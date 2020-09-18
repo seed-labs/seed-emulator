@@ -151,7 +151,14 @@ class RouteServer(Router):
 
     This class represents a route server node in the simulation."""
 
-    def __init__(self, name, ixp, sim):
+    def __init__(self, name: str, ixp: int, sim):
+        """!RouteServer constructor
+
+        @param self The object pointer.
+        @param name The name of this RouteServer.
+        @param ixp The ASN of IXP this RouteServer belongs to.
+        @param sim Reference to the parent simulator object.
+        """
         self.name = name
         self.ixp = ixp
         self.type = 'rs'
@@ -160,19 +167,44 @@ class RouteServer(Router):
         self.interfaces = []  # Suppose to have only one interace
 
     def getIP_on_IXP_Network(self):
+        """!Get IP address on the IX peering LAN.
+
+        @param self The object pointer.
+        @returns str IP address.
+        """
         (network, ip) = self.interfaces[0]
         return ip
 
     def getASN(self):
+        """!Get ASN of the RouteServer.
+
+        @param self The object pointer.
+        @returns int ASN.
+        """
         return self.ixp
 
     def getType(self):
+        """!Get type of the RouteServer.
+
+        @param self The object pointer.
+        @returns str type.
+        """
         return self.type
 
-    def addPeer(self, peername):
+    def addPeer(self, peername: str):
+        """!Add a peer.
+
+        @param self The object pointer.
+        @param peername The name of the peer AS.
+        """
+
         self.peers.add(peername)
 
     def initializeNetwork(self):
+        """!Create the IX peering LAN.
+
+        @param self The object pointer.
+        """
         net_name = SimConstants.IXNETNAME.format(self.ixp)
         net = self.simulator.getNetwork(net_name)
         if net:
@@ -180,16 +212,27 @@ class RouteServer(Router):
             self.addInterface(net_name, ip)
 
     def listPeers(self):
+        """!Print the list of peers to stdout.
+
+        @param self The object pointer."""
         print("  Peers:")
         for peer in self.peers:
             print("     ", peer)
 
     def printDetails(self):
+        """!Print the details to stdout.
+
+        @param self The object pointer."""
         print(self.name)
         self.listInterfaces()
         self.listPeers()
 
     def createBirdConf_BGP(self):
+        """!Get Bird's BGP config.
+
+        @param self The object pointer.
+        @returns str Part of bird.conf."""
+        area_0_entries = ""
         # generate the BGP entry for each interface
         entries = FileTemplate.birdConf_common
         (net_name, my_ip) = self.interfaces[0]
@@ -207,7 +250,18 @@ class RouteServer(Router):
 
 # For BGP router
 class BGPRouter(Router):
-    def __init__(self, name, asn, ixp, sim):
+    """!BGPRouter class
+
+    This class represents a BGP router node in the simulation."""
+    def __init__(self, name: str, asn: int, ixp: int, sim):
+        """!BGPRouter constructor
+
+        @param self The object pointer.
+        @param name The name of this BGPRouter.
+        @param asn The ASN of this BGPRouter.
+        @param ixp The ASN of IXP this BGPRouter belongs to.
+        @param sim Reference to the parent simulator object.
+        """
         self.name = name
         self.asn = asn
         self.ixp = ixp
@@ -218,20 +272,44 @@ class BGPRouter(Router):
         self.peers = set()   # Set of peers (names)
 
     def getIP_on_IXP_Network(self):
+        """!Get IP address on the IX peering LAN.
+
+        @param self The object pointer.
+        @returns str IP address.
+        """
         (network, ip) = self.interfaces[1]
         return ip
 
     def getIP_on_Internal_Network(self):
+        """!Get IP address on the internal LAN.
+
+        @param self The object pointer.
+        @returns str IP address.
+        """
         (network, ip) = self.interfaces[0]
         return ip
 
     def getASN(self):
+        """!Get ASN.
+
+        @param self The object pointer.
+        @returns int ASN.
+        """
         return self.asn
 
     def getType(self):
+        """!Get type of the BGPRouter.
+
+        @param self The object pointer.
+        @returns str type.
+        """
         return self.type
 
     def initializeNetwork(self):
+        """!Create the internal LAN.
+
+        @param self The object pointer.
+        """
         # Initialize the interface
         net_name = SimConstants.ASNETNAME.format(self.asn)
         net = self.simulator.getNetwork(net_name)
@@ -247,19 +325,35 @@ class BGPRouter(Router):
 
     # Add peer name
     def addPeer(self, peername):
+        """!Add a peer.
+
+        @param self The object pointer.
+        @param peername The name of the peer AS.
+        """
+
         self.peers.add(peername)
 
     def listPeers(self):
+        """!Print the list of peers to stdout.
+
+        @param self The object pointer."""
         print("  Peers:")
         for peer in self.peers:
             print("      ", peer)
 
     def printDetails(self):
+        """!Print the details to stdout.
+
+        @param self The object pointer."""
         print(self.name)
         self.listInterfaces()
         self.listPeers()
 
     def createBirdConf_BGP(self):
+        """!Get Bird's BGP config.
+
+        @param self The object pointer.
+        @returns str Part of bird.conf."""
         # generate the BGP entry for each interface
         entries = FileTemplate.birdConf_common
         my_ip = self.getIP_on_IXP_Network()
@@ -277,6 +371,10 @@ class BGPRouter(Router):
     # From the AS object, get the list of BGP routers (names) for this AS
     # Add each of them (except itself) as a IBGP peer
     def createBirdConf_IBGP(self):
+        """!Get Bird's IBGP config.
+
+        @param self The object pointer.
+        @returns str Part of bird.conf."""
         entries = ""
         my_ip = self.getIP_on_Internal_Network()
         as_obj = self.simulator.getASByName(
