@@ -1,11 +1,14 @@
+"""Internet Simulator Constants."""
 
 # Define constant strings and templates
+
+
 class SimConstants:
     OUTDIR = "./output/{}"
-    TEMPLATE_HOSTDIR   = "./template/host"
+    TEMPLATE_HOSTDIR = "./template/host"
     TEMPLATE_ROUTERDIR = "./template/router"
-    ASNAME  = 'as{}'
-    IXNAME  = 'ix{}'
+    ASNAME = 'as{}'
+    IXNAME = 'ix{}'
     ASNETNAME = 'net_as{}'
     IXNETNAME = 'net_ix{}'
     BGPRouterNAME = 'rt_as{}_ix{}'
@@ -15,7 +18,7 @@ class SimConstants:
 
 class FileTemplate():
     hostStartScript =  \
-"""#!/bin/bash
+        """#!/bin/bash
   
 ip route change default via {} dev eth0
 service nginx start
@@ -23,14 +26,14 @@ tail -f /dev/null
 """
 
     routerStartScript =  \
-"""#!/bin/bash
+        """#!/bin/bash
   
 [ ! -d /run/bird ] && mkdir /run/bird
 bird -d
 """
 
     birdConf_common =  \
-"""protocol kernel {
+        """protocol kernel {
     import none;
     export all;
 }
@@ -44,8 +47,8 @@ protocol direct {
 
 """
 
-    birdConf_BGP  = \
-"""protocol bgp {{
+    birdConf_BGP = \
+        """protocol bgp {{
     import all;
     export all;
 
@@ -55,8 +58,8 @@ protocol direct {
 
 """
 
-    birdConf_BGP_RS  = \
-"""protocol bgp {{
+    birdConf_BGP_RS = \
+        """protocol bgp {{
     import all;
     export all;
 
@@ -68,8 +71,8 @@ protocol direct {
 
 """
 
-    birdConf_IBGP  = \
-"""protocol bgp {{
+    birdConf_IBGP = \
+        """protocol bgp {{
     import all;
     export all;
 
@@ -81,8 +84,8 @@ protocol direct {
 
 """
 
-    birdConf_OSPF  = \
-"""table t_ospf;
+    birdConf_OSPF = \
+        """table t_ospf;
 
 protocol ospf {
     table t_ospf;
@@ -97,9 +100,9 @@ protocol ospf {
 }
 
 """
-    
+
     docker_compose_host_entry = \
-"""    {0}:
+        """    {0}:
         build: {1}
         cap_add:
                 - ALL
@@ -109,7 +112,7 @@ protocol ospf {
 """
 
     docker_compose_router_entry = \
-"""    {0}:
+        """    {0}:
         build: {1}
         cap_add:
                 - ALL
@@ -118,23 +121,21 @@ protocol ospf {
         networks:
 {2}
 """
-    
+
     docker_compose_interface_entry = \
-"""            {}:
+        """            {}:
                 ipv4_address: {}
 """
 
-
     docker_compose_network_entry = \
-"""    {0}:
+        """    {0}:
         ipam:
             config:
                 - subnet: {1}/{2}
 """
 
-
     docker_compose_header = \
-"""version: "3"
+        """version: "3"
 
 services:
 
@@ -147,4 +148,3 @@ services:
         image: iib_base_host
 
 """
-

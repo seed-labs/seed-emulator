@@ -1,0 +1,16 @@
+\page Example
+Additonal documents goes here.
+
+\tableofcontents
+
+\section section1 This is a section
+
+This is just like latex. (but not the exact same) See docs/README.dox for source of this file.
+
+\subsection sub1 Subsction Title
+Text here.
+
+\subsection sub2 Yet another subsection title
+More text.
+
+Check https://www.doxygen.nl/manual/commands.html#cmdpage.

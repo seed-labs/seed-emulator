@@ -1,3 +1,5 @@
+"""IXP and AS."""
+
 import os
 import csv
 
@@ -47,7 +49,8 @@ class AS:
     def getBGPRouters(self):
         """!Get the set of BGP routers.
 
-        @param self The object pointer."""
+        @param self The object pointer.
+        @returns set<str> Set of BGP routers."""
         return self.__bgprouters
 
     def addBGPRouter(self, router_name: str):
