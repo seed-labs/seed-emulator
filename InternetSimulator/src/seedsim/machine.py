@@ -21,7 +21,7 @@ class Machine:
     def getName(self):
         """!Get name of the Machine.
 
-        @param name The name of this Machine.
+        @param self The object pointer.
         @returns str Name of this router."""
         return self.name
 
