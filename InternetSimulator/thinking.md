@@ -21,6 +21,11 @@ Feel free to add more to this list. This is our wish list.
 
 - **DNS infrastructure** (including multiple servers)
 
+- **DNS support**: Right now, we have to use IP address to talk to the machines inside the simulator. We have two ways to support DNS:
+
+  - Automatically generate mappings to the ```/etc/hosts``` for each container.
+  - Provide an external DNS server (running on the VM), which serves as the local DNS server for all the containers. This local DNS server will serve the ROOT zone, so it can map everything to its IP address. We will generate the zone file automatically. 
+
 - **Firewall**: users can specify their firewall rules either as a script file or directly feed their rules to our Firewall class
 
 - **NAT server (both DNAT and SNAT)**: there are many interesting things that we can do with DNAT and SNAT, such as load balancing. I did that in my lecture using VMs, but the number of machine I could use is quite limited. Container solves that problem.
@@ -38,9 +43,12 @@ Feel free to add more to this list. This is our wish list.
 - **Transit AS with complicated internal network**: For these ASes, to specify its internal network's topology, we can use these approaches: (1) Automatically generate one for users if users do not care too much about the topology. (2) Prepare some existing topology for users to select. (3) Ask users to provide their own topology file (CSV).
 
 - **Testing nodes**: To automate the testing effort, for each feature we build, we should develop some testing script, and deploy them in testing nodes. When the simulator runs, those testing nodes will give us a report on the results.  For example, we can run ```birdc``` script on BGP routers to get the protocol information and save them to a permanent storage. 
-This is much better than manual effort. I believe ```birdc``` can be accessed from remotely. That will be even better, because we can just run the testing script on the VM. 
+This is much better than manual effort. I believe ```birdc``` can be accessed from remotely. That will be even better, because we can just run the testing script on the VM.<br> 
 **Note**: This is just one idea to automate the testing. We should put more thoughts on this, so we can improve our productivity. 
 
+- **Kubernetes**: We can deploy our simulator on multiple VMs using Kubernetes. We should generate all the Kubernetes files. 
+
+- **Command and Control**: We can install a control server on each node. If we want to do something on a particular node, we can just send a command to it. This could be used for our management (we can have a central management system). It can also be used for botnet simulation, which is a lab that we can develop based on the simulator. 
 
 ## Miscellaneous
 
