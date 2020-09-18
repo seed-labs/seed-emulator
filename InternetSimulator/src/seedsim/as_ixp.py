@@ -34,7 +34,7 @@ class AS:
         """!Add a peer.
 
         @param self The object pointer.
-        @param as_name The name of the perr AS.
+        @param as_name The name of the peer AS.
         @param ix_name The name of the IX to establish this peering."""
 
         self.__peers.add((as_name, ix_name))
