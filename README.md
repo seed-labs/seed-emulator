@@ -1,2 +1,3 @@
-# seedsimulator
+# SEED Simulator 
+
 SEED Simulator
