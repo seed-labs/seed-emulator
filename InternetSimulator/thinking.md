@@ -50,6 +50,10 @@ This is much better than manual effort. I believe ```birdc``` can be accessed fr
 
 - **Command and Control**: We can install a control server on each node. If we want to do something on a particular node, we can just send a command to it. This could be used for our management (we can have a central management system). It can also be used for botnet simulation, which is a lab that we can develop based on the simulator. 
 
+- **Segment Routing**: The new traffic-engineering technology - makes network programming very straightforward. (example (note: In Chinese): https://www.cisco.com/c/dam/global/zh_cn/solutions/service-provider/segment-routing/pdf/linux_srv6_article1.pdf) 
+
+- **RPKI**: The PKI for Internet Number Resources (IP addresses, ASNs). RPKI enables authenticated route origin authorization. Commonly used for defeating prefix hijacks and prevent misconfigs.
+
 ## Miscellaneous
 
 Most of the tools we use in our container will come from the existing open-source tools. However, if needed, we may need to develop our own tool that will be used in the container.  Basically, we develop two types of software:
