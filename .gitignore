@@ -1,2 +1,7 @@
 **/output/*
 **/__pycache__/*
+*.out
+*.o
+*.so
+*.swp
+
