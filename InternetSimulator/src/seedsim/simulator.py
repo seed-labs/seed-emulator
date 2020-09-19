@@ -6,14 +6,18 @@ import csv
 from .constants import *
 from .network import Network
 from .as_ixp import AS, IXP
+from .machine import Host
 from .machine import *
 
 
-####################################
-# The Simulator class
-####################################
 class Simulator():
-    def __init__(self, name):
+    """The Simulator class."""
+
+    def __init__(self, name: str):
+        """!Simulator constructor
+
+        @param self The object pointer.
+        @param name The name of this Simulation."""
         self.name = name
         self.networks = {}
         self.hosts = {}
@@ -21,7 +25,15 @@ class Simulator():
         self.ASes = {}
         self.IXPs = {}
 
-    def addIX(self, name, asn, net_name):
+    def addIX(self, name: str, asn: int, net_name: str):
+        """!Add an Internet Exchange
+
+        @param self The object pointer.
+        @param name The name of the IX.
+        @param asn The asn of the IX RS.
+        @param net_name The name of IX peering LAN network.
+        @returns Created IX.
+        """
         if name in self.IXPs.keys():
             # print('The key {} already exists, ignored.'.format(name))
             return self.IXPs[name]
@@ -29,7 +41,15 @@ class Simulator():
             self.IXPs[name] = IXP(name, asn, net_name, self)
             return self.IXPs[name]
 
-    def addAS(self, name, asn, as_type, net_name):
+    def addAS(self, name: str, asn: int, as_type: str, net_name: str):
+        """!Add an AS
+
+        @param self The object pointer.
+        @param name The name of the AS.
+        @param asn ASN.
+        @param net_name The name of AS internal network.
+        @returns Created AS.
+        """
         if name in self.ASes.keys():
             # print('The key {} already exists, ignored.'.format(name))
             return self.ASes[name]
@@ -39,7 +59,15 @@ class Simulator():
 
     # Can get both AS and IX
 
-    def getASByName(self, name):
+    def getASByName(self, name: str):
+        """!Get AS/IX by name
+
+        @todo Maybe we can make an "Object registry" dict? We can put all
+        stuffs (AS, IX, Nets, etc) in the registry. 
+        @param self The object pointer.
+        @param name The name of the AS/IX to find.
+        @returns AS or IX.
+        """
         if name.startswith(SimConstants.ASNAME[:2]):
             if name in self.ASes.keys():
                 return self.ASes[name]
@@ -49,14 +77,29 @@ class Simulator():
 
         return None
 
-    def getASByASN(self, asn):
+    def getASByASN(self, asn: int):
+        """!Get AS by ASN
+
+        @param self The object pointer.
+        @param asn ASN.
+        @returns AS.
+        """
         name = SimConstants.ASNETNAME.format(asn)
         if name in self.ASes.keys():
             return self.ASes[name]
         else:
             return None
 
-    def addNetwork(self, name, network, netmask, type):
+    def addNetwork(self, name: str, network: str, netmask: str, type: str):
+        """!Add a Netwrok
+
+        @param self The object pointer.
+        @param name The name of the network.
+        @param network The prefix of the network.
+        @param netmask The netmask of the network.
+        @param type The type of the network.
+        @returns Created Network.
+        """
         if name in self.networks.keys():
             #print('The key {} already exists, ignored.'.format(name))
             return self.networks[name]
@@ -64,13 +107,28 @@ class Simulator():
             self.networks[name] = Network(name, network, netmask, type, self)
             return self.networks[name]
 
-    def getNetwork(self, name):
+    def getNetwork(self, name: str):
+        """!Get a Netwrok
+
+        @param self The object pointer.
+        @param name The name of the network.
+        @returns Network.
+        """
         if name in self.networks.keys():
             return self.networks[name]
         else:
             return None
 
-    def addBGPRouter(self, asn, ixp, type):
+    def addBGPRouter(self, asn: int, ixp: str, type: str):
+        """!Add a BGP router
+
+        @param asn ASN of the router.
+        @param ixp The name of the IXP.
+        @param type Type of the BGP router (as/rs).
+
+        @returns Created router.
+        """
+
         if type == 'as':
             name = SimConstants.BGPRouterNAME.format(asn, ixp)
         else:
@@ -91,48 +149,92 @@ class Simulator():
 
         return self.routers[name]
 
-    def getRouter(self, name):
+    def getRouter(self, name: str):
+        """!Get a BGP router
+
+        @param name The name of the router.
+        @returns Network.
+        """
+
         if name in self.routers.keys():
             return self.routers[name]
         else:
             return None
 
-    def addHost(self, name, host):
+    def addHost(self, name: str, host: Host):
+        """!Add a BGP router
+
+        @param name Name of the host.
+        @param host Reference to the host object to add.
+        """
+
         if name in self.hosts.keys():
             print('The key {} already exists, ignored.'.format(name))
         else:
             self.hosts[name] = host
 
-    def getHost(self, name):
+    def getHost(self, name: str):
+        """!Get a Host
+
+        @param name The name of the host.
+        @returns Host.
+        """
+        
         if name in self.hosts.keys():
             return self.hosts[name]
         else:
             return None
 
     def listRouters(self):
+        """!Print the details to stdout.
+
+        @param self The object pointer."""
+
         for k, (rt_name, router) in enumerate(self.routers.items()):
             router.printDetails()
 
     def listHosts(self):
+        """!Print the details to stdout.
+
+        @param self The object pointer."""
+        
         for k, (host_name, host) in enumerate(self.hosts.items()):
             host.printDetails()
 
     def listNetworks(self):
+        """!Print the details to stdout.
+
+        @param self The object pointer."""
+
         for k, (net_name, network) in enumerate(self.networks.items()):
             network.printDetails()
 
     def listASes(self):
+        """!Print the details to stdout.
+
+        @param self The object pointer."""
+
         for k, (as_name, as_obj) in enumerate(self.ASes.items()):
             as_obj.printDetails()
 
     def listIXPs(self):
+        """!Print the details to stdout.
+
+        @param self The object pointer."""
+
         for k, (ix_name, is_obj) in enumerate(self.IXPs.items()):
             is_obj.printDetails()
 
     # Create the host list.
     # total: specify how many hosts to create for each network
 
-    def generateHosts(self, total):
+    def generateHosts(self, total: int):
+        """!Create the host list.
+
+        @param self The object pointer.
+        @param total Number of hosts to create for each network.
+        """
+
         for k, (net_name, network) in enumerate(self.networks.items()):
             if network.type == 'IX':
                 continue  # need to generate hosts for the IX network
@@ -143,6 +245,10 @@ class Simulator():
                 self.addHost(host_name, host)
 
     def createHostDockerFiles(self):
+        """!Create Dockerfile for all hosts
+
+        @param self The object pointer."""
+
         for k, (hostname, host) in enumerate(self.hosts.items()):
             start_script = host.createStartScript()
 
@@ -155,6 +261,10 @@ class Simulator():
             os.system("chmod a+x {}".format(dirname+"/start.sh"))
 
     def createRouterDockerFiles(self):
+        """!Create Dockerfile for all routers
+
+        @param self The object pointer."""
+
         for k, (routername, router) in enumerate(self.routers.items()):
             bird_conf = router.createBirdConf_BGP()
             if router.getType() == 'as':   # IBGP is meaningful for BGP router, not for router server
@@ -168,6 +278,10 @@ class Simulator():
                 f.write(bird_conf)
 
     def createDockerComposeFile(self):
+        """!Create docker-compose.yml
+
+        @param self The object pointer."""
+
         f = open(SimConstants.OUTDIR.format("docker-compose.yml"), "w")
         f.write(FileTemplate.docker_compose_header)
 
@@ -191,7 +305,13 @@ class Simulator():
 
     # Read the AS data from CSV file
 
-    def getASFromCSV(self, filename):
+    def getASFromCSV(self, filename: str):
+        """!Read the AS data from CSV file
+
+        @param self The object pointer.
+        @param filename Name of the CSV file.
+        """
+
         with open(filename, newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
@@ -218,6 +338,11 @@ class Simulator():
                     self.addAS(as_name, asn, type, net_name)
 
     def getPeeringsFromCSV(self, filename):
+        """!Read the peering data from CSV file
+
+        @param self The object pointer.
+        @param filename Name of the CSV file.
+        """
         with open(filename, newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
