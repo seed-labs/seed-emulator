@@ -1,4 +1,4 @@
-# Naming Conventions
+# Naming Conventions {#NamingConventions}
 
 
 We need to give each entity of the simulator a name. These names are not only for program's internal uses, they are also to name the container. When users see the name, they should immediately know the purpose of the container. Therefore, names must be meaningful and easy to recognize. That means we need to encode meaningful information in the names. Here is the current naming conventions. We may need to make changes in the future. We define the template here, so if we need to change the naming convention, this is the only place that we need to change. ***We should never hardcode the naming scheme in the rest of the code***.  
