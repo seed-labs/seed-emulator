@@ -7,12 +7,14 @@ from .constants import *
 
 
 class AS:
-    """!Autonomous System
+    """!
+    Autonomous System
 
     This class represents an AS in the simulation."""
 
     def __init__(self, name: str, asn: int, as_type: str, net_name: str, simulator):
-        """!Autonomous System constructor
+        """!
+        Autonomous System constructor
 
         @param self The object pointer.
         @param name The name of this AS.
@@ -31,7 +33,8 @@ class AS:
 
     # Add (AS IX) to the peer list: self peers with AS at IX
     def addPeer(self, as_name: str, ix_name: str):
-        """!Add a peer.
+        """!
+        Add a peer.
 
         @param self The object pointer.
         @param as_name The name of the peer AS.
@@ -40,21 +43,24 @@ class AS:
         self.__peers.add((as_name, ix_name))
 
     def printDetails(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
         print("Name: {} -- Network: {} -- Type: {}".format(self.__name,
                                                            self.__network, self.__type))
 
     def getBGPRouters(self):
-        """!Get the set of BGP routers.
+        """!
+        Get the set of BGP routers.
 
         @param self The object pointer.
         @returns set<str> Set of BGP routers."""
         return self.__bgprouters
 
     def addBGPRouter(self, router_name: str):
-        """!Add a new BGP router.
+        """!
+        Add a new BGP router.
 
         @param self The object pointer.
         @router_name The name of the new router."""
@@ -62,7 +68,8 @@ class AS:
 
     # Future work: we can generate dot files using self.__peers
     def generateDotFile(self):
-        """!Generate Graphviz dot file for this AS.
+        """!
+        Generate Graphviz dot file for this AS.
 
         @todo not yet implemented.
 
@@ -71,12 +78,14 @@ class AS:
 
 
 class IXP:
-    """!Internet Exchange Point
+    """!
+    Internet Exchange Point
 
     This class represents an IXP in the simulation."""
 
     def __init__(self, name: str, asn: int, net_name: str, simulator):
-        """!Internet Exchange Point constructor
+        """!
+        Internet Exchange Point constructor
 
         @param self The object pointer.
         @param name The name of this IXP.
@@ -92,14 +101,16 @@ class IXP:
 
     # Add Router to the list using router name
     def addBGPRouter(self, router_name: str):
-        """!Add a BGP router to this IX.
+        """!
+        Add a BGP router to this IX.
 
         @param self The object pointer.
         @param name The name of the router."""
         self.__bgp_routers.add(router_name)
 
     def printDetails(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
         print("Name: {} -- Network: {} -- Type: {}".format(self.__name,

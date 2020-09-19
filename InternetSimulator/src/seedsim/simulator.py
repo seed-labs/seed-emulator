@@ -14,7 +14,8 @@ class Simulator():
     """The Simulator class."""
 
     def __init__(self, name: str):
-        """!Simulator constructor
+        """!
+        Simulator constructor
 
         @param self The object pointer.
         @param name The name of this Simulation."""
@@ -26,7 +27,8 @@ class Simulator():
         self.IXPs = {}
 
     def addIX(self, name: str, asn: int, net_name: str):
-        """!Add an Internet Exchange
+        """!
+        Add an Internet Exchange
 
         @param self The object pointer.
         @param name The name of the IX.
@@ -42,7 +44,8 @@ class Simulator():
             return self.IXPs[name]
 
     def addAS(self, name: str, asn: int, as_type: str, net_name: str):
-        """!Add an AS
+        """!
+        Add an AS
 
         @param self The object pointer.
         @param name The name of the AS.
@@ -60,7 +63,8 @@ class Simulator():
     # Can get both AS and IX
 
     def getASByName(self, name: str):
-        """!Get AS/IX by name
+        """!
+        Get AS/IX by name
 
         @todo Maybe we can make an "Object registry" dict? We can put all
         stuffs (AS, IX, Nets, etc) in the registry. 
@@ -78,7 +82,8 @@ class Simulator():
         return None
 
     def getASByASN(self, asn: int):
-        """!Get AS by ASN
+        """!
+        Get AS by ASN
 
         @param self The object pointer.
         @param asn ASN.
@@ -91,7 +96,8 @@ class Simulator():
             return None
 
     def addNetwork(self, name: str, network: str, netmask: str, type: str):
-        """!Add a Netwrok
+        """!
+        Add a Netwrok
 
         @param self The object pointer.
         @param name The name of the network.
@@ -108,7 +114,8 @@ class Simulator():
             return self.networks[name]
 
     def getNetwork(self, name: str):
-        """!Get a Netwrok
+        """!
+        Get a Netwrok
 
         @param self The object pointer.
         @param name The name of the network.
@@ -120,7 +127,8 @@ class Simulator():
             return None
 
     def addBGPRouter(self, asn: int, ixp: str, type: str):
-        """!Add a BGP router
+        """!
+        Add a BGP router
 
         @param asn ASN of the router.
         @param ixp The name of the IXP.
@@ -150,7 +158,8 @@ class Simulator():
         return self.routers[name]
 
     def getRouter(self, name: str):
-        """!Get a BGP router
+        """!
+        Get a BGP router
 
         @param name The name of the router.
         @returns Network.
@@ -162,7 +171,8 @@ class Simulator():
             return None
 
     def addHost(self, name: str, host: Host):
-        """!Add a BGP router
+        """!
+        Add a BGP router
 
         @param name Name of the host.
         @param host Reference to the host object to add.
@@ -174,7 +184,8 @@ class Simulator():
             self.hosts[name] = host
 
     def getHost(self, name: str):
-        """!Get a Host
+        """!
+        Get a Host
 
         @param name The name of the host.
         @returns Host.
@@ -186,7 +197,8 @@ class Simulator():
             return None
 
     def listRouters(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
 
@@ -194,7 +206,8 @@ class Simulator():
             router.printDetails()
 
     def listHosts(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
         
@@ -202,7 +215,8 @@ class Simulator():
             host.printDetails()
 
     def listNetworks(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
 
@@ -210,7 +224,8 @@ class Simulator():
             network.printDetails()
 
     def listASes(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
 
@@ -218,7 +233,8 @@ class Simulator():
             as_obj.printDetails()
 
     def listIXPs(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
 
@@ -229,7 +245,8 @@ class Simulator():
     # total: specify how many hosts to create for each network
 
     def generateHosts(self, total: int):
-        """!Create the host list.
+        """!
+        Create the host list.
 
         @param self The object pointer.
         @param total Number of hosts to create for each network.
@@ -245,7 +262,8 @@ class Simulator():
                 self.addHost(host_name, host)
 
     def createHostDockerFiles(self):
-        """!Create Dockerfile for all hosts
+        """!
+        Create Dockerfile for all hosts
 
         @param self The object pointer."""
 
@@ -261,7 +279,8 @@ class Simulator():
             os.system("chmod a+x {}".format(dirname+"/start.sh"))
 
     def createRouterDockerFiles(self):
-        """!Create Dockerfile for all routers
+        """!
+        Create Dockerfile for all routers
 
         @param self The object pointer."""
 
@@ -278,7 +297,8 @@ class Simulator():
                 f.write(bird_conf)
 
     def createDockerComposeFile(self):
-        """!Create docker-compose.yml
+        """!
+        Create docker-compose.yml
 
         @param self The object pointer."""
 
@@ -306,7 +326,8 @@ class Simulator():
     # Read the AS data from CSV file
 
     def getASFromCSV(self, filename: str):
-        """!Read the AS data from CSV file
+        """!
+        Read the AS data from CSV file
 
         @param self The object pointer.
         @param filename Name of the CSV file.
@@ -338,7 +359,8 @@ class Simulator():
                     self.addAS(as_name, asn, type, net_name)
 
     def getPeeringsFromCSV(self, filename):
-        """!Read the peering data from CSV file
+        """!
+        Read the peering data from CSV file
 
         @param self The object pointer.
         @param filename Name of the CSV file.

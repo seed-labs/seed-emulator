@@ -7,7 +7,9 @@ from .constants import *
 
 
 class Network:
-    """!Network class
+    """!
+    
+    Network class
     
     This class represents a network in the simulation."""
 
@@ -19,7 +21,9 @@ class Network:
     RT_BGP_END = 200
 
     def __init__(self, name: str, prefix: str, netmask: str, type: str, simulator):
-        """!Network constructor
+        """!
+        
+        Network constructor
 
         @param self The object pointer.
         @param prefix The prefix of this Network.
@@ -47,7 +51,8 @@ class Network:
     # Assign IP addresses based on ASN. This one is used to
     # assign IP addresses to BGP routers on the IXP network
     def getIPByASN(self, asn: int):
-        """!Assign IP addresses based on ASN.
+        """!
+        Assign IP addresses based on ASN.
         
         This one is used to assign IP addresses to BGP routers on the IXP
         network.
@@ -62,7 +67,8 @@ class Network:
         return '.'.join(ip_in_list)
 
     def getIP(self, router=False, bgp=False):
-        """!Get IP address by type
+        """!
+        Get IP address by type
 
         @param self The object pointer.
         @param router Is this IP for internal router?
@@ -90,7 +96,8 @@ class Network:
             return '.'.join(ip_in_list)
 
     def getDefaultRT(self):
-        """!Get the router in this network.
+        """!
+        Get the router in this network.
 
         @param self The object pointer.
         @returns str IP address.
@@ -98,7 +105,8 @@ class Network:
         return self.default_router
 
     def createDockerComposeEntry(self):
-        """!Get the docker compose file as string
+        """!
+        Get the docker compose file as string
 
         @param self The object pointer.
         @returns str Part of docker-compose.yml
@@ -108,7 +116,8 @@ class Network:
         return result
 
     def printDetails(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
         print("Name: {} -- Network: {} -- Netmask: {}".format(self.name,

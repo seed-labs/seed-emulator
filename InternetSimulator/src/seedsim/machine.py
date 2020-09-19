@@ -7,19 +7,22 @@ from .constants import *
 
 
 class Machine:
-    """!Machine class
+    """!
+    Machine class
 
     The base Machine class. This class represents an generic machine in the simulation."""
     
     def __init__(self, name: str):
-        """!Machine constructor
+        """!
+        Machine constructor
 
         @param self The object pointer.
         @param name The name of this Machine."""
         self.name = name
 
     def getName(self):
-        """!Get name of the Machine.
+        """!
+        Get name of the Machine.
 
         @param self The object pointer.
         @returns str Name of this router."""
@@ -27,12 +30,14 @@ class Machine:
 
 
 class Host(Machine):
-    """!Host class
+    """!
+    Host class
     
     This class represents an host node in the simulation."""
 
     def __init__(self, name: str, network: str, ip: str, simulator):
-        """!Host constructor
+        """!
+        Host constructor
 
         @param self The object pointer.
         @param name The name of this host.
@@ -48,14 +53,16 @@ class Host(Machine):
         self.simulator = simulator
 
     def printDetails(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
         print(self.name)
         print("   ", self.network, self.ip)
 
     def createStartScript(self):
-        """!Get the start script as string.
+        """!
+        Get the start script as string.
 
         @param self The object pointer.
         @returns str Content of start.sh."""
@@ -65,7 +72,8 @@ class Host(Machine):
         return content
 
     def createDockerComposeEntry(self):
-        """!Get the docker compose file as string
+        """!
+        Get the docker compose file as string
 
         @param self The object pointer.
         @returns str Part of docker-compose.yml"""
@@ -77,11 +85,13 @@ class Host(Machine):
 
 
 class Router(Machine):
-    """!Router class
+    """!
+    Router class
     
     This class represents a router node in the simulation."""
     def __init__(self, name: str, sim):
-        """!Router constructor
+        """!
+        Router constructor
 
         @param self The object pointer.
         @param name The name of this router.
@@ -94,14 +104,16 @@ class Router(Machine):
         self.simulator = sim
 
     def printDetails(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
         print(self.name)
         self.listInterfaces()
 
     def listInterfaces(self):
-        """!Print the interfaces details to stdout.
+        """!
+        Print the interfaces details to stdout.
 
         @param self The object pointer."""
         print("  Interfaces:")
@@ -109,7 +121,8 @@ class Router(Machine):
             print("     ", name, ip)
 
     def addInterface(self, name: str, ip: str):
-        """!Add an interface to router.
+        """!
+        Add an interface to router.
 
         @param self The object pointer.
         @param name Name of the interface.
@@ -117,7 +130,8 @@ class Router(Machine):
         self.interfaces.append((name, ip))
 
     def createBirdConf_OSPF(self):
-        """!Get Bird's OSPF config.
+        """!
+        Get Bird's OSPF config.
 
         @param self The object pointer.
         @returns str Part of bird.conf."""
@@ -129,7 +143,8 @@ class Router(Machine):
         return FileTemplate.birdConf_OSPF.format(area_0_entries)
 
     def createDockerComposeEntry(self):
-        """!Get the docker compose file as string
+        """!
+        Get the docker compose file as string
 
         @param self The object pointer.
         @returns str Part of docker-compose.yml"""
@@ -147,12 +162,14 @@ class Router(Machine):
 
 # For route server
 class RouteServer(Router):
-    """!RouteServer class
+    """!
+    RouteServer class
 
     This class represents a route server node in the simulation."""
 
     def __init__(self, name: str, ixp: int, sim):
-        """!RouteServer constructor
+        """!
+        RouteServer constructor
 
         @param self The object pointer.
         @param name The name of this RouteServer.
@@ -167,7 +184,8 @@ class RouteServer(Router):
         self.interfaces = []  # Suppose to have only one interace
 
     def getIP_on_IXP_Network(self):
-        """!Get IP address on the IX peering LAN.
+        """!
+        Get IP address on the IX peering LAN.
 
         @param self The object pointer.
         @returns str IP address.
@@ -176,7 +194,8 @@ class RouteServer(Router):
         return ip
 
     def getASN(self):
-        """!Get ASN of the RouteServer.
+        """!
+        Get ASN of the RouteServer.
 
         @param self The object pointer.
         @returns int ASN.
@@ -184,7 +203,8 @@ class RouteServer(Router):
         return self.ixp
 
     def getType(self):
-        """!Get type of the RouteServer.
+        """!
+        Get type of the RouteServer.
 
         @param self The object pointer.
         @returns str type.
@@ -192,7 +212,8 @@ class RouteServer(Router):
         return self.type
 
     def addPeer(self, peername: str):
-        """!Add a peer.
+        """!
+        Add a peer.
 
         @param self The object pointer.
         @param peername The name of the peer AS.
@@ -201,7 +222,8 @@ class RouteServer(Router):
         self.peers.add(peername)
 
     def initializeNetwork(self):
-        """!Create the IX peering LAN.
+        """!
+        Create the IX peering LAN.
 
         @param self The object pointer.
         """
@@ -212,7 +234,8 @@ class RouteServer(Router):
             self.addInterface(net_name, ip)
 
     def listPeers(self):
-        """!Print the list of peers to stdout.
+        """!
+        Print the list of peers to stdout.
 
         @param self The object pointer."""
         print("  Peers:")
@@ -220,7 +243,8 @@ class RouteServer(Router):
             print("     ", peer)
 
     def printDetails(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
         print(self.name)
@@ -228,7 +252,8 @@ class RouteServer(Router):
         self.listPeers()
 
     def createBirdConf_BGP(self):
-        """!Get Bird's BGP config.
+        """!
+        Get Bird's BGP config.
 
         @param self The object pointer.
         @returns str Part of bird.conf."""
@@ -250,11 +275,13 @@ class RouteServer(Router):
 
 # For BGP router
 class BGPRouter(Router):
-    """!BGPRouter class
+    """!
+    BGPRouter class
 
     This class represents a BGP router node in the simulation."""
     def __init__(self, name: str, asn: int, ixp: int, sim):
-        """!BGPRouter constructor
+        """!
+        BGPRouter constructor
 
         @param self The object pointer.
         @param name The name of this BGPRouter.
@@ -272,7 +299,8 @@ class BGPRouter(Router):
         self.peers = set()   # Set of peers (names)
 
     def getIP_on_IXP_Network(self):
-        """!Get IP address on the IX peering LAN.
+        """!
+        Get IP address on the IX peering LAN.
 
         @param self The object pointer.
         @returns str IP address.
@@ -281,7 +309,8 @@ class BGPRouter(Router):
         return ip
 
     def getIP_on_Internal_Network(self):
-        """!Get IP address on the internal LAN.
+        """!
+        Get IP address on the internal LAN.
 
         @param self The object pointer.
         @returns str IP address.
@@ -290,7 +319,8 @@ class BGPRouter(Router):
         return ip
 
     def getASN(self):
-        """!Get ASN.
+        """!
+        Get ASN.
 
         @param self The object pointer.
         @returns int ASN.
@@ -298,7 +328,8 @@ class BGPRouter(Router):
         return self.asn
 
     def getType(self):
-        """!Get type of the BGPRouter.
+        """!
+        Get type of the BGPRouter.
 
         @param self The object pointer.
         @returns str type.
@@ -306,7 +337,8 @@ class BGPRouter(Router):
         return self.type
 
     def initializeNetwork(self):
-        """!Create the internal LAN.
+        """!
+        Create the internal LAN.
 
         @param self The object pointer.
         """
@@ -325,7 +357,8 @@ class BGPRouter(Router):
 
     # Add peer name
     def addPeer(self, peername):
-        """!Add a peer.
+        """!
+        Add a peer.
 
         @param self The object pointer.
         @param peername The name of the peer AS.
@@ -334,7 +367,8 @@ class BGPRouter(Router):
         self.peers.add(peername)
 
     def listPeers(self):
-        """!Print the list of peers to stdout.
+        """!
+        Print the list of peers to stdout.
 
         @param self The object pointer."""
         print("  Peers:")
@@ -342,7 +376,8 @@ class BGPRouter(Router):
             print("      ", peer)
 
     def printDetails(self):
-        """!Print the details to stdout.
+        """!
+        Print the details to stdout.
 
         @param self The object pointer."""
         print(self.name)
@@ -350,7 +385,8 @@ class BGPRouter(Router):
         self.listPeers()
 
     def createBirdConf_BGP(self):
-        """!Get Bird's BGP config.
+        """!
+        Get Bird's BGP config.
 
         @param self The object pointer.
         @returns str Part of bird.conf."""
@@ -371,7 +407,8 @@ class BGPRouter(Router):
     # From the AS object, get the list of BGP routers (names) for this AS
     # Add each of them (except itself) as a IBGP peer
     def createBirdConf_IBGP(self):
-        """!Get Bird's IBGP config.
+        """!
+        Get Bird's IBGP config.
 
         @param self The object pointer.
         @returns str Part of bird.conf."""
