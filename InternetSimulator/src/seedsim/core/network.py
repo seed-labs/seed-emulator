@@ -1,6 +1,8 @@
 from ipaddress import IPv4Network
 from seedsim.SimObject import SimObject
 from seedsim.core.enums import NetworkType
+from seedsim.core.AddressAssignmentConstraint import AddressAssignmentConstraint
+from typing import Generator
 
 class Network(SimObject):
     """!
@@ -11,8 +13,13 @@ class Network(SimObject):
     __type: NetworkType
     __prefix: IPv4Network
     __name: str
+    __aac: AddressAssignmentConstraint
 
-    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network):
+    __ix_assigner: Generator[int, None, None] = None
+    __router_assigner: Generator[int, None, None] = None
+    __host_assigner: Generator[int, None, None] = None
+
+    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None):
         """!
         @brief Network constructor.
 
@@ -25,6 +32,7 @@ class Network(SimObject):
         self.__name = name
         self.__type = type
         self.__prefix = prefix
+        self.__aac = aac if aac != None else AddressAssignmentConstraint()
 
     def getName(self) -> str:
         """!
@@ -51,6 +59,11 @@ class Network(SimObject):
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'Network {} ({}): {}\n'.format(self.__name, self.__type, self.__prefix)
+        out += 'Network {} ({}):\n'.format(self.__name, self.__type)
+
+        indent += 4
+        out += ' ' * indent
+        out += 'Prefix: {}\n'.format(self.__prefix)
+        out += self.__aac.print(indent)
 
         return out

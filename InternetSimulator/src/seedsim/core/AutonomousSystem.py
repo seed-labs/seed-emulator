@@ -1,5 +1,6 @@
 from seedsim.SimObject import SimObject
 from seedsim.core.Network import Network, NetworkType
+from seedsim.core.AddressAssignmentConstraint import AddressAssignmentConstraint
 from ipaddress import IPv4Network
 from typing import Generator, Dict
 
@@ -24,7 +25,7 @@ class AutonomousSystem(SimObject):
         self.__asn = asn
         self.__subnet_generator = none if asn > 255 else IPv4Network("10.{}.0.0/16".format(asn)).subnets(new_prefix = 24)
     
-    def createNetwork(self, name: str, prefix: str = "auto") -> Network:
+    def createNetwork(self, name: str, prefix: str = "auto", aac: AddressAssignmentConstraint = None) -> Network:
         """!
         @brief Create a new network.
 
@@ -40,7 +41,7 @@ class AutonomousSystem(SimObject):
         assert prefix != "auto" or self.__asn <= 255, "can't use auto: asn > 255"
 
         network = IPv4Network(prefix) if prefix != "auto" else next(self.__subnet_generator)
-        self.__nets[name] = Network(name, NetworkType.Local, network)
+        self.__nets[name] = Network(name, NetworkType.Local, network, aac)
         return self.__nets[name]
         
     def print(self, indent: int) -> str:
