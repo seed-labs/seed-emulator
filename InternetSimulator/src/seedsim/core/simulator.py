@@ -3,7 +3,7 @@ class Simulator:
     @brief The Simulator class.
     """
 
-    __objects = {}
+    __objects: dict[str, object] = {}
 
     def register(self, name: str, obj: object) -> None:
         """!

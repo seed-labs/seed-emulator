@@ -9,16 +9,28 @@ class Network:
     """
     __type: NetworkType
     __prefix: IPv4Network
+    __name: str
 
-    def __init__(self, type: NetworkType, prefix: IPv4Network):
+    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network):
         """!
         @brief Network constructor.
 
+        @param name name of the network. Note that this is considered a "local"
+        name. Networks can have the same name, as long as they are in different
+        contexts (i.e., different AS).
         @param type type of the network.
         @param prefix prefix of the network.
         """
+        self.__name = name
         self.__type = type
         self.__prefix = prefix
+
+    def getName(self) -> str:
+        """!
+        @brief Get name of this network.
+
+        @returns name.
+        """
 
     def getType(self) -> NetworkType:
         """!
