@@ -21,7 +21,7 @@ class AutonomousSystem():
         """
 
         self.__asn = asn
-        self.__subnet_generator = none if asn > 255 else IPv4Network("10.{}.0.0/16".format(asn))
+        self.__subnet_generator = none if asn > 255 else IPv4Network("10.{}.0.0/16".format(asn)).subnets(new_prefix = 24)
     
     def createNetwork(self, name: str, prefix: str = "auto") -> Network:
         """!
