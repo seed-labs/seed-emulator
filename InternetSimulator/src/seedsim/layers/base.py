@@ -9,7 +9,13 @@ class Base(Layer, SimObject):
     The base layer.
     """
 
-    __ases: Dict[int, AutonomousSystem] = {}
+    __ases: Dict[int, AutonomousSystem]
+
+    def __init__(self):
+        """!
+        @brief Base layer constructor.
+        """
+        self.__ases = {}
 
     def getName(self) -> str:
         return "Base"

@@ -15,9 +15,9 @@ class Network(SimObject):
     __name: str
     __aac: AddressAssignmentConstraint
 
-    __ix_assigner: Generator[int, None, None] = None
-    __router_assigner: Generator[int, None, None] = None
-    __host_assigner: Generator[int, None, None] = None
+    __ix_assigner: Generator[int, None, None]
+    __router_assigner: Generator[int, None, None]
+    __host_assigner: Generator[int, None, None]
 
     def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None):
         """!

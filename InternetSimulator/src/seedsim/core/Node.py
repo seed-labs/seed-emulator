@@ -12,7 +12,13 @@ class Node(SimObject):
     This class represents a generic node.
     """
 
-    _interfaces: List[Interface] = []
+    _interfaces: List[Interface]
+
+    def __init__(self):
+        """!
+        @brief Node constructor.
+        """
+        self._interfaces = []
 
     def connectNetwork(self, net: Network) -> Interface:
         """!

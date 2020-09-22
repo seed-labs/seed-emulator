@@ -12,7 +12,7 @@ class AutonomousSystem(SimObject):
     """
 
     __asn: int
-    __nets: Dict[str, Network] = {}
+    __nets: Dict[str, Network]
     __subnet_generator: Generator[IPv4Network, None, None]
 
     def __init__(self, asn: int):
@@ -21,7 +21,7 @@ class AutonomousSystem(SimObject):
 
         @param asn ASN for this system.
         """
-
+        self.__nets = {}
         self.__asn = asn
         self.__subnet_generator = none if asn > 255 else IPv4Network("10.{}.0.0/16".format(asn)).subnets(new_prefix = 24)
     
@@ -46,7 +46,7 @@ class AutonomousSystem(SimObject):
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'AutonomousSystem AS{}:\n'.format(self.__asn)
+        out += 'AutonomousSystem as{}:\n'.format(self.__asn)
 
         indent += 4
         out += ' ' * indent

@@ -6,7 +6,13 @@ class Simulator(SimObject):
     @brief The Simulator class.
     """
 
-    __objects: Dict[str, object] = {}
+    __objects: Dict[str, object]
+
+    def __init__(self):
+        """!
+        @brief Simulator constructor.
+        """
+        self.__objects = {}
 
     def register(self, name: str, obj: object) -> None:
         """!
