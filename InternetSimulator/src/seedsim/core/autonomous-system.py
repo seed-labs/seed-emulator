@@ -38,6 +38,7 @@ class AutonomousSystem():
         assert name not in self.__nets, "network {} already exist on as{}".format(name, self.__asn)
         assert prefix != "auto" or self.__asn <= 255, "can't use auto: asn > 255"
 
-        self.__nets[name] = IPv4Network(prefix) if prfix != "auto" else next(self.__subnet_generator)
+        network = IPv4Network(prefix) if prfix != "auto" else next(self.__subnet_generator)
+        self.__nets[name] = Network(name, NetworkType.Local, network)
         return self.__nets[name]
         
