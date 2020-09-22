@@ -1,3 +1,6 @@
+from typing import List
+from seedsim.core.Simulator import Simulator
+
 class Layer:
     """!
     @brief The layer interface.
@@ -14,7 +17,7 @@ class Layer:
         """
         raise NotImplementedError('getName not implemented')
 
-    def getDependencies(self) -> list[str]:
+    def getDependencies(self) -> List[str]:
         """!
         @brief Get a list of names of dependencies layers.
 

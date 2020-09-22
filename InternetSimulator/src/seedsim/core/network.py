@@ -1,5 +1,5 @@
 from ipaddress import IPv4Network
-from .enums import NetworkType
+from seedsim.core.enums import NetworkType
 
 class Network:
     """!

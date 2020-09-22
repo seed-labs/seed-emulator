@@ -1,9 +1,11 @@
+from typing import Dict
+
 class Simulator:
     """!
     @brief The Simulator class.
     """
 
-    __objects: dict[str, object] = {}
+    __objects: Dict[str, object] = {}
 
     def register(self, name: str, obj: object) -> None:
         """!
