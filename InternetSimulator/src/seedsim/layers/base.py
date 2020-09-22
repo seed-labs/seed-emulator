@@ -1,10 +1,10 @@
 from seedsim.layers.Layer import Layer
-from seedsim.core.AutonomousSystem import AutonomousSystem
-from seedsim.core.Simulator import Simulator
-from seedsim.SimObject import SimObject
+from seedsim.core import AutonomousSystem
+from seedsim.core import Simulator
+from seedsim.core import Printable
 from typing import Dict, List
 
-class Base(Layer, SimObject):
+class Base(Layer, Printable):
     """!
     The base layer.
     """

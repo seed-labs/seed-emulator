@@ -1,8 +1,8 @@
-from seedsim.SimObject import SimObject
-from seedsim.core.enums import InterfaceType
+from .Printable import Printable
+from .enums import InterfaceType
 from typing import Generator
 
-class AddressAssignmentConstraint(SimObject):
+class AddressAssignmentConstraint(Printable):
     """!
     AddressAssignmentConstraint class.
 

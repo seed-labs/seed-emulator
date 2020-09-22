@@ -1,10 +1,11 @@
-from seedsim.SimObject import SimObject
-from seedsim.core.Network import Network, NetworkType
-from seedsim.core.AddressAssignmentConstraint import AddressAssignmentConstraint
+from .Printable import Printable
+from .Network import Network
+from .AddressAssignmentConstraint import AddressAssignmentConstraint
+from .enums import NetworkType
 from ipaddress import IPv4Network
 from typing import Generator, Dict
 
-class AutonomousSystem(SimObject):
+class AutonomousSystem(Printable):
     """!
     @brief Autonomous System class. 
 

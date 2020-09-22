@@ -1,4 +1,4 @@
-from seedsim.layers.Base import Base
+from seedsim.layers import Base
 
 base = Base()
 

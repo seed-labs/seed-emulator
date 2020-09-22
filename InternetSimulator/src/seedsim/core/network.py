@@ -1,10 +1,10 @@
 from ipaddress import IPv4Network
-from seedsim.SimObject import SimObject
-from seedsim.core.enums import NetworkType
-from seedsim.core.AddressAssignmentConstraint import AddressAssignmentConstraint
+from .Printable import Printable
+from .enums import NetworkType
+from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from typing import Generator
 
-class Network(SimObject):
+class Network(Printable):
     """!
     @brief The network class.
 

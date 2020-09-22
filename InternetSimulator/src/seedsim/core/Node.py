@@ -1,11 +1,11 @@
-from seedsim.SimObject import SimObject
-from seedsim.core.Network import NetworkType
-from seedsim.core.Interface import Interface
-from seedsim.core.enums import NodeRole
+from .Printable import Printable
+from .Network import Network
+from .Interface import Interface
+from .enums import NodeRole, NetworkType
 from typing import List
 
 
-class Node(SimObject):
+class Node(Printable):
     """!
     @brief Node base class.
 

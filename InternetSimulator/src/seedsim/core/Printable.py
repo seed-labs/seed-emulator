@@ -1,6 +1,8 @@
-class SimObject:
+class Printable:
     """!
-    @brief parent class of all seedsim classes
+    @brief Printable class.
+
+    Implement this class for indentable print.
     """
 
     def print(self, indentation: int = 0) -> str:

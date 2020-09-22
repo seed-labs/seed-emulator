@@ -1,7 +1,7 @@
-from seedsim.SimObject import SimObject
-from seedsim.core.enums import InterfaceType
+from .Printable import Printable
+from .enums import InterfaceType
 
-class Interface(SimObject):
+class Interface(Printable):
     """!
     @brief Interface class.
 
