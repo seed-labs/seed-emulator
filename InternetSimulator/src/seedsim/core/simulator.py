@@ -1,6 +1,7 @@
 from typing import Dict
+from seedsim.SimObject import SimObject
 
-class Simulator:
+class Simulator(SimObject):
     """!
     @brief The Simulator class.
     """

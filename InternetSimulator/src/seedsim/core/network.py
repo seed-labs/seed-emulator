@@ -1,7 +1,8 @@
 from ipaddress import IPv4Network
+from seedsim.SimObject import SimObject
 from seedsim.core.enums import NetworkType
 
-class Network:
+class Network(SimObject):
     """!
     @brief The network class.
 
@@ -47,3 +48,9 @@ class Network:
         @returns prefix.
         """
         return self.__prefix
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'Network {} ({}): {}\n'.format(self.__name, self.__type, self.__prefix)
+
+        return out

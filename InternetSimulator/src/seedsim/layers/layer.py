@@ -1,7 +1,8 @@
 from typing import List
 from seedsim.core.Simulator import Simulator
+from seedsim.SimObject import SimObject
 
-class Layer:
+class Layer(SimObject):
     """!
     @brief The layer interface.
     """

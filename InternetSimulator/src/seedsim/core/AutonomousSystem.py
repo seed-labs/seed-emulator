@@ -1,8 +1,9 @@
+from seedsim.SimObject import SimObject
 from seedsim.core.Network import Network, NetworkType
 from ipaddress import IPv4Network
 from typing import Generator, Dict
 
-class AutonomousSystem():
+class AutonomousSystem(SimObject):
     """!
     @brief Autonomous System class. 
 
@@ -42,3 +43,15 @@ class AutonomousSystem():
         self.__nets[name] = Network(name, NetworkType.Local, network)
         return self.__nets[name]
         
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'AutonomousSystem AS{}:\n'.format(self.__asn)
+
+        indent += 4
+        out += ' ' * indent
+        out += 'Networks:\n'
+
+        for net in self.__nets.values():
+            out += net.print(indent + 4)
+
+        return out
