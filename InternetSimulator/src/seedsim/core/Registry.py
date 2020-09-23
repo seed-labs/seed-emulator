@@ -1,7 +1,7 @@
 from typing import Dict, Tuple, List
 from .Printable import Printable
 
-class Registry:
+class Registry(Printable):
     """!
     @brief The Registry class.
 
@@ -68,6 +68,16 @@ class Registry:
             if s == scope: rslt.append(obj)
 
         return rslt
+    
+    def print(self, indent: int):
+        out = (' ' * indent) + 'Registry:\n'
+        indent += 4
+        for keys, val in self.__objects.items():
+            [scope, type, name] = keys
+            out += (' ' * indent) + 'Object {}/{}/{}:\n'.format(scope, type, name)
+            out += val.print(indent + 4)
+
+        return out
 
 class ScopedRegistry(Registry):
     """!
