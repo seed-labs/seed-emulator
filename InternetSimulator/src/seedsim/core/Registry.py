@@ -12,7 +12,7 @@ class Registry:
 
     def register(self, scope: str, type: str, name: str, obj: object) -> object:
         """!
-        @brief Register an object with the internet.
+        @brief Register an object.
 
         @param scope scope of the object (e.g., asn).
         @param type type of the object (e.g., net/node)
@@ -68,3 +68,54 @@ class Registry:
             if s == scope: rslt.append(obj)
 
         return rslt
+
+class ScopedRegistry(Registry):
+    """!
+    @brief Scoped Registry class.
+
+    Scoped wrapper for Registry class.
+    """
+
+    __reg = Registry()
+    __scope: str
+
+    def __init__(self, scope: str):
+        """!
+        @brief Scoped Registry ctor.
+
+        @param scope scope to bind to.
+        """
+        self.__scope = scope
+
+    def register(self, type: str, name: str, obj: object) -> object:
+        """!
+        @brief Register an object.
+
+        @param type type of the object (e.g., net/node)
+        @param name name of the object.
+        @param obj target object.
+        @returns registered object
+        @throws AssertionError if name exists.
+        """
+        return self.__reg.register(self.__scope, type, name, obj)
+
+    def get(self, type: str, name: str) -> object:
+        """!
+        @brief Retrive an object with name.
+
+        @param type type of the object (e.g., net/node)
+        @param name name of the object.
+        @throws AssertionError if name does not exist.
+        @returns object.
+        """
+        return self.__reg.get(self.__scope, type, name)
+
+    def getByType(self, type: str) -> List[object]:
+        """!
+        @brief Retrive objects with type.
+
+        @param scope scope of the object (e.g., asn).
+        @param type type of the object (e.g., net/node)
+        @returns objects.
+        """
+        return self.__reg.getByType(self.__scope, type)

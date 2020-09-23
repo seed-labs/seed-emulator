@@ -1,7 +1,7 @@
 from .Printable import Printable
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
-from .Registry import Registry
+from .Registry import ScopedRegistry
 from .enums import NetworkType
 from ipaddress import IPv4Network
 from typing import Generator, Dict
@@ -15,7 +15,7 @@ class AutonomousSystem(Printable):
 
     __asn: int
     __subnet_generator: Generator[IPv4Network, None, None]
-    __reg = Registry()
+    __reg: ScopedRegistry
 
     def __init__(self, asn: int):
         """!
@@ -23,9 +23,9 @@ class AutonomousSystem(Printable):
 
         @param asn ASN for this system.
         """
-        self. = {}
         self.__asn = asn
-        self.__subnet_generator = none if asn > 255 else IPv4Network("10.{}.0.0/16".format(asn)).subnets(new_prefix = 24)
+        self.__reg = ScopedRegistry(str(asn))
+        self.__subnet_generator = None if asn > 255 else IPv4Network("10.{}.0.0/16".format(asn)).subnets(new_prefix = 24)
     
     def createNetwork(self, name: str, prefix: str = "auto", aac: AddressAssignmentConstraint = None) -> Network:
         """!
@@ -40,7 +40,7 @@ class AutonomousSystem(Printable):
         assert prefix != "auto" or self.__asn <= 255, "can't use auto: asn > 255"
 
         network = IPv4Network(prefix) if prefix != "auto" else next(self.__subnet_generator)
-        return self.__reg.register(str(self.__asn), 'net', name, Network(name, NetworkType.Local, network, aac))
+        return self.__reg.register('net', name, Network(name, NetworkType.Local, network, aac))
 
     def getNetwork(self, name: str) -> NetworkType:
         """!
@@ -49,7 +49,7 @@ class AutonomousSystem(Printable):
         @param name name of the new network.
         @returns Network.
         """
-        return self.__reg.get(str(self.__asn), 'net', name)
+        return self.__reg.get('net', name)
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -59,7 +59,7 @@ class AutonomousSystem(Printable):
         out += ' ' * indent
         out += 'Networks:\n'
 
-        for net in self.__reg.getByType(str(self.__asn), 'net'):
+        for net in self.__reg.getByType('net'):
             out += net.print(indent + 4)
 
         return out
