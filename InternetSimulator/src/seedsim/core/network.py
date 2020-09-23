@@ -1,10 +1,11 @@
 from ipaddress import IPv4Network, IPv4Address
 from .Printable import Printable
 from .enums import NetworkType, InterfaceType
+from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from typing import Generator, Dict
 
-class Network(Printable):
+class Network(Printable, Registrable):
     """!
     @brief The network class.
 

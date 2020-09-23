@@ -1,7 +1,7 @@
 from typing import List
-from seedsim.core import Printable
+from seedsim.core import Printable, Registrable
 
-class Layer(Printable):
+class Layer(Printable, Registrable):
     """!
     @brief The layer interface.
     """

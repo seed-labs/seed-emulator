@@ -1,6 +1,9 @@
 from typing import Dict, Tuple, List
 from .Printable import Printable
 
+class Registrable(object):
+    pass
+
 class Registry(Printable):
     """!
     @brief The Registry class.
@@ -8,9 +11,9 @@ class Registry(Printable):
     Registry is the global container for all objects in the simulator.
     """
 
-    __objects: Dict[Tuple[str, str, str], object] = {}
+    __objects: Dict[Tuple[str, str, str], Registrable] = {}
 
-    def register(self, scope: str, type: str, name: str, obj: object) -> object:
+    def register(self, scope: str, type: str, name: str, obj: Registrable) -> Registrable:
         """!
         @brief Register an object.
 
@@ -25,7 +28,7 @@ class Registry(Printable):
         self.__objects[(scope, type, name)] = obj
         return self.__objects[(scope, type, name)]
 
-    def get(self, scope: str, type: str, name: str) -> object:
+    def get(self, scope: str, type: str, name: str) -> Registrable:
         """!
         @brief Retrive an object with name.
 
@@ -38,7 +41,7 @@ class Registry(Printable):
         assert (scope, type, name) in self.__objects, 'object with name {} does not exist.'.format(name)
         return self.__objects[(scope, type, name)]
 
-    def getByType(self, scope: str, type: str) -> List[object]:
+    def getByType(self, scope: str, type: str) -> List[Registrable]:
         """!
         @brief Retrive objects with type.
 
@@ -46,7 +49,7 @@ class Registry(Printable):
         @param type type of the object (e.g., net/node)
         @returns objects.
         """
-        rslt: List[object] = []
+        rslt: List[Registrable] = []
 
         for key, obj in self.__objects.items():
             (s, t, _) = key
@@ -54,14 +57,14 @@ class Registry(Printable):
 
         return rslt
 
-    def getByScope(self, scope: str) -> List[object]:
+    def getByScope(self, scope: str) -> List[Registrable]:
         """!
         @brief Retrive objects with scope.
 
         @param scope scope of the object (e.g., asn).
         @returns objects.
         """
-        rslt: List[object] = []
+        rslt: List[Registrable] = []
 
         for key, obj in self.__objects.items():
             (s, _, _) = key
@@ -97,7 +100,7 @@ class ScopedRegistry(Registry):
         """
         self.__scope = scope
 
-    def register(self, type: str, name: str, obj: object) -> object:
+    def register(self, type: str, name: str, obj: Registrable) -> Registrable:
         """!
         @brief Register an object.
 
@@ -120,7 +123,7 @@ class ScopedRegistry(Registry):
         """
         return self.__reg.get(self.__scope, type, name)
 
-    def getByType(self, type: str) -> List[object]:
+    def getByType(self, type: str) -> List[Registrable]:
         """!
         @brief Retrive objects with type.
 

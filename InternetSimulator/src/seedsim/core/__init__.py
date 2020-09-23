@@ -6,4 +6,4 @@ from .InternetExchange import InternetExchange
 from .Network import Network
 from .Node import Node
 from .Printable import Printable
-from .Registry import Registry
+from .Registry import Registry, Registrable

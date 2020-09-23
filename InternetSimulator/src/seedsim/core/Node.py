@@ -3,11 +3,10 @@ from .Network import Network
 from .Interface import Interface
 from .File import File
 from .enums import NodeRole, NetworkType
-from .Registry import ScopedRegistry
+from .Registry import ScopedRegistry, Registrable
 from typing import List
 
-
-class Node(Printable):
+class Node(Printable, Registrable):
     """!
     @brief Node base class.
 
@@ -18,16 +17,17 @@ class Node(Printable):
     __role: NodeRole
     __reg: ScopedRegistry
 
-    def __init__(self, role: NodeRole, asn: int):
+    def __init__(self, role: NodeRole, asn: int, scope: str = None):
         """!
         @brief Node constructor.
 
         @param role role of this node.
         @param asn network that this node belongs to.
+        @param scope scope of the node, if not asn.
         """
         self.__interfaces = []
         self.__asn = asn
-        self.__reg = ScopedRegistry(str(asn))
+        self.__reg = ScopedRegistry(scope if scope != None else str(asn))
 
     def joinNetwork(self, net: Network, address: str = "auto") -> Interface:
         """!
