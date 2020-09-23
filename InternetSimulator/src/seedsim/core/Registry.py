@@ -2,6 +2,11 @@ from typing import Dict, Tuple, List
 from .Printable import Printable
 
 class Registrable(object):
+    """!
+    @brief The Registerable base class.
+
+    Base class for all Registrable objects.
+    """
     pass
 
 class Registry(Printable):

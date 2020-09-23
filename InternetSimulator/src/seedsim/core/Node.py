@@ -1,10 +1,72 @@
 from .Printable import Printable
 from .Network import Network
-from .Interface import Interface
-from .File import File
-from .enums import NodeRole, NetworkType
+from .enums import NodeRole, NetworkType, InterfaceType
 from .Registry import ScopedRegistry, Registrable
 from typing import List
+
+class File(Printable):
+    """!
+    @brief File class.
+
+    This class represents a file on a node.
+    """
+
+    __content: str
+    __path: str
+
+    def __init__(self, path: str, content: str):
+        """!
+        @brief File constructor.
+
+        Put a file onto a node.
+
+        @param path path of the file.
+        @param content content of the file.
+        """
+
+    def setPath(self, path: str):
+        """!
+        @brief Update file path.
+
+        @param path new path.
+        """
+        self.__path = path
+
+    def setContent(self, content: str):
+        """!
+        @brief Update file content.
+
+        @param path new path.
+        """
+        self.__content = content
+
+    def get(self) -> (str, str):
+        """!
+        @brief Get file path and content.
+
+        @returns a tuple where the first element is path and second element is 
+        content
+        """
+        return (self.__path, self.__content)
+
+class Interface(Printable):
+    """!
+    @brief Interface class.
+
+    This class represents a network interface card.
+    """
+
+    def getType(self) -> InterfaceType:
+        """!
+        @brief Get type of this interface.
+
+        This will be used in some automation
+        cases. For example, AddressAssignmentConstraint will use the node type
+        to decide how to assign IP addresses to nodes.
+
+        @returns interface type
+        """
+        raise NotImplementedError("getType not implemented.")
 
 class Node(Printable, Registrable):
     """!
