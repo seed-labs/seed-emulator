@@ -16,7 +16,6 @@ class Network(Printable):
     __aac: AddressAssignmentConstraint
     __assigners: Dict[InterfaceType, Generator[int, None, None]]
 
-
     def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None):
         """!
         @brief Network constructor.

@@ -13,8 +13,6 @@ class Node(Printable):
     This class represents a generic node.
     """
 
-    _interfaces: List[Interface]
-    __files: List[File]
     __role: NodeRole
 
     def __init__(self, role: NodeRole):
@@ -26,6 +24,12 @@ class Node(Printable):
         self.__interfaces = []
 
     def connectNetwork(self, net: Network, address: str = "auto") -> Interface:
+        """!
+        @brief Connect node to a network.
+        """
+        pass
+
+    def connectNetworkByName(self, netname: str, address: str = "auto") -> Interface:
         """!
         @brief Connect node to a network.
         """

@@ -1,7 +1,5 @@
 from seedsim.layers.Layer import Layer
-from seedsim.core import AutonomousSystem
-from seedsim.core import Simulator
-from seedsim.core import Printable
+from seedsim.core import AutonomousSystem, Printable, Registry
 from typing import Dict, List
 
 class Base(Layer):
@@ -10,6 +8,7 @@ class Base(Layer):
     """
 
     __ases: Dict[int, AutonomousSystem]
+    __reg = Registry()
 
     def __init__(self):
         """!
@@ -23,7 +22,7 @@ class Base(Layer):
     def getDependencies(self) -> List[str]:
         return []
 
-    def onRender(self, simulator: Simulator) -> None:
+    def onRender(self) -> None:
         pass
 
     def createAutonomousSystem(self, asn: int) -> AutonomousSystem:

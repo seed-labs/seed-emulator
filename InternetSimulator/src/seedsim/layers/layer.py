@@ -1,5 +1,4 @@
 from typing import List
-from seedsim.core import Simulator
 from seedsim.core import Printable
 
 class Layer(Printable):
@@ -26,7 +25,7 @@ class Layer(Printable):
         """
         raise NotImplementedError('getDependencies not implemented')
 
-    def onRender(self, simulator: Simulator) -> None:
+    def onRender(self) -> None:
         """!
         @brief Handle rendering.
         """
