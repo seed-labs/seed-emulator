@@ -3,6 +3,7 @@ from .Network import Network
 from .Interface import Interface
 from .File import File
 from .enums import NodeRole, NetworkType
+from .Registry import ScopedRegistry
 from typing import List
 
 
@@ -13,23 +14,28 @@ class Node(Printable):
     This class represents a generic node.
     """
 
+    __asn: int
     __role: NodeRole
+    __reg: ScopedRegistry
 
-    def __init__(self, role: NodeRole):
+    def __init__(self, role: NodeRole, asn: int):
         """!
         @brief Node constructor.
 
         @param role role of this node.
+        @param asn network that this node belongs to.
         """
         self.__interfaces = []
+        self.__asn = asn
+        self.__reg = ScopedRegistry(str(asn))
 
-    def connectNetwork(self, net: Network, address: str = "auto") -> Interface:
+    def joinNetwork(self, net: Network, address: str = "auto") -> Interface:
         """!
         @brief Connect node to a network.
         """
         pass
 
-    def connectNetworkByName(self, netname: str, address: str = "auto") -> Interface:
+    def joinNetworkByName(self, netname: str, address: str = "auto") -> Interface:
         """!
         @brief Connect node to a network.
         """

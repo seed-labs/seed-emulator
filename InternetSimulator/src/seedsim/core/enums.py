@@ -27,6 +27,9 @@ class NodeRole(Enum):
     ## Router node.
     Router = "Router"
 
+    ## Route served node.
+    RouteServer = "Route Server"
+
 class InterfaceType(Enum):
     """!
     @brief NIC types enum.
