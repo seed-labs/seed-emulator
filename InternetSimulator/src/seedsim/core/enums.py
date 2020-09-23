@@ -33,10 +33,10 @@ class InterfaceType(Enum):
     """
 
     ## Interface connected to IX.
-    Ix = "Internet Exchange Interface"
+    InternetExchange = "Internet Exchange Interface"
 
     ## Interface connected to internal transit network.
-    Internal = "Internal Network Interface"
+    Local = "Internal Network Interface"
 
     ## Interface connected to hosting network.
     Host = "Content network Interface"

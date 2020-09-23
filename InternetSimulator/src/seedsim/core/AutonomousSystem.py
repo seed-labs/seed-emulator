@@ -7,7 +7,7 @@ from typing import Generator, Dict
 
 class AutonomousSystem(Printable):
     """!
-    @brief Autonomous System class. 
+    @brief AutonomousSystem class. 
 
     This class represents an autonomous system.
     """

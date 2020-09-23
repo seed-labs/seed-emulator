@@ -4,7 +4,7 @@ from seedsim.core import Simulator
 from seedsim.core import Printable
 from typing import Dict, List
 
-class Base(Layer, Printable):
+class Base(Layer):
     """!
     The base layer.
     """
