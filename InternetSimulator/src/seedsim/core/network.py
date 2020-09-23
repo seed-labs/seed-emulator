@@ -1,8 +1,8 @@
-from ipaddress import IPv4Network
+from ipaddress import IPv4Network, IPv4Address
 from .Printable import Printable
-from .enums import NetworkType
+from .enums import NetworkType, InterfaceType
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
-from typing import Generator
+from typing import Generator, Dict
 
 class Network(Printable):
     """!
@@ -14,10 +14,8 @@ class Network(Printable):
     __prefix: IPv4Network
     __name: str
     __aac: AddressAssignmentConstraint
+    __assigners: Dict[InterfaceType, Generator[int, None, None]]
 
-    __ix_assigner: Generator[int, None, None]
-    __router_assigner: Generator[int, None, None]
-    __host_assigner: Generator[int, None, None]
 
     def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None):
         """!
@@ -33,6 +31,11 @@ class Network(Printable):
         self.__type = type
         self.__prefix = prefix
         self.__aac = aac if aac != None else AddressAssignmentConstraint()
+        self.__assigners = {}
+
+        if type != NetworkType.InternetExchange:
+            self.__assigners[InterfaceType.Host] = self.__aac.getOffsetGenerator(InterfaceType.Host)
+            self.__assigners[InterfaceType.Local] = self.__aac.getOffsetGenerator(InterfaceType.Local)
 
     def getName(self) -> str:
         """!
@@ -56,6 +59,22 @@ class Network(Printable):
         @returns prefix.
         """
         return self.__prefix
+
+    def assign(self, type: InterfaceType, asn: int = -1) -> IPv4Address:
+        """!
+        @brief Assign IP for interface.
+
+        @param type type of the interface.
+        @param asn optional. If interface type is InternetExchange, the asn for
+        IP address mapping.
+        @throws AssertionError if try to assign IX IP as non-IX network, or try
+        to assign IP to non-IX interface on IX network
+        """
+        assert not (type == InterfaceType.InternetExchange and self.__type != NetworkType.InternetExchange), 'trying to assign IX address from non-IX network' 
+        assert not (type != InterfaceType.InternetExchange and self.__type == NetworkType.InternetExchange), 'trying to assign from non-IX netwotk to IX interface'
+
+        if type == InterfaceType.InternetExchange: return self.__prefix[self.__aac.mapIxAddress(asn)]
+        return self.__prefix[next(self.__assigners[type])]
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

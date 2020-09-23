@@ -1,5 +1,5 @@
 from .Printable import Printable
-from .enums import InterfaceType
+from .enums import NetworkType, InterfaceType
 from typing import Generator
 
 class AddressAssignmentConstraint(Printable):
@@ -10,29 +10,39 @@ class AddressAssignmentConstraint(Printable):
     Derive from this class to change the default behavior.
     """
 
-    def __range(self, a: int, b: int):
-        for n in range(a, b): yield n
+    def __range(self, a: int, b: int, s: int = 1):
+        for n in range(a, b, s): yield n
 
     def __always(self, a: int):
         while True: yield a
 
-    def getOffsetGenerator(self, type: InterfaceType, asn: int = 0) -> Generator[int, None, None]:
+    def getOffsetGenerator(self, type: InterfaceType) -> Generator[int, None, None]:
         """!
         @brief Get IP offset generator for a type of interface.
 
         @todo Handle pure-internal routers.
 
-        @param type type of interface.
+        @param type type of the interface.
         @param asn optional. ASN of this node.
         @returns An int generator that generates IP address offset.
-        @throws  AssertionError if asn is invalud for the IX type port.
+        @throws ValueError if try to get generator of IX interface.
         """
 
-        if role == InterfaceType.Host: return self.__range(71, 99)
-        if role == InterfaceType.Internal: return self.__range(254, 200)
-        if role == InterfaceType.Ix:
-            assert asn > 1, "defualt offset generator for IX needs asn to be > 1"
-            return self.__always(asn)
+        if type == InterfaceType.Host: return self.__range(71, 99)
+        if type == InterfaceType.Local: return self.__range(254, 200, -1)
+
+        raise ValueError("IX IP assigment must done with mapIxAddress().")
+
+    def mapIxAddress(self, asn: int) -> int:
+        """!
+        @brief Map ASN to IP address in IX peering LAN.
+
+        @param asn ASN of IX participant.
+        @returns offset.
+        @throws AssertionError if can't map ASN to IP address.
+        """
+        assert asn >= 2 and asn <= 254, "can't map ASN {} to IX address.".format(asn)
+        return asn
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
