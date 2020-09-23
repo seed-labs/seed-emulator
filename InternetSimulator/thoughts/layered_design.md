@@ -1,5 +1,5 @@
 
-# Thoughts on Layered Design
+# Thoughts on Layered Design {#Layered}
 
 
 **Inspiration**. I have been using Adobe Photoshop and Premiere quite a lot (for my lecture videos). I really like the layer idea in their software. Basically, you can build each image/video as layer, and you can have many layers. When you render them, you combine all the layers together to produce the final video or images. When you modify them, you can modify each individual layers. These layer not only make modification easier, they also conceptually separate the components. You can turn them on and off easily. I am thinking about use a similar approach. 
