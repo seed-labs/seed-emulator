@@ -1,4 +1,5 @@
 from seedsim.layers import Base
+from seedsim.core import Registry
 
 base = Base()
 
@@ -10,3 +11,4 @@ as151_net0 = as151.createNetwork("net0")
 as151_net1 = as151.createNetwork("net1")
 
 print(base)
+print(Registry())
