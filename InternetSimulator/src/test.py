@@ -23,6 +23,7 @@ as151_h1.joinNetworkByName("net0")
 
 ebgp = Ebgp()
 ebgp.addPrivatePeering(100, 150, 151)
+ebgp.addRsPeer(100, 150)
 
 r = Renderer()
 

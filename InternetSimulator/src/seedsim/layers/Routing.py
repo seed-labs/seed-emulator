@@ -8,6 +8,9 @@ class Routing(Layer):
 
     This layer provides routing support for routers. i.e., this layer install
     BIRD on nodes and allow BGP/OSPF to work.
+
+    This layer will also setup direct protocol for host networks, kernel
+    protocol, etc.
     """
 
     __reg: Registry = Registry()
