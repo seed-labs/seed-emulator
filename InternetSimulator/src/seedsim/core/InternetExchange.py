@@ -1,9 +1,10 @@
 from .Printable import Printable
 from .Registry import ScopedRegistry
 from .enums import NetworkType, NodeRole
-from .Node import Node
+from .Node import Node, Interface
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
+from ipaddress import IPv4Network
 
 class InternetExchange(Printable):
     """!
@@ -16,6 +17,7 @@ class InternetExchange(Printable):
     __reg: ScopedRegistry
     __net: Network
     __rs: Node
+    __rsif: Interface
 
     def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None):
         """!
@@ -29,9 +31,10 @@ class InternetExchange(Printable):
 
         assert prefix != "auto" or self.__id <= 255, "can't use auto: id > 255"
         network = IPv4Network(prefix) if prefix != "auto" else IPv4Network("10.{}.0.0/24".format(self.__id))
-        self.__rs = self.__reg.register('rs', str(self.__id), Node(NodeRole.RouteServer, self.__id))
-        self.__net = self.__reg.register('net', str(self.__id), Network(str(self.__id), NetworkType.InternetExchange, network, aac))
-        rs_node.joinNetwork(self.__net)
+        name = str(self.__id)
+        self.__rs = self.__reg.register('rs', name, Node(name, NodeRole.RouteServer, self.__id))
+        self.__net = self.__reg.register('net', name, Network(name, NetworkType.InternetExchange, network, aac))
+        self.__rsif = self.__rs.joinNetwork(self.__net)
 
     def getPeeringLan(self) -> Network:
         """!
@@ -48,3 +51,16 @@ class InternetExchange(Printable):
         @returns RS node.
         """
         return self.__rs
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'InternetExchange {}:\n'.format(self.__id)
+
+        indent += 4
+        out += ' ' * indent
+        out += 'Peering LAN Prefix: {}\n'.format(self.__net.getPrefix())
+
+        out += ' ' * indent
+        out += 'RS Address: {}\n'.format(self.__rsif.getAddress())
+
+        return out

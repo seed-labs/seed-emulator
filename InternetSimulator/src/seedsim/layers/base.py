@@ -1,5 +1,5 @@
 from seedsim.layers.Layer import Layer
-from seedsim.core import AutonomousSystem, Printable, Registry
+from seedsim.core import AutonomousSystem, InternetExchange, Printable, Registry, AddressAssignmentConstraint
 from typing import Dict, List
 
 class Base(Layer):
@@ -8,6 +8,7 @@ class Base(Layer):
     """
 
     __ases: Dict[int, AutonomousSystem]
+    __ixes: Dict[int, InternetExchange]
     __reg = Registry()
 
     def __init__(self):
@@ -15,6 +16,7 @@ class Base(Layer):
         @brief Base layer constructor.
         """
         self.__ases = {}
+        self.__ixes = {}
 
     def getName(self) -> str:
         return "Base"
@@ -37,6 +39,20 @@ class Base(Layer):
         self.__ases[asn] = AutonomousSystem(asn)
         return self.__ases[asn]
 
+    def createInternetExchange(self, asn: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None) -> InternetExchange:
+        """!
+        @brief Create a new InternetExchange.
+
+        @param asn ASN of the new IX.
+        @param prefix (optional) prefix of the IX peering LAN.
+        @param aac (optional) Address assigment constraint.
+        @returns created IX.
+        @throws AssertionError if IX exists.
+        """
+        assert asn not in self.__ases, "ix{} already exist.".format(asn)
+        self.__ixes[asn] = InternetExchange(asn, prefix, aac)
+        return self.__ixes[asn]
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'BaseLayer:\n'
@@ -45,6 +61,11 @@ class Base(Layer):
         out += ' ' * indent
         out += 'AutonomousSystems:\n'
         for _as in self.__ases.values():
+            out += _as.print(indent + 4)
+
+        out += ' ' * indent
+        out += 'InternetExchanges:\n'
+        for _as in self.__ixes.values():
             out += _as.print(indent + 4)
 
         return out
