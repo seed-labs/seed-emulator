@@ -1,5 +1,6 @@
 from seedsim.layers import Base, Ebgp
 from seedsim.renderer import Renderer
+from seedsim.core import Registry
 
 base = Base()
 
@@ -28,10 +29,11 @@ r = Renderer()
 r.addLayer(ebgp)
 r.addLayer(base)
 
-
-print("Layers ========")
+print("Layers =================")
 print(r)
 
-print("Renderer output ========")
-
+print("\n\n\n\nRenderer output ========")
 r.render()
+
+print("\n\n\n\nRegistry ===============")
+print(Registry())

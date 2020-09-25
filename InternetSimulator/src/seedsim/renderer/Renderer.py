@@ -1,4 +1,4 @@
-from seedsim.core import Printable
+from seedsim.core import Printable, ScopedRegistry
 from seedsim.layers import Layer
 from typing import List, Tuple, Dict
 
@@ -8,6 +8,7 @@ class Renderer(Printable):
     """
 
     __layers: Dict[str, Tuple[Layer, bool]]
+    __reg = ScopedRegistry('seedsim')
 
     def __init__(self):
         """!
@@ -26,6 +27,7 @@ class Renderer(Printable):
         lname = layer.getName()
         assert lname not in self.__layers, 'layer {} already added.'.format(lname)
         self.__layers[lname] = (layer, False)
+        self.__reg.register('layer', lname, layer)
 
     def __render(self, layerName: str):
         """!
