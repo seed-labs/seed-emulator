@@ -172,6 +172,22 @@ class Node(Printable, Registrable):
         
         assert False, 'No such network: {}'.format(netname)
 
+    def getName(self) -> str:
+        """!
+        @brief Get node name.
+
+        @returns name.
+        """
+        return self.__name
+
+    def getAsn(self) -> int:
+        """!
+        @brief Get node parent AS ASN.
+
+        @returns asm.
+        """
+        return self.__asn
+
     def getRole(self) -> NodeRole:
         """!
         @brief Get role of current node.

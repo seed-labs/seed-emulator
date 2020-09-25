@@ -1,6 +1,20 @@
 from .Layer import Layer
 from seedsim.core import Registry, ScopedRegistry, Node, Interface, Network
 from typing import List
+from functools import partial
+
+def addProtocol(node: Node, protocol: str, name: str, body: str):
+    """!
+    @brief Add a new protocol to BIRD on the given node.
+
+    This method is to be injected in to router node class objects.
+
+    @param node node to operator on.
+    @param protocol protocol type. (e.g., bgp, ospf)
+    @param name protocol name.
+    @param body protocol body.
+    """
+    print("===== RoutingLayer: TODO: Handle API: do addProtocol {} {} on Node {}@as{}.".format(protocol, name, node.getName(), node.getAsn()))
 
 class Routing(Layer):
     """!
@@ -23,9 +37,11 @@ class Routing(Layer):
         for ((scope, type, name), obj) in self.__reg.getAll().items():
             if type == 'rs':
                 print("===== RoutingLayer: TODO: Bootstrap bird.conf for RS {}".format(name))
+                obj.addProtocol = partial(addProtocol, obj) # "inject" the method
                 
             if type == 'rnode':
                 print("===== RoutingLayer: TODO: Bootstrap bird.conf for AS{} router {}".format(scope, name))
+                obj.addProtocol = partial(addProtocol, obj) # "inject" the method
 
             if type == 'hnode':
                 hifaces: List[Interface] = obj.getInterfaces()
@@ -44,7 +60,6 @@ class Routing(Layer):
                 
                 assert rif != None, 'Host {} in as{} in network {}: no router'.format(name, scope, hnet.getName())
                 print("===== RoutingLayer: TODO: Set default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
-
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

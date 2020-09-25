@@ -77,6 +77,8 @@ class Ebgp(Layer):
 
             assert p_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(a, ix)
             print("===== EbgpLayer: TODO: add to bird.conf: {} as {} (RS) <-> {} as {}".format(rs_if.getAddress(), ix, p_ixif.getAddress(), peer))
+            ix_rs.addProtocol('bgp', 'as{}'.format(peer), '') # addProtocol method is "injected" by routing layer
+            p_ixnode.addProtocol('bgp', 'rs{}'.format(ix), '')
 
         for (ix, a, b) in self.__peerings:
             ix_reg = ScopedRegistry('ix')
@@ -112,6 +114,8 @@ class Ebgp(Layer):
             assert b_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(b, ix)
 
             print("===== EbgpLayer: TODO: add to bird.conf: {} as {} <-> {} as {}".format(a_ixif.getAddress(), a, b_ixif.getAddress(), b))
+            a_ixnode.addProtocol('bgp', 'as{}'.format(b), '') # addProtocol method is "injected" by routing layer
+            b_ixnode.addProtocol('bgp', 'rs{}'.format(a), '')
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
