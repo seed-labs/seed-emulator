@@ -18,7 +18,7 @@ class Renderer(Printable):
 
     def addLayer(self, layer: Layer):
         """!
-        @bref Add a layer.
+        @brief Add a layer.
 
         @param layer layer to add.
         @throws AssertionError if layer already exist.
