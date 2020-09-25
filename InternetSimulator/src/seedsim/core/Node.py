@@ -3,7 +3,7 @@ from .Network import Network
 from .enums import NodeRole, NetworkType
 from .Registry import Registry, ScopedRegistry, Registrable
 from ipaddress import IPv4Address
-from typing import List
+from typing import List, Dict
 
 class File(Printable):
     """!
@@ -15,7 +15,7 @@ class File(Printable):
     __content: str
     __path: str
 
-    def __init__(self, path: str, content: str):
+    def __init__(self, path: str, content: str = ''):
         """!
         @brief File constructor.
 
@@ -24,6 +24,8 @@ class File(Printable):
         @param path path of the file.
         @param content content of the file.
         """
+        self.__path = path
+        self.__content = content
 
     def setPath(self, path: str):
         """!
@@ -41,6 +43,14 @@ class File(Printable):
         """
         self.__content = content
 
+    def appendContent(self, content: str):
+        """!
+        @brief Append to file.
+
+        @param content content.
+        """
+        self.__content += content
+
     def get(self) -> (str, str):
         """!
         @brief Get file path and content.
@@ -49,6 +59,17 @@ class File(Printable):
         content
         """
         return (self.__path, self.__content)
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += "{}:\n".format(self.__path)
+        indent += 4
+        for line in self.__content.splitlines():
+            out += ' ' * indent
+            out += '> '
+            out += line
+            out += '\n'
+        return out
 
 class Interface(Printable):
     """!
@@ -121,6 +142,7 @@ class Node(Printable, Registrable):
     __reg: ScopedRegistry
     __greg = Registry()
     __interfaces: List[Interface]
+    __files: Dict[str, File]
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -132,6 +154,7 @@ class Node(Printable, Registrable):
         @param scope scope of the node, if not asn.
         """
         self.__interfaces = []
+        self.__files = {}
         self.__asn = asn
         self.__reg = ScopedRegistry(scope if scope != None else str(asn))
         self.__role = role
@@ -203,8 +226,11 @@ class Node(Printable, Registrable):
         @brief Get a file object, and create if not exist.
 
         @param path file path.
+        @returns file.
         """
-        pass
+        if path in self.__files: return self.__files[path]
+        self.__files[path] = File(path)
+        return self.__files[path]
 
     def setFile(self, path: str, content: str):
         """!
@@ -214,7 +240,7 @@ class Node(Printable, Registrable):
         override if already exist.
         @param content file content.
         """
-        pass
+        self.getFile(path).setContent(content)
 
     def appendFile(self, path: str, content: str):
         """!
@@ -223,7 +249,7 @@ class Node(Printable, Registrable):
         @param path path of the file. Will be created if not exist.
         @param content content to append.
         """
-        pass
+        self.getFile(path).appendContent(content)
 
     def getInterfaces(self) -> List[Interface]:
         """!
@@ -244,6 +270,10 @@ class Node(Printable, Registrable):
         out += 'Interfaces:\n'
         for interface in self.__interfaces:
             out += interface.print(indent + 4)
+        out += ' ' * indent
+        out += 'Files:\n'
+        for file in self.__files.values():
+            out += file.print(indent + 4)
 
 
         return out

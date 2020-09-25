@@ -1,7 +1,26 @@
 from .Layer import Layer
 from seedsim.core import Registry, ScopedRegistry, Node, Interface, Network
-from typing import List
+from typing import List, Dict
 from functools import partial
+
+RoutingFileTemplates: Dict[str, str] = {}
+
+RoutingFileTemplates["protocol"] = """protocol {protocol} {name} {{{body}}}
+"""
+
+RoutingFileTemplates["rs_bird"] = """router id {routerId};
+protocol device {{
+}}
+"""
+
+RoutingFileTemplates["rnode_bird"] = """router id {routerId};
+protocol device {{
+}}
+protocol kernel {{
+    import none;
+    export all;
+}}
+"""
 
 def addProtocol(node: Node, protocol: str, name: str, body: str):
     """!
@@ -15,6 +34,11 @@ def addProtocol(node: Node, protocol: str, name: str, body: str):
     @param body protocol body.
     """
     print("===== RoutingLayer: TODO: Handle API: do addProtocol {} {} on Node {}@as{}.".format(protocol, name, node.getName(), node.getAsn()))
+    node.appendFile("/etc/bird/bird.conf", RoutingFileTemplates["protocol"].format(
+        protocol = protocol,
+        name = name,
+        body = body
+    ))
 
 class Routing(Layer):
     """!
@@ -36,12 +60,32 @@ class Routing(Layer):
     def onRender(self):
         for ((scope, type, name), obj) in self.__reg.getAll().items():
             if type == 'rs':
+                rs_node: Node = obj
                 print("===== RoutingLayer: TODO: Bootstrap bird.conf for RS {}".format(name))
-                obj.addProtocol = partial(addProtocol, obj) # "inject" the method
+
+                rs_ifaces = rs_node.getInterfaces()
+                assert len(rs_ifaces) == 1, "rs node {} has != 1 interfaces".format(rs_node.getName())
+
+                rs_iface = rs_ifaces[0]
+
+                rs_node.addProtocol = partial(addProtocol, rs_node) # "inject" the method
+                rs_node.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rs_bird"].format(
+                    routerId = rs_iface.getAddress()
+                ))
                 
             if type == 'rnode':
                 print("===== RoutingLayer: TODO: Bootstrap bird.conf for AS{} router {}".format(scope, name))
-                obj.addProtocol = partial(addProtocol, obj) # "inject" the method
+                rnode: Node = obj
+
+                r_ifaces = rnode.getInterfaces()
+                assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rs_node.getAsn(), rs_node.getName())
+
+                r_iface = r_ifaces[0]
+
+                rnode.addProtocol = partial(addProtocol, rnode) # "inject" the method
+                rnode.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rnode_bird"].format(
+                    routerId = r_iface.getAddress()
+                ))
 
             if type == 'hnode':
                 hifaces: List[Interface] = obj.getInterfaces()

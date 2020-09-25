@@ -1,6 +1,23 @@
 from .Layer import Layer
 from seedsim.core import Registry, ScopedRegistry, Network, Node, Interface
-from typing import Tuple, List
+from typing import Tuple, List, Dict
+
+EbgpFileTemplates: Dict[str, str] = {}
+
+EbgpFileTemplates["rs_bird_peer"] =  """
+    import all;
+    export all;
+    rs client;
+    local {localAddress} as {localAsn};
+    neighbor {peerAddress} as {peerAsn};
+"""
+
+EbgpFileTemplates["rnode_bird_peer"] = """
+    import {importFilter};
+    export {exportFilter};
+    local {localAddress} as {localAsn};
+    neighbor {peerAddress} as {peerAsn};
+"""
 
 class Ebgp(Layer):
     """!
@@ -77,8 +94,24 @@ class Ebgp(Layer):
 
             assert p_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(a, ix)
             print("===== EbgpLayer: TODO: add to bird.conf: {} as {} (RS) <-> {} as {}".format(rs_if.getAddress(), ix, p_ixif.getAddress(), peer))
-            ix_rs.addProtocol('bgp', 'as{}'.format(peer), '') # addProtocol method is "injected" by routing layer
-            p_ixnode.addProtocol('bgp', 'rs{}'.format(ix), '')
+
+            # addProtocol method is "injected" by routing layer
+            ix_rs.addProtocol('bgp', 'as{}'.format(peer), EbgpFileTemplates["rs_bird_peer"].format(
+                localAddress = rs_if.getAddress(),
+                localAsn = ix,
+                peerAddress = p_ixif.getAddress(),
+                peerAsn = peer
+            )) 
+
+            # @todo import/export filter?
+            p_ixnode.addProtocol('bgp', 'rs{}'.format(ix), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = p_ixif.getAddress(),
+                localAsn = peer,
+                peerAddress = rs_if.getAddress(),
+                peerAsn = ix,
+                exportFilter = "all",
+                importFilter = "all"
+            )) 
 
         for (ix, a, b) in self.__peerings:
             ix_reg = ScopedRegistry('ix')
@@ -114,8 +147,27 @@ class Ebgp(Layer):
             assert b_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(b, ix)
 
             print("===== EbgpLayer: TODO: add to bird.conf: {} as {} <-> {} as {}".format(a_ixif.getAddress(), a, b_ixif.getAddress(), b))
-            a_ixnode.addProtocol('bgp', 'as{}'.format(b), '') # addProtocol method is "injected" by routing layer
-            b_ixnode.addProtocol('bgp', 'rs{}'.format(a), '')
+
+            # addProtocol method is "injected" by routing layer
+            # @todo import/export filter?
+            a_ixnode.addProtocol('bgp', 'as{}'.format(b), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = a_ixif.getAddress(),
+                localAsn = a,
+                peerAddress = b_ixif.getAddress(),
+                peerAsn = b,
+                exportFilter = "all",
+                importFilter = "all"
+            ))
+
+            # @todo import/export filter?
+            b_ixnode.addProtocol('bgp', 'as{}'.format(a), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = b_ixif.getAddress(),
+                localAsn = b,
+                peerAddress = a_ixif.getAddress(),
+                peerAsn = a,
+                exportFilter = "all",
+                importFilter = "all"
+            )) 
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
