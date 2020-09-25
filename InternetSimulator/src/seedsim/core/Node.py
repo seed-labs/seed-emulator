@@ -133,16 +133,18 @@ class Node(Printable, Registrable):
     This class represents a generic node.
     """
 
+    __name: str
     __asn: int
     __role: NodeRole
     __reg: ScopedRegistry
     __greg = Registry()
     __interfaces: List[Interface]
 
-    def __init__(self, role: NodeRole, asn: int, scope: str = None):
+    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
         @brief Node constructor.
 
+        @name name name of this node.
         @param role role of this node.
         @param asn network that this node belongs to.
         @param scope scope of the node, if not asn.
@@ -151,6 +153,7 @@ class Node(Printable, Registrable):
         self.__asn = asn
         self.__reg = ScopedRegistry(scope if scope != None else str(asn))
         self.__role = role
+        self.__name = name
 
     def joinNetwork(self, net: Network, address: str = "auto") -> Interface:
         """!
@@ -239,7 +242,7 @@ class Node(Printable, Registrable):
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'Node:\n'.format(self.__role)
+        out += 'Node {}:\n'.format(self.__name)
 
         indent += 4
         out += ' ' * indent

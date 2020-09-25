@@ -59,7 +59,7 @@ class AutonomousSystem(Printable):
         @param name name of the new node.
         @returns Node.
         """
-        return self.__reg.register('rnode', name, Node(NodeRole.Router, self.__asn))
+        return self.__reg.register('rnode', name, Node(name, NodeRole.Router, self.__asn))
 
     def getRouter(self, name: str) -> Node:
         """!
@@ -69,10 +69,28 @@ class AutonomousSystem(Printable):
         @returns Node.
         """
         return self.__reg.get('rnode', name)
+
+    def createHost(self, name: str) -> Node:
+        """!
+        @brief Create a host node.
+
+        @param name name of the new node.
+        @returns Node.
+        """
+        return self.__reg.register('hnode', name, Node(name, NodeRole.Host, self.__asn))
+
+    def getHost(self, name: str) -> Node:
+        """!
+        @brief Retrive a host node.
+
+        @param name name of the node.
+        @returns Node.
+        """
+        return self.__reg.get('hnode', name)
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'AutonomousSystem as{}:\n'.format(self.__asn)
+        out += 'AutonomousSystem {}:\n'.format(self.__asn)
 
         indent += 4
         out += ' ' * indent
@@ -85,6 +103,12 @@ class AutonomousSystem(Printable):
         out += 'Routers:\n'
 
         for net in self.__reg.getByType('rnode'):
+            out += net.print(indent + 4)
+
+        out += ' ' * indent
+        out += 'Hosts:\n'
+
+        for net in self.__reg.getByType('hnode'):
             out += net.print(indent + 4)
 
         return out

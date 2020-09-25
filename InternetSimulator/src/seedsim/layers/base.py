@@ -41,6 +41,9 @@ class Base(Layer):
         out = ' ' * indent
         out += 'BaseLayer:\n'
 
+        indent += 4
+        out += ' ' * indent
+        out += 'AutonomousSystems:\n'
         for _as in self.__ases.values():
             out += _as.print(indent + 4)
 
