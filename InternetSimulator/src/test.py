@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Ebgp
+from seedsim.layers import Base, Routing, Ebgp
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
 
@@ -26,6 +26,7 @@ ebgp.addPrivatePeering(100, 150, 151)
 
 r = Renderer()
 
+r.addLayer(Routing())
 r.addLayer(ebgp)
 r.addLayer(base)
 

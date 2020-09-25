@@ -5,6 +5,8 @@ from typing import Tuple, List
 class Ebgp(Layer):
     """!
     @brief The Ebgp (eBGP) layer.
+
+    This layer enable eBGP peering in InternetExchange.
     """
 
     __peerings: List[Tuple[int, int, int]]
@@ -19,7 +21,7 @@ class Ebgp(Layer):
         return "Ebgp"
 
     def getDependencies(self) -> List[str]:
-        return ["Base"]
+        return ["Routing"]
 
     def addPrivatePeering(self, ix: int, a: int, b: int):
         """!
@@ -72,7 +74,7 @@ class Ebgp(Layer):
             
             assert b_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(b, ix)
 
-            print("===== TODO: Make bird.conf: {} as {} <-> {} as {}".format(a_ixif.getAddress(), a, b_ixif.getAddress(), b))
+            print("===== EbgpLayer: TODO: Make bird.conf: {} as {} <-> {} as {}".format(a_ixif.getAddress(), a, b_ixif.getAddress(), b))
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

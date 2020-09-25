@@ -73,6 +73,15 @@ class Registry(Printable):
 
         return rslt
 
+    def getAll(self) -> Dict[Tuple[str, str, str], Registrable]:
+        """!
+        @brief Get all objects in the Global Registry.
+
+        @returns dictionary, where keys in tuple (scope, type, name) and value
+        is object
+        """
+        return self.__objects
+
     def getByScope(self, scope: str) -> List[Registrable]:
         """!
         @brief Retrive objects with scope.
