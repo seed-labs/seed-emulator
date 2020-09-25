@@ -48,6 +48,12 @@ class Routing(Layer):
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'RoutingLayer\n'
+        out += 'RoutingLayer:\n'
+
+        indent += 4
+        out += ' ' * indent
+
+        out += '<RoutingLayer does not have configurable options>\n'
+
 
         return out
