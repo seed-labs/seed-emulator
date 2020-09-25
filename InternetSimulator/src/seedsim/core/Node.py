@@ -239,6 +239,14 @@ class Node(Printable, Registrable):
         @param content content to append.
         """
         pass
+
+    def getInterfaces(self) -> List[Interface]:
+        """!
+        @brief Get list of interfaces.
+
+        @returns list of interfaces.
+        """
+        return self.__interfaces
         
     def print(self, indent: int) -> str:
         out = ' ' * indent

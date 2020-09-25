@@ -1,10 +1,10 @@
-from seedsim.layers.Layer import Layer
+from .Layer import Layer
 from seedsim.core import AutonomousSystem, InternetExchange, Printable, Registry, AddressAssignmentConstraint
 from typing import Dict, List
 
 class Base(Layer):
     """!
-    The base layer.
+    @brief The base layer.
     """
 
     __ases: Dict[int, AutonomousSystem]

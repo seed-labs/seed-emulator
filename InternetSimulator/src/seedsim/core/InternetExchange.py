@@ -31,7 +31,7 @@ class InternetExchange(Printable):
 
         assert prefix != "auto" or self.__id <= 255, "can't use auto: id > 255"
         network = IPv4Network(prefix) if prefix != "auto" else IPv4Network("10.{}.0.0/24".format(self.__id))
-        name = str(self.__id)
+        name = 'ix{}'.format(str(self.__id))
         self.__rs = self.__reg.register('rs', name, Node(name, NodeRole.RouteServer, self.__id))
         self.__net = self.__reg.register('net', name, Network(name, NetworkType.InternetExchange, network, aac))
         self.__rsif = self.__rs.joinNetwork(self.__net)
