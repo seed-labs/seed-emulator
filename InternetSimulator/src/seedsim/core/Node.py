@@ -3,7 +3,7 @@ from .Network import Network
 from .enums import NodeRole, NetworkType
 from .Registry import Registry, ScopedRegistry, Registrable
 from ipaddress import IPv4Address
-from typing import List, Dict
+from typing import List, Dict, Set, Tuple
 
 class File(Printable):
     """!
@@ -143,6 +143,9 @@ class Node(Printable, Registrable):
     __greg = Registry()
     __interfaces: List[Interface]
     __files: Dict[str, File]
+    __softwares: Set[str]
+    __build_commands: List[str]
+    __start_commands: List[Tuple[str, bool]]
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -159,6 +162,9 @@ class Node(Printable, Registrable):
         self.__reg = ScopedRegistry(scope if scope != None else str(asn))
         self.__role = role
         self.__name = name
+        self.__softwares = set()
+        self.__build_commands = []
+        self.__start_commands = []
 
     def joinNetwork(self, net: Network, address: str = "auto") -> Interface:
         """!
@@ -251,6 +257,69 @@ class Node(Printable, Registrable):
         """
         self.getFile(path).appendContent(content)
 
+    def addSoftware(self, name: str):
+        """!
+        @brief Add new software to node.
+
+        @param name software package name.
+
+        Use this to add software to the node. For example, if using the "docker"
+        compiler, this will be added as an "apt-get install" line in Dockerfile.
+        """
+        self.__softwares.add(name)
+
+    def getSoftwares(self) -> Set[str]:
+        """!
+        @brief Get set of software lists.
+
+        @retrens set of softwares.
+        """
+        return self.__softwares
+
+    def addBuildCommand(self, cmd: str):
+        """!
+        @brief Add new command to build step.
+
+        @param cmd command to add.
+
+        Use this to add build steps to the node. For example, if using the
+        "docker" compiler, this will be added as a "RUN" line in Dockerfile.
+        """
+        self.__build_commands.append(cmd)
+    
+    def getBuildCommands(self) -> List[str]:
+        """!
+        @brief Get build commands.
+
+        @returns list of commands.
+        """
+        return self.__build_commands
+
+    def addStartCommand(self, cmd: str, fork: bool = False):
+        """!
+        @brief Add new command to start script.
+
+        The command should not be a blocking command. If you need to run a
+        blocking command, set fork to true and fork it to the background so
+        that it won't block the execution of other commands.
+
+        @param cmd command to add.
+        @param fork (optional) fork to command to background?
+
+        Use this to add start steps to the node. For example, if using the
+        "docker" compiler, this will be added to start.sh.
+        """
+        self.__start_commands.append((cmd, fork))
+
+    def getStartCommands(self) -> List[Tuple[str, bool]]:
+        """!
+        @brief Get start commands.
+
+        @returns list of tuples, where the first element is command, and the
+        second element indicates if this command should be forked.
+        """
+        return self.__build_commands
+
     def getInterfaces(self) -> List[Interface]:
         """!
         @brief Get list of interfaces.
@@ -267,13 +336,38 @@ class Node(Printable, Registrable):
         out += ' ' * indent
         out += 'Role: {}\n'.format(self.__role)
         out += ' ' * indent
+
         out += 'Interfaces:\n'
         for interface in self.__interfaces:
             out += interface.print(indent + 4)
+
         out += ' ' * indent
         out += 'Files:\n'
         for file in self.__files.values():
             out += file.print(indent + 4)
 
+        out += ' ' * indent
+        out += 'Softwares:\n'
+        indent += 4
+        for software in self.__softwares:
+            out += ' ' * indent
+            out += '{}\n'.format(software)
+        indent -= 4
+
+        out += ' ' * indent
+        out += 'Additional Build Commands:\n'
+        indent += 4
+        for cmd in self.__build_commands:
+            out += ' ' * indent
+            out += '{}\n'.format(cmd)
+        indent -= 4
+
+        out += ' ' * indent
+        out += 'Additional Start Commands:\n'
+        indent += 4
+        for (cmd, fork) in self.__start_commands:
+            out += ' ' * indent
+            out += '{}{}\n'.format(cmd, ' (fork)' if fork else '')
+        indent -= 4
 
         return out

@@ -60,6 +60,8 @@ class Routing(Layer):
         for ((scope, type, name), obj) in self.__reg.getAll().items():
             if type == 'rs':
                 rs_node: Node = obj
+                rs_node.addSoftware('bird')
+                rs_node.addStartCommand('bird -d', True)
                 self._log("Bootstraping bird.conf for RS {}...".format(name))
 
                 rs_ifaces = rs_node.getInterfaces()
@@ -76,6 +78,8 @@ class Routing(Layer):
                 self._log("Bootstraping bird.conf for AS{} Router {}...".format(scope, name))
 
                 rnode: Node = obj
+                rnode.addSoftware('bird')
+                rnode.addStartCommand('bird -d', True)
 
                 r_ifaces = rnode.getInterfaces()
                 assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rs_node.getAsn(), rs_node.getName())
