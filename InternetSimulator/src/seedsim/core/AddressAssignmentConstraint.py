@@ -1,5 +1,5 @@
 from .Printable import Printable
-from .enums import NetworkType, InterfaceType
+from .enums import NetworkType, NodeRole
 from typing import Generator
 
 class AddressAssignmentConstraint(Printable):
@@ -16,20 +16,20 @@ class AddressAssignmentConstraint(Printable):
     def __always(self, a: int):
         while True: yield a
 
-    def getOffsetGenerator(self, type: InterfaceType) -> Generator[int, None, None]:
+    def getOffsetGenerator(self, type: NodeRole) -> Generator[int, None, None]:
         """!
-        @brief Get IP offset generator for a type of interface.
+        @brief Get IP offset generator for a type of node.
 
         @todo Handle pure-internal routers.
 
-        @param type type of the interface.
+        @param type type of the node.
         @param asn optional. ASN of this node.
         @returns An int generator that generates IP address offset.
         @throws ValueError if try to get generator of IX interface.
         """
 
-        if type == InterfaceType.Host: return self.__range(71, 99)
-        if type == InterfaceType.Local: return self.__range(254, 200, -1)
+        if type == NodeRole.Host: return self.__range(71, 99)
+        if type == NodeRole.Router: return self.__range(254, 200, -1)
 
         raise ValueError("IX IP assigment must done with mapIxAddress().")
 

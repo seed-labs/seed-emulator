@@ -1,6 +1,6 @@
 from .Printable import Printable
 from .Network import Network
-from .enums import NodeRole, NetworkType, InterfaceType
+from .enums import NodeRole, NetworkType
 from .Registry import Registry, ScopedRegistry, Registrable
 from ipaddress import IPv4Address
 from typing import List
@@ -58,10 +58,9 @@ class Interface(Printable):
     """
 
     __network: Network
-    __type: InterfaceType
     __address: IPv4Address
 
-    def __init__(self, net: Network, type: InterfaceType = None):
+    def __init__(self, net: Network):
         """!
         @brief Interface constructor.
 
@@ -72,24 +71,7 @@ class Interface(Printable):
         """
         self.__address = None
         self.__network = net
-        self.__type = type
-        if self.__type == None:
-            if net.getType() == NetworkType.Host: self.__type = InterfaceType.Host
-            if net.getType() == NetworkType.InternetExchange: self.__type = InterfaceType.InternetExchange
-            if net.getType() == NetworkType.Local: self.__type = InterfaceType.Local
 
-    def getType(self) -> InterfaceType:
-        """!
-        @brief Get type of this interface.
-
-        This will be used in some automation
-        cases. For example, AddressAssignmentConstraint will use the node type
-        to decide how to assign IP addresses to nodes.
-
-        @returns interface type
-        """
-        return self.__type
-    
     def getNet(self) -> Network:
         """!
         @brief Get the network that this interface attached to.
@@ -163,24 +145,11 @@ class Node(Printable, Registrable):
 
         @throws AssertionError if network does not exist.
         """
-        _addr: IPv4Address = None
-        _itype: InterfaceType = None
-        if self.__role == NodeRole.Host: _itype = InterfaceType.Host
-        if self.__role == NodeRole.Router:
-            _ntype = net.getType()
-            if _ntype == NetworkType.InternetExchange:
-                _itype = InterfaceType.InternetExchange
-
-            if _ntype == NetworkType.Host or _ntype == NetworkType.Local:
-                _itype = InterfaceType.Local
-
-        if self.__role == NodeRole.RouteServer:
-            _itype = InterfaceType.InternetExchange
         
-        if address == "auto": _addr = net.assign(_itype, self.__asn)
+        if address == "auto": _addr = net.assign(self.__role, self.__asn)
         else: _addr = IPv4Address(address)
 
-        _iface = Interface(net, _itype)
+        _iface = Interface(net)
         _iface.setAddress(_addr)
 
         self.__interfaces.append(_iface)

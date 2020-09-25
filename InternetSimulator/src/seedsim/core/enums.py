@@ -29,18 +29,3 @@ class NodeRole(Enum):
 
     ## Route served node.
     RouteServer = "Route Server"
-
-class InterfaceType(Enum):
-    """!
-    @brief NIC types enum.
-    """
-
-    ## Interface connected to IX.
-    InternetExchange = "Internet Exchange Interface"
-
-    ## Interface connected to internal transit network, or from router to a host
-    #  network
-    Local = "Internal Network Interface"
-
-    ## Interface connected to hosting network.
-    Host = "Content network Interface"
