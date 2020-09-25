@@ -46,6 +46,17 @@ class Registry(Printable):
         assert (scope, type, name) in self.__objects, 'object with name {} does not exist.'.format(name)
         return self.__objects[(scope, type, name)]
 
+    def has(self, scope: str, type: str, name: str) -> bool:
+        """!
+        @brief Test if an object exist.
+
+        @param scope scope of the object (e.g., asn).
+        @param type type of the object (e.g., net/node)
+        @param name name of the object.
+        @returns True if exist, False otherwise.
+        """
+        return (scope, type, name) in self.__objects
+
     def getByType(self, scope: str, type: str) -> List[Registrable]:
         """!
         @brief Retrive objects with type.
@@ -127,6 +138,17 @@ class ScopedRegistry(Registry):
         @returns object.
         """
         return self.__reg.get(self.__scope, type, name)
+
+    def has(self, type: str, name: str) -> bool:
+        """!
+        @brief Test if an object exist.
+
+        @param scope scope of the object (e.g., asn).
+        @param type type of the object (e.g., net/node)
+        @param name name of the object.
+        @returns True if exist, False otherwise.
+        """
+        return self.__reg.has(self.__scope, type, name)
 
     def getByType(self, type: str) -> List[Registrable]:
         """!

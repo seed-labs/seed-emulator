@@ -38,7 +38,8 @@ class InterfaceType(Enum):
     ## Interface connected to IX.
     InternetExchange = "Internet Exchange Interface"
 
-    ## Interface connected to internal transit network.
+    ## Interface connected to internal transit network, or from router to a host
+    #  network
     Local = "Internal Network Interface"
 
     ## Interface connected to hosting network.
