@@ -93,7 +93,7 @@ class Ebgp(Layer):
                         break
 
             assert p_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(a, ix)
-            print("===== EbgpLayer: TODO: add to bird.conf: {} as {} (RS) <-> {} as {}".format(rs_if.getAddress(), ix, p_ixif.getAddress(), peer))
+            self._log("adding peering: {} as {} (RS) <-> {} as {}".format(rs_if.getAddress(), ix, p_ixif.getAddress(), peer))
 
             # addProtocol method is "injected" by routing layer
             ix_rs.addProtocol('bgp', 'as{}'.format(peer), EbgpFileTemplates["rs_bird_peer"].format(
@@ -146,7 +146,7 @@ class Ebgp(Layer):
             
             assert b_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(b, ix)
 
-            print("===== EbgpLayer: TODO: add to bird.conf: {} as {} <-> {} as {}".format(a_ixif.getAddress(), a, b_ixif.getAddress(), b))
+            self._log("adding peering: {} as {} <-> {} as {}".format(a_ixif.getAddress(), a, b_ixif.getAddress(), b))
 
             # addProtocol method is "injected" by routing layer
             # @todo import/export filter?

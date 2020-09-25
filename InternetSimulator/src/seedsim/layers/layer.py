@@ -1,5 +1,6 @@
 from typing import List
 from seedsim.core import Printable, Registrable
+from sys import stderr
 
 class Layer(Printable, Registrable):
     """!
@@ -30,3 +31,9 @@ class Layer(Printable, Registrable):
         @brief Handle rendering.
         """
         raise NotImplementedError('onRender not implemented')
+
+    def _log(self, message: str) -> None:
+        """!
+        @brief Log to stderr.
+        """
+        print("==== {}Layer: {}".format(self.getName(), message), file=stderr)

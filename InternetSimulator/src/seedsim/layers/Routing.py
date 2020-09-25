@@ -33,7 +33,6 @@ def addProtocol(node: Node, protocol: str, name: str, body: str):
     @param name protocol name.
     @param body protocol body.
     """
-    print("===== RoutingLayer: TODO: Handle API: do addProtocol {} {} on Node {}@as{}.".format(protocol, name, node.getName(), node.getAsn()))
     node.appendFile("/etc/bird/bird.conf", RoutingFileTemplates["protocol"].format(
         protocol = protocol,
         name = name,
@@ -61,7 +60,7 @@ class Routing(Layer):
         for ((scope, type, name), obj) in self.__reg.getAll().items():
             if type == 'rs':
                 rs_node: Node = obj
-                print("===== RoutingLayer: TODO: Bootstrap bird.conf for RS {}".format(name))
+                self._log("Bootstraping bird.conf for RS {}...".format(name))
 
                 rs_ifaces = rs_node.getInterfaces()
                 assert len(rs_ifaces) == 1, "rs node {} has != 1 interfaces".format(rs_node.getName())
@@ -74,7 +73,8 @@ class Routing(Layer):
                 ))
                 
             if type == 'rnode':
-                print("===== RoutingLayer: TODO: Bootstrap bird.conf for AS{} router {}".format(scope, name))
+                self._log("Bootstraping bird.conf for AS{} Router {}...".format(scope, name))
+
                 rnode: Node = obj
 
                 r_ifaces = rnode.getInterfaces()
@@ -103,7 +103,7 @@ class Routing(Layer):
                             break
                 
                 assert rif != None, 'Host {} in as{} in network {}: no router'.format(name, scope, hnet.getName())
-                print("===== RoutingLayer: TODO: Set default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
+                self._log("!! TODO: Set default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

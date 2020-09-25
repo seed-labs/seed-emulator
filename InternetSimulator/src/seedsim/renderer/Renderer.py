@@ -1,6 +1,7 @@
 from seedsim.core import Printable, ScopedRegistry
 from seedsim.layers import Layer
 from typing import List, Tuple, Dict
+from sys import stderr
 
 class Renderer(Printable):
     """!
@@ -36,15 +37,22 @@ class Renderer(Printable):
         @param layerName name of layer.
         @throws AssertionError if dependencies unmet 
         """
+        self.__log('requesting render: {}'.format(layerName))
+
         assert layerName in self.__layers, 'Layer {} requried but missing'.format(layerName)
 
         (layer, done) = self.__layers[layerName]
-        if done: return
+        if done:
+            self.__log('{}: already rendered, skipping'.format(layerName))
+            return
 
         for dep in layer.getDependencies():
+            self.__log('{}: requesting dependency render: {}'.format(layerName, dep))
             self.__render(dep)
 
+        self.__log('rendering {}...'.format(layerName))
         layer.onRender()
+        self.__log('done: {}'.format(layerName))
         self.__layers[layerName] = (layer, True)
 
     def render(self):
@@ -62,6 +70,9 @@ class Renderer(Printable):
             out += v.print(indent)
 
         return out
+
+    def __log(self, message: str):
+        print('== Renderer: {}'.format(message), file=stderr)
 
 
         
