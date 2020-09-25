@@ -43,6 +43,7 @@ class Network(Printable, Registrable):
 
         @returns name.
         """
+        return self.__name
 
     def getType(self) -> NetworkType:
         """!

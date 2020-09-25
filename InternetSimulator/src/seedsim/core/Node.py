@@ -114,6 +114,18 @@ class Interface(Printable):
         """
         return self.__address
 
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'Interface:\n'
+
+        indent += 4
+        out += ' ' * indent
+        out += 'Connected to: {}\n'.format(self.__network.getName())
+        out += ' ' * indent
+        out += 'Address: {}\n'.format(self.__address)
+
+        return out
+
 class Node(Printable, Registrable):
     """!
     @brief Node base class.
@@ -138,6 +150,7 @@ class Node(Printable, Registrable):
         self.__interfaces = []
         self.__asn = asn
         self.__reg = ScopedRegistry(scope if scope != None else str(asn))
+        self.__role = role
 
     def joinNetwork(self, net: Network, address: str = "auto") -> Interface:
         """!
@@ -162,10 +175,12 @@ class Node(Printable, Registrable):
             _itype = InterfaceType.InternetExchange
         
         if address == "auto": _addr = net.assign(_itype, self.__asn)
-        else _addr = IPv4Address(address)
+        else: _addr = IPv4Address(address)
 
         _iface = Interface(net, _itype)
         _iface.setAddress(_addr)
+
+        self.__interfaces.append(_iface)
 
         return _iface
 
@@ -222,3 +237,17 @@ class Node(Printable, Registrable):
         """
         pass
         
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'Node:\n'.format(self.__role)
+
+        indent += 4
+        out += ' ' * indent
+        out += 'Role: {}\n'.format(self.__role)
+        out += ' ' * indent
+        out += 'Interfaces:\n'
+        for interface in self.__interfaces:
+            out += interface.print(indent + 4)
+
+
+        return out
