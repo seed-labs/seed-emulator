@@ -41,7 +41,7 @@ class File(Printable):
         """!
         @brief Update file content.
 
-        @param path new path.
+        @param content content.
         """
         self.__content = content
 
@@ -88,9 +88,6 @@ class Interface(Printable):
         @brief Interface constructor.
 
         @param net network to connect to.
-        @param type optionally, override interface type. For example, one may
-        choose to override the router's interface type in a host network, so the
-        IP assignment assigns the correct address for the router.
         """
         self.__address = None
         self.__network = net
@@ -285,7 +282,7 @@ class Node(Printable, Registrable):
         """!
         @brief Get set of software lists.
 
-        @retrens set of softwares.
+        @returns set of softwares.
         """
         return self.__softwares
 

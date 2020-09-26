@@ -22,12 +22,12 @@ class Network(Printable, Registrable):
         """!
         @brief Network constructor.
 
-        @param scope scope of the network.
         @param name name of the network. Note that this is considered a "local"
         name. Networks can have the same name, as long as they are in different
         contexts (i.e., different AS).
         @param type type of the network.
         @param prefix prefix of the network.
+        @param aac (optional) AddressAssignmentConstraint to use.
         """
         self.__name = name
         self.__type = type

@@ -23,7 +23,6 @@ class AddressAssignmentConstraint(Printable):
         @todo Handle pure-internal routers.
 
         @param type type of the node.
-        @param asn optional. ASN of this node.
         @returns An int generator that generates IP address offset.
         @throws ValueError if try to get generator of IX interface.
         """

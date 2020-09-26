@@ -36,6 +36,7 @@ class AutonomousSystem(Printable):
         @param prefix optional. Network prefix of this network. If not set, a
         /24 subnet of "10.{asn}.{id}.0/24" will be used, where asn is ASN of
         this AS, and id is a self-incremental value starts from 0.
+        @param aac optional. AddressAssignmentConstraint to use.
         @throws StopIteration if subnet exhausted.
         """
         assert prefix != "auto" or self.__asn <= 255, "can't use auto: asn > 255"

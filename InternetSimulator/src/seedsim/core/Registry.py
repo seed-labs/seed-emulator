@@ -183,7 +183,6 @@ class ScopedRegistry(Registry):
         """!
         @brief Test if an object exist.
 
-        @param scope scope of the object (e.g., asn).
         @param type type of the object (e.g., net/node)
         @param name name of the object.
         @returns True if exist, False otherwise.
@@ -194,7 +193,6 @@ class ScopedRegistry(Registry):
         """!
         @brief Retrive objects with type.
 
-        @param scope scope of the object (e.g., asn).
         @param type type of the object (e.g., net/node)
         @returns objects.
         """

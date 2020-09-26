@@ -17,4 +17,9 @@ class Printable:
         raise NotImplementedError("print not implemented.")
 
     def __str__(self) -> str:
+        """!
+        @brief convert to string.
+
+        alias to print(0).
+        """
         return self.print(0)

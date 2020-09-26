@@ -24,6 +24,8 @@ class InternetExchange(Printable):
         @brief InternetExchange constructor.
 
         @param id ID (ASN) for the IX.
+        @param prefix (optional) prefix to use as peering LAN.
+        @param aac (option) AddressAssignmentConstraint to use.
         """
 
         self.__id = id
