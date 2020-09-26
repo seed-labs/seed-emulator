@@ -1,7 +1,26 @@
 from .Layer import Layer
-from seedsim.core import Network, Registry
+from seedsim.core import Network, Registry, Node
 from seedsim.core.enums import NetworkType
-from typing import Set
+from typing import Set, Dict, List
+
+OspfFileTemplates: Dict[str, str] = {}
+
+OspfFileTemplates['ospf_body'] = """
+    table t_ospf;
+    import all;
+    export all;
+    area 0 {{
+{interfaces}
+    }}
+"""
+
+OspfFileTemplates['ospf_interface'] = """\
+        interface "{interfaceName}";
+"""
+
+OspfFileTemplates['ospf_stub_interface'] = """\
+        interface "{interfaceName}" {{ stub; }};
+"""
 
 class Ospf(Layer):
     """!
@@ -90,4 +109,63 @@ class Ospf(Layer):
         @param netname name of the network.
         """
         self.mask(self.__reg.get(str(asn), 'net', netname))
+
+    def onRender(self):
+        for ((scope, type, name), obj) in self.__reg.getAll().items():
+            if type != 'rnode': continue
+            router: Node = obj
+
+            stubs: List[str] = []
+            active: List[str] = []
+
+            self._log('setting up OSPF for router as{}/{}...'.format(scope, name))
+            for iface in router.getInterfaces():
+                net = iface.getNet()
+
+                if net in self.__masked: continue
+
+                if net in self.__stubs or net.getType() == NetworkType.InternetExchange:
+                    stubs.append(net.getName())
+                    continue
+
+                active.append(net.getName())
+            
+            ospf_interfaces = ''
+            for name in stubs: ospf_interfaces += OspfFileTemplates['ospf_stub_interface'].format(
+                interfaceName = name
+            )
+            for name in active: ospf_interfaces += OspfFileTemplates['ospf_interface'].format(
+                interfaceName = name
+            )
+
+            if ospf_interfaces != '':
+                router.addTable('t_ospf')
+                router.addProtocol('ospf', 'ospf1', OspfFileTemplates['ospf_body'].format(
+                    interfaces = ospf_interfaces
+                ))
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'OspfLayer:\n'
+
+        indent += 4
+
+        out += ' ' * indent
+        out += 'Stub Networks:\n'
+        indent += 4
+        for net in self.__stubs:
+            out += ' ' * indent
+            (scope, _, netname) = net.getRegistryInfo()
+            out += 'as{}/{}\n'.format(scope, netname)
+        indent -= 4
+
+        out += ' ' * indent
+        out += 'Masked Networks:\n'
+        indent += 4
+        for net in self.__masked:
+            out += ' ' * indent
+            (scope, _, netname) = net.getRegistryInfo()
+            out += 'as{}/{}\n'.format(scope, netname)
+
+        return out
 

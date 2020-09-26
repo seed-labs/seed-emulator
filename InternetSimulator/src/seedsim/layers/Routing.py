@@ -70,6 +70,18 @@ def addProtocol(node: Node, protocol: str, name: str, body: str):
         body = body
     ))
 
+def addTable(node: Node, tableName: str):
+    """!
+    @brief Add a new routing table to BIRD on the given node.
+
+    This method is to be injected in to router node class objects. This method
+    does not check if the table is already added.
+
+    @param node node to operator on.
+    @tableName name of the new table.
+    """
+    node.appendFile('/etc/bird/bird.conf', 'table {};\n'.format(tableName))
+
 class Routing(Layer):
     """!
     @brief The Routing layer.
@@ -136,6 +148,7 @@ class Routing(Layer):
                 r_iface = r_ifaces[0]
 
                 rnode.addProtocol = partial(addProtocol, rnode) # "inject" the method
+                rnode.addTable = partial(addTable, rnode)
 
                 rnode.setFile("/netmap.txt", netmap)
                 rnode.setFile("/interface_rename", RoutingFileTemplates["interface_rename_script"])
