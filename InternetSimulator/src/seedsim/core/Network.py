@@ -14,6 +14,7 @@ class Network(Printable, Registrable):
     __type: NetworkType
     __prefix: IPv4Network
     __name: str
+    __scope: str
     __aac: AddressAssignmentConstraint
     __assigners: Dict[NodeRole, Generator[int, None, None]]
 
@@ -21,6 +22,7 @@ class Network(Printable, Registrable):
         """!
         @brief Network constructor.
 
+        @param scope scope of the network.
         @param name name of the network. Note that this is considered a "local"
         name. Networks can have the same name, as long as they are in different
         contexts (i.e., different AS).

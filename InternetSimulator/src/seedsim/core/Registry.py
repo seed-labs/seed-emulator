@@ -7,7 +7,37 @@ class Registrable(object):
 
     Base class for all Registrable objects.
     """
-    pass
+    _rscope: str
+    _rtype: str
+    _rname: str
+
+    def __init__(self):
+        """!
+        @brief Registerable class constructor.
+        """
+        self.__scope = 'undefined'
+        self._rtype = 'undefined'
+        self._rname = 'undefined'
+
+    def doRegister(self, scope: str, type: str, name: str):
+        """!
+        @brief Handle registration.
+
+        @param scope scope.
+        @param type type.
+        @param name name.
+        """
+        self._rscope = scope
+        self._rtype = type
+        self._rname = name
+    
+    def getRegistryInfo(self) -> Tuple[str, str, str]:
+        """!
+        @brief Get registry info
+
+        @returns Tuple of scope, type and name
+        """
+        return (self._rscope, self._rtype, self._rname)
 
 class Registry(Printable):
     """!
@@ -30,6 +60,7 @@ class Registry(Printable):
         @throws AssertionError if name exists.
         """
         assert (scope, type, name) not in self.__objects, 'object with name {} already exist.'.format(name)
+        obj.doRegister(scope, type, name)
         self.__objects[(scope, type, name)] = obj
         return self.__objects[(scope, type, name)]
 
