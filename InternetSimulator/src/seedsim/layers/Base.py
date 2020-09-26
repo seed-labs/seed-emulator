@@ -53,6 +53,22 @@ class Base(Layer):
         self.__ixes[asn] = InternetExchange(asn, prefix, aac)
         return self.__ixes[asn]
 
+    def getAsns(self) -> List[int]:
+        """!
+        @brief Get list of ASNs.
+
+        @returns List of ASNs.
+        """
+        return self.__ases.keys()
+
+    def getIxIds(self) -> List[int]:
+        """!
+        @brief Get list of IX IDs.
+
+        @returns List of IX IDs.
+        """
+        return self.__ixes.keys()
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'BaseLayer:\n'

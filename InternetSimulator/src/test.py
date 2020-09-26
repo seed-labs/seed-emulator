@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, Ospf
+from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
 from seedsim.compiler import Docker
@@ -36,11 +36,13 @@ routing.addDirectByName(151, "net0")
 r = Renderer()
 
 ospf = Ospf()
+ibgp = Ibgp()
 
 r.addLayer(ospf)
 r.addLayer(routing)
 r.addLayer(ebgp)
 r.addLayer(base)
+r.addLayer(ibgp)
 
 print("Layers =================")
 print(r)
