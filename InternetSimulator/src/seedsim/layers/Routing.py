@@ -6,7 +6,7 @@ from functools import partial
 
 RoutingFileTemplates: Dict[str, str] = {}
 
-RoutingFileTemplates["interface_name_script"] = """\
+RoutingFileTemplates["interface_rename_script"] = """\
 #!/bin/bash
 cidr_to_net() {
     ipcalc -n "$1" | sed -E -n 's/^Network: +([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\/[0-9]{1,2}) +.*/\\1/p'
@@ -117,25 +117,39 @@ class Routing(Layer):
 
                 rnode: Node = obj
                 rnode.addSoftware('bird')
-                rnode.addStartCommand('bird -d', True)
 
                 r_ifaces = rnode.getInterfaces()
                 assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rs_node.getAsn(), rs_node.getName())
 
                 directs = ''
+                netmap = ''
 
                 for iface in r_ifaces:
-                    if iface.getNet() in self.__direct_nets:
+                    net = iface.getNet()
+                    netmap += '{}:{}\n'.format(net.getName(), net.getPrefix())
+                    if net in self.__direct_nets:
                         directs += RoutingFileTemplates["rnode_bird_interface"].format(
-                            interfaceName = iface.getNet().getName()
+                            interfaceName = net.getName()
                         )
 
                 r_iface = r_ifaces[0]
 
                 rnode.addProtocol = partial(addProtocol, rnode) # "inject" the method
+
+                rnode.setFile("/netmap.txt", netmap)
+                rnode.setFile("/interface_rename", RoutingFileTemplates["interface_rename_script"])
                 rnode.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rnode_bird"].format(
                     routerId = r_iface.getAddress()
                 ))
+
+                rnode.addStartCommand('chmod +x /interface_rename')
+                rnode.addStartCommand('/interface_rename')
+                rnode.addStartCommand('bird -d', True)
+                
+                rnode.addSoftware('jq')
+                rnode.addSoftware('ipcalc')
+                rnode.addSoftware('bird')
+
                 if directs != '': rnode.addProtocol('direct', 'local_nets', directs)
 
             if type == 'hnode':

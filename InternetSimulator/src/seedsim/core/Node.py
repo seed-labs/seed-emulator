@@ -5,6 +5,8 @@ from .Registry import Registry, ScopedRegistry, Registrable
 from ipaddress import IPv4Address
 from typing import List, Dict, Set, Tuple
 
+DEFAULT_SOFTWARES: List[str] = ['curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump']
+
 class File(Printable):
     """!
     @brief File class.
@@ -165,6 +167,9 @@ class Node(Printable, Registrable):
         self.__softwares = set()
         self.__build_commands = []
         self.__start_commands = []
+
+        for soft in DEFAULT_SOFTWARES:
+            self.__softwares.add(soft)
 
     def joinNetwork(self, net: Network, address: str = "auto") -> Interface:
         """!
@@ -347,7 +352,7 @@ class Node(Printable, Registrable):
             out += file.print(indent + 4)
 
         out += ' ' * indent
-        out += 'Softwares:\n'
+        out += 'Software:\n'
         indent += 4
         for software in self.__softwares:
             out += ' ' * indent
