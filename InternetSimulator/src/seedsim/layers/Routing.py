@@ -6,6 +6,29 @@ from functools import partial
 
 RoutingFileTemplates: Dict[str, str] = {}
 
+RoutingFileTemplates["interface_name_script"] = """\
+#!/bin/bash
+cidr_to_net() {
+    ipcalc -n "$1" | sed -E -n 's/^Network: +([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\/[0-9]{1,2}) +.*/\\1/p'
+}
+
+ip -j addr | jq -cr '.[]' | while read -r iface; do {
+    ifname="`jq -cr '.ifname' <<< "$iface"`"
+    echo "trying to rename $ifname..."
+    jq -cr '.addr_info[]' <<< "$iface" | while read -r iaddr; do {
+        addr="`jq -cr '"\(.local)/\(.prefixlen)"' <<< "$iaddr"`"
+        net="`cidr_to_net "$addr"`"
+        new_ifname="`grep "$net" < netmap.txt | cut -d: -f1`"
+        [ ! -z "$new_ifname" ] && {
+            echo "$ifname net match netmap: $new_ifname, renaming..."
+            ip li set "$ifname" down
+            ip li set "$ifname" name "$new_ifname"
+            ip li set "$new_ifname" up
+        }
+    }; done
+}; done
+"""
+
 RoutingFileTemplates["protocol"] = """\
 protocol {protocol} {name} {{{body}}}
 """
