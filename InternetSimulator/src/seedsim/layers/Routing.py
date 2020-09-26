@@ -92,7 +92,8 @@ class Routing(Layer):
                 ))
 
             if type == 'hnode':
-                hifaces: List[Interface] = obj.getInterfaces()
+                hnode: Node = obj
+                hifaces: List[Interface] = hnode.getInterfaces()
                 assert len(hifaces) == 1, 'Host {} in as{} has != 1 interfaces'.format(name, scope)
                 hif = hifaces[0]
                 hnet: Network = hif.getNet()
@@ -107,7 +108,8 @@ class Routing(Layer):
                             break
                 
                 assert rif != None, 'Host {} in as{} in network {}: no router'.format(name, scope, hnet.getName())
-                self._log("!! TODO: Set default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
+                self._log("Setting default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
+                hnode.addStartCommand('ip route change defualt via {} dev eth0'.format(rif.getAddress()))
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

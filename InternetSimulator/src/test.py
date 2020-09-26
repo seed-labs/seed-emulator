@@ -1,6 +1,7 @@
 from seedsim.layers import Base, Routing, Ebgp
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
+from seedsim.compiler import Docker
 
 base = Base()
 
@@ -40,4 +41,9 @@ print("\n\n\n\nRenderer output ========")
 r.render()
 
 print("\n\n\n\nRegistry ===============")
-print(Registry())
+reg = Registry()
+print(reg)
+
+print("\n\n\n\nCompiler output ========")
+compiler = Docker()
+compiler.compile(reg, './test/')
