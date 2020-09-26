@@ -99,6 +99,7 @@ class Routing(Layer):
             if type == 'rs':
                 rs_node: Node = obj
                 rs_node.addSoftware('bird')
+                rs_node.addStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
                 rs_node.addStartCommand('bird -d', True)
                 self._log("Bootstraping bird.conf for RS {}...".format(name))
 
@@ -144,6 +145,7 @@ class Routing(Layer):
 
                 rnode.addStartCommand('chmod +x /interface_rename')
                 rnode.addStartCommand('/interface_rename')
+                rnode.addStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
                 rnode.addStartCommand('bird -d', True)
                 
                 rnode.addSoftware('jq')
@@ -170,7 +172,7 @@ class Routing(Layer):
                 
                 assert rif != None, 'Host {} in as{} in network {}: no router'.format(name, scope, hnet.getName())
                 self._log("Setting default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
-                hnode.addStartCommand('ip route change defualt via {} dev eth0'.format(rif.getAddress()))
+                hnode.addStartCommand('ip route change default via {} dev eth0'.format(rif.getAddress()))
 
     def addDirect(self, net: Network):
         """!

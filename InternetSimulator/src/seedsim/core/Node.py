@@ -243,6 +243,14 @@ class Node(Printable, Registrable):
         self.__files[path] = File(path)
         return self.__files[path]
 
+    def getFiles(self) -> List[File]:
+        """!
+        @brief Get all files.
+
+        @return list of files.
+        """
+        return self.__files.values()
+
     def setFile(self, path: str, content: str):
         """!
         @brief Set content of the file.
@@ -323,7 +331,7 @@ class Node(Printable, Registrable):
         @returns list of tuples, where the first element is command, and the
         second element indicates if this command should be forked.
         """
-        return self.__build_commands
+        return self.__start_commands
 
     def getInterfaces(self) -> List[Interface]:
         """!

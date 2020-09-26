@@ -27,9 +27,11 @@ as151_h1.joinNetworkByName("net0")
 ebgp = Ebgp()
 ebgp.addPrivatePeering(100, 150, 151)
 ebgp.addRsPeer(100, 150)
+ebgp.addRsPeer(100, 151)
 
 routing = Routing()
 routing.addDirectByName(150, "net0")
+routing.addDirectByName(151, "net0")
 
 r = Renderer()
 
