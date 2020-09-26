@@ -1,25 +1,33 @@
 from .Layer import Layer
 from seedsim.core import Registry, ScopedRegistry, Node, Interface, Network
-from typing import List, Dict
+from seedsim.core.enums import NetworkType
+from typing import List, Dict, Set
 from functools import partial
 
 RoutingFileTemplates: Dict[str, str] = {}
 
-RoutingFileTemplates["protocol"] = """protocol {protocol} {name} {{{body}}}
+RoutingFileTemplates["protocol"] = """\
+protocol {protocol} {name} {{{body}}}
 """
 
-RoutingFileTemplates["rs_bird"] = """router id {routerId};
+RoutingFileTemplates["rs_bird"] = """\
+router id {routerId};
 protocol device {{
 }}
 """
 
-RoutingFileTemplates["rnode_bird"] = """router id {routerId};
+RoutingFileTemplates["rnode_bird"] = """\
+router id {routerId};
 protocol device {{
 }}
 protocol kernel {{
     import none;
     export all;
 }}
+"""
+
+RoutingFileTemplates["rnode_bird_interface"] = """
+    interface "{interfaceName}";
 """
 
 def addProtocol(node: Node, protocol: str, name: str, body: str):
@@ -49,6 +57,13 @@ class Routing(Layer):
     """
 
     __reg: Registry = Registry()
+    __direct_nets: Set[Network]
+
+    def __init__(self):
+        """!
+        @brief Routing layre constructor.
+        """
+        self.__direct_nets = set()
     
     def getName(self) -> str:
         return "Routing"
@@ -84,12 +99,21 @@ class Routing(Layer):
                 r_ifaces = rnode.getInterfaces()
                 assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rs_node.getAsn(), rs_node.getName())
 
+                directs = ''
+
+                for iface in r_ifaces:
+                    if iface.getNet() in self.__direct_nets:
+                        directs += RoutingFileTemplates["rnode_bird_interface"].format(
+                            interfaceName = iface.getNet().getName()
+                        )
+
                 r_iface = r_ifaces[0]
 
                 rnode.addProtocol = partial(addProtocol, rnode) # "inject" the method
                 rnode.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rnode_bird"].format(
                     routerId = r_iface.getAddress()
                 ))
+                if directs != '': rnode.addProtocol('direct', 'local_nets', directs)
 
             if type == 'hnode':
                 hnode: Node = obj
@@ -111,6 +135,35 @@ class Routing(Layer):
                 self._log("Setting default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
                 hnode.addStartCommand('ip route change defualt via {} dev eth0'.format(rif.getAddress()))
 
+    def addDirect(self, net: Network):
+        """!
+        @brief Add a network to "direct" protcol.
+
+        Mark network as "direct" candidate. All router nodes connected to this
+        network will add the interface attaches to this network to their
+        "direct" protocol block.
+
+        @param net network.
+        @throws AssertionError if try to add non-AS network as direct.
+        """
+        assert net.getType() != NetworkType.InternetExchange, 'cannot set IX network {} as direct network.'.format(net.getName())
+        self.__direct_nets.add(net)
+
+    def addDirectByName(self, asn: int, netname: str):
+        """!
+        @brief Add a network to "direct" protcol by name.
+
+        Mark network as "direct" candidate. All router nodes connected to this
+        network will add the interface attaches to this network to their
+        "direct" protocol block.
+
+        @param asn ASN.
+        @param netname network name.
+        @throws AssertionError if net not exist.
+        @throws AssertionError if try to add non-AS network as direct.
+        """
+        self.addDirect(self.__reg.get(str(asn), 'net', netname))
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'RoutingLayer:\n'
@@ -118,7 +171,13 @@ class Routing(Layer):
         indent += 4
         out += ' ' * indent
 
-        out += '<RoutingLayer does not have configurable options>\n'
+        out += 'Direct Networks:\n'
 
+        indent += 4
+
+        for net in self.__direct_nets:
+            out += ' ' * indent
+            (scope, _, netname) = net.getRegistryInfo()
+            out += 'as{}/{}\n'.format(scope, netname)
 
         return out

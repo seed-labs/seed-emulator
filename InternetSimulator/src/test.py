@@ -28,9 +28,12 @@ ebgp = Ebgp()
 ebgp.addPrivatePeering(100, 150, 151)
 ebgp.addRsPeer(100, 150)
 
+routing = Routing()
+routing.addDirectByName(150, "net0")
+
 r = Renderer()
 
-r.addLayer(Routing())
+r.addLayer(routing)
 r.addLayer(ebgp)
 r.addLayer(base)
 
