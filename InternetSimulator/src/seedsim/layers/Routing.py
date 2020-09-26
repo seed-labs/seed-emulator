@@ -89,6 +89,10 @@ class Routing(Layer):
     This layer provides routing support for routers and hosts. i.e., (1) install
     BIRD on router nodes and allow BGP/OSPF to work, (2) setup kernel and device
     protocols, and (3) setup defult routes for host nodes.
+
+    When this layer is rendered, two new methods will be added to the router
+    node and can be used by other layers: (1) addProtocol: add new protocol
+    block to BIRD, and (2) addTable: add new routing table to BIRD.
     """
 
     __reg: Registry = Registry()
