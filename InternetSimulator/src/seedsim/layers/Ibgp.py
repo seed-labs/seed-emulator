@@ -1,7 +1,18 @@
 from .Layer import Layer
 from .Base import Base
-from seedsim.core import Registry, ScopedRegistry, Node
-from typing import List, Set
+from .Ospf import Ospf
+from seedsim.core import Registry, ScopedRegistry, Node, Interface
+from seedsim.core.enums import NetworkType
+from typing import List, Set, Dict
+
+IbgpFileTemplates: Dict[str, str] = {}
+
+IbgpFileTemplates['ibgp_peer'] = '''
+    import all;
+    export all;
+    local {localAddress} as {asn};
+    neighbor {peerAddress} as {asn};
+'''
 
 class Ibgp(Layer):
     """!
@@ -36,6 +47,24 @@ class Ibgp(Layer):
         """
         self.__masked.add(asn)
 
+    def __findFirstUnmasked(self, node: Node) -> Interface:
+        """!
+        @brief find first NIC on the node that is connected to a unmasked
+        internal network.
+
+        @param node target node.
+
+        @returns interface if found, None if not found.
+        """
+        for iface in node.getInterfaces():
+            ospf: Ospf = self.__reg.get('seedsim', 'layer', 'Ospf')
+            net = iface.getNet()
+            if net.getType() == NetworkType.InternetExchange: continue
+            if ospf.isMasked(net): continue
+            return iface
+
+        return None
+
     def onRender(self):
         base: Base = self.__reg.get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():
@@ -44,8 +73,33 @@ class Ibgp(Layer):
             self._log('setting up IBGP peering for as{}...'.format(asn))
             routers: List[Node] = ScopedRegistry(str(asn)).getByType('rnode')
 
-            for router in routers:
-                self._log('!! TODO: setting up IBGP peering on as{}/{}'.format(asn, router.getName()))
+            for local in routers:
+                self._log('setting up IBGP peering on as{}/{}...'.format(asn, local.getName()))
+
+                n = 1
+                for remote in routers:
+                    if local == remote: continue
+
+                    lif = self.__findFirstUnmasked(local)
+                    if lif == None:
+                        self._log('ignoreing as{}/{}: no valid internal interface'.format(asn, local.getName()))
+                        continue
+
+                    rif = self.__findFirstUnmasked(remote)
+                    if rif == None: continue # not logging here, as it will be logged by the one above
+
+                    laddr = lif.getAddress()
+                    raddr = rif.getAddress()
+                    local.addProtocol('bgp', 'ibgp{}'.format(n), IbgpFileTemplates['ibgp_peer'].format(
+                        localAddress = laddr,
+                        peerAddress = raddr,
+                        asn = asn
+                    ))
+
+                    n += 1
+
+                    self._log('adding peering: {} <-> {} (ibgp, as{})'.format(laddr, raddr, asn))
+
 
 
     def print(self, indent: int) -> str:

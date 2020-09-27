@@ -6,14 +6,21 @@ from seedsim.compiler import Docker
 base = Base()
 
 ix100 = base.createInternetExchange(100)
+ix101 = base.createInternetExchange(101)
+
 
 as150 = base.createAutonomousSystem(150)
 as150.createNetwork("net0")
+as150.createNetwork("net_link")
 as150_r1 = as150.createRouter("r1")
 as150_r1.joinNetworkByName("ix100")
 as150_r1.joinNetworkByName("net0")
+as150_r1.joinNetworkByName("net_link")
 as150_h1 = as150.createHost("h1")
 as150_h1.joinNetworkByName("net0")
+as150_r2 = as150.createRouter("r2")
+as150_r2.joinNetworkByName("ix101")
+as150_r2.joinNetworkByName("net_link")
 
 
 as151 = base.createAutonomousSystem(151)

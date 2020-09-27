@@ -110,6 +110,16 @@ class Ospf(Layer):
         """
         self.mask(self.__reg.get(str(asn), 'net', netname))
 
+    def isMasked(self, net: Network) -> bool:
+        """!
+        @brief Test if a network is masked.
+
+        @param net network to test.
+        
+        @returns if net is masked.
+        """
+        return net in self.__masked
+
     def onRender(self):
         for ((scope, type, name), obj) in self.__reg.getAll().items():
             if type != 'rnode': continue
