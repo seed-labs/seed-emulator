@@ -11,7 +11,7 @@ OspfFileTemplates['ospf_body'] = """
     export all;
     area 0 {{
 {interfaces}
-    }}
+    }};
 """
 
 OspfFileTemplates['ospf_interface'] = """\
