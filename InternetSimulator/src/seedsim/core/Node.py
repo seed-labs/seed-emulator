@@ -227,7 +227,7 @@ class Node(Printable, Registrable):
 
         @returns role.
         """
-        return this.__role
+        return self.__role
 
     def getFile(self, path: str) -> File:
         """!

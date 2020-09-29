@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp
+from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
 from seedsim.compiler import Docker
@@ -50,11 +50,17 @@ r = Renderer()
 ospf = Ospf()
 ibgp = Ibgp()
 
+ws = WebService()
+
+ws.installOnAll(150) # install on all hosts
+ws.installOn(as151_h1)
+
 r.addLayer(ospf)
 r.addLayer(routing)
 r.addLayer(ebgp)
 r.addLayer(base)
 r.addLayer(ibgp)
+r.addLayer(ws)
 
 print("Layers =================")
 print(r)

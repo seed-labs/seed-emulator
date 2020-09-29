@@ -1,6 +1,6 @@
 from .Layer import Layer
-from seedsim.core import Node
-from seedsim.core import Printable
+from seedsim.core import Node, Printable, ScopedRegistry
+from seedsim.core.enums import NodeRole
 from typing import Dict
 
 class Server(Printable):
@@ -47,7 +47,7 @@ class Service(Layer):
         if m_name not in servicesdb:
             servicesdb[m_name] = {}
 
-        return self._doInstall(node, servicesdb[m_name])
+        return self._doInstall(node)
 
     def installOnAll(self, asn: int) -> Dict[int, Dict[str, Server]]:
         """!
@@ -58,5 +58,7 @@ class Service(Layer):
         @returns Dict of Dict, the inner dict is Dict[Node name, Server] and the
         outer dict is Dict[Asn, inner Dict].
         """
-
+        scope = ScopedRegistry(str(asn))
+        for host in scope.getByType('hnode'):
+            self.installOn(host)
 

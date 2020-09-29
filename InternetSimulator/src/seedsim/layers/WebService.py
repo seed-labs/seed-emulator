@@ -1,16 +1,16 @@
 from .Service import Service, Server
-from seedsim.core import Node
+from seedsim.core import Node, Printable
 from seedsim.core.enums import NodeRole
 from typing import List
 
-class WebServer(Server):
+class WebServer(Server, Printable):
     """!
     @brief The WebServer class.
     """
 
     __node: Node
     __port: int
-    __content: str
+    __index: str
 
     def __init__(self, node: Node):
         """!
@@ -21,7 +21,7 @@ class WebServer(Server):
         asn = node.getAsn()
         self.__node = node
         self.__port = 80
-        self.__content = '<h1>Web Server node {} at AS{}</h1>'.format(node.getName(), node.getAsn())
+        self.__index = '<h1>Web Server node {} at AS{}</h1>'.format(node.getName(), node.getAsn())
         
 
     def setPort(self, port: int):
@@ -30,9 +30,10 @@ class WebServer(Server):
 
         @param port port.
         """
+        ## ! todo
         self.__port = port
 
-    def setContent(self, content: str):
+    def setIndexContent(self, content: str):
         """!
         @brief Set content of index.html.
 
@@ -45,7 +46,14 @@ class WebServer(Server):
         @brief Install the service.
         """
         self.__node.addSoftware('nginx-light')
+        self.__node.setFile('/var/www/html/index.html', self.__index)
+        self.__node.addStartCommand('service nginx start')
         
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'Server: as{}/{}\n'.format(self.__node.getAsn(), self.__node.getName())
+
+        return out
 
 class WebService(Service):
     """!
@@ -75,8 +83,22 @@ class WebService(Service):
         @returns Handler of the installed web service.
         @throws AssertionError if node is not host node.
         """
-        pass
+        self.__servers.append(WebServer(node))
 
     def onRender(self):
         for server in self.__servers:
             server.install()
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'WebServiceLayer:\n'
+
+        indent += 4
+        out += ' ' * indent
+
+        out += 'Installed Nodes:\n'
+ 
+        for server in self.__servers:
+            out += server.print(indent + 4) 
+
+        return out       
