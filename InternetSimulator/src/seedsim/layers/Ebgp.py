@@ -13,6 +13,7 @@ EbgpFileTemplates["rs_bird_peer"] =  """
 """
 
 EbgpFileTemplates["rnode_bird_peer"] = """
+    table t_bgp;
     import {importFilter};
     export {exportFilter};
     local {localAddress} as {localAsn};
@@ -104,6 +105,9 @@ class Ebgp(Layer):
             )) 
 
             # @todo import/export filter?
+            p_ixnode.addTable('t_bgp')
+            p_ixnode.addTablePipe('t_bgp')
+            p_ixnode.addTablePipe('t_direct', 't_bgp')
             p_ixnode.addProtocol('bgp', 'rs{}'.format(ix), EbgpFileTemplates["rnode_bird_peer"].format(
                 localAddress = p_ixif.getAddress(),
                 localAsn = peer,
@@ -150,6 +154,9 @@ class Ebgp(Layer):
 
             # addProtocol method is "injected" by routing layer
             # @todo import/export filter?
+            a_ixnode.addTable('t_bgp')
+            a_ixnode.addTablePipe('t_bgp')
+            a_ixnode.addTablePipe('t_direct', 't_bgp')
             a_ixnode.addProtocol('bgp', 'as{}'.format(b), EbgpFileTemplates["rnode_bird_peer"].format(
                 localAddress = a_ixif.getAddress(),
                 localAsn = a,
@@ -160,6 +167,9 @@ class Ebgp(Layer):
             ))
 
             # @todo import/export filter?
+            b_ixnode.addTable('t_bgp')
+            b_ixnode.addTablePipe('t_bgp')
+            b_ixnode.addTablePipe('t_direct', 't_bgp')
             b_ixnode.addProtocol('bgp', 'as{}'.format(a), EbgpFileTemplates["rnode_bird_peer"].format(
                 localAddress = b_ixif.getAddress(),
                 localAsn = b,

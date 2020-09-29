@@ -8,6 +8,7 @@ from typing import List, Set, Dict
 IbgpFileTemplates: Dict[str, str] = {}
 
 IbgpFileTemplates['ibgp_peer'] = '''
+    table t_bgp;
     import all;
     export all;
     igp table t_ospf;
@@ -91,6 +92,7 @@ class Ibgp(Layer):
 
                     laddr = lif.getAddress()
                     raddr = rif.getAddress()
+                    local.addTable('t_bgp')
                     local.addProtocol('bgp', 'ibgp{}'.format(n), IbgpFileTemplates['ibgp_peer'].format(
                         localAddress = laddr,
                         peerAddress = raddr,

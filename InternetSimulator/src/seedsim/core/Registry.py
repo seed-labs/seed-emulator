@@ -10,6 +10,7 @@ class Registrable(object):
     _rscope: str
     _rtype: str
     _rname: str
+    _attrs: Dict[str, object]
 
     def __init__(self):
         """!
@@ -30,6 +31,7 @@ class Registrable(object):
         self._rscope = scope
         self._rtype = type
         self._rname = name
+        self._attrs = {}
     
     def getRegistryInfo(self) -> Tuple[str, str, str]:
         """!
@@ -38,6 +40,41 @@ class Registrable(object):
         @returns Tuple of scope, type and name
         """
         return (self._rscope, self._rtype, self._rname)
+
+    def getAttribute(self, name: str, default: object = None) -> object:
+        """!
+        @brief Get an attribute.
+
+        @param name name of attribute.
+        @param default value to set and return if name not exist.
+
+        @returns value, or None if not exist.
+        """
+        if name not in self._attrs:
+            if default != None:
+                self.setAttribute(name, default)
+                return self._attrs[name]
+            return None
+        return self._attrs[name]
+
+    def setAttribute(self, name: str, value: object):
+        """!
+        @brief Set an attribute.
+
+        @param name name of attribute.
+        @param value value of attribute.
+        """
+        self._attrs[name] = value
+
+    def hasAttribute(self, name: str) -> bool:
+        """!
+        @brief Check if an attribute exists.
+
+        @param name name of attribute.
+        
+        @returns True if exist, False otherwise.
+        """
+        return name in self._attrs
 
 class Registry(Printable):
     """!

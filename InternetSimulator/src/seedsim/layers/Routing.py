@@ -33,6 +33,15 @@ RoutingFileTemplates["protocol"] = """\
 protocol {protocol} {name} {{{body}}}
 """
 
+RoutingFileTemplates["pipe"] = """\
+protocol pipe {{
+    table {src};
+    peer table {dst};
+    import {importFilter};
+    export {exportFilter};
+}}
+"""
+
 RoutingFileTemplates["rs_bird"] = """\
 router id {routerId};
 protocol device {{
@@ -41,6 +50,7 @@ protocol device {{
 
 RoutingFileTemplates["rnode_bird"] = """\
 router id {routerId};
+table t_direct;
 protocol device {{
 }}
 protocol kernel {{
@@ -70,17 +80,51 @@ def addProtocol(node: Node, protocol: str, name: str, body: str):
         body = body
     ))
 
+def addTablePipe(node: Node, src: str, dst: str = 'master', importFilter: str = 'none', exportFilter: str = 'all', ignoreExist: bool = True):
+    """!
+    @brief add a new routing table pipe.
+    
+    @param node node to operator on.
+    @param src src table.
+    @param dst (optional) dst table (default: master)
+    @param importFilter (optional) filter for importing from dst table to src table (default: none)
+    @param exportFilter (optional) filter for exporting from src table to dst table (default: all)
+    @param ignoreExist (optional) assert check if table exists. If true, error is silently discarded.
+
+    @throws AssertionError if pipe between two tables already exist and ignoreExist is False.
+    """
+    meta = node.getAttribute('__routing_layer_metadata', {})
+    if 'pipes' not in meta: meta['pipes'] = {}
+    pipes = meta['pipes']
+    if src not in pipes: pipes[src] = []
+    if dst in pipes[src]:
+        assert ignoreExist, 'pipe from {} to {} already exist'.format(src, dst)
+        return
+    pipes[src].append(dst)
+    node.appendFile('/etc/bird/bird.conf', RoutingFileTemplates["pipe"].format(
+        src = src,
+        dst = dst,
+        importFilter = importFilter,
+        exportFilter = exportFilter
+    ))
+
+
 def addTable(node: Node, tableName: str):
     """!
     @brief Add a new routing table to BIRD on the given node.
 
-    This method is to be injected in to router node class objects. This method
-    does not check if the table is already added.
+    This method is to be injected in to router node class objects. 
 
     @param node node to operator on.
     @tableName name of the new table.
     """
-    node.appendFile('/etc/bird/bird.conf', 'table {};\n'.format(tableName))
+    meta = node.getAttribute('__routing_layer_metadata', {})
+    if 'tables' not in meta: meta['tables'] = []
+    tables = meta['tables']
+    if tableName not in tables: node.appendFile('/etc/bird/bird.conf', 'table {};\n'.format(tableName))
+    tables.append(tableName)
+
+
 
 class Routing(Layer):
     """!
@@ -138,7 +182,7 @@ class Routing(Layer):
                 r_ifaces = rnode.getInterfaces()
                 assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rs_node.getAsn(), rs_node.getName())
 
-                directs = ''
+                directs = 'table t_direct;\n'
                 netmap = ''
 
                 for iface in r_ifaces:
@@ -153,6 +197,7 @@ class Routing(Layer):
 
                 rnode.addProtocol = partial(addProtocol, rnode) # "inject" the method
                 rnode.addTable = partial(addTable, rnode)
+                rnode.addTablePipe = partial(addTablePipe, rnode)
 
                 rnode.setFile("/netmap.txt", netmap)
                 rnode.setFile("/interface_rename", RoutingFileTemplates["interface_rename_script"])
@@ -197,7 +242,8 @@ class Routing(Layer):
 
         Mark network as "direct" candidate. All router nodes connected to this
         network will add the interface attaches to this network to their
-        "direct" protocol block.
+        "direct" protocol block. The "direct" protocol will be attached to the
+        "t_direct" table.
 
         @param net network.
         @throws AssertionError if try to add non-AS network as direct.

@@ -22,15 +22,6 @@ OspfFileTemplates['ospf_stub_interface'] = """\
         interface "{interfaceName}" {{ stub; }};
 """
 
-OspfFileTemplates['ospf_pipe'] = '''
-    table master;
-    peer table t_ospf;
-    import all;
-    export all;
-''' # !! fixme: no export all
-
-
-
 class Ospf(Layer):
     """!
     @brief Ospf (OSPF) layer.
@@ -162,7 +153,7 @@ class Ospf(Layer):
                 router.addProtocol('ospf', 'ospf1', OspfFileTemplates['ospf_body'].format(
                     interfaces = ospf_interfaces
                 ))
-                router.addProtocol('pipe', 'ospf_pipe', OspfFileTemplates['ospf_pipe'])
+                router.addTablePipe('t_ospf')
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
