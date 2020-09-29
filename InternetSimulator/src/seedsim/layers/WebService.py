@@ -1,9 +1,9 @@
 from .Service import Service, Server
-from seedsim.core import Node, Printable
+from seedsim.core import Node
 from seedsim.core.enums import NodeRole
 from typing import List
 
-class WebServer(Server, Printable):
+class WebServer(Server):
     """!
     @brief The WebServer class.
     """
