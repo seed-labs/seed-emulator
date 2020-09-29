@@ -93,6 +93,8 @@ class Ibgp(Layer):
                     laddr = lif.getAddress()
                     raddr = rif.getAddress()
                     local.addTable('t_bgp')
+                    local.addTablePipe('t_bgp')
+                    local.addTablePipe('t_direct', 't_bgp')
                     local.addProtocol('bgp', 'ibgp{}'.format(n), IbgpFileTemplates['ibgp_peer'].format(
                         localAddress = laddr,
                         peerAddress = raddr,

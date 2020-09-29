@@ -12,6 +12,8 @@ ix101 = base.createInternetExchange(101)
 as150 = base.createAutonomousSystem(150)
 as150.createNetwork("net0")
 as150.createNetwork("net_link")
+as150.createNetwork("net1")
+
 as150_r1 = as150.createRouter("r1")
 as150_r1.joinNetworkByName("ix100")
 as150_r1.joinNetworkByName("net0")
@@ -21,7 +23,9 @@ as150_h1.joinNetworkByName("net0")
 as150_r2 = as150.createRouter("r2")
 as150_r2.joinNetworkByName("ix101")
 as150_r2.joinNetworkByName("net_link")
-
+as150_r2.joinNetworkByName("net1")
+as150_h2 = as150.createHost("h2")
+as150_h2.joinNetworkByName("net1")
 
 as151 = base.createAutonomousSystem(151)
 as151.createNetwork("net0") 
@@ -38,6 +42,7 @@ ebgp.addRsPeer(100, 151)
 
 routing = Routing()
 routing.addDirectByName(150, "net0")
+routing.addDirectByName(150, "net1")
 routing.addDirectByName(151, "net0")
 
 r = Renderer()
