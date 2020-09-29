@@ -182,7 +182,7 @@ class Routing(Layer):
                 r_ifaces = rnode.getInterfaces()
                 assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rs_node.getAsn(), rs_node.getName())
 
-                directs = 'table t_direct;\n'
+                directs = '\n    table t_direct;'
                 netmap = ''
 
                 for iface in r_ifaces:
