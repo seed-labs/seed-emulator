@@ -10,6 +10,7 @@ IbgpFileTemplates: Dict[str, str] = {}
 IbgpFileTemplates['ibgp_peer'] = '''
     import all;
     export all;
+    igp table t_ospf;
     local {localAddress} as {asn};
     neighbor {peerAddress} as {asn};
 '''

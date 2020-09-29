@@ -109,7 +109,7 @@ class Ebgp(Layer):
                 localAsn = peer,
                 peerAddress = rs_if.getAddress(),
                 peerAsn = ix,
-                exportFilter = "all",
+                exportFilter = "all", # !! todo
                 importFilter = "all"
             )) 
 
