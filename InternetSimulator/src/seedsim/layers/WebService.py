@@ -1,7 +1,21 @@
 from .Service import Service, Server
 from seedsim.core import Node
 from seedsim.core.enums import NodeRole
-from typing import List
+from typing import List, Dict
+
+WebServerFileTemplates: Dict[str, str] = {}
+
+WebServerFileTemplates['nginx_site'] = '''\
+server {{
+    listen {port};
+    root /var/www/html;
+    index index.html;
+    server_name _;
+    location / {{
+        try_files $uri $uri/ =404;
+    }}
+}}
+'''
 
 class WebServer(Server):
     """!
@@ -47,6 +61,7 @@ class WebServer(Server):
         """
         self.__node.addSoftware('nginx-light')
         self.__node.setFile('/var/www/html/index.html', self.__index)
+        self.__node.setFile('/etc/nginx/sites-available/default', WebServerFileTemplates['nginx_site'].format(port = self.__port))
         self.__node.addStartCommand('service nginx start')
         
     def print(self, indent: int) -> str:
