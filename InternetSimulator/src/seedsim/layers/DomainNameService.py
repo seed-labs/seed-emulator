@@ -1,7 +1,7 @@
 from __future__ import annotations
 from .Service import Service, Server
 from seedsim.core import Node, Printable
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from re import sub
 
 class Zone(Printable):
@@ -56,6 +56,8 @@ class Zone(Printable):
     def addRecord(self, record: str):
         """!
         @brief Add a new record to zone.
+
+        @todo NS?
         """
         self.__records.append(record)
 
@@ -66,6 +68,16 @@ class Zone(Printable):
         @return list of records.
         """
         return self.__records
+
+    def findRecords(self, keyword: str) -> List[str]:
+        """!
+        @brief Find a record.
+
+        @param keyword keyword.
+
+        @return list of records.
+        """
+        return [ r for r in self.__records if keyword in r ]
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -128,7 +140,7 @@ class DomainNameService(Service):
         """
         return self.__rootZone
 
-    def hostZoneOn(self, domain: str, node: Node):
+    def hostZoneOn(self, domain: str, node: Node, addNsAndSoa: bool = True):
         """!
         @brief Host a zone on the given node.
 
@@ -136,14 +148,27 @@ class DomainNameService(Service):
 
         @param domain zone name.
         @param node target node.
+        @param addNsAndSoa (optional) add NS and SOA records automatically, true
+        by default.
         """
         pass
+
+    def __autoNameServer(self, zone: Zone):
+        if (len(zone.getSubZones().values()) == 0): return
+        for subzone in zone.getSubZones().values():
+            for ns in subzone.findRecords('NS'):
+                # todo
+                pass
+            self.__autoNameServer(subzone)
 
     def autoNameServer(self):
         """!
         @brief Try to automatically add NS records of children to parent zones.
+
+        Note that all zones in the simulation must have NS record for this to
+        work.
         """
-        pass
+        self.__autoNameServer(self.__rootZone)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

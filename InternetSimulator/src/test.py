@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService
+from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
 from seedsim.compiler import Docker
@@ -75,3 +75,17 @@ print(reg)
 print("\n\n\n\nCompiler output ========")
 compiler = Docker()
 compiler.compile(reg, './test/')
+
+
+
+print("\n\n\n\n========================")
+
+dns = DomainNameService()
+dns.getZone('example.com.').addRecord('@   A 127.0.0.1')
+dns.getZone('example.com.').addRecord('www A 127.0.0.1')
+dns.getZone('example.com.').addRecord('@ NS ns1.example.com.')
+dns.getZone('example.com.').addRecord('ns1 A 10.0.0.1')
+
+dns.autoNameServer()
+
+print(dns)
