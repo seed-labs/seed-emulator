@@ -1,7 +1,8 @@
 from __future__ import annotations
 from .Service import Service, Server
 from seedsim.core import Node, Printable
-from typing import List, Dict, Tuple
+from seedsim.core.enums import NodeRole
+from typing import List, Dict, Tuple, Set
 from re import sub
 
 class Zone(Printable):
@@ -11,6 +12,7 @@ class Zone(Printable):
     __zonename: str
     __subzones: Dict[str, Zone]
     __records: List[str]
+    __gules: List[str]
 
     def __init__(self, name: str):
         """!
@@ -21,6 +23,7 @@ class Zone(Printable):
         self.__zonename = name
         self.__subzones = {}
         self.__records = []
+        self.__gules = []
 
     def getName(self) -> str:
         """!
@@ -61,6 +64,20 @@ class Zone(Printable):
         """
         self.__records.append(record)
 
+    def addGuleRecord(self, fqdn: str, addr: str):
+        """!
+        @brief Add a new gule record.
+
+        Use this method to register a name server in the parent zone.
+
+        @param fqdn full domain name of the name server.
+        @param addr IP address of the name server.
+        """
+        if fqdn[-1] != '.': fqdn += '.'
+        self.__gules.append('{} A {}'.format(fqdn, addr))
+        self.__gules.append('{} NS {}'.format(self.__zonename, fqdn))
+
+
     def getRecords(self) -> List[str]:
         """!
         @brief Get all records.
@@ -68,6 +85,14 @@ class Zone(Printable):
         @return list of records.
         """
         return self.__records
+
+    def getGuleRecords(self) -> List[str]:
+        """!
+        @brief Get all gule records.
+
+        @return list of records.
+        """
+        return self.__gules
 
     def findRecords(self, keyword: str) -> List[str]:
         """!
@@ -107,12 +132,32 @@ class DomainNameServer(Server):
     @brief The domain name server.
     """
 
+    __node: Node
+    __zones: Set[Zone]
+
+    def __init__(self, node: Node):
+        self.__node = node
+        self.__zones = set()
+
+    def addZone(self, zone: Zone):
+        self.__zones.add(zone)
+
+    def getZones(self) -> List[Zone]:
+        return list(self.__zones)
+
 class DomainNameService(Service):
     """!
     @brief The domain name service.
     """
 
     __rootZone: Zone = Zone('') # singleton
+    __servers: List[DomainNameServer]
+
+    def __init__(self):
+        self.__servers = []
+
+    def getName(self):
+        return 'DomainNameService'
 
     def getZone(self, domain: str) -> Zone:
         """!
@@ -140,6 +185,14 @@ class DomainNameService(Service):
         """
         return self.__rootZone
 
+    def _doInstall(self, node: Node) -> DomainNameServer:
+        server: DomainNameServer = node.getAttribute('__domain_name_service_server')
+        if server != None: return server
+        server = DomainNameServer(node)
+        self.__servers.append(server)
+        node.setAttribute('__domain_name_service_server', server)
+        return server
+
     def hostZoneOn(self, domain: str, node: Node, addNsAndSoa: bool = True):
         """!
         @brief Host a zone on the given node.
@@ -148,17 +201,37 @@ class DomainNameService(Service):
 
         @param domain zone name.
         @param node target node.
-        @param addNsAndSoa (optional) add NS and SOA records automatically, true
-        by default.
+        @param addNsAndSoa (optional) add NS (ns1.domain.tld) and SOA records
+        automatically, true by default. This method will also add gule records.
+
+        @throws AssertionError if node is not a host node.
+        @throws AssertionError if node has no interface.
         """
-        pass
+        if not node.hasAttribute('__domain_name_service_server'):
+            self.installOn(node)
+
+        server: DomainNameServer = node.getAttribute('__domain_name_service_server')
+        zone = self.getZone(domain)
+        server.addZone(zone)
+
+        if not addNsAndSoa: return
+
+        ifaces = node.getInterfaces()
+        assert len(ifaces) > 0, 'node has not interfaces'
+        addr = ifaces[0].getAddress()
+
+        if len(zone.findRecords('SOA')) == 0:
+            zone.addRecord('@ SOA TODO TODO TODO')
+
+        if domain[-1] != '.': domain += '.'
+        zone.addGuleRecord('ns1.{}'.format(domain), addr)
+        zone.addRecord('ns1.{} A {}'.format(domain, addr))
+        zone.addRecord('@ NS ns1.{}'.format(domain))
 
     def __autoNameServer(self, zone: Zone):
         if (len(zone.getSubZones().values()) == 0): return
         for subzone in zone.getSubZones().values():
-            for ns in subzone.findRecords('NS'):
-                # todo
-                pass
+            for gule in subzone.getGuleRecords(): zone.addRecord(gule)
             self.__autoNameServer(subzone)
 
     def autoNameServer(self):

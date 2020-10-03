@@ -83,8 +83,7 @@ print("\n\n\n\n========================")
 dns = DomainNameService()
 dns.getZone('example.com.').addRecord('@   A 127.0.0.1')
 dns.getZone('example.com.').addRecord('www A 127.0.0.1')
-dns.getZone('example.com.').addRecord('@ NS ns1.example.com.')
-dns.getZone('example.com.').addRecord('ns1 A 10.0.0.1')
+dns.hostZoneOn('example.com.', as151_h1)
 
 dns.autoNameServer()
 

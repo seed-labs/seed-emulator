@@ -98,7 +98,12 @@ class WebService(Service):
         @returns Handler of the installed web service.
         @throws AssertionError if node is not host node.
         """
-        self.__servers.append(WebServer(node))
+        server: WebServer = node.getAttribute('__web_service_server')
+        if server != None: return server
+        server = WebServer(node)
+        self.__servers.append(server)
+        node.setAttribute('__web_service_server', server)
+        return server
 
     def onRender(self):
         for server in self.__servers:
