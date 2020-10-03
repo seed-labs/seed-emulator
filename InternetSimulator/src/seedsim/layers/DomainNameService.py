@@ -1,7 +1,7 @@
+from __future__ import annotations
 from .Service import Service, Server
 from seedsim.core import Node, Printable
 from typing import List, Dict
-from __future__ import annotations
 from re import sub
 
 class Zone(Printable):
@@ -85,7 +85,7 @@ class Zone(Printable):
         out += 'Subzones:\n'
         
         indent += 4
-        for subzone in self.__subzones:
+        for subzone in self.__subzones.values():
             out += subzone.print(indent)
 
         return out
@@ -100,7 +100,7 @@ class DomainNameService(Service):
     @brief The domain name service.
     """
 
-    __rootZone: Zone = Zone('.') # singleton
+    __rootZone: Zone = Zone('') # singleton
 
     def getZone(self, domain: str) -> Zone:
         """!
@@ -112,7 +112,7 @@ class DomainNameService(Service):
 
         @returns zone handler.
         """
-        path: List[str] = domain.sub(r'\.$', '', domain).split('.')
+        path: List[str] = sub(r'\.$', '', domain).split('.')
         path.reverse()
         zoneptr = self.__rootZone
         for z in path:
