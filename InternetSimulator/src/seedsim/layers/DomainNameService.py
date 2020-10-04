@@ -186,8 +186,11 @@ class DomainNameServer(Server):
         self.__node.addStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
 
         for zone in self.__zones:
-            zonename = zone.getName()
-            zonepath = '/etc/bind/zones/{}'.format(zonename)
+            zonename = filename = zone.getName()
+            if zonename == '' or zonename == '.':
+                filename = 'root'
+                zonename = '.'
+            zonepath = '/etc/bind/zones/{}'.format(filename)
             self.__node.setFile(zonepath, '\n'.join(zone.getRecords()))
             self.__node.appendFile('/etc/bind/named.conf.zones',
                 'zone "{}" {{ type master; file "{}"; }};\n'.format(zonename, zonepath)
