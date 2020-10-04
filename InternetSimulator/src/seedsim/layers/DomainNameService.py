@@ -182,7 +182,16 @@ class DomainNameServer(Server):
         @brief Handle the installation.
         """
         self.__node.addSoftware('bind9')
+        self.__node.addStartCommand('mkdir /etc/bind/zones')
+        self.__node.addStartCommand('echo "include \"/etc/bind/named.conf.zones\";" >> /etc/bind/named.conf.local')
 
+        for zone in self.__zones:
+            zonename = zone.getName()
+            zonepath = '/etc/bind/zones/{}'.format(zonename)
+            self.__node.setFile(zonepath, '\n'.join(zone.getRecords()))
+            self.__node.appendFile('/etc/bind/named.conf.zones',
+                'zone "{}" {{ type master; file "{}" }};\n'.format(zonename, zonepath)
+            )
     
 class DomainNameService(Service):
     """!
