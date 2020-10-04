@@ -4,6 +4,7 @@ from seedsim.core import Node, Printable
 from seedsim.core.enums import NodeRole
 from typing import List, Dict, Tuple, Set
 from re import sub
+from random import randint
 
 class Zone(Printable):
     """!
@@ -22,7 +23,10 @@ class Zone(Printable):
         """
         self.__zonename = name
         self.__subzones = {}
-        self.__records = []
+        self.__records = [
+            '$TTL 300',
+            '$ORIGIN {}'.format(name if name != '' else '.')
+        ]
         self.__gules = []
 
     def getName(self) -> str:
@@ -106,11 +110,12 @@ class Zone(Printable):
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'Zone "{}":\n'.format(self.__zonename)
+        zonename = self.__zonename if self.__zonename != '' else '(root zone)'
+        out += 'Zone "{}":\n'.format(zonename)
 
         indent += 4
         out += ' ' * indent
-        out += 'Records:\n'
+        out += 'Zonefile:\n'
 
         indent += 4
         for record in self.__records:
@@ -136,15 +141,47 @@ class DomainNameServer(Server):
     __zones: Set[Zone]
 
     def __init__(self, node: Node):
+        """!
+        @brief DomainNameServer constructor.
+
+        @param node node to install server on.
+        """
         self.__node = node
         self.__zones = set()
 
     def addZone(self, zone: Zone):
+        """!
+        @brief Add a zone to this node.
+
+        You should use DomainNameService.hostZoneOn to host zone on node if you
+        want the automated NS record to work.
+        """
         self.__zones.add(zone)
 
     def getZones(self) -> List[Zone]:
+        """!
+        @brief Get list of zones hosted on the node.
+
+        @returns list of zones.
+        """
         return list(self.__zones)
 
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        (scope, _, name) = self.__node.getRegistryInfo()
+        out += 'Zones on as{}/{}:\n'.format(scope, name)
+        indent += 4
+        for zone in self.__zones:
+            out += ' ' * indent
+            out += '{}\n'.format(zone.getName())
+
+        return out
+
+    def install(self):
+        """!
+        @brief Handle the installation.
+        """
+    
 class DomainNameService(Service):
     """!
     @brief The domain name service.
@@ -154,6 +191,9 @@ class DomainNameService(Service):
     __servers: List[DomainNameServer]
 
     def __init__(self):
+        """!
+        @brief DomainNameService constructor.
+        """
         self.__servers = []
 
     def getName(self):
@@ -220,15 +260,21 @@ class DomainNameService(Service):
         assert len(ifaces) > 0, 'node has not interfaces'
         addr = ifaces[0].getAddress()
 
-        if len(zone.findRecords('SOA')) == 0:
-            zone.addRecord('@ SOA TODO TODO TODO')
-
         if domain[-1] != '.': domain += '.'
+
+        if len(zone.findRecords('SOA')) == 0:
+            zone.addRecord('@ SOA {} {} {} 900 900 1800 60'.format('ns1.{}'.format(domain), 'admin.{}'.format(domain), randint(1, 0xffffffff)))
+
         zone.addGuleRecord('ns1.{}'.format(domain), addr)
         zone.addRecord('ns1.{} A {}'.format(domain, addr))
         zone.addRecord('@ NS ns1.{}'.format(domain))
 
     def __autoNameServer(self, zone: Zone):
+        """!
+        @brief Try to automatically add NS records of children to parent zones.
+
+        @param zone root zone reference.
+        """
         if (len(zone.getSubZones().values()) == 0): return
         for subzone in zone.getSubZones().values():
             for gule in subzone.getGuleRecords(): zone.addRecord(gule)
@@ -237,9 +283,6 @@ class DomainNameService(Service):
     def autoNameServer(self):
         """!
         @brief Try to automatically add NS records of children to parent zones.
-
-        Note that all zones in the simulation must have NS record for this to
-        work.
         """
         self.__autoNameServer(self.__rootZone)
 
@@ -249,5 +292,11 @@ class DomainNameService(Service):
 
         indent += 4
         out += self.__rootZone.print(indent)
+
+        out += ' ' * indent
+        out += 'Servers:\n'
+
+        for server in self.__servers:
+            out += server.print(indent + 4)
 
         return out
