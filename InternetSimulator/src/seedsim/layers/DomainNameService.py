@@ -181,6 +181,8 @@ class DomainNameServer(Server):
         """!
         @brief Handle the installation.
         """
+        self.__node.addSoftware('bind9')
+
     
 class DomainNameService(Service):
     """!
@@ -198,6 +200,9 @@ class DomainNameService(Service):
 
     def getName(self):
         return 'DomainNameService'
+    
+    def getDependencies(self) -> List[str]:
+        return ['Base']
 
     def getZone(self, domain: str) -> Zone:
         """!
@@ -286,6 +291,10 @@ class DomainNameService(Service):
         """
         self.__autoNameServer(self.__rootZone)
 
+    def onRender(self):
+        for server in self.__servers:
+            server.install()
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'DomainNameService:\n'
@@ -294,7 +303,7 @@ class DomainNameService(Service):
         out += self.__rootZone.print(indent)
 
         out += ' ' * indent
-        out += 'Servers:\n'
+        out += 'Hosted zones:\n'
 
         for server in self.__servers:
             out += server.print(indent + 4)

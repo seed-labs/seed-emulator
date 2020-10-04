@@ -55,12 +55,20 @@ ws = WebService()
 ws.installOnAll(150) # install on all hosts
 ws.installOn(as151_h1)
 
+dns = DomainNameService()
+dns.getZone('example.com.').addRecord('@   A 127.0.0.1')
+dns.getZone('example.com.').addRecord('www A 127.0.0.1')
+dns.hostZoneOn('example.com.', as151_h1)
+
+dns.autoNameServer()
+
 r.addLayer(ospf)
 r.addLayer(routing)
 r.addLayer(ebgp)
 r.addLayer(base)
 r.addLayer(ibgp)
 r.addLayer(ws)
+r.addLayer(dns)
 
 print("Layers =================")
 print(r)
@@ -76,15 +84,3 @@ print("\n\n\n\nCompiler output ========")
 compiler = Docker()
 compiler.compile(reg, './test/')
 
-
-
-print("\n\n\n\n========================")
-
-dns = DomainNameService()
-dns.getZone('example.com.').addRecord('@   A 127.0.0.1')
-dns.getZone('example.com.').addRecord('www A 127.0.0.1')
-dns.hostZoneOn('example.com.', as151_h1)
-
-dns.autoNameServer()
-
-print(dns)
