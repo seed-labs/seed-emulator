@@ -183,7 +183,7 @@ class DomainNameServer(Server):
         """
         self.__node.addSoftware('bind9')
         self.__node.addStartCommand('mkdir /etc/bind/zones')
-        self.__node.addStartCommand('echo "include \"/etc/bind/named.conf.zones\";" >> /etc/bind/named.conf.local')
+        self.__node.addStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
 
         for zone in self.__zones:
             zonename = zone.getName()
