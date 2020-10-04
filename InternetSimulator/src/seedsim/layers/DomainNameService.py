@@ -190,8 +190,10 @@ class DomainNameServer(Server):
             zonepath = '/etc/bind/zones/{}'.format(zonename)
             self.__node.setFile(zonepath, '\n'.join(zone.getRecords()))
             self.__node.appendFile('/etc/bind/named.conf.zones',
-                'zone "{}" {{ type master; file "{}" }};\n'.format(zonename, zonepath)
+                'zone "{}" {{ type master; file "{}"; }};\n'.format(zonename, zonepath)
             )
+
+        self.__node.addStartCommand('service named start')
     
 class DomainNameService(Service):
     """!
