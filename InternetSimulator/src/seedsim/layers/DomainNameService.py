@@ -225,6 +225,7 @@ class DomainNameService(Service):
 
         @returns zone handler.
         """
+        if domain == '.' or domain == '': return self.__rootZone
         path: List[str] = sub(r'\.$', '', domain).split('.')
         path.reverse()
         zoneptr = self.__rootZone
@@ -277,6 +278,7 @@ class DomainNameService(Service):
         addr = ifaces[0].getAddress()
 
         if domain[-1] != '.': domain += '.'
+        if domain == '.': domain = ''
 
         if len(zone.findRecords('SOA')) == 0:
             zone.addRecord('@ SOA {} {} {} 900 900 1800 60'.format('ns1.{}'.format(domain), 'admin.{}'.format(domain), randint(1, 0xffffffff)))

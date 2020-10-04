@@ -59,6 +59,9 @@ dns = DomainNameService()
 dns.getZone('example.com.').addRecord('@   A 127.0.0.1')
 dns.getZone('example.com.').addRecord('www A 127.0.0.1')
 dns.hostZoneOn('example.com.', as151_h1)
+dns.hostZoneOn('com.', as150_h2)
+dns.hostZoneOn('.', as150_h1)
+
 
 dns.autoNameServer()
 
