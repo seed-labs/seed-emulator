@@ -65,7 +65,7 @@ dns.hostZoneOn('com.', as150_h2)
 dns.hostZoneOn('.', as150_h1)
 dns.autoNameServer()
 
-ldns = DomainNameCachingService()
+ldns = DomainNameCachingService(autoRoot = True, setResolvconf = True)
 ldns.installOn(as151_h2)
 
 r.addLayer(ospf)

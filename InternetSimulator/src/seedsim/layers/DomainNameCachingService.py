@@ -58,9 +58,14 @@ class DomainNameCachingServer(Server):
         """
         return self.__root_servers
 
-    def install(self):
+    def install(self, setResolvconf: bool):
         """!
         @brief Handle installation.
+
+        @param setResolvconf set resolv.conf of all other nodes in the AS.
+
+        @throw AssertionError if setResolvconf is true but current node has no
+        IP address.
         """
         self.__node.addSoftware('bind9')
         self.__node.setFile('/etc/bind/named.conf.options', DomainNameCachingServiceFileTemplates['named_options'])
@@ -69,6 +74,22 @@ class DomainNameCachingServer(Server):
             self.__node.setFile('/usr/share/dns/root.hints', hint)
             self.__node.setFile('/etc/bind/db.root', hint)
         self.__node.addStartCommand('service named start')
+        if not setResolvconf: return
+        (scope, _, _) = self.__node.getRegistryInfo()
+        sr = ScopedRegistry(scope)
+        ifaces = self.__node.getInterfaces()
+        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(self.__node.getName())
+        addr = ifaces[0].getAddress()
+
+        for rnode in sr.getByType('rnode'):
+            rnode.appendFile('/etc/resolv.conf.new', 'nameserver {}\n'.format(addr))
+            if 'cp /etc/resolv.conf.new /etc/resolv.conf' not in rnode.getStartCommands():
+                rnode.addStartCommand('cp /etc/resolv.conf.new /etc/resolv.conf')
+
+        for hnode in sr.getByType('hnode'):
+            if 'cp /etc/resolv.conf.new /etc/resolv.conf' not in hnode.getStartCommands():
+                hnode.addStartCommand('cp /etc/resolv.conf.new /etc/resolv.conf')
+            hnode.appendFile('/etc/resolv.conf.new', 'nameserver {}\n'.format(addr))
 
 class DomainNameCachingService(Service):
     """!
@@ -109,8 +130,6 @@ class DomainNameCachingService(Service):
 
         @param node node to install the cache service on.
 
-        @todo setResolvconf.
-
         @returns Handler of the installed cache service.
         @throws AssertionError if node is not host node.
         """
@@ -130,7 +149,7 @@ class DomainNameCachingService(Service):
         
         for server in self.__servers:
             server.setRootServers(root_servers)
-            server.install()
+            server.install(self.__set_resolvconf)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
