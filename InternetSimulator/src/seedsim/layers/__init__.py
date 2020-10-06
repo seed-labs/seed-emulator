@@ -7,3 +7,4 @@ from .Ibgp import Ibgp
 from .Service import Service, Server
 from .WebService import WebService, WebServer
 from .DomainNameService import DomainNameServer, DomainNameService, Zone
+from .DomainNameCachingService import DomainNameCachingServer, DomainNameCachingService

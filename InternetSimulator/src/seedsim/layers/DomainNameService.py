@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .Service import Service, Server
-from seedsim.core import Node, Printable
+from seedsim.core import Node, Printable, ScopedRegistry
 from seedsim.core.enums import NodeRole
 from typing import List, Dict, Tuple, Set
 from re import sub
@@ -78,8 +78,9 @@ class Zone(Printable):
         @param addr IP address of the name server.
         """
         if fqdn[-1] != '.': fqdn += '.'
+        zonename = self.__zonename if self.__zonename != '' else '.' 
         self.__gules.append('{} A {}'.format(fqdn, addr))
-        self.__gules.append('{} NS {}'.format(self.__zonename, fqdn))
+        self.__gules.append('{} NS {}'.format(zonename, fqdn))
 
 
     def getRecords(self) -> List[str]:
@@ -173,7 +174,9 @@ class DomainNameServer(Server):
         indent += 4
         for zone in self.__zones:
             out += ' ' * indent
-            out += '{}\n'.format(zone.getName())
+            zname = zone.getName()
+            if zname == '' or zname[-1] != '.': zname += '.'
+            out += '{}\n'.format(zname)
 
         return out
 
@@ -205,6 +208,7 @@ class DomainNameService(Service):
 
     __rootZone: Zone = Zone('') # singleton
     __servers: List[DomainNameServer]
+    __reg = ScopedRegistry('seedsim')
 
     def __init__(self):
         """!

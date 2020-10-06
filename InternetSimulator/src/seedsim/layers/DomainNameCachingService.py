@@ -1,6 +1,18 @@
-from seedsim.core import Node
+from seedsim.core import Node, ScopedRegistry
 from .Service import Service, Server
-from typing import List
+from .DomainNameService import DomainNameService
+from typing import List, Dict
+
+DomainNameCachingServiceFileTemplates: Dict[str, str] = {}
+
+DomainNameCachingServiceFileTemplates['named_options'] = '''
+options {
+	directory "/var/cache/bind";
+	recursion yes;
+	dnssec-validation no;
+	allow-query { any; };
+};
+'''
 
 class DomainNameCachingServer(Server):
     """!
@@ -26,7 +38,9 @@ class DomainNameCachingServer(Server):
         @brief Change root server hint.
 
         By defualt, the caching server uses the root hint file shipped with
-        bind9. Use this method to override root hint.
+        bind9. Use this method to override root hint. Note that if autoRoot is
+        set to true in DomainNameCachingService, manual changes will be
+        overrided.
 
         @param servers list of IP addresses of the root servers.
         """
@@ -44,6 +58,18 @@ class DomainNameCachingServer(Server):
         """
         return self.__root_servers
 
+    def install(self):
+        """!
+        @brief Handle installation.
+        """
+        self.__node.addSoftware('bind9')
+        self.__node.setFile('/etc/bind/named.conf.options', DomainNameCachingServiceFileTemplates['named_options'])
+        if len(self.__root_servers) > 0:
+            hint = '\n'.join(self.__root_servers)
+            self.__node.setFile('/usr/share/dns/root.hints', hint)
+            self.__node.setFile('/etc/bind/db.root', hint)
+        self.__node.addStartCommand('service named start')
+
 class DomainNameCachingService(Service):
     """!
     @brief Caching DNS (i.e., Local DNS)
@@ -53,6 +79,8 @@ class DomainNameCachingService(Service):
 
     __auto_root: bool
     __set_resolvconf: bool
+    __reg = ScopedRegistry('seedsim')
+    __servers: List[DomainNameCachingServer]
 
     def __init__(self, autoRoot: bool = True, setResolvconf: bool = False):
         """!
@@ -67,9 +95,51 @@ class DomainNameCachingService(Service):
 
         self.__auto_root = autoRoot
         self.__set_resolvconf = setResolvconf
+        self.__servers = []
 
     def getName(self) -> str:
         return 'DomainNameCachingService'
 
     def getDependencies(self) -> List[str]:
         return ['Base', 'DomainNameService'] if self.__auto_root else ['Base']
+
+    def _doInstall(self, node: Node) -> DomainNameCachingServer:
+        """!
+        @brief Install the cache service on given node.
+
+        @param node node to install the cache service on.
+
+        @todo setResolvconf.
+
+        @returns Handler of the installed cache service.
+        @throws AssertionError if node is not host node.
+        """
+        server: DomainNameCachingServer = node.getAttribute('__domain_name_cacheing_service_server')
+        if server != None: return server
+        server = DomainNameCachingServer(node)
+        self.__servers.append(server)
+        node.setAttribute('__domain_name_cacheing_service_server', server)
+        return server
+
+    def onRender(self):
+        root_servers: List[str] = []
+        if self.__auto_root:
+            dns_layer: DomainNameService = self.__reg.get('layer', 'DomainNameService')
+            root_zone = dns_layer.getRootZone()
+            root_servers = root_zone.getGuleRecords()
+        
+        for server in self.__servers:
+            server.setRootServers(root_servers)
+            server.install()
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'DomainNameCachingService:\n'
+
+        out += ' ' * indent
+        out += 'Configure root hint: {}\n'.format(self.__auto_root)
+
+        out += ' ' * indent
+        out += 'Set resolv.conf: {}\n'.format(self.__set_resolvconf)
+
+        return out

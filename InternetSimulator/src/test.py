@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService
+from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
 from seedsim.compiler import Docker
@@ -34,6 +34,8 @@ as151_r1.joinNetworkByName("ix100")
 as151_r1.joinNetworkByName("net0")
 as151_h1 = as151.createHost("h1")
 as151_h1.joinNetworkByName("net0")
+as151_h2 = as151.createHost("h2")
+as151_h2.joinNetworkByName("net0")
 
 ebgp = Ebgp()
 ebgp.addPrivatePeering(100, 150, 151)
@@ -61,9 +63,10 @@ dns.getZone('example.com.').addRecord('www A 127.0.0.1')
 dns.hostZoneOn('example.com.', as151_h1)
 dns.hostZoneOn('com.', as150_h2)
 dns.hostZoneOn('.', as150_h1)
-
-
 dns.autoNameServer()
+
+ldns = DomainNameCachingService()
+ldns.installOn(as151_h2)
 
 r.addLayer(ospf)
 r.addLayer(routing)
@@ -72,6 +75,8 @@ r.addLayer(base)
 r.addLayer(ibgp)
 r.addLayer(ws)
 r.addLayer(dns)
+r.addLayer(ldns)
+
 
 print("Layers =================")
 print(r)
@@ -86,4 +91,3 @@ print(reg)
 print("\n\n\n\nCompiler output ========")
 compiler = Docker()
 compiler.compile(reg, './test/')
-
