@@ -2,6 +2,9 @@ from .Layer import Layer
 from .Base import AutonomousSystem
 from seedsim.core import Node, Network
 from typing import List
+import requests
+
+RIS_PREFIXLIST_URL = 'https://stat.ripe.net/data/announced-prefixes/data.json'
 
 class Reality(Layer):
     """!
@@ -20,7 +23,28 @@ class Reality(Layer):
     def getDependencies(self) -> List[str]:
         return ['Base']
 
-    def createRealWorldRouter(self, as: AutonomousSystem, prefixes: List[str] = None) -> Node:
+    def getPrefixList(self, asn: int) -> List[str]:
+        """!
+        @brief Helper tool, get real-world prefix list for an ans by RIPE RIS.
+
+        @param asn asn.
+        
+        @throw AssertionError if API failed.
+        """
+        self._log('loading real-world prefix list for as{}'.format(asn))
+
+        rslt = requests.get(RIS_PREFIXLIST_URL, {
+            'resource': asn
+        })
+
+        assert rslt.status_code == 200, 'RIPEstat API returned non-200'
+        
+        json = rslt.json()
+        assert json['status'] == 'ok', 'RIPEstat API returned not-OK'
+ 
+        return [p['prefix'] for p in json['data']['prefixes'] if ':' not in p['prefix']]
+
+    def createRealWorldRouter(self, asobj: AutonomousSystem, prefixes: List[str] = None) -> Node:
         """!
         @brief add a router node that routes prefixes to the real world.
 

@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService
+from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService, Reality
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
 from seedsim.compiler import Docker
@@ -91,3 +91,9 @@ print(reg)
 print("\n\n\n\nCompiler output ========")
 compiler = Docker()
 compiler.compile(reg, './test/')
+
+
+
+
+real = Reality()
+print(real.getPrefixList(11872))
