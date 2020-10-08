@@ -1,6 +1,6 @@
 from .Layer import Layer
 from .Base import Base
-from .Routing import Routing
+from .Routing import Routing, Router
 from .Ebgp import Ebgp
 from .Ospf import Ospf
 from .Ibgp import Ibgp

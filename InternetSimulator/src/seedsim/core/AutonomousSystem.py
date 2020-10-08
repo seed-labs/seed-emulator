@@ -27,6 +27,12 @@ class AutonomousSystem(Printable):
         self.__asn = asn
         self.__reg = ScopedRegistry(str(asn))
         self.__subnet_generator = None if asn > 255 else IPv4Network("10.{}.0.0/16".format(asn)).subnets(new_prefix = 24)
+
+    def getAsn(self) -> int:
+        """!
+        @brief Get ASN.
+        """
+        retrun self.__asn
     
     def createNetwork(self, name: str, prefix: str = "auto", aac: AddressAssignmentConstraint = None) -> Network:
         """!
