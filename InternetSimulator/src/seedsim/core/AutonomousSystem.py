@@ -32,7 +32,7 @@ class AutonomousSystem(Printable):
         """!
         @brief Get ASN.
         """
-        retrun self.__asn
+        return self.__asn
     
     def createNetwork(self, name: str, prefix: str = "auto", aac: AddressAssignmentConstraint = None) -> Network:
         """!

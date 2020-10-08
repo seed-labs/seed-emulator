@@ -18,10 +18,11 @@ class RealWorldRouter(Router):
     __realworld_routes: List[str]
     __sealed: bool
 
-    def __init__(self):
+    def initRealWorld(self):
         """!
-        @brief RealWorldRouter constructor.
+        @brief init RealWorldRouter.
         """
+        if hasattr(self, '__sealed'): return
         self.__realworld_routes = []
         self.__sealed = False
 
@@ -54,16 +55,14 @@ class RealWorldRouter(Router):
 
 
     def print(self, indent: int) -> str:
-        out = super(Node, self).print(indent)
+        out = super(RealWorldRouter, self).print(indent)
 
         out += ' ' * indent
         out += 'Real-world prefixes:\n'
 
         indent += 4
-        out += ' ' * indent
-
         for prefix in self.__realworld_routes:
-            out += ' ' * 4
+            out += ' ' * indent
             out += '{}\n'.format(prefix)
 
         return out
@@ -82,13 +81,13 @@ class Reality(Layer):
         """!
         @brief Reality constructor.
         """
-        __rwnodes = []
+        self.__rwnodes = []
 
     def getName(self):
         return 'Reality'
     
     def getDependencies(self) -> List[str]:
-        return ['Routing']
+        return ['Ebgp']
 
     def getPrefixList(self, asn: int) -> List[str]:
         """!
@@ -115,12 +114,16 @@ class Reality(Layer):
         """!
         @brief add a router node that routes prefixes to the real world.
 
+        Connect the node to an IX, or to other nodes in IX via IBGP, to get the
+        routes into simulation.
+
         @param as AutonomousSystem to add this node to.
         @param prefixes (optional) prefixes to annoucne. If unset, will try to
         get prefixes from real-world DFZ via RIPE RIS.
         """
         rwnode: RealWorldRouter = asobj.createRouter(nodename)
         rwnode.__class__ = RealWorldRouter
+        rwnode.initRealWorld()
         if prefixes == None: prefixes = self.getPrefixList(asobj.getAsn())
         for prefix in prefixes:
             rwnode.addRealWorldRoute(prefix)
@@ -130,6 +133,8 @@ class Reality(Layer):
         """!
         @brief add an AutonomousSystem with a router node that routes prefixes
         to the real world.
+
+        Connect the AS to an IX to get the routes into simulation.
 
         @param asn asn.
         @param prefixes (optional) prefixes to annoucne. If unset, will try to
@@ -148,3 +153,13 @@ class Reality(Layer):
         @param net network.
         """
         pass
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'Real-world router nodes:\n'
+
+        indent += 4
+        for node in self.__rwnodes:
+            out += node.print(indent)
+
+        return out

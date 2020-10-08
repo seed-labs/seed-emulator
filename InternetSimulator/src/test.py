@@ -96,4 +96,5 @@ compiler.compile(reg, './test/')
 
 
 real = Reality()
-print(real.getPrefixList(11872))
+as11872 = real.createRealWorldAutonomousSystem(11872)
+print(as11872)
