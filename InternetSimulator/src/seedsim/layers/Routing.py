@@ -63,68 +63,66 @@ RoutingFileTemplates["rnode_bird_interface"] = """
     interface "{interfaceName}";
 """
 
-def addProtocol(node: Node, protocol: str, name: str, body: str):
+class Router(Node):
     """!
-    @brief Add a new protocol to BIRD on the given node.
+    @brief Node extension class.
 
-    This method is to be injected in to router node class objects.
-
-    @param node node to operator on.
-    @param protocol protocol type. (e.g., bgp, ospf)
-    @param name protocol name.
-    @param body protocol body.
+    Nodes with routing install will be replaced with this to get the extension
+    methods.
     """
-    node.appendFile("/etc/bird/bird.conf", RoutingFileTemplates["protocol"].format(
-        protocol = protocol,
-        name = name,
-        body = body
-    ))
 
-def addTablePipe(node: Node, src: str, dst: str = 'master', importFilter: str = 'none', exportFilter: str = 'all', ignoreExist: bool = True):
-    """!
-    @brief add a new routing table pipe.
-    
-    @param node node to operator on.
-    @param src src table.
-    @param dst (optional) dst table (default: master)
-    @param importFilter (optional) filter for importing from dst table to src table (default: none)
-    @param exportFilter (optional) filter for exporting from src table to dst table (default: all)
-    @param ignoreExist (optional) assert check if table exists. If true, error is silently discarded.
+    def addProtocol(self, protocol: str, name: str, body: str):
+        """!
+        @brief Add a new protocol to BIRD on the given node.
 
-    @throws AssertionError if pipe between two tables already exist and ignoreExist is False.
-    """
-    meta = node.getAttribute('__routing_layer_metadata', {})
-    if 'pipes' not in meta: meta['pipes'] = {}
-    pipes = meta['pipes']
-    if src not in pipes: pipes[src] = []
-    if dst in pipes[src]:
-        assert ignoreExist, 'pipe from {} to {} already exist'.format(src, dst)
-        return
-    pipes[src].append(dst)
-    node.appendFile('/etc/bird/bird.conf', RoutingFileTemplates["pipe"].format(
-        src = src,
-        dst = dst,
-        importFilter = importFilter,
-        exportFilter = exportFilter
-    ))
+        @param protocol protocol type. (e.g., bgp, ospf)
+        @param name protocol name.
+        @param body protocol body.
+        """
+        self.appendFile("/etc/bird/bird.conf", RoutingFileTemplates["protocol"].format(
+            protocol = protocol,
+            name = name,
+            body = body
+        ))
 
+    def addTablePipe(self, src: str, dst: str = 'master', importFilter: str = 'none', exportFilter: str = 'all', ignoreExist: bool = True):
+        """!
+        @brief add a new routing table pipe.
+        
+        @param src src table.
+        @param dst (optional) dst table (default: master)
+        @param importFilter (optional) filter for importing from dst table to src table (default: none)
+        @param exportFilter (optional) filter for exporting from src table to dst table (default: all)
+        @param ignoreExist (optional) assert check if table exists. If true, error is silently discarded.
 
-def addTable(node: Node, tableName: str):
-    """!
-    @brief Add a new routing table to BIRD on the given node.
+        @throws AssertionError if pipe between two tables already exist and ignoreExist is False.
+        """
+        meta = self.getAttribute('__routing_layer_metadata', {})
+        if 'pipes' not in meta: meta['pipes'] = {}
+        pipes = meta['pipes']
+        if src not in pipes: pipes[src] = []
+        if dst in pipes[src]:
+            assert ignoreExist, 'pipe from {} to {} already exist'.format(src, dst)
+            return
+        pipes[src].append(dst)
+        self.appendFile('/etc/bird/bird.conf', RoutingFileTemplates["pipe"].format(
+            src = src,
+            dst = dst,
+            importFilter = importFilter,
+            exportFilter = exportFilter
+        ))
 
-    This method is to be injected in to router node class objects. 
+    def addTable(self, tableName: str):
+        """!
+        @brief Add a new routing table to BIRD on the given node.
 
-    @param node node to operator on.
-    @tableName name of the new table.
-    """
-    meta = node.getAttribute('__routing_layer_metadata', {})
-    if 'tables' not in meta: meta['tables'] = []
-    tables = meta['tables']
-    if tableName not in tables: node.appendFile('/etc/bird/bird.conf', 'table {};\n'.format(tableName))
-    tables.append(tableName)
-
-
+        @tableName name of the new table.
+        """
+        meta = self.getAttribute('__routing_layer_metadata', {})
+        if 'tables' not in meta: meta['tables'] = []
+        tables = meta['tables']
+        if tableName not in tables: self.appendFile('/etc/bird/bird.conf', 'table {};\n'.format(tableName))
+        tables.append(tableName)
 
 class Routing(Layer):
     """!
@@ -168,7 +166,7 @@ class Routing(Layer):
 
                 rs_iface = rs_ifaces[0]
 
-                rs_node.addProtocol = partial(addProtocol, rs_node) # "inject" the method
+                rs_node.__class__ = Router
                 rs_node.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rs_bird"].format(
                     routerId = rs_iface.getAddress()
                 ))
@@ -195,10 +193,7 @@ class Routing(Layer):
 
                 r_iface = r_ifaces[0]
 
-                rnode.addProtocol = partial(addProtocol, rnode) # "inject" the method
-                rnode.addTable = partial(addTable, rnode)
-                rnode.addTablePipe = partial(addTablePipe, rnode)
-
+                rnode.__class__ = Router
                 rnode.setFile("/netmap.txt", netmap)
                 rnode.setFile("/interface_rename", RoutingFileTemplates["interface_rename_script"])
                 rnode.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rnode_bird"].format(

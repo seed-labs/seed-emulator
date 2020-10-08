@@ -1,4 +1,5 @@
 from .Layer import Layer
+from .Routing import Router
 from seedsim.core import Registry, ScopedRegistry, Network, Node, Interface
 from typing import Tuple, List, Dict
 
@@ -77,13 +78,13 @@ class Ebgp(Layer):
             p_reg = ScopedRegistry(str(peer))
 
             ix_net: Network = ix_reg.get('net', 'ix{}'.format(ix))
-            ix_rs: Node = ix_reg.get('rs', 'ix{}'.format(ix))
+            ix_rs: Router = ix_reg.get('rs', 'ix{}'.format(ix))
             rs_ifs = ix_rs.getInterfaces()
             assert len(rs_ifs) == 1, '??? ix{} rs has {} interfaces.'.format(ix, len(rs_ifs))
             rs_if = rs_ifs[0]
 
-            p_rnodes: List[Node] = p_reg.getByType('rnode')
-            p_ixnode: Node = None
+            p_rnodes: List[Router] = p_reg.getByType('rnode')
+            p_ixnode: Router = None
             p_ixif: Interface = None
             for node in p_rnodes:
                 if p_ixnode != None: break
@@ -96,7 +97,6 @@ class Ebgp(Layer):
             assert p_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(a, ix)
             self._log("adding peering: {} as {} (RS) <-> {} as {}".format(rs_if.getAddress(), ix, p_ixif.getAddress(), peer))
 
-            # addProtocol method is "injected" by routing layer
             ix_rs.addProtocol('bgp', 'as{}'.format(peer), EbgpFileTemplates["rs_bird_peer"].format(
                 localAddress = rs_if.getAddress(),
                 localAsn = ix,
@@ -104,7 +104,6 @@ class Ebgp(Layer):
                 peerAsn = peer
             )) 
 
-            # @todo import/export filter?
             p_ixnode.addTable('t_bgp')
             p_ixnode.addTablePipe('t_bgp')
             p_ixnode.addTablePipe('t_direct', 't_bgp')
@@ -123,10 +122,10 @@ class Ebgp(Layer):
             b_reg = ScopedRegistry(str(b))
 
             ix_net: Network = ix_reg.get('net', 'ix{}'.format(ix))
-            a_rnodes: List[Node] = a_reg.getByType('rnode')
-            b_rnodes: List[Node] = b_reg.getByType('rnode')
+            a_rnodes: List[Router] = a_reg.getByType('rnode')
+            b_rnodes: List[Router] = b_reg.getByType('rnode')
 
-            a_ixnode: Node = None
+            a_ixnode: Router = None
             a_ixif: Interface = None
             for node in a_rnodes:
                 if a_ixnode != None: break
@@ -138,7 +137,7 @@ class Ebgp(Layer):
             
             assert a_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(a, ix)
 
-            b_ixnode: Node = None
+            b_ixnode: Router = None
             b_ixif: Interface = None
             for node in b_rnodes:
                 if b_ixnode != None: break
@@ -152,7 +151,6 @@ class Ebgp(Layer):
 
             self._log("adding peering: {} as {} <-> {} as {}".format(a_ixif.getAddress(), a, b_ixif.getAddress(), b))
 
-            # addProtocol method is "injected" by routing layer
             # @todo import/export filter?
             a_ixnode.addTable('t_bgp')
             a_ixnode.addTablePipe('t_bgp')
