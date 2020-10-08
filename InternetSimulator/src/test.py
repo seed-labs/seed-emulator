@@ -68,6 +68,12 @@ dns.autoNameServer()
 ldns = DomainNameCachingService(autoRoot = True, setResolvconf = True)
 ldns.installOn(as151_h2)
 
+real = Reality()
+as11872 = base.createAutonomousSystem(11872)
+as11872_rw = real.createRealWorldRouter(as11872)
+as11872_rw.joinNetworkByName("ix100", "10.100.0.118")
+ebgp.addRsPeer(100, 11872)
+
 r.addLayer(ospf)
 r.addLayer(routing)
 r.addLayer(ebgp)
@@ -76,6 +82,7 @@ r.addLayer(ibgp)
 r.addLayer(ws)
 r.addLayer(dns)
 r.addLayer(ldns)
+r.addLayer(real)
 
 
 print("Layers =================")
@@ -91,10 +98,3 @@ print(reg)
 print("\n\n\n\nCompiler output ========")
 compiler = Docker()
 compiler.compile(reg, './test/')
-
-
-
-
-real = Reality()
-as11872 = real.createRealWorldAutonomousSystem(11872)
-print(as11872)

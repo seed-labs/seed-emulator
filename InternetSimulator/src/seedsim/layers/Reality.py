@@ -2,10 +2,19 @@ from .Layer import Layer
 from .Base import Base
 from .Routing import Router
 from seedsim.core import Node, Network, AutonomousSystem, ScopedRegistry
-from typing import List
+from typing import List, Dict
 import requests
 
 RIS_PREFIXLIST_URL = 'https://stat.ripe.net/data/announced-prefixes/data.json'
+
+RealityFileTemplates: Dict[str, str] = {}
+
+RealityFileTemplates['configure_script'] = '''\
+#!/bin/bash
+gw="`ip rou show default | cut -d' ' -f3`"
+sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
+iptables -t nat -A POSTROUTING -j MASQUERADE
+'''
 
 class RealWorldRouter(Router):
     """!
@@ -25,6 +34,10 @@ class RealWorldRouter(Router):
         if hasattr(self, '__sealed'): return
         self.__realworld_routes = []
         self.__sealed = False
+        self.addSoftware('iptables')
+        self.setFile('/rw_configure_script', RealityFileTemplates['configure_script'])
+        self.addStartCommand('chmod +x /rw_configure_script')
+        self.addStartCommand('/rw_configure_script')
 
     def addRealWorldRoute(self, prefix: str):
         """!
@@ -41,14 +54,16 @@ class RealWorldRouter(Router):
         """!
         @brief seal the realworld router.
 
-        Use this method to "seal" the router (add static protocol, add provision
-        script to node.) No new real world routes can be added once the node is
-        sealed.
+        Use this method to "seal" the router (add static protocol.) No new real
+        world routes can be added once the node is sealed.
         """
         if self.__sealed: return
         self.__sealed = True
+        if len(self.__realworld_routes) == 0: return
         self.addTable('t_rw')
-        statics = '    table t_rw;\n    ' + ' via !__default_gw__!;\n    '.join(self.__realworld_routes)
+        statics = '\n    table t_rw;\n    route ' + ' via !__default_gw__!;\n    route '.join(self.__realworld_routes)
+        statics += ' via !__default_gw__!;\n'
+
         self.addProtocol('static', 'real_world', statics)
         self.addTablePipe('t_rw', 't_bgp')
         # self.addTablePipe('t_rw', 't_ospf') # TODO
@@ -64,6 +79,7 @@ class RealWorldRouter(Router):
         for prefix in self.__realworld_routes:
             out += ' ' * indent
             out += '{}\n'.format(prefix)
+        
 
         return out
 
@@ -129,21 +145,7 @@ class Reality(Layer):
             rwnode.addRealWorldRoute(prefix)
         self.__rwnodes.append(rwnode)
 
-    def createRealWorldAutonomousSystem(self, asn: int, prefixes: List[str] = None) -> AutonomousSystem:
-        """!
-        @brief add an AutonomousSystem with a router node that routes prefixes
-        to the real world.
-
-        Connect the AS to an IX to get the routes into simulation.
-
-        @param asn asn.
-        @param prefixes (optional) prefixes to annoucne. If unset, will try to
-        get prefixes from real-world DFZ via RIPE RIS.
-        """
-        base: Base = self.__reg.get('layer', 'Base')
-        asobj = base.createAutonomousSystem(asn)
-        self.createRealWorldRouter(asobj, prefixes=prefixes)
-        return asobj
+        return rwnode
 
     def enableRealWorldAccess(self, net: Network):
         """!
@@ -153,6 +155,11 @@ class Reality(Layer):
         @param net network.
         """
         pass
+
+    def onRender(self):
+        for node in self.__rwnodes:
+            print(node)
+            node.seal()
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

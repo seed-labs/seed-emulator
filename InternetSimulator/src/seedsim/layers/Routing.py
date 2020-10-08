@@ -166,7 +166,7 @@ class Routing(Layer):
 
                 rs_iface = rs_ifaces[0]
 
-                rs_node.__class__ = Router
+                if not issubclass(rs_node.__class__, Router): rs_node.__class__ = Router
                 rs_node.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rs_bird"].format(
                     routerId = rs_iface.getAddress()
                 ))
@@ -181,19 +181,21 @@ class Routing(Layer):
                 assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rs_node.getAsn(), rs_node.getName())
 
                 directs = '\n    table t_direct;'
+                has_localnet = False
                 netmap = ''
 
                 for iface in r_ifaces:
                     net = iface.getNet()
                     netmap += '{}:{}\n'.format(net.getName(), net.getPrefix())
                     if net in self.__direct_nets:
+                        has_localnet = True
                         directs += RoutingFileTemplates["rnode_bird_interface"].format(
                             interfaceName = net.getName()
                         )
 
                 r_iface = r_ifaces[0]
 
-                rnode.__class__ = Router
+                if not issubclass(rnode.__class__, Router): rnode.__class__ = Router
                 rnode.setFile("/netmap.txt", netmap)
                 rnode.setFile("/interface_rename", RoutingFileTemplates["interface_rename_script"])
                 rnode.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rnode_bird"].format(
@@ -209,7 +211,7 @@ class Routing(Layer):
                 rnode.addSoftware('ipcalc')
                 rnode.addSoftware('bird')
 
-                if directs != '': rnode.addProtocol('direct', 'local_nets', directs)
+                if has_localnet: rnode.addProtocol('direct', 'local_nets', directs)
 
             if type == 'hnode':
                 hnode: Node = obj
