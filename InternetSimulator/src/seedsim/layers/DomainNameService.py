@@ -1,7 +1,7 @@
 from __future__ import annotations
 from .Service import Service, Server
 from seedsim.core import Node, Printable, ScopedRegistry
-from seedsim.core.enums import NodeRole
+from seedsim.core.enums import NodeRole, NetworkType
 from typing import List, Dict, Tuple, Set
 from re import sub
 from random import randint
@@ -82,6 +82,27 @@ class Zone(Printable):
         self.__gules.append('{} A {}'.format(fqdn, addr))
         self.__gules.append('{} NS {}'.format(zonename, fqdn))
 
+    def resolveTo(self, name: str, node: Node):
+        """!
+        @brief Add a new A record, pointing to the given node.
+
+        @param name name.
+        @param node node.
+
+        @throws AssertionError if node does not have valid interfaces.
+        """
+
+        address: str = None
+        ifaces = node.getInterfaces()
+        assert len(ifaces) > 0, 'Node has no interfaces.'
+        for iface in ifaces:
+            net = iface.getNet()
+            if net.getType() == NetworkType.Host or net.getType() == NetworkType.Local:
+                address = iface.getAddress()
+                break
+
+        assert address != None, 'Node has no valid interfaces.'
+        self.__records.append('{} A {}'.format(name, address))
 
     def getRecords(self) -> List[str]:
         """!
