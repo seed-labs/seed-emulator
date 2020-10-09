@@ -18,7 +18,21 @@ The simulator is built from four components:
 
 #### Core classes
 
-TODO
+**`AddressAssignmentConstraint`**: The IP address assignment in a network is automated if one is not specified. This is to make building a scenario simpler. Users can derive from the `AddressAssignmentConstraint` class and change the assignment behavior.
+
+**`AutonomousSystem`**: The `AutonomousSystem` class provides an easy-to-use wrapper for creating a new network and nodes in the simulation. The `AutonomousSystem` class itself is an abstract concept in the simulation. It is only there for ease of access and does not take part in the simulation generation. 
+
+**`InternetExchange`**: The `InternetExchange` class provides an easy way to access the created node and network for an Internet Exchange. `InternetExchange` is only there for ease of access and does not take part in the simulation generation. 
+
+**`Network`**: The `Network` class is an abstraction of network in the simulation. 
+
+**`Node`**: The `Node` class is an abstraction of a node in the simulation. A node can be either a router or a server. The `Node` class provides various APIs for installing new software, adding new files, and joining networks. 
+
+**`Printable`**:
+
+**`Registerable`**:
+
+**`Registry`**:
 
 #### Layers
 
