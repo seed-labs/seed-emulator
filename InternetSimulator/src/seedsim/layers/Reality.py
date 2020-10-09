@@ -71,6 +71,7 @@ class RealWorldRouter(Router):
 
     def print(self, indent: int) -> str:
         out = super(RealWorldRouter, self).print(indent)
+        indent += 4
 
         out += ' ' * indent
         out += 'Real-world prefixes:\n'
