@@ -38,11 +38,21 @@ The simulator is built from four components:
 
 **Base Layer**. We do need to have a base layer. This layer is the barebone setup. Considering this layer as the hardware layer. We use cable, switches, and routers to create and connect networks. However, nothing is set up on the routers yet. Setting up the routers is done through a routing protocol layer. Routers inside an IXP are automatically considered as BGP routers.
 
+**Routing Layer**.
+
 **BGP Layer** If we want to add BGP to the network, we create a BGP layer. In this layer, we configure all the BGP routers specified in this layer (or all the BGP routers in the base layer). The base layer has APIs for enumerating all the BGP routers and other components, such as ASes, networks, internal routers for an AS, etc. What this layer does is to specify the peering relationship, add BGP services and the corresponding configuration (based on peerings) to each BGP routers. This layer is for EBGP only.
 
 **IBGP Layer**. If we want to run an IBGP inside an AS, we can create an IBGP layer for an AS, and then configure all the involved BGP routers. 
 
 **OSPF Layer**. If we want to add OSPF to the internal routers of an AS, we can create an OSPF layer for that AS. In this layer, we configure the routers for each of the machines on this layer. 
+
+**Web Service Layer**.
+
+**DNS Layer**.
+
+**Local DNS Layer**.
+
+**Reality Layer**.
 
 #### Renderer
 
@@ -73,3 +83,13 @@ TODO
 #### WebService
 
 TODO
+
+### DomainNameService
+
+TODO
+
+### DomainNameCachingService
+
+TODO
+
+## Reality
