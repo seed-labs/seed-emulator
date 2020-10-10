@@ -32,18 +32,6 @@ The simulator is built from four components:
 
 **`Registry`**: The `Registry` class is a singleton class for "registering" objects in the simulation. All classes can access the `Registry` to register new object or get registered objects. Objects in the `Registry` are all derived from the `Registerable` class. All `Registerable` class has three tags: scope, type, and name. For example, a router node name R1 in AS150 will be tagged with `('150', 'rnode', 'R1')`, and the `Routing` layer instance, if installed, will be tagged with `('seedsim', 'layer', 'Routing')`.
 
-#### Layers
-
-TODO
-
-#### Renderer
-
-TODO
-
-#### Compiler
-
-TODO
-
 ### Layers
 
 #### Base
@@ -140,18 +128,77 @@ ospf = Ospf()
 ibgp = Ibgp()
 ```
 
+#### Service
+
+- Class Name: `Service`
+- Dependency: `N/A`
+- Description: The service layer is the base layer of other services. The service itself cannot be rendered and only services the goal of providing common utility methods for users and other service layers.
+
+```python
+s = SomeService()
+s.installOnAll(150)
+s.installOn(as150_h1)
+```
+
 #### Web Service
 
-TODO
+- Class Name: `WebService`
+- Dependency: `Base`
+- Description: The web service layer installs `nginx-light` on host nodes and hosts a simple webpage showing the current node name and ASN.
+
+```python
+ws = WebService()
+ws.installOnAll(150)
+ws.installOn(as151_h1)
+```
 
 ### Domain Name Service
 
-TODO
+- Class Name: `DomainNameService`
+- Dependency: `Base`
+- Description: The DNS layer allows hosting one or more zones on host nodes. It provides a simple zone tracking mechanism to help setting up complex zone structures or even running the entire DNS chain from the root.
+
+```python
+dns = DomainNameService()
+dns.getZone('example.com.').addRecord('@   A 127.0.0.1')
+dns.getZone('example.com.').addRecord('www A 127.0.0.1')
+dns.getZone('example2.com.').resolveTo('test', as151_h1)
+dns.hostZoneOn('example.com.', as151_h1)
+dns.hostZoneOn('example2.com.', as151_h1)
+dns.hostZoneOn('com.', as150_h2)
+dns.hostZoneOn('.', as150_h1)
+dns.autoNameServer()
+```
 
 ### Domain Name Caching Service
 
-TODO
+- Class Name: `DomainNameCachingService`
+- Dependency: `Base` only if not using `autoRoot`, `Base` and `DomainNameService` otherwise.
+- Description: The `DomainNameCachingService` layer allows hosting local DNS (Caching DNS server) on the host node. This layre provides the option to change `resolv.conf` on all nodes within the AS (`setResolvconf`), and the option to automatically update the local root hint file according to the root zone in the `DomainNameService` layer (`autoRoot`).
+
+```python
+ldns = DomainNameCachingService(autoRoot = True, setResolvconf = True)
+ldns.installOn(as151_h2)
+```
 
 ### Reality
+
+- Class Name: `Reality`
+- Dependency: `Ebgp`
+- Description: The `Reality` layer allows easy interaction with hosts in the real-world. It allows exposing a simulated network with a VPN to the real-world (TODO), and enables adding real-world AS to simulation with ease. The layer allows users to set a list of prefixes to announce with BGP, to the simulated Internet, and route it via the default gateway (i.e., the reality.) It can also fetch the prefix list of real-world AS and add them automatically.
+
+```python
+real = Reality()
+as11872 = base.createAutonomousSystem(11872)
+as11872_rw = real.createRealWorldRouter(as11872)
+as11872_rw.joinNetworkByName("ix100", "10.100.0.118")
+ebgp.addRsPeer(100, 11872)
+```
+
+### Renderer
+
+TODO
+
+### Compiler
 
 TODO
