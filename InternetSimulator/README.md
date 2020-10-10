@@ -28,31 +28,13 @@ The simulator is built from four components:
 
 **`Node`**: The `Node` class is an abstraction of a node in the simulation. A node can be either a router or a server. The `Node` class provides various APIs for installing new software, adding new files, and joining networks. 
 
-**`Printable`**:
+**`Printable`**: The `Printable` class is the base class of all classes that are "printable." It can be considered a special toString interface that allows specifying indentation. 
 
-**`Registerable`**:
-
-**`Registry`**:
+**`Registry`**: The `Registry` class is a singleton class for "registering" objects in the simulation. All classes can access the `Registry` to register new object or get registered objects. Objects in the `Registry` are all derived from the `Registerable` class. All `Registerable` class has three tags: scope, type, and name. For example, a router node name R1 in AS150 will be tagged with `('150', 'rnode', 'R1')`, and the `Routing` layer instance, if installed, will be tagged with `('seedsim', 'layer', 'Routing')`.
 
 #### Layers
 
-**Base Layer**. We do need to have a base layer. This layer is the barebone setup. Considering this layer as the hardware layer. We use cable, switches, and routers to create and connect networks. However, nothing is set up on the routers yet. Setting up the routers is done through a routing protocol layer. Routers inside an IXP are automatically considered as BGP routers.
-
-**Routing Layer**.
-
-**BGP Layer** If we want to add BGP to the network, we create a BGP layer. In this layer, we configure all the BGP routers specified in this layer (or all the BGP routers in the base layer). The base layer has APIs for enumerating all the BGP routers and other components, such as ASes, networks, internal routers for an AS, etc. What this layer does is to specify the peering relationship, add BGP services and the corresponding configuration (based on peerings) to each BGP routers. This layer is for EBGP only.
-
-**IBGP Layer**. If we want to run an IBGP inside an AS, we can create an IBGP layer for an AS, and then configure all the involved BGP routers. 
-
-**OSPF Layer**. If we want to add OSPF to the internal routers of an AS, we can create an OSPF layer for that AS. In this layer, we configure the routers for each of the machines on this layer. 
-
-**Web Service Layer**.
-
-**DNS Layer**.
-
-**Local DNS Layer**.
-
-**Reality Layer**.
+TODO
 
 #### Renderer
 
@@ -66,30 +48,110 @@ TODO
 
 #### Base
 
-TODO
+- Class Name: `Base`
+- Depende: None
+- Description: The base layer, as the name suggested, provides the base of simulation. This layer can only be used to create Autonomous Systems and Internet Exchanges. 
+
+```python
+base = Base()
+
+ix100 = base.createInternetExchange(100)
+ix101 = base.createInternetExchange(101)
+
+as150 = base.createAutonomousSystem(150)
+as151 = base.createAutonomousSystem(151)
+
+as150.createNetwork("net0")
+as150.createNetwork("net_link")
+as150.createNetwork("net1")
+
+as150_r1 = as150.createRouter("r1")
+as150_r1.joinNetworkByName("ix100")
+as150_r1.joinNetworkByName("net0")
+as150_r1.joinNetworkByName("net_link")
+
+as150_h1 = as150.createHost("h1")
+as150_h1.joinNetworkByName("net0")
+
+as150_r2 = as150.createRouter("r2")
+as150_r2.joinNetworkByName("ix101")
+as150_r2.joinNetworkByName("net_link")
+as150_r2.joinNetworkByName("net1")
+
+as150_h2 = as150.createHost("h2")
+as150_h2.joinNetworkByName("net1")
+
+as151.createNetwork("net0") 
+
+as151_r1 = as151.createRouter("r1")
+as151_r1.joinNetworkByName("ix100")
+as151_r1.joinNetworkByName("net0")
+
+as151_h1 = as151.createHost("h1")
+as151_h1.joinNetworkByName("net0")
+
+as151_h2 = as151.createHost("h2")
+as151_h2.joinNetworkByName("net0")
+```
 
 #### Routing
 
+- Clas Name: `Routing`
+- Dependencies: `Base`
+- Description: The routing layer install the base for other routing protocols like BGP and OSPF. It installs the necessary software on the nodes with router nodes and does proper initial configurations. The routing layer also allows users to specify a list of directly connected interfaces to generate connected routes and install them to RIB (routing information base). 
+
+```python
+routing = Routing()
+routing.addDirectByName(150, "net0")
+routing.addDirectByName(150, "net1")
+routing.addDirectByName(151, "net0")
+```
+
+#### eBGP
+
+- Class Name: `Ebgp`
+- Dependency: `Routing`
+- Description: The external BGP (eBGP) layer. This layer allows users to set up BGP peering by specifying only the Internet Exchange ID and peer ASNs.
+
+```python
+ebgp = Ebgp()
+ebgp.addPrivatePeering(100, 150, 151)
+ebgp.addRsPeer(100, 150)
+ebgp.addRsPeer(100, 151)
+```
+
+#### OSPF
+
+- Class Name: `Ospf`
+- Dependency: `Routing`
+- Description: The OSPF layer. OSPF layer, if installed, will set up OSPF on all non-IX interfaces. IX interfaces will also be included in the OSPF as passive (stub) interfaces'. The auto stub-interface and auto OSPF behavior can be controlled by manually marking a network as a stub, or by removing the network from OSPF altogether.
+
+```python
+ospf = Ospf()
+```
+
+#### iBGP
+
+- Class Name: `Ibgp`
+- Dependency: `Ospf`
+- Description: The internal BGP (iBGP) layer. This layer will setup full-mesh iBGP peering between all routers within an AS in all ASes. Masks can be applied on an AS to prevent the auto full-mesh. The full-mesh peering is done using the first non-IX interface address. Nexthop resolution will be made with the OSPF table, so OSPF should be installed for iBGP to work properly.
+
+```python
+ibgp = Ibgp()
+```
+
+#### Web Service
+
 TODO
 
-#### Ebgp
+### Domain Name Service
 
 TODO
 
-#### Ibgp
+### Domain Name Caching Service
 
 TODO
 
-#### WebService
+### Reality
 
 TODO
-
-### DomainNameService
-
-TODO
-
-### DomainNameCachingService
-
-TODO
-
-## Reality
