@@ -17,6 +17,7 @@ EbgpFileTemplates["rnode_bird_peer"] = """
     table t_bgp;
     import {importFilter};
     export {exportFilter};
+    next hop self;
     local {localAddress} as {localAsn};
     neighbor {peerAddress} as {peerAsn};
 """
