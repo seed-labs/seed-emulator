@@ -13,7 +13,6 @@ RealityFileTemplates['configure_script'] = '''\
 #!/bin/bash
 gw="`ip rou show default | cut -d' ' -f3`"
 sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
-iptables -t nat -A POSTROUTING -j MASQUERADE
 '''
 
 class RealWorldRouter(Router):
@@ -26,14 +25,16 @@ class RealWorldRouter(Router):
 
     __realworld_routes: List[str]
     __sealed: bool
+    __hide_hops: bool
 
-    def initRealWorld(self):
+    def initRealWorld(self, hideHops: bool):
         """!
         @brief init RealWorldRouter.
         """
         if hasattr(self, '__sealed'): return
         self.__realworld_routes = []
         self.__sealed = False
+        self.__hide_hops = hideHops
         self.addSoftware('iptables')
         self.setFile('/rw_configure_script', RealityFileTemplates['configure_script'])
         self.addStartCommand('chmod +x /rw_configure_script')
@@ -63,6 +64,13 @@ class RealWorldRouter(Router):
         self.addTable('t_rw')
         statics = '\n    table t_rw;\n    route ' + ' via !__default_gw__!;\n    route '.join(self.__realworld_routes)
         statics += ' via !__default_gw__!;\n'
+        for prefix in self.__realworld_routes:
+            # nat matched only
+            self.appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -j MASQUERADE\n'.format(prefix))
+            
+            if self.__hide_hops:
+                # remove realworld hops
+                self.appendFile('/rw_configure_script', 'iptables -t mangle -A POSTROUTING -d {} -j TTL --ttl-set 64\n'.format(prefix))
 
         self.addProtocol('static', 'real_world', statics)
         self.addTablePipe('t_rw', 't_bgp')
@@ -93,12 +101,17 @@ class Reality(Layer):
 
     __rwnodes: List[RealWorldRouter]
     __reg = ScopedRegistry('seedsim')
+    __hide_hops: bool
 
-    def __init__(self):
+    def __init__(self, hideHops: bool = True):
         """!
         @brief Reality constructor.
+
+        @param hideHops hide realworld hops from traceroute (by setting TTL = 64
+        to all real world dsts on POSTROUTING)
         """
         self.__rwnodes = []
+        self.__hide_hops = hideHops
 
     def getName(self):
         return 'Reality'
