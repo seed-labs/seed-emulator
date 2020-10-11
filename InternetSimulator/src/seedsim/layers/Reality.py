@@ -153,7 +153,7 @@ class Reality(Layer):
         """
         rwnode: RealWorldRouter = asobj.createRouter(nodename)
         rwnode.__class__ = RealWorldRouter
-        rwnode.initRealWorld()
+        rwnode.initRealWorld(self.__hide_hops)
         if prefixes == None: prefixes = self.getPrefixList(asobj.getAsn())
         for prefix in prefixes:
             rwnode.addRealWorldRoute(prefix)
