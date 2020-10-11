@@ -197,8 +197,24 @@ ebgp.addRsPeer(100, 11872)
 
 ### Renderer
 
-TODO
+The `Renderer` class is for "rendering" the layers. Essentially, the renderer calls the "render" method on each layer, while resolving the dependencies. Layers will add new objects to or modify existing objects in the registry, which can later be accessed by the compiler or another layer. For example, the `Base` layer will be creating new nodes in the registry, and the `Routing` layer will later iterate all router nodes in the registry and setup routing on them.
+
+```python
+r = Renderer()
+
+r.addLayer(ospf)
+r.addLayer(routing)
+r.addLayer(ebgp)
+r.addLayer(base)
+r.addLayer(ibgp)
+r.addLayer(ws)
+r.addLayer(dns)
+r.addLayer(ldns)
+r.addLayer(real)
+
+r.render()
+```
 
 ### Compiler
 
-TODO
+The compiler is the component that converts objects in the registry to actual runnable simulator objects. The only compiler backend currently available is Docker. 
