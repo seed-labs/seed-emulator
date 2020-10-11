@@ -127,7 +127,7 @@ class Docker(Compiler):
         chdir(real_nodename)
 
         soft = node.getSoftwares()
-        if len(soft) > 0: dockerfile += 'RUN apt-get install -y {}\n'.format(' '.join(soft))
+        if len(soft) > 0: dockerfile += 'RUN apt-get install -y {}\n'.format(' '.join(sorted(soft)))
 
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
