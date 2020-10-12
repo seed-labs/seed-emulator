@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService, Reality
+from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService, Reality, CyrmuIpOriginService
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
 from seedsim.compiler import Docker
@@ -65,7 +65,6 @@ dns.hostZoneOn('example.com.', as151_h1)
 dns.hostZoneOn('example2.com.', as151_h1)
 dns.hostZoneOn('com.', as150_h2)
 dns.hostZoneOn('.', as150_h1)
-dns.autoNameServer()
 
 ldns = DomainNameCachingService(autoRoot = True, setResolvconf = True)
 ldns.installOn(as151_h2)
@@ -76,6 +75,8 @@ as11872_rw = real.createRealWorldRouter(as11872)
 as11872_rw.joinNetworkByName("ix100", "10.100.0.118")
 ebgp.addRsPeer(100, 11872)
 
+
+
 r.addLayer(ospf)
 r.addLayer(routing)
 r.addLayer(ebgp)
@@ -85,6 +86,11 @@ r.addLayer(ws)
 r.addLayer(dns)
 r.addLayer(ldns)
 r.addLayer(real)
+
+cyrmu = CyrmuIpOriginService()
+cyrmu.installOn(as150_h1)
+dns.autoNameServer()
+r.addLayer(cyrmu)
 
 
 print("Layers =================")

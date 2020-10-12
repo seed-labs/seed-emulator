@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 from seedsim.core import Printable, Registrable
 from sys import stderr
 
@@ -6,6 +6,20 @@ class Layer(Printable, Registrable):
     """!
     @brief The layer interface.
     """
+
+    reverseDependencies: Dict[str, List[str]] = {}
+
+    def addReverseDependency(self, layerName: str):
+        """!
+        @brief add reverse layer dependency.
+
+        Use this method to request the current layer to be rendered before
+        another layer.
+        """
+        if layerName not in self.reverseDependencies:
+            self.reverseDependencies[layerName] = []
+
+        self.reverseDependencies[layerName].append(self.getName())
 
     def getName(self) -> str:
         """!

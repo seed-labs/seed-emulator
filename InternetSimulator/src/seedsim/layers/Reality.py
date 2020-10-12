@@ -51,6 +51,14 @@ class RealWorldRouter(Router):
         assert not self.__sealed, 'Node sealed.'
         self.__realworld_routes.append(prefix)
 
+    def getRealWorldRoutes(self) -> List[str]:
+        """!
+        @brief Get list of real world prefixes.
+
+        @returns list of prefixes.
+        """
+        return self.__realworld_routes
+
     def seal(self):
         """!
         @brief seal the realworld router.
@@ -160,6 +168,14 @@ class Reality(Layer):
         self.__rwnodes.append(rwnode)
 
         return rwnode
+
+    def getRealWorldRouters(self) -> List[RealWorldRouter]:
+        """!
+        @brief Get list of real-world routers.
+
+        @returns list of real world routers.
+        """
+        return self.__rwnodes
 
     def enableRealWorldAccess(self, net: Network):
         """!

@@ -50,6 +50,12 @@ class Renderer(Printable):
             self.__log('{}: requesting dependency render: {}'.format(layerName, dep))
             self.__render(dep)
 
+        if layer.getName() in layer.reverseDependencies:
+            rdeps = layer.reverseDependencies[layer.getName()]
+            for dep in rdeps:
+                self.__log('{}: requesting reverse-dependency render: {}'.format(layerName, dep))
+                self.__render(dep)
+
         self.__log('rendering {}...'.format(layerName))
         layer.onRender()
         self.__log('done: {}'.format(layerName))
