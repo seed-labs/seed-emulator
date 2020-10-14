@@ -188,6 +188,14 @@ class DomainNameServer(Server):
         """
         return list(self.__zones)
 
+    def getNode(self) -> Node:
+        """!
+        @brief Get the node.
+
+        @returns node.
+        """
+        return self.__node
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         (scope, _, name) = self.__node.getRegistryInfo()
@@ -206,7 +214,6 @@ class DomainNameServer(Server):
         @brief Handle the installation.
         """
         self.__node.addSoftware('bind9')
-        self.__node.addStartCommand('[ ! -d /etc/bind/zones ] && mkdir /etc/bind/zones')
         self.__node.addStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
 
         for zone in self.__zones:
@@ -315,6 +322,23 @@ class DomainNameService(Service):
         zone.addGuleRecord('ns1.{}'.format(domain), addr)
         zone.addRecord('ns1.{} A {}'.format(domain, addr))
         zone.addRecord('@ NS ns1.{}'.format(domain))
+
+    def getServerByZoneName(self, zonename: str) -> DomainNameServer:
+        """!
+        @brief Get server by zonename.
+
+        @param zonename zonename.
+
+        @returns server if exists, None otherwise.
+        """
+
+        if zonename[-1] != '.': zonename += '.'
+        if zonename == '.': zonename = ''
+        for server in self.__servers:
+            for zone in server.getZones():
+                if zone.getName() == zonename: return server
+
+        return None
 
     def __autoNameServer(self, zone: Zone):
         """!
