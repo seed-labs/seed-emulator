@@ -10,12 +10,15 @@ DockerCompilerFileTemplates['dockerfile'] = """\
 FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
+RUN apt-get install -y zsh curl
+RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc
+RUN echo 'exec zsh' > /root/.bashrc
 """
 
 DockerCompilerFileTemplates['start_script'] = """\
 #!/bin/bash
 {startCommands}
-echo "ready! run 'docker exec -it $HOSTNAME /bin/bash' to attach to this node" >&2
+echo "ready! run 'docker exec -it $HOSTNAME /bin/zsh' to attach to this node" >&2
 tail -f /dev/null
 """
 
