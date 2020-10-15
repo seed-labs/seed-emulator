@@ -125,7 +125,7 @@ class CyrmuIpOriginService(Service):
         dns: DomainNameService = self.__reg.get('layer', 'DomainNameService')
         zone = dns.getZone('cymru.com.')
 
-        self._log('Setting "cymru.com." server nodes...')
+        self._log('Setting up "cymru.com." server nodes...')
         for server in self.__servers:
             dns.hostZoneOn('cymru.com.', server.getNode())
 
