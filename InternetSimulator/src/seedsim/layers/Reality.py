@@ -188,7 +188,6 @@ class Reality(Layer):
 
     def onRender(self):
         for node in self.__rwnodes:
-            print(node)
             node.seal()
 
     def print(self, indent: int) -> str:
