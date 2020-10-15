@@ -10,9 +10,6 @@ class CyrmuIpOriginServer(Server):
     @brief Cymru's IP info service server.
     """
 
-    __dns_server: DomainNameServer
-    __reg = ScopedRegistry('seedsim')
-    __dns_server: DomainNameServer
     __node: Node
 
     def __init__(self, node: Node):
@@ -21,9 +18,6 @@ class CyrmuIpOriginServer(Server):
 
         @param node node to install on.
         """
-        assert self.__reg.has('layer', 'DomainNameService'), 'Please initlize DomainNameService object and add it to renderer fist.'
-        dns: DomainNameService = self.__reg.get('layer', 'DomainNameService')
-        self.__dns_server = dns.hostZoneOn('cymru.com', node)
         self.__node = node
 
     def getNode(self) -> Node:
@@ -33,14 +27,6 @@ class CyrmuIpOriginServer(Server):
         @returns node.
         """
         return self.__node
-
-    def getDnsServer(self) -> DomainNameServer:
-        """!
-        @brief get DNS server.
-
-        @returns dns server.
-        """
-        return self.__dns_server
 
 class CyrmuIpOriginService(Service):
     """!
@@ -55,16 +41,14 @@ class CyrmuIpOriginService(Service):
     """
 
     __servers: List[CyrmuIpOriginServer]
-    __zone: Zone
+    __records: List[str]
     __reg = ScopedRegistry('seedsim')
 
     def __init__(self):
         """!
         @brief CyrmuIpOriginService constructor
         """
-        assert self.__reg.has('layer', 'DomainNameService'), 'Please initlize DomainNameService object first.'
-        dns: DomainNameService = self.__reg.get('layer', 'DomainNameService')
-        self.__zone = dns.getZone('cymru.com')
+        self.__records = []
         self.__servers = []
         self.addReverseDependency('DomainNameService')
 
@@ -107,15 +91,7 @@ class CyrmuIpOriginService(Service):
             record = '*.'
             record += '.'.join(reversed(str(net).split('.')[0:3]))
             record += '.origin.asn TXT "{} | {} | ZZ | SEED | 0000-00-00"'.format(asn, net)
-            self.__zone.addRecord(record)
-
-    def getZone(self) -> Zone:
-        """!
-        @brief Get the cyrmu.com zone.
-
-        @returns zone.
-        """
-        return self.__zone
+            self.__records.append(record)
 
     def _doInstall(self, node: Node) -> CyrmuIpOriginServer: 
         server = CyrmuIpOriginServer(node)
@@ -144,6 +120,18 @@ class CyrmuIpOriginService(Service):
         for mapping in mappings:
             (prefix, asn) = mapping
             self.addMapping(str(prefix), asn)
+
+        self._log('Creating "cymru.com." zone...')
+        dns: DomainNameService = self.__reg.get('layer', 'DomainNameService')
+        zone = dns.getZone('cymru.com.')
+
+        self._log('Setting "cymru.com." server nodes...')
+        for server in self.__servers:
+            dns.hostZoneOn('cymru.com.', server.getNode())
+
+        self._log('Adding mappings...')
+        for record in self.__records:
+            zone.addRecord(record)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

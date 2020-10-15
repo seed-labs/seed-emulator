@@ -78,6 +78,14 @@ as11872_rw.joinNetworkByName("ix100", "10.100.0.118")
 ebgp.addRsPeer(100, 11872)
 
 
+cyrmu = CyrmuIpOriginService()
+cyrmu.installOn(as150_h1)
+
+dnssec = Dnssec()
+dnssec.enableOn('example.com.')
+dnssec.enableOn('com.')
+dnssec.enableOn('.')
+
 r.addLayer(ospf)
 r.addLayer(routing)
 r.addLayer(ebgp)
@@ -87,16 +95,7 @@ r.addLayer(ws)
 r.addLayer(dns)
 r.addLayer(ldns)
 r.addLayer(real)
-
-cyrmu = CyrmuIpOriginService()
-cyrmu.installOn(as150_h1)
-dns.autoNameServer()
 r.addLayer(cyrmu)
-
-dnssec = Dnssec()
-dnssec.enableOn('example.com.')
-dnssec.enableOn('com.')
-dnssec.enableOn('.')
 r.addLayer(dnssec)
 
 print("Layers =================")

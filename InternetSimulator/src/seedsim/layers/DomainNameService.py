@@ -238,11 +238,15 @@ class DomainNameService(Service):
     __rootZone: Zone = Zone('') # singleton
     __servers: List[DomainNameServer]
     __reg = ScopedRegistry('seedsim')
+    __autoNs: bool
 
-    def __init__(self):
+    def __init__(self, autoNameServer: bool = True):
         """!
         @brief DomainNameService constructor.
+        
+        @param autoNameServer add gule records to parents automaically.
         """
+        self.__autoNs = autoNameServer
         self.__servers = []
 
     def getName(self):
@@ -347,17 +351,16 @@ class DomainNameService(Service):
         @param zone root zone reference.
         """
         if (len(zone.getSubZones().values()) == 0): return
+        self._log('Collecting subzones NSes of "{}"...'.format(zone.getName()))
         for subzone in zone.getSubZones().values():
             for gule in subzone.getGuleRecords(): zone.addRecord(gule)
             self.__autoNameServer(subzone)
 
-    def autoNameServer(self):
-        """!
-        @brief Try to automatically add NS records of children to parent zones.
-        """
-        self.__autoNameServer(self.__rootZone)
-
     def onRender(self):
+        if self.__autoNs:
+            self._log('Setting up NS records...')
+            self.__autoNameServer(self.__rootZone)
+
         for server in self.__servers:
             server.install()
 
