@@ -6,6 +6,19 @@ from typing import List, Dict, Tuple, Set
 from re import sub
 from random import randint
 
+DomainNameServiceFileTemplates: Dict[str, str] = {}
+
+DomainNameServiceFileTemplates['named_options'] = '''\
+options {
+	directory "/var/cache/bind";
+	recursion no;
+	dnssec-validation no;
+    empty-zones-enable no;
+	allow-query { any; };
+    allow-update { any; };
+};
+'''
+
 class Zone(Printable):
     """!
     @brief Domain name zone.
@@ -215,6 +228,7 @@ class DomainNameServer(Server):
         """
         self.__node.addSoftware('bind9')
         self.__node.addStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
+        self.__node.setFile('/etc/bind/named.conf.options', DomainNameServiceFileTemplates['named_options'])
 
         for zone in self.__zones:
             zonename = filename = zone.getName()
@@ -251,6 +265,9 @@ class DomainNameService(Service):
 
     def getName(self):
         return 'DomainNameService'
+
+    def getConflicts(self) -> List[str]:
+        return ['DomainNameCachingService']
     
     def getDependencies(self) -> List[str]:
         return ['Base']

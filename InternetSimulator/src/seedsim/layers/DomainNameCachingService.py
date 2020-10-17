@@ -5,11 +5,12 @@ from typing import List, Dict
 
 DomainNameCachingServiceFileTemplates: Dict[str, str] = {}
 
-DomainNameCachingServiceFileTemplates['named_options'] = '''
+DomainNameCachingServiceFileTemplates['named_options'] = '''\
 options {
 	directory "/var/cache/bind";
 	recursion yes;
 	dnssec-validation no;
+    empty-zones-enable no;
 	allow-query { any; };
 };
 '''
@@ -120,6 +121,9 @@ class DomainNameCachingService(Service):
 
     def getName(self) -> str:
         return 'DomainNameCachingService'
+
+    def getConflicts(self) -> List[str]:
+        return ['DomainNameService']
 
     def getDependencies(self) -> List[str]:
         return ['Base', 'DomainNameService'] if self.__auto_root else ['Base']

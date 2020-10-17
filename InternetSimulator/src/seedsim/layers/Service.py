@@ -1,7 +1,7 @@
 from .Layer import Layer
 from seedsim.core import Node, Printable, ScopedRegistry
 from seedsim.core.enums import NodeRole
-from typing import Dict
+from typing import Dict, List
 
 class Server(Printable):
     """!
@@ -32,6 +32,16 @@ class Service(Layer):
         @returns dict for storage.
         """
 
+    def getConflicts(self) -> List[str]:
+        """!
+        @brief Get a list of conflicting services.
+
+        Override to change.
+
+        @return list of service names.
+        """
+        return []
+
     def installOn(self, node: Node) -> Server:
         """!
         @brief Install the service on given node.
@@ -42,10 +52,18 @@ class Service(Layer):
         @throws AssertionError if node is not host node.
         """
         assert node.getRole() == NodeRole.Host, 'node as{}/{} is not a host node'.format(node.getAsn(), node.getName())
-        servicesdb = node.getAttribute('services', {})
+        servicesdb: Dict = node.getAttribute('services', {})
+
+        for (name, service_info) in servicesdb.items():
+            service: Service = service_info['__self']
+            assert name not in self.getConflicts(), '{} conflict with {} on as{}/{}.'.format(self.getName(), service.getName(), node.getAsn(), node.getName())
+            assert self.getName() not in service.getConflicts(), '{} conflict with {} on as{}/{}.'.format(self.getName(), service.getName(), node.getAsn(), node.getName())
+
         m_name = self.getName()
         if m_name not in servicesdb:
-            servicesdb[m_name] = {}
+            servicesdb[m_name] = {
+                '__self': self
+            }
 
         return self._doInstall(node)
 
