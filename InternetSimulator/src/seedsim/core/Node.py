@@ -5,7 +5,7 @@ from .Registry import Registry, ScopedRegistry, Registrable
 from ipaddress import IPv4Address
 from typing import List, Dict, Set, Tuple
 
-DEFAULT_SOFTWARES: List[str] = ['curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'dnsutils']
+DEFAULT_SOFTWARES: List[str] = ['curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'dnsutils', 'jq', 'ipcalc']
 
 class File(Printable):
     """!

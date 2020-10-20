@@ -178,8 +178,6 @@ class Routing(Layer):
                 rnode.addStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
                 rnode.addStartCommand('bird -d', True)
                 
-                rnode.addSoftware('jq')
-                rnode.addSoftware('ipcalc')
                 rnode.addSoftware('bird')
 
                 if has_localnet: rnode.addProtocol('direct', 'local_nets', directs)
@@ -202,7 +200,8 @@ class Routing(Layer):
                 
                 assert rif != None, 'Host {} in as{} in network {}: no router'.format(name, scope, hnet.getName())
                 self._log("Setting default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
-                hnode.addStartCommand('ip route change default via {} dev eth0'.format(rif.getAddress()))
+                hnode.addStartCommand('ip rou del default')
+                hnode.addStartCommand('ip route add default via {} dev {}'.format(rif.getAddress(), rif.getNet().getName()))
 
     def addDirect(self, net: Network):
         """!

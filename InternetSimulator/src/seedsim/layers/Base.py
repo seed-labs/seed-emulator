@@ -10,20 +10,25 @@ cidr_to_net() {
     ipcalc -n "$1" | sed -E -n 's/^Network: +([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\/[0-9]{1,2}) +.*/\\1/p'
 }
 
-# todo: setup tc netem
-
 ip -j addr | jq -cr '.[]' | while read -r iface; do {
     ifname="`jq -cr '.ifname' <<< "$iface"`"
     echo "trying to rename $ifname..."
     jq -cr '.addr_info[]' <<< "$iface" | while read -r iaddr; do {
         addr="`jq -cr '"\(.local)/\(.prefixlen)"' <<< "$iaddr"`"
         net="`cidr_to_net "$addr"`"
-        new_ifname="`grep "$net" < netmap.txt | cut -d: -f1`"
+        line="`grep "$net" < ifinfo.txt`"
+        new_ifname="`cut -d: -f1 <<< "$line"`"
+        latency="`cut -d: -f3 <<< "$line"`"
+        bw="`cut -d: -f4 <<< "$line"`"
+        [ "$bw" = 0 ] && bw=1000000000000
+        loss="`cut -d: -f5 <<< "$line"`"
         [ ! -z "$new_ifname" ] && {
-            echo "$ifname net match netmap: $new_ifname, renaming..."
+            echo "$ifname net match ifinfo: $new_ifname, renaming..."
             ip li set "$ifname" down
             ip li set "$ifname" name "$new_ifname"
             ip li set "$new_ifname" up
+            tc qdisc add dev "$new_ifname" root handle 1:0 tbf rate "${bw}bit" buffer 1500 limit 4096
+            tc qdisc add dev "$new_ifname" parent 1:0 handle 10: netem delay "${latency}ms" loss "${loss}%"
         }
     }; done
 }; done
