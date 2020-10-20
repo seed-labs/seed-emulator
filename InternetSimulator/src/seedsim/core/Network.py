@@ -3,7 +3,7 @@ from .Printable import Printable
 from .enums import NetworkType, NodeRole
 from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
-from typing import Generator, Dict
+from typing import Generator, Dict, Tuple
 
 class Network(Printable, Registrable):
     """!
@@ -17,6 +17,10 @@ class Network(Printable, Registrable):
     __scope: str
     __aac: AddressAssignmentConstraint
     __assigners: Dict[NodeRole, Generator[int, None, None]]
+
+    __d_latency: int       # in ms
+    __d_bandwidth: int     # in bps
+    __d_drop: float        # percentage
 
     def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None):
         """!
@@ -37,6 +41,35 @@ class Network(Printable, Registrable):
 
         self.__assigners[NodeRole.Router] = self.__aac.getOffsetGenerator(NodeRole.Router)
         self.__assigners[NodeRole.Host] = self.__aac.getOffsetGenerator(NodeRole.Host)
+
+        self.__d_latency = 0
+        self.__d_bandwidth = 0
+        self.__d_drop = 0
+
+    def setDefaultLinkProperties(self, latency: int = 0, bandwidth: int = 0, packetDrop: float = 0):
+        """!
+        @brief Set default link properties of interfaces attached to the network.
+
+        @param latency (optional) latency to add to the link in ms, default 0. Note that this will be
+        apply on all interfaces, meaning the rtt between two hosts will be 2 * latency.
+        @param outBandwidth (optional) egress bandwidth of the link in bps, 0 for unlimited, default 0.
+        @param packetDrop (optional) link packet drop as percentage, 0 for unlimited, default 0.
+        """
+        assert latency >= 0, 'invalid latency'
+        assert bandwidth >= 0, 'invalid bandwidth'
+        assert packetDrop >= 0 and packetDrop <= 100, 'invalid packet drop'
+
+        self.__d_latency = latency
+        self.__d_bandwidth = bandwidth
+        self.__d_drop = packetDrop
+
+    def getDefaultLinkProperties(self) -> Tuple[int, int, int]:
+        """!
+        @brief Get default link properties.
+
+        @retrns tuple (latency, bandwidth, packet drop)
+        """
+        return (self.__d_latency, self.__d_bandwidth, self.__d_drop)
 
     def getName(self) -> str:
         """!
@@ -74,7 +107,6 @@ class Network(Printable, Registrable):
 
         if self.__type == NetworkType.InternetExchange: return self.__prefix[self.__aac.mapIxAddress(asn)]
         return self.__prefix[next(self.__assigners[nodeRole])]
-
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

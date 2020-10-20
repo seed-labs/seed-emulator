@@ -11,7 +11,7 @@ ix101 = base.createInternetExchange(101)
 
 as150 = base.createAutonomousSystem(150)
 as150.createNetwork("net0")
-as150.createNetwork("net-link")
+as150.createNetwork("net-link").setDefaultLinkProperties(latency = 15, bandwidth = 1000000)
 as150.createNetwork("net1")
 
 as150_r1 = as150.createRouter("r1")

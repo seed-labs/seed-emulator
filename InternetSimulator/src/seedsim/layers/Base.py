@@ -1,6 +1,33 @@
 from .Layer import Layer
-from seedsim.core import AutonomousSystem, InternetExchange, Printable, Registry, AddressAssignmentConstraint
+from seedsim.core import AutonomousSystem, InternetExchange, Printable, Registry, AddressAssignmentConstraint, Node
 from typing import Dict, List
+
+BaseFileTemplates: Dict[str, str] = {}
+
+BaseFileTemplates["interface_setup_script"] = """\
+#!/bin/bash
+cidr_to_net() {
+    ipcalc -n "$1" | sed -E -n 's/^Network: +([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\/[0-9]{1,2}) +.*/\\1/p'
+}
+
+# todo: setup tc netem
+
+ip -j addr | jq -cr '.[]' | while read -r iface; do {
+    ifname="`jq -cr '.ifname' <<< "$iface"`"
+    echo "trying to rename $ifname..."
+    jq -cr '.addr_info[]' <<< "$iface" | while read -r iaddr; do {
+        addr="`jq -cr '"\(.local)/\(.prefixlen)"' <<< "$iaddr"`"
+        net="`cidr_to_net "$addr"`"
+        new_ifname="`grep "$net" < netmap.txt | cut -d: -f1`"
+        [ ! -z "$new_ifname" ] && {
+            echo "$ifname net match netmap: $new_ifname, renaming..."
+            ip li set "$ifname" down
+            ip li set "$ifname" name "$new_ifname"
+            ip li set "$new_ifname" up
+        }
+    }; done
+}; done
+"""
 
 class Base(Layer):
     """!
@@ -25,7 +52,23 @@ class Base(Layer):
         return []
 
     def onRender(self) -> None:
-        pass
+        for ((scope, type, name), obj) in self.__reg.getAll().items():
+
+            if not (type == 'rs' or type == 'rnode' or type == 'hnode'):
+                continue
+            
+            node: Node = obj
+
+            ifinfo = ''
+            for iface in node.getInterfaces():
+                net = iface.getNet()
+                [l, b, d] = iface.getLinkProperties()
+                ifinfo += '{}:{}:{}:{}:{}\n'.format(net.getName(), net.getPrefix(), l, b, d)
+
+            node.setFile('/ifinfo.txt', ifinfo)
+            node.setFile('/interface_setup', BaseFileTemplates['interface_setup_script'])
+            node.addStartCommand('chmod +x /interface_setup')
+            node.addStartCommand('/interface_setup')
 
     def createAutonomousSystem(self, asn: int) -> AutonomousSystem:
         """!

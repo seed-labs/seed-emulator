@@ -83,6 +83,10 @@ class Interface(Printable):
     __network: Network
     __address: IPv4Address
 
+    __latency: int       # in ms
+    __bandwidth: int     # in bps
+    __drop: float        # percentage
+
     def __init__(self, net: Network):
         """!
         @brief Interface constructor.
@@ -91,6 +95,35 @@ class Interface(Printable):
         """
         self.__address = None
         self.__network = net
+        (l, b, d) = net.getDefaultLinkProperties()
+        self.__latency = l
+        self.__bandwidth = b
+        self.__drop = d
+
+    def setLinkProperties(self, latency: int = 0, bandwidth: int = 0, packetDrop: float = 0):
+        """!
+        @brief Set link properties.
+
+        @param latency (optional) latency to add to the link in ms, default 0.
+        @param outBandwidth (optional) egress bandwidth of the link in bps, 0 for unlimited, default 0.
+        @param packetDrop (optional) link packet drop as percentage, 0 for unlimited, default 0.
+        """
+
+        assert latency >= 0, 'invalid latency'
+        assert bandwidth >= 0, 'invalid bandwidth'
+        assert packetDrop >= 0 and packetDrop <= 100, 'invalid packet drop'
+
+        self.__latency = latency
+        self.__bandwidth = bandwidth
+        self.__drop = packetDrop
+
+    def getLinkProperties(self) -> Tuple[int, int, int]:
+        """!
+        @brief Get link properties.
+
+        @retrns tuple (latency, bandwidth, packet drop)
+        """
+        return (self.__latency, self.__bandwidth, self.__drop)
 
     def getNet(self) -> Network:
         """!
@@ -125,6 +158,14 @@ class Interface(Printable):
         out += 'Connected to: {}\n'.format(self.__network.getName())
         out += ' ' * indent
         out += 'Address: {}\n'.format(self.__address)
+        out += ' ' * indent
+        out += 'Link Properties: {}\n'.format(self.__address)
+
+        indent += 4
+        out += ' ' * indent
+        out += 'Added Latency: {} ms\n'.format(self.__latency)
+        out += ' ' * indent
+        out += 'Egress Bandwidth Limit: {} bps\n'.format('unlimited' if self.__bandwidth <= 0 else self.__bandwidth)
 
         return out
 
