@@ -53,18 +53,6 @@ class Ibgp(Layer):
         """
         self.__masked.add(asn)
 
-    def mask(self, asn: int):
-        """!
-        @brief Mask an non-edge routers in an AS.
-
-        By default, Ibgp layer will add iBGP peering for all ASes on all
-        routers. Use this method to mask non-edge routers (routers w/o 
-        connection to an IX).
-
-        @param asn AS to mask.
-        """
-        pass
-
     def __findFirstUnmasked(self, node: Node) -> Interface:
         """!
         @brief find first NIC on the node that is connected to a unmasked

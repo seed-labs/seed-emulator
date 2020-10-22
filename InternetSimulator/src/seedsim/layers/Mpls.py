@@ -151,6 +151,8 @@ class Mpls(Layer):
 
         @param node node.
         """
+        self._log('Setting up LDP and OSPF on as{}/{}'.format(node.getAsn(), node.getName()))
+
         node.setPrivileged(True)
         node.addSoftware('frr')
 
@@ -178,10 +180,12 @@ class Mpls(Layer):
     def onRender(self):
         for asn in self.__enabled:
             if self.__reg.has('seedsim', 'layer', 'Ospf'):
+                self._log('Ospf layer exists, masking as{}'.format(asn))
                 ospf: Ospf = self.__reg.get('seedsim', 'layer', 'Ospf')
                 ospf.maskAsn(asn)
 
             if self.__reg.has('seedsim', 'layer', 'Ibgp'):
+                self._log('Ibgp layer exists, masking as{}'.format(asn))
                 ibgp: Ibgp = self.__reg.get('seedsim', 'layer', 'Ibgp')
                 ibgp.mask(asn)
 
