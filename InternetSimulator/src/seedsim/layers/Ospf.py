@@ -140,7 +140,7 @@ class Ospf(Layer):
             router: Node = obj
             if router.getAsn() in self.__masked_asn: continue
 
-            stubs: List[str] = []
+            stubs: List[str] = ['dummy0']
             active: List[str] = []
 
             self._log('setting up OSPF for router as{}/{}...'.format(scope, name))

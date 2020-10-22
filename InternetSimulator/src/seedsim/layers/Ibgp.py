@@ -98,16 +98,8 @@ class Ibgp(Layer):
                 for remote in routers:
                     if local == remote: continue
 
-                    lif = self.__findFirstUnmasked(local)
-                    if lif == None:
-                        self._log('ignoreing as{}/{}: no valid internal interface'.format(asn, local.getName()))
-                        continue
-
-                    rif = self.__findFirstUnmasked(remote)
-                    if rif == None: continue # not logging here, as it will be logged by the one above
-
-                    laddr = lif.getAddress()
-                    raddr = rif.getAddress()
+                    laddr = local.getLoopbackAddress()
+                    raddr = remote.getLoopbackAddress()
                     local.addTable('t_bgp')
                     local.addTablePipe('t_bgp')
                     local.addTablePipe('t_direct', 't_bgp')

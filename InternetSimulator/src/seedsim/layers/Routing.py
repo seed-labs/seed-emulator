@@ -3,6 +3,7 @@ from seedsim.core import Registry, ScopedRegistry, Node, Interface, Network
 from seedsim.core.enums import NetworkType
 from typing import List, Dict, Set
 from functools import partial
+from ipaddress import IPv4Network
 
 RoutingFileTemplates: Dict[str, str] = {}
 
@@ -58,6 +59,24 @@ class Router(Node):
     Nodes with routing install will be replaced with this to get the extension
     methods.
     """
+
+    __loopback_address: str
+
+    def setLoopbackAddress(self, address: str):
+        """!
+        @brief Set loopback address.
+
+        @param address address.
+        """
+        self.__loopback_address = address
+
+    def getLoopbackAddress(self) -> str:
+        """!
+        @brief Get loopback address.
+
+        @returns address.
+        """
+        return self.__loopback_address
 
     def addProtocol(self, protocol: str, name: str, body: str):
         """!
@@ -123,10 +142,15 @@ class Routing(Layer):
     When this layer is rendered, two new methods will be added to the router
     node and can be used by other layers: (1) addProtocol: add new protocol
     block to BIRD, and (2) addTable: add new routing table to BIRD.
+    
+    This layer also assign loopback address for iBGP/LDP, etc., for other
+    protocols to use later and as router id.
     """
 
     __reg: Registry = Registry()
     __direct_nets: Set[Network]
+    __loopback_assigner = IPv4Network('10.0.0.0/16')
+    __loopback_pos = 1
 
     def __init__(self):
         """!
@@ -168,9 +192,21 @@ class Routing(Layer):
                 ))
                 
             if type == 'rnode':
+                rnode: Router = obj
+                if not issubclass(rnode.__class__, Router): rnode.__class__ = Router
+
+                self._log("Setting up loopback interface for AS{} Router {}...".format(scope, name))
+
+                lbaddr = self.__loopback_assigner[self.__loopback_pos]
+
+                rnode.addStartCommand('ip li add dummy0 type dummy')
+                rnode.addStartCommand('ip li set dummy0 up')
+                rnode.addStartCommand('ip addr add {}/32 dev dummy0'.format(lbaddr))
+                rnode.setLoopbackAddress(lbaddr)
+                self.__loopback_pos += 1
+
                 self._log("Bootstraping bird.conf for AS{} Router {}...".format(scope, name))
 
-                rnode: Node = obj
                 self.__installBird(rnode)
 
                 r_ifaces = rnode.getInterfaces()
@@ -187,11 +223,8 @@ class Routing(Layer):
                             interfaceName = net.getName()
                         )
 
-                r_iface = r_ifaces[0]
-
-                if not issubclass(rnode.__class__, Router): rnode.__class__ = Router
                 rnode.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rnode_bird"].format(
-                    routerId = r_iface.getAddress()
+                    routerId = rnode.getLoopbackAddress()
                 ))
 
                 rnode.addStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
