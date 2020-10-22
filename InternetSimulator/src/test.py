@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService, Reality, CyrmuIpOriginService, Dnssec, ReverseDomainNameService
+from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService, Reality, CyrmuIpOriginService, Dnssec, ReverseDomainNameService, Mpls
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
 from seedsim.compiler import Docker
@@ -29,11 +29,13 @@ as150_h2.joinNetworkByName("net1")
 as150_h3 = as150.createHost("h3")
 as150_h3.joinNetworkByName("net1")
 
+mpls = Mpls()
+mpls.enableOn(150)
 
 as151 = base.createAutonomousSystem(151)
 as151.createNetwork("net0") 
 as151_r1 = as151.createRouter("r1")
-as151_r1.joinNetworkByName("ix100")
+as151_r1.joinNetworkByName("ix100").setLinkProperties(latency = 120)
 as151_r1.joinNetworkByName("net0")
 as151_h1 = as151.createHost("h1")
 as151_h1.joinNetworkByName("net0")
@@ -105,6 +107,7 @@ r.addLayer(real)
 r.addLayer(cyrmu)
 r.addLayer(dnssec)
 r.addLayer(rdns)
+r.addLayer(mpls)
 
 print("Layers =================")
 print(r)
