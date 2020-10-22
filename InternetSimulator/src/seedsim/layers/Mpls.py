@@ -10,9 +10,9 @@ MplsFileTemplates: Dict[str, str] = {}
 
 MplsFileTemplates['frr_start_script'] = """\
 #!/bin/bash
-mount -o remount rw /proc/sys
+mount -o remount rw /proc/sys 2> /dev/null
 echo '1048575' > /proc/sys/net/mpls/platform_labels
-for iface in /proc/sys/net/mpls/conf/*/input; do echo '1' > "$iface"; done
+while read -r iface; do echo '1' > "/proc/sys/net/mpls/conf/$iface/input"; done < mpls_ifaces.txt
 sed -i 's/ldpd=no/ldpd=yes/' /etc/frr/daemons
 sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
 service frr start
@@ -170,6 +170,7 @@ class Mpls(Layer):
 
         ospf_ifaces = ''
         ldp_ifaces = ''
+        mpls_iface_list = []
 
         # todo mask network from ospf?
         for iface in node.getInterfaces():
@@ -178,6 +179,7 @@ class Mpls(Layer):
             if not (True in (node.getRole() == NodeRole.Router for node in net.getAssociations())): continue
             ospf_ifaces += MplsFileTemplates['frr_config_ospf_iface'].format(interface = net.getName())
             ldp_ifaces += MplsFileTemplates['frr_config_ldp_iface'].format(interface = net.getName())
+            mpls_iface_list.append(net.getName())
 
         node.setFile('/etc/frr/frr.conf', MplsFileTemplates['frr_config'].format(
             loopbackAddress = node.getLoopbackAddress(),
@@ -186,6 +188,7 @@ class Mpls(Layer):
         ))
 
         node.setFile('/frr_start', MplsFileTemplates['frr_start_script'])
+        node.setFile('/mpls_ifaces.txt', '\n'.join(mpls_iface_list))
         node.addStartCommand('chmod +x /frr_start')
         node.addStartCommand('/frr_start')
 

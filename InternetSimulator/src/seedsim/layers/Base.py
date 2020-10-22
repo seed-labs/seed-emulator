@@ -12,7 +12,6 @@ cidr_to_net() {
 
 ip -j addr | jq -cr '.[]' | while read -r iface; do {
     ifname="`jq -cr '.ifname' <<< "$iface"`"
-    echo "trying to rename $ifname..."
     jq -cr '.addr_info[]' <<< "$iface" | while read -r iaddr; do {
         addr="`jq -cr '"\(.local)/\(.prefixlen)"' <<< "$iaddr"`"
         net="`cidr_to_net "$addr"`"
@@ -23,7 +22,6 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
         [ "$bw" = 0 ] && bw=1000000000000
         loss="`cut -d: -f5 <<< "$line"`"
         [ ! -z "$new_ifname" ] && {
-            echo "$ifname net match ifinfo: $new_ifname, renaming..."
             ip li set "$ifname" down
             ip li set "$ifname" name "$new_ifname"
             ip li set "$new_ifname" up
