@@ -37,6 +37,7 @@ DockerCompilerFileTemplates['compose_service'] = """\
             - ALL
         sysctls:
             - net.ipv4.ip_forward=1
+        privileged: {privileged}
         networks:
 {networks}
 """
@@ -122,7 +123,8 @@ class Docker(Compiler):
         
         self.__services += DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
-            networks = node_nets
+            networks = node_nets,
+            privileged = 'true' if node.isPrivileged() else 'false'
         )
 
         dockerfile = DockerCompilerFileTemplates['dockerfile']
