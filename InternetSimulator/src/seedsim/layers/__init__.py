@@ -12,3 +12,4 @@ from .Reality import Reality
 from .CymruIpOrigin import CyrmuIpOriginService, CyrmuIpOriginServer
 from .Dnssec import Dnssec
 from .ReverseDomainNameService import ReverseDomainNameService, ReverseDomainNameServer
+from .Mpls import Mpls

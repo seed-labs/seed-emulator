@@ -1,4 +1,7 @@
 from .Layer import Layer
+from .Ospf import Ospf
+from .Ibgp import Ibgp
+from .Routing import Router
 from seedsim.core import Node, Registry, ScopedRegistry
 from seedsim.core.enums import NetworkType, NodeRole
 from typing import List, Tuple, Dict
@@ -6,15 +9,18 @@ from typing import List, Tuple, Dict
 MplsFileTemplates: Dict[str, str] = {}
 
 MplsFileTemplates['frr_start_script'] = """\
+#!/bin/bash
 mount -o remount rw /proc/sys
 echo '1048575' > /proc/sys/net/mpls/platform_labels
 for iface in /proc/sys/net/mpls/conf/*/input; do echo '1' > "$iface"; done
 sed -i 's/ldpd=no/ldpd=yes/' /etc/frr/daemons
+sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
 service frr start
 """
 
 MplsFileTemplates['frr_config'] = """\
 router id {loopbackAddress}
+{ospfInterfaces}
 mpls ldp
  address-family ipv4
   discovery transport-address {loopbackAddress}
@@ -22,6 +28,10 @@ mpls ldp
  exit-address-family
 router ospf
  redistribute connected
+"""
+
+MplsFileTemplates['frr_config_ldp_iface'] = """\
+  interface {interface}
 """
 
 MplsFileTemplates['frr_config_ospf_iface'] = """\
@@ -51,6 +61,10 @@ class Mpls(Layer):
     - mpls_router
     - mpls_iptunnel
     - mpls_gso
+
+    Node with MPLS enabled will be privileged. This means the container
+    potentially have full control over the docker host. Be careful when exposing
+    the node to the public.
     """
 
     __reg = Registry()
@@ -122,28 +136,73 @@ class Mpls(Layer):
                 if net.getType() == NetworkType.InternetExchange:
                     is_edge = True
                     break
-                for assoc in net.getAssociations():
-                    if assoc.getRole() == NodeRole.Host:
-                        is_edge = True
-                        break
-                if is_edge: break
+                if True in (node.getRole() == NodeRole.Host for node in net.getAssociations()):
+                    is_edge = True
+                    break
 
             if is_edge: enodes.append(node)
             else: nodes.append(node)
 
         return (enodes, nodes)
 
-    def __setUpLdpOspf(self, node: Node):
+    def __setUpLdpOspf(self, node: Router):
         """!
-        @brief Setup LDP and OSPF on node.
+        @brief Setup LDP and OSPF on router.
 
         @param node node.
         """
-        pass
-        
+        node.setPrivileged(True)
+        node.addSoftware('frr')
+
+        ospf_ifaces = ''
+        ldp_ifaces = ''
+
+        # todo mask network from ospf?
+        for iface in node.getInterfaces():
+            net = iface.getNet()
+            if net.getType() == NetworkType.InternetExchange: continue
+            if not (True in (node.getRole() == NodeRole.Router for node in net.getAssociations())): continue
+            ospf_ifaces += MplsFileTemplates['frr_config_ospf_iface'].format(interface = net.getName())
+            ldp_ifaces += MplsFileTemplates['frr_config_ldp_iface'].format(interface = net.getName())
+
+        node.setFile('/etc/frr/frr.conf', MplsFileTemplates['frr_config'].format(
+            loopbackAddress = node.getLoopbackAddress(),
+            ospfInterfaces = ospf_ifaces,
+            ldpInterfaces = ldp_ifaces
+        ))
+
+        node.setFile('/frr_start', MplsFileTemplates['frr_start_script'])
+        node.addStartCommand('chmod +x /frr_start')
+        node.addStartCommand('/frr_start')
 
     def onRender(self):
         for asn in self.__enabled:
+            if self.__reg.has('seedsim', 'layer', 'Ospf'):
+                ospf: Ospf = self.__reg.get('seedsim', 'layer', 'Ospf')
+                ospf.maskAsn(asn)
+
+            if self.__reg.has('seedsim', 'layer', 'Ibgp'):
+                ibgp: Ibgp = self.__reg.get('seedsim', 'layer', 'Ibgp')
+                ibgp.mask(asn)
+
             scope = ScopedRegistry(str(asn))
             (enodes, nodes) = self.__getEdgeNodes(scope)
+
+            for n in enodes: self.__setUpLdpOspf(n)
+            for n in nodes: self.__setUpLdpOspf(n)
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'MplsLayer:\n'
+        
+        indent += 4
+        out += ' ' * indent
+        out += 'Enabled on:\n'
+
+        indent += 4
+        for asn in self.__enabled:
+            out += ' ' * indent
+            out += 'as{}\n'.format(asn)
+
+        return out
             
