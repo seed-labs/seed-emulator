@@ -265,7 +265,8 @@ class Node(Printable, Registrable):
         _iface.setAddress(_addr)
 
         self.__interfaces.append(_iface)
-
+        
+        net.associate(self)
         return _iface
 
     def joinNetworkByName(self, netname: str, address: str = "auto") -> Interface:

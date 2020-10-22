@@ -3,7 +3,7 @@ from .Printable import Printable
 from .enums import NetworkType, NodeRole
 from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
-from typing import Generator, Dict, Tuple
+from typing import Generator, Dict, Tuple, List
 
 class Network(Printable, Registrable):
     """!
@@ -17,6 +17,8 @@ class Network(Printable, Registrable):
     __scope: str
     __aac: AddressAssignmentConstraint
     __assigners: Dict[NodeRole, Generator[int, None, None]]
+
+    __connected_nodes: List['Node']
 
     __d_latency: int       # in ms
     __d_bandwidth: int     # in bps
@@ -38,6 +40,8 @@ class Network(Printable, Registrable):
         self.__prefix = prefix
         self.__aac = aac if aac != None else AddressAssignmentConstraint()
         self.__assigners = {}
+
+        self.__connected_nodes = []
 
         self.__assigners[NodeRole.Router] = self.__aac.getOffsetGenerator(NodeRole.Router)
         self.__assigners[NodeRole.Host] = self.__aac.getOffsetGenerator(NodeRole.Host)
@@ -107,6 +111,22 @@ class Network(Printable, Registrable):
 
         if self.__type == NetworkType.InternetExchange: return self.__prefix[self.__aac.mapIxAddress(asn)]
         return self.__prefix[next(self.__assigners[nodeRole])]
+
+    def associate(self, node: 'Node'):
+        """!
+        @brief Associate the node with network.
+
+        @param node node.
+        """
+        self.__connected_nodes.append(node)
+
+    def getAssociations(self) -> List['Node']:
+        """!
+        @brief Get list of assoicated nodes.
+
+        @returns list of nodes.
+        """
+        return self.__connected_nodes
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
