@@ -1,5 +1,33 @@
 from .Layer import Layer
-from seedsim.core import Node
+from seedsim.core import Node, Registry, ScopedRegistry
+from seedsim.core.enums import NetworkType, NodeRole
+from typing import List, Tuple, Dict
+
+MplsFileTemplates: Dict[str, str] = {}
+
+MplsFileTemplates['frr_start_script'] = """\
+mount -o remount rw /proc/sys
+echo '1048575' > /proc/sys/net/mpls/platform_labels
+for iface in /proc/sys/net/mpls/conf/*/input; do echo '1' > "$iface"; done
+sed -i 's/ldpd=no/ldpd=yes/' /etc/frr/daemons
+service frr start
+"""
+
+MplsFileTemplates['frr_config'] = """\
+router id {loopbackAddress}
+mpls ldp
+ address-family ipv4
+  discovery transport-address {loopbackAddress}
+{ldpInterfaces}
+ exit-address-family
+router ospf
+ redistribute connected
+"""
+
+MplsFileTemplates['frr_config_ospf_iface'] = """\
+interface {interface}
+ ip ospf area 0
+"""
 
 class Mpls(Layer):
     """!
@@ -25,6 +53,22 @@ class Mpls(Layer):
     - mpls_gso
     """
 
+    __reg = Registry()
+    __additional_edges: List[Node]
+    __enabled: List[int]
+
+    def __init__(self):
+        """!
+        @brief Mpls layer constructor.
+        """
+        self.__additional_edges = []
+        self.__enabled = []
+
+        # they are not really "dependency," we just need them to render after
+        # us, in case we need to setup masks.
+        self.addReverseDependency('Ospf')
+        self.addReverseDependency('Ibgp')
+
     def getName(self) -> str:
         return 'Mpls'
 
@@ -42,5 +86,64 @@ class Mpls(Layer):
 
         @param node node
         """
-        pass
+        self.__additional_edges.append(node)
 
+    def enableOn(self, asn: int):
+        """!
+        @brief Use MPLS in an AS.
+
+        MPLS is not enabled by default. Use this method to enable MPLS for an
+        AS. This also automatically setup masks for OSPF and IBGP layer if they
+        exist.
+
+        @param asn ASN.
+        """
+        self.__enabled.append(asn)
+
+    def __getEdgeNodes(self, scope: ScopedRegistry) -> Tuple[List[Node], List[Node]]:
+        """!
+        @brief Helper tool - get list of routers (edge, non-edge) of an AS.
+
+        @param scope scope.
+        """
+        enodes: List[Node] = []
+        nodes: List[Node] = []
+
+        for obj in scope.getByType('rnode'):
+            node: Node = obj
+
+            if node in self.__additional_edges:
+                enodes.append(node)
+                continue
+
+            is_edge = False
+            for iface in node.getInterfaces():
+                net = iface.getNet()
+                if net.getType() == NetworkType.InternetExchange:
+                    is_edge = True
+                    break
+                for assoc in net.getAssociations():
+                    if assoc.getRole() == NodeRole.Host:
+                        is_edge = True
+                        break
+                if is_edge: break
+
+            if is_edge: enodes.append(node)
+            else: nodes.append(node)
+
+        return (enodes, nodes)
+
+    def __setUpLdpOspf(self, node: Node):
+        """!
+        @brief Setup LDP and OSPF on node.
+
+        @param node node.
+        """
+        pass
+        
+
+    def onRender(self):
+        for asn in self.__enabled:
+            scope = ScopedRegistry(str(asn))
+            (enodes, nodes) = self.__getEdgeNodes(scope)
+            
