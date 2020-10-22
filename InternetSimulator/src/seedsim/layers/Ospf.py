@@ -27,6 +27,7 @@ class Ospf(Layer):
     @brief Ospf (OSPF) layer.
 
     @todo bird2
+    @todo allow mask as
 
     This layer enables OSPF on all router nodes. By default, this will make all
     internal network interfaces (interfaces that are connected to a network
