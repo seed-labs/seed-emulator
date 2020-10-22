@@ -39,6 +39,18 @@ interface {interface}
  ip ospf area 0
 """
 
+MplsFileTemplates['bird_ibgp_peer'] = '''
+    ipv4 {{
+        table t_bgp;
+        import all;
+        export all;
+        igp table master4;
+    }};
+    local {localAddress} as {asn};
+    neighbor {peerAddress} as {asn};
+'''
+
+
 class Mpls(Layer):
     """!
     @brief The Mpls (MPLS) layer.
@@ -177,6 +189,31 @@ class Mpls(Layer):
         node.addStartCommand('chmod +x /frr_start')
         node.addStartCommand('/frr_start')
 
+    def __setUpIbgpMesh(self, nodes: List[Router]):
+        """!
+        @brief Setup IBGP full mesh.
+
+        @param node list of nodes.
+        """
+
+        self._log('Setting up iBGP full mesh for edge nodes...')
+        for local in nodes:
+
+            n = 1
+            for remote in nodes:
+                if local == remote: continue
+
+                local.addTable('t_bgp')
+                local.addTablePipe('t_bgp')
+                local.addTablePipe('t_direct', 't_bgp')
+                local.addProtocol('bgp', 'ibgp{}'.format(n), MplsFileTemplates['bird_ibgp_peer'].format(
+                    localAddress = local.getLoopbackAddress(),
+                    peerAddress = remote.getLoopbackAddress(),
+                    asn = local.getAsn()
+                ))
+
+                n += 1
+
     def onRender(self):
         for asn in self.__enabled:
             if self.__reg.has('seedsim', 'layer', 'Ospf'):
@@ -194,6 +231,7 @@ class Mpls(Layer):
 
             for n in enodes: self.__setUpLdpOspf(n)
             for n in nodes: self.__setUpLdpOspf(n)
+            self.__setUpIbgpMesh(enodes)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
