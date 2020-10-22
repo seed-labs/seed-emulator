@@ -5,6 +5,8 @@ from sys import stderr
 class Layer(Printable, Registrable):
     """!
     @brief The layer interface.
+
+    @todo Allow set conflicting layer.
     """
 
     reverseDependencies: Dict[str, List[str]] = {}

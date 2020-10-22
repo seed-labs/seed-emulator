@@ -44,6 +44,8 @@ class Router(Node):
     """!
     @brief Node extension class.
 
+    @todo bird2
+
     Nodes with routing install will be replaced with this to get the extension
     methods.
     """
@@ -112,6 +114,8 @@ class Routing(Layer):
     When this layer is rendered, two new methods will be added to the router
     node and can be used by other layers: (1) addProtocol: add new protocol
     block to BIRD, and (2) addTable: add new routing table to BIRD.
+
+    @todo bird2
     """
 
     __reg: Registry = Registry()

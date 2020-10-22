@@ -20,6 +20,8 @@ class Ibgp(Layer):
     """!
     @brief The Ibgp (iBGP) layer.
 
+    @todo bird2
+
     This layer automatically setup full mesh peering between routers within AS.
     """
 
@@ -48,6 +50,18 @@ class Ibgp(Layer):
         @param asn AS to mask.
         """
         self.__masked.add(asn)
+
+    def mask(self, asn: int):
+        """!
+        @brief Mask an non-edge routers in an AS.
+
+        By default, Ibgp layer will add iBGP peering for all ASes on all
+        routers. Use this method to mask non-edge routers (routers w/o 
+        connection to an IX).
+
+        @param asn AS to mask.
+        """
+        pass
 
     def __findFirstUnmasked(self, node: Node) -> Interface:
         """!

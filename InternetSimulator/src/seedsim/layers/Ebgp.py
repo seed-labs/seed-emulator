@@ -26,6 +26,8 @@ class Ebgp(Layer):
     """!
     @brief The Ebgp (eBGP) layer.
 
+    @todo bird2
+
     This layer enable eBGP peering in InternetExchange.
     """
 
