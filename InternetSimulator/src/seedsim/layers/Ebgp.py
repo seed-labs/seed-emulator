@@ -6,18 +6,22 @@ from typing import Tuple, List, Dict
 EbgpFileTemplates: Dict[str, str] = {}
 
 EbgpFileTemplates["rs_bird_peer"] =  """
-    import all;
-    export all;
+    ipv4 {{
+        import all;
+        export all;
+    }};
     rs client;
     local {localAddress} as {localAsn};
     neighbor {peerAddress} as {peerAsn};
 """
 
 EbgpFileTemplates["rnode_bird_peer"] = """
-    table t_bgp;
-    import {importFilter};
-    export {exportFilter};
-    next hop self;
+    ipv4 {{
+        table t_bgp;
+        import {importFilter};
+        export {exportFilter};
+        next hop self;
+    }};
     local {localAddress} as {localAsn};
     neighbor {peerAddress} as {peerAsn};
 """

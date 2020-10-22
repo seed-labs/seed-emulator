@@ -195,7 +195,7 @@ class RealWorldRouter(Router):
         self.__sealed = True
         if len(self.__realworld_routes) == 0: return
         self.addTable('t_rw')
-        statics = '\n    table t_rw;\n    route ' + ' via !__default_gw__!;\n    route '.join(self.__realworld_routes)
+        statics = '\n    ipv4 { table t_rw; import all };\n    route ' + ' via !__default_gw__!;\n    route '.join(self.__realworld_routes)
         statics += ' via !__default_gw__!;\n'
         for prefix in self.__realworld_routes:
             # nat matched only

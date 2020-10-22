@@ -6,9 +6,11 @@ from typing import Set, Dict, List
 OspfFileTemplates: Dict[str, str] = {}
 
 OspfFileTemplates['ospf_body'] = """
-    table t_ospf;
-    import all;
-    export all;
+    ipv4 {{
+        table t_ospf;
+        import all;
+        export all;
+    }};
     area 0 {{
 {interfaces}
     }};

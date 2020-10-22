@@ -27,16 +27,27 @@ protocol device {{
 
 RoutingFileTemplates["rnode_bird"] = """\
 router id {routerId};
-table t_direct;
+ipv4 table t_direct;
 protocol device {{
 }}
 protocol kernel {{
-    import none;
-    export all;
+    ipv4 {{
+        import all;
+        export all;
+    }};
+    learn;
 }}
 """
 
-RoutingFileTemplates["rnode_bird_interface"] = """
+RoutingFileTemplates['rnode_bird_direct'] = """
+    ipv4 {{
+        table t_direct;
+        import all;
+    }};
+{interfaces}
+"""
+
+RoutingFileTemplates["rnode_bird_direct_interface"] = """
     interface "{interfaceName}";
 """
 
@@ -64,12 +75,12 @@ class Router(Node):
             body = body
         ))
 
-    def addTablePipe(self, src: str, dst: str = 'master', importFilter: str = 'none', exportFilter: str = 'all', ignoreExist: bool = True):
+    def addTablePipe(self, src: str, dst: str = 'master4', importFilter: str = 'none', exportFilter: str = 'all', ignoreExist: bool = True):
         """!
         @brief add a new routing table pipe.
         
         @param src src table.
-        @param dst (optional) dst table (default: master)
+        @param dst (optional) dst table (default: master4)
         @param importFilter (optional) filter for importing from dst table to src table (default: none)
         @param exportFilter (optional) filter for exporting from src table to dst table (default: all)
         @param ignoreExist (optional) assert check if table exists. If true, error is silently discarded.
@@ -100,7 +111,7 @@ class Router(Node):
         meta = self.getAttribute('__routing_layer_metadata', {})
         if 'tables' not in meta: meta['tables'] = []
         tables = meta['tables']
-        if tableName not in tables: self.appendFile('/etc/bird/bird.conf', 'table {};\n'.format(tableName))
+        if tableName not in tables: self.appendFile('/etc/bird/bird.conf', 'ipv4 table {};\n'.format(tableName))
         tables.append(tableName)
 
 class Routing(Layer):
@@ -133,11 +144,19 @@ class Routing(Layer):
     def getDependencies(self) -> List[str]:
         return ["Base"]
 
+    def __installBird(self, node: Node):
+        """!
+        @brief Install bird on node, and handle the bug.
+        """
+        node.addBuildCommand('mkdir -p /usr/share/doc/bird2/examples/')
+        node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
+        node.addBuildCommand('apt-get install -y --no-install-recommends bird2')
+
     def onRender(self):
         for ((scope, type, name), obj) in self.__reg.getAll().items():
             if type == 'rs':
                 rs_node: Node = obj
-                rs_node.addSoftware('bird')
+                self.__installBird(rs_node)
                 rs_node.addStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
                 rs_node.addStartCommand('bird -d', True)
                 self._log("Bootstraping bird.conf for RS {}...".format(name))
@@ -156,19 +175,19 @@ class Routing(Layer):
                 self._log("Bootstraping bird.conf for AS{} Router {}...".format(scope, name))
 
                 rnode: Node = obj
-                rnode.addSoftware('bird')
+                self.__installBird(rnode)
 
                 r_ifaces = rnode.getInterfaces()
                 assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rs_node.getAsn(), rs_node.getName())
 
-                directs = '\n    table t_direct;'
+                ifaces = ''
                 has_localnet = False
 
                 for iface in r_ifaces:
                     net = iface.getNet()
                     if net in self.__direct_nets:
                         has_localnet = True
-                        directs += RoutingFileTemplates["rnode_bird_interface"].format(
+                        ifaces += RoutingFileTemplates["rnode_bird_direct_interface"].format(
                             interfaceName = net.getName()
                         )
 
@@ -182,9 +201,7 @@ class Routing(Layer):
                 rnode.addStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
                 rnode.addStartCommand('bird -d', True)
                 
-                rnode.addSoftware('bird')
-
-                if has_localnet: rnode.addProtocol('direct', 'local_nets', directs)
+                if has_localnet: rnode.addProtocol('direct', 'local_nets', RoutingFileTemplates['rnode_bird_direct'].format(interfaces = ifaces))
 
             if type == 'hnode':
                 hnode: Node = obj

@@ -8,10 +8,12 @@ from typing import List, Set, Dict
 IbgpFileTemplates: Dict[str, str] = {}
 
 IbgpFileTemplates['ibgp_peer'] = '''
-    table t_bgp;
-    import all;
-    export all;
-    igp table t_ospf;
+    ipv4 {{
+        table t_bgp;
+        import all;
+        export all;
+        igp table t_ospf;
+    }};
     local {localAddress} as {asn};
     neighbor {peerAddress} as {asn};
 '''
