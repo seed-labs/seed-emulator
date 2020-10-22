@@ -28,7 +28,6 @@ class Ospf(Layer):
     """!
     @brief Ospf (OSPF) layer.
 
-    @todo bird2
     @todo allow mask as
 
     This layer enables OSPF on all router nodes. By default, this will make all
@@ -39,6 +38,7 @@ class Ospf(Layer):
 
     __stubs: Set[Network]
     __masked: Set[Network]
+    __masked_asn: Set[int]
     __reg = Registry()
 
     def __init__(self):
@@ -48,6 +48,7 @@ class Ospf(Layer):
 
         self.__stubs = set()
         self.__masked = set()
+        self.__masked_asn = set()
 
     def getName(self) -> str:
         return 'Ospf'
@@ -86,7 +87,7 @@ class Ospf(Layer):
         """
         self.markStub(self.__reg.get(str(asn), 'net', netname))
 
-    def mask(self, net: Network):
+    def maskNetwork(self, net: Network):
         """!
         @brief Remove all OSPF interfaces connected to a network.
 
@@ -99,8 +100,16 @@ class Ospf(Layer):
         @param net network.
         @throws AssertionError if network is not local.
         """
-        assert net.getType() != NetworkType.InternetExchange, 'cannot operator on IX network.'
+        assert net.getType() != NetworkType.InternetExchange, 'cannot mask IX network.'
         self.__masked.add(net)
+
+    def maskAsn(self, asn: int):
+        """!
+        @brief Disable OSPF for an AS.
+
+        @param asn asn.
+        """
+        self.__masked_asn.add(asn)
 
     def maskByName(self, asn: int, netname: str):
         """!
@@ -113,7 +122,7 @@ class Ospf(Layer):
         @param asn ASN to operate on.
         @param netname name of the network.
         """
-        self.mask(self.__reg.get(str(asn), 'net', netname))
+        self.maskNetwork(self.__reg.get(str(asn), 'net', netname))
 
     def isMasked(self, net: Network) -> bool:
         """!
@@ -129,6 +138,7 @@ class Ospf(Layer):
         for ((scope, type, name), obj) in self.__reg.getAll().items():
             if type != 'rnode': continue
             router: Node = obj
+            if router.getAsn() in self.__masked_asn: continue
 
             stubs: List[str] = []
             active: List[str] = []
@@ -182,6 +192,14 @@ class Ospf(Layer):
             out += ' ' * indent
             (scope, _, netname) = net.getRegistryInfo()
             out += 'as{}/{}\n'.format(scope, netname)
+        indent -= 4
+
+        out += ' ' * indent
+        out += 'Masked AS:\n'
+        indent += 4
+        for asn in self.__masked_asn:
+            out += ' ' * indent
+            out += 'as{}\n'.format(asn)
 
         return out
 
