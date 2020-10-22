@@ -186,6 +186,8 @@ class Node(Printable, Registrable):
     __softwares: Set[str]
     __build_commands: List[str]
     __start_commands: List[Tuple[str, bool]]
+    __ports: List[Tuple[int, int]]
+    __privileged: bool
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -205,9 +207,47 @@ class Node(Printable, Registrable):
         self.__softwares = set()
         self.__build_commands = []
         self.__start_commands = []
+        self.__ports = []
+        self.__privileged = False
 
         for soft in DEFAULT_SOFTWARES:
             self.__softwares.add(soft)
+
+    def addPort(self, host: int, node: int):
+        """!
+        @brief Add port forwarding.
+
+        @param host port of the host.
+        @param node port of the node.
+        """
+        self.__ports.append((host, node))
+
+    def getPorts(self) -> List[Tuple[int, int]]:
+        """!
+        @brief Get port forwardings.
+
+        @returns list of tuple of ports (host, node).
+        """
+        return self.__ports
+
+    def setPrivileged(self, privileged: bool):
+        """!
+        @brief Set or unset the node as privileged node.
+
+        Some backend like Docker will require the container to be privileged
+        in order to do some privileged operations.
+
+        @param privileged (optional) set if node is privileged.
+        """
+        self.__privileged = privileged
+
+    def isPrivileged(self,) -> bool:
+        """!
+        @brief Test if node is set to privileged.
+
+        @returns True if privileged, False otherwise.
+        """
+        return self.__privileged
 
     def joinNetwork(self, net: Network, address: str = "auto") -> Interface:
         """!
