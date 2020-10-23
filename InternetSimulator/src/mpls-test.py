@@ -21,7 +21,8 @@ from seedsim.core import Registry
 #  6.|-- 10.100.0.151  0.0%    10    0.3   0.2   0.1   0.3   0.1
 #  7.|-- 10.151.0.71   0.0%    10    0.2   0.2   0.1   0.3   0.0
 #
-# hop 3, 4 is mpls router, so they are invisible from ip network.
+# hop 3, 4 is mpls router, they do not have the route to as151 or as152, so
+# their response can't get back.
 #
 # tcpdump on as150_r2, interface net1:
 # root@d5d8ad0d6d48 / # tcpdump -i net1 -n mpls
@@ -38,6 +39,9 @@ from seedsim.core import Registry
 
 
 base = Base()
+routing = Routing()
+mpls = Mpls()
+bgp = Ebgp()
 
 ix100 = base.createInternetExchange(100)
 ix101 = base.createInternetExchange(101)
@@ -53,8 +57,8 @@ r2 = as150.createRouter('r2')
 r3 = as150.createRouter('r3')
 r4 = as150.createRouter('r4')
 
-r1.joinNetworkByName('net0')
 r1.joinNetworkByName('ix100')
+r1.joinNetworkByName('net0')
 
 r2.joinNetworkByName('net0')
 r2.joinNetworkByName('net1')
@@ -64,9 +68,6 @@ r3.joinNetworkByName('net2')
 
 r4.joinNetworkByName('net2')
 r4.joinNetworkByName('ix101')
-
-routing = Routing()
-mpls = Mpls()
 
 mpls.enableOn(150)
 
@@ -90,7 +91,6 @@ as152_r = as152.createRouter('r')
 as152_r.joinNetworkByName('net0')
 as152_r.joinNetworkByName('ix101')
 
-bgp = Ebgp()
 bgp.addPrivatePeering(100, 150, 151)
 bgp.addPrivatePeering(101, 150, 152)
 
