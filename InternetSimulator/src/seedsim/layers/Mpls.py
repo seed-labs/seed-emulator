@@ -19,7 +19,7 @@ service frr start
 """
 
 MplsFileTemplates['frr_config'] = """\
-router id {loopbackAddress}
+router-id {loopbackAddress}
 {ospfInterfaces}
 mpls ldp
  address-family ipv4
@@ -180,6 +180,7 @@ class Mpls(Layer):
             ospf_ifaces += MplsFileTemplates['frr_config_ospf_iface'].format(interface = net.getName())
             ldp_ifaces += MplsFileTemplates['frr_config_ldp_iface'].format(interface = net.getName())
             mpls_iface_list.append(net.getName())
+            net.setMtu(9000)
 
         node.setFile('/etc/frr/frr.conf', MplsFileTemplates['frr_config'].format(
             loopbackAddress = node.getLoopbackAddress(),

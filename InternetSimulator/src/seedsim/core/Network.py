@@ -24,6 +24,8 @@ class Network(Printable, Registrable):
     __d_bandwidth: int     # in bps
     __d_drop: float        # percentage
 
+    __mtu: int
+
     def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None):
         """!
         @brief Network constructor.
@@ -49,6 +51,24 @@ class Network(Printable, Registrable):
         self.__d_latency = 0
         self.__d_bandwidth = 0
         self.__d_drop = 0
+
+        self.__mtu = 1500
+
+    def setMtu(self, mtu: int):
+        """!
+        @brief Set MTU of this network.
+
+        @param mtu MTU.
+        """
+        self.__mtu = mtu
+
+    def getMtu(self) -> int:
+        """!
+        @brief Get MTU of this network.
+
+        @returns mtu.
+        """
+        return self.__mtu
 
     def setDefaultLinkProperties(self, latency: int = 0, bandwidth: int = 0, packetDrop: float = 0):
         """!
