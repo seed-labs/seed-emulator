@@ -25,7 +25,7 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
             ip li set "$ifname" down
             ip li set "$ifname" name "$new_ifname"
             ip li set "$new_ifname" up
-            tc qdisc add dev "$new_ifname" root handle 1:0 tbf rate "${bw}bit" buffer 9016 limit 1000
+            tc qdisc add dev "$new_ifname" root handle 1:0 tbf rate "${bw}bit" buffer 1000000 limit 1000
             tc qdisc add dev "$new_ifname" parent 1:0 handle 10: netem delay "${latency}ms" loss "${loss}%"
         }
     }; done
