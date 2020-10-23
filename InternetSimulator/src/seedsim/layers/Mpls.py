@@ -34,9 +34,11 @@ MplsFileTemplates['frr_config_ldp_iface'] = """\
   interface {interface}
 """
 
+# todo: make configurable hello/dead
 MplsFileTemplates['frr_config_ospf_iface'] = """\
 interface {interface}
  ip ospf area 0
+ ip ospf dead-interval minimal hello-multiplier 2
 """
 
 MplsFileTemplates['bird_ibgp_peer'] = '''
