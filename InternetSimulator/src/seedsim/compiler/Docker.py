@@ -49,6 +49,8 @@ DockerCompilerFileTemplates['compose_service_network'] = """\
 
 DockerCompilerFileTemplates['compose_network'] = """\
     {netId}:
+        driver_opts:
+            com.docker.network.driver.mtu: {mtu}
         ipam:
             config:
                 - subnet: {prefix}
@@ -159,7 +161,8 @@ class Docker(Compiler):
         (scope, _, _) = net.getRegistryInfo()
         self.__networks += DockerCompilerFileTemplates['compose_network'].format(
             netId = '{}{}'.format(self.__contextToPrefix(scope, 'net'), net.getName()),
-            prefix = net.getPrefix()
+            prefix = net.getPrefix(),
+            mtu = net.getMtu()
         )
 
     def _doCompile(self, registry: Registry):
