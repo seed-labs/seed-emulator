@@ -3,14 +3,19 @@ from seedsim.renderer import Renderer
 from seedsim.compiler import Docker
 from seedsim.core import Registry
 
+# topology:
+#
+#        |  AS150's MPLS backbone                         |
 #        |          ____________ ibgp ___________         |
 #        |         /                             \        |
 # as151 -|- as150_r1 -- as150_r2 -- as150_r3 -- as150_r4 -|- as152 
-#        |  AS150's MPLS backbone                         |
+#        |                                                |
 # Note that IBGP session is only between as150_r1 and as150_r4. Meaning as150_r2
 # and as150_r3 does not have routing table from as151 and as152.
 #
+# 
 # traceroute (as152 to as151):
+#
 # Start: 2020-10-22T19:37:07+0000
 # HOST: 0e58e675b98b Loss%   Snt   Last   Avg  Best  Wrst StDev
 #  1.|-- 10.152.0.254  0.0%    10    0.1   0.1   0.1   0.1   0.0
@@ -21,10 +26,12 @@ from seedsim.core import Registry
 #  6.|-- 10.100.0.151  0.0%    10    0.3   0.2   0.1   0.3   0.1
 #  7.|-- 10.151.0.71   0.0%    10    0.2   0.2   0.1   0.3   0.0
 #
-# hop 3, 4 is mpls router, they do not have the route to as151 or as152, so
-# their response can't get back.
+# hop 3, 4 is mpls router (as150_r2 and as150_r3), they do not have the route to
+# as151 or as152, so their response can't get back.
+# 
 #
 # tcpdump on as150_r2, interface net1:
+# 
 # root@d5d8ad0d6d48 / # tcpdump -i net1 -n mpls
 # tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
 # listening on net1, link-type EN10MB (Ethernet), capture size 262144 bytes
@@ -36,7 +43,6 @@ from seedsim.core import Registry
 # 4 packets captured
 # 4 packets received by filter
 # 0 packets dropped by kernel
-
 
 base = Base()
 routing = Routing()
