@@ -32,7 +32,7 @@ The simulator is built from four components:
 
 **`Registry`**: The `Registry` class is a singleton class for "registering" objects in the simulation. All classes can access the `Registry` to register new object or get registered objects. Objects in the `Registry` are all derived from the `Registerable` class. All `Registerable` class has three tags: scope, type, and name. For example, a router node name R1 in AS150 will be tagged with `('150', 'rnode', 'R1')`, and the `Routing` layer instance, if installed, will be tagged with `('seedsim', 'layer', 'Routing')`.
 
-### Layers
+### Layers: OSI Layer 1
 
 #### Base
 
@@ -81,6 +81,8 @@ as151_h1.joinNetworkByName("net0")
 as151_h2 = as151.createHost("h2")
 as151_h2.joinNetworkByName("net0")
 ```
+
+### Layers: OSI Layer 3
 
 #### Routing
 
@@ -139,6 +141,8 @@ mpls = Mpls()
 mpls.enableOn(150)
 ```
 
+### Layers: OSI Layer 5
+
 #### Service
 
 - Class Name: `Service`
@@ -163,7 +167,7 @@ ws.installOnAll(150)
 ws.installOn(as151_h1)
 ```
 
-### Domain Name Service
+#### Domain Name Service
 
 - Class Name: `DomainNameService`
 - Dependency: `Base`
@@ -181,7 +185,7 @@ dns.hostZoneOn('.', as150_h1)
 dns.autoNameServer()
 ```
 
-### Domain Name Caching Service
+#### Domain Name Caching Service
 
 - Class Name: `DomainNameCachingService`
 - Dependency: `Base` only if not using `autoRoot`, `Base` and `DomainNameService` otherwise.
@@ -192,7 +196,9 @@ ldns = DomainNameCachingService(autoRoot = True, setResolvconf = True)
 ldns.installOn(as151_h2)
 ```
 
-### Cyrmu IP Origin Service
+### Layers: OSI Layer 7
+
+#### Cyrmu IP Origin Service
 
 - Class Name: `CyrmuIpOriginService`
 - Dependency: `DomainNameService`
@@ -203,7 +209,7 @@ cyrmu = CyrmuIpOriginService()
 cyrmu.installOn(as150_h1)
 ```
 
-### Reverse Domain Name Service
+#### Reverse Domain Name Service
 
 - Class Name: `ReverseDomainNameService`
 - Dependency: `DomainNameService`
@@ -215,7 +221,7 @@ rdns.installOn(as150_h1)
 dns.hostZoneOn('arpa.', as150_h2)
 ```
 
-### DNSSEC
+#### DNSSEC
 
 - Class Name: `Dnssec`
 - Dependency: `DomainNameService`
@@ -228,7 +234,9 @@ dnssec.enableOn('com.')
 dnssec.enableOn('.')
 ```
 
-### Reality
+### Layers: Miscellaneous
+
+#### Reality
 
 - Class Name: `Reality`
 - Dependency: `Ebgp`
