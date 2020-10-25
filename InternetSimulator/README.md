@@ -128,6 +128,17 @@ ospf = Ospf()
 ibgp = Ibgp()
 ```
 
+#### MPLS
+
+- Class Name: `Mpls`
+- Dependency: `Routing`
+- Description: The MPLS layer. MPLS layer, if installed, will set up MPLS (LDP) on the given AS. With MPLS, only edge routers in the AS will participate in the iBGP peering mesh since the non-edge routers will do MPLS and don't need the IP routing table. When MPLS is enabled on an AS, it automatically masks the OSPF and iBGP layer for the AS, since now both of them will be handled by the MPLS layer.
+
+```python
+mpls = Mpls()
+mpls.enableOn(150)
+```
+
 #### Service
 
 - Class Name: `Service`
@@ -181,6 +192,42 @@ ldns = DomainNameCachingService(autoRoot = True, setResolvconf = True)
 ldns.installOn(as151_h2)
 ```
 
+### Cyrmu IP Origin Service
+
+- Class Name: `CyrmuIpOriginService`
+- Dependency: `DomainNameService`
+- Description: Cymru's IP info service is used by various traceroute utilities to map IP address to ASN (using DNS). This service loads the prefix list within the simulation and creates ASN mappings for them, so with proper local DNS configuration, nodes can see the ASN when doing traceroute. The layer will host domain `cymru.com.`
+
+```python
+cyrmu = CyrmuIpOriginService()
+cyrmu.installOn(as150_h1)
+```
+
+### Reverse Domain Name Service
+
+- Class Name: `ReverseDomainNameService`
+- Dependency: `DomainNameService`
+- Description: Reverse DNS. This service hosts the `in-addr.arpa.` zone and resolves IP addresses to `nodename-netname.nodetype.asn.net.`. You may need to host the zone `arpa.` to complete the DNS chain.
+
+```python
+rdns = ReverseDomainNameService()
+rdns.installOn(as150_h1)
+dns.hostZoneOn('arpa.', as150_h2)
+```
+
+### DNSSEC
+
+- Class Name: `Dnssec`
+- Dependency: `DomainNameService`
+- Description: This layer helps setting up DNSSEC. It works by signing the zones and send the DS record to parent(s) with `nsupdate`. 
+
+```python
+dnssec = Dnssec()
+dnssec.enableOn('example.com.')
+dnssec.enableOn('com.')
+dnssec.enableOn('.')
+```
+
 ### Reality
 
 - Class Name: `Reality`
@@ -211,6 +258,10 @@ r.addLayer(ws)
 r.addLayer(dns)
 r.addLayer(ldns)
 r.addLayer(real)
+r.addLayer(cyrmu)
+r.addLayer(dnssec)
+r.addLayer(rdns)
+r.addLayer(mpls)
 
 r.render()
 ```
