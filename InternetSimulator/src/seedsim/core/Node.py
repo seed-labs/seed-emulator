@@ -5,7 +5,7 @@ from .Registry import Registry, ScopedRegistry, Registrable
 from ipaddress import IPv4Address
 from typing import List, Dict, Set, Tuple
 
-DEFAULT_SOFTWARES: List[str] = ['curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'dnsutils', 'jq', 'ipcalc']
+DEFAULT_SOFTWARES: List[str] = ['curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc']
 
 class File(Printable):
     """!
@@ -188,6 +188,7 @@ class Node(Printable, Registrable):
     __start_commands: List[Tuple[str, bool]]
     __ports: List[Tuple[int, int]]
     __privileged: bool
+    __common_software: Set[str] = set()
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -211,7 +212,7 @@ class Node(Printable, Registrable):
         self.__privileged = False
 
         for soft in DEFAULT_SOFTWARES:
-            self.__softwares.add(soft)
+            self.__common_software.add(soft)
 
     def addPort(self, host: int, node: int):
         """!
@@ -360,13 +361,33 @@ class Node(Printable, Registrable):
         """
         self.__softwares.add(name)
 
+    def addCommonSoftware(self, name: str):
+        """!
+        @brief Add new software to all node.
+
+        @param name software package name.
+
+        Use this to add software to all node. For example, if using the "docker"
+        compiler, this will be added as an "apt-get install" line in Dockerfile
+        of all nodes.
+        """
+        self.__common_software.add(name)
+
     def getSoftwares(self) -> Set[str]:
         """!
-        @brief Get set of software lists.
+        @brief Get set of software.
 
         @returns set of softwares.
         """
         return self.__softwares
+
+    def getCommonSoftware(self) -> Set[str]:
+        """!
+        @brief Get set of common software.
+
+        @returns set of softwares.
+        """
+        return self.__common_software
 
     def addBuildCommand(self, cmd: str):
         """!

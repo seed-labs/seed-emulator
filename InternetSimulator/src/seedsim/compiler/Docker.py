@@ -133,6 +133,9 @@ class Docker(Compiler):
         mkdir(real_nodename)
         chdir(real_nodename)
 
+        commsoft = node.getCommonSoftware()
+        if len(commsoft) > 0: dockerfile += 'RUN apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(commsoft)))
+
         soft = node.getSoftwares()
         if len(soft) > 0: dockerfile += 'RUN apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(soft)))
 
