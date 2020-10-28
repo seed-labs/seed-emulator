@@ -354,7 +354,7 @@ class Reality(Layer):
         out += 'RealityLayer:\n'
 
         indent += 4
-        out = ' ' * indent
+        out += ' ' * indent
         out += 'Real-world router nodes:\n'
 
         indent += 4

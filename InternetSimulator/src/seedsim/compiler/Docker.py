@@ -39,7 +39,15 @@ DockerCompilerFileTemplates['compose_service'] = """\
             - net.ipv4.ip_forward=1
         privileged: {privileged}
         networks:
-{networks}
+{networks}{ports}
+"""
+DockerCompilerFileTemplates['compose_ports'] = """\
+        ports:
+{portList}
+"""
+
+DockerCompilerFileTemplates['compose_port'] = """\
+            - {hostPort}:{nodePort}
 """
 
 DockerCompilerFileTemplates['compose_service_network'] = """\
@@ -123,10 +131,24 @@ class Docker(Compiler):
                 address = iface.getAddress()
             )
         
+        _ports = node.getPorts()
+        ports = ''
+        if len(_ports) > 0:
+            lst = ''
+            for (h, n) in _ports:
+                lst += DockerCompilerFileTemplates['compose_port'].format(
+                    hostPort = h,
+                    nodePort = n
+                )
+            ports = DockerCompilerFileTemplates['compose_ports'].format(
+                portList = lst
+            )
+        
         self.__services += DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
             networks = node_nets,
-            privileged = 'true' if node.isPrivileged() else 'false'
+            privileged = 'true' if node.isPrivileged() else 'false',
+            ports = ports
         )
 
         dockerfile = DockerCompilerFileTemplates['dockerfile']

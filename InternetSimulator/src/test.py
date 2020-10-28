@@ -83,6 +83,8 @@ as11872_rw = real.createRealWorldRouter(as11872)
 as11872_rw.joinNetworkByName("ix100", "10.100.0.118")
 ebgp.addRsPeer(100, 11872)
 
+real.enableRealWorldAccessByName(150, 'net0')
+
 cyrmu = CyrmuIpOriginService()
 cyrmu.installOn(as150_h1)
 
@@ -115,9 +117,9 @@ print(r)
 print("\n\n\n\nRenderer output ========")
 r.render()
 
-print("\n\n\n\nRegistry ===============")
+#print("\n\n\n\nRegistry ===============")
 reg = Registry()
-print(reg)
+#print(reg)
 
 print("\n\n\n\nCompiler output ========")
 compiler = Docker()

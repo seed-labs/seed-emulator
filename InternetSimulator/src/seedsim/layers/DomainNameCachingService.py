@@ -159,6 +159,8 @@ class DomainNameCachingService(Service):
         out = ' ' * indent
         out += 'DomainNameCachingService:\n'
 
+        indent += 4
+
         out += ' ' * indent
         out += 'Configure root hint: {}\n'.format(self.__auto_root)
 
