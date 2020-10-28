@@ -138,6 +138,11 @@ client-to-client
 dev tap0
 '''
 
+RealityFileTemplates['ovpn_startup_script'] = '''\
+#!/bin/bash
+echo TODO: bridge "$1".
+'''
+
 class RealWorldRouter(Router):
     """!
     @brief RealWorldRouter class.
@@ -321,31 +326,48 @@ class Reality(Layer):
         @param scope asn of the network owner.
         @param netname name of the network.
         """
-        pass
+        self.enableRealWorldAccess(Registry().get(str(asn), 'net', netname))
 
     def onRender(self):
         for node in self.__rwnodes:
+            self._log('Setting up real-world router as{}/{}...'.format(node.getAsn(), node.getName()))
             node.seal()
 
         cur_port = 65000
         for net in self.__rwnets:
-            snode_name = 'br-{}'.format(net.getName())
+            (scope, _, name) = net.getRegistryInfo()
+            self._log('Setting up real-world bridge for network as{}/{}...'.format(scope, name))
+            snode_name = 'br-as{}-{}'.format(scope, name)
             snode = Node(snode_name, NodeRole.Host, 0, 'seedsim')
+            snode.joinNetwork(net)
             self.__reg.register('snode', snode_name, snode)
             snode.addSoftware('openvpn')
             snode.setFile('/ovpn-server.conf', RealityFileTemplates['ovpn_server_config'])
             snode.setFile('/ovpn_startup', RealityFileTemplates['ovpn_startup_script'])
             snode.addStartCommand('chmod +x /ovpn_startup')
-            snode.addStartCommand('/ovpn_startup {}'.format(net.getName()))
+            snode.addStartCommand('/ovpn_startup {}'.format(name))
             snode.addPort(cur_port, 1194)
             cur_port += 1
 
     def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'RealityLayer:\n'
+
+        indent += 4
         out = ' ' * indent
         out += 'Real-world router nodes:\n'
 
         indent += 4
         for node in self.__rwnodes:
             out += node.print(indent)
+
+        indent -= 4
+        out += ' ' * indent
+        out += 'Bridged networks:\n'
+        indent += 4
+        for net in self.__rwnets:
+            (scope, _, name) = net.getRegistryInfo()
+            out += ' ' * indent
+            out += 'as{}/{}'.format(scope, name)
 
         return out

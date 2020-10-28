@@ -183,6 +183,10 @@ class Docker(Compiler):
                 self._log('compiling rs node for {}...'.format(name))
                 self.__compileNode(obj)
 
+            if type == 'snode':
+                self._log('compiling service node {}...'.format(name))
+                self.__compileNode(obj)
+
             if type == 'net':
                 self._log('creating network: {}/{}...'.format(scope, name))
                 self.__compileNet(obj)
