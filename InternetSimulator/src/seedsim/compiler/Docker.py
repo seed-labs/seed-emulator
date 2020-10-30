@@ -47,7 +47,7 @@ DockerCompilerFileTemplates['compose_ports'] = """\
 """
 
 DockerCompilerFileTemplates['compose_port'] = """\
-            - {hostPort}:{nodePort}
+            - {hostPort}:{nodePort}/{proto}
 """
 
 DockerCompilerFileTemplates['compose_service_network'] = """\
@@ -135,10 +135,11 @@ class Docker(Compiler):
         ports = ''
         if len(_ports) > 0:
             lst = ''
-            for (h, n) in _ports:
+            for (h, n, p) in _ports:
                 lst += DockerCompilerFileTemplates['compose_port'].format(
                     hostPort = h,
-                    nodePort = n
+                    nodePort = n,
+                    proto = p
                 )
             ports = DockerCompilerFileTemplates['compose_ports'].format(
                 portList = lst

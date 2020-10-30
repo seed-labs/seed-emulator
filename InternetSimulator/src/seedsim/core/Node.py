@@ -186,7 +186,7 @@ class Node(Printable, Registrable):
     __softwares: Set[str]
     __build_commands: List[str]
     __start_commands: List[Tuple[str, bool]]
-    __ports: List[Tuple[int, int]]
+    __ports: List[Tuple[int, int, str]]
     __privileged: bool
     __common_software: Set[str] = set()
 
@@ -214,14 +214,15 @@ class Node(Printable, Registrable):
         for soft in DEFAULT_SOFTWARES:
             self.__common_software.add(soft)
 
-    def addPort(self, host: int, node: int):
+    def addPort(self, host: int, node: int, proto: str = 'tcp'):
         """!
         @brief Add port forwarding.
 
         @param host port of the host.
         @param node port of the node.
+        @param proto protocol.
         """
-        self.__ports.append((host, node))
+        self.__ports.append((host, node, proto))
 
     def getPorts(self) -> List[Tuple[int, int]]:
         """!

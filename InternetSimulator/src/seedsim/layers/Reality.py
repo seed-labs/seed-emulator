@@ -140,7 +140,20 @@ dev tap0
 
 RealityFileTemplates['ovpn_startup_script'] = '''\
 #!/bin/bash
-echo TODO: bridge "$1".
+[ ! -d /dev/net ] && mkdir /dev/net
+mknod /dev/net/tun c 10 200
+openvpn --config /ovpn-server.conf &
+while ! ip li sh tap0; do sleep 1; done
+ip li set tap0 up
+addr="`ip -br ad sh eth0 | awk '{ print $3 }'`"
+gw="`ip rou sh default | cut -d' ' -f3`"
+ip addr fl eth0
+brctl addbr br0
+brctl addif br0 eth0
+brctl addif br0 tap0
+ip addr add "$addr" dev br0
+ip li set br0 up
+ip rou add default via "$gw" dev br0
 '''
 
 class RealWorldRouter(Router):
@@ -342,11 +355,12 @@ class Reality(Layer):
             snode.joinNetwork(net)
             self.__reg.register('snode', snode_name, snode)
             snode.addSoftware('openvpn')
+            snode.addSoftware('bridge-utils')
             snode.setFile('/ovpn-server.conf', RealityFileTemplates['ovpn_server_config'])
             snode.setFile('/ovpn_startup', RealityFileTemplates['ovpn_startup_script'])
             snode.addStartCommand('chmod +x /ovpn_startup')
             snode.addStartCommand('/ovpn_startup {}'.format(name))
-            snode.addPort(cur_port, 1194)
+            snode.addPort(cur_port, 1194, 'udp')
             cur_port += 1
 
     def print(self, indent: int) -> str:
