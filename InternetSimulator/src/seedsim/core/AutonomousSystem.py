@@ -1,3 +1,4 @@
+from .Graphable import Graphable
 from .Printable import Printable
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
@@ -7,7 +8,8 @@ from .Node import Node
 from ipaddress import IPv4Network
 from typing import Generator, Dict
 
-class AutonomousSystem(Printable):
+
+class AutonomousSystem(Printable, Graphable):
     """!
     @brief AutonomousSystem class. 
 

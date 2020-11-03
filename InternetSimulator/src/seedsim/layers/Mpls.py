@@ -2,7 +2,7 @@ from .Layer import Layer
 from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Routing import Router
-from seedsim.core import Node, Registry, ScopedRegistry
+from seedsim.core import Node, Registry, ScopedRegistry, Graphable
 from seedsim.core.enums import NetworkType, NodeRole
 from typing import List, Tuple, Dict
 
@@ -53,7 +53,7 @@ MplsFileTemplates['bird_ibgp_peer'] = '''
 '''
 
 
-class Mpls(Layer):
+class Mpls(Layer, Graphable):
     """!
     @brief The Mpls (MPLS) layer.
 

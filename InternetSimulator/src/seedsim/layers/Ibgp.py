@@ -1,7 +1,7 @@
 from .Layer import Layer
 from .Base import Base
 from .Ospf import Ospf
-from seedsim.core import Registry, ScopedRegistry, Node, Interface
+from seedsim.core import Registry, ScopedRegistry, Node, Interface, Graphable
 from seedsim.core.enums import NetworkType
 from typing import List, Set, Dict
 
@@ -18,7 +18,7 @@ IbgpFileTemplates['ibgp_peer'] = '''
     neighbor {peerAddress} as {asn};
 '''
 
-class Ibgp(Layer):
+class Ibgp(Layer, Graphable):
     """!
     @brief The Ibgp (iBGP) layer.
 

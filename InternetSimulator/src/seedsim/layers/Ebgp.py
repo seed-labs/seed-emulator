@@ -1,6 +1,6 @@
 from .Layer import Layer
 from .Routing import Router
-from seedsim.core import Registry, ScopedRegistry, Network, Node, Interface
+from seedsim.core import Registry, ScopedRegistry, Network, Node, Interface, Graphable
 from typing import Tuple, List, Dict
 
 EbgpFileTemplates: Dict[str, str] = {}
@@ -26,7 +26,7 @@ EbgpFileTemplates["rnode_bird_peer"] = """
     neighbor {peerAddress} as {peerAsn};
 """
 
-class Ebgp(Layer):
+class Ebgp(Layer, Graphable):
     """!
     @brief The Ebgp (eBGP) layer.
 
