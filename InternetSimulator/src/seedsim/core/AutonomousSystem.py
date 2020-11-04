@@ -26,6 +26,7 @@ class AutonomousSystem(Printable, Graphable):
 
         @param asn ASN for this system.
         """
+        Graphable.__init__(self)
         self.__asn = asn
         self.__reg = ScopedRegistry(str(asn))
         self.__subnet_generator = None if asn > 255 else IPv4Network("10.{}.0.0/16".format(asn)).subnets(new_prefix = 24)
@@ -96,6 +97,35 @@ class AutonomousSystem(Printable, Graphable):
         @returns Node.
         """
         return self.__reg.get('hnode', name)
+
+    def _doCreateGraphs(self):
+        l2graph = self._addGraph('AS{}: Layer 2 Connection'.format(self.__asn), False)
+        
+        for obj in self.__reg.getByType('net'):
+            net: Network = obj
+            l2graph.addVertex('Network: {}'.format(net.getName()), shape = 'rectangle', group = 'AS{}'.format(self.__asn))
+
+        for obj in self.__reg.getByType('rnode'):
+            router: Node = obj
+            rtrname = 'Router: {}'.format(router.getName(), group = 'AS{}'.format(self.__asn))
+            l2graph.addVertex(rtrname, group = 'AS{}'.format(self.__asn), shape = 'diamond')
+            for iface in router.getInterfaces():
+                net = iface.getNet()
+                netname = 'Network: {}'.format(net.getName())
+                if net.getType() == NetworkType.InternetExchange:
+                    netname = 'Exchange: {}...'.format(net.getName())
+                    l2graph.addVertex(netname, shape = 'rectangle')
+                l2graph.addEdge(rtrname, netname)
+
+        for obj in self.__reg.getByType('hnode'):
+            router: Node = obj
+            rtrname = 'Host: {}'.format(router.getName(), group = 'AS{}'.format(self.__asn))
+            l2graph.addVertex(rtrname, group = 'AS{}'.format(self.__asn))
+            for iface in router.getInterfaces():
+                net = iface.getNet()
+                netname = 'Network: {}'.format(net.getName())
+                l2graph.addEdge(rtrname, netname)
+
         
     def print(self, indent: int) -> str:
         out = ' ' * indent

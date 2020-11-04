@@ -124,3 +124,9 @@ reg = Registry()
 print("\n\n\n\nCompiler output ========")
 compiler = Docker()
 compiler.compile(reg, './test/')
+
+
+as150.createGraphs()
+for graph in as150.getGraphs().values():
+    print(graph)
+    print(graph.toGraphviz())

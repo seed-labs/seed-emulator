@@ -1,4 +1,5 @@
 from typing import List, Dict
+from .Printable import Printable
 
 class Vertex:
     """!
@@ -12,12 +13,16 @@ class Vertex:
     # cluster.
     group: str
 
-    def __init__(self, name: str, group: str = None):
+    # shape of the node
+    shape: str
+
+    def __init__(self, name: str, group: str = None, shape: str = 'ellipse'):
         """!
         @brief Vertex constructor.
         """
         self.name = name
         self.group = group
+        self.shape = shape
 
 class Edge:
     """!
@@ -49,7 +54,7 @@ class Edge:
     # label on the b side of the edge
     blabel: str
 
-class Graph:
+class Graph(Printable):
     """!
     @brief a graph.
     """
@@ -75,7 +80,7 @@ class Graph:
         self.vertices = {}
         self.edges = []
 
-    def addVertex(self, name: str, group: str = None):
+    def addVertex(self, name: str, group: str = None, shape: str = 'ellipse'):
         """!
         @brief add a new node.
         
@@ -83,16 +88,16 @@ class Graph:
         @param group (optional) name of the culster.
         @throws AssertionError if vertex already exist.
         """
-        assert name not in self.__vertices, 'vertex with name {} already exist.'.format(name)
-        self.vertices[name] = Vertex(name, group)
+        assert name not in self.vertices, 'vertex with name {} already exist.'.format(name)
+        self.vertices[name] = Vertex(name, group, shape)
 
     def addEdge(self, a: str, b: str, label: str = None, alabel: str = None, blabel: str = None):
         """!
         @brief add a new edge
         @throws AssertionError if vertex a or b does not exist.
         """
-        assert a in self.__vertices, ' {} not a vertex.'.format(a)
-        assert b in self.__vertices, ' {} not a vertex.'.format(b)
+        assert a in self.vertices, ' {} not a vertex.'.format(a)
+        assert b in self.vertices, ' {} not a vertex.'.format(b)
         self.edges.append(Edge(a, b, label, alabel, blabel))
 
     def toGraphviz(self) -> str:
@@ -103,7 +108,84 @@ class Graph:
 
         @returns graphviz source.
         """
-        pass
+        out = '{} "{}" {{\n'.format('digraph' if self.directed else 'graph', self.name)
+        vlines = []
+        cluster_vlines = {}
+        indent = 4
+
+        out += ' ' * indent
+        out += 'label = "{}"\n'.format(self.name)
+
+        for v in self.vertices.values():
+            options = ' '
+            if v.shape != None: options += 'shape="{}" '.format(v.shape)
+            vline = '"{}" [{}]\n'.format(v.name, options)
+            
+            if v.group != None:
+                if v.group not in cluster_vlines: cluster_vlines[v.group] = []
+                cluster_vlines[v.group].append(vline)
+            else: vlines.append(vline)
+
+        for line in vlines:
+            out += ' ' * indent
+            out += line
+        
+        cluster_id = 0
+        for (l, c) in cluster_vlines.items():
+            out += ' ' * indent
+            out += 'subgraph cluster_{} {{\n'.format(cluster_id)
+            indent += 4
+
+            out += ' ' * indent
+            out += 'label = "{}"\n'.format(l)
+
+            for line in c:
+                out += ' ' * indent
+                out += line
+
+            indent -= 4
+            out += ' ' * indent
+            out += '}\n'
+
+            cluster_id += 1
+
+
+        for e in self.edges:
+            out += ' ' * indent
+            options = ' '
+            if e.label != None: options += 'label="{}" '.format(e.label)
+            if e.alabel != None: options += 'headlabel="{}" '.format(e.alabel)
+            if e.blabel != None: options += 'taillabel="{}" '.format(e.blabel)
+            out += '"{}" {} "{}" [{}]\n'.format(e.a, '->' if self.directed else '--', e.b, options)
+
+        out += '}'
+
+        return out
+
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'Graph "{}":\n'.format(self.name)
+
+        indent += 4
+        out += ' ' * indent
+        out += 'Vertices:\n'
+
+        indent += 4
+        for v in self.vertices.values():
+            out += ' ' * indent
+            out += '"{}", group "{}"\n'.format(v.name, v.group)
+
+        indent -= 4
+        out += ' ' * indent
+        out += 'Edges:\n'
+
+        indent += 4
+        for e in self.edges:
+            out += ' ' * indent
+            out += '"{}" {} "{}"\n'.format(e.a, '->' if self.directed else '--', e.b)
+
+        return out
 
 class Graphable:
     """!
@@ -112,12 +194,14 @@ class Graphable:
     """
 
     __graphs: Dict[str, Graph]
+    __graphs_created: bool
 
     def __init__(self):
         """!
         @brief Graphable constructor.
         """
         self.__graphs = {}
+        self.__graphs_created = False
 
     def _addGraph(self, name: str, directed: bool) -> Graph:
         """!
@@ -151,3 +235,19 @@ class Graphable:
         @returns all graphs.
         """
         return self.__graphs
+
+    def _doCreateGraphs(self):
+        """!
+        @brief handle graph creation, should be implemented by all graphable
+        classes.
+        """
+        raise NotImplementedError('_doCreateGraphs not implemented.')
+
+    def createGraphs(self):
+        """!
+        @brief Create graphs.
+
+        Call this method to ask the class to create graphs.
+        """
+        self._doCreateGraphs()
+        self.__graphs_created = True
