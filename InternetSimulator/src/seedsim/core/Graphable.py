@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List, Dict
 from .Printable import Printable
 
@@ -83,6 +84,15 @@ class Graph(Printable):
         self.directed = directed
         self.vertices = {}
         self.edges = []
+
+    def copy(self, graph: Graph):
+        """!
+        @brief Copy all edges, vertices from another graph, overrding the
+        current ones.
+        """
+
+        self.edges = graph.edges.copy()
+        self.vertices = graph.vertices.copy()
 
     def addVertex(self, name: str, group: str = None, shape: str = 'ellipse'):
         """!
@@ -272,5 +282,6 @@ class Graphable:
 
         Call this method to ask the class to create graphs.
         """
+        if self.__graphs_created: return
         self._doCreateGraphs()
         self.__graphs_created = True

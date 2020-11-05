@@ -85,6 +85,17 @@ class Base(Layer):
         self.__ases[asn] = AutonomousSystem(asn)
         return self.__ases[asn]
 
+    def getAutonomousSystem(self, asn: int) -> AutonomousSystem:
+        """!
+        @brief Create an existing AutonomousSystem.
+
+        @param asn ASN of the AS.
+        @returns AS.
+        @throws AssertionError if asn does not exist.
+        """
+        assert asn in self.__ases, "as{} does not exist.".format(asn)
+        return self.__ases[asn]
+
     def createInternetExchange(self, asn: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None) -> InternetExchange:
         """!
         @brief Create a new InternetExchange.
@@ -95,8 +106,19 @@ class Base(Layer):
         @returns created IX.
         @throws AssertionError if IX exists.
         """
-        assert asn not in self.__ases, "ix{} already exist.".format(asn)
+        assert asn not in self.__ixes, "ix{} already exist.".format(asn)
         self.__ixes[asn] = InternetExchange(asn, prefix, aac)
+        return self.__ixes[asn]
+
+    def getInternetExchange(self, asn: int) -> InternetExchange:
+        """!
+        @brief Get an existing InternetExchange.
+
+        @param asn ASN of the IX.
+        @returns InternetExchange.
+        @throws AssertionError if ix does not exist.
+        """
+        assert asn in self.__ixes, "ix{} does not exist.".format(asn)
         return self.__ixes[asn]
 
     def getAsns(self) -> List[int]:

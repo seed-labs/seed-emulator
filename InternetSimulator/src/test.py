@@ -30,7 +30,7 @@ as150_h3 = as150.createHost("h3")
 as150_h3.joinNetworkByName("net1")
 
 mpls = Mpls()
-mpls.enableOn(150)
+#mpls.enableOn(150)
 
 as151 = base.createAutonomousSystem(151)
 as151.createNetwork("net0") 
@@ -140,7 +140,12 @@ for graph in as150.getGraphs().values():
     print(graph)
     print(graph.toGraphviz())
 
-print(ebgp)
+ebgp.createGraphs()
 for graph in ebgp.getGraphs().values():
+    print(graph)
+    print(graph.toGraphviz())
+
+ibgp.createGraphs()
+for graph in ibgp.getGraphs().values():
     print(graph)
     print(graph.toGraphviz())

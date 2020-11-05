@@ -26,7 +26,6 @@ class Ibgp(Layer, Graphable):
 
     This layer automatically setup full mesh peering between routers within AS.
     """
-
     __masked: Set[int] = set()
     __reg = Registry()
 
@@ -34,6 +33,7 @@ class Ibgp(Layer, Graphable):
         """!
         @brief Ibgp (iBGP) layer constructor.
         """
+        Graphable.__init__(self)
         self.__masked = set()
 
     def getName(self) -> str:
@@ -101,7 +101,23 @@ class Ibgp(Layer, Graphable):
 
                     self._log('adding peering: {} <-> {} (ibgp, as{})'.format(laddr, raddr, asn))
 
+    def _doCreateGraphs(self):
+        base: Base = self.__reg.get('seedsim', 'layer', 'Base')
+        for asn in base.getAsns():
+            if asn in self.__masked: continue
+            asobj = base.getAutonomousSystem(asn)
+            asobj.createGraphs()
+            l2graph = asobj.getGraph('AS{}: Layer 2 Connection'.format(asn))
+            ibgpgraph = self._addGraph('AS{}: iBGP sessions'.format(asn), False)
+            ibgpgraph.copy(l2graph)
 
+            rtrs = ScopedRegistry(str(asn)).getByType('rnode').copy()
+            
+            while len(rtrs) > 0:
+                a = rtrs.pop()
+                for b in rtrs:
+                    ibgpgraph.addEdge('Router: {}'.format(a.getName()), 'Router: {}'.format(b.getName()), style = 'dashed')
+            
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
