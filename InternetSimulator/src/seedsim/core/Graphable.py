@@ -29,7 +29,7 @@ class Edge:
     @brief an edge in graph.
     """
 
-    def __init__(self, a: str, b: str, label: str = None, alabel: str = None, blabel: str = None):
+    def __init__(self, a: str, b: str, label: str = None, alabel: str = None, blabel: str = None, style: str = 'solid'):
         """!
         @brief Edge constructor.
         """
@@ -38,6 +38,7 @@ class Edge:
         self.label = label
         self.alabel = alabel
         self.blabel = blabel
+        self.style = style
 
     # name of vertex, if directed, this is src
     a: str
@@ -53,6 +54,9 @@ class Edge:
 
     # label on the b side of the edge
     blabel: str
+
+    # style of the edge
+    style: str
 
 class Graph(Printable):
     """!
@@ -88,17 +92,35 @@ class Graph(Printable):
         @param group (optional) name of the culster.
         @throws AssertionError if vertex already exist.
         """
-        assert name not in self.vertices, 'vertex with name {} already exist.'.format(name)
+        assert name not in self.vertices, '{}: vertex with name {} already exist.'.format(self.name, name)
         self.vertices[name] = Vertex(name, group, shape)
 
-    def addEdge(self, a: str, b: str, label: str = None, alabel: str = None, blabel: str = None):
+    def hasVertex(self, name: str):
+        """!
+        @brief Test if a vertex exists.
+
+        @todo 
+
+        @returns True if exist.
+        """
+        return name in self.vertices
+
+    def addEdge(self, a: str, b: str, label: str = None, alabel: str = None, blabel: str = None, style: str = 'solid'):
         """!
         @brief add a new edge
         @throws AssertionError if vertex a or b does not exist.
         """
-        assert a in self.vertices, ' {} not a vertex.'.format(a)
-        assert b in self.vertices, ' {} not a vertex.'.format(b)
-        self.edges.append(Edge(a, b, label, alabel, blabel))
+        assert a in self.vertices, '{}: {} is not a vertex.'.format(self.name, a)
+        assert b in self.vertices, '{}: {} is not a vertex.'.format(self.name, b)
+        self.edges.append(Edge(a, b, label, alabel, blabel, style))
+
+    def hasEdge(self, a: str, b: str):
+        """!
+        @brief Test if an edge exists.
+
+        @returns True if exist.
+        """
+        pass
 
     def toGraphviz(self) -> str:
         """!
@@ -156,6 +178,7 @@ class Graph(Printable):
             if e.label != None: options += 'label="{}" '.format(e.label)
             if e.alabel != None: options += 'headlabel="{}" '.format(e.alabel)
             if e.blabel != None: options += 'taillabel="{}" '.format(e.blabel)
+            if e.style != None: options += 'style="{}" '.format(e.style)
             out += '"{}" {} "{}" [{}]\n'.format(e.a, '->' if self.directed else '--', e.b, options)
 
         out += '}'
@@ -206,12 +229,12 @@ class Graphable:
     def _addGraph(self, name: str, directed: bool) -> Graph:
         """!
         @brief create a new graph. This is to be called by internal classes to
-        create graph.
+        create graph. If a graph already exists, it will be returned.
 
         @return newly created graph.
         @throws AssertionError if graph already exist.
         """
-        assert name not in self.__graphs, 'graph {} already exist'.format(name)
+        if name in self.__graphs: return self.__graphs[name]
         g = Graph(name, directed)
         self.__graphs[name] = g
         return g

@@ -40,6 +40,7 @@ class Ebgp(Layer, Graphable):
         """!
         @brief Ebgp layer constructor.
         """
+        Graphable.__init__(self)
         self.__peerings = []
         self.__rs_peers = []
     
@@ -180,7 +181,62 @@ class Ebgp(Layer, Graphable):
                 peerAsn = a,
                 exportFilter = "all",
                 importFilter = "all"
-            )) 
+            ))
+
+    def _doCreateGraphs(self):
+        # creates the following:
+        # - ebgp peering, all ASes in one graph
+        # - ebgp peering, one for each ix
+        # mlpa peer (i.e., via rs): dashed line
+        # private peer: solid line
+
+        full_graph = self._addGraph('All Peering Sessions', False)
+
+        ix_list = set()
+        for (i, _) in self.__rs_peers: ix_list.add(i)
+        for (i, _, _) in self.__peerings: ix_list.add(i)
+        for ix in ix_list:
+            self._log('Creating RS peering sessions graph for IX{}...'.format(ix))
+            ix_graph = self._addGraph('IX{} Peering Sessions'.format(ix), False)
+
+            mesh_ases = set()
+            
+            for (i, a) in self.__rs_peers:
+                if i == ix: mesh_ases.add(a)
+
+            while len(mesh_ases) > 0:
+                a = mesh_ases.pop()
+                if not full_graph.hasVertex('AS{}'.format(a)):
+                    full_graph.addVertex('AS{}'.format(a), 'IX{}'.format(i))
+                if not ix_graph.hasVertex('AS{}'.format(a)):
+                    ix_graph.addVertex('AS{}'.format(a), 'IX{}'.format(i))
+                for b in mesh_ases:
+                    if not full_graph.hasVertex('AS{}'.format(b)):
+                        full_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
+                    if not ix_graph.hasVertex('AS{}'.format(b)):
+                        ix_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
+
+                    full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), style = 'dashed')
+                    ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), style = 'dashed')
+                    
+        for (i, a, b) in self.__peerings:
+            self._log('Creating private peering sessions graph for IX{} AS{} <-> AS{}...'.format(i, a, b))
+
+            ix_graph = self._addGraph('IX{} Peering Sessions'.format(i), False)
+
+            if not full_graph.hasVertex('AS{}'.format(a)):
+                full_graph.addVertex('AS{}'.format(a), 'IX{}'.format(i))
+            if not ix_graph.hasVertex('AS{}'.format(a)):
+                ix_graph.addVertex('AS{}'.format(a), 'IX{}'.format(i))
+
+            if not full_graph.hasVertex('AS{}'.format(b)):
+                full_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
+            if not ix_graph.hasVertex('AS{}'.format(b)):
+                ix_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
+
+            full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b))
+            ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b))
+
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

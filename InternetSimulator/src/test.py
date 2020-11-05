@@ -44,8 +44,17 @@ as151_h2.joinNetworkByName("net0")
 as151_h3 = as151.createHost("h3")
 as151_h3.joinNetworkByName("net0")
 
+as152 = base.createAutonomousSystem(152)
+as152.createNetwork("net0")
+as152_r1 = as152.createRouter("r1")
+as152_r1.joinNetworkByName("ix101")
+as152_r1.joinNetworkByName("net0")
+as152_h1 = as152.createHost("h1")
+as152_h1.joinNetworkByName("net0")
+
 ebgp = Ebgp()
 ebgp.addPrivatePeering(100, 150, 151)
+ebgp.addPrivatePeering(101, 150, 152)
 ebgp.addRsPeer(100, 150)
 ebgp.addRsPeer(100, 151)
 
@@ -128,5 +137,10 @@ compiler.compile(reg, './test/')
 
 as150.createGraphs()
 for graph in as150.getGraphs().values():
+    print(graph)
+    print(graph.toGraphviz())
+
+print(ebgp)
+for graph in ebgp.getGraphs().values():
     print(graph)
     print(graph.toGraphviz())
