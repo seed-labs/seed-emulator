@@ -135,11 +135,6 @@ compiler = Docker()
 compiler.compile(reg, './test/')
 
 
-as150.createGraphs()
-for graph in as150.getGraphs().values():
-    print(graph)
-    print(graph.toGraphviz())
-
 ebgp.createGraphs()
 for graph in ebgp.getGraphs().values():
     print(graph)
@@ -147,5 +142,10 @@ for graph in ebgp.getGraphs().values():
 
 ibgp.createGraphs()
 for graph in ibgp.getGraphs().values():
+    print(graph)
+    print(graph.toGraphviz())
+
+base.createGraphs()
+for graph in base.getGraphs().values():
     print(graph)
     print(graph.toGraphviz())

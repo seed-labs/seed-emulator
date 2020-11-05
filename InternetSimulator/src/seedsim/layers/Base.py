@@ -1,5 +1,5 @@
 from .Layer import Layer
-from seedsim.core import AutonomousSystem, InternetExchange, Printable, Registry, AddressAssignmentConstraint, Node
+from seedsim.core import AutonomousSystem, InternetExchange, Printable, Registry, AddressAssignmentConstraint, Node, Graphable
 from typing import Dict, List
 
 BaseFileTemplates: Dict[str, str] = {}
@@ -32,7 +32,7 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
 }; done
 """
 
-class Base(Layer):
+class Base(Layer, Graphable):
     """!
     @brief The base layer.
     """
@@ -45,6 +45,7 @@ class Base(Layer):
         """!
         @brief Base layer constructor.
         """
+        Graphable.__init__(self)
         self.__ases = {}
         self.__ixes = {}
 
@@ -136,6 +137,13 @@ class Base(Layer):
         @returns List of IX IDs.
         """
         return self.__ixes.keys()
+
+    def _doCreateGraphs(self):
+        graph = self._addGraph('Layer 2 Connections', False)
+        for asobj in self.__ases.values():
+            asobj.createGraphs()
+            asgraph = asobj.getGraph('AS{}: Layer 2 Connections'.format(asobj.getAsn()))
+            graph.copy(asgraph)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

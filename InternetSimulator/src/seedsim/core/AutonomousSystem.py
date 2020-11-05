@@ -99,7 +99,7 @@ class AutonomousSystem(Printable, Graphable):
         return self.__reg.get('hnode', name)
 
     def _doCreateGraphs(self):
-        l2graph = self._addGraph('AS{}: Layer 2 Connection'.format(self.__asn), False)
+        l2graph = self._addGraph('AS{}: Layer 2 Connections'.format(self.__asn), False)
         
         for obj in self.__reg.getByType('net'):
             net: Network = obj

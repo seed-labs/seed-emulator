@@ -107,16 +107,18 @@ class Ibgp(Layer, Graphable):
             if asn in self.__masked: continue
             asobj = base.getAutonomousSystem(asn)
             asobj.createGraphs()
-            l2graph = asobj.getGraph('AS{}: Layer 2 Connection'.format(asn))
+            l2graph = asobj.getGraph('AS{}: Layer 2 Connections'.format(asn))
             ibgpgraph = self._addGraph('AS{}: iBGP sessions'.format(asn), False)
             ibgpgraph.copy(l2graph)
+            for edge in ibgpgraph.edges:
+                edge.style = 'dotted'
 
             rtrs = ScopedRegistry(str(asn)).getByType('rnode').copy()
             
             while len(rtrs) > 0:
                 a = rtrs.pop()
                 for b in rtrs:
-                    ibgpgraph.addEdge('Router: {}'.format(a.getName()), 'Router: {}'.format(b.getName()), style = 'dashed')
+                    ibgpgraph.addEdge('Router: {}'.format(a.getName()), 'Router: {}'.format(b.getName()), style = 'solid')
             
 
     def print(self, indent: int) -> str:

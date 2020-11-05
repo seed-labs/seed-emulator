@@ -206,36 +206,43 @@ class Ebgp(Layer, Graphable):
 
             while len(mesh_ases) > 0:
                 a = mesh_ases.pop()
-                if not full_graph.hasVertex('AS{}'.format(a)):
+                if not full_graph.hasVertex('AS{}'.format(a), 'IX{}'.format(i)):
                     full_graph.addVertex('AS{}'.format(a), 'IX{}'.format(i))
-                if not ix_graph.hasVertex('AS{}'.format(a)):
+                if not ix_graph.hasVertex('AS{}'.format(a), 'IX{}'.format(i)):
                     ix_graph.addVertex('AS{}'.format(a), 'IX{}'.format(i))
                 for b in mesh_ases:
-                    if not full_graph.hasVertex('AS{}'.format(b)):
+                    if not full_graph.hasVertex('AS{}'.format(b), 'IX{}'.format(i)):
                         full_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
-                    if not ix_graph.hasVertex('AS{}'.format(b)):
+                    if not ix_graph.hasVertex('AS{}'.format(b), 'IX{}'.format(i)):
                         ix_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
 
-                    full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), style = 'dashed')
-                    ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), style = 'dashed')
+                    full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), style = 'dashed', )
+                    ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), style = 'dashed')
                     
         for (i, a, b) in self.__peerings:
             self._log('Creating private peering sessions graph for IX{} AS{} <-> AS{}...'.format(i, a, b))
 
             ix_graph = self._addGraph('IX{} Peering Sessions'.format(i), False)
 
-            if not full_graph.hasVertex('AS{}'.format(a)):
+            if not full_graph.hasVertex('AS{}'.format(a), 'IX{}'.format(i)):
                 full_graph.addVertex('AS{}'.format(a), 'IX{}'.format(i))
-            if not ix_graph.hasVertex('AS{}'.format(a)):
+            if not ix_graph.hasVertex('AS{}'.format(a), 'IX{}'.format(i)):
                 ix_graph.addVertex('AS{}'.format(a), 'IX{}'.format(i))
 
-            if not full_graph.hasVertex('AS{}'.format(b)):
+            if not full_graph.hasVertex('AS{}'.format(b), 'IX{}'.format(i)):
                 full_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
-            if not ix_graph.hasVertex('AS{}'.format(b)):
+            if not ix_graph.hasVertex('AS{}'.format(b), 'IX{}'.format(i)):
                 ix_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
 
-            full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b))
-            ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b))
+            full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i))
+            ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i))
+
+        es = list(full_graph.vertices.values())
+        while len(es) > 0:
+            a = es.pop()
+            for b in es:
+                if a.name == b.name:
+                    full_graph.addEdge(a.name, b.name, a.group, b.group, style = 'dotted')
 
 
     def print(self, indent: int) -> str:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import List, Dict
 from .Printable import Printable
+from copy import deepcopy
 
 class Vertex:
     """!
@@ -24,6 +25,12 @@ class Vertex:
         self.name = name
         self.group = group
         self.shape = shape
+
+    def getId(self):
+        """!
+        @brief Get the unique id of this node. 
+        """
+        return str(self.group) + "::" + str(self.name)
 
 class Edge:
     """!
@@ -87,12 +94,13 @@ class Graph(Printable):
 
     def copy(self, graph: Graph):
         """!
-        @brief Copy all edges, vertices from another graph, overrding the
-        current ones.
+        @brief Copy all edges, vertices from another graph.
+
+        @param graph graph to copy from
         """
 
-        self.edges = graph.edges.copy()
-        self.vertices = graph.vertices.copy()
+        self.edges += deepcopy(graph.edges)
+        self.vertices.update(deepcopy(graph.vertices))
 
     def addVertex(self, name: str, group: str = None, shape: str = 'ellipse'):
         """!
@@ -102,10 +110,11 @@ class Graph(Printable):
         @param group (optional) name of the culster.
         @throws AssertionError if vertex already exist.
         """
-        assert name not in self.vertices, '{}: vertex with name {} already exist.'.format(self.name, name)
-        self.vertices[name] = Vertex(name, group, shape)
+        assert not self.hasVertex(name, group), '{}: vertex with name {} already exist.'.format(self.name, name)
+        v = Vertex(name, group, shape)
+        self.vertices[v.getId()] = v
 
-    def hasVertex(self, name: str):
+    def hasVertex(self, name: str, group: str = None):
         """!
         @brief Test if a vertex exists.
 
@@ -113,16 +122,22 @@ class Graph(Printable):
 
         @returns True if exist.
         """
-        return name in self.vertices
+        return Vertex(name, group).getId() in self.vertices
 
-    def addEdge(self, a: str, b: str, label: str = None, alabel: str = None, blabel: str = None, style: str = 'solid'):
+    def __findVertex(self, name: str, group: str = None):
+        if self.hasVertex(name, group):
+            return self.vertices[Vertex(name, group).getId()]
+        assert group == None, '{}: {}::{} is not a vertex.'.format(self.name, group, name)
+        for v in self.vertices.values():
+            if v.name == name: return v
+        assert False, '{}: {}::{} is not a vertex.'.format(self.name, group, name)
+
+    def addEdge(self, a: str, b: str, agroup: str = None, bgroup: str = None, label: str = None, alabel: str = None, blabel: str = None, style: str = 'solid'):
         """!
         @brief add a new edge
         @throws AssertionError if vertex a or b does not exist.
         """
-        assert a in self.vertices, '{}: {} is not a vertex.'.format(self.name, a)
-        assert b in self.vertices, '{}: {} is not a vertex.'.format(self.name, b)
-        self.edges.append(Edge(a, b, label, alabel, blabel, style))
+        self.edges.append(Edge(self.__findVertex(a, agroup).getId(), self.__findVertex(b, bgroup).getId(), label, alabel, blabel, style))
 
     def hasEdge(self, a: str, b: str):
         """!
@@ -150,8 +165,9 @@ class Graph(Printable):
 
         for v in self.vertices.values():
             options = ' '
+            if v.name != None: options += 'label="{}" '.format(v.name)
             if v.shape != None: options += 'shape="{}" '.format(v.shape)
-            vline = '"{}" [{}]\n'.format(v.name, options)
+            vline = '"{}" [{}]\n'.format(v.getId(), options)
             
             if v.group != None:
                 if v.group not in cluster_vlines: cluster_vlines[v.group] = []
