@@ -112,3 +112,8 @@ r.render()
 c = Docker()
 
 c.compile(Registry(), output = 'test')
+
+mpls.createGraphs()
+for graph in mpls.getGraphs().values():
+    print(graph)
+    print(graph.toGraphviz())

@@ -89,6 +89,7 @@ class Mpls(Layer, Graphable):
         """!
         @brief Mpls layer constructor.
         """
+        Graphable.__init__(self)
         self.__additional_edges = []
         self.__enabled = []
 
@@ -238,6 +239,26 @@ class Mpls(Layer, Graphable):
             for n in enodes: self.__setUpLdpOspf(n)
             for n in nodes: self.__setUpLdpOspf(n)
             self.__setUpIbgpMesh(enodes)
+
+    def _doCreateGraphs(self):
+        base: Base = self.__reg.get('seedsim', 'layer', 'Base')
+        for asn in base.getAsns():
+            if asn not in self.__enabled: continue
+            asobj = base.getAutonomousSystem(asn)
+            asobj.createGraphs()
+            l2graph = asobj.getGraph('AS{}: Layer 2 Connections'.format(asn))
+            mplsgraph = self._addGraph('AS{}: MPLS Topology'.format(asn), False)
+            mplsgraph.copy(l2graph)
+            for edge in mplsgraph.edges:
+                edge.style = 'dotted'
+
+            scope = ScopedRegistry(str(asn))
+            (enodes, _) = self.__getEdgeNodes(scope)
+            
+            while len(enodes) > 0:
+                a = enodes.pop()
+                for b in enodes:
+                    mplsgraph.addEdge('Router: {}'.format(a.getName()), 'Router: {}'.format(b.getName()), style = 'solid')
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
