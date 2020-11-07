@@ -3,7 +3,8 @@ from .Base import Base
 from .Routing import Router
 from seedsim.core import Node, Network, AutonomousSystem, ScopedRegistry, Registry
 from seedsim.core.enums import NodeRole
-from typing import List, Dict
+from typing import List, Dict, Tuple
+from itertools import repeat
 import requests
 
 RIS_PREFIXLIST_URL = 'https://stat.ripe.net/data/announced-prefixes/data.json'
@@ -136,6 +137,7 @@ user nobody
 group nogroup
 client-to-client
 dev tap0
+ifconfig-pool {addressStart} {addressEnd} {addressMask}
 '''
 
 RealityFileTemplates['ovpn_startup_script'] = '''\
@@ -251,7 +253,7 @@ class Reality(Layer):
     """
 
     __rwnodes: List[RealWorldRouter]
-    __rwnets: List[Network]
+    __rwnets: List[Tuple[Network, int]]
     __reg = ScopedRegistry('seedsim')
     __hide_hops: bool
 
@@ -322,41 +324,50 @@ class Reality(Layer):
         """
         return self.__rwnodes
 
-    def enableRealWorldAccess(self, net: Network):
+    def enableRealWorldAccess(self, net: Network, naddrs: int = 8):
         """!
         @brief Setup VPN server for real-world clients to join a simulated
         network.
 
         @param net network.
+        @param naddrs number of IP addresses to assign to client pool.
         """
-        self.__rwnets.append(net)
+        self.__rwnets.append((net, naddrs))
 
-    def enableRealWorldAccessByName(self, asn: int, netname: str):
+    def enableRealWorldAccessByName(self, asn: int, netname: str, naddrs: int = 8):
         """!
         @brief Setup VPN server for real-world clients to join a simulated
         network.
 
         @param scope asn of the network owner.
         @param netname name of the network.
+        @param naddrs number of IP addresses to assign to client pool.
         """
         self.enableRealWorldAccess(Registry().get(str(asn), 'net', netname))
 
     def onRender(self):
+        # @todo ifconfig-pool
         for node in self.__rwnodes:
             self._log('Setting up real-world router as{}/{}...'.format(node.getAsn(), node.getName()))
             node.seal()
 
         cur_port = 65000
-        for net in self.__rwnets:
+        for (net, poolsz) in self.__rwnets:
             (scope, _, name) = net.getRegistryInfo()
             self._log('Setting up real-world bridge for network as{}/{}...'.format(scope, name))
             snode_name = 'br-as{}-{}'.format(scope, name)
             snode = Node(snode_name, NodeRole.Host, 0, 'seedsim')
             snode.joinNetwork(net)
+            addrstart = addrend = net.assign(NodeRole.Host)
+            for i in repeat(None, poolsz - 1): addrend = net.assign(NodeRole.Host)
             self.__reg.register('snode', snode_name, snode)
             snode.addSoftware('openvpn')
             snode.addSoftware('bridge-utils')
-            snode.setFile('/ovpn-server.conf', RealityFileTemplates['ovpn_server_config'])
+            snode.setFile('/ovpn-server.conf', RealityFileTemplates['ovpn_server_config'].format(
+                addressStart = addrstart,
+                addressEnd = addrend,
+                addressMask = net.getPrefix().netmask
+            ))
             snode.setFile('/ovpn_startup', RealityFileTemplates['ovpn_startup_script'])
             snode.addStartCommand('chmod +x /ovpn_startup')
             snode.addStartCommand('/ovpn_startup {}'.format(name))
@@ -379,9 +390,9 @@ class Reality(Layer):
         out += ' ' * indent
         out += 'Bridged networks:\n'
         indent += 4
-        for net in self.__rwnets:
+        for (net, naddr) in self.__rwnets:
             (scope, _, name) = net.getRegistryInfo()
             out += ' ' * indent
-            out += 'as{}/{}'.format(scope, name)
+            out += 'as{}/{}: {} Addresses'.format(scope, name, naddr)
 
         return out
