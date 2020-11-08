@@ -1,0 +1,18 @@
+- [x] tc
+- [x] loopback address system
+- [x] ip to asn mapping
+- [x] reverse dns
+- [ ] nat direct return path
+- [x] mpls
+- [x] real-world bridging
+- [x] graphing
+- [ ] user-defined images
+- [ ] metric collection
+- [ ] centralized command & control server
+- [ ] real internal network
+- [ ] distributed simulation
+- [ ] BGP: BGP route filters
+- [ ] Local DNS: loads root DNSSEC key automaically
+- [ ] RPKI
+- [ ] firewall
+- [ ] catch-all interface
