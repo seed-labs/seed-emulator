@@ -132,7 +132,7 @@ reg = Registry()
 
 print("\n\n\n\nCompiler output ========")
 compiler = Docker()
-compiler.compile(reg, './test/')
+compiler.compile('./test/')
 
 
 ebgp.createGraphs()

@@ -1,6 +1,6 @@
 from seedsim.layers import Base, Routing, Mpls, Ebgp
 from seedsim.renderer import Renderer
-from seedsim.compiler import Docker
+from seedsim.compiler import Docker, DistributedDocker
 from seedsim.core import Registry
 
 # topology:
@@ -109,9 +109,9 @@ r.addLayer(bgp)
 
 r.render()
 
-c = Docker()
+c = DistributedDocker()
 
-c.compile(Registry(), output = 'test')
+c.compile('test')
 
 mpls.createGraphs()
 for graph in mpls.getGraphs().values():
