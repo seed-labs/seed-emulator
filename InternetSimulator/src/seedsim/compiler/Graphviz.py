@@ -1,23 +1,26 @@
 from .Compiler import Compiler
-from seedsim.core import Registry, Node
+from seedsim.core import ScopedRegistry, Node, Graphable
 from typing import Dict
+from unicodedata import normalize
+import re
+
 
 class Graphviz(Compiler):
     """!
-    @brief Compile the simulation topology to graphviz graph.
+    @brief Get all graphable object and graph them.
 
-    @todo This should output the followings:
-    - Physical connection (entire simulation)
-    - Physical connection (one for each AS)
-    - eBGP peerings (entire simulation)
-    - iBGP peerings (one for each AS)
-    - IX-level peering (one each IX)
     """
 
-    __ip_node: Dict[str, Node] # ip to node mapping
+    def __slugify(self, filename):
+        return ''.join([c for c in filename if c.isalpha() or c.isdigit() or c== ' ']).rstrip()
 
     def getName(self) -> str:
         return 'Graphviz'
 
-    def _doCompile(self, registry: Registry):
-
+    def _doCompile(self):
+        reg = ScopedRegistry('seedsim')
+        for obj in reg.getByType('graph'):
+            graphs: Graphable = obj
+            graphs.createGraphs()
+            for graph in graphs.getGraphs().values():
+                print(graph.toGraphviz(), file=open('{}.dot'.format(self.__slugify(graph.name)), 'w'))

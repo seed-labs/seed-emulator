@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import List, Dict
 from .Printable import Printable
+from .Registry import Registry, Registrable
 from copy import deepcopy
 
 class Vertex:
@@ -236,7 +237,7 @@ class Graph(Printable):
 
         return out
 
-class Graphable:
+class Graphable(Registrable):
     """!
     @brief Graphable. All layers that can produce graphs will have this
     prototype.
@@ -244,6 +245,8 @@ class Graphable:
 
     __graphs: Dict[str, Graph]
     __graphs_created: bool
+    __reg: Registry = Registry()
+    _n_graphs = 0
 
     def __init__(self):
         """!
@@ -251,6 +254,7 @@ class Graphable:
         """
         self.__graphs = {}
         self.__graphs_created = False
+        self.__reg.register('seedsim', 'graph', str(len(self.__reg.getByType('seedsim', 'graph'))), self)
 
     def _addGraph(self, name: str, directed: bool) -> Graph:
         """!
@@ -264,6 +268,12 @@ class Graphable:
         g = Graph(name, directed)
         self.__graphs[name] = g
         return g
+    
+    def getName(self) -> str:
+        """!
+        @brief Get name of this graph provider.
+        """
+        raise NotImplementedError('getName not implemented.')
 
     def getGraph(self, name: str) -> Graph:
         """!

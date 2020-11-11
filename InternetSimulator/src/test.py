@@ -1,7 +1,7 @@
 from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService, Reality, CyrmuIpOriginService, Dnssec, ReverseDomainNameService, Mpls
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
-from seedsim.compiler import Docker
+from seedsim.compiler import Docker, DistributedDocker, Graphviz
 
 base = Base()
 
@@ -131,21 +131,11 @@ reg = Registry()
 #print(reg)
 
 print("\n\n\n\nCompiler output ========")
-compiler = Docker()
-compiler.compile('./test/')
+dcompiler = Docker()
+#dcompiler.compile('./test/')
 
+ddcompiler = DistributedDocker()
+#ddcompiler.compile('./test/')
 
-ebgp.createGraphs()
-for graph in ebgp.getGraphs().values():
-    print(graph)
-    print(graph.toGraphviz())
-
-ibgp.createGraphs()
-for graph in ibgp.getGraphs().values():
-    print(graph)
-    print(graph.toGraphviz())
-
-base.createGraphs()
-for graph in base.getGraphs().values():
-    print(graph)
-    print(graph.toGraphviz())
+gcompiler = Graphviz()
+gcompiler.compile('./test')
