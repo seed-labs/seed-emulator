@@ -135,7 +135,7 @@ dcompiler = Docker()
 #dcompiler.compile('./test/')
 
 ddcompiler = DistributedDocker()
-#ddcompiler.compile('./test/')
+ddcompiler.compile('./test/')
 
 gcompiler = Graphviz()
-gcompiler.compile('./test')
+gcompiler.compile('./test/_graphs')

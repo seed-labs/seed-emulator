@@ -38,6 +38,7 @@ class Compiler:
         mkdir(output)
         chdir(output)
         self._doCompile()
+        chdir('..')
 
     def _log(self, message: str) -> None:
         """!
