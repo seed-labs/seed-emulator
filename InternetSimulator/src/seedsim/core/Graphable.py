@@ -237,7 +237,7 @@ class Graph(Printable):
 
         return out
 
-class Graphable(Registrable):
+class Graphable():
     """!
     @brief Graphable. All layers that can produce graphs will have this
     prototype.

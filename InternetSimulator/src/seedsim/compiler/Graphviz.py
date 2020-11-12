@@ -12,7 +12,7 @@ class Graphviz(Compiler):
     """
 
     def __slugify(self, filename):
-        return ''.join([c for c in filename if c.isalpha() or c.isdigit() or c== ' ']).rstrip()
+        return ''.join([c for c in filename if c.isalpha() or c.isdigit() or c == ' ']).rstrip()
 
     def getName(self) -> str:
         return 'Graphviz'

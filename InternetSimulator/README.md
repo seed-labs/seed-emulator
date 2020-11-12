@@ -30,6 +30,8 @@ The simulator is built from four components:
 
 **`Printable`**: The `Printable` class is the base class of all classes that are "printable." It can be considered a special toString interface that allows specifying indentation. 
 
+**`Graphable`**: The `Graphable` class is the base class of all classes that can provide graphs.
+
 **`Registry`**: The `Registry` class is a singleton class for "registering" objects in the simulation. All classes can access the `Registry` to register new object or get registered objects. Objects in the `Registry` are all derived from the `Registerable` class. All `Registerable` class has three tags: scope, type, and name. For example, a router node name R1 in AS150 will be tagged with `('150', 'rnode', 'R1')`, and the `Routing` layer instance, if installed, will be tagged with `('seedsim', 'layer', 'Routing')`.
 
 ### Layers: OSI Layer 1
@@ -240,7 +242,7 @@ dnssec.enableOn('.')
 
 - Class Name: `Reality`
 - Dependency: `Ebgp`
-- Description: The `Reality` layer allows easy interaction with hosts in the real-world. It allows exposing a simulated network with a VPN to the real-world (TODO), and enables adding real-world AS to simulation with ease. The layer allows users to set a list of prefixes to announce with BGP, to the simulated Internet, and route it via the default gateway (i.e., the reality.) It can also fetch the prefix list of real-world AS and add them automatically.
+- Description: The `Reality` layer allows easy interaction with hosts in the real-world. It allows exposing a simulated network with a VPN to the real-world, and enables adding real-world AS to simulation with ease. The layer allows users to set a list of prefixes to announce with BGP, to the simulated Internet, and route it via the default gateway (i.e., the reality.) It can also fetch the prefix list of real-world AS and add them automatically.
 
 ```python
 real = Reality()
@@ -248,6 +250,8 @@ as11872 = base.createAutonomousSystem(11872)
 as11872_rw = real.createRealWorldRouter(as11872)
 as11872_rw.joinNetworkByName("ix100", "10.100.0.118")
 ebgp.addRsPeer(100, 11872)
+
+real.enableRealWorldAccessByName(150, 'net0')
 ```
 
 ### Renderer
@@ -274,6 +278,66 @@ r.addLayer(mpls)
 r.render()
 ```
 
-### Compiler
+### Graphing
 
-The compiler is the component that converts objects in the registry to actual runnable simulator objects. The only compiler backend currently available is Docker. 
+Serval classes of the simulator offer graphing options to convert the topologies to graphs. These classes are:
+
+- `AutonomousSystem` offers the following graphs:
+    - Layer 2 connections of the current AS.
+- `Base` offers the following graphs:
+    - Layer 2 connections of all AS, on one graph.
+- `Ebgp` offers the following graphs:
+    - eBGP peering (One each AS).
+    - eBGP peering (All AS on one graph)
+- `Ibgp` offers the following graphs:
+    - iBGP peering (One each AS).
+- `Mpls` offers the following graphs:
+    - MPLS topology (One each AS).
+
+To get graphs from graphable classes, first, render the simulation, then call `graphable.createGraphs()`. Once done, they will be available via `graphable.getGraphs()`. For example:
+
+```python
+r.render()
+
+# ...
+
+ebgp.createGraphs()
+for graph in ebgp.getGraphs().values():
+    print(graph)
+    print(graph.toGraphviz())
+```
+
+### Compilers
+
+The compiler is the component that "compiles" the objects in the registry.
+
+#### Docker
+
+The docker compiler compiles the simulation to multiple docker containers. Networks in the simulation will be converted to docker networks, and nodes in the simulation are converted to docker services. It also generates a docker-compose file for spawning the containers.
+
+```python
+dcompiler = Docker()
+dcompiler.compile('./test-docker') # output dir
+```
+
+#### Docker (Distributed)
+
+The DistributedDocker compiler compiles the simulation to multiple docker containers. Networks in the simulation will be converted to docker networks, and nodes in the simulation are converted to docker services. It also generates a docker-compose file for spawning the containers.
+
+Instead of putting all containers on one docker host, the DistributedDocker compiler generates one group of containers and docker-compose configuration for each AS, so the containers can be distributed across multiple Docker hosts.
+
+```python
+ddcompiler = DistributedDocker()
+ddcompiler.compile('./test-ddocker') # output dir
+```
+
+The "distributed simulations" works by making all IX networks overlay networks. For this to work, all participating docker hosts must join the same swarm, and IX network and container must be started on the master Docker host before other ASes' containers.
+
+#### Graphviz
+
+This is not a real compiler. Instead of building the simulation, the Graphviz compiler collects all graphs from different layers and save them to the output directory.
+
+```python
+gcompiler = Graphviz()
+gcompiler.compile('./test-graphs') # output dir
+```
