@@ -126,9 +126,9 @@ print(r)
 print("\n\n\n\nRenderer output ========")
 r.render()
 
-#print("\n\n\n\nRegistry ===============")
+print("\n\n\n\nRegistry ===============")
 reg = Registry()
-#print(reg)
+print(reg)
 
 print("\n\n\n\nCompiler output ========")
 dcompiler = Docker()

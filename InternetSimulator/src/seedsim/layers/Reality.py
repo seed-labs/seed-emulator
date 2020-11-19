@@ -355,12 +355,13 @@ class Reality(Layer):
         for (net, poolsz) in self.__rwnets:
             (scope, _, name) = net.getRegistryInfo()
             self._log('Setting up real-world bridge for network as{}/{}...'.format(scope, name))
-            snode_name = 'br-as{}-{}'.format(scope, name)
+            snode_name = 'br-{}'.format(name)
             snode = Node(snode_name, NodeRole.Host, 0, 'seedsim')
             snode.joinNetwork(net)
             addrstart = addrend = net.assign(NodeRole.Host)
             for i in repeat(None, poolsz - 1): addrend = net.assign(NodeRole.Host)
-            self.__reg.register('snode', snode_name, snode)
+            ScopedRegistry(scope).register('snode', snode_name, snode)
+            #self.__reg.register('snode', snode_name, snode)
             snode.addSoftware('openvpn')
             snode.addSoftware('bridge-utils')
             snode.setFile('/ovpn-server.conf', RealityFileTemplates['ovpn_server_config'].format(
