@@ -23,7 +23,7 @@ tail -f /dev/null
 """
 
 DockerCompilerFileTemplates['compose'] = """\
-version: "3"
+version: "3.4"
 services:
 {services}
 networks:

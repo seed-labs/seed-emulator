@@ -2,7 +2,7 @@ from seedsim.core import Registry, ScopedRegistry, Node, Network
 from .Compiler import Compiler
 from typing import Dict
 from hashlib import md5
-from os import mkdir, chdir
+from os import mkdir, chdir, rmdir
 
 DistributedDockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -23,7 +23,7 @@ tail -f /dev/null
 """
 
 DistributedDockerCompilerFileTemplates['compose'] = """\
-version: "3"
+version: "3.4"
 services:
 {services}
 networks:
@@ -269,3 +269,5 @@ class DistributedDocker(Compiler):
                 print('COMPOSE_PROJECT_NAME=sim_{}'.format(scope), file=open('.env', 'w'))
 
             chdir('..')
+
+            if services == '' and networks == '': rmdir(scope)
