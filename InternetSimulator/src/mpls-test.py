@@ -1,6 +1,6 @@
 from seedsim.layers import Base, Routing, Mpls, Ebgp
 from seedsim.renderer import Renderer
-from seedsim.compiler import Docker, DistributedDocker
+from seedsim.compiler import GcpDistributedDocker
 from seedsim.core import Registry
 
 # topology:
@@ -109,7 +109,7 @@ r.addLayer(bgp)
 
 r.render()
 
-c = DistributedDocker()
+c = GcpDistributedDocker()
 
 c.compile('test')
 
