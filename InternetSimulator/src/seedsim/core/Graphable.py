@@ -9,22 +9,27 @@ class Vertex:
     @brief a vertex in graph.
     """
 
-    # name of the node.
     name: str
-
-    # group of the node, nodes within same group will be put into the samle
-    # cluster.
     group: str
-
-    # shape of the node
     shape: str
 
     def __init__(self, name: str, group: str = None, shape: str = 'ellipse'):
         """!
         @brief Vertex constructor.
+
+        @param name name.
+        @param group cluster name.
+        @param shape shape.
         """
+
+        ## name of the node.
         self.name = name
+
+        ## group of the node, nodes within same group will be put into the same
+        ## cluster.
         self.group = group
+
+        ## shape of the node
         self.shape = shape
 
     def getId(self):
@@ -38,59 +43,71 @@ class Edge:
     @brief an edge in graph.
     """
 
+    a: str
+    b: str
+    label: str
+    alabel: str
+    blabel: str    
+    style: str 
+
     def __init__(self, a: str, b: str, label: str = None, alabel: str = None, blabel: str = None, style: str = 'solid'):
         """!
         @brief Edge constructor.
+
+        @param a source node.
+        @param b destination node.
+        @param label middle lable.
+        @param alabel lable on the source side.
+        @param blabel lable on the destination side.
+        @param style style.
         """
+
+        ## name of vertex, if directed, this is src
         self.a = a
+
+        ## name of vertex, if directed, this is dest
         self.b = b
+
+        ## label on the middle of the edge
         self.label = label
+
+        ## label on the a side of the edge
         self.alabel = alabel
+
+        ## label on the b side of the edge
         self.blabel = blabel
+
+        ## style of the edge
         self.style = style
-
-    # name of vertex, if directed, this is src
-    a: str
-
-    # name of vertex, if directed, this is dest
-    b: str
-
-    # label on the middle of the edge
-    label: str
-
-    # label on the a side of the edge
-    alabel: str
-
-    # label on the b side of the edge
-    blabel: str
-
-    # style of the edge
-    style: str
 
 class Graph(Printable):
     """!
     @brief a graph.
     """
 
-    # name.
     name: str
-
-    # directed graph?
     directed: bool
-
-    # list of vertices
     vertices: Dict[str, Vertex]
-
-    # list of edges
     edges: List[Edge]
 
     def __init__(self, name: str, directed: bool):
         """!
         @brief Graph constructor.
+
+        @param name name.
+        @param directed directed graph?
         """
+
+        ## name of the graph.
         self.name = name
+
+        ## directed graph?
         self.directed = directed
+
+        ## list of vertices
         self.vertices = {}
+
+        ## list of edges
         self.edges = []
 
     def copy(self, graph: Graph):
@@ -109,6 +126,8 @@ class Graph(Printable):
         
         @param name name of the node.
         @param group (optional) name of the culster.
+        @param shape (optional) shape of the vertex.
+
         @throws AssertionError if vertex already exist.
         """
         assert not self.hasVertex(name, group), '{}: vertex with name {} already exist.'.format(self.name, name)
@@ -245,7 +264,7 @@ class Graphable(Registrable):
 
     __graphs: Dict[str, Graph]
     __graphs_created: bool
-    __reg: Registry = Registry()
+    __reg = Registry()
     _n_graphs = 0
 
     def __init__(self):

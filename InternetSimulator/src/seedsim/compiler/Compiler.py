@@ -32,7 +32,6 @@ class Compiler:
         """!
         @brief Compile the simulation.
 
-        @param registry rendered simulation.
         @param output output directory path.
         """
         mkdir(output)

@@ -302,7 +302,8 @@ class Reality(Layer):
         Connect the node to an IX, or to other nodes in IX via IBGP, to get the
         routes into simulation.
 
-        @param as AutonomousSystem to add this node to.
+        @param asobj AutonomousSystem to add this node to.
+        @param nodename name to use for the realworld router.
         @param prefixes (optional) prefixes to annoucne. If unset, will try to
         get prefixes from real-world DFZ via RIPE RIS.
         """
@@ -339,7 +340,7 @@ class Reality(Layer):
         @brief Setup VPN server for real-world clients to join a simulated
         network.
 
-        @param scope asn of the network owner.
+        @param asn asn of the network owner.
         @param netname name of the network.
         @param naddrs number of IP addresses to assign to client pool.
         """

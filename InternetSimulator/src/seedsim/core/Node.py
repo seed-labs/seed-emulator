@@ -105,7 +105,7 @@ class Interface(Printable):
         @brief Set link properties.
 
         @param latency (optional) latency to add to the link in ms, default 0.
-        @param outBandwidth (optional) egress bandwidth of the link in bps, 0 for unlimited, default 0.
+        @param bandwidth (optional) egress bandwidth of the link in bps, 0 for unlimited, default 0.
         @param packetDrop (optional) link packet drop as percentage, 0 for unlimited, default 0.
         """
 
@@ -121,7 +121,7 @@ class Interface(Printable):
         """!
         @brief Get link properties.
 
-        @retrns tuple (latency, bandwidth, packet drop)
+        @returns tuple (latency, bandwidth, packet drop)
         """
         return (self.__latency, self.__bandwidth, self.__drop)
 

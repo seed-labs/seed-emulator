@@ -123,7 +123,7 @@ class Router(Node):
         """!
         @brief Add a new routing table to BIRD on the given node.
 
-        @tableName name of the new table.
+        @param tableName name of the new table.
         """
         meta = self.getAttribute('__routing_layer_metadata', {})
         if 'tables' not in meta: meta['tables'] = []
@@ -147,7 +147,7 @@ class Routing(Layer):
     protocols to use later and as router id.
     """
 
-    __reg: Registry = Registry()
+    __reg = Registry()
     __direct_nets: Set[Network]
     __loopback_assigner = IPv4Network('10.0.0.0/16')
     __loopback_pos = 1

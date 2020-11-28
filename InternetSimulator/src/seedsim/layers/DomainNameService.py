@@ -249,7 +249,7 @@ class DomainNameService(Service):
     @brief The domain name service.
     """
 
-    __rootZone: Zone = Zone('') # singleton
+    __rootZone = Zone('') # singleton
     __servers: List[DomainNameServer]
     __reg = ScopedRegistry('seedsim')
     __autoNs: bool

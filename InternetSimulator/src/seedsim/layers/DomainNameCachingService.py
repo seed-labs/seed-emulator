@@ -111,7 +111,7 @@ class DomainNameCachingService(Service):
         @param autoRoot (optional) find root zone name servers automaically.
         True by defualt, if true, DomainNameCachingService will find root NS in
         DomainNameService and use them as root.
-        @param setResolvConf (optional) set all nodes in the AS to use local DNS
+        @param setResolvconf (optional) set all nodes in the AS to use local DNS
         node in the AS by overrideing resolv.conf. Default to false.
         """
 

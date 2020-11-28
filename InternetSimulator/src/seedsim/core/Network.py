@@ -76,7 +76,7 @@ class Network(Printable, Registrable):
 
         @param latency (optional) latency to add to the link in ms, default 0. Note that this will be
         apply on all interfaces, meaning the rtt between two hosts will be 2 * latency.
-        @param outBandwidth (optional) egress bandwidth of the link in bps, 0 for unlimited, default 0.
+        @param bandwidth (optional) egress bandwidth of the link in bps, 0 for unlimited, default 0.
         @param packetDrop (optional) link packet drop as percentage, 0 for unlimited, default 0.
         """
         assert latency >= 0, 'invalid latency'
@@ -91,7 +91,7 @@ class Network(Printable, Registrable):
         """!
         @brief Get default link properties.
 
-        @retrns tuple (latency, bandwidth, packet drop)
+        @returns tuple (latency, bandwidth, packet drop)
         """
         return (self.__d_latency, self.__d_bandwidth, self.__d_drop)
 
