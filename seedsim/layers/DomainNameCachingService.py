@@ -118,15 +118,15 @@ class DomainNameCachingService(Service):
         self.__auto_root = autoRoot
         self.__set_resolvconf = setResolvconf
         self.__servers = []
+        self.addDependency('Base', False, False)
+        if autoRoot:
+            self.addDependency('DomainNameService', False, False)
 
     def getName(self) -> str:
         return 'DomainNameCachingService'
 
     def getConflicts(self) -> List[str]:
         return ['DomainNameService']
-
-    def getDependencies(self) -> List[str]:
-        return ['Base', 'DomainNameService'] if self.__auto_root else ['Base']
 
     def _doInstall(self, node: Node) -> DomainNameCachingServer:
         """!

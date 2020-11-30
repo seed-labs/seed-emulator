@@ -30,7 +30,7 @@ class Renderer(Printable):
         self.__layers[lname] = (layer, False)
         self.__reg.register('layer', lname, layer)
 
-    def __render(self, layerName: str):
+    def __render(self, layerName: str, optional: bool):
         """!
         @brief Render a layer.
         
@@ -39,22 +39,22 @@ class Renderer(Printable):
         """
         self.__log('requesting render: {}'.format(layerName))
 
-        assert layerName in self.__layers, 'Layer {} requried but missing'.format(layerName)
+        if not optional:
+            assert layerName in self.__layers, 'Layer {} requried but missing'.format(layerName)
+
+        if optional and layerName not in self.__layers:
+            self.__log('{}: not found but is optional, skipping'.format(layerName))
+            return
 
         (layer, done) = self.__layers[layerName]
         if done:
             self.__log('{}: already rendered, skipping'.format(layerName))
             return
 
-        for dep in layer.getDependencies():
-            self.__log('{}: requesting dependency render: {}'.format(layerName, dep))
-            self.__render(dep)
-
-        if layer.getName() in layer.reverseDependencies:
-            rdeps = layer.reverseDependencies[layer.getName()]
-            for dep in rdeps:
-                self.__log('{}: requesting reverse-dependency render: {}'.format(layerName, dep))
-                self.__render(dep)
+        if layerName in Layer.dependencies:
+            for (dep, opt) in Layer.dependencies[layerName]:
+                self.__log('{}: requesting dependency render: {}'.format(layerName, dep))
+                self.__render(dep, opt)
 
         self.__log('rendering {}...'.format(layerName))
         layer.onRender()
@@ -68,7 +68,7 @@ class Renderer(Printable):
         @throws AssertionError if dependencies unmet 
         """
         for layerName in self.__layers.keys():
-            self.__render(layerName)
+            self.__render(layerName, False)
 
     def print(self, indent: int) -> str:
         out = ''

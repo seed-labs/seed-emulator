@@ -157,12 +157,10 @@ class Routing(Layer):
         @brief Routing layre constructor.
         """
         self.__direct_nets = set()
+        self.addDependency('Base', False, False)
     
     def getName(self) -> str:
         return "Routing"
-
-    def getDependencies(self) -> List[str]:
-        return ["Base"]
 
     def __installBird(self, node: Node):
         """!

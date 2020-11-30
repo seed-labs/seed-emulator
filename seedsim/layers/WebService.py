@@ -82,12 +82,10 @@ class WebService(Service):
         @brief WebService constructor.
         """
         self.__servers = []
+        self.addDependency('Base', False, False)
 
     def getName(self) -> str:
         return 'WebService'
-
-    def getDependencies(self) -> List[str]:
-        return ['Base']
 
     def _doInstall(self, node: Node) -> WebServer:
         """!

@@ -41,13 +41,11 @@ class ReverseDomainNameService(Service):
         """
         self.__records = []
         self.__servers = []
-        self.addReverseDependency('DomainNameService')
+        self.addDependency('DomainNameService', True, False)
+        self.addDependency('Base', False, False)
 
     def getName(self) -> str:
         return 'ReverseDomainNameService'
-
-    def getDependencies(self) -> List[str]:
-        return ['Base']
 
     def _doInstall(self, node: Node) -> ReverseDomainNameServer:
         server = ReverseDomainNameServer(node)

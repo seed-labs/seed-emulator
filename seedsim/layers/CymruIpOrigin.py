@@ -50,13 +50,11 @@ class CyrmuIpOriginService(Service):
         """
         self.__records = []
         self.__servers = []
-        self.addReverseDependency('DomainNameService')
+        self.addDependency('DomainNameService', True, True)
+        self.addDependency('Base', False, False)
 
     def getName(self) -> str:
         return 'CyrmuIpOriginService'
-
-    def getDependencies(self) -> List[str]:
-        return ['Base']
 
     def addMapping(self, prefix: str, asn: int):
         """!

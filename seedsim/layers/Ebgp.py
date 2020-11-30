@@ -43,12 +43,10 @@ class Ebgp(Layer, Graphable):
         Graphable.__init__(self)
         self.__peerings = []
         self.__rs_peers = []
+        self.addDependency('Routing', False, False)
     
     def getName(self) -> str:
         return "Ebgp"
-
-    def getDependencies(self) -> List[str]:
-        return ["Routing"]
 
     def addPrivatePeering(self, ix: int, a: int, b: int):
         """!

@@ -50,11 +50,10 @@ class Ospf(Layer):
         self.__masked = set()
         self.__masked_asn = set()
 
+        self.addDependency('Routing', False, False)
+
     def getName(self) -> str:
         return 'Ospf'
-
-    def getDependencies(self) -> List[str]:
-        return ['Routing']
 
     def markStub(self, net: Network):
         """!

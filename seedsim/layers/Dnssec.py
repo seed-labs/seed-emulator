@@ -69,13 +69,11 @@ class Dnssec(Layer):
         @brief Dnssec layer constructor.
         """
         self.__zonenames = set()
+        self.addDependency('DomainNameService', False, False)
 
     def getName(self):
         return 'Dnssec'
     
-    def getDependencies(self) -> List[str]:
-        return ['DomainNameService']
-
     def enableOn(self, zonename: str):
         """!
         @brief Enable DNSSEC on the given zone.

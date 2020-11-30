@@ -262,6 +262,7 @@ class DomainNameService(Service):
         """
         self.__autoNs = autoNameServer
         self.__servers = []
+        self.addDependency('Base', False, False)
 
     def getName(self):
         return 'DomainNameService'
@@ -269,9 +270,6 @@ class DomainNameService(Service):
     def getConflicts(self) -> List[str]:
         return ['DomainNameCachingService']
     
-    def getDependencies(self) -> List[str]:
-        return ['Base']
-
     def getZone(self, domain: str) -> Zone:
         """!
         @brief Get a zone, create it if not exist.

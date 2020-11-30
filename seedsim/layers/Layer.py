@@ -1,27 +1,36 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from seedsim.core import Printable, Registrable
 from sys import stderr
+from enum import Enum
+
 
 class Layer(Printable, Registrable):
     """!
     @brief The layer interface.
-
-    @todo Allow set conflicting layer.
     """
 
-    reverseDependencies: Dict[str, List[str]] = {}
+    dependencies: Dict[str, List[Tuple[str, bool]]] = {}
 
-    def addReverseDependency(self, layerName: str):
+    def addDependency(self, layerName: str, reverse: bool, optional: bool):
         """!
-        @brief add reverse layer dependency.
+        @brief add layer dependency.
 
-        Use this method to request the current layer to be rendered before
-        another layer.
+        @param layerName name of the layer.
+        @param reverse add as reverse dependency. Regular dependency requires
+        the given layer to be rendered before the current layer. Reverse
+        dependency requires the given layer to be rendered after the current
+        layer. 
+        @param optional continue render even if the given layer does not exist.
+        Does not work for reverse dependencies.
         """
-        if layerName not in self.reverseDependencies:
-            self.reverseDependencies[layerName] = []
 
-        self.reverseDependencies[layerName].append(self.getName())
+        _current = layerName if reverse else self.getName()
+        _target = self.getName() if reverse else layerName
+
+        if _current not in self.dependencies:
+            self.dependencies[_current] = []
+
+        self.dependencies[_current].append((_target, optional))
 
     def getName(self) -> str:
         """!
@@ -33,14 +42,6 @@ class Layer(Printable, Registrable):
         @returns name of the layer.
         """
         raise NotImplementedError('getName not implemented')
-
-    def getDependencies(self) -> List[str]:
-        """!
-        @brief Get a list of names of dependencies layers.
-
-        @returns list of names of layers.
-        """
-        raise NotImplementedError('getDependencies not implemented')
 
     def onRender(self) -> None:
         """!

@@ -35,12 +35,10 @@ class Ibgp(Layer, Graphable):
         """
         Graphable.__init__(self)
         self.__masked = set()
+        self.addDependency('Ospf', False, False)
 
     def getName(self) -> str:
         return 'Ibgp'
-
-    def getDependencies(self) -> List[str]:
-        return ['Ospf']
 
     def mask(self, asn: int):
         """!

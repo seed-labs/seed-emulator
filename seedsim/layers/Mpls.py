@@ -95,14 +95,13 @@ class Mpls(Layer, Graphable):
 
         # they are not really "dependency," we just need them to render after
         # us, in case we need to setup masks.
-        self.addReverseDependency('Ospf')
-        self.addReverseDependency('Ibgp')
+        self.addDependency('Ospf', True, True)
+        self.addDependency('Ibgp', True, True)
+
+        self.addDependency('Routing', False, False)
 
     def getName(self) -> str:
         return 'Mpls'
-
-    def getDependencies(self) -> List[str]:
-        return ['Routing']
 
     def markAsEdge(self, node: Node):
         """!

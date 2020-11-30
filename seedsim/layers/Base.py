@@ -52,9 +52,6 @@ class Base(Layer, Graphable):
     def getName(self) -> str:
         return "Base"
 
-    def getDependencies(self) -> List[str]:
-        return []
-
     def onRender(self) -> None:
         for ((scope, type, name), obj) in self.__reg.getAll().items():
 

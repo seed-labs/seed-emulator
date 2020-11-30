@@ -267,13 +267,11 @@ class Reality(Layer):
         self.__rwnodes = []
         self.__rwnets = []
         self.__hide_hops = hideHops
+        self.addDependency('Ebgp', False, False)
 
     def getName(self):
         return 'Reality'
     
-    def getDependencies(self) -> List[str]:
-        return ['Ebgp']
-
     def getPrefixList(self, asn: int) -> List[str]:
         """!
         @brief Helper tool, get real-world prefix list for an ans by RIPE RIS.
