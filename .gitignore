@@ -4,4 +4,6 @@
 *.o
 *.so
 *.swp
+*.tfvars
 docs-out
+__pycache__
