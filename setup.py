@@ -5,7 +5,7 @@ with open("README.md", "r") as readme:
 
 setuptools.setup(
     name = "seedsim",
-    version = "0.0.3",
+    version = "0.0.4",
     author = "Honghao Zeng",
     author_email = "hozeng@syr.edu",
     description = "SEED Internet Simulator",
