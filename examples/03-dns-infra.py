@@ -114,6 +114,12 @@ as153_router.joinNetworkByName('ix100')
 
 ###############################################################################
 
+dnssec.enableOn('.')
+dnssec.enableOn('com.')
+dnssec.enableOn('example.com.')
+
+###############################################################################
+
 ebgp.addRsPeer(100, 150)
 ebgp.addRsPeer(100, 151)
 ebgp.addRsPeer(100, 152)
