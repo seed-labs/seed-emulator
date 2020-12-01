@@ -107,7 +107,7 @@ class CyrmuIpOriginService(Service):
                 for prefix in router.getRealWorldRoutes():
                     mappings.append((prefix, asn))
         
-        self._log('Collecting all networks in the simulation...'.format(asn, name))
+        self._log('Collecting all networks in the simulation...')
         for regobj in (Registry()).getAll().items():
             [(asn, type, name), obj] = regobj
             if type != 'net': continue
