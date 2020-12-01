@@ -39,12 +39,11 @@ class Renderer(Printable):
         """
         self.__log('requesting render: {}'.format(layerName))
 
-        if not optional:
-            assert layerName in self.__layers, 'Layer {} requried but missing'.format(layerName)
-
         if optional and layerName not in self.__layers:
             self.__log('{}: not found but is optional, skipping'.format(layerName))
             return
+
+        assert layerName in self.__layers, 'Layer {} requried but missing'.format(layerName)
 
         (layer, done) = self.__layers[layerName]
         if done:
