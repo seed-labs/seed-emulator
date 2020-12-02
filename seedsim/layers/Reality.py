@@ -17,11 +17,7 @@ gw="`ip rou show default | cut -d' ' -f3`"
 sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
 '''
 
-RealityFileTemplates['ovpn_server_config'] = '''\
-mode server
-tls-server
-verb 3
-<key>
+RealityFileTemplates['ovpn_key'] = '''\
 -----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDGyzUXoj+wffTx
 2S1KHxZ63YNlzJxUVoWpgAcjIibhHkc8mN7qdyUOkamateSr29JDVSgrBDFJbx01
@@ -50,8 +46,9 @@ IcIJJQYJkFGLcnf0a9bYgZYhyRpGKSdLI0sZPpDpAoGBAL3V17HDfe9pPE2MhfKf
 /HkA3KHQnuSI63NKURYwg93YpKPNvrQeDtu69iKP1u/CDmlYyN3ocO0wBx/lcqog
 baY6j2daX4LF6wipbN8nmu+d
 -----END PRIVATE KEY-----
-</key>
-<ca>
+'''
+
+RealityFileTemplates['ovpn_ca'] = '''\
 -----BEGIN CERTIFICATE-----
 MIIDSzCCAjOgAwIBAgIUeBWmET3RvnXU1V9YVprLzlcT/BAwDQYJKoZIhvcNAQEL
 BQAwFjEUMBIGA1UEAwwLRWFzeS1SU0EgQ0EwHhcNMTkxMDAyMjAyMjM1WhcNMjkw
@@ -72,8 +69,9 @@ XQqfdCFTV3mcr0A/YrO73pJC80819uDoNRuwfeAKyNNcJB3nReIAVM4FLJ4kKX8s
 6IjypBv+ZX2jhli+3xIOKUOKNEwEYpDRr78TMMN1m7NA1Z1rdxN7McvaE/6RXy5Z
 P4qwZ5v373hLfW+/YlQ2gb8UMXAK2G025a5754E0Ag==
 -----END CERTIFICATE-----
-</ca>
-<cert>
+'''
+
+RealityFileTemplates['ovpn_cert'] = '''\
 -----BEGIN CERTIFICATE-----
 MIIDbzCCAlegAwIBAgIRAKZMH5L7JUN8QqloCQr9ZUgwDQYJKoZIhvcNAQELBQAw
 FjEUMBIGA1UEAwwLRWFzeS1SU0EgQ0EwHhcNMTkxMDAyMjAyMzI2WhcNMjIwOTE2
@@ -95,6 +93,20 @@ EjYDvjaEiQHXjeVr+M/FdtdggAleUGfOvohgA6QDM/NKgTzpbxiZMrlYjztCIs5i
 jPICvnaaLqUJJLhdX8vmEyZ5lcReCfA+i823AHzimHNVJQGDZAZjFWeZS+X6S7lc
 z/aTAQLl/Nl/8Z7o8TQzH5NTdg==
 -----END CERTIFICATE-----
+'''
+
+RealityFileTemplates['ovpn_server_config'] = '''\
+mode server
+tls-server
+verb 3
+<key>
+{key}
+</key>
+<ca>
+{ca}
+</ca>
+<cert>
+{cert}
 </cert>
 <dh>
 -----BEGIN DH PARAMETERS-----
@@ -249,6 +261,8 @@ class Reality(Layer):
     """!
     @brief The Reality.
 
+    @todo make ovpn config on-the-fly?
+
     Reality Layer provides different ways to connect from and to the real world. 
     """
 
@@ -257,16 +271,26 @@ class Reality(Layer):
     __reg = ScopedRegistry('seedsim')
     __hide_hops: bool
 
-    def __init__(self, hideHops: bool = True):
+    __ovpn_ca: str
+    __ovpn_cert: str
+    __ovpn_key: str
+
+    def __init__(self, hideHops: bool = True, ovpnCa: str = None, ovpnCert: str = None, ovpnKey: str = None):
         """!
         @brief Reality constructor.
 
-        @param hideHops hide realworld hops from traceroute (by setting TTL = 64
-        to all real world dsts on POSTROUTING)
+        @param hideHops (optional) hide realworld hops from traceroute (by
+        setting TTL = 64 to all real world dsts on POSTROUTING), defualt True.
+        @param ovpnCa (optional) CA to use for openvpn.
+        @param ovpnCert (optional) server certificate to use for openvpn.
+        @param ovpnKey (optional) server key to use for openvpn.
         """
         self.__rwnodes = []
         self.__rwnets = []
         self.__hide_hops = hideHops
+        self.__ovpn_ca = ovpnCa
+        self.__ovpn_cert = ovpnCert
+        self.__ovpn_key = ovpnKey
         self.addDependency('Ebgp', False, False)
 
     def getName(self):
@@ -366,7 +390,10 @@ class Reality(Layer):
             snode.setFile('/ovpn-server.conf', RealityFileTemplates['ovpn_server_config'].format(
                 addressStart = addrstart,
                 addressEnd = addrend,
-                addressMask = net.getPrefix().netmask
+                addressMask = net.getPrefix().netmask,
+                key = self.__ovpn_key if self.__ovpn_key != None else RealityFileTemplates['ovpn_key'],
+                ca = self.__ovpn_ca if self.__ovpn_ca != None else RealityFileTemplates['ovpn_ca'],
+                cert = self.__ovpn_cert if self.__ovpn_cert != None else RealityFileTemplates['ovpn_cert']
             ))
             snode.setFile('/ovpn_startup', RealityFileTemplates['ovpn_startup_script'])
             snode.addStartCommand('chmod +x /ovpn_startup')
