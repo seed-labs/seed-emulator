@@ -1,4 +1,4 @@
-from os import mkdir, chdir
+from os import mkdir, chdir, getcwd
 from sys import stderr
 
 class Compiler:
@@ -34,10 +34,11 @@ class Compiler:
 
         @param output output directory path.
         """
+        cur = getcwd()
         mkdir(output)
         chdir(output)
         self._doCompile()
-        chdir('..')
+        chdir(cur)
 
     def _log(self, message: str) -> None:
         """!
