@@ -1,5 +1,4 @@
-Simple BGP peering
----
+# Simple BGP peering
 
 This is the most basic example; peer three autonomous systems (AS150, AS151, and AS152) at an internet exchange. Each autonomous system announces a /24 prefix, and each is running a single web server within the network.
 
