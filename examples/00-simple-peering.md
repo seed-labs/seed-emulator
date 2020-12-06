@@ -19,7 +19,7 @@ In this setup, we will need four layers:
 
 We will use the defualt renderer and compiles the simulation to docker containers.
 
-Then, initialize them:
+Once the classes are imported, initialize them:
 
 ```python
 base = Base()
