@@ -1,4 +1,5 @@
 from seedsim.core import Registry, Node, Network
+from seedsim.core.enums import NodeRole
 from .Compiler import Compiler
 from typing import Dict
 from hashlib import md5
@@ -33,6 +34,7 @@ networks:
 DockerCompilerFileTemplates['compose_service'] = """\
     {nodeId}:
         build: ./{nodeId}
+        container_name: {nodeName}
         cap_add:
             - ALL
         sysctls:
@@ -74,16 +76,28 @@ class Docker(Compiler):
 
     __services: str
     __networks: str
+    __naming_scheme: str
 
-    def __init__(self):
+    def __init__(self, nameingScheme: str = "as{asn}{role}-{name}-{primaryIp}"):
         """!
         @brief Docker compiler constructor.
+
+        @param nameingScheme (optional) node nameing scheme. Avaliable variables
+        are: {asn}, {role} (r - router, h - host, rs - route server), {name},
+        {primaryIp}
         """
         self.__networks = ""
         self.__services = ""
+        self.__naming_scheme = nameingScheme
 
     def getName(self) -> str:
         return "Docker"
+
+    def __nodeRoleToString(self, role: NodeRole):
+        if role == NodeRole.Host: return 'h'
+        if role == NodeRole.Router: return 'r'
+        if role == NodeRole.RouteServer: return 'rs'
+        assert False, 'unknow node role {}'.format(role)
 
     def __contextToPrefix(self, scope: str, type: str) -> str:
         """!
@@ -147,6 +161,12 @@ class Docker(Compiler):
         
         self.__services += DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
+            nodeName = self.__naming_scheme.format(
+                asn = node.getAsn(),
+                role = self.__nodeRoleToString(node.getRole()),
+                name = node.getName(),
+                primaryIp = node.getInterfaces()[0].getAddress()
+            ),
             networks = node_nets,
             privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports

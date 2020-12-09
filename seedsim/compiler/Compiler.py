@@ -1,5 +1,6 @@
-from os import mkdir, chdir, getcwd
-from sys import stderr
+from os import mkdir, chdir, getcwd, path
+from shutil import rmtree
+from sys import stderr, exit
 
 class Compiler:
     """!
@@ -28,13 +29,22 @@ class Compiler:
         """
         raise NotImplementedError('getName not implemented.')
 
-    def compile(self, output: str):
+    def compile(self, output: str, override: bool = False):
         """!
         @brief Compile the simulation.
 
         @param output output directory path.
+        @param override (optional) override the output folder if it already
+        exist. False by defualt.
         """
         cur = getcwd()
+        if path.exists(output):
+            if override:
+                self._log('output folder "{}" already exist, overriding.'.format(output))
+                rmtree(output)
+            else:
+                self._log('output folder "{}" already exist. Set "override = True" when calling compile() to override.'.format(output))
+                exit(1)
         mkdir(output)
         chdir(output)
         self._doCompile()
