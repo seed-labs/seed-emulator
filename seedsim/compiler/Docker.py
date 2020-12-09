@@ -78,17 +78,17 @@ class Docker(Compiler):
     __networks: str
     __naming_scheme: str
 
-    def __init__(self, nameingScheme: str = "as{asn}{role}-{name}-{primaryIp}"):
+    def __init__(self, namingScheme: str = "as{asn}{role}-{name}-{primaryIp}"):
         """!
         @brief Docker compiler constructor.
 
-        @param nameingScheme (optional) node nameing scheme. Avaliable variables
+        @param namingScheme (optional) node naming scheme. Avaliable variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
         {primaryIp}
         """
         self.__networks = ""
         self.__services = ""
-        self.__naming_scheme = nameingScheme
+        self.__naming_scheme = namingScheme
 
     def getName(self) -> str:
         return "Docker"

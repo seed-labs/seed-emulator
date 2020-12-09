@@ -93,15 +93,15 @@ class DistributedDocker(Compiler):
     This works by making every IX network overlay network. 
     """
 
-    def __init__(self, nameingScheme: str = "as{asn}{role}-{name}-{primaryIp}"):
+    def __init__(self, namingScheme: str = "as{asn}{role}-{name}-{primaryIp}"):
         """!
         @brief DistributedDocker compiler constructor.
 
-        @param nameingScheme (optional) node nameing scheme. Avaliable variables
+        @param namingScheme (optional) node naming scheme. Avaliable variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
         {primaryIp}
         """
-        self.__naming_scheme = nameingScheme
+        self.__naming_scheme = namingScheme
 
     def getName(self) -> str:
         return "DistributedDocker"

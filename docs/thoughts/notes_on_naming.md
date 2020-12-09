@@ -24,13 +24,18 @@ Through my implementation, sometimes I use the actual object reference, sometime
    self.peers.add(peername)  # Add to the set
 ```
 
-- **Naming for containers** (added on 12/8/2020): When we generate the `docker-compose.yml` file, we should
+- **Naming for containers** (added on 12/9/2020): When we generate the `docker-compose.yml` file, we should
 use `container_name` to give each container a name, instead of letting docker to 
 generate a name for us. This name should encode essential information about 
-the container to make it user friendly. The name should use this format: `ASN-Role-IP`. 
-The `ASN` is the autonomous system number, such as `AS150`. For Internet Exchanges,
-we should use `IX` as the prefix, such as `IX100`. The `Role` should spell out the
-main purpose of the container, such as `router`, `host`, `rs` (router server), `dns`,
-`web`, etc. The `IP` part should be the IP address of the container.
+the container to make it user friendly. The current naming format is `as{asn}{role}-{name}-{primaryIp}`, where:
 
+- `asn` is the ASN of the node,
+- `role` is the role of the node:
+   - `r` for router,
+   - `rs` for route server, and
+   - `h` for host
+- `name` is the name of the node, and,
+- `primaryIp` is the IP address on the first interface of the node.
+
+The format is user-customizable; we should come up with more variables for users to choose from.
 
