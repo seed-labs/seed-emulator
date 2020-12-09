@@ -28,10 +28,17 @@ the SimCity game, etc.
 - **Duplicate AS**: Inevitably, when we import other people's simulators, we
 will get into a situation where some ASes are duplicate. How to handle this?
 Sometimes, the duplication is part of the reality, and sometimes, it is 
-a mistake. Our layer design may be able to help here. ASes in the upper layer
-may be able to hide the ASes in the lower layer. We need to make sure this 
-does not create issues. Another choice is to add a `deleteAS` API, so we can
-delete a particular AS from the imported simulator.
+a mistake. Our layer design may be able to help here. Here are some thoughts:
+    - ASes in the upper layer may be able to hide the ASes in the lower layer. 
+      We need to make sure this does not create issues. 
+    - Another choice is to add a `deleteAS` API, so we can delete a particular 
+      AS from the imported simulator.
+    - We can implement some mechanism like layer mask, which can mask certain
+      elements on a particular layer. 
+    - When we import other a simulator, we will recreate all its objects. We can
+      just go to an imported object, and make change to it directly, including
+      change its ASN, IP prefix, etc. This may be the best way to do it.
+
 
 - **Manifest file**: Just like Android apps, we may want to include a manifest
 file for each simulator. It publishes some of the essential information, such
@@ -42,4 +49,4 @@ as the ASes, IP prefixes, IXes, etc. This file can make the management easier.
     For example, we don't want an imported simulation to install a web server 
     on a host that is not part of the imported simulation. Obviously, when the 
     simulation runs, it will interfere with the rest of the system, but that
-    is fine. 
+    is fine.  Maybe we can introduce `namespace`.
