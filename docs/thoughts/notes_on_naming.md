@@ -29,13 +29,13 @@ use `container_name` to give each container a name, instead of letting docker to
 generate a name for us. This name should encode essential information about 
 the container to make it user friendly. The current naming format is `as{asn}{role}-{name}-{primaryIp}`, where:
 
-- `asn` is the ASN of the node,
-- `role` is the role of the node:
-   - `r` for router,
-   - `rs` for route server, and
-   - `h` for host
-- `name` is the name of the node, and,
-- `primaryIp` is the IP address on the first interface of the node.
+   - `asn` is the ASN of the node,
+   - `role` is the role of the node:
+      - `r` for router,
+      - `rs` for route server, and
+      - `h` for host
+   - `name` is the name of the node, and,
+   - `primaryIp` is the IP address on the first interface of the node.
 
 The format is user-customizable; we should come up with more variables for users to choose from.
 
