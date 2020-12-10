@@ -13,7 +13,7 @@ from seedsim.compiler import Docker
 In this setup, we will need four layers: 
 
 - The `Base` layer provides the base of the simulation; it describes what hosts belong to what autonomous system and how hosts are connected with each other. 
-- The `Routing` layer acts as the base of other routing protocols. `Routing` layer (1) installs BIRD internet routing daemon on every host with router role, (2) provides lower-level APIs for manipulating BIRD's FIB (forwarding information base), adding new protocols, etc., and (3) setup proper default route on non-router role hosts to point to the first router in the network.
+- The `Routing` layer acts as the base of other routing protocols. `Routing` layer (1) installs BIRD internet routing daemon on every host with router role, (2) provides lower-level APIs for manipulating BIRD's FIB (forwarding information base) and adding new protocols, etc., and (3) setup proper default route on non-router role hosts to point to the first router in the network.
 - The `Ebgp` layer provides API for setting up intra-AS BGP peering.
 - The `WebService` layer provides API for install `nginx` web server on hosts.
 
@@ -38,11 +38,9 @@ docker_compiler = Docker()
 base.createInternetExchange(100)
 ```
 
-The current version of the internet simulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function calls create a new internet exchange, and will a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetworkByName` function call.
+The current version of the internet simulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function call creates a new internet exchange, and will create a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetworkByName` function call.
 
-You may optionally set the IX LAN prefix with the `prefix` parameter and the way it assigns IP addresses to nodes with the `aac` parameter when calling `createInternetExchange`.
-
-- TODO: `aac` (`AddressAssignmentConstraint` docs)
+You may optionally set the IX LAN prefix with the `prefix` parameter and the way it assigns IP addresses to nodes with the `aac` parameter when calling `createInternetExchange`. For details, check to remarks section.
 
 Here, the internet exchange `100` is created. It creates the network `ix100`.
 
@@ -54,7 +52,7 @@ Here, the internet exchange `100` is created. It creates the network `ix100`.
 as150 = base.createAutonomousSystem(150)
 ```
 
-Creating a new autonomous system is as simple as calling the `Base::createAutonomousSystem` function. The call returns an `AutonomousSystem` class instance, and it can be used to further create hosts in the autonomous system.
+Creating a new autonomous system is simple; just call the `Base::createAutonomousSystem` function. The call returns an `AutonomousSystem` class instance, and it can be used to further create hosts in the autonomous system.
 
 ### Step 3.2: create the host
 
@@ -86,9 +84,7 @@ To connect the router (`router0`) with our host node (`web`), create a new netwo
 as150_net = as150.createNetwork('net0')
 ```
 
-The `AutonomousSystem::createNetwork` calls create a new local network (as opposed to the networks created by `Base::createInternetExchange`), which can only be joined by nodes from within the autonomous system. Similar to the `createInternetExchange` call, the `createNetwork` call also automatically assigns network prefixes; it uses `10.{asn}.{id}.0/24` by default. `createNetwork` call also accept `prefix` and `aac` parameter for configuring prefix and setting up auto address assignment.
-
-- TODO: `aac` (`AddressAssignmentConstraint` docs)
+The `AutonomousSystem::createNetwork` calls create a new local network (as opposed to the networks created by `Base::createInternetExchange`), which can only be joined by nodes from within the autonomous system. Similar to the `createInternetExchange` call, the `createNetwork` call also automatically assigns network prefixes; it uses `10.{asn}.{id}.0/24` by default. `createNetwork` call also accept `prefix` and `aac` parameter for configuring prefix and setting up auto address assignment. For details, check to remarks section.
 
 We now have the network, it is not in the FIB yet, and thus will not be announce to BGP peers. We need to let our routing daemon know we want the network in FIB. This can be done by:
 
@@ -115,7 +111,7 @@ Last, put the router into the internet exchange:
 as150_router.joinNetworkByName('ix100')
 ```
 
-The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. You may use this to join a local network too. (i.e., instead of `as150_router.joinNetwork(as150_net)`, you can do `as150_router.joinNetworkByName('net0')` too.) `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
+The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. You may use this to join a local network too. (i.e., instead of `as150_router.joinNetwork(as150_net)`, we can do `as150_router.joinNetworkByName('net0')` too.) `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
 
 ## Step 4: create more autonomous systems
 
@@ -197,3 +193,45 @@ docker_compiler.compile('./simple-peering')
 ```
 
 Now we can find the output in the `simple-peering` directory. The docker compiler comes with a docker-compose configuration. To bring up the simulation, simply run `docker-compose build && docker-compose up` in the `simple-peering` directory.
+
+## Remarks
+
+### Creating networks with a custom prefix
+
+By default, the network prefix is assigned with the following scheme:
+
+```
+10.{asn}.{id}.0/24
+```
+
+For internet exchanges, the `{id}` part is always `0`. For example, the default prefix of IX100 will be `10.100.0.0/24`.
+
+For other autonomous systems, `{id}` is the nth network created. For example, for AS150, the first network will be `10.150.0.0/24`, and the second one will be `10.150.1.0/24`.
+
+This, however, does not work for all cases. If we have an autonomous system where its ASN is greater than 255, the automated prefix assignment won't work. Or maybe we just want another prefix for the network. In such cases, we can override the prefix assignment by setting the `prefix` argument:
+
+```python
+# for internet exchanges:
+base.createInternetExchange(33108, prefix = '206.81.80.0/23')
+
+# for local network:
+as11872.createNetwork('net0', prefix = '128.230.0.0/16')
+```
+
+### Assigning IP addresses to interfaces
+
+The IP addresses in a network are assigned with `AddressAssignmentConstraint`. The default constraints are as follow:
+
+- Host nodes: from 71 to 99
+- Router nodes: from 254 to 200
+- Router nodes in internet exchange: ASN
+
+For example, in AS150, if a host node joined a local network, it's IP address will be `10.150.0.71`. The next host joined the network will become `10.150.0.72`. If a router joined a local network, it's IP addresss will be `10.150.0.254`, and if the router joined an internet exchange network (say IX100), it will be `10.100.0.150`.
+
+Sometimes it will be useful to override the automated assignment for once. Both `joinNetwork` and `joinNetworkByName` accept an `address` argument for overriding the assignment:
+
+```python
+as11872_router.joinNetworkByName('ix100', address = '10.100.0.118')
+```
+
+We may alternatively implement our own `AddressAssignmentConstraint` class instead. Both `createInternetExchange` and `createNetwork` accept the `aac` argument, which will alter the auto address assignment behavior. Foe details, please refer to the API documentation.
