@@ -1,11 +1,13 @@
-# Transit AS
+# Transit AS (MPLS)
 
-This is a more in-depth example; in this example, we will configure two internet exchanges, AS150 will be in both exchanges. AS151 and AS152 will be in IX100 and IX101, respectively. AS150 will serve as the transit AS for AS151 and AS152. There will be four hops in AS150. AS151 and AS152 will each announce one /24 prefix and host one web server in the network.
+This example is similar to the regular transit example. In this example, we will configure two internet exchanges, AS150 will be in both exchanges. AS151 and AS152 will be in IX100 and IX101, respectively. AS150 will serve as the transit AS for AS151 and AS152. There will be four hops in AS150. AS151 and AS152 will each announce one /24 prefix and host one web server in the network.
+
+In other words, the topology is the exact same as the last example. The only difference in this example is that we will not use MPLS instead of OSPF and IBGP in the transit network. With MPLS, non-edge routers don't need to carry the BGP routing table at all. Non-edge routes only need to keep track of a small amount of MPLS labels, which greatly reduces the resources needed on non-edge routes.
 
 ## Step 1: import and create required componets
 
 ```python
-from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, WebService
+from seedsim.layers import Base, Routing, Ebgp, Mpls, WebService
 from seedsim.renderer import Renderer
 from seedsim.compiler import Docker
 ```
@@ -15,8 +17,10 @@ In this setup, we will need these layers:
 - The `Base` layer provides the base of the simulation; it describes what hosts belong to what autonomous system and how hosts are connected with each other. 
 - The `Routing` layer acts as the base of other routing protocols. `Routing` layer (1) installs BIRD internet routing daemon on every host with router role, (2) provides lower-level APIs for manipulating BIRD's FIB (forwarding information base), adding new protocols, etc., and (3) setup proper default route on non-router role hosts to point to the first router in the network.
 - The `Ebgp` layer provides API for setting up intra-AS BGP peering.
-- The `Ibgp` layer automatically setup full-mesh iBGP peering between all routers within an autonomous system.
-- The `Ospf` layer automatically setup OSPF routing on all routers within an autonomous system.
+- The `Mpls` layer automatically setup MPLS. The default behavior for the MPLS layer are as follow:
+    - First, it classifies router nodes as edge routers and non-edge routers. Routers with at least one connection to an internet exchange or to a network with host role nodes connected are considered as edge routers. All other routers are considered as non-edge routers.
+    - Then, for all edge routers, it setup LDP, OSPF and IBGP full mesh sessions between them. For all non-edge routers, it setup only LDP and OSPF.
+
 - The `WebService` layer provides API for install `nginx` web server on hosts.
 
 We will use the defualt renderer and compiles the simulation to docker containers.
@@ -27,8 +31,7 @@ Once the classes are imported, initialize them:
 base = Base()
 routing = Routing()
 ebgp = Ebgp()
-ibgp = Ibgp()
-ospf = Ospf()
+mpls = Mpls()
 web = WebService()
 
 rendrer = Renderer()
@@ -104,6 +107,55 @@ r4.joinNetworkByName('ix101')
 The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. The `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
 
 You may also use the `Node::joinNetwork` call connect nodes to a network. It can also take `address` to override the auto address assignment.
+
+### Step 3.5: configure MPLS
+
+Unlike OSPF and IBGP, MPLS needs to be explicitly enabled for an autonomous system. This can be done by `Mpls::enableOn`:
+
+```python
+mpls.enableOn(150)
+```
+
+The `enableOn` call takes on parameter, the ASN to enable MPLS on.
+
+Here, only `r1` and `r4` are edge routers; thus, IBGP session will only be set up between them. `r2` and `r3` will only participate in OSPF and LDP. The topology looks like this:
+
+```
+       |  AS150's MPLS backbone                         |
+       |          ____________ ibgp ___________         |
+       |         /                             \        |
+as151 -|- as150_r1 -- as150_r2 -- as150_r3 -- as150_r4 -|- as152 
+       |                                                |
+```
+
+Since `r2` and `r3` don't carry table from AS151 and AS152, traceroute will look like this:
+
+```
+HOST: 0e58e675b98b Loss%   Snt   Last   Avg  Best  Wrst StDev
+ 1.|-- 10.152.0.254  0.0%    10    0.1   0.1   0.1   0.1   0.0
+ 2.|-- 10.101.0.150  0.0%    10    0.1   0.1   0.1   0.2   0.0
+ 3.|-- ???          100.0    10    0.0   0.0   0.0   0.0   0.0
+ 4.|-- ???          100.0    10    0.0   0.0   0.0   0.0   0.0
+ 5.|-- 10.150.0.254  0.0%    10    0.1   0.1   0.1   0.2   0.0
+ 6.|-- 10.100.0.151  0.0%    10    0.3   0.2   0.1   0.3   0.1
+ 7.|-- 10.151.0.71   0.0%    10    0.2   0.2   0.1   0.3   0.0
+```
+
+The two missing hops are `r2` and `r3`. We can also validate that the network is indeed running on MPLS by `tcpdump`:
+
+```
+root@d5d8ad0d6d48 / # tcpdump -i net1 -n mpls
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on net1, link-type EN10MB (Ethernet), capture size 262144 bytes
+19:39:33.831880 MPLS (label 21, exp 0, [S], ttl 61) IP 10.152.0.71 > 10.151.0.71: ICMP echo request, id 123, seq 1, length 64
+19:39:33.832051 MPLS (label 19, exp 0, [S], ttl 61) IP 10.151.0.71 > 10.152.0.71: ICMP echo reply, id 123, seq 1, length 64
+19:39:34.877246 MPLS (label 21, exp 0, [S], ttl 61) IP 10.152.0.71 > 10.151.0.71: ICMP echo request, id 123, seq 2, length 64
+19:39:34.877314 MPLS (label 19, exp 0, [S], ttl 61) IP 10.151.0.71 > 10.152.0.71: ICMP echo reply, id 123, seq 2, length 64
+^C
+4 packets captured
+4 packets received by filter
+0 packets dropped by kernel
+```
 
 ## Step 4: create a customer autonomous system
 
@@ -229,45 +281,10 @@ After rendering the layers, all the nodes and networks are created. They are sti
 In this example, we will use docker on a single host to run the simulation, so we use the `Docker` compiler:
 
 ```python
-docker_compiler.compile('./transit-as')
+docker_compiler.compile('./transit-as-mpls')
 ```
 
 ## Remarks
-
-### Transit's internal network
-
-In this particular example, we used OSPF and IBGP for internal routing. IBGP and OSPF layer does not need to be configured explicitly; they are by default enabled on all autonomous systems.
-
-The default behaviors are as follow:
-
-- IBGP is configured between all routers within an autonomous system,
-- OSPF is enabled on all networks that have two or more routers in them.
-- Passive OSPF is enabled on all other connected networks.
-
-We may "mask" an autonomous system from OSPF or IBGP, if we don't want the behavior. For IBGP, use `Ibgp::mask` method. It takes an ASN as input and will disable IBGP on that autonomous system:
-
-```python
-ibgp.mask(151)
-```
-
-The above masks AS151 from IBGP, meaning the IBGP layer won't touch any routers from AS151. However, in this particular example, AS151 has only one router, so it wasn't going to be configured by the IBGP layer anyway.
-
-For the OSPF layer, we have a bit more customizability. To mask an entire autonomous system, use `Ospf::maskAsn`:
-
-```python
-ospf.maskAsn(151)
-```
-
-We can also mask only a single network with `Ospf::maskNetwork` and `Ospf::maskByName`. `maskNetwork` call takes one parameter - the reference to the network object, and `maskByName` call takes two parameters, the first is the scope (i.e., ASN) of the network, and the second is the name of the network. Masking a network takes it out of the OSPF layer's consideration. In other words, no OSPF will be enabled on any interface connected to the network, passive or active.
-
-```python
-# mask with name
-ospf.maskByName('151', 'net0')
-
-# mask with reference
-ospf.maskNetwork(as152_net)
-```
-
 
 ### Creating networks with a custom prefix
 
