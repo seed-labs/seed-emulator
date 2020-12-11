@@ -4,6 +4,14 @@ This example is similar to the regular transit example. In this example, we will
 
 In other words, the topology is the exact same as the last example. The only difference in this example is that we will not use MPLS instead of OSPF and IBGP in the transit network. With MPLS, non-edge routers don't need to carry the BGP routing table at all. Non-edge routes only need to keep track of a small amount of MPLS labels, which greatly reduces the resources needed on non-edge routes.
 
+## Step 0: host system support
+
+MPLS requires support from the Linux kernel; for this example to work properly, load the MPLS kernel module on the simulator host with the following command, as root:
+
+```
+# modprobe mpls_router
+```
+
 ## Step 1: import and create required componets
 
 ```python
