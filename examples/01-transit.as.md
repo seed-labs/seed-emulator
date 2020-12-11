@@ -1,6 +1,6 @@
 # Transit AS
 
-This is a more in-depth example; in this example, we will configure two internet exchanges, AS150 will be in both exchanges. AS151 and AS152 will be in IX100 and IX101, respectively. AS150 will serves as the transit AS for AS151 and AS152, AS151 and AS152 will each announce one /24 prefix and host one web server in the network.
+This is a more in-depth example; in this example, we will configure two internet exchanges, AS150 will be in both exchanges. AS151 and AS152 will be in IX100 and IX101, respectively. AS150 will serves as the transit AS for AS151 and AS152. There will be four hops in AS150. AS151 and AS152 will each announce one /24 prefix and host one web server in the network.
 
 ## Step 1: import and create required componets
 
@@ -48,17 +48,189 @@ You may optionally set the IX LAN prefix with the `prefix` parameter and the way
 
 Here, two internet exchanges are created. This add two new networks, `ix100` and `ix101`, to the simulation.
 
-## Step 3: create an autonomous system
+## Step 3: create a transit autonomous system
 
-## Step 4: create another autonomous system
+### Step 3.1: create the autonomous system instance
 
-## Step 5: create the transit autonomous system
+```python
+as150 = base.createAutonomousSystem(150)
+```
+
+Creating a new autonomous system is simple; just call the `Base::createAutonomousSystem` function. The call returns an `AutonomousSystem` class instance, and it can be used to further create hosts in the autonomous system.
+
+### Step 3.2: create the internal networks
+
+```python
+as150.createNetwork('net0')
+as150.createNetwork('net1')
+as150.createNetwork('net2')
+```
+
+The `AutonomousSystem::createNetwork` calls create a new local network (as opposed to the networks created by `Base::createInternetExchange`), which can only be joined by nodes from within the autonomous system. Similar to the `createInternetExchange` call, the `createNetwork` call also automatically assigns network prefixes; it uses `10.{asn}.{id}.0/24` by default. `createNetwork` call also accept `prefix` and `aac` parameter for configuring prefix and setting up auto address assignment. For details, check to remarks section.
+
+Since we planned to have four hops in AS150, meaning we will need three internal networks to connect the routers together.
+
+### Step 3.3: create routers
+
+Next, we will need routers. The `AutonomousSystem::createRouter` takes a name and returns router `Node` instance:
+
+```python
+r1 = as150.createRouter('r1')
+r2 = as150.createRouter('r2')
+r3 = as150.createRouter('r3')
+r4 = as150.createRouter('r4')
+```
+
+Again, we planned to have four hops, so we created four routers here.
+
+### Step 3.4: configure routers
+
+We now have both networks and routers. We need to connect the routers to networks.
+
+```python
+r1.joinNetworkByName('ix100')
+r1.joinNetworkByName('net0')
+
+r2.joinNetworkByName('net0')
+r2.joinNetworkByName('net1')
+
+r3.joinNetworkByName('net1')
+r3.joinNetworkByName('net2')
+
+r4.joinNetworkByName('net2')
+r4.joinNetworkByName('ix101')
+```
+
+The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. The `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
+
+You may also use the `Node::joinNetwork` call connect nodes to a network. It can also take `address` to override the auto address assignment.
+
+## Step 4: create a customer autonomous system
+
+### Step 4.1: create the autonomous system instance
+
+```python
+as151 = base.createAutonomousSystem(151)
+```
+
+Creating a new autonomous system is simple; just call the `Base::createAutonomousSystem` function. The call returns an `AutonomousSystem` class instance, and it can be used to further create hosts in the autonomous system.
+
+### Step 4.2: create the host
+
+Once we have the `AutonomousSystem` instance, we can create a new host for the web service. Creating a new host is also simple; simply call the `AutonomousSystem::createHost` API. The call only takes one parameter, `name`, which is the name of the host, and it will return an `Node` instance on success. In this case, we will name our new host `web`, since we will be hosting `WebService` on it:
+
+```python
+as151_web = as151.createHost('web')
+```
+
+Then, we can start installing `WebService` onto the host node we just created. This can be done with the `Service::installOn` call. `WebService` class derives from the `Service` class, so it also has the `installOn` method. The `installOn` takes a `Node` instance and install the service on that node:
+
+```python
+web.installOn(as151_web)
+```
+
+Alternatively, we can use the `Service::installOnAll` API to install the service on all nodes of an autonomous system. The `installOnAll` API takes an integer as input and install the service on all host nodes in that AS. In other words, we can use `web.installOnAll(150)` to install `WebService` on all hosts nodes of AS150.
+
+### Step 4.3: create the router and setup the network
+
+Next, we will need a router. Creating a router is similar to creating a host. The `AutonomousSystem::createRouter` takes a name and returns `Node` instance:
+
+```python
+as151_router = as151.createRouter('router0')
+```
+
+To connect the router (`router0`) with our host node (`web`), create a new network:
+
+```python
+as151_net = as151.createNetwork('net0')
+```
+
+The `AutonomousSystem::createNetwork` calls create a new local network (as opposed to the networks created by `Base::createInternetExchange`), which can only be joined by nodes from within the autonomous system. Similar to the `createInternetExchange` call, the `createNetwork` call also automatically assigns network prefixes; it uses `10.{asn}.{id}.0/24` by default. `createNetwork` call also accept `prefix` and `aac` parameter for configuring prefix and setting up auto address assignment. For details, check to remarks section.
+
+We now have the network, it is not in the FIB yet, and thus will not be announce to BGP peers. We need to let our routing daemon know we want the network in FIB. This can be done by:
+
+```python
+routing.addDirect(as151_net)
+```
+
+The `Routing::addDirect` call marks a network as a "direct" network. A "direct" network will be added to the `direct` protocol block of BIRD, so the prefix of the directly connected network will be loaded into FIB.
+
+Alternatively, `Routing::addDirectByName` can be used to mark networks as direct network by network name. For example, `routing.addDirectByName(150, 'net0')` will do the same thing as above.
+
+Now, put the host and router in the network:
+
+```python
+as151_web.joinNetwork(as151_net)
+as151_router.joinNetwork(as151_net)
+```
+
+The `Node::joinNetwork` call connects a node to a network. It can also optionally takes another parameter, `address`, to override the auto address assignment. 
+
+Last, put the router into the internet exchange:
+
+```python
+as151_router.joinNetworkByName('ix100')
+```
+
+The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. You may use this to join a local network too. (i.e., instead of `as151_router.joinNetwork(as151_net)`, we can do `as151_router.joinNetworkByName('net0')` too.) `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
+
+## Step 5: create another customer autonomous system
+
+Repeat step 4 with a different ASN and exchange to create another transit customer:
+
+```python
+as152 = base.createAutonomousSystem(152)
+
+as152_web = as152.createHost('web')
+web.installOn(as152_web)
+
+as152_router = as152.createRouter('router0')
+
+as152_net = as152.createNetwork('net0')
+
+routing.addDirect(as152_net)
+
+as152_web.joinNetwork(as152_net)
+as152_router.joinNetwork(as152_net)
+
+as152_router.joinNetworkByName('ix101')
+```
 
 ## Step 6: setup BGP peering
 
+```python
+ebgp.addPrivatePeering(100, 150, 151)
+ebgp.addPrivatePeering(101, 150, 152)
+```
+
+The `Ebgp::addPrivatePeering` call takes three paramters; internet exchange ID, first ASN, and the second ASN. It will configure peering between the two given ASNs in the given exchange. We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MPLA)). 
+
+The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
+
 ## Step 7: rendrer the simulation
 
+```python
+rendrer.addLayer(base)
+rendrer.addLayer(routing)
+rendrer.addLayer(ebgp)
+rendrer.addLayer(ibgp)
+rendrer.addLayer(ospf)
+rendrer.addLayer(web)
+
+rendrer.render()
+```
+
+The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
+
 ## Step 8: compile the simulation
+
+After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the simulation to other formats. 
+
+In this example, we will use docker on a single host to run the simulation, so we use the `Docker` compiler:
+
+```python
+docker_compiler.compile('./transit-as')
+```
 
 ## Remarks
 
