@@ -265,8 +265,7 @@ The eBGP layer setup peering by looking for the router node of the given autonom
 rendrer.addLayer(base)
 rendrer.addLayer(routing)
 rendrer.addLayer(ebgp)
-rendrer.addLayer(ibgp)
-rendrer.addLayer(ospf)
+rendrer.addLayer(mpls)
 rendrer.addLayer(web)
 
 rendrer.render()
