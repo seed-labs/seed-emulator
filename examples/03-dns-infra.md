@@ -15,16 +15,57 @@ In this setup, we will need these layers:
 - The `Base` layer provides the base of the simulation; it describes what hosts belong to what autonomous system and how hosts are connected with each other. 
 - The `Routing` layer acts as the base of other routing protocols. `Routing` layer (1) installs BIRD internet routing daemon on every host with router role, (2) provides lower-level APIs for manipulating BIRD's FIB (forwarding information base), adding new protocols, etc., and (3) setup proper default route on non-router role hosts to point to the first router in the network.
 - The `Ebgp` layer provides API for setting up intra-AS BGP peering.
-- The `DomainNameService` layer, TODO.
-- The `DomainNameCachingService` layer, TODO.
-- The `Dnssec` layer, TODO.
+- The `DomainNameService` layer provides APIs and tools for hosting domain name servers in the simulation.
+- The `DomainNameCachingService` layer provides tools for hosting a local caching domain name server.
+- The `Dnssec` layer works with the `DomainNameService` layer to enable DNSSEC support.
 - The `WebService` layer provides API for install `nginx` web server on hosts.
+
+We will use the defualt renderer and compiles the simulation to docker containers.
+
+Once the classes are imported, initialize them:
+
+```python
+base = Base()
+routing = Routing()
+ebgp = Ebgp()
+web = WebService()
+dns = DomainNameService(autoNs = True)
+dnssec = Dnssec()
+ldns = DomainNameCachingService(autoRoot = True, setResolvconf = True)
+
+rendrer = Renderer()
+docker_compiler = Docker()
+```
+
+Here, we set `autoNs = True` for the `DomainNameService` layer. `autoNs` is default to true; we only put it here so we can mention it in this guide. The `autoNs` option controls the automated `NS` behavior. When it is on (true), the DNS layer will look for host nodes hosting the zone and add their IP address to the nameserver(s) of the parent zones. In other words, it enables the DNS layer to automatically discover what zone are hosted on what nodes and add the "glue records" for them.
+
+`autoRoot = True` is also a defualt option and it was included here for documentation. The `autoRoot` options automatically look for the root DNS in the simulation and update the root hint file bind uses, so it will use the root DNS hosted in the simulation instead of the real ones. If you want to keep the real roots while hosting root DNS in simulation, you need to explicitly disable this option. 
+
+We also set `setResolvconf = True` for the `DomainNameCachingService` layer. This tells the layer to update the `resolv.conf` file on all nodes within the autonomous system to use the local DNS node as their DNS. This one is not on by default.
 
 ## Step 2: create an internet exchange
 
+```python
+base.createInternetExchange(100)
+```
+
+The current version of the internet simulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function call creates a new internet exchange, and will create a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetworkByName` function call.
+
+You may optionally set the IX LAN prefix with the `prefix` parameter and the way it assigns IP addresses to nodes with the `aac` parameter when calling `createInternetExchange`. For details, check to remarks section.
+
+Here, the internet exchange `100` is created. It creates the network `ix100`.
+
 ## Step 3: create a zone
 
-## Step 4: create an autonomous system and host the root zone
+```python
+example_com = dns.getZone('example.com.')
+```
+
+The `getZone` call gets a zone or creates the zone if no such zone exists. A `Zone` instance will be returned; we will see how to work with the `Zone` object later.
+
+Note that the `getZone` call may create more than one zones. For example, in this call, it actually created three new zones - the root zone (`.`), the `.com` TLD zone (`com.`), and the `example.com` zone (`example.com.`).
+
+## Step 4: create an autonomous system and host the root zone (`.`)
 
 ### Step 4.1: create the autonomous system instance
 
@@ -34,9 +75,9 @@ In this setup, we will need these layers:
 
 ### Step 4.4: host the zone
 
-## Step 5: create an autonomous system and host the TLD zone
+## Step 5: create an autonomous system and host the TLD zone (`com.`)
 
-## Step 6: create an autonomous system and host the zone
+## Step 6: create an autonomous system and host the zone (`example.com`)
 
 ## Step 7: create an autonomous system for users (optional)
 
@@ -77,9 +118,7 @@ Now we can find the output in the `dns-infra` directory. The docker compiler com
 
 ## Remarks
 
-### Automated NS configuration 
-
-### Automated root DNS override
+### DNS chain
 
 ### DNSSEC chain
 
