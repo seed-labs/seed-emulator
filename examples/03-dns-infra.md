@@ -67,19 +67,185 @@ Note that the `getZone` call may create more than one zones. For example, in thi
 
 ## Step 4: create an autonomous system and host the root zone (`.`)
 
+Now we have the zones, but we still need to host it somewhere. Let's first create an autonomous system for hosting our root server.
+
 ### Step 4.1: create the autonomous system instance
 
-### Step 4.2: create the host
+```python
+as150 = base.createAutonomousSystem(150)
+```
+
+Creating a new autonomous system is simple; just call the `Base::createAutonomousSystem` function. The call returns an `AutonomousSystem` class instance, and it can be used to further create hosts in the autonomous system.
+
+### Step 4.2: create a host node
+
+Now, we need to create a host node to run the DNS service on. Once we have the `AutonomousSystem` instance, we can create a new host for the web service. Creating a new host is also simple; simply call the `AutonomousSystem::createHost` API. The call only takes one parameter, `name`, which is the name of the host, and it will return an `Node` instance on success:
+
+```python
+root_server = as150.createHost('root_server')
+```
+
+We won't install the DNS on the node just yet. The reason will be explained later.
 
 ### Step 4.3: create the router and configure the network
 
+Next, we will need a router. Creating a router is similar to creating a host. The `AutonomousSystem::createRouter` takes a name and returns `Node` instance:
+
+```python
+as150_router = as150.createRouter('router0')
+```
+
+To connect the router (`router0`) with our host node (`web`), create a new network:
+
+```python
+as150_net = as150.createNetwork('net0')
+```
+
+The `AutonomousSystem::createNetwork` calls create a new local network (as opposed to the networks created by `Base::createInternetExchange`), which can only be joined by nodes from within the autonomous system. Similar to the `createInternetExchange` call, the `createNetwork` call also automatically assigns network prefixes; it uses `10.{asn}.{id}.0/24` by default. `createNetwork` call also accept `prefix` and `aac` parameter for configuring prefix and setting up auto address assignment. For details, check to remarks section.
+
+We now have the network, it is not in the FIB yet, and thus will not be announce to BGP peers. We need to let our routing daemon know we want the network in FIB. This can be done by:
+
+```python
+routing.addDirect(as150_net)
+```
+
+The `Routing::addDirect` call marks a network as a "direct" network. A "direct" network will be added to the `direct` protocol block of BIRD, so the prefix of the directly connected network will be loaded into FIB.
+
+Alternatively, `Routing::addDirectByName` can be used to mark networks as direct network by network name. For example, `routing.addDirectByName(150, 'net0')` will do the same thing as above.
+
+Now, put the host and router in the network:
+
+```python
+root_server.joinNetwork(as150_net)
+as150_router.joinNetwork(as150_net)
+```
+
+The `Node::joinNetwork` call connects a node to a network. It can also optionally takes another parameter, `address`, to override the auto address assignment. 
+
+Last, put the router into the internet exchange:
+
+```python
+as150_router.joinNetworkByName('ix100')
+```
+
+The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. You may use this to join a local network too. (i.e., instead of `as150_router.joinNetwork(as150_net)`, we can do `as150_router.joinNetworkByName('net0')` too.) `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
+
 ### Step 4.4: host the zone
+
+Now, with the network interfaces properly configured, we can start hosting DNS zone on the host node: 
+
+```python
+dns.hostZoneOn('.', root_server, addNsAndSoa = True)
+```
+
+The `DomainNameService::hostZoneOn` call takes three arguments; the first is the zone name, the second is the node to install DNS on, and the third is an optional one, `addNsAndSoa`. The `addNsAndSoa` option automatically create NS and SOA records in the zone, according to the IP address on the interface of the given node; this is why we delay the installation - the IP address was not available before we do `root_server.joinNetwork(as150_net)`.
+
+The `addNsAndSoa` is default to `True`.
 
 ## Step 5: create an autonomous system and host the TLD zone (`com.`)
 
+Now, repeat step 4 with a different ASN and host the `com.` zone:
+
+```python
+as151 = base.createAutonomousSystem(151)
+
+com_server = as151.createHost('com_server')
+
+as151_router = as151.createRouter('router0')
+
+as151_net = as151.createNetwork('net0')
+
+routing.addDirect(as151_net)
+
+com_server.joinNetwork(as151_net)
+as151_router.joinNetwork(as151_net)
+
+as151_router.joinNetworkByName('ix100')
+
+dns.hostZoneOn('com.', com_server)
+```
+
 ## Step 6: create an autonomous system and host the zone (`example.com`)
 
-## Step 7: create an autonomous system for users (optional)
+Then, repeat step 4/5 with a different ASN and host the `example.com.` zone:
+
+```python
+as152 = base.createAutonomousSystem(152)
+
+example_com_web = as152.createHost('example_web')
+web.installOn(example_com_web)
+
+example_com_server = as152.createHost('example_com_server')
+
+as152_router = as152.createRouter('router0')
+
+as152_net = as152.createNetwork('net0')
+
+routing.addDirect(as152_net)
+
+example_com_web.joinNetwork(as152_net)
+example_com_server.joinNetwork(as152_net)
+as152_router.joinNetwork(as152_net)
+
+as152_router.joinNetworkByName('ix100')
+
+dns.hostZoneOn('example.com.', example_com_server)
+
+example_com.addRecord(
+    '@ A {}'.format(example_com_web.getInterfaces()[0].getAddress())
+)
+```
+
+There are a few new things here; let's break them down.
+
+```python
+example_com_web = as152.createHost('example_web')
+web.installOn(example_com_web)
+```
+
+The above install `WebService` on `example_web` host. `WebService` class derives from the `Service` class, so it also has the `installOn` method. The `installOn` takes a `Node` instance and install the service on that node.
+
+```python
+example_com.addRecord(
+    '@ A {}'.format(example_com_web.getInterfaces()[0].getAddress())
+)
+```
+
+The above adds a new `A` record to the `example.com.` zone. It points the `@` domain to the first IP address of the webserver node.
+
+## Step 7: create an autonomous system for users
+
+Now, since we are not using the real IP address of root DNS, nor do we set up a recursive DNS server to lookup our root server, normal containers won't be able to use the zones we hosted in the simulation. To deal with this, we can create a new autonomous system for users and host a recursive DNS server (or local DNS, DNS caching server):
+
+```python
+as153 = base.createAutonomousSystem(153)
+
+local_dns = as153.createHost('local_dns')
+ldns.installOn(local_dns)
+
+client = as153.createHost('client')
+
+as153_router = as153.createRouter('router0')
+
+as153_net = as153.createNetwork('net0')
+
+routing.addDirect(as153_net)
+
+local_dns.joinNetwork(as153_net)
+client.joinNetwork(as153_net)
+as153_router.joinNetwork(as153_net)
+
+as153_router.joinNetworkByName('ix100')
+```
+
+The important part is:
+
+```python
+local_dns = as153.createHost('local_dns')
+ldns.installOn(local_dns)
+```
+
+This creates a local DNS server. Since we have set `setResolvconf` earlier, all nodes in AS153 will use the local resolver as DNS, and since we have `autoRoot`, the local DNS will be able to find the root zone we hosted in the simulation.
 
 ## Step 8: configure DNSSEC (optional)
 
@@ -102,7 +268,6 @@ rendrer.render()
 ```
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
-
 
 ## Step 11: compile the simulation
 
