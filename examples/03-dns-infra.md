@@ -249,7 +249,28 @@ This creates a local DNS server. Since we have set `setResolvconf` earlier, all 
 
 ## Step 8: configure DNSSEC (optional)
 
+The DNSSEC layer configures DNSSEC for a zone. It works by signing the zone on-the-fly when the simulator starts and sending DS records to parents with `nsupdate`.
+
+```python
+dnssec.enableOn('.')
+dnssec.enableOn('com.')
+dnssec.enableOn('example.com.')
+```
+
+The `Dnssec::enableOn` call takes only one parameter, the zone name. Note that for DNSSEC to work, you will need to sign the entire chain to build the "chain of trust." 
+
 ## Step 9: configure BGP peering
+
+```python
+ebgp.addRsPeer(100, 150)
+ebgp.addRsPeer(100, 151)
+ebgp.addRsPeer(100, 152)
+ebgp.addRsPeer(100, 153)
+```
+
+The `Ebgp::addRsPeer` call takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MPLA)). Peering can alternatively be configured with `Ebgp::addPrivatePeering`. `addPrivatePeering` method takes three parameters: internet exchange ID, first participant ASN, and second participant ASN. `addPrivatePeering` will setup peering between first and second ASN. 
+
+The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
 ## Step 10: render the simulation
 
