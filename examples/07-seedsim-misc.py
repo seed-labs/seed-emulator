@@ -92,8 +92,8 @@ as152_router.joinNetworkByName('ix101')
 
 ###############################################################################
 
-ebgp.addPrivatePeering(100, 150, 151)
-ebgp.addPrivatePeering(101, 150, 152)
+ebgp.addPrivatePeering(100, 150, 151, abRelationship = 'Provider')
+ebgp.addPrivatePeering(101, 150, 152, abRelationship = 'Provider')
 
 ###############################################################################
 
