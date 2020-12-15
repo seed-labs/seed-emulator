@@ -5,7 +5,7 @@ from seedsim.core import Node, ScopedRegistry, Registry, Network
 from typing import List, Tuple
 from ipaddress import IPv4Network
 
-class CyrmuIpOriginServer(Server):
+class CymruIpOriginServer(Server):
     """!
     @brief Cymru's IP info service server.
     """
@@ -14,7 +14,7 @@ class CyrmuIpOriginServer(Server):
 
     def __init__(self, node: Node):
         """!
-        @brief CyrmuIpOriginServer constructor.
+        @brief CymruIpOriginServer constructor.
 
         @param node node to install on.
         """
@@ -28,7 +28,7 @@ class CyrmuIpOriginServer(Server):
         """
         return self.__node
 
-class CyrmuIpOriginService(Service):
+class CymruIpOriginService(Service):
     """!
     @brief Cymru's IP info service.
 
@@ -40,13 +40,13 @@ class CyrmuIpOriginService(Service):
     This layer hosts the domain cymru.com.
     """
 
-    __servers: List[CyrmuIpOriginServer]
+    __servers: List[CymruIpOriginServer]
     __records: List[str]
     __reg = ScopedRegistry('seedsim')
 
     def __init__(self):
         """!
-        @brief CyrmuIpOriginService constructor
+        @brief CymruIpOriginService constructor
         """
         self.__records = []
         self.__servers = []
@@ -54,7 +54,7 @@ class CyrmuIpOriginService(Service):
         self.addDependency('Base', False, False)
 
     def getName(self) -> str:
-        return 'CyrmuIpOriginService'
+        return 'CymruIpOriginService'
 
     def addMapping(self, prefix: str, asn: int):
         """!
@@ -91,8 +91,8 @@ class CyrmuIpOriginService(Service):
             record += '.origin.asn TXT "{} | {} | ZZ | SEED | 0000-00-00"'.format(asn, net)
             self.__records.append(record)
 
-    def _doInstall(self, node: Node) -> CyrmuIpOriginServer: 
-        server = CyrmuIpOriginServer(node)
+    def _doInstall(self, node: Node) -> CymruIpOriginServer: 
+        server = CymruIpOriginServer(node)
         self.__servers.append(server)
 
     def onRender(self):
@@ -133,7 +133,7 @@ class CyrmuIpOriginService(Service):
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'CyrmuIpOriginService:\n'
+        out += 'CymruIpOriginService:\n'
         
         indent += 4
         out += ' ' * indent

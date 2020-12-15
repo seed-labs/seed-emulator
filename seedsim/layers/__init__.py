@@ -9,7 +9,7 @@ from .WebService import WebService, WebServer
 from .DomainNameService import DomainNameServer, DomainNameService, Zone
 from .DomainNameCachingService import DomainNameCachingServer, DomainNameCachingService
 from .Reality import Reality
-from .CymruIpOrigin import CyrmuIpOriginService, CyrmuIpOriginServer
+from .CymruIpOrigin import CymruIpOriginService, CymruIpOriginServer
 from .Dnssec import Dnssec
 from .ReverseDomainNameService import ReverseDomainNameService, ReverseDomainNameServer
 from .Mpls import Mpls

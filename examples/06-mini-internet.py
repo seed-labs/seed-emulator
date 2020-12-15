@@ -1,6 +1,6 @@
 from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, Mpls
 from seedsim.layers import WebService, DomainNameService, DomainNameCachingService, Dnssec
-from seedsim.layers import CyrmuIpOriginService, ReverseDomainNameService
+from seedsim.layers import CymruIpOriginService, ReverseDomainNameService
 from seedsim.compiler import Docker
 from seedsim.compiler import Compiler
 
@@ -14,7 +14,7 @@ web = WebService()
 dns = DomainNameService()
 ldns = DomainNameCachingService()
 dnssec = Dnssec()
-cyrmu = CyrmuIpOriginService()
+cyrmu = CymruIpOriginService()
 rdns = ReverseDomainNameService()
 
 ###############################################################################

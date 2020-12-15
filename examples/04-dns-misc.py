@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, DomainNameService, DomainNameCachingService, Dnssec, WebService, CyrmuIpOriginService, ReverseDomainNameService
+from seedsim.layers import Base, Routing, Ebgp, DomainNameService, DomainNameCachingService, Dnssec, WebService, CymruIpOriginService, ReverseDomainNameService
 from seedsim.renderer import Renderer
 from seedsim.compiler import Docker
 
@@ -10,7 +10,7 @@ dns = DomainNameService()
 dnssec = Dnssec()
 ldns = DomainNameCachingService(setResolvconf = True)
 rdns = ReverseDomainNameService()
-ip_origin = CyrmuIpOriginService()
+ip_origin = CymruIpOriginService()
 
 ###############################################################################
 

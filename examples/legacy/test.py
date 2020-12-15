@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService, Reality, CyrmuIpOriginService, Dnssec, ReverseDomainNameService, Mpls
+from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService, Reality, CymruIpOriginService, Dnssec, ReverseDomainNameService, Mpls
 from seedsim.renderer import Renderer
 from seedsim.core import Registry
 from seedsim.compiler import Docker, DistributedDocker, Graphviz, GcpDistributedDocker
@@ -94,7 +94,7 @@ ebgp.addRsPeer(100, 11872)
 
 real.enableRealWorldAccessByName(150, 'net0')
 
-cyrmu = CyrmuIpOriginService()
+cyrmu = CymruIpOriginService()
 cyrmu.installOn(as150_h1)
 
 rdns = ReverseDomainNameService()

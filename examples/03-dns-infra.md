@@ -1,11 +1,11 @@
-# DNS infrastructure
+# DNS infrastructure & other DNS services
 
-In this example, we will set up the entire DNS infrastructure, complete with root server, TLD server, and DNSSEC support.
+In this example, we will set up the entire DNS infrastructure, complete with root server, TLD server, and DNSSEC support. We will also configure some additional services that create DNS zones that add reverse DNS and ASN associations for IP addresses.
 
 ## Step 1: import and create required componets
 
 ```python
-from seedsim.layers import Base, Routing, Ebgp, DomainNameService, DomainNameCachingService, Dnssec, WebService
+from seedsim.layers import Base, Routing, Ebgp, DomainNameService, DomainNameCachingService, Dnssec, WebService, CymruIpOriginService, ReverseDomainNameService
 from seedsim.renderer import Renderer
 from seedsim.compiler import Docker
 ```
@@ -19,6 +19,7 @@ In this setup, we will need these layers:
 - The `DomainNameCachingService` layer provides tools for hosting a local caching domain name server.
 - The `Dnssec` layer works with the `DomainNameService` layer to enable DNSSEC support.
 - The `WebService` layer provides API for install `nginx` web server on hosts.
+- The `CymruIpOriginService` 
 
 We will use the defualt renderer and compiles the simulation to docker containers.
 
@@ -303,10 +304,6 @@ docker_compiler.compile('./dns-infra')
 Now we can find the output in the `dns-infra` directory. The docker compiler comes with a docker-compose configuration. To bring up the simulation, simply run `docker-compose build && docker-compose up` in the `dns-infra` directory.
 
 ## Remarks
-
-### DNS chain
-
-### DNSSEC chain
 
 ### Creating networks with a custom prefix
 

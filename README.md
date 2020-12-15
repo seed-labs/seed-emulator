@@ -200,14 +200,14 @@ ldns.installOn(as151_h2)
 
 ### Layers: OSI Layer 7
 
-#### Cyrmu IP Origin Service
+#### Cymru IP Origin Service
 
-- Class Name: `CyrmuIpOriginService`
+- Class Name: `CymruIpOriginService`
 - Dependency: `DomainNameService`
 - Description: Cymru's IP info service is used by various traceroute utilities to map IP address to ASN (using DNS). This service loads the prefix list within the simulation and creates ASN mappings for them, so with proper local DNS configuration, nodes can see the ASN when doing traceroute. The layer will host domain `cymru.com.`
 
 ```python
-cyrmu = CyrmuIpOriginService()
+cyrmu = CymruIpOriginService()
 cyrmu.installOn(as150_h1)
 ```
 
