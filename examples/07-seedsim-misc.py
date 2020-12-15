@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, Mpls, WebService
+from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Mpls, WebService
 from seedsim.renderer import Renderer
 from seedsim.compiler import Docker, DistributedDocker, GcpDistributedDocker, Graphviz
 from seedsim.core import Registry
@@ -92,8 +92,8 @@ as152_router.joinNetworkByName('ix101')
 
 ###############################################################################
 
-ebgp.addPrivatePeering(100, 150, 151, abRelationship = 'Provider')
-ebgp.addPrivatePeering(101, 150, 152, abRelationship = 'Provider')
+ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
 
 ###############################################################################
 

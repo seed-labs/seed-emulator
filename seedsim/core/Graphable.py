@@ -222,8 +222,8 @@ class Graph(Printable):
             out += ' ' * indent
             options = ' '
             if e.label != None: options += 'label="{}" '.format(e.label)
-            if e.alabel != None: options += 'headlabel="{}" '.format(e.alabel)
-            if e.blabel != None: options += 'taillabel="{}" '.format(e.blabel)
+            if e.alabel != None: options += 'taillabel="{}" '.format(e.alabel)
+            if e.blabel != None: options += 'headlabel="{}" '.format(e.blabel)
             if e.style != None: options += 'style="{}" '.format(e.style)
             out += '"{}" {} "{}" [{}]\n'.format(e.a, '->' if self.directed else '--', e.b, options)
 

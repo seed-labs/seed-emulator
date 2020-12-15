@@ -112,6 +112,7 @@ class Ebgp(Layer, Graphable):
         """
         assert (ix, a, b) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(a, b, ix)
         assert (ix, b, a) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(b, a, ix)
+        assert abRelationship == PeerRelationship.Provider or abRelationship == PeerRelationship.Provider, 'unknow peering relationship {}'.format(abRelationship)
 
         self.__peerings[(ix, a, b)] = abRelationship
 
@@ -268,8 +269,8 @@ class Ebgp(Layer, Graphable):
                     if not ix_graph.hasVertex('AS{}'.format(b), 'IX{}'.format(i)):
                         ix_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
 
-                    full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), style = 'dashed', )
-                    ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), style = 'dashed')
+                    full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), style = 'dashed', label = 'Peer')
+                    ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), style = 'dashed', label = 'Peer')
                     
         for (i, a, b), rel in self.__peerings.items():
             self._log('Creating private peering sessions graph for IX{} AS{} <-> AS{}...'.format(i, a, b))
@@ -286,8 +287,13 @@ class Ebgp(Layer, Graphable):
             if not ix_graph.hasVertex('AS{}'.format(b), 'IX{}'.format(i)):
                 ix_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
 
-            full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i))
-            ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i))
+            if rel == PeerRelationship.Peer:
+                full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), label = 'Peer')
+                ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), label = 'Peer')
+
+            if rel == PeerRelationship.Provider:
+                full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'Provider', blabel = 'Customer')
+                ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'Provider', blabel = 'Customer')
 
         es = list(full_graph.vertices.values())
         while len(es) > 0:
@@ -306,7 +312,7 @@ class Ebgp(Layer, Graphable):
             out += ' ' * indent
             out += 'IX{}: RS <-> AS{}\n'.format(i, a)
 
-        for (i, a, b), rel in self.__peerings.item():
+        for (i, a, b), rel in self.__peerings.items():
             out += ' ' * indent
             out += 'IX{}: AS{} <--({})--> AS{}\n'.format(i, a, rel, b)
 

@@ -1,7 +1,7 @@
 from .Layer import Layer
 from .Base import Base
 from .Routing import Routing, Router
-from .Ebgp import Ebgp
+from .Ebgp import Ebgp, PeerRelationship
 from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Service import Service, Server
