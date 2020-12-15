@@ -2,6 +2,7 @@ from .Layer import Layer
 from .Routing import Router
 from seedsim.core import Registry, ScopedRegistry, Network, Node, Interface, Graphable
 from typing import Tuple, List, Dict
+from enum import Enum
 
 EbgpFileTemplates: Dict[str, str] = {}
 
@@ -26,6 +27,18 @@ EbgpFileTemplates["rnode_bird_peer"] = """
     neighbor {peerAddress} as {peerAsn};
 """
 
+class PeerRelationship(Enum):
+    """!
+    @brief Relationship between peers.
+    """
+
+    ## Provider: a side: export everything, b side: export only customer's and
+    ## own prefixes
+    Provider = "Provider"
+
+    ## Peer: a side & b side: only export customer's and own prefixes.
+    Peer = "Peer"
+
 class Ebgp(Layer, Graphable):
     """!
     @brief The Ebgp (eBGP) layer.
@@ -33,7 +46,7 @@ class Ebgp(Layer, Graphable):
     This layer enable eBGP peering in InternetExchange.
     """
 
-    __peerings: List[Tuple[int, int, int]]
+    __peerings: Dict[Tuple[int, int, int], PeerRelationship]
     __rs_peers: List[Tuple[int, int]]
 
     def __init__(self):
@@ -41,27 +54,66 @@ class Ebgp(Layer, Graphable):
         @brief Ebgp layer constructor.
         """
         Graphable.__init__(self)
-        self.__peerings = []
+        self.__peerings = {}
         self.__rs_peers = []
         self.addDependency('Routing', False, False)
+
+    def __getAsPrefixes(self, a: int) -> List[str]:
+        sr = ScopedRegistry(str(a))
+        nets = []
+        for net in sr.getByType('net'):
+            netobj: Network = net
+            nets.append(str(netobj.getPrefix()))
+
+        return nets
+
+    def __getCustomerPrefixes(self, a: int) -> List[int]:
+        nets = []
+        for (_, _a, b), r in self.__peerings.items():
+            if a != _a or r != PeerRelationship.Provider: continue
+            nets += self.__getAsPrefixes(b)
+        
+        return nets
+
+    def __getExportFilters(self, a: int, b: int, rel: PeerRelationship) -> Tuple[str, str]:
+        a_prefixes = self.__getAsPrefixes(a)
+        a_cust_prefixes = self.__getCustomerPrefixes(a)
+        a_all = a_prefixes + a_cust_prefixes
+
+        b_prefixes = self.__getAsPrefixes(b)
+        b_cust_prefixes = self.__getCustomerPrefixes(b)
+        b_all = b_prefixes + b_cust_prefixes
+
+        a_export = 'all'
+        b_export = 'none' if len(b_all) == 0 else 'where net ~ [{}]'.format(','.join(b_all))
+        
+        if rel == PeerRelationship.Peer:
+            a_export = 'none' if len(a_all) == 0 else 'where net ~ [{}]'.format(','.join(a_all))
+
+        return (a_export, b_export)
+
     
     def getName(self) -> str:
         return "Ebgp"
 
-    def addPrivatePeering(self, ix: int, a: int, b: int):
+    def addPrivatePeering(self, ix: int, a: int, b: int, abRelationship: PeerRelationship = PeerRelationship.Peer):
         """!
         @brief Setup private peering between two ASes in IX.
 
         @param ix IXP id.
         @param a First ASN.
         @param b Second ASN.
+        @param abRelationship (optional) A and B's relationship. If set to
+        PeerRelationship.Provider, A will export everything to B, if set to
+        PeerRelationship.Peer, A will only export own and customer prefixes to
+        B. Default to Peer.
 
         @throws AssertionError if peering already exist.
         """
         assert (ix, a, b) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(a, b, ix)
         assert (ix, b, a) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(b, a, ix)
 
-        self.__peerings.append((ix, a, b))
+        self.__peerings[(ix, a, b)] = abRelationship
 
     def addRsPeer(self, ix: int, peer: int):
         """!
@@ -108,6 +160,8 @@ class Ebgp(Layer, Graphable):
                 peerAsn = peer
             )) 
 
+            (a_export, b_export) = self.__getExportFilters(ix, b, PeerRelationship.Peer)
+
             p_ixnode.addTable('t_bgp')
             p_ixnode.addTablePipe('t_bgp')
             p_ixnode.addTablePipe('t_direct', 't_bgp')
@@ -116,11 +170,11 @@ class Ebgp(Layer, Graphable):
                 localAsn = peer,
                 peerAddress = rs_if.getAddress(),
                 peerAsn = ix,
-                exportFilter = "all", # !! todo
+                exportFilter = b_export,
                 importFilter = "all"
             )) 
 
-        for (ix, a, b) in self.__peerings:
+        for (ix, a, b), rel in self.__peerings.items():
             ix_reg = ScopedRegistry('ix')
             a_reg = ScopedRegistry(str(a))
             b_reg = ScopedRegistry(str(b))
@@ -153,9 +207,10 @@ class Ebgp(Layer, Graphable):
             
             assert b_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(b, ix)
 
-            self._log("adding peering: {} as {} <-> {} as {}".format(a_ixif.getAddress(), a, b_ixif.getAddress(), b))
+            self._log("adding peering: {} as {} <-({})-> {} as {}".format(a_ixif.getAddress(), a, rel, b_ixif.getAddress(), b))
 
-            # @todo import/export filter?
+            (a_export, b_export) = self.__getExportFilters(a, b, rel)
+
             a_ixnode.addTable('t_bgp')
             a_ixnode.addTablePipe('t_bgp')
             a_ixnode.addTablePipe('t_direct', 't_bgp')
@@ -164,11 +219,10 @@ class Ebgp(Layer, Graphable):
                 localAsn = a,
                 peerAddress = b_ixif.getAddress(),
                 peerAsn = b,
-                exportFilter = "all",
+                exportFilter = a_export,
                 importFilter = "all"
             ))
 
-            # @todo import/export filter?
             b_ixnode.addTable('t_bgp')
             b_ixnode.addTablePipe('t_bgp')
             b_ixnode.addTablePipe('t_direct', 't_bgp')
@@ -177,7 +231,7 @@ class Ebgp(Layer, Graphable):
                 localAsn = b,
                 peerAddress = a_ixif.getAddress(),
                 peerAsn = a,
-                exportFilter = "all",
+                exportFilter = b_export,
                 importFilter = "all"
             ))
 
@@ -192,7 +246,7 @@ class Ebgp(Layer, Graphable):
 
         ix_list = set()
         for (i, _) in self.__rs_peers: ix_list.add(i)
-        for (i, _, _) in self.__peerings: ix_list.add(i)
+        for (i, _, _), _ in self.__peerings.items(): ix_list.add(i)
         for ix in ix_list:
             self._log('Creating RS peering sessions graph for IX{}...'.format(ix))
             ix_graph = self._addGraph('IX{} Peering Sessions'.format(ix), False)
@@ -217,7 +271,7 @@ class Ebgp(Layer, Graphable):
                     full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), style = 'dashed', )
                     ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), style = 'dashed')
                     
-        for (i, a, b) in self.__peerings:
+        for (i, a, b), rel in self.__peerings.items():
             self._log('Creating private peering sessions graph for IX{} AS{} <-> AS{}...'.format(i, a, b))
 
             ix_graph = self._addGraph('IX{} Peering Sessions'.format(i), False)
@@ -252,9 +306,9 @@ class Ebgp(Layer, Graphable):
             out += ' ' * indent
             out += 'IX{}: RS <-> AS{}\n'.format(i, a)
 
-        for (i, a, b) in self.__peerings:
+        for (i, a, b), rel in self.__peerings.item():
             out += ' ' * indent
-            out += 'IX{}: AS{} <-> AS{}\n'.format(i, a, b)
+            out += 'IX{}: AS{} <--({})--> AS{}\n'.format(i, a, rel, b)
 
 
         return out
