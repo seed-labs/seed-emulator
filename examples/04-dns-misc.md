@@ -1,11 +1,11 @@
-# DNS infrastructure & other DNS services
+# DNS infrastructure and zone-generating layers
 
-In this example, we will set up the entire DNS infrastructure, complete with root server, TLD server, and DNSSEC support.
+In this example, we will set up the entire DNS infrastructure, complete with root server, TLD server, and DNSSEC support. We will also configure some additional services that create DNS zones that add reverse DNS and ASN associations for IP addresses.
 
 ## Step 1: import and create required componets
 
 ```python
-from seedsim.layers import Base, Routing, Ebgp, DomainNameService, DomainNameCachingService, Dnssec, WebService
+from seedsim.layers import Base, Routing, Ebgp, DomainNameService, DomainNameCachingService, Dnssec, WebService, CymruIpOriginService, ReverseDomainNameService
 from seedsim.renderer import Renderer
 from seedsim.compiler import Docker
 ```
@@ -19,6 +19,8 @@ In this setup, we will need these layers:
 - The `DomainNameCachingService` layer provides tools for hosting a local caching domain name server.
 - The `Dnssec` layer works with the `DomainNameService` layer to enable DNSSEC support.
 - The `WebService` layer provides API for install `nginx` web server on hosts.
+- The `CymruIpOriginService` hosts the `cymru.com` zone. Team Cymru provides a way to look up the origin ASN of any given IP address by DNS; the service is used by various network utilities like `traceroute` and `mtr`, which we will be using in the simulator to check routes. The service works by hosting the zone `origin.asn.cymru.com`; for example, try `dig TXT '0.0.230.128.origin.asn.cymru.com'`. In the simulator, this layer collects all networks in the simulation and creates the zone in the DNS layer.
+- The `ReverseDomainNameService` creates the `in-addr.arpa.` zone (i.e., the reverse IP zone). All IP addresses on any node in the simulation will be given a reverse DNS record like `nodename-netname.nodetype.asn.net`.
 
 We will use the defualt renderer and compiles the simulation to docker containers.
 
@@ -32,6 +34,8 @@ web = WebService()
 dns = DomainNameService(autoNs = True)
 dnssec = Dnssec()
 ldns = DomainNameCachingService(autoRoot = True, setResolvconf = True)
+rdns = ReverseDomainNameService()
+ip_origin = CymruIpOriginService()
 
 rendrer = Renderer()
 docker_compiler = Docker()
@@ -176,6 +180,8 @@ example_com_web = as152.createHost('example_web')
 web.installOn(example_com_web)
 
 example_com_server = as152.createHost('example_com_server')
+cyrmu_com_server = as152.createHost('cyrmu_com_server')
+v4_rdns_server = as152.createHost('v4_rdns_server')
 
 as152_router = as152.createRouter('router0')
 
@@ -185,11 +191,19 @@ routing.addDirect(as152_net)
 
 example_com_web.joinNetwork(as152_net)
 example_com_server.joinNetwork(as152_net)
+cyrmu_com_server.joinNetwork(as152_net)
+v4_rdns_server.joinNetwork(as152_net)
 as152_router.joinNetwork(as152_net)
 
 as152_router.joinNetworkByName('ix100')
 
 dns.hostZoneOn('example.com.', example_com_server)
+
+# same as dns.hostZoneOn('cymru.com.', cyrmu_com_server)
+ip_origin.installOn(cyrmu_com_server)
+
+# same as dns.hostZoneOn('in-addr.arpa.', v4_rdns_server)
+rdns.installOn(v4_rdns_server)
 
 example_com.addRecord(
     '@ A {}'.format(example_com_web.getInterfaces()[0].getAddress())
@@ -201,9 +215,25 @@ There are a few new things here; let's break them down.
 ```python
 example_com_web = as152.createHost('example_web')
 web.installOn(example_com_web)
+
+example_com_server = as152.createHost('example_com_server')
+cyrmu_com_server = as152.createHost('cyrmu_com_server')
+v4_rdns_server = as152.createHost('v4_rdns_server')
 ```
 
 The above install `WebService` on `example_web` host. `WebService` class derives from the `Service` class, so it also has the `installOn` method. The `installOn` takes a `Node` instance and install the service on that node.
+
+We also create two new servers, `cyrmu_com_server` and `v4_rdns_server`, for hosting the reverse DNS and ASN origin zones. We may host them all on one server, too. 
+
+```python
+# same as dns.hostZoneOn('cymru.com.', cyrmu_com_server)
+ip_origin.installOn(cyrmu_com_server)
+
+# same as dns.hostZoneOn('in-addr.arpa.', v4_rdns_server)
+rdns.installOn(v4_rdns_server)
+```
+
+Here, we install the IP origin service and the reverse DNS service on server nodes we created. Since they are not actually "services," the `installOn` call just hosts the zone on the server.
 
 ```python
 example_com.addRecord(
@@ -297,7 +327,7 @@ After rendering the layers, all the nodes and networks are created. They are sti
 In this example, we will use docker on a single host to run the simulation, so we use the `Docker` compiler:
 
 ```python
-docker_compiler.compile('./dns-infra')
+docker_compiler.compile('./dns-misc')
 ```
 
 Now we can find the output in the `dns-infra` directory. The docker compiler comes with a docker-compose configuration. To bring up the simulation, simply run `docker-compose build && docker-compose up` in the `dns-infra` directory.

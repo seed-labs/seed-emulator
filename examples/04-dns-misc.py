@@ -12,12 +12,7 @@ ldns = DomainNameCachingService(setResolvconf = True)
 rdns = ReverseDomainNameService()
 ip_origin = CymruIpOriginService()
 
-###############################################################################
-
 rendrer = Renderer()
-
-###############################################################################
-
 docker_compiler = Docker()
 
 ###############################################################################
