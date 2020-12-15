@@ -1,11 +1,13 @@
-# Transit AS
+# Real-world interation
 
-This is a more in-depth example; in this example, we will configure two internet exchanges, AS150 will be in both exchanges. AS151 and AS152 will be in IX100 and IX101, respectively. AS150 will serve as the transit AS for AS151 and AS152. There will be four hops in AS150. AS151 and AS152 will each announce one /24 prefix and host one web server in the network.
+In this example, we will frist setup some basic transit; we will configure two internet exchanges, AS150 will be in both exchanges. AS151 and AS152 will be in IX100 and IX101, respectively. AS150 will serve as the transit AS for AS151 and AS152. There will be four hops in AS150. AS151 and AS152 will each announce one /24 prefix and host one web server in the network.
+
+In AS151 and AS152, we will host VPN servers that are accessible from outside the simulator, so real-world hosts can connect to the simulation. We will then add a real-world autonomous system, AS11872 (Syracuse University), to the simulation. The real-world autonomous system will collect the prefixes it announced in the real-world, and route them to the real-world from the simulation.
 
 ## Step 1: import and create required componets
 
 ```python
-from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, WebService
+from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, WebService, Reality
 from seedsim.renderer import Renderer
 from seedsim.compiler import Docker
 ```
@@ -157,6 +159,17 @@ The `Routing::addDirect` call marks a network as a "direct" network. A "direct" 
 
 Alternatively, `Routing::addDirectByName` can be used to mark networks as direct network by network name. For example, `routing.addDirectByName(151, 'net0')` will do the same thing as above.
 
+```python
+real.enableRealWorldAccess(as151_net)
+```
+
+The `Reality::enableRealWorldAccess` call enables real-world access to a network by hosting an OpenVPN server. The server will be reachable from the real world; we can check the server port by doing `docker ps` once the simulation is up. 
+
+`enableRealWorldAccess` accepts two parameters; the first is the reference to the network to bridge the VPN server into, and the second one, `naddr`, is an optional parameter for specifying how many host IP addresses to allocate to the server (default to 8). It uses the network's IP assigner to get IP addresses for host-role nodes. For details, check the `AddressAssignmentConstraint` in the remarks section.
+
+Alternatively, `Routing::addDirectByName` can be used to do the same thing. For example, `real.enableRealWorldAccess(151, 'net0')` will do the same thing as above.
+
+
 Now, put the host and router in the network:
 
 ```python
@@ -189,6 +202,7 @@ as152_router = as152.createRouter('router0')
 as152_net = as152.createNetwork('net0')
 
 routing.addDirect(as152_net)
+real.enableRealWorldAccess(as152_net)
 
 as152_web.joinNetwork(as152_net)
 as152_router.joinNetwork(as152_net)
@@ -196,18 +210,45 @@ as152_router.joinNetwork(as152_net)
 as152_router.joinNetworkByName('ix101')
 ```
 
-## Step 6: setup BGP peering
+## Step 6: create the real-world customer autonomous system
+
+First, create the autonomous system object:
+
+```python
+as11872 = base.createAutonomousSystem(11872)
+```
+
+Then, create a real world router:
+
+```python
+as11872_router = real.createRealWorldRouter(as11872)
+```
+
+The `createRealWorldRouter` call takes three parameters; the first is the reference to the autonomous system object to create the router, the second, `nodename`, is the name of router node (default to `rw`), and the third, `prefixes` is a list of prefixes (default to `None`). Here, we let it default to `None`, so the layer will get the prefixes list for us.
+
+If `prefixes` is set to `None` (the `NoneType`, not empty list), the layer will automatically fetch the list of prefixes announced by the autonomous system in the real world. Otherwise, it will use the list of prefixes we specified.
+
+The `createRealWorldRouter` returns a `RealWorldRouter` instance. `RealWorldRouter` class was derived from the regular router node class; it adds an `addRealWorldRoute` method to router class. `addRealWorldRoute` accepts one parameter, `prefix`, and will route the given prefix to real-world.
+
+The last step is to connect the autonomous system to an internet exchange. Here, we picked IX101. We need to override the auto address assignment, as 11872 is out of the 2~254 range:
+
+```python
+as11872_router.joinNetworkByName('ix101', '10.101.0.118')
+```
+
+## Step 7: setup BGP peering
 
 ```python
 ebgp.addPrivatePeering(100, 150, 151)
 ebgp.addPrivatePeering(101, 150, 152)
+ebgp.addPrivatePeering(101, 150, 11872)
 ```
 
 The `Ebgp::addPrivatePeering` call takes three paramters; internet exchange ID, first ASN, and the second ASN. It will configure peering between the two given ASNs in the given exchange. We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MPLA)). 
 
 The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
-## Step 7: rendrer the simulation
+## Step 8: rendrer the simulation
 
 ```python
 rendrer.addLayer(base)
@@ -216,20 +257,21 @@ rendrer.addLayer(ebgp)
 rendrer.addLayer(ibgp)
 rendrer.addLayer(ospf)
 rendrer.addLayer(web)
+rendrer.addLayer(real)
 
 rendrer.render()
 ```
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
 
-## Step 8: compile the simulation
+## Step 9: compile the simulation
 
 After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the simulation to other formats. 
 
 In this example, we will use docker on a single host to run the simulation, so we use the `Docker` compiler:
 
 ```python
-docker_compiler.compile('./transit-as')
+docker_compiler.compile('./real-world')
 ```
 
 ## Remarks
@@ -267,7 +309,6 @@ ospf.maskByName('151', 'net0')
 # mask with reference
 ospf.maskNetwork(as152_net)
 ```
-
 
 ### Creating networks with a custom prefix
 
