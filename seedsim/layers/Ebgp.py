@@ -112,7 +112,7 @@ class Ebgp(Layer, Graphable):
         """
         assert (ix, a, b) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(a, b, ix)
         assert (ix, b, a) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(b, a, ix)
-        assert abRelationship == PeerRelationship.Provider or abRelationship == PeerRelationship.Provider, 'unknow peering relationship {}'.format(abRelationship)
+        assert abRelationship == PeerRelationship.Peer or abRelationship == PeerRelationship.Provider, 'unknow peering relationship {}'.format(abRelationship)
 
         self.__peerings[(ix, a, b)] = abRelationship
 

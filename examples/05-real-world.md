@@ -239,12 +239,16 @@ as11872_router.joinNetworkByName('ix101', '10.101.0.118')
 ## Step 7: setup BGP peering
 
 ```python
-ebgp.addPrivatePeering(100, 150, 151)
-ebgp.addPrivatePeering(101, 150, 152)
-ebgp.addPrivatePeering(101, 150, 11872)
+ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 150, 11872, abRelationship = PeerRelationship.Provider)
 ```
 
-The `Ebgp::addPrivatePeering` call takes three paramters; internet exchange ID, first ASN, and the second ASN. It will configure peering between the two given ASNs in the given exchange. We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MPLA)). 
+The `Ebgp::addPrivatePeering` call takes four paramters; internet exchange ID, first ASN, the second ASN, and the relationship. The relationship parameter defaults to `Peer`. The call will configure peering between the two given ASNs in the given exchange. 
+
+The peering relationship can be either `PeerRelationship.Provider` or `PeerRelationship.Peer`. The former will configure the session as a transit session; the first ASN will be the transit provider, the second ASN, and the second ASN will be the transit customer of the first ASN. Transit providers will export all tables to the customer, and transit customer will only export their own table and their customer's table to the provider. For the `Peer` relationship, both sides will only send their own prefix and their customer's prefix.
+
+We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MPLA)). Note that the session with RS will always be `Peer` relationship.
 
 The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
 

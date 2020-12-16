@@ -1,4 +1,4 @@
-from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, WebService, Router
+from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, WebService, Router
 from seedsim.renderer import Renderer
 from seedsim.compiler import Docker
 from seedsim.core import Registry
@@ -96,16 +96,16 @@ as3_102.joinNetwork(as3_net_101_102)
 
 ###############################################################################
 
-ebgp.addPrivatePeering(100, 2, 150)
-ebgp.addPrivatePeering(100, 150, 151)
+ebgp.addPrivatePeering(100, 2, 150, PeerRelationship.Provider)
+ebgp.addPrivatePeering(100, 150, 151, PeerRelationship.Provider)
 
-ebgp.addPrivatePeering(101, 2, 3)
-ebgp.addPrivatePeering(101, 2, 152)
-ebgp.addPrivatePeering(101, 3, 152)
+ebgp.addPrivatePeering(101, 2, 3, PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 2, 152, PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 3, 152, PeerRelationship.Provider)
 
-ebgp.addPrivatePeering(102, 2, 160)
-ebgp.addPrivatePeering(102, 3, 160)
-ebgp.addPrivatePeering(102, 3, 161)
+ebgp.addPrivatePeering(102, 2, 160, PeerRelationship.Provider)
+ebgp.addPrivatePeering(102, 3, 160, PeerRelationship.Provider)
+ebgp.addPrivatePeering(102, 3, 161, PeerRelationship.Provider)
 
 ###############################################################################
 
