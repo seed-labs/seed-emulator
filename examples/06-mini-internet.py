@@ -7,6 +7,8 @@ from seedsim.compiler import Compiler
 
 from seedsim.renderer import Renderer
 
+from seedsim.core import Registry, Node
+
 from seedsim.layers import Router, Service
 
 from typing import List, Tuple, Dict
@@ -159,7 +161,6 @@ make_transit_as(11, [102, 105], [
 
 ###############################################################################
 
-make_real_as(15169, 100, '10.100.0.250') # Google
 make_real_as(11872, 105, '10.105.0.250') # Syracuse University
 
 ###############################################################################
@@ -176,6 +177,25 @@ make_dns_as(161, ['com.', 'arpa.'], 103)
 
 make_user_as(170, 102)
 make_user_as(171, 105)
+
+###############################################################################
+
+google = base.createAutonomousSystem(15169)
+
+google_dns_net = google.createNetwork('google_dns_net', '8.8.8.0/24')
+
+google_dns = google.createHost('google_dns')
+
+google_dns.joinNetwork(google_dns_net, '8.8.8.8')
+
+ldns.installOn(google_dns)
+
+routing.addDirect(google_dns_net)
+
+google_router = google.createRouter('router0')
+
+google_router.joinNetwork(google_dns_net)
+google_router.joinNetworkByName('ix100', '10.100.0.250')
 
 ###############################################################################
 
@@ -216,12 +236,20 @@ ebgp.addPrivatePeering(102, 11, 170, PeerRelationship.Provider)
 
 ebgp.addPrivatePeering(105, 11, 171, PeerRelationship.Provider)
 
-ebgp.addPrivatePeering(105, 3, 11872, PeerRelationship.Provider)
-ebgp.addPrivatePeering(105, 11, 11872, PeerRelationship.Provider)
+ebgp.addPrivatePeering(105, 3, 11872, PeerRelationship.Unfiltered)
+ebgp.addPrivatePeering(105, 11, 11872, PeerRelationship.Unfiltered)
 
 ebgp.addPrivatePeering(100, 2, 15169, PeerRelationship.Provider)
 ebgp.addPrivatePeering(100, 3, 15169, PeerRelationship.Provider)
 ebgp.addPrivatePeering(100, 4, 15169, PeerRelationship.Provider)
+
+###############################################################################
+
+reg = Registry()
+for ((scope, type, name), object) in reg.getAll().items():
+    if type != 'hnode': continue
+    host: Node = object
+    host.addStartCommand('echo "nameserver 8.8.8.8" > /etc/resolv.conf')
 
 ###############################################################################
 
