@@ -265,7 +265,11 @@ ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider
 
 The `Ebgp::addPrivatePeering` call takes four paramters; internet exchange ID, first ASN, the second ASN, and the relationship. The relationship parameter defaults to `Peer`. The call will configure peering between the two given ASNs in the given exchange. 
 
-The peering relationship can be either `PeerRelationship.Provider` or `PeerRelationship.Peer`. The former will configure the session as a transit session; the first ASN will be the transit provider, the second ASN, and the second ASN will be the transit customer of the first ASN. Transit providers will export all tables to the customer, and transit customer will only export their own table and their customer's table to the provider. For the `Peer` relationship, both sides will only send their own prefix and their customer's prefix.
+The peering relationship can be one of the followings:
+
+- `PeerRelationship.Provider`: The first ASN is considered as the upstream provider of the second ASN. The first ASN will export all routes to the second ASN, and the second ASN will only export its customers' and its own prefixes to the first ASN.
+- `PeerRelationship.Peer`: The two ASNs are considered as peers. Both sides will only export their customers and their own prefixes.
+- `PeerRelationship.Unfiltered`: Make both sides export all routes to each other.
 
 We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MPLA)). Note that the session with RS will always be `Peer` relationship.
 

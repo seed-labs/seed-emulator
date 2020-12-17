@@ -298,9 +298,15 @@ ebgp.addRsPeer(100, 152)
 ebgp.addRsPeer(100, 153)
 ```
 
-The `Ebgp::addRsPeer` call takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MPLA)). Peering can alternatively be configured with `Ebgp::addPrivatePeering`. `addPrivatePeering` method takes four parameters: internet exchange ID, first participant ASN, second participant ASN, and the peer relationship. `addPrivatePeering` will setup peering between first and second ASN.
+The `Ebgp::addRsPeer` call takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MPLA)). 
 
-The peering relationship can be either `PeerRelationship.Provider` or `PeerRelationship.Peer`. The former will configure the session as a transit session; the first ASN will be the transit provider, the second ASN, and the second ASN will be the transit customer of the first ASN. Transit providers will export all tables to the customer, and transit customer will only export their own table and their customer's table to the provider. For the `Peer` relationship, both sides will only send their own prefix and their customer's prefix. Note that the session with RS (`addRsPeer`) will always be `Peer` relationship.
+Peering can alternatively be configured with `Ebgp::addPrivatePeering`. `addPrivatePeering` method takes four parameters: internet exchange ID, first participant ASN, second participant ASN, and the peer relationship. `addPrivatePeering` will setup peering between first and second ASN. The peering relationship can be one of the followings:
+
+- `PeerRelationship.Provider`: The first ASN is considered as the upstream provider of the second ASN. The first ASN will export all routes to the second ASN, and the second ASN will only export its customers' and its own prefixes to the first ASN.
+- `PeerRelationship.Peer`: The two ASNs are considered as peers. Both sides will only export their customers and their own prefixes.
+- `PeerRelationship.Unfiltered`: Make both sides export all routes to each other.
+
+Note that the session with RS (`addRsPeer`) will always be `Peer` relationship.
 
 The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
