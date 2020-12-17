@@ -51,7 +51,7 @@ def make_service_as(asn: int, services: List[Service], exchange: int):
     router.joinNetworkByName('ix{}'.format(exchange))
 
     for service in services:
-        server = service_as.createHost('s_{}'.format(service.getName()))
+        server = service_as.createHost('s_{}'.format(service.getName().lower()))
 
         server.joinNetwork(net)
 
@@ -73,7 +73,7 @@ def make_dns_as(asn: int, zones: List[str], exchange: int):
     router.joinNetworkByName('ix{}'.format(exchange))
 
     for zone in zones:
-        server = dns_as.createHost('s_{}'.format(zone))
+        server = dns_as.createHost('s_{}dns'.format(zone.replace('.','_')))
 
         server.joinNetwork(net)
 
