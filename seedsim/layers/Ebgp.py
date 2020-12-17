@@ -161,7 +161,7 @@ class Ebgp(Layer, Graphable):
                 peerAsn = peer
             )) 
 
-            (a_export, b_export) = self.__getExportFilters(ix, b, PeerRelationship.Peer)
+            (a_export, b_export) = self.__getExportFilters(ix, peer, PeerRelationship.Peer)
 
             p_ixnode.addTable('t_bgp')
             p_ixnode.addTablePipe('t_bgp')
