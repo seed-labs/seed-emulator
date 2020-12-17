@@ -39,6 +39,9 @@ class PeerRelationship(Enum):
     ## Peer: a side & b side: only export customer's and own prefixes.
     Peer = "Peer"
 
+    ## Unfiltered: no filter on both sides
+    Unfiltered = "Unfiltered"
+
 class Ebgp(Layer, Graphable):
     """!
     @brief The Ebgp (eBGP) layer.
@@ -76,6 +79,8 @@ class Ebgp(Layer, Graphable):
         return nets
 
     def __getExportFilters(self, a: int, b: int, rel: PeerRelationship) -> Tuple[str, str]:
+        if rel == PeerRelationship.Unfiltered: return ('all', 'all')
+
         a_prefixes = self.__getAsPrefixes(a)
         a_cust_prefixes = self.__getCustomerPrefixes(a)
         a_all = a_prefixes + a_cust_prefixes
@@ -112,7 +117,7 @@ class Ebgp(Layer, Graphable):
         """
         assert (ix, a, b) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(a, b, ix)
         assert (ix, b, a) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(b, a, ix)
-        assert abRelationship == PeerRelationship.Peer or abRelationship == PeerRelationship.Provider, 'unknow peering relationship {}'.format(abRelationship)
+        assert abRelationship == PeerRelationship.Peer or abRelationship == PeerRelationship.Provider or abRelationship == PeerRelationship.Unfiltered, 'unknow peering relationship {}'.format(abRelationship)
 
         self.__peerings[(ix, a, b)] = abRelationship
 
@@ -218,6 +223,10 @@ class Ebgp(Layer, Graphable):
             if rel == PeerRelationship.Provider:
                 a_proto_pfx = 'c_'
                 b_proto_pfx = 'u_'
+
+            if rel == PeerRelationship.Unfiltered:
+                a_proto_pfx = 'c_'
+                b_proto_pfx = 'c_'
 
             a_ixnode.addTable('t_bgp')
             a_ixnode.addTablePipe('t_bgp')
