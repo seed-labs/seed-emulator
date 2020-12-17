@@ -1,17 +1,14 @@
 from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship
 from seedsim.layers import WebService, DomainNameService, DomainNameCachingService
 from seedsim.layers import CymruIpOriginService, ReverseDomainNameService
-
 from seedsim.compiler import Docker, Graphviz
 from seedsim.compiler import Compiler
-
 from seedsim.renderer import Renderer
-
 from seedsim.core import Registry, Node
-
 from seedsim.layers import Router, Service
-
 from typing import List, Tuple, Dict
+
+###############################################################################
 
 base = Base()
 routing = Routing()
@@ -115,14 +112,6 @@ def make_transit_as(asn: int, exchanges: List[int], intra_ix_links: List[Tuple[i
 
         routers[a].joinNetwork(net)
         routers[b].joinNetwork(net)
-
-###############################################################################
-
-def get_asn():
-    i = 150
-    while True:
-        yield i
-        i += 1
 
 ###############################################################################
 
