@@ -154,7 +154,7 @@ class Ebgp(Layer, Graphable):
             assert p_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(a, ix)
             self._log("adding peering: {} as {} (RS) <-> {} as {}".format(rs_if.getAddress(), ix, p_ixif.getAddress(), peer))
 
-            ix_rs.addProtocol('bgp', 'as{}'.format(peer), EbgpFileTemplates["rs_bird_peer"].format(
+            ix_rs.addProtocol('bgp', 'p_as{}'.format(peer), EbgpFileTemplates["rs_bird_peer"].format(
                 localAddress = rs_if.getAddress(),
                 localAsn = ix,
                 peerAddress = p_ixif.getAddress(),
@@ -166,7 +166,7 @@ class Ebgp(Layer, Graphable):
             p_ixnode.addTable('t_bgp')
             p_ixnode.addTablePipe('t_bgp')
             p_ixnode.addTablePipe('t_direct', 't_bgp')
-            p_ixnode.addProtocol('bgp', 'rs{}'.format(ix), EbgpFileTemplates["rnode_bird_peer"].format(
+            p_ixnode.addProtocol('bgp', 'p_rs{}'.format(ix), EbgpFileTemplates["rnode_bird_peer"].format(
                 localAddress = p_ixif.getAddress(),
                 localAsn = peer,
                 peerAddress = rs_if.getAddress(),
@@ -211,11 +211,18 @@ class Ebgp(Layer, Graphable):
             self._log("adding peering: {} as {} <-({})-> {} as {}".format(a_ixif.getAddress(), a, rel, b_ixif.getAddress(), b))
 
             (a_export, b_export) = self.__getExportFilters(a, b, rel)
+            
+            a_proto_pfx = 'p_'
+            b_proto_pfx = 'p_'
+
+            if rel == PeerRelationship.Provider:
+                a_proto_pfx = 'c_'
+                b_proto_pfx = 'u_'
 
             a_ixnode.addTable('t_bgp')
             a_ixnode.addTablePipe('t_bgp')
             a_ixnode.addTablePipe('t_direct', 't_bgp')
-            a_ixnode.addProtocol('bgp', 'as{}'.format(b), EbgpFileTemplates["rnode_bird_peer"].format(
+            a_ixnode.addProtocol('bgp', '{}as{}'.format(a_proto_pfx, b), EbgpFileTemplates["rnode_bird_peer"].format(
                 localAddress = a_ixif.getAddress(),
                 localAsn = a,
                 peerAddress = b_ixif.getAddress(),
@@ -227,7 +234,7 @@ class Ebgp(Layer, Graphable):
             b_ixnode.addTable('t_bgp')
             b_ixnode.addTablePipe('t_bgp')
             b_ixnode.addTablePipe('t_direct', 't_bgp')
-            b_ixnode.addProtocol('bgp', 'as{}'.format(a), EbgpFileTemplates["rnode_bird_peer"].format(
+            b_ixnode.addProtocol('bgp', '{}as{}'.format(b_proto_pfx, a), EbgpFileTemplates["rnode_bird_peer"].format(
                 localAddress = b_ixif.getAddress(),
                 localAsn = b,
                 peerAddress = a_ixif.getAddress(),
