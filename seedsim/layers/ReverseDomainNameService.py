@@ -70,7 +70,7 @@ class ReverseDomainNameService(Service):
             for iface in node.getInterfaces():
                 addr = '.'.join(reversed(str(iface.getAddress()).split('.')))
                 netname = iface.getNet().getName()
-                record = '{} PTR {}-{}.{}.{}.net.'.format(addr, name, netname, type, scope)
+                record = '{} PTR {}-{}.{}.{}.net.'.format(addr, name, netname, type, scope).replace('_', '-')
                 zone.addRecord(record)
 
         self._log('Setting up "in-addr.arpa." server nodes...')
