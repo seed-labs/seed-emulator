@@ -72,7 +72,7 @@ example_com_web = as152.createHost('example_web')
 web.installOn(example_com_web)
 
 example_com_server = as152.createHost('example_com_server')
-cyrmu_com_server = as152.createHost('cyrmu_com_server')
+cymru_com_server = as152.createHost('cymru_com_server')
 v4_rdns_server = as152.createHost('v4_rdns_server')
 
 as152_router = as152.createRouter('router0')
@@ -83,7 +83,7 @@ routing.addDirect(as152_net)
 
 example_com_web.joinNetwork(as152_net)
 example_com_server.joinNetwork(as152_net)
-cyrmu_com_server.joinNetwork(as152_net)
+cymru_com_server.joinNetwork(as152_net)
 v4_rdns_server.joinNetwork(as152_net)
 as152_router.joinNetwork(as152_net)
 
@@ -91,8 +91,8 @@ as152_router.joinNetworkByName('ix100')
 
 dns.hostZoneOn('example.com.', example_com_server)
 
-# same as dns.hostZoneOn('cymru.com.', cyrmu_com_server)
-ip_origin.installOn(cyrmu_com_server)
+# same as dns.hostZoneOn('cymru.com.', cymru_com_server)
+ip_origin.installOn(cymru_com_server)
 
 # same as dns.hostZoneOn('in-addr.arpa.', v4_rdns_server)
 rdns.installOn(v4_rdns_server)
