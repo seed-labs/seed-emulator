@@ -92,6 +92,7 @@ def make_user_as(asn: int, exchange: str):
 
     real.enableRealWorldAccess(net)
 
+    router.joinNetwork(net)
     router.joinNetworkByName('ix{}'.format(exchange))
 
 ###############################################################################
