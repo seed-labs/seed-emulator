@@ -207,8 +207,8 @@ ldns.installOn(as151_h2)
 - Description: Cymru's IP info service is used by various traceroute utilities to map IP address to ASN (using DNS). This service loads the prefix list within the simulation and creates ASN mappings for them, so with proper local DNS configuration, nodes can see the ASN when doing traceroute. The layer will host domain `cymru.com.`
 
 ```python
-cyrmu = CymruIpOriginService()
-cyrmu.installOn(as150_h1)
+cymru = CymruIpOriginService()
+cymru.installOn(as150_h1)
 ```
 
 #### Reverse Domain Name Service
@@ -270,7 +270,7 @@ r.addLayer(ws)
 r.addLayer(dns)
 r.addLayer(ldns)
 r.addLayer(real)
-r.addLayer(cyrmu)
+r.addLayer(cymru)
 r.addLayer(dnssec)
 r.addLayer(rdns)
 r.addLayer(mpls)

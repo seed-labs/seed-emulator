@@ -10,8 +10,8 @@
 - [ ] metric collection
 - [ ] centralized command & control server
 - [ ] real internal network
-- [ ] distributed simulation
-- [ ] BGP: BGP route filters
+- [x] distributed simulation
+- [x] BGP: BGP route filters
 - [ ] Local DNS: loads root DNSSEC key automaically
 - [ ] RPKI
 - [ ] firewall
