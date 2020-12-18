@@ -1,5 +1,5 @@
 from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship
-from seedsim.layers import WebService, DomainNameService, DomainNameCachingService
+from seedsim.layers import WebService, DomainNameService, DomainNameCachingService, Dnssec
 from seedsim.layers import CymruIpOriginService, ReverseDomainNameService
 from seedsim.compiler import Docker, Graphviz
 from seedsim.compiler import Compiler
@@ -19,6 +19,7 @@ real = Reality()
 web = WebService()
 dns = DomainNameService()
 ldns = DomainNameCachingService()
+dnssec = Dnssec()
 cymru = CymruIpOriginService()
 rdns = ReverseDomainNameService()
 
@@ -162,10 +163,24 @@ make_service_as(154, [rdns], 104)
 make_service_as(155, [cymru], 105)
 
 make_dns_as(160, ['.'], 103)
-make_dns_as(161, ['com.', 'arpa.'], 103)
+make_dns_as(161, ['net.', 'com.', 'arpa.'], 103)
+
+dns.getZone('as150.net.').addRecord('@ A 10.150.0.71')
+dns.getZone('as151.net.').addRecord('@ A 10.151.0.71')
+dns.getZone('as152.net.').addRecord('@ A 10.152.0.71')
+
+make_dns_as(162, ['as150.net.', 'as151.net.', 'as152.net.'], 103)
 
 make_user_as(170, 102)
 make_user_as(171, 105)
+
+###############################################################################
+
+dnssec.enableOn('.')
+dnssec.enableOn('net.')
+dnssec.enableOn('as150.net.')
+dnssec.enableOn('as151.net.')
+dnssec.enableOn('as152.net.')
 
 ###############################################################################
 
@@ -220,6 +235,7 @@ ebgp.addPrivatePeering(105, 3, 155, PeerRelationship.Provider)
 ebgp.addPrivatePeering(103, 3, 160, PeerRelationship.Provider)
 
 ebgp.addPrivatePeering(103, 3, 161, PeerRelationship.Provider)
+ebgp.addPrivatePeering(103, 3, 162, PeerRelationship.Provider)
 
 ebgp.addPrivatePeering(102, 11, 170, PeerRelationship.Provider)
 
@@ -251,6 +267,7 @@ rendrer.addLayer(real)
 rendrer.addLayer(web)
 rendrer.addLayer(dns)
 rendrer.addLayer(ldns)
+rendrer.addLayer(dnssec)
 rendrer.addLayer(cymru)
 rendrer.addLayer(rdns)
 
