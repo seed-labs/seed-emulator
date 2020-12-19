@@ -181,12 +181,14 @@ def make_transit_as(asn: int, exchanges: List[int], intra_ix_links: List[Tuple[i
 The transit AS creator builds transit providers. It:
 
 - create an AS with the `createAutonomousSystem` call of the base layer,
-- for each PoP (point of presence), create a router in the internet exchange with the `createRouter` call of the AS object, join the exchange with the `joinNetworkByName` of the node object, and save the exchange ID and router object pair in the dictionary,
-- for each intra-exchange links, create a network for the link, mark it as direct, and have the two linked routers join the network.
+- for each PoP (point of presence), create a router in the internet exchange with the `createRouter` call of the AS object, join the exchange with the `joinNetworkByName` of the node object, and save the exchange ID and router object pair in the dictionary, and
+- for each intra-exchange links, create a network for the link with the `createNetwork` call of the AS object, mark it as direct with `addDirect` call of the routing layer, so the router will load the network into FIB (forwarding information base) and send it to BGP peers, and have the two linked routers join the network with the `joinNetwork` call of the node object. Note that the `addDirect` call isn't strictly necessary since even if the transit provider's internal network is not in the DFZ (default-free zone), the routing will still work, just that we won't be able to traceroute to the transit provider's network.
 
 This is all we needed to create transit providers since we will add OSPF and IBGP layer to the simulation, which will handle the internal routing automatically. 
 
 ## Create internet exchanges
+
+After creating the helper functions, we can start to build the actual simulation. The first logical thing to do is to create the internet exchanges:
 
 ```python
 base.createInternetExchange(100)
@@ -200,6 +202,8 @@ base.createInternetExchange(105)
 Not much to say about this; just call `createInternetExchange` to create new internet exchanges.
 
 ## Create transit providers
+
+Then, let's create the tier-1 transit providers. The definition of transit provider tier is somewhat ad-hoc; here, we assume tier-1 transit providers to be providers that don't need to purchase any transit from other providers to reach the entire internet. In other words, tier-1 transit providers can reach the entire internet with only peering. For tier-2 providers, we define it to be transit providers that need to purchase transit from other providers to be able to reach the entire internet.
 
 ### Tier 1 transit providers
 
