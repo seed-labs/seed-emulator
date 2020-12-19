@@ -149,6 +149,10 @@ make_transit_as(11, [102, 105], [
     (102, 105)
 ])
 
+make_transit_as(12, [101, 104], [
+    (101, 104)
+])
+
 ###############################################################################
 
 make_real_as(11872, 105, '10.105.0.250') # Syracuse University
@@ -162,14 +166,20 @@ make_service_as(153, [ldns], 102)
 make_service_as(154, [rdns], 104)
 make_service_as(155, [cymru], 105)
 
+###############################################################################
+
 make_dns_as(160, ['.'], 103)
 make_dns_as(161, ['net.', 'com.', 'arpa.'], 103)
+
+###############################################################################
 
 dns.getZone('as150.net.').addRecord('@ A 10.150.0.71')
 dns.getZone('as151.net.').addRecord('@ A 10.151.0.71')
 dns.getZone('as152.net.').addRecord('@ A 10.152.0.71')
 
 make_dns_as(162, ['as150.net.', 'as151.net.', 'as152.net.'], 103)
+
+###############################################################################
 
 make_user_as(170, 102)
 make_user_as(171, 105)
@@ -219,7 +229,11 @@ ebgp.addRsPeer(104, 4)
 ebgp.addPrivatePeering(102, 2, 11, PeerRelationship.Provider)
 ebgp.addPrivatePeering(105, 3, 11, PeerRelationship.Provider)
 
+ebgp.addPrivatePeering(101, 2, 12, PeerRelationship.Provider)
+ebgp.addPrivatePeering(104, 4, 12, PeerRelationship.Provider)
+
 ebgp.addPrivatePeering(101, 2, 150, PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 12, 150, PeerRelationship.Provider)
 
 ebgp.addPrivatePeering(100, 3, 151, PeerRelationship.Provider)
 ebgp.addPrivatePeering(100, 4, 151, PeerRelationship.Provider)
@@ -229,6 +243,7 @@ ebgp.addPrivatePeering(102, 2, 152, PeerRelationship.Provider)
 ebgp.addPrivatePeering(102, 2, 153, PeerRelationship.Provider)
 
 ebgp.addPrivatePeering(104, 4, 154, PeerRelationship.Provider)
+ebgp.addPrivatePeering(104, 12, 154, PeerRelationship.Provider)
 
 ebgp.addPrivatePeering(105, 3, 155, PeerRelationship.Provider)
 
