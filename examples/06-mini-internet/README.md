@@ -37,3 +37,47 @@ The heads and tails of edges are labeled with one of the following labels:
 - `P` means the session is a regular peering session.
 - `R` means the session is an MLPA (Multi-Lateral Peering Agreement) peering, or route-server peering sessions. It is functionally the same as the `P` sessions.
 - `X` means the session has an unspecified role; this will be explained later.
+
+Route export filters for different sessions are different:
+
+- For provider-customer transit sessions, the `C` end will only export its own prefixes and its' customers' prefixes; the `U` end will export everything (routes from other customers, peers, upstreams).
+- For peer sessions (`P`), both sides export only their own prefixes and their' customers' prefixes.
+- For unspecified sessions (`X`), both sides export all routes (routes from other customers, peers, upstreams) to each other.
+
+## Import and create required componets
+
+## Create helpers
+
+### Real-world AS creator
+
+### Service AS creator
+
+### DNS AS creator
+
+### User AS creator
+
+### Transit AS creator
+
+## Create internet exchanges
+
+## Create transit providers
+
+## Create real-world ASes
+
+## Create service ASes
+
+## Configure DNSSEC
+
+## Becoming Google: Hosting the 8.8.8.8 DNS
+
+## Configure RS peerings
+
+## Configure transit providers
+
+## Configure nameserver for host nodes
+
+## Rendrer the simulation 
+
+## Compile the simulation
+
+## Remarks
