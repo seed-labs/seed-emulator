@@ -20,9 +20,3 @@ This is one of the more sophisticated examples; here, we combine what we have us
 - six internet exchanges (100-105), and
 - DNSSEC for `as150.net`, `as151.net` and `as152.net`.
 
-```
-IX100   IX102   IX103   IX104   IX105
-
-
-
-```
