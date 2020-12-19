@@ -20,3 +20,20 @@ This is one of the more sophisticated examples; here, we combine what we have us
 - six internet exchanges (100-105), and
 - DNSSEC for `as150.net`, `as151.net` and `as152.net`.
 
+The topology is rather complex; here's the Graphviz output of the `Bgp` layer:
+
+![Topology](topology.svg)
+
+Each edge indicates a BGP session. 
+
+- Regular lines indicate regular BGP sessions.
+- Dashed lines indicate MLPA (Multi-Lateral Peering Agreement) peering, or route-server peering sessions.
+- Dotted lines indicate internal peering sessions (IBGP).
+
+The heads and tails of edges are labeled with one of the following labels:
+
+- `C` means this end is the customer end of a provider-customer transit session.
+- `U` means this end is the upstream (i.e., the provider) end of a provider-customer transit session.
+- `P` means the session is a regular peering session.
+- `R` means the session is an MLPA (Multi-Lateral Peering Agreement) peering, or route-server peering sessions. It is functionally the same as the `P` sessions.
+- `X` means the session has an unspecified role; this will be explained later.
