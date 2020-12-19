@@ -272,21 +272,23 @@ class Ebgp(Layer, Graphable):
             
             for (i, a) in self.__rs_peers:
                 if i == ix: mesh_ases.add(a)
+            
+            self._log('IX{} RS-mesh: {}'.format(ix, mesh_ases))
 
             while len(mesh_ases) > 0:
                 a = mesh_ases.pop()
-                if not full_graph.hasVertex('AS{}'.format(a), 'IX{}'.format(i)):
-                    full_graph.addVertex('AS{}'.format(a), 'IX{}'.format(i))
-                if not ix_graph.hasVertex('AS{}'.format(a), 'IX{}'.format(i)):
-                    ix_graph.addVertex('AS{}'.format(a), 'IX{}'.format(i))
+                if not full_graph.hasVertex('AS{}'.format(a), 'IX{}'.format(ix)):
+                    full_graph.addVertex('AS{}'.format(a), 'IX{}'.format(ix))
+                if not ix_graph.hasVertex('AS{}'.format(a), 'IX{}'.format(ix)):
+                    ix_graph.addVertex('AS{}'.format(a), 'IX{}'.format(ix))
                 for b in mesh_ases:
-                    if not full_graph.hasVertex('AS{}'.format(b), 'IX{}'.format(i)):
-                        full_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
-                    if not ix_graph.hasVertex('AS{}'.format(b), 'IX{}'.format(i)):
-                        ix_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
+                    if not full_graph.hasVertex('AS{}'.format(b), 'IX{}'.format(ix)):
+                        full_graph.addVertex('AS{}'.format(b), 'IX{}'.format(ix))
+                    if not ix_graph.hasVertex('AS{}'.format(b), 'IX{}'.format(ix)):
+                        ix_graph.addVertex('AS{}'.format(b), 'IX{}'.format(ix))
 
-                    full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), style = 'dashed', label = 'Peer')
-                    ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), style = 'dashed', label = 'Peer')
+                    full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(ix), 'IX{}'.format(ix), style = 'dashed', alabel = 'R', blabel= 'R')
+                    ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(ix), 'IX{}'.format(ix), style = 'dashed', alabel = 'R', blabel= 'R')
                     
         for (i, a, b), rel in self.__peerings.items():
             self._log('Creating private peering sessions graph for IX{} AS{} <-> AS{}...'.format(i, a, b))
@@ -304,19 +306,23 @@ class Ebgp(Layer, Graphable):
                 ix_graph.addVertex('AS{}'.format(b), 'IX{}'.format(i))
 
             if rel == PeerRelationship.Peer:
-                full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), label = 'Peer')
-                ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), label = 'Peer')
+                full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'P', blabel= 'P')
+                ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'P', blabel= 'P')
 
-            if rel == PeerRelationship.Provider:
-                full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'Provider', blabel = 'Customer')
-                ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'Provider', blabel = 'Customer')
+            if rel == PeerRelationship.Provider:    
+                full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'U', blabel = 'C')
+                ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'U', blabel = 'C')
+
+            if rel == PeerRelationship.Unfiltered:
+                full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'X', blabel= 'X')
+                ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'X', blabel= 'X')
 
         es = list(full_graph.vertices.values())
         while len(es) > 0:
             a = es.pop()
             for b in es:
                 if a.name == b.name:
-                    full_graph.addEdge(a.name, b.name, a.group, b.group, style = 'dotted')
+                    full_graph.addEdge(a.name, b.name, a.group, b.group, style = 'dotted', alabel = 'I', blabel= 'I')
 
 
     def print(self, indent: int) -> str:
