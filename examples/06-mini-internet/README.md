@@ -37,12 +37,14 @@ The heads and tails of edges are labeled with one of the following labels:
 - `P` means the session is a regular peering session.
 - `R` means the session is an MLPA (Multi-Lateral Peering Agreement) peering, or route-server peering sessions. It is functionally the same as the `P` sessions.
 - `X` means the session has an unspecified role; this will be explained later.
+- `I` means the session is internal (IBGP). Note that a session between IBGP peers does not necessarily mean there's a physical connection between the internal routers. The nature of IBGP requires full mesh connections to exchange routing information. (route reflector can be used to get rid of the full mesh, but the `Ibgp` layer uses full-mesh).
 
 Route export filters for different sessions are different:
 
 - For provider-customer transit sessions, the `C` end will only export its own prefixes and its' customers' prefixes; the `U` end will export everything (routes from other customers, peers, upstreams).
 - For peer sessions (`P`), both sides export only their own prefixes and their' customers' prefixes.
 - For unspecified sessions (`X`), both sides export all routes (routes from other customers, peers, upstreams) to each other.
+- For internal sessions (`I`), both sides export all routes (routes from other customers, peers, upstreams) to each other.
 
 ## Create helpers
 
@@ -60,7 +62,7 @@ def make_real_as(asn: int, exchange: int, exchange_ip: str):
 
 The real-world AS helper creates a real-world AS in the simulator. It works by utilizing the `Reality` layer. 
 
-We first create an AS with the `createAutonomousSystem` call of the base layer. We then add a real-world router to the AS with the `createRealWorldRouter` call of the real-world layer. Last, we connect the real-world router to an internet exchange with the `joinNetworkByName` call of the node class. Since real-world ASN can be outside the 2~254 range, we override the auto address assignment by manually assigning an address when joining the network.
+It first creates an AS with the `createAutonomousSystem` call of the base layer. It then adds a real-world router to the AS with the `createRealWorldRouter` call of the real-world layer. Last, it connects the real-world router to an internet exchange with the `joinNetworkByName` call of the node class. Since real-world ASN can be outside the 2~254 range, we override the auto address assignment by manually assigning an address when joining the network.
 
 ### Service AS creator
 
@@ -86,6 +88,15 @@ def make_service_as(asn: int, services: List[Service], exchange: int):
         service.installOn(server)
 ```
 
+The service AS helper creates AS that hosts the given list of services. It:
+
+- create an AS with the `createAutonomousSystem` call of the base layer,
+- create a router with the `createRouter` call of the AS object,
+- create a network with the `createNetwork` call of the AS object,
+mark the created network as a direct network with the `addDirect` call of the routing layer, so the router will load the network into FIB (forwarding information base) and send it to BGP peers,
+- connect the router to the created network and internet exchange, with `joinNetwork` and `joinNetworkByName` call of the node class, and
+- loop through the given services list, create one host node with `createHost` call of the AS object, connect the host node to the network created earlier, and host the given service on the node.
+
 ### DNS AS creator
 
 ```python
@@ -110,6 +121,15 @@ def make_dns_as(asn: int, zones: List[str], exchange: int):
         dns.hostZoneOn(zone, server)
 ```
 
+The DNS AS helper creates AS that hosts the given list of DNS zones. It:
+
+- create an AS with the `createAutonomousSystem` call of the base layer,
+- create a router with the `createRouter` call of the AS object,
+- create a network with the `createNetwork` call of the AS object,
+mark the created network as a direct network with the `addDirect` call of the routing layer, so the router will load the network into FIB (forwarding information base) and send it to BGP peers,
+- connect the router to the created network and internet exchange, with `joinNetwork` and `joinNetworkByName` call of the node class, and
+- loop through the given zones list, create one host node with `createHost` call of the AS object, connect the host node to the network created earlier, and host the given zone on the node.
+
 ### User AS creator
 
 ```python
@@ -127,6 +147,15 @@ def make_user_as(asn: int, exchange: str):
     router.joinNetwork(net)
     router.joinNetworkByName('ix{}'.format(exchange))
 ```
+
+The user AS helper creates a real-world accessible AS in the simulator. It works by utilizing the `Reality` layer. It:
+
+- create an AS with the `createAutonomousSystem` call of the base layer,
+- create a router with the `createRouter` call of the AS object,
+- create a network with the `createNetwork` call of the AS object,
+mark the created network as a direct network with the `addDirect` call of the routing layer, so the router will load the network into FIB (forwarding information base) and send it to BGP peers,
+- connect the router to the created network and internet exchange, with `joinNetwork` and `joinNetworkByName` call of the node class, and
+- enale real-world access using the `enableRealWorldAccess` call of the real-world layer; it creates a real-world accessible OpenVPN and allow users to connect to the simulation directly.
 
 ### Transit AS creator
 
@@ -149,6 +178,14 @@ def make_transit_as(asn: int, exchanges: List[int], intra_ix_links: List[Tuple[i
         routers[b].joinNetwork(net)
 ```
 
+The transit AS creator builds transit providers. It:
+
+- create an AS with the `createAutonomousSystem` call of the base layer,
+- for each PoP (point of presence), create a router in the internet exchange with the `createRouter` call of the AS object, join the exchange with the `joinNetworkByName` of the node object, and save the exchange ID and router object pair in the dictionary,
+- for each intra-exchange links, create a network for the link, mark it as direct, and have the two linked routers join the network.
+
+This is all we needed to create transit providers since we will add OSPF and IBGP layer to the simulation, which will handle the internal routing automatically. 
+
 ## Create internet exchanges
 
 ```python
@@ -159,6 +196,8 @@ base.createInternetExchange(103)
 base.createInternetExchange(104)
 base.createInternetExchange(105)
 ```
+
+Not much to say about this; just call `createInternetExchange` to create new internet exchanges.
 
 ## Create transit providers
 
