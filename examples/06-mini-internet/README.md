@@ -203,9 +203,11 @@ Not much to say about this; just call `createInternetExchange` to create new int
 
 ## Create transit providers
 
-Then, let's create the tier-1 transit providers. The definition of transit provider tier is somewhat ad-hoc; here, we assume tier-1 transit providers to be providers that don't need to purchase any transit from other providers to reach the entire internet. In other words, tier-1 transit providers can reach the entire internet with only peering. For tier-2 providers, we define it to be transit providers that need to purchase transit from other providers to be able to reach the entire internet.
+Then, we can start creating transit providers. 
 
 ### Tier 1 transit providers
+
+Let's first create the tier-1 transit providers. The definition of transit provider tier is somewhat ad-hoc; here, we assume tier-1 transit providers to be providers that don't need to purchase any transit from other providers to reach the entire internet. In other words, tier-1 transit providers can reach the entire internet with only peering. 
 
 ```python
 make_transit_as(2, [100, 101, 102], [
@@ -225,7 +227,11 @@ make_transit_as(4, [100, 104], [
 ])
 ```
 
+We create the transit providers with the helpers we defined. For example, here, AS2 has three PoP, at IX100, IX101, and IX102. It has three links, connecting the PoPs at IX100 and IX101, IX101 and IX101, and IX102 and IX100. Note that we don't actually need to connect all PoPs together. As long as there exists a path from any given PoP to other PoPs, the internal routing will work.
+
 ### Tier 2 transit providers
+
+For tier-2 providers, we define it to be transit providers that need to purchase transit from other providers to be able to reach the entire internet. 
 
 ```python
 make_transit_as(11, [102, 105], [
@@ -236,6 +242,10 @@ make_transit_as(12, [101, 104], [
     (101, 104)
 ])
 ```
+
+At this point, we can't tell which AS is in which tier yet. The tier of a provider is merely decided by how many customers they have and if other tier-1 ISP wants to peer with them. Later we will see that AS2, AS3, and AS4 can each reach part of the internet, but not each other's customers, so a regular peering between the three AS will allow all of them to reach the entire internet. For AS11 and AS12, they have too few customers and don't have access to peering to all three tier-one ASes, so they can only purchase a full-table transit from tier-1 providers. 
+
+If AS11 and AS12 joined enough exchanges that they can peer with all tier-1 providers (and given that the tier-1s would like to peer with them), they can become tier-1 too (this is basically how it works in the real world, too).
 
 ## Create real-world ASes
 
