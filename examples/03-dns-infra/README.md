@@ -33,7 +33,7 @@ dns = DomainNameService(autoNs = True)
 dnssec = Dnssec()
 ldns = DomainNameCachingService(autoRoot = True, setResolvconf = True)
 
-rendrer = Renderer()
+renderer = Renderer()
 docker_compiler = Docker()
 ```
 
@@ -285,15 +285,15 @@ The eBGP layer setup peering by looking for the router node of the given autonom
 We are now done configuring the layers. The next step is to add all layers to the renderer and render the simulation:
 
 ```python
-rendrer.addLayer(base)
-rendrer.addLayer(routing)
-rendrer.addLayer(ebgp)
-rendrer.addLayer(dns)
-rendrer.addLayer(ldns)
-rendrer.addLayer(dnssec)
-rendrer.addLayer(web)
+renderer.addLayer(base)
+renderer.addLayer(routing)
+renderer.addLayer(ebgp)
+renderer.addLayer(dns)
+renderer.addLayer(ldns)
+renderer.addLayer(dnssec)
+renderer.addLayer(web)
 
-rendrer.render()
+renderer.render()
 ```
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.

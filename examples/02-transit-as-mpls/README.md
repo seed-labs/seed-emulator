@@ -42,7 +42,7 @@ ebgp = Ebgp()
 mpls = Mpls()
 web = WebService()
 
-rendrer = Renderer()
+renderer = Renderer()
 docker_compiler = Docker()
 ```
 
@@ -275,16 +275,16 @@ We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two pa
 
 The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
-## Step 7: rendrer the simulation
+## Step 7: render the simulation
 
 ```python
-rendrer.addLayer(base)
-rendrer.addLayer(routing)
-rendrer.addLayer(ebgp)
-rendrer.addLayer(mpls)
-rendrer.addLayer(web)
+renderer.addLayer(base)
+renderer.addLayer(routing)
+renderer.addLayer(ebgp)
+renderer.addLayer(mpls)
+renderer.addLayer(web)
 
-rendrer.render()
+renderer.render()
 ```
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.

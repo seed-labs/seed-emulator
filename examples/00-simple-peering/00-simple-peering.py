@@ -7,7 +7,7 @@ routing = Routing()
 ebgp = Ebgp()
 web = WebService()
 
-rendrer = Renderer()
+renderer = Renderer()
 
 docker_compiler = Docker()
 
@@ -77,12 +77,12 @@ ebgp.addRsPeer(100, 152)
 
 ###############################################################################
 
-rendrer.addLayer(base)
-rendrer.addLayer(routing)
-rendrer.addLayer(ebgp)
-rendrer.addLayer(web)
+renderer.addLayer(base)
+renderer.addLayer(routing)
+renderer.addLayer(ebgp)
+renderer.addLayer(web)
 
-rendrer.render()
+renderer.render()
 
 ###############################################################################
 

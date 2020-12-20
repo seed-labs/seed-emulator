@@ -23,7 +23,7 @@ dnssec = Dnssec()
 cymru = CymruIpOriginService()
 rdns = ReverseDomainNameService()
 
-rendrer = Renderer()
+renderer = Renderer()
 docker_compiler = Docker()
 graphviz = Graphviz()
 
@@ -273,20 +273,20 @@ for ((scope, type, name), object) in reg.getAll().items():
 
 ###############################################################################
 
-rendrer.addLayer(base)
-rendrer.addLayer(routing)
-rendrer.addLayer(ebgp)
-rendrer.addLayer(ibgp)
-rendrer.addLayer(ospf)
-rendrer.addLayer(real)
-rendrer.addLayer(web)
-rendrer.addLayer(dns)
-rendrer.addLayer(ldns)
-rendrer.addLayer(dnssec)
-rendrer.addLayer(cymru)
-rendrer.addLayer(rdns)
+renderer.addLayer(base)
+renderer.addLayer(routing)
+renderer.addLayer(ebgp)
+renderer.addLayer(ibgp)
+renderer.addLayer(ospf)
+renderer.addLayer(real)
+renderer.addLayer(web)
+renderer.addLayer(dns)
+renderer.addLayer(ldns)
+renderer.addLayer(dnssec)
+renderer.addLayer(cymru)
+renderer.addLayer(rdns)
 
-rendrer.render()
+renderer.render()
 
 ###############################################################################
 

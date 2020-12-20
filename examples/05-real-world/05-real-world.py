@@ -12,7 +12,7 @@ real = Reality()
 
 ###############################################################################
 
-rendrer = Renderer()
+renderer = Renderer()
 
 ###############################################################################
 
@@ -101,15 +101,15 @@ ebgp.addPrivatePeering(101, 150, 11872, abRelationship = PeerRelationship.Provid
 
 ###############################################################################
 
-rendrer.addLayer(base)
-rendrer.addLayer(routing)
-rendrer.addLayer(ebgp)
-rendrer.addLayer(ibgp)
-rendrer.addLayer(ospf)
-rendrer.addLayer(web)
-rendrer.addLayer(real)
+renderer.addLayer(base)
+renderer.addLayer(routing)
+renderer.addLayer(ebgp)
+renderer.addLayer(ibgp)
+renderer.addLayer(ospf)
+renderer.addLayer(web)
+renderer.addLayer(real)
 
-rendrer.render()
+renderer.render()
 
 ###############################################################################
 

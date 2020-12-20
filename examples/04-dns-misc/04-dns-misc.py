@@ -12,7 +12,7 @@ ldns = DomainNameCachingService(setResolvconf = True)
 rdns = ReverseDomainNameService()
 ip_origin = CymruIpOriginService()
 
-rendrer = Renderer()
+renderer = Renderer()
 docker_compiler = Docker()
 
 ###############################################################################
@@ -137,17 +137,17 @@ ebgp.addRsPeer(100, 153)
 
 ###############################################################################
 
-rendrer.addLayer(base)
-rendrer.addLayer(routing)
-rendrer.addLayer(ebgp)
-rendrer.addLayer(dns)
-rendrer.addLayer(ldns)
-rendrer.addLayer(dnssec)
-rendrer.addLayer(web)
-rendrer.addLayer(rdns)
-rendrer.addLayer(ip_origin)
+renderer.addLayer(base)
+renderer.addLayer(routing)
+renderer.addLayer(ebgp)
+renderer.addLayer(dns)
+renderer.addLayer(ldns)
+renderer.addLayer(dnssec)
+renderer.addLayer(web)
+renderer.addLayer(rdns)
+renderer.addLayer(ip_origin)
 
-rendrer.render()
+renderer.render()
 
 ###############################################################################
 

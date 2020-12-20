@@ -13,7 +13,7 @@ web = WebService()
 
 ###############################################################################
 
-rendrer = Renderer()
+renderer = Renderer()
 
 ###############################################################################
 
@@ -97,13 +97,13 @@ ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider
 
 ###############################################################################
 
-rendrer.addLayer(base)
-rendrer.addLayer(routing)
-rendrer.addLayer(ebgp)
-rendrer.addLayer(mpls)
-rendrer.addLayer(web)
+renderer.addLayer(base)
+renderer.addLayer(routing)
+renderer.addLayer(ebgp)
+renderer.addLayer(mpls)
+renderer.addLayer(web)
 
-rendrer.render()
+renderer.render()
 
 ###############################################################################
 

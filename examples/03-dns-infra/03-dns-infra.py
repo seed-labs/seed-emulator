@@ -10,7 +10,7 @@ dns = DomainNameService()
 dnssec = Dnssec()
 ldns = DomainNameCachingService(setResolvconf = True)
 
-rendrer = Renderer()
+renderer = Renderer()
 docker_compiler = Docker()
 
 ###############################################################################
@@ -122,15 +122,15 @@ ebgp.addRsPeer(100, 153)
 
 ###############################################################################
 
-rendrer.addLayer(base)
-rendrer.addLayer(routing)
-rendrer.addLayer(ebgp)
-rendrer.addLayer(dns)
-rendrer.addLayer(ldns)
-rendrer.addLayer(dnssec)
-rendrer.addLayer(web)
+renderer.addLayer(base)
+renderer.addLayer(routing)
+renderer.addLayer(ebgp)
+renderer.addLayer(dns)
+renderer.addLayer(ldns)
+renderer.addLayer(dnssec)
+renderer.addLayer(web)
 
-rendrer.render()
+renderer.render()
 
 ###############################################################################
 

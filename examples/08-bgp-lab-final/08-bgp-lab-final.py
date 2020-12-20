@@ -10,7 +10,7 @@ ibgp = Ibgp()
 ospf = Ospf()
 web = WebService()
 
-rendrer = Renderer()
+renderer = Renderer()
 docker_compiler = Docker()
 
 ###############################################################################
@@ -109,14 +109,14 @@ ebgp.addPrivatePeering(102, 3, 161, PeerRelationship.Provider)
 
 ###############################################################################
 
-rendrer.addLayer(base)
-rendrer.addLayer(routing)
-rendrer.addLayer(ebgp)
-rendrer.addLayer(ibgp)
-rendrer.addLayer(ospf)
-rendrer.addLayer(web)
+renderer.addLayer(base)
+renderer.addLayer(routing)
+renderer.addLayer(ebgp)
+renderer.addLayer(ibgp)
+renderer.addLayer(ospf)
+renderer.addLayer(web)
 
-rendrer.render()
+renderer.render()
 
 ###############################################################################
 
