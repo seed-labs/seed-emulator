@@ -243,9 +243,11 @@ make_transit_as(12, [101, 104], [
 ])
 ```
 
+### About provider tiers
+
 At this point, we can't tell which AS is in which tier yet. The tier of a provider is merely decided by how many customers they have and if other tier-1 ISP wants to peer with them. Later we will see that AS2, AS3, and AS4 can each reach part of the internet, but not each other's customers, so a regular peering between the three AS will allow all of them to reach the entire internet. For AS11 and AS12, they have too few customers and don't have access to peering to all three tier-one ASes, so they can only purchase a full-table transit from tier-1 providers. 
 
-If AS11 and AS12 joined enough exchanges that they can peer with all tier-1 providers (and given that the tier-1s would like to peer with them), they can become tier-1 too (this is basically how it works in the real world, too).
+If AS11 and AS12 joined enough exchanges that they can peer with all tier-1 providers (and given that the tier-1s would like to peer with them), they can become tier-1 too. This is how it works in the real world, too. In the real world, however, even if you have joined enough exchanges and you can peer with all tier-1 ISPs, most of the time, the tier-1s will only send you routes local to that area, so you still don't have the full table, and you are still not tier-1.
 
 ## Create real-world ASes
 
