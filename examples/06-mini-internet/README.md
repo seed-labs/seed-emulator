@@ -255,6 +255,8 @@ If AS11 and AS12 joined enough exchanges that they can peer with all tier-1 prov
 make_real_as(11872, 105, '10.105.0.250') 
 ```
 
+Not much to say here; the above created a real-world AS, AS11872, put it in IX105 with the address `10.105.0.250`. It will announce the blocks announced by AS11872 in the real-world and route them to the real-world.
+
 ## Create service ASes
 
 ```python
@@ -266,18 +268,30 @@ make_service_as(154, [rdns], 104)
 make_service_as(155, [cymru], 105)
 ```
 
+Now, with the service helper, create some AS to host some services. The important ones here are AS154 and AS155, which hosts the reverse DNS (`in-addr.arpa`) and the Cymru IP origin service. They will make the traceroute looks prettier in the simulation. 
+
 ## Create DNS infrastructure
 
+Now, let's proceed to build the DNS infrastructure. DNS infrastructure is required for both the reverse DNS and Cymru IP origin service, as well as other zones we are going to host in the simulation.
+
 ### Root and TLD NS
+
+The first step will be to create the root DNS and the TLD DNS. This can be done with the helper we created eariler:
 
 ```python
 make_dns_as(160, ['.'], 103)
 make_dns_as(161, ['net.', 'com.', 'arpa.'], 103)
 ```
 
+The above created two ASes, AS160 and AS161. Both are in IX103. AS160 will be hosting the root zone, and AS161 will be hosting the `.net`, `.com` and `.arpa` TLD zones.
+
 ### Other NS
 
+Now, host zome other zones.
+
 #### Adding records
+
+Before hosting zones, we can first create the zones and add some records to them.
 
 ```python
 dns.getZone('as150.net.').addRecord('@ A 10.150.0.71')
@@ -285,20 +299,32 @@ dns.getZone('as151.net.').addRecord('@ A 10.151.0.71')
 dns.getZone('as152.net.').addRecord('@ A 10.152.0.71')
 ```
 
+Note that the `getZone` call automatically creates the zones if they don't exist. The above creates three new zones and points them to their corresponding web server nodes.
+
 #### Hosting zones
+
+After creating the zones, we still need to host it somewhere. This can be done with the same helper we used eariler:
 
 ```python
 make_dns_as(162, ['as150.net.', 'as151.net.', 'as152.net.'], 103)
 ```
 
+The call above hosts all three zones on AS162.
+
 ## Create user AS
+
+Now, let's create some user AS so users can join the simulator with their real computer. This is not strictly necessary; we can always just attach to the containers, and they will be already in the simulated internet.
 
 ```python
 make_user_as(170, 102)
 make_user_as(171, 105)
 ```
 
+The helper calls above create two user ASes, AS170 and AS171, in IX102 and IX105.
+
 ## Configure DNSSEC
+
+Now, optionally, we can enable DNSSEC for the three zones. Enabling DNSSEC is simply enable DNSSEC on the entire chain:
 
 ```python
 dnssec.enableOn('.')
@@ -310,19 +336,47 @@ dnssec.enableOn('as152.net.')
 
 ## Becoming Google: Hosting the 8.8.8.8 DNS
 
+Now, let's host a public recursive DNS for the simulator, so the host nodes and the users can resolve zones in our self-hosted DNS infrastructure. Let's host Google's public DNS, 8.8.8.8.
+
+First, create Google's AS:
+
 ```python
 google = base.createAutonomousSystem(15169)
+```
 
+Then, we need to create a network with the `8.8.8.0/24` prefix:
+
+```python
 google_dns_net = google.createNetwork('google_dns_net', '8.8.8.0/24')
+```
 
+Then, create a host node for the recursive DNS service:
+
+```python
 google_dns = google.createHost('google_dns')
+```
 
+Then, have it join the network we created earlier, manually set its address to `8.8.8.8`:
+
+```python
 google_dns.joinNetwork(google_dns_net, '8.8.8.8')
+```
 
+Now, install the service:
+
+```python
 ldns.installOn(google_dns)
+```
 
+Mark the network as direct, so it will get into FIB and be sent to BGP peers:
+
+```python
 routing.addDirect(google_dns_net)
+```
 
+Last, create a router, have it join the host network and the internet exchange:
+
+```
 google_router = google.createRouter('router0')
 
 google_router.joinNetwork(google_dns_net)
@@ -331,7 +385,11 @@ google_router.joinNetworkByName('ix100', '10.100.0.250')
 
 ## Configure peerings
 
+At this point, we have done creating all ASes. We can now start configuring the peerings. This is also where the tiers of transit providers get decided.
+
 ### RS peerings
+
+First, the tier-1s peer with each other over the route servers:
 
 ```python
 ebgp.addRsPeer(100, 2)
@@ -347,6 +405,12 @@ ebgp.addRsPeer(104, 4)
 ```
 
 ### Private peering and transits
+
+Next, we configure the private BGP sessions. For each session, we need to set its peering relationship. The peering relationship can be one of the followings:
+
+- `PeerRelationship.Provider`: The first ASN is considered as the upstream provider of the second ASN. The first ASN will export all routes to the second ASN, and the second ASN will only export its customers' and its own prefixes to the first ASN.
+- `PeerRelationship.Peer`: The two ASNs are considered as peers. Both sides will only export their customers and their own prefixes.
+- `PeerRelationship.Unfiltered`: Make both sides export all routes to each other.
 
 ```python
 ebgp.addPrivatePeering(102, 2, 11, PeerRelationship.Provider)
@@ -387,7 +451,11 @@ ebgp.addPrivatePeering(100, 3, 15169, PeerRelationship.Provider)
 ebgp.addPrivatePeering(100, 4, 15169, PeerRelationship.Provider)
 ```
 
+Note that the session with the real-world AS, AS11872, is set to `PeerRelationship.Unfiltered`. This is because the prefixes imported from the real world is only a route; they are not `Network` objects in the simulation. The way the BGP layer generates route filter is by collecting the `Network` objects in each AS, so it won't see the real-world prefixes, and thus we need to make the session unfiltered.
+
 ## Configure nameserver for host nodes
+
+We want all host nodes in the simulation to use the `8.8.8.8` DNS; this can be done by iterating through all nodes in the simulation and add a start command, `echo "nameserver 8.8.8.8" > /etc/resolv.conf`, to all host nodes. We don't use `addBuildCommand` / `appendFile` / `setFile` here, as the `/etc/resolv.conf` is generated by the container itself when start. All three command above runs at build time, so the changes they made will be overridden.
 
 ```python
 reg = Registry()
@@ -396,6 +464,8 @@ for ((scope, type, name), object) in reg.getAll().items():
     host: Node = object
     host.addStartCommand('echo "nameserver 8.8.8.8" > /etc/resolv.conf')
 ```
+
+The `Registry` is a singleton class, and it stores all the important objects in the simulation; this includes the host nodes that we want to modify the name server. The `getAll` call returns a dictionary, the keys are a tuple of `<scope, type, name>`, and the values are objects. `scope` is usually the ASN, and `type` is the type of objects, and `name` is its name. For details, refer to the API documentation.
 
 ## Render the simulation 
 
@@ -416,11 +486,15 @@ renderer.addLayer(rdns)
 renderer.render()
 ```
 
+The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
+
 ## Compile the simulation
+
+After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the simulation to other formats. 
+
+In this example, we will use docker on a single host to run the simulation, so we use the `Docker` compiler. Since the topology is rather complex, it will be helpful to have some graphical representations. Thus, we added the Graphviz compiler to dump graphs to the `_graphs` subfolder.
 
 ```python
 docker_compiler.compile('./mini-internet')
 graphviz.compile('./mini-internet/_graphs')
 ```
-
-## Remarks
