@@ -14,9 +14,13 @@
 - [x] BGP: BGP route filters
 - [ ] Local DNS: loads root DNSSEC key automaically
 - [ ] RPKI
-    - [ ] build RPKI infra. with openssl 
+    - [ ] build RPKI infra. with openssl
+        - [ ] rfc8182
+    - [ ] rfc8183
 - [ ] firewall
 - [ ] catch-all interface
 - [ ] simulation import/export
 - [ ] simulation namespace
-- [ ] openvpn generate certificates on-the-fly
+- [ ] openvpn: generate certificates on-the-fly
+- [ ] re-write aac
+- [ ] don't fix the 10.x.0.0/24 assigment (merge with aac?)
