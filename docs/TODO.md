@@ -14,5 +14,9 @@
 - [x] BGP: BGP route filters
 - [ ] Local DNS: loads root DNSSEC key automaically
 - [ ] RPKI
+    - [ ] build RPKI infra. with openssl 
 - [ ] firewall
 - [ ] catch-all interface
+- [ ] simulation import/export
+- [ ] simulation namespace
+- [ ] openvpn generate certificates on-the-fly
