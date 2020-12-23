@@ -14,7 +14,8 @@
 - [x] BGP: BGP route filters
 - [ ] Local DNS: loads root DNSSEC key automaically
 - [ ] RPKI
-    - [ ] build RPKI infra. with openssl
+    - [ ] build RPKI infra. with openssl `
+        - [x] rfc8181
         - [ ] rfc8182
     - [ ] rfc8183
 - [ ] firewall
