@@ -20,16 +20,17 @@ class AutonomousSystem(Printable, Graphable):
     __subnet_generator: Generator[IPv4Network, None, None]
     __reg: ScopedRegistry
 
-    def __init__(self, asn: int):
+    def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
         @brief AutonomousSystem constructor.
 
         @param asn ASN for this system.
+        @param subnetTemplate template for assigning subnet.
         """
         Graphable.__init__(self)
         self.__asn = asn
         self.__reg = ScopedRegistry(str(asn))
-        self.__subnet_generator = None if asn > 255 else IPv4Network("10.{}.0.0/16".format(asn)).subnets(new_prefix = 24)
+        self.__subnet_generator = None if asn > 255 else IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24)
 
     def getAsn(self) -> int:
         """!
