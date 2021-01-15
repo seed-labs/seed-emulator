@@ -42,7 +42,14 @@ DockerCompilerFileTemplates['compose_service'] = """\
         privileged: {privileged}
         networks:
 {networks}{ports}
+        labels:
+{labelList}
 """
+
+DockerCompilerFileTemplates['compose_label_meta'] = """\
+            org.seedsecuritylabs.seedsim.meta.{key}: "{value}"
+"""
+
 DockerCompilerFileTemplates['compose_ports'] = """\
         ports:
 {portList}
@@ -92,6 +99,57 @@ class Docker(Compiler):
 
     def getName(self) -> str:
         return "Docker"
+
+    def __getNodeMeta(self, node: Node):
+        (scope, type, name) = node.getRegistryInfo()
+
+        labels = ''
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'asn',
+            value = node.getAsn()
+        )
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'nodename',
+            value = name
+        )
+
+        if type == 'hnode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'Host'
+            )
+
+        if type == 'rnode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'Router'
+            )
+
+        if type == 'rs':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'Route Server'
+            )
+
+        n = 0
+        for iface in node.getInterfaces():
+            net = iface.getNet()
+
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'net.{}.name'.format(n),
+                value = net.getName()
+            )
+
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'net.{}.address'.format(n),
+                value = '{}/{}'.format(iface.getAddress(), net.getPrefix().prefixlen)
+            )
+
+            n += 1
+
+        return labels
 
     def __nodeRoleToString(self, role: NodeRole):
         if role == NodeRole.Host: return 'h'
@@ -169,7 +227,8 @@ class Docker(Compiler):
             ),
             networks = node_nets,
             privileged = 'true' if node.isPrivileged() else 'false',
-            ports = ports
+            ports = ports,
+            labelList = self.__getNodeMeta(node)
         )
 
         dockerfile = DockerCompilerFileTemplates['dockerfile']
