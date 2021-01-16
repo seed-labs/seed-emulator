@@ -127,6 +127,12 @@ class Docker(Compiler):
                 value = 'Router'
             )
 
+        if type == 'snode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'Simulator Service Worker'
+            )
+
         if type == 'rs':
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key = 'role',
