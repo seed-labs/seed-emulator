@@ -80,11 +80,107 @@ How to merge:
 
 ### Merging `OspfLayer`
 
+What needs to be merged: 
+
+1. List of marked stub networks
+2. List of masked networks
+3. List of masked ASNs
+
+How to merge:
+
+1. Just join the lists.
+2. Just join the lists.
+3. Join the lists, and remove duplicates.
+
 ### Merging `MplsLayer`
+
+What needs to be merged: 
+
+1. List of ASNs with MPLS enabled
+2. List of manually marked edge routers
+
+How to merge:
+
+1. Just join the lists.
+1. Just join the lists.
 
 ### Merging `RealityLayer`
 
-### Merging Services
+What needs to be merged: 
+
+1. List of realworld-access enabled networks.
+2. List of realworld routers.
+
+How to merge:
+
+1. Just join the lists.
+2. Just join the lists. 
+
+### Merging `DomainNameServiceLayer`
+
+What needs to be merged:
+
+- Zones
+- List of servers, and what zone they are hosting.
+
+#### Merging zones
+
+If two zones has the same name, merge them. Problems:
+
+1. What if they have different SOA record?
+2. What if They have different NS record(s)?
+3. What if there are other conflicting records?
+4. What to submit to the parent zone as gule records?
+
+### Merging `DomainNameCachingServiceLayer`
+
+What needs to be merged:
+
+1. List of nodes to install the service on.
+
+How to merge:
+
+1. Just join the lists.
+
+### Merging `ReverseDomainNameServiceLayer`
+
+What needs to be merged:
+
+1. List of zone names with DNSSEC enabled.
+
+How to merge:
+
+1. Just join the lists.
+
+### Merging `DnssecLayer`
+
+What needs to be merged:
+
+1. List of zone names with DNSSEC enabled.
+
+How to merge:
+
+1. Just join the lists.
+
+### Merging `CymruIpOriginLayer`
+
+What needs to be merged:
+
+1. List of nodes to install the service on.
+
+How to merge:
+
+1. Just join the lists.
+
+### Merging `WebServiceLayer`
+
+What needs to be merged:
+
+1. List of nodes to install the service on.
+
+How to merge:
+
+1. Just join the lists.
 
 ## Core Components
 
