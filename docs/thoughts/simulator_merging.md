@@ -14,6 +14,23 @@ simulatorA.merge(simulatorB)
 `- ...
 ```
 
+Cases:
+- No overlapping IX or AS,
+- Overlapping IX, no overlapping AS,
+- No overlapping AS, but overlapping AS,
+- Overlapping IX and AS.
+
+For overlapping AS:
+- Overlapping internal networks (try merge network).
+- For overlapping network:
+- Node IP conflict (try merge node?)
+- Router IP conflict (try merge node?)
+- RS IP conflict (just pick one, RS are the same)
+
+For merging nodes:
+- Conflicting router configurations,
+- Conflicting hosts node services.
+
 ## Layers
 
 Merge criteria: invoke `merge` if two layers have the same type.
@@ -242,6 +259,10 @@ What needs to be merged:
 - start commands
 - ports
 - privileged flag
+
+Special cases:
+
+- RS node: just pick one and keep it. RS nodes are always the same currently.
 
 Problems: 
 
