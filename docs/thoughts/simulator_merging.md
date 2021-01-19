@@ -242,3 +242,7 @@ What needs to be merged:
 - start commands
 - ports
 - privileged flag
+
+Problems: 
+
+- Currently, for services (e.g., DNS layer, web service layer) installed on the nodes, only the layer themselves keep track of what nodes to install the services on. What to do when we merged the nodes?
