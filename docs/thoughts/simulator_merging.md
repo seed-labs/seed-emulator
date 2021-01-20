@@ -15,10 +15,10 @@ simulatorA.merge(simulatorB)
 ```
 
 Cases:
-- No overlapping IX or AS,
-- Overlapping IX, no overlapping AS,
-- No overlapping AS, but overlapping AS,
-- Overlapping IX and AS.
+- (00): No overlapping IX or AS,
+- (10): Overlapping IX, no overlapping AS,
+- (01): No overlapping AS, but overlapping AS,
+- (11): Overlapping IX and AS.
 
 For overlapping AS:
 - Overlapping internal networks (try merge network).
@@ -33,7 +33,7 @@ For merging nodes:
 
 ## Layers
 
-Merge criteria: invoke `merge` if two layers have the same type.
+Merge criteria: invoke `merge` if two layers have the same type. (possible in all four cases)
 
 ### Merging `BaseLayer`
 
@@ -41,22 +41,22 @@ Merge criteria: see below.
 
 #### Components: Internet Exchange
 
-Merge criteria: invoke `merge` if the exchanges has the same ID.
+Merge criteria: invoke `merge` if the exchanges has the same ID. (only possible in case 10, 11)
 
 Currently, internet exchanges are just networks. Refer to network merging in the "Core Components" section for details.
 
 #### Components: Autonomous System
 
-Merge criteria: invoke `merge` if the AS has the same ASN.
+Merge criteria: invoke `merge` if the AS has the same ASN. (only possible in case 01, 11)
 
 What needs to be merged:
 
-1. Subnet Generator
-2. Networks
-3. Hosts
-4. Routers
+1. Subnet Generator (case 01, 11)
+2. Networks (case 01, 11)
+3. Hosts (case 01, 11)
+4. Routers (case 01, 11)
 
-How to merge:
+How to merge (both cases 01, 11):
 
 1. Rewrite to use list to keep track of assigned subnets, then merge lists.
 2. Merge if subnet are the same, see network merging in the "Core Components" section for details.
@@ -65,45 +65,45 @@ How to merge:
 
 ### Merging `RoutingLayer`
 
-What needs to be merged: 
+What needs to be merged (all four cases): 
 
 1. List of networks marked as 'direct'
 
-How to merge:
+How to merge (all four cases):
 
 1. It is just a set of networks; simply join the sets.
 
 ### Merging `EbgpLayer`
 
-What needs to be merged: 
+What needs to be merged (all four cases): 
 
 1. RS peering list
 2. Private peering list
 
-How to merge:
+How to merge (all four cases):
 
 1. It's a list; just join them and remove duplicates.
 2. It's a dictionary. Join them, and check for duplicates.
 
 ### Merging `IbgpLayer`
 
-What needs to be merged: 
+What needs to be merged (all four cases): 
 
 1. Masked ASN list
 
-How to merge:
+How to merge (all four cases):
 
 1. It's a list; just join them and remove duplicates.
 
 ### Merging `OspfLayer`
 
-What needs to be merged: 
+What needs to be merged (all four cases): 
 
 1. List of marked stub networks
 2. List of masked networks
 3. List of masked ASNs
 
-How to merge:
+How to merge (all four cases):
 
 1. Just join the lists.
 2. Just join the lists.
@@ -111,36 +111,36 @@ How to merge:
 
 ### Merging `MplsLayer`
 
-What needs to be merged: 
+What needs to be merged (all four cases): 
 
 1. List of ASNs with MPLS enabled
 2. List of manually marked edge routers
 
-How to merge:
+How to merge (all four cases):
 
 1. Just join the lists.
 1. Just join the lists.
 
 ### Merging `RealityLayer`
 
-What needs to be merged: 
+What needs to be merged (all four cases): 
 
 1. List of realworld-access enabled networks.
 2. List of realworld routers.
 
-How to merge:
+How to merge (all four cases):
 
 1. Just join the lists.
 2. Just join the lists. 
 
 ### Merging `DomainNameServiceLayer`
 
-What needs to be merged:
+What needs to be merged (all four cases):
 
 - Zones
 - List of servers, and what zone they are hosting.
 
-#### Merging zones
+#### Merging zones (all four cases)
 
 If two zones has the same name, merge them. Problems:
 
@@ -151,51 +151,51 @@ If two zones has the same name, merge them. Problems:
 
 ### Merging `DomainNameCachingServiceLayer`
 
-What needs to be merged:
+What needs to be merged (all four cases):
 
 1. List of nodes to install the service on.
 
-How to merge:
+How to merge (all four cases):
 
 1. Just join the lists.
 
 ### Merging `ReverseDomainNameServiceLayer`
 
-What needs to be merged:
+What needs to be merged (all four cases):
 
 1. List of zone names with DNSSEC enabled.
 
-How to merge:
+How to merge (all four cases):
 
 1. Just join the lists.
 
 ### Merging `DnssecLayer`
 
-What needs to be merged:
+What needs to be merged (all four cases):
 
 1. List of zone names with DNSSEC enabled.
 
-How to merge:
+How to merge (all four cases):
 
 1. Just join the lists.
 
 ### Merging `CymruIpOriginLayer`
 
-What needs to be merged:
+What needs to be merged (all four cases):
 
 1. List of nodes to install the service on.
 
-How to merge:
+How to merge (all four cases):
 
 1. Just join the lists.
 
 ### Merging `WebServiceLayer`
 
-What needs to be merged:
+What needs to be merged (all four cases):
 
 1. List of nodes to install the service on.
 
-How to merge:
+How to merge (all four cases):
 
 1. Just join the lists.
 
@@ -203,7 +203,7 @@ How to merge:
 
 ### Merging Network
 
-Merge criteria: invoke `merge` if the network has the same type, prefix, and belong to the same ASN.
+Merge criteria: invoke `merge` if the network has the same type, prefix, and belong to the same ASN.  (all four cases)
 
 What needs to be merged: 
 
