@@ -106,3 +106,101 @@ simulatorA.getLayer('Bgp').addRsPeering(102, 150)
 
 mergedSimulator = simulatorA.merge(simulatorB)
 ```
+
+## Case 4: overlapping AS, but no common network
+
+```py
+# Scenario: two simulators:
+#   - SimulatorA has AS150 and IX100, and many other ASes in IX100.
+#       - in this AS150, one router exists with name r0
+#   - SimulatorB has AS150 and IX101, and many other ASes in IX101.
+#       - in this AS150, one router exists with name r0
+#
+# Goal: merge A and B, let two AS150 be on their own.
+
+# without renaming manually, objects (hosts, networks, routers) with same name
+# will be remaned to "simulator.getName() + '_' + object.getName()"
+simulatorB.getAutonomousSystem(150).getRouter('r0').rename('r1')
+
+mergedSimulator = simulatorA.merge(simulatorB)
+```
+
+## Case 5: overlapping AS, but no common network, connect the AS
+
+```py
+# Scenario: two simulators:
+#   - SimulatorA has AS150 and IX100, and many other ASes in IX100.
+#       - in this AS150, one router exists with name r0
+#   - SimulatorB has AS150 and IX101, and many other ASes in IX101.
+#       - in this AS150, one router exists with name r0
+#
+# Goal: merge A and B, connect two AS150 with a new internal network.
+
+# without renaming manually, objects (hosts, networks, routers) with same name
+# will be remaned to "simulator.getName() + '_' + object.getName()"
+simulatorB.getAutonomousSystem(150).getRouter('r0').rename('r1')
+
+mergedSimulator = simulatorA.merge(simulatorB)
+
+new_150 = mergedSimulator.getAutonomousSystem(150)
+
+net1 = new_150.createNetwork('net1')
+
+new_150.getRouter('r0').joinNetwork(net1)
+new_150.getRouter('r1').joinNetwork(net1)
+```
+
+## Case 6: overlapping AS, has common network, allow both networks to exist.
+
+```py
+# Scenario: two simulators:
+#   - SimulatorA has AS150 and IX100, and many other ASes in IX100.
+#       - in this AS150, one internal network exist with name net0, prefix 
+#         10.150.0.0/24
+#   - SimulatorB has AS150 and IX101, and many other ASes in IX101.
+#       - in this AS150, one internal network exist with name net0, prefix 
+#         10.150.0.0/24
+#
+# Goal: Keep both networks as-it. So the 10.150.0.0/24 network is now an anycast
+# network announced by AS150 at both exchanges. Note that the two AS150s are not
+# connected.
+
+# without renaming manually, objects (hosts, networks, routers) with same name
+# will be remaned to "simulator.getName() + '_' + object.getName()"
+simulatorB.getAutonomousSystem(150).getRouter('r0').rename('r1')
+simulatorB.getAutonomousSystem(150).getNetwork('net0').rename('net1')
+
+mergedSimulator = simulatorA.merge(simulatorB)
+```
+
+## Case 7: overlapping AS, has common network, renumber one of the network, connect the AS
+
+```py
+# Scenario: two simulators:
+#   - SimulatorA has AS150 and IX100, and many other ASes in IX100.
+#       - in this AS150, one internal network exist with name net0, prefix 
+#         10.150.0.0/24
+#   - SimulatorB has AS150 and IX101, and many other ASes in IX101.
+#       - in this AS150, one internal network exist with name net0, prefix 
+#         10.150.0.0/24
+#
+# Goal: Renumber the network in the simulator B to 10.150.254.0/24, connect the
+# simulators with a new network.
+
+# without renaming manually, objects (hosts, networks, routers) with same name
+# will be remaned to "simulator.getName() + '_' + object.getName()"
+simulatorB.getAutonomousSystem(150).getRouter('r0').rename('r1') 
+netB = simulatorB.getAutonomousSystem(150).getNetwork('net0')
+
+netB.rename('net254')
+netB.renumber('10.150.254.0/24')
+
+mergedSimulator = simulatorA.merge(simulatorB)
+
+new_150 = mergedSimulator.getAutonomousSystem(150)
+
+net1 = new_150.createNetwork('net1')
+
+new_150.getRouter('r0').joinNetwork(net1)
+new_150.getRouter('r1').joinNetwork(net1)
+```
