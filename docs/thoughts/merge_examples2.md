@@ -14,7 +14,7 @@ sim2 = Simulator()
 sim2.load("sim2.josn")
 
 
-ix100_1 = sim1.getAsByNumber(100)
+ix100_1 = sim1.getIxByNumber(100)
 if ix100_1 is None: # This IX doesn ot exist
    # It is the developer's job here.
    # - Create ix100, and add it to the simulator.
@@ -23,7 +23,7 @@ if ix100_1 is None: # This IX doesn ot exist
    #   or create a new network and attach the BGP router to it.
    # - If the network is new, attach it to some internal networks.
 
-ix100_2 = sim2.getAsByNumber(100)
+ix100_2 = sim2.getIxByNumber(100)
 if ix100_2 is None:
    # Do the same as in sim1
 
