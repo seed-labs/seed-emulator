@@ -21,15 +21,11 @@ Cases:
 - (11): Overlapping IX and AS.
 
 For overlapping AS:
-- Overlapping internal networks (try merge network).
-- For overlapping network:
-- Node IP conflict (try merge node?)
-- Router IP conflict (try merge node?)
-- RS IP conflict (just pick one, RS are the same)
+- Overlapping internal networks (don't try to merge them, treat them as different networks).
+- Overlapping internet exchange (error out)
 
-For merging nodes:
-- Conflicting router configurations,
-- Conflicting hosts node services.
+For overlapping IX:
+- Keep only one of the RS; RSes are the same, so it does not matter which to keep.
 
 ## Layers
 
@@ -205,6 +201,9 @@ How to merge (all four cases):
 
 Merge criteria: invoke `merge` if the network has the same type, prefix, and belong to the same ASN.  (all four cases)
 
+- If network merge was invoked with a network of different type (IX/internal), prefix, or ASN, error out.
+- If network type is not IX, error out. For local networks, even if they have the same prefix, we cannot reliably merge them, as we might see host/router IP conflicts, and those host/router can be doing anything, so we can't merge them.
+
 What needs to be merged: 
 
 1. Name string
@@ -231,39 +230,5 @@ Let's assume the merge call was `netA.merge(netB)`.
 
 #### Merging connected hosts
 
-Problem: Do we really want to merge two networks? Consider some of the following problems:
-
-- What to do if two nodes have the same IP address?
-    - Option A: merge two nodes; see the node merging section below.
-    - Option B: assign new IP addresses to conflicting nodes.
-
-For option A, check the node merging section below for a detailed discussion.
-
-For option B, what if the user hard-coded IP address in the simulation? For example, what if the user already added DNS records to point to one of the nodes?
-
-Special case: Internet exchange network. If there are duplicate IP addresses, the merge will just fail, as IP addresses are assigned to exchange networks according to their ASN. However:
-
-- What if two simulator used different `AddressAssignmentConstraint` and for the same AS, their address is different according to the `AddressAssignmentConstraint`? 
-
-### Merging Node
-
-Merge criteria: see Merging Network section above.
-
-What needs to be merged: 
-
-- Name string
-- interface list
-- file list
-- software list
-- build commands
-- start commands
-- ports
-- privileged flag
-
-Special cases:
-
-- RS node: just pick one and keep it. RS nodes are always the same currently.
-
-Problems: 
-
-- Currently, for services (e.g., DNS layer, web service layer) installed on the nodes, only the layer themselves keep track of what nodes to install the services on. What to do when we merged the nodes?
+- If we found IP conflict and the node type is not RS, error out.
+- If we found IP conflict and the node is RS, drop one of the RS.
