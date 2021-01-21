@@ -25,7 +25,10 @@ for a in common_ases:
    ##     How two ASs are merged depends on the user provided function. 
    ##     We can provide a default merge function if none is provided.
    ##     We can also provide a list of pre-defined merge functions for 
-   ##        developers to choose. 
+   ##        developers to choose. For example, we can implement a
+   ##        merge_delect() to cover the first choice. We can also implement
+   ##        merge_useNetworksInFirst() to use the network in the first simualtor 
+   ##        if there is a common network.  
    ##     We will provide the needed APIs.  
    a_merged = a1.mergeWith(a2, function=merge)
    sim1.replaceAS(a_merged)
