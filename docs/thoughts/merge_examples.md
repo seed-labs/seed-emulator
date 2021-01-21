@@ -204,3 +204,29 @@ net1 = new_150.createNetwork('net1')
 new_150.getRouter('r0').joinNetwork(net1)
 new_150.getRouter('r1').joinNetwork(net1)
 ```
+
+## Case 8: overlapping AS, no common network, create new router to connect two networks
+
+```py
+# Scenario: two simulators:
+#   - SimulatorA has AS150 and IX100, and many other ASes in IX100.
+#       - in this AS150, there's router r0 and network net0.
+#   - SimulatorB has AS150 and IX101, and many other ASes in IX101.
+#       - in this AS150, there's router r0 and network net1.
+#
+# Goal: merge A and B, connect two AS150 with a new router joining both net0 and
+# net1.
+
+# without renaming manually, objects (hosts, networks, routers) with same name
+# will be remaned to "simulator.getName() + '_' + object.getName()"
+simulatorB.getAutonomousSystem(150).getRouter('r0').rename('r1') 
+
+mergedSimulator = simulatorA.merge(simulatorB)
+
+new150 = mergedSimulator.getAutonomousSystem(150)
+
+r2 = new150.createRouter('r2')
+
+r2.joinNetworkByName('net0')
+r2.joinNetworkByName('net1')
+```
