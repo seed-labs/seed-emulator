@@ -1,3 +1,5 @@
+## Simulator features
+
 - [x] tc
 - [x] loopback address system
 - [x] ip to asn mapping
@@ -25,3 +27,9 @@
 - [ ] openvpn: generate certificates on-the-fly
 - [ ] re-write aac
 - [ ] don't fix the 10.x.0.0/24 assigment (merge with aac?)
+
+## Simulator merging
+
+- [ ] merger class
+- [ ] services interface: add installOn() which takes IP address
+- [ ] rewrite registery
