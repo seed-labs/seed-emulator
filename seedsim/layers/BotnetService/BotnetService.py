@@ -25,7 +25,7 @@ do
 done
 printf "\\n%s\\n"  "Server is ready"
 sleep 3
-python2 /tmp/BotClient.py
+python3 /tmp/BotClient.py
 """
 
 class BotnetServer(Server):
@@ -64,14 +64,14 @@ class BotnetServer(Server):
         """!
         @brief Install the Botnet C2 server.
         """
-        self.__node.addSoftware('python2 git cmake python2.7-dev gcc g++ make')
+        self.__node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip')
         self.__node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/')
-        self.__node.addBuildCommand('curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py')
-        self.__node.addBuildCommand('python2 /tmp/get-pip.py')
-        self.__node.addBuildCommand('pip2 install -r /tmp/byob/byob/requirements.txt')
+        # self.__node.addBuildCommand('curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py')
+        # self.__node.addBuildCommand('python2 /tmp/get-pip.py')
+        self.__node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
         self.__node.setFile('/tmp/byob/byob/modules/payloads/b6H.py', BotnetServerFileTemplates['payload'].replace("{serverHost}", self.__ip))
         self.__node.setFile('/tmp/byob/byob/modules/stagers/b6H.py', BotnetServerFileTemplates['stager'].replace("{serverHost}", self.__ip))
-        self.__node.addStartCommand('cd /tmp/byob/byob/; echo "exit\ny" | python2 server.py --port {} &'.format(self.__port))
+        self.__node.addStartCommand('cd /tmp/byob/byob/; echo "exit\ny" | python3 server.py --port {} &'.format(self.__port))
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -115,11 +115,11 @@ class BotnetClient(Server):
         """!
         @brief Install the service.
         """
-        self.__node.addSoftware('python2 git cmake python2.7-dev gcc g++ make')
+        self.__node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip')
         self.__node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/')
-        self.__node.addBuildCommand('curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py')
-        self.__node.addBuildCommand('python2 /tmp/get-pip.py')
-        self.__node.addBuildCommand('pip2 install -r /tmp/byob/byob/requirements.txt')
+        # self.__node.addBuildCommand('curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py')
+        # self.__node.addBuildCommand('python2 /tmp/get-pip.py')
+        self.__node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
         self.__node.setFile('/tmp/BotClient.py', self.__dropper)
         self.__node.addStartCommand(BotnetServerFileTemplates['start_command'].format(C2ServerIp = self.__c2_server_ip))
 
