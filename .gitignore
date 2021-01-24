@@ -4,4 +4,9 @@
 *.o
 *.so
 *.swp
+*.tfvars
 docs-out
+__pycache__
+build
+dist
+*.egg-info
