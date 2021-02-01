@@ -237,14 +237,13 @@ class DistributedDocker(Compiler):
             netId = '{}{}'.format(self.__contextToPrefix(scope, 'net'), net.getName())
         )
 
-    def _doCompile(self):
-        registry = Registry()
+    def _doCompile(self, registry: Registry):
         scopes = set()
         for (scope, _, _) in registry.getAll().keys(): scopes.add(scope)
 
         ix_nets = ''
 
-        for ixnet in ScopedRegistry('ix').getByType('net'):
+        for ixnet in ScopedRegistry('ix', registry).getByType('net'):
             ix_nets += self.__compileIxNetWorker(ixnet)
 
         for scope in scopes:

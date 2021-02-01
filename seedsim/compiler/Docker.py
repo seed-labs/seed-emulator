@@ -276,8 +276,7 @@ class Docker(Compiler):
             mtu = net.getMtu()
         )
 
-    def _doCompile(self):
-        registry = Registry()
+    def _doCompile(self, registry: Registry):
         for ((scope, type, name), obj) in registry.getAll().items():
 
             if type == 'rnode':

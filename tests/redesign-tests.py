@@ -71,3 +71,14 @@ as152_router.joinNetworkByName('ix100')
 ebgp.addRsPeer(100, 150)
 ebgp.addRsPeer(100, 151)
 ebgp.addRsPeer(100, 152)
+
+###############################################################################
+
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(web)
+
+sim.render()
+
+sim.compile(Docker(), 'test', True)

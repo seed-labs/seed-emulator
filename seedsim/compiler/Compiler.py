@@ -1,3 +1,4 @@
+from seedsim.core import Registry
 from os import mkdir, chdir, getcwd, path
 from shutil import rmtree
 from sys import stderr, exit
@@ -9,7 +10,7 @@ class Compiler:
     Compiler takes the rendered result and compiles them to working simulators.
     """
 
-    def _doCompile(self):
+    def _doCompile(self, registry: Registry):
         """!
         @brief Compiler driver implementation.
 
@@ -29,7 +30,7 @@ class Compiler:
         """
         raise NotImplementedError('getName not implemented.')
 
-    def compile(self, output: str, override: bool = False):
+    def compile(self, registry: Registry, output: str, override: bool = False):
         """!
         @brief Compile the simulation.
 
@@ -47,7 +48,7 @@ class Compiler:
                 exit(1)
         mkdir(output)
         chdir(output)
-        self._doCompile()
+        self._doCompile(registry)
         chdir(cur)
 
     def _log(self, message: str) -> None:

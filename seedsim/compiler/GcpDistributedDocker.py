@@ -223,7 +223,7 @@ class GcpDistributedDocker(Compiler):
         for exfile in ['_tf_scripts/get-swmtkn', '_tf_scripts/ssh-keygen']:
             chmod(exfile, 0o755)
 
-    def __make_tf(self):
+    def __make_tf(self, registry: Registry):
         """!
         @brief Generate TF config for docker hosts.
         """
@@ -235,7 +235,7 @@ class GcpDistributedDocker(Compiler):
 
         scopes = set()
 
-        for (scope, type, _) in Registry().getAll().keys():
+        for (scope, type, _) in registry.getAll().keys():
             if scope == 'ix': continue
             if type == 'net' or type == 'hnode' or type == 'rnode' or type == 'snode':
                 scopes.add(scope)

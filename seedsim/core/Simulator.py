@@ -83,6 +83,17 @@ class Simulator:
         for layerName in self.__layers.keys():
             self.__render(layerName, False)
 
+    def compile(self, compiler: 'Compiler', out: str, override: bool = False):
+        """!
+        @brief Compile the simulation.
+
+        @param compiler to use.
+        @param output output directory path.
+        @param override (optional) override the output folder if it already
+        exist. False by defualt.
+        """
+        compiler.compile(self.__registry, out, override)
+
     def getRegistry(self) -> Registry: 
         return self.__registry
 
