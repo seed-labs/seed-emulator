@@ -1,4 +1,4 @@
-from seedsim.core import Node, ScopedRegistry
+from seedsim.core import Node, ScopedRegistry, Registry
 from .Service import Service, Server
 from .DomainNameService import DomainNameService
 from typing import List, Dict
@@ -24,8 +24,9 @@ class DomainNameCachingServer(Server):
 
     __root_servers: List[str]
     __node: Node
+    __reg: Registry
 
-    def __init__(self, node: Node):
+    def __init__(self, node: Node, registry: Registry):
         """!
         @brief DomainNameCachingServer constructor.
 
@@ -33,6 +34,7 @@ class DomainNameCachingServer(Server):
         """
         self.__root_servers = []
         self.__node = node
+        self.__reg = registry
 
     def setRootServers(self, servers: List[str]):
         """!
@@ -77,7 +79,7 @@ class DomainNameCachingServer(Server):
         self.__node.addStartCommand('service named start')
         if not setResolvconf: return
         (scope, _, _) = self.__node.getRegistryInfo()
-        sr = ScopedRegistry(scope)
+        sr = ScopedRegistry(scope, self.__reg)
         ifaces = self.__node.getInterfaces()
         assert len(ifaces) > 0, 'Node {} has no IP address.'.format(self.__node.getName())
         addr = ifaces[0].getAddress()
@@ -101,7 +103,7 @@ class DomainNameCachingService(Service):
 
     __auto_root: bool
     __set_resolvconf: bool
-    __reg = ScopedRegistry('seedsim')
+    __reg: ScopedRegistry
     __servers: List[DomainNameCachingServer]
 
     def __init__(self, autoRoot: bool = True, setResolvconf: bool = False):
@@ -118,6 +120,7 @@ class DomainNameCachingService(Service):
         self.__auto_root = autoRoot
         self.__set_resolvconf = setResolvconf
         self.__servers = []
+        self.__reg = ScopedRegistry('seedsim', self._getReg())
         self.addDependency('Base', False, False)
         if autoRoot:
             self.addDependency('DomainNameService', False, False)
@@ -139,7 +142,7 @@ class DomainNameCachingService(Service):
         """
         server: DomainNameCachingServer = node.getAttribute('__domain_name_cacheing_service_server')
         if server != None: return server
-        server = DomainNameCachingServer(node)
+        server = DomainNameCachingServer(node, self._getReg())
         self.__servers.append(server)
         node.setAttribute('__domain_name_cacheing_service_server', server)
         return server

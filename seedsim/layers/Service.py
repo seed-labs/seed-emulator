@@ -76,7 +76,7 @@ class Service(Layer):
         @returns Dict of Dict, the inner dict is Dict[Node name, Server] and the
         outer dict is Dict[Asn, inner Dict].
         """
-        scope = ScopedRegistry(str(asn))
+        scope = ScopedRegistry(str(asn), self._getReg())
         for host in scope.getByType('hnode'):
             self.installOn(host)
 

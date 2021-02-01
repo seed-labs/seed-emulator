@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .Service import Service, Server
-from seedsim.core import Node, Printable, ScopedRegistry
+from seedsim.core import Node, Printable
 from seedsim.core.enums import NodeRole, NetworkType
 from typing import List, Dict, Tuple, Set
 from re import sub
@@ -249,9 +249,8 @@ class DomainNameService(Service):
     @brief The domain name service.
     """
 
-    __rootZone = Zone('') # singleton
+    __rootZone: Zone
     __servers: List[DomainNameServer]
-    __reg = ScopedRegistry('seedsim')
     __autoNs: bool
 
     def __init__(self, autoNameServer: bool = True):
@@ -262,6 +261,7 @@ class DomainNameService(Service):
         """
         self.__autoNs = autoNameServer
         self.__servers = []
+        self.__rootZone = Zone('.')
         self.addDependency('Base', False, False)
 
     def getName(self):
