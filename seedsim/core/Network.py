@@ -26,7 +26,7 @@ class Network(Printable, Registrable):
 
     __mtu: int
 
-    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None):
+    def __init__(self, simulator: Simulator, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None):
         """!
         @brief Network constructor.
 

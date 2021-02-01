@@ -1,5 +1,5 @@
 from typing import List, Dict, Tuple
-from seedsim.core import Printable, Registrable, Simulator
+from seedsim.core import Printable, Registrable, Simulator, Registry
 from sys import stderr
 from enum import Enum
 
@@ -13,8 +13,21 @@ class Layer(Printable, Registrable):
     _simulator: Simulator
 
     def __init__(self, simulator: Simulator):
+        """!
+        @brief Create new layer.
+
+        @param simulator simulator
+        """
         self._simulator = simulator
         self.__dependencies = {}
+
+    def _getReg(self) -> Registry:
+        """!
+        @brief Helper function for getting Registry.
+
+        @returns Registry
+        """
+        return self._simulator.getRegistry()
 
     def addDependency(self, layerName: str, reverse: bool, optional: bool):
         """!

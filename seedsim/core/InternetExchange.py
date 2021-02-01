@@ -4,6 +4,7 @@ from .enums import NetworkType, NodeRole
 from .Node import Node, Interface
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
+from .Simulator import Simulator
 from ipaddress import IPv4Network
 
 class InternetExchange(Printable):
@@ -19,7 +20,7 @@ class InternetExchange(Printable):
     __rs: Node
     __rsif: Interface
 
-    def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None):
+    def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None, simulator: Simulator):
         """!
         @brief InternetExchange constructor.
 
@@ -29,7 +30,7 @@ class InternetExchange(Printable):
         """
 
         self.__id = id
-        self.__reg = ScopedRegistry('ix')
+        self.__reg = ScopedRegistry('ix', simulator.getRegistry())
 
         assert prefix != "auto" or self.__id <= 255, "can't use auto: id > 255"
         network = IPv4Network(prefix) if prefix != "auto" else IPv4Network("10.{}.0.0/24".format(self.__id))

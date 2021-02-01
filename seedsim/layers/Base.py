@@ -39,7 +39,6 @@ class Base(Layer, Graphable):
 
     __ases: Dict[int, AutonomousSystem]
     __ixes: Dict[int, InternetExchange]
-    __reg: Registry
 
     def __init__(self, simulator: Simulator):
         """!
@@ -49,13 +48,12 @@ class Base(Layer, Graphable):
         Graphable.__init__(self)
         self.__ases = {}
         self.__ixes = {}
-        self.__reg = self._simulator.getRegistry()
 
     def getName(self) -> str:
         return "Base"
 
     def onRender(self) -> None:
-        for ((scope, type, name), obj) in self.__reg.getAll().items():
+        for ((scope, type, name), obj) in self._getReg().getAll().items():
 
             if not (type == 'rs' or type == 'rnode' or type == 'hnode'):
                 continue

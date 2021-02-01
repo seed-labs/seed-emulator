@@ -185,16 +185,17 @@ class ScopedRegistry(Registry):
     Scoped wrapper for Registry class.
     """
 
-    __reg = Registry()
+    __reg: Registry
     __scope: str
 
-    def __init__(self, scope: str):
+    def __init__(self, scope: str, parent: Registry):
         """!
         @brief Scoped Registry ctor.
 
         @param scope scope to bind to.
         """
         self.__scope = scope
+        self.__reg = parent
 
     def register(self, type: str, name: str, obj: Registrable) -> Registrable:
         """!

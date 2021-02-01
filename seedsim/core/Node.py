@@ -1,7 +1,8 @@
 from .Printable import Printable
 from .Network import Network
 from .enums import NodeRole, NetworkType
-from .Registry import Registry, ScopedRegistry, Registrable
+from .Registry import ScopedRegistry, Registrable
+from .Simulator import Simulator
 from ipaddress import IPv4Address
 from typing import List, Dict, Set, Tuple
 
@@ -180,7 +181,6 @@ class Node(Printable, Registrable):
     __asn: int
     __role: NodeRole
     __reg: ScopedRegistry
-    __greg = Registry()
     __interfaces: List[Interface]
     __files: Dict[str, File]
     __softwares: Set[str]
@@ -189,8 +189,9 @@ class Node(Printable, Registrable):
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
     __common_software: Set[str] = set()
+    __simulator: Simulator
 
-    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
+    def __init__(self, simulator: Simulator, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
         @brief Node constructor.
 
@@ -202,7 +203,7 @@ class Node(Printable, Registrable):
         self.__interfaces = []
         self.__files = {}
         self.__asn = asn
-        self.__reg = ScopedRegistry(scope if scope != None else str(asn))
+        self.__reg = ScopedRegistry(scope if scope != None else str(asn), simulator.getRegistry())
         self.__role = role
         self.__name = name
         self.__softwares = set()
@@ -210,6 +211,7 @@ class Node(Printable, Registrable):
         self.__start_commands = []
         self.__ports = []
         self.__privileged = False
+        self.__simulator = simulator
 
         for soft in DEFAULT_SOFTWARES:
             self.__common_software.add(soft)
@@ -282,8 +284,8 @@ class Node(Printable, Registrable):
         if self.__reg.has("net", netname):
             return self.joinNetwork(self.__reg.get("net", netname), address)
 
-        if self.__greg.has("ix", "net", netname):
-            return self.joinNetwork(self.__greg.get("ix", "net", netname), address)
+        if self.__simulator.getRegistry().has("ix", "net", netname):
+            return self.joinNetwork(self.self.__simulator.getRegistry().get("ix", "net", netname), address)
         
         assert False, 'No such network: {}'.format(netname)
 
