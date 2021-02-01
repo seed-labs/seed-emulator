@@ -285,7 +285,7 @@ class Node(Printable, Registrable):
             return self.joinNetwork(self.__reg.get("net", netname), address)
 
         if self.__simulator.getRegistry().has("ix", "net", netname):
-            return self.joinNetwork(self.self.__simulator.getRegistry().get("ix", "net", netname), address)
+            return self.joinNetwork(self.__simulator.getRegistry().get("ix", "net", netname), address)
         
         assert False, 'No such network: {}'.format(netname)
 

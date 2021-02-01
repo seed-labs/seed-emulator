@@ -2,6 +2,7 @@ from ipaddress import IPv4Network, IPv4Address
 from .Printable import Printable
 from .enums import NetworkType, NodeRole
 from .Registry import Registrable
+from .Simulator import Simulator
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from typing import Generator, Dict, Tuple, List
 

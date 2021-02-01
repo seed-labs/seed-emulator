@@ -275,7 +275,7 @@ class Graphable(Registrable):
         self.__simulator = simulator
         self.__graphs = {}
         self.__graphs_created = False
-        simulator.getRegistry().register('seedsim', 'graph', str(len(self.__reg.getByType('seedsim', 'graph'))), self)
+        simulator.getRegistry().register('seedsim', 'graph', str(len(self.__simulator.getRegistry().getByType('seedsim', 'graph'))), self)
 
     def _addGraph(self, name: str, directed: bool) -> Graph:
         """!

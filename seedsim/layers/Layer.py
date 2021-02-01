@@ -45,7 +45,7 @@ class Layer(Printable, Registrable):
         _current = layerName if reverse else self.getName()
         _target = self.getName() if reverse else layerName
 
-        if _current not in self.dependencies:
+        if _current not in self.__dependencies:
             self.__dependencies[_current] = []
 
         self.__dependencies[_current].append((_target, optional))
