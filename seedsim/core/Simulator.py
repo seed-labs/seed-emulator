@@ -1,15 +1,20 @@
 from __future__ import annotations
 from .Merger import Merger
 from .Registry import Registry
-from typing import List
+from typing import Dict, Set, Tuple
+from sys import stderr
 
 class Simulator:
 
     __registry: Registry
+    __layers: Dict[str, Tuple[Layer, bool]]
+    __dependencies_db: Dict[str, Set[Tuple[str, bool]]]
     __rendered: bool
 
     def __init__(self):
+        self.__layers = {}
         self.__rendered = False
+        self.__dependencies_db = {}
         self.__registry = Registry()
 
     def addLayer(self, layer: Layer):
@@ -23,12 +28,60 @@ class Simulator:
         lname = layer.getName()
         assert lname not in self.__layers, 'layer {} already added.'.format(lname)
         self.__registry.register('seedsim', 'layer', lname, layer)
+        self.__layers[lname] = (layer, False)
 
     def getLayer(self, layerName: str) -> Layer:
         self.__registry.get('seedsim', 'layer', layerName)
 
+    def __render(self, layerName, optional: bool):
+        """!
+        @brief Render a layer.
+        
+        @param layerName name of layer.
+        @throws AssertionError if dependencies unmet 
+        """
+        self.__log('requesting render: {}'.format(layerName))
+
+        if optional and layerName not in self.__layers:
+            self.__log('{}: not found but is optional, skipping'.format(layerName))
+            return
+
+        assert layerName in self.__layers, 'Layer {} requried but missing'.format(layerName)
+
+        (layer, done) = self.__layers[layerName]
+        if done:
+            self.__log('{}: already rendered, skipping'.format(layerName))
+            return
+
+        if layerName in self.__dependencies_db:
+            for (dep, opt) in self.__dependencies_db[layerName]:
+                self.__log('{}: requesting dependency render: {}'.format(layerName, dep))
+                self.__render(dep, opt)
+
+        self.__log('rendering {}...'.format(layerName))
+        layer.onRender()
+        self.__log('done: {}'.format(layerName))
+        self.__layers[layerName] = (layer, True)
+    
+    def __loadDependencies(self, deps: Dict[str, Set[Tuple[str, bool]]]):
+        for (layer, deps) in deps.items():
+            if not layer in self.__dependencies_db:
+                self.__dependencies_db[layer] = deps
+                continue
+
+            self.__dependencies_db[layer] |= deps
+
     def render(self):
-        raise NotImplementedError('todo')
+        """!
+        @brief Render.
+
+        @throws AssertionError if dependencies unmet 
+        """
+        for (layer, _) in self.__layers.values():
+            self.__loadDependencies(layer.getDependencies())
+
+        for layerName in self.__layers.keys():
+            self.__render(layerName, False)
 
     def getRegistry(self) -> Registry: 
         return self.__registry
@@ -44,3 +97,6 @@ class Simulator:
 
     def load(self, fileName: str):
         raise NotImplementedError('todo')
+
+    def __log(self, message: str):
+        print('== Simulator: {}'.format(message), file=stderr)

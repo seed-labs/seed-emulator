@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import Set, Dict, Tuple
 from seedsim.core import Printable, Registrable, Simulator, Registry
 from sys import stderr
 from enum import Enum
@@ -9,7 +9,7 @@ class Layer(Printable, Registrable):
     @brief The layer interface.
     """
 
-    __dependencies: Dict[str, List[Tuple[str, bool]]]
+    __dependencies: Dict[str, Set[Tuple[str, bool]]]
     _simulator: Simulator
 
     def __init__(self, simulator: Simulator):
@@ -46,9 +46,17 @@ class Layer(Printable, Registrable):
         _target = self.getName() if reverse else layerName
 
         if _current not in self.__dependencies:
-            self.__dependencies[_current] = []
+            self.__dependencies[_current] = set()
 
-        self.__dependencies[_current].append((_target, optional))
+        self.__dependencies[_current].add((_target, optional))
+
+    def getDependencies(self) -> Dict[str, Set[Tuple[str, bool]]]:
+        """!
+        @brief Get dependencies.
+
+        @return dependencies.
+        """
+        return self.__dependencies
 
     def getName(self) -> str:
         """!
