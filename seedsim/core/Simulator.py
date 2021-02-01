@@ -28,8 +28,11 @@ class Simulator:
     def getLayer(self, layerName: str) -> Layer:
         self.__reg.get('seedsim', 'layer', layerName)
 
-    def render()
+    def render(self)
         raise NotImplementedError('todo')
+
+    def getRegistry(self): Registry
+        return self._reg
 
     def removeLayer(self, layerName: str) -> bool:
         raise NotImplementedError('todo')

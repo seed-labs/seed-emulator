@@ -1,5 +1,5 @@
 from .Layer import Layer
-from seedsim.core import AutonomousSystem, InternetExchange, Printable, Registry, AddressAssignmentConstraint, Node, Graphable
+from seedsim.core import AutonomousSystem, InternetExchange, Printable, Registry, AddressAssignmentConstraint, Node, Graphable, Simulator
 from typing import Dict, List
 
 BaseFileTemplates: Dict[str, str] = {}
@@ -39,15 +39,17 @@ class Base(Layer, Graphable):
 
     __ases: Dict[int, AutonomousSystem]
     __ixes: Dict[int, InternetExchange]
-    __reg = Registry()
+    __reg: Registry
 
-    def __init__(self):
+    def __init__(self, simulator: Simulator):
         """!
         @brief Base layer constructor.
         """
+        Layer.__init__(simulator)
         Graphable.__init__(self)
         self.__ases = {}
         self.__ixes = {}
+        self.__reg = self._simulator.getRegistry()
 
     def getName(self) -> str:
         return "Base"
