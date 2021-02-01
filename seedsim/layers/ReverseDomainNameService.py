@@ -1,6 +1,6 @@
 from .Service import Service, Server
 from .DomainNameService import DomainNameService, DomainNameServer, Zone
-from seedsim.core import ScopedRegistry, Registry, Node
+from seedsim.core import ScopedRegistry, Registry, Node, Simulator
 from typing import List
 
 class ReverseDomainNameServer(Server):
@@ -33,14 +33,18 @@ class ReverseDomainNameService(Service):
     """
 
     __servers: List[ReverseDomainNameServer]
-    __reg = ScopedRegistry('seedsim')
+    __reg: ScopedRegistry
 
-    def __init__(self):
+    def __init__(self, simulator: Simulator):
         """!
         @brief ReverseDomainNameService constructor
+
+        @param simulator simulator
         """
+        Service.__init__(self, simulator)
         self.__records = []
         self.__servers = []
+        self.__reg = ScopedRegistry('seedsim', self._getReg())
         self.addDependency('DomainNameService', True, False)
         self.addDependency('Base', False, False)
 

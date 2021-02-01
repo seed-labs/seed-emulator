@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .Service import Service, Server
-from seedsim.core import Node, Printable
+from seedsim.core import Node, Printable, Simulator
 from seedsim.core.enums import NodeRole, NetworkType
 from typing import List, Dict, Tuple, Set
 from re import sub
@@ -253,12 +253,14 @@ class DomainNameService(Service):
     __servers: List[DomainNameServer]
     __autoNs: bool
 
-    def __init__(self, autoNameServer: bool = True):
+    def __init__(self, simulator: Simulator, autoNameServer: bool = True):
         """!
         @brief DomainNameService constructor.
         
+        @param simulator simulator.
         @param autoNameServer add gule records to parents automaically.
         """
+        Service.__init__(self, simulator)
         self.__autoNs = autoNameServer
         self.__servers = []
         self.__rootZone = Zone('.')

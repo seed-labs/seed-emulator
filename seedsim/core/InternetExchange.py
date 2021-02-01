@@ -20,7 +20,7 @@ class InternetExchange(Printable):
     __rs: Node
     __rsif: Interface
 
-    def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None, simulator: Simulator):
+    def __init__(self, simulator: Simulator, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None):
         """!
         @brief InternetExchange constructor.
 

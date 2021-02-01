@@ -1,5 +1,5 @@
 from .Layer import Layer
-from seedsim.core import Node, Printable, ScopedRegistry
+from seedsim.core import Node, Printable, ScopedRegistry, Simulator
 from seedsim.core.enums import NodeRole
 from typing import Dict, List
 
@@ -16,6 +16,14 @@ class Service(Layer):
 
     The base class for all Services.
     """
+
+    def __init__(self, simulator: Simulator):
+        """!
+        @brief Build service.
+
+        @param simulator simulator
+        """
+        Layer.__init__(self, simulator)
 
     def _doInstall(self, node: Node) -> Server:
         """!

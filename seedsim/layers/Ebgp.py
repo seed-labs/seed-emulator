@@ -1,6 +1,6 @@
 from .Layer import Layer
 from .Routing import Router
-from seedsim.core import Registry, ScopedRegistry, Network, Node, Interface, Graphable
+from seedsim.core import Registry, ScopedRegistry, Network, Node, Interface, Graphable, Simulator
 from typing import Tuple, List, Dict
 from enum import Enum
 
@@ -52,17 +52,20 @@ class Ebgp(Layer, Graphable):
     __peerings: Dict[Tuple[int, int, int], PeerRelationship]
     __rs_peers: List[Tuple[int, int]]
 
-    def __init__(self):
+    def __init__(self, simulator: Simulator):
         """!
         @brief Ebgp layer constructor.
+        
+        @param simulator simulator.
         """
-        Graphable.__init__(self)
+        Graphable.__init__(self, simulator)
+        Layer.__init__(self, simulator)
         self.__peerings = {}
         self.__rs_peers = []
         self.addDependency('Routing', False, False)
 
     def __getAsPrefixes(self, a: int) -> List[str]:
-        sr = ScopedRegistry(str(a))
+        sr = ScopedRegistry(str(a), self._getReg())
         nets = []
         for net in sr.getByType('net'):
             netobj: Network = net
@@ -136,8 +139,8 @@ class Ebgp(Layer, Graphable):
 
     def onRender(self) -> None:
         for (ix, peer) in self.__rs_peers:
-            ix_reg = ScopedRegistry('ix')
-            p_reg = ScopedRegistry(str(peer))
+            ix_reg = ScopedRegistry('ix', self._getReg())
+            p_reg = ScopedRegistry(str(peer), self._getReg())
 
             ix_net: Network = ix_reg.get('net', 'ix{}'.format(ix))
             ix_rs: Router = ix_reg.get('rs', 'ix{}'.format(ix))
@@ -181,9 +184,9 @@ class Ebgp(Layer, Graphable):
             )) 
 
         for (ix, a, b), rel in self.__peerings.items():
-            ix_reg = ScopedRegistry('ix')
-            a_reg = ScopedRegistry(str(a))
-            b_reg = ScopedRegistry(str(b))
+            ix_reg = ScopedRegistry('ix', self._getReg())
+            a_reg = ScopedRegistry(str(a), self._getReg())
+            b_reg = ScopedRegistry(str(b), self._getReg())
 
             ix_net: Network = ix_reg.get('net', 'ix{}'.format(ix))
             a_rnodes: List[Router] = a_reg.getByType('rnode')

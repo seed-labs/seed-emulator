@@ -1,7 +1,7 @@
 from .Layer import Layer
 from .Base import Base
 from .Routing import Router
-from seedsim.core import Node, Network, AutonomousSystem, ScopedRegistry, Registry
+from seedsim.core import Node, Network, AutonomousSystem, ScopedRegistry, Registry, Simulator
 from seedsim.core.enums import NodeRole
 from typing import List, Dict, Tuple
 from itertools import repeat
@@ -268,29 +268,32 @@ class Reality(Layer):
 
     __rwnodes: List[RealWorldRouter]
     __rwnets: List[Tuple[Network, int]]
-    __reg = ScopedRegistry('seedsim')
+    __reg: ScopedRegistry
     __hide_hops: bool
 
     __ovpn_ca: str
     __ovpn_cert: str
     __ovpn_key: str
 
-    def __init__(self, hideHops: bool = True, ovpnCa: str = None, ovpnCert: str = None, ovpnKey: str = None):
+    def __init__(self, simulator: Simulator, hideHops: bool = True, ovpnCa: str = None, ovpnCert: str = None, ovpnKey: str = None):
         """!
         @brief Reality constructor.
 
+        @param simulator simulator.
         @param hideHops (optional) hide realworld hops from traceroute (by
         setting TTL = 64 to all real world dsts on POSTROUTING), defualt True.
         @param ovpnCa (optional) CA to use for openvpn.
         @param ovpnCert (optional) server certificate to use for openvpn.
         @param ovpnKey (optional) server key to use for openvpn.
         """
+        Layer.__init__(self, simulator)
         self.__rwnodes = []
         self.__rwnets = []
         self.__hide_hops = hideHops
         self.__ovpn_ca = ovpnCa
         self.__ovpn_cert = ovpnCert
         self.__ovpn_key = ovpnKey
+        self.__reg = ScopedRegistry('seedsim', self._getReg())
         self.addDependency('Ebgp', False, False)
 
     def getName(self):
@@ -366,7 +369,7 @@ class Reality(Layer):
         @param netname name of the network.
         @param naddrs number of IP addresses to assign to client pool.
         """
-        self.enableRealWorldAccess(Registry().get(str(asn), 'net', netname))
+        self.enableRealWorldAccess(self._getReg().get(str(asn), 'net', netname))
 
     def onRender(self):
         # @todo ifconfig-pool
@@ -383,7 +386,7 @@ class Reality(Layer):
             snode.joinNetwork(net)
             addrstart = addrend = net.assign(NodeRole.Host)
             for i in repeat(None, poolsz - 1): addrend = net.assign(NodeRole.Host)
-            ScopedRegistry(scope).register('snode', snode_name, snode)
+            ScopedRegistry(scope, self._getReg()).register('snode', snode_name, snode)
             #self.__reg.register('snode', snode_name, snode)
             snode.addSoftware('openvpn')
             snode.addSoftware('bridge-utils')

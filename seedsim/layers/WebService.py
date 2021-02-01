@@ -1,5 +1,5 @@
 from .Service import Service, Server
-from seedsim.core import Node
+from seedsim.core import Node, Simulator
 from seedsim.core.enums import NodeRole
 from typing import List, Dict
 
@@ -77,10 +77,13 @@ class WebService(Service):
 
     __servers: List[WebServer]
 
-    def __init__(self):
+    def __init__(self, simulator: Simulator):
         """!
         @brief WebService constructor.
+
+        @param simulator simulator
         """
+        Service.__init__(self, simulator)
         self.__servers = []
         self.addDependency('Base', False, False)
 

@@ -44,8 +44,8 @@ class Base(Layer, Graphable):
         """!
         @brief Base layer constructor.
         """
-        Layer.__init__(simulator)
-        Graphable.__init__(self)
+        Layer.__init__(self, simulator)
+        Graphable.__init__(self, simulator)
         self.__ases = {}
         self.__ixes = {}
 
@@ -80,7 +80,7 @@ class Base(Layer, Graphable):
         @throws AssertionError if asn exists.
         """
         assert asn not in self.__ases, "as{} already exist.".format(asn)
-        self.__ases[asn] = AutonomousSystem(asn)
+        self.__ases[asn] = AutonomousSystem(self._simulator, asn)
         return self.__ases[asn]
 
     def getAutonomousSystem(self, asn: int) -> AutonomousSystem:
@@ -105,7 +105,7 @@ class Base(Layer, Graphable):
         @throws AssertionError if IX exists.
         """
         assert asn not in self.__ixes, "ix{} already exist.".format(asn)
-        self.__ixes[asn] = InternetExchange(asn, prefix, aac)
+        self.__ixes[asn] = InternetExchange(self._simulator, asn, prefix, aac)
         return self.__ixes[asn]
 
     def getInternetExchange(self, asn: int) -> InternetExchange:

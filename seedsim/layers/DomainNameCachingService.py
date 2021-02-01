@@ -1,6 +1,7 @@
-from seedsim.core import Node, ScopedRegistry, Registry
+from seedsim.core import Node, ScopedRegistry, Registry, Simulator
 from .Service import Service, Server
 from .DomainNameService import DomainNameService
+from .Layer import Layer
 from typing import List, Dict
 
 DomainNameCachingServiceFileTemplates: Dict[str, str] = {}
@@ -106,16 +107,18 @@ class DomainNameCachingService(Service):
     __reg: ScopedRegistry
     __servers: List[DomainNameCachingServer]
 
-    def __init__(self, autoRoot: bool = True, setResolvconf: bool = False):
+    def __init__(self, simulator: Simulator, autoRoot: bool = True, setResolvconf: bool = False):
         """!
         @brief DomainNameCachingService constructor.
 
+        @param simulator simulator.
         @param autoRoot (optional) find root zone name servers automaically.
         True by defualt, if true, DomainNameCachingService will find root NS in
         DomainNameService and use them as root.
         @param setResolvconf (optional) set all nodes in the AS to use local DNS
         node in the AS by overrideing resolv.conf. Default to false.
         """
+        Service.__init__(self, simulator)
 
         self.__auto_root = autoRoot
         self.__set_resolvconf = setResolvconf

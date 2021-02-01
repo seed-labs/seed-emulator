@@ -1,5 +1,5 @@
 from .Layer import Layer
-from seedsim.core import Network, Registry, Node
+from seedsim.core import Network, Registry, Node, Simulator
 from seedsim.core.enums import NetworkType
 from typing import Set, Dict, List
 
@@ -39,12 +39,15 @@ class Ospf(Layer):
     __stubs: Set[Network]
     __masked: Set[Network]
     __masked_asn: Set[int]
-    __reg = Registry()
 
-    def __init__(self):
+    def __init__(self, simulator: Simulator):
         """!
         @brief Ospf (OSPF) layer conscrutor.
+
+        @param simulator simulator.
         """
+
+        Layer.__init__(self, simulator)
 
         self.__stubs = set()
         self.__masked = set()

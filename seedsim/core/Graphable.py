@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import List, Dict
 from .Printable import Printable
 from .Registry import Registry, Registrable
+from .Simulator import Simulator
 from copy import deepcopy
 
 class Vertex:
@@ -264,16 +265,17 @@ class Graphable(Registrable):
 
     __graphs: Dict[str, Graph]
     __graphs_created: bool
-    __reg = Registry()
     _n_graphs = 0
+    __simulator: Simulator
 
-    def __init__(self):
+    def __init__(self, simulator: Simulator):
         """!
         @brief Graphable constructor.
         """
+        self.__simulator = simulator
         self.__graphs = {}
         self.__graphs_created = False
-        self.__reg.register('seedsim', 'graph', str(len(self.__reg.getByType('seedsim', 'graph'))), self)
+        simulator.getRegistry().register('seedsim', 'graph', str(len(self.__reg.getByType('seedsim', 'graph'))), self)
 
     def _addGraph(self, name: str, directed: bool) -> Graph:
         """!

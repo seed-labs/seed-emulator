@@ -20,6 +20,7 @@ class AutonomousSystem(Printable, Graphable):
     __asn: int
     __subnet_generator: Generator[IPv4Network, None, None]
     __reg: ScopedRegistry
+    __simulator: Simulator
 
     def __init__(self, simulator: Simulator, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
@@ -28,7 +29,8 @@ class AutonomousSystem(Printable, Graphable):
         @param asn ASN for this system.
         @param subnetTemplate template for assigning subnet.
         """
-        Graphable.__init__(self)
+        Graphable.__init__(self, simulator)
+        self.__simulator = simulator
         self.__asn = asn
         self.__reg = ScopedRegistry(str(asn), simulator.getRegistry())
         self.__subnet_generator = None if asn > 255 else IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24)
@@ -53,7 +55,7 @@ class AutonomousSystem(Printable, Graphable):
         assert prefix != "auto" or self.__asn <= 255, "can't use auto: asn > 255"
 
         network = IPv4Network(prefix) if prefix != "auto" else next(self.__subnet_generator)
-        return self.__reg.register('net', name, Network(simulator, name, NetworkType.Local, network, aac))
+        return self.__reg.register('net', name, Network(self.__simulator, name, NetworkType.Local, network, aac))
 
     def getNetwork(self, name: str) -> Network:
         """!
@@ -71,7 +73,7 @@ class AutonomousSystem(Printable, Graphable):
         @param name name of the new node.
         @returns Node.
         """
-        return self.__reg.register('rnode', name, Node(simulator, name, NodeRole.Router, self.__asn))
+        return self.__reg.register('rnode', name, Node(self.__simulator, name, NodeRole.Router, self.__asn))
 
     def getRouter(self, name: str) -> Node:
         """!
@@ -89,7 +91,7 @@ class AutonomousSystem(Printable, Graphable):
         @param name name of the new node.
         @returns Node.
         """
-        return self.__reg.register('hnode', name, Node(simulator, name, NodeRole.Host, self.__asn))
+        return self.__reg.register('hnode', name, Node(self.__simulator, name, NodeRole.Host, self.__asn))
 
     def getHost(self, name: str) -> Node:
         """!

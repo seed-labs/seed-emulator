@@ -2,7 +2,7 @@ from .Layer import Layer
 from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Routing import Router
-from seedsim.core import Node, Registry, ScopedRegistry, Graphable
+from seedsim.core import Node, Registry, ScopedRegistry, Graphable, Simulator
 from seedsim.core.enums import NetworkType, NodeRole
 from typing import List, Tuple, Dict
 
@@ -81,15 +81,17 @@ class Mpls(Layer, Graphable):
     the node to the public.
     """
 
-    __reg = Registry()
     __additional_edges: List[Node]
     __enabled: List[int]
 
-    def __init__(self):
+    def __init__(self, simulator: Simulator):
         """!
         @brief Mpls layer constructor.
+        
+        @param simulator simulator.
         """
-        Graphable.__init__(self)
+        Graphable.__init__(self, simulator)
+        Layer.__init__(self, simulator)
         self.__additional_edges = []
         self.__enabled = []
 
@@ -222,17 +224,17 @@ class Mpls(Layer, Graphable):
 
     def onRender(self):
         for asn in self.__enabled:
-            if self.__reg.has('seedsim', 'layer', 'Ospf'):
+            if self._getReg().has('seedsim', 'layer', 'Ospf'):
                 self._log('Ospf layer exists, masking as{}'.format(asn))
-                ospf: Ospf = self.__reg.get('seedsim', 'layer', 'Ospf')
+                ospf: Ospf = self._getReg().get('seedsim', 'layer', 'Ospf')
                 ospf.maskAsn(asn)
 
-            if self.__reg.has('seedsim', 'layer', 'Ibgp'):
+            if self._getReg().has('seedsim', 'layer', 'Ibgp'):
                 self._log('Ibgp layer exists, masking as{}'.format(asn))
-                ibgp: Ibgp = self.__reg.get('seedsim', 'layer', 'Ibgp')
+                ibgp: Ibgp = self._getReg().get('seedsim', 'layer', 'Ibgp')
                 ibgp.mask(asn)
 
-            scope = ScopedRegistry(str(asn))
+            scope = ScopedRegistry(str(asn), self._getReg())
             (enodes, nodes) = self.__getEdgeNodes(scope)
 
             for n in enodes: self.__setUpLdpOspf(n)
@@ -240,7 +242,7 @@ class Mpls(Layer, Graphable):
             self.__setUpIbgpMesh(enodes)
 
     def _doCreateGraphs(self):
-        base: Base = self.__reg.get('seedsim', 'layer', 'Base')
+        base: Base = self._getReg().get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():
             if asn not in self.__enabled: continue
             asobj = base.getAutonomousSystem(asn)
@@ -251,7 +253,7 @@ class Mpls(Layer, Graphable):
             for edge in mplsgraph.edges:
                 edge.style = 'dotted'
 
-            scope = ScopedRegistry(str(asn))
+            scope = ScopedRegistry(str(asn), self._getReg())
             (enodes, _) = self.__getEdgeNodes(scope)
             
             while len(enodes) > 0:

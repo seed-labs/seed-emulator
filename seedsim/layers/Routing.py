@@ -1,5 +1,5 @@
 from .Layer import Layer
-from seedsim.core import Registry, ScopedRegistry, Node, Interface, Network
+from seedsim.core import Registry, ScopedRegistry, Node, Interface, Network, Simulator
 from seedsim.core.enums import NetworkType
 from typing import List, Dict, Set
 from functools import partial
@@ -147,15 +147,17 @@ class Routing(Layer):
     protocols to use later and as router id.
     """
 
-    __reg = Registry()
     __direct_nets: Set[Network]
     __loopback_assigner = IPv4Network('10.0.0.0/16')
     __loopback_pos = 1
 
-    def __init__(self):
+    def __init__(self, simulator: Simulator):
         """!
         @brief Routing layre constructor.
+
+        @param simulator simulator.
         """
+        Layer.__init__(self, simulator)
         self.__direct_nets = set()
         self.addDependency('Base', False, False)
     
@@ -171,7 +173,7 @@ class Routing(Layer):
         node.addBuildCommand('apt-get install -y --no-install-recommends bird2')
 
     def onRender(self):
-        for ((scope, type, name), obj) in self.__reg.getAll().items():
+        for ((scope, type, name), obj) in self._getReg().getAll().items():
             if type == 'rs':
                 rs_node: Node = obj
                 self.__installBird(rs_node)
@@ -238,7 +240,7 @@ class Routing(Layer):
                 hnet: Network = hif.getNet()
                 rif: Interface = None
 
-                cur_scope = ScopedRegistry(scope)
+                cur_scope = ScopedRegistry(scope, self._getReg())
                 for router in cur_scope.getByType('rnode'):
                     if rif != None: break
                     for riface in router.getInterfaces():
@@ -279,7 +281,7 @@ class Routing(Layer):
         @throws AssertionError if net not exist.
         @throws AssertionError if try to add non-AS network as direct.
         """
-        self.addDirect(self.__reg.get(str(asn), 'net', netname))
+        self.addDirect(self._getReg().get(str(asn), 'net', netname))
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

@@ -1,7 +1,7 @@
 from .Service import Service, Server
 from .DomainNameService import DomainNameService, DomainNameServer, Zone
 from .Reality import Reality
-from seedsim.core import Node, ScopedRegistry, Registry, Network
+from seedsim.core import Node, ScopedRegistry, Registry, Network, Simulator
 from typing import List, Tuple
 from ipaddress import IPv4Network
 
@@ -42,16 +42,20 @@ class CymruIpOriginService(Service):
 
     __servers: List[CymruIpOriginServer]
     __records: List[str]
-    __reg = ScopedRegistry('seedsim')
+    __reg: ScopedRegistry
 
-    def __init__(self):
+    def __init__(self, simulator: Simulator):
         """!
         @brief CymruIpOriginService constructor
+
+        @param simulator simulator.
         """
+        Service.__init__(self, simulator)
         self.__records = []
         self.__servers = []
         self.addDependency('DomainNameService', True, True)
         self.addDependency('Base', False, False)
+        self.__reg = ScopedRegistry('seedsim', self._getReg())
 
     def getName(self) -> str:
         return 'CymruIpOriginService'
@@ -108,7 +112,7 @@ class CymruIpOriginService(Service):
                     mappings.append((prefix, asn))
         
         self._log('Collecting all networks in the simulation...')
-        for regobj in (Registry()).getAll().items():
+        for regobj in self._getReg().getAll().items():
             [(asn, type, name), obj] = regobj
             if type != 'net': continue
             net: Network = obj

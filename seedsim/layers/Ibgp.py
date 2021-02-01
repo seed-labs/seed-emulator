@@ -1,7 +1,7 @@
 from .Layer import Layer
 from .Base import Base
 from .Ospf import Ospf
-from seedsim.core import Registry, ScopedRegistry, Node, Interface, Graphable
+from seedsim.core import ScopedRegistry, Node, Interface, Graphable, Simulator
 from seedsim.core.enums import NetworkType
 from typing import List, Set, Dict
 
@@ -22,18 +22,18 @@ class Ibgp(Layer, Graphable):
     """!
     @brief The Ibgp (iBGP) layer.
 
-    @todo bird2
-
     This layer automatically setup full mesh peering between routers within AS.
     """
     __masked: Set[int] = set()
-    __reg = Registry()
 
-    def __init__(self):
+    def __init__(self, simulator: Simulator):
         """!
         @brief Ibgp (iBGP) layer constructor.
+        
+        @param simulator simulator.
         """
-        Graphable.__init__(self)
+        Graphable.__init__(self, simulator)
+        Layer.__init__(self, simulator)
         self.__masked = set()
         self.addDependency('Ospf', False, False)
 
@@ -61,7 +61,7 @@ class Ibgp(Layer, Graphable):
         @returns interface if found, None if not found.
         """
         for iface in node.getInterfaces():
-            ospf: Ospf = self.__reg.get('seedsim', 'layer', 'Ospf')
+            ospf: Ospf = self._getReg().get('seedsim', 'layer', 'Ospf')
             net = iface.getNet()
             if net.getType() == NetworkType.InternetExchange: continue
             if ospf.isMasked(net): continue
@@ -70,12 +70,12 @@ class Ibgp(Layer, Graphable):
         return None
 
     def onRender(self):
-        base: Base = self.__reg.get('seedsim', 'layer', 'Base')
+        base: Base = self._getReg().get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():
             if asn in self.__masked: continue
 
             self._log('setting up IBGP peering for as{}...'.format(asn))
-            routers: List[Node] = ScopedRegistry(str(asn)).getByType('rnode')
+            routers: List[Node] = ScopedRegistry(str(asn), self._getReg()).getByType('rnode')
 
             for local in routers:
                 self._log('setting up IBGP peering on as{}/{}...'.format(asn, local.getName()))
@@ -100,7 +100,7 @@ class Ibgp(Layer, Graphable):
                     self._log('adding peering: {} <-> {} (ibgp, as{})'.format(laddr, raddr, asn))
 
     def _doCreateGraphs(self):
-        base: Base = self.__reg.get('seedsim', 'layer', 'Base')
+        base: Base = self._getReg().get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():
             if asn in self.__masked: continue
             asobj = base.getAutonomousSystem(asn)
@@ -111,7 +111,7 @@ class Ibgp(Layer, Graphable):
             for edge in ibgpgraph.edges:
                 edge.style = 'dotted'
 
-            rtrs = ScopedRegistry(str(asn)).getByType('rnode').copy()
+            rtrs = ScopedRegistry(str(asn), self._getReg()).getByType('rnode').copy()
             
             while len(rtrs) > 0:
                 a = rtrs.pop()
