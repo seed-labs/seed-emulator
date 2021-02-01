@@ -83,7 +83,10 @@ class Registry(Printable):
     Registry is the global container for all objects in the simulator.
     """
 
-    __objects: Dict[Tuple[str, str, str], Registrable] = {}
+    __objects: Dict[Tuple[str, str, str], Registrable]
+
+    def __init__(self):
+        self.__objects = {}
 
     def register(self, scope: str, type: str, name: str, obj: Registrable) -> Registrable:
         """!

@@ -1,8 +1,28 @@
-from .Simulator import SimulatorObject
+class Mergeable(object):
+    """!
+    @brief Mergeable base class
+    """
+
+    def getTypeName(self) -> str:
+        """!
+        @brief Get type name of the current object. 
+        """
+        raise NotImplementedError("getTypeName not implemented.")
+
+    def shouldMerge(self, other: Mergeable) -> bool:
+        """!
+        @brief Test if two object should be merged, or treated as different
+        objects. This is called when merging two object with the same type.
+        simulator.
+
+        @param other the other object
+        """
+        raise NotImplementedError("equals not implemented.")
+
 
 class Merger(object):
     """!
-    @brief Merger class. 
+    @brief Merger base class. 
 
     When merging
     """
@@ -16,9 +36,9 @@ class Merger(object):
         raise NotImplementedError("getTargetType not implemented.")
 
 
-    def doMerge(self, objectA: SimulatorObject, objectB: SimulatorObject) -> SimulatorObject:
+    def doMerge(self, objectA: Mergeable, objectB: Mergeable) -> Mergeable:
         """!
-        @brief Do the merging.
+        @brief Do merging.
 
         @param objectA first object.
         @param objectB second object.
