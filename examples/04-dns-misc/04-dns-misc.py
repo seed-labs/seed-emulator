@@ -1,19 +1,18 @@
 from seedsim.layers import Base, Routing, Ebgp, DomainNameService, DomainNameCachingService, Dnssec, WebService, CymruIpOriginService, ReverseDomainNameService
-from seedsim.renderer import Renderer
+from seedsim.core import Simulator
 from seedsim.compiler import Docker
 
-base = Base()
-routing = Routing()
-ebgp = Ebgp()
-web = WebService()
-dns = DomainNameService()
-dnssec = Dnssec()
-ldns = DomainNameCachingService(setResolvconf = True)
-rdns = ReverseDomainNameService()
-ip_origin = CymruIpOriginService()
+sim = Simulator()
 
-renderer = Renderer()
-docker_compiler = Docker()
+base = Base(sim)
+routing = Routing(sim)
+ebgp = Ebgp(sim)
+web = WebService(sim)
+dns = DomainNameService(sim)
+dnssec = Dnssec(sim)
+ldns = DomainNameCachingService(sim, setResolvconf = True)
+rdns = ReverseDomainNameService(sim)
+ip_origin = CymruIpOriginService(sim)
 
 ###############################################################################
 
@@ -137,18 +136,18 @@ ebgp.addRsPeer(100, 153)
 
 ###############################################################################
 
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(dns)
-renderer.addLayer(ldns)
-renderer.addLayer(dnssec)
-renderer.addLayer(web)
-renderer.addLayer(rdns)
-renderer.addLayer(ip_origin)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(dns)
+sim.addLayer(ldns)
+sim.addLayer(dnssec)
+sim.addLayer(web)
+sim.addLayer(rdns)
+sim.addLayer(ip_origin)
 
-renderer.render()
+sim.render()
 
 ###############################################################################
 
-docker_compiler.compile('./dns-misc')
+sim.compile(Docker(), './dns-misc')
