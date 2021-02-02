@@ -1,17 +1,16 @@
 from seedsim.layers import Base, Routing, Ebgp, DomainNameService, DomainNameCachingService, Dnssec, WebService
-from seedsim.renderer import Renderer
+from seedsim.core import Simulator
 from seedsim.compiler import Docker
 
-base = Base()
-routing = Routing()
-ebgp = Ebgp()
-web = WebService()
-dns = DomainNameService()
-dnssec = Dnssec()
-ldns = DomainNameCachingService(setResolvconf = True)
+sim = Simulator()
 
-renderer = Renderer()
-docker_compiler = Docker()
+base = Base(sim)
+routing = Routing(sim)
+ebgp = Ebgp(sim)
+web = WebService(sim)
+dns = DomainNameService(sim)
+dnssec = Dnssec(sim)
+ldns = DomainNameCachingService(sim, setResolvconf = True)
 
 ###############################################################################
 
@@ -122,16 +121,16 @@ ebgp.addRsPeer(100, 153)
 
 ###############################################################################
 
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(dns)
-renderer.addLayer(ldns)
-renderer.addLayer(dnssec)
-renderer.addLayer(web)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(dns)
+sim.addLayer(ldns)
+sim.addLayer(dnssec)
+sim.addLayer(web)
 
-renderer.render()
+sim.render()
 
 ###############################################################################
 
-docker_compiler.compile('./dns-infra')
+sim.compile(Docker(), './dns-infra')

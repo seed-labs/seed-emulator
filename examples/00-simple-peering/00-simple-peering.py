@@ -1,15 +1,13 @@
 from seedsim.layers import Base, Routing, Ebgp, WebService
-from seedsim.renderer import Renderer
 from seedsim.compiler import Docker
+from seedsim.core import Simulator
 
-base = Base()
-routing = Routing()
-ebgp = Ebgp()
-web = WebService()
+sim = Simulator()
 
-renderer = Renderer()
-
-docker_compiler = Docker()
+base = Base(sim)
+routing = Routing(sim)
+ebgp = Ebgp(sim)
+web = WebService(sim)
 
 ###############################################################################
 
@@ -77,13 +75,13 @@ ebgp.addRsPeer(100, 152)
 
 ###############################################################################
 
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(web)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(web)
 
-renderer.render()
+sim.render()
 
 ###############################################################################
 
-docker_compiler.compile('./simple-peering')
+sim.compile(Docker(), './simple-peering')

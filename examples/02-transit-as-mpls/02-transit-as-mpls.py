@@ -1,15 +1,14 @@
 from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Mpls, WebService
-from seedsim.renderer import Renderer
+from seedsim.core import Simulator
 from seedsim.compiler import Docker
 
-base = Base()
-routing = Routing()
-ebgp = Ebgp()
-mpls = Mpls()
-web = WebService()
+sim = Simulator()
 
-renderer = Renderer()
-docker_compiler = Docker()
+base = Base(sim)
+routing = Routing(sim)
+ebgp = Ebgp(sim)
+mpls = Mpls(sim)
+web = WebService(sim)
 
 ###############################################################################
 
@@ -86,14 +85,14 @@ ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider
 
 ###############################################################################
 
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(mpls)
-renderer.addLayer(web)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(mpls)
+sim.addLayer(web)
 
-renderer.render()
+sim.render()
 
 ###############################################################################
 
-docker_compiler.compile('./transit-as-mpls')
+sim.compile(Docker(), './transit-as-mpls')
