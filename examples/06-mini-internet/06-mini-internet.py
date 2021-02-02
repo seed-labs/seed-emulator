@@ -3,29 +3,26 @@ from seedsim.layers import WebService, DomainNameService, DomainNameCachingServi
 from seedsim.layers import CymruIpOriginService, ReverseDomainNameService
 from seedsim.compiler import Docker, Graphviz
 from seedsim.compiler import Compiler
-from seedsim.renderer import Renderer
-from seedsim.core import Registry, Node
+from seedsim.core import Registry, Node, Simulator
 from seedsim.layers import Router, Service
 from typing import List, Tuple, Dict
 
 ###############################################################################
 
-base = Base()
-routing = Routing()
-ebgp = Ebgp()
-ibgp = Ibgp()
-ospf = Ospf()
-real = Reality()
-web = WebService()
-dns = DomainNameService()
-ldns = DomainNameCachingService()
-dnssec = Dnssec()
-cymru = CymruIpOriginService()
-rdns = ReverseDomainNameService()
+sim = Simulator()
 
-renderer = Renderer()
-docker_compiler = Docker()
-graphviz = Graphviz()
+base = Base(sim)
+routing = Routing(sim)
+ebgp = Ebgp(sim)
+ibgp = Ibgp(sim)
+ospf = Ospf(sim)
+real = Reality(sim)
+web = WebService(sim)
+dns = DomainNameService(sim)
+ldns = DomainNameCachingService(sim)
+dnssec = Dnssec(sim)
+cymru = CymruIpOriginService(sim)
+rdns = ReverseDomainNameService(sim)
 
 ###############################################################################
 
@@ -273,22 +270,22 @@ for ((scope, type, name), object) in reg.getAll().items():
 
 ###############################################################################
 
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(ibgp)
-renderer.addLayer(ospf)
-renderer.addLayer(real)
-renderer.addLayer(web)
-renderer.addLayer(dns)
-renderer.addLayer(ldns)
-renderer.addLayer(dnssec)
-renderer.addLayer(cymru)
-renderer.addLayer(rdns)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(ibgp)
+sim.addLayer(ospf)
+sim.addLayer(real)
+sim.addLayer(web)
+sim.addLayer(dns)
+sim.addLayer(ldns)
+sim.addLayer(dnssec)
+sim.addLayer(cymru)
+sim.addLayer(rdns)
 
-renderer.render()
+sim.render()
 
 ###############################################################################
 
-docker_compiler.compile('./mini-internet')
-graphviz.compile('./mini-internet/_graphs')
+sim.compile(Docker(), './mini-internet')
+sim.compile(Graphviz(), './mini-internet/_graphs')
