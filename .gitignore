@@ -5,6 +5,7 @@
 *.so
 *.swp
 *.tfvars
+*.pyc
 docs-out
 __pycache__
 build
