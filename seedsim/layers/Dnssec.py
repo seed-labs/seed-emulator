@@ -1,7 +1,7 @@
 from .Layer import Layer
 from .DomainNameService import DomainNameService
 from typing import Set, Dict, List
-from seedsim.core import ScopedRegistry, Node, Simulator
+from seedsim.core import Node, Simulator
 
 DnssecFileTemplates: Dict[str, str] = {}
 
@@ -62,7 +62,6 @@ class Dnssec(Layer):
     """
 
     __zonenames: Set[str]
-    __reg: ScopedRegistry
 
     def __init__(self, simulator: Simulator):
         """!
@@ -72,7 +71,6 @@ class Dnssec(Layer):
         """
         Layer.__init__(self, simulator)
         self.__zonenames = set()
-        self.__reg = ScopedRegistry('seedsim', self._getReg())
         self.addDependency('DomainNameService', False, False)
 
     def getName(self):
@@ -88,7 +86,7 @@ class Dnssec(Layer):
         self.__zonenames.add(zonename)
 
     def onRender(self):
-        dns: DomainNameService = self.__reg.get('layer', 'DomainNameService')
+        dns: DomainNameService = self._getReg().get('seedsim', 'layer', 'DomainNameService')
         nodes: Set[Node] = set()
         for zonename in self.__zonenames:
             self._log('Looking for server hosting "{}"...'.format(zonename))

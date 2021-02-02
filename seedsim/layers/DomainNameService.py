@@ -263,7 +263,7 @@ class DomainNameService(Service):
         Service.__init__(self, simulator)
         self.__autoNs = autoNameServer
         self.__servers = []
-        self.__rootZone = Zone('.')
+        self.__rootZone = Zone('')
         self.addDependency('Base', False, False)
 
     def getName(self):
