@@ -87,7 +87,7 @@ class Ospf(Layer):
         @param asn ASN to operate on.
         @param netname name of the network.
         """
-        self.markStub(self.__reg.get(str(asn), 'net', netname))
+        self.markStub(self._getReg().get(str(asn), 'net', netname))
 
     def maskNetwork(self, net: Network):
         """!
@@ -124,7 +124,7 @@ class Ospf(Layer):
         @param asn ASN to operate on.
         @param netname name of the network.
         """
-        self.maskNetwork(self.__reg.get(str(asn), 'net', netname))
+        self.maskNetwork(self._getReg().get(str(asn), 'net', netname))
 
     def isMasked(self, net: Network) -> bool:
         """!
@@ -137,7 +137,7 @@ class Ospf(Layer):
         return net in self.__masked
 
     def onRender(self):
-        for ((scope, type, name), obj) in self.__reg.getAll().items():
+        for ((scope, type, name), obj) in self._getReg().getAll().items():
             if type != 'rnode': continue
             router: Node = obj
             if router.getAsn() in self.__masked_asn: continue
