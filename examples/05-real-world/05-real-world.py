@@ -1,22 +1,16 @@
 from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, WebService, Reality
-from seedsim.renderer import Renderer
+from seedsim.core import Simulator
 from seedsim.compiler import Docker
 
-base = Base()
-routing = Routing()
-ebgp = Ebgp()
-ibgp = Ibgp()
-ospf = Ospf()
-web = WebService()
-real = Reality()
+sim = Simulator()
 
-###############################################################################
-
-renderer = Renderer()
-
-###############################################################################
-
-docker_compiler = Docker()
+base = Base(sim)
+routing = Routing(sim)
+ebgp = Ebgp(sim)
+ibgp = Ibgp(sim)
+ospf = Ospf(sim)
+web = WebService(sim)
+real = Reality(sim)
 
 ###############################################################################
 
@@ -101,16 +95,16 @@ ebgp.addPrivatePeering(101, 150, 11872, abRelationship = PeerRelationship.Provid
 
 ###############################################################################
 
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(ibgp)
-renderer.addLayer(ospf)
-renderer.addLayer(web)
-renderer.addLayer(real)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(ibgp)
+sim.addLayer(ospf)
+sim.addLayer(web)
+sim.addLayer(real)
 
-renderer.render()
+sim.render()
 
 ###############################################################################
 
-docker_compiler.compile('./real-world')
+sim.compile(Docker(), './real-world')

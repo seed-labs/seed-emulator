@@ -269,6 +269,7 @@ class Reality(Layer):
     __rwnodes: List[RealWorldRouter]
     __rwnets: List[Tuple[Network, int]]
     __reg: ScopedRegistry
+    __simulator: Simulator
     __hide_hops: bool
 
     __ovpn_ca: str
@@ -293,6 +294,7 @@ class Reality(Layer):
         self.__ovpn_ca = ovpnCa
         self.__ovpn_cert = ovpnCert
         self.__ovpn_key = ovpnKey
+        self.__simulator = simulator
         self.__reg = ScopedRegistry('seedsim', self._getReg())
         self.addDependency('Ebgp', False, False)
 
@@ -382,7 +384,7 @@ class Reality(Layer):
             (scope, _, name) = net.getRegistryInfo()
             self._log('Setting up real-world bridge for network as{}/{}...'.format(scope, name))
             snode_name = 'br-{}'.format(name)
-            snode = Node(snode_name, NodeRole.Host, 0, 'seedsim')
+            snode = Node(self.__simulator, snode_name, NodeRole.Host, 0, 'seedsim')
             snode.joinNetwork(net)
             addrstart = addrend = net.assign(NodeRole.Host)
             for i in repeat(None, poolsz - 1): addrend = net.assign(NodeRole.Host)
