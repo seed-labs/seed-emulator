@@ -1,17 +1,16 @@
 from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, WebService, Router
-from seedsim.renderer import Renderer
+from seedsim.sim import Renderer
 from seedsim.compiler import Docker
-from seedsim.core import Registry
+from seedsim.core import Simulator
 
-base = Base()
-routing = Routing()
-ebgp = Ebgp()
-ibgp = Ibgp()
-ospf = Ospf()
-web = WebService()
+sim = Simulator()
 
-renderer = Renderer()
-docker_compiler = Docker()
+base = Base(sim)
+routing = Routing(sim)
+ebgp = Ebgp(sim)
+ibgp = Ibgp(sim)
+ospf = Ospf(sim)
+web = WebService(sim)
 
 ###############################################################################
 
@@ -109,15 +108,15 @@ ebgp.addPrivatePeering(102, 3, 161, PeerRelationship.Provider)
 
 ###############################################################################
 
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(ibgp)
-renderer.addLayer(ospf)
-renderer.addLayer(web)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(ibgp)
+sim.addLayer(ospf)
+sim.addLayer(web)
 
-renderer.render()
+sim.render()
 
 ###############################################################################
 
-docker_compiler.compile('./bgp-lab-final')
+sim.compile(Docker(), './bgp-lab-final')

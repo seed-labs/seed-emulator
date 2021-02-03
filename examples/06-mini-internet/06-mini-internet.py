@@ -262,8 +262,7 @@ ebgp.addPrivatePeering(100, 4, 15169, PeerRelationship.Provider)
 
 ###############################################################################
 
-reg = Registry()
-for ((scope, type, name), object) in reg.getAll().items():
+for ((scope, type, name), object) in sim.getRegistry().getAll().items():
     if type != 'hnode': continue
     host: Node = object
     host.addStartCommand('echo "nameserver 8.8.8.8" > /etc/resolv.conf')
