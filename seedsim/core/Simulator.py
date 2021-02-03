@@ -3,6 +3,7 @@ from .Merger import Merger
 from .Registry import Registry
 from typing import Dict, Set, Tuple
 from sys import stderr
+import pickle
 
 class Simulator:
 
@@ -104,10 +105,13 @@ class Simulator:
         raise NotImplementedError('todo')
 
     def dump(self, fileName: str):
-        raise NotImplementedError('todo')
+        with open(fileName, 'wb') as f:
+            pickle.dump(self.__dict__, f)
 
     def load(self, fileName: str):
-        raise NotImplementedError('todo')
+        with open(fileName, 'rb') as f:
+            d = pickle.load(f)
+            self.__dict__.update(d)
 
     def __log(self, message: str):
         print('== Simulator: {}'.format(message), file=stderr)
