@@ -1,4 +1,4 @@
-from .AddressAssignmentConstraint import AddressAssignmentConstraint
+from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
 from .AutonomousSystem import AutonomousSystem
 from .InternetExchange import InternetExchange
 from .Network import Network
