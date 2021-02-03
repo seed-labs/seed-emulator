@@ -7,7 +7,7 @@ from .enums import NetworkType, NodeRole
 from .Node import Node
 from .Simulator import Simulator
 from ipaddress import IPv4Network
-from typing import Generator, Dict
+from typing import Dict, List
 
 
 class AutonomousSystem(Printable, Graphable):
@@ -18,7 +18,7 @@ class AutonomousSystem(Printable, Graphable):
     """
 
     __asn: int
-    __subnet_generator: Generator[IPv4Network, None, None]
+    __subnets: List[IPv4Network]
     __reg: ScopedRegistry
     __simulator: Simulator
 
@@ -33,7 +33,7 @@ class AutonomousSystem(Printable, Graphable):
         self.__simulator = simulator
         self.__asn = asn
         self.__reg = ScopedRegistry(str(asn), simulator.getRegistry())
-        self.__subnet_generator = None if asn > 255 else IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24)
+        self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
 
     def getAsn(self) -> int:
         """!
@@ -54,7 +54,7 @@ class AutonomousSystem(Printable, Graphable):
         """
         assert prefix != "auto" or self.__asn <= 255, "can't use auto: asn > 255"
 
-        network = IPv4Network(prefix) if prefix != "auto" else next(self.__subnet_generator)
+        network = IPv4Network(prefix) if prefix != "auto" else self.__subnets.pop(0)
         return self.__reg.register('net', name, Network(self.__simulator, name, NetworkType.Local, network, aac))
 
     def getNetwork(self, name: str) -> Network:

@@ -4,7 +4,7 @@ from .enums import NetworkType, NodeRole
 from .Registry import Registrable
 from .Simulator import Simulator
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
-from typing import Generator, Dict, Tuple, List
+from typing import Dict, Tuple, List
 
 class Network(Printable, Registrable):
     """!
