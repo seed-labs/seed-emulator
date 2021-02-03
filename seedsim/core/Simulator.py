@@ -1,9 +1,16 @@
 from __future__ import annotations
 from .Merger import Merger
-from .Registry import Registry
+from .Registry import Registry, Registrable
 from typing import Dict, Set, Tuple
 from sys import stderr
 import pickle
+
+class LayerDatabase(Registrable):
+
+    db: Dict[str, Tuple[Layer, bool]]
+
+    def __init__(self):
+        self.db = {}
 
 class Simulator:
 
@@ -13,10 +20,11 @@ class Simulator:
     __rendered: bool
 
     def __init__(self):
-        self.__layers = {}
         self.__rendered = False
         self.__dependencies_db = {}
         self.__registry = Registry()
+        self.__layers = LayerDatabase()
+        self.__registry.register('seedsim', 'dict', 'layersdb', self.__layers)
 
     def addLayer(self, layer: Layer):
         """!
@@ -27,9 +35,9 @@ class Simulator:
         """
 
         lname = layer.getName()
-        assert lname not in self.__layers, 'layer {} already added.'.format(lname)
+        assert lname not in self.__layers.db, 'layer {} already added.'.format(lname)
         self.__registry.register('seedsim', 'layer', lname, layer)
-        self.__layers[lname] = (layer, False)
+        self.__layers.db[lname] = (layer, False)
 
     def getLayer(self, layerName: str) -> Layer:
         self.__registry.get('seedsim', 'layer', layerName)
@@ -43,13 +51,13 @@ class Simulator:
         """
         self.__log('requesting render: {}'.format(layerName))
 
-        if optional and layerName not in self.__layers:
+        if optional and layerName not in self.__layers.db:
             self.__log('{}: not found but is optional, skipping'.format(layerName))
             return
 
-        assert layerName in self.__layers, 'Layer {} requried but missing'.format(layerName)
+        assert layerName in self.__layers.db, 'Layer {} requried but missing'.format(layerName)
 
-        (layer, done) = self.__layers[layerName]
+        (layer, done) = self.__layers.db[layerName]
         if done:
             self.__log('{}: already rendered, skipping'.format(layerName))
             return
@@ -62,7 +70,7 @@ class Simulator:
         self.__log('rendering {}...'.format(layerName))
         layer.onRender()
         self.__log('done: {}'.format(layerName))
-        self.__layers[layerName] = (layer, True)
+        self.__layers.db[layerName] = (layer, True)
     
     def __loadDependencies(self, deps: Dict[str, Set[Tuple[str, bool]]]):
         for (layer, deps) in deps.items():
@@ -78,10 +86,10 @@ class Simulator:
 
         @throws AssertionError if dependencies unmet 
         """
-        for (layer, _) in self.__layers.values():
+        for (layer, _) in self.__layers.db.values():
             self.__loadDependencies(layer.getDependencies())
 
-        for layerName in self.__layers.keys():
+        for layerName in self.__layers.db.keys():
             self.__render(layerName, False)
 
     def compile(self, compiler: 'Compiler', out: str, override: bool = False):
@@ -105,13 +113,16 @@ class Simulator:
         raise NotImplementedError('todo')
 
     def dump(self, fileName: str):
+        assert self.__render, 'cannot dump simulation after render.'
         with open(fileName, 'wb') as f:
-            pickle.dump(self.__dict__, f)
+            pickle.dump(self.__registry, f)
 
     def load(self, fileName: str):
         with open(fileName, 'rb') as f:
-            d = pickle.load(f)
-            self.__dict__.update(d)
+            self.__rendered = False
+            self.__dependencies_db = {}
+            self.__registry = pickle.load(f)
+            self.__layers = self.__registry.get('seedsim', 'dict', 'layersdb')
 
     def __log(self, message: str):
         print('== Simulator: {}'.format(message), file=stderr)
