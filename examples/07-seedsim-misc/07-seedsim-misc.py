@@ -1,26 +1,16 @@
 from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Mpls, WebService
-from seedsim.renderer import Renderer
 from seedsim.compiler import Docker, DistributedDocker, GcpDistributedDocker, Graphviz
-from seedsim.core import Registry
+from seedsim.core import Simulator
 from os import mkdir
 
-base = Base()
-routing = Routing()
-ebgp = Ebgp()
-mpls = Mpls()
+sim = Simulator()
 
-web = WebService()
+base = Base(sim)
+routing = Routing(sim)
+ebgp = Ebgp(sim)
+mpls = Mpls(sim)
 
-###############################################################################
-
-renderer = Renderer()
-
-###############################################################################
-
-docker_compiler = Docker()
-graphviz_compiler = Graphviz()
-dist_compiler = DistributedDocker()
-gcp_dist_compiler = GcpDistributedDocker()
+web = WebService(sim)
 
 ###############################################################################
 
@@ -97,22 +87,22 @@ ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider
 
 ###############################################################################
 
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(mpls)
-renderer.addLayer(web)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(mpls)
+sim.addLayer(web)
 
-renderer.render()
+sim.render()
 
 ###############################################################################
 
-print(Registry())
+print(sim.getRegistry())
 
 ###############################################################################
 
 mkdir('./seedsim-misc')
-docker_compiler.compile('./seedsim-misc/regular-docker')
-graphviz_compiler.compile('./seedsim-misc/graphs')
-dist_compiler.compile('./seedsim-misc/distributed-docker')
-gcp_dist_compiler.compile('./seedsim-misc/gcp-distributed-docker')
+sim.compile(Docker(), './seedsim-misc/regular-docker')
+sim.compile(Graphviz(), './seedsim-misc/graphs')
+sim.compile(DistributedDocker(), './seedsim-misc/distributed-docker')
+sim.compile(GcpDistributedDocker(), './seedsim-misc/gcp-distributed-docker')

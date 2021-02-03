@@ -246,9 +246,9 @@ class GcpDistributedDocker(Compiler):
             name = scope
         ), file=open('worker-as{}.tf'.format(scope), 'w'))
 
-    def _doCompile(self):
+    def _doCompile(self, registry: Registry):
         dcomp = DistributedDocker()
         self.__init_tf()
         self._log('generating container configurations...')
-        dcomp.compile('_containers')
-        self.__make_tf()
+        dcomp.compile(registry, '_containers')
+        self.__make_tf(registry)
