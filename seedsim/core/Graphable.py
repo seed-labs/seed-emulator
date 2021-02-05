@@ -266,16 +266,13 @@ class Graphable(Registrable):
     __graphs: Dict[str, Graph]
     __graphs_created: bool
     _n_graphs = 0
-    __simulator: Simulator
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief Graphable constructor.
         """
-        self.__simulator = simulator
         self.__graphs = {}
         self.__graphs_created = False
-        simulator.getRegistry().register('seedsim', 'graph', str(len(self.__simulator.getRegistry().getByType('seedsim', 'graph'))), self)
 
     def _addGraph(self, name: str, directed: bool) -> Graph:
         """!
@@ -316,19 +313,26 @@ class Graphable(Registrable):
         """
         return self.__graphs
 
-    def _doCreateGraphs(self):
+    def _doCreateGraphs(self, simulator: Simulator):
         """!
         @brief handle graph creation, should be implemented by all graphable
         classes.
+
+        @param simulator simulator object.
         """
         raise NotImplementedError('_doCreateGraphs not implemented.')
 
-    def createGraphs(self):
+    def createGraphs(self, simulator: Simulator):
         """!
         @brief Create graphs.
 
+        @param simulator simulator object.
+
         Call this method to ask the class to create graphs.
         """
+        assert simulator.rendered(), 'Simulation needs to be redered before graphs can be created.'
+        reg = simulator.getRegistry()
+        reg.register('seedsim', 'graph', str(len(reg.getByType('seedsim', 'graph'))), self)
         if self.__graphs_created: return
-        self._doCreateGraphs()
+        self._doCreateGraphs(simulator)
         self.__graphs_created = True
