@@ -3,6 +3,7 @@ from .Network import Network
 from .enums import NodeRole
 from .Registry import Registrable
 from .Simulator import Simulator
+from .Configurable import Configurable
 from ipaddress import IPv4Address
 from typing import List, Dict, Set, Tuple
 
@@ -54,7 +55,7 @@ class File(Printable):
         """
         self.__content += content
 
-    def get(self) -> (str, str):
+    def get(self) -> Tuple[str, str]:
         """!
         @brief Get file path and content.
 
@@ -170,7 +171,7 @@ class Interface(Printable):
 
         return out
 
-class Node(Printable, Registrable):
+class Node(Printable, Registrable, Configurable):
     """!
     @brief Node base class.
 

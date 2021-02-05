@@ -6,11 +6,12 @@ from .Registry import ScopedRegistry
 from .enums import NetworkType, NodeRole
 from .Node import Node
 from .Simulator import Simulator
+from .Configurable import Configurable
 from ipaddress import IPv4Network
 from typing import Dict, List
 
 
-class AutonomousSystem(Printable, Graphable):
+class AutonomousSystem(Printable, Graphable, Configurable):
     """!
     @brief AutonomousSystem class. 
 
@@ -20,20 +21,31 @@ class AutonomousSystem(Printable, Graphable):
     __asn: int
     __subnets: List[IPv4Network]
     __reg: ScopedRegistry
-    __simulator: Simulator
+    __routers: Dict[Node]
+    __hosts: Dict[Node]
+    __nets: Dict[Network]
 
-    def __init__(self, simulator: Simulator, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
+    def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
         @brief AutonomousSystem constructor.
 
         @param asn ASN for this system.
         @param subnetTemplate template for assigning subnet.
         """
-        Graphable.__init__(self, simulator)
-        self.__simulator = simulator
+        self.__hosts = {}
+        self.__routers = {}
+        self.__nets = {}
         self.__asn = asn
-        self.__reg = ScopedRegistry(str(asn), simulator.getRegistry())
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
+
+    def configure(self, simulator: Simulator):
+        reg = simulator.getRegistry()
+        for (key, val) in self.__hosts.items(): reg.register(str(self.__asn), 'hnode', key, val)
+        for (key, val) in self.__routers.items(): reg.register(str(self.__asn), 'rnode', key, val)
+        for (key, val) in self.__nets.items(): reg.register(str(self.__asn), 'net', key, val)
+
+        for host in self.__hosts.values(): host.configure(simulator)
+        for router in self.__routers.values(): router.configure(simulator)
 
     def getAsn(self) -> int:
         """!
@@ -55,7 +67,8 @@ class AutonomousSystem(Printable, Graphable):
         assert prefix != "auto" or self.__asn <= 255, "can't use auto: asn > 255"
 
         network = IPv4Network(prefix) if prefix != "auto" else self.__subnets.pop(0)
-        return self.__reg.register('net', name, Network(self.__simulator, name, NetworkType.Local, network, aac))
+        assert name not in self.__nets, 'Network with name {} already exist.'.format(name)
+        self.__nets[name] = Network(self.__simulator, name, NetworkType.Local, network, aac)
 
     def getNetwork(self, name: str) -> Network:
         """!
@@ -64,7 +77,7 @@ class AutonomousSystem(Printable, Graphable):
         @param name name of the network.
         @returns Network.
         """
-        return self.__reg.get('net', name)
+        return self.__nets[name]
 
     def createRouter(self, name: str) -> Node:
         """!
@@ -73,7 +86,8 @@ class AutonomousSystem(Printable, Graphable):
         @param name name of the new node.
         @returns Node.
         """
-        return self.__reg.register('rnode', name, Node(self.__simulator, name, NodeRole.Router, self.__asn))
+        assert name not in self.__routers, 'Router with name {} already exists.'.format(name)
+        self.__routers[name] = Node(self.__simulator, name, NodeRole.Router, self.__asn)
 
     def getRouter(self, name: str) -> Node:
         """!
@@ -82,7 +96,7 @@ class AutonomousSystem(Printable, Graphable):
         @param name name of the node.
         @returns Node.
         """
-        return self.__reg.get('rnode', name)
+        return self.__routers[name]
 
     def createHost(self, name: str) -> Node:
         """!
@@ -91,7 +105,8 @@ class AutonomousSystem(Printable, Graphable):
         @param name name of the new node.
         @returns Node.
         """
-        return self.__reg.register('hnode', name, Node(self.__simulator, name, NodeRole.Host, self.__asn))
+        assert name not in self.__hosts, 'Host with name {} already exists.'.format(name)
+        self.__hosts[name] = Node(self.__simulator, name, NodeRole.Host, self.__asn)
 
     def getHost(self, name: str) -> Node:
         """!
@@ -100,16 +115,16 @@ class AutonomousSystem(Printable, Graphable):
         @param name name of the node.
         @returns Node.
         """
-        return self.__reg.get('hnode', name)
+        return self.__hosts[name]
 
     def _doCreateGraphs(self):
         l2graph = self._addGraph('AS{}: Layer 2 Connections'.format(self.__asn), False)
         
-        for obj in self.__reg.getByType('net'):
+        for obj in self.__nets.values():
             net: Network = obj
             l2graph.addVertex('Network: {}'.format(net.getName()), shape = 'rectangle', group = 'AS{}'.format(self.__asn))
 
-        for obj in self.__reg.getByType('rnode'):
+        for obj in self.__routers.values():
             router: Node = obj
             rtrname = 'Router: {}'.format(router.getName(), group = 'AS{}'.format(self.__asn))
             l2graph.addVertex(rtrname, group = 'AS{}'.format(self.__asn), shape = 'diamond')
@@ -121,7 +136,7 @@ class AutonomousSystem(Printable, Graphable):
                     l2graph.addVertex(netname, shape = 'rectangle')
                 l2graph.addEdge(rtrname, netname)
 
-        for obj in self.__reg.getByType('hnode'):
+        for obj in self.__hosts.values():
             router: Node = obj
             rtrname = 'Host: {}'.format(router.getName(), group = 'AS{}'.format(self.__asn))
             l2graph.addVertex(rtrname, group = 'AS{}'.format(self.__asn))
