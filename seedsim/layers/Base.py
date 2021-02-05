@@ -40,20 +40,21 @@ class Base(Layer, Graphable):
     __ases: Dict[int, AutonomousSystem]
     __ixes: Dict[int, InternetExchange]
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief Base layer constructor.
         """
-        Layer.__init__(self, simulator)
-        Graphable.__init__(self, simulator)
         self.__ases = {}
         self.__ixes = {}
 
     def getName(self) -> str:
         return "Base"
 
-    def onRender(self) -> None:
-        for ((scope, type, name), obj) in self._getReg().getAll().items():
+    def onRender(self, simulator: Simulator) -> None:
+        for ix in self.__ixes.values(): ix.configure(simulator)
+        for asobj in self.__ases.values(): asobj.configure(simulator)
+
+        for ((scope, type, name), obj) in simulator.getRegistry().getAll().items():
 
             if not (type == 'rs' or type == 'rnode' or type == 'hnode'):
                 continue
@@ -80,7 +81,7 @@ class Base(Layer, Graphable):
         @throws AssertionError if asn exists.
         """
         assert asn not in self.__ases, "as{} already exist.".format(asn)
-        self.__ases[asn] = AutonomousSystem(self._simulator, asn)
+        self.__ases[asn] = AutonomousSystem(asn)
         return self.__ases[asn]
 
     def getAutonomousSystem(self, asn: int) -> AutonomousSystem:
@@ -105,7 +106,7 @@ class Base(Layer, Graphable):
         @throws AssertionError if IX exists.
         """
         assert asn not in self.__ixes, "ix{} already exist.".format(asn)
-        self.__ixes[asn] = InternetExchange(self._simulator, asn, prefix, aac)
+        self.__ixes[asn] = InternetExchange(asn, prefix, aac)
         return self.__ixes[asn]
 
     def getInternetExchange(self, asn: int) -> InternetExchange:

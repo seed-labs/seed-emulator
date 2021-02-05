@@ -21,8 +21,8 @@ class AutonomousSystem(Printable, Graphable, Configurable):
     __asn: int
     __subnets: List[IPv4Network]
     __reg: ScopedRegistry
-    __routers: Dict[Node]
-    __hosts: Dict[Node]
+    __routers: Dict[str, Node]
+    __hosts: Dict[str, Node]
     __nets: Dict[Network]
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
