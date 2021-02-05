@@ -241,12 +241,12 @@ class Mpls(Layer, Graphable):
             for n in nodes: self.__setUpLdpOspf(n)
             self.__setUpIbgpMesh(enodes)
 
-    def _doCreateGraphs(self):
-        base: Base = self._getReg().get('seedsim', 'layer', 'Base')
+    def _doCreateGraphs(self, simulator: Simulator):
+        base = self._getReg().get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():
             if asn not in self.__enabled: continue
             asobj = base.getAutonomousSystem(asn)
-            asobj.createGraphs()
+            asobj.createGraphs(simulator)
             l2graph = asobj.getGraph('AS{}: Layer 2 Connections'.format(asn))
             mplsgraph = self._addGraph('AS{}: MPLS Topology'.format(asn), False)
             mplsgraph.copy(l2graph)

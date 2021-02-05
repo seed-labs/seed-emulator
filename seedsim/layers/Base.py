@@ -137,10 +137,10 @@ class Base(Layer, Graphable):
         """
         return self.__ixes.keys()
 
-    def _doCreateGraphs(self):
+    def _doCreateGraphs(self, simulator: Simulator):
         graph = self._addGraph('Layer 2 Connections', False)
         for asobj in self.__ases.values():
-            asobj.createGraphs()
+            asobj.createGraphs(simulator)
             asgraph = asobj.getGraph('AS{}: Layer 2 Connections'.format(asobj.getAsn()))
             graph.copy(asgraph)
 

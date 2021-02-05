@@ -99,12 +99,12 @@ class Ibgp(Layer, Graphable):
 
                     self._log('adding peering: {} <-> {} (ibgp, as{})'.format(laddr, raddr, asn))
 
-    def _doCreateGraphs(self):
+    def _doCreateGraphs(self, simulator: Simulator):
         base: Base = self._getReg().get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():
             if asn in self.__masked: continue
             asobj = base.getAutonomousSystem(asn)
-            asobj.createGraphs()
+            asobj.createGraphs(simulator)
             l2graph = asobj.getGraph('AS{}: Layer 2 Connections'.format(asn))
             ibgpgraph = self._addGraph('AS{}: iBGP sessions'.format(asn), False)
             ibgpgraph.copy(l2graph)
