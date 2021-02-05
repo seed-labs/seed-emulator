@@ -80,6 +80,14 @@ class Simulator:
 
             self.__dependencies_db[layer] |= deps
 
+    def rendered(self) -> bool:
+        """!
+        @brief test if the simulator is rendered.
+
+        @retrns True if rendered
+        """
+        return self.__rendered
+
     def render(self):
         """!
         @brief Render.
@@ -102,7 +110,7 @@ class Simulator:
         @param override (optional) override the output folder if it already
         exist. False by defualt.
         """
-        compiler.compile(self.__registry, out, override)
+        compiler.compile(self, out, override)
 
     def getRegistry(self) -> Registry: 
         return self.__registry

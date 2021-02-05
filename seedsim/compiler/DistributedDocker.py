@@ -1,3 +1,4 @@
+from seedsim.core.Simulator import Simulator
 from seedsim.core import Registry, ScopedRegistry, Node, Network
 from seedsim.core.enums import NodeRole
 from .Compiler import Compiler
@@ -237,7 +238,8 @@ class DistributedDocker(Compiler):
             netId = '{}{}'.format(self.__contextToPrefix(scope, 'net'), net.getName())
         )
 
-    def _doCompile(self, registry: Registry):
+    def _doCompile(self, simulator: Simulator):
+        registry = simulator.getRegistry()
         scopes = set()
         for (scope, _, _) in registry.getAll().keys(): scopes.add(scope)
 

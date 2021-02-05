@@ -1,3 +1,4 @@
+from seedsim.core.Simulator import Simulator
 from .Compiler import Compiler
 from seedsim.core import Registry, ScopedRegistry, Node, Graphable
 from typing import Dict
@@ -17,10 +18,10 @@ class Graphviz(Compiler):
     def getName(self) -> str:
         return 'Graphviz'
 
-    def _doCompile(self, registry: Registry):
-        reg = ScopedRegistry('seedsim', registry)
+    def _doCompile(self, simulator: Simulator):
+        reg = ScopedRegistry('seedsim', simulator.getRegistry())
         for obj in reg.getByType('graph'):
             graphs: Graphable = obj
-            graphs.createGraphs()
+            graphs.createGraphs(simulator)
             for graph in graphs.getGraphs().values():
                 print(graph.toGraphviz(), file=open('{}.dot'.format(self.__slugify(graph.name)), 'w'))

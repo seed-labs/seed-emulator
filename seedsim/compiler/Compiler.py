@@ -1,3 +1,4 @@
+from seedsim.core.Simulator import Simulator
 from seedsim.core import Registry
 from os import mkdir, chdir, getcwd, path
 from shutil import rmtree
@@ -10,7 +11,7 @@ class Compiler:
     Compiler takes the rendered result and compiles them to working simulators.
     """
 
-    def _doCompile(self, registry: Registry):
+    def _doCompile(self, simulator: Simulator):
         """!
         @brief Compiler driver implementation.
 
@@ -30,7 +31,7 @@ class Compiler:
         """
         raise NotImplementedError('getName not implemented.')
 
-    def compile(self, registry: Registry, output: str, override: bool = False):
+    def compile(self, simulator: Simulator, output: str, override: bool = False):
         """!
         @brief Compile the simulation.
 
@@ -38,6 +39,8 @@ class Compiler:
         @param override (optional) override the output folder if it already
         exist. False by defualt.
         """
+        assert simulator.rendered(), 'Simulation needs to be rendered before compile.'
+
         cur = getcwd()
         if path.exists(output):
             if override:
@@ -48,7 +51,7 @@ class Compiler:
                 exit(1)
         mkdir(output)
         chdir(output)
-        self._doCompile(registry)
+        self._doCompile(simulator)
         chdir(cur)
 
     def _log(self, message: str) -> None:

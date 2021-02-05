@@ -1,3 +1,4 @@
+from seedsim.core.Simulator import Simulator
 from seedsim.core import Registry, Node, Network
 from seedsim.core.enums import NodeRole
 from .Compiler import Compiler
@@ -276,7 +277,9 @@ class Docker(Compiler):
             mtu = net.getMtu()
         )
 
-    def _doCompile(self, registry: Registry):
+    def _doCompile(self, simulator: Simulator):
+        registry = simulator.getRegistry()
+
         for ((scope, type, name), obj) in registry.getAll().items():
 
             if type == 'rnode':

@@ -1,3 +1,4 @@
+from seedsim.core.Simulator import Simulator
 from seedsim.core import Registry
 from .Compiler import Compiler
 from .DistributedDocker import DistributedDocker
@@ -246,7 +247,8 @@ class GcpDistributedDocker(Compiler):
             name = scope
         ), file=open('worker-as{}.tf'.format(scope), 'w'))
 
-    def _doCompile(self, registry: Registry):
+    def _doCompile(self, simulator: Simulator):
+        registry = simulator.getRegistry()
         dcomp = DistributedDocker()
         self.__init_tf()
         self._log('generating container configurations...')
