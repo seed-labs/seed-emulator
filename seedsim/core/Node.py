@@ -1,7 +1,7 @@
 from .Printable import Printable
 from .Network import Network
-from .enums import NodeRole, NetworkType
-from .Registry import ScopedRegistry, Registrable
+from .enums import NodeRole
+from .Registry import Registrable
 from .Simulator import Simulator
 from ipaddress import IPv4Address
 from typing import List, Dict, Set, Tuple
@@ -179,8 +179,8 @@ class Node(Printable, Registrable):
 
     __name: str
     __asn: int
+    __scope: str
     __role: NodeRole
-    __reg: ScopedRegistry
     __interfaces: List[Interface]
     __files: Dict[str, File]
     __softwares: Set[str]
@@ -189,9 +189,11 @@ class Node(Printable, Registrable):
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
     __common_software: Set[str] = set()
-    __simulator: Simulator
 
-    def __init__(self, simulator: Simulator, name: str, role: NodeRole, asn: int, scope: str = None):
+    __configured: bool
+    __pending_nets: List[Tuple[str, str]]
+
+    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
         @brief Node constructor.
 
@@ -203,18 +205,41 @@ class Node(Printable, Registrable):
         self.__interfaces = []
         self.__files = {}
         self.__asn = asn
-        self.__reg = ScopedRegistry(scope if scope != None else str(asn), simulator.getRegistry())
         self.__role = role
         self.__name = name
+        self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
         self.__build_commands = []
         self.__start_commands = []
         self.__ports = []
         self.__privileged = False
-        self.__simulator = simulator
+
+        self.__pending_nets = []
+        self.__configured = False
 
         for soft in DEFAULT_SOFTWARES:
             self.__common_software.add(soft)
+
+    def configure(self, simulator: Simulator):
+        """!
+        @brief configure the node. This is called when rendering.
+
+        NICs will be setup during the configuring procress. No new interfaces
+        can be added after configuration.
+
+        @param simulator Simulator object to use to configure.
+        """
+        assert not self.__configured, 'Node already configured.'
+
+        reg = simulator.getRegistry()
+
+        for (netname, address) in self.__pending_nets:
+
+            if reg.has(self.__scope, "net", netname):
+                return self.__joinNetwork(reg.get(self.__scope, "net", netname), address)
+
+            if reg.has("ix", "net", netname):
+                return self.__joinNetwork(reg.get("ix", "net", netname), address)
 
     def addPort(self, host: int, node: int, proto: str = 'tcp'):
         """!
@@ -245,7 +270,7 @@ class Node(Printable, Registrable):
         """
         self.__privileged = privileged
 
-    def isPrivileged(self,) -> bool:
+    def isPrivileged(self) -> bool:
         """!
         @brief Test if node is set to privileged.
 
@@ -253,7 +278,7 @@ class Node(Printable, Registrable):
         """
         return self.__privileged
 
-    def joinNetwork(self, net: Network, address: str = "auto") -> Interface:
+    def __joinNetwork(self, net: Network, address: str = "auto"):
         """!
         @brief Connect the node to a network.
         @param net network to connect.
@@ -271,23 +296,19 @@ class Node(Printable, Registrable):
         self.__interfaces.append(_iface)
         
         net.associate(self)
-        return _iface
 
-    def joinNetworkByName(self, netname: str, address: str = "auto") -> Interface:
+    def joinNetwork(self, netname: str, address: str = "auto"):
         """!
         @brief Connect the node to a network.
         @param netname name of the network.
         @param address (optional) override address assigment.
 
+        @returns assigned IP address
         @throws AssertionError if network does not exist.
         """
-        if self.__reg.has("net", netname):
-            return self.joinNetwork(self.__reg.get("net", netname), address)
+        assert not self.__configured, 'Node already configured.'
 
-        if self.__simulator.getRegistry().has("ix", "net", netname):
-            return self.joinNetwork(self.__simulator.getRegistry().get("ix", "net", netname), address)
-        
-        assert False, 'No such network: {}'.format(netname)
+        self.__pending_nets.append((netname, address))
 
     def getName(self) -> str:
         """!
