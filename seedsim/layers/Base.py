@@ -50,10 +50,11 @@ class Base(Layer, Graphable):
     def getName(self) -> str:
         return "Base"
 
-    def onRender(self, simulator: Simulator) -> None:
+    def configure(self, simulator: Simulator):
         for ix in self.__ixes.values(): ix.configure(simulator)
         for asobj in self.__ases.values(): asobj.configure(simulator)
 
+    def onRender(self, simulator: Simulator) -> None:
         for ((scope, type, name), obj) in simulator.getRegistry().getAll().items():
 
             if not (type == 'rs' or type == 'rnode' or type == 'hnode'):

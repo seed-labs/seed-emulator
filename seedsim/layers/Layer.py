@@ -1,33 +1,23 @@
 from typing import Set, Dict, Tuple
-from seedsim.core import Printable, Registrable, Simulator, Registry
+from seedsim.core import Printable, Registrable, Simulator, Configurable
 from sys import stderr
 from enum import Enum
 
 
-class Layer(Printable, Registrable):
+class Layer(Printable, Registrable, Configurable):
     """!
     @brief The layer interface.
     """
 
     __dependencies: Dict[str, Set[Tuple[str, bool]]]
-    _simulator: Simulator
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief Create new layer.
 
         @param simulator simulator
         """
-        self._simulator = simulator
         self.__dependencies = {}
-
-    def _getReg(self) -> Registry:
-        """!
-        @brief Helper function for getting Registry.
-
-        @returns Registry
-        """
-        return self._simulator.getRegistry()
 
     def addDependency(self, layerName: str, reverse: bool, optional: bool):
         """!
@@ -69,7 +59,7 @@ class Layer(Printable, Registrable):
         """
         raise NotImplementedError('getName not implemented')
 
-    def onRender(self) -> None:
+    def onRender(self, simulator: Simulator) -> None:
         """!
         @brief Handle rendering.
         """

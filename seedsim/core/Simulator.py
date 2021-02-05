@@ -87,6 +87,7 @@ class Simulator:
         @throws AssertionError if dependencies unmet 
         """
         for (layer, _) in self.__layers.db.values():
+            layer.configure(self)
             self.__loadDependencies(layer.getDependencies())
 
         for layerName in self.__layers.db.keys():
