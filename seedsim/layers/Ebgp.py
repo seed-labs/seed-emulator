@@ -52,20 +52,18 @@ class Ebgp(Layer, Graphable):
     __peerings: Dict[Tuple[int, int, int], PeerRelationship]
     __rs_peers: List[Tuple[int, int]]
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief Ebgp layer constructor.
         
         @param simulator simulator.
         """
-        Graphable.__init__(self, simulator)
-        Layer.__init__(self, simulator)
         self.__peerings = {}
         self.__rs_peers = []
         self.addDependency('Routing', False, False)
 
-    def __getAsPrefixes(self, a: int) -> List[str]:
-        sr = ScopedRegistry(str(a), self._getReg())
+    def __getAsPrefixes(self, reg: Registry, a: int) -> List[str]:
+        sr = ScopedRegistry(str(a), reg)
         nets = []
         for net in sr.getByType('net'):
             netobj: Network = net
@@ -137,10 +135,12 @@ class Ebgp(Layer, Graphable):
 
         self.__rs_peers.append((ix, peer))
 
-    def onRender(self) -> None:
+    def onRender(self, simulator: Simulator) -> None:
+        reg = simulator.getRegistry()
+
         for (ix, peer) in self.__rs_peers:
-            ix_reg = ScopedRegistry('ix', self._getReg())
-            p_reg = ScopedRegistry(str(peer), self._getReg())
+            ix_reg = ScopedRegistry('ix', reg)
+            p_reg = ScopedRegistry(str(peer), reg)
 
             ix_net: Network = ix_reg.get('net', 'ix{}'.format(ix))
             ix_rs: Router = ix_reg.get('rs', 'ix{}'.format(ix))
@@ -184,9 +184,9 @@ class Ebgp(Layer, Graphable):
             )) 
 
         for (ix, a, b), rel in self.__peerings.items():
-            ix_reg = ScopedRegistry('ix', self._getReg())
-            a_reg = ScopedRegistry(str(a), self._getReg())
-            b_reg = ScopedRegistry(str(b), self._getReg())
+            ix_reg = ScopedRegistry('ix', reg)
+            a_reg = ScopedRegistry(str(a), reg)
+            b_reg = ScopedRegistry(str(b), reg)
 
             ix_net: Network = ix_reg.get('net', 'ix{}'.format(ix))
             a_rnodes: List[Router] = a_reg.getByType('rnode')
