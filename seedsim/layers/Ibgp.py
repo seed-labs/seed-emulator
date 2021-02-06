@@ -24,7 +24,7 @@ class Ibgp(Layer, Graphable):
 
     This layer automatically setup full mesh peering between routers within AS.
     """
-    __masked: Set[int] = set()
+    __masked: Set[int]
 
     def __init__(self):
         """!
@@ -38,7 +38,7 @@ class Ibgp(Layer, Graphable):
     def getName(self) -> str:
         return 'Ibgp'
 
-    def mask(self, asn: int):
+    def maskAsn(self, asn: int):
         """!
         @brief Mask an AS.
 
