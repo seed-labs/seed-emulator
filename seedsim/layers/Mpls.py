@@ -84,14 +84,12 @@ class Mpls(Layer, Graphable):
     __additional_edges: List[Node]
     __enabled: List[int]
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief Mpls layer constructor.
         
         @param simulator simulator.
         """
-        Graphable.__init__(self, simulator)
-        Layer.__init__(self, simulator)
         self.__additional_edges = []
         self.__enabled = []
 
@@ -222,19 +220,20 @@ class Mpls(Layer, Graphable):
 
                 n += 1
 
-    def onRender(self):
+    def onRender(self, simulator: Simulator):
+        reg = simulator.getRegistry()
         for asn in self.__enabled:
-            if self._getReg().has('seedsim', 'layer', 'Ospf'):
+            if reg.has('seedsim', 'layer', 'Ospf'):
                 self._log('Ospf layer exists, masking as{}'.format(asn))
-                ospf: Ospf = self._getReg().get('seedsim', 'layer', 'Ospf')
+                ospf: Ospf = reg.get('seedsim', 'layer', 'Ospf')
                 ospf.maskAsn(asn)
 
-            if self._getReg().has('seedsim', 'layer', 'Ibgp'):
+            if reg.has('seedsim', 'layer', 'Ibgp'):
                 self._log('Ibgp layer exists, masking as{}'.format(asn))
-                ibgp: Ibgp = self._getReg().get('seedsim', 'layer', 'Ibgp')
+                ibgp: Ibgp = reg.get('seedsim', 'layer', 'Ibgp')
                 ibgp.mask(asn)
 
-            scope = ScopedRegistry(str(asn), self._getReg())
+            scope = ScopedRegistry(str(asn), reg)
             (enodes, nodes) = self.__getEdgeNodes(scope)
 
             for n in enodes: self.__setUpLdpOspf(n)
@@ -242,7 +241,7 @@ class Mpls(Layer, Graphable):
             self.__setUpIbgpMesh(enodes)
 
     def _doCreateGraphs(self, simulator: Simulator):
-        base = self._getReg().get('seedsim', 'layer', 'Base')
+        base = simulator.getRegistry().get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():
             if asn not in self.__enabled: continue
             asobj = base.getAutonomousSystem(asn)
@@ -253,7 +252,7 @@ class Mpls(Layer, Graphable):
             for edge in mplsgraph.edges:
                 edge.style = 'dotted'
 
-            scope = ScopedRegistry(str(asn), self._getReg())
+            scope = ScopedRegistry(str(asn), simulator.getRegistry())
             (enodes, _) = self.__getEdgeNodes(scope)
             
             while len(enodes) > 0:
