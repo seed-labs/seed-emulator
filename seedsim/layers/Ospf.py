@@ -36,19 +36,16 @@ class Ospf(Layer):
     the IX interface will also be added as stub interface.
     """
 
-    __stubs: Set[Network]
-    __masked: Set[Network]
+    __stubs: Set[(int, str)]
+    __masked: Set[(int, str)]
     __masked_asn: Set[int]
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief Ospf (OSPF) layer conscrutor.
 
         @param simulator simulator.
         """
-
-        Layer.__init__(self, simulator)
-
         self.__stubs = set()
         self.__masked = set()
         self.__masked_asn = set()
@@ -58,23 +55,7 @@ class Ospf(Layer):
     def getName(self) -> str:
         return 'Ospf'
 
-    def markStub(self, net: Network):
-        """!
-        @brief Set all OSPF interfaces connected to a network as stub
-        interfaces.
-
-        By default, all internal networks will be active OSPF interface. This
-        method can be used to override the behavior and make the interface
-        stub interface (i.e., passive). For example, you can mark host-only 
-        internal networks as a stub.
-
-        @param net Network.
-        @throws AssertionError if network is not local
-        """
-        assert net.getType() != NetworkType.InternetExchange, 'cannot operator on IX network.'
-        self.__stubs.add(net)
-
-    def markStubByName(self, asn: int, netname: str):
+    def markAsStub(self, asn: int, netname: str):
         """!
         @brief Set all OSPF interfaces connected to a network as stub
         interfaces.
@@ -87,9 +68,9 @@ class Ospf(Layer):
         @param asn ASN to operate on.
         @param netname name of the network.
         """
-        self.markStub(self._getReg().get(str(asn), 'net', netname))
+        self.__stubs.add((asn, netname))
 
-    def maskNetwork(self, net: Network):
+    def maskNetwork(self, asn: int, netname: str):
         """!
         @brief Remove all OSPF interfaces connected to a network.
 
@@ -102,8 +83,7 @@ class Ospf(Layer):
         @param net network.
         @throws AssertionError if network is not local.
         """
-        assert net.getType() != NetworkType.InternetExchange, 'cannot mask IX network.'
-        self.__masked.add(net)
+        self.__masked.add((asn, netname))
 
     def maskAsn(self, asn: int):
         """!
@@ -113,20 +93,7 @@ class Ospf(Layer):
         """
         self.__masked_asn.add(asn)
 
-    def maskByName(self, asn: int, netname: str):
-        """!
-        @brief Remove all OSPF interfaces connected to a network.
-
-        By default, all internal networks will be active OSPF interface. Use
-        this method to mask a network and disable OSPF on all connected
-        interface.
-
-        @param asn ASN to operate on.
-        @param netname name of the network.
-        """
-        self.maskNetwork(self._getReg().get(str(asn), 'net', netname))
-
-    def isMasked(self, net: Network) -> bool:
+    def isMasked(self, asn: int, netname: str) -> bool:
         """!
         @brief Test if a network is masked.
 
@@ -134,10 +101,12 @@ class Ospf(Layer):
         
         @returns if net is masked.
         """
-        return net in self.__masked
+        return (asn, netname) in self.__masked
 
-    def onRender(self):
-        for ((scope, type, name), obj) in self._getReg().getAll().items():
+    def onRender(self, simulator: Simulator):
+        reg = simulator.getRegistry()
+
+        for ((scope, type, name), obj) in reg.getAll().items():
             if type != 'rnode': continue
             router: Node = obj
             if router.getAsn() in self.__masked_asn: continue
@@ -149,9 +118,9 @@ class Ospf(Layer):
             for iface in router.getInterfaces():
                 net = iface.getNet()
 
-                if net in self.__masked: continue
+                if (int(scope), net.getName()) in self.__masked: continue
 
-                if net in self.__stubs or net.getType() == NetworkType.InternetExchange:
+                if (int(scope), net.getName()) in self.__stubs or net.getType() == NetworkType.InternetExchange:
                     stubs.append(net.getName())
                     continue
 
@@ -181,18 +150,16 @@ class Ospf(Layer):
         out += ' ' * indent
         out += 'Stub Networks:\n'
         indent += 4
-        for net in self.__stubs:
+        for (scope, netname) in self.__stubs:
             out += ' ' * indent
-            (scope, _, netname) = net.getRegistryInfo()
             out += 'as{}/{}\n'.format(scope, netname)
         indent -= 4
 
         out += ' ' * indent
         out += 'Masked Networks:\n'
         indent += 4
-        for net in self.__masked:
+        for (scope, netname) in self.__masked:
             out += ' ' * indent
-            (scope, _, netname) = net.getRegistryInfo()
             out += 'as{}/{}\n'.format(scope, netname)
         indent -= 4
 
