@@ -26,14 +26,12 @@ class Ibgp(Layer, Graphable):
     """
     __masked: Set[int] = set()
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief Ibgp (iBGP) layer constructor.
         
         @param simulator simulator.
         """
-        Graphable.__init__(self, simulator)
-        Layer.__init__(self, simulator)
         self.__masked = set()
         self.addDependency('Ospf', False, False)
 
@@ -51,31 +49,14 @@ class Ibgp(Layer, Graphable):
         """
         self.__masked.add(asn)
 
-    def __findFirstUnmasked(self, node: Node) -> Interface:
-        """!
-        @brief find first NIC on the node that is connected to a unmasked
-        internal network.
-
-        @param node target node.
-
-        @returns interface if found, None if not found.
-        """
-        for iface in node.getInterfaces():
-            ospf: Ospf = self._getReg().get('seedsim', 'layer', 'Ospf')
-            net = iface.getNet()
-            if net.getType() == NetworkType.InternetExchange: continue
-            if ospf.isMasked(net): continue
-            return iface
-
-        return None
-
-    def onRender(self):
-        base: Base = self._getReg().get('seedsim', 'layer', 'Base')
+    def onRender(self, simulator: Simulator):
+        reg = simulator.getRegistry()
+        base: Base = reg.get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():
             if asn in self.__masked: continue
 
             self._log('setting up IBGP peering for as{}...'.format(asn))
-            routers: List[Node] = ScopedRegistry(str(asn), self._getReg()).getByType('rnode')
+            routers: List[Node] = ScopedRegistry(str(asn), reg).getByType('rnode')
 
             for local in routers:
                 self._log('setting up IBGP peering on as{}/{}...'.format(asn, local.getName()))
@@ -100,7 +81,7 @@ class Ibgp(Layer, Graphable):
                     self._log('adding peering: {} <-> {} (ibgp, as{})'.format(laddr, raddr, asn))
 
     def _doCreateGraphs(self, simulator: Simulator):
-        base: Base = self._getReg().get('seedsim', 'layer', 'Base')
+        base: Base = simulator.getRegistry().get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():
             if asn in self.__masked: continue
             asobj = base.getAutonomousSystem(asn)
@@ -111,7 +92,7 @@ class Ibgp(Layer, Graphable):
             for edge in ibgpgraph.edges:
                 edge.style = 'dotted'
 
-            rtrs = ScopedRegistry(str(asn), self._getReg()).getByType('rnode').copy()
+            rtrs = ScopedRegistry(str(asn), simulator.getRegistry()).getByType('rnode').copy()
             
             while len(rtrs) > 0:
                 a = rtrs.pop()
