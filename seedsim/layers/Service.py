@@ -1,7 +1,7 @@
 from .Layer import Layer
 from seedsim.core import Node, Printable, ScopedRegistry, Simulator
 from seedsim.core.enums import NodeRole
-from typing import Dict, List
+from typing import Dict, List, Set, Tuple
 
 class Server(Printable):
     """!
@@ -10,6 +10,14 @@ class Server(Printable):
     The Server class is the handler for installed services.
     """
 
+    def install(self, node: Node):
+        """!
+        @brief Install the server on node.
+
+        @param node node.
+        """
+        raise NotImplementedError('install not implemented')
+
 class Service(Layer):
     """!
     @brief Service base class.
@@ -17,46 +25,21 @@ class Service(Layer):
     The base class for all Services.
     """
 
-    def __init__(self, simulator: Simulator):
+    __ip_targets: Set[Tuple[Server, str, int]]
+    __name_targets: Set[Tuple[Server, str, int]]
+
+    def _createServer(self) -> Server:
         """!
-        @brief Build service.
-
-        @param simulator simulator
+        @brief Create a new server.
         """
-        Layer.__init__(self, simulator)
+        raise NotImplementedError('_createServer not implemented')
 
-    def _doInstall(self, node: Node) -> Server:
-        """!
-        @brief Install the service on node.
-
-        @param node node to install the service on.
-        """
-        raise NotImplementedError('_doInstall not implemented')
-
-    def _getStorage(self) -> Dict[str, object]:
-        """!
-        @brief Get a node-specific service storage.
-
-        @returns dict for storage.
-        """
-
-    def getConflicts(self) -> List[str]:
-        """!
-        @brief Get a list of conflicting services.
-
-        Override to change.
-
-        @return list of service names.
-        """
-        return []
-
-    def installOn(self, node: Node) -> Server:
+    def __installServer(self, server: Server, node: Node):
         """!
         @brief Install the service on given node.
 
         @param node node to install the service on.
 
-        @returns Handler of the installed service.
         @throws AssertionError if node is not host node.
         """
         assert node.getRole() == NodeRole.Host, 'node as{}/{} is not a host node'.format(node.getAsn(), node.getName())
@@ -73,18 +56,71 @@ class Service(Layer):
                 '__self': self
             }
 
-        return self._doInstall(node)
+    def configure(self, simulator: Simulator):
+        reg = simulator.getRegistry()
 
-    def installOnAll(self, asn: int) -> Dict[int, Dict[str, Server]]:
+        for (server, address, asn) in self.__ip_targets:
+            hit = False
+            for (scope, type, name), obj in reg.getAll().items():
+                if type != 'hnode': continue
+
+                node: Node = obj
+                if asn != None and str(asn) != scope: continue
+                for iface in node.getInterfaces():
+                    if str(iface.getAddress()) == address:
+                        hit = True
+                        self.__installServer(server, node)
+                        server.install(node)
+                        self._log('installed on as{}/{}.'.format(scope, name))
+            
+            assert hit, 'no node with IP address {}'.format(address)
+
+        for (server, name, asn) in self.__name_targets:
+            hit = False
+            for (scope, type, _name), node in reg.getAll().items():
+                if type != 'hnode' or scope != str(asn) or _name != name: continue
+                hit = True
+                self.__installServer(server, node)
+                break
+            
+            assert hit, 'no node with IP name {} in as{}'.format(name, scope)
+            
+    def getConflicts(self) -> List[str]:
         """!
-        @brief install the service on all host nodes in the given AS.
+        @brief Get a list of conflicting services.
 
-        @param asn ASN.
+        Override to change.
 
-        @returns Dict of Dict, the inner dict is Dict[Node name, Server] and the
-        outer dict is Dict[Asn, inner Dict].
+        @return list of service names.
         """
-        scope = ScopedRegistry(str(asn), self._getReg())
-        for host in scope.getByType('hnode'):
-            self.installOn(host)
+        return []
+
+    def installByIp(self, address: str, asn: int = None) -> Server:
+        """!
+        @brief Install to node by IP address.
+
+        @param address IP address
+        @param asn (optional) ASN to limit the scope of IP address
+
+        @returns server instance.
+        """
+        if '__ip_targets' not in self: self.__ip_targets = set()
+        server = self._createServer()
+        self.__ip_targets.add((server, address, asn))
+        return server
+
+    def installByName(self, asn: int, nodename: str) -> Server:
+        """!
+        @brief Install to node by node name.
+
+        @param asn asn
+        @param nodename name of the node
+
+        @returns server instance
+        """
+        if '__name_targets' not in self: self.__name_targets = set()
+        server = self._createServer()
+        self.__name_targets.add((server, nodename, asn))
+
+        return server
 
