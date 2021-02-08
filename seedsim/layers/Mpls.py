@@ -231,7 +231,7 @@ class Mpls(Layer, Graphable):
             if reg.has('seedsim', 'layer', 'Ibgp'):
                 self._log('Ibgp layer exists, masking as{}'.format(asn))
                 ibgp: Ibgp = reg.get('seedsim', 'layer', 'Ibgp')
-                ibgp.mask(asn)
+                ibgp.maskAsn(asn)
 
             scope = ScopedRegistry(str(asn), reg)
             (enodes, nodes) = self.__getEdgeNodes(scope)
