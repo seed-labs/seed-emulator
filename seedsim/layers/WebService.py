@@ -22,20 +22,17 @@ class WebServer(Server):
     @brief The WebServer class.
     """
 
-    __node: Node
     __port: int
     __index: str
 
-    def __init__(self, node: Node):
+    def __init__(self):
         """!
         @brief WebServer constructor.
 
         @param node node.
         """
-        asn = node.getAsn()
-        self.__node = node
         self.__port = 80
-        self.__index = '<h1>Web Server node {} at AS{}</h1>'.format(node.getName(), node.getAsn())
+        self.__index = '<h1>{nodeName} at {asn}</h1>'
         
 
     def setPort(self, port: int):
@@ -44,29 +41,29 @@ class WebServer(Server):
 
         @param port port.
         """
-        ## ! todo
         self.__port = port
 
     def setIndexContent(self, content: str):
         """!
         @brief Set content of index.html.
 
-        @param content content.
+        @param content content. {nodeName} and {asn} are avalaible and will be
+        filled in.
         """
-        self.__content = content
+        self.__index = content
     
-    def install(self):
+    def install(self, node: Node):
         """!
         @brief Install the service.
         """
-        self.__node.addSoftware('nginx-light')
-        self.__node.setFile('/var/www/html/index.html', self.__index)
-        self.__node.setFile('/etc/nginx/sites-available/default', WebServerFileTemplates['nginx_site'].format(port = self.__port))
-        self.__node.addStartCommand('service nginx start')
+        node.addSoftware('nginx-light')
+        node.setFile('/var/www/html/index.html', self.__index.format(asn = node.getAsn(), nodeName = node.getName()))
+        node.setFile('/etc/nginx/sites-available/default', WebServerFileTemplates['nginx_site'].format(port = self.__port))
+        node.addStartCommand('service nginx start')
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'Server: as{}/{}\n'.format(self.__node.getAsn(), self.__node.getName())
+        out += 'Web server object.\n'
 
         return out
 
@@ -87,28 +84,11 @@ class WebService(Service):
         self.__servers = []
         self.addDependency('Base', False, False)
 
+    def _createServer(self) -> Server:
+        return WebServer()
+
     def getName(self) -> str:
         return 'WebService'
-
-    def _doInstall(self, node: Node) -> WebServer:
-        """!
-        @brief Install the web service on given node.
-
-        @param node node to install the web service on.
-
-        @returns Handler of the installed web service.
-        @throws AssertionError if node is not host node.
-        """
-        server: WebServer = node.getAttribute('__web_service_server')
-        if server != None: return server
-        server = WebServer(node)
-        self.__servers.append(server)
-        node.setAttribute('__web_service_server', server)
-        return server
-
-    def onRender(self):
-        for server in self.__servers:
-            server.install()
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -122,4 +102,4 @@ class WebService(Service):
         for server in self.__servers:
             out += server.print(indent + 4) 
 
-        return out       
+        return out

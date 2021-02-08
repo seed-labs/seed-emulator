@@ -55,6 +55,8 @@ class Service(Layer):
             servicesdb[m_name] = {
                 '__self': self
             }
+        
+        server.install(node)
 
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
@@ -70,8 +72,7 @@ class Service(Layer):
                     if str(iface.getAddress()) == address:
                         hit = True
                         self.__installServer(server, node)
-                        server.install(node)
-                        self._log('installed on as{}/{}.'.format(scope, name))
+                        self._log('ip-install: installed on as{}/{} ({}).'.format(scope, name, address))
             
             assert hit, 'no node with IP address {}'.format(address)
 
@@ -81,10 +82,14 @@ class Service(Layer):
                 if type != 'hnode' or scope != str(asn) or _name != name: continue
                 hit = True
                 self.__installServer(server, node)
+                self._log('installed on as{}/{}.'.format(scope, name))
                 break
             
             assert hit, 'no node with IP name {} in as{}'.format(name, scope)
-            
+    
+    def onRender(self, simulator: Simulator):
+        return
+
     def getConflicts(self) -> List[str]:
         """!
         @brief Get a list of conflicting services.
