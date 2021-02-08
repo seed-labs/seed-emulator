@@ -1,8 +1,6 @@
 from .Layer import Layer
-from seedsim.core import Registry, ScopedRegistry, Node, Interface, Network, Simulator
-from seedsim.core.enums import NetworkType
-from typing import List, Dict, Set
-from functools import partial
+from seedsim.core import ScopedRegistry, Node, Interface, Network, Simulator
+from typing import List, Dict, Set, Tuple
 from ipaddress import IPv4Network
 
 RoutingFileTemplates: Dict[str, str] = {}
@@ -147,17 +145,16 @@ class Routing(Layer):
     protocols to use later and as router id.
     """
 
-    __direct_nets: Set[Network]
+    __direct_nets: Set[Tuple[str, str]]
     __loopback_assigner = IPv4Network('10.0.0.0/16')
     __loopback_pos = 1
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief Routing layre constructor.
 
         @param simulator simulator.
         """
-        Layer.__init__(self, simulator)
         self.__direct_nets = set()
         self.addDependency('Base', False, False)
     
@@ -172,8 +169,9 @@ class Routing(Layer):
         node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
         node.addBuildCommand('apt-get install -y --no-install-recommends bird2')
 
-    def onRender(self):
-        for ((scope, type, name), obj) in self._getReg().getAll().items():
+    def onRender(self, simulator: Simulator):
+        reg = simulator.getRegistry()
+        for ((scope, type, name), obj) in reg.getAll().items():
             if type == 'rs':
                 rs_node: Node = obj
                 self.__installBird(rs_node)
@@ -210,14 +208,14 @@ class Routing(Layer):
                 self.__installBird(rnode)
 
                 r_ifaces = rnode.getInterfaces()
-                assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rs_node.getAsn(), rs_node.getName())
+                assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rnode.getAsn(), rnode.getName())
 
                 ifaces = ''
                 has_localnet = False
 
                 for iface in r_ifaces:
                     net = iface.getNet()
-                    if net in self.__direct_nets:
+                    if (scope, net.getName()) in self.__direct_nets:
                         has_localnet = True
                         ifaces += RoutingFileTemplates["rnode_bird_direct_interface"].format(
                             interfaceName = net.getName()
@@ -240,7 +238,7 @@ class Routing(Layer):
                 hnet: Network = hif.getNet()
                 rif: Interface = None
 
-                cur_scope = ScopedRegistry(scope, self._getReg())
+                cur_scope = ScopedRegistry(scope, reg)
                 for router in cur_scope.getByType('rnode'):
                     if rif != None: break
                     for riface in router.getInterfaces():
@@ -252,21 +250,6 @@ class Routing(Layer):
                 self._log("Setting default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
                 hnode.addStartCommand('ip rou del default 2> /dev/null')
                 hnode.addStartCommand('ip route add default via {} dev {}'.format(rif.getAddress(), rif.getNet().getName()))
-
-    def addDirect(self, net: Network):
-        """!
-        @brief Add a network to "direct" protcol.
-
-        Mark network as "direct" candidate. All router nodes connected to this
-        network will add the interface attaches to this network to their
-        "direct" protocol block. The "direct" protocol will be attached to the
-        "t_direct" table.
-
-        @param net network.
-        @throws AssertionError if try to add non-AS network as direct.
-        """
-        assert net.getType() != NetworkType.InternetExchange, 'cannot set IX network {} as direct network.'.format(net.getName())
-        self.__direct_nets.add(net)
 
     def addDirectByName(self, asn: int, netname: str):
         """!
@@ -281,7 +264,7 @@ class Routing(Layer):
         @throws AssertionError if net not exist.
         @throws AssertionError if try to add non-AS network as direct.
         """
-        self.addDirect(self._getReg().get(str(asn), 'net', netname))
+        self.__direct_nets.add((str(asn), netname))
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -294,9 +277,8 @@ class Routing(Layer):
 
         indent += 4
 
-        for net in self.__direct_nets:
+        for (asn, netname) in self.__direct_nets:
             out += ' ' * indent
-            (scope, _, netname) = net.getRegistryInfo()
-            out += 'as{}/{}\n'.format(scope, netname)
+            out += 'as{}/{}\n'.format(asn, netname)
 
         return out
