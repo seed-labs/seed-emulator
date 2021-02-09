@@ -8,23 +8,8 @@ class ReverseDomainNameServer(Server):
     @brief Reverse DNS server.
     """
 
-    __node: Node
-
-    def __init__(self, node: Node):
-        """!
-        @brief ReverseDnsServer constructor.
-
-        @param node node to install on.
-        """
-        self.__node = node
-
-    def getNode(self) -> Node:
-        """!
-        @brief get node.
-
-        @returns node.
-        """
-        return self.__node
+    def install(self, node: Node):
+        pass
 
 class ReverseDomainNameService(Service):
     """!
@@ -32,36 +17,34 @@ class ReverseDomainNameService(Service):
     IP addresses to nodename-netname.nodetype.asn.net
     """
 
-    __servers: List[ReverseDomainNameServer]
-    __reg: ScopedRegistry
+    __dns: DomainNameService
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief ReverseDomainNameService constructor
 
         @param simulator simulator
         """
-        Service.__init__(self, simulator)
-        self.__records = []
-        self.__servers = []
-        self.__reg = ScopedRegistry('seedsim', self._getReg())
         self.addDependency('DomainNameService', True, False)
         self.addDependency('Base', False, False)
 
     def getName(self) -> str:
         return 'ReverseDomainNameService'
 
-    def _doInstall(self, node: Node) -> ReverseDomainNameServer:
-        server = ReverseDomainNameServer(node)
-        self.__servers.append(server)
+    def _doInstall(self, node: Node, server: Server):
+        self._log('setting up "in-addr.arpa." server on as{}/{}...'.format(node.getAsn(), node.getName()))
+        dns_s: DomainNameServer = self.__dns.installByName(node.getAsn(), node.getName())
+        dns_s.addZone(self.__dns.getZone('in-addr.arpa.'))
 
-    def onRender(self):
+    def configure(self, simulator: Simulator):
+        reg = simulator.getRegistry()
+
         self._log('Creating "in-addr.arpa." zone...')
-        dns: DomainNameService = self.__reg.get('layer', 'DomainNameService')
-        zone = dns.getZone('in-addr.arpa.')
+        self.__dns = reg.get('layer', 'DomainNameService')
+        zone = self.__dns.getZone('in-addr.arpa.')
 
         self._log('Collecting IP addresses...')
-        for ([scope, type, name], obj) in Registry().getAll().items():
+        for ([scope, type, name], obj) in reg.getAll().items():
             if type != 'rnode' and type != 'hnode': continue
             self._log('Collecting {}/{}/{}...'.format(scope, type, name))
 
@@ -77,23 +60,11 @@ class ReverseDomainNameService(Service):
                 record = '{} PTR {}-{}.{}.{}.net.'.format(addr, name, netname, type, scope).replace('_', '-')
                 zone.addRecord(record)
 
-        self._log('Setting up "in-addr.arpa." server nodes...')
-        for server in self.__servers:
-            dns.hostZoneOn('in-addr.arpa.', server.getNode())
+        return super().configure(simulator)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'ReverseDomainNameService:\n'
-        
-        indent += 4
-        out += ' ' * indent
-        out += 'Installed on:\n'
-
-        indent += 4
-        for server in self.__servers:
-            (asn, _, name) = server.getNode().getRegistryInfo()
-            out += ' ' * indent
-            out += 'as{}/{}\n'.format(asn, name)
+        out += 'ReverseDomainNameService\n'
 
         return out
 
