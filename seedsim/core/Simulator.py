@@ -42,14 +42,16 @@ class Simulator:
     def getLayer(self, layerName: str) -> Layer:
         self.__registry.get('seedsim', 'layer', layerName)
 
-    def __render(self, layerName, optional: bool):
+    def __render(self, layerName, optional: bool, configure: bool):
         """!
         @brief Render a layer.
         
         @param layerName name of layer.
         @throws AssertionError if dependencies unmet 
         """
-        self.__log('requesting render: {}'.format(layerName))
+        verb = 'configure' if configure else 'render'
+
+        self.__log('requesting {}: {}'.format(verb, layerName))
 
         if optional and layerName not in self.__layers.db:
             self.__log('{}: not found but is optional, skipping'.format(layerName))
@@ -59,16 +61,19 @@ class Simulator:
 
         (layer, done) = self.__layers.db[layerName]
         if done:
-            self.__log('{}: already rendered, skipping'.format(layerName))
+            self.__log('{}: already {}, skipping'.format(verb, layerName))
             return
 
         if layerName in self.__dependencies_db:
             for (dep, opt) in self.__dependencies_db[layerName]:
                 self.__log('{}: requesting dependency render: {}'.format(layerName, dep))
-                self.__render(dep, opt)
+                self.__render(dep, opt, configure)
 
-        self.__log('rendering {}...'.format(layerName))
-        layer.onRender()
+        self.__log('entering {}...'.format(layerName))
+        
+        if configure: layer.configure(self)
+        else: layer.onRender(self)
+        
         self.__log('done: {}'.format(layerName))
         self.__layers.db[layerName] = (layer, True)
     
@@ -95,11 +100,13 @@ class Simulator:
         @throws AssertionError if dependencies unmet 
         """
         for (layer, _) in self.__layers.db.values():
-            layer.configure(self)
             self.__loadDependencies(layer.getDependencies())
 
         for layerName in self.__layers.db.keys():
-            self.__render(layerName, False)
+            self.__render(layerName, False, True)
+
+        for layerName in self.__layers.db.keys():
+            self.__render(layerName, False, False)
 
     def compile(self, compiler: 'Compiler', out: str, override: bool = False):
         """!
