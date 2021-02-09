@@ -72,8 +72,6 @@ class WebService(Service):
     @brief The WebService class.
     """
 
-    __servers: List[WebServer]
-
     def __init__(self, simulator: Simulator):
         """!
         @brief WebService constructor.
@@ -81,7 +79,6 @@ class WebService(Service):
         @param simulator simulator
         """
         Service.__init__(self, simulator)
-        self.__servers = []
         self.addDependency('Base', False, False)
 
     def _createServer(self) -> Server:
@@ -92,14 +89,6 @@ class WebService(Service):
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'WebServiceLayer:\n'
-
-        indent += 4
-        out += ' ' * indent
-
-        out += 'Installed Nodes:\n'
- 
-        for server in self.__servers:
-            out += server.print(indent + 4) 
+        out += 'WebServiceLayer\n'
 
         return out
