@@ -1,7 +1,7 @@
 from __future__ import annotations
 from .Service import Service, Server
 from seedsim.core import Node, Printable, Simulator
-from seedsim.core.enums import NodeRole, NetworkType
+from seedsim.core.enums import NetworkType
 from typing import List, Dict, Tuple, Set
 from re import sub
 from random import randint
@@ -172,26 +172,35 @@ class DomainNameServer(Server):
     @brief The domain name server.
     """
 
+    __zones: Set[Tuple[Zone, bool]]
     __node: Node
-    __zones: Set[Zone]
 
-    def __init__(self, node: Node):
+    def __init__(self):
         """!
         @brief DomainNameServer constructor.
 
         @param node node to install server on.
         """
-        self.__node = node
         self.__zones = set()
 
-    def addZone(self, zone: Zone):
+    def addZone(self, zone: Zone, createNsAndSoa: bool = True):
         """!
         @brief Add a zone to this node.
+
+        @param zone zone to host.
+        @param createNsAndSoa add NS and SOA (if doesn't already exist) to zone. 
 
         You should use DomainNameService.hostZoneOn to host zone on node if you
         want the automated NS record to work.
         """
-        self.__zones.add(zone)
+        self.__zones.add((zone, createNsAndSoa))
+
+    def getNode(self) -> Node:
+        """!
+        @brief get node associated with the server. Note that this only works
+        after the services is configured.
+        """
+        return self.__node
 
     def getZones(self) -> List[Zone]:
         """!
@@ -200,14 +209,6 @@ class DomainNameServer(Server):
         @returns list of zones.
         """
         return list(self.__zones)
-
-    def getNode(self) -> Node:
-        """!
-        @brief Get the node.
-
-        @returns node.
-        """
-        return self.__node
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -222,27 +223,54 @@ class DomainNameServer(Server):
 
         return out
 
-    def install(self):
+    def configure(self, node: Node):
+        """!
+        @brief configure the node.
+        """
+        self.__node = node
+
+        for (zone, auto_ns_soa) in self.__zones:
+            zonename = zone.getName()
+
+            if auto_ns_soa:
+                ifaces = node.getInterfaces()
+                assert len(ifaces) > 0, 'node has not interfaces'
+                addr = ifaces[0].getAddress()
+
+                if zonename[-1] != '.': zonename += '.'
+                if zonename == '.': zonename = ''
+
+                if len(zone.findRecords('SOA')) == 0:
+                    zone.addRecord('@ SOA {} {} {} 900 900 1800 60'.format('ns1.{}'.format(zonename), 'admin.{}'.format(zonename), randint(1, 0xffffffff)))
+
+                zone.addGuleRecord('ns1.{}'.format(zonename), addr)
+                zone.addRecord('ns1.{} A {}'.format(zonename, addr))
+                zone.addRecord('@ NS ns1.{}'.format(zonename))
+
+    def install(self, node: Node):
         """!
         @brief Handle the installation.
         """
-        self.__node.addSoftware('bind9')
-        self.__node.addStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
-        self.__node.setFile('/etc/bind/named.conf.options', DomainNameServiceFileTemplates['named_options'])
+        assert node == self.__node, 'configured node differs from install node.'
 
-        for zone in self.__zones:
+        node.addSoftware('bind9')
+        node.addStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
+        node.setFile('/etc/bind/named.conf.options', DomainNameServiceFileTemplates['named_options'])
+
+        for (zone, auto_ns_soa) in self.__zones:
             zonename = filename = zone.getName()
+
             if zonename == '' or zonename == '.':
                 filename = 'root'
                 zonename = '.'
             zonepath = '/etc/bind/zones/{}'.format(filename)
-            self.__node.setFile(zonepath, '\n'.join(zone.getRecords()))
-            self.__node.appendFile('/etc/bind/named.conf.zones',
+            node.setFile(zonepath, '\n'.join(zone.getRecords()))
+            node.appendFile('/etc/bind/named.conf.zones',
                 'zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
             )
 
-        self.__node.addStartCommand('chown -R bind:bind /etc/bind/zones')
-        self.__node.addStartCommand('service named start')
+        node.addStartCommand('chown -R bind:bind /etc/bind/zones')
+        node.addStartCommand('service named start')
     
 class DomainNameService(Service):
     """!
@@ -250,7 +278,6 @@ class DomainNameService(Service):
     """
 
     __rootZone: Zone
-    __servers: List[DomainNameServer]
     __autoNs: bool
 
     def __init__(self, simulator: Simulator, autoNameServer: bool = True):
@@ -262,9 +289,26 @@ class DomainNameService(Service):
         """
         Service.__init__(self, simulator)
         self.__autoNs = autoNameServer
-        self.__servers = []
         self.__rootZone = Zone('')
         self.addDependency('Base', False, False)
+    
+    def __autoNameServer(self, zone: Zone):
+        """!
+        @brief Try to automatically add NS records of children to parent zones.
+
+        @param zone root zone reference.
+        """
+        if (len(zone.getSubZones().values()) == 0): return
+        self._log('Collecting subzones NSes of "{}"...'.format(zone.getName()))
+        for subzone in zone.getSubZones().values():
+            for gule in subzone.getGuleRecords(): zone.addRecord(gule)
+            self.__autoNameServer(subzone)
+
+    def _createServer(self) -> Server:
+        return DomainNameServer()
+
+    def _doConfigure(self, node: Node, server: DomainNameServer):
+        server.configure(node)
 
     def getName(self):
         return 'DomainNameService'
@@ -299,87 +343,12 @@ class DomainNameService(Service):
         """
         return self.__rootZone
 
-    def _doInstall(self, node: Node) -> DomainNameServer:
-        server: DomainNameServer = node.getAttribute('__domain_name_service_server')
-        if server != None: return server
-        server = DomainNameServer(node)
-        self.__servers.append(server)
-        node.setAttribute('__domain_name_service_server', server)
-        return server
-
-    def hostZoneOn(self, domain: str, node: Node, addNsAndSoa: bool = True):
-        """!
-        @brief Host a zone on the given node.
-
-        Zone must be created with getZone first.
-
-        @param domain zone name.
-        @param node target node.
-        @param addNsAndSoa (optional) add NS (ns1.domain.tld) and SOA records
-        automatically, true by default. This method will also add gule records.
-
-        @throws AssertionError if node is not a host node.
-        @throws AssertionError if node has no interface.
-        """
-        if not node.hasAttribute('__domain_name_service_server'):
-            self.installOn(node)
-
-        server: DomainNameServer = node.getAttribute('__domain_name_service_server')
-        zone = self.getZone(domain)
-        server.addZone(zone)
-
-        if not addNsAndSoa: return
-
-        ifaces = node.getInterfaces()
-        assert len(ifaces) > 0, 'node has not interfaces'
-        addr = ifaces[0].getAddress()
-
-        if domain[-1] != '.': domain += '.'
-        if domain == '.': domain = ''
-
-        if len(zone.findRecords('SOA')) == 0:
-            zone.addRecord('@ SOA {} {} {} 900 900 1800 60'.format('ns1.{}'.format(domain), 'admin.{}'.format(domain), randint(1, 0xffffffff)))
-
-        zone.addGuleRecord('ns1.{}'.format(domain), addr)
-        zone.addRecord('ns1.{} A {}'.format(domain, addr))
-        zone.addRecord('@ NS ns1.{}'.format(domain))
-
-    def getServerByZoneName(self, zonename: str) -> DomainNameServer:
-        """!
-        @brief Get server by zonename.
-
-        @param zonename zonename.
-
-        @returns server if exists, None otherwise.
-        """
-
-        if zonename[-1] != '.': zonename += '.'
-        if zonename == '.': zonename = ''
-        for server in self.__servers:
-            for zone in server.getZones():
-                if zone.getName() == zonename: return server
-
-        return None
-
-    def __autoNameServer(self, zone: Zone):
-        """!
-        @brief Try to automatically add NS records of children to parent zones.
-
-        @param zone root zone reference.
-        """
-        if (len(zone.getSubZones().values()) == 0): return
-        self._log('Collecting subzones NSes of "{}"...'.format(zone.getName()))
-        for subzone in zone.getSubZones().values():
-            for gule in subzone.getGuleRecords(): zone.addRecord(gule)
-            self.__autoNameServer(subzone)
-
-    def onRender(self):
+    def onRender(self, simulator: Simulator):
         if self.__autoNs:
             self._log('Setting up NS records...')
             self.__autoNameServer(self.__rootZone)
 
-        for server in self.__servers:
-            server.install()
+        super().onRender(simulator)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -387,11 +356,5 @@ class DomainNameService(Service):
 
         indent += 4
         out += self.__rootZone.print(indent)
-
-        out += ' ' * indent
-        out += 'Hosted zones:\n'
-
-        for server in self.__servers:
-            out += server.print(indent + 4)
 
         return out

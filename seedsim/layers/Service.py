@@ -1,3 +1,4 @@
+from re import S
 from .Layer import Layer
 from seedsim.core import Node, Printable, ScopedRegistry, Simulator
 from seedsim.core.enums import NodeRole
@@ -27,6 +28,8 @@ class Service(Layer):
 
     __ip_targets: Set[Tuple[Server, str, int]]
     __name_targets: Set[Tuple[Server, str, int]]
+    
+    __targets: Set[Tuple[Server, Node]]
 
     def _createServer(self) -> Server:
         """!
@@ -34,11 +37,34 @@ class Service(Layer):
         """
         raise NotImplementedError('_createServer not implemented')
 
-    def __installServer(self, server: Server, node: Node):
+    def _doInstall(self, node: Node, server: Server):
         """!
-        @brief Install the service on given node.
+        @brief install the server on node. This can be overrided by service
+        implementations.
 
-        @param node node to install the service on.
+        @param node node.
+        @param server server.
+        """
+        server.install(node)
+
+    def _doConfigure(self, node: Node, server: Server):
+        """!
+        @brief configure the node. Some services may need to by configure before
+        rendered.
+
+        This is currently used by the DNS layer to configure NS and gules
+        records before the actuall installation.
+        
+        @param node node
+        @param server server
+        """
+        return
+
+    def __configureServer(self, server: Server, node: Node):
+        """!
+        @brief Configure the service on given node.
+
+        @param node node to configure the service on.
 
         @throws AssertionError if node is not host node.
         """
@@ -55,11 +81,13 @@ class Service(Layer):
             servicesdb[m_name] = {
                 '__self': self
             }
-        
-        server.install(node)
+
+        self._doConfigure(node, server)
+        self.__targets.add((server, node))
 
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
+        self.__targets = set()
 
         for (server, address, asn) in self.__ip_targets:
             hit = False
@@ -71,8 +99,8 @@ class Service(Layer):
                 for iface in node.getInterfaces():
                     if str(iface.getAddress()) == address:
                         hit = True
-                        self.__installServer(server, node)
-                        self._log('ip-install: installed on as{}/{} ({}).'.format(scope, name, address))
+                        self.__configureServer(server, node)
+                        self._log('ip-conf: configure on as{}/{} ({}).'.format(scope, name, address))
             
             assert hit, 'no node with IP address {}'.format(address)
 
@@ -81,15 +109,16 @@ class Service(Layer):
             for (scope, type, _name), node in reg.getAll().items():
                 if type != 'hnode' or scope != str(asn) or _name != name: continue
                 hit = True
-                self.__installServer(server, node)
-                self._log('installed on as{}/{}.'.format(scope, name))
+                self.__configureServer(server, node)
+                self._log('conf: configure on as{}/{}.'.format(scope, name))
                 break
             
             assert hit, 'no node with IP name {} in as{}'.format(name, scope)
     
     def onRender(self, simulator: Simulator):
-        return
-
+        for (server, node) in self.__targets:
+            self._doInstall(node, server)
+        
     def getConflicts(self) -> List[str]:
         """!
         @brief Get a list of conflicting services.
