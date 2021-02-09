@@ -40,7 +40,7 @@ class ReverseDomainNameService(Service):
         reg = simulator.getRegistry()
 
         self._log('Creating "in-addr.arpa." zone...')
-        self.__dns = reg.get('layer', 'DomainNameService')
+        self.__dns = reg.get('seedsim', 'layer', 'DomainNameService')
         zone = self.__dns.getZone('in-addr.arpa.')
 
         self._log('Collecting IP addresses...')
@@ -67,7 +67,4 @@ class ReverseDomainNameService(Service):
         out += 'ReverseDomainNameService\n'
 
         return out
-
-
-        
     
