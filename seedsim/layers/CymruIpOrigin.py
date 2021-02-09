@@ -27,13 +27,12 @@ class CymruIpOriginService(Service):
 
     __records: List[str]
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief CymruIpOriginService constructor
 
         @param simulator simulator.
         """
-        Service.__init__(self, simulator)
         self.__records = []
         self.addDependency('DomainNameService', True, True)
         self.addDependency('Base', False, False)
@@ -96,7 +95,7 @@ class CymruIpOriginService(Service):
                     mappings.append((prefix, asn))
         
         self._log('Collecting all networks in the simulation...')
-        for regobj in self._getReg().getAll().items():
+        for regobj in reg.getAll().items():
             [(asn, type, name), obj] = regobj
             if type != 'net': continue
             net: Network = obj
