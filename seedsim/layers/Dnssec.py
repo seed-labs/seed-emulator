@@ -1,6 +1,6 @@
 from .Layer import Layer
-from .DomainNameService import DomainNameService
-from typing import Set, Dict, List
+from .DomainNameService import DomainNameServer, DomainNameService
+from typing import Set, Dict
 from seedsim.core import Node, Simulator
 
 DnssecFileTemplates: Dict[str, str] = {}
@@ -73,6 +73,17 @@ class Dnssec(Layer):
         self.__zonenames = set()
         self.addDependency('DomainNameService', False, False)
 
+    def __findZoneNode(self, dns: DomainNameService, zonename: str) -> Node:
+        targets = dns.getTargets()
+        for (server, node) in targets:
+            dns_s: DomainNameServer = server
+            zones = dns_s.getZones()
+            for zone in zones:
+                # TODO: what if mutiple nodes host the same zone?
+                if zone.getName() == zonename: return node
+
+        return None
+
     def getName(self):
         return 'Dnssec'
     
@@ -90,10 +101,10 @@ class Dnssec(Layer):
         nodes: Set[Node] = set()
         for zonename in self.__zonenames:
             self._log('Looking for server hosting "{}"...'.format(zonename))
-            server = dns.getServerByZoneName(zonename)
+            node = self.__findZoneNode(dns, zonename)
             
-            assert server != None, 'no server found for dnssec-enabled zone {}'.format(zonename)
-            node = server.getNode()
+            assert node != None, 'no server found for dnssec-enabled zone {}'.format(zonename)
+
             (scope, _, name) = node.getRegistryInfo()
             self._log('Setting up DNSSEC for "{}" on as{}/{}'.format(zonename, scope, name))
             nodes.add(node)

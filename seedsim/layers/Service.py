@@ -129,6 +129,13 @@ class Service(Layer):
         """
         return []
 
+    def getTargets(self) -> Set[Tuple[Server, Node]]:
+        """!
+        @brief Get nodes and the server object associated with them. Note this
+        only work after the layer is configured.
+        """
+        return self.__targets
+
     def installByIp(self, address: str, asn: int = None) -> Server:
         """!
         @brief Install to node by IP address.

@@ -208,7 +208,9 @@ class DomainNameServer(Server):
 
         @returns list of zones.
         """
-        return list(self.__zones)
+        zones = []
+        for (z, _) in self.__zones: zones.append(z)
+        return zones
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
