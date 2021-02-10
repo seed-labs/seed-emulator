@@ -251,7 +251,7 @@ class Routing(Layer):
                 hnode.addStartCommand('ip rou del default 2> /dev/null')
                 hnode.addStartCommand('ip route add default via {} dev {}'.format(rif.getAddress(), rif.getNet().getName()))
 
-    def addDirectByName(self, asn: int, netname: str):
+    def addDirect(self, asn: int, netname: str):
         """!
         @brief Add a network to "direct" protcol by name.
 
