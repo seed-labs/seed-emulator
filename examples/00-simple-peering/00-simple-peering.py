@@ -4,10 +4,10 @@ from seedsim.core import Simulator
 
 sim = Simulator()
 
-base = Base(sim)
-routing = Routing(sim)
-ebgp = Ebgp(sim)
-web = WebService(sim)
+base = Base()
+routing = Routing()
+ebgp = Ebgp()
+web = WebService()
 
 ###############################################################################
 
@@ -18,54 +18,53 @@ base.createInternetExchange(100)
 as150 = base.createAutonomousSystem(150)
 
 as150_web = as150.createHost('web')
-web.installOn(as150_web)
+web.installByName(150, 'web')
 
 as150_router = as150.createRouter('router0')
-
 as150_net = as150.createNetwork('net0')
 
-routing.addDirect(as150_net)
+routing.addDirect(150, 'net0')
 
-as150_web.joinNetwork(as150_net)
-as150_router.joinNetwork(as150_net)
+as150_web.joinNetwork('net0')
+as150_router.joinNetwork('net0')
 
-as150_router.joinNetworkByName('ix100')
+as150_router.joinNetwork('ix100')
 
 ###############################################################################
 
 as151 = base.createAutonomousSystem(151)
 
 as151_web = as151.createHost('web')
-web.installOn(as151_web)
+web.installByName(151, 'web')
 
 as151_router = as151.createRouter('router0')
 
 as151_net = as151.createNetwork('net0')
 
-routing.addDirect(as151_net)
+routing.addDirect(151, 'net0')
 
-as151_web.joinNetwork(as151_net)
-as151_router.joinNetwork(as151_net)
+as151_web.joinNetwork('net0')
+as151_router.joinNetwork('net0')
 
-as151_router.joinNetworkByName('ix100')
+as151_router.joinNetwork('ix100')
 
 ###############################################################################
 
 as152 = base.createAutonomousSystem(152)
 
 as152_web = as152.createHost('web')
-web.installOn(as152_web)
+web.installByName(152, 'web')
 
 as152_router = as152.createRouter('router0')
 
 as152_net = as152.createNetwork('net0')
 
-routing.addDirect(as152_net)
+routing.addDirect(152, 'net0')
 
-as152_web.joinNetwork(as152_net)
-as152_router.joinNetwork(as152_net)
+as152_web.joinNetwork('net0')
+as152_router.joinNetwork('net0')
 
-as152_router.joinNetworkByName('ix100')
+as152_router.joinNetwork('ix100')
 
 ###############################################################################
 
