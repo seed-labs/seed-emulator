@@ -1,7 +1,7 @@
 from .Layer import Layer
-from seedsim.core import Network, Registry, Node, Simulator
+from seedsim.core import Node, Simulator
 from seedsim.core.enums import NetworkType
-from typing import Set, Dict, List
+from typing import Set, Dict, List, Tuple
 
 OspfFileTemplates: Dict[str, str] = {}
 
@@ -36,8 +36,8 @@ class Ospf(Layer):
     the IX interface will also be added as stub interface.
     """
 
-    __stubs: Set[(int, str)]
-    __masked: Set[(int, str)]
+    __stubs: Set[Tuple[int, str]]
+    __masked: Set[Tuple[int, str]]
     __masked_asn: Set[int]
 
     def __init__(self):

@@ -11,14 +11,6 @@ class Layer(Printable, Registrable, Configurable):
 
     __dependencies: Dict[str, Set[Tuple[str, bool]]]
 
-    def __init__(self):
-        """!
-        @brief Create new layer.
-
-        @param simulator simulator
-        """
-        self.__dependencies = {}
-
     def addDependency(self, layerName: str, reverse: bool, optional: bool):
         """!
         @brief add layer dependency.
@@ -35,6 +27,8 @@ class Layer(Printable, Registrable, Configurable):
         _current = layerName if reverse else self.getName()
         _target = self.getName() if reverse else layerName
 
+        if not hasattr(self, '__dependencies'): self.__dependencies = {}
+
         if _current not in self.__dependencies:
             self.__dependencies[_current] = set()
 
@@ -46,7 +40,8 @@ class Layer(Printable, Registrable, Configurable):
 
         @return dependencies.
         """
-        return self.__dependencies
+
+        return self.__dependencies if hasattr(self, '__dependencies') else {}
 
     def getName(self) -> str:
         """!

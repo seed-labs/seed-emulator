@@ -72,13 +72,12 @@ class WebService(Service):
     @brief The WebService class.
     """
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief WebService constructor.
 
         @param simulator simulator
         """
-        Service.__init__(self, simulator)
         self.addDependency('Base', False, False)
 
     def _createServer(self) -> Server:

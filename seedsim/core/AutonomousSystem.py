@@ -23,7 +23,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
     __reg: ScopedRegistry
     __routers: Dict[str, Node]
     __hosts: Dict[str, Node]
-    __nets: Dict[Network]
+    __nets: Dict[str, Network]
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
@@ -68,7 +68,9 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
         network = IPv4Network(prefix) if prefix != "auto" else self.__subnets.pop(0)
         assert name not in self.__nets, 'Network with name {} already exist.'.format(name)
-        self.__nets[name] = Network(self.__simulator, name, NetworkType.Local, network, aac)
+        self.__nets[name] = Network(name, NetworkType.Local, network, aac)
+
+        return self.__nets[name]
 
     def getNetwork(self, name: str) -> Network:
         """!
@@ -87,7 +89,9 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns Node.
         """
         assert name not in self.__routers, 'Router with name {} already exists.'.format(name)
-        self.__routers[name] = Node(self.__simulator, name, NodeRole.Router, self.__asn)
+        self.__routers[name] = Node(name, NodeRole.Router, self.__asn)
+
+        return self.__routers[name]
 
     def getRouter(self, name: str) -> Node:
         """!
@@ -106,7 +110,9 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns Node.
         """
         assert name not in self.__hosts, 'Host with name {} already exists.'.format(name)
-        self.__hosts[name] = Node(self.__simulator, name, NodeRole.Host, self.__asn)
+        self.__hosts[name] = Node(name, NodeRole.Host, self.__asn)
+
+        return self.__hosts[name]
 
     def getHost(self, name: str) -> Node:
         """!

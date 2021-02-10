@@ -145,7 +145,7 @@ class Service(Layer):
 
         @returns server instance.
         """
-        if '__ip_targets' not in self: self.__ip_targets = set()
+        if not hasattr(self, '__ip_targets'): self.__ip_targets = set()
 
         for (s, addr, _asn) in self.__ip_targets:
             if addr == address and _asn == asn: return s
@@ -163,7 +163,7 @@ class Service(Layer):
 
         @returns server instance
         """
-        if '__name_targets' not in self: self.__name_targets = set()
+        if not hasattr(self, '__name_targets'): self.__name_targets = set()
 
         for (s, n, a) in self.__name_targets:
             if a == asn and n == nodename: return s

@@ -19,7 +19,7 @@ class InternetExchange(Printable, Configurable):
     __rs: Node
     __name: str
 
-    def __init__(self, simulator: Simulator, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None):
+    def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None):
         """!
         @brief InternetExchange constructor.
 
@@ -34,8 +34,8 @@ class InternetExchange(Printable, Configurable):
         network = IPv4Network(prefix) if prefix != "auto" else IPv4Network("10.{}.0.0/24".format(self.__id))
 
         self.__name = 'ix{}'.format(str(self.__id))
-        self.__rs = Node(simulator, self.__name, NodeRole.RouteServer, self.__id)
-        self.__net = Network(simulator, self.__name, NetworkType.InternetExchange, network, aac)
+        self.__rs = Node(self.__name, NodeRole.RouteServer, self.__id)
+        self.__net = Network(self.__name, NetworkType.InternetExchange, network, aac)
 
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
