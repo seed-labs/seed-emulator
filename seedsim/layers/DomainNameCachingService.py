@@ -1,7 +1,7 @@
-from seedsim.core import Node, ScopedRegistry, Registry, Simulator
+from seedsim.core import Configurable
+from seedsim.core import Node, ScopedRegistry, Simulator
 from .Service import Service, Server
 from .DomainNameService import DomainNameService
-from .Layer import Layer
 from typing import List, Dict
 
 DomainNameCachingServiceFileTemplates: Dict[str, str] = {}
@@ -16,7 +16,7 @@ options {
 };
 '''
 
-class DomainNameCachingServer(Server):
+class DomainNameCachingServer(Server, Configurable):
     """!
     @brief Caching DNS server (i.e., Local DNS server)
 
@@ -24,18 +24,24 @@ class DomainNameCachingServer(Server):
     """
 
     __root_servers: List[str]
-    __node: Node
-    __reg: Registry
+    __configure_resolvconf: bool
+    __simulator: Simulator
 
-    def __init__(self, node: Node, registry: Registry):
+    def __init__(self):
         """!
         @brief DomainNameCachingServer constructor.
 
         @param node node to install on.
         """
         self.__root_servers = []
-        self.__node = node
-        self.__reg = registry
+        self.__configure_resolvconf = False
+
+    def setConfigureResolvconf(self, configure: bool):
+        """!
+        @brief Enable or disable set resolv.conf. When true, resolv.conf of all
+        other nodes in the AS will be set to this server.
+        """
+        self.__configure_resolvconf = configure
 
     def setRootServers(self, servers: List[str]):
         """!
@@ -62,27 +68,25 @@ class DomainNameCachingServer(Server):
         """
         return self.__root_servers
 
-    def install(self, setResolvconf: bool):
-        """!
-        @brief Handle installation.
+    def configure(self, simulator: Simulator):
+        self.__simulator = simulator
 
-        @param setResolvconf set resolv.conf of all other nodes in the AS.
-
-        @throw AssertionError if setResolvconf is true but current node has no
-        IP address.
-        """
-        self.__node.addSoftware('bind9')
-        self.__node.setFile('/etc/bind/named.conf.options', DomainNameCachingServiceFileTemplates['named_options'])
+    def install(self, node: Node):
+        node.addSoftware('bind9')
+        node.setFile('/etc/bind/named.conf.options', DomainNameCachingServiceFileTemplates['named_options'])
         if len(self.__root_servers) > 0:
             hint = '\n'.join(self.__root_servers)
-            self.__node.setFile('/usr/share/dns/root.hints', hint)
-            self.__node.setFile('/etc/bind/db.root', hint)
-        self.__node.addStartCommand('service named start')
-        if not setResolvconf: return
-        (scope, _, _) = self.__node.getRegistryInfo()
-        sr = ScopedRegistry(scope, self.__reg)
-        ifaces = self.__node.getInterfaces()
-        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(self.__node.getName())
+            node.setFile('/usr/share/dns/root.hints', hint)
+            node.setFile('/etc/bind/db.root', hint)
+        node.addStartCommand('service named start')
+
+        if not self.__configure_resolvconf: return
+
+        reg = self.__simulator.getRegistry()
+        (scope, _, _) = node.getRegistryInfo()
+        sr = ScopedRegistry(scope, reg)
+        ifaces = node.getInterfaces()
+        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(node.getName())
         addr = ifaces[0].getAddress()
 
         for rnode in sr.getByType('rnode'):
@@ -103,30 +107,22 @@ class DomainNameCachingService(Service):
     """
 
     __auto_root: bool
-    __set_resolvconf: bool
-    __reg: ScopedRegistry
-    __servers: List[DomainNameCachingServer]
 
-    def __init__(self, simulator: Simulator, autoRoot: bool = True, setResolvconf: bool = False):
+    def __init__(self, autoRoot: bool = True):
         """!
         @brief DomainNameCachingService constructor.
 
-        @param simulator simulator.
         @param autoRoot (optional) find root zone name servers automaically.
         True by defualt, if true, DomainNameCachingService will find root NS in
         DomainNameService and use them as root.
-        @param setResolvconf (optional) set all nodes in the AS to use local DNS
-        node in the AS by overrideing resolv.conf. Default to false.
         """
-        Service.__init__(self, simulator)
-
         self.__auto_root = autoRoot
-        self.__set_resolvconf = setResolvconf
-        self.__servers = []
-        self.__reg = ScopedRegistry('seedsim', self._getReg())
         self.addDependency('Base', False, False)
         if autoRoot:
             self.addDependency('DomainNameService', False, False)
+
+    def _createServer(self) -> DomainNameCachingServer:
+        return DomainNameCachingServer()
 
     def getName(self) -> str:
         return 'DomainNameCachingService'
@@ -134,32 +130,19 @@ class DomainNameCachingService(Service):
     def getConflicts(self) -> List[str]:
         return ['DomainNameService']
 
-    def _doInstall(self, node: Node) -> DomainNameCachingServer:
-        """!
-        @brief Install the cache service on given node.
+    def configure(self, simulator: Simulator):
+        super().configure(simulator)
 
-        @param node node to install the cache service on.
+        targets = self.getTargets()
+        for (server, node) in targets:
+            server.configure(simulator)
 
-        @returns Handler of the installed cache service.
-        @throws AssertionError if node is not host node.
-        """
-        server: DomainNameCachingServer = node.getAttribute('__domain_name_cacheing_service_server')
-        if server != None: return server
-        server = DomainNameCachingServer(node, self._getReg())
-        self.__servers.append(server)
-        node.setAttribute('__domain_name_cacheing_service_server', server)
-        return server
-
-    def onRender(self):
-        root_servers: List[str] = []
         if self.__auto_root:
-            dns_layer: DomainNameService = self.__reg.get('layer', 'DomainNameService')
+            dns_layer: DomainNameService = simulator.getRegistry().get('seedsim', 'layer', 'DomainNameService')
             root_zone = dns_layer.getRootZone()
             root_servers = root_zone.getGuleRecords()
-        
-        for server in self.__servers:
-            server.setRootServers(root_servers)
-            server.install(self.__set_resolvconf)
+            for (server, node) in targets:
+                server.setRootServers(root_servers)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -169,8 +152,5 @@ class DomainNameCachingService(Service):
 
         out += ' ' * indent
         out += 'Configure root hint: {}\n'.format(self.__auto_root)
-
-        out += ' ' * indent
-        out += 'Set resolv.conf: {}\n'.format(self.__set_resolvconf)
 
         return out
