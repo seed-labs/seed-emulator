@@ -13,4 +13,4 @@ class Configurable(object):
 
         @param simulator simulator object to use.
         """
-        raise NotImplementedError('configure not implemented.')
+        return

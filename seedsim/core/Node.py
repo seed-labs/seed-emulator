@@ -236,11 +236,17 @@ class Node(Printable, Registrable, Configurable):
 
         for (netname, address) in self.__pending_nets:
 
-            if reg.has(self.__scope, "net", netname):
-                return self.__joinNetwork(reg.get(self.__scope, "net", netname), address)
+            hit = False
 
-            if reg.has("ix", "net", netname):
-                return self.__joinNetwork(reg.get("ix", "net", netname), address)
+            if reg.has(self.__scope, "net", netname):
+                hit = True
+                self.__joinNetwork(reg.get(self.__scope, "net", netname), address)
+
+            if not hit and reg.has("ix", "net", netname):
+                hit = True
+                self.__joinNetwork(reg.get("ix", "net", netname), address)
+
+            assert hit, 'no network matched for name {}'.format(netname)
 
     def addPort(self, host: int, node: int, proto: str = 'tcp'):
         """!

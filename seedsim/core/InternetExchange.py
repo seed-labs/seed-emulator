@@ -37,10 +37,16 @@ class InternetExchange(Printable, Configurable):
         self.__rs = Node(self.__name, NodeRole.RouteServer, self.__id)
         self.__net = Network(self.__name, NetworkType.InternetExchange, network, aac)
 
+        self.__rs.joinNetwork(self.__name)
+
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
-        reg.register('ix', 'rs', self.__name, self.__rs)
+
         reg.register('ix', 'net', self.__name, self.__net)
+        reg.register('ix', 'rs', self.__name, self.__rs)
+
+        self.__rs.configure(simulator)
+
 
     def getPeeringLan(self) -> Network:
         """!

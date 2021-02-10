@@ -1,16 +1,19 @@
 from __future__ import annotations
 from .Merger import Merger
-from .Registry import Registry, Registrable
+from .Registry import Registry, Registrable, Printable
 from typing import Dict, Set, Tuple
 from sys import stderr
 import pickle
 
-class LayerDatabase(Registrable):
+class LayerDatabase(Registrable, Printable):
 
     db: Dict[str, Tuple[Layer, bool]]
 
     def __init__(self):
         self.db = {}
+
+    def print(self, indentation: int) -> str:
+        return ''
 
 class Simulator:
 
@@ -99,14 +102,22 @@ class Simulator:
 
         @throws AssertionError if dependencies unmet 
         """
+        assert not self.__rendered, 'already rendered.'
+
         for (layer, _) in self.__layers.db.values():
             self.__loadDependencies(layer.getDependencies())
 
         for layerName in self.__layers.db.keys():
             self.__render(layerName, False, True)
 
+        # FIXME
+        for (name, (layer, _)) in self.__layers.db.items():
+            self.__layers.db[name] = (layer, False)
+
         for layerName in self.__layers.db.keys():
             self.__render(layerName, False, False)
+
+        self.__rendered = True
 
     def compile(self, compiler: 'Compiler', out: str, override: bool = False):
         """!

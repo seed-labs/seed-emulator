@@ -58,6 +58,7 @@ class Ebgp(Layer, Graphable):
         
         @param simulator simulator.
         """
+        super().__init__()
         self.__peerings = {}
         self.__rs_peers = []
         self.addDependency('Routing', False, False)
@@ -71,23 +72,23 @@ class Ebgp(Layer, Graphable):
 
         return nets
 
-    def __getCustomerPrefixes(self, a: int) -> List[int]:
+    def __getCustomerPrefixes(self, reg: Registry, a: int) -> List[int]:
         nets = []
         for (_, _a, b), r in self.__peerings.items():
             if a != _a or r != PeerRelationship.Provider: continue
-            nets += self.__getAsPrefixes(b)
+            nets += self.__getAsPrefixes(reg, b)
         
         return nets
 
-    def __getExportFilters(self, a: int, b: int, rel: PeerRelationship) -> Tuple[str, str]:
+    def __getExportFilters(self, reg: Registry, a: int, b: int, rel: PeerRelationship) -> Tuple[str, str]:
         if rel == PeerRelationship.Unfiltered: return ('all', 'all')
 
-        a_prefixes = self.__getAsPrefixes(a)
-        a_cust_prefixes = self.__getCustomerPrefixes(a)
+        a_prefixes = self.__getAsPrefixes(reg, a)
+        a_cust_prefixes = self.__getCustomerPrefixes(reg, a)
         a_all = a_prefixes + a_cust_prefixes
 
-        b_prefixes = self.__getAsPrefixes(b)
-        b_cust_prefixes = self.__getCustomerPrefixes(b)
+        b_prefixes = self.__getAsPrefixes(reg, b)
+        b_cust_prefixes = self.__getCustomerPrefixes(reg, b)
         b_all = b_prefixes + b_cust_prefixes
 
         a_export = 'all'
@@ -169,7 +170,7 @@ class Ebgp(Layer, Graphable):
                 peerAsn = peer
             )) 
 
-            (a_export, b_export) = self.__getExportFilters(ix, peer, PeerRelationship.Peer)
+            (a_export, b_export) = self.__getExportFilters(reg, ix, peer, PeerRelationship.Peer)
 
             p_ixnode.addTable('t_bgp')
             p_ixnode.addTablePipe('t_bgp')
@@ -218,7 +219,7 @@ class Ebgp(Layer, Graphable):
 
             self._log("adding peering: {} as {} <-({})-> {} as {}".format(a_ixif.getAddress(), a, rel, b_ixif.getAddress(), b))
 
-            (a_export, b_export) = self.__getExportFilters(a, b, rel)
+            (a_export, b_export) = self.__getExportFilters(reg, a, b, rel)
             
             a_proto_pfx = 'p_'
             b_proto_pfx = 'p_'

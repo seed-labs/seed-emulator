@@ -78,6 +78,7 @@ class WebService(Service):
 
         @param simulator simulator
         """
+        super().__init__()
         self.addDependency('Base', False, False)
 
     def _createServer(self) -> Server:

@@ -155,6 +155,7 @@ class Routing(Layer):
 
         @param simulator simulator.
         """
+        super().__init__()
         self.__direct_nets = set()
         self.addDependency('Base', False, False)
     

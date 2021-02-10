@@ -44,6 +44,7 @@ class Base(Layer, Graphable):
         """!
         @brief Base layer constructor.
         """
+        super().__init__()
         self.__ases = {}
         self.__ixes = {}
 
@@ -51,7 +52,10 @@ class Base(Layer, Graphable):
         return "Base"
 
     def configure(self, simulator: Simulator):
+        self._log('setting up internet exchanges...')
         for ix in self.__ixes.values(): ix.configure(simulator)
+
+        self._log('setting up autonomous systems...')
         for asobj in self.__ases.values(): asobj.configure(simulator)
 
     def onRender(self, simulator: Simulator) -> None:

@@ -1,6 +1,6 @@
 from re import S
 from .Layer import Layer
-from seedsim.core import Node, Printable, ScopedRegistry, Simulator
+from seedsim.core import Node, Printable, Simulator
 from seedsim.core.enums import NodeRole
 from typing import Dict, List, Set, Tuple
 
@@ -30,6 +30,12 @@ class Service(Layer):
     __name_targets: Set[Tuple[Server, str, int]]
     
     __targets: Set[Tuple[Server, Node]]
+
+    def __init__(self):
+        super().__init__()
+        self.__ip_targets = set()
+        self.__name_targets = set()
+        self.__targets = set()
 
     def _createServer(self) -> Server:
         """!
@@ -87,7 +93,6 @@ class Service(Layer):
 
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
-        self.__targets = set()
 
         for (server, address, asn) in self.__ip_targets:
             hit = False
@@ -145,8 +150,6 @@ class Service(Layer):
 
         @returns server instance.
         """
-        if not hasattr(self, '__ip_targets'): self.__ip_targets = set()
-
         for (s, addr, _asn) in self.__ip_targets:
             if addr == address and _asn == asn: return s
 
@@ -163,8 +166,6 @@ class Service(Layer):
 
         @returns server instance
         """
-        if not hasattr(self, '__name_targets'): self.__name_targets = set()
-
         for (s, n, a) in self.__name_targets:
             if a == asn and n == nodename: return s
 
