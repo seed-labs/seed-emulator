@@ -46,6 +46,7 @@ class Ospf(Layer):
 
         @param simulator simulator.
         """
+        super().__init__()
         self.__stubs = set()
         self.__masked = set()
         self.__masked_asn = set()

@@ -32,6 +32,7 @@ class Ibgp(Layer, Graphable):
         
         @param simulator simulator.
         """
+        super().__init__()
         self.__masked = set()
         self.addDependency('Ospf', False, False)
 
