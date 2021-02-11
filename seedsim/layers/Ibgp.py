@@ -1,8 +1,6 @@
 from .Layer import Layer
 from .Base import Base
-from .Ospf import Ospf
-from seedsim.core import ScopedRegistry, Node, Interface, Graphable, Simulator
-from seedsim.core.enums import NetworkType
+from seedsim.core import ScopedRegistry, Node, Graphable, Simulator
 from typing import List, Set, Dict
 
 IbgpFileTemplates: Dict[str, str] = {}

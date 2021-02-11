@@ -160,7 +160,7 @@ class Ebgp(Layer, Graphable):
                         p_ixif = iface
                         break
 
-            assert p_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(a, ix)
+            assert p_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(peer, ix)
             self._log("adding peering: {} as {} (RS) <-> {} as {}".format(rs_if.getAddress(), ix, p_ixif.getAddress(), peer))
 
             ix_rs.addProtocol('bgp', 'p_as{}'.format(peer), EbgpFileTemplates["rs_bird_peer"].format(

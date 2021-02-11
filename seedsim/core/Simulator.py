@@ -1,7 +1,7 @@
 from __future__ import annotations
 from .Merger import Merger
 from .Registry import Registry, Registrable, Printable
-from typing import Dict, Set, Tuple
+from typing import Dict, Set, Tuple, List
 from sys import stderr
 import pickle
 
@@ -11,9 +11,6 @@ class LayerDatabase(Registrable, Printable):
 
     def __init__(self):
         self.db = {}
-
-    def print(self, indentation: int) -> str:
-        return ''
 
 class Simulator:
 
