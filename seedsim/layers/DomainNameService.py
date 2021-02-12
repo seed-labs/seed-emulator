@@ -62,7 +62,7 @@ class Zone(Printable):
         """
         assert '.' not in name, 'invalid subzone name "{}"'.format(name)
         if name in self.__subzones: return self.__subzones[name]
-        self.__subzones[name] = Zone('{}.{}'.format(name, self.__zonename))
+        self.__subzones[name] = Zone('{}.{}'.format(name, self.__zonename if self.__zonename != '.' else ''))
         return self.__subzones[name]
     
     def getSubZones(self) -> Dict[str, Zone]:
@@ -282,16 +282,16 @@ class DomainNameService(Service):
     __rootZone: Zone
     __autoNs: bool
 
-    def __init__(self, simulator: Simulator, autoNameServer: bool = True):
+    def __init__(self, autoNameServer: bool = True):
         """!
         @brief DomainNameService constructor.
         
         @param simulator simulator.
         @param autoNameServer add gule records to parents automaically.
         """
-        Service.__init__(self, simulator)
+        super().__init__()
         self.__autoNs = autoNameServer
-        self.__rootZone = Zone('')
+        self.__rootZone = Zone('.')
         self.addDependency('Base', False, False)
     
     def __autoNameServer(self, zone: Zone):

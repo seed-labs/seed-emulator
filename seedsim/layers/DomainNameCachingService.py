@@ -116,6 +116,7 @@ class DomainNameCachingService(Service):
         True by defualt, if true, DomainNameCachingService will find root NS in
         DomainNameService and use them as root.
         """
+        super().__init__()
         self.__auto_root = autoRoot
         self.addDependency('Base', False, False)
         if autoRoot:
