@@ -63,13 +63,13 @@ class Dnssec(Layer):
 
     __zonenames: Set[str]
 
-    def __init__(self, simulator: Simulator):
+    def __init__(self):
         """!
         @brief Dnssec layer constructor.
 
         @param simulator simulator
         """
-        Layer.__init__(self, simulator)
+        super.__init__()
         self.__zonenames = set()
         self.addDependency('DomainNameService', False, False)
 
@@ -96,8 +96,9 @@ class Dnssec(Layer):
         if zonename[-1] != '.': zonename += '.'
         self.__zonenames.add(zonename)
 
-    def onRender(self):
-        dns: DomainNameService = self._getReg().get('seedsim', 'layer', 'DomainNameService')
+    def onRender(self, simulator: Simulator):
+        reg = simulator.getRegistry()
+        dns: DomainNameService = reg.get('seedsim', 'layer', 'DomainNameService')
         nodes: Set[Node] = set()
         for zonename in self.__zonenames:
             self._log('Looking for server hosting "{}"...'.format(zonename))
