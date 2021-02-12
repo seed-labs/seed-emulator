@@ -11,18 +11,18 @@ from typing import List, Tuple, Dict
 
 sim = Simulator()
 
-base = Base(sim)
-routing = Routing(sim)
-ebgp = Ebgp(sim)
-ibgp = Ibgp(sim)
-ospf = Ospf(sim)
-real = Reality(sim)
-web = WebService(sim)
-dns = DomainNameService(sim)
-ldns = DomainNameCachingService(sim)
-dnssec = Dnssec(sim)
-cymru = CymruIpOriginService(sim)
-rdns = ReverseDomainNameService(sim)
+base = Base()
+routing = Routing()
+ebgp = Ebgp()
+ibgp = Ibgp()
+ospf = Ospf()
+real = Reality()
+web = WebService()
+dns = DomainNameService()
+ldns = DomainNameCachingService()
+dnssec = Dnssec()
+cymru = CymruIpOriginService()
+rdns = ReverseDomainNameService()
 
 ###############################################################################
 
@@ -30,7 +30,7 @@ def make_real_as(asn: int, exchange: int, exchange_ip: str):
     real_as = base.createAutonomousSystem(asn)
     real_router = real.createRealWorldRouter(real_as)
 
-    real_router.joinNetworkByName('ix{}'.format(exchange), exchange_ip)
+    real_router.joinNetwork('ix{}'.format(exchange), exchange_ip)
 
 ###############################################################################
 
@@ -41,18 +41,20 @@ def make_service_as(asn: int, services: List[Service], exchange: int):
 
     net = service_as.createNetwork('net0')
 
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    router.joinNetwork(net)
+    router.joinNetwork('net0')
 
-    router.joinNetworkByName('ix{}'.format(exchange))
+    router.joinNetwork('ix{}'.format(exchange))
 
     for service in services:
-        server = service_as.createHost('s_{}'.format(service.getName().lower()))
+        name = 's_{}'.format(service.getName().lower())
 
-        server.joinNetwork(net)
+        server = service_as.createHost(name)
 
-        service.installOn(server)
+        server.joinNetwork('net0')
+
+        service.installByName(asn, name)
 
 ###############################################################################
 
@@ -63,18 +65,20 @@ def make_dns_as(asn: int, zones: List[str], exchange: int):
 
     net = dns_as.createNetwork('net0')
 
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    router.joinNetwork(net)
+    router.joinNetwork('net0')
 
-    router.joinNetworkByName('ix{}'.format(exchange))
+    router.joinNetwork('ix{}'.format(exchange))
 
     for zone in zones:
-        server = dns_as.createHost('s_{}dns'.format(zone.replace('.','_')))
+        name = 's_{}dns'.format(zone.replace('.','_'))
 
-        server.joinNetwork(net)
+        server = dns_as.createHost(name)
 
-        dns.hostZoneOn(zone, server)
+        server.joinNetwork('net0')
+
+        dns.installByName(asn, name).addZone(dns.getZone(zone))
 
 ###############################################################################
 
@@ -85,12 +89,12 @@ def make_user_as(asn: int, exchange: str):
 
     net = user_as.createNetwork('net0')
 
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    real.enableRealWorldAccess(net)
+    real.enableRealWorldAccess(user_as, 'net0')
 
-    router.joinNetwork(net)
-    router.joinNetworkByName('ix{}'.format(exchange))
+    router.joinNetwork('net0')
+    router.joinNetwork('ix{}'.format(exchange))
 
 ###############################################################################
 
@@ -101,15 +105,17 @@ def make_transit_as(asn: int, exchanges: List[int], intra_ix_links: List[Tuple[i
 
     for ix in exchanges:
         routers[ix] = transit_as.createRouter('r{}'.format(ix))
-        routers[ix].joinNetworkByName('ix{}'.format(ix))
+        routers[ix].joinNetwork('ix{}'.format(ix))
 
     for (a, b) in intra_ix_links:
-        net = transit_as.createNetwork('net_{}_{}'.format(a, b))
+        name = 'net_{}_{}'.format(a, b)
 
-        routing.addDirect(net)
+        net = transit_as.createNetwork(name)
 
-        routers[a].joinNetwork(net)
-        routers[b].joinNetwork(net)
+        routing.addDirect(asn, name)
+
+        routers[a].joinNetwork(name)
+        routers[b].joinNetwork(name)
 
 ###############################################################################
 
@@ -197,16 +203,16 @@ google_dns_net = google.createNetwork('google_dns_net', '8.8.8.0/24')
 
 google_dns = google.createHost('google_dns')
 
-google_dns.joinNetwork(google_dns_net, '8.8.8.8')
+google_dns.joinNetwork('google_dns_net', '8.8.8.8')
 
-ldns.installOn(google_dns)
+ldns.installByName(15169, 'google_dns')
 
-routing.addDirect(google_dns_net)
+routing.addDirect(15169, 'google_dns_net')
 
 google_router = google.createRouter('router0')
 
-google_router.joinNetwork(google_dns_net)
-google_router.joinNetworkByName('ix100', '10.100.0.250')
+google_router.joinNetwork('google_dns_net')
+google_router.joinNetwork('ix100', '10.100.0.250')
 
 ###############################################################################
 
