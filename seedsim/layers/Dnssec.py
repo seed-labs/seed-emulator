@@ -69,7 +69,7 @@ class Dnssec(Layer):
 
         @param simulator simulator
         """
-        super.__init__()
+        super().__init__()
         self.__zonenames = set()
         self.addDependency('DomainNameService', False, False)
 
