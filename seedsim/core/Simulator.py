@@ -61,7 +61,7 @@ class Simulator:
 
         (layer, done) = self.__layers.db[layerName]
         if done:
-            self.__log('{}: already {}, skipping'.format(verb, layerName))
+            self.__log('{}: already done, skipping'.format(layerName))
             return
 
         if layerName in self.__dependencies_db:
