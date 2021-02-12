@@ -10,7 +10,7 @@ ebgp = Ebgp()
 web = WebService()
 dns = DomainNameService()
 dnssec = Dnssec()
-ldns = DomainNameCachingService(True)
+ldns = DomainNameCachingService()
 
 ###############################################################################
 

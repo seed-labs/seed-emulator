@@ -1,7 +1,7 @@
 from .Service import Service, Server
-from .DomainNameService import DomainNameService, DomainNameServer, Zone
+from .DomainNameService import DomainNameService, DomainNameServer
 from .Reality import Reality
-from seedsim.core import Node, ScopedRegistry, Registry, Network, Simulator
+from seedsim.core import Node, Network, Simulator
 from typing import List, Tuple
 from ipaddress import IPv4Network
 
@@ -26,6 +26,7 @@ class CymruIpOriginService(Service):
     """
 
     __records: List[str]
+    __dns: DomainNameService
 
     def __init__(self):
         """!
@@ -33,9 +34,13 @@ class CymruIpOriginService(Service):
 
         @param simulator simulator.
         """
+        super().__init__()
         self.__records = []
         self.addDependency('DomainNameService', True, True)
         self.addDependency('Base', False, False)
+
+    def _createServer(self) -> Server:
+        return CymruIpOriginServer()
 
     def getName(self) -> str:
         return 'CymruIpOriginService'
@@ -109,6 +114,7 @@ class CymruIpOriginService(Service):
         self._log('Creating "cymru.com." zone...')
         dns: DomainNameService = reg.get('seedsim', 'layer', 'DomainNameService')
         zone = dns.getZone('cymru.com.')
+        self.__dns = dns
 
         self._log('Adding mappings...')
         for record in self.__records:
