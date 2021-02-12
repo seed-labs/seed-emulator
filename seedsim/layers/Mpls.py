@@ -90,6 +90,7 @@ class Mpls(Layer, Graphable):
         
         @param simulator simulator.
         """
+        super().__init__()
         self.__additional_edges = []
         self.__enabled = []
 
