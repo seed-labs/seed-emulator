@@ -4,6 +4,7 @@
 *.o
 *.so
 *.swp
+.DS_Store
 *.tfvars
 docs-out
 __pycache__
