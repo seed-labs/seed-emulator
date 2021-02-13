@@ -252,5 +252,5 @@ class GcpDistributedDocker(Compiler):
         dcomp = DistributedDocker()
         self.__init_tf()
         self._log('generating container configurations...')
-        dcomp.compile(registry, '_containers')
+        dcomp.compile(simulator, '_containers')
         self.__make_tf(registry)

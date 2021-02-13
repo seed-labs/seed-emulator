@@ -5,12 +5,12 @@ from os import mkdir
 
 sim = Simulator()
 
-base = Base(sim)
-routing = Routing(sim)
-ebgp = Ebgp(sim)
-mpls = Mpls(sim)
+base = Base()
+routing = Routing()
+ebgp = Ebgp()
+mpls = Mpls()
 
-web = WebService(sim)
+web = WebService()
 
 ###############################################################################
 
@@ -30,17 +30,17 @@ r2 = as150.createRouter('r2')
 r3 = as150.createRouter('r3')
 r4 = as150.createRouter('r4')
 
-r1.joinNetworkByName('ix100')
-r1.joinNetworkByName('net0')
+r1.joinNetwork('ix100')
+r1.joinNetwork('net0')
 
-r2.joinNetworkByName('net0')
-r2.joinNetworkByName('net1')
+r2.joinNetwork('net0')
+r2.joinNetwork('net1')
 
-r3.joinNetworkByName('net1')
-r3.joinNetworkByName('net2')
+r3.joinNetwork('net1')
+r3.joinNetwork('net2')
 
-r4.joinNetworkByName('net2')
-r4.joinNetworkByName('ix101')
+r4.joinNetwork('net2')
+r4.joinNetwork('ix101')
 
 mpls.enableOn(150)
 
@@ -49,36 +49,36 @@ mpls.enableOn(150)
 as151 = base.createAutonomousSystem(151)
 
 as151_web = as151.createHost('web')
-web.installOn(as151_web)
+web.installByName(151, 'web')
 
 as151_router = as151.createRouter('router0')
 
 as151_net = as151.createNetwork('net0')
 
-routing.addDirect(as151_net)
+routing.addDirect(151, 'net0')
 
-as151_web.joinNetwork(as151_net)
-as151_router.joinNetwork(as151_net)
+as151_web.joinNetwork('net0')
+as151_router.joinNetwork('net0')
 
-as151_router.joinNetworkByName('ix100')
+as151_router.joinNetwork('ix100')
 
 ###############################################################################
 
 as152 = base.createAutonomousSystem(152)
 
 as152_web = as152.createHost('web')
-web.installOn(as152_web)
+web.installByName(152, 'web')
 
 as152_router = as152.createRouter('router0')
 
 as152_net = as152.createNetwork('net0')
 
-routing.addDirect(as152_net)
+routing.addDirect(152, 'net0')
 
-as152_web.joinNetwork(as152_net)
-as152_router.joinNetwork(as152_net)
+as152_web.joinNetwork('net0')
+as152_router.joinNetwork('net0')
 
-as152_router.joinNetworkByName('ix101')
+as152_router.joinNetwork('ix101')
 
 ###############################################################################
 
