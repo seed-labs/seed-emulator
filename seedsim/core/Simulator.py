@@ -12,6 +12,9 @@ class LayerDatabase(Registrable, Printable):
     def __init__(self):
         self.db = {}
 
+    def print(self, indentation: int) -> str:
+        return ' ' * indentation + 'LayerDatabase\n'
+
 class Simulator:
 
     __registry: Registry

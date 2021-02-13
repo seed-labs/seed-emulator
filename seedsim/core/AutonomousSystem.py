@@ -160,19 +160,19 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         out += ' ' * indent
         out += 'Networks:\n'
 
-        for net in self.__reg.getByType('net'):
+        for net in self.__nets.values():
             out += net.print(indent + 4)
 
         out += ' ' * indent
         out += 'Routers:\n'
 
-        for net in self.__reg.getByType('rnode'):
-            out += net.print(indent + 4)
+        for node in self.__routers.values():
+            out += node.print(indent + 4)
 
         out += ' ' * indent
         out += 'Hosts:\n'
 
-        for net in self.__reg.getByType('hnode'):
-            out += net.print(indent + 4)
+        for host in self.__hosts.values():
+            out += host.print(indent + 4)
 
         return out
