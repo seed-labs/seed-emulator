@@ -4,6 +4,7 @@
 *.o
 *.so
 *.swp
+.DS_Store
 *.tfvars
 *.pyc
 docs-out
