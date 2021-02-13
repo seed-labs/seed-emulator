@@ -6,7 +6,7 @@ from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Service import Service, Server
 from .WebService import WebService, WebServer
-from .BotnetService import BotnetService, BotnetServer, BotnetClient
+from .BotnetService import BotnetClientService, BotnetClientServer, BotnetService, BotnetServer
 from .DomainRegistrarService import DomainRegistrarService, DomainRegistrarServer
 from .DomainNameService import DomainNameServer, DomainNameService, Zone
 from .DomainNameCachingService import DomainNameCachingServer, DomainNameCachingService

