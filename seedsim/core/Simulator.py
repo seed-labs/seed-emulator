@@ -29,22 +29,6 @@ class Simulator:
         self.__layers = LayerDatabase()
         self.__registry.register('seedsim', 'dict', 'layersdb', self.__layers)
 
-    def addLayer(self, layer: Layer):
-        """!
-        @brief Add a layer.
-
-        @param layer layer to add.
-        @throws AssertionError if layer already exist.
-        """
-
-        lname = layer.getName()
-        assert lname not in self.__layers.db, 'layer {} already added.'.format(lname)
-        self.__registry.register('seedsim', 'layer', lname, layer)
-        self.__layers.db[lname] = (layer, False)
-
-    def getLayer(self, layerName: str) -> Layer:
-        return self.__registry.get('seedsim', 'layer', layerName)
-
     def __render(self, layerName, optional: bool, configure: bool):
         """!
         @brief Render a layer.
@@ -73,9 +57,25 @@ class Simulator:
                 self.__render(dep, opt, configure)
 
         self.__log('entering {}...'.format(layerName))
+
+        hooks: List[Hook] = []
+        for hook in self.__registry.getByType('seedsim', 'hook'):
+            if hook.getTargetLayer() == layerName: hooks.append(hook)
         
-        if configure: layer.configure(self)
-        else: layer.render(self)
+        if configure:
+            self.__log('invoking pre-configure hooks for {}...'.format(layerName))
+            for hook in hooks: hook.preconfigure(self)
+            self.__log('configureing {}...'.format(layerName))
+            layer.configure(self)
+            self.__log('invoking post-configure hooks for {}...'.format(layerName))
+            for hook in hooks: hook.postconfigure(self)
+        else:
+            self.__log('invoking pre-render hooks for {}...'.format(layerName))
+            for hook in hooks: hook.prerender(self)
+            self.__log('rendering {}...'.format(layerName))
+            layer.render(self)
+            self.__log('invoking post-render hooks for {}...'.format(layerName))
+            for hook in hooks: hook.postrender(self)
         
         self.__log('done: {}'.format(layerName))
         self.__layers.db[layerName] = (layer, True)
@@ -88,6 +88,9 @@ class Simulator:
 
             self.__dependencies_db[layer] |= deps
 
+    def __log(self, message: str):
+        print('== Simulator: {}'.format(message), file=stderr)
+
     def rendered(self) -> bool:
         """!
         @brief test if the simulator is rendered.
@@ -95,6 +98,25 @@ class Simulator:
         @retrns True if rendered
         """
         return self.__rendered
+
+    def addHook(self, hook: Hook):
+        self.__registry.register('seedsim', 'hook', hook.getName(), hook)
+
+    def addLayer(self, layer: Layer):
+        """!
+        @brief Add a layer.
+
+        @param layer layer to add.
+        @throws AssertionError if layer already exist.
+        """
+
+        lname = layer.getName()
+        assert lname not in self.__layers.db, 'layer {} already added.'.format(lname)
+        self.__registry.register('seedsim', 'layer', lname, layer)
+        self.__layers.db[lname] = (layer, False)
+
+    def getLayer(self, layerName: str) -> Layer:
+        return self.__registry.get('seedsim', 'layer', layerName)
 
     def render(self):
         """!
@@ -150,6 +172,3 @@ class Simulator:
             self.__dependencies_db = {}
             self.__registry = pickle.load(f)
             self.__layers = self.__registry.get('seedsim', 'dict', 'layersdb')
-
-    def __log(self, message: str):
-        print('== Simulator: {}'.format(message), file=stderr)

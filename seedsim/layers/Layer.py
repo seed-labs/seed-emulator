@@ -1,7 +1,6 @@
 from typing import Set, Dict, Tuple
 from seedsim.core import Printable, Registrable, Simulator, Configurable
 from sys import stderr
-from enum import Enum
 
 
 class Layer(Printable, Registrable, Configurable):
