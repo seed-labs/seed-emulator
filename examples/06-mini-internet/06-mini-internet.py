@@ -2,8 +2,8 @@ from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelatio
 from seedsim.layers import WebService, DomainNameService, DomainNameCachingService, Dnssec
 from seedsim.layers import CymruIpOriginService, ReverseDomainNameService
 from seedsim.compiler import Docker, Graphviz
-from seedsim.compiler import Compiler
-from seedsim.core import Registry, Node, Simulator
+from seedsim.hooks import ResolvConfHook
+from seedsim.core import Simulator
 from seedsim.layers import Router, Service
 from typing import List, Tuple, Dict
 
@@ -268,6 +268,10 @@ ebgp.addPrivatePeering(100, 4, 15169, PeerRelationship.Provider)
 
 ###############################################################################
 
+sim.addHook(ResolvConfHook(['8.8.8.8']))
+
+###############################################################################
+
 sim.addLayer(base)
 sim.addLayer(routing)
 sim.addLayer(ebgp)
@@ -282,13 +286,6 @@ sim.addLayer(cymru)
 sim.addLayer(rdns)
 
 sim.render()
-
-###############################################################################
-
-for ((scope, type, name), object) in sim.getRegistry().getAll().items():
-    if type != 'hnode': continue
-    host: Node = object
-    host.insertStartCommand(0, 'echo "nameserver 8.8.8.8" > /etc/resolv.conf')
 
 ###############################################################################
 
