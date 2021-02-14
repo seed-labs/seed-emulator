@@ -43,7 +43,7 @@ class Simulator:
         self.__layers.db[lname] = (layer, False)
 
     def getLayer(self, layerName: str) -> Layer:
-        self.__registry.get('seedsim', 'layer', layerName)
+        return self.__registry.get('seedsim', 'layer', layerName)
 
     def __render(self, layerName, optional: bool, configure: bool):
         """!
