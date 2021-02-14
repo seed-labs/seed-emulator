@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 # __author__ = 'Demon'
-from .. Service import Service, Server
+from ..Service import Service, Server
 from seedsim.core import Node
-from .. DomainNameService import DomainNameServer
-from typing import List, Dict
+from typing import Dict
 import pkgutil
 
 DomainRegistrarServerFileTemplates: Dict[str, str] = {}
@@ -32,20 +31,15 @@ class DomainRegistrarServer(Server):
     @brief The DomainRegistrarServer class.
     """
 
-    __node: Node
     __port: int
-    __index: str
 
-    def __init__(self, node: Node):
+    def __init__(self):
         """!
         @brief DomainRegistrarServer constructor.
 
         @param node node.
         """
-        asn = node.getAsn()
-        self.__node = node
         self.__port = 80
-        self.__index = '<?php phpinfo() ?>'
 
     def setPort(self, port: int):
         """!
@@ -56,19 +50,20 @@ class DomainRegistrarServer(Server):
         ## ! todo
         self.__port = port
 
-    def install(self):
+    def install(self, node: Node):
         """!
         @brief Install the service.
         """
-        self.__node.addSoftware('nginx-light php7.4-fpm')
-        self.__node.setFile('/var/www/html/index.php', DomainRegistrarServerFileTemplates['web_app_file'])
-        self.__node.setFile('/var/www/html/domain.php', DomainRegistrarServerFileTemplates['web_app_file2'])
-        self.__node.setFile('/etc/nginx/sites-available/default', DomainRegistrarServerFileTemplates['nginx_site'].format(port = self.__port))
-        self.__node.addStartCommand('service nginx start;/etc/init.d/php7.4-fpm start')
+        node.addSoftware('nginx-light php7.4-fpm')
+        node.setFile('/var/www/html/index.php', DomainRegistrarServerFileTemplates['web_app_file'])
+        node.setFile('/var/www/html/domain.php', DomainRegistrarServerFileTemplates['web_app_file2'])
+        node.setFile('/etc/nginx/sites-available/default', DomainRegistrarServerFileTemplates['nginx_site'].format(port = self.__port))
+        node.appendStartCommand('service nginx start')
+        node.appendStartCommand('service php7.4-fpm start')
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'Server: as{}/{}\n'.format(self.__node.getAsn(), self.__node.getName())
+        out += 'DomainRegistrarServer\n'
 
         return out
 
@@ -77,54 +72,24 @@ class DomainRegistrarService(Service):
     @brief The DomainRegistrarService class.
     """
 
-    __servers: List[DomainRegistrarServer]
-
     def __init__(self):
         """!
         @brief DomainRegistrarService constructor.
         """
-        self.__servers = []
+        super().__init__()
         self.addDependency('Base', False, False)
 
     def getName(self) -> str:
         return 'DomainRegistrarService'
 
-    def _doInstall(self, node: Node) -> DomainRegistrarServer:
-        """!
-        @brief Install the DomainRegistrar service on given node.
+    def _createServer(self) -> DomainRegistrarServer:
+        return DomainRegistrarServer()
 
-        @param node node to install the DomainRegistrar service on.
-
-        @returns Handler of the installed DomainRegistrar service.
-        @throws AssertionError if node is not host node.
-        """
-        dns_server: DomainNameServer = node.getAttribute('__domain_name_service_server')
-        if dns_server == None: raise NotImplementedError('This node does not install com TLD DNS server, install it first.')
-
-
-
-        server: DomainRegistrarServer = node.getAttribute('__domain_registrar_service_server')
-        if server != None: return server
-        server = DomainRegistrarServer(node)
-
-        self.__servers.append(server)
-        node.setAttribute('__domain_registrar_service_server', server)
-        return server
-
-    def render(self):
-        for server in self.__servers:
-            server.install()
+    def _doConfigure(self, node: Node, server: Server):
+        assert node.getAttribute('__domain_name_service_server') != None, 'DomainNameService required on node to use DomainRegistrarService.'
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'DomainRegistrarService:\n'
-
-        indent += 4
-        out += ' ' * indent
-
-        out += 'Installed Nodes:\n'
-
-        for server in self.__servers:
-            out += server.print(indent + 4)
+        out += 'DomainRegistrarService\n'
 
         return out
