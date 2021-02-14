@@ -58,7 +58,7 @@ class Base(Layer, Graphable):
         self._log('setting up autonomous systems...')
         for asobj in self.__ases.values(): asobj.configure(simulator)
 
-    def onRender(self, simulator: Simulator) -> None:
+    def render(self, simulator: Simulator) -> None:
         for ((scope, type, name), obj) in simulator.getRegistry().getAll().items():
 
             if not (type == 'rs' or type == 'rnode' or type == 'hnode'):

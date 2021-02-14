@@ -120,7 +120,7 @@ class Service(Layer):
             
             assert hit, 'no node with IP name {} in as{}'.format(name, scope)
     
-    def onRender(self, simulator: Simulator):
+    def render(self, simulator: Simulator):
         for (server, node) in self.__targets:
             self._doInstall(node, server)
         

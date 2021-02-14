@@ -111,7 +111,7 @@ class DomainRegistrarService(Service):
         node.setAttribute('__domain_registrar_service_server', server)
         return server
 
-    def onRender(self):
+    def render(self):
         for server in self.__servers:
             server.install()
 

@@ -345,12 +345,12 @@ class DomainNameService(Service):
         """
         return self.__rootZone
 
-    def onRender(self, simulator: Simulator):
+    def render(self, simulator: Simulator):
         if self.__autoNs:
             self._log('Setting up NS records...')
             self.__autoNameServer(self.__rootZone)
 
-        super().onRender(simulator)
+        super().render(simulator)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

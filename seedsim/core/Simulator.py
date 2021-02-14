@@ -75,7 +75,7 @@ class Simulator:
         self.__log('entering {}...'.format(layerName))
         
         if configure: layer.configure(self)
-        else: layer.onRender(self)
+        else: layer.render(self)
         
         self.__log('done: {}'.format(layerName))
         self.__layers.db[layerName] = (layer, True)

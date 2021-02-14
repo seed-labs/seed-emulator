@@ -96,7 +96,7 @@ class Dnssec(Layer):
         if zonename[-1] != '.': zonename += '.'
         self.__zonenames.add(zonename)
 
-    def onRender(self, simulator: Simulator):
+    def render(self, simulator: Simulator):
         reg = simulator.getRegistry()
         dns: DomainNameService = reg.get('seedsim', 'layer', 'DomainNameService')
         nodes: Set[Node] = set()

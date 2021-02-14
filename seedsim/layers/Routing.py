@@ -170,7 +170,7 @@ class Routing(Layer):
         node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
         node.addBuildCommand('apt-get install -y --no-install-recommends bird2')
 
-    def onRender(self, simulator: Simulator):
+    def render(self, simulator: Simulator):
         reg = simulator.getRegistry()
         for ((scope, type, name), obj) in reg.getAll().items():
             if type == 'rs':

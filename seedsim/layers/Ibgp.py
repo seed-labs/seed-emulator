@@ -48,7 +48,7 @@ class Ibgp(Layer, Graphable):
         """
         self.__masked.add(asn)
 
-    def onRender(self, simulator: Simulator):
+    def render(self, simulator: Simulator):
         reg = simulator.getRegistry()
         base: Base = reg.get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():

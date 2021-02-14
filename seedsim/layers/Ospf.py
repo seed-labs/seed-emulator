@@ -104,7 +104,7 @@ class Ospf(Layer):
         """
         return (asn, netname) in self.__masked
 
-    def onRender(self, simulator: Simulator):
+    def render(self, simulator: Simulator):
         reg = simulator.getRegistry()
 
         for ((scope, type, name), obj) in reg.getAll().items():

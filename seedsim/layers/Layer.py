@@ -56,11 +56,11 @@ class Layer(Printable, Registrable, Configurable):
         """
         raise NotImplementedError('getName not implemented')
 
-    def onRender(self, simulator: Simulator) -> None:
+    def render(self, simulator: Simulator) -> None:
         """!
         @brief Handle rendering.
         """
-        raise NotImplementedError('onRender not implemented')
+        raise NotImplementedError('render not implemented')
 
     def _log(self, message: str) -> None:
         """!

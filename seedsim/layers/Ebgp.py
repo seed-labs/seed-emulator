@@ -136,7 +136,7 @@ class Ebgp(Layer, Graphable):
 
         self.__rs_peers.append((ix, peer))
 
-    def onRender(self, simulator: Simulator) -> None:
+    def render(self, simulator: Simulator) -> None:
         reg = simulator.getRegistry()
 
         for (ix, peer) in self.__rs_peers:

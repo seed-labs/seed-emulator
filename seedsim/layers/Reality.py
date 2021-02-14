@@ -393,7 +393,7 @@ class Reality(Layer):
             self._log('Setting up real-world router as{}/{}...'.format(node.getAsn(), node.getName()))
             node.seal()
 
-    def onRender(self, simulator: Simulator) -> None:
+    def render(self, simulator: Simulator) -> None:
         return
 
     def print(self, indent: int) -> str:

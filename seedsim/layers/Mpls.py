@@ -221,7 +221,7 @@ class Mpls(Layer, Graphable):
 
                 n += 1
 
-    def onRender(self, simulator: Simulator):
+    def render(self, simulator: Simulator):
         reg = simulator.getRegistry()
         for asn in self.__enabled:
             if reg.has('seedsim', 'layer', 'Ospf'):

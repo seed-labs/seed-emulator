@@ -56,7 +56,7 @@ class Renderer(Printable):
                 self.__render(dep, opt)
 
         self.__log('rendering {}...'.format(layerName))
-        layer.onRender()
+        layer.render()
         self.__log('done: {}'.format(layerName))
         self.__layers[layerName] = (layer, True)
 
