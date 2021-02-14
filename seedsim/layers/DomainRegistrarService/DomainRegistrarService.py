@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 # __author__ = 'Demon'
-from ..Service import Service, Server
-from seedsim.core import Node
+from seedsim.core import Node, Service, Server
 from typing import Dict
 import pkgutil
 

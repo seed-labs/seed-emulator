@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 # __author__ = 'Demon'
-from .. Service import Service, Server
-from seedsim.core import Node
-from typing import List, Dict
-import zlib,base64,marshal
-import pkgutil
-import inspect
+from seedsim.core import Node, Service, Server
+from typing import Dict
+import zlib, base64, marshal, pkgutil, inspect
 
 BotnetServerFileTemplates: Dict[str, str] = {}
 

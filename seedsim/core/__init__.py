@@ -10,3 +10,5 @@ from .Simulator import Simulator
 from .Merger import Mergeable, Merger
 from .Configurable import Configurable
 from .Hook import Hook
+from .Layer import Layer
+from .Service import Server, Service

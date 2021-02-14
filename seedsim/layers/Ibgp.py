@@ -1,6 +1,5 @@
-from .Layer import Layer
 from .Base import Base
-from seedsim.core import ScopedRegistry, Node, Graphable, Simulator
+from seedsim.core import ScopedRegistry, Node, Graphable, Simulator, Layer
 from typing import List, Set, Dict
 
 IbgpFileTemplates: Dict[str, str] = {}

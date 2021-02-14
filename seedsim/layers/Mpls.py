@@ -1,8 +1,7 @@
-from .Layer import Layer
 from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Routing import Router
-from seedsim.core import Node, Registry, ScopedRegistry, Graphable, Simulator
+from seedsim.core import Node, ScopedRegistry, Graphable, Simulator, Layer
 from seedsim.core.enums import NetworkType, NodeRole
 from typing import List, Tuple, Dict
 

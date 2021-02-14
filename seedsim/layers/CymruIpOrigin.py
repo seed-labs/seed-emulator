@@ -1,7 +1,6 @@
-from .Service import Service, Server
 from .DomainNameService import DomainNameService, DomainNameServer
 from .Reality import Reality
-from seedsim.core import Node, Network, Simulator
+from seedsim.core import Node, Network, Simulator, Service, Server
 from typing import List, Tuple
 from ipaddress import IPv4Network
 

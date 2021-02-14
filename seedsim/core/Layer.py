@@ -1,6 +1,10 @@
-from typing import Set, Dict, Tuple
-from seedsim.core import Printable, Registrable, Simulator, Configurable
+from .Printable import Printable
+from .Registry import Registrable
+from .Simulator import Simulator
+from .Configurable import Configurable
+
 from sys import stderr
+from typing import Set, Dict, Tuple
 
 
 class Layer(Printable, Registrable, Configurable):

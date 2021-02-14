@@ -1,6 +1,5 @@
 from __future__ import annotations
-from .Service import Service, Server
-from seedsim.core import Node, Printable, Simulator
+from seedsim.core import Node, Printable, Simulator, Service, Server
 from seedsim.core.enums import NetworkType
 from typing import List, Dict, Tuple, Set
 from re import sub

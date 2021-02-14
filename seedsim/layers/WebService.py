@@ -1,7 +1,5 @@
-from .Service import Service, Server
-from seedsim.core import Node, Simulator
-from seedsim.core.enums import NodeRole
-from typing import List, Dict
+from seedsim.core import Node, Service, Server
+from typing import Dict
 
 WebServerFileTemplates: Dict[str, str] = {}
 

@@ -1,7 +1,8 @@
-from re import S
 from .Layer import Layer
-from seedsim.core import Node, Printable, Simulator
-from seedsim.core.enums import NodeRole
+from .Node import Node
+from .Printable import Printable
+from .Simulator import Simulator
+from .enums import NodeRole
 from typing import Dict, List, Set, Tuple
 
 class Server(Printable):

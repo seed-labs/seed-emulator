@@ -3,8 +3,8 @@ from seedsim.layers import WebService, DomainNameService, DomainNameCachingServi
 from seedsim.layers import CymruIpOriginService, ReverseDomainNameService
 from seedsim.compiler import Docker, Graphviz
 from seedsim.hooks import ResolvConfHook
-from seedsim.core import Simulator
-from seedsim.layers import Router, Service
+from seedsim.core import Simulator, Service
+from seedsim.layers import Router
 from typing import List, Tuple, Dict
 
 ###############################################################################

@@ -1,5 +1,4 @@
-from .Layer import Layer
-from seedsim.core import ScopedRegistry, Node, Interface, Network, Simulator
+from seedsim.core import ScopedRegistry, Node, Interface, Network, Simulator, Layer
 from typing import List, Dict, Set, Tuple
 from ipaddress import IPv4Network
 

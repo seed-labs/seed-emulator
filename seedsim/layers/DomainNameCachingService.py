@@ -1,6 +1,5 @@
-from seedsim.core import Configurable
+from seedsim.core import Configurable, Service, Server
 from seedsim.core import Node, ScopedRegistry, Simulator
-from .Service import Service, Server
 from .DomainNameService import DomainNameService
 from typing import List, Dict
 
@@ -8,11 +7,11 @@ DomainNameCachingServiceFileTemplates: Dict[str, str] = {}
 
 DomainNameCachingServiceFileTemplates['named_options'] = '''\
 options {
-	directory "/var/cache/bind";
-	recursion yes;
-	dnssec-validation no;
+    directory "/var/cache/bind";
+    recursion yes;
+    dnssec-validation no;
     empty-zones-enable no;
-	allow-query { any; };
+    allow-query { any; };
 };
 '''
 

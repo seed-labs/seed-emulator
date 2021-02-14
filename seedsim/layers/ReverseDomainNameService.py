@@ -1,6 +1,5 @@
-from .Service import Service, Server
 from .DomainNameService import DomainNameService, DomainNameServer
-from seedsim.core import Node, Simulator
+from seedsim.core import Node, Simulator, Service, Server
 
 class ReverseDomainNameServer(Server):
     """!

@@ -1,5 +1,4 @@
-from .Layer import Layer
-from seedsim.core import AutonomousSystem, InternetExchange, Printable, Registry, AddressAssignmentConstraint, Node, Graphable, Simulator
+from seedsim.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Simulator, Layer
 from typing import Dict, List
 
 BaseFileTemplates: Dict[str, str] = {}

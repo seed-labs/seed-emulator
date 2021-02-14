@@ -1,5 +1,4 @@
-from .Layer import Layer
-from seedsim.core import Node, Simulator
+from seedsim.core import Node, Simulator, Layer
 from seedsim.core.enums import NetworkType
 from typing import Set, Dict, List, Tuple
 
