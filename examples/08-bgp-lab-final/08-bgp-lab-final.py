@@ -1,16 +1,15 @@
-from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, WebService, Router
-from seedsim.sim import Renderer
+from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, WebService
 from seedsim.compiler import Docker
 from seedsim.core import Simulator
 
 sim = Simulator()
 
-base = Base(sim)
-routing = Routing(sim)
-ebgp = Ebgp(sim)
-ibgp = Ibgp(sim)
-ospf = Ospf(sim)
-web = WebService(sim)
+base = Base()
+routing = Routing()
+ebgp = Ebgp()
+ibgp = Ibgp()
+ospf = Ospf()
+web = WebService()
 
 ###############################################################################
 
@@ -24,12 +23,12 @@ def make_stub_as(asn: int, exchange: str):
 
     net = stub_as.createNetwork('net0')
 
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    web_server.joinNetwork(net)
-    router.joinNetwork(net)
+    web_server.joinNetwork('net0')
+    router.joinNetwork('net0')
 
-    router.joinNetworkByName(exchange)
+    router.joinNetwork(exchange)
 
 ###############################################################################
 
@@ -55,26 +54,26 @@ as2_100 = as2.createRouter('r0')
 as2_101 = as2.createRouter('r1')
 as2_102 = as2.createRouter('r2')
 
-as2_100.joinNetworkByName('ix100')
-as2_101.joinNetworkByName('ix101')
-as2_102.joinNetworkByName('ix102')
+as2_100.joinNetwork('ix100')
+as2_101.joinNetwork('ix101')
+as2_102.joinNetwork('ix102')
 
 as2_net_100_101 = as2.createNetwork('n01')
 as2_net_101_102 = as2.createNetwork('n12')
 as2_net_102_100 = as2.createNetwork('n20')
 
-routing.addDirect(as2_net_100_101)
-routing.addDirect(as2_net_101_102)
-routing.addDirect(as2_net_102_100)
+routing.addDirect(2, 'n01')
+routing.addDirect(2, 'n12')
+routing.addDirect(2, 'n20')
 
-as2_100.joinNetwork(as2_net_100_101)
-as2_101.joinNetwork(as2_net_100_101)
+as2_100.joinNetwork('n01')
+as2_101.joinNetwork('n01')
 
-as2_101.joinNetwork(as2_net_101_102)
-as2_102.joinNetwork(as2_net_101_102)
+as2_101.joinNetwork('n12')
+as2_102.joinNetwork('n12')
 
-as2_102.joinNetwork(as2_net_102_100)
-as2_100.joinNetwork(as2_net_102_100)
+as2_102.joinNetwork('n20')
+as2_100.joinNetwork('n20')
 
 ###############################################################################
 
@@ -83,15 +82,15 @@ as3 = base.createAutonomousSystem(3)
 as3_101 = as3.createRouter('r1')
 as3_102 = as3.createRouter('r2')
 
-as3_101.joinNetworkByName('ix101')
-as3_102.joinNetworkByName('ix102')
+as3_101.joinNetwork('ix101')
+as3_102.joinNetwork('ix102')
 
 as3_net_101_102 = as3.createNetwork('n12')
 
-routing.addDirect(as3_net_101_102)
+routing.addDirect(2, 'n12')
 
-as3_101.joinNetwork(as3_net_101_102)
-as3_102.joinNetwork(as3_net_101_102)
+as3_101.joinNetwork('as3_net_101_102')
+as3_102.joinNetwork('n12')
 
 ###############################################################################
 
