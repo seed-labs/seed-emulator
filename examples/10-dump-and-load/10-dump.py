@@ -1,6 +1,5 @@
 from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, WebService
 from seedsim.core import Simulator
-from seedsim.compiler import Docker
 
 sim = Simulator()
 
