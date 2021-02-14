@@ -268,13 +268,6 @@ ebgp.addPrivatePeering(100, 4, 15169, PeerRelationship.Provider)
 
 ###############################################################################
 
-for ((scope, type, name), object) in sim.getRegistry().getAll().items():
-    if type != 'hnode': continue
-    host: Node = object
-    host.addStartCommand('echo "nameserver 8.8.8.8" > /etc/resolv.conf')
-
-###############################################################################
-
 sim.addLayer(base)
 sim.addLayer(routing)
 sim.addLayer(ebgp)
@@ -289,6 +282,13 @@ sim.addLayer(cymru)
 sim.addLayer(rdns)
 
 sim.render()
+
+###############################################################################
+
+for ((scope, type, name), object) in sim.getRegistry().getAll().items():
+    if type != 'hnode': continue
+    host: Node = object
+    host.insertStartCommand(0, 'echo "nameserver 8.8.8.8" > /etc/resolv.conf')
 
 ###############################################################################
 
