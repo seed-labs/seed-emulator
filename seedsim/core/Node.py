@@ -439,7 +439,23 @@ class Node(Printable, Registrable, Configurable):
         """
         return self.__build_commands
 
-    def addStartCommand(self, cmd: str, fork: bool = False):
+    def insertStartCommand(self, index: int, cmd: str, fork: bool = False):
+        """!
+        @brief Add new command to start script.
+
+        The command should not be a blocking command. If you need to run a
+        blocking command, set fork to true and fork it to the background so
+        that it won't block the execution of other commands.
+
+        @param cmd command to add.
+        @param fork (optional) fork to command to background?
+
+        Use this to add start steps to the node. For example, if using the
+        "docker" compiler, this will be added to start.sh.
+        """
+        self.__start_commands.insert(index, (cmd, fork))
+
+    def appendStartCommand(self, cmd: str, fork: bool = False):
         """!
         @brief Add new command to start script.
 

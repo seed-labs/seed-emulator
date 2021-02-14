@@ -59,7 +59,7 @@ class WebServer(Server):
         node.addSoftware('nginx-light')
         node.setFile('/var/www/html/index.html', self.__index.format(asn = node.getAsn(), nodeName = node.getName()))
         node.setFile('/etc/nginx/sites-available/default', WebServerFileTemplates['nginx_site'].format(port = self.__port))
-        node.addStartCommand('service nginx start')
+        node.appendStartCommand('service nginx start')
         
     def print(self, indent: int) -> str:
         out = ' ' * indent

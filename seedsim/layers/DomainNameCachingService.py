@@ -78,7 +78,7 @@ class DomainNameCachingServer(Server, Configurable):
             hint = '\n'.join(self.__root_servers)
             node.setFile('/usr/share/dns/root.hints', hint)
             node.setFile('/etc/bind/db.root', hint)
-        node.addStartCommand('service named start')
+        node.appendStartCommand('service named start')
 
         if not self.__configure_resolvconf: return
 
@@ -92,11 +92,11 @@ class DomainNameCachingServer(Server, Configurable):
         for rnode in sr.getByType('rnode'):
             rnode.appendFile('/etc/resolv.conf.new', 'nameserver {}\n'.format(addr))
             if 'cp /etc/resolv.conf.new /etc/resolv.conf' not in rnode.getStartCommands():
-                rnode.addStartCommand('cp /etc/resolv.conf.new /etc/resolv.conf')
+                rnode.appendStartCommand('cp /etc/resolv.conf.new /etc/resolv.conf')
 
         for hnode in sr.getByType('hnode'):
             if 'cp /etc/resolv.conf.new /etc/resolv.conf' not in hnode.getStartCommands():
-                hnode.addStartCommand('cp /etc/resolv.conf.new /etc/resolv.conf')
+                hnode.appendStartCommand('cp /etc/resolv.conf.new /etc/resolv.conf')
             hnode.appendFile('/etc/resolv.conf.new', 'nameserver {}\n'.format(addr))
 
 class DomainNameCachingService(Service):

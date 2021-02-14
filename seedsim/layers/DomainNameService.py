@@ -256,7 +256,7 @@ class DomainNameServer(Server):
         assert node == self.__node, 'configured node differs from install node.'
 
         node.addSoftware('bind9')
-        node.addStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
+        node.appendStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
         node.setFile('/etc/bind/named.conf.options', DomainNameServiceFileTemplates['named_options'])
 
         for (zone, auto_ns_soa) in self.__zones:
@@ -271,8 +271,8 @@ class DomainNameServer(Server):
                 'zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
             )
 
-        node.addStartCommand('chown -R bind:bind /etc/bind/zones')
-        node.addStartCommand('service named start')
+        node.appendStartCommand('chown -R bind:bind /etc/bind/zones')
+        node.appendStartCommand('service named start')
     
 class DomainNameService(Service):
     """!

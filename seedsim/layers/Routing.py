@@ -176,8 +176,8 @@ class Routing(Layer):
             if type == 'rs':
                 rs_node: Node = obj
                 self.__installBird(rs_node)
-                rs_node.addStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
-                rs_node.addStartCommand('bird -d', True)
+                rs_node.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
+                rs_node.appendStartCommand('bird -d', True)
                 self._log("Bootstraping bird.conf for RS {}...".format(name))
 
                 rs_ifaces = rs_node.getInterfaces()
@@ -198,9 +198,9 @@ class Routing(Layer):
 
                 lbaddr = self.__loopback_assigner[self.__loopback_pos]
 
-                rnode.addStartCommand('ip li add dummy0 type dummy')
-                rnode.addStartCommand('ip li set dummy0 up')
-                rnode.addStartCommand('ip addr add {}/32 dev dummy0'.format(lbaddr))
+                rnode.appendStartCommand('ip li add dummy0 type dummy')
+                rnode.appendStartCommand('ip li set dummy0 up')
+                rnode.appendStartCommand('ip addr add {}/32 dev dummy0'.format(lbaddr))
                 rnode.setLoopbackAddress(lbaddr)
                 self.__loopback_pos += 1
 
@@ -226,8 +226,8 @@ class Routing(Layer):
                     routerId = rnode.getLoopbackAddress()
                 ))
 
-                rnode.addStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
-                rnode.addStartCommand('bird -d', True)
+                rnode.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
+                rnode.appendStartCommand('bird -d', True)
                 
                 if has_localnet: rnode.addProtocol('direct', 'local_nets', RoutingFileTemplates['rnode_bird_direct'].format(interfaces = ifaces))
 
@@ -249,8 +249,8 @@ class Routing(Layer):
                 
                 assert rif != None, 'Host {} in as{} in network {}: no router'.format(name, scope, hnet.getName())
                 self._log("Setting default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
-                hnode.addStartCommand('ip rou del default 2> /dev/null')
-                hnode.addStartCommand('ip route add default via {} dev {}'.format(rif.getAddress(), rif.getNet().getName()))
+                hnode.appendStartCommand('ip rou del default 2> /dev/null')
+                hnode.appendStartCommand('ip route add default via {} dev {}'.format(rif.getAddress(), rif.getNet().getName()))
 
     def addDirect(self, asn: int, netname: str):
         """!

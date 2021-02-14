@@ -74,8 +74,8 @@ class Base(Layer, Graphable):
 
             node.setFile('/ifinfo.txt', ifinfo)
             node.setFile('/interface_setup', BaseFileTemplates['interface_setup_script'])
-            node.addStartCommand('chmod +x /interface_setup')
-            node.addStartCommand('/interface_setup')
+            node.appendStartCommand('chmod +x /interface_setup')
+            node.appendStartCommand('/interface_setup')
 
     def createAutonomousSystem(self, asn: int) -> AutonomousSystem:
         """!

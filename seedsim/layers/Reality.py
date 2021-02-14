@@ -194,8 +194,8 @@ class RealWorldRouter(Router):
         self.__hide_hops = hideHops
         self.addSoftware('iptables')
         self.setFile('/rw_configure_script', RealityFileTemplates['configure_script'])
-        self.addStartCommand('chmod +x /rw_configure_script')
-        self.addStartCommand('/rw_configure_script')
+        self.appendStartCommand('chmod +x /rw_configure_script')
+        self.appendStartCommand('/rw_configure_script')
 
     def addRealWorldRoute(self, prefix: str):
         """!
@@ -380,8 +380,8 @@ class Reality(Layer):
             cert = self.__ovpn_cert if self.__ovpn_cert != None else RealityFileTemplates['ovpn_cert']
         ))
         node.setFile('/ovpn_startup', RealityFileTemplates['ovpn_startup_script'])
-        node.addStartCommand('chmod +x /ovpn_startup')
-        node.addStartCommand('/ovpn_startup {}'.format(netname))
+        node.appendStartCommand('chmod +x /ovpn_startup')
+        node.appendStartCommand('/ovpn_startup {}'.format(netname))
         node.addPort(self.__cur_port, 1194, 'udp')
 
         self.__cur_port += 1

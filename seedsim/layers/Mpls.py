@@ -193,8 +193,8 @@ class Mpls(Layer, Graphable):
 
         node.setFile('/frr_start', MplsFileTemplates['frr_start_script'])
         node.setFile('/mpls_ifaces.txt', '\n'.join(mpls_iface_list))
-        node.addStartCommand('chmod +x /frr_start')
-        node.addStartCommand('/frr_start')
+        node.appendStartCommand('chmod +x /frr_start')
+        node.appendStartCommand('/frr_start')
 
     def __setUpIbgpMesh(self, nodes: List[Router]):
         """!

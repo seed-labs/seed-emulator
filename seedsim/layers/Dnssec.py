@@ -58,7 +58,9 @@ class Dnssec(Layer):
 
     This layer helps setting up DNSSEC. It works by signing the zones and send
     the DS record to parent(s) with nsupdate. Note that to build a DNSSEC
-    infrastructure, you will need to sign the entire chain. 
+    infrastructure, you will need to sign the entire chain. You will also need
+    working local DNS server configured on the node hosting the zone for it to
+    find the parent name server.
     """
 
     __zonenames: Set[str]
@@ -113,8 +115,8 @@ class Dnssec(Layer):
 
         for node in nodes:
             node.appendFile('/enable_dnssec', DnssecFileTemplates['enable_dnssec_script'])
-            node.addStartCommand('chmod +x /enable_dnssec')
-            node.addStartCommand('/enable_dnssec')
+            node.appendStartCommand('chmod +x /enable_dnssec')
+            node.appendStartCommand('/enable_dnssec')
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

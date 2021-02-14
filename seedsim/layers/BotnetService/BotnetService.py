@@ -86,7 +86,7 @@ class BotnetServer(Server):
         node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
         node.setFile('/tmp/byob/byob/modules/payloads/b6H.py', BotnetServerFileTemplates['payload'].replace("{serverHost}", address))
         node.setFile('/tmp/byob/byob/modules/stagers/b6H.py', BotnetServerFileTemplates['stager'].replace("{serverHost}", address))
-        node.addStartCommand('cd /tmp/byob/byob/; echo "exit\ny" | python3 server.py --port {} &'.format(self.__port))
+        node.appendStartCommand('cd /tmp/byob/byob/; echo "exit\ny" | python3 server.py --port {} &'.format(self.__port))
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -145,7 +145,7 @@ class BotnetClientServer(Server):
         # self.__node.addBuildCommand('python2 /tmp/get-pip.py')
         node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
         node.setFile('/tmp/BotClient.py', self.__dropper)
-        node.addStartCommand(BotnetServerFileTemplates['start_command'].format(C2ServerIp = self.__c2_server_ip))
+        node.appendStartCommand(BotnetServerFileTemplates['start_command'].format(C2ServerIp = self.__c2_server_ip))
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
