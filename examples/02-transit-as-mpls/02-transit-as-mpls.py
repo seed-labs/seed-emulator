@@ -1,4 +1,5 @@
-from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, WebService, Mpls
+from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Mpls
+from seedsim.services import WebService
 from seedsim.core import Simulator
 from seedsim.compiler import Docker
 

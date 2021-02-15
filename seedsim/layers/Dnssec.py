@@ -1,6 +1,6 @@
-from .DomainNameService import DomainNameServer, DomainNameService
 from typing import Set, Dict
 from seedsim.core import Node, Simulator, Layer
+from seedsim.services import DomainNameServer, DomainNameService
 
 DnssecFileTemplates: Dict[str, str] = {}
 

@@ -1,5 +1,6 @@
-from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Mpls, WebService
+from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Mpls
 from seedsim.compiler import Docker, DistributedDocker, GcpDistributedDocker, Graphviz
+from seedsim.services import WebService
 from seedsim.core import Simulator
 from os import mkdir
 

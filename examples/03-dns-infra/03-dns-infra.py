@@ -1,4 +1,5 @@
-from seedsim.layers import Base, Routing, Ebgp, DomainNameService, DomainNameServer, DomainNameCachingService, Dnssec, WebService
+from seedsim.layers import Base, Routing, Ebgp, Dnssec
+from seedsim.services import DomainNameService, DomainNameCachingService, WebService
 from seedsim.core import Simulator
 from seedsim.compiler import Docker
 

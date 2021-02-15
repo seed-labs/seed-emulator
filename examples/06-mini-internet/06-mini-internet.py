@@ -1,6 +1,6 @@
-from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship
-from seedsim.layers import WebService, DomainNameService, DomainNameCachingService, Dnssec
-from seedsim.layers import CymruIpOriginService, ReverseDomainNameService
+from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship, Dnssec
+from seedsim.services import WebService, DomainNameService, DomainNameCachingService
+from seedsim.services import CymruIpOriginService, ReverseDomainNameService
 from seedsim.compiler import Docker, Graphviz
 from seedsim.hooks import ResolvConfHook
 from seedsim.core import Simulator, Service

@@ -1,6 +1,6 @@
 from seedsim.core import Simulator
-from seedsim.layers import BotnetClientServer, BotnetClientService
-from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, BotnetService
+from seedsim.services import BotnetClientServer, BotnetClientService, BotnetService
+from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedsim.compiler import Docker
 
 sim = Simulator()

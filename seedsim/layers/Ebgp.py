@@ -1,5 +1,5 @@
 from .Routing import Router
-from seedsim.core import Registry, ScopedRegistry, Network, Node, Interface, Graphable, Simulator, Layer
+from seedsim.core import Registry, ScopedRegistry, Network, Interface, Graphable, Simulator, Layer
 from typing import Tuple, List, Dict
 from enum import Enum
 
