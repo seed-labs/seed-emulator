@@ -81,6 +81,12 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
         return self.__nets[name]
 
+    def getNetworks(self) -> List[str]:
+        """!
+        @brief Get llist of name of networks.
+        """
+        return list(self.__nets.keys())
+
     def createRouter(self, name: str) -> Node:
         """!
         @brief Create a router node.
@@ -92,6 +98,12 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         self.__routers[name] = Node(name, NodeRole.Router, self.__asn)
 
         return self.__routers[name]
+
+    def getRouters(self) -> List[str]:
+        """!
+        @brief Get llist of name of routers.
+        """
+        return list(self.__routers.keys())
 
     def getRouter(self, name: str) -> Node:
         """!
@@ -122,6 +134,12 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns Node.
         """
         return self.__hosts[name]
+
+    def getHosts(self) -> List[str]:
+        """!
+        @brief Get llist of name of hosts.
+        """
+        return list(self.__hosts.keys())
 
     def _doCreateGraphs(self):
         l2graph = self._addGraph('AS{}: Layer 2 Connections'.format(self.__asn), False)
