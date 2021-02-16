@@ -2,14 +2,19 @@
 # encoding: utf-8
 
 
-from MiniInternet import reg, renderer, Node, docker_compiler, dns
-from seedsim.layers import BotnetService
-from seedsim.layers import DomainRegistrarService
+from seedsim.core import Simulator
+from seedsim.services import BotnetService, BotnetClientService
+from seedsim.services import DomainRegistrarService
+from seedsim.compiler import Docker
 import datetime
 
-bot = BotnetService()
-domain_registrar = DomainRegistrarService()
+sim = Simulator()
 
+sim.load('mini-internet.bin')
+
+bot = BotnetService()
+bot_client = BotnetClientService()
+domain_registrar = DomainRegistrarService()
 
 ###########################################
 
@@ -18,7 +23,7 @@ def dga() -> list:
     domain_list = []
     domain = ""
     import math, datetime
-    today = datetime.datetime.today()
+    today = datetime.datetime.utcnow()
     year = today.year
     month = today.month
     minute = today.minute
@@ -35,22 +40,27 @@ def dga() -> list:
     return domain_list
 
 ##########################################
+reg = sim.getRegistry()
+
 c2_server_ip = "10.150.0.71"
 for ((scope, type, name), object) in reg.getAll().items():
     if type != 'hnode': continue
     host: Node = object
-    if host.getAsn() == 150:
-        bot.installC2(host)
-        c2_server_ip == format(host.getInterfaces()[0].getAddress())
+    if host.getAsn() == 150 and "webservice" in host.getName():
+        bot.installByName(150, host.getName())
+
     elif host.getAsn() in [151,152]:
-        bot.installBot(node=host, C2ServerIp=c2_server_ip, dga=dga)
+        c = bot_client.installByName(host.getAsn(), host.getName())
+        c.setServer(c2_server_ip, enable_dga=True, dga=dga)
     elif 's_com_dns' in host.getName():
         domain_registrar.installOn(host)
+#
+#
+#
+sim.addLayer(bot)
+sim.addLayer(domain_registrar)
+sim.render()
 
+###############################################################################
 
-
-renderer.addLayer(bot)
-renderer.addLayer(domain_registrar)
-renderer.render()
-
-docker_compiler.compile('./botnet-in-mini-internet')
+sim.compile(Docker(), './botnet-in-mini-internet')
