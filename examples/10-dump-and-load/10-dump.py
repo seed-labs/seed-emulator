@@ -1,7 +1,6 @@
 from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedsim.services import WebService
 from seedsim.core import Simulator
-from seedsim.compiler import Docker
 
 sim = Simulator()
 
@@ -92,8 +91,4 @@ sim.addLayer(ibgp)
 sim.addLayer(ospf)
 sim.addLayer(web)
 
-sim.render()
-
-###############################################################################
-
-sim.compile(Docker(), './transit-as')
+sim.dump('10-dump.bin')

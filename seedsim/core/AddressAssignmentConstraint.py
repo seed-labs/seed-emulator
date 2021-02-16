@@ -1,6 +1,24 @@
 from .Printable import Printable
 from .enums import NetworkType, NodeRole
-from typing import Generator
+
+class Assigner:
+    __current: int
+    __end: int
+    __step: int
+
+    def __init__(self, start: int, end: int, step: int):
+        self.__current = start
+        self.__end = end
+        self.__step = step
+
+    def next(self) -> int:
+        if self.__step > 0 and self.__current > self.__end:
+            assert False, 'out of range.'
+        if self.__step < 0 and self.__current < self.__end:
+            assert False, 'out of range.'
+        v = self.__current
+        self.__current += self.__step
+        return v
 
 class AddressAssignmentConstraint(Printable):
     """!
@@ -38,25 +56,19 @@ class AddressAssignmentConstraint(Printable):
         self.__routerEnd = routerEnd
         self.__routerStep = routerStep
 
-    def __range(self, a: int, b: int, s: int = 1):
-        for n in range(a, b, s): yield n
-
-    def __always(self, a: int):
-        while True: yield a
-
-    def getOffsetGenerator(self, type: NodeRole) -> Generator[int, None, None]:
+    def getOffsetAssigner(self, type: NodeRole) -> Assigner:
         """!
-        @brief Get IP offset generator for a type of node.
+        @brief Get IP offset assigner for a type of node.
 
         @todo Handle pure-internal routers.
 
         @param type type of the node.
-        @returns An int generator that generates IP address offset.
-        @throws ValueError if try to get generator of IX interface.
+        @returns An int assigner that generates IP address offset.
+        @throws ValueError if try to get assigner of IX interface.
         """
 
-        if type == NodeRole.Host: return self.__range(self.__hostStart, self.__hostEnd, self.__hostStep)
-        if type == NodeRole.Router: return self.__range(self.__routerStart, self.__routerEnd, self.__routerStep)
+        if type == NodeRole.Host: return Assigner(self.__hostStart, self.__hostEnd, self.__hostStep)
+        if type == NodeRole.Router: return Assigner(self.__routerStart, self.__routerEnd, self.__routerStep)
 
         raise ValueError("IX IP assigment must done with mapIxAddress().")
 

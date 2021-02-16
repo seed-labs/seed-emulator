@@ -2,8 +2,8 @@ from ipaddress import IPv4Network, IPv4Address
 from .Printable import Printable
 from .enums import NetworkType, NodeRole
 from .Registry import Registrable
-from .AddressAssignmentConstraint import AddressAssignmentConstraint
-from typing import Generator, Dict, Tuple, List
+from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
+from typing import Dict, Tuple, List
 
 class Network(Printable, Registrable):
     """!
@@ -16,7 +16,7 @@ class Network(Printable, Registrable):
     __name: str
     __scope: str
     __aac: AddressAssignmentConstraint
-    __assigners: Dict[NodeRole, Generator[int, None, None]]
+    __assigners: Dict[NodeRole, Assigner]
 
     __connected_nodes: List['Node']
 
@@ -45,8 +45,8 @@ class Network(Printable, Registrable):
 
         self.__connected_nodes = []
 
-        self.__assigners[NodeRole.Router] = self.__aac.getOffsetGenerator(NodeRole.Router)
-        self.__assigners[NodeRole.Host] = self.__aac.getOffsetGenerator(NodeRole.Host)
+        self.__assigners[NodeRole.Router] = self.__aac.getOffsetAssigner(NodeRole.Router)
+        self.__assigners[NodeRole.Host] = self.__aac.getOffsetAssigner(NodeRole.Host)
 
         self.__d_latency = 0
         self.__d_bandwidth = 0
@@ -130,7 +130,7 @@ class Network(Printable, Registrable):
         assert not (nodeRole == nodeRole.Host and self.__type == NetworkType.InternetExchange), 'trying to assign IX netwotk to non-router node'
 
         if self.__type == NetworkType.InternetExchange: return self.__prefix[self.__aac.mapIxAddress(asn)]
-        return self.__prefix[next(self.__assigners[nodeRole])]
+        return self.__prefix[self.__assigners[nodeRole].next()]
 
     def associate(self, node: 'Node'):
         """!

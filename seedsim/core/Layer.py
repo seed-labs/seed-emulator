@@ -1,15 +1,22 @@
-from typing import List, Dict, Tuple
-from seedsim.core import Printable, Registrable
+from .Printable import Printable
+from .Registry import Registrable
+from .Simulator import Simulator
+from .Configurable import Configurable
+
 from sys import stderr
-from enum import Enum
+from typing import Set, Dict, Tuple
 
 
-class Layer(Printable, Registrable):
+class Layer(Printable, Registrable, Configurable):
     """!
     @brief The layer interface.
     """
 
-    dependencies: Dict[str, List[Tuple[str, bool]]] = {}
+    __dependencies: Dict[str, Set[Tuple[str, bool]]]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.__dependencies = {}
 
     def addDependency(self, layerName: str, reverse: bool, optional: bool):
         """!
@@ -27,10 +34,19 @@ class Layer(Printable, Registrable):
         _current = layerName if reverse else self.getName()
         _target = self.getName() if reverse else layerName
 
-        if _current not in self.dependencies:
-            self.dependencies[_current] = []
+        if _current not in self.__dependencies:
+            self.__dependencies[_current] = set()
 
-        self.dependencies[_current].append((_target, optional))
+        self.__dependencies[_current].add((_target, optional))
+
+    def getDependencies(self) -> Dict[str, Set[Tuple[str, bool]]]:
+        """!
+        @brief Get dependencies.
+
+        @return dependencies.
+        """
+
+        return self.__dependencies
 
     def getName(self) -> str:
         """!
@@ -43,11 +59,11 @@ class Layer(Printable, Registrable):
         """
         raise NotImplementedError('getName not implemented')
 
-    def onRender(self) -> None:
+    def render(self, simulator: Simulator) -> None:
         """!
         @brief Handle rendering.
         """
-        raise NotImplementedError('onRender not implemented')
+        raise NotImplementedError('render not implemented')
 
     def _log(self, message: str) -> None:
         """!

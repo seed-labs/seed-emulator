@@ -1,9 +1,9 @@
-from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, Router, BotnetService
-from seedsim.renderer import Renderer
+from seedsim.core import Simulator
+from seedsim.services import BotnetClientServer, BotnetClientService, BotnetService
+from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedsim.compiler import Docker
-from seedsim.core import Registry
 
-
+sim = Simulator()
 
 base = Base()
 routing = Routing()
@@ -11,19 +11,26 @@ ebgp = Ebgp()
 ibgp = Ibgp()
 ospf = Ospf()
 bot = BotnetService()
+bot_client = BotnetClientService()
 
-bot_desc = {150: "c2", 151: "server", 152: "server", 160: "server", 161: "server"}
-c2_server_ip = "10.150.0.71"
+###############################################################################
 
-renderer = Renderer()
-docker_compiler = Docker()
+bot_desc = {
+    150: 'c2',
+    151: 'server',
+    152: 'server',
+    160: 'server',
+    161: 'server'
+}
+
+c2_server_ip = '10.150.0.71'
 
 ###############################################################################
 
 def make_stub_as(asn: int, exchange: str):
     stub_as = base.createAutonomousSystem(asn)
 
-    if bot_desc.get(asn) == "c2":
+    if bot_desc.get(asn) == 'c2':
         botnet_server = stub_as.createHost('c2_server')
     else:
         botnet_server = stub_as.createHost('bot')
@@ -31,18 +38,17 @@ def make_stub_as(asn: int, exchange: str):
     router = stub_as.createRouter('router0')
 
     net = stub_as.createNetwork('net0')
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    botnet_server.joinNetwork(net)
-    router.joinNetwork(net)
+    botnet_server.joinNetwork('net0')
+    router.joinNetwork('net0')
 
-    router.joinNetworkByName(exchange)
-    if bot_desc.get(asn) == "c2":
-        bot.installC2(botnet_server)
+    router.joinNetwork(exchange)
+    if bot_desc.get(asn) == 'c2':
+        bot.installByName(asn, 'c2_server')
     else:
-        bot.installBot(botnet_server,c2_server_ip)
-
-
+        c: BotnetClientServer = bot_client.installByName(asn, 'bot')
+        c.setServer(c2_server_ip)
 
 ###############################################################################
 
@@ -68,26 +74,26 @@ as2_100 = as2.createRouter('r0')
 as2_101 = as2.createRouter('r1')
 as2_102 = as2.createRouter('r2')
 
-as2_100.joinNetworkByName('ix100')
-as2_101.joinNetworkByName('ix101')
-as2_102.joinNetworkByName('ix102')
+as2_100.joinNetwork('ix100')
+as2_101.joinNetwork('ix101')
+as2_102.joinNetwork('ix102')
 
 as2_net_100_101 = as2.createNetwork('n01')
 as2_net_101_102 = as2.createNetwork('n12')
 as2_net_102_100 = as2.createNetwork('n20')
 
-routing.addDirect(as2_net_100_101)
-routing.addDirect(as2_net_101_102)
-routing.addDirect(as2_net_102_100)
+routing.addDirect(2, 'n01')
+routing.addDirect(2, 'n12')
+routing.addDirect(2, 'n20')
 
-as2_100.joinNetwork(as2_net_100_101)
-as2_101.joinNetwork(as2_net_100_101)
+as2_100.joinNetwork('n01')
+as2_101.joinNetwork('n01')
 
-as2_101.joinNetwork(as2_net_101_102)
-as2_102.joinNetwork(as2_net_101_102)
+as2_101.joinNetwork('n12')
+as2_102.joinNetwork('n12')
 
-as2_102.joinNetwork(as2_net_102_100)
-as2_100.joinNetwork(as2_net_102_100)
+as2_102.joinNetwork('n20')
+as2_100.joinNetwork('n20')
 
 ###############################################################################
 
@@ -96,15 +102,15 @@ as3 = base.createAutonomousSystem(3)
 as3_101 = as3.createRouter('r1')
 as3_102 = as3.createRouter('r2')
 
-as3_101.joinNetworkByName('ix101')
-as3_102.joinNetworkByName('ix102')
+as3_101.joinNetwork('ix101')
+as3_102.joinNetwork('ix102')
 
 as3_net_101_102 = as3.createNetwork('n12')
 
-routing.addDirect(as3_net_101_102)
+routing.addDirect(3, 'n12')
 
-as3_101.joinNetwork(as3_net_101_102)
-as3_102.joinNetwork(as3_net_101_102)
+as3_101.joinNetwork('n12')
+as3_102.joinNetwork('n12')
 
 ###############################################################################
 
@@ -121,15 +127,15 @@ ebgp.addPrivatePeering(102, 3, 161, PeerRelationship.Provider)
 
 ###############################################################################
 
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(ibgp)
-renderer.addLayer(ospf)
-renderer.addLayer(bot)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(ibgp)
+sim.addLayer(ospf)
+sim.addLayer(bot)
 
-renderer.render()
+sim.render()
 
 ###############################################################################
 
-docker_compiler.compile('./botnet-in-as')
+sim.compile(Docker(), './botnet-in-as')

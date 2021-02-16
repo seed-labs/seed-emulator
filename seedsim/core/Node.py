@@ -1,7 +1,9 @@
 from .Printable import Printable
 from .Network import Network
-from .enums import NodeRole, NetworkType
-from .Registry import Registry, ScopedRegistry, Registrable
+from .enums import NodeRole
+from .Registry import Registrable
+from .Simulator import Simulator
+from .Configurable import Configurable
 from ipaddress import IPv4Address
 from typing import List, Dict, Set, Tuple
 
@@ -53,7 +55,7 @@ class File(Printable):
         """
         self.__content += content
 
-    def get(self) -> (str, str):
+    def get(self) -> Tuple[str, str]:
         """!
         @brief Get file path and content.
 
@@ -169,7 +171,7 @@ class Interface(Printable):
 
         return out
 
-class Node(Printable, Registrable):
+class Node(Printable, Registrable, Configurable):
     """!
     @brief Node base class.
 
@@ -178,9 +180,8 @@ class Node(Printable, Registrable):
 
     __name: str
     __asn: int
+    __scope: str
     __role: NodeRole
-    __reg: ScopedRegistry
-    __greg = Registry()
     __interfaces: List[Interface]
     __files: Dict[str, File]
     __softwares: Set[str]
@@ -189,6 +190,9 @@ class Node(Printable, Registrable):
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
     __common_software: Set[str] = set()
+
+    __configured: bool
+    __pending_nets: List[Tuple[str, str]]
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -202,17 +206,47 @@ class Node(Printable, Registrable):
         self.__interfaces = []
         self.__files = {}
         self.__asn = asn
-        self.__reg = ScopedRegistry(scope if scope != None else str(asn))
         self.__role = role
         self.__name = name
+        self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
         self.__build_commands = []
         self.__start_commands = []
         self.__ports = []
         self.__privileged = False
 
+        self.__pending_nets = []
+        self.__configured = False
+
         for soft in DEFAULT_SOFTWARES:
             self.__common_software.add(soft)
+
+    def configure(self, simulator: Simulator):
+        """!
+        @brief configure the node. This is called when rendering.
+
+        NICs will be setup during the configuring procress. No new interfaces
+        can be added after configuration.
+
+        @param simulator Simulator object to use to configure.
+        """
+        assert not self.__configured, 'Node already configured.'
+
+        reg = simulator.getRegistry()
+
+        for (netname, address) in self.__pending_nets:
+
+            hit = False
+
+            if reg.has(self.__scope, "net", netname):
+                hit = True
+                self.__joinNetwork(reg.get(self.__scope, "net", netname), address)
+
+            if not hit and reg.has("ix", "net", netname):
+                hit = True
+                self.__joinNetwork(reg.get("ix", "net", netname), address)
+
+            assert hit, 'no network matched for name {}'.format(netname)
 
     def addPort(self, host: int, node: int, proto: str = 'tcp'):
         """!
@@ -243,7 +277,7 @@ class Node(Printable, Registrable):
         """
         self.__privileged = privileged
 
-    def isPrivileged(self,) -> bool:
+    def isPrivileged(self) -> bool:
         """!
         @brief Test if node is set to privileged.
 
@@ -251,7 +285,7 @@ class Node(Printable, Registrable):
         """
         return self.__privileged
 
-    def joinNetwork(self, net: Network, address: str = "auto") -> Interface:
+    def __joinNetwork(self, net: Network, address: str = "auto"):
         """!
         @brief Connect the node to a network.
         @param net network to connect.
@@ -269,23 +303,19 @@ class Node(Printable, Registrable):
         self.__interfaces.append(_iface)
         
         net.associate(self)
-        return _iface
 
-    def joinNetworkByName(self, netname: str, address: str = "auto") -> Interface:
+    def joinNetwork(self, netname: str, address: str = "auto"):
         """!
         @brief Connect the node to a network.
         @param netname name of the network.
         @param address (optional) override address assigment.
 
+        @returns assigned IP address
         @throws AssertionError if network does not exist.
         """
-        if self.__reg.has("net", netname):
-            return self.joinNetwork(self.__reg.get("net", netname), address)
+        assert not self.__configured, 'Node already configured.'
 
-        if self.__greg.has("ix", "net", netname):
-            return self.joinNetwork(self.__greg.get("ix", "net", netname), address)
-        
-        assert False, 'No such network: {}'.format(netname)
+        self.__pending_nets.append((netname, address))
 
     def getName(self) -> str:
         """!
@@ -409,7 +439,23 @@ class Node(Printable, Registrable):
         """
         return self.__build_commands
 
-    def addStartCommand(self, cmd: str, fork: bool = False):
+    def insertStartCommand(self, index: int, cmd: str, fork: bool = False):
+        """!
+        @brief Add new command to start script.
+
+        The command should not be a blocking command. If you need to run a
+        blocking command, set fork to true and fork it to the background so
+        that it won't block the execution of other commands.
+
+        @param cmd command to add.
+        @param fork (optional) fork to command to background?
+
+        Use this to add start steps to the node. For example, if using the
+        "docker" compiler, this will be added to start.sh.
+        """
+        self.__start_commands.insert(index, (cmd, fork))
+
+    def appendStartCommand(self, cmd: str, fork: bool = False):
         """!
         @brief Add new command to start script.
 

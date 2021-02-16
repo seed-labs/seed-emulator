@@ -1,14 +1,15 @@
-from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship
-from seedsim.layers import WebService, DomainNameService, DomainNameCachingService, Dnssec
-from seedsim.layers import CymruIpOriginService, ReverseDomainNameService
+from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship, Dnssec
+from seedsim.services import WebService, DomainNameService, DomainNameCachingService
+from seedsim.services import CymruIpOriginService, ReverseDomainNameService
 from seedsim.compiler import Docker, Graphviz
-from seedsim.compiler import Compiler
-from seedsim.renderer import Renderer
-from seedsim.core import Registry, Node
-from seedsim.layers import Router, Service
+from seedsim.hooks import ResolvConfHook
+from seedsim.core import Simulator, Service
+from seedsim.layers import Router
 from typing import List, Tuple, Dict
 
 ###############################################################################
+
+sim = Simulator()
 
 base = Base()
 routing = Routing()
@@ -23,17 +24,13 @@ dnssec = Dnssec()
 cymru = CymruIpOriginService()
 rdns = ReverseDomainNameService()
 
-renderer = Renderer()
-docker_compiler = Docker()
-graphviz = Graphviz()
-
 ###############################################################################
 
 def make_real_as(asn: int, exchange: int, exchange_ip: str):
     real_as = base.createAutonomousSystem(asn)
     real_router = real.createRealWorldRouter(real_as)
 
-    real_router.joinNetworkByName('ix{}'.format(exchange), exchange_ip)
+    real_router.joinNetwork('ix{}'.format(exchange), exchange_ip)
 
 ###############################################################################
 
@@ -44,18 +41,20 @@ def make_service_as(asn: int, services: List[Service], exchange: int):
 
     net = service_as.createNetwork('net0')
 
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    router.joinNetwork(net)
+    router.joinNetwork('net0')
 
-    router.joinNetworkByName('ix{}'.format(exchange))
+    router.joinNetwork('ix{}'.format(exchange))
 
     for service in services:
-        server = service_as.createHost('s_{}'.format(service.getName().lower()))
+        name = 's_{}'.format(service.getName().lower())
 
-        server.joinNetwork(net)
+        server = service_as.createHost(name)
 
-        service.installOn(server)
+        server.joinNetwork('net0')
+
+        service.installByName(asn, name)
 
 ###############################################################################
 
@@ -66,18 +65,20 @@ def make_dns_as(asn: int, zones: List[str], exchange: int):
 
     net = dns_as.createNetwork('net0')
 
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    router.joinNetwork(net)
+    router.joinNetwork('net0')
 
-    router.joinNetworkByName('ix{}'.format(exchange))
+    router.joinNetwork('ix{}'.format(exchange))
 
     for zone in zones:
-        server = dns_as.createHost('s_{}dns'.format(zone.replace('.','_')))
+        name = 's_{}dns'.format(zone.replace('.','_'))
 
-        server.joinNetwork(net)
+        server = dns_as.createHost(name)
 
-        dns.hostZoneOn(zone, server)
+        server.joinNetwork('net0')
+
+        dns.installByName(asn, name).addZone(dns.getZone(zone))
 
 ###############################################################################
 
@@ -88,12 +89,12 @@ def make_user_as(asn: int, exchange: str):
 
     net = user_as.createNetwork('net0')
 
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    real.enableRealWorldAccess(net)
+    real.enableRealWorldAccess(user_as, 'net0')
 
-    router.joinNetwork(net)
-    router.joinNetworkByName('ix{}'.format(exchange))
+    router.joinNetwork('net0')
+    router.joinNetwork('ix{}'.format(exchange))
 
 ###############################################################################
 
@@ -104,15 +105,17 @@ def make_transit_as(asn: int, exchanges: List[int], intra_ix_links: List[Tuple[i
 
     for ix in exchanges:
         routers[ix] = transit_as.createRouter('r{}'.format(ix))
-        routers[ix].joinNetworkByName('ix{}'.format(ix))
+        routers[ix].joinNetwork('ix{}'.format(ix))
 
     for (a, b) in intra_ix_links:
-        net = transit_as.createNetwork('net_{}_{}'.format(a, b))
+        name = 'net_{}_{}'.format(a, b)
 
-        routing.addDirect(net)
+        net = transit_as.createNetwork(name)
 
-        routers[a].joinNetwork(net)
-        routers[b].joinNetwork(net)
+        routing.addDirect(asn, name)
+
+        routers[a].joinNetwork(name)
+        routers[b].joinNetwork(name)
 
 ###############################################################################
 
@@ -200,16 +203,16 @@ google_dns_net = google.createNetwork('google_dns_net', '8.8.8.0/24')
 
 google_dns = google.createHost('google_dns')
 
-google_dns.joinNetwork(google_dns_net, '8.8.8.8')
+google_dns.joinNetwork('google_dns_net', '8.8.8.8')
 
-ldns.installOn(google_dns)
+ldns.installByName(15169, 'google_dns')
 
-routing.addDirect(google_dns_net)
+routing.addDirect(15169, 'google_dns_net')
 
 google_router = google.createRouter('router0')
 
-google_router.joinNetwork(google_dns_net)
-google_router.joinNetworkByName('ix100', '10.100.0.250')
+google_router.joinNetwork('google_dns_net')
+google_router.joinNetwork('ix100', '10.100.0.250')
 
 ###############################################################################
 
@@ -265,30 +268,26 @@ ebgp.addPrivatePeering(100, 4, 15169, PeerRelationship.Provider)
 
 ###############################################################################
 
-reg = Registry()
-for ((scope, type, name), object) in reg.getAll().items():
-    if type != 'hnode': continue
-    host: Node = object
-    host.addStartCommand('echo "nameserver 8.8.8.8" > /etc/resolv.conf')
+sim.addHook(ResolvConfHook(['8.8.8.8']))
 
 ###############################################################################
 
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(ibgp)
-renderer.addLayer(ospf)
-renderer.addLayer(real)
-renderer.addLayer(web)
-renderer.addLayer(dns)
-renderer.addLayer(ldns)
-renderer.addLayer(dnssec)
-renderer.addLayer(cymru)
-renderer.addLayer(rdns)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(ibgp)
+sim.addLayer(ospf)
+sim.addLayer(real)
+sim.addLayer(web)
+sim.addLayer(dns)
+sim.addLayer(ldns)
+sim.addLayer(dnssec)
+sim.addLayer(cymru)
+sim.addLayer(rdns)
 
-renderer.render()
+sim.render()
 
 ###############################################################################
 
-docker_compiler.compile('./mini-internet')
-graphviz.compile('./mini-internet/_graphs')
+sim.compile(Docker(), './mini-internet')
+sim.compile(Graphviz(), './mini-internet/_graphs')

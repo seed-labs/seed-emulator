@@ -1,8 +1,7 @@
-from .Layer import Layer
 from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Routing import Router
-from seedsim.core import Node, Registry, ScopedRegistry, Graphable
+from seedsim.core import Node, ScopedRegistry, Graphable, Simulator, Layer
 from seedsim.core.enums import NetworkType, NodeRole
 from typing import List, Tuple, Dict
 
@@ -81,15 +80,16 @@ class Mpls(Layer, Graphable):
     the node to the public.
     """
 
-    __reg = Registry()
     __additional_edges: List[Node]
     __enabled: List[int]
 
     def __init__(self):
         """!
         @brief Mpls layer constructor.
+        
+        @param simulator simulator.
         """
-        Graphable.__init__(self)
+        super().__init__()
         self.__additional_edges = []
         self.__enabled = []
 
@@ -192,8 +192,8 @@ class Mpls(Layer, Graphable):
 
         node.setFile('/frr_start', MplsFileTemplates['frr_start_script'])
         node.setFile('/mpls_ifaces.txt', '\n'.join(mpls_iface_list))
-        node.addStartCommand('chmod +x /frr_start')
-        node.addStartCommand('/frr_start')
+        node.appendStartCommand('chmod +x /frr_start')
+        node.appendStartCommand('/frr_start')
 
     def __setUpIbgpMesh(self, nodes: List[Router]):
         """!
@@ -220,38 +220,39 @@ class Mpls(Layer, Graphable):
 
                 n += 1
 
-    def onRender(self):
+    def render(self, simulator: Simulator):
+        reg = simulator.getRegistry()
         for asn in self.__enabled:
-            if self.__reg.has('seedsim', 'layer', 'Ospf'):
+            if reg.has('seedsim', 'layer', 'Ospf'):
                 self._log('Ospf layer exists, masking as{}'.format(asn))
-                ospf: Ospf = self.__reg.get('seedsim', 'layer', 'Ospf')
+                ospf: Ospf = reg.get('seedsim', 'layer', 'Ospf')
                 ospf.maskAsn(asn)
 
-            if self.__reg.has('seedsim', 'layer', 'Ibgp'):
+            if reg.has('seedsim', 'layer', 'Ibgp'):
                 self._log('Ibgp layer exists, masking as{}'.format(asn))
-                ibgp: Ibgp = self.__reg.get('seedsim', 'layer', 'Ibgp')
-                ibgp.mask(asn)
+                ibgp: Ibgp = reg.get('seedsim', 'layer', 'Ibgp')
+                ibgp.maskAsn(asn)
 
-            scope = ScopedRegistry(str(asn))
+            scope = ScopedRegistry(str(asn), reg)
             (enodes, nodes) = self.__getEdgeNodes(scope)
 
             for n in enodes: self.__setUpLdpOspf(n)
             for n in nodes: self.__setUpLdpOspf(n)
             self.__setUpIbgpMesh(enodes)
 
-    def _doCreateGraphs(self):
-        base: Base = self.__reg.get('seedsim', 'layer', 'Base')
+    def _doCreateGraphs(self, simulator: Simulator):
+        base = simulator.getRegistry().get('seedsim', 'layer', 'Base')
         for asn in base.getAsns():
             if asn not in self.__enabled: continue
             asobj = base.getAutonomousSystem(asn)
-            asobj.createGraphs()
+            asobj.createGraphs(simulator)
             l2graph = asobj.getGraph('AS{}: Layer 2 Connections'.format(asn))
             mplsgraph = self._addGraph('AS{}: MPLS Topology'.format(asn), False)
             mplsgraph.copy(l2graph)
             for edge in mplsgraph.edges:
                 edge.style = 'dotted'
 
-            scope = ScopedRegistry(str(asn))
+            scope = ScopedRegistry(str(asn), simulator.getRegistry())
             (enodes, _) = self.__getEdgeNodes(scope)
             
             while len(enodes) > 0:

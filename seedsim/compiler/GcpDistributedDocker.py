@@ -1,3 +1,4 @@
+from seedsim.core.Simulator import Simulator
 from seedsim.core import Registry
 from .Compiler import Compiler
 from .DistributedDocker import DistributedDocker
@@ -223,7 +224,7 @@ class GcpDistributedDocker(Compiler):
         for exfile in ['_tf_scripts/get-swmtkn', '_tf_scripts/ssh-keygen']:
             chmod(exfile, 0o755)
 
-    def __make_tf(self):
+    def __make_tf(self, registry: Registry):
         """!
         @brief Generate TF config for docker hosts.
         """
@@ -235,7 +236,7 @@ class GcpDistributedDocker(Compiler):
 
         scopes = set()
 
-        for (scope, type, _) in Registry().getAll().keys():
+        for (scope, type, _) in registry.getAll().keys():
             if scope == 'ix': continue
             if type == 'net' or type == 'hnode' or type == 'rnode' or type == 'snode':
                 scopes.add(scope)
@@ -246,9 +247,10 @@ class GcpDistributedDocker(Compiler):
             name = scope
         ), file=open('worker-as{}.tf'.format(scope), 'w'))
 
-    def _doCompile(self):
+    def _doCompile(self, simulator: Simulator):
+        registry = simulator.getRegistry()
         dcomp = DistributedDocker()
         self.__init_tf()
         self._log('generating container configurations...')
-        dcomp.compile('_containers')
-        self.__make_tf()
+        dcomp.compile(simulator, '_containers')
+        self.__make_tf(registry)

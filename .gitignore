@@ -6,6 +6,8 @@
 *.swp
 .DS_Store
 *.tfvars
+*.pyc
+.idea
 docs-out
 __pycache__
 build

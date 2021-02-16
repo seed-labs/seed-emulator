@@ -83,7 +83,10 @@ class Registry(Printable):
     Registry is the global container for all objects in the simulator.
     """
 
-    __objects: Dict[Tuple[str, str, str], Registrable] = {}
+    __objects: Dict[Tuple[str, str, str], Registrable]
+
+    def __init__(self):
+        self.__objects = {}
 
     def register(self, scope: str, type: str, name: str, obj: Registrable) -> Registrable:
         """!
@@ -182,16 +185,17 @@ class ScopedRegistry(Registry):
     Scoped wrapper for Registry class.
     """
 
-    __reg = Registry()
+    __reg: Registry
     __scope: str
 
-    def __init__(self, scope: str):
+    def __init__(self, scope: str, parent: Registry):
         """!
         @brief Scoped Registry ctor.
 
         @param scope scope to bind to.
         """
         self.__scope = scope
+        self.__reg = parent
 
     def register(self, type: str, name: str, obj: Registrable) -> Registrable:
         """!

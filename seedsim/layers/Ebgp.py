@@ -1,6 +1,5 @@
-from .Layer import Layer
 from .Routing import Router
-from seedsim.core import Registry, ScopedRegistry, Network, Node, Interface, Graphable
+from seedsim.core import Registry, ScopedRegistry, Network, Interface, Graphable, Simulator, Layer
 from typing import Tuple, List, Dict
 from enum import Enum
 
@@ -55,14 +54,16 @@ class Ebgp(Layer, Graphable):
     def __init__(self):
         """!
         @brief Ebgp layer constructor.
+        
+        @param simulator simulator.
         """
-        Graphable.__init__(self)
+        super().__init__()
         self.__peerings = {}
         self.__rs_peers = []
         self.addDependency('Routing', False, False)
 
-    def __getAsPrefixes(self, a: int) -> List[str]:
-        sr = ScopedRegistry(str(a))
+    def __getAsPrefixes(self, reg: Registry, a: int) -> List[str]:
+        sr = ScopedRegistry(str(a), reg)
         nets = []
         for net in sr.getByType('net'):
             netobj: Network = net
@@ -70,23 +71,23 @@ class Ebgp(Layer, Graphable):
 
         return nets
 
-    def __getCustomerPrefixes(self, a: int) -> List[int]:
+    def __getCustomerPrefixes(self, reg: Registry, a: int) -> List[int]:
         nets = []
         for (_, _a, b), r in self.__peerings.items():
             if a != _a or r != PeerRelationship.Provider: continue
-            nets += self.__getAsPrefixes(b)
+            nets += self.__getAsPrefixes(reg, b)
         
         return nets
 
-    def __getExportFilters(self, a: int, b: int, rel: PeerRelationship) -> Tuple[str, str]:
+    def __getExportFilters(self, reg: Registry, a: int, b: int, rel: PeerRelationship) -> Tuple[str, str]:
         if rel == PeerRelationship.Unfiltered: return ('all', 'all')
 
-        a_prefixes = self.__getAsPrefixes(a)
-        a_cust_prefixes = self.__getCustomerPrefixes(a)
+        a_prefixes = self.__getAsPrefixes(reg, a)
+        a_cust_prefixes = self.__getCustomerPrefixes(reg, a)
         a_all = a_prefixes + a_cust_prefixes
 
-        b_prefixes = self.__getAsPrefixes(b)
-        b_cust_prefixes = self.__getCustomerPrefixes(b)
+        b_prefixes = self.__getAsPrefixes(reg, b)
+        b_cust_prefixes = self.__getCustomerPrefixes(reg, b)
         b_all = b_prefixes + b_cust_prefixes
 
         a_export = 'all'
@@ -134,10 +135,12 @@ class Ebgp(Layer, Graphable):
 
         self.__rs_peers.append((ix, peer))
 
-    def onRender(self) -> None:
+    def render(self, simulator: Simulator) -> None:
+        reg = simulator.getRegistry()
+
         for (ix, peer) in self.__rs_peers:
-            ix_reg = ScopedRegistry('ix')
-            p_reg = ScopedRegistry(str(peer))
+            ix_reg = ScopedRegistry('ix', reg)
+            p_reg = ScopedRegistry(str(peer), reg)
 
             ix_net: Network = ix_reg.get('net', 'ix{}'.format(ix))
             ix_rs: Router = ix_reg.get('rs', 'ix{}'.format(ix))
@@ -156,7 +159,7 @@ class Ebgp(Layer, Graphable):
                         p_ixif = iface
                         break
 
-            assert p_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(a, ix)
+            assert p_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(peer, ix)
             self._log("adding peering: {} as {} (RS) <-> {} as {}".format(rs_if.getAddress(), ix, p_ixif.getAddress(), peer))
 
             ix_rs.addProtocol('bgp', 'p_as{}'.format(peer), EbgpFileTemplates["rs_bird_peer"].format(
@@ -166,7 +169,7 @@ class Ebgp(Layer, Graphable):
                 peerAsn = peer
             )) 
 
-            (a_export, b_export) = self.__getExportFilters(ix, peer, PeerRelationship.Peer)
+            (a_export, b_export) = self.__getExportFilters(reg, ix, peer, PeerRelationship.Peer)
 
             p_ixnode.addTable('t_bgp')
             p_ixnode.addTablePipe('t_bgp')
@@ -181,9 +184,9 @@ class Ebgp(Layer, Graphable):
             )) 
 
         for (ix, a, b), rel in self.__peerings.items():
-            ix_reg = ScopedRegistry('ix')
-            a_reg = ScopedRegistry(str(a))
-            b_reg = ScopedRegistry(str(b))
+            ix_reg = ScopedRegistry('ix', reg)
+            a_reg = ScopedRegistry(str(a), reg)
+            b_reg = ScopedRegistry(str(b), reg)
 
             ix_net: Network = ix_reg.get('net', 'ix{}'.format(ix))
             a_rnodes: List[Router] = a_reg.getByType('rnode')
@@ -215,7 +218,7 @@ class Ebgp(Layer, Graphable):
 
             self._log("adding peering: {} as {} <-({})-> {} as {}".format(a_ixif.getAddress(), a, rel, b_ixif.getAddress(), b))
 
-            (a_export, b_export) = self.__getExportFilters(a, b, rel)
+            (a_export, b_export) = self.__getExportFilters(reg, a, b, rel)
             
             a_proto_pfx = 'p_'
             b_proto_pfx = 'p_'

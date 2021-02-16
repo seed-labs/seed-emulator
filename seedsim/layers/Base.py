@@ -1,5 +1,4 @@
-from .Layer import Layer
-from seedsim.core import AutonomousSystem, InternetExchange, Printable, Registry, AddressAssignmentConstraint, Node, Graphable
+from seedsim.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Simulator, Layer
 from typing import Dict, List
 
 BaseFileTemplates: Dict[str, str] = {}
@@ -39,21 +38,27 @@ class Base(Layer, Graphable):
 
     __ases: Dict[int, AutonomousSystem]
     __ixes: Dict[int, InternetExchange]
-    __reg = Registry()
 
     def __init__(self):
         """!
         @brief Base layer constructor.
         """
-        Graphable.__init__(self)
+        super().__init__()
         self.__ases = {}
         self.__ixes = {}
 
     def getName(self) -> str:
         return "Base"
 
-    def onRender(self) -> None:
-        for ((scope, type, name), obj) in self.__reg.getAll().items():
+    def configure(self, simulator: Simulator):
+        self._log('setting up internet exchanges...')
+        for ix in self.__ixes.values(): ix.configure(simulator)
+
+        self._log('setting up autonomous systems...')
+        for asobj in self.__ases.values(): asobj.configure(simulator)
+
+    def render(self, simulator: Simulator) -> None:
+        for ((scope, type, name), obj) in simulator.getRegistry().getAll().items():
 
             if not (type == 'rs' or type == 'rnode' or type == 'hnode'):
                 continue
@@ -68,8 +73,8 @@ class Base(Layer, Graphable):
 
             node.setFile('/ifinfo.txt', ifinfo)
             node.setFile('/interface_setup', BaseFileTemplates['interface_setup_script'])
-            node.addStartCommand('chmod +x /interface_setup')
-            node.addStartCommand('/interface_setup')
+            node.appendStartCommand('chmod +x /interface_setup')
+            node.appendStartCommand('/interface_setup')
 
     def createAutonomousSystem(self, asn: int) -> AutonomousSystem:
         """!
@@ -135,10 +140,10 @@ class Base(Layer, Graphable):
         """
         return self.__ixes.keys()
 
-    def _doCreateGraphs(self):
+    def _doCreateGraphs(self, simulator: Simulator):
         graph = self._addGraph('Layer 2 Connections', False)
         for asobj in self.__ases.values():
-            asobj.createGraphs()
+            asobj.createGraphs(simulator)
             asgraph = asobj.getGraph('AS{}: Layer 2 Connections'.format(asobj.getAsn()))
             graph.copy(asgraph)
 

@@ -1,7 +1,6 @@
-from .Service import Service, Server
-from .DomainNameService import DomainNameService, DomainNameServer, Zone
-from .Reality import Reality
-from seedsim.core import Node, ScopedRegistry, Registry, Network
+from .DomainNameService import DomainNameService, DomainNameServer
+from seedsim.core import Node, Network, Simulator, Service, Server
+from seedsim.layers import Reality
 from typing import List, Tuple
 from ipaddress import IPv4Network
 
@@ -10,23 +9,8 @@ class CymruIpOriginServer(Server):
     @brief Cymru's IP info service server.
     """
 
-    __node: Node
-
-    def __init__(self, node: Node):
-        """!
-        @brief CymruIpOriginServer constructor.
-
-        @param node node to install on.
-        """
-        self.__node = node
-
-    def getNode(self) -> Node:
-        """!
-        @brief get node.
-
-        @returns node.
-        """
-        return self.__node
+    def install(self, node: Node):
+        pass
 
 class CymruIpOriginService(Service):
     """!
@@ -40,18 +24,22 @@ class CymruIpOriginService(Service):
     This layer hosts the domain cymru.com.
     """
 
-    __servers: List[CymruIpOriginServer]
     __records: List[str]
-    __reg = ScopedRegistry('seedsim')
+    __dns: DomainNameService
 
     def __init__(self):
         """!
         @brief CymruIpOriginService constructor
+
+        @param simulator simulator.
         """
+        super().__init__()
         self.__records = []
-        self.__servers = []
         self.addDependency('DomainNameService', True, True)
         self.addDependency('Base', False, False)
+
+    def _createServer(self) -> Server:
+        return CymruIpOriginServer()
 
     def getName(self) -> str:
         return 'CymruIpOriginService'
@@ -91,15 +79,18 @@ class CymruIpOriginService(Service):
             record += '.origin.asn TXT "{} | {} | ZZ | SEED | 0000-00-00"'.format(asn, net)
             self.__records.append(record)
 
-    def _doInstall(self, node: Node) -> CymruIpOriginServer: 
-        server = CymruIpOriginServer(node)
-        self.__servers.append(server)
+    def _doInstall(self, node: Node, server: Server): 
+        self._log('setting up "cymru.com." server node on as{}/{}...'.format(node.getAsn(), node.getName()))
+        dns_s: DomainNameServer = self.__dns.installByName(node.getAsn(), node.getName())
+        dns_s.addZone(self.__dns.getZone('cymru.com.'))
 
-    def onRender(self):
+    def configure(self, simulator: Simulator):
+        reg = simulator.getRegistry()
+
         mappings: List[Tuple[str, str]] = []
 
-        if self.__reg.has('layer', 'Reality'):
-            real: Reality = self.__reg.get('layer', 'Reality')
+        if reg.has('seedsim', 'layer', 'Reality'):
+            real: Reality = reg.get('seedsim', 'layer', 'Reality')
             for router in real.getRealWorldRouters():
                 (asn, _, name) = router.getRegistryInfo()
                 asn = int(asn)
@@ -108,7 +99,7 @@ class CymruIpOriginService(Service):
                     mappings.append((prefix, asn))
         
         self._log('Collecting all networks in the simulation...')
-        for regobj in (Registry()).getAll().items():
+        for regobj in reg.getAll().items():
             [(asn, type, name), obj] = regobj
             if type != 'net': continue
             net: Network = obj
@@ -120,30 +111,19 @@ class CymruIpOriginService(Service):
             self.addMapping(str(prefix), asn)
 
         self._log('Creating "cymru.com." zone...')
-        dns: DomainNameService = self.__reg.get('layer', 'DomainNameService')
+        dns: DomainNameService = reg.get('seedsim', 'layer', 'DomainNameService')
         zone = dns.getZone('cymru.com.')
-
-        self._log('Setting up "cymru.com." server nodes...')
-        for server in self.__servers:
-            dns.hostZoneOn('cymru.com.', server.getNode())
+        self.__dns = dns
 
         self._log('Adding mappings...')
         for record in self.__records:
             zone.addRecord(record)
 
+        return super().configure(simulator)        
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'CymruIpOriginService:\n'
-        
-        indent += 4
-        out += ' ' * indent
-        out += 'Installed on:\n'
-
-        indent += 4
-        for server in self.__servers:
-            (asn, _, name) = server.getNode().getRegistryInfo()
-            out += ' ' * indent
-            out += 'as{}/{}\n'.format(asn, name)
+        out += 'CymruIpOriginService\n'
 
         return out
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import List, Dict
 from .Printable import Printable
 from .Registry import Registry, Registrable
+from .Simulator import Simulator
 from copy import deepcopy
 
 class Vertex:
@@ -264,7 +265,6 @@ class Graphable(Registrable):
 
     __graphs: Dict[str, Graph]
     __graphs_created: bool
-    __reg = Registry()
     _n_graphs = 0
 
     def __init__(self):
@@ -273,7 +273,6 @@ class Graphable(Registrable):
         """
         self.__graphs = {}
         self.__graphs_created = False
-        self.__reg.register('seedsim', 'graph', str(len(self.__reg.getByType('seedsim', 'graph'))), self)
 
     def _addGraph(self, name: str, directed: bool) -> Graph:
         """!
@@ -314,19 +313,26 @@ class Graphable(Registrable):
         """
         return self.__graphs
 
-    def _doCreateGraphs(self):
+    def _doCreateGraphs(self, simulator: Simulator):
         """!
         @brief handle graph creation, should be implemented by all graphable
         classes.
+
+        @param simulator simulator object.
         """
         raise NotImplementedError('_doCreateGraphs not implemented.')
 
-    def createGraphs(self):
+    def createGraphs(self, simulator: Simulator):
         """!
         @brief Create graphs.
 
+        @param simulator simulator object.
+
         Call this method to ask the class to create graphs.
         """
+        assert simulator.rendered(), 'Simulation needs to be redered before graphs can be created.'
+        reg = simulator.getRegistry()
+        reg.register('seedsim', 'graph', str(len(reg.getByType('seedsim', 'graph'))), self)
         if self.__graphs_created: return
-        self._doCreateGraphs()
+        self._doCreateGraphs(simulator)
         self.__graphs_created = True

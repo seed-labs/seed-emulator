@@ -1,7 +1,6 @@
-from .Layer import Layer
-from .DomainNameService import DomainNameService
-from typing import Set, Dict, List
-from seedsim.core import ScopedRegistry, Node
+from typing import Set, Dict
+from seedsim.core import Node, Simulator, Layer
+from seedsim.services import DomainNameServer, DomainNameService
 
 DnssecFileTemplates: Dict[str, str] = {}
 
@@ -58,18 +57,33 @@ class Dnssec(Layer):
 
     This layer helps setting up DNSSEC. It works by signing the zones and send
     the DS record to parent(s) with nsupdate. Note that to build a DNSSEC
-    infrastructure, you will need to sign the entire chain. 
+    infrastructure, you will need to sign the entire chain. You will also need
+    working local DNS server configured on the node hosting the zone for it to
+    find the parent name server.
     """
 
     __zonenames: Set[str]
-    __reg = ScopedRegistry('seedsim')
 
     def __init__(self):
         """!
         @brief Dnssec layer constructor.
+
+        @param simulator simulator
         """
+        super().__init__()
         self.__zonenames = set()
         self.addDependency('DomainNameService', False, False)
+
+    def __findZoneNode(self, dns: DomainNameService, zonename: str) -> Node:
+        targets = dns.getTargets()
+        for (server, node) in targets:
+            dns_s: DomainNameServer = server
+            zones = dns_s.getZones()
+            for zone in zones:
+                # TODO: what if mutiple nodes host the same zone?
+                if zone.getName() == zonename: return node
+
+        return None
 
     def getName(self):
         return 'Dnssec'
@@ -83,15 +97,16 @@ class Dnssec(Layer):
         if zonename[-1] != '.': zonename += '.'
         self.__zonenames.add(zonename)
 
-    def onRender(self):
-        dns: DomainNameService = self.__reg.get('layer', 'DomainNameService')
+    def render(self, simulator: Simulator):
+        reg = simulator.getRegistry()
+        dns: DomainNameService = reg.get('seedsim', 'layer', 'DomainNameService')
         nodes: Set[Node] = set()
         for zonename in self.__zonenames:
             self._log('Looking for server hosting "{}"...'.format(zonename))
-            server = dns.getServerByZoneName(zonename)
+            node = self.__findZoneNode(dns, zonename)
             
-            assert server != None, 'no server found for dnssec-enabled zone {}'.format(zonename)
-            node = server.getNode()
+            assert node != None, 'no server found for dnssec-enabled zone {}'.format(zonename)
+
             (scope, _, name) = node.getRegistryInfo()
             self._log('Setting up DNSSEC for "{}" on as{}/{}'.format(zonename, scope, name))
             nodes.add(node)
@@ -99,8 +114,8 @@ class Dnssec(Layer):
 
         for node in nodes:
             node.appendFile('/enable_dnssec', DnssecFileTemplates['enable_dnssec_script'])
-            node.addStartCommand('chmod +x /enable_dnssec')
-            node.addStartCommand('/enable_dnssec')
+            node.appendStartCommand('chmod +x /enable_dnssec')
+            node.appendStartCommand('/enable_dnssec')
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
