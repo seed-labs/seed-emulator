@@ -1,2 +1,0 @@
-zone "as152.net." { type master; file "/etc/bind/zones/as152.net."; allow-update { any; }; };
-

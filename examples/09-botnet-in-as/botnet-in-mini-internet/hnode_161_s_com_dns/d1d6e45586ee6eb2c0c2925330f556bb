@@ -1,5 +1,0 @@
-$TTL 300
-$ORIGIN com.
-@ SOA ns1.com. admin.com. 1545463438 900 900 1800 60
-ns1.com. A 10.161.0.72
-@ NS ns1.com.
