@@ -61,6 +61,14 @@ As a single server object is typically installed only on one node, the `_doInsta
 
 Here's a list of included services:
 
+- `WebService`: A simple nginx-based web service.
+- `DomainNameService`: The DNS service allows hosting one or more zones on host nodes. It provides a internal zone tracking mechanism to help setting up complex zone structures or even running the entire DNS chain from the root. It can be configured to handle adding NS records, PTR records, and glue of NS records automatically, so users can focus on adding the records they want, and it will just work.
+    - `Dnssec`: The `Dnssec` class is not really a service but actually a layer. It works finding the given zones and set up a script on the server hosting the zone to sign the zone on-the-fly and send the DS record to the parent zone server with `nsupdate`.
+- `DomainNameCachingService`: The `DomainNameCachingService` service allows hosting local DNS (Caching DNS server) on the host node. This service provides the option to change `resolv.conf` on all nodes within the AS (`setResolvconf`), and the option to automatically update the local root hint file according to the root zone in the `DomainNameService` layer (`autoRoot`).
+- `ReverseDomainNameService`: Reverse DNS. This service hosts the `in-addr.arpa.` zone, collect IP address of all nodes in the simlation, and resolves IP addresses to `nodename-netname.nodetype.asn.net.`.
+- `CymruIpOrigin`: Cymru's IP info service is used by various traceroute utilities to map IP address to ASN (using DNS). This service loads the prefix list within the simulation and creates ASN mappings for them, so with proper local DNS configuration, nodes can see the ASN when doing traceroute. The layer will host domain `cymru.com`.
+- `DomainRegistrarService`:
+- `BotnetService`:
 
 ### Rendering layers
 
