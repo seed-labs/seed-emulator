@@ -7,7 +7,7 @@ The different functionality of the simulator is separated into different layers.
 
 Layers will have no knowledge of what or how other layers are configured prior to the render stage. Layers must keep track of the changes they try to make internally within the class. The process of actually makeing changes, like adding nodes, networks, peering configurations, or other fancy stuff like DNS, web server, etc., into the simulation is called rendering.
 
-During the render stage, the `render` method of each layer will be called in order of their dependencies, and a `Simulator` object will be passed in. The `Simulator` object allows the different layers to collaboratively build a single simulation. `Base` layer, for example, creates routers, hosts and exchanges, and networks in the `Registry` (obtained by calling `simulator.getRegistry()`). `Bgp` layer can then access those exchanges and routers configured by the `Base` layer and setup BGP peering to them.
+During the render stage, the `render` method of each layer will be called in order of their dependencies, and a `Simulator` object will be passed in. The `Simulator` object allows the different layers to collaboratively build a single simulation. `Base` layer, for example, creates routers, hosts and exchanges, and networks in the `Registry` (obtained by calling `simulator.getRegistry()`). `Bgp` layer can then access those exchanges and routers in the `Registry` configured by the `Base` layer and setup BGP peering on them.
 
 In the old design, layers are allowed to change the simulator outside the render stage, which makes layers deeply coupled with a particular simulator scenario code.
 
