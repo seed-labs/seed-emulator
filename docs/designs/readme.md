@@ -2,39 +2,45 @@
 
 ## Table of Contents
 
-* [Table of Contents](#table-of-contents)
-* [Overview](#overview)
-* [Design](#design)
-    * [Layers](#layers)
-        * [Services](#services)
-    * [Render](#render)
-    * [Configure](#configure)
-    * [Compile](#compile)
-    * [Graphing](#graphing)
-* [Merging Simulators](#merging-simulators)
-    * [Exporting simulation](#exporting-simulation)
-    * [Importing simulation](#importing-simulation)
-    * [Merging simulation](#merging-simulation)
-    * [Conflict resolution](#conflict-resolution)
-    * [Custom merge actions](#custom-merge-actions)
-* [Case study](#case-study)
-    * [BGP peering](#bgp-peering)
-    * [Transit provider](#transit-provider)
-    * [MPLS transit provider](#mpls-transit-provider)
-    * [Fun with DNS](#fun-with-dns)
-        * [DNS infrastructure](#dns-infrastructure)
-        * [Local DNS](#local-dns)
-        * [DNSSEC](#dnssec)
-        * [Reverse domain name and IP origin](#reverse-domain-name-and-ip-origin)
-    * [A miniature internet](#a-miniature-internet)
-    * [Botnet](#botnet)
-    * [Bitcoin](#bitcoin)
-* [Advance topics](#advance-topics)
-    * [Hook into the rendering](#hook-into-the-rendering)
-    * [Buliding new compiler](#buliding-new-compiler)
-    * [Buliding new service](#buliding-new-service)
-    * [Buliding new layer](#buliding-new-layer)
-    * [Creating new graphs](#creating-new-graphs)
+   * [Internet Simulator](#internet-simulator)
+      * [Table of Contents](#table-of-contents)
+      * [Overview](#overview)
+      * [Design](#design)
+         * [Layers](#layers)
+            * [Services](#services)
+         * [Render](#render)
+         * [Configure](#configure)
+         * [Graphing](#graphing)
+         * [Compile](#compile)
+            * [Docker](#docker)
+            * [Docker (Distributed)](#docker-distributed)
+            * [Docker (Distributed) (GCP)](#docker-distributed-gcp)
+            * [Graphviz](#graphviz)
+      * [Merging Simulators](#merging-simulators)
+         * [Exporting simulation](#exporting-simulation)
+         * [Importing simulation](#importing-simulation)
+         * [Merging simulation](#merging-simulation)
+            * [Conflict resolution](#conflict-resolution)
+            * [Custom merge actions](#custom-merge-actions)
+      * [Case study](#case-study)
+         * [BGP peering](#bgp-peering)
+         * [Transit provider](#transit-provider)
+         * [MPLS transit provider](#mpls-transit-provider)
+         * [Fun with DNS](#fun-with-dns)
+            * [DNS infrastructure](#dns-infrastructure)
+            * [Local DNS](#local-dns)
+            * [DNSSEC](#dnssec)
+            * [Reverse domain name and IP origin](#reverse-domain-name-and-ip-origin)
+         * [A miniature internet](#a-miniature-internet)
+         * [Botnet](#botnet)
+         * [Bitcoin](#bitcoin)
+      * [Advance topics](#advance-topics)
+         * [Hook into the rendering](#hook-into-the-rendering)
+         * [Buliding new compiler](#buliding-new-compiler)
+         * [Buliding new service](#buliding-new-service)
+         * [Buliding new layer](#buliding-new-layer)
+         * [Creating new graphs](#creating-new-graphs)
+
 
 ## Overview
 
@@ -52,7 +58,7 @@ Unlike traditional simulators, this simulator is based on the idea of layers. Ea
 
 Every component is a layer. The base of the simulation is the `Base` layer, and the other layers, like `Routing`, `Bgp`, `Ospf`, `Mpls` and `DomainNameService` add different components to the simulation.  `Base` layer, for example, describes the base of the simulation: what autonomous systems (AS) and internet exchanges (IX) are in the simulator, what nodes and networks are in each of the AS, and how nodes are connected with networks. `Bgp` layer, on the other hand, describes how ASes and where are peered with each other, and what's the relationship between the peers.
 
-Each layer only takes care of its' own matter. BGP layer only saves what autonomous systems are peered with what autonomous system, and what internet exchange. It doesn't care how or where the router node actually is; as long as the information matched (correct IX, correct peer ASN), it will configure the peering between them. DNS layer only saves what zones are hosted on which node with their IP address or name, meaning one can build a DNS infrastructure with DNS layer in one simulation and easily export it and re-use the same infrastructure in a simulation with entirely different BGP peerings and layer two topologies, given that they re-create nodes with the same name in the other simulation.
+Each layer only takes care of its' own matter. BGP layer only saves what autonomous systems are peered with what autonomous system, and what internet exchange. It doesn't care how or where the router node actually is; as long as the information matched (correct IX, correct peer ASN), it will configure the peering between them. DNS layer only saves what zones are hosted on which node with their IP address or name, meaning one can build a DNS infrastructure with DNS layer in one simulation and easily export it and re-use the same infrastructure in a simulation with entirely different BGP peerings and layer two topologies, given that they re-create nodes with the same name in the other simulation. In other words, layers will have no knowledge of what or how other layers are configured prior to the render stage. Layers must keep track of the changes they try to make internally within the class.
 
 Here's a list of included layers:
 
@@ -82,7 +88,7 @@ As a single server object is typically installed only on one node, the `_doInsta
 
 ### Render
 
-Layers will have no knowledge of what or how other layers are configured prior to the render stage. Layers must keep track of the changes they try to make internally within the class. The process of actually makeing changes, like adding nodes, networks, peering configurations, or other fancy stuff like DNS, web server, etc., into the simulation is called rendering.
+The process of actually makeing changes, like adding nodes, networks, peering configurations, or other fancy stuff like DNS, web server, etc., into the simulation is called rendering.
 
 During the render stage, the `render` method of each layer will be called in order of their dependencies, and a `Simulator` object will be passed in. The `Simulator` object allows the different layers to collaboratively build a single simulation. `Base` layer, for example, creates routers, hosts and exchanges, and networks in the `Registry` (obtained by calling `simulator.getRegistry()`). `Bgp` layer can then access those exchanges and routers in the `Registry` configured by the `Base` layer and setup BGP peering on them.
 
@@ -102,9 +108,62 @@ In the configure stage, layers should register the data that other layers might 
 
 The configure stage is especially useful if a layer wants to make changes to another layer but still requires the other layer to have configured the simulator first. Currently, this is used in the `ReverseDomainName` and `CymruIpOrigin` service, both of which create a new zone in the `DomainName` service. They do so in the configure stage, as `DomainName` compiles the `Zone` data structure to zone files in the render stage, and additional zone added after the render stage won't be included in the final output. 
 
+### Graphing
+
+
+Serval classes of the simulator offer graphing options to convert the topologies to graphs. These classes are:
+
+- `AutonomousSystem` offers the following graphs:
+    - Layer 2 connections of the current AS.
+- `Base` offers the following graphs:
+    - Layer 2 connections of all AS, on one graph.
+- `Ebgp` offers the following graphs:
+    - eBGP peering (One each AS).
+    - eBGP peering (All AS on one graph)
+- `Ibgp` offers the following graphs:
+    - iBGP peering (One each AS).
+- `Mpls` offers the following graphs:
+    - MPLS topology (One each AS).
+
 ### Compile
 
-### Graphing
+Compile are the step that turns the rendered node and network objects into something that can be run by the user. The node objects basically keep track of what software to install on them, what networks they are connected to, and what files are installed to what location, and what commands to run to start the node. Networks are just objects with properties storing the network name, prefix, like properties (speed limit, MTU, latency to add, etc.). These objects themself won't run, so we need to "compile" these objects. 
+
+The simulator includes serval different compilers to fit different use cases.
+
+#### Docker
+
+The docker compiler compiles the simulation to multiple docker containers. Networks in the simulation will be converted to docker networks, and nodes in the simulation are converted to docker services. It also generates a docker-compose file for spawning the containers.
+
+```python
+dcompiler = Docker()
+dcompiler.compile('./test-docker') # output dir
+```
+
+#### Docker (Distributed)
+
+The DistributedDocker compiler compiles the simulation to multiple docker containers. Networks in the simulation will be converted to docker networks, and nodes in the simulation are converted to docker services. It also generates a docker-compose file for spawning the containers.
+
+Instead of putting all containers on one docker host, the DistributedDocker compiler generates one group of containers and docker-compose configuration for each AS, so the containers can be distributed across multiple Docker hosts.
+
+```python
+ddcompiler = DistributedDocker()
+ddcompiler.compile('./test-ddocker') # output dir
+```
+
+The "distributed simulations" works by making all IX networks overlay networks. For this to work, all participating docker hosts must join the same swarm, and IX network and container must be started on the master Docker host before other ASes' containers.
+
+#### Docker (Distributed) (GCP)
+
+
+#### Graphviz
+
+This is not a real compiler. Instead of building the simulation, the Graphviz compiler collects all graphs from different layers and save them to the output directory.
+
+```python
+gcompiler = Graphviz()
+gcompiler.compile('./test-graphs') # output dir
+```
 
 ## Merging Simulators
 
