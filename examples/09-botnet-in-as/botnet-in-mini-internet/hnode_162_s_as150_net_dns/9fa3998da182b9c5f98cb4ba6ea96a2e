@@ -1,0 +1,9 @@
+options {
+	directory "/var/cache/bind";
+	recursion no;
+	dnssec-validation no;
+    empty-zones-enable no;
+	allow-query { any; };
+    allow-update { any; };
+};
+

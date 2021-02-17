@@ -1,0 +1,45 @@
+#!/bin/bash
+rm -fr /etc/bind/keys 
+mkdir /etc/bind/keys
+cd /etc/bind/keys
+rndc freeze
+while read -r zonename; do {
+    [ -z "$zonename" ] && continue
+    zonefile="$zonename"
+    [ "$zonename" = "." ] && zonefile="root"
+    echo "setting up DNSSEC for "$zonename"..."
+    sed -i 's|zone "'"$zonename"'" { type master; file "/etc/bind/zones/'"$zonefile"'"; allow-update { any; }; };|zone "'"$zonename"'" { type master; file "/etc/bind/zones/'"$zonefile"'"; allow-update { any; }; key-directory "/etc/bind/keys"; auto-dnssec maintain; inline-signing yes; };|' /etc/bind/named.conf.zones
+    dnssec-keygen -a NSEC3RSASHA1 -b 2048 -n ZONE "$zonename"
+    dnssec-keygen -f KSK -a NSEC3RSASHA1 -b 4096 -n ZONE "$zonename"
+}; done < /dnssec_zones.txt
+
+chown -R bind:bind /etc/bind/keys
+rndc thaw
+rndc reload
+
+while read -r zonename; do {
+    [ -z "$zonename" ] && continue
+    [ "$zonename" = "." ] && continue
+    pzonename="`tr '.' '\n' <<< "$zonename" | sed '1d' | tr '\n' '.' | sed -e 's/\.\.$/./'`"
+    while true; do {
+        pns="`dig +short NS "$pzonename"`" || pns=''
+        [ -z "$pns" ] && echo "cannot get NS for parent zone ($pzonename), retrying in 1 second..." || break
+        sleep 1
+    }; done
+    dig +short NS "$pzonename" | while read -r ns; do dig +short "$ns"; done | while read -r nsaddr; do {
+        dss="`dig @127.0.0.1 dnskey "$zonename" | dnssec-dsfromkey -f- "$zonename" | sed 's/IN/300/; s/^/update add /;'`"
+        echo "$dss"
+        echo "submiting DS record to parent zone $nsaddr..."
+        while true; do {
+            cat << UPDATE | nsupdate && echo "parent accepted the update." && break
+server $nsaddr
+zone $pzonename
+$dss
+send
+UPDATE
+            echo "submission failed, retrying in 1 second..."
+            sleep 1
+        }; done
+    };done
+}; done < /dnssec_zones.txt
+
