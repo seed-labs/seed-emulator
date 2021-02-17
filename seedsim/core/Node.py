@@ -189,7 +189,7 @@ class Node(Printable, Registrable, Configurable):
     __start_commands: List[Tuple[str, bool]]
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
-    __common_software: Set[str] = set()
+    __common_software: Set[str]
 
     __configured: bool
     __pending_nets: List[Tuple[str, str]]
@@ -210,6 +210,7 @@ class Node(Printable, Registrable, Configurable):
         self.__name = name
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
+        self.__common_software = set()
         self.__build_commands = []
         self.__start_commands = []
         self.__ports = []
