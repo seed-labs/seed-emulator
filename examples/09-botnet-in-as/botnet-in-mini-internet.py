@@ -40,24 +40,23 @@ def dga() -> list:
     return domain_list
 
 ##########################################
-reg = sim.getRegistry()
-
+base_layer = sim.getLayer('Base')
+x = base_layer.getAutonomousSystem(150)
+hosts = x.getHosts()
 c2_server_ip = "10.150.0.71"
-for ((scope, type, name), object) in reg.getAll().items():
-    if type != 'hnode': continue
-    host: Node = object
-    if host.getAsn() == 150 and "webservice" in host.getName():
-        bot.installByName(150, host.getName())
 
-    elif host.getAsn() in [151,152]:
-        c = bot_client.installByName(host.getAsn(), host.getName())
-        c.setServer(c2_server_ip, enable_dga=True, dga=dga)
-    elif 's_com_dns' in host.getName():
-        domain_registrar.installOn(host)
-#
-#
-#
+bot.installByName(150, hosts[0])
+
+for asn in [151,152,153,154,155]:
+    asn_base = base_layer.getAutonomousSystem(asn)
+    c = bot_client.installByName(asn, asn_base.getHosts()[0])
+    c.setServer(c2_server_ip, enable_dga=True, dga=dga)
+
+
+domain_registrar.installByName(161, "s_com_dns")
+
 sim.addLayer(bot)
+sim.addLayer(bot_client)
 sim.addLayer(domain_registrar)
 sim.render()
 

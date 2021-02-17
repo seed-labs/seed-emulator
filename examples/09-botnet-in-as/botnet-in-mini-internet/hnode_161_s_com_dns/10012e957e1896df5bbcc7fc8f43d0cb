@@ -1,0 +1,2 @@
+zone "com." { type master; file "/etc/bind/zones/com."; allow-update { any; }; };
+

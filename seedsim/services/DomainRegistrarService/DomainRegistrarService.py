@@ -85,7 +85,7 @@ class DomainRegistrarService(Service):
         return DomainRegistrarServer()
 
     def _doConfigure(self, node: Node, server: Server):
-        assert node.getAttribute('__domain_name_service_server') != None, 'DomainNameService required on node to use DomainRegistrarService.'
+        assert "DomainNameService" in node.getAttribute('services') , 'DomainNameService required on node to use DomainRegistrarService.'
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

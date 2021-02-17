@@ -1,0 +1,13 @@
+router id 10.103.0.103;
+protocol device {
+}
+protocol bgp p_as3 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.103.0.103 as 103;
+    neighbor 10.103.0.3 as 3;
+}
+

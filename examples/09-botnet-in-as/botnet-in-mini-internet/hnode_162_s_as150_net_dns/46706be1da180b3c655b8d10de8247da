@@ -1,0 +1,6 @@
+$TTL 300
+$ORIGIN as150.net.
+@ A 10.150.0.71
+@ SOA ns1.as150.net. admin.as150.net. 2951290195 900 900 1800 60
+ns1.as150.net. A 10.162.0.71
+@ NS ns1.as150.net.

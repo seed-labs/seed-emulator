@@ -1,0 +1,2 @@
+zone "." { type master; file "/etc/bind/zones/root"; allow-update { any; }; };
+

@@ -1,0 +1,5 @@
+$TTL 300
+$ORIGIN arpa.
+@ SOA ns1.arpa. admin.arpa. 1752431401 900 900 1800 60
+ns1.arpa. A 10.161.0.73
+@ NS ns1.arpa.
