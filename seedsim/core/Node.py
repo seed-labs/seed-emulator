@@ -189,7 +189,7 @@ class Node(Printable, Registrable, Configurable):
     __start_commands: List[Tuple[str, bool]]
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
-    __common_software: Set[str] = set()
+    __common_software: Set[str]
 
     __configured: bool
     __pending_nets: List[Tuple[str, str]]
@@ -210,6 +210,7 @@ class Node(Printable, Registrable, Configurable):
         self.__name = name
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
+        self.__common_software = set()
         self.__build_commands = []
         self.__start_commands = []
         self.__ports = []
@@ -391,18 +392,6 @@ class Node(Printable, Registrable, Configurable):
         compiler, this will be added as an "apt-get install" line in Dockerfile.
         """
         self.__softwares.add(name)
-
-    def addCommonSoftware(self, name: str):
-        """!
-        @brief Add new software to all node.
-
-        @param name software package name.
-
-        Use this to add software to all node. For example, if using the "docker"
-        compiler, this will be added as an "apt-get install" line in Dockerfile
-        of all nodes.
-        """
-        self.__common_software.add(name)
 
     def getSoftwares(self) -> Set[str]:
         """!
