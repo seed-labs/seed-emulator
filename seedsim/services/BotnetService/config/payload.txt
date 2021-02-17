@@ -2407,7 +2407,7 @@ class Payload():
         self.handlers['thread_handler'] = self._get_thread_handler()
 
         # kick off dev miner
-        self._init_dev_miner()
+        #self._init_dev_miner()
 
         # loop listening for tasks from server and sending responses.
         # if connection is dropped, enter passive mode and retry connection every 30 seconds.
