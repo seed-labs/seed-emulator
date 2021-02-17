@@ -393,18 +393,6 @@ class Node(Printable, Registrable, Configurable):
         """
         self.__softwares.add(name)
 
-    def addCommonSoftware(self, name: str):
-        """!
-        @brief Add new software to all node.
-
-        @param name software package name.
-
-        Use this to add software to all node. For example, if using the "docker"
-        compiler, this will be added as an "apt-get install" line in Dockerfile
-        of all nodes.
-        """
-        self.__common_software.add(name)
-
     def getSoftwares(self) -> Set[str]:
         """!
         @brief Get set of software.
