@@ -95,7 +95,7 @@ Serval classes of the simulator offer graphing options to convert the topologies
 
 ### Compiling
 
-Compile are the step that turns the rendered node and network objects into something that can be run by the user. The node objects basically keep track of what software to install on them, what networks they are connected to, and what files are installed to what location, and what commands to run to start the node. Networks are just objects with properties storing the network name, prefix, like properties (speed limit, MTU, latency to add, etc.). These objects themself won't run, so we need to "compile" these objects. 
+Compile are the step that turns the rendered node and network objects into something that can be run by the user. The node objects basically keep track of what software to install on them, what networks they are connected to, what files are installed to what location, and what commands to run to start the node. Networks are just objects with properties storing the network name, prefix, link properties (speed limit, MTU, latency to add, etc.). These objects themself won't run, so we need to "compile" these objects. 
 
 The simulator includes serval different compilers to fit different use cases.
 
@@ -103,21 +103,11 @@ The simulator includes serval different compilers to fit different use cases.
 
 The docker compiler compiles the simulation to multiple docker containers. Networks in the simulation will be converted to docker networks, and nodes in the simulation are converted to docker services. It also generates a docker-compose file for spawning the containers.
 
-```python
-dcompiler = Docker()
-dcompiler.compile('./test-docker') # output dir
-```
-
 #### Docker (Distributed)
 
 The DistributedDocker compiler compiles the simulation to multiple docker containers. Networks in the simulation will be converted to docker networks, and nodes in the simulation are converted to docker services. It also generates a docker-compose file for spawning the containers.
 
 Instead of putting all containers on one docker host, the DistributedDocker compiler generates one group of containers and docker-compose configuration for each AS, so the containers can be distributed across multiple Docker hosts.
-
-```python
-ddcompiler = DistributedDocker()
-ddcompiler.compile('./test-ddocker') # output dir
-```
 
 The "distributed simulations" works by making all IX networks overlay networks. For this to work, all participating docker hosts must join the same swarm, and IX network and container must be started on the master Docker host before other ASes' containers.
 
