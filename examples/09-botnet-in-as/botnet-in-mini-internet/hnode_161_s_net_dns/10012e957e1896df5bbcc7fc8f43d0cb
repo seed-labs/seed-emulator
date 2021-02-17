@@ -1,2 +1,0 @@
-zone "net." { type master; file "/etc/bind/zones/net."; allow-update { any; }; };
-

@@ -1,6 +1,0 @@
-$TTL 300
-$ORIGIN as152.net.
-@ A 10.152.0.71
-@ SOA ns1.as152.net. admin.as152.net. 1119180086 900 900 1800 60
-ns1.as152.net. A 10.162.0.73
-@ NS ns1.as152.net.
