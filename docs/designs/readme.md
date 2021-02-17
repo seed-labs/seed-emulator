@@ -62,9 +62,9 @@ Each layer only takes care of its' own matter. BGP layer only saves what autonom
 
 Here's a list of included layers:
 
-`Base`: The base layer is the base of the simulation; consider it as the OSI layer 1. Users define Autonomous Systems, Internet Exchanges, routers, hosts, networks, and how they are connected in the `Base` layer.
-`Routing`: The routing layer provides the basic routing functionality to the simulator. 
-`Bgp`: ...
+- `Base`: The base layer is the base of the simulation; consider it as the OSI layer 1. Users define Autonomous Systems, Internet Exchanges, routers, hosts, networks, and how they are connected in the `Base` layer.
+- `Routing`: The routing layer provides the basic routing functionality to the simulator. 
+- `Bgp`: ...
 
 #### Services
 
