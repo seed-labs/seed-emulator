@@ -32,8 +32,12 @@ Each layer only takes care of its' own matter. BGP layer only saves what autonom
 Here's a list of included layers:
 
 - `Base`: The base layer is the base of the simulation; consider it as the OSI layer 1. Users define Autonomous Systems, Internet Exchanges, routers, hosts, networks, and how they are connected in the `Base` layer.
-- `Routing`: The routing layer provides the basic routing functionality to the simulator. 
-- `Bgp`: ...
+- `Routing`: The routing layer provides the basic routing functionality to the simulator. It does three things: (1) install BIRD on router nodes and allow dynamic routing protocol layers to work, (2) setup kernel and device and (3) setup defult routes for host nodes. When this layer is rendered, two new methods will be added to the router node and can be used by other layers: (1) `addProtocol`: add new protocol block to BIRD, and (2) `addTable`: add new routing table to BIRD. This layer also assign loopback address for iBGP/LDP, etc., for other protocols to use later and as router id. The `Routing` layer itself also offers an `addDirect` method to mark a network as direct, to load the network into the routing information base. 
+- `Ebgp`: The EBGP layer offers a convenient way to set up BGP peering between different autonomous systems. Users only need to provide the Internet exchange ID and peer ASNs, and the BGP layer will find the correct routers and setup BGP peering between them.
+- `Ospf`: This layer enable OSPF on all router nodes. By default, this will make all internal network interfaces (interfaces that are connected to a network created by the AS). OSPF interface. Other interfaces, like internet exchange interfaces, will also be added as stub (passive) interface. Users can choose to override the automatic behavior by manually marking networks as stub or remove the network from OSPF entirely. Users can also choose to mask an entire autonomous system if they don't want OSPF in a particular autonomous system.
+- `Ibgp`: This layer automatically setup IBGP full mesh peering between routers within AS using the loopback address configured by the routing layer. This will allow routers from within the AS to exchange routes received from other BGP peers (customers, upstreams, IX peering, etc.) between each other, building a transit network. OSPF will have to be enabled for `Ibgp` to work.
+- `Mpls`: This layer is a replacement for the IBGP full mesh + OSPF setup for the transit provider's internal network. Instead of the traditional IP network, which requires every hop to have a copy of the full table, MPLS allows non-edge hops to hold only the MPLS forwarding table, which negated the need for the full table. MPLS uses LDP (Label Distribution Protocol) to create LSP (Label-switched path) for each unique path between the edge routers from within an autonomous system. The number of paths in an AS between edges is far less than the number of routes in the DFZ (Default Free Zone), saving resources on the non-edge routers. 
+- `Reality`: Reality Layer offers optons to connect the simulator from and to the real world. It allows exposing a simulated network with a VPN to the real-world, and enables adding real-world AS to simulation with ease. The layer allows users to set a list of prefixes to announce with BGP to the simulated Internet, and route it to the real-world. It can also fetch the prefix list of real-world AS and add them automatically.
 
 ### Services
 
@@ -54,6 +58,9 @@ Derived `Service` layer can alternatively implement the following methods to cha
 - `_doConfigure(server: Server, node: Node)`: change how servers are configured. This is called during the configure stage, and by default, this does nothing.
 
 As a single server object is typically installed only on one node, the `_doInstall` and `_doConfigure` method only passes in the `Node` object. However, sometimes the service layer may need to gather information from the entire simulation, instead of from just the node it tries to install the services on. An example of this includes the `ReverseDomain` service, which needs to collect IP addresses of all nodes in the entire simulation and create PTR records for them in the `in-addr.arpa.` zone. In such an occurrence, the `configure` and `render` method inherited from the `Service` layer may be overridden tool. Just remember to call the `configure` and `render` in the parent class (i.e., `Service` class), as those are responsible for invoking the `_doInstall` and `_doConfigure` methods.
+
+Here's a list of included services:
+
 
 ### Rendering layers
 
