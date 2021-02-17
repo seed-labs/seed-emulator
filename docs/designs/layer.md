@@ -29,7 +29,7 @@ The configure stage is especially useful if a layer wants to make changes to ano
 
 Services are special kinds of layers. One way to differentiate the regular layers and services layer is their scope. A regular Layer makes changes to the entire simulation (like BGP, which configure peeing across multiple different autonomous systems, exchanges, and routers). In contrast, a service only makes changes to individual nodes (like `Web`, which install `nginx` on the given node). 
 
-In fact, the `Service` class itself is derived from the `Layer` class and it just adds a few helper functions to make developing new services easier:
+In the old design, services are installed by providing the node object to the services. In the new design, we decided not to use any node object to identify which node to install the services on, as that creates dependencies to the base layer, as mentioned in the previous section. In the new design, we use the node's name and IP address to identify nodes to install service on. And in fact, the `Service` class itself is derived from the `Layer` class and it just adds a few helper functions to make developing new services easier:
 
 - `Service::installByName(asn: int, nodename: str)`: install service on the node with `nodename` in AS `asn`.
 - `Service::installByIp(address: str, asn: int = None)`: install service on the node with IP address `address`, optionally limit the ASN to `asn`.
