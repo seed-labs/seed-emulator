@@ -32,7 +32,7 @@ Services are special kinds of layers. One way to differentiate the regular layer
 In fact, the `Service` class itself is derived from the `Layer` class and it just adds a few helper functions to make developing new services easier:
 
 - `Service::installByName(asn: int, nodename: str)`: install service on the node with `nodename` in AS `asn`.
-- `Service::installByIp(address: str, asn: int = None)`: install service on the node with IP address `address`, optionally limit the scope th AS `asn`.
+- `Service::installByIp(address: str, asn: int = None)`: install service on the node with IP address `address`, optionally limit the ASN to `asn`.
 
 The `Service` layer will keep track of what nodes are pending service configuration / installation and will do the proper configuration / installation during the configure and render stage. 
 
