@@ -133,6 +133,7 @@ sim.addLayer(ebgp)
 sim.addLayer(ibgp)
 sim.addLayer(ospf)
 sim.addLayer(bot)
+sim.addLayer(bot_client)
 
 sim.render()
 
