@@ -176,6 +176,10 @@ While all the included compilers compile to Docker in some ways, there are no li
 
 ## Merging Simulators
 
+Thanks to the layered design, we can merge different emulations into one. This allows users to re-use part of existing emulations to build new emulations. For example, one can take the DNS layer out from an emulation with a complete DNS infrastructure and use it in another emulation. As the DNS layer only keep track of the name of nodes to target the service installation, as long as the user re-creates nodes with the same name in the new emulation, the DNS layer will "just works," even if the new simulator has a completely different topology in the Base layer.
+
+The reusability aspect of the layer opens up an entirely new area of possibilities: sharing emulations. This section will go over the design of the merging mechanism.
+
 ### Exporting simulation
 
 ### Importing simulation
