@@ -172,7 +172,7 @@ This is not a real compiler. Instead of building the simulation, the Graphviz co
 
 Compilers, while actually doing all the heavy-lifting jobs, and actually trivial to implement. The only method needed to be implemented is `_doCompile`, which will pass in a `Simulator` object as the parameter. Compilers then iterate through all node objects and network objects in the emulation and "compiles" them to `Dockerfile` and `docker-compose.yml`.
 
-While all the included compilers compile to Docker in some ways, there are no limits as to what backend the compilers can compiler to, given one implement them; compilers provided a clean way to abstract the idea of emulation. When users build an emulation, they do not need to worry about how or where the emulation will be running on eventually; it can be running on a single Docker host, or it can be running distributed across multiple Docker hosts. I may not even be running on Docker platforms. One can easily build a compiler of Vagrant and have the emulation run on virtual machines instead of containers.
+While all the included compilers compile to Docker in some ways, there are no limits as to what backend the compilers can compiler to, given one implement them; compilers provided a clean way to abstract the idea of emulation. When users build an emulation, they do not need to worry about how or where the emulation will be running on eventually; it can be running on a single Docker host, or it can be running distributed across multiple Docker hosts. It may not even be running on Docker platforms. One can easily build a compiler of Vagrant and have the emulation run on virtual machines instead of containers.
 
 ## Merging Simulators
 
