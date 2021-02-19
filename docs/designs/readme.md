@@ -57,7 +57,7 @@ See [design.md](design.md)
 
 ### Botnet
 
-[Botnet Document]('botnet.md')
+[Botnet Document](botnet.md)
 
 ### Bitcoin
 

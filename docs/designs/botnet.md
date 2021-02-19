@@ -11,22 +11,22 @@ Our emulator allows user to create Botnet service, including C2 (Command & Contr
 
 ### Install Botnet service example
 
- 	```
- 	from seedsim.services import BotnetClientService, BotnetService
+```
+from seedsim.services import BotnetClientService, BotnetService
 
- 	bot = BotnetService()
-	bot_client = BotnetClientService()
+bot = BotnetService()
+bot_client = BotnetClientService()
 
- 	as_150 = base.createAutonomousSystem(150)
- 	as_151 = base.createAutonomousSystem(151)
- 	c2_server = as_150.createHost('c2_server')
- 	bot_server = as_151.createHost('bot')
+as_150 = base.createAutonomousSystem(150)
+as_151 = base.createAutonomousSystem(151)
+c2_server = as_150.createHost('c2_server')
+bot_server = as_151.createHost('bot')
 
- 	c2_server_ip = "10.150.0.71"
- 	bot.installByName(150, 'c2_server')
- 	c = bot_client.installByName(151, 'bot')
- 	c.setServer(c2_server_ip)
- 	```
+c2_server_ip = "10.150.0.71"
+bot.installByName(150, 'c2_server')
+c = bot_client.installByName(151, 'bot')
+c.setServer(c2_server_ip)
+```
 
 ### seedsim.services.BotnetService
 
@@ -45,7 +45,7 @@ This class has a method called ```setServer``` to setup the Bot client. An Bot c
 | Attribute   |      Type     |  Description |
 |-------------|:-------------:|-------------:|
 | c2_server   |  Required, String | IP address of C2 server. In order to tell Bot client who is the c2_server, and when docker instance has launched, Bot client will continously connect to C2 server|
-| enable_dga  |    Optional, Bool   |   By default, it is False, when we set it to True, Bot client will adopt DGA feature to generate multiple domains and randomly choose one of them to connect. User need to register these domains, let them resolve to C2 server by using [Domain Registrar Service](), the default DGA function code in the following.|
+| enable_dga  |    Optional, Bool   |   By default, it is False, when we set it to True, Bot client will adopt DGA feature to generate multiple domains and randomly choose one of them to connect. User need to register these domains, let them resolve to C2 server by using [Domain Registrar Service](domain_registrar_service.md), the default DGA function code in the following.|
 | dga         | Optional, function |  When you enable DGA featrue, and want to use your own DGA function, you can define a function named ```dga``` with a list return. Bot client service will pass your DGA function to target docker instance, and randomly choose one of your domain list to connect.  If dga is not set and enable_dga is True, it will use default function.|
 
 The following is an example of using self define dga function:
