@@ -372,7 +372,7 @@ class DomainNameService(Service):
         """
         return self.__rootZone
 
-    def getZoneServerName(self, domain: str) -> List[Tuple[str, int]]:
+    def getZoneServerNames(self, domain: str) -> List[Tuple[str, int]]:
         """!
         @brief Get the names of servers hosting the given zone. This only works
         if the server was installed by using the "installByName" call.
