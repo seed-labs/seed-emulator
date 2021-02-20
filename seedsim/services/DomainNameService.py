@@ -304,6 +304,34 @@ class DomainNameService(Service):
         for subzone in zone.getSubZones().values():
             for gule in subzone.getGuleRecords(): zone.addRecord(gule)
             self.__autoNameServer(subzone)
+    
+    def __getZoneServer(self, domain: str, by_ip: bool) -> List[Tuple[str, int]]:
+        """!
+        @brief get zone server by IP or name. Helper function. See 
+        getZoneServerNames / getZoneServerIps.
+
+        @param domain domain.
+        @param by_ip lookup by IP.
+
+        @returns list of tuple of names or ip and asn.
+        """
+        info = []
+        targets = self.getPendingTargetIps() if by_ip else self.getPendingTargetNames()
+
+        for (sobj, key, asn) in targets:
+            server: DomainNameServer = sobj
+
+            hit = False
+
+            for zone in server.getZones():
+                if zone.getName() == domain:
+                    info.append((key, asn))
+                    hit = True
+                    break
+            
+            if hit: continue
+        
+        return info
 
     def _createServer(self) -> Server:
         return DomainNameServer()
@@ -343,6 +371,30 @@ class DomainNameService(Service):
         @return root zone.
         """
         return self.__rootZone
+
+    def getZoneServerName(self, domain: str) -> List[Tuple[str, int]]:
+        """!
+        @brief Get the names of servers hosting the given zone. This only works
+        if the server was installed by using the "installByName" call.
+
+        @param domain domain.
+
+        @returns list of tuple of (node name, asn)
+        """
+        return self.__getZoneServer(domain, False)
+        
+
+    def getZoneServerIps(self, domain: str) -> List[Tuple[str, int]]:
+        """!
+        @brief Get the names of servers hosting the given zone. This only works
+        if the server was installed by using the "installByName" call. The ASN
+        part can be None if it was not set.
+
+        @param domain domain.
+
+        @returns list of tuple of (node name, asn)
+        """
+        return self.__getZoneServer(domain, True)
 
     def render(self, simulator: Simulator):
         if self.__autoNs:
