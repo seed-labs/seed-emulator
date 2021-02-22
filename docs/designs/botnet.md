@@ -11,6 +11,9 @@ Our emulator allows user to create Botnet service, including C2 (Command & Contr
 
 ### Install Botnet service example
 
+Comment: Please add detailed explanation to show users how to use 
+the class. Basically, you need to explain your code. 
+
 ```
 from seedsim.services import BotnetClientService, BotnetService
 
@@ -80,3 +83,11 @@ c = bot_client.installByName(asn, host_name)
 c.setServer(c2_server_ip, enable_dga=True, dga=dga)
 
 ```
+
+
+## Demonstration 
+
+Comment: You have shown me the demonstration of the botnet. Can you 
+write down what you have demonstrated, just like what you did during
+the demonstration? All the files that are needed should be stored 
+somewhere, so others can duplicate your demonstration.
