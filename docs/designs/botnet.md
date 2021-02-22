@@ -11,7 +11,7 @@ Our emulator allows user to create Botnet service, including C2 (Command & Contr
 
 ### Install Botnet service example
 
-Comment: Please add detailed explanation to show users how to use 
+**Comment:** Please add detailed explanation to show users how to use 
 the class. Basically, you need to explain your code. 
 
 ```
@@ -30,6 +30,11 @@ bot.installByName(150, 'c2_server')
 c = bot_client.installByName(151, 'bot')
 c.setServer(c2_server_ip)
 ```
+
+**Comment:** This example is too simplified. Please add at least two bots
+in this example. 
+
+
 
 ### seedsim.services.BotnetService
 
@@ -84,10 +89,15 @@ c.setServer(c2_server_ip, enable_dga=True, dga=dga)
 
 ```
 
+**Comment:**  With dga, I thought that IP address is not used. 
+Why is it still in the code?  Please also add comments to the 
+code above. 
+
+
 
 ## Demonstration 
 
-Comment: You have shown me the demonstration of the botnet. Can you 
+**Comment:** You have shown me the demonstration of the botnet. Can you 
 write down what you have demonstrated, just like what you did during
 the demonstration? All the files that are needed should be stored 
 somewhere, so others can duplicate your demonstration.
