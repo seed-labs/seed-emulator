@@ -46,7 +46,7 @@ In the old design, services are installed by providing the node object to the se
 
 - `Service::installByName(asn: int, nodename: str)`: install service on the node with `nodename` in AS `asn`.
 - `Service::installByIp(address: str, asn: int = None)`: install service on the node with IP address `address`, optionally limit the ASN to `asn`.
-- `Service::installIf(cond: Callable[[Node], bool])`: install the service on a node if the function or lambda returns true for the node object passed in. Example:
+- `Service::installIf(cond: Callable[[Node], bool])`: install the service on a node if the function or lambda returns true for the node object passed in. Examples:
    - `service.installIf(lambda node: node.getAsn() == 150)`: install on first node in AS150.
    - `service.installIf(lambda node: not node.getAttribute('services').keys.has('DomainNameService')`: install on first node in any AS, that does not have `DomainNameService` installed on them.
 
