@@ -142,7 +142,7 @@ On the above code, we firstly defined a function called ```dga```, this function
 
 ## Demonstration 
 
-This demonstration shows how can we build a botnet service in a pretty complex network. All the code can be found on [09-botnet-in-as] (../../examples/09-botnet-in-as) example.
+This demonstration shows how can we build a botnet service in a pretty complex network. All the code can be found on [09-botnet-in-as] (https://github.com/seed-labs/SEEDSimulator/tree/feature-merge/examples/09-botnet-in-as) example.
 
 ### Step 1: Dump & Load a existed network emulator
 
