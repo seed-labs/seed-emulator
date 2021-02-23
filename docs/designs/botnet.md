@@ -23,6 +23,8 @@ sim = Simulator()
 base = Base()
 routing = Routing()
 ebgp = Ebgp()
+
+########Import######################
 bot = BotnetService()
 bot_client = BotnetClientService()
 
@@ -79,7 +81,7 @@ sim.compile(Docker(), './simple-botnet')
 
 ```
 
-Firstly, in the line 10-11, we need to import Botnet Service class and create a instance for C2 service and bot client service. In the line 13-17, we create 2 Autonomous Systems and host respectively. As a botnet sample, we are going to make the host that in ASN 151 to be the client, ASN 150 to be C2 server. Right now we already know the IP address of C2 server because of the IP convention, so we just need to use ```installByName``` API to attach our botnet service on specific host. With bot client installation, we also need to invoke ```setServer``` to setup Botnet client, because we have to tell Botnet who is the controller. After that, we just need to add ```bot``` and ```bot_client``` layer on our emulator.
+Firstly, in the code block of ```Import```, we need to import Botnet Service class and create a instance for C2 service and bot client service. In the code block of ```Create AS and hosts```, we create 2 Autonomous Systems and host respectively. As a botnet sample, we are going to make the host that in ASN 151 to be the client, ASN 150 to be C2 server. Right now we already know the IP address of C2 server because of the IP convention, so we just need to use ```installByName``` API to attach our botnet service on specific host. With bot client installation, we also need to invoke ```setServer``` to setup Botnet client, because we have to tell Botnet who is the controller. After that, we just need to add ```bot``` and ```bot_client``` layer on our emulator.
 
 
 
