@@ -84,7 +84,7 @@ Configuration:
 
 ```yaml
 bindings:
-    - "com_server_*":
+    - "com_server_.*":
         - filter:
             - asn: 150
 ```
@@ -95,10 +95,10 @@ This filter matches all com server services (i.e., `com_server_1`, `com_server_2
 
 ```yaml
 bindings:
-    - "net_server_*":
+    - "net_server_.*":
         - filter:
             - asn: 151
-            - node_name: "net_server_*"
+            - node_name: "net_server_.*"
 ```
 
 This filter matches all net server services (i.e., `net_server_1`, `net_server_2`, ..., `net_server_10`), limit the ASN of the node to be 151, and limit the name of node to be `net_server_*`.
@@ -125,3 +125,14 @@ bindings:
             - any_services:
                 - "WebService"
 ```
+
+### Lambds
+
+```yaml
+bindings:
+    - "*":
+        - filter:
+            - lambda: "lambda service_name, node: not node.getServices().has('DomainNameCachingService')"
+```
+
+For lambda, `service_name` is the name of the services to bind (e.g., `root_server_1`, `com_server_1`, etc.), and `node` is the node object in the emulator.
