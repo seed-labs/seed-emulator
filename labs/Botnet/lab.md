@@ -133,9 +133,20 @@ $ tcpdump icmp
 
 ## Task 3. Writing Your Own Programs
 
- - Ask students to write their own program, and push it to 
-   each bot. Use a skeleton code to show students how 
-   to write such a code. 
+In this task, students need to write their own program and push to each bot, then use C2 console to launch the program by using ```broadcast``` command. After launching, each of bots should automatically execute this program. In your own program, you can do something that you think is interesting, for example: Steal a secret file, encrypt a file etc. The following code snippet shows how can we put your program in each bot. ***(Notice: In bot client environment, only support Python3)***
+
+```
+...
+for asn in [151,152,153,154,155]:
+    asn_base = base_layer.getAutonomousSystem(asn)
+    c = bot_client.installByName(asn, asn_base.getHosts()[0])
+    c.setServer(c2_server_ip)
+    c.setModule(filename='myprog.py', file_src='./myprog_in_local.py')
+
+``` 
+
+The only one thing we need to do is that use ```setModule``` API after you have installed a bot client on a host. The first argument ```filename``` is the name that you want to stored in bot docker container, the file will eventually deploy in ```/tmp/filename```. The second argument ```file_src``` is your file that existed on your VM(or computer). For example, if I wrote a program
+called ```myprog_in_local.py``` in my VM, and set ```filename='myprog.py'```. After starting all the container, the file will copy to ```/tmp/myprog.py``` in each of bots.
 
 
 ## Task 4. Evading Firewalls

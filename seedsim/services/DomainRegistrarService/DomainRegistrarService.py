@@ -53,10 +53,10 @@ class DomainRegistrarServer(Server):
         """!
         @brief Install the service.
         """
-        node.addSoftware('nginx-light php7.4-fpm')
-        node.setFile('/var/www/html/index.php', DomainRegistrarServerFileTemplates['web_app_file'])
-        node.setFile('/var/www/html/domain.php', DomainRegistrarServerFileTemplates['web_app_file2'])
-        node.setFile('/etc/nginx/sites-available/default', DomainRegistrarServerFileTemplates['nginx_site'].format(port = self.__port))
+        node.addSoftware('nginx-light php7.4-fpm') # Install nginx and php
+        node.setFile('/var/www/html/index.php', DomainRegistrarServerFileTemplates['web_app_file']) #index page for domain register service
+        node.setFile('/var/www/html/domain.php', DomainRegistrarServerFileTemplates['web_app_file2']) # domain names register page.
+        node.setFile('/etc/nginx/sites-available/default', DomainRegistrarServerFileTemplates['nginx_site'].format(port = self.__port)) # setup nginx
         node.appendStartCommand('service nginx start')
         node.appendStartCommand('service php7.4-fpm start')
 
@@ -85,6 +85,7 @@ class DomainRegistrarService(Service):
         return DomainRegistrarServer()
 
     def _doConfigure(self, node: Node, server: Server):
+        # In order to identify if the target node has DomainNameService.
         assert "DomainNameService" in node.getAttribute('services') , 'DomainNameService required on node to use DomainRegistrarService.'
 
     def print(self, indent: int) -> str:
