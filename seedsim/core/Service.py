@@ -142,6 +142,21 @@ class Service(Layer):
         """
         return self.__targets
 
+    def getPendingTargetIps(self) -> Set[Tuple[Server, str, int]]:
+        """!
+        @brief Get a set of pending IP targets and the server objects associated
+        with them. The set content is (server object, IP address, asn). The asn
+        part is optional and may be None.
+        """
+        return self.__ip_targets
+
+    def getPendingTargetNames(self) -> Set[Tuple[Server, str, int]]:
+        """!
+        @brief Get a set of pending name targets and the server objects
+        associated with them. The set content is (server object, name, asn).
+        """
+        return self.__name_targets
+
     def installByIp(self, address: str, asn: int = None) -> Server:
         """!
         @brief Install to node by IP address.

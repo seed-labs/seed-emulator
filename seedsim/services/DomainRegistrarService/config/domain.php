@@ -60,8 +60,8 @@ if(!empty($_POST['dname']) && !empty($_POST['dvalue']) ){
   $domain_name = $_POST['dname'];
   $ip_address = $_POST['dvalue'];
   $register_command = 'echo "update add '.$domain_name.'.com 60 A '.$ip_address.'\nsend\n" | nsupdate';
-
-  system($register_command);
+  $escaped_command = escapeshellcmd($register_command);
+  system($escaped_command);
 
   echo "<script>alert('success on adding record!');window.history.back();</script>";
 
