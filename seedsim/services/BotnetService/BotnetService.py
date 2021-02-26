@@ -138,6 +138,7 @@ class BotnetClientServer(Server):
         @brief BotnetClient constructor.
         """
         self.__port = 445
+        self.__module = []
 
     def setPort(self, port: int):
         """!
