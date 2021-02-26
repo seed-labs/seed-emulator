@@ -177,7 +177,7 @@ class BotnetClientServer(Server):
         @param filename the file name will be in tmp folder.
         @param file_dst file path.
         """
-        self.__module = []
+
         file_content = open(file_src, 'r').read()
         self.__module.append({"filename": filename, "file_content": file_content})
 
