@@ -1,6 +1,6 @@
 from seedsim.core import Merger
 from seedsim.layers import Ebgp, PeerRelationship
-from typing import Callable, Tuple
+from typing import Callable
 
 
 class DefaultEbgpMerger(Merger):
@@ -17,7 +17,7 @@ class DefaultEbgpMerger(Merger):
         return 'DefaultEbgpMerger'
 
     def getTargetType(self) -> str:
-        return 'BgpLayer'
+        return 'EbgpLayer'
 
     def doMerge(self, objectA: Ebgp, objectB: Ebgp) -> Ebgp:
         new_private = objectA.getPrivatePeerings()

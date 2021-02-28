@@ -1,11 +1,13 @@
 from seedsim import mergers
 from seedsim.core import Simulator
-from seedsim.mergers import DefaultBaseMerger
-from seedsim.layers import Base
+from seedsim.mergers import DefaultBaseMerger, DefaultEbgpMerger
+from seedsim.layers import Base, Ebgp
 
 ###############################################################################
 
 baseA = Base()
+
+ebgpA = Ebgp()
 
 baseA.createInternetExchange(100)
 
@@ -19,12 +21,17 @@ h150.joinNetwork('net0')
 r150.joinNetwork('net0')
 r150.joinNetwork('ix100')
 
+ebgpA.addRsPeer(100, 150)
+
 simA = Simulator()
 simA.addLayer(baseA)
+simA.addLayer(ebgpA)
 
 ###############################################################################
 
 baseB = Base()
+
+ebgpB = Ebgp()
 
 as151 = baseB.createAutonomousSystem(151)
 
@@ -36,12 +43,15 @@ h151.joinNetwork('net0')
 r151.joinNetwork('net0')
 r151.joinNetwork('ix100')
 
+ebgpB.addRsPeer(100, 151)
+
 simB = Simulator()
 simB.addLayer(baseB)
+simB.addLayer(ebgpB)
 
 ###############################################################################
 
-merged = simA.merge(simB, [DefaultBaseMerger()])
+merged = simA.merge(simB, [DefaultBaseMerger(), DefaultEbgpMerger()])
 
 print('A ==========')
 print(simA.getRegistry())
