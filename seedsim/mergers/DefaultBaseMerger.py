@@ -11,6 +11,19 @@ class DefaultBaseMerger(Merger):
         self,
         onAsConflict: Callable[[AutonomousSystem, AutonomousSystem], AutonomousSystem] = lambda asA, asB: asA,
         onIxConflict: Callable[[InternetExchange, InternetExchange], InternetExchange] = lambda ixA, ixB: ixA):
+        """!
+        @brief DefaultBaseMerger constructor.
+        @param onAsConflict AS conflict handler. This will be called when the
+        same AS appears in both emulations. This parameter should be a function,
+        two AS objects will be passed in, and a new AS object should be
+        returned. This defaults to returning the AS object in the first
+        emulation.
+        @param onIxConflict IX conflict handler. This will be called when the
+        same IX appears in both emulations. This parameter should be a function,
+        two IX objects will be passed in, and a new IX object should be
+        returned. This defaults to returning the IX object in the first
+        emulation.
+        """
         super().__init__()
         self.__asConflictHandler = onAsConflict
         self.__ixConflictHandler = onIxConflict

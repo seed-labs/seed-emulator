@@ -10,6 +10,14 @@ class DefaultEbgpMerger(Merger):
     def __init__(
         self,
         onPeeringRelationshipConflict: Callable[[int, int, int, PeerRelationship, PeerRelationship], PeerRelationship] = lambda ix, a, b, relA, relB: relA):
+        """!
+        @brief DefaultEbgpMerger constructor.
+        @param onPeeringRelationshipConflict define handler for handling peering
+        relationship conflicts. This should be a function that accepts: (ix,
+        asnA, asnB, peeringRelationshipA, peeringRelationshipB) and return a
+        peering relationship. This defaults to use the peering relationship
+        set in the first emulator.
+        """
         super().__init__()
         self.__peeringConflictHandler = onPeeringRelationshipConflict
         
