@@ -39,7 +39,8 @@ class DefaultBaseMerger(Merger):
             if asn in as_objects.keys():
                 self._log('AS{} is also in the first eumlator, calling conflict handler.'.format(asn))
                 obj = self.__asConflictHandler(as_objects[asn], obj)
-            if obj != as_objects[asn]: as_objects[asn] = obj
+                if obj != as_objects[asn]: as_objects[asn] = obj
+            else: as_objects[asn] = obj
         
         for ix in objectB.getInternetExchangeIds():
             self._log('found IX{} in the second eumlator.'.format(ix))
@@ -47,7 +48,8 @@ class DefaultBaseMerger(Merger):
             if ix in ix_objects.keys():
                 self._log('IX{} is also in the first eumlator, calling conflict handler.'.format(ix))
                 obj = self.__ixConflictHandler(ix_objects[ix], obj)
-            if obj != ix_objects[ix]: ix_objects[ix] = obj
+                if obj != ix_objects[ix]: ix_objects[ix] = obj
+            else: ix_objects[ix] = obj
 
         new_base = Base()
 
