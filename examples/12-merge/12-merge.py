@@ -1,6 +1,5 @@
-from seedsim import mergers
 from seedsim.core import Simulator
-from seedsim.mergers import DefaultBaseMerger, DefaultEbgpMerger
+from seedsim.mergers import DEFAULT_MERGERS
 from seedsim.layers import Base, Ebgp
 
 ###############################################################################
@@ -51,7 +50,7 @@ simB.addLayer(ebgpB)
 
 ###############################################################################
 
-merged = simA.merge(simB, [DefaultBaseMerger(), DefaultEbgpMerger()])
+merged = simA.merge(simB, DEFAULT_MERGERS)
 
 print('A ==========')
 print(simA.getRegistry())
