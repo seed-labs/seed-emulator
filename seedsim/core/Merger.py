@@ -1,4 +1,5 @@
 from __future__ import annotations
+from sys import stderr
 
 class Mergeable(object):
     """!
@@ -26,8 +27,11 @@ class Merger(object):
     """!
     @brief Merger base class. 
 
-    When merging
+    When merging, merger are invoked to do the merge.
     """
+
+    def getName(self) -> str:
+        raise NotImplementedError("getTargetType not implemented.")
 
     def getTargetType(self) -> str:
         """!
@@ -47,3 +51,6 @@ class Merger(object):
         @returns merged object.
         """
         raise NotImplementedError("doMerge not implemented.")
+
+    def _log(self, message):
+        print('== {}: {}'.format(self.getName(), message), file=stderr)

@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 from .Printable import Printable
 from .Registry import Registrable
 from .Simulator import Simulator
 from .Configurable import Configurable
+from .Merger import Mergeable
 
 from sys import stderr
 from typing import Set, Dict, Tuple
 
 
-class Layer(Printable, Registrable, Configurable):
+class Layer(Printable, Registrable, Configurable, Mergeable):
     """!
     @brief The layer interface.
     """
@@ -17,6 +20,12 @@ class Layer(Printable, Registrable, Configurable):
     def __init__(self) -> None:
         super().__init__()
         self.__dependencies = {}
+
+    def getTypeName(self) -> str:
+        return '{}Layer'.format(self.getName())
+
+    def shouldMerge(self, other: Layer) -> bool:
+        return self.getName() == other.getName()
 
     def addDependency(self, layerName: str, reverse: bool, optional: bool):
         """!
