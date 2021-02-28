@@ -98,6 +98,15 @@ class Base(Layer, Graphable):
         """
         assert asn in self.__ases, "as{} does not exist.".format(asn)
         return self.__ases[asn]
+    
+    def setAutonomousSystem(self, asObject: AutonomousSystem):
+        """!
+        @brief Set AS to an existing AS object.
+
+        @param asObject AS object.
+        """
+        asn = asObject.getAsn()
+        self.__ases[asn] = asObject
 
     def createInternetExchange(self, asn: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None) -> InternetExchange:
         """!
@@ -124,6 +133,15 @@ class Base(Layer, Graphable):
         assert asn in self.__ixes, "ix{} does not exist.".format(asn)
         return self.__ixes[asn]
 
+    def setInternetExchange(self, ixObject: InternetExchange):
+        """!
+        @brief Set IX to an existing IX object.
+
+        @param ixObject IX object.
+        """
+        asn = ixObject.getId()
+        self.__ixes[asn] = ixObject
+
     def getAsns(self) -> List[int]:
         """!
         @brief Get list of ASNs.
@@ -132,7 +150,7 @@ class Base(Layer, Graphable):
         """
         return self.__ases.keys()
 
-    def getIxIds(self) -> List[int]:
+    def getInternetExchangeIds(self) -> List[int]:
         """!
         @brief Get list of IX IDs.
 
