@@ -79,6 +79,21 @@ class CymruIpOriginService(Service):
             record += '.origin.asn TXT "{} | {} | ZZ | SEED | 0000-00-00"'.format(asn, net)
             self.__records.append(record)
 
+    def getRecords(self) -> List[str]:
+        """!
+        @brief get generated records.
+
+        @return list of records.
+        """
+        return self.__records
+
+    def addRecord(self, record: str):
+        """!
+        @brief add record directly to the cymru zone. You should use addMapping
+        to add mapping and not addRecord, unless you know what you are doing.
+        """
+        self.__records.append(record)
+
     def _doInstall(self, node: Node, server: Server): 
         self._log('setting up "cymru.com." server node on as{}/{}...'.format(node.getAsn(), node.getName()))
         dns_s: DomainNameServer = self.__dns.installByName(node.getAsn(), node.getName())
