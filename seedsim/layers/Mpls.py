@@ -3,7 +3,7 @@ from .Ibgp import Ibgp
 from .Routing import Router
 from seedsim.core import Node, ScopedRegistry, Graphable, Simulator, Layer
 from seedsim.core.enums import NetworkType, NodeRole
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Set
 
 MplsFileTemplates: Dict[str, str] = {}
 
@@ -80,8 +80,8 @@ class Mpls(Layer, Graphable):
     the node to the public.
     """
 
-    __additional_edges: List[Node]
-    __enabled: List[int]
+    __additional_edges: Set[Tuple[int, str]]
+    __enabled: Set[int]
 
     def __init__(self):
         """!
@@ -90,8 +90,8 @@ class Mpls(Layer, Graphable):
         @param simulator simulator.
         """
         super().__init__()
-        self.__additional_edges = []
-        self.__enabled = []
+        self.__additional_edges = set()
+        self.__enabled = set()
 
         # they are not really "dependency," we just need them to render after
         # us, in case we need to setup masks.
@@ -103,18 +103,27 @@ class Mpls(Layer, Graphable):
     def getName(self) -> str:
         return 'Mpls'
 
-    def markAsEdge(self, node: Node):
+    def markAsEdge(self, asn: int, nodename: str):
         """!
-        @brief Mark a node as edge node.
+        @brief Mark a router node as edge node.
 
         By default, only nodes with connection to IX, or connection to a network
         with at least one host node, will be considered an edge router and be
         included in the iBGP mesh. Use this method to mark a node as edge
         manually.
 
-        @param node node
+        @param asn asn
+        @param nodename name of node
         """
-        self.__additional_edges.append(node)
+        self.__additional_edges.add((asn, nodename))
+
+    def getEdges(self) -> Set[Tuple[int, str]]:
+        """!
+        @brief Get set of router nodes marked as edge.
+
+        @returns set of tuple of asn and node name.
+        """
+        return self.__additional_edges
 
     def enableOn(self, asn: int):
         """!
@@ -126,7 +135,15 @@ class Mpls(Layer, Graphable):
 
         @param asn ASN.
         """
-        self.__enabled.append(asn)
+        self.__enabled.add(asn)
+
+    def getEnabled(self) -> Set[int]:
+        """!
+        @brief Get set of ASNs that has MPLS enabled.
+
+        @return set of ASNs
+        """
+        return self.__enabled
 
     def __getEdgeNodes(self, scope: ScopedRegistry) -> Tuple[List[Node], List[Node]]:
         """!
@@ -139,10 +156,6 @@ class Mpls(Layer, Graphable):
 
         for obj in scope.getByType('rnode'):
             node: Node = obj
-
-            if node in self.__additional_edges:
-                enodes.append(node)
-                continue
 
             is_edge = False
             for iface in node.getInterfaces():
@@ -235,6 +248,11 @@ class Mpls(Layer, Graphable):
 
             scope = ScopedRegistry(str(asn), reg)
             (enodes, nodes) = self.__getEdgeNodes(scope)
+
+            for (asn_, nodename) in self.__additional_edges:
+                if asn_ != asn: continue
+                if scope.has('rnode', nodename):
+                    enodes.append(scope.get('rnode', nodename))
 
             for n in enodes: self.__setUpLdpOspf(n)
             for n in nodes: self.__setUpLdpOspf(n)
