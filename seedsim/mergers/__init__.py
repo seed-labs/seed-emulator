@@ -9,3 +9,4 @@ from .DefaultDnssecMerger import DefaultDnssecMerger
 from .DefaultCymruIpOriginServiceMerger import DefaultCymruIpOriginServiceMerger
 from .DefaultWebServiceMerger import DefaultWebServiceMerger
 from .DefaultDomainNameCachingServiceMerger import DefaultDomainNameCachingServiceMerger
+from .DefaultReverseDomainNameServiceMerger import DefaultReverseDomainNameServiceMerger
