@@ -7,8 +7,10 @@ from .DefaultOspfMerger import DefaultOspfMerger
 from .DefaultMplsMerger import DefaultMplsMerger
 from .DefaultDnssecMerger import DefaultDnssecMerger
 from .DefaultCymruIpOriginServiceMerger import DefaultCymruIpOriginServiceMerger
+from .DefaultWebServiceMerger import DefaultWebServiceMerger
 
 DEFAULT_MERGERS = [
     DefaultBaseMerger(), DefaultEbgpMerger(), DefaultRoutingMerger(),
     DefaultIbgpMerger(), DefaultOspfMerger(), DefaultMplsMerger(),
-    DefaultDnssecMerger(), DefaultCymruIpOriginServiceMerger()]
+    DefaultDnssecMerger(), DefaultCymruIpOriginServiceMerger(),
+    DefaultWebServiceMerger()]

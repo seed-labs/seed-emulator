@@ -7,3 +7,4 @@ from .DefaultOspfMerger import DefaultOspfMerger
 from .DefaultMplsMerger import DefaultMplsMerger
 from .DefaultDnssecMerger import DefaultDnssecMerger
 from .DefaultCymruIpOriginServiceMerger import DefaultCymruIpOriginServiceMerger
+from .DefaultWebServiceMerger import DefaultWebServiceMerger
