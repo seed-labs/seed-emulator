@@ -266,6 +266,14 @@ class Routing(Layer):
         """
         self.__direct_nets.add((str(asn), netname))
 
+    def getDirects(self) -> Set[Tuple[str, str]]:
+        """!
+        @brief Get the set of direct networks.
+
+        @return set of tuple of (asn, netname)
+        """
+        return self.__direct_nets
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'RoutingLayer:\n'
