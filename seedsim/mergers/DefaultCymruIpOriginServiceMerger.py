@@ -1,7 +1,7 @@
-from seedsim.core import Merger
+from .ServiceMerger import ServiceMerger
 from seedsim.services import CymruIpOriginService
 
-class DefaultCymruIpOriginServiceMerger(Merger):
+class DefaultCymruIpOriginServiceMerger(ServiceMerger):
 
     def getName(self) -> str:
         return 'DefaultCymruIpOriginServiceMerger'
@@ -9,8 +9,12 @@ class DefaultCymruIpOriginServiceMerger(Merger):
     def getTargetType(self) -> str:
         return 'CymruIpOriginServiceLayer'
 
+    def _createService(self) -> CymruIpOriginService:
+        return CymruIpOriginService()
+
     def doMerge(self, objectA: CymruIpOriginService, objectB: CymruIpOriginService) -> CymruIpOriginService:
-        new_org = CymruIpOriginService()
+        new_org: CymruIpOriginService = super().doMerge(objectA, objectB)
+        
         for record in (objectA.getRecords() + objectB.getMagetRecordsppings()):
             new_org.addRecord(record)
 
