@@ -46,6 +46,14 @@ class Ibgp(Layer, Graphable):
         @param asn AS to mask.
         """
         self.__masked.add(asn)
+    
+    def getMaskedAsns(self) -> Set[int]:
+        """!
+        @brief Get set of masked ASNs.
+        
+        @return set of ASNs.
+        """
+        return self.__masked
 
     def render(self, simulator: Simulator):
         reg = simulator.getRegistry()

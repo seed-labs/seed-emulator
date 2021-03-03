@@ -97,6 +97,14 @@ class Dnssec(Layer):
         if zonename[-1] != '.': zonename += '.'
         self.__zonenames.add(zonename)
 
+    def getEnabledZones(self) -> Set[str]:
+        """!
+        @brief Get set of zonenames with DNSSEC enabled.
+        
+        @return set of zonenames.
+        """
+        return self.__zonenames
+
     def render(self, simulator: Simulator):
         reg = simulator.getRegistry()
         dns: DomainNameService = reg.get('seedsim', 'layer', 'DomainNameService')

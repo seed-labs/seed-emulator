@@ -47,6 +47,13 @@ class InternetExchange(Printable, Configurable):
 
         self.__rs.configure(simulator)
 
+    def getId(self) -> int:
+        """!
+        @brief Get intetnet exchang ID.
+
+        @returns ID.
+        """
+        return self.__id
 
     def getPeeringLan(self) -> Network:
         """!

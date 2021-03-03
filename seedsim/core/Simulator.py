@@ -1,5 +1,6 @@
 from __future__ import annotations
-from .Merger import Merger
+from os import truncate
+from .Merger import Mergeable, Merger
 from .Registry import Registry, Registrable, Printable
 from typing import Dict, Set, Tuple, List
 from sys import stderr
@@ -118,6 +119,9 @@ class Simulator:
     def getLayer(self, layerName: str) -> Layer:
         return self.__registry.get('seedsim', 'layer', layerName)
 
+    def getLayers(self) -> List[Layer]:
+        return self.__registry.getByType('seedsim', 'layer')
+
     def render(self):
         """!
         @brief Render.
@@ -159,7 +163,32 @@ class Simulator:
         raise NotImplementedError('todo')
 
     def merge(self, other: Simulator, mergers: List[Merger]) -> Simulator:
-        raise NotImplementedError('todo')
+        new_layers: Dict[Mergeable] = {}
+        other_layers: Dict[Mergeable] = {}
+
+        for l in self.getLayers(): new_layers[l.getTypeName()] = l
+        for l in other.getLayers(): other_layers[l.getTypeName()] = l
+
+        for l in other_layers.values():
+            typename = l.getTypeName()
+
+            if typename not in new_layers.keys():
+                new_layers[typename] = l
+                continue
+
+            merged = False
+
+            for merger in mergers:
+                if merger.getTargetType() != typename: continue
+                new_layers[typename] = merger.doMerge(new_layers[typename], l)
+                merged = True
+            
+            assert merged, 'abort: no merger found for {}'.format(typename)
+
+        new_sim = Simulator()
+        for l in new_layers.values(): new_sim.addLayer(l)
+
+        return new_sim
 
     def dump(self, fileName: str):
         assert self.__render, 'cannot dump simulation after render.'

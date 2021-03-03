@@ -122,6 +122,14 @@ class Ebgp(Layer, Graphable):
 
         self.__peerings[(ix, a, b)] = abRelationship
 
+    def getPrivatePeerings(self) -> Dict[Tuple[int, int, int], PeerRelationship]:
+        """!
+        @brief Get private peerings.
+
+        @returns dict, where key is tuple of (ix, asnA, asnB) and value is peering relationship.
+        """
+        return self.__peerings
+
     def addRsPeer(self, ix: int, peer: int):
         """!
         @brief Setup RS peering for an AS.
@@ -134,6 +142,14 @@ class Ebgp(Layer, Graphable):
         assert (ix, peer) not in self.__rs_peers, '{} already peered with RS at IX{}'.format(peer, ix)
 
         self.__rs_peers.append((ix, peer))
+
+    def getRsPeers(self) -> List[Tuple[int, int]]:
+        """!
+        @brief Get RS peers.
+
+        @returns list of tuple of (ix, peerAsn)
+        """
+        return self.__rs_peers
 
     def render(self, simulator: Simulator) -> None:
         reg = simulator.getRegistry()

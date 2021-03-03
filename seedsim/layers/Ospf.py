@@ -70,6 +70,14 @@ class Ospf(Layer):
         """
         self.__stubs.add((asn, netname))
 
+    def getStubs(self) -> Set[Tuple[int, str]]:
+        """!
+        @brief Get set of networks that have been marked as stub.
+
+        @returns set of tuple of asn and netname
+        """
+        return self.__stubs
+
     def maskNetwork(self, asn: int, netname: str):
         """!
         @brief Remove all OSPF interfaces connected to a network.
@@ -85,6 +93,14 @@ class Ospf(Layer):
         """
         self.__masked.add((asn, netname))
 
+    def getMaskedNetworks(self) -> Set[Tuple[int, str]]:
+        """!
+        @brief Get set of masked network.
+
+        @returns set of tuple of asn and netname
+        """
+        return self.__masked
+
     def maskAsn(self, asn: int):
         """!
         @brief Disable OSPF for an AS.
@@ -92,6 +108,14 @@ class Ospf(Layer):
         @param asn asn.
         """
         self.__masked_asn.add(asn)
+
+    def getMaskedAsns(self) -> Set[int]:
+        """!
+        @brief Get list of masked ASNs.
+
+        @returns set of ASNs.
+        """
+        return self.__masked_asn
 
     def isMasked(self, asn: int, netname: str) -> bool:
         """!
