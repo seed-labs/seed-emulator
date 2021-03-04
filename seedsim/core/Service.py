@@ -3,6 +3,7 @@ from .Node import Node
 from .Printable import Printable
 from .Simulator import Simulator
 from .enums import NodeRole
+from .Binding import Binding
 from typing import Dict, List, Set, Tuple
 
 class Server(Printable):
@@ -29,6 +30,7 @@ class Service(Layer):
 
     __ip_targets: Set[Tuple[Server, str, int]]
     __name_targets: Set[Tuple[Server, str, int]]
+    __bindings: List[Binding]
     
     __targets: Set[Tuple[Server, Node]]
 
@@ -37,6 +39,7 @@ class Service(Layer):
         self.__ip_targets = set()
         self.__name_targets = set()
         self.__targets = set()
+        self.__bindings = []
 
     def _createServer(self) -> Server:
         """!
@@ -91,6 +94,14 @@ class Service(Layer):
 
         self._doConfigure(node, server)
         self.__targets.add((server, node))
+
+    def addBinding(self, binding: Binding):
+        """!
+        @brief add a new node binding configuration.
+
+        @param binding node binding.
+        """
+        self.__bindings.append(binding)
 
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
