@@ -87,11 +87,11 @@ client = as153.createHost('client')
 
 as153_router = as153.createRouter('router0')
 
-as153_net = as153.createNetwork('net0')
+as153_net = as153.createNetwork('net0', '8.8.8.0/24')
 
 routing.addDirect(153, 'net0')
 
-local_dns.joinNetwork('net0')
+local_dns.joinNetwork('net0', '8.8.8.8')
 client.joinNetwork('net0')
 as153_router.joinNetwork('net0')
 
@@ -124,8 +124,8 @@ sim.addBinding(Binding('example_com_server', filter = Filter(
 # ex4: bind by name (regex)
 sim.addBinding(Binding('.*web', filter = Filter(nodeName = '.*web')))
 
-# back to bind by name
-sim.addBinding(Binding('local_dns', filter = Filter(nodeName = 'local_dns')))
+# ex5: bind by prefix
+sim.addBinding(Binding('local_dns', filter = Filter(prefix = '8.8.8.0/24')))
 
 ###############################################################################
 
