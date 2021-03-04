@@ -75,7 +75,7 @@ class Binding(Printable):
             node: Node = obj
             filter = self.filter
 
-            if filter.asn != None and node.getAsn() != self.asn: continue
+            if filter.asn != None and node.getAsn() != filter.asn: continue
             
             if filter.nodeName != None and not re.compile(filter.nodeName).match(name): continue
 

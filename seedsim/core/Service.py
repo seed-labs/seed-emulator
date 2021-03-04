@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .Layer import Layer
 from .Node import Node
 from .Printable import Printable
@@ -28,16 +29,14 @@ class Service(Layer):
     The base class for all Services.
     """
 
-    __ip_targets: Set[Tuple[Server, str, int]]
-    __name_targets: Set[Tuple[Server, str, int]]
+    __pending_targets: Dict[str, Server]
     __bindings: List[Binding]
     
     __targets: Set[Tuple[Server, Node]]
 
     def __init__(self):
         super().__init__()
-        self.__ip_targets = set()
-        self.__name_targets = set()
+        self.__pending_targets = {}
         self.__targets = set()
         self.__bindings = []
 
@@ -95,6 +94,17 @@ class Service(Layer):
         self._doConfigure(node, server)
         self.__targets.add((server, node))
 
+    def install(self, vnode: str) -> Server:
+        """!
+        @brief install the service on a node identified by given name.
+        """
+        if vnode in self.__pending_targets.keys(): return self.__pending_targets[vnode]
+
+        s = self._createServer()
+        self.__pending_targets[vnode] = s
+
+        return self.__pending_targets[vnode]
+
     def addBinding(self, binding: Binding):
         """!
         @brief add a new node binding configuration.
@@ -106,31 +116,17 @@ class Service(Layer):
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
 
-        for (server, address, asn) in self.__ip_targets:
-            hit = False
-            for (scope, type, name), obj in reg.getAll().items():
-                if type != 'hnode': continue
-
-                node: Node = obj
-                if asn != None and str(asn) != scope: continue
-                for iface in node.getInterfaces():
-                    if str(iface.getAddress()) == address:
-                        hit = True
-                        self.__configureServer(server, node)
-                        self._log('ip-conf: configure on as{}/{} ({}).'.format(scope, name, address))
-            
-            assert hit, 'no node with IP address {}'.format(address)
-
-        for (server, name, asn) in self.__name_targets:
-            hit = False
-            for (scope, type, _name), node in reg.getAll().items():
-                if type != 'hnode' or scope != str(asn) or _name != name: continue
-                hit = True
-                self.__configureServer(server, node)
-                self._log('conf: configure on as{}/{}.'.format(scope, name))
-                break
-            
-            assert hit, 'no node with IP name {} in as{}'.format(name, scope)
+        for (vnode, server) in self.__pending_targets.items():
+            self._log('looking for binding for {}...'.format(vnode))
+            binded = False
+            for binding in self.__bindings:
+                pnode = binding.getCandidate(vnode, reg)
+                if pnode == None: continue
+                
+                binded = True
+                self.__configureServer(server, pnode)
+                self._log('configure: binded {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
+            assert binded, 'failed to bind vnode {} to any physical node.'.format(vnode)
     
     def render(self, simulator: Simulator):
         for (server, node) in self.__targets:
@@ -153,51 +149,11 @@ class Service(Layer):
         """
         return self.__targets
 
-    def getPendingTargetIps(self) -> Set[Tuple[Server, str, int]]:
+    def getPendingTarget(self) -> Set[Tuple[Server, str, int]]:
         """!
         @brief Get a set of pending IP targets and the server objects associated
         with them. The set content is (server object, IP address, asn). The asn
         part is optional and may be None.
         """
-        return self.__ip_targets
-
-    def getPendingTargetNames(self) -> Set[Tuple[Server, str, int]]:
-        """!
-        @brief Get a set of pending name targets and the server objects
-        associated with them. The set content is (server object, name, asn).
-        """
-        return self.__name_targets
-
-    def installByIp(self, address: str, asn: int = None) -> Server:
-        """!
-        @brief Install to node by IP address.
-
-        @param address IP address
-        @param asn (optional) ASN to limit the scope of IP address
-
-        @returns server instance.
-        """
-        for (s, addr, _asn) in self.__ip_targets:
-            if addr == address and _asn == asn: return s
-
-        server = self._createServer()
-        self.__ip_targets.add((server, address, asn))
-        return server
-
-    def installByName(self, asn: int, nodename: str) -> Server:
-        """!
-        @brief Install to node by node name.
-
-        @param asn asn
-        @param nodename name of the node
-
-        @returns server instance
-        """
-        for (s, n, a) in self.__name_targets:
-            if a == asn and n == nodename: return s
-
-        server = self._createServer()
-        self.__name_targets.add((server, nodename, asn))
-
-        return server
+        return self.__pending_targets
 
