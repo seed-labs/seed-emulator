@@ -149,11 +149,9 @@ class Service(Layer):
         """
         return self.__targets
 
-    def getPendingTarget(self) -> Set[Tuple[Server, str, int]]:
+    def getPendingTargets(self) -> Dict[str, Server]:
         """!
-        @brief Get a set of pending IP targets and the server objects associated
-        with them. The set content is (server object, IP address, asn). The asn
-        part is optional and may be None.
+        @brief Get a set of pending vnode to install the service on.
         """
         return self.__pending_targets
 
