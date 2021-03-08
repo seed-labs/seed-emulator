@@ -108,9 +108,9 @@ class Binding(Printable):
 
             if node.hasAttribute('binded'): continue
 
-            if self.action == Action.FIRST:
-                node.setAttribute('binded', True)
-                return node
+            node.setAttribute('binded', True)
+
+            if self.action == Action.FIRST: return node
         
             candidates.append(node)
 
