@@ -77,7 +77,7 @@ class Binding(Printable):
             node: Node = obj
             filter = self.filter
 
-            self.__log('trying node as{}/{}...'.format(scope, type))
+            self.__log('trying node as{}/{}...'.format(scope, name  ))
 
             if filter.asn != None and node.getAsn() != filter.asn:
                 self.__log('node asn ({}) != filter asn ({}), trying next node.'.format(node.getAsn(), filter.asn))
@@ -126,14 +126,14 @@ class Binding(Printable):
                 self.__log('custom function returned false for node as{}/{}, trying next node.'.format(scope, name))
                 continue
 
-            if node.hasAttribute('bonud'):
-                self.__log('node as{}/{} is already bonud, trying next node.'.format(scope, name))
+            if node.hasAttribute('binded'):
+                self.__log('node as{}/{} is already binded, trying next node.'.format(scope, name))
                 continue
 
             self.__log('node as{}/{} added as candidate. looking for more candidates.'.format(scope, name))
 
             if self.action == Action.FIRST:
-                node.setAttribute('bonud', True)
+                node.setAttribute('binded', True)
                 return node
         
             candidates.append(node)
@@ -147,8 +147,8 @@ class Binding(Printable):
         if self.action == Action.RANDOM: node = random.choice(candidates)
 
         if node != None: 
-            self.__log('bound to as{}/{}.')
-            node.setAttribute('bonud', True)
+            self.__log('binded to as{}/{}.'.format(node.getAsn(), node.getName()))
+            node.setAttribute('binded', True)
 
         return node
 
