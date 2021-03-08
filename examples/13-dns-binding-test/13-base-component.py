@@ -117,7 +117,4 @@ sim.addLayer(ebgp)
 sim.addLayer(ibgp)
 sim.addLayer(ospf)
 
-
-sim.render()
-
 sim.dump('base-component.bin')
