@@ -18,13 +18,15 @@ class Filter(Printable):
     anyService: List[str]
     allServices: List[str]
     notServices: List[str]
+    allowBound: bool
 
     custom: Callable[[str, Node], bool]
 
     def __init__(
         self, asn: int = None, nodeName: str = None, ip: str = None,
         prefix: str = None, anyService: List[str] = [], allServices: List[str] = [],
-        notServices: List[str] = [], custom: Callable[[str, Node], bool] = None
+        notServices: List[str] = [], custom: Callable[[str, Node], bool] = None,
+        allowBound: bool = False
     ):
         self.asn = asn
         self.nodeName = nodeName
@@ -34,6 +36,7 @@ class Filter(Printable):
         self.allServices = allServices
         self.notServices = notServices
         self.custom = custom
+        self.allowBound = allowBound
 
 class Binding(Printable):
 
@@ -59,7 +62,7 @@ class Binding(Printable):
     def getCandidate(self, vnode: str, registry: Registry) -> Node:
         """!
         @brief get a binding candidate from given registry. Note that this will
-        make change to the node by adding a "binded =  true" attribute to the
+        make change to the node by adding a "bound =  true" attribute to the
         node object.
 
         @param vnode name of vnode
@@ -126,14 +129,14 @@ class Binding(Printable):
                 self.__log('custom function returned false for node as{}/{}, trying next node.'.format(scope, name))
                 continue
 
-            if node.hasAttribute('binded'):
-                self.__log('node as{}/{} is already binded, trying next node.'.format(scope, name))
+            if node.hasAttribute('bound') and not filter.allowBound:
+                self.__log('node as{}/{} is already bound and re-bind is not allowed, trying next node.'.format(scope, name))
                 continue
 
             self.__log('node as{}/{} added as candidate. looking for more candidates.'.format(scope, name))
 
             if self.action == Action.FIRST:
-                node.setAttribute('binded', True)
+                node.setAttribute('bound', True)
                 return node
         
             candidates.append(node)
@@ -147,8 +150,8 @@ class Binding(Printable):
         if self.action == Action.RANDOM: node = random.choice(candidates)
 
         if node != None: 
-            self.__log('binded to as{}/{}.'.format(node.getAsn(), node.getName()))
-            node.setAttribute('binded', True)
+            self.__log('bound to as{}/{}.'.format(node.getAsn(), node.getName()))
+            node.setAttribute('bound', True)
 
         return node
 
