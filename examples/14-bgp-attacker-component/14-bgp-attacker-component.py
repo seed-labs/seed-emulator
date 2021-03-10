@@ -81,7 +81,7 @@ sim.addLayer(ospf)
 ###############################################################################
 
 bgp_attack.addHijackedPrefix(as151_n0.getPrefix())
-bgp_attack.joinInternetExchange('ix100')
+bgp_attack.joinInternetExchange('ix100', '10.100.0.66')
 
 hijack_component = bgp_attack.get()
 

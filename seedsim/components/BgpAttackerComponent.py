@@ -32,5 +32,5 @@ class BgpAttackerComponent(Component):
         self.__routing.addDirect(666, netname)
         self.__counter += 1
 
-    def joinInternetExchange(self, ix: str):
-        self.__hijacker.joinNetwork(ix)
+    def joinInternetExchange(self, ix: str, addr: str):
+        self.__hijacker.joinNetwork(ix, addr)
