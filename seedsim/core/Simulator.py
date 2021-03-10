@@ -6,6 +6,14 @@ from typing import Dict, Set, Tuple, List
 from sys import stderr
 import pickle
 
+class BindingDatabase(Registrable, Printable):
+    db: List[core.Binding]
+
+    def __init__(self):
+        self.db = []
+
+    def print(self, indentation: int) -> str:
+        return ' ' * indentation + 'BindingDatabase\n'
 
 class LayerDatabase(Registrable, Printable):
 
@@ -20,20 +28,20 @@ class LayerDatabase(Registrable, Printable):
 class Simulator:
 
     __registry: Registry
-    __layers: Dict[str, Tuple[Layer, bool]]
+    __layers: LayerDatabase
     __dependencies_db: Dict[str, Set[Tuple[str, bool]]]
     __rendered: bool
-
-    __bindings: List[core.Binding]
+    __bindings: BindingDatabase
 
     def __init__(self):
         self.__rendered = False
         self.__dependencies_db = {}
         self.__registry = Registry()
         self.__layers = LayerDatabase()
-        self.__registry.register('seedsim', 'dict', 'layersdb', self.__layers)
+        self.__bindings = BindingDatabase()
 
-        self.__bindings = []
+        self.__registry.register('seedsim', 'dict', 'layersdb', self.__layers)
+        self.__registry.register('seedsim', 'list', 'bindingdb', self.__bindings)
 
     def __render(self, layerName, optional: bool, configure: bool):
         """!
@@ -109,7 +117,7 @@ class Simulator:
         self.__registry.register('seedsim', 'hook', hook.getName(), hook)
 
     def addBinding(self, bindng: Binding):
-        self.__bindings.append(bindng)
+        self.__bindings.db.append(bindng)
 
     def addLayer(self, layer: Layer):
         """!
@@ -140,7 +148,7 @@ class Simulator:
 
         for (layer, _) in self.__layers.db.values():
             if isinstance(layer, core.Service):
-                for binding in self.__bindings: layer.addBinding(binding)
+                for binding in self.__bindings.db: layer.addBinding(binding)
 
             self.__loadDependencies(layer.getDependencies())
 
@@ -212,3 +220,4 @@ class Simulator:
             self.__dependencies_db = {}
             self.__registry = pickle.load(f)
             self.__layers = self.__registry.get('seedsim', 'dict', 'layersdb')
+            self.__bindings = self.__registry.get('seedsim', 'list', 'bindingdb')
