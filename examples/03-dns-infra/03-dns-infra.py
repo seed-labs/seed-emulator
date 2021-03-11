@@ -1,6 +1,6 @@
 from seedsim.layers import Base, Routing, Ebgp, Dnssec
 from seedsim.services import DomainNameService, DomainNameCachingService, WebService
-from seedsim.core import Simulator
+from seedsim.core import Simulator, Binding, Filter
 from seedsim.compiler import Docker
 
 sim = Simulator()
@@ -38,8 +38,6 @@ as150_router.joinNetwork('net0')
 
 as150_router.joinNetwork('ix100')
 
-dns.installByName(150, 'root_server').addZone(dns.getZone('.'))
-
 ###############################################################################
 
 as151 = base.createAutonomousSystem(151)
@@ -57,14 +55,11 @@ as151_router.joinNetwork('net0')
 
 as151_router.joinNetwork('ix100')
 
-dns.installByName(151, 'com_server').addZone(dns.getZone('com.'))
-
 ###############################################################################
 
 as152 = base.createAutonomousSystem(152)
 
 example_com_web = as152.createHost('example_web')
-web.installByName(152, 'example_web')
 
 example_com_server = as152.createHost('example_com_server')
 
@@ -80,8 +75,6 @@ as152_router.joinNetwork('net0')
 
 as152_router.joinNetwork('ix100')
 
-dns.installByName(152, 'example_com_server').addZone(dns.getZone('example.com.'))
-
 example_com.addRecord('@ A 10.152.0.200')
 
 ###############################################################################
@@ -89,21 +82,50 @@ example_com.addRecord('@ A 10.152.0.200')
 as153 = base.createAutonomousSystem(153)
 
 local_dns = as153.createHost('local_dns')
-ldns.installByName(153, 'local_dns')
 
 client = as153.createHost('client')
 
 as153_router = as153.createRouter('router0')
 
-as153_net = as153.createNetwork('net0')
+as153_net = as153.createNetwork('net0', '8.8.8.0/24')
 
 routing.addDirect(153, 'net0')
 
-local_dns.joinNetwork('net0')
+local_dns.joinNetwork('net0', '8.8.8.8')
 client.joinNetwork('net0')
 as153_router.joinNetwork('net0')
 
 as153_router.joinNetwork('ix100')
+
+###############################################################################
+
+dns.install('root_server').addZone(dns.getZone('.'))
+dns.install('com_server').addZone(dns.getZone('com.'))
+dns.install('example_com_server').addZone(dns.getZone('example.com.'))
+
+ldns.install('local_dns')
+
+web.install('example_web')
+
+###############################################################################
+
+# ex1: bind by name
+sim.addBinding(Binding('root_server', filter = Filter(nodeName = 'root_server')))
+
+# ex2: bind by asn
+sim.addBinding(Binding('com_server', filter = Filter(asn = 151)))
+
+# ex3: bind by name & asn
+sim.addBinding(Binding('example_com_server', filter = Filter(
+    asn = 152,
+    nodeName = 'example_com_server'
+)))
+
+# ex4: bind by name (regex)
+sim.addBinding(Binding('.*web', filter = Filter(nodeName = '.*web')))
+
+# ex5: bind by prefix
+sim.addBinding(Binding('local_dns', filter = Filter(prefix = '8.8.8.0/24')))
 
 ###############################################################################
 

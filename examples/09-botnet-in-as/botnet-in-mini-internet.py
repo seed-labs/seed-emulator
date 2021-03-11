@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-
-from seedsim.core import Simulator
+from seedsim.core import Simulator, Binding, Filter
 from seedsim.services import BotnetService, BotnetClientService
 from seedsim.services import DomainRegistrarService
 from seedsim.compiler import Docker
-import datetime
 
 sim = Simulator()
 
@@ -43,17 +41,20 @@ def dga() -> list:
 base_layer = sim.getLayer('Base')
 x = base_layer.getAutonomousSystem(150)
 hosts = x.getHosts()
-c2_server_ip = "10.150.0.71"
 
-bot.installByName(150, hosts[0])
+bot.install("c2_server")
+sim.addBinding(Binding("c2_server", filter = Filter(asn = 150, nodeName=hosts[0], allowBound=True)))
 
 for asn in [151,152,153,154,155]:
+    vname = "bot" + str(asn)
     asn_base = base_layer.getAutonomousSystem(asn)
-    c = bot_client.installByName(asn, asn_base.getHosts()[0])
-    c.setServer(c2_server_ip, enable_dga=True, dga=dga)
+    c = bot_client.install(vname)
+    c.setServer(enable_dga=True, dga=dga)
+    sim.addBinding(Binding(vname, filter = Filter(asn = asn, nodeName=asn_base.getHosts()[0], allowBound=True)))
 
 
-domain_registrar.installByName(161, "s_com_dns")
+domain_registrar.install("domain_registrar")
+sim.addBinding(Binding("domain_registrar", filter = Filter(asn = 161, nodeName="s_com_dns",  allowBound=True)))
 
 sim.addLayer(bot)
 sim.addLayer(bot_client)

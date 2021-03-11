@@ -9,10 +9,6 @@ class ServiceMerger(Merger):
     def doMerge(self, objectA: Service, objectB: Service) -> Service:
         new_service = self._createService()
 
-        for t in (objectA.getPendingTargetIps() | objectB.getPendingTargetIps()):
-            new_service.__ip_targets.add(t)
-
-        for t in (objectA.getPendingTargetNames() | objectB.getPendingTargetNames()):
-            new_service.__name_targets.add(t)
+        new_service.__pending_targets = dict(objectA.getPendingTargets(), **objectB.getPendingTargets())
 
         return new_service
