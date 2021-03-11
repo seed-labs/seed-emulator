@@ -181,7 +181,7 @@ class Simulator:
     def removeLayer(self, layerName: str) -> bool:
         raise NotImplementedError('todo')
 
-    def merge(self, other: Simulator, mergers: List[Merger]) -> Simulator:
+    def merge(self, other: Simulator, mergers: List[Merger] = [], vnodePrefix: str = '') -> Simulator:
         new_layers: Dict[Mergeable] = {}
         other_layers: Dict[Mergeable] = {}
 
@@ -190,6 +190,9 @@ class Simulator:
 
         for l in other_layers.values():
             typename = l.getTypeName()
+
+            if isinstance(l, core.Service):
+                l.addPrefix(vnodePrefix)
 
             if typename not in new_layers.keys():
                 new_layers[typename] = l
