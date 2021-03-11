@@ -3,7 +3,7 @@ from seedsim.services import WebService, DomainNameService, DomainNameCachingSer
 from seedsim.services import CymruIpOriginService, ReverseDomainNameService
 from seedsim.compiler import Docker, Graphviz
 from seedsim.hooks import ResolvConfHook
-from seedsim.core import Simulator, Service
+from seedsim.core import Simulator, Service, Binding, Filter
 from seedsim.layers import Router
 from typing import List, Tuple, Dict
 
@@ -51,10 +51,12 @@ def make_service_as(asn: int, services: List[Service], exchange: int):
         name = 's_{}'.format(service.getName().lower())
 
         server = service_as.createHost(name)
+        #server1 = service_as.createHost(name)
 
         server.joinNetwork('net0')
 
-        service.installByName(asn, name)
+        service.install(name)
+        sim.addBinding(Binding(name, filter = Filter(asn = asn, nodeName=name)))
 
 ###############################################################################
 
@@ -78,7 +80,8 @@ def make_dns_as(asn: int, zones: List[str], exchange: int):
 
         server.joinNetwork('net0')
 
-        dns.installByName(asn, name).addZone(dns.getZone(zone))
+        dns.install(name).addZone(dns.getZone(zone))
+        sim.addBinding(Binding(name, filter = Filter(asn = asn, nodeName=name)))
 
 ###############################################################################
 
@@ -166,8 +169,8 @@ make_service_as(150, [web, ldns], 101)
 make_service_as(151, [web], 100)
 make_service_as(152, [web], 102)
 make_service_as(153, [ldns], 102)
-make_service_as(154, [rdns], 104)
-make_service_as(155, [cymru], 105)
+make_service_as(154, [ldns], 104)
+make_service_as(155, [web], 105)
 
 ###############################################################################
 
@@ -205,7 +208,8 @@ google_dns = google.createHost('google_dns')
 
 google_dns.joinNetwork('google_dns_net', '8.8.8.8')
 
-ldns.installByName(15169, 'google_dns')
+ldns.install('google_dns')
+sim.addBinding(Binding("google_dns", filter = Filter(asn = 15169, nodeName="google_dns")))
 
 routing.addDirect(15169, 'google_dns_net')
 
@@ -282,13 +286,13 @@ sim.addLayer(web)
 sim.addLayer(dns)
 sim.addLayer(ldns)
 sim.addLayer(dnssec)
-sim.addLayer(cymru)
-sim.addLayer(rdns)
+#sim.addLayer(cymru)
+#sim.addLayer(rdns)
 
 sim.dump('mini-internet.bin')
 #sim.render()
 
 ###############################################################################
 
-# sim.compile(Docker(), './mini-internet')
+#sim.compile(Docker(), './mini-internet')
 # sim.compile(Graphviz(), './mini-internet/_graphs')

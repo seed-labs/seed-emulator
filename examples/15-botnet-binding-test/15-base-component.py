@@ -1,7 +1,9 @@
-from seedsim.core import Simulator, Binding, Filter
-from seedsim.services import BotnetClientServer, BotnetClientService, BotnetService
+#!/usr/bin/env python
+# encoding: utf-8
+# __author__ = 'Demon'
 from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedsim.compiler import Docker
+from seedsim.core import Simulator
 
 sim = Simulator()
 
@@ -10,61 +12,40 @@ routing = Routing()
 ebgp = Ebgp()
 ibgp = Ibgp()
 ospf = Ospf()
-bot = BotnetService()
-bot_client = BotnetClientService()
-
-###############################################################################
-
-bot_desc = {
-    150: 'c2',
-    151: 'server',
-    152: 'server',
-    160: 'server',
-    161: 'server'
-}
-
-c2_server_ip = '10.150.0.71'
-
-###############################################################################
 
 def make_stub_as(asn: int, exchange: str):
     stub_as = base.createAutonomousSystem(asn)
-
-    if bot_desc.get(asn) == 'c2':
-        botnet_server = stub_as.createHost('c2_server')
-    else:
-        botnet_server = stub_as.createHost('bot')
-
+    host = stub_as.createHost('host0')
+    host1 = stub_as.createHost('host1')
+    host2 = stub_as.createHost('host2')
+    host3 = stub_as.createHost('host3')
+    host4 = stub_as.createHost('host4')
     router = stub_as.createRouter('router0')
 
     net = stub_as.createNetwork('net0')
-    routing.addDirect(asn, 'net0')
 
-    botnet_server.joinNetwork('net0')
+    routing.addDirect(asn, 'net0')
     router.joinNetwork('net0')
+    host.joinNetwork('net0')
+    host1.joinNetwork('net0')
+    host2.joinNetwork('net0')
+    host3.joinNetwork('net0')
+    host4.joinNetwork('net0')
 
     router.joinNetwork(exchange)
-    if bot_desc.get(asn) == 'c2':
-        bot.install('c2_server')
-        sim.addBinding(Binding('c2_server', filter = Filter(asn = asn)))
-    else:
-        c: BotnetClientServer = bot_client.install('bot')
-        c.setServer(c2_server_ip)
-        sim.addBinding(Binding('bot', filter = Filter(asn = asn)))
 
 
-###############################################################################
-
+##############################################################################
 base.createInternetExchange(100)
 base.createInternetExchange(101)
 base.createInternetExchange(102)
-
-###############################################################################
 
 make_stub_as(150, 'ix100')
 make_stub_as(151, 'ix100')
 
 make_stub_as(152, 'ix101')
+make_stub_as(153, 'ix101')
+make_stub_as(154, 'ix101')
 
 make_stub_as(160, 'ix102')
 make_stub_as(161, 'ix102')
@@ -110,7 +91,7 @@ as3_102.joinNetwork('ix102')
 
 as3_net_101_102 = as3.createNetwork('n12')
 
-routing.addDirect(3, 'n12')
+routing.addDirect(2, 'n12')
 
 as3_101.joinNetwork('n12')
 as3_102.joinNetwork('n12')
@@ -130,17 +111,10 @@ ebgp.addPrivatePeering(102, 3, 161, PeerRelationship.Provider)
 
 ###############################################################################
 
-
 sim.addLayer(base)
 sim.addLayer(routing)
 sim.addLayer(ebgp)
 sim.addLayer(ibgp)
 sim.addLayer(ospf)
-sim.addLayer(bot)
-sim.addLayer(bot_client)
 
-sim.render()
-
-###############################################################################
-
-sim.compile(Docker(), './botnet-in-as')
+sim.dump('base-component.bin')
