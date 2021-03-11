@@ -3,6 +3,9 @@ from seedsim.services import CymruIpOriginService
 
 class DefaultCymruIpOriginServiceMerger(ServiceMerger):
 
+    def __init__(self, selfVnodePrefix: str, otherVnodePrefix: str) -> None:
+        super().__init__(selfVnodePrefix, otherVnodePrefix)
+
     def getName(self) -> str:
         return 'DefaultCymruIpOriginServiceMerger'
 

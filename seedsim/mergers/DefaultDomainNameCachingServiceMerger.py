@@ -3,6 +3,9 @@ from seedsim.services import DomainNameCachingService
 
 class DefaultDomainNameCachingServiceMerger(ServiceMerger):
 
+    def __init__(self, selfVnodePrefix: str, otherVnodePrefix: str) -> None:
+        super().__init__(selfVnodePrefix, otherVnodePrefix)
+
     def _createService(self) -> DomainNameCachingService:
         return DomainNameCachingService()
 
