@@ -42,7 +42,7 @@ bot_c2.install("c2_server")
 
 for i in range(10):
     b = bot_client.install("bot"+str(i))
-    b.setServer(enable_dga=True, dga=dga)
+    b.setServer(c2_server="10.150.0.71")
 
 
 sim.addLayer(bot_c2)

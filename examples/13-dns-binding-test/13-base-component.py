@@ -20,6 +20,7 @@ def make_stub_as(asn: int, exchange: str):
     host2 = stub_as.createHost('host2')
     host3 = stub_as.createHost('host3')
     host4 = stub_as.createHost('host4')
+    host5 = stub_as.createHost('host5')
     router = stub_as.createRouter('router0')
 
     net = stub_as.createNetwork('net0')
@@ -31,6 +32,7 @@ def make_stub_as(asn: int, exchange: str):
     host2.joinNetwork('net0')
     host3.joinNetwork('net0')
     host4.joinNetwork('net0')
+    host5.joinNetwork('net0')
 
     router.joinNetwork(exchange)
 
