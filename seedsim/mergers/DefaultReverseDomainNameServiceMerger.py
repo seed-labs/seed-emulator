@@ -3,7 +3,7 @@ from seedsim.services import ReverseDomainNameService
 
 class DefaultReverseDomainNameServiceMerger(ServiceMerger):
 
-    def __init__(self, selfVnodePrefix: str, otherVnodePrefix: str) -> None:
+    def __init__(self, selfVnodePrefix: str = '', otherVnodePrefix: str = '') -> None:
         super().__init__(selfVnodePrefix, otherVnodePrefix)
 
     def getTargetType(self) -> str:
