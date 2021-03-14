@@ -23,7 +23,7 @@ router.get('/container', async function(req, res, next) {
         });
 
         // filter out undefine (not our nodes)
-        containers = containers.filter(c => c.nodeInfo.name);
+        containers = containers.filter(c => c.meta.nodeInfo.name);
 
         res.json({
             ok: true,
