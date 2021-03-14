@@ -98,4 +98,4 @@ ebgp.addPrivatePeering(100, 2, 666, PeerRelationship.Unfiltered)
 ###############################################################################
 
 sim_with_attack.render()
-sim_with_attack.compile(Docker(), 'bgp-attacker-component')
+sim_with_attack.compile(Docker(selfManagedNetwork = True), 'bgp-attacker-component')
