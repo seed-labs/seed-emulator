@@ -31,7 +31,7 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
     ifname="`jq -cr '.ifname' <<< "$iface"`"
     jq -cr '.addr_info[]' <<< "$iface" | while read -r iaddr; do {
         addr="`jq -cr '"\(.local)/\(.prefixlen)"' <<< "$iaddr"`"
-        line="`grep "$net" < /dummy_addr_map.txt`"
+        line="`grep "$addr" < /dummy_addr_map.txt`"
         [ -z "$line" ] && continue
         new_addr="`cut -d, -f2 <<< "$line"`"
         ip addr del "$addr" dev "$ifname"
@@ -255,6 +255,11 @@ class Docker(Compiler):
                 )
 
                 address = d_address
+                
+                self._log('using self-managed network: using dummy address {}/{} for {}/{} on as{}/{}'.format(
+                    d_address, d_prefix.prefixlen, iface.getAddress(), iface.getNet().getPrefix().prefixlen,
+                    node.getAsn(), node.getName()
+                ))
 
             node_nets += DockerCompilerFileTemplates['compose_service_network'].format(
                 netId = real_netname,
@@ -330,8 +335,10 @@ class Docker(Compiler):
     def __compileNet(self, net: Network):
         (scope, _, _) = net.getRegistryInfo()
         if self.__self_managed_network:
-            net.setAttribute('dummy_prefix', next(self.__dummy_network_pool))
+            pfx = next(self.__dummy_network_pool)
+            net.setAttribute('dummy_prefix', pfx)
             net.setAttribute('dummy_prefix_index', 2)
+            self._log('self-managed network: using dummy prefix {}'.format(pfx))
 
         self.__networks += DockerCompilerFileTemplates['compose_network'].format(
             netId = '{}{}'.format(self.__contextToPrefix(scope, 'net'), net.getName()),
