@@ -1,10 +1,11 @@
 from seedsim.core.Simulator import Simulator
-from seedsim.core import Registry, Node, Network
+from seedsim.core import Node, Network
 from seedsim.core.enums import NodeRole
 from .Compiler import Compiler
-from typing import Dict
+from typing import Dict, Generator
 from hashlib import md5
 from os import mkdir, chdir
+from ipaddress import IPv4Network, IPv4Address
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -23,6 +24,21 @@ DockerCompilerFileTemplates['start_script'] = """\
 echo "ready! run 'docker exec -it $HOSTNAME /bin/zsh' to attach to this node" >&2
 tail -f /dev/null
 """
+
+DockerCompilerFileTemplates['replace_address_script'] = '''\
+#!/bin/bash
+ip -j addr | jq -cr '.[]' | while read -r iface; do {
+    ifname="`jq -cr '.ifname' <<< "$iface"`"
+    jq -cr '.addr_info[]' <<< "$iface" | while read -r iaddr; do {
+        addr="`jq -cr '"\(.local)/\(.prefixlen)"' <<< "$iaddr"`"
+        line="`grep "$net" < /dummy_addr_map.txt`"
+        [ -z "$line" ] && continue
+        new_addr="`cut -d, -f2 <<< "$line"`"
+        ip addr del "$addr" dev "$ifname"
+        ip addr add "$new_addr" dev "$ifname"
+    }; done
+}; done
+'''
 
 DockerCompilerFileTemplates['compose'] = """\
 version: "3.4"
@@ -85,18 +101,37 @@ class Docker(Compiler):
     __services: str
     __networks: str
     __naming_scheme: str
+    __self_managed_network: bool
+    __dummy_network_pool: Generator[IPv4Network, None, None]
 
-    def __init__(self, namingScheme: str = "as{asn}{role}-{name}-{primaryIp}"):
+    def __init__(
+        self,
+        namingScheme: str = "as{asn}{role}-{name}-{primaryIp}",
+        selfManagedNetwork: bool = False,
+        dummyNetworksPool: str = '10.0.0.0/8',
+        dummyNetworksMask: int = 24
+    ):
         """!
         @brief Docker compiler constructor.
 
         @param namingScheme (optional) node naming scheme. Avaliable variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
         {primaryIp}
+        @param selfManagedNetwork (optional) use self-managed network. Enable
+        this to manage the network inside containers instead of using docker's
+        network management. This works by first assigning "dummy" prefix and
+        address to containers, then replace those address with "real" address
+        when the containers start. This will allow the use of overlapping
+        networks in the emulation and will allow the use of the ".1" address on
+        nodes.
+        @param dummyNetworksPool (optional) dummy networks pool.
+        @param dymmyNetworksMask (optional) mask of dummy networks.
         """
         self.__networks = ""
         self.__services = ""
         self.__naming_scheme = namingScheme
+        self.__self_managed_network = selfManagedNetwork
+        self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
     def getName(self) -> str:
         return "Docker"
@@ -198,16 +233,32 @@ class Docker(Compiler):
         real_nodename = '{}{}'.format(prefix, node.getName())
 
         node_nets = ''
+        dummy_addr_map = ''
 
         for iface in node.getInterfaces():
             net = iface.getNet()
             (netscope, _, _) = net.getRegistryInfo()
             net_prefix = self.__contextToPrefix(netscope, 'net')
             real_netname = '{}{}'.format(net_prefix, net.getName())
+            address = iface.getAddress()
+
+            if self.__self_managed_network:
+                d_index: int = net.getAttribute('dummy_prefix_index')
+                d_prefix: IPv4Network = net.getAttribute('dummy_prefix')
+                d_address: IPv4Address = d_prefix[d_index]
+
+                net.setAttribute('dummy_prefix_index', d_index + 1)
+
+                dummy_addr_map += '{}/{},{}/{}\n'.format(
+                    d_address, d_prefix.prefixlen,
+                    iface.getAddress(), iface.getNet().getPrefix().prefixlen
+                )
+
+                address = d_address
 
             node_nets += DockerCompilerFileTemplates['compose_service_network'].format(
                 netId = real_netname,
-                address = iface.getAddress()
+                address = address
             )
         
         _ports = node.getPorts()
@@ -251,6 +302,13 @@ class Docker(Compiler):
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
         start_commands = ''
+
+        if self.__self_managed_network:
+            start_commands += 'chmod +x /replace_address.sh\n'
+            start_commands += '/replace_address.sh\n'
+            dockerfile += self.__addFile('/replace_address.sh', DockerCompilerFileTemplates['replace_address_script'])
+            dockerfile += self.__addFile('/dummy_addr_map.txt', dummy_addr_map)
+
         for (cmd, fork) in node.getStartCommands():
             start_commands += '{}{}\n'.format(cmd, ' &' if fork else '')
 
@@ -271,14 +329,24 @@ class Docker(Compiler):
 
     def __compileNet(self, net: Network):
         (scope, _, _) = net.getRegistryInfo()
+        if self.__self_managed_network:
+            net.setAttribute('dummy_prefix', next(self.__dummy_network_pool))
+            net.setAttribute('dummy_prefix_index', 2)
+
         self.__networks += DockerCompilerFileTemplates['compose_network'].format(
             netId = '{}{}'.format(self.__contextToPrefix(scope, 'net'), net.getName()),
-            prefix = net.getPrefix(),
+            prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network else net.getPrefix(),
             mtu = net.getMtu()
         )
 
     def _doCompile(self, simulator: Simulator):
         registry = simulator.getRegistry()
+
+        for ((scope, type, name), obj) in registry.getAll().items():
+
+            if type == 'net':
+                self._log('creating network: {}/{}...'.format(scope, name))
+                self.__compileNet(obj)
 
         for ((scope, type, name), obj) in registry.getAll().items():
 
@@ -297,10 +365,6 @@ class Docker(Compiler):
             if type == 'snode':
                 self._log('compiling service node {}...'.format(name))
                 self.__compileNode(obj)
-
-            if type == 'net':
-                self._log('creating network: {}/{}...'.format(scope, name))
-                self.__compileNet(obj)
 
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(
