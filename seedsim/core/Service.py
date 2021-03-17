@@ -94,6 +94,18 @@ class Service(Layer):
         self._doConfigure(node, server)
         self.__targets.add((server, node))
 
+    def addPrefix(self, prefix: str):
+        """!
+        @brief add a prefix to all virtual nodes.
+
+        This method sets a prepend a prefix to all virtual node names.
+        """
+        new_dict = {}
+        for k, v in self.__pending_targets.items():
+            new_dict[prefix + k] = v
+        
+        self.__pending_targets = new_dict
+
     def install(self, vnode: str) -> Server:
         """!
         @brief install the service on a node identified by given name.
@@ -115,7 +127,6 @@ class Service(Layer):
 
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
-
         for (vnode, server) in self.__pending_targets.items():
             self._log('looking for binding for {}...'.format(vnode))
             binded = False
@@ -148,6 +159,14 @@ class Service(Layer):
         only work after the layer is configured.
         """
         return self.__targets
+
+    def setPendingTargets(self, targets: Dict[str, Server]):
+        """!
+        @brief Overrides the pending vnode dict. Use with caution.
+
+        @param targets new targets.
+        """
+        self.__pending_targets = targets
 
     def getPendingTargets(self) -> Dict[str, Server]:
         """!

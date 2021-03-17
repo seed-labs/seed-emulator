@@ -9,6 +9,6 @@ class ServiceMerger(Merger):
     def doMerge(self, objectA: Service, objectB: Service) -> Service:
         new_service = self._createService()
 
-        new_service.__pending_targets = dict(objectA.getPendingTargets(), **objectB.getPendingTargets())
+        new_service.setPendingTargets(dict(objectA.getPendingTargets(), **objectB.getPendingTargets()))
 
         return new_service

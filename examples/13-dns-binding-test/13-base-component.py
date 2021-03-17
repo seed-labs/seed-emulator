@@ -106,6 +106,11 @@ ebgp.addPrivatePeering(100, 150, 151, PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 2, 3, PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 2, 152, PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 3, 152, PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 2, 153, PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 3, 153, PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 2, 154, PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 3, 154, PeerRelationship.Provider)
+
 
 ebgp.addPrivatePeering(102, 2, 160, PeerRelationship.Provider)
 ebgp.addPrivatePeering(102, 3, 160, PeerRelationship.Provider)

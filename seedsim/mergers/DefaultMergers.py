@@ -10,11 +10,12 @@ from .DefaultCymruIpOriginServiceMerger import DefaultCymruIpOriginServiceMerger
 from .DefaultWebServiceMerger import DefaultWebServiceMerger
 from .DefaultDomainNameCachingServiceMerger import DefaultDomainNameCachingServiceMerger
 from .DefaultReverseDomainNameServiceMerger import DefaultReverseDomainNameServiceMerger
+from .DefaultDomainNameServiceMerger import DefaultDomainNameServiceMerger
 
 DEFAULT_MERGERS = [
     DefaultBaseMerger(), DefaultEbgpMerger(), DefaultRoutingMerger(),
     DefaultIbgpMerger(), DefaultOspfMerger(), DefaultMplsMerger(),
     DefaultDnssecMerger(), DefaultCymruIpOriginServiceMerger(),
     DefaultWebServiceMerger(), DefaultDomainNameCachingServiceMerger(),
-    DefaultReverseDomainNameServiceMerger()
+    DefaultReverseDomainNameServiceMerger(), DefaultDomainNameServiceMerger()
 ]

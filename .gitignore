@@ -13,3 +13,10 @@ __pycache__
 build
 dist
 *.egg-info
+client/frontend/public/*.js
+client/frontend/public/*.map
+client/frontend/public/*.txt
+client/frontend/public/fonts
+client/frontend/node_modules
+client/backend/node_modules
+client/backend/bin
