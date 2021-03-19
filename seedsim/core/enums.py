@@ -12,9 +12,8 @@ class NetworkType(Enum):
     #  networks.
     Local = "Local Network"
 
-    ## Host networks. "Content" (i.e., web server, dns server) runs on this type
-    #  of networks.
-    Host = "Content Network"
+    ## Bridge networks. This type of network eanble access to the real world.
+    Bridge = "Bridge Network"
 
 class NodeRole(Enum):
     """!
