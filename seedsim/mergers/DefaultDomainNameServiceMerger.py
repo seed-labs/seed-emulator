@@ -10,7 +10,8 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
         self._log('merging zone: {}'.format('(root)' if position == '' else position))
 
         # merge regular records
-        for r in a.getRecords(): dst.addRecord(r)
+        for r in a.getRecords():
+            if r not in dst.getRecords(): dst.addRecord(r)
         for r in b.getRecords():
             # TODO: better checks?
             if r not in dst.getRecords(): dst.addRecord(r) 

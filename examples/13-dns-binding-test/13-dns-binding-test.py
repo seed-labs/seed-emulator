@@ -38,6 +38,8 @@ merged.addBinding(Binding('ns[1-3]-dnspod.com', filter = Filter(custom = lambda 
 merged.addBinding(Binding('local-dns-\w', filter = Filter(asn=152), action=Action.FIRST))
 
 #Add binding for Second Component
+merged.addBinding(Binding('uk-root-server', filter = Filter()))
+merged.addBinding(Binding('uk-com-server', filter = Filter()))
 merged.addBinding(Binding('a-uk-server', filter = Filter()))
 merged.addBinding(Binding('a-com-uk-server', filter = Filter()))
 merged.addBinding(Binding('a-net-uk-server', filter = Filter()))

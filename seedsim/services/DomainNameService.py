@@ -244,9 +244,17 @@ class DomainNameServer(Server):
                 if len(zone.findRecords('SOA')) == 0:
                     zone.addRecord('@ SOA {} {} {} 900 900 1800 60'.format('ns1.{}'.format(zonename), 'admin.{}'.format(zonename), randint(1, 0xffffffff)))
 
-                zone.addGuleRecord('ns1.{}'.format(zonename), addr)
-                zone.addRecord('ns1.{} A {}'.format(zonename, addr))
-                zone.addRecord('@ NS ns1.{}'.format(zonename))
+                #If there are multiple zone servers, increase the NS number for ns name.
+                ns_number = 1
+                while (True):
+                    if len(zone.findRecords('ns{}.{} A '.format(str(ns_number), zonename))) > 0:
+                        ns_number +=1
+                    else:
+                        break
+
+                zone.addGuleRecord('ns{}.{}'.format(str(ns_number), zonename), addr)
+                zone.addRecord('ns{}.{} A {}'.format(str(ns_number), zonename, addr))
+                zone.addRecord('@ NS ns{}.{}'.format(str(ns_number), zonename))
 
     def install(self, node: Node, dns: DomainNameService):
         """!
