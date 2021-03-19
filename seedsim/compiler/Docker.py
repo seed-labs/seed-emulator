@@ -1,6 +1,6 @@
 from seedsim.core.Simulator import Simulator
 from seedsim.core import Node, Network
-from seedsim.core.enums import NodeRole
+from seedsim.core.enums import NodeRole, NetworkType
 from .Compiler import Compiler
 from typing import Dict, Generator
 from hashlib import md5
@@ -238,11 +238,12 @@ class Docker(Compiler):
         for iface in node.getInterfaces():
             net = iface.getNet()
             (netscope, _, _) = net.getRegistryInfo()
-            net_prefix = self.__contextToPrefix(netscope, 'net')
+            net_prefix = self.__contextToPrefix(netscope, 'net') 
+            if net.getType() == NetworkType.Bridge: net_prefix = ''
             real_netname = '{}{}'.format(net_prefix, net.getName())
             address = iface.getAddress()
 
-            if self.__self_managed_network:
+            if self.__self_managed_network and net.getType() != NetworkType.Bridge:
                 d_index: int = net.getAttribute('dummy_prefix_index')
                 d_prefix: IPv4Network = net.getAttribute('dummy_prefix')
                 d_address: IPv4Address = d_prefix[d_index]
@@ -334,15 +335,18 @@ class Docker(Compiler):
 
     def __compileNet(self, net: Network):
         (scope, _, _) = net.getRegistryInfo()
-        if self.__self_managed_network:
+        if self.__self_managed_network and net.getType() != NetworkType.Bridge:
             pfx = next(self.__dummy_network_pool)
             net.setAttribute('dummy_prefix', pfx)
             net.setAttribute('dummy_prefix_index', 2)
             self._log('self-managed network: using dummy prefix {}'.format(pfx))
 
+        net_prefix = self.__contextToPrefix(scope, 'net')
+        if net.getType() == NetworkType.Bridge: net_prefix = ''
+
         self.__networks += DockerCompilerFileTemplates['compose_network'].format(
-            netId = '{}{}'.format(self.__contextToPrefix(scope, 'net'), net.getName()),
-            prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network else net.getPrefix(),
+            netId = '{}{}'.format(net_prefix, net.getName()),
+            prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
             mtu = net.getMtu()
         )
 

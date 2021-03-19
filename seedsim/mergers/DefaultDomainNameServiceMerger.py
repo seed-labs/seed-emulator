@@ -1,8 +1,42 @@
 from .ServiceMerger import ServiceMerger
-from seedsim.services import DomainNameService
+from seedsim.services import DomainNameService, Zone
 from re import match
 
 class DefaultDomainNameServiceMerger(ServiceMerger):
+
+    def __mergeZone(self, a: Zone, b: Zone, dst: Zone, position: str = ''):
+        names = set()
+
+        self._log('merging zone: {}'.format('(root)' if position == '' else position))
+
+        # merge regular records
+        for r in a.getRecords():
+            if r not in dst.getRecords(): dst.addRecord(r)
+        for r in b.getRecords():
+            # TODO: better checks?
+            if r not in dst.getRecords(): dst.addRecord(r) 
+
+        # merge gules
+        for r in a.getGuleRecords(): dst.addGuleRecord(r)
+        for r in b.getGuleRecords(): 
+            # TODO: better checks?
+            if r not in dst.getGuleRecords(): dst.addGuleRecord(r)
+
+        # look for all subzones
+        for k in a.getSubZones().keys():
+            self._log('{}.{} zone found in first emulator.'.format(k, position))
+            names.add(k)
+        for k in b.getSubZones().keys():
+            self._log('{}.{} zone found in second emulator.'.format(k, position))
+            names.add(k)
+        
+        # for all subzones,
+        for name in names:
+            # first test for conflicts.
+            assert len([r for r in dst.getRecords() if match('{}\s+'.format(name), r)]) == 0, 'found conflict: {}.{} is both a record and a standalone zone.'.format(name, position)
+
+            # then if no conflict, recursively merge them.
+            self.__mergeZone(a.getSubZone(name), b.getSubZone(name), dst.getSubZone(name), '{}.{}'.format(name, position))
 
     def _createService(self) -> DomainNameService:
         return DomainNameService()
@@ -15,43 +49,7 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
 
     def doMerge(self, objectA: DomainNameService, objectB: DomainNameService) -> DomainNameService:
         merged: DomainNameService = super().doMerge(objectA, objectB)
-        servers_A = objectA.getPendingTargets()
-        servers_B = objectB.getPendingTargets()
-
-        zones_A = []
-        zones_B = []
-        for i in servers_A:
-            zones = servers_A[i].getZones()
-            zones_A += [x for x in zones]
-
-        for j in servers_B:
-            zones = servers_B[j].getZones()
-            zones_B += [x for x in zones]
-
-        for zone in zones_A:
-            zone_name = zone.getName()
-            for rec in zone.getRecords():
-                m = match('(\w+) A ', rec)
-                if m:
-                    sub_domain = m.group(1)
-                    full_domain = sub_domain + "." + zone_name
-                    if len(objectB.getZoneServerNames(full_domain)) > 0:
-                        msg = 'There is a conflict in DomainNameService layer with zone {} during the merge process. Do you want to continue?'.format(full_domain)
-                        choice = input("%s (y/N) " % msg).lower() == 'y'
-                        if not choice:
-                            exit()
-
-        for zone in zones_B:
-            zone_name = zone.getName()
-            for rec in zone.getRecords():
-                m = match('(\w+) A ', rec)
-                if m:
-                    sub_domain = m.group(1)
-                    full_domain = sub_domain + "." + zone_name
-                    if len(objectA.getZoneServerNames(full_domain)) > 0:
-                        msg = 'There is a conflict in DomainNameService layer with zone {} during the merge process. Do you want to continue?'.format(full_domain)
-                        choice = input("%s (y/N) " % msg).lower() == 'y'
-                        if not choice:
-                            exit()
+        
+        self.__mergeZone(objectA.getRootZone(), objectB.getRootZone(), merged.getRootZone())
 
         return merged

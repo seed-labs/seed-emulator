@@ -15,23 +15,23 @@ ldns = DomainNameCachingService()
 
 
 #Install root server
-dns.install('a-root-server').addZone(dns.getZone('.'))
+dns.install('a-root-server').addZone('.')
+dns.install('b-root-server').addZone('.')
 
 #Install COM TLD server
-dns.install('a-com-server').addZone(dns.getZone('com.'))
+dns.install('a-com-server').addZone('com.')
 
 #Install NET TLD server
-dns.install('a-net-server').addZone(dns.getZone('net.'))
+dns.install('a-net-server').addZone('net.')
 
 #Install EDU TLD server
-dns.install('a-edu-server').addZone(dns.getZone('edu.'))
+dns.install('a-edu-server').addZone('edu.')
 
 #Install CN TLD server
-dns.install('a-cn-server').addZone(dns.getZone('cn.'))
+dns.install('a-cn-server').addZone('cn.')
 
 #Install GOV TLD server
-dns.install('a-gov-server').addZone(dns.getZone('gov.'))
-
+dns.install('a-gov-server').addZone('gov.')
 
 #Add some default record
 twitter_com = dns.getZone('twitter.com.')
@@ -59,15 +59,15 @@ us_gov.addRecord('www A 6.6.6.6')
 
 
 #Install DNSPOD servers
-dns.install('ns1-dnspod.com').addZone(twitter_com)
-dns.install('ns1-dnspod.com').addZone(google_com)
-dns.install('ns1-dnspod.com').addZone(facebook_com)
+dns.install('ns1-dnspod.com').addZone('twitter.com.')
+dns.install('ns1-dnspod.com').addZone('google.com.')
+dns.install('ns1-dnspod.com').addZone('facebook.com.')
 
-dns.install('ns2-dnspod.com').addZone(syr_edu)
-dns.install('ns2-dnspod.com').addZone(us_gov)
+dns.install('ns2-dnspod.com').addZone('syr.edu.')
+dns.install('ns2-dnspod.com').addZone('us.gov.')
 
-dns.install('ns2-dnspod.com').addZone(weibo_cn)
-dns.install('ns3-dnspod.com').addZone(php_net)
+dns.install('ns2-dnspod.com').addZone('weibo.cn.')
+dns.install('ns3-dnspod.com').addZone('php.net.')
 
 #Install local DNS
 ldns.install('local-dns-1')

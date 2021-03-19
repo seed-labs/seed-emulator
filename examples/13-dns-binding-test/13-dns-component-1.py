@@ -11,12 +11,19 @@ sim = Simulator()
 dns = DomainNameService()
 ldns = DomainNameCachingService()
 
+
+#Install root server
+dns.install('uk-root-server').addZone('.')
+
+#Install com server
+dns.install('uk-com-server').addZone('com.')
+
 #Install UK TLD server
-dns.install('a-uk-server').addZone(dns.getZone('uk.'))
+dns.install('a-uk-server').addZone('uk.')
 
 #Install UK sub zones
-dns.install('a-com-uk-server').addZone(dns.getZone('com.uk.'))
-dns.install('a-net-uk-server').addZone(dns.getZone('net.uk.'))
+dns.install('a-com-uk-server').addZone('com.uk.')
+dns.install('a-net-uk-server').addZone('net.uk.')
 
 #Add some default record
 com_uk = dns.getZone('company.com.uk.')
@@ -34,9 +41,9 @@ net_uk.addRecord('www A 7.7.7.7')
 
 
 #Host com_uk and net_uk on godaddy server
-dns.install('godaddy').addZone(com_uk)
-dns.install('godaddy').addZone(net_uk)
-#dns.install('godaddy').addZone(twitter_com)
+dns.install('godaddy').addZone('company.com.uk.')
+dns.install('godaddy').addZone('example.net.uk.')
+# dns.install('godaddy').addZone(twitter_com)
 
 
 sim.addLayer(dns)

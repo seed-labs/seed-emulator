@@ -87,6 +87,15 @@ class Network(Printable, Registrable):
         self.__d_bandwidth = bandwidth
         self.__d_drop = packetDrop
 
+    def setType(self, newType: NetworkType):
+        """!
+        @brief overrides network type of this network. Do not use this unless
+        you know what you are doring.
+
+        @param newType new nettype.
+        """
+        self.__type = newType
+
     def getDefaultLinkProperties(self) -> Tuple[int, int, int]:
         """!
         @brief Get default link properties.

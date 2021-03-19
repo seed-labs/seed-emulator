@@ -1,6 +1,7 @@
+from ipaddress import IPv4Network
 from .Routing import Router
-from seedsim.core import Node, AutonomousSystem, Simulator, Layer
-from seedsim.core.enums import NodeRole
+from seedsim.core import Node, AutonomousSystem, Simulator, Layer, Network  
+from seedsim.core.enums import NodeRole, NetworkType
 from typing import List, Dict, Tuple
 from itertools import repeat
 import requests
@@ -274,7 +275,10 @@ class Reality(Layer):
 
     __cur_port: int
 
-    def __init__(self, hideHops: bool = True, ovpnCa: str = None, ovpnCert: str = None, ovpnKey: str = None):
+    __bridge_nets: List[IPv4Network]
+    __subnet_index: int
+
+    def __init__(self, hideHops: bool = True, ovpnCa: str = None, ovpnCert: str = None, ovpnKey: str = None, bridgeNetworksPool: str = '100.64.0.0/16', bridgeNetworksMask: int = 24):
         """!
         @brief Reality constructor.
 
@@ -293,7 +297,22 @@ class Reality(Layer):
         self.__ovpn_cert = ovpnCert
         self.__ovpn_key = ovpnKey
         self.__cur_port = 65000
+        self.__bridge_nets = list(IPv4Network(bridgeNetworksPool).subnets(new_prefix = bridgeNetworksMask))
+        self.__bridge_nets_index = 0
         self.addDependency('Ebgp', False, False)
+
+    def __getBridgeNetworkOf(self, asobj: AutonomousSystem) -> Network:
+        brnet_name = 'aaa_brnet_{}'.format(asobj.getAsn())
+        if brnet_name in asobj.getNetworks():
+            brnet = asobj.getNetwork(brnet_name)
+        else:
+            prefix = self.__bridge_nets[self.__bridge_nets_index]
+            self.__bridge_nets_index += 1
+            brnet = asobj.createNetwork(brnet_name, prefix)
+
+        brnet.setType(NetworkType.Bridge)
+
+        return brnet
 
     def getName(self):
         return 'Reality'
@@ -338,6 +357,7 @@ class Reality(Layer):
         for prefix in prefixes:
             rwnode.addRealWorldRoute(prefix)
         self.__rwnodes.append(rwnode)
+        rwnode.joinNetwork(self.__getBridgeNetworkOf(asobj).getName())
 
         return rwnode
 
@@ -357,10 +377,11 @@ class Reality(Layer):
         @param net network.
         @param naddrs number of IP addresses to assign to client pool.
         """
-        node = asobj.createHost('br-{}'.format(netname))
+        node = asobj.createRouter('br-{}'.format(netname))
         node.joinNetwork(netname)
 
         net = asobj.getNetwork(netname)
+        brnet = self.__getBridgeNetworkOf(asobj)
 
         self._log('setting up real-world bridge for network as{}/{}...'.format(asobj.getAsn(), netname))
 
@@ -380,10 +401,10 @@ class Reality(Layer):
         node.setFile('/ovpn_startup', RealityFileTemplates['ovpn_startup_script'])
         node.appendStartCommand('chmod +x /ovpn_startup')
         node.appendStartCommand('/ovpn_startup {}'.format(netname))
+        node.joinNetwork(brnet.getName())
         node.addPort(self.__cur_port, 1194, 'udp')
 
         self.__cur_port += 1
-
 
     def configure(self, simulator: Simulator):
         # @todo ifconfig-pool
