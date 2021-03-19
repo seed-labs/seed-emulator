@@ -99,9 +99,9 @@ as153_router.joinNetwork('ix100')
 
 ###############################################################################
 
-dns.install('root_server').addZone(dns.getZone('.'))
-dns.install('com_server').addZone(dns.getZone('com.'))
-dns.install('example_com_server').addZone(dns.getZone('example.com.'))
+dns.install('root_server').addZone('.')
+dns.install('com_server').addZone('com.')
+dns.install('example_com_server').addZone('example.com.')
 
 ldns.install('local_dns')
 

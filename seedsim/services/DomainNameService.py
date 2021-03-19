@@ -72,14 +72,6 @@ class Zone(Printable):
         """
         return self.__subzones
 
-    def setSubZones(self, sub_zones: Dict):
-        """!
-        @brief Overrides the sub zones. Use with caution.
-
-        @param targets new sub zones.
-        """
-        self.__subzones = sub_zones
-
     def addRecord(self, record: str):
         """!
         @brief Add a new record to zone.
@@ -179,7 +171,7 @@ class DomainNameServer(Server):
     @brief The domain name server.
     """
 
-    __zones: Set[Tuple[Zone, bool]]
+    __zones: Set[Tuple[str, bool]]
     __node: Node
 
     def __init__(self):
@@ -190,17 +182,17 @@ class DomainNameServer(Server):
         """
         self.__zones = set()
 
-    def addZone(self, zone: Zone, createNsAndSoa: bool = True):
+    def addZone(self, zonename: str, createNsAndSoa: bool = True):
         """!
         @brief Add a zone to this node.
 
-        @param zone zone to host.
+        @param zonename name of zone to host.
         @param createNsAndSoa add NS and SOA (if doesn't already exist) to zone. 
 
         You should use DomainNameService.hostZoneOn to host zone on node if you
         want the automated NS record to work.
         """
-        self.__zones.add((zone, createNsAndSoa))
+        self.__zones.add((zonename, createNsAndSoa))
 
     def getNode(self) -> Node:
         """!
@@ -209,7 +201,7 @@ class DomainNameServer(Server):
         """
         return self.__node
 
-    def getZones(self) -> List[Zone]:
+    def getZones(self) -> List[str]:
         """!
         @brief Get list of zones hosted on the node.
 
@@ -224,21 +216,21 @@ class DomainNameServer(Server):
         (scope, _, name) = self.__node.getRegistryInfo()
         out += 'Zones on as{}/{}:\n'.format(scope, name)
         indent += 4
-        for zone in self.__zones:
+        for (zone, _) in self.__zones:
             out += ' ' * indent
-            zname = zone.getName()
-            if zname == '' or zname[-1] != '.': zname += '.'
-            out += '{}\n'.format(zname)
+            if zone == '' or zone[-1] != '.': zone += '.'
+            out += '{}\n'.format(zone)
 
         return out
 
-    def configure(self, node: Node):
+    def configure(self, node: Node, dns: DomainNameService):
         """!
         @brief configure the node.
         """
         self.__node = node
 
-        for (zone, auto_ns_soa) in self.__zones:
+        for (_zonename, auto_ns_soa) in self.__zones:
+            zone = dns.getZone(_zonename)
             zonename = zone.getName()
 
             if auto_ns_soa:
@@ -256,7 +248,7 @@ class DomainNameServer(Server):
                 zone.addRecord('ns1.{} A {}'.format(zonename, addr))
                 zone.addRecord('@ NS ns1.{}'.format(zonename))
 
-    def install(self, node: Node):
+    def install(self, node: Node, dns: DomainNameService):
         """!
         @brief Handle the installation.
         """
@@ -266,8 +258,8 @@ class DomainNameServer(Server):
         node.appendStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
         node.setFile('/etc/bind/named.conf.options', DomainNameServiceFileTemplates['named_options'])
 
-
-        for (zone, auto_ns_soa) in self.__zones:
+        for (_zonename, auto_ns_soa) in self.__zones:
+            zone = dns.getZone(_zonename)
             zonename = filename = zone.getName()
 
             if zonename == '' or zonename == '.':
@@ -318,7 +310,10 @@ class DomainNameService(Service):
         return DomainNameServer()
 
     def _doConfigure(self, node: Node, server: DomainNameServer):
-        server.configure(node)
+        server.configure(node, self)
+
+    def _doInstall(self, node: Node, server: DomainNameServer):
+        server.install(node, self)
 
     def getName(self):
         return 'DomainNameService'
