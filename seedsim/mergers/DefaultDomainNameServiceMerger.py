@@ -7,7 +7,7 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
     def __mergeZone(self, a: Zone, b: Zone, dst: Zone, position: str = ''):
         names = set()
 
-        self._log('merging zone: {}'.format(position))
+        self._log('merging zone: {}'.format('(root)' if position == '' else position))
 
         # merge regular records
         for r in a.getRecords(): dst.addRecord(r)
@@ -22,8 +22,12 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
             if r not in dst.getGuleRecords(): dst.addGuleRecord(r)
 
         # look for all subzones
-        for k in a.getSubZones().keys(): names.add(k)
-        for k in b.getSubZones().keys(): names.add(k)
+        for k in a.getSubZones().keys():
+            self._log('{}.{} zone found in first emulator.'.format(k, position))
+            names.add(k)
+        for k in b.getSubZones().keys():
+            self._log('{}.{} zone found in second emulator.'.format(k, position))
+            names.add(k)
         
         # for all subzones,
         for name in names:
