@@ -1,6 +1,6 @@
 from .Routing import Router
-from seedsim.core import Node, AutonomousSystem, Simulator, Layer
-from seedsim.core.enums import NodeRole
+from seedsim.core import Node, AutonomousSystem, Simulator, Layer, Network  
+from seedsim.core.enums import NodeRole, NetworkType
 from typing import List, Dict, Tuple
 from itertools import repeat
 import requests
@@ -295,6 +295,16 @@ class Reality(Layer):
         self.__cur_port = 65000
         self.addDependency('Ebgp', False, False)
 
+    def __getBridgeNetworkOf(self, asobj: AutonomousSystem) -> Network:
+        brnet_name = '000-brnet-{}'.format(asobj.getAsn())
+        if brnet_name in asobj.getNetworks():
+            brnet = asobj.getNetwork(brnet_name)
+        else: brnet = asobj.createNetwork(brnet_name) # todo: use special prefix for br-net.
+
+        brnet.__type = NetworkType.Bridge
+
+        return brnet
+
     def getName(self):
         return 'Reality'
     
@@ -338,6 +348,7 @@ class Reality(Layer):
         for prefix in prefixes:
             rwnode.addRealWorldRoute(prefix)
         self.__rwnodes.append(rwnode)
+        rwnode.joinNetwork(self.__getBridgeNetworkOf(asobj).getName())
 
         return rwnode
 
@@ -361,6 +372,7 @@ class Reality(Layer):
         node.joinNetwork(netname)
 
         net = asobj.getNetwork(netname)
+        brnet = self.__getBridgeNetworkOf(asobj)
 
         self._log('setting up real-world bridge for network as{}/{}...'.format(asobj.getAsn(), netname))
 
@@ -380,6 +392,7 @@ class Reality(Layer):
         node.setFile('/ovpn_startup', RealityFileTemplates['ovpn_startup_script'])
         node.appendStartCommand('chmod +x /ovpn_startup')
         node.appendStartCommand('/ovpn_startup {}'.format(netname))
+        node.joinNetwork(brnet.getName())
         node.addPort(self.__cur_port, 1194, 'udp')
 
         self.__cur_port += 1
