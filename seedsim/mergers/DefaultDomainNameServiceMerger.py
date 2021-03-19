@@ -19,6 +19,7 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
         servers_A = objectA.getPendingTargets()
         servers_B = objectB.getPendingTargets()
 
+
         zones_A = []
         zones_B = []
         for i in servers_A:
@@ -29,6 +30,7 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
             zones = servers_B[j].getZones()
             zones_B += [x for x in zones]
 
+        #Detecting Zone mismatch issue
         for zone in zones_A:
             zone_name = zone.getName()
             for rec in zone.getRecords():
@@ -61,13 +63,12 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
         subzones_B = objectB.getRootZone().getSubZones()
         merged.getRootZone().setSubZones(dict(subzones_A, **subzones_B))
         #
-        # for s in servers_A.values():
-        #     for s1 in servers_B.values():
-        #         zone_in_s = s.getZones()
-        #         zone_in_s1 = s1.getZones()
-        #         for z in zone_in_s:
-        #             for z1 in zone_in_s1:
-        #                 if z.getName() == z1.getName():
+        for server in merged.getPendingTargets().values():
+            for zone in server.getZones():
+                zonename = zone.getName()
+                subzone_in_A = objectA.getZone(zonename).getSubZones()
+                subzone_in_B = objectB.getZone(zonename).getSubZones()
+                zone.setSubZones(dict(subzone_in_A, **subzone_in_B))
 
 
         return merged

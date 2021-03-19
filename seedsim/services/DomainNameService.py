@@ -266,6 +266,7 @@ class DomainNameServer(Server):
         node.appendStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
         node.setFile('/etc/bind/named.conf.options', DomainNameServiceFileTemplates['named_options'])
 
+
         for (zone, auto_ns_soa) in self.__zones:
             zonename = filename = zone.getName()
 
