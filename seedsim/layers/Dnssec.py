@@ -81,7 +81,7 @@ class Dnssec(Layer):
             zones = dns_s.getZones()
             for zone in zones:
                 # TODO: what if mutiple nodes host the same zone?
-                if zone.getName() == zonename: return node
+                if zone == zonename: return node
 
         return None
 
