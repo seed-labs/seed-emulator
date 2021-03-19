@@ -15,6 +15,7 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
 
     def doMerge(self, objectA: DomainNameService, objectB: DomainNameService) -> DomainNameService:
         merged: DomainNameService = super().doMerge(objectA, objectB)
+       # merged: DomainNameService = self._createService()
         servers_A = objectA.getPendingTargets()
         servers_B = objectB.getPendingTargets()
 
@@ -53,5 +54,20 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
                         choice = input("%s (y/N) " % msg).lower() == 'y'
                         if not choice:
                             exit()
+
+
+        #setup sub zones for new service
+        subzones_A = objectA.getRootZone().getSubZones()
+        subzones_B = objectB.getRootZone().getSubZones()
+        merged.getRootZone().setSubZones(dict(subzones_A, **subzones_B))
+        #
+        # for s in servers_A.values():
+        #     for s1 in servers_B.values():
+        #         zone_in_s = s.getZones()
+        #         zone_in_s1 = s1.getZones()
+        #         for z in zone_in_s:
+        #             for z1 in zone_in_s1:
+        #                 if z.getName() == z1.getName():
+
 
         return merged

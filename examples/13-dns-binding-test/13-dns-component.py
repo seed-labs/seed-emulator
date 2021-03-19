@@ -16,6 +16,7 @@ ldns = DomainNameCachingService()
 
 #Install root server
 dns.install('a-root-server').addZone(dns.getZone('.'))
+dns.install('b-root-server').addZone(dns.getZone('.'))
 
 #Install COM TLD server
 dns.install('a-com-server').addZone(dns.getZone('com.'))

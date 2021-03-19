@@ -72,6 +72,14 @@ class Zone(Printable):
         """
         return self.__subzones
 
+    def setSubZones(self, sub_zones: Dict):
+        """!
+        @brief Overrides the sub zones. Use with caution.
+
+        @param targets new sub zones.
+        """
+        self.__subzones = sub_zones
+
     def addRecord(self, record: str):
         """!
         @brief Add a new record to zone.

@@ -19,10 +19,16 @@ simA.load('dns-component.bin')
 simB.load('base-component.bin')
 simC.load('dns-component-1.bin')
 
-merged = simA.merge(simB, DEFAULT_MERGERS).merge(simC, DEFAULT_MERGERS)
+merged = simA.merge(simB, DEFAULT_MERGERS)#.merge(simC, DEFAULT_MERGERS)
+
+merged = merged.merge(simC, DEFAULT_MERGERS)
+
+#dns: DomainNameService = simA.getLayer('DomainNameService')
+#ldns: DomainNameCachingService = simA.getLayer('DomainNameCachingService')
 
 #Add binding for First Component
 merged.addBinding(Binding('a-root-server', filter = Filter(asn = 150)))
+merged.addBinding(Binding('b-root-server', filter = Filter(asn = 150)))
 merged.addBinding(Binding('a-com-server', filter = Filter(asn = 151)))
 merged.addBinding(Binding('a-net-server', filter = Filter(asn = 153)))
 merged.addBinding(Binding('a-gov-server', filter = Filter(asn = 152), action=Action.LAST))
@@ -39,6 +45,9 @@ merged.addBinding(Binding('godaddy', filter = Filter()))
 
 
 merged.addHook(ResolvConfHook(['10.152.0.71']))
+# merged.addLayer(dns)
+# merged.addLayer(ldns)
+
 
 merged.render()
 
