@@ -238,7 +238,8 @@ class Docker(Compiler):
         for iface in node.getInterfaces():
             net = iface.getNet()
             (netscope, _, _) = net.getRegistryInfo()
-            net_prefix = self.__contextToPrefix(netscope, 'net')
+            net_prefix = self.__contextToPrefix(netscope, 'net') 
+            if net.getType() == NetworkType.Bridge: net_prefix = ''
             real_netname = '{}{}'.format(net_prefix, net.getName())
             address = iface.getAddress()
 
@@ -340,8 +341,11 @@ class Docker(Compiler):
             net.setAttribute('dummy_prefix_index', 2)
             self._log('self-managed network: using dummy prefix {}'.format(pfx))
 
+        net_prefix = self.__contextToPrefix(scope, 'net')
+        if net.getType() == NetworkType.Bridge: net_prefix = ''
+
         self.__networks += DockerCompilerFileTemplates['compose_network'].format(
-            netId = '{}{}'.format(self.__contextToPrefix(scope, 'net'), net.getName()),
+            netId = '{}{}'.format(net_prefix, net.getName()),
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
             mtu = net.getMtu()
         )

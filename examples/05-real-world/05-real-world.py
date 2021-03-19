@@ -1,6 +1,6 @@
 from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, Reality
 from seedsim.services import WebService
-from seedsim.core import Simulator
+from seedsim.core import Simulator, Binding, Filter
 from seedsim.compiler import Docker
 
 sim = Simulator()
@@ -48,7 +48,6 @@ r4.joinNetwork('ix101')
 as151 = base.createAutonomousSystem(151)
 
 as151_web = as151.createHost('web')
-web.installByName(151, 'web')
 
 as151_router = as151.createRouter('router0')
 
@@ -67,7 +66,6 @@ as151_router.joinNetwork('ix100')
 as152 = base.createAutonomousSystem(152)
 
 as152_web = as152.createHost('web')
-web.installByName(152, 'web')
 
 as152_router = as152.createRouter('router0')
 
@@ -93,6 +91,16 @@ as11872_router.joinNetwork('ix101', '10.101.0.118')
 ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 150, 11872, abRelationship = PeerRelationship.Provider)
+
+###############################################################################
+
+web.install('web1')
+web.install('web2')
+
+###############################################################################
+
+sim.addBinding(Binding('web1', filter = Filter(asn = 151, nodeName = 'web')))
+sim.addBinding(Binding('web2', filter = Filter(asn = 152, nodeName = 'web')))
 
 ###############################################################################
 

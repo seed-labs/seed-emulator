@@ -1,3 +1,4 @@
+from ipaddress import IPv4Network
 from .Routing import Router
 from seedsim.core import Node, AutonomousSystem, Simulator, Layer, Network  
 from seedsim.core.enums import NodeRole, NetworkType
@@ -274,7 +275,10 @@ class Reality(Layer):
 
     __cur_port: int
 
-    def __init__(self, hideHops: bool = True, ovpnCa: str = None, ovpnCert: str = None, ovpnKey: str = None):
+    __bridge_nets: List[IPv4Network]
+    __subnet_index: int
+
+    def __init__(self, hideHops: bool = True, ovpnCa: str = None, ovpnCert: str = None, ovpnKey: str = None, bridgeNetworksPool: str = '100.64.0.0/16', bridgeNetworksMask: int = 24):
         """!
         @brief Reality constructor.
 
@@ -293,15 +297,20 @@ class Reality(Layer):
         self.__ovpn_cert = ovpnCert
         self.__ovpn_key = ovpnKey
         self.__cur_port = 65000
+        self.__bridge_nets = list(IPv4Network(bridgeNetworksPool).subnets(new_prefix = bridgeNetworksMask))
+        self.__bridge_nets_index = 0
         self.addDependency('Ebgp', False, False)
 
     def __getBridgeNetworkOf(self, asobj: AutonomousSystem) -> Network:
-        brnet_name = '000-brnet-{}'.format(asobj.getAsn())
+        brnet_name = 'aaa_brnet_{}'.format(asobj.getAsn())
         if brnet_name in asobj.getNetworks():
             brnet = asobj.getNetwork(brnet_name)
-        else: brnet = asobj.createNetwork(brnet_name) # todo: use special prefix for br-net.
+        else:
+            prefix = self.__bridge_nets[self.__bridge_nets_index]
+            self.__bridge_nets_index += 1
+            brnet = asobj.createNetwork(brnet_name, prefix)
 
-        brnet.__type = NetworkType.Bridge
+        brnet.setType(NetworkType.Bridge)
 
         return brnet
 
@@ -368,7 +377,7 @@ class Reality(Layer):
         @param net network.
         @param naddrs number of IP addresses to assign to client pool.
         """
-        node = asobj.createHost('br-{}'.format(netname))
+        node = asobj.createRouter('br-{}'.format(netname))
         node.joinNetwork(netname)
 
         net = asobj.getNetwork(netname)
@@ -396,7 +405,6 @@ class Reality(Layer):
         node.addPort(self.__cur_port, 1194, 'udp')
 
         self.__cur_port += 1
-
 
     def configure(self, simulator: Simulator):
         # @todo ifconfig-pool
