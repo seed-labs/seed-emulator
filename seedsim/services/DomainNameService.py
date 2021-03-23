@@ -26,6 +26,7 @@ class Zone(Printable):
     __subzones: Dict[str, Zone]
     __records: List[str]
     __gules: List[str]
+    __pendingrecords: List[set]
 
     def __init__(self, name: str):
         """!
@@ -40,6 +41,7 @@ class Zone(Printable):
             '$ORIGIN {}'.format(name if name != '' else '.')
         ]
         self.__gules = []
+        self.__pendingrecords = []
 
     def getName(self) -> str:
         """!
@@ -115,6 +117,24 @@ class Zone(Printable):
 
         assert address != None, 'Node has no valid interfaces.'
         self.__records.append('{} A {}'.format(name, address))
+
+    def resolveToVnode(self, name: str, vnode: str):
+        """!
+        @brief Add a new A record, pointing to the given virtual node name.
+
+        @param name name.
+        @param vnode  virtual node name.
+
+        """
+        self.__pendingrecords.append((name, vnode))
+
+    def getPendingRecords(self):
+        """!
+        @brief Get all pending records.
+
+        @return list of pending records.
+        """
+        return self.__pendingrecords
 
     def getRecords(self) -> List[str]:
         """!
@@ -319,6 +339,31 @@ class DomainNameService(Service):
 
     def _doConfigure(self, node: Node, server: DomainNameServer):
         server.configure(node, self)
+
+    def configure(self, simulator: Simulator):
+        reg = simulator.getRegistry()
+        targets = self.getPendingTargets()
+
+        #Add pending records for every zones, for resolveToVnode method.
+        for (vnode, sobj) in targets.items():
+            server: DomainNameServer = sobj
+
+            for zone in server.getZones():
+                zone = self.getZone(zone)
+                if len(zone.getPendingRecords()) > 0:
+                    for pending_records in zone.getPendingRecords():
+                        domain_name = pending_records[0]
+                        vnode_name = pending_records[1]
+                        for binding in self.getBindings():
+                            pnode = binding.getCandidate(vnode_name, reg)
+                            if pnode == None: continue
+                            ifaces = pnode.getInterfaces()
+                            assert len(ifaces) > 0, 'resolveToVnode(): node has no interfaces'
+                            addr = ifaces[0].getAddress()
+
+                            zone.addRecord('{} A {}'.format(domain_name, addr))
+
+        return super().configure(simulator)
 
     def _doInstall(self, node: Node, server: DomainNameServer):
         server.install(node, self)

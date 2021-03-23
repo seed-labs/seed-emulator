@@ -22,6 +22,11 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
             # TODO: better checks?
             if r not in dst.getGuleRecords(): dst.addGuleRecord(r)
 
+        # merge pending records (vnode)
+        for r in a.getPendingRecords(): dst.resolveToVnode(r[0], r[1])
+        for r in b.getPendingRecords():
+            if r not in dst.getPendingRecords(): dst.resolveToVnode(r[0], r[1])
+
         # look for all subzones
         for k in a.getSubZones().keys():
             self._log('{}.{} zone found in first emulator.'.format(k, position))

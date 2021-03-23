@@ -43,7 +43,7 @@ php_net = dns.getZone('php.net.')
 us_gov = dns.getZone('us.gov.')
 
 twitter_com.addRecord('@ A 1.1.1.1')
-twitter_com.addRecord('www A 1.1.1.1')
+twitter_com.resolveToVnode("webserver", "www-twitter-com-web")
 google_com.addRecord('@ A 2.2.2.2')
 google_com.addRecord('www A 2.2.2.2')
 facebook_com.addRecord('@ A 3.3.3.3')

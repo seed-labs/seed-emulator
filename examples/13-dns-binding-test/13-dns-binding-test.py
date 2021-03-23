@@ -45,6 +45,8 @@ merged.addBinding(Binding('a-com-uk-server', filter = Filter()))
 merged.addBinding(Binding('a-net-uk-server', filter = Filter()))
 merged.addBinding(Binding('godaddy', filter = Filter()))
 
+merged.addBinding(Binding('www-twitter-com-web', filter = Filter()))
+
 
 merged.addHook(ResolvConfHook(['10.152.0.71']))
 # merged.addLayer(dns)

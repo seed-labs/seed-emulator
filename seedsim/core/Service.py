@@ -160,6 +160,12 @@ class Service(Layer):
         """
         return self.__targets
 
+    def getBindings(self) -> List[Binding]:
+        """!
+        @brief Get all bindings for service
+        """
+        return self.__bindings
+
     def setPendingTargets(self, targets: Dict[str, Server]):
         """!
         @brief Overrides the pending vnode dict. Use with caution.
