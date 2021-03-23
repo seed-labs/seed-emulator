@@ -23,9 +23,10 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
             if r not in dst.getGuleRecords(): dst.addGuleRecord(r)
 
         # merge pending records (vnode)
-        for r in a.getPendingRecords(): dst.resolveToVnode(r[0], r[1])
-        for r in b.getPendingRecords():
-            if r not in dst.getPendingRecords(): dst.resolveToVnode(r[0], r[1])
+        for (n, v) in a.getPendingRecords().items(): dst.resolveToVnode(n, v)
+        for (n, v) in b.getPendingRecords().items():
+            assert n not in dst.getPendingRecords(), 'found conflict: {} already points to a vnode'.format(n)
+            dst.resolveToVnode(n, v)
 
         # look for all subzones
         for k in a.getSubZones().keys():

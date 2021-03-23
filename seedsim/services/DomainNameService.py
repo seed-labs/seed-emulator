@@ -26,7 +26,8 @@ class Zone(Printable):
     __subzones: Dict[str, Zone]
     __records: List[str]
     __gules: List[str]
-    __pendingrecords: List[set]
+    # TODO: maybe make it a Dict[str, List[str]], so a name can point to mutiple vnodes?
+    __pending_records: Dict[str, str]
 
     def __init__(self, name: str):
         """!
@@ -41,7 +42,7 @@ class Zone(Printable):
             '$ORIGIN {}'.format(name if name != '' else '.')
         ]
         self.__gules = []
-        self.__pendingrecords = []
+        self.__pending_records = {}
 
     def getName(self) -> str:
         """!
@@ -126,15 +127,38 @@ class Zone(Printable):
         @param vnode  virtual node name.
 
         """
-        self.__pendingrecords.append((name, vnode))
+        self.__pending_records[name] = vnode
 
-    def getPendingRecords(self):
+    def resolvePendingRecords(self, simulator: Simulator):
         """!
-        @brief Get all pending records.
+        @brief resolve pending records in this zone.
 
-        @return list of pending records.
+        @param simulator simulator object.
         """
-        return self.__pendingrecords
+        for (domain_name, vnode_name) in self.__pending_records.items():
+            bound = False
+            for binding in simulator.getBindings():
+                pnode = binding.getCandidate(vnode_name, simulator.getRegistry(), True)
+
+                if pnode == None: continue
+
+                ifaces = pnode.getInterfaces()
+                assert len(ifaces) > 0, 'resolvePendingRecords(): node as{}/{} has no interfaces'.format(pnode.getAsn(), pnode.getName())
+                addr = ifaces[0].getAddress()
+
+                self.addRecord('{} A {}'.format(domain_name, addr))
+
+                bound = True
+                break
+            assert bound, 'resolvePendingRecords(): no binding for vnode {}'.format(vnode_name)
+
+    def getPendingRecords(self) -> Dict[str, str]:
+        """!
+        @brief Get pending records.
+
+        @returns dict, where key is domain name, and value is vnode name.
+        """
+        return self.__pending_records
 
     def getRecords(self) -> List[str]:
         """!
@@ -334,6 +358,12 @@ class DomainNameService(Service):
             for gule in subzone.getGuleRecords(): zone.addRecord(gule)
             self.__autoNameServer(subzone)
 
+    def __resolvePendingRecords(self, simulator: Simulator, zone: Zone):
+        zone.resolvePendingRecords(simulator)
+        self._log('resloving pending records for zone "{}"...'.format(zone.getName()))
+        for subzone in zone.getSubZones().values():
+            self.__resolvePendingRecords(simulator, subzone)
+
     def _createServer(self) -> Server:
         return DomainNameServer()
 
@@ -341,28 +371,7 @@ class DomainNameService(Service):
         server.configure(node, self)
 
     def configure(self, simulator: Simulator):
-        reg = simulator.getRegistry()
-        targets = self.getPendingTargets()
-
-        #Add pending records for every zones, for resolveToVnode method.
-        for (vnode, sobj) in targets.items():
-            server: DomainNameServer = sobj
-
-            for zone in server.getZones():
-                zone = self.getZone(zone)
-                if len(zone.getPendingRecords()) > 0:
-                    for pending_records in zone.getPendingRecords():
-                        domain_name = pending_records[0]
-                        vnode_name = pending_records[1]
-                        for binding in self.getBindings():
-                            pnode = binding.getCandidate(vnode_name, reg, True)
-                            if pnode == None: continue
-                            ifaces = pnode.getInterfaces()
-                            assert len(ifaces) > 0, 'resolveToVnode(): node has no interfaces'
-                            addr = ifaces[0].getAddress()
-
-                            zone.addRecord('{} A {}'.format(domain_name, addr))
-
+        self.__resolvePendingRecords(simulator, self.__rootZone)
         return super().configure(simulator)
 
     def _doInstall(self, node: Node, server: DomainNameServer):
