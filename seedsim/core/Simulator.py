@@ -119,6 +119,9 @@ class Simulator:
     def addBinding(self, bindng: Binding):
         self.__bindings.db.append(bindng)
 
+    def getBindings(self) -> List[core.Binding]:
+        return self.__bindings.db
+
     def addLayer(self, layer: Layer):
         """!
         @brief Add a layer.
@@ -147,9 +150,6 @@ class Simulator:
         assert not self.__rendered, 'already rendered.'
 
         for (layer, _) in self.__layers.db.values():
-            if isinstance(layer, core.Service):
-                for binding in self.__bindings.db: layer.addBinding(binding)
-
             self.__loadDependencies(layer.getDependencies())
 
         for layerName in self.__layers.db.keys():

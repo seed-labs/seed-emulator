@@ -30,7 +30,6 @@ class Service(Layer):
     """
 
     __pending_targets: Dict[str, Server]
-    __bindings: List[Binding]
     
     __targets: Set[Tuple[Server, Node]]
 
@@ -38,7 +37,6 @@ class Service(Layer):
         super().__init__()
         self.__pending_targets = {}
         self.__targets = set()
-        self.__bindings = []
 
     def _createServer(self) -> Server:
         """!
@@ -117,20 +115,12 @@ class Service(Layer):
 
         return self.__pending_targets[vnode]
 
-    def addBinding(self, binding: Binding):
-        """!
-        @brief add a new node binding configuration.
-
-        @param binding node binding.
-        """
-        self.__bindings.append(binding)
-
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
         for (vnode, server) in self.__pending_targets.items():
             self._log('looking for binding for {}...'.format(vnode))
             binded = False
-            for binding in self.__bindings:
+            for binding in simulator.getBindings():
                 pnode = binding.getCandidate(vnode, reg)
                 if pnode == None: continue
                 
@@ -159,12 +149,6 @@ class Service(Layer):
         only work after the layer is configured.
         """
         return self.__targets
-
-    def getBindings(self) -> List[Binding]:
-        """!
-        @brief Get all bindings for service
-        """
-        return self.__bindings
 
     def setPendingTargets(self, targets: Dict[str, Server]):
         """!
