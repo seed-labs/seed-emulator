@@ -59,7 +59,7 @@ class Binding(Printable):
         """
         return re.compile(self.source).match(vnode)
 
-    def getCandidate(self, vnode: str, registry: Registry) -> Node:
+    def getCandidate(self, vnode: str, registry: Registry, peek: bool = False) -> Node:
         """!
         @brief get a binding candidate from given registry. Note that this will
         make change to the node by adding a "bound =  true" attribute to the
@@ -67,6 +67,8 @@ class Binding(Printable):
 
         @param vnode name of vnode
         @param regitry registry to select candidate from. 
+        @param peek (optional) peek mode - ignore bound attribute and don't set
+        it when node is selected.
 
         @return candidate node, or none if not found
         """
@@ -129,14 +131,15 @@ class Binding(Printable):
                 self.__log('custom function returned false for node as{}/{}, trying next node.'.format(scope, name))
                 continue
 
-            if node.hasAttribute('bound') and not filter.allowBound:
+            if node.hasAttribute('bound') and not filter.allowBound and not peek:
                 self.__log('node as{}/{} is already bound and re-bind is not allowed, trying next node.'.format(scope, name))
                 continue
 
             self.__log('node as{}/{} added as candidate. looking for more candidates.'.format(scope, name))
 
             if self.action == Action.FIRST:
-                node.setAttribute('bound', True)
+                self.__log('{} as{}/{}.'.format('peek: picked' if peek else 'bound to', node.getAsn(), node.getName()))
+                if not peek: node.setAttribute('bound', True)
                 return node
         
             candidates.append(node)
@@ -150,8 +153,8 @@ class Binding(Printable):
         if self.action == Action.RANDOM: node = random.choice(candidates)
 
         if node != None: 
-            self.__log('bound to as{}/{}.'.format(node.getAsn(), node.getName()))
-            node.setAttribute('bound', True)
+            self.__log('{} as{}/{}.'.format('peek: picked' if peek else 'bound to', node.getAsn(), node.getName()))
+            if not peek: node.setAttribute('bound', True)
 
         return node
 

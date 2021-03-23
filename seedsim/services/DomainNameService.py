@@ -355,7 +355,7 @@ class DomainNameService(Service):
                         domain_name = pending_records[0]
                         vnode_name = pending_records[1]
                         for binding in self.getBindings():
-                            pnode = binding.getCandidate(vnode_name, reg)
+                            pnode = binding.getCandidate(vnode_name, reg, True)
                             if pnode == None: continue
                             ifaces = pnode.getInterfaces()
                             assert len(ifaces) > 0, 'resolveToVnode(): node has no interfaces'
