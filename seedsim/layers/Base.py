@@ -14,6 +14,7 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
     jq -cr '.addr_info[]' <<< "$iface" | while read -r iaddr; do {
         addr="`jq -cr '"\(.local)/\(.prefixlen)"' <<< "$iaddr"`"
         net="`cidr_to_net "$addr"`"
+        [ -z "$net" ] && continue
         line="`grep "$net" < ifinfo.txt`"
         new_ifname="`cut -d: -f1 <<< "$line"`"
         latency="`cut -d: -f3 <<< "$line"`"
@@ -57,7 +58,6 @@ class Base(Layer, Graphable):
         self._log('setting up autonomous systems...')
         for asobj in self.__ases.values(): asobj.configure(simulator)
 
-    def render(self, simulator: Simulator) -> None:
         for ((scope, type, name), obj) in simulator.getRegistry().getAll().items():
 
             if not (type == 'rs' or type == 'rnode' or type == 'hnode'):
@@ -75,6 +75,9 @@ class Base(Layer, Graphable):
             node.setFile('/interface_setup', BaseFileTemplates['interface_setup_script'])
             node.appendStartCommand('chmod +x /interface_setup')
             node.appendStartCommand('/interface_setup')
+
+    def render(self, simulator: Simulator) -> None:
+        pass
 
     def createAutonomousSystem(self, asn: int) -> AutonomousSystem:
         """!
