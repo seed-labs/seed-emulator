@@ -20,6 +20,8 @@ dns.install('b-root-server').addZone('.')
 
 #Install COM TLD server
 dns.install('a-com-server').addZone('com.')
+dns.install('b-com-server').addZone('com.')
+dns.install('c-com-server').addZone('com.')
 
 #Install NET TLD server
 dns.install('a-net-server').addZone('net.')
@@ -43,13 +45,13 @@ php_net = dns.getZone('php.net.')
 us_gov = dns.getZone('us.gov.')
 
 twitter_com.addRecord('@ A 1.1.1.1')
-twitter_com.resolveToVnode("webserver", "www-twitter-com-web")
+twitter_com.resolveToVnode("www", "www-twitter-com-web")
 google_com.addRecord('@ A 2.2.2.2')
-google_com.addRecord('www A 2.2.2.2')
+google_com.resolveToVnode('www','www-google-com-web')
 facebook_com.addRecord('@ A 3.3.3.3')
-facebook_com.addRecord('www A 3.3.3.3')
+facebook_com.resolveToVnode('www', 'www-facebook-com-web')
 syr_edu.addRecord('@ A 128.230.18.63')
-syr_edu.addRecord('www A 128.230.18.63')
+syr_edu.resolveToVnode('www', 'www-syr-edu-web')
 weibo_cn.addRecord('@ A 4.4.4.4')
 weibo_cn.addRecord('www A 4.4.4.4')
 php_net.addRecord('@ A 5.5.5.5')

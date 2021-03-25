@@ -304,7 +304,7 @@ class DomainNameServer(Server):
         """!
         @brief Handle the installation.
         """
-        assert node == self.__node, 'configured node differs from install node.'
+        assert node == self.__node, 'configured node differs from install node. Please check if there are conflict bindings'
 
         node.addSoftware('bind9')
         node.appendStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
