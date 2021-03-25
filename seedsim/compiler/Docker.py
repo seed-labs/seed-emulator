@@ -108,7 +108,7 @@ class Docker(Compiler):
         self,
         namingScheme: str = "as{asn}{role}-{name}-{primaryIp}",
         selfManagedNetwork: bool = False,
-        dummyNetworksPool: str = '10.0.0.0/8',
+        dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24
     ):
         """!
@@ -124,7 +124,9 @@ class Docker(Compiler):
         when the containers start. This will allow the use of overlapping
         networks in the emulation and will allow the use of the ".1" address on
         nodes.
-        @param dummyNetworksPool (optional) dummy networks pool.
+        @param dummyNetworksPool (optional) dummy networks pool. This should not
+        overlap with any "real" networks used in the emulation, including
+        loopback IP addresses. 
         @param dymmyNetworksMask (optional) mask of dummy networks.
         """
         self.__networks = ""

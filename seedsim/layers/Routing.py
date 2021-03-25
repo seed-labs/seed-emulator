@@ -145,17 +145,18 @@ class Routing(Layer):
     """
 
     __direct_nets: Set[Tuple[str, str]]
-    __loopback_assigner = IPv4Network('10.0.0.0/16')
-    __loopback_pos = 1
-
-    def __init__(self):
+    __loopback_assigner: IPv4Network
+    
+    def __init__(self, loopback_range: str = '10.0.0.0/16'):
         """!
         @brief Routing layre constructor.
 
-        @param simulator simulator.
+        @param loopback_range (optional) network range for assiging loopback
+        IP addresses.
         """
         super().__init__()
         self.__direct_nets = set()
+        self.__loopback_assigner = IPv4Network(loopback_range)
         self.addDependency('Base', False, False)
     
     def getName(self) -> str:

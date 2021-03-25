@@ -116,4 +116,4 @@ sim.render()
 
 ###############################################################################
 
-sim.compile(Docker(), './real-world')
+sim.compile(Docker(selfManagedNetwork = True), './real-world')
