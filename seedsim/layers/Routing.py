@@ -146,6 +146,7 @@ class Routing(Layer):
 
     __direct_nets: Set[Tuple[str, str]]
     __loopback_assigner: IPv4Network
+    __loopback_pos: int
     
     def __init__(self, loopback_range: str = '10.0.0.0/16'):
         """!
@@ -157,6 +158,7 @@ class Routing(Layer):
         super().__init__()
         self.__direct_nets = set()
         self.__loopback_assigner = IPv4Network(loopback_range)
+        self.__loopback_pos = 1
         self.addDependency('Base', False, False)
     
     def getName(self) -> str:
