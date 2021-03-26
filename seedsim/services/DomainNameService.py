@@ -217,6 +217,7 @@ class DomainNameServer(Server):
 
     __zones: Set[Tuple[str, bool]]
     __node: Node
+    __is_master: bool
 
     def __init__(self):
         """!
@@ -225,6 +226,7 @@ class DomainNameServer(Server):
         @param node node to install server on.
         """
         self.__zones = set()
+        self.__is_master = False
 
     def addZone(self, zonename: str, createNsAndSoa: bool = True):
         """!
@@ -237,6 +239,12 @@ class DomainNameServer(Server):
         want the automated NS record to work.
         """
         self.__zones.add((zonename, createNsAndSoa))
+
+    def setMaster(self):
+        """!
+        @brief set the name server to be master name server.
+        """
+        self.__is_master = True
 
     def getNode(self) -> Node:
         """!
@@ -282,6 +290,9 @@ class DomainNameServer(Server):
                 assert len(ifaces) > 0, 'node has not interfaces'
                 addr = ifaces[0].getAddress()
 
+                if self.__is_master:
+                    dns.addMasterIp(zonename, str(addr))
+
                 if zonename[-1] != '.': zonename += '.'
                 if zonename == '.': zonename = ''
 
@@ -319,9 +330,20 @@ class DomainNameServer(Server):
                 zonename = '.'
             zonepath = '/etc/bind/zones/{}'.format(filename)
             node.setFile(zonepath, '\n'.join(zone.getRecords()))
-            node.appendFile('/etc/bind/named.conf.zones',
-                'zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
-            )
+
+            if self.__is_master:
+                node.appendFile('/etc/bind/named.conf.zones',
+                        'zone "{}" {{ type master; notify yes; allow-transfer {{ any; }}; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
+                    )
+            elif zone.getName() in dns.getMasterIp().keys(): # Check if there are some master servers
+                master_ips = ';'.join(dns.getMasterIp()[zone.getName()])
+                node.appendFile('/etc/bind/named.conf.zones',
+                    'zone "{}" {{ type slave; masters {{ {}; }}; file "{}"; }};\n'.format(zonename, master_ips, zonepath)
+                )
+            else:
+                node.appendFile('/etc/bind/named.conf.zones',
+                    'zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
+                )
 
         node.appendStartCommand('chown -R bind:bind /etc/bind/zones')
         node.appendStartCommand('service named start')
@@ -333,6 +355,7 @@ class DomainNameService(Service):
 
     __rootZone: Zone
     __autoNs: bool
+    __masters: Dict [str, List[str]]
 
     def __init__(self, autoNameServer: bool = True):
         """!
@@ -344,6 +367,7 @@ class DomainNameService(Service):
         super().__init__()
         self.__autoNs = autoNameServer
         self.__rootZone = Zone('.')
+        self.__masters = {}
         self.addDependency('Base', False, False)
     
     def __autoNameServer(self, zone: Zone):
@@ -436,6 +460,32 @@ class DomainNameService(Service):
             if hit: continue
         
         return info
+
+    def addMasterIp(self, zone: str, addr: str):
+        """!
+        @brief add master name server IP address.
+
+        @param addr the IP address of master zone server.
+        @param zone the zone name, e.g : com.
+        """
+        if zone in self.__masters.keys():
+            self.__masters[zone].append(addr)
+        else:
+            self.__masters[zone] = [addr]
+
+    def setAllMasterIp(self, masters: Dict[str: List[str]]):
+        """!
+        @brief override all master IPs, only used for merger.
+        """
+        self.__masters = masters
+
+    def getMasterIp(self) -> Dict [str, List[str]]:
+        """!
+        @brief get all master name server IP address.
+
+        @return list of ip address
+        """
+        return self.__masters
 
     def render(self, simulator: Simulator):
         if self.__autoNs:
