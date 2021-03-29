@@ -15,8 +15,12 @@ ldns = DomainNameCachingService()
 
 
 #Install root server
-dns.install('a-root-server').addZone('.')
-dns.install('b-root-server').addZone('.')
+a_root_server = dns.install('a-root-server')
+a_root_server.addZone('.')
+#Set a-root-server to be primary(master) server
+a_root_server.setMaster()
+
+dns.install('b-root-server').addZone('.') # b-root-server will be slave.
 
 #Install COM TLD server
 dns.install('a-com-server').addZone('com.')

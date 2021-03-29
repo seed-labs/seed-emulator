@@ -44,6 +44,12 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
             # then if no conflict, recursively merge them.
             self.__mergeZone(a.getSubZone(name), b.getSubZone(name), dst.getSubZone(name), '{}.{}'.format(name, position))
 
+    def __mergeMaster(self, objectA: DomainNameService, objectB: DomainNameService, merged: DomainNameService):
+        masterA = objectA.getMasterIp()
+        masterB = objectB.getMasterIp()
+        new_master = {key: value + masterB[key] for key, value in masterA.items()}
+        merged.setAllMasterIp(new_master)
+
     def _createService(self) -> DomainNameService:
         return DomainNameService()
 
@@ -57,5 +63,5 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
         merged: DomainNameService = super().doMerge(objectA, objectB)
         
         self.__mergeZone(objectA.getRootZone(), objectB.getRootZone(), merged.getRootZone())
-
+        self.__mergeMaster(objectA, objectB, merged)
         return merged
