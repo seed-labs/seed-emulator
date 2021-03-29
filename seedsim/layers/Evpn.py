@@ -2,7 +2,7 @@ from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Routing import Router
 from seedsim.core import Layer
-from typing import Dict
+from typing import Dict, Tuple, List, Set
 
 EvpnFileTemplates: Dict[str, str] = {}
 
@@ -87,3 +87,61 @@ class Evpn(Layer):
 
     This layer add supports for BGP-signeled EVPN.
     """
+
+    __customers: Set[Tuple[int, int, str, str, int]]
+    __providers: Set[int]
+
+    def __init__(self):
+        super().__init__()
+
+        # they are not really "dependency," we just need them to render after
+        # us, in case we need to setup masks.
+        self.addDependency('Ospf', True, True)
+        self.addDependency('Ibgp', True, True)
+
+        self.addDependency('Routing', False, False)
+
+        self.__customers = set()
+        self.__providers = set()
+
+    def getName(self) -> str:
+        return 'Evpn'
+        
+    def configureAsEvpnProvider(self, asn: int):
+        '''!
+        @brief configure an AS to be EVPN provider; currently, making an EVPN
+        provider will exclude it from any IP-based network.
+
+        @param asn asn.
+        '''
+        self.__providers.add(asn)
+
+    def getEvpnProviders(self) -> Set[int]:
+        '''!
+        @brief get set of EVPN providers.
+        
+        @returns set of asns.
+        '''
+        return self.__providers
+
+    def addCustomer(self, providerAsn: int, customerAsn: int, customerNetworkName: str, providerRouterNodeName: str, vni: int):
+        '''!
+        @brief add a customer.
+
+        @param providerAsn provider ASN.
+        @param customerAsn customer ASN. If the target network is an internet
+        exchange, use 0 as asn.
+        @param customerNetworkName customer network name.
+        @param routerNodeName name of the PE router node.
+        @param vni VNI.
+        '''
+        self.__customers.add((providerAsn, customerAsn, customerNetworkName, providerRouterNodeName, vni))
+
+    def getCustomers(self) -> Set[Tuple[int, int, str, str, int]]:
+        '''!
+        @brief Get set of customers.
+
+        @return set of (provider asn, customer asn, customer netname, pe node name)
+        '''
+        return self.__customers
+    
