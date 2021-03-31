@@ -118,6 +118,10 @@ ebgp.addPrivatePeering(102, 3, 161, PeerRelationship.Provider)
 
 ###############################################################################
 
+
+
+sim.addHook(ResolvConfHook(['10.152.0.71']))
+
 sim.addLayer(base)
 sim.addLayer(routing)
 sim.addLayer(ebgp)
