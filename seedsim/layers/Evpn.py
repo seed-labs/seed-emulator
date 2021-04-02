@@ -179,9 +179,30 @@ class Evpn(Layer):
         ))
 
     def __configureProviderEdgeRouter(self, router: Router, customers: List[Tuple[int, str, int]]):
-        pass
+        vxlan_ifaces = ''
+
+        vnis: Set[int] = set()
+
+        for (_, _, vni) in customers: vnis.add(vni)
+
+        self._log('creating vxlan interfaces on as{}/{}'.format(router.getAsn(), router.getName()))
+        for vni in vnis:
+            vxlan_ifaces += EvpnFileTemplates['vetp_bridge'].format(
+                name = vni,
+                vni = vni,
+                loopbackAddress = router.getLoopbackAddress()
+            )
+
+            router.appendStartCommand('ifup br-{}'.format(vni))
+            router.appendStartCommand('ifup vtep-{}'.format(vni))
+        
+        router.setFile('/etc/network/interfaces.d/vxlan_interfaces', vxlan_ifaces)
+
+        # todo: bridge to customer's network
 
     def __configureAutonomousSystem(self, asn: int, reg: Registry):
+        self._log('configuring as{}'.format(asn))
+
         customers: List[Tuple[int, str, str, int]] = []
 
         routers: List[Router] = []
@@ -191,10 +212,12 @@ class Evpn(Layer):
         for r in ScopedRegistry(str(asn), reg).getByType('rnode'):
             routers.append(r)
 
+        self._log('collecting customers of as{}'.format(asn))
         for (pasn, casn, cn, prn, vni) in self.__customers:
             if pasn != asn: continue
             customers.append((casn, cn, prn, vni))
 
+        self._log('classifying p/pe for as{}'.format(asn))
         for r in routers:
             is_edge = False
 
@@ -206,8 +229,20 @@ class Evpn(Layer):
             if is_edge: pe.append(r)
             else: p.append(r)
 
+        self._log('classifying p routers for as{}'.format(asn))
         for router in p: self.__configureProviderRouter(router)
-        
+
+        self._log('classifying pe routers for as{}'.format(asn))
+        for router in pe:
+            self._log('collection customers connected to as{}/{}'.format(asn, router.getName()))
+
+            this_customers: List[Tuple[int, str, int]] = []
+
+            for (casn, cn, prn, vni) in customers:
+                if prn != router.getName(): continue
+                this_customers.append((casn, cn, vni))
+            
+            self.__configureProviderEdgeRouter(router, this_customers)
         
 
     def render(self, simulator: Simulator):
