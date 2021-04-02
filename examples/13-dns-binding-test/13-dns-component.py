@@ -23,8 +23,13 @@ a_root_server.setMaster()
 dns.install('b-root-server').addZone('.') # b-root-server will be slave.
 
 #Install COM TLD server
-dns.install('a-com-server').addZone('com.')
-dns.install('b-com-server').addZone('com.')
+a_com_server = dns.install('a-com-server')
+a_com_server.addZone('com.')
+a_com_server.setMaster()
+b_com_server = dns.install('b-com-server')
+b_com_server.addZone('com.')
+b_com_server.setMaster()
+
 dns.install('c-com-server').addZone('com.')
 
 #Install NET TLD server
