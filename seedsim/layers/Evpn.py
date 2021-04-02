@@ -1,7 +1,9 @@
+from _typeshed import AnyPath
 from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Routing import Router
-from seedsim.core import Layer
+from seedsim.core import Layer, Simulator, ScopedRegistry, Registry
+from seedsim.core.enums import NetworkType, NodeRole
 from typing import Dict, Tuple, List, Set
 
 EvpnFileTemplates: Dict[str, str] = {}
@@ -26,14 +28,13 @@ iface vtep-{name} inet manual
     post-down       ip link del vtep-{name}
 '''
 
-EvpnFileTemplates['rr_config'] = '''\
+EvpnFileTemplates['frr_config'] = '''\
 ip router-id {routerId}
 !
 {ospfInterfaces}
 !
 router bgp {asn}
     no bgp default ipv4-unicast
-    neighbor fabric peer-group
     neighbor fabric remote-as {asn}
     neighbor fabric update-source {loopbackAddress}
     neighbor fabric capability dynamic
@@ -43,14 +44,11 @@ router bgp {asn}
     !
     address-family l2vpn evpn
         neighbor fabric activate
-        neighbor fabric route-reflector-client
         neighbor fabric soft-reconfiguration inbound
+        advertise-all-vni
+        advertise-svi-ip
     exit-address-family
 !
-'''
-
-EvpnFileTemplates['rr_config_neighbor'] = '''\
-    neighbor {neighbourAddress} peer-group fabric
 '''
 
 EvpnFileTemplates['ospf_interface'] = '''\
@@ -59,26 +57,8 @@ interface {interface}
     ip ospf dead-interval minimal hello-multiplier 2
 '''
 
-EvpnFileTemplates['pe_config'] = '''\
-ip router-id {routerId}
-!
-{ospfInterfaces}
-!
-router bgp {asn}
-    no bgp default ipv4-unicast
-    neighbor {rrAddress} remote-as {asn}
-    neighbor {rrAddress} update-source {loopbackAddress}
-    neighbor {rrAddress} capability dynamic
-    neighbor {rrAddress} capability extended-nexthop
-    neighbor {rrAddress} graceful-restart
-    !
-    address-family l2vpn evpn
-        neighbor {rrAddress} activate
-        neighbor {rrAddress} soft-reconfiguration inbound
-        advertise-all-vni
-        advertise-svi-ip
-    exit-address-family
-!
+EvpnFileTemplates['bgp_neighbor'] = '''\
+    neighbor {neighbourAddress} peer-group fabric
 '''
 
 class Evpn(Layer):
@@ -145,3 +125,108 @@ class Evpn(Layer):
         '''
         return self.__customers
     
+    def __configureOspf(self, node: Router) -> str:
+        self._log('configuring OSPF on as{}/{}'.format(node.getAsn(), node.getName()))
+
+        ospf_ifaces = ''
+
+        for iface in node.getInterfaces():
+            net = iface.getNet()
+            if net.getType() == NetworkType.InternetExchange: continue
+            if not (True in (node.getRole() == NodeRole.Router for node in net.getAssociations())): continue
+
+            ospf_ifaces += EvpnFileTemplates['ospf_interface'].format(
+                interface = net.getName()
+            )
+
+            net.setMtu(9000)
+
+        return ospf_ifaces
+
+    def __configureIbgpMesh(self, local: Router, nodes: List[Router]) -> str:
+        self._log('configuring IBGP mesh on provider edge as{}/{}'.format(local.getAsn(), local.getName()))
+
+        neighbours = ''
+
+        for remote in nodes:
+            if local == remote: continue
+
+            neighbours += EvpnFileTemplates['bgp_neighbor'].format(
+                neighbourAddress = remote.getLoopbackAddress()
+            )
+
+        return neighbours
+
+    def __configureFrr(self, router: Router):
+        self._log('setting up FRR on as{}/{}'.format(router.getAsn(), router.getName()))
+
+        router.setFile('/frr_start', EvpnFileTemplates['frr_start_script'])
+        router.appendStartCommand('chmod +x /frr_start')
+        router.appendStartCommand('/frr_start')
+        router.addSoftware('frr')
+
+    def __configureProviderRouter(self, router: Router):
+        self._log('configuring provider router as{}/{}'.format(router.getAsn(), router.getName()))
+
+        self.__configureFrr(router)
+
+        router.setFile('/etc/frr/frr.conf', EvpnFileTemplates['frr_config'].format(
+            ospfInterfaces = self.__configureOspf(router),
+            routerId = router.getLoopbackAddress(),
+            asn = router.getAsn(),
+            loopbackAddress = router.getLoopbackAddress(),
+            neighbours = ''
+        ))
+
+    def __configureProviderEdgeRouter(self, router: Router, customers: List[Tuple[int, str, int]]):
+        pass
+
+    def __configureAutonomousSystem(self, asn: int, reg: Registry):
+        customers: List[Tuple[int, str, str, int]] = []
+
+        routers: List[Router] = []
+        pe: List[Router] = []
+        p: List[Router] = []
+
+        for r in ScopedRegistry(str(asn), reg).getByType('rnode'):
+            routers.append(r)
+
+        for (pasn, casn, cn, prn, vni) in self.__customers:
+            if pasn != asn: continue
+            customers.append((casn, cn, prn, vni))
+
+        for r in routers:
+            is_edge = False
+
+            for (_, _, prn, _) in customers:
+                if r.getName() == prn:
+                    is_edge = True
+                    break
+            
+            if is_edge: pe.append(r)
+            else: p.append(r)
+
+        for router in p: self.__configureProviderRouter(router)
+        
+        
+
+    def render(self, simulator: Simulator):
+        reg = simulator.getRegistry()
+
+        asns: Set[int] = set()
+
+        for (asn, _, _, _, _) in self.__customers: asns.add(asn)
+
+        for asn in self.asns:
+            if reg.has('seedsim', 'layer', 'Ospf'):
+                self._log('Ospf layer exists, masking as{}'.format(asn))
+                ospf: Ospf = reg.get('seedsim', 'layer', 'Ospf')
+                ospf.maskAsn(asn)
+
+            if reg.has('seedsim', 'layer', 'Ibgp'):
+                self._log('Ibgp layer exists, masking as{}'.format(asn))
+                ibgp: Ibgp = reg.get('seedsim', 'layer', 'Ibgp')
+                ibgp.maskAsn(asn)
+
+            self.__configureAutonomousSystem(asn, reg)
+
