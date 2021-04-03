@@ -50,6 +50,9 @@ merged.addBinding(Binding('www-google-com-web', filter = Filter(asn=150, nodeNam
 merged.addBinding(Binding('www-facebook-com-web', filter = Filter(asn=152, nodeName="host1")))
 merged.addBinding(Binding('www-syr-edu-web', filter = Filter(asn=152, nodeName="host2")))
 
+
+merged.addHook(ResolvConfHook(['10.150.0.77','10.151.0.77','10.152.0.77',
+                            '10.153.0.77','10.154.0.77','10.160.0.77','10.161.0.77']))
 merged.render()
 
 ###############################################################################
