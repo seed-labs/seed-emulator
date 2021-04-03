@@ -31,6 +31,6 @@ class ResolvConfHookByAs(Hook):
             if scope != self.__asn: continue
             self._log('setting resolv.conf for as{}/{}'.format(scope, name))
             host: Node = object
-            host.appendStartCommand('rm /etc/resolv.conf')
+            host.appendStartCommand(': > /etc/resolv.conf')
             for s in self.__servers:
                 host.appendStartCommand('echo "nameserver {}" >> /etc/resolv.conf'.format(s))
