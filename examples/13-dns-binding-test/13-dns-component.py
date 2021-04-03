@@ -9,9 +9,7 @@ from seedsim.compiler import Docker
 
 
 sim = Simulator()
-
 dns = DomainNameService()
-ldns = DomainNameCachingService()
 
 
 #Install root server
@@ -80,10 +78,7 @@ dns.install('ns2-dnspod.com').addZone('us.gov.')
 dns.install('ns2-dnspod.com').addZone('weibo.cn.')
 dns.install('ns3-dnspod.com').addZone('php.net.')
 
-#Install local DNS
-ldns.install('local-dns-1')
 
 sim.addLayer(dns)
-sim.addLayer(ldns)
 
 sim.dump('dns-component.bin')
