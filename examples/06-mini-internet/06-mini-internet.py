@@ -3,7 +3,7 @@ from seedsim.services import WebService, DomainNameService, DomainNameCachingSer
 from seedsim.services import CymruIpOriginService, ReverseDomainNameService
 from seedsim.compiler import Docker, Graphviz
 from seedsim.hooks import ResolvConfHook
-from seedsim.core import Simulator, Service
+from seedsim.core import Simulator, Service, Binding, Filter
 from seedsim.layers import Router
 from typing import List, Tuple, Dict
 
@@ -34,7 +34,7 @@ def make_real_as(asn: int, exchange: int, exchange_ip: str):
 
 ###############################################################################
 
-def make_service_as(asn: int, services: List[Service], exchange: int):
+def make_service_as(sim: Simulator, asn: int, services: List[Service], exchange: int):
     service_as = base.createAutonomousSystem(asn)
 
     router = service_as.createRouter('router0')
@@ -54,11 +54,14 @@ def make_service_as(asn: int, services: List[Service], exchange: int):
 
         server.joinNetwork('net0')
 
-        service.installByName(asn, name)
+        vnodename = 'as{}_{}'.format(asn, name)
+
+        service.install(vnodename)
+        sim.addBinding(Binding(vnodename, filter = Filter(asn = asn, nodeName = name)))
 
 ###############################################################################
 
-def make_dns_as(asn: int, zones: List[str], exchange: int):
+def make_dns_as(sim: Simulator, asn: int, zones: List[str], exchange: int):
     dns_as = base.createAutonomousSystem(asn)
 
     router = dns_as.createRouter('router0')
@@ -78,7 +81,10 @@ def make_dns_as(asn: int, zones: List[str], exchange: int):
 
         server.joinNetwork('net0')
 
-        dns.installByName(asn, name).addZone(dns.getZone(zone))
+        vnodename = 'as{}_{}'.format(asn, name)
+
+        dns.install(vnodename).addZone(zone)
+        sim.addBinding(Binding(vnodename, filter = Filter(asn = asn, nodeName = name)))
 
 ###############################################################################
 
@@ -162,17 +168,15 @@ make_real_as(11872, 105, '10.105.0.250') # Syracuse University
 
 ###############################################################################
 
-make_service_as(150, [web, ldns], 101)
-make_service_as(151, [web], 100)
-make_service_as(152, [web], 102)
-make_service_as(153, [ldns], 102)
-make_service_as(154, [rdns], 104)
-make_service_as(155, [cymru], 105)
+make_service_as(sim, 150, [web, ldns], 101)
+make_service_as(sim, 151, [web], 100)
+make_service_as(sim, 152, [web], 102)
+make_service_as(sim, 153, [ldns], 102)
 
 ###############################################################################
 
-make_dns_as(160, ['.'], 103)
-make_dns_as(161, ['net.', 'com.', 'arpa.'], 103)
+make_dns_as(sim, 160, ['.'], 103)
+make_dns_as(sim, 161, ['net.', 'com.', 'arpa.'], 103)
 
 ###############################################################################
 
@@ -180,7 +184,12 @@ dns.getZone('as150.net.').addRecord('@ A 10.150.0.71')
 dns.getZone('as151.net.').addRecord('@ A 10.151.0.71')
 dns.getZone('as152.net.').addRecord('@ A 10.152.0.71')
 
-make_dns_as(162, ['as150.net.', 'as151.net.', 'as152.net.'], 103)
+make_dns_as(sim, 162, ['as150.net.', 'as151.net.', 'as152.net.'], 103)
+
+###############################################################################
+
+make_dns_as(sim, 154, ['in-addr.arpa.'], 104)
+make_dns_as(sim, 155, ['cymru.com.'], 105)
 
 ###############################################################################
 
@@ -205,7 +214,8 @@ google_dns = google.createHost('google_dns')
 
 google_dns.joinNetwork('google_dns_net', '8.8.8.8')
 
-ldns.installByName(15169, 'google_dns')
+ldns.install('google_dns')
+sim.addBinding(Binding('google_dns', filter = Filter(asn = 15169)))
 
 routing.addDirect(15169, 'google_dns_net')
 
