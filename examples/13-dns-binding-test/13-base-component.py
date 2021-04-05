@@ -4,8 +4,8 @@
 from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedsim.compiler import Docker
 from seedsim.services import DomainNameCachingService
-from seedsim.core import Simulator, Binding, Filter
-from seedsim.hooks import ResolvConfHook
+from seedsim.core import Simulator, Binding, Filter, Node
+from typing import List
 
 sim = Simulator()
 
@@ -16,6 +16,13 @@ ibgp = Ibgp()
 ospf = Ospf()
 ldns = DomainNameCachingService()
 
+
+def setup_resolve_conf(hosts: List[ Node ], ldns_ip: str):
+    #Setup local dns IP for hosts
+    for h in hosts:
+        h.appendStartCommand(': > /etc/resolv.conf')
+        h.appendStartCommand('echo "nameserver {}" >> /etc/resolv.conf'.format(ldns_ip))
+
 def make_stub_as(asn: int, exchange: str):
     stub_as = base.createAutonomousSystem(asn)
     host = stub_as.createHost('host0')
@@ -25,8 +32,10 @@ def make_stub_as(asn: int, exchange: str):
     host4 = stub_as.createHost('host4')
     host5 = stub_as.createHost('host5')
     ldns_host = stub_as.createHost('ldns') #used for local dns service
-    router = stub_as.createRouter('router0')
+    ldns_ip = "10.{}.0.77".format(asn)
+    setup_resolve_conf([host,host1,host2,host3,host4,host5,ldns_host], ldns_ip)# Setup resolve.conf for hosts.
 
+    router = stub_as.createRouter('router0')
     net = stub_as.createNetwork('net0')
 
     routing.addDirect(asn, 'net0')
@@ -50,9 +59,15 @@ ldns.install('local-dns-154')
 ldns.install('local-dns-160')
 ldns.install('local-dns-161')
 
-#Setting up ResolvConf file for local dns list of each host in different AS
-sim.addHook(ResolvConfHook(['10.150.0.77','10.151.0.77','10.152.0.77',
-                            '10.153.0.77','10.154.0.77','10.160.0.77','10.161.0.77']))
+#Add bindings for local dns:
+sim.addBinding(Binding('local-dns-150', filter = Filter(asn=150, nodeName="ldns")))
+sim.addBinding(Binding('local-dns-151', filter = Filter(asn=151, nodeName="ldns")))
+sim.addBinding(Binding('local-dns-152', filter = Filter(asn=152, nodeName="ldns")))
+sim.addBinding(Binding('local-dns-153', filter = Filter(asn=153, nodeName="ldns")))
+sim.addBinding(Binding('local-dns-154', filter = Filter(asn=154, nodeName="ldns")))
+sim.addBinding(Binding('local-dns-160', filter = Filter(asn=160, nodeName="ldns")))
+sim.addBinding(Binding('local-dns-161', filter = Filter(asn=161, nodeName="ldns")))
+
 ##############################################################################
 base.createInternetExchange(100)
 base.createInternetExchange(101)

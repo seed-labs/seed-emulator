@@ -210,6 +210,9 @@ class Simulator:
         new_sim = Simulator()
         for l in new_layers.values(): new_sim.addLayer(l)
 
+        for binding in self.getBindings(): new_sim.addBinding(binding)
+        for binding in other.getBindings(): new_sim.addBinding(binding)
+
         return new_sim
 
     def dump(self, fileName: str):
