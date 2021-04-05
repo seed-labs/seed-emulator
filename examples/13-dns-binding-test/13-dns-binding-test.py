@@ -16,7 +16,7 @@ simA.load('dns-component.bin')
 simB.load('base-component.bin')
 simC.load('dns-component-1.bin')
 
-merged = simA.merge(simB, DEFAULT_MERGERS)
+merged = simB.merge(simA, DEFAULT_MERGERS)
 merged = merged.merge(simC, DEFAULT_MERGERS)
 
 #Add binding for First Component

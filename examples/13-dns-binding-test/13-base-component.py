@@ -32,7 +32,7 @@ def make_stub_as(asn: int, exchange: str):
     host4 = stub_as.createHost('host4')
     host5 = stub_as.createHost('host5')
     ldns_host = stub_as.createHost('ldns') #used for local dns service
-    ldns_ip = "10.{}.0.77".format(asn)
+    ldns_ip = ldns_host.getInterfaces()[0].getAddress()
     setup_resolve_conf([host,host1,host2,host3,host4,host5,ldns_host], ldns_ip)# Setup resolve.conf for hosts.
 
     router = stub_as.createRouter('router0')
