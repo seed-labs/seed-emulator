@@ -15,26 +15,19 @@ class Filter(Printable):
     nodeName: str
     ip: str
     prefix: str
-    anyService: List[str]
-    allServices: List[str]
-    notServices: List[str]
     allowBound: bool
 
     custom: Callable[[str, Node], bool]
 
     def __init__(
         self, asn: int = None, nodeName: str = None, ip: str = None,
-        prefix: str = None, anyService: List[str] = [], allServices: List[str] = [],
-        notServices: List[str] = [], custom: Callable[[str, Node], bool] = None,
+        prefix: str = None, custom: Callable[[str, Node], bool] = None,
         allowBound: bool = False
     ):
         self.asn = asn
         self.nodeName = nodeName
         self.ip = ip
         self.prefix = prefix
-        self.anyService = anyService
-        self.allServices = allServices
-        self.notServices = notServices
         self.custom = custom
         self.allowBound = allowBound
 
