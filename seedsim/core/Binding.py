@@ -106,20 +106,6 @@ class Binding(Printable):
                     self.__log('node as{}/{} not in prefix {}, trying next node.'.format(scope, name, filter.prefix))
                     continue
 
-            node_services = node.getAttribute('services', {}).keys()
-
-            if len(filter.anyService) > 0 and not any([ x in node_services for x in filter.anyService ]):
-                self.__log('node as{}/{} does have any services in [{}], trying next node.'.format(scope, name, ','.join(filter.anyService)))
-                continue
-
-            if len(filter.allServices) > 0 and not all([ x in node_services for x in filter.allServices ]):
-                self.__log('node as{}/{} does have all services in [{}], trying next node.'.format(scope, name, ','.join(filter.allServices)))
-                continue
-
-            if len(filter.notServices) > 0 and any([ x in node_services for x in filter.notServices ]):
-                self.__log('node as{}/{} haveservices in [{}], trying next node.'.format(scope, name, ','.join(filter.notServices)))
-                continue
-
             if filter.custom != None and not filter.custom(vnode, node):
                 self.__log('custom function returned false for node as{}/{}, trying next node.'.format(scope, name))
                 continue
