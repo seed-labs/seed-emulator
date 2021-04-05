@@ -17,12 +17,6 @@ ospf = Ospf()
 ldns = DomainNameCachingService()
 
 
-def setup_resolve_conf(hosts: List[ Node ], ldns_ip: str):
-    #Setup local dns IP for hosts
-    for h in hosts:
-        h.appendStartCommand(': > /etc/resolv.conf')
-        h.appendStartCommand('echo "nameserver {}" >> /etc/resolv.conf'.format(ldns_ip))
-
 def make_stub_as(asn: int, exchange: str):
     stub_as = base.createAutonomousSystem(asn)
     host = stub_as.createHost('host0')
@@ -32,8 +26,6 @@ def make_stub_as(asn: int, exchange: str):
     host4 = stub_as.createHost('host4')
     host5 = stub_as.createHost('host5')
     ldns_host = stub_as.createHost('ldns') #used for local dns service
-    ldns_ip = ldns_host.getInterfaces()[0].getAddress()
-    setup_resolve_conf([host,host1,host2,host3,host4,host5,ldns_host], ldns_ip)# Setup resolve.conf for hosts.
 
     router = stub_as.createRouter('router0')
     net = stub_as.createNetwork('net0')
@@ -51,13 +43,13 @@ def make_stub_as(asn: int, exchange: str):
     router.joinNetwork(exchange)
 
 ##############Install local DNS###############################################
-ldns.install('local-dns-150')
-ldns.install('local-dns-151')
-ldns.install('local-dns-152')
-ldns.install('local-dns-153')
-ldns.install('local-dns-154')
-ldns.install('local-dns-160')
-ldns.install('local-dns-161')
+ldns.install('local-dns-150').setConfigureResolvconf(True)
+ldns.install('local-dns-151').setConfigureResolvconf(True)
+ldns.install('local-dns-152').setConfigureResolvconf(True)
+ldns.install('local-dns-153').setConfigureResolvconf(True)
+ldns.install('local-dns-154').setConfigureResolvconf(True)
+ldns.install('local-dns-160').setConfigureResolvconf(True)
+ldns.install('local-dns-161').setConfigureResolvconf(True)
 
 #Add bindings for local dns:
 sim.addBinding(Binding('local-dns-150', filter = Filter(asn=150, nodeName="ldns")))
