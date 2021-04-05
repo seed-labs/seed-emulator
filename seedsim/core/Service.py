@@ -116,18 +116,11 @@ class Service(Layer):
         return self.__pending_targets[vnode]
 
     def configure(self, simulator: Simulator):
-        reg = simulator.getRegistry()
         for (vnode, server) in self.__pending_targets.items():
+            pnode = simulator.getBindingFor(vnode)
             self._log('looking for binding for {}...'.format(vnode))
-            binded = False
-            for binding in simulator.getBindings():
-                pnode = binding.getCandidate(vnode, reg)
-                if pnode == None: continue
-                
-                binded = True
-                self.__configureServer(server, pnode)
-                self._log('configure: binded {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
-            assert binded, 'failed to bind vnode {} to any physical node.'.format(vnode)
+            self.__configureServer(server, pnode)
+            self._log('configure: binded {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
     
     def render(self, simulator: Simulator):
         for (server, node) in self.__targets:

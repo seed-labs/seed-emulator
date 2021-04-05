@@ -32,10 +32,12 @@ class Simulator:
     __dependencies_db: Dict[str, Set[Tuple[str, bool]]]
     __rendered: bool
     __bindings: BindingDatabase
+    __resolved_bindings: Dict[str, Node]
 
     def __init__(self):
         self.__rendered = False
         self.__dependencies_db = {}
+        self.__resolved_bindings = {}
         self.__registry = Registry()
         self.__layers = LayerDatabase()
         self.__bindings = BindingDatabase()
@@ -141,6 +143,45 @@ class Simulator:
     def getLayers(self) -> List[Layer]:
         return self.__registry.getByType('seedsim', 'layer')
 
+    def resolvVnode(self, vnode: str) -> Node:
+        """!
+        @brief resolve physical node for the given virtual node.
+
+        @param vnode virtual node name.
+
+        @returns physical node.
+        """
+        for binding in self.getBindings():
+            pnode = binding.getCandidate(vnode, self.__registry, True)
+            if pnode == None: continue
+            return pnode
+        assert False, 'cannot resolve vnode {}'.format(vnode)
+
+    def getBindingFor(self, vnode: str) -> Node:
+        """!
+        @brief get physical node for the given virtual node from the
+        pre-populated vnode-pnode mappings.
+
+        Note that the bindings are processed in the early render stage, meaning
+        calls to this function will always fail before render, and only virtual
+        node names that have been used in service will be available to be
+        "resolve" to the physical node using this function.
+
+        This is meant to be used by services to find the physical node to
+        install their servers on and should not be used for any other purpose. 
+        if you try to resolve some arbitrary vnode names to physical node,
+        use the resolveVnode function instead.
+
+        tl;dr: don't use this, use resolvVnode, unless you know what you are
+        doing.
+
+        @param vnode virtual node.
+
+        @returns physical node.
+        """
+        assert vnode in self.__resolved_bindings, 'failed to find binding for vnode {}.'.format(vnode)
+        return self.__resolved_bindings[vnode]
+
     def render(self):
         """!
         @brief Render.
@@ -151,6 +192,29 @@ class Simulator:
 
         for (layer, _) in self.__layers.db.values():
             self.__loadDependencies(layer.getDependencies())
+
+        # render base first
+        self.__render('Base', False, True)
+
+        # collect all pending vnode names
+        self.__log('collecting virtual node names in the emulation...')
+        vnodes: List[str] = []
+        for (layer, _) in self.__layers.db.values():
+            if not isinstance(layer, core.Service): continue
+            for (vnode, _) in layer.getPendingTargets().items():
+                assert vnode not in vnodes, 'duplicated vnode: {}'.format(vnode)
+                vnodes.append(vnode)
+        self.__log('found {} virtual nodes.'.format(len(vnodes)))
+
+        # resolv bindings for all vnodes
+        self.__log('resolving binding for all virtual nodes...')
+        for binding in self.getBindings():
+            for vnode in vnodes:
+                if vnode in self.__resolved_bindings: continue
+                pnode = binding.getCandidate(vnode, self.__registry)
+                if pnode == None: continue
+                self.__log('vnode {} bound to as{}/{}'.format(vnode, pnode.getAsn(), pnode.getName()))
+                self.__resolved_bindings[vnode] = pnode
 
         for layerName in self.__layers.db.keys():
             self.__render(layerName, False, True)

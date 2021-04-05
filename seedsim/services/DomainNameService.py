@@ -136,21 +136,13 @@ class Zone(Printable):
         @param simulator simulator object.
         """
         for (domain_name, vnode_name) in self.__pending_records.items():
-            bound = False
-            for binding in simulator.getBindings():
-                pnode = binding.getCandidate(vnode_name, simulator.getRegistry(), True)
+            pnode = simulator.resolvVnode(vnode_name)
 
-                if pnode == None: continue
+            ifaces = pnode.getInterfaces()
+            assert len(ifaces) > 0, 'resolvePendingRecords(): node as{}/{} has no interfaces'.format(pnode.getAsn(), pnode.getName())
+            addr = ifaces[0].getAddress()
 
-                ifaces = pnode.getInterfaces()
-                assert len(ifaces) > 0, 'resolvePendingRecords(): node as{}/{} has no interfaces'.format(pnode.getAsn(), pnode.getName())
-                addr = ifaces[0].getAddress()
-
-                self.addRecord('{} A {}'.format(domain_name, addr))
-
-                bound = True
-                break
-            assert bound, 'resolvePendingRecords(): no binding for vnode {}'.format(vnode_name)
+            self.addRecord('{} A {}'.format(domain_name, addr))
 
     def getPendingRecords(self) -> Dict[str, str]:
         """!
