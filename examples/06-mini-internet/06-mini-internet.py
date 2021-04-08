@@ -1,6 +1,6 @@
 from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship, Dnssec
 from seedsim.services import WebService, DomainNameService, DomainNameCachingService
-from seedsim.services import CymruIpOriginService, ReverseDomainNameService
+from seedsim.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedsim.compiler import Docker, Graphviz
 from seedsim.hooks import ResolvConfHook
 from seedsim.core import Simulator, Service, Binding, Filter
@@ -23,6 +23,7 @@ ldns = DomainNameCachingService()
 dnssec = Dnssec()
 cymru = CymruIpOriginService()
 rdns = ReverseDomainNameService()
+lg = BgpLookingGlassService()
 
 ###############################################################################
 
@@ -88,10 +89,23 @@ def make_dns_as(sim: Simulator, asn: int, zones: List[str], exchange: int):
 
 ###############################################################################
 
-def make_user_as(asn: int, exchange: str):
+def make_user_as(sim: Simulator, asn: int, exchange: str):
     user_as = base.createAutonomousSystem(asn)
 
     router = user_as.createRouter('router0')
+
+    lgnode = user_as.createHost('looking_glass')
+
+    vnodename = 'lg{}'.format(asn)
+
+    # lg server itself needs to be install on a host node
+    lgserver = lg.install(vnodename)
+
+    # and attach to a router; a lg server can be attached to mutiple routers
+    lgserver.attach('router0')
+    
+    # bind service node to physical node
+    sim.addBinding(Binding(vnodename, filter = Filter(asn = asn, nodeName = 'looking_glass')))
 
     net = user_as.createNetwork('net0')
 
@@ -101,6 +115,8 @@ def make_user_as(asn: int, exchange: str):
 
     router.joinNetwork('net0')
     router.joinNetwork('ix{}'.format(exchange))
+
+    lgnode.joinNetwork('net0')
 
 ###############################################################################
 
@@ -193,8 +209,8 @@ make_dns_as(sim, 155, ['cymru.com.'], 105)
 
 ###############################################################################
 
-make_user_as(170, 102)
-make_user_as(171, 105)
+make_user_as(sim, 170, 102)
+make_user_as(sim, 171, 105)
 
 ###############################################################################
 
@@ -294,6 +310,7 @@ sim.addLayer(ldns)
 sim.addLayer(dnssec)
 sim.addLayer(cymru)
 sim.addLayer(rdns)
+sim.addLayer(lg)
 
 sim.render()
 

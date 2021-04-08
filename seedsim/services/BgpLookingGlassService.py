@@ -31,6 +31,7 @@ class BgpLookingGlassServer(Server):
 
         # note: need golang 1.12+; ubuntu defaults to 1.13. need attention if using debain
         node.addSoftware('golang')
+        node.addSoftware('git')
         node.addSoftware('make')
         node.addBuildCommand('git clone https://github.com/xddxdd/bird-lg-go /lg')
         node.addBuildCommand('curl -Lo /bin/go-bindata https://github.com/kevinburke/go-bindata/releases/download/v3.11.0/go-bindata-linux-amd64')
@@ -114,6 +115,10 @@ class BgpLookingGlassServer(Server):
             )
 
             self.__installLookingGlass(router)
+
+            router.appendStartCommand('while [ ! -e "{}" ]; do echo "lg: waiting for bird...";  sleep 1; done'.format(
+                BIRDCTRL
+            ))
             
             router.appendStartCommand('/lg/proxy/proxy --bird "{}" --listen :{}'.format(
                 BIRDCTRL, self.__proxy_port
@@ -125,7 +130,7 @@ class BgpLookingGlassServer(Server):
             node.appendStartCommand('echo "{} {}.lg.as{}.net" >> /etc/hosts'.format(address, router, asn))
 
         node.appendStartCommand('/lg/frontend/frontend -domain lg.as{}.net --servers {} --proxy-port {} --listen :{} --title-brand "{}" --navbar-brand "{}"'.format(
-            asn, ','.join(routers.keys), self.__proxy_port, self.__frontend_port, 'AS{} looking glass'.format(asn), 'AS{} looking glass'.format(asn)
+            asn, ','.join(routers.keys()), self.__proxy_port, self.__frontend_port, 'AS{} looking glass'.format(asn), 'AS{} looking glass'.format(asn)
         ))
 
 class BgpLookingGlassService(Service):
@@ -133,12 +138,22 @@ class BgpLookingGlassService(Service):
     @brief the BGP looking glass service.
     """
 
+    __simulator: Simulator
+
     def __init__(self):
         super().__init__()
         self.addDependency('Routing', False, False)
 
     def _createServer(self) -> Server:
         return BgpLookingGlassServer()
+
+    def _doConfigure(self, node: Node, server: BgpLookingGlassServer):
+        super()._doConfigure(node, server)
+        server.bind(self.__simulator)
+
+    def configure(self, simulator: Simulator):
+        self.__simulator = simulator
+        return super().configure(simulator)
 
     def getName(self) -> str:
         return 'BgpLookingGlassService'

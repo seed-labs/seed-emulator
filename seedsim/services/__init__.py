@@ -5,3 +5,4 @@ from .DomainNameService import DomainNameServer, DomainNameService, Zone
 from .DomainNameCachingService import DomainNameCachingServer, DomainNameCachingService
 from .CymruIpOrigin import CymruIpOriginService, CymruIpOriginServer
 from .ReverseDomainNameService import ReverseDomainNameService, ReverseDomainNameServer
+from .BgpLookingGlassService import BgpLookingGlassServer, BgpLookingGlassService
