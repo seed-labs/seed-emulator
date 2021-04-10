@@ -90,7 +90,7 @@ as11872_router.joinNetwork('ix101', '10.101.0.118')
 
 ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
-ebgp.addPrivatePeering(101, 150, 11872, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 150, 11872, abRelationship = PeerRelationship.Unfiltered)
 
 ###############################################################################
 
@@ -116,4 +116,4 @@ sim.render()
 
 ###############################################################################
 
-sim.compile(Docker(), './real-world')
+sim.compile(Docker(selfManagedNetwork = True), './real-world')

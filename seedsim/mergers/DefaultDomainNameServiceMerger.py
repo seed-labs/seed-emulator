@@ -22,6 +22,12 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
             # TODO: better checks?
             if r not in dst.getGuleRecords(): dst.addGuleRecord(r)
 
+        # merge pending records (vnode)
+        for (n, v) in a.getPendingRecords().items(): dst.resolveToVnode(n, v)
+        for (n, v) in b.getPendingRecords().items():
+            assert n not in dst.getPendingRecords(), 'found conflict: {} already points to a vnode'.format(n)
+            dst.resolveToVnode(n, v)
+
         # look for all subzones
         for k in a.getSubZones().keys():
             self._log('{}.{} zone found in first emulator.'.format(k, position))
@@ -38,6 +44,12 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
             # then if no conflict, recursively merge them.
             self.__mergeZone(a.getSubZone(name), b.getSubZone(name), dst.getSubZone(name), '{}.{}'.format(name, position))
 
+    def __mergeMaster(self, objectA: DomainNameService, objectB: DomainNameService, merged: DomainNameService):
+        masterA = objectA.getMasterIp()
+        masterB = objectB.getMasterIp()
+        new_master = {key: value + masterB[key] for key, value in masterA.items()}
+        merged.setAllMasterIp(new_master)
+
     def _createService(self) -> DomainNameService:
         return DomainNameService()
 
@@ -51,5 +63,5 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
         merged: DomainNameService = super().doMerge(objectA, objectB)
         
         self.__mergeZone(objectA.getRootZone(), objectB.getRootZone(), merged.getRootZone())
-
+        self.__mergeMaster(objectA, objectB, merged)
         return merged

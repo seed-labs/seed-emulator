@@ -14,7 +14,6 @@ routing = Routing()
 ebgp = Ebgp()
 ibgp = Ibgp()
 ospf = Ospf()
-ldns = DomainNameCachingService()
 
 
 def make_stub_as(asn: int, exchange: str):
@@ -22,10 +21,10 @@ def make_stub_as(asn: int, exchange: str):
     host = stub_as.createHost('host0')
     host1 = stub_as.createHost('host1')
     host2 = stub_as.createHost('host2')
-    host3 = stub_as.createHost('host3')
-    host4 = stub_as.createHost('host4')
-    host5 = stub_as.createHost('host5')
-    ldns_host = stub_as.createHost('ldns') #used for local dns service
+    # host3 = stub_as.createHost('host3')
+    # host4 = stub_as.createHost('host4')
+    # host5 = stub_as.createHost('host5')
+    # ldns_host = stub_as.createHost('ldns') #used for local dns service
 
     router = stub_as.createRouter('router0')
     net = stub_as.createNetwork('net0')
@@ -35,30 +34,30 @@ def make_stub_as(asn: int, exchange: str):
     host.joinNetwork('net0')
     host1.joinNetwork('net0')
     host2.joinNetwork('net0')
-    host3.joinNetwork('net0')
-    host4.joinNetwork('net0')
-    host5.joinNetwork('net0')
-    ldns_host.joinNetwork('net0')
+    # host3.joinNetwork('net0')
+    # host4.joinNetwork('net0')
+    # host5.joinNetwork('net0')
+    # ldns_host.joinNetwork('net0')
 
     router.joinNetwork(exchange)
 
 ##############Install local DNS###############################################
-ldns.install('local-dns-150').setConfigureResolvconf(True)
-ldns.install('local-dns-151').setConfigureResolvconf(True)
-ldns.install('local-dns-152').setConfigureResolvconf(True)
-ldns.install('local-dns-153').setConfigureResolvconf(True)
-ldns.install('local-dns-154').setConfigureResolvconf(True)
-ldns.install('local-dns-160').setConfigureResolvconf(True)
-ldns.install('local-dns-161').setConfigureResolvconf(True)
-
-#Add bindings for local dns:
-sim.addBinding(Binding('local-dns-150', filter = Filter(asn=150, nodeName="ldns")))
-sim.addBinding(Binding('local-dns-151', filter = Filter(asn=151, nodeName="ldns")))
-sim.addBinding(Binding('local-dns-152', filter = Filter(asn=152, nodeName="ldns")))
-sim.addBinding(Binding('local-dns-153', filter = Filter(asn=153, nodeName="ldns")))
-sim.addBinding(Binding('local-dns-154', filter = Filter(asn=154, nodeName="ldns")))
-sim.addBinding(Binding('local-dns-160', filter = Filter(asn=160, nodeName="ldns")))
-sim.addBinding(Binding('local-dns-161', filter = Filter(asn=161, nodeName="ldns")))
+# ldns.install('local-dns-150').setConfigureResolvconf(True)
+# ldns.install('local-dns-151').setConfigureResolvconf(True)
+# ldns.install('local-dns-152').setConfigureResolvconf(True)
+# ldns.install('local-dns-153').setConfigureResolvconf(True)
+# ldns.install('local-dns-154').setConfigureResolvconf(True)
+# ldns.install('local-dns-160').setConfigureResolvconf(True)
+# ldns.install('local-dns-161').setConfigureResolvconf(True)
+#
+# #Add bindings for local dns:
+# sim.addBinding(Binding('local-dns-150', filter = Filter(asn=150, nodeName="ldns")))
+# sim.addBinding(Binding('local-dns-151', filter = Filter(asn=151, nodeName="ldns")))
+# sim.addBinding(Binding('local-dns-152', filter = Filter(asn=152, nodeName="ldns")))
+# sim.addBinding(Binding('local-dns-153', filter = Filter(asn=153, nodeName="ldns")))
+# sim.addBinding(Binding('local-dns-154', filter = Filter(asn=154, nodeName="ldns")))
+# sim.addBinding(Binding('local-dns-160', filter = Filter(asn=160, nodeName="ldns")))
+# sim.addBinding(Binding('local-dns-161', filter = Filter(asn=161, nodeName="ldns")))
 
 ##############################################################################
 base.createInternetExchange(100)
@@ -147,6 +146,5 @@ sim.addLayer(routing)
 sim.addLayer(ebgp)
 sim.addLayer(ibgp)
 sim.addLayer(ospf)
-sim.addLayer(ldns)
 
 sim.dump('base-component.bin')

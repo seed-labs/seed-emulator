@@ -145,17 +145,20 @@ class Routing(Layer):
     """
 
     __direct_nets: Set[Tuple[str, str]]
-    __loopback_assigner = IPv4Network('10.0.0.0/16')
-    __loopback_pos = 1
-
-    def __init__(self):
+    __loopback_assigner: IPv4Network
+    __loopback_pos: int
+    
+    def __init__(self, loopback_range: str = '10.0.0.0/16'):
         """!
         @brief Routing layre constructor.
 
-        @param simulator simulator.
+        @param loopback_range (optional) network range for assiging loopback
+        IP addresses.
         """
         super().__init__()
         self.__direct_nets = set()
+        self.__loopback_assigner = IPv4Network(loopback_range)
+        self.__loopback_pos = 1
         self.addDependency('Base', False, False)
     
     def getName(self) -> str:
@@ -169,7 +172,7 @@ class Routing(Layer):
         node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
         node.addBuildCommand('apt-get install -y --no-install-recommends bird2')
 
-    def render(self, simulator: Simulator):
+    def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
         for ((scope, type, name), obj) in reg.getAll().items():
             if type == 'rs':
@@ -250,6 +253,9 @@ class Routing(Layer):
                 self._log("Setting default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
                 hnode.appendStartCommand('ip rou del default 2> /dev/null')
                 hnode.appendStartCommand('ip route add default via {} dev {}'.format(rif.getAddress(), rif.getNet().getName()))
+
+    def render(self, simulator: Simulator) -> None:
+        pass
 
     def addDirect(self, asn: int, netname: str):
         """!

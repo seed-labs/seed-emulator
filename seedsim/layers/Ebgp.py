@@ -151,7 +151,7 @@ class Ebgp(Layer, Graphable):
         """
         return self.__rs_peers
 
-    def render(self, simulator: Simulator) -> None:
+    def configure(self, simulator: Simulator) -> None:
         reg = simulator.getRegistry()
 
         for (ix, peer) in self.__rs_peers:
@@ -270,6 +270,9 @@ class Ebgp(Layer, Graphable):
                 exportFilter = b_export,
                 importFilter = "all"
             ))
+
+    def render(self, simulator: Simulator) -> None:
+        pass
 
     def _doCreateGraphs(self):
         # creates the following:

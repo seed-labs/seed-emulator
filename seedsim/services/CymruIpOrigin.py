@@ -95,9 +95,8 @@ class CymruIpOriginService(Service):
         self.__records.append(record)
 
     def _doInstall(self, node: Node, server: Server): 
-        self._log('setting up "cymru.com." server node on as{}/{}...'.format(node.getAsn(), node.getName()))
-        dns_s: DomainNameServer = self.__dns.installByName(node.getAsn(), node.getName())
-        dns_s.addZone(self.__dns.getZone('cymru.com.'))
+        assert False, 'CymruIpOriginService is not a real service and should not be installed this way. Please install a DomainNameService on the node and host the zone "cymru.com." yourself.'
+
 
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()

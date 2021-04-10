@@ -9,17 +9,26 @@ from seedsim.compiler import Docker
 
 
 sim = Simulator()
-
 dns = DomainNameService()
-ldns = DomainNameCachingService()
 
 
 #Install root server
-dns.install('a-root-server').addZone('.')
-dns.install('b-root-server').addZone('.')
+a_root_server = dns.install('a-root-server')
+a_root_server.addZone('.')
+#Set a-root-server to be primary(master) server
+a_root_server.setMaster()
+
+dns.install('b-root-server').addZone('.') # b-root-server will be slave.
 
 #Install COM TLD server
-dns.install('a-com-server').addZone('com.')
+a_com_server = dns.install('a-com-server')
+a_com_server.addZone('com.')
+a_com_server.setMaster()
+b_com_server = dns.install('b-com-server')
+b_com_server.addZone('com.')
+b_com_server.setMaster()
+
+dns.install('c-com-server').addZone('com.')
 
 #Install NET TLD server
 dns.install('a-net-server').addZone('net.')
@@ -43,13 +52,13 @@ php_net = dns.getZone('php.net.')
 us_gov = dns.getZone('us.gov.')
 
 twitter_com.addRecord('@ A 1.1.1.1')
-twitter_com.addRecord('www A 1.1.1.1')
+twitter_com.resolveToVnode("www", "www-twitter-com-web")
 google_com.addRecord('@ A 2.2.2.2')
-google_com.addRecord('www A 2.2.2.2')
+google_com.resolveToVnode('www','www-google-com-web')
 facebook_com.addRecord('@ A 3.3.3.3')
-facebook_com.addRecord('www A 3.3.3.3')
+facebook_com.resolveToVnode('www', 'www-facebook-com-web')
 syr_edu.addRecord('@ A 128.230.18.63')
-syr_edu.addRecord('www A 128.230.18.63')
+syr_edu.resolveToVnode('www', 'www-syr-edu-web')
 weibo_cn.addRecord('@ A 4.4.4.4')
 weibo_cn.addRecord('www A 4.4.4.4')
 php_net.addRecord('@ A 5.5.5.5')
@@ -69,10 +78,7 @@ dns.install('ns2-dnspod.com').addZone('us.gov.')
 dns.install('ns2-dnspod.com').addZone('weibo.cn.')
 dns.install('ns3-dnspod.com').addZone('php.net.')
 
-#Install local DNS
-ldns.install('local-dns-1')
 
 sim.addLayer(dns)
-sim.addLayer(ldns)
 
 sim.dump('dns-component.bin')

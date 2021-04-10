@@ -30,7 +30,6 @@ class Service(Layer):
     """
 
     __pending_targets: Dict[str, Server]
-    __bindings: List[Binding]
     
     __targets: Set[Tuple[Server, Node]]
 
@@ -38,7 +37,6 @@ class Service(Layer):
         super().__init__()
         self.__pending_targets = {}
         self.__targets = set()
-        self.__bindings = []
 
     def _createServer(self) -> Server:
         """!
@@ -117,27 +115,12 @@ class Service(Layer):
 
         return self.__pending_targets[vnode]
 
-    def addBinding(self, binding: Binding):
-        """!
-        @brief add a new node binding configuration.
-
-        @param binding node binding.
-        """
-        self.__bindings.append(binding)
-
     def configure(self, simulator: Simulator):
-        reg = simulator.getRegistry()
         for (vnode, server) in self.__pending_targets.items():
+            pnode = simulator.getBindingFor(vnode)
             self._log('looking for binding for {}...'.format(vnode))
-            binded = False
-            for binding in self.__bindings:
-                pnode = binding.getCandidate(vnode, reg)
-                if pnode == None: continue
-                
-                binded = True
-                self.__configureServer(server, pnode)
-                self._log('configure: binded {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
-            assert binded, 'failed to bind vnode {} to any physical node.'.format(vnode)
+            self.__configureServer(server, pnode)
+            self._log('configure: binded {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
     
     def render(self, simulator: Simulator):
         for (server, node) in self.__targets:

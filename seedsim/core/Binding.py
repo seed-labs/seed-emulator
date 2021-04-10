@@ -15,26 +15,19 @@ class Filter(Printable):
     nodeName: str
     ip: str
     prefix: str
-    anyService: List[str]
-    allServices: List[str]
-    notServices: List[str]
     allowBound: bool
 
     custom: Callable[[str, Node], bool]
 
     def __init__(
         self, asn: int = None, nodeName: str = None, ip: str = None,
-        prefix: str = None, anyService: List[str] = [], allServices: List[str] = [],
-        notServices: List[str] = [], custom: Callable[[str, Node], bool] = None,
+        prefix: str = None, custom: Callable[[str, Node], bool] = None,
         allowBound: bool = False
     ):
         self.asn = asn
         self.nodeName = nodeName
         self.ip = ip
         self.prefix = prefix
-        self.anyService = anyService
-        self.allServices = allServices
-        self.notServices = notServices
         self.custom = custom
         self.allowBound = allowBound
 
@@ -59,7 +52,7 @@ class Binding(Printable):
         """
         return re.compile(self.source).match(vnode)
 
-    def getCandidate(self, vnode: str, registry: Registry) -> Node:
+    def getCandidate(self, vnode: str, registry: Registry, peek: bool = False) -> Node:
         """!
         @brief get a binding candidate from given registry. Note that this will
         make change to the node by adding a "bound =  true" attribute to the
@@ -67,6 +60,8 @@ class Binding(Printable):
 
         @param vnode name of vnode
         @param regitry registry to select candidate from. 
+        @param peek (optional) peek mode - ignore bound attribute and don't set
+        it when node is selected.
 
         @return candidate node, or none if not found
         """
@@ -111,32 +106,19 @@ class Binding(Printable):
                     self.__log('node as{}/{} not in prefix {}, trying next node.'.format(scope, name, filter.prefix))
                     continue
 
-            node_services = node.getAttribute('services', {}).keys()
-
-            if len(filter.anyService) > 0 and not any([ x in node_services for x in filter.anyService ]):
-                self.__log('node as{}/{} does have any services in [{}], trying next node.'.format(scope, name, ','.join(filter.anyService)))
-                continue
-
-            if len(filter.allServices) > 0 and not all([ x in node_services for x in filter.allServices ]):
-                self.__log('node as{}/{} does have all services in [{}], trying next node.'.format(scope, name, ','.join(filter.allServices)))
-                continue
-
-            if len(filter.notServices) > 0 and any([ x in node_services for x in filter.notServices ]):
-                self.__log('node as{}/{} haveservices in [{}], trying next node.'.format(scope, name, ','.join(filter.notServices)))
-                continue
-
             if filter.custom != None and not filter.custom(vnode, node):
                 self.__log('custom function returned false for node as{}/{}, trying next node.'.format(scope, name))
                 continue
 
-            if node.hasAttribute('bound') and not filter.allowBound:
+            if node.hasAttribute('bound') and not filter.allowBound and not peek:
                 self.__log('node as{}/{} is already bound and re-bind is not allowed, trying next node.'.format(scope, name))
                 continue
 
             self.__log('node as{}/{} added as candidate. looking for more candidates.'.format(scope, name))
 
             if self.action == Action.FIRST:
-                node.setAttribute('bound', True)
+                self.__log('{} as{}/{}.'.format('peek: picked' if peek else 'bound to', node.getAsn(), node.getName()))
+                if not peek: node.setAttribute('bound', True)
                 return node
         
             candidates.append(node)
@@ -150,8 +132,8 @@ class Binding(Printable):
         if self.action == Action.RANDOM: node = random.choice(candidates)
 
         if node != None: 
-            self.__log('bound to as{}/{}.'.format(node.getAsn(), node.getName()))
-            node.setAttribute('bound', True)
+            self.__log('{} as{}/{}.'.format('peek: picked' if peek else 'bound to', node.getAsn(), node.getName()))
+            if not peek: node.setAttribute('bound', True)
 
         return node
 

@@ -1,7 +1,7 @@
 from seedsim.core import Hook, Simulator, Node
 from typing import List
 
-class ResolvConfHook(Hook):
+class ResolvConfHookByAs(Hook):
     """!
     @brief ResolvConfHook class. This class allows you to set resolv.conf on
     all host nodes.
@@ -9,13 +9,14 @@ class ResolvConfHook(Hook):
 
     __servers: List[str]
 
-    def __init__(self, nameservers: List[str]):
+    def __init__(self, nameservers: List[str], asn: int):
         """!
         @brief ResolvConfHook constructor.
 
         
         """
         self.__servers = nameservers
+        self.__asn = asn
 
     def getName(self) -> str:
         return 'ResolvConfHook'
@@ -27,6 +28,7 @@ class ResolvConfHook(Hook):
         reg = simulator.getRegistry()
         for ((scope, type, name), object) in reg.getAll().items():
             if type != 'hnode': continue
+            if scope != self.__asn: continue
             self._log('setting resolv.conf for as{}/{}'.format(scope, name))
             host: Node = object
             host.appendStartCommand(': > /etc/resolv.conf')

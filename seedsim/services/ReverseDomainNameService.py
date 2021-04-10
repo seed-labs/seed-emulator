@@ -33,10 +33,8 @@ class ReverseDomainNameService(Service):
     def _createServer(self) -> Server:
         return ReverseDomainNameServer()
 
-    def _doInstall(self, node: Node, server: Server):
-        self._log('setting up "in-addr.arpa." server on as{}/{}...'.format(node.getAsn(), node.getName()))
-        dns_s: DomainNameServer = self.__dns.installByName(node.getAsn(), node.getName())
-        dns_s.addZone(self.__dns.getZone('in-addr.arpa.'))
+    def install(self, vnode: str) -> Server:
+        assert False, 'ReverseDomainNameService is not a real service and should not be installed this way. Please install a DomainNameService on the node and host the zone "in-addr.arpa." yourself.'
 
     def configure(self, simulator: Simulator):
         reg = simulator.getRegistry()
