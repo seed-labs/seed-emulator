@@ -151,6 +151,7 @@ class Simulator:
 
         @returns physical node.
         """
+        if vnode in self.__resolved_bindings: return self.__resolved_bindings[vnode]
         for binding in self.getBindings():
             pnode = binding.getCandidate(vnode, self.__registry, True)
             if pnode == None: continue
