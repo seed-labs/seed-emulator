@@ -9,14 +9,14 @@ class BgpAttackerComponent(Component):
     __hijacker: Router
     __counter: int
 
-    def __init__(self):
+    def __init__(self, attackerAsn: int):
         self.__data = Simulator()
         self.__counter = 0
 
         base = Base()
         self.__routing = Routing()
 
-        self.__hijacker_as = base.createAutonomousSystem(666)
+        self.__hijacker_as = base.createAutonomousSystem(attackerAsn)
         self.__hijacker = self.__hijacker_as.createRouter('hijacker')
 
         self.__data.addLayer(base)
@@ -29,7 +29,7 @@ class BgpAttackerComponent(Component):
         netname = 'h{}'.format(self.__counter)
         self.__hijacker_as.createNetwork(netname, prefix)
         self.__hijacker.joinNetwork(netname)
-        self.__routing.addDirect(666, netname)
+        self.__routing.addDirect(self.__hijacker_as.getAsn(), netname)
         self.__counter += 1
 
     def joinInternetExchange(self, ix: str, addr: str):
