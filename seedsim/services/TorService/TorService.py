@@ -10,10 +10,15 @@ from enum import Enum
 
 TorServerFileTemplates: Dict[str, str] = {}
 
+#Tor general configuration file
 TorServerFileTemplates["torrc"] = pkgutil.get_data(__name__, 'config/torrc').decode("utf-8")
+#Tor DirServer(DA) configuration file
 TorServerFileTemplates["torrc.da"] = pkgutil.get_data(__name__, 'config/torrc.da').decode("utf-8")
+#Get DirServer fingerprints script
 TorServerFileTemplates["da_fingerprint"] = pkgutil.get_data(__name__, 'config/da_fingerprint').decode("utf-8")
+#Tor setup script
 TorServerFileTemplates["tor-entrypoint"] = pkgutil.get_data(__name__, 'config/tor-entrypoint').decode("utf-8")
+#Used for download DA fingerprints from DA servers.
 TorServerFileTemplates["downloader"] = """
     until $(curl --output /dev/null --silent --head --fail http://{da_addr}:8888); do
         echo "DA server not ready"
@@ -54,6 +59,14 @@ BUILD_COMMANDS = """build_temps="build-essential automake" && \
 
 
 class TorNodeType(Enum):
+    """!
+    @brief Tor node type:
+    DA - directory authority
+    RELAY - non-exit relay
+    EXIT - exit relay
+    CLIENT - exposes the tor socks port on 9050
+    HS - hidden service, will point to a destination server.
+    """
     DA = "DA"
     RELAY = "RELAY"
     EXIT = "EXIT"
@@ -79,36 +92,70 @@ class TorServer(Server):
         self.__hs_link = ()
 
     def setRole(self, role: Enum):
+        """!
+        @brief User need to set a role of tor server, by default, it's relay node.
+
+        @param role specify what type of role in this tor server
+        """
         self.__role = role.value
 
     def getRole(self) -> str:
+        """!
+        @brief Get role info of this tor server.
+
+        @param return the value of role type.
+        """
         return self.__role
 
     def getLink(self) -> str:
+        """!
+        @brief Get the link of HS server, only HS role node has this feature.
+
+        @param return the value of role type.
+        """
         return self.__hs_link
 
     def setLink(self, addr, port: int):
+        """!
+        @brief set IP link of HS server, only be invoked by __resolveHSLink()
+
+        """
         self.__hs_link = (addr, port)
 
     def linkByVnode(self, vname: str, port: int):
+        """!
+        @brief set Vnode link of HS server, if a tor server is HS role, it's able to link to another virtual node
+               as an onion service. In /tor/HS[random]/hs/hostname file at HS node, it contains the onion address name.
+
+        """
         assert self.getRole() == "HS", "linkByVnode(): only HS type node can bind a host."
         assert len(self.__hs_link) == 0, "linkByVnode(): TorServer already has linked a host."
         self.__hs_link = (vname, port)
 
     def configure(self, node: Node, tor):
+        """!
+        @brief configure TorServer node
+
+        """
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'TorNode configure(): node has not interfaces'
         addr = ifaces[0].getAddress()
 
         if self.getRole() == "DA":
+            # Save DA address in tor service, other type of node will download fingerprint from these DA.
             tor.addDirAuthority(addr)
 
         if self.getRole() == "HS" and len(self.getLink()) != 0:
+            # take out link in HS server and set it to env variable, they would mapping to tor config file.
             addr, port = self.getLink()
             node.appendStartCommand("export TOR_HS_ADDR={}".format(addr))
             node.appendStartCommand("export TOR_HS_PORT={}".format(port))
 
     def install(self, node: Node, tor):
+        """!
+        @brief Tor server installation step.
+
+        """
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'node has not interfaces'
         addr = ifaces[0].getAddress()
@@ -128,6 +175,7 @@ class TorServer(Server):
         node.appendStartCommand("export ROLE={}".format(self.__role))
         node.appendStartCommand("chmod +x /usr/local/bin/tor-entrypoint /usr/local/bin/da_fingerprint")
         node.appendStartCommand("mkdir /tor")
+        #If node role is DA, launch a python webserver for other node to download fingerprints.
         if self.getRole() == "DA":
             node.appendStartCommand("python3 -m http.server 8888 -d /tor &")
         node.appendStartCommand("tor-entrypoint")
@@ -161,6 +209,10 @@ class TorService(Service):
         return self.__da_nodes
 
     def __resolveHSLink(self, simulator: Simulator):
+        """!
+        @brief Transfer vnode link to physical node IP address.
+
+        """
         for server in self.getPendingTargets().values():
             if server.getRole() == "HS" and len(server.getLink()) != 0:
                 vname, port = server.getLink()
