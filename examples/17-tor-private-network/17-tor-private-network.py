@@ -34,7 +34,7 @@ onion_service.linkByVnode("webserver", 80)
 
 #Add bindings
 sim.addBinding(Binding('da*', filter = Filter(asn = 150)))
-sim.addBinding(Binding('client', filter = Filter(asn = 151)))
+sim.addBinding(Binding('client', filter = Filter(asn = 151), action=Action.FIRST))
 sim.addBinding(Binding('relay*', filter = Filter(asn = 152)))
 sim.addBinding(Binding('exit', filter = Filter(asn = 153)))
 sim.addBinding(Binding('hs', filter = Filter(asn = 154)))
