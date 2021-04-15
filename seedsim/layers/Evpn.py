@@ -1,4 +1,3 @@
-from _typeshed import AnyPath
 from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Routing import Router
@@ -12,6 +11,24 @@ EvpnFileTemplates['frr_start_script'] = '''\
 #!/bin/bash
 sed -i 's/ldpd=no/ldpd=yes/' /etc/frr/daemons
 sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
+[ -e /vnis.txt ] && {
+    while read -r vnis; do {
+        echo "configuring bridge and vtep for vni $vni..."
+        ifup br-$vni
+        ifup vtep-$vni
+    }; done < /vnis.txt
+}
+[ -e /evpn_customers.txt ] && {
+    while read -r line; do {
+        echo "connecting customer $vni..."
+
+        vni="`cut -d, -f1 <<< "$line"`"
+        netname="`cut -d, -f1 <<< "$line"`"
+
+        ip addr flush $netname
+        ip link set $netname master br-$vni
+    }; done < /evpn_customers.txt
+}
 service frr start
 '''
 
@@ -165,8 +182,8 @@ class Evpn(Layer):
         router.appendStartCommand('/frr_start')
         router.addSoftware('frr')
 
-    def __configureProviderRouter(self, router: Router):
-        self._log('configuring provider router as{}/{}'.format(router.getAsn(), router.getName()))
+    def __configureProviderRouter(self, router: Router, peers: List[Router] = []):
+        self._log('configuring common properties for provider router as{}/{}'.format(router.getAsn(), router.getName()))
 
         self.__configureFrr(router)
 
@@ -175,7 +192,7 @@ class Evpn(Layer):
             routerId = router.getLoopbackAddress(),
             asn = router.getAsn(),
             loopbackAddress = router.getLoopbackAddress(),
-            neighbours = ''
+            neighbours = self.__configureIbgpMesh(router, peers)
         ))
 
     def __configureProviderEdgeRouter(self, router: Router, customers: List[Tuple[int, str, int]]):
@@ -229,10 +246,10 @@ class Evpn(Layer):
             if is_edge: pe.append(r)
             else: p.append(r)
 
-        self._log('classifying p routers for as{}'.format(asn))
+        self._log('configuring p routers for as{}'.format(asn))
         for router in p: self.__configureProviderRouter(router)
 
-        self._log('classifying pe routers for as{}'.format(asn))
+        self._log('configuring pe routers for as{}'.format(asn))
         for router in pe:
             self._log('collection customers connected to as{}/{}'.format(asn, router.getName()))
 
@@ -242,8 +259,8 @@ class Evpn(Layer):
                 if prn != router.getName(): continue
                 this_customers.append((casn, cn, vni))
             
+            self.__configureProviderRouter(router, pe)
             self.__configureProviderEdgeRouter(router, this_customers)
-        
 
     def render(self, simulator: Simulator):
         reg = simulator.getRegistry()
