@@ -52,6 +52,9 @@ class Base(Layer, Graphable):
         return "Base"
 
     def configure(self, simulator: Simulator):
+        self._log('registering nodes...')
+        for asobj in self.__ases.values(): asobj.registerNodes(simulator)
+
         self._log('setting up internet exchanges...')
         for ix in self.__ixes.values(): ix.configure(simulator)
 

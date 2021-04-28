@@ -4,8 +4,11 @@ from .enums import NodeRole
 from .Registry import Registrable
 from .Simulator import Simulator
 from .Configurable import Configurable
-from ipaddress import IPv4Address
+from .enums import NetworkType
+from ipaddress import IPv4Address, IPv4Interface
 from typing import List, Dict, Set, Tuple
+from string import ascii_letters
+from random import choice
 
 DEFAULT_SOFTWARES: List[str] = ['curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc']
 
@@ -193,6 +196,7 @@ class Node(Printable, Registrable, Configurable):
 
     __configured: bool
     __pending_nets: List[Tuple[str, str]]
+    __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str]]
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -217,6 +221,7 @@ class Node(Printable, Registrable, Configurable):
         self.__privileged = False
 
         self.__pending_nets = []
+        self.__xcs = {}
         self.__configured = False
 
         for soft in DEFAULT_SOFTWARES:
@@ -248,6 +253,27 @@ class Node(Printable, Registrable, Configurable):
                 self.__joinNetwork(reg.get("ix", "net", netname), address)
 
             assert hit, 'no network matched for name {}'.format(netname)
+
+        for (peername, peerasn) in list(self.__xcs.keys()):
+            peer: Node = None
+
+            if reg.has(str(peerasn), 'rnode', peername): peer = reg.get(str(peerasn), 'rnode', peername)
+            elif reg.has(str(peerasn), 'hnode', peername): peer = reg.get(str(peerasn), 'hnode', peername)
+            else: assert False, 'as{}/{}: cannot xc to node as{}/{}: no such node'.format(self.getAsn(), self.getName(), peerasn, peername)
+
+            (peeraddr, netname) = peer.getCrossConnect(self.getAsn(), self.getName())
+            (localaddr, _) = self.__xcs[(peername, peerasn)]
+            assert localaddr.network == peeraddr.network, 'as{}/{}: cannot xc to node as{}/{}: {}.net != {}.net'.format(self.getAsn(), self.getName(), peerasn, peername, localaddr, peeraddr)
+
+            if netname != None:
+                self.__joinNetwork(reg.get('xc', 'net', netname), str(localaddr.ip))
+                self.__xcs[(peername, peerasn)] = (localaddr, netname)
+            else:
+                # netname = 'as{}.{}_as{}.{}'.format(self.getAsn(), self.getName(), peerasn, peername)
+                netname = ''.join(choice(ascii_letters) for i in range(10))
+                net = Network(netname, NetworkType.CrossConnect, localaddr.network)
+                self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
+                self.__xcs[(peername, peerasn)] = (localaddr, netname)
 
     def addPort(self, host: int, node: int, proto: str = 'tcp'):
         """!
@@ -317,6 +343,37 @@ class Node(Printable, Registrable, Configurable):
         assert not self.__configured, 'Node already configured.'
 
         self.__pending_nets.append((netname, address))
+
+    def crossConnect(self, peerasn: int, peername: str, address: str):
+        """!
+        @brief create new p2p cross-connect connection to a remote node.
+        @param peername node name of the peer node.
+        @param peerasn asn of the peer node.
+        @param address address to use on the interface in CIDR notiation. Must
+        be within the same subnet.
+        """
+        assert peername != self.getName() or peerasn != self.getName(), 'cannot XC to self.'
+        self.__xcs[(peername, peerasn)] = (IPv4Interface(address), None)
+
+    def getCrossConnect(self, peerasn: int, peername: str) -> Tuple[IPv4Interface, str]:
+        """!
+        @brief retrieve IP address for the given peer.
+        @param peername node name of the peer node.
+        @param peerasn asn of the peer node.
+
+        @returns tuple of IP address and XC network name. XC network name will
+        be None if the network has not yet been created.
+        """
+        assert (peername, peerasn) in self.__xcs, 'as{}/{} is not in the XC list.'.format(peerasn, peername)
+        return self.__xcs[(peername, peerasn)]
+
+    def getCrossConnects(self) -> Dict[Tuple[str, int], Tuple[IPv4Interface, str]]:
+        """!
+        @brief get all cross connects on this node.
+
+        @returns dict, where key is (peer node name, peer node asn) and value is (address on interface, netname)
+        """
+        return self.__xcs
 
     def getName(self) -> str:
         """!

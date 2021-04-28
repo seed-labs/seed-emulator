@@ -15,6 +15,9 @@ class NetworkType(Enum):
     ## Bridge networks. This type of network eanble access to the real world.
     Bridge = "Bridge Network"
 
+    ## XC network. This type of network connects two nodes directly.
+    CrossConnect = "Cross Connect"
+
 class NodeRole(Enum):
     """!
     @brief Node roles enum.

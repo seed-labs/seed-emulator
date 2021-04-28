@@ -38,12 +38,13 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         self.__asn = asn
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
 
-    def configure(self, simulator: Simulator):
+    def registerNodes(self, simulator: Simulator):
         reg = simulator.getRegistry()
         for (key, val) in self.__hosts.items(): reg.register(str(self.__asn), 'hnode', key, val)
         for (key, val) in self.__routers.items(): reg.register(str(self.__asn), 'rnode', key, val)
         for (key, val) in self.__nets.items(): reg.register(str(self.__asn), 'net', key, val)
 
+    def configure(self, simulator: Simulator):
         for host in self.__hosts.values(): host.configure(simulator)
         for router in self.__routers.values(): router.configure(simulator)
 

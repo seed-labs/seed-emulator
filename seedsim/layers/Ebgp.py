@@ -1,3 +1,4 @@
+from string import ascii_letters
 from .Routing import Router
 from seedsim.core import Registry, ScopedRegistry, Network, Interface, Graphable, Simulator, Layer
 from typing import Tuple, List, Dict
@@ -50,6 +51,7 @@ class Ebgp(Layer, Graphable):
 
     __peerings: Dict[Tuple[int, int, int], PeerRelationship]
     __rs_peers: List[Tuple[int, int]]
+    __xc_peerings: Dict[Tuple[int, int], PeerRelationship]
 
     def __init__(self):
         """!
@@ -59,6 +61,7 @@ class Ebgp(Layer, Graphable):
         """
         super().__init__()
         self.__peerings = {}
+        self.__xc_peerings = {}
         self.__rs_peers = []
         self.addDependency('Routing', False, False)
 
@@ -130,6 +133,24 @@ class Ebgp(Layer, Graphable):
         """
         return self.__peerings
 
+    def addCrossConnectPeering(self, a: int, b: int, abRelationship: PeerRelationship = PeerRelationship.Peer):
+        """!
+        @brief add cross-connect peering.
+        """
+        assert (a, b) not in self.__xc_peerings, '{} <-> {} already configured as XC peer'.format(a, b)
+        assert (b, a) not in self.__xc_peerings, '{} <-> {} already configured as XC peer'.format(b, a)
+        assert abRelationship == PeerRelationship.Peer or abRelationship == PeerRelationship.Provider or abRelationship == PeerRelationship.Unfiltered, 'unknow peering relationship {}'.format(abRelationship)
+
+        self.__xc_peerings[(a, b)] = abRelationship
+
+    def getCrossConnectPeerings(self) -> Dict[Tuple[int, int], PeerRelationship]:
+        """!
+        @brief get corss-connect peerings.
+
+        @returns dict,  where key is tuple of (asnA, asnB) and value is peering relationship.
+        """
+        return self.__xc_peerings
+
     def addRsPeer(self, ix: int, peer: int):
         """!
         @brief Setup RS peering for an AS.
@@ -197,7 +218,77 @@ class Ebgp(Layer, Graphable):
                 peerAsn = ix,
                 exportFilter = b_export,
                 importFilter = "all"
-            )) 
+            ))
+
+        for (a, b), rel in self.__xc_peerings.items():
+            a_reg = ScopedRegistry(str(a), reg)
+            b_reg = ScopedRegistry(str(b), reg)
+
+            a_router: Router = None
+            b_router: Router = None
+
+            a_addr: str = None
+            b_addr: str = None
+
+            hit = False
+
+            for node in a_reg.getByType('rnode'):
+                router: Router = node
+                for (peername, peerasn), (localaddr, _) in router.getCrossConnects().items():
+                    if peerasn != b: continue
+                    if not b_reg.has('rnode', peername): continue
+
+                    hit = True
+                    a_router = node
+                    b_router = b_reg.get('rnode', peername)
+
+                    a_addr = str(localaddr.ip)
+                    (b_ifaddr, _) = b_router.getCrossConnect(a, a_router.getName())
+                    b_addr = str(b_ifaddr.ip)
+
+                    break
+                if hit: break
+
+            assert hit, 'cannot find XC to configure peer AS{} <--> AS{}'.format(a, b)
+
+            self._log("adding XC peering: {} as {} <-({})-> {} as {}".format(a_addr, a, rel, b_addr, b))
+
+            (a_export, b_export) = self.__getExportFilters(reg, a, b, rel)
+            
+            a_proto_pfx = 'p_'
+            b_proto_pfx = 'p_'
+
+            if rel == PeerRelationship.Provider:
+                a_proto_pfx = 'c_'
+                b_proto_pfx = 'u_'
+
+            if rel == PeerRelationship.Unfiltered:
+                a_proto_pfx = 'c_'
+                b_proto_pfx = 'c_'
+
+            a_router.addTable('t_bgp')
+            a_router.addTablePipe('t_bgp')
+            a_router.addTablePipe('t_direct', 't_bgp')
+            a_router.addProtocol('bgp', '{}as{}'.format(a_proto_pfx, b), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = a_addr,
+                localAsn = a,
+                peerAddress = b_addr,
+                peerAsn = b,
+                exportFilter = a_export,
+                importFilter = "all"
+            ))
+
+            b_router.addTable('t_bgp')
+            b_router.addTablePipe('t_bgp')
+            b_router.addTablePipe('t_direct', 't_bgp')
+            b_router.addProtocol('bgp', '{}as{}'.format(b_proto_pfx, a), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = b_addr,
+                localAsn = b,
+                peerAddress = a_addr,
+                peerAsn = a,
+                exportFilter = b_export,
+                importFilter = "all"
+            ))
 
         for (ix, a, b), rel in self.__peerings.items():
             ix_reg = ScopedRegistry('ix', reg)
@@ -232,7 +323,7 @@ class Ebgp(Layer, Graphable):
             
             assert b_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(b, ix)
 
-            self._log("adding peering: {} as {} <-({})-> {} as {}".format(a_ixif.getAddress(), a, rel, b_ixif.getAddress(), b))
+            self._log("adding IX peering: {} as {} <-({})-> {} as {}".format(a_ixif.getAddress(), a, rel, b_ixif.getAddress(), b))
 
             (a_export, b_export) = self.__getExportFilters(reg, a, b, rel)
             

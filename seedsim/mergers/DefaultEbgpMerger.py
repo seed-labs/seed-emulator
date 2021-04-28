@@ -6,10 +6,12 @@ from typing import Callable
 class DefaultEbgpMerger(Merger):
 
     __peeringConflictHandler: Callable[[int, int, int, PeerRelationship, PeerRelationship], PeerRelationship]
+    __xcPeeringConflictHandler: Callable[[int, int, int, PeerRelationship, PeerRelationship], PeerRelationship]
 
     def __init__(
         self,
-        onPeeringRelationshipConflict: Callable[[int, int, int, PeerRelationship, PeerRelationship], PeerRelationship] = lambda ix, a, b, relA, relB: relA):
+        onPeeringRelationshipConflict: Callable[[int, int, int, PeerRelationship, PeerRelationship], PeerRelationship] = lambda ix, a, b, relA, relB: relA,
+        onXcPeeringRelationshipConflict: Callable[[int, int, PeerRelationship, PeerRelationship], PeerRelationship] = lambda a, b, relA, relB: relA):
         """!
         @brief DefaultEbgpMerger constructor.
         @param onPeeringRelationshipConflict define handler for handling peering
@@ -20,6 +22,7 @@ class DefaultEbgpMerger(Merger):
         """
         super().__init__()
         self.__peeringConflictHandler = onPeeringRelationshipConflict
+        self.__xcPeeringConflictHandler = onXcPeeringRelationshipConflict
         
     def getName(self) -> str:
         return 'DefaultEbgpMerger'
@@ -30,6 +33,7 @@ class DefaultEbgpMerger(Merger):
     def doMerge(self, objectA: Ebgp, objectB: Ebgp) -> Ebgp:
         new_private = objectA.getPrivatePeerings()
         new_rs = objectA.getRsPeers()
+        new_xc = objectA.getCrossConnectPeerings()
 
         for ((ix, a, b), rel) in objectB.getPrivatePeerings().items():
             if (ix, a, b) in new_private.keys() and new_private[(ix, a, b)] != rel:
@@ -42,9 +46,18 @@ class DefaultEbgpMerger(Merger):
         for (ix, asn) in objectB.getRsPeers():
             if (ix, asn) not in new_rs: new_rs.append((ix, asn))
 
+        for ((a, b), rel) in objectB.getCrossConnectPeerings().items():
+            if (a, b) in new_xc.keys() and new_private[(a, b)] != rel:
+                self._log('Peering relationship conflict for peering in XC between AS{} and AS{}: {} != {}, calling handler'.format(
+                    a, b, new_xc[(a, b)], rel
+                ))
+                new_xc[(a, b)] = self.__xcPeeringConflictHandler(a, b, new_xc[(a, b)], rel)
+            else: new_xc[(a, b)] = rel
+
         new_ebgp = Ebgp()
 
-        for ((ix, a, b), rel) in new_private: new_ebgp.addPrivatePeering(ix, a, b, rel)
+        for ((ix, a, b), rel) in new_private.items(): new_ebgp.addPrivatePeering(ix, a, b, rel)
+        for ((a, b), rel) in new_xc.items(): new_ebgp.addCrossConnectPeering(a, b, rel)
         for (ix, asn) in new_rs: new_ebgp.addRsPeer(ix, asn)
 
         return new_ebgp
