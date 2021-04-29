@@ -430,6 +430,8 @@ class Ebgp(Layer, Graphable):
                 full_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'X', blabel= 'X')
                 ix_graph.addEdge('AS{}'.format(a), 'AS{}'.format(b), 'IX{}'.format(i), 'IX{}'.format(i), alabel = 'X', blabel= 'X')
 
+        # todo: XC peering graphs
+
         es = list(full_graph.vertices.values())
         while len(es) > 0:
             a = es.pop()

@@ -170,6 +170,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
                 netname = 'Network: {}'.format(net.getName())
                 l2graph.addEdge(rtrname, netname)
 
+        # todo: better xc graphs?
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
