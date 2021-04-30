@@ -77,6 +77,7 @@ class DefaultGenerator:
             for member in members.keys():
                 self.__generate(member, simulator, depth - 1)
                 if member in peers.keys():
+                    # FIXME: right = peer is customer, left = peer is provider
                     rel = peers[member]
                     self.__log('peering AS{} with AS{} in IX{} using relationship {}...'.format(member, asn, ix, rel))
                     bgp.addPrivatePeering(ix, member, asn, rel)
