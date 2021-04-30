@@ -1,5 +1,4 @@
 from typing import List, Tuple, Dict
-from . . .layers import PeerRelationship
 from sys import stderr
 
 class DataProvider:
@@ -12,7 +11,7 @@ class DataProvider:
         """
         raise NotImplementedError('getName not implemented')
 
-    def getPrefixes(asn: int) -> List[str]:
+    def getPrefixes(self, asn: int) -> List[str]:
         """!
         @brief Get list of prefixes announced by the given ASN.
         @param asn asn.
@@ -21,7 +20,7 @@ class DataProvider:
         """
         raise NotImplementedError('getPrefixes not implemented.')
 
-    def getPeers(asn: int) -> Dict[int, PeerRelationship]:
+    def getPeers(self, asn: int) -> Dict[int, str]:
         """!
         @brief Get a dict of peer ASNs of the given ASN.
         @param asn asn.
@@ -30,7 +29,7 @@ class DataProvider:
         """
         raise NotImplementedError('getPeers not implemented.')
 
-    def getInternetExchanges(asn: int) -> List[int]:
+    def getInternetExchanges(self, asn: int) -> List[int]:
         """!
         @brief Get list of internet exchanges joined by the given ASN.
         @param asn asn.
@@ -40,7 +39,7 @@ class DataProvider:
         """
         raise NotImplementedError('getInternetExchanges not implemented.')
 
-    def getInternetExchangeMembers(id: int) -> Dict[int, str]:
+    def getInternetExchangeMembers(self, id: int) -> Dict[int, str]:
         """!
         @brief Get internet exchange members for given IX ID.
         @param id internet exchange ID provided by getInternetExchanges.
@@ -51,7 +50,7 @@ class DataProvider:
         """
         raise NotImplementedError('getInternetExchangeMembers not implemented.')
 
-    def getInternetExchangePrefix(id: int) -> str:
+    def getInternetExchangePrefix(self, id: int) -> str:
         """!
         @brief Get internet exchange peering lan prefix for given IX ID.
         @param id internet exchange ID provided by getInternetExchanges.
