@@ -93,3 +93,15 @@ After mining for a couple of minutes. We can stop mining by running command ```m
 As we can see, there are ```128000000000000000000``` ETH currency in our default account right now, which means we has mined successfully.
 
 > Notice: The reason why we can easily mine a valid block is that when we built our ETH network, we have set the difficulty to 0 in initial step. That means we don't need higher hashrate to mine, just for educational purpose. But along with the successful mined block increasing. The difficulty also will be increased, so it would more and more difficult for mining.
+
+
+## Performance test
+
+- ETH service is a pretty heavy service, if you want to run more than 20 ETH nodes, you might need to make sure that memory size is sufficient. Here are some performance test on my VM.
+	- My VM setting: 4096MB memory and 2 core CPU.
+	- When I close other processes in VM (like browser, editor.), 20 ETH nodes can be run in my VM, but the VM became slower, cannot even switch the window.
+	- I’ve tried to adjust my VM’s memory. 25 ETH nodes can be running, but my VM is still very slow.
+	- Approx memory for every single ETH node: 200MB.
+- Some suggestion to optimize the service.
+	- Find a light version of geth (ETH client software) on the Internet, instead of using full feature version. Because we just need to simulate the mining process.
+	- From configuration perspective to reduce the memory usage, for example, turn off full sync mode, turn off log printing, turn off web3 interface etc.
