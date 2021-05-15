@@ -95,6 +95,34 @@ As we can see, there are ```128000000000000000000``` ETH currency in our default
 > Notice: The reason why we can easily mine a valid block is that when we built our ETH network, we have set the difficulty to 0 in initial step. That means we don't need higher hashrate to mine, just for educational purpose. But along with the successful mined block increasing. The difficulty also will be increased, so it would more and more difficult for mining.
 
 
+## Make a Transaction
+
+Now, let's try to make our first transaction in our private network. Firstly, we created 10 ETH nodes, and start all the containers. In each of ETH node, we started miner with 20 threads (run ```miner.start(20)```). After approx 10 minutes, in the first miner, we have many money in the account.
+
+![](pics/trans-1.jpg)
+
+Next, let's attach another any of ETH node, and check out the balance of its account, we will see it's zero.
+
+![](pics/trans-2.jpg)
+
+Right now we have two accounts. ```0x46c9d395f8546c8ac10922a6e233e459719ef165``` has 30000000000000000000 ETH balance, and ```0x04761545d8dc6e9e0f71b2db484d93706a9240fe``` has ```0```.
+
+Next, let's try to create a transaction to send 7000000 ETH to the second account. In the first account console, we have to unlock the account, otherwise we cannot send any transactions without unlocking. Type ```personal.unlockAccount(eth.accounts[0])``` to unlock it. It would prompt a password requirement. By default, the password is ```admin```. Then we can use API ```eth.sendTransaction()``` to create a transaction.
+
+![](pics/trans-3.jpg)
+
+As we can see, there are couple of parameters we have to provide, ```from``` is the address of first account, ```to``` is the address of second account that we want to send to. After enter the command, we will get a block hash that represents this transaction. We can use API ```eth.getTransaction(hash)``` to check out the status of this transaction or either using ```eth.pendingTransactions``` to list all pending transactions. Here is the picture.
+
+![](pics/trans-4.jpg)
+
+After a while, we check the pending list again, we would see it's empty, which means the transaction has completed. Now, we can go to second account and check the balance again, we will see the balance changed.
+
+![](pics/trans-5.jpg)
+
+As we can see, the second account has received the ```7000000``` ETH from the first account. That means we finished a transaction in our ETH network.
+
+> Notice: after sending transaction, we need to make sure the miner has started, otherwise, this transaction will always be pending status. 
+
 ## Performance test
 
 - ETH service is a pretty heavy service, if you want to run more than 20 ETH nodes, you might need to make sure that memory size is sufficient. Here are some performance test on my VM.

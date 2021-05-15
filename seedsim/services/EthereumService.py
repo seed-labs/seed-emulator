@@ -107,7 +107,7 @@ class EthereumServer(Server):
         node.appendStartCommand("bash /tmp/downloader.sh")
         node.appendStartCommand("sleep 2")
         #Launch Ethereum process.
-        node.appendStartCommand('nohup geth {} --bootnodes "$(cat /tmp/shared_enode)" --identity="NODE_{}" --networkid=10 --verbosity=6 --mine --rpc --rpcport=8549 --rpcaddr 0.0.0.0 &'.format(datadir_option, self.__serial_number))
+        node.appendStartCommand('nohup geth {} --bootnodes "$(cat /tmp/shared_enode)" --identity="NODE_{}" --networkid=10 --verbosity=6 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0 &'.format(datadir_option, self.__serial_number))
 
 
 
