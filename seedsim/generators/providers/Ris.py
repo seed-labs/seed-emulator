@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 import requests
 
 RIPE_API = 'https://stat.ripe.net/data'
-PEERINGDB_API = ''
+PEERINGDB_API = 'https://www.peeringdb.com/api'
 
 class Ris(DataProvider):
 
@@ -14,6 +14,7 @@ class Ris(DataProvider):
         self.__cache['prefixes'] = {}
         self.__cache['peers'] = {}
         self.__cache['exchanges'] = {}
+        self.__cache['exchange_details'] = {}
         super().__init__()
 
     def __ripe(self, verb: str, params: Any) -> Any:
@@ -26,8 +27,13 @@ class Ris(DataProvider):
 
         return json['data']
     
-    def __peeringdb(self, path: str, arg: str) -> Any:
-        pass
+    def __peeringdb(self, path: str, params: Any) -> Any:
+        rslt = requests.get('{}/{}'.format(PEERINGDB_API, path), params)
+
+        assert rslt.status_code == 200, 'PeeringDB data API returned non-200'
+
+        json = rslt.json()
+        return json['data']
 
     def getName(self) -> str:
         return 'Ris'
@@ -62,10 +68,33 @@ class Ris(DataProvider):
         return peers
     
     def getInternetExchanges(self, asn: int) -> List[int]:
-        return
+        if asn in self.__cache['exchanges']:
+            self._log('exchange list of AS{} in cache.'.format(asn))
+            return self.__cache['exchanges'][asn]
+        
+        self._log('exchange list of AS{} not in cache, loading from PeeringDB...'.format(asn))
+
+        exchanges = []
+
+        data = self.__peeringdb('net', {
+            'asn': asn,
+            'depth': 1
+        })
+
+        if len(data) > 0: exchanges = data[0]['netixlan_set']
+        
+        if len(exchanges) == 0: self._log('note: AS{} does not have any public exchanges on record.'.format(asn))
+        
+        self.__cache['exchanges'][asn] = exchanges
+
+        return exchanges
 
     def getInternetExchangeMembers(self, id: int) -> Dict[int, str]:
-        return
+        if id in self.__cache['exchange_details']:
+            self._log('exchange details of IX{} in cache.'.format(id))
+            return self.__cache['exchange_details'][id]['']
+        
+        self._log('exchange details of IX{} not in cache, loading from PeeringDB...'.format(id))
 
     def getInternetExchangePrefix(self, id: int) -> str:
         return
