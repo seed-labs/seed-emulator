@@ -1,9 +1,9 @@
 from seedemu.layers import Base, Routing, Ebgp
 from seedemu.services import WebService
 from seedemu.compiler import Docker
-from seedemu.core import Emulator
+from seedemu.core import Emulator, Binding, Filter
 
-sim = Emulator()
+emu = Emulator()
 
 base = Base()
 routing = Routing()
@@ -19,7 +19,8 @@ base.createInternetExchange(100)
 as150 = base.createAutonomousSystem(150)
 
 as150_web = as150.createHost('web')
-web.installByName(150, 'web')
+web.install('web150')
+emu.addBinding(Binding('web150', filter = Filter(nodeName = 'web', asn = 150)))
 
 as150_router = as150.createRouter('router0')
 as150_net = as150.createNetwork('net0')
@@ -36,7 +37,8 @@ as150_router.joinNetwork('ix100')
 as151 = base.createAutonomousSystem(151)
 
 as151_web = as151.createHost('web')
-web.installByName(151, 'web')
+web.install('web151')
+emu.addBinding(Binding('web151', filter = Filter(nodeName = 'web', asn = 151)))
 
 as151_router = as151.createRouter('router0')
 
@@ -54,7 +56,8 @@ as151_router.joinNetwork('ix100')
 as152 = base.createAutonomousSystem(152)
 
 as152_web = as152.createHost('web')
-web.installByName(152, 'web')
+web.install('web152')
+emu.addBinding(Binding('web152', filter = Filter(nodeName = 'web', asn = 152)))
 
 as152_router = as152.createRouter('router0')
 
@@ -75,13 +78,13 @@ ebgp.addRsPeer(100, 152)
 
 ###############################################################################
 
-sim.addLayer(base)
-sim.addLayer(routing)
-sim.addLayer(ebgp)
-sim.addLayer(web)
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(web)
 
-sim.render()
+emu.render()
 
 ###############################################################################
 
-sim.compile(Docker(), './simple-peering')
+emu.compile(Docker(), './simple-peering')
