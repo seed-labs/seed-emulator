@@ -11,7 +11,7 @@ setuptools.setup(
     description = "SEED Internet Emulator",
     long_description = long_description,
     long_description_content_type = "text/markdown",
-    url = "https://github.com/seed-labs/seed-simulator",
+    url = "https://github.com/seed-labs/seed-emulator",
     packages = setuptools.find_packages(),
     package_data = {'': ['services/BotnetService/config/*.txt','services/DomainRegistrarService/config/*.php','services/TorService/config/*']},
     include_package_data = True,

@@ -109,7 +109,7 @@ class Emulator:
 
     def rendered(self) -> bool:
         """!
-        @brief test if the simulator is rendered.
+        @brief test if the emulator is rendered.
 
         @retrns True if rendered
         """
