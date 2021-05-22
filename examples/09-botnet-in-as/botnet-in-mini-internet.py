@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from seedsim.core import Simulator, Binding, Filter
-from seedsim.services import BotnetService, BotnetClientService
-from seedsim.services import DomainRegistrarService
-from seedsim.compiler import Docker
+from seedemu.core import Simulator, Binding, Filter
+from seedemu.services import BotnetService, BotnetClientService
+from seedemu.services import DomainRegistrarService
+from seedemu.compiler import Docker
 
 sim = Simulator()
 

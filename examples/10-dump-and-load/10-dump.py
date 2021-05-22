@@ -1,6 +1,6 @@
-from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
-from seedsim.services import WebService
-from seedsim.core import Simulator
+from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
+from seedemu.services import WebService
+from seedemu.core import Simulator
 
 sim = Simulator()
 

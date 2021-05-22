@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 # __author__ = 'Demon'
-from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
-from seedsim.compiler import Docker
-from seedsim.core import Simulator
+from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
+from seedemu.compiler import Docker
+from seedemu.core import Simulator
 
 sim = Simulator()
 

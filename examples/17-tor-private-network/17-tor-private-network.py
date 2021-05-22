@@ -2,10 +2,10 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
-from seedsim.core import Simulator, Binding, Filter, Action
-from seedsim.compiler import Docker
-from seedsim.services import TorService, TorNodeType
-from seedsim.services import WebService
+from seedemu.core import Simulator, Binding, Filter, Action
+from seedemu.compiler import Docker
+from seedemu.services import TorService, TorNodeType
+from seedemu.services import WebService
 
 
 sim = Simulator()

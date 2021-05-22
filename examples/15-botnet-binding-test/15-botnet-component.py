@@ -3,9 +3,9 @@
 # __author__ = 'Demon'
 
 
-from seedsim.services.BotnetService import BotnetService, BotnetClientService
+from seedemu.services.BotnetService import BotnetService, BotnetClientService
 
-from seedsim.core import Simulator
+from seedemu.core import Simulator
 
 ###########################################
 

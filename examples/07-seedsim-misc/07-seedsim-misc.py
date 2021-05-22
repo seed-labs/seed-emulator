@@ -1,7 +1,7 @@
-from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Mpls
-from seedsim.compiler import Docker, DistributedDocker, GcpDistributedDocker, Graphviz
-from seedsim.services import WebService
-from seedsim.core import Simulator
+from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Mpls
+from seedemu.compiler import Docker, DistributedDocker, GcpDistributedDocker, Graphviz
+from seedemu.services import WebService
+from seedemu.core import Simulator
 from os import mkdir
 
 sim = Simulator()
@@ -102,8 +102,8 @@ print(sim.getRegistry())
 
 ###############################################################################
 
-mkdir('./seedsim-misc')
-sim.compile(Docker(), './seedsim-misc/regular-docker')
-sim.compile(Graphviz(), './seedsim-misc/graphs')
-sim.compile(DistributedDocker(), './seedsim-misc/distributed-docker')
-sim.compile(GcpDistributedDocker(), './seedsim-misc/gcp-distributed-docker')
+mkdir('./seedemu-misc')
+sim.compile(Docker(), './seedemu-misc/regular-docker')
+sim.compile(Graphviz(), './seedemu-misc/graphs')
+sim.compile(DistributedDocker(), './seedemu-misc/distributed-docker')
+sim.compile(GcpDistributedDocker(), './seedemu-misc/gcp-distributed-docker')

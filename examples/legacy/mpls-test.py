@@ -1,7 +1,7 @@
-from seedsim.layers import Base, Routing, Mpls, Ebgp
-from seedsim.renderer import Renderer
-from seedsim.compiler import GcpDistributedDocker
-from seedsim.core import Registry
+from seedemu.layers import Base, Routing, Mpls, Ebgp
+from seedemu.renderer import Renderer
+from seedemu.compiler import GcpDistributedDocker
+from seedemu.core import Registry
 
 # topology:
 #

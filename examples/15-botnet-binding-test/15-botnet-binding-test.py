@@ -2,8 +2,8 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
-from seedsim.core import Simulator, Binding, Filter, Action
-from seedsim.compiler import Docker
+from seedemu.core import Simulator, Binding, Filter, Action
+from seedemu.compiler import Docker
 
 
 simA = Simulator()

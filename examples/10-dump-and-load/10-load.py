@@ -1,6 +1,6 @@
-from seedsim.core import Simulator
-from seedsim.layers import Base
-from seedsim.compiler import Docker
+from seedemu.core import Simulator
+from seedemu.layers import Base
+from seedemu.compiler import Docker
 
 ###############################################################################
 

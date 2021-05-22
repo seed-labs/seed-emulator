@@ -1,7 +1,7 @@
-from seedsim.core import Simulator
-from seedsim.mergers import DEFAULT_MERGERS
-from seedsim.layers import Base, Routing, Ebgp
-from seedsim.compiler import Docker
+from seedemu.core import Simulator
+from seedemu.mergers import DEFAULT_MERGERS
+from seedemu.layers import Base, Routing, Ebgp
+from seedemu.compiler import Docker
 
 ###############################################################################
 

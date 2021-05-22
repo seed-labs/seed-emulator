@@ -1,7 +1,7 @@
-from seedsim.layers import Base, Routing, Ebgp, Dnssec
-from seedsim.services import DomainNameService, DomainNameCachingService, WebService, CymruIpOriginService, ReverseDomainNameService
-from seedsim.core import Simulator
-from seedsim.compiler import Docker
+from seedemu.layers import Base, Routing, Ebgp, Dnssec
+from seedemu.services import DomainNameService, DomainNameCachingService, WebService, CymruIpOriginService, ReverseDomainNameService
+from seedemu.core import Simulator
+from seedemu.compiler import Docker
 
 sim = Simulator()
 

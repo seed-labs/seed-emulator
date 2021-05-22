@@ -1,7 +1,7 @@
-from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, Reality
-from seedsim.services import WebService
-from seedsim.core import Simulator, Binding, Filter
-from seedsim.compiler import Docker
+from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, Reality
+from seedemu.services import WebService
+from seedemu.core import Simulator, Binding, Filter
+from seedemu.compiler import Docker
 
 sim = Simulator()
 

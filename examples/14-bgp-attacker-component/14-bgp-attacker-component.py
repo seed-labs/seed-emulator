@@ -1,8 +1,8 @@
-from seedsim.core import Simulator
-from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, PeerRelationship
-from seedsim.components import BgpAttackerComponent
-from seedsim.compiler import Docker
-from seedsim.mergers import DEFAULT_MERGERS
+from seedemu.core import Simulator
+from seedemu.layers import Base, Routing, Ebgp, Ospf, Ibgp, PeerRelationship
+from seedemu.components import BgpAttackerComponent
+from seedemu.compiler import Docker
+from seedemu.mergers import DEFAULT_MERGERS
 
 ###############################################################################
 # topology:

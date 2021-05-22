@@ -1,5 +1,5 @@
-from seedsim.services.DomainNameService import DomainNameService
-from seedsim.core import Simulator
+from seedemu.services.DomainNameService import DomainNameService
+from seedemu.core import Simulator
 
 sim = Simulator()
 dns = DomainNameService()

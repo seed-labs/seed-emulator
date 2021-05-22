@@ -1,1 +1,0 @@
-from .BgpAttackerComponent import BgpAttackerComponent

@@ -2,8 +2,8 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
-from seedsim.services import DomainNameService, DomainNameCachingService
-from seedsim.core import Simulator
+from seedemu.services import DomainNameService, DomainNameCachingService
+from seedemu.core import Simulator
 
 
 sim = Simulator()

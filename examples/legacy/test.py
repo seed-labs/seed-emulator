@@ -1,7 +1,7 @@
-from seedsim.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService, Reality, CymruIpOriginService, Dnssec, ReverseDomainNameService, Mpls
-from seedsim.renderer import Renderer
-from seedsim.core import Registry
-from seedsim.compiler import Docker, DistributedDocker, Graphviz, GcpDistributedDocker
+from seedemu.layers import Base, Routing, Ebgp, Ospf, Ibgp, WebService, DomainNameService, DomainNameCachingService, Reality, CymruIpOriginService, Dnssec, ReverseDomainNameService, Mpls
+from seedemu.renderer import Renderer
+from seedemu.core import Registry
+from seedemu.compiler import Docker, DistributedDocker, Graphviz, GcpDistributedDocker
 
 base = Base()
 

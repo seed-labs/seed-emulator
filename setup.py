@@ -4,7 +4,7 @@ with open("README.md", "r") as readme:
     long_description = readme.read()
 
 setuptools.setup(
-    name = "seedsim",
+    name = "seedemu",
     version = "0.0.7",
     author = "Honghao Zeng",
     author_email = "hozeng@syr.edu",
