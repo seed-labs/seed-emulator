@@ -67,25 +67,30 @@ It first creates an AS with the `createAutonomousSystem` call of the base layer.
 ### Service AS creator
 
 ```python
-def make_service_as(asn: int, services: List[Service], exchange: int):
+def make_service_as(sim: Emulator, asn: int, services: List[Service], exchange: int):
     service_as = base.createAutonomousSystem(asn)
 
     router = service_as.createRouter('router0')
 
     net = service_as.createNetwork('net0')
 
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    router.joinNetwork(net)
+    router.joinNetwork('net0')
 
-    router.joinNetworkByName('ix{}'.format(exchange))
+    router.joinNetwork('ix{}'.format(exchange))
 
     for service in services:
-        server = service_as.createHost('s_{}'.format(service.getName().lower()))
+        name = 's_{}'.format(service.getName().lower())
 
-        server.joinNetwork(net)
+        server = service_as.createHost(name)
 
-        service.installOn(server)
+        server.joinNetwork('net0')
+
+        vnodename = 'as{}_{}'.format(asn, name)
+
+        service.install(vnodename)
+        sim.addBinding(Binding(vnodename, filter = Filter(asn = asn, nodeName = name)))
 ```
 
 The service AS helper creates AS that hosts the given list of services. It:
@@ -94,31 +99,36 @@ The service AS helper creates AS that hosts the given list of services. It:
 - create a router with the `createRouter` call of the AS object,
 - create a network with the `createNetwork` call of the AS object,
 mark the created network as a direct network with the `addDirect` call of the routing layer, so the router will load the network into FIB (forwarding information base) and send it to BGP peers,
-- connect the router to the created network and internet exchange, with `joinNetwork` and `joinNetworkByName` call of the node class, and
+- connect the router to the created network and internet exchange, with `joinNetwork` call of the node class, and
 - loop through the given services list, create one host node with `createHost` call of the AS object, connect the host node to the network created earlier, and host the given service on the node.
 
 ### DNS AS creator
 
 ```python
-def make_dns_as(asn: int, zones: List[str], exchange: int):
+def make_dns_as(sim: Emulator, asn: int, zones: List[str], exchange: int):
     dns_as = base.createAutonomousSystem(asn)
 
     router = dns_as.createRouter('router0')
 
     net = dns_as.createNetwork('net0')
 
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    router.joinNetwork(net)
+    router.joinNetwork('net0')
 
-    router.joinNetworkByName('ix{}'.format(exchange))
+    router.joinNetwork('ix{}'.format(exchange))
 
     for zone in zones:
-        server = dns_as.createHost('s_{}dns'.format(zone.replace('.','_')))
+        name = 's_{}dns'.format(zone.replace('.','_'))
 
-        server.joinNetwork(net)
+        server = dns_as.createHost(name)
 
-        dns.hostZoneOn(zone, server)
+        server.joinNetwork('net0')
+
+        vnodename = 'as{}_{}'.format(asn, name)
+
+        dns.install(vnodename).addZone(zone)
+        sim.addBinding(Binding(vnodename, filter = Filter(asn = asn, nodeName = name)))
 ```
 
 The DNS AS helper creates AS that hosts the given list of DNS zones. It:
@@ -127,25 +137,40 @@ The DNS AS helper creates AS that hosts the given list of DNS zones. It:
 - create a router with the `createRouter` call of the AS object,
 - create a network with the `createNetwork` call of the AS object,
 mark the created network as a direct network with the `addDirect` call of the routing layer, so the router will load the network into FIB (forwarding information base) and send it to BGP peers,
-- connect the router to the created network and internet exchange, with `joinNetwork` and `joinNetworkByName` call of the node class, and
+- connect the router to the created network and internet exchange, with `joinNetwork` call of the node class, and
 - loop through the given zones list, create one host node with `createHost` call of the AS object, connect the host node to the network created earlier, and host the given zone on the node.
 
 ### User AS creator
 
 ```python
-def make_user_as(asn: int, exchange: str):
+def make_user_as(sim: Emulator, asn: int, exchange: str):
     user_as = base.createAutonomousSystem(asn)
 
     router = user_as.createRouter('router0')
 
+    lgnode = user_as.createHost('looking_glass')
+
+    vnodename = 'lg{}'.format(asn)
+
+    # lg server itself needs to be install on a host node
+    lgserver = lg.install(vnodename)
+
+    # and attach to a router; a lg server can be attached to mutiple routers
+    lgserver.attach('router0')
+    
+    # bind service node to physical node
+    sim.addBinding(Binding(vnodename, filter = Filter(asn = asn, nodeName = 'looking_glass')))
+
     net = user_as.createNetwork('net0')
 
-    routing.addDirect(net)
+    routing.addDirect(asn, 'net0')
 
-    real.enableRealWorldAccess(net)
+    real.enableRealWorldAccess(user_as, 'net0')
 
-    router.joinNetwork(net)
-    router.joinNetworkByName('ix{}'.format(exchange))
+    router.joinNetwork('net0')
+    router.joinNetwork('ix{}'.format(exchange))
+
+    lgnode.joinNetwork('net0')
 ```
 
 The user AS helper creates a real-world accessible AS in the emulator. It works by utilizing the `Reality` layer. It:
@@ -154,7 +179,8 @@ The user AS helper creates a real-world accessible AS in the emulator. It works 
 - create a router with the `createRouter` call of the AS object,
 - create a network with the `createNetwork` call of the AS object,
 mark the created network as a direct network with the `addDirect` call of the routing layer, so the router will load the network into FIB (forwarding information base) and send it to BGP peers,
-- connect the router to the created network and internet exchange, with `joinNetwork` and `joinNetworkByName` call of the node class, and
+- host a BGP looking glass for the router,
+- connect the router to the created network and internet exchange, with `joinNetwork` call of the node class, and
 - enale real-world access using the `enableRealWorldAccess` call of the real-world layer; it creates a real-world accessible OpenVPN and allow users to connect to the emulation directly.
 
 ### Transit AS creator
@@ -167,21 +193,23 @@ def make_transit_as(asn: int, exchanges: List[int], intra_ix_links: List[Tuple[i
 
     for ix in exchanges:
         routers[ix] = transit_as.createRouter('r{}'.format(ix))
-        routers[ix].joinNetworkByName('ix{}'.format(ix))
+        routers[ix].joinNetwork('ix{}'.format(ix))
 
     for (a, b) in intra_ix_links:
-        net = transit_as.createNetwork('net_{}_{}'.format(a, b))
+        name = 'net_{}_{}'.format(a, b)
 
-        routing.addDirect(net)
+        net = transit_as.createNetwork(name)
 
-        routers[a].joinNetwork(net)
-        routers[b].joinNetwork(net)
+        routing.addDirect(asn, name)
+
+        routers[a].joinNetwork(name)
+        routers[b].joinNetwork(name)
 ```
 
 The transit AS creator builds transit providers. It:
 
 - create an AS with the `createAutonomousSystem` call of the base layer,
-- for each PoP (point of presence), create a router in the internet exchange with the `createRouter` call of the AS object, join the exchange with the `joinNetworkByName` of the node object, and save the exchange ID and router object pair in the dictionary, and
+- for each PoP (point of presence), create a router in the internet exchange with the `createRouter` call of the AS object, join the exchange with the `joinNetwork` of the node object, and save the exchange ID and router object pair in the dictionary, and
 - for each intra-exchange links, create a network for the link with the `createNetwork` call of the AS object, mark it as direct with `addDirect` call of the routing layer, so the router will load the network into FIB (forwarding information base) and send it to BGP peers, and have the two linked routers join the network with the `joinNetwork` call of the node object. Note that the `addDirect` call isn't strictly necessary since even if the transit provider's internal network is not in the DFZ (default-free zone), the routing will still work, just that we won't be able to traceroute to the transit provider's network.
 
 This is all we needed to create transit providers since we will add OSPF and IBGP layer to the emulation, which will handle the internal routing automatically. 
@@ -260,15 +288,13 @@ Not much to say here; the above created a real-world AS, AS11872, put it in IX10
 ## Create service ASes
 
 ```python
-make_service_as(150, [web, ldns], 101)
-make_service_as(151, [web], 100)
-make_service_as(152, [web], 102)
-make_service_as(153, [ldns], 102)
-make_service_as(154, [rdns], 104)
-make_service_as(155, [cymru], 105)
+make_service_as(sim, 150, [web, ldns], 101)
+make_service_as(sim, 151, [web], 100)
+make_service_as(sim, 152, [web], 102)
+make_service_as(sim, 153, [ldns], 102)
 ```
 
-Now, with the service helper, create some AS to host some services. The important ones here are AS154 and AS155, which hosts the reverse DNS (`in-addr.arpa`) and the Cymru IP origin service. They will make the traceroute looks prettier in the emulation. 
+Now, with the service helper, create some AS to host some services. 
 
 ## Create DNS infrastructure
 
@@ -279,8 +305,8 @@ Now, let's proceed to build the DNS infrastructure. DNS infrastructure is requir
 The first step will be to create the root DNS and the TLD DNS. This can be done with the helper we created eariler:
 
 ```python
-make_dns_as(160, ['.'], 103)
-make_dns_as(161, ['net.', 'com.', 'arpa.'], 103)
+make_dns_as(sim, 160, ['.'], 103)
+make_dns_as(sim, 161, ['net.', 'com.', 'arpa.'], 103)
 ```
 
 The above created two ASes, AS160 and AS161. Both are in IX103. AS160 will be hosting the root zone, and AS161 will be hosting the `.net`, `.com` and `.arpa` TLD zones.
@@ -311,13 +337,22 @@ make_dns_as(162, ['as150.net.', 'as151.net.', 'as152.net.'], 103)
 
 The call above hosts all three zones on AS162.
 
+#### Hosting the Cymru IP origin service and reverse DNS service
+
+```python
+make_dns_as(sim, 154, ['in-addr.arpa.'], 104)
+make_dns_as(sim, 155, ['cymru.com.'], 105)
+```
+
+`ReverseDomainNameService` and `CymruIpOriginService` create two zones: the reverse DNS (`in-addr.arpa`) and the Cymru IP origin service. They will make the traceroute looks prettier in the emulation. 
+
 ## Create user AS
 
 Now, let's create some user AS so users can join the emulator with their real computer. This is not strictly necessary; we can always just attach to the containers, and they will be already in the simulated internet.
 
 ```python
-make_user_as(170, 102)
-make_user_as(171, 105)
+make_user_as(sim, 170, 102)
+make_user_as(sim, 171, 105)
 ```
 
 The helper calls above create two user ASes, AS170 and AS171, in IX102 and IX105.
@@ -359,28 +394,29 @@ google_dns = google.createHost('google_dns')
 Then, have it join the network we created earlier, manually set its address to `8.8.8.8`:
 
 ```python
-google_dns.joinNetwork(google_dns_net, '8.8.8.8')
+google_dns.joinNetwork('google_dns_net', '8.8.8.8')
 ```
 
 Now, install the service:
 
 ```python
-ldns.installOn(google_dns)
+ldns.install('google_dns')
+sim.addBinding(Binding('google_dns', filter = Filter(asn = 15169)))
 ```
 
 Mark the network as direct, so it will get into FIB and be sent to BGP peers:
 
 ```python
-routing.addDirect(google_dns_net)
+routing.addDirect(15169, 'google_dns_net')
 ```
 
 Last, create a router, have it join the host network and the internet exchange:
 
-```
+```python
 google_router = google.createRouter('router0')
 
-google_router.joinNetwork(google_dns_net)
-google_router.joinNetworkByName('ix100', '10.100.0.250')
+google_router.joinNetwork('google_dns_net')
+google_router.joinNetwork('ix100', '10.100.0.250')
 ```
 
 ## Configure peerings
@@ -457,33 +493,30 @@ Note that the session with the real-world AS, AS11872, is set to `PeerRelationsh
 
 We want all host nodes in the emulation to use the `8.8.8.8` DNS; this can be done by iterating through all nodes in the emulation and add a start command, `echo "nameserver 8.8.8.8" > /etc/resolv.conf`, to all host nodes. We don't use `addBuildCommand` / `appendFile` / `setFile` here, as the `/etc/resolv.conf` is generated by the container itself when start. All three command above runs at build time, so the changes they made will be overridden.
 
-```python
-reg = Registry()
-for ((scope, type, name), object) in reg.getAll().items():
-    if type != 'hnode': continue
-    host: Node = object
-    host.addStartCommand('echo "nameserver 8.8.8.8" > /etc/resolv.conf')
-```
+We created a simple "hook" to take care of changing the name server:
 
-The `Registry` is a singleton class, and it stores all the important objects in the emulation; this includes the host nodes that we want to modify the name server. The `getAll` call returns a dictionary, the keys are a tuple of `<scope, type, name>`, and the values are objects. `scope` is usually the ASN, and `type` is the type of objects, and `name` is its name. For details, refer to the API documentation.
+```python
+sim.addHook(ResolvConfHook(['8.8.8.8']))
+```
 
 ## Render the emulation 
 
 ```python
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(ibgp)
-renderer.addLayer(ospf)
-renderer.addLayer(real)
-renderer.addLayer(web)
-renderer.addLayer(dns)
-renderer.addLayer(ldns)
-renderer.addLayer(dnssec)
-renderer.addLayer(cymru)
-renderer.addLayer(rdns)
+sim.addLayer(base)
+sim.addLayer(routing)
+sim.addLayer(ebgp)
+sim.addLayer(ibgp)
+sim.addLayer(ospf)
+sim.addLayer(real)
+sim.addLayer(web)
+sim.addLayer(dns)
+sim.addLayer(ldns)
+sim.addLayer(dnssec)
+sim.addLayer(cymru)
+sim.addLayer(rdns)
+sim.addLayer(lg)
 
-renderer.render()
+sim.render()
 ```
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
@@ -495,6 +528,6 @@ After rendering the layers, all the nodes and networks are created. They are sti
 In this example, we will use docker on a single host to run the emulation, so we use the `Docker` compiler. Since the topology is rather complex, it will be helpful to have some graphical representations. Thus, we added the Graphviz compiler to dump graphs to the `_graphs` subfolder.
 
 ```python
-docker_compiler.compile('./mini-internet')
-graphviz.compile('./mini-internet/_graphs')
+sim.compile(Docker(), './mini-internet')
+sim.compile(Graphviz(), './mini-internet/_graphs')
 ```
