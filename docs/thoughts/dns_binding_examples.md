@@ -15,8 +15,8 @@ Using ASN connector to randomly bind in different AS.
 
 ```python
 from seedsim.core import Configuration, Binding, Filter, Action
-simA = Simulator()
-simB = Simulator()
+simA = Emulator()
+simB = Emulator()
 simA.load('dns-dump.bin')   # service component.
 simB.load('internet-1.bin') # base component, has as[100,200,300,400,500]-host[1-10] nodes.
 
@@ -62,8 +62,8 @@ Using Node name to specifcally bind.
 
 ```python
 from seedsim.core import Configuration, Binding, Filter, Action
-simA = Simulator()
-simB = Simulator()
+simA = Emulator()
+simB = Emulator()
 simA.load('dns-dump.bin')   # service component.
 simB.load('internet-1.bin') # anycast base component, data sheet contains "anycast-host-0","anycast-host-1" and other nodes.
 
@@ -114,8 +114,8 @@ Using IP prefix connector
 
 ```python
 from seedsim.core import Configuration, Binding, Filter, Action
-simA = Simulator()
-simB = Simulator()
+simA = Emulator()
+simB = Emulator()
 simA.load('dns-dump.bin')   # service component.
 simB.load('internet-1.bin') # base component, including AS100,AS200,AS300,AS400,AS500.
 
@@ -182,9 +182,9 @@ simB.connect(my_config, dns)
 
 ```python
 from seedsim.core import Configuration, Binding, Filter, Action
-simA = Simulator()
-simB = Simulator()
-simC = Simulator()
+simA = Emulator()
+simB = Emulator()
+simC = Emulator()
 
 simA.load('dns-dump.bin')   # dns service component.
 simB.load('internet-1.bin') # base component.

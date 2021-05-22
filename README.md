@@ -1,38 +1,38 @@
-Internet Simulator
+Internet Emulator
 ---
 
-The goal of this project is to build a simulator of the Internet, containing necessary components that will enable us to build replicas of the real-world Internet infrastructure. 
+The goal of this project is to build a emulator of the Internet, containing necessary components that will enable us to build replicas of the real-world Internet infrastructure. 
 
-We can already experiment with small-scale attacks like ARP poisoning, TCP hijacking, and DNS poisoning, but our goal is to provide a simulation where users are allowed to conduct attacks on a macroscopic level. The simulation will enable users to launch attacks against the entire Internet. The simulator for the Internet allows users to experiment with various Internet technologies that people usually would not have access to, like BGP. This simulator will enable users to perform a nation-level BGP hijack to bring down the Internet for an entire nation, perform MITM on a core ISP router, or launch DNS poisoning attacks on the TLD name servers.
+We can already experiment with small-scale attacks like ARP poisoning, TCP hijacking, and DNS poisoning, but our goal is to provide a emulation where users are allowed to conduct attacks on a macroscopic level. The emulation will enable users to launch attacks against the entire Internet. The emulator for the Internet allows users to experiment with various Internet technologies that people usually would not have access to, like BGP. This emulator will enable users to perform a nation-level BGP hijack to bring down the Internet for an entire nation, perform MITM on a core ISP router, or launch DNS poisoning attacks on the TLD name servers.
 
-Users can join the simulated Internet with VPN client software. This simulation is completely transparent to users joining it, allowing many different possibilities. This allows users to conduct and experience in real-time, as if it was happening in the real world. Simulation is popular in every field of engineering, especially for those activities that are expensive or dangerous to conduct. However, popular Internet simulators usually do not do well in a real-time application, as they are mainly designed to be used for research and runs slow. Also, lots of no-for-research-use simulators have very high system requirements, rendering them unfeasible for large-scale simulations.
+Users can join the simulated Internet with VPN client software. This emulation is completely transparent to users joining it, allowing many different possibilities. This allows users to conduct and experience in real-time, as if it was happening in the real world. Simulation is popular in every field of engineering, especially for those activities that are expensive or dangerous to conduct. However, popular Internet emulators usually do not do well in a real-time application, as they are mainly designed to be used for research and runs slow. Also, lots of no-for-research-use emulators have very high system requirements, rendering them unfeasible for large-scale emulations.
 
 ### Design
 
-The simulator is built from four components: 
+The emulator is built from four components: 
 
-- Core classes, which provide the essential abstraction of the key simulator components like Network, Network Interface Card, Node (Router and Server),
-- Layers, which provide a high-level API for building the simulation on different levels,
-- Renderer, which "renders" the different layer and build a complete simulation, and
-- Compiler, which "compiles" the product from renderer to actual simulation.
+- Core classes, which provide the essential abstraction of the key emulator components like Network, Network Interface Card, Node (Router and Server),
+- Layers, which provide a high-level API for building the emulation on different levels,
+- Renderer, which "renders" the different layer and build a complete emulation, and
+- Compiler, which "compiles" the product from renderer to actual emulation.
 
 #### Core classes
 
 **`AddressAssignmentConstraint`**: The IP address assignment in a network is automated if one is not specified. This is to make building a scenario simpler. Users can derive from the `AddressAssignmentConstraint` class and change the assignment behavior.
 
-**`AutonomousSystem`**: The `AutonomousSystem` class provides an easy-to-use wrapper for creating a new network and nodes in the simulation. The `AutonomousSystem` class itself is an abstract concept in the simulation. It is only there for ease of access and does not take part in the simulation generation. 
+**`AutonomousSystem`**: The `AutonomousSystem` class provides an easy-to-use wrapper for creating a new network and nodes in the emulation. The `AutonomousSystem` class itself is an abstract concept in the emulation. It is only there for ease of access and does not take part in the emulation generation. 
 
-**`InternetExchange`**: The `InternetExchange` class provides an easy way to access the created node and network for an Internet Exchange. `InternetExchange` is only there for ease of access and does not take part in the simulation generation. 
+**`InternetExchange`**: The `InternetExchange` class provides an easy way to access the created node and network for an Internet Exchange. `InternetExchange` is only there for ease of access and does not take part in the emulation generation. 
 
-**`Network`**: The `Network` class is an abstraction of network in the simulation. 
+**`Network`**: The `Network` class is an abstraction of network in the emulation. 
 
-**`Node`**: The `Node` class is an abstraction of a node in the simulation. A node can be either a router or a server. The `Node` class provides various APIs for installing new software, adding new files, and joining networks. 
+**`Node`**: The `Node` class is an abstraction of a node in the emulation. A node can be either a router or a server. The `Node` class provides various APIs for installing new software, adding new files, and joining networks. 
 
 **`Printable`**: The `Printable` class is the base class of all classes that are "printable." It can be considered a special toString interface that allows specifying indentation. 
 
 **`Graphable`**: The `Graphable` class is the base class of all classes that can provide graphs.
 
-**`Registry`**: The `Registry` class is a singleton class for "registering" objects in the simulation. All classes can access the `Registry` to register new object or get registered objects. Objects in the `Registry` are all derived from the `Registerable` class. All `Registerable` class has three tags: scope, type, and name. For example, a router node name R1 in AS150 will be tagged with `('150', 'rnode', 'R1')`, and the `Routing` layer instance, if installed, will be tagged with `('seedsim', 'layer', 'Routing')`.
+**`Registry`**: The `Registry` class is a singleton class for "registering" objects in the emulation. All classes can access the `Registry` to register new object or get registered objects. Objects in the `Registry` are all derived from the `Registerable` class. All `Registerable` class has three tags: scope, type, and name. For example, a router node name R1 in AS150 will be tagged with `('150', 'rnode', 'R1')`, and the `Routing` layer instance, if installed, will be tagged with `('seedsim', 'layer', 'Routing')`.
 
 ### Layers: OSI Layer 1
 
@@ -40,7 +40,7 @@ The simulator is built from four components:
 
 - Class Name: `Base`
 - Depende: None
-- Description: The base layer, as the name suggested, provides the base of simulation. This layer can only be used to create Autonomous Systems and Internet Exchanges. 
+- Description: The base layer, as the name suggested, provides the base of emulation. This layer can only be used to create Autonomous Systems and Internet Exchanges. 
 
 ```python
 base = Base()
@@ -204,7 +204,7 @@ ldns.installOn(as151_h2)
 
 - Class Name: `CymruIpOriginService`
 - Dependency: `DomainNameService`
-- Description: Cymru's IP info service is used by various traceroute utilities to map IP address to ASN (using DNS). This service loads the prefix list within the simulation and creates ASN mappings for them, so with proper local DNS configuration, nodes can see the ASN when doing traceroute. The layer will host domain `cymru.com.`
+- Description: Cymru's IP info service is used by various traceroute utilities to map IP address to ASN (using DNS). This service loads the prefix list within the emulation and creates ASN mappings for them, so with proper local DNS configuration, nodes can see the ASN when doing traceroute. The layer will host domain `cymru.com.`
 
 ```python
 cymru = CymruIpOriginService()
@@ -242,7 +242,7 @@ dnssec.enableOn('.')
 
 - Class Name: `Reality`
 - Dependency: `Ebgp`
-- Description: The `Reality` layer allows easy interaction with hosts in the real-world. It allows exposing a simulated network with a VPN to the real-world, and enables adding real-world AS to simulation with ease. The layer allows users to set a list of prefixes to announce with BGP, to the simulated Internet, and route it via the default gateway (i.e., the reality.) It can also fetch the prefix list of real-world AS and add them automatically.
+- Description: The `Reality` layer allows easy interaction with hosts in the real-world. It allows exposing a simulated network with a VPN to the real-world, and enables adding real-world AS to emulation with ease. The layer allows users to set a list of prefixes to announce with BGP, to the simulated Internet, and route it via the default gateway (i.e., the reality.) It can also fetch the prefix list of real-world AS and add them automatically.
 
 ```python
 real = Reality()
@@ -280,7 +280,7 @@ r.render()
 
 ### Graphing
 
-Serval classes of the simulator offer graphing options to convert the topologies to graphs. These classes are:
+Serval classes of the emulator offer graphing options to convert the topologies to graphs. These classes are:
 
 - `AutonomousSystem` offers the following graphs:
     - Layer 2 connections of the current AS.
@@ -294,7 +294,7 @@ Serval classes of the simulator offer graphing options to convert the topologies
 - `Mpls` offers the following graphs:
     - MPLS topology (One each AS).
 
-To get graphs from graphable classes, first, render the simulation, then call `graphable.createGraphs()`. Once done, they will be available via `graphable.getGraphs()`. For example:
+To get graphs from graphable classes, first, render the emulation, then call `graphable.createGraphs()`. Once done, they will be available via `graphable.getGraphs()`. For example:
 
 ```python
 r.render()
@@ -313,7 +313,7 @@ The compiler is the component that "compiles" the objects in the registry.
 
 #### Docker
 
-The docker compiler compiles the simulation to multiple docker containers. Networks in the simulation will be converted to docker networks, and nodes in the simulation are converted to docker services. It also generates a docker-compose file for spawning the containers.
+The docker compiler compiles the emulation to multiple docker containers. Networks in the emulation will be converted to docker networks, and nodes in the emulation are converted to docker services. It also generates a docker-compose file for spawning the containers.
 
 ```python
 dcompiler = Docker()
@@ -322,7 +322,7 @@ dcompiler.compile('./test-docker') # output dir
 
 #### Docker (Distributed)
 
-The DistributedDocker compiler compiles the simulation to multiple docker containers. Networks in the simulation will be converted to docker networks, and nodes in the simulation are converted to docker services. It also generates a docker-compose file for spawning the containers.
+The DistributedDocker compiler compiles the emulation to multiple docker containers. Networks in the emulation will be converted to docker networks, and nodes in the emulation are converted to docker services. It also generates a docker-compose file for spawning the containers.
 
 Instead of putting all containers on one docker host, the DistributedDocker compiler generates one group of containers and docker-compose configuration for each AS, so the containers can be distributed across multiple Docker hosts.
 
@@ -331,11 +331,11 @@ ddcompiler = DistributedDocker()
 ddcompiler.compile('./test-ddocker') # output dir
 ```
 
-The "distributed simulations" works by making all IX networks overlay networks. For this to work, all participating docker hosts must join the same swarm, and IX network and container must be started on the master Docker host before other ASes' containers.
+The "distributed emulations" works by making all IX networks overlay networks. For this to work, all participating docker hosts must join the same swarm, and IX network and container must be started on the master Docker host before other ASes' containers.
 
 #### Graphviz
 
-This is not a real compiler. Instead of building the simulation, the Graphviz compiler collects all graphs from different layers and save them to the output directory.
+This is not a real compiler. Instead of building the emulation, the Graphviz compiler collects all graphs from different layers and save them to the output directory.
 
 ```python
 gcompiler = Graphviz()

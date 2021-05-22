@@ -12,17 +12,17 @@ from seedsim.compiler import Docker
 
 In this setup, we will need these layers: 
 
-- The `Base` layer provides the base of the simulation; it describes what hosts belong to what autonomous system and how hosts are connected with each other. 
+- The `Base` layer provides the base of the emulation; it describes what hosts belong to what autonomous system and how hosts are connected with each other. 
 - The `Routing` layer acts as the base of other routing protocols. `Routing` layer (1) installs BIRD internet routing daemon on every host with router role, (2) provides lower-level APIs for manipulating BIRD's FIB (forwarding information base), adding new protocols, etc., and (3) setup proper default route on non-router role hosts to point to the first router in the network.
 - The `Ebgp` layer provides API for setting up intra-AS BGP peering.
-- The `DomainNameService` layer provides APIs and tools for hosting domain name servers in the simulation.
+- The `DomainNameService` layer provides APIs and tools for hosting domain name servers in the emulation.
 - The `DomainNameCachingService` layer provides tools for hosting a local caching domain name server.
 - The `Dnssec` layer works with the `DomainNameService` layer to enable DNSSEC support.
 - The `WebService` layer provides API for install `nginx` web server on hosts.
-- The `CymruIpOriginService` hosts the `cymru.com` zone. Team Cymru provides a way to look up the origin ASN of any given IP address by DNS; the service is used by various network utilities like `traceroute` and `mtr`, which we will be using in the simulator to check routes. The service works by hosting the zone `origin.asn.cymru.com`; for example, try `dig TXT '0.0.230.128.origin.asn.cymru.com'`. In the simulator, this layer collects all networks in the simulation and creates the zone in the DNS layer.
-- The `ReverseDomainNameService` creates the `in-addr.arpa.` zone (i.e., the reverse IP zone). All IP addresses on any node in the simulation will be given a reverse DNS record like `nodename-netname.nodetype.asn.net`.
+- The `CymruIpOriginService` hosts the `cymru.com` zone. Team Cymru provides a way to look up the origin ASN of any given IP address by DNS; the service is used by various network utilities like `traceroute` and `mtr`, which we will be using in the emulator to check routes. The service works by hosting the zone `origin.asn.cymru.com`; for example, try `dig TXT '0.0.230.128.origin.asn.cymru.com'`. In the emulator, this layer collects all networks in the emulation and creates the zone in the DNS layer.
+- The `ReverseDomainNameService` creates the `in-addr.arpa.` zone (i.e., the reverse IP zone). All IP addresses on any node in the emulation will be given a reverse DNS record like `nodename-netname.nodetype.asn.net`.
 
-We will use the defualt renderer and compiles the simulation to docker containers.
+We will use the defualt renderer and compiles the emulation to docker containers.
 
 Once the classes are imported, initialize them:
 
@@ -43,7 +43,7 @@ docker_compiler = Docker()
 
 Here, we set `autoNs = True` for the `DomainNameService` layer. `autoNs` is default to true; we only put it here so we can mention it in this guide. The `autoNs` option controls the automated `NS` behavior. When it is on (true), the DNS layer will look for host nodes hosting the zone and add their IP address to the nameserver(s) of the parent zones. In other words, it enables the DNS layer to automatically discover what zone are hosted on what nodes and add the "glue records" for them.
 
-`autoRoot = True` is also a defualt option and it was included here for documentation. The `autoRoot` options automatically look for the root DNS in the simulation and update the root hint file bind uses, so it will use the root DNS hosted in the simulation instead of the real ones. If you want to keep the real roots while hosting root DNS in simulation, you need to explicitly disable this option. 
+`autoRoot = True` is also a defualt option and it was included here for documentation. The `autoRoot` options automatically look for the root DNS in the emulation and update the root hint file bind uses, so it will use the root DNS hosted in the emulation instead of the real ones. If you want to keep the real roots while hosting root DNS in emulation, you need to explicitly disable this option. 
 
 We also set `setResolvconf = True` for the `DomainNameCachingService` layer. This tells the layer to update the `resolv.conf` file on all nodes within the autonomous system to use the local DNS node as their DNS. This one is not on by default.
 
@@ -53,7 +53,7 @@ We also set `setResolvconf = True` for the `DomainNameCachingService` layer. Thi
 base.createInternetExchange(100)
 ```
 
-The current version of the internet simulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function call creates a new internet exchange, and will create a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetworkByName` function call.
+The current version of the internet emulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function call creates a new internet exchange, and will create a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetworkByName` function call.
 
 You may optionally set the IX LAN prefix with the `prefix` parameter and the way it assigns IP addresses to nodes with the `aac` parameter when calling `createInternetExchange`. For details, check to remarks section.
 
@@ -245,7 +245,7 @@ The above adds a new `A` record to the `example.com.` zone. It points the `@` do
 
 ## Step 7: create an autonomous system for users
 
-Now, since we are not using the real IP address of root DNS, nor do we set up a recursive DNS server to lookup our root server, normal containers won't be able to use the zones we hosted in the simulation. To deal with this, we can create a new autonomous system for users and host a recursive DNS server (or local DNS, DNS caching server):
+Now, since we are not using the real IP address of root DNS, nor do we set up a recursive DNS server to lookup our root server, normal containers won't be able to use the zones we hosted in the emulation. To deal with this, we can create a new autonomous system for users and host a recursive DNS server (or local DNS, DNS caching server):
 
 ```python
 as153 = base.createAutonomousSystem(153)
@@ -275,11 +275,11 @@ local_dns = as153.createHost('local_dns')
 ldns.installOn(local_dns)
 ```
 
-This creates a local DNS server. Since we have set `setResolvconf` earlier, all nodes in AS153 will use the local resolver as DNS, and since we have `autoRoot`, the local DNS will be able to find the root zone we hosted in the simulation.
+This creates a local DNS server. Since we have set `setResolvconf` earlier, all nodes in AS153 will use the local resolver as DNS, and since we have `autoRoot`, the local DNS will be able to find the root zone we hosted in the emulation.
 
 ## Step 8: configure DNSSEC (optional)
 
-The DNSSEC layer configures DNSSEC for a zone. It works by signing the zone on-the-fly when the simulator starts and sending DS records to parents with `nsupdate`.
+The DNSSEC layer configures DNSSEC for a zone. It works by signing the zone on-the-fly when the emulator starts and sending DS records to parents with `nsupdate`.
 
 ```python
 dnssec.enableOn('.')
@@ -310,9 +310,9 @@ Note that the session with RS (`addRsPeer`) will always be `Peer` relationship.
 
 The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
-## Step 10: render the simulation
+## Step 10: render the emulation
 
-We are now done configuring the layers. The next step is to add all layers to the renderer and render the simulation:
+We are now done configuring the layers. The next step is to add all layers to the renderer and render the emulation:
 
 ```python
 renderer.addLayer(base)
@@ -328,17 +328,17 @@ renderer.render()
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
 
-## Step 11: compile the simulation
+## Step 11: compile the emulation
 
-After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the simulation to other formats. 
+After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the emulation to other formats. 
 
-In this example, we will use docker on a single host to run the simulation, so we use the `Docker` compiler:
+In this example, we will use docker on a single host to run the emulation, so we use the `Docker` compiler:
 
 ```python
 docker_compiler.compile('./dns-misc')
 ```
 
-Now we can find the output in the `dns-infra` directory. The docker compiler comes with a docker-compose configuration. To bring up the simulation, simply run `docker-compose build && docker-compose up` in the `dns-infra` directory.
+Now we can find the output in the `dns-infra` directory. The docker compiler comes with a docker-compose configuration. To bring up the emulation, simply run `docker-compose build && docker-compose up` in the `dns-infra` directory.
 
 ## Remarks
 

@@ -1,4 +1,4 @@
-## Simulator features
+## Emulator features
 
 - [x] tc
 - [x] loopback address system
@@ -12,7 +12,7 @@
 - [ ] metric collection
 - [ ] centralized command & control server
 - [ ] real internal network
-- [x] distributed simulation
+- [x] distributed emulation
 - [x] BGP: BGP route filters
 - [ ] Local DNS: loads root DNSSEC key automaically
 - [ ] RPKI
@@ -22,13 +22,13 @@
     - [ ] rfc8183
 - [ ] firewall
 - [ ] catch-all interface
-- [ ] simulation import/export
-- [ ] simulation namespace
+- [ ] emulation import/export
+- [ ] emulation namespace
 - [ ] openvpn: generate certificates on-the-fly
 - [ ] re-write aac
 - [ ] don't fix the 10.x.0.0/24 assigment (merge with aac?)
 
-## Simulator merging
+## Emulator merging
 
 - [ ] merger class
 - [ ] services interface: add installOn() which takes IP address

@@ -1,6 +1,6 @@
 # Mini Internet
 
-This is one of the more sophisticated examples; here, we combine what we have used from previous examples and build a larger simulation. This document assumes the reader has some idea of what each layer does; it will be better to go through the other examples before proceeding with this one. In this example, we will set up:
+This is one of the more sophisticated examples; here, we combine what we have used from previous examples and build a larger emulation. This document assumes the reader has some idea of what each layer does; it will be better to go through the other examples before proceeding with this one. In this example, we will set up:
 
 - Three tier-1 transit providers: AS2, AS3, and AS4 (buy transit from no one, peer with each other), 
 - two tier-2 transit provider: AS11 (buy transit from AS2 and AS3) and AS12 (buy transit from AS2 and AS4),
@@ -60,7 +60,7 @@ def make_real_as(asn: int, exchange: int, exchange_ip: str):
     real_router.joinNetworkByName('ix{}'.format(exchange), exchange_ip)
 ```
 
-The real-world AS helper creates a real-world AS in the simulator. It works by utilizing the `Reality` layer. 
+The real-world AS helper creates a real-world AS in the emulator. It works by utilizing the `Reality` layer. 
 
 It first creates an AS with the `createAutonomousSystem` call of the base layer. It then adds a real-world router to the AS with the `createRealWorldRouter` call of the real-world layer. Last, it connects the real-world router to an internet exchange with the `joinNetworkByName` call of the node class. Since real-world ASN can be outside the 2~254 range, we override the auto address assignment by manually assigning an address when joining the network.
 
@@ -148,14 +148,14 @@ def make_user_as(asn: int, exchange: str):
     router.joinNetworkByName('ix{}'.format(exchange))
 ```
 
-The user AS helper creates a real-world accessible AS in the simulator. It works by utilizing the `Reality` layer. It:
+The user AS helper creates a real-world accessible AS in the emulator. It works by utilizing the `Reality` layer. It:
 
 - create an AS with the `createAutonomousSystem` call of the base layer,
 - create a router with the `createRouter` call of the AS object,
 - create a network with the `createNetwork` call of the AS object,
 mark the created network as a direct network with the `addDirect` call of the routing layer, so the router will load the network into FIB (forwarding information base) and send it to BGP peers,
 - connect the router to the created network and internet exchange, with `joinNetwork` and `joinNetworkByName` call of the node class, and
-- enale real-world access using the `enableRealWorldAccess` call of the real-world layer; it creates a real-world accessible OpenVPN and allow users to connect to the simulation directly.
+- enale real-world access using the `enableRealWorldAccess` call of the real-world layer; it creates a real-world accessible OpenVPN and allow users to connect to the emulation directly.
 
 ### Transit AS creator
 
@@ -184,11 +184,11 @@ The transit AS creator builds transit providers. It:
 - for each PoP (point of presence), create a router in the internet exchange with the `createRouter` call of the AS object, join the exchange with the `joinNetworkByName` of the node object, and save the exchange ID and router object pair in the dictionary, and
 - for each intra-exchange links, create a network for the link with the `createNetwork` call of the AS object, mark it as direct with `addDirect` call of the routing layer, so the router will load the network into FIB (forwarding information base) and send it to BGP peers, and have the two linked routers join the network with the `joinNetwork` call of the node object. Note that the `addDirect` call isn't strictly necessary since even if the transit provider's internal network is not in the DFZ (default-free zone), the routing will still work, just that we won't be able to traceroute to the transit provider's network.
 
-This is all we needed to create transit providers since we will add OSPF and IBGP layer to the simulation, which will handle the internal routing automatically. 
+This is all we needed to create transit providers since we will add OSPF and IBGP layer to the emulation, which will handle the internal routing automatically. 
 
 ## Create internet exchanges
 
-After creating the helper functions, we can start to build the actual simulation. The first logical thing to do is to create the internet exchanges:
+After creating the helper functions, we can start to build the actual emulation. The first logical thing to do is to create the internet exchanges:
 
 ```python
 base.createInternetExchange(100)
@@ -268,11 +268,11 @@ make_service_as(154, [rdns], 104)
 make_service_as(155, [cymru], 105)
 ```
 
-Now, with the service helper, create some AS to host some services. The important ones here are AS154 and AS155, which hosts the reverse DNS (`in-addr.arpa`) and the Cymru IP origin service. They will make the traceroute looks prettier in the simulation. 
+Now, with the service helper, create some AS to host some services. The important ones here are AS154 and AS155, which hosts the reverse DNS (`in-addr.arpa`) and the Cymru IP origin service. They will make the traceroute looks prettier in the emulation. 
 
 ## Create DNS infrastructure
 
-Now, let's proceed to build the DNS infrastructure. DNS infrastructure is required for both the reverse DNS and Cymru IP origin service, as well as other zones we are going to host in the simulation.
+Now, let's proceed to build the DNS infrastructure. DNS infrastructure is required for both the reverse DNS and Cymru IP origin service, as well as other zones we are going to host in the emulation.
 
 ### Root and TLD NS
 
@@ -313,7 +313,7 @@ The call above hosts all three zones on AS162.
 
 ## Create user AS
 
-Now, let's create some user AS so users can join the simulator with their real computer. This is not strictly necessary; we can always just attach to the containers, and they will be already in the simulated internet.
+Now, let's create some user AS so users can join the emulator with their real computer. This is not strictly necessary; we can always just attach to the containers, and they will be already in the simulated internet.
 
 ```python
 make_user_as(170, 102)
@@ -336,7 +336,7 @@ dnssec.enableOn('as152.net.')
 
 ## Becoming Google: Hosting the 8.8.8.8 DNS
 
-Now, let's host a public recursive DNS for the simulator, so the host nodes and the users can resolve zones in our self-hosted DNS infrastructure. Let's host Google's public DNS, 8.8.8.8.
+Now, let's host a public recursive DNS for the emulator, so the host nodes and the users can resolve zones in our self-hosted DNS infrastructure. Let's host Google's public DNS, 8.8.8.8.
 
 First, create Google's AS:
 
@@ -451,11 +451,11 @@ ebgp.addPrivatePeering(100, 3, 15169, PeerRelationship.Provider)
 ebgp.addPrivatePeering(100, 4, 15169, PeerRelationship.Provider)
 ```
 
-Note that the session with the real-world AS, AS11872, is set to `PeerRelationship.Unfiltered`. This is because the prefixes imported from the real world is only a route; they are not `Network` objects in the simulation. The way the BGP layer generates route filter is by collecting the `Network` objects in each AS, so it won't see the real-world prefixes, and thus we need to make the session unfiltered.
+Note that the session with the real-world AS, AS11872, is set to `PeerRelationship.Unfiltered`. This is because the prefixes imported from the real world is only a route; they are not `Network` objects in the emulation. The way the BGP layer generates route filter is by collecting the `Network` objects in each AS, so it won't see the real-world prefixes, and thus we need to make the session unfiltered.
 
 ## Configure nameserver for host nodes
 
-We want all host nodes in the simulation to use the `8.8.8.8` DNS; this can be done by iterating through all nodes in the simulation and add a start command, `echo "nameserver 8.8.8.8" > /etc/resolv.conf`, to all host nodes. We don't use `addBuildCommand` / `appendFile` / `setFile` here, as the `/etc/resolv.conf` is generated by the container itself when start. All three command above runs at build time, so the changes they made will be overridden.
+We want all host nodes in the emulation to use the `8.8.8.8` DNS; this can be done by iterating through all nodes in the emulation and add a start command, `echo "nameserver 8.8.8.8" > /etc/resolv.conf`, to all host nodes. We don't use `addBuildCommand` / `appendFile` / `setFile` here, as the `/etc/resolv.conf` is generated by the container itself when start. All three command above runs at build time, so the changes they made will be overridden.
 
 ```python
 reg = Registry()
@@ -465,9 +465,9 @@ for ((scope, type, name), object) in reg.getAll().items():
     host.addStartCommand('echo "nameserver 8.8.8.8" > /etc/resolv.conf')
 ```
 
-The `Registry` is a singleton class, and it stores all the important objects in the simulation; this includes the host nodes that we want to modify the name server. The `getAll` call returns a dictionary, the keys are a tuple of `<scope, type, name>`, and the values are objects. `scope` is usually the ASN, and `type` is the type of objects, and `name` is its name. For details, refer to the API documentation.
+The `Registry` is a singleton class, and it stores all the important objects in the emulation; this includes the host nodes that we want to modify the name server. The `getAll` call returns a dictionary, the keys are a tuple of `<scope, type, name>`, and the values are objects. `scope` is usually the ASN, and `type` is the type of objects, and `name` is its name. For details, refer to the API documentation.
 
-## Render the simulation 
+## Render the emulation 
 
 ```python
 renderer.addLayer(base)
@@ -488,11 +488,11 @@ renderer.render()
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
 
-## Compile the simulation
+## Compile the emulation
 
-After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the simulation to other formats. 
+After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the emulation to other formats. 
 
-In this example, we will use docker on a single host to run the simulation, so we use the `Docker` compiler. Since the topology is rather complex, it will be helpful to have some graphical representations. Thus, we added the Graphviz compiler to dump graphs to the `_graphs` subfolder.
+In this example, we will use docker on a single host to run the emulation, so we use the `Docker` compiler. Since the topology is rather complex, it will be helpful to have some graphical representations. Thus, we added the Graphviz compiler to dump graphs to the `_graphs` subfolder.
 
 ```python
 docker_compiler.compile('./mini-internet')

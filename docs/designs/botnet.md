@@ -13,12 +13,12 @@ Our emulator allows user to create Botnet service, including C2 (Command & Contr
 
 
 ```
-from seedsim.core import Simulator
+from seedsim.core import Emulator
 from seedsim.layers import Base, Routing, Ebgp
 from seedsim.compiler import Docker
 from seedsim.services import BotnetClientService, BotnetService
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()
@@ -144,7 +144,7 @@ On the above code, we firstly defined a function called ```dga```, this function
 
 ## Demonstration 
 
-This demonstration shows how can we build a botnet service in a pretty complex network. All the code can be found on [09-botnet-in-as](https://github.com/seed-labs/SEEDSimulator/tree/feature-merge/examples/09-botnet-in-as) example.
+This demonstration shows how can we build a botnet service in a pretty complex network. All the code can be found on [09-botnet-in-as](https://github.com/seed-labs/SEEDEmulator/tree/feature-merge/examples/09-botnet-in-as) example.
 
 ### Step 1: Dump & Load a existed network emulator
 

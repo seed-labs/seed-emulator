@@ -12,12 +12,12 @@ from seedsim.compiler import Docker
 
 In this setup, we will need four layers: 
 
-- The `Base` layer provides the base of the simulation; it describes what hosts belong to what autonomous system and how hosts are connected with each other. 
+- The `Base` layer provides the base of the emulation; it describes what hosts belong to what autonomous system and how hosts are connected with each other. 
 - The `Routing` layer acts as the base of other routing protocols. `Routing` layer (1) installs BIRD internet routing daemon on every host with router role, (2) provides lower-level APIs for manipulating BIRD's FIB (forwarding information base) and adding new protocols, etc., and (3) setup proper default route on non-router role hosts to point to the first router in the network.
 - The `Ebgp` layer provides API for setting up intra-AS BGP peering.
 - The `WebService` layer provides API for install `nginx` web server on hosts.
 
-We will use the defualt renderer and compiles the simulation to docker containers.
+We will use the defualt renderer and compiles the emulation to docker containers.
 
 Once the classes are imported, initialize them:
 
@@ -38,7 +38,7 @@ docker_compiler = Docker()
 base.createInternetExchange(100)
 ```
 
-The current version of the internet simulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function call creates a new internet exchange, and will create a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetworkByName` function call.
+The current version of the internet emulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function call creates a new internet exchange, and will create a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetworkByName` function call.
 
 You may optionally set the IX LAN prefix with the `prefix` parameter and the way it assigns IP addresses to nodes with the `aac` parameter when calling `createInternetExchange`. For details, check to remarks section.
 
@@ -175,9 +175,9 @@ Note that the session with RS (`addRsPeer`) will always be `Peer` relationship.
 
 The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
-## Step 6: render the simulation
+## Step 6: render the emulation
 
-We are now done configuring the layers. The next step is to add all layers to the renderer and render the simulation:
+We are now done configuring the layers. The next step is to add all layers to the renderer and render the emulation:
 
 ```python
 renderer.addLayer(base)
@@ -190,17 +190,17 @@ renderer.render()
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
 
-## Step 7: compile the simulation
+## Step 7: compile the emulation
 
-After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the simulation to other formats. 
+After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the emulation to other formats. 
 
-In this example, we will use docker on a single host to run the simulation, so we use the `Docker` compiler:
+In this example, we will use docker on a single host to run the emulation, so we use the `Docker` compiler:
 
 ```python
 docker_compiler.compile('./simple-peering')
 ```
 
-Now we can find the output in the `simple-peering` directory. The docker compiler comes with a docker-compose configuration. To bring up the simulation, simply run `docker-compose build && docker-compose up` in the `simple-peering` directory.
+Now we can find the output in the `simple-peering` directory. The docker compiler comes with a docker-compose configuration. To bring up the emulation, simply run `docker-compose build && docker-compose up` in the `simple-peering` directory.
 
 ## Remarks
 

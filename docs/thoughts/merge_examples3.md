@@ -2,12 +2,12 @@
 
 ## Dealing with Common AS
 
-If two simulators have common ASes, we need to resolve the conflict. 
+If two emulators have common ASes, we need to resolve the conflict. 
 
 ```py
-sim1 = Simulator()
+sim1 = Emulator()
 sim1.load("sim1.json")
-sim2 = Simulator()
+sim2 = Emulator()
 sim2.load("sim2.josn")
 
 common_ases = Utility.findCommonASes (sim1.getASes(), sim2.getASes())

@@ -2,7 +2,7 @@
 
 In this example, we will frist setup some basic transit; we will configure two internet exchanges, AS150 will be in both exchanges. AS151 and AS152 will be in IX100 and IX101, respectively. AS150 will serve as the transit AS for AS151 and AS152. There will be four hops in AS150. AS151 and AS152 will each announce one /24 prefix and host one web server in the network.
 
-In AS151 and AS152, we will host VPN servers that are accessible from outside the simulator, so real-world hosts can connect to the simulation. We will then add a real-world autonomous system, AS11872 (Syracuse University), to the simulation. The real-world autonomous system will collect the prefixes it announced in the real-world, and route them to the real-world from the simulation.
+In AS151 and AS152, we will host VPN servers that are accessible from outside the emulator, so real-world hosts can connect to the emulation. We will then add a real-world autonomous system, AS11872 (Syracuse University), to the emulation. The real-world autonomous system will collect the prefixes it announced in the real-world, and route them to the real-world from the emulation.
 
 ## Step 1: import and create required componets
 
@@ -14,14 +14,14 @@ from seedsim.compiler import Docker
 
 In this setup, we will need these layers: 
 
-- The `Base` layer provides the base of the simulation; it describes what hosts belong to what autonomous system and how hosts are connected with each other. 
+- The `Base` layer provides the base of the emulation; it describes what hosts belong to what autonomous system and how hosts are connected with each other. 
 - The `Routing` layer acts as the base of other routing protocols. `Routing` layer (1) installs BIRD internet routing daemon on every host with router role, (2) provides lower-level APIs for manipulating BIRD's FIB (forwarding information base), adding new protocols, etc., and (3) setup proper default route on non-router role hosts to point to the first router in the network.
 - The `Ebgp` layer provides API for setting up intra-AS BGP peering.
 - The `Ibgp` layer automatically setup full-mesh iBGP peering between all routers within an autonomous system.
 - The `Ospf` layer automatically setup OSPF routing on all routers within an autonomous system.
 - The `WebService` layer provides API for install `nginx` web server on hosts.
 
-We will use the defualt renderer and compiles the simulation to docker containers.
+We will use the defualt renderer and compiles the emulation to docker containers.
 
 Once the classes are imported, initialize them:
 
@@ -44,11 +44,11 @@ base.createInternetExchange(100)
 base.createInternetExchange(101)
 ```
 
-The current version of the internet simulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function call creates a new internet exchange, and will create a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetworkByName` function call.
+The current version of the internet emulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function call creates a new internet exchange, and will create a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetworkByName` function call.
 
 You may optionally set the IX LAN prefix with the `prefix` parameter and the way it assigns IP addresses to nodes with the `aac` parameter when calling `createInternetExchange`. For details, check to remarks section.
 
-Here, two internet exchanges are created. This add two new networks, `ix100` and `ix101`, to the simulation.
+Here, two internet exchanges are created. This add two new networks, `ix100` and `ix101`, to the emulation.
 
 ## Step 3: create a transit autonomous system
 
@@ -163,7 +163,7 @@ Alternatively, `Routing::addDirectByName` can be used to mark networks as direct
 real.enableRealWorldAccess(as151_net)
 ```
 
-The `Reality::enableRealWorldAccess` call enables real-world access to a network by hosting an OpenVPN server. The server will be reachable from the real world; we can check the server port by doing `docker ps` once the simulation is up. 
+The `Reality::enableRealWorldAccess` call enables real-world access to a network by hosting an OpenVPN server. The server will be reachable from the real world; we can check the server port by doing `docker ps` once the emulation is up. 
 
 `enableRealWorldAccess` accepts two parameters; the first is the reference to the network to bridge the VPN server into, and the second one, `naddr`, is an optional parameter for specifying how many host IP addresses to allocate to the server (default to 8). It uses the network's IP assigner to get IP addresses for host-role nodes. For details, check the `AddressAssignmentConstraint` in the remarks section.
 
@@ -256,7 +256,7 @@ We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two pa
 
 The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
-## Step 8: render the simulation
+## Step 8: render the emulation
 
 ```python
 renderer.addLayer(base)
@@ -272,11 +272,11 @@ renderer.render()
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
 
-## Step 9: compile the simulation
+## Step 9: compile the emulation
 
-After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the simulation to other formats. 
+After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the emulation to other formats. 
 
-In this example, we will use docker on a single host to run the simulation, so we use the `Docker` compiler:
+In this example, we will use docker on a single host to run the emulation, so we use the `Docker` compiler:
 
 ```python
 docker_compiler.compile('./real-world')

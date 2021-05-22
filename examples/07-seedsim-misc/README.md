@@ -1,6 +1,6 @@
 # seedsim: miscellaneous
 
-The simulator provides a few other compilers for running the simulation in different environments. It also includes a graphing system for visualizing various topologies. We will go over them in this example. 
+The emulator provides a few other compilers for running the emulation in different environments. It also includes a graphing system for visualizing various topologies. We will go over them in this example. 
 
 The topology used in this example is the exact same as the MPLS transit example. We won't go over the setup again here.
 
@@ -20,7 +20,7 @@ All classes derived from `Graphable` can output one or more graphs of their topo
 - `Mpls` offers the following graphs:
     - MPLS topology (One each AS).
 
-To get graphs from graphable classes, first, render the simulation, then call `graphable.createGraphs()`. Once done, they will be available via `graphable.getGraphs()`. For example:
+To get graphs from graphable classes, first, render the emulation, then call `graphable.createGraphs()`. Once done, they will be available via `graphable.getGraphs()`. For example:
 
 ```python
 r.render()
@@ -37,11 +37,11 @@ The `getGraphs` call returns a `dict` of type `<str, Graph>`. The key is the nam
 
 ## Registry
 
-There is a global class, Registry, which keep tracks of every important objects created in the simulation (nodes, layers, networks, files, etc.). In fact, what compiles do is just takes the node and network objects out from the Registry and convert them to dockerfiles.
+There is a global class, Registry, which keep tracks of every important objects created in the emulation (nodes, layers, networks, files, etc.). In fact, what compiles do is just takes the node and network objects out from the Registry and convert them to dockerfiles.
 
 ### Inspecting objects
 
-Most of the objects created in the simulator are derived from the `Printable` class. As the name suggested, they can be printed. To see what classes are printable, check the API documentation. `Registry` is also a printable object, we can print it to check almost all objects created in the simulation:
+Most of the objects created in the emulator are derived from the `Printable` class. As the name suggested, they can be printed. To see what classes are printable, check the API documentation. `Registry` is also a printable object, we can print it to check almost all objects created in the emulation:
 
 ```python
 print(Registry())
@@ -53,7 +53,7 @@ print(Registry())
 docker_compiler.compile('./seedsim-misc/regular-docker')
 ```
 
-In the examples, we have only used the single-host docker compiler. The simulator, however, does offer various other options to run the simulation distributly.
+In the examples, we have only used the single-host docker compiler. The emulator, however, does offer various other options to run the emulation distributly.
 
 ### Distributed Docker (`DistributedDocker`) compiler
 
@@ -63,7 +63,7 @@ dist_compiler.compile('./seedsim-misc/distributed-docker')
 
 Instead of compiling all nodes into one set of containers, the `DistributedDocker` compiler compiles nodes into multiple sets of containers. Each autonomous system will be in its own set, and each will have its own `docker-compose.yml`. 
 
-This works by making all internet exchange networks overlay network. To run the simulation distributed, create a docker swarm, and start the internet exchange container sets on manager nodes. The rest of the autonomous systems can be started on either worker or manager nodes.
+This works by making all internet exchange networks overlay network. To run the emulation distributed, create a docker swarm, and start the internet exchange container sets on manager nodes. The rest of the autonomous systems can be started on either worker or manager nodes.
 
 ### GCP (Google Cloud Platform) Distributed Docker (`GcpDistributedDocker`) compiler
 
@@ -71,7 +71,7 @@ This works by making all internet exchange networks overlay network. To run the 
 gcp_dist_compiler.compile('./seedsim-misc/gcp-distributed-docker')
 ```
 
-Instead of creating a docker swarm manually and host the autonomous systems one by one, we can use the GCP Distributed Docker compiler to compile the simulation to a terraform plan; the plan will automatically create virtual machines for the swarm, configure the swarm, and deploy the autonomous systems on them.
+Instead of creating a docker swarm manually and host the autonomous systems one by one, we can use the GCP Distributed Docker compiler to compile the emulation to a terraform plan; the plan will automatically create virtual machines for the swarm, configure the swarm, and deploy the autonomous systems on them.
 
 It uses the `DistributedDocker` to generate the containers and will generate an additional terraform plan for deploying it on GCP. To deploy, run `terraform apply` and follow the instructions.
 

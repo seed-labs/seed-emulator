@@ -9,13 +9,13 @@ Run `17-base-component.py`, in order to reuse a base component. In this base com
 Import Tor modules and create Tor Service. Then load our base component. You can also see these code in `17-tor-private-network.py`
 
 ```python
-from seedsim.core import Simulator, Binding, Filter, Action
+from seedsim.core import Emulator, Binding, Filter, Action
 from seedsim.compiler import Docker
 from seedsim.services import TorService, TorNodeType
 from seedsim.services import WebService
 
 
-sim = Simulator()
+sim = Emulator()
 tor = TorService()
 web = WebService()
 

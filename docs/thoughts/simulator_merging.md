@@ -1,9 +1,9 @@
-# Merging simulators
+# Merging emulators
 
 Idea: perform merging top-down, e.g.:
 
 ```
-simulatorA.merge(simulatorB)
+emulatorA.merge(emulatorB)
 |- baselayerA.merge(baselayerB)
 |  |- internetExchangeA.merge(internetExchangeB)
 |  |   `- internetExchangeANetwork.merge(internetExchangeBNetwork)

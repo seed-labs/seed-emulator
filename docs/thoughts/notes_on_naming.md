@@ -4,10 +4,10 @@ In our code, we often need to add the referencs of an object to another object, 
 
 Through my implementation, sometimes I use the actual object reference, sometimes I use the name. That caused a lot of confusion. Eventually, I decided to adopt the **reference by name** approach. For example, if an AS has a list of routers, it will be a list of router names. Here are some details:
 
-- **Naming convention**: Each entity in our simulator has a unique name. When the entity is created, the name will be given. We will define the template for names. For example, in the current implementation, bgp router's name is like the following ```rt_as150_ix100```, indicating this is a BGP router from ```as15``` and it is located at ```ix100```.We will have a design documents on the naming conventions.<br> 
-**Note on names**: Names need to be intuitive and easy to recognize, because when we build the container, these will be the container names. When users look at the container name, they should immediately know the role of that container. Therefore, the names are not only for the internal uses of the program,  they are also used by the actual users of the simulator.
+- **Naming convention**: Each entity in our emulator has a unique name. When the entity is created, the name will be given. We will define the template for names. For example, in the current implementation, bgp router's name is like the following ```rt_as150_ix100```, indicating this is a BGP router from ```as15``` and it is located at ```ix100```.We will have a design documents on the naming conventions.<br> 
+**Note on names**: Names need to be intuitive and easy to recognize, because when we build the container, these will be the container names. When users look at the container name, they should immediately know the role of that container. Therefore, the names are not only for the internal uses of the program,  they are also used by the actual users of the emulator.
 
-- **Mapping names to objects**: We will have a central place to map each name to objects. In the simulator class, here is what we have. I used the dictionary data structure, with the key being the name, and the value being the reference to the actual objects. 
+- **Mapping names to objects**: We will have a central place to map each name to objects. In the emulator class, here is what we have. I used the dictionary data structure, with the key being the name, and the value being the reference to the actual objects. 
 
 ```
      self.networks = {}

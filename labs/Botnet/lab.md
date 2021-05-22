@@ -26,12 +26,12 @@ Please download the ```Labsetup.zip``` file to your VM from the lab’s website,
 In order to focus on Botnet service itself, in this lab, we are going to load a existed network emulator, it has already setup network configuration, so we can build our own Botnet service on top of that. First, we run ```python3 MiniInternet.py```, we can get the dump file called ```mini-internet.bin```. Next, in the ```botnet-in-mini-internet.py```, we would load this bin file to reuse the mini-internet emulator. The following code shows how to load an exist emulator into our emulator:
 
 ```
-from seedsim.core import Simulator
+from seedsim.core import Emulator
 from seedsim.services import BotnetService, BotnetClientService
 from seedsim.services import DomainRegistrarService
 from seedsim.compiler import Docker
 
-sim = Simulator() # create a emulator instance
+sim = Emulator() # create a emulator instance
 
 sim.load('mini-internet.bin') # invoke load method to import mini internet emulator
 ```
