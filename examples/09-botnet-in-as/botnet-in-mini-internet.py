@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from seedemu.core import Simulator, Binding, Filter
+from seedemu.core import Emulator, Binding, Filter
 from seedemu.services import BotnetService, BotnetClientService
 from seedemu.services import DomainRegistrarService
 from seedemu.compiler import Docker
 
-sim = Simulator()
+sim = Emulator()
 
 sim.load('mini-internet.bin')
 

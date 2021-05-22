@@ -3,10 +3,10 @@
 # __author__ = 'Demon'
 
 from seedemu.services import DomainNameService, DomainNameCachingService
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 
 
-sim = Simulator()
+sim = Emulator()
 
 dns = DomainNameService()
 ldns = DomainNameCachingService()

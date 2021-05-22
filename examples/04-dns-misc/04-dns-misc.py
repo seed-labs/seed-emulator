@@ -1,9 +1,9 @@
 from seedemu.layers import Base, Routing, Ebgp, Dnssec
 from seedemu.services import DomainNameService, DomainNameCachingService, WebService, CymruIpOriginService, ReverseDomainNameService
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 from seedemu.compiler import Docker
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()

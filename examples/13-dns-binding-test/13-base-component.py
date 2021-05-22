@@ -4,10 +4,10 @@
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedemu.compiler import Docker
 from seedemu.services import DomainNameCachingService
-from seedemu.core import Simulator, Binding, Filter, Node
+from seedemu.core import Emulator, Binding, Filter, Node
 from typing import List
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()

@@ -2,12 +2,12 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
-from seedemu.core import Simulator, Binding, Filter, Action
+from seedemu.core import Emulator, Binding, Filter, Action
 from seedemu.compiler import Docker
 
 
-simA = Simulator()
-simB = Simulator()
+simA = Emulator()
+simB = Emulator()
 
 simA.load('botnet-component.bin')
 simB.load('base-component.bin')

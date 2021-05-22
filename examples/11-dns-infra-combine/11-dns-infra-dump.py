@@ -1,7 +1,7 @@
 from seedemu.services.DomainNameService import DomainNameService
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 
-sim = Simulator()
+sim = Emulator()
 dns = DomainNameService()
 
 dns.install('root_server').addZone(dns.getZone('.'))

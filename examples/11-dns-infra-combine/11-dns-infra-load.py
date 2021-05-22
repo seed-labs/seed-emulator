@@ -1,7 +1,7 @@
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 from seedemu.services import DomainNameService
 
-sim = Simulator()
+sim = Emulator()
 sim.load('dns-dump.bin')
 
 dns: DomainNameService = sim.getLayer('DomainNameService')

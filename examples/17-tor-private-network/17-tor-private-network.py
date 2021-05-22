@@ -2,13 +2,13 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
-from seedemu.core import Simulator, Binding, Filter, Action
+from seedemu.core import Emulator, Binding, Filter, Action
 from seedemu.compiler import Docker
 from seedemu.services import TorService, TorNodeType
 from seedemu.services import WebService
 
 
-sim = Simulator()
+sim = Emulator()
 tor = TorService()
 web = WebService()
 

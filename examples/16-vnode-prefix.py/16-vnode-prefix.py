@@ -1,13 +1,13 @@
 from seedemu import mergers
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedemu.services import WebService
-from seedemu.core import Simulator, Binding, Filter
+from seedemu.core import Emulator, Binding, Filter
 from seedemu.compiler import Docker
 from seedemu.mergers import DEFAULT_MERGERS
 
 ###############################################################################
 
-sim_base = Simulator()
+sim_base = Emulator()
 
 base = Base()
 routing = Routing()
@@ -95,7 +95,7 @@ sim_base.addLayer(ospf)
 
 ###############################################################################
 
-sim_web1 = Simulator()
+sim_web1 = Emulator()
 
 web1 = WebService()
 web1.install('host0')
@@ -104,7 +104,7 @@ sim_web1.addLayer(web1)
 
 ###############################################################################
 
-sim_web2 = Simulator()
+sim_web2 = Emulator()
 
 web2 = WebService()
 web2.install('host0')

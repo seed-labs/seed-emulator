@@ -1,10 +1,10 @@
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Mpls
 from seedemu.compiler import Docker, DistributedDocker, GcpDistributedDocker, Graphviz
 from seedemu.services import WebService
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 from os import mkdir
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()

@@ -3,13 +3,13 @@ from seedemu.services import WebService, DomainNameService, DomainNameCachingSer
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedemu.compiler import Docker, Graphviz
 from seedemu.hooks import ResolvConfHook
-from seedemu.core import Simulator, Service, Binding, Filter
+from seedemu.core import Emulator, Service, Binding, Filter
 from seedemu.layers import Router
 from typing import List, Tuple, Dict
 
 ###############################################################################
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()
@@ -35,7 +35,7 @@ def make_real_as(asn: int, exchange: int, exchange_ip: str):
 
 ###############################################################################
 
-def make_service_as(sim: Simulator, asn: int, services: List[Service], exchange: int):
+def make_service_as(sim: Emulator, asn: int, services: List[Service], exchange: int):
     service_as = base.createAutonomousSystem(asn)
 
     router = service_as.createRouter('router0')
@@ -62,7 +62,7 @@ def make_service_as(sim: Simulator, asn: int, services: List[Service], exchange:
 
 ###############################################################################
 
-def make_dns_as(sim: Simulator, asn: int, zones: List[str], exchange: int):
+def make_dns_as(sim: Emulator, asn: int, zones: List[str], exchange: int):
     dns_as = base.createAutonomousSystem(asn)
 
     router = dns_as.createRouter('router0')
@@ -89,7 +89,7 @@ def make_dns_as(sim: Simulator, asn: int, zones: List[str], exchange: int):
 
 ###############################################################################
 
-def make_user_as(sim: Simulator, asn: int, exchange: str):
+def make_user_as(sim: Emulator, asn: int, exchange: str):
     user_as = base.createAutonomousSystem(asn)
 
     router = user_as.createRouter('router0')

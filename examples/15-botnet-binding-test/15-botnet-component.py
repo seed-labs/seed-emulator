@@ -5,7 +5,7 @@
 
 from seedemu.services.BotnetService import BotnetService, BotnetClientService
 
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 
 ###########################################
 
@@ -33,7 +33,7 @@ def dga() -> list:
 ##########################################
 
 
-sim = Simulator()
+sim = Emulator()
 
 bot_c2 = BotnetService()
 bot_client = BotnetClientService()

@@ -1,4 +1,4 @@
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 from seedemu.mergers import DEFAULT_MERGERS
 from seedemu.layers import Base, Routing, Ebgp
 from seedemu.compiler import Docker
@@ -25,7 +25,7 @@ r150.joinNetwork('ix100')
 
 ebgpA.addRsPeer(100, 150)
 
-simA = Simulator()
+simA = Emulator()
 simA.addLayer(baseA)
 simA.addLayer(routingA)
 simA.addLayer(ebgpA)
@@ -50,7 +50,7 @@ r151.joinNetwork('ix100')
 
 ebgpB.addRsPeer(100, 151)
 
-simB = Simulator()
+simB = Emulator()
 simB.addLayer(baseB)
 simB.addLayer(routingB)
 simB.addLayer(ebgpB)

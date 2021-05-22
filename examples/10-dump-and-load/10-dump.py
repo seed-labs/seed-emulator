@@ -1,8 +1,8 @@
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedemu.services import WebService
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()

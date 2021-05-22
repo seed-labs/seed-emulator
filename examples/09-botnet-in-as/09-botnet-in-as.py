@@ -1,9 +1,9 @@
-from seedemu.core import Simulator, Binding, Filter
+from seedemu.core import Emulator, Binding, Filter
 from seedemu.services import BotnetClientServer, BotnetClientService, BotnetService
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedemu.compiler import Docker
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()

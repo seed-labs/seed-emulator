@@ -3,13 +3,13 @@ from seedemu.services import WebService, DomainNameService, DomainNameCachingSer
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService
 from seedemu.compiler import Docker, Graphviz
 from seedemu.hooks import ResolvConfHook
-from seedemu.core import Simulator, Service, Binding, Filter
+from seedemu.core import Emulator, Service, Binding, Filter
 from seedemu.layers import Router
 from typing import List, Tuple, Dict
 
 ###############################################################################
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()

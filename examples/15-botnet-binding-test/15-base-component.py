@@ -3,9 +3,9 @@
 # __author__ = 'Demon'
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedemu.compiler import Docker
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()

@@ -8,7 +8,7 @@ setuptools.setup(
     version = "0.0.7",
     author = "Honghao Zeng",
     author_email = "hozeng@syr.edu",
-    description = "SEED Internet Simulator",
+    description = "SEED Internet Emulator",
     long_description = long_description,
     long_description_content_type = "text/markdown",
     url = "https://github.com/seed-labs/seed-simulator",

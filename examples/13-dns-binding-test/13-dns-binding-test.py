@@ -2,15 +2,15 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
-from seedemu.core import Simulator, Binding, Filter, Action
+from seedemu.core import Emulator, Binding, Filter, Action
 from seedemu.mergers import DEFAULT_MERGERS
 from seedemu.hooks import ResolvConfHook
 from seedemu.compiler import Docker
 
 
-simA = Simulator()
-simB = Simulator()
-simC = Simulator()
+simA = Emulator()
+simB = Emulator()
+simC = Emulator()
 
 simA.load('dns-component.bin')
 simB.load('base-component.bin')

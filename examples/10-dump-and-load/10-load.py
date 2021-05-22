@@ -1,10 +1,10 @@
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 from seedemu.layers import Base
 from seedemu.compiler import Docker
 
 ###############################################################################
 
-sim = Simulator()
+sim = Emulator()
 
 sim.load('10-dump.bin')
 

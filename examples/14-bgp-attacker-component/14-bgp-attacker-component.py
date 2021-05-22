@@ -1,4 +1,4 @@
-from seedemu.core import Simulator
+from seedemu.core import Emulator
 from seedemu.layers import Base, Routing, Ebgp, Ospf, Ibgp, PeerRelationship
 from seedemu.components import BgpAttackerComponent
 from seedemu.compiler import Docker
@@ -14,7 +14,7 @@ from seedemu.mergers import DEFAULT_MERGERS
 # (hijacking as151)
 ###############################################################################
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()
