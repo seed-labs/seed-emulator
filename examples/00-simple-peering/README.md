@@ -96,12 +96,10 @@ The `AutonomousSystem::createNetwork` calls create a new local network (as oppos
 We now have the network, it is not in the FIB yet, and thus will not be announce to BGP peers. We need to let our routing daemon know we want the network in FIB. This can be done by:
 
 ```python
-routing.addDirect(as150_net)
+routing.addDirect(150, 'net0')
 ```
 
 The `Routing::addDirect` call marks a network as a "direct" network. A "direct" network will be added to the `direct` protocol block of BIRD, so the prefix of the directly connected network will be loaded into FIB.
-
-Alternatively, `Routing::addDirectByName` can be used to mark networks as direct network by network name. For example, `routing.addDirectByName(150, 'net0')` will do the same thing as above.
 
 Now, put the host and router in the network:
 
@@ -204,7 +202,7 @@ After rendering the layers, all the nodes and networks are created. They are sti
 In this example, we will use docker on a single host to run the emulation, so we use the `Docker` compiler:
 
 ```python
-emu.compile(Docker(), './emuple-peering')
+emu.compile(Docker(), './simple-peering')
 ```
 
 Now we can find the output in the `simple-peering` directory. The docker compiler comes with a docker-compose configuration. To bring up the emulation, simply run `docker-compose build && docker-compose up` in the `simple-peering` directory.
