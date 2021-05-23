@@ -5,9 +5,10 @@ This is a more in-depth example; in this example, we will configure two internet
 ## Step 1: import and create required componets
 
 ```python
-from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, WebService
-from seedsim.renderer import Renderer
-from seedsim.compiler import Docker
+from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
+from seedemu.services import WebService
+from seedemu.core import Emulator, Binding, Filter
+from seedemu.compiler import Docker
 ```
 
 In this setup, we will need these layers: 
@@ -24,15 +25,14 @@ We will use the defualt renderer and compiles the emulation to docker containers
 Once the classes are imported, initialize them:
 
 ```python
+emu = Emulator()
+
 base = Base()
 routing = Routing()
 ebgp = Ebgp()
 ibgp = Ibgp()
 ospf = Ospf()
 web = WebService()
-
-renderer = Renderer()
-docker_compiler = Docker()
 ```
 
 ## Step 2: create the internet exchanges
@@ -88,22 +88,20 @@ Again, we planned to have four hops, so we created four routers here.
 We now have both networks and routers. We need to connect the routers to networks.
 
 ```python
-r1.joinNetworkByName('ix100')
-r1.joinNetworkByName('net0')
+r1.joinNetwork('ix100')
+r1.joinNetwork('net0')
 
-r2.joinNetworkByName('net0')
-r2.joinNetworkByName('net1')
+r2.joinNetwork('net0')
+r2.joinNetwork('net1')
 
-r3.joinNetworkByName('net1')
-r3.joinNetworkByName('net2')
+r3.joinNetwork('net1')
+r3.joinNetwork('net2')
 
-r4.joinNetworkByName('net2')
-r4.joinNetworkByName('ix101')
+r4.joinNetwork('net2')
+r4.joinNetwork('ix101')
 ```
 
-The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. The `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
-
-You may also use the `Node::joinNetwork` call connect nodes to a network. It can also take `address` to override the auto address assignment.
+The `Node::joinNetwork` calls take the name of the network and join the network. It first searches through the local networks, then global networks. The `joinNetwork` call also takes an optional parameter, `address`, for overriding auto address assignment.
 
 ## Step 4: create a customer autonomous system
 
@@ -123,13 +121,21 @@ Once we have the `AutonomousSystem` instance, we can create a new host for the w
 as151_web = as151.createHost('web')
 ```
 
-Then, we can start installing `WebService` onto the host node we just created. This can be done with the `Service::installOn` call. `WebService` class derives from the `Service` class, so it also has the `installOn` method. The `installOn` takes a `Node` instance and install the service on that node:
+Before we proceed further, let's first talk about the concept of virtual node and physical node. Physical nodes are "real" nodes; they are created by the `AutonomousSystem::createHost` API, just like what we did above. Virtual nodes are not "real" nodes; consider them as a "blueprint" of a physical node. We can make changes to the "blueprint" then bind the virtual nodes to physical nodes. The changes we made to the virtual node will be applied to the physical node that the virtual node is attached to.
+
+To install `WebService` on the node we just created before, we need to first use the `Service::install` call. `WebService` class derives from the `Service` class, so it also has the `install` method. The `install` takes a virtual node name and install the service on that virtual node:
 
 ```python
-web.installOn(as151_web)
+web.install('web151')
 ```
 
-Alternatively, we can use the `Service::installOnAll` API to install the service on all nodes of an autonomous system. The `installOnAll` API takes an integer as input and install the service on all host nodes in that AS. In other words, we can use `web.installOnAll(150)` to install `WebService` on all hosts nodes of AS150.
+The call above created a virtual node with the name `web151`; it has `WebServices` installed on it. The next step is to tell the emulator how to bind this virtual node. To bind a virtual node, we need `Binding` and `Filter`. `Binding` allows us to define binding for a given virtual node name. `Filter` allows us to define some constrict on what physical nodes are considered as binding candidates. Here, we want to bind to the node with the name `web` under AS150. So we can add a binding like this to the emulator:
+
+```python
+emu.addBinding(Binding('web151', filter = Filter(nodeName = 'web', asn = 151)))
+```
+
+There are also other constraints one can use to select candidates. See the remarks section for more details.
 
 ### Step 4.3: create the router and setup the network
 
@@ -150,12 +156,10 @@ The `AutonomousSystem::createNetwork` calls create a new local network (as oppos
 We now have the network, it is not in the FIB yet, and thus will not be announce to BGP peers. We need to let our routing daemon know we want the network in FIB. This can be done by:
 
 ```python
-routing.addDirect(as151_net)
+routing.addDirect(151, 'net0')
 ```
 
 The `Routing::addDirect` call marks a network as a "direct" network. A "direct" network will be added to the `direct` protocol block of BIRD, so the prefix of the directly connected network will be loaded into FIB.
-
-Alternatively, `Routing::addDirectByName` can be used to mark networks as direct network by network name. For example, `routing.addDirectByName(151, 'net0')` will do the same thing as above.
 
 Now, put the host and router in the network:
 
@@ -169,10 +173,10 @@ The `Node::joinNetwork` call connects a node to a network. It can also optionall
 Last, put the router into the internet exchange:
 
 ```python
-as151_router.joinNetworkByName('ix100')
+as151_router.joinNetwork('ix100')
 ```
 
-The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. You may use this to join a local network too. (i.e., instead of `as151_router.joinNetwork(as151_net)`, we can do `as151_router.joinNetworkByName('net0')` too.) `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
+The `Node::joinNetwork` call connects a node to a network. It first searches through the local networks, then global networks. Internet exchanges, for example, are considered as global network. It can also optionally takes another parameter, `address`, to override the auto address assignment. 
 
 ## Step 5: create another customer autonomous system
 
@@ -182,18 +186,19 @@ Repeat step 4 with a different ASN and exchange to create another transit custom
 as152 = base.createAutonomousSystem(152)
 
 as152_web = as152.createHost('web')
-web.installOn(as152_web)
+web.install('web152')
+emu.addBinding(Binding('web152', filter = Filter(nodeName = 'web', asn = 152)))
 
 as152_router = as152.createRouter('router0')
 
 as152_net = as152.createNetwork('net0')
 
-routing.addDirect(as152_net)
+routing.addDirect(152, 'net0')
 
-as152_web.joinNetwork(as152_net)
-as152_router.joinNetwork(as152_net)
+as152_web.joinNetwork('net0')
+as152_router.joinNetwork('net0')
 
-as152_router.joinNetworkByName('ix101')
+as152_router.joinNetwork('ix101')
 ```
 
 ## Step 6: setup BGP peering
@@ -218,14 +223,14 @@ The eBGP layer setup peering by looking for the router node of the given autonom
 ## Step 7: render the emulation
 
 ```python
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(ibgp)
-renderer.addLayer(ospf)
-renderer.addLayer(web)
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(ibgp)
+emu.addLayer(ospf)
+emu.addLayer(web)
 
-renderer.render()
+emu.render()
 ```
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
@@ -237,10 +242,41 @@ After rendering the layers, all the nodes and networks are created. They are sti
 In this example, we will use docker on a single host to run the emulation, so we use the `Docker` compiler:
 
 ```python
-docker_compiler.compile('./transit-as')
+emu.compile(Docker(), './transit-as')
 ```
 
 ## Remarks
+
+### Virtual node binding & filtering
+
+The constructor of a binding looks like this:
+
+```python
+def __init__(self, source, action = Action.RANDOM, filter = Filter()):
+```
+
+- `source` is a regex string to match virtual node names. For example, if we want to match all nodes starts with "web," we can use `"web.*"`.
+- `action` is the action to take after a list of candidates is selected by the filter. It can be `RANDOM`, which select a random node from the list, `FIRST`, which use the first node from the list, or `LAST`, which use the last node from the list. It defaults to `RANDOM`.
+- `filter` points to a filter object. Filters will be discussed in detail later. It defaults to an empty filter with no rules set, which will select all physical nodes without binding as candidates.
+
+The constructor of a filter looks like this:
+
+```python
+def __init__(
+    self, asn: int = None, nodeName: str = None, ip: str = None,
+    prefix: str = None, custom: Callable[[str, Node], bool] = None,
+    allowBound: bool = False
+)
+```
+
+All constructor parameters are one of the constraints. If more than one constraint is set, a physical node must meet all constraints to be selected as a candidate. 
+
+- `asn` allows one to limit the AS number of physical nodes. When this is set, only physical nodes from the given AS will be selected.
+- `nodeName` allows one to define the name of the physical node to be selected. Note that physical nodes can have the same name given that they are in different AS.
+- `ip` allows one to define the IP of the physical node to be selected.
+- `prefix` allows one to define the prefix of IP address on the physical node to be selected. Note that the prefix does not have to match the exact prefix attach to the interface of the physical node; as long as the IP address on the interface falls into the range of the prefix given, the physical node will be selected.
+- `custom` allows one to use a custom function to select nodes. The function should take two parameters, the first is a string, the virtual node name, and the second is a Node object, the physical node. Then function should then return `True` if a node should be selected, or `False` otherwise.
+- `allowBound` allows physical nodes that are already selected by other binding to be selected again.
 
 ### Transit's internal network
 
@@ -275,7 +311,6 @@ ospf.maskByName('151', 'net0')
 # mask with reference
 ospf.maskNetwork(as152_net)
 ```
-
 
 ### Creating networks with a custom prefix
 

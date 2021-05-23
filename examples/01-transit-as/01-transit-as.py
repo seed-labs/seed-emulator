@@ -1,9 +1,9 @@
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedemu.services import WebService
-from seedemu.core import Emulator
+from seedemu.core import Emulator, Binding, Filter
 from seedemu.compiler import Docker
 
-sim = Emulator()
+emu = Emulator()
 
 base = Base()
 routing = Routing()
@@ -47,7 +47,8 @@ r4.joinNetwork('ix101')
 as151 = base.createAutonomousSystem(151)
 
 as151_web = as151.createHost('web')
-web.installByName(151, 'web')
+web.install('web151')
+emu.addBinding(Binding('web151', filter = Filter(nodeName = 'web', asn = 151)))
 
 as151_router = as151.createRouter('router0')
 
@@ -65,7 +66,8 @@ as151_router.joinNetwork('ix100')
 as152 = base.createAutonomousSystem(152)
 
 as152_web = as152.createHost('web')
-web.installByName(152, 'web')
+web.install('web152')
+emu.addBinding(Binding('web152', filter = Filter(nodeName = 'web', asn = 152)))
 
 as152_router = as152.createRouter('router0')
 
@@ -85,15 +87,15 @@ ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider
 
 ###############################################################################
 
-sim.addLayer(base)
-sim.addLayer(routing)
-sim.addLayer(ebgp)
-sim.addLayer(ibgp)
-sim.addLayer(ospf)
-sim.addLayer(web)
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(ibgp)
+emu.addLayer(ospf)
+emu.addLayer(web)
 
-sim.render()
+emu.render()
 
 ###############################################################################
 
-sim.compile(Docker(), './transit-as')
+emu.compile(Docker(), './transit-as')
