@@ -272,10 +272,10 @@ The IP addresses in a network are assigned with `AddressAssignmentConstraint`. T
 
 For example, in AS150, if a host node joined a local network, it's IP address will be `10.150.0.71`. The next host joined the network will become `10.150.0.72`. If a router joined a local network, it's IP addresss will be `10.150.0.254`, and if the router joined an internet exchange network (say IX100), it will be `10.100.0.150`.
 
-Sometimes it will be useful to override the automated assignment for once. Both `joinNetwork` and `joinNetworkByName` accept an `address` argument for overriding the assignment:
+Sometimes it will be useful to override the automated assignment for once. `joinNetwork` accept an `address` argument for overriding the assignment:
 
 ```python
-as11872_router.joinNetworkByName('ix100', address = '10.100.0.118')
+as11872_router.joinNetwork('ix100', address = '10.100.0.118')
 ```
 
 We may alternatively implement our own `AddressAssignmentConstraint` class instead. Both `createInternetExchange` and `createNetwork` accept the `aac` argument, which will alter the auto address assignment behavior. Foe details, please refer to the API documentation.
