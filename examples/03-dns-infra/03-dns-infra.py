@@ -3,15 +3,15 @@ from seedemu.services import DomainNameService, DomainNameCachingService, WebSer
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.compiler import Docker
 
-sim = Emulator()
+emu = Emulator()
 
 base = Base()
 routing = Routing()
 ebgp = Ebgp()
 web = WebService()
-dns = DomainNameService()
+dns = DomainNameService(autoNameServer = True)
 dnssec = Dnssec()
-ldns = DomainNameCachingService()
+ldns = DomainNameCachingService(autoRoot = True)
 
 ###############################################################################
 
@@ -103,29 +103,29 @@ dns.install('root_server').addZone('.')
 dns.install('com_server').addZone('com.')
 dns.install('example_com_server').addZone('example.com.')
 
-ldns.install('local_dns')
+ldns.install('local_dns').setConfigureResolvconf(True)
 
 web.install('example_web')
 
 ###############################################################################
 
 # ex1: bind by name
-sim.addBinding(Binding('root_server', filter = Filter(nodeName = 'root_server')))
+emu.addBinding(Binding('root_server', filter = Filter(nodeName = 'root_server')))
 
 # ex2: bind by asn
-sim.addBinding(Binding('com_server', filter = Filter(asn = 151)))
+emu.addBinding(Binding('com_server', filter = Filter(asn = 151)))
 
 # ex3: bind by name & asn
-sim.addBinding(Binding('example_com_server', filter = Filter(
+emu.addBinding(Binding('example_com_server', filter = Filter(
     asn = 152,
     nodeName = 'example_com_server'
 )))
 
 # ex4: bind by name (regex)
-sim.addBinding(Binding('.*web', filter = Filter(nodeName = '.*web')))
+emu.addBinding(Binding('.*web', filter = Filter(nodeName = '.*web')))
 
 # ex5: bind by prefix
-sim.addBinding(Binding('local_dns', filter = Filter(prefix = '8.8.8.0/24')))
+emu.addBinding(Binding('local_dns', filter = Filter(prefix = '8.8.8.0/24')))
 
 ###############################################################################
 
@@ -142,16 +142,16 @@ ebgp.addRsPeer(100, 153)
 
 ###############################################################################
 
-sim.addLayer(base)
-sim.addLayer(routing)
-sim.addLayer(ebgp)
-sim.addLayer(dns)
-sim.addLayer(ldns)
-sim.addLayer(dnssec)
-sim.addLayer(web)
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(dns)
+emu.addLayer(ldns)
+emu.addLayer(dnssec)
+emu.addLayer(web)
 
-sim.render()
+emu.render()
 
 ###############################################################################
 
-sim.compile(Docker(), './dns-infra')
+emu.compile(Docker(), './dns-infra')

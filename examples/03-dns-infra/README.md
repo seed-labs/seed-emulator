@@ -5,9 +5,10 @@ In this example, we will set up the entire DNS infrastructure, complete with roo
 ## Step 1: import and create required componets
 
 ```python
-from seedsim.layers import Base, Routing, Ebgp, DomainNameService, DomainNameCachingService, Dnssec, WebService
-from seedsim.renderer import Renderer
-from seedsim.compiler import Docker
+from seedemu.layers import Base, Routing, Ebgp, Dnssec
+from seedemu.services import DomainNameService, DomainNameCachingService, WebService
+from seedemu.core import Emulator, Binding, Filter
+from seedemu.compiler import Docker
 ```
 
 In this setup, we will need these layers: 
@@ -25,23 +26,20 @@ We will use the defualt renderer and compiles the emulation to docker containers
 Once the classes are imported, initialize them:
 
 ```python
+emu = Emulator()
+
 base = Base()
 routing = Routing()
 ebgp = Ebgp()
 web = WebService()
-dns = DomainNameService(autoNs = True)
+dns = DomainNameService()
 dnssec = Dnssec()
-ldns = DomainNameCachingService(autoRoot = True, setResolvconf = True)
-
-renderer = Renderer()
-docker_compiler = Docker()
+ldns = DomainNameCachingService()
 ```
 
-Here, we set `autoNs = True` for the `DomainNameService` layer. `autoNs` is default to true; we only put it here so we can mention it in this guide. The `autoNs` option controls the automated `NS` behavior. When it is on (true), the DNS layer will look for host nodes hosting the zone and add their IP address to the nameserver(s) of the parent zones. In other words, it enables the DNS layer to automatically discover what zone are hosted on what nodes and add the "glue records" for them.
+Here, we set `autoNameServer = True` for the `DomainNameService` layer. `autoNameServer` is default to true; we only put it here so we can mention it in this guide. The `autoNameServer` option controls the automated `NS` behavior. When it is on (true), the DNS layer will look for host nodes hosting the zone and add their IP address to the nameserver(s) of the parent zones. In other words, it enables the DNS layer to automatically discover what zone are hosted on what nodes and add the "glue records" for them.
 
 `autoRoot = True` is also a defualt option and it was included here for documentation. The `autoRoot` options automatically look for the root DNS in the emulation and update the root hint file bind uses, so it will use the root DNS hosted in the emulation instead of the real ones. If you want to keep the real roots while hosting root DNS in emulation, you need to explicitly disable this option. 
-
-We also set `setResolvconf = True` for the `DomainNameCachingService` layer. This tells the layer to update the `resolv.conf` file on all nodes within the autonomous system to use the local DNS node as their DNS. This one is not on by default.
 
 ## Step 2: create an internet exchange
 
@@ -65,9 +63,9 @@ The `getZone` call gets a zone or creates the zone if no such zone exists. A `Zo
 
 Note that the `getZone` call may create more than one zones. For example, in this call, it actually created three new zones - the root zone (`.`), the `.com` TLD zone (`com.`), and the `example.com` zone (`example.com.`).
 
-## Step 4: create an autonomous system and host the root zone (`.`)
+## Step 4: create an autonomous system and host node for the root zone (`.`)
 
-Now we have the zones, but we still need to host it somewhere. Let's first create an autonomous system for hosting our root server.
+Now we have the zones, but we still need to host it somewhere. Let's first create an autonomous system for hosting our root server. Note that we are only creating server nodes now and not installing services on the nodes yet. We will do the installations later.
 
 ### Step 4.1: create the autonomous system instance
 
@@ -106,12 +104,10 @@ The `AutonomousSystem::createNetwork` calls create a new local network (as oppos
 We now have the network, it is not in the FIB yet, and thus will not be announce to BGP peers. We need to let our routing daemon know we want the network in FIB. This can be done by:
 
 ```python
-routing.addDirect(as150_net)
+routing.addDirect(150, 'net0')
 ```
 
 The `Routing::addDirect` call marks a network as a "direct" network. A "direct" network will be added to the `direct` protocol block of BIRD, so the prefix of the directly connected network will be loaded into FIB.
-
-Alternatively, `Routing::addDirectByName` can be used to mark networks as direct network by network name. For example, `routing.addDirectByName(150, 'net0')` will do the same thing as above.
 
 Now, put the host and router in the network:
 
@@ -125,28 +121,17 @@ The `Node::joinNetwork` call connects a node to a network. It can also optionall
 Last, put the router into the internet exchange:
 
 ```python
-as150_router.joinNetworkByName('ix100')
+as150_router.joinNetwork('ix100')
 ```
 
-The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. You may use this to join a local network too. (i.e., instead of `as150_router.joinNetwork(as150_net)`, we can do `as150_router.joinNetworkByName('net0')` too.) `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
+The `Node::joinNetwork` call connects a node to a network. It first searches through the local networks, then global networks. Internet exchanges, for example, are considered as global network. It can also optionally takes another parameter, `address`, to override the auto address assignment. 
 
-### Step 4.4: host the zone
+## Step 5: create an autonomous system and host node for the TLD zone (`com.`)
 
-Now, with the network interfaces properly configured, we can start hosting DNS zone on the host node: 
-
-```python
-dns.hostZoneOn('.', root_server, addNsAndSoa = True)
-```
-
-The `DomainNameService::hostZoneOn` call takes three arguments; the first is the zone name, the second is the node to install DNS on, and the third is an optional one, `addNsAndSoa`. The `addNsAndSoa` option automatically create NS and SOA records in the zone, according to the IP address on the interface of the given node; this is why we delay the installation - the IP address was not available before we do `root_server.joinNetwork(as150_net)`.
-
-The `addNsAndSoa` is default to `True`.
-
-## Step 5: create an autonomous system and host the TLD zone (`com.`)
-
-Now, repeat step 4 with a different ASN and host the `com.` zone:
+Now, repeat step 4 with a different ASN for the `com.` zone:
 
 ```python
+as151 = base.createAutonomousSystem(151)
 as151 = base.createAutonomousSystem(151)
 
 com_server = as151.createHost('com_server')
@@ -155,25 +140,22 @@ as151_router = as151.createRouter('router0')
 
 as151_net = as151.createNetwork('net0')
 
-routing.addDirect(as151_net)
+routing.addDirect(151, 'net0')
 
-com_server.joinNetwork(as151_net)
-as151_router.joinNetwork(as151_net)
+com_server.joinNetwork('net0')
+as151_router.joinNetwork('net0')
 
-as151_router.joinNetworkByName('ix100')
-
-dns.hostZoneOn('com.', com_server)
+as151_router.joinNetwork('ix100')
 ```
 
-## Step 6: create an autonomous system and host the zone (`example.com`)
+## Step 6: create an autonomous system and host node for the zone (`example.com`)
 
-Then, repeat step 4/5 with a different ASN and host the `example.com.` zone:
+Then, repeat step 4/5 with a different ASN for the `example.com.` zone:
 
 ```python
 as152 = base.createAutonomousSystem(152)
 
 example_com_web = as152.createHost('example_web')
-web.installOn(example_com_web)
 
 example_com_server = as152.createHost('example_com_server')
 
@@ -181,37 +163,36 @@ as152_router = as152.createRouter('router0')
 
 as152_net = as152.createNetwork('net0')
 
-routing.addDirect(as152_net)
+routing.addDirect(152, 'net0')
 
-example_com_web.joinNetwork(as152_net)
-example_com_server.joinNetwork(as152_net)
-as152_router.joinNetwork(as152_net)
+example_com_web.joinNetwork('net0', '10.152.0.200')
+example_com_server.joinNetwork('net0')
+as152_router.joinNetwork('net0')
 
-as152_router.joinNetworkByName('ix100')
+as152_router.joinNetwork('ix100')
 
-dns.hostZoneOn('example.com.', example_com_server)
-
-example_com.addRecord(
-    '@ A {}'.format(example_com_web.getInterfaces()[0].getAddress())
-)
+example_com.addRecord('@ A 10.152.0.200')
 ```
 
 There are a few new things here; let's break them down.
 
 ```python
 example_com_web = as152.createHost('example_web')
-web.installOn(example_com_web)
 ```
 
-The above install `WebService` on `example_web` host. `WebService` class derives from the `Service` class, so it also has the `installOn` method. The `installOn` takes a `Node` instance and install the service on that node.
+Here, in addition to the name server node, we created a web server node. We will use this node later to host a web page on example.com.
 
 ```python
-example_com.addRecord(
-    '@ A {}'.format(example_com_web.getInterfaces()[0].getAddress())
-)
+example_com_web.joinNetwork('net0', '10.152.0.200')
 ```
 
-The above adds a new `A` record to the `example.com.` zone. It points the `@` domain to the first IP address of the webserver node.
+Here, when joining the network with the webserver node, we manually assigned an IP address to the node. 
+
+```python
+example_com.addRecord('@ A 10.152.0.200')
+```
+
+The above adds a new `A` record to the `example.com.` zone. It points the `@` domain to the IP address of the webserver node, `10.152.0.200`.
 
 ## Step 7: create an autonomous system for users
 
@@ -221,33 +202,129 @@ Now, since we are not using the real IP address of root DNS, nor do we set up a 
 as153 = base.createAutonomousSystem(153)
 
 local_dns = as153.createHost('local_dns')
-ldns.installOn(local_dns)
 
 client = as153.createHost('client')
 
 as153_router = as153.createRouter('router0')
 
-as153_net = as153.createNetwork('net0')
+as153_net = as153.createNetwork('net0', '8.8.8.0/24')
 
-routing.addDirect(as153_net)
+routing.addDirect(153, 'net0')
 
-local_dns.joinNetwork(as153_net)
-client.joinNetwork(as153_net)
-as153_router.joinNetwork(as153_net)
+local_dns.joinNetwork('net0', '8.8.8.8')
+client.joinNetwork('net0')
+as153_router.joinNetwork('net0')
 
-as153_router.joinNetworkByName('ix100')
+as153_router.joinNetwork('ix100')
 ```
 
 The important part is:
 
 ```python
 local_dns = as153.createHost('local_dns')
-ldns.installOn(local_dns)
 ```
 
-This creates a local DNS server. Since we have set `setResolvconf` earlier, all nodes in AS153 will use the local resolver as DNS, and since we have `autoRoot`, the local DNS will be able to find the root zone we hosted in the emulation.
+This creates a local DNS server node. We will install the local DNS server to it in the next two steps.
 
-## Step 8: configure DNSSEC (optional)
+## Step 8: creating virtual nodes
+
+Before we proceed further, let's first talk about the concept of virtual node and physical node. Physical nodes are "real" nodes; they are created by the `AutonomousSystem::createHost` API, just like what we did above. Virtual nodes are not "real" nodes; consider them as a "blueprint" of a physical node. We can make changes to the "blueprint" then bind the virtual nodes to physical nodes. The changes we made to the virtual node will be applied to the physical node that the virtual node is attached to.
+
+### Step 8.1: creating virtual nodes for DNS servers
+
+To install a DNS server on a node, we first need to call `Service::install`. `DomainNameService` class derives from the `Service` class, so it also has the `install` method. The `install` takes a virtual node name and installs the service on that virtual node. The call will return a server instance. In `DomainNameService`'s case, it returns a `DomainNameServer` instance, which allows us to manipulate the configuration of the name server.
+
+For example, if we would like to host the root zone (`.` zone) on a virtual node with the name `root_server`, we can do this:
+
+```python
+root_dns_server = dns.install('root_server')
+root_server.addZone('.')
+```
+
+With this, host our zones in the emulation:
+
+```python
+dns.install('root_server').addZone('.')
+dns.install('com_server').addZone('com.')
+dns.install('example_com_server').addZone('example.com.')
+```
+
+### Step 8.1: creating virtual nodes for other services
+
+We want two other services. Let's create virtual nodes for them too:
+
+```python
+ldns.install('local_dns').setConfigureResolvconf(True)
+
+web.install('example_web')
+```
+
+The `setConfigureResolvconf` method is provided by the local DNS server. It defaults to false, and when set to true, will automatically update `resolv.conf` on all nodes within the AS to use it as the name server.
+
+## Step 9: binding virtual nodes
+
+Now, we need to attach those said "blueprints" to the physical nodes. Before we proceed, let's take a look at the filter and binding class:
+
+The constructor of a binding looks like this:
+
+```python
+def __init__(self, source, action = Action.RANDOM, filter = Filter()):
+```
+
+- `source` is a regex string to match virtual node names. For example, if we want to match all nodes starts with "web," we can use `"web.*"`.
+- `action` is the action to take after a list of candidates is selected by the filter. It can be `RANDOM`, which select a random node from the list, `FIRST`, which use the first node from the list, or `LAST`, which use the last node from the list. It defaults to `RANDOM`.
+- `filter` points to a filter object. Filters will be discussed in detail later. It defaults to an empty filter with no rules set, which will select all physical nodes without binding as candidates.
+
+The constructor of a filter looks like this:
+
+```python
+def __init__(
+    self, asn: int = None, nodeName: str = None, ip: str = None,
+    prefix: str = None, custom: Callable[[str, Node], bool] = None,
+    allowBound: bool = False
+)
+```
+
+All constructor parameters are one of the constraints. If more than one constraint is set, a physical node must meet all constraints to be selected as a candidate. 
+
+- `asn` allows one to limit the AS number of physical nodes. When this is set, only physical nodes from the given AS will be selected.
+- `nodeName` allows one to define the name of the physical node to be selected. Note that physical nodes can have the same name given that they are in different AS.
+- `ip` allows one to define the IP of the physical node to be selected.
+- `prefix` allows one to define the prefix of IP address on the physical node to be selected. Note that the prefix does not have to match the exact prefix attach to the interface of the physical node; as long as the IP address on the interface falls into the range of the prefix given, the physical node will be selected.
+- `custom` allows one to use a custom function to select nodes. The function should take two parameters, the first is a string, the virtual node name, and the second is a Node object, the physical node. Then function should then return `True` if a node should be selected, or `False` otherwise.
+- `allowBound` allows physical nodes that are already selected by other binding to be selected again.
+
+With this, we can bind virtual nodes to physical nodes. 
+
+For example, if we do not care about what AS the node will be in, and just want to bind the virtual node `root_server` to any physical node with name `root_server`, we can do this:
+
+```python
+emu.addBinding(Binding('root_server', filter = Filter(nodeName = 'root_server')))
+```
+
+And, if we want to bind the node `com_server` to any available node in AS151, we can do this:
+
+```python
+emu.addBinding(Binding('com_server', filter = Filter(asn = 151)))
+```
+
+Continue and provide bindings for other virtual nodes:
+
+```python
+# bind by name & asn
+emu.addBinding(Binding('example_com_server', filter = Filter(
+    asn = 152,
+    nodeName = 'example_com_server'
+)))
+
+# bind by name (regex)
+emu.addBinding(Binding('.*web', filter = Filter(nodeName = '.*web')))
+
+# bind by prefix
+emu.addBinding(Binding('local_dns', filter = Filter(prefix = '8.8.8.0/24')))
+```
+
+## Step 10: configure DNSSEC (optional)
 
 The DNSSEC layer configures DNSSEC for a zone. It works by signing the zone on-the-fly when the emulator starts and sending DS records to parents with `nsupdate`.
 
@@ -259,7 +336,7 @@ dnssec.enableOn('example.com.')
 
 The `Dnssec::enableOn` call takes only one parameter, the zone name. Note that for DNSSEC to work, you will need to sign the entire chain to build the "chain of trust." 
 
-## Step 9: configure BGP peering
+## Step 11: configure BGP peering
 
 ```python
 ebgp.addRsPeer(100, 150)
@@ -278,34 +355,34 @@ Peering can alternatively be configured with `Ebgp::addPrivatePeering`. `addPriv
 
 Note that the session with RS (`addRsPeer`) will always be `Peer` relationship.
 
-The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
+The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetwork('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
-## Step 10: render the emulation
+## Step 12: render the emulation
 
 We are now done configuring the layers. The next step is to add all layers to the renderer and render the emulation:
 
 ```python
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(dns)
-renderer.addLayer(ldns)
-renderer.addLayer(dnssec)
-renderer.addLayer(web)
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(dns)
+emu.addLayer(ldns)
+emu.addLayer(dnssec)
+emu.addLayer(web)
 
-renderer.render()
+emu.render()
 ```
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
 
-## Step 11: compile the emulation
+## Step 13: compile the emulation
 
 After rendering the layers, all the nodes and networks are created. They are still stored as internal data structures; to create something we can run, we need to "compile" the emulation to other formats. 
 
 In this example, we will use docker on a single host to run the emulation, so we use the `Docker` compiler:
 
 ```python
-docker_compiler.compile('./dns-infra')
+emu.compile(Docker(), './dns-infra')
 ```
 
 Now we can find the output in the `dns-infra` directory. The docker compiler comes with a docker-compose configuration. To bring up the emulation, simply run `docker-compose build && docker-compose up` in the `dns-infra` directory.
@@ -344,10 +421,10 @@ The IP addresses in a network are assigned with `AddressAssignmentConstraint`. T
 
 For example, in AS150, if a host node joined a local network, it's IP address will be `10.150.0.71`. The next host joined the network will become `10.150.0.72`. If a router joined a local network, it's IP addresss will be `10.150.0.254`, and if the router joined an internet exchange network (say IX100), it will be `10.100.0.150`.
 
-Sometimes it will be useful to override the automated assignment for once. Both `joinNetwork` and `joinNetworkByName` accept an `address` argument for overriding the assignment:
+Sometimes it will be useful to override the automated assignment for once. `joinNetwork` accept an `address` argument for overriding the assignment:
 
 ```python
-as11872_router.joinNetworkByName('ix100', address = '10.100.0.118')
+as11872_router.joinNetwork('ix100', address = '10.100.0.118')
 ```
 
 We may alternatively implement our own `AddressAssignmentConstraint` class instead. Both `createInternetExchange` and `createNetwork` accept the `aac` argument, which will alter the auto address assignment behavior. Foe details, please refer to the API documentation.
