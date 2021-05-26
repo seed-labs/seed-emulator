@@ -57,12 +57,12 @@ def make_real_as(asn: int, exchange: int, exchange_ip: str):
     real_as = base.createAutonomousSystem(asn)
     real_router = real.createRealWorldRouter(real_as)
 
-    real_router.joinNetworkByName('ix{}'.format(exchange), exchange_ip)
+    real_router.joinNetwork('ix{}'.format(exchange), exchange_ip)
 ```
 
 The real-world AS helper creates a real-world AS in the emulator. It works by utilizing the `Reality` layer. 
 
-It first creates an AS with the `createAutonomousSystem` call of the base layer. It then adds a real-world router to the AS with the `createRealWorldRouter` call of the real-world layer. Last, it connects the real-world router to an internet exchange with the `joinNetworkByName` call of the node class. Since real-world ASN can be outside the 2~254 range, we override the auto address assignment by manually assigning an address when joining the network.
+It first creates an AS with the `createAutonomousSystem` call of the base layer. It then adds a real-world router to the AS with the `createRealWorldRouter` call of the real-world layer. Last, it connects the real-world router to an internet exchange with the `joinNetwork` call of the node class. Since real-world ASN can be outside the 2~254 range, we override the auto address assignment by manually assigning an address when joining the network.
 
 ### Service AS creator
 
