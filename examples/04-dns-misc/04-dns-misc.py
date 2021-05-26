@@ -1,17 +1,17 @@
 from seedemu.layers import Base, Routing, Ebgp, Dnssec
 from seedemu.services import DomainNameService, DomainNameCachingService, WebService, CymruIpOriginService, ReverseDomainNameService
-from seedemu.core import Emulator
+from seedemu.core import Emulator, Binding, Filter
 from seedemu.compiler import Docker
 
-sim = Emulator()
+emu = Emulator()
 
 base = Base()
 routing = Routing()
 ebgp = Ebgp()
 web = WebService()
-dns = DomainNameService()
+dns = DomainNameService(autoNameServer = True)
 dnssec = Dnssec()
-ldns = DomainNameCachingService()
+ldns = DomainNameCachingService(autoRoot = True)
 rdns = ReverseDomainNameService()
 ip_origin = CymruIpOriginService()
 
@@ -40,7 +40,8 @@ as150_router.joinNetwork('net0')
 
 as150_router.joinNetwork('ix100')
 
-dns.installByName(150, 'root_server').addZone(dns.getZone('.'))
+dns.install('root_server').addZone('.')
+emu.addBinding(Binding('root_server', filter = Filter(asn = 150, nodeName = 'root_server')))
 
 ###############################################################################
 
@@ -61,15 +62,20 @@ as151_router.joinNetwork('net0')
 
 as151_router.joinNetwork('ix100')
 
-dns.installByName(151, 'com_server').addZone(dns.getZone('com.'))
-dns.installByName(151, 'arpa_server').addZone(dns.getZone('arpa.'))
+dns.install('com_server').addZone('com.')
+dns.install('arpa_server').addZone('arpa.')
+
+emu.addBinding(Binding('com_server', filter = Filter(asn = 151, nodeName = 'com_server')))
+emu.addBinding(Binding('arpa_server', filter = Filter(asn = 151, nodeName = 'arpa_server')))
 
 ###############################################################################
 
 as152 = base.createAutonomousSystem(152)
 
 example_com_web = as152.createHost('example_web')
-web.installByName(152, 'example_web')
+
+web.install('example_web')
+emu.addBinding(Binding('example_web', filter = Filter(asn = 152, nodeName = 'example_web')))
 
 example_com_server = as152.createHost('example_com_server')
 cymru_com_server = as152.createHost('cymru_com_server')
@@ -82,6 +88,8 @@ as152_net = as152.createNetwork('net0')
 routing.addDirect(152, 'net0')
 
 example_com_web.joinNetwork('net0', '10.152.0.200')
+example_com.addRecord('@ A 10.152.0.100')
+
 example_com_server.joinNetwork('net0')
 cymru_com_server.joinNetwork('net0')
 v4_rdns_server.joinNetwork('net0')
@@ -89,22 +97,22 @@ as152_router.joinNetwork('net0')
 
 as152_router.joinNetwork('ix100')
 
-dns.installByName(152, 'example_com_server').addZone(dns.getZone('example.com.'))
+dns.install('example_com_server').addZone('example.com.')
+dns.install('cymru_com_server').addZone('cymru.com.')
+dns.install('v4_rdns_server').addZone('in-addr.arpa.')
 
-# same as dns.installByName(152, 'cymru_com_server').addZone(dns.getZone('cymru.com.'))
-ip_origin.installByName(152, 'cymru_com_server')
-
-# same as dns.installByName(152, 'v4_rdns_server').addZone(dns.getZone('in-addr.arpa.'))
-rdns.installByName(152, 'v4_rdns_server')
-
-example_com.addRecord('@ A 10.152.0.100')
+emu.addBinding(Binding('example_com_server', filter = Filter(asn = 152, nodeName = 'example_com_server')))
+emu.addBinding(Binding('cymru_com_server', filter = Filter(asn = 152, nodeName = 'cymru_com_server')))
+emu.addBinding(Binding('v4_rdns_server', filter = Filter(asn = 152, nodeName = 'v4_rdns_server')))
 
 ###############################################################################
 
 as153 = base.createAutonomousSystem(153)
 
 local_dns = as153.createHost('local_dns')
-ldns.installByName(153, 'local_dns')
+
+ldns.install('local_dns').setConfigureResolvconf(True)
+emu.addBinding(Binding('local_dns', filter = Filter(asn = 153, nodeName = 'local_dns')))
 
 client = as153.createHost('client')
 
@@ -135,18 +143,18 @@ ebgp.addRsPeer(100, 153)
 
 ###############################################################################
 
-sim.addLayer(base)
-sim.addLayer(routing)
-sim.addLayer(ebgp)
-sim.addLayer(dns)
-sim.addLayer(ldns)
-sim.addLayer(dnssec)
-sim.addLayer(web)
-sim.addLayer(rdns)
-sim.addLayer(ip_origin)
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(dns)
+emu.addLayer(ldns)
+emu.addLayer(dnssec)
+emu.addLayer(web)
+emu.addLayer(rdns)
+emu.addLayer(ip_origin)
 
-sim.render()
+emu.render()
 
 ###############################################################################
 
-sim.compile(Docker(), './dns-misc')
+emu.compile(Docker(), './dns-misc')
