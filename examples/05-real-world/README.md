@@ -7,9 +7,10 @@ In AS151 and AS152, we will host VPN servers that are accessible from outside th
 ## Step 1: import and create required componets
 
 ```python
-from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, WebService, Reality
-from seedsim.renderer import Renderer
-from seedsim.compiler import Docker
+from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, Reality
+from seedemu.services import WebService
+from seedemu.core import Emulator, Binding, Filter
+from seedemu.compiler import Docker
 ```
 
 In this setup, we will need these layers: 
@@ -26,15 +27,15 @@ We will use the defualt renderer and compiles the emulation to docker containers
 Once the classes are imported, initialize them:
 
 ```python
+emu = Emulator()
+
 base = Base()
 routing = Routing()
 ebgp = Ebgp()
 ibgp = Ibgp()
 ospf = Ospf()
 web = WebService()
-
-renderer = Renderer()
-docker_compiler = Docker()
+real = Reality()
 ```
 
 ## Step 2: create the internet exchanges
@@ -44,7 +45,7 @@ base.createInternetExchange(100)
 base.createInternetExchange(101)
 ```
 
-The current version of the internet emulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function call creates a new internet exchange, and will create a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetworkByName` function call.
+The current version of the internet emulator is only possible to peer autonomous systems from within the internet exchange. The `Base::createInternetExchange` function call creates a new internet exchange, and will create a new global network name `ix{id}` with network prefix of `10.{id}.0.0/24`, where `{id}` is the ID of the internet exchange. The exchange network can later be joined by router nodes using the `Node::joinNetwork` function call.
 
 You may optionally set the IX LAN prefix with the `prefix` parameter and the way it assigns IP addresses to nodes with the `aac` parameter when calling `createInternetExchange`. For details, check to remarks section.
 
@@ -90,22 +91,20 @@ Again, we planned to have four hops, so we created four routers here.
 We now have both networks and routers. We need to connect the routers to networks.
 
 ```python
-r1.joinNetworkByName('ix100')
-r1.joinNetworkByName('net0')
+r1.joinNetwork('ix100')
+r1.joinNetwork('net0')
 
-r2.joinNetworkByName('net0')
-r2.joinNetworkByName('net1')
+r2.joinNetwork('net0')
+r2.joinNetwork('net1')
 
-r3.joinNetworkByName('net1')
-r3.joinNetworkByName('net2')
+r3.joinNetwork('net1')
+r3.joinNetwork('net2')
 
-r4.joinNetworkByName('net2')
-r4.joinNetworkByName('ix101')
+r4.joinNetwork('net2')
+r4.joinNetwork('ix101')
 ```
 
-The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. The `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
-
-You may also use the `Node::joinNetwork` call connect nodes to a network. It can also take `address` to override the auto address assignment.
+The `Node::joinNetwork` call connects a node to a network. It first searches through the local networks, then global networks. Internet exchanges, for example, are considered as global network. It can also optionally takes another parameter, `address`, to override the auto address assignment. 
 
 ## Step 4: create a customer autonomous system
 
@@ -124,14 +123,6 @@ Once we have the `AutonomousSystem` instance, we can create a new host for the w
 ```python
 as151_web = as151.createHost('web')
 ```
-
-Then, we can start installing `WebService` onto the host node we just created. This can be done with the `Service::installOn` call. `WebService` class derives from the `Service` class, so it also has the `installOn` method. The `installOn` takes a `Node` instance and install the service on that node:
-
-```python
-web.installOn(as151_web)
-```
-
-Alternatively, we can use the `Service::installOnAll` API to install the service on all nodes of an autonomous system. The `installOnAll` API takes an integer as input and install the service on all host nodes in that AS. In other words, we can use `web.installOnAll(150)` to install `WebService` on all hosts nodes of AS150.
 
 ### Step 4.3: create the router and setup the network
 
@@ -152,23 +143,18 @@ The `AutonomousSystem::createNetwork` calls create a new local network (as oppos
 We now have the network, it is not in the FIB yet, and thus will not be announce to BGP peers. We need to let our routing daemon know we want the network in FIB. This can be done by:
 
 ```python
-routing.addDirect(as151_net)
+routing.addDirect(151, 'net0')
 ```
 
 The `Routing::addDirect` call marks a network as a "direct" network. A "direct" network will be added to the `direct` protocol block of BIRD, so the prefix of the directly connected network will be loaded into FIB.
 
-Alternatively, `Routing::addDirectByName` can be used to mark networks as direct network by network name. For example, `routing.addDirectByName(151, 'net0')` will do the same thing as above.
-
 ```python
-real.enableRealWorldAccess(as151_net)
+real.enableRealWorldAccess(as151, 'net0')
 ```
 
 The `Reality::enableRealWorldAccess` call enables real-world access to a network by hosting an OpenVPN server. The server will be reachable from the real world; we can check the server port by doing `docker ps` once the emulation is up. 
 
-`enableRealWorldAccess` accepts two parameters; the first is the reference to the network to bridge the VPN server into, and the second one, `naddr`, is an optional parameter for specifying how many host IP addresses to allocate to the server (default to 8). It uses the network's IP assigner to get IP addresses for host-role nodes. For details, check the `AddressAssignmentConstraint` in the remarks section.
-
-Alternatively, `Routing::addDirectByName` can be used to do the same thing. For example, `real.enableRealWorldAccess(151, 'net0')` will do the same thing as above.
-
+`enableRealWorldAccess` accepts three parameters; the first is the reference to the AS object, the second one is the name of network, and the third one, `naddr`, is an optional parameter for specifying how many host IP addresses to allocate to the server (default to 8). It uses the network's IP assigner to get IP addresses for host-role nodes. For details, check the `AddressAssignmentConstraint` in the remarks section.
 
 Now, put the host and router in the network:
 
@@ -182,10 +168,10 @@ The `Node::joinNetwork` call connects a node to a network. It can also optionall
 Last, put the router into the internet exchange:
 
 ```python
-as151_router.joinNetworkByName('ix100')
+as151_router.joinNetwork('ix100')
 ```
 
-The `Node::joinNetworkByName` calls take the name of the network and join the network. It first searches through the local networks, then global networks. You may use this to join a local network too. (i.e., instead of `as151_router.joinNetwork(as151_net)`, we can do `as151_router.joinNetworkByName('net0')` too.) `joinNetworkByName` call also takes an optional parameter, `address`, for overriding auto address assignment.
+The `Node::joinNetwork` call connects a node to a network. It first searches through the local networks, then global networks. Internet exchanges, for example, are considered as global network. It can also optionally takes another parameter, `address`, to override the auto address assignment. 
 
 ## Step 5: create another customer autonomous system
 
@@ -195,19 +181,18 @@ Repeat step 4 with a different ASN and exchange to create another transit custom
 as152 = base.createAutonomousSystem(152)
 
 as152_web = as152.createHost('web')
-web.installOn(as152_web)
 
 as152_router = as152.createRouter('router0')
 
 as152_net = as152.createNetwork('net0')
 
-routing.addDirect(as152_net)
-real.enableRealWorldAccess(as152_net)
+routing.addDirect(152, 'net0')
+real.enableRealWorldAccess(as152, 'net0')
 
-as152_web.joinNetwork(as152_net)
-as152_router.joinNetwork(as152_net)
+as152_web.joinNetwork('net0')
+as152_router.joinNetwork('net0')
 
-as152_router.joinNetworkByName('ix101')
+as152_router.joinNetwork('ix101')
 ```
 
 ## Step 6: create the real-world customer autonomous system
@@ -233,7 +218,7 @@ The `createRealWorldRouter` returns a `RealWorldRouter` instance. `RealWorldRout
 The last step is to connect the autonomous system to an internet exchange. Here, we picked IX101. We need to override the auto address assignment, as 11872 is out of the 2~254 range:
 
 ```python
-as11872_router.joinNetworkByName('ix101', '10.101.0.118')
+as11872_router.joinNetwork('ix101', '10.101.0.118')
 ```
 
 ## Step 7: setup BGP peering
@@ -254,20 +239,38 @@ The peering relationship can be one of the followings:
 
 We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MLPA)). Note that the session with RS will always be `Peer` relationship.
 
-The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
+The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetwork('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
-## Step 8: render the emulation
+## Step 8: host the services
+
+We have created two web server nodes, but we have not hosted the actual web service on them. Let's proceed to host the services.
 
 ```python
-renderer.addLayer(base)
-renderer.addLayer(routing)
-renderer.addLayer(ebgp)
-renderer.addLayer(ibgp)
-renderer.addLayer(ospf)
-renderer.addLayer(web)
-renderer.addLayer(real)
+web.install('web1')
+web.install('web2')
+```
 
-renderer.render()
+First, create two virual nodes with the `Service::install` call.
+
+```python
+emu.addBinding(Binding('web1', filter = Filter(asn = 151, nodeName = 'web')))
+emu.addBinding(Binding('web2', filter = Filter(asn = 152, nodeName = 'web')))
+```
+
+Then, bind them to the physical nodes we created eariler.
+
+## Step 9: render the emulation
+
+```python
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(ibgp)
+emu.addLayer(ospf)
+emu.addLayer(web)
+emu.addLayer(real)
+
+emu.render()
 ```
 
 The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
@@ -279,7 +282,7 @@ After rendering the layers, all the nodes and networks are created. They are sti
 In this example, we will use docker on a single host to run the emulation, so we use the `Docker` compiler:
 
 ```python
-docker_compiler.compile('./real-world')
+emu.compile(Docker(), './real-world')
 ```
 
 ## Remarks
@@ -350,10 +353,10 @@ The IP addresses in a network are assigned with `AddressAssignmentConstraint`. T
 
 For example, in AS150, if a host node joined a local network, it's IP address will be `10.150.0.71`. The next host joined the network will become `10.150.0.72`. If a router joined a local network, it's IP addresss will be `10.150.0.254`, and if the router joined an internet exchange network (say IX100), it will be `10.100.0.150`.
 
-Sometimes it will be useful to override the automated assignment for once. Both `joinNetwork` and `joinNetworkByName` accept an `address` argument for overriding the assignment:
+Sometimes it will be useful to override the automated assignment for once. Both `joinNetwork` accepts an `address` argument for overriding the assignment:
 
 ```python
-as11872_router.joinNetworkByName('ix100', address = '10.100.0.118')
+as11872_router.joinNetwork('ix100', address = '10.100.0.118')
 ```
 
 We may alternatively implement our own `AddressAssignmentConstraint` class instead. Both `createInternetExchange` and `createNetwork` accept the `aac` argument, which will alter the auto address assignment behavior. Foe details, please refer to the API documentation.

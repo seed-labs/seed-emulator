@@ -3,7 +3,7 @@ from seedemu.services import WebService
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.compiler import Docker
 
-sim = Emulator()
+emu = Emulator()
 
 base = Base()
 routing = Routing()
@@ -99,21 +99,21 @@ web.install('web2')
 
 ###############################################################################
 
-sim.addBinding(Binding('web1', filter = Filter(asn = 151, nodeName = 'web')))
-sim.addBinding(Binding('web2', filter = Filter(asn = 152, nodeName = 'web')))
+emu.addBinding(Binding('web1', filter = Filter(asn = 151, nodeName = 'web')))
+emu.addBinding(Binding('web2', filter = Filter(asn = 152, nodeName = 'web')))
 
 ###############################################################################
 
-sim.addLayer(base)
-sim.addLayer(routing)
-sim.addLayer(ebgp)
-sim.addLayer(ibgp)
-sim.addLayer(ospf)
-sim.addLayer(web)
-sim.addLayer(real)
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(ibgp)
+emu.addLayer(ospf)
+emu.addLayer(web)
+emu.addLayer(real)
 
-sim.render()
+emu.render()
 
 ###############################################################################
 
-sim.compile(Docker(selfManagedNetwork = True), './real-world')
+emu.compile(Docker(), './real-world')
