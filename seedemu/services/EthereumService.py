@@ -2,8 +2,8 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
-from seedsim.core import Node, Printable, Simulator, Service, Server
-from seedsim.core.enums import NetworkType
+from seedemu.core import Node, Printable, Service, Server
+from seedemu.core.enums import NetworkType
 from typing import List, Dict, Tuple, Set
 import pkgutil
 
