@@ -1,7 +1,7 @@
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedemu.services import WebService
 from seedemu.compiler import Docker
-from seedemu.core import Emulator
+from seedemu.core import Emulator, Filter, Binding
 
 sim = Emulator()
 
@@ -18,7 +18,8 @@ def make_stub_as(asn: int, exchange: str):
     stub_as = base.createAutonomousSystem(asn)
 
     web_server = stub_as.createHost('web')
-    web.installOn(web_server)
+    web.install('web{}'.format(asn))
+    sim.addBinding(Binding('web{}'.format(asn), filter = Filter(asn = asn, nodeName = 'web')))
 
     router = stub_as.createRouter('router0')
 
@@ -90,7 +91,7 @@ as3_net_101_102 = as3.createNetwork('n12')
 
 routing.addDirect(2, 'n12')
 
-as3_101.joinNetwork('as3_net_101_102')
+as3_101.joinNetwork('n12')
 as3_102.joinNetwork('n12')
 
 ###############################################################################
