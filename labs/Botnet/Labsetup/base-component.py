@@ -80,7 +80,7 @@ def make_dns_as(asn: int, zones: List[str], exchange: int):
 
         server.joinNetwork('net0')
 
-        dns.install(name).addZone(dns.getZone(zone))
+        dns.install(name).addZone(zone)
         sim.addBinding(Binding(name, filter = Filter(asn = asn, nodeName=name)))
 
 ###############################################################################

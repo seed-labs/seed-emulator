@@ -28,7 +28,15 @@ Install tor nodes. Typically, a tor network should contains at least 5 types of 
 
 `User---->socks connect to---->CLIENT---->RELAY---->RELAY1---->RELAY2---->EXIT---->HS---->Destination `
 
-The Path (circuit) is dynamically choosed by tor program. DA(Dir Authority) node is responsible to maintain these nodes info by voting and consensus mechanism thereby ensure which nodes are available to use.
+The Path (circuit) is dynamically chosen by tor program. DA(Dir Authority) node is responsible to maintain these nodes info by voting and consensus mechanism thereby ensure which nodes are available to use.
+
+All relay nodes need to know the DA (Directory Authority) servers. This is done
+by putting DA’s fingerprints in their configuration file, the fingerprints contains 
+IP address of DA and public key of DA. This is done automatically by the emulator. 
+DA will maintain all of nodes information and generate a best path to client. 
+This path is called circuit in Tor network.
+There can be multiple DA nodes, CLIENT only needs to work with one DA node each time. 
+
 
 So we need to create these essential type of nodes. The following code shows how to create them:
 
@@ -42,6 +50,9 @@ tor.install("relay1").setRole(TorNodeType.RELAY)
 tor.install("exit").setRole(TorNodeType.EXIT)
 ```
 As we can see, we created 3 DA nodes, 2 RELAY nodes, 1 CLIENT and 1 EXIT. That's a basic tor network .
+
+
+
 
 ## Step 4
 
@@ -98,3 +109,14 @@ You would the response like this:
 That means our tor network works fine. Because that onion address is already pointed to our webserver which installed in AS160.
 
 > Notice: Sometimes, maybe you would see cannot resolve [random].onion address when you use CURL command. That's because the tor network is not very stable. It would continuously calculate the consenus, so the circuit would not be worked for everytime. Only one thing we can do is keep try it until it works. Or you can monitor the tor netword by connect its control port to see what happend inside of tor. You can install a tool called nyx by running apt-get install nyx. Then use command nyx -i 10.151.0.71:9051 to connect CLIENT node control port to monitor all connections. When you try to use curl to connect tor network. You can see what's the reason that cause the onion address resolve failed.
+
+
+## Note
+
+When we design the lab, we need to find ways to show students that Tor is 
+protecting the communication. We need to show how the Tor works internally.
+We can use a tool called `nyx` (see notes above) to 
+connect to the control port of CLIENT node. This tool will show the path 
+and all connections.
+
+We can also put a sniffer on each RELAY node to track where packets go. 
