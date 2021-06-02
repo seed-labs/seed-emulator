@@ -29,9 +29,9 @@ DockerCompilerFileTemplates['seedemu_sniffer'] = """\
 #!/bin/bash
 last_pid=0
 while read -r expr; do {
-    [ "$last_pid" != 0 ] && kill $last_pid
+    [ "$last_pid" != 0 ] && kill $last_pid 2> /dev/null
     [ -z "$expr" ] && continue
-    tcpdump -i any -nn -p -q "$expr" 2> /dev/null &
+    tcpdump -i any -nn -p -q "$expr" &
     last_pid=$!
 }; done
 [ "$last_pid" != 0 ] && kill $last_pid

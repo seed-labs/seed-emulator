@@ -122,14 +122,14 @@ router.post('/sniff', express.json(), async function(req, res, next) {
     sniffer.setListener((nodeId, data) => {
         if (currentSnifferSocket) {
             currentSnifferSocket.send(JSON.stringify({
-                source: nodeId, data
+                source: nodeId, data: data.toString('utf8')
             }));
         }
     });
 
     currentSnifferFilter = req.body.filter ?? '';
 
-    sniffer.sniff((await getContainers()).map(c => c.Id), currentSnifferFilter);
+    await sniffer.sniff((await getContainers()).map(c => c.Id), currentSnifferFilter);
 
     res.json({
         ok: true,

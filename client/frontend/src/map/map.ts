@@ -9,7 +9,8 @@ const mapUi = new MapUi({
     datasource,
     mapElementId: 'map',
     infoPlateElementId: 'info',
-    filterInputElementId: 'filter'
+    filterInputElementId: 'filter',
+    filterWrapElementId: 'filter-wrap'
 });
 
 mapUi.start();

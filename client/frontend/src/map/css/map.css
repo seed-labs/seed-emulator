@@ -32,3 +32,12 @@ html, body, .container, .map {
     padding-right: 1rem;
     font-family: 'Courier New', Courier, monospace;
 }
+
+.input-wrap.error, .input.error {
+    color: red;
+    border-color: red;
+}
+
+.input-wrap.disabled, .input.disabled {
+    background-color: #ccc;
+}

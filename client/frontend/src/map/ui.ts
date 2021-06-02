@@ -6,27 +6,50 @@ export interface MapUiConfiguration {
     datasource: DataSource,
     mapElementId: string,
     infoPlateElementId: string,
-    filterInputElementId: string
+    filterInputElementId: string,
+    filterWrapElementId: string
 }
 
 export class MapUi {
     private _mapElement: HTMLElement;
     private _infoPlateElement: HTMLElement;
     private _filterInput: HTMLInputElement;
+    private _filterWrap: HTMLElement;
     private _datasource: DataSource;
 
     private _nodes: DataSet<Vertex, 'id'>;
     private _edges: DataSet<Edge, 'id'>;
+
+    private _freezed: boolean;
+    private _blocked: boolean;
 
     constructor(config: MapUiConfiguration) {
         this._datasource = config.datasource;
         this._mapElement = document.getElementById(config.mapElementId);
         this._infoPlateElement = document.getElementById(config.infoPlateElementId);
         this._filterInput = document.getElementById(config.filterInputElementId) as HTMLInputElement;
+        this._filterWrap = document.getElementById(config.filterWrapElementId);
+
+        this._freezed = false;
 
         this._datasource.on('packet', (data) => {
+            this._unfreeze();
+
             if (data.source) {
                 this._flashNode(data.source);
+            }
+
+            // fixme?
+            if (data.data) {
+                if (data.data.includes('listening')) {
+                    this._filterInput.classList.remove('error');
+                    this._filterWrap.classList.remove('error');
+                }
+
+                if (data.data.includes('error')) { 
+                    this._filterInput.classList.add('error');
+                    this._filterWrap.classList.add('error');
+                }
             }
         });
     }
@@ -49,10 +72,31 @@ export class MapUi {
         }, 300);
     }
 
+    private _freeze() {
+        if (this._freezed) return;
+
+        this._freezed = true;
+        this._filterInput.disabled = true;
+        this._filterInput.classList.add('disabled');
+        this._filterWrap.classList.add('disabled');
+    }
+
+    private _unfreeze() {
+        if (!this._freezed || this._blocked) return;
+
+        this._freezed = false;
+        this._filterInput.disabled = false;
+        this._filterInput.classList.remove('disabled');
+        this._filterWrap.classList.remove('disabled');
+    }
+
     private async _filterUpdateHandler(event: KeyboardEvent) {
-        console.log(event);
         if (event.key != 'Enter') return;
+
+        this._blocked = true;
+        this._freeze();
         this._filterInput.value = await this._datasource.setSniffFilter(this._filterInput.value);
+        this._blocked = false;
     }
 
     private _boundfilterUpdateHandler = this._filterUpdateHandler.bind(this);
