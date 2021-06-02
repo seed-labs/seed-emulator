@@ -18,4 +18,5 @@ var ui = new IndexUi({
     taskbarElementId: 'taskbar'
 });
 
-ui.load('/api/v1/container');
+ui.loadContainers('/api/v1/container');
+ui.loadNetworks('/api/v1/network')
