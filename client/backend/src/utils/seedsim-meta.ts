@@ -1,6 +1,9 @@
-const META_PREFIX = 'org.seedsecuritylabs.seedsim.meta.';
+import 'dockerode';
+import Dockerode from 'dockerode';
 
-export interface SimulatorNode {
+const META_PREFIX = 'org.seedsecuritylabs.seedemu.meta.';
+
+export interface SeedEmulatorNode {
     name?: string;
     role?: string;
     asn?: number;
@@ -10,12 +13,21 @@ export interface SimulatorNode {
     }[];
 };
 
-export class Simulator {
+export interface SeedEmulatorMetadata {
+    hasSession: boolean;
+    nodeInfo: SeedEmulatorNode;
+}
+
+export interface SeedContainerInfo extends Dockerode.ContainerInfo {
+    meta: SeedEmulatorMetadata;
+}
+
+export class Emulator {
 
     static ParseMeta(labels: {
         [key: string]: string
-    }): SimulatorNode {
-        var node: SimulatorNode = {
+    }): SeedEmulatorNode {
+        var node: SeedEmulatorNode = {
             nets: []
         };
 

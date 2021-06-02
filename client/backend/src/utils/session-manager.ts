@@ -17,10 +17,10 @@ export class SessionManager implements LogProducer {
 
     private _docker: dockerode;
 
-    constructor(docker: dockerode) {
+    constructor(docker: dockerode, namespace: String = '') {
         this._sessions = {};
         this._docker = docker;
-        this._logger = new Logger({ name: 'SessionManager' });
+        this._logger = new Logger({ name: `${namespace}SessionManager` });
     }
 
     private async _getContainerRealId(id: string): Promise<string> {

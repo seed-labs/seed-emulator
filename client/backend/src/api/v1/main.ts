@@ -1,29 +1,44 @@
 import express from 'express';
 import { SocketHandler } from '../../utils/socket-handler';
 import dockerode from 'dockerode';
-import { Simulator } from '../../utils/seedsim-meta';
+import { SeedContainerInfo, Emulator } from '../../utils/seedsim-meta';
+import { Sniffer } from '../../utils/sniffer';
+import WebSocket from 'ws';
 
 const router = express.Router();
 const docker = new dockerode();
 const socketHandler = new SocketHandler(docker);
+const sniffer = new Sniffer(docker);
+
+const getContainers: () => Promise<SeedContainerInfo[]> = async function() {
+    var containers: dockerode.ContainerInfo[] = await docker.listContainers();
+
+    var _containers: SeedContainerInfo[] = containers.map(c => {
+        var withMeta = c as SeedContainerInfo;
+
+        withMeta.meta = {
+            hasSession: socketHandler.getSessionManager().hasSession(c.Id),
+            nodeInfo: Emulator.ParseMeta(c.Labels)
+        };
+
+        return withMeta;
+    });
+
+    // filter out undefine (not our nodes)
+    return _containers.filter(c => c.meta.nodeInfo.name);;
+} 
 
 socketHandler.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'debug'
 }));
 
+sniffer.getLoggers().forEach(logger => logger.setSettings({
+    minLevel: 'debug'
+}));
+
 router.get('/container', async function(req, res, next) {
     try {
-        var containers: any[] = await docker.listContainers();
-
-        containers.map(c => {
-            c.meta = {
-                hasSession: socketHandler.getSessionManager().hasSession(c.Id),
-                nodeInfo: Simulator.ParseMeta(c.Labels)
-            };
-        });
-
-        // filter out undefine (not our nodes)
-        containers = containers.filter(c => c.meta.nodeInfo.name);
+        let containers = await getContainers();
 
         res.json({
             ok: true,
@@ -54,7 +69,7 @@ router.get('/container/:id', async function(req, res, next) {
         var result: any = candidates[0];
         result.meta = {
             hasSession: socketHandler.getSessionManager().hasSession(result.Id),
-            nodeInfo: Simulator.ParseMeta(result.Labels)
+            nodeInfo: Emulator.ParseMeta(result.Labels)
         };
         res.json({
             ok: true, result
@@ -75,6 +90,29 @@ router.ws('/console/:id', async function(ws, req, next) {
     }
     
     next();
+});
+
+var currentSnifferSocket: WebSocket = undefined;
+
+router.post('/sniff', express.text(), async function(req, res, next) {
+    sniffer.setListener((nodeId, data) => {
+        if (currentSnifferSocket) {
+            currentSnifferSocket.send(JSON.stringify({
+                source: nodeId, data
+            }));
+        }
+    });
+
+    sniffer.sniff((await getContainers()).map(c => c.Id), req.body);
+
+    next();
+})
+
+router.ws('/sniff', async function(ws, req, next) {
+    currentSnifferSocket = ws;
+    ws.on('close', () => {
+        currentSnifferSocket = undefined;
+    })
 });
 
 export = router;

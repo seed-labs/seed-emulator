@@ -25,6 +25,18 @@ echo "ready! run 'docker exec -it $HOSTNAME /bin/zsh' to attach to this node" >&
 tail -f /dev/null
 """
 
+DockerCompilerFileTemplates['seedemu_sniffer'] = """\
+#!/bin/bash
+last_pid=0
+while read -r expr; do {
+    [ "$last_pid" != 0 ] && kill $last_pid
+    [ -z "$expr" ] && continue
+    tcpdump -i any -nn -p -q "$expr" 2> /dev/null &
+    last_pid=$!
+}; done
+[ "$last_pid" != 0 ] && kill $last_pid
+"""
+
 DockerCompilerFileTemplates['replace_address_script'] = '''\
 #!/bin/bash
 ip -j addr | jq -cr '.[]' | while read -r iface; do {
@@ -324,7 +336,10 @@ class Docker(Compiler):
             startCommands = start_commands
         ))
 
+        dockerfile += self.__addFile('/seedemu_sniffer', DockerCompilerFileTemplates['seedemu_sniffer'])
+
         dockerfile += 'RUN chmod +x /start.sh\n'
+        dockerfile += 'RUN chmod +x /seedemu_sniffer\n'
 
         for file in node.getFiles():
             (path, content) = file.get()
