@@ -1,7 +1,7 @@
 import express from 'express';
 import { SocketHandler } from '../../utils/socket-handler';
 import dockerode from 'dockerode';
-import { SeedContainerInfo, Emulator } from '../../utils/seedsim-meta';
+import { SeedContainerInfo, Emulator, SeedNetInfo } from '../../utils/seedsim-meta';
 import { Sniffer } from '../../utils/sniffer';
 import WebSocket from 'ws';
 
@@ -18,14 +18,14 @@ const getContainers: () => Promise<SeedContainerInfo[]> = async function() {
 
         withMeta.meta = {
             hasSession: socketHandler.getSessionManager().hasSession(c.Id),
-            nodeInfo: Emulator.ParseMeta(c.Labels)
+            emulatorInfo: Emulator.ParseNodeMeta(c.Labels)
         };
 
         return withMeta;
     });
 
     // filter out undefine (not our nodes)
-    return _containers.filter(c => c.meta.nodeInfo.name);;
+    return _containers.filter(c => c.meta.emulatorInfo.name);;
 } 
 
 socketHandler.getLoggers().forEach(logger => logger.setSettings({
@@ -35,6 +35,29 @@ socketHandler.getLoggers().forEach(logger => logger.setSettings({
 sniffer.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'debug'
 }));
+
+router.get('/network', async function(req, res, next) {
+    var networks = await docker.listNetworks();
+
+    var _networks: SeedNetInfo[] = networks.map(n => {
+        var withMeta = n as SeedNetInfo;
+
+        withMeta.meta = {
+            emulatorInfo: Emulator.ParseNetMeta(n.Labels)
+        };
+
+        return withMeta;
+    });
+    
+    _networks = _networks.filter(n => n.meta.emulatorInfo.name);
+
+    res.json({
+        ok: true,
+        result: _networks
+    });
+
+    next();
+});
 
 router.get('/container', async function(req, res, next) {
     try {
@@ -69,7 +92,7 @@ router.get('/container/:id', async function(req, res, next) {
         var result: any = candidates[0];
         result.meta = {
             hasSession: socketHandler.getSessionManager().hasSession(result.Id),
-            nodeInfo: Emulator.ParseMeta(result.Labels)
+            emulatorInfo: Emulator.ParseNodeMeta(result.Labels)
         };
         res.json({
             ok: true, result

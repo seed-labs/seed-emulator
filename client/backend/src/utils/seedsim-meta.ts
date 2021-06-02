@@ -11,20 +11,33 @@ export interface SeedEmulatorNode {
         name?: string;
         address?: string;
     }[];
-};
+}
+
+export interface SeedEmulatorNet {
+    name?: string;
+    scope?: string;
+    type?: string;
+    prefix?: string;
+}
 
 export interface SeedEmulatorMetadata {
     hasSession: boolean;
-    nodeInfo: SeedEmulatorNode;
+    emulatorInfo: SeedEmulatorNode;
 }
 
 export interface SeedContainerInfo extends Dockerode.ContainerInfo {
     meta: SeedEmulatorMetadata;
 }
 
+export interface SeedNetInfo extends Dockerode.NetworkInspectInfo {
+    meta: {
+        emulatorInfo: SeedEmulatorNet;
+    }
+}
+
 export class Emulator {
 
-    static ParseMeta(labels: {
+    static ParseNodeMeta(labels: {
         [key: string]: string
     }): SeedEmulatorNode {
         var node: SeedEmulatorNode = {
@@ -49,6 +62,25 @@ export class Emulator {
         });
 
         return node;
+    }
+
+    static ParseNetMeta(labels: {
+        [key: string]: string
+    }): SeedEmulatorNet {
+        var net: SeedEmulatorNet = {};
+
+        Object.keys(labels).forEach(label => {
+            if (!label.startsWith(META_PREFIX)) return;
+            var key = label.replace(META_PREFIX, '');
+            var value = labels[label];
+
+            if (key === 'type') net.type = value;
+            if (key === 'scope') net.scope = value;
+            if (key === 'name') net.name = value;
+            if (key === 'prefix') net.prefix = value;
+        });        
+
+        return net;
     }
 
 };
