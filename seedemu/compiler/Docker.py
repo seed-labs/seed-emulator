@@ -100,6 +100,8 @@ DockerCompilerFileTemplates['compose_network'] = """\
         ipam:
             config:
                 - subnet: {prefix}
+        labels:
+{labelList}
 """
 
 class Docker(Compiler):
@@ -149,6 +151,33 @@ class Docker(Compiler):
 
     def getName(self) -> str:
         return "Docker"
+
+    def __getNetMeta(self, net: Network): 
+        (scope, type, name) = net.getRegistryInfo()
+
+        labels = ''
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'type',
+            value = 'global' if scope == 'ix' else 'local'
+        )
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'scope',
+            value = scope
+        )
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'name',
+            value = name
+        )
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'prefix',
+            value = net.getPrefix()
+        )
+
+        return labels
 
     def __getNodeMeta(self, node: Node):
         (scope, type, name) = node.getRegistryInfo()
@@ -364,7 +393,8 @@ class Docker(Compiler):
         self.__networks += DockerCompilerFileTemplates['compose_network'].format(
             netId = '{}{}'.format(net_prefix, net.getName()),
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
-            mtu = net.getMtu()
+            mtu = net.getMtu(),
+            labelList = self.__getNetMeta(net)
         )
 
     def _doCompile(self, emulator: Emulator):
