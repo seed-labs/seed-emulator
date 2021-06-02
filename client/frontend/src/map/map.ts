@@ -6,7 +6,10 @@ const API_PATH = '/api/v1';
 
 const datasource = new DataSource(API_PATH);
 const mapUi = new MapUi({
-    datasource, mapElementId: 'map', infoPlateElementId: 'info'
+    datasource,
+    mapElementId: 'map',
+    infoPlateElementId: 'info',
+    filterInputElementId: 'filter'
 });
 
-mapUi.redraw();
+mapUi.start();

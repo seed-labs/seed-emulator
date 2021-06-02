@@ -5,12 +5,14 @@ import { DataSource, Edge, Vertex } from './datasource';
 export interface MapUiConfiguration {
     datasource: DataSource,
     mapElementId: string,
-    infoPlateElementId: string
+    infoPlateElementId: string,
+    filterInputElementId: string
 }
 
 export class MapUi {
     private _mapElement: HTMLElement;
     private _infoPlateElement: HTMLElement;
+    private _filterInput: HTMLInputElement;
     private _datasource: DataSource;
 
     private _nodes: DataSet<Vertex, 'id'>;
@@ -20,6 +22,7 @@ export class MapUi {
         this._datasource = config.datasource;
         this._mapElement = document.getElementById(config.mapElementId);
         this._infoPlateElement = document.getElementById(config.infoPlateElementId);
+        this._filterInput = document.getElementById(config.filterInputElementId) as HTMLInputElement;
 
         this._datasource.on('packet', (data) => {
             if (data.source) {
@@ -44,6 +47,25 @@ export class MapUi {
         window.setTimeout(() => {
             this._setNodeHighlight(id, false);
         }, 300);
+    }
+
+    private async _filterUpdateHandler(event: KeyboardEvent) {
+        console.log(event);
+        if (event.key != 'Enter') return;
+        this._filterInput.value = await this._datasource.setSniffFilter(this._filterInput.value);
+    }
+
+    private _boundfilterUpdateHandler = this._filterUpdateHandler.bind(this);
+
+    async start() {
+        this.redraw();
+        this._filterInput.value = await this._datasource.getSniffFilter();
+        this._filterInput.addEventListener('keydown', this._boundfilterUpdateHandler);
+    }
+
+    stop() {
+        this._datasource.disconnect();
+        this._filterInput.removeEventListener('keydown', this._boundfilterUpdateHandler);
     }
 
     async redraw() {

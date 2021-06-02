@@ -43,6 +43,10 @@ export class DataSource {
 
         xhr.open(method, url);
 
+        if (method == 'POST') {
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+        }
+
         return new Promise((resolve, reject) => {
             xhr.onload = function () {
                 if (this.status != 200) {
@@ -93,6 +97,14 @@ export class DataSource {
     disconnect() {
         this._connected = false;
         this._socket.close();
+    }
+
+    async getSniffFilter(): Promise<string> {
+        return (await this._load('GET', `${this._apiBase}/sniff`)).result.currentFilter;
+    }
+
+    async setSniffFilter(filter: string): Promise<string> {
+        return (await this._load('POST', `${this._apiBase}/sniff`, JSON.stringify({ filter }))).result.currentFilter;
     }
 
     on(eventName: DataEvent, callback?: (data: any) => void) {

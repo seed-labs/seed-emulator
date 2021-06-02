@@ -116,8 +116,9 @@ router.ws('/console/:id', async function(ws, req, next) {
 });
 
 var currentSnifferSocket: WebSocket = undefined;
+var currentSnifferFilter: string = '';
 
-router.post('/sniff', express.text(), async function(req, res, next) {
+router.post('/sniff', express.json(), async function(req, res, next) {
     sniffer.setListener((nodeId, data) => {
         if (currentSnifferSocket) {
             currentSnifferSocket.send(JSON.stringify({
@@ -126,10 +127,30 @@ router.post('/sniff', express.text(), async function(req, res, next) {
         }
     });
 
-    sniffer.sniff((await getContainers()).map(c => c.Id), req.body);
+    currentSnifferFilter = req.body.filter ?? '';
+
+    sniffer.sniff((await getContainers()).map(c => c.Id), currentSnifferFilter);
+
+    res.json({
+        ok: true,
+        result: {
+            currentFilter: currentSnifferFilter
+        }
+    });
 
     next();
-})
+});
+
+router.get('/sniff', function(req, res, next) {
+    res.json({
+        ok: true,
+        result: {
+            currentFilter: currentSnifferFilter
+        }
+    });
+
+    next();
+});
 
 router.ws('/sniff', async function(ws, req, next) {
     currentSnifferSocket = ws;

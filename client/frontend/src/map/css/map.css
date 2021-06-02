@@ -13,3 +13,22 @@ html, body, .container, .map {
     overflow: hidden;
     position: relative;
 }
+
+.input-wrap {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: calc(100vw - 20px);
+    border: 2px #333 solid;
+    background-color: #fff;
+}
+
+.input {
+    font-size: 1.3em;
+    line-height: 2.4rem;
+    width: 100%;
+    border: none;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    font-family: 'Courier New', Courier, monospace;
+}
