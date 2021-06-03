@@ -15,6 +15,28 @@
         <div class="input-wrap" id="filter-wrap">
             <input class="input" id="filter" placeholder="Animate packet flow with BPF filter..." autocorrect="off" autocapitalize="off" spellcheck="false" />
         </div>
+        <div class="log-wrap" id="log-wrap">
+            <div class="log" id="log-viewport">
+                <table class="log">
+                    <thead>
+                        <tr>
+                          <th>Time</th>
+                          <th>Node</th>
+                          <th>Log</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-body">
+                    </tbody>
+                </table>
+            </div>
+            <div class="log-controls">
+                <button id="log-clear">clear</button>
+                <input type="checkbox" id="log-autoscroll" checked />
+                <label for="log-autoscroll" >autoscroll</label>
+                <input type="checkbox" id="log-disable" />
+                <label for="log-disable" >disable log (improves performance)</label>
+            </div>
+        </div>
     </div>
 </body>
 <script src="./map.js"></script>

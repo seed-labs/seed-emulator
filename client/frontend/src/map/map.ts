@@ -10,7 +10,14 @@ const mapUi = new MapUi({
     mapElementId: 'map',
     infoPlateElementId: 'info',
     filterInputElementId: 'filter',
-    filterWrapElementId: 'filter-wrap'
+    filterWrapElementId: 'filter-wrap',
+    logBodyElementId: 'log-body',
+    logViewportElementId: 'log-viewport',
+    logControls: {
+        autoscrollCheckboxElementId: 'log-autoscroll',
+        clearButtonElementId: 'log-clear',
+        disableCheckboxElementId: 'log-disable'
+    }
 });
 
 mapUi.start();

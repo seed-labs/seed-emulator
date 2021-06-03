@@ -21,6 +21,7 @@ html, body, .container, .map {
     width: calc(100vw - 20px);
     border: 2px #333 solid;
     background-color: #fff;
+    opacity: 85%;
 }
 
 .input {
@@ -31,6 +32,35 @@ html, body, .container, .map {
     padding-left: 1rem;
     padding-right: 1rem;
     font-family: 'Courier New', Courier, monospace;
+}
+
+.log-wrap {
+    font-family: 'Courier New', Courier, monospace;
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    width: calc(100vw - 20px);
+    border: 2px #333 solid;
+    background-color: #fff;
+    opacity: 85%;
+}
+
+.log {
+    width: 100%;
+    max-height: 180px;
+    overflow-y: scroll;
+}
+
+.log a, .log a:visited {
+    color: #000;
+}
+
+.log th {
+    background-color: #ccc;
+    text-align: left;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
 }
 
 .input-wrap.error, .input.error {
