@@ -1,5 +1,6 @@
 import { DataSet } from 'vis-data';
 import { Network } from 'vis-network';
+import { EmulatorNetwork, EmulatorNode } from '../common/types';
 import { DataSource, Edge, Vertex } from './datasource';
 
 export interface MapUiConfiguration {
@@ -165,8 +166,64 @@ export class MapUi {
         this._blocked = false;
     }
 
+    private _createInfoPlateValuePair(label: string, text: string): HTMLDivElement {
+        let div = document.createElement('div');
+
+        let span0 = document.createElement('span');
+        span0.className = 'label';
+        span0.innerText = label;
+
+        let span1 = document.createElement('span');
+        span1.className = 'text';
+        span1.innerText = text;
+
+        div.appendChild(span0);
+        div.appendChild(span1);
+
+        return div;
+    }
+
     private _updateInfoPlateWith(nodeId: string) {
-        // todo
+        let vertex = this._nodes.get(nodeId);
+
+        this._infoPlateElement.innerText = '';
+
+        let title = document.createElement('div');
+        title.className = 'title';
+        this._infoPlateElement.appendChild(title);
+
+        if (vertex.type == 'network') {
+            title.innerText = `Network: ${vertex.label}`;
+            let net = vertex.object as EmulatorNetwork;
+
+            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('ID', net.Id.substr(0, 12)));
+            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Name', net.meta.emulatorInfo.name));
+            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Scope', net.meta.emulatorInfo.scope));
+            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Type', net.meta.emulatorInfo.type));
+            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Prefix', net.meta.emulatorInfo.prefix));
+        }
+
+        if (vertex.type == 'node') {
+            title.innerText = `Host: ${vertex.label}`;
+            let node = vertex.object as EmulatorNode;
+
+            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('ID', node.Id.substr(0, 12)));
+            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('ASN', node.meta.emulatorInfo.asn.toString()));
+            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Name', node.meta.emulatorInfo.name));
+            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Role', node.meta.emulatorInfo.role));
+
+            node.meta.emulatorInfo.nets.forEach(net => {
+                this._infoPlateElement.appendChild(this._createInfoPlateValuePair(`IP(${net.name})`, net.address));
+            });
+
+            let consoleLink = document.createElement('a');
+            
+            consoleLink.target = '_blank';
+            consoleLink.href = `/console.html#${node.Id.substr(0, 12)}`;
+            consoleLink.innerText = 'Launch console';
+
+            this._infoPlateElement.appendChild(consoleLink);
+        }
     }
 
     private _boundfilterUpdateHandler = this._filterUpdateHandler.bind(this);

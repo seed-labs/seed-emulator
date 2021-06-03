@@ -9,6 +9,7 @@ export interface Vertex extends NodeOptions {
     group?: string;
     shape?: string;
     type: 'node' | 'network';
+    object: EmulatorNode | EmulatorNetwork;
 }
 
 export interface Edge extends EdgeOptions {
@@ -141,7 +142,8 @@ export class DataSource {
                 id: net.Id,
                 label: `${netInfo.scope}/${netInfo.name}`,
                 type: 'network',
-                shape: 'star'
+                shape: 'star',
+                object: net
             };
 
             if (netInfo.type == 'local') {
@@ -160,7 +162,8 @@ export class DataSource {
                 shape: 'box',
                 shapeProperties: {
                     borderRadius: 0
-                }
+                },
+                object: node
             };
 
             if (nodeInfo.role != 'Route Server') {

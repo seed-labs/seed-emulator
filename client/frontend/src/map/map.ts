@@ -8,7 +8,7 @@ const datasource = new DataSource(API_PATH);
 const mapUi = new MapUi({
     datasource,
     mapElementId: 'map',
-    infoPlateElementId: 'info',
+    infoPlateElementId: 'info-plate',
     filterInputElementId: 'filter',
     filterWrapElementId: 'filter-wrap',
     logBodyElementId: 'log-body',

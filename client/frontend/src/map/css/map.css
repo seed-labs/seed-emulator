@@ -14,14 +14,17 @@ html, body, .container, .map {
     position: relative;
 }
 
-.input-wrap {
+.wrap {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    width: calc(100vw - 20px);
     border: 2px #333 solid;
     background-color: #fff;
     opacity: 85%;
+}
+
+.input-wrap {
+    top: 10px;
+    left: 10px;
+    width: calc(100vw - 20px);
 }
 
 .input {
@@ -36,13 +39,35 @@ html, body, .container, .map {
 
 .log-wrap {
     font-family: 'Courier New', Courier, monospace;
-    position: absolute;
     bottom: 10px;
     left: 10px;
     width: calc(100vw - 20px);
-    border: 2px #333 solid;
-    background-color: #fff;
-    opacity: 85%;
+}
+
+.info-plate-wrap {
+    font-family: 'Courier New', Courier, monospace;
+    top: 65px;
+    right: 10px;
+    width: 300px;
+}
+
+.info-plate {
+    padding: .25em;
+    font-size: .85em;
+}
+
+.info-plate .title {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.info-plate .label {
+    font-weight: bold;
+}
+
+.info-plate .label:after {
+    content: ':';
+    padding-right: .5em;
 }
 
 .log {
@@ -51,7 +76,7 @@ html, body, .container, .map {
     overflow-y: scroll;
 }
 
-.log a, .log a:visited {
+a, a:visited {
     color: #000;
 }
 

@@ -12,10 +12,15 @@
     </noscript>
     <div class="container">
         <div class="map" id="map"></div>
-        <div class="input-wrap" id="filter-wrap">
+        <div class="input-wrap wrap" id="filter-wrap">
             <input class="input" id="filter" placeholder="Animate packet flow with BPF filter..." autocorrect="off" autocapitalize="off" spellcheck="false" />
         </div>
-        <div class="log-wrap" id="log-wrap">
+        <div class="info-plate-wrap wrap">
+            <div class="info-plate" id="info-plate">
+                No object selected. Select an object to inspect the details.
+            </div>
+        </div>
+        <div class="log-wrap wrap" id="log-wrap">
             <div class="log" id="log-viewport">
                 <table class="log">
                     <thead>
