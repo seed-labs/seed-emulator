@@ -123,9 +123,19 @@ export class DataSource {
             let nets = node.NetworkSettings.Networks;
             Object.keys(nets).forEach(key => {
                 let net = nets[key];
+                var label = '';
+
+                node.meta.emulatorInfo.nets.forEach(emunet => {
+                    // fixme
+                    if (key.includes(emunet.name)) {
+                        label = emunet.address;
+                    }
+                });
+
                 edges.push({
                     from: node.Id,
-                    to: net.NetworkID
+                    to: net.NetworkID,
+                    label
                 });
             })
         })

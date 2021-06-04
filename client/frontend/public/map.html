@@ -12,34 +12,43 @@
     </noscript>
     <div class="container">
         <div class="map" id="map"></div>
-        <div class="input-wrap wrap" id="filter-wrap">
-            <input class="input" id="filter" placeholder="Animate packet flow with BPF filter..." autocorrect="off" autocapitalize="off" spellcheck="false" />
-        </div>
-        <div class="info-plate-wrap wrap">
-            <div class="info-plate" id="info-plate">
-                No object selected. Select an object to inspect the details.
+        <div class="panel filter-panel">
+            <div class="panel-title">Filter</div>
+            <div class="filter-wrap wrap" id="filter-wrap">
+                <input class="filter" id="filter" placeholder="Animate packet flow with BPF filter..." autocorrect="off" autocapitalize="off" spellcheck="false" />
             </div>
         </div>
-        <div class="log-wrap wrap" id="log-wrap">
-            <div class="log" id="log-viewport">
-                <table class="log">
-                    <thead>
-                        <tr>
-                          <th>Time</th>
-                          <th>Node</th>
-                          <th>Log</th>
-                        </tr>
-                    </thead>
-                    <tbody id="log-body">
-                    </tbody>
-                </table>
+        <div class="panel info-plate-panel">
+            <div class="panel-title">Details</div>
+            <div class="info-plate-wrap wrap">
+                <div class="info-plate" id="info-plate">
+                    No object selected. Select an object to inspect the details.
+                </div>
             </div>
-            <div class="log-controls">
-                <button id="log-clear">clear</button>
-                <input type="checkbox" id="log-autoscroll" checked />
-                <label for="log-autoscroll" >autoscroll</label>
-                <input type="checkbox" id="log-disable" />
-                <label for="log-disable" >disable log (improves performance)</label>
+        </div>
+        <div class="panel log-panel">
+            <div class="panel-title">Log</div>
+            <div class="log-wrap wrap" id="log-wrap">
+                <div class="log" id="log-viewport">
+                    <table class="log">
+                        <thead>
+                            <tr>
+                              <th>Time</th>
+                              <th>Node</th>
+                              <th>Log</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-body">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="log-controls">
+                    <button id="log-clear">clear</button>
+                    <input type="checkbox" id="log-autoscroll" checked />
+                    <label for="log-autoscroll" >autoscroll</label>
+                    <input type="checkbox" id="log-disable" />
+                    <label for="log-disable" >disable log (improves performance)</label>
+                </div>
             </div>
         </div>
     </div>

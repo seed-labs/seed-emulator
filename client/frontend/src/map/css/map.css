@@ -14,20 +14,34 @@ html, body, .container, .map {
     position: relative;
 }
 
-.wrap {
+.panel {
     position: absolute;
-    border: 2px #333 solid;
-    background-color: #fff;
     opacity: 85%;
 }
 
-.input-wrap {
+.panel .panel-title {
+    font-family: 'Courier New', Courier, monospace;
+    padding: 5px 5px 3px 5px;
+    background-color: #333;
+    display: inline-block;
+    color: #ddd;
+    line-height: .8em;
+    font-weight: bold;
+}
+
+.wrap {
+    border: 2px #333 solid;
+    background-color: #fff;
+    width: 100%;
+}
+
+.filter-panel {
     top: 10px;
     left: 10px;
     width: calc(100vw - 20px);
 }
 
-.input {
+.filter {
     font-size: 1.3em;
     line-height: 2.4rem;
     width: 100%;
@@ -37,18 +51,18 @@ html, body, .container, .map {
     font-family: 'Courier New', Courier, monospace;
 }
 
-.log-wrap {
+.log-panel {
     font-family: 'Courier New', Courier, monospace;
     bottom: 10px;
     left: 10px;
     width: calc(100vw - 20px);
 }
 
-.info-plate-wrap {
+.info-plate-panel {
     font-family: 'Courier New', Courier, monospace;
-    top: 65px;
+    top: 85px;
     right: 10px;
-    width: 300px;
+    min-width: 300px;
 }
 
 .info-plate {
@@ -86,6 +100,10 @@ a, a:visited {
     position: -webkit-sticky;
     position: sticky;
     top: 0;
+}
+
+.log tr:hover {
+    background-color: #eee;
 }
 
 .input-wrap.error, .input.error {
