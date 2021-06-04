@@ -37,7 +37,12 @@ export class MapUi {
     private _graph: Network;
 
     private _logQueue: HTMLElement[];
+
+    private _flashQueue: Set<string>;
+    private _flashingNodes: Set<string>;
+    
     private _logPrinter: number;
+    private _flasher: number;
 
     private _freezed: boolean;
     private _blocked: boolean;
@@ -61,6 +66,9 @@ export class MapUi {
 
         this._logQueue = [];
 
+        this._flashQueue = new Set<string>();
+        this._flashingNodes = new Set<string>();
+
         this._macMapping = {};
 
         this._logClear.onclick = () => {
@@ -74,14 +82,14 @@ export class MapUi {
 
             this._unfreeze();
 
-            this._flashNode(data.source);
+            this._flashQueue.add(data.source);
 
             var flashed = new Set<string>();
 
             Object.keys(this._macMapping).forEach(mac => {
                 if (data.data.includes(mac) && !flashed.has(mac)) {
                     flashed.add(mac);
-                    this._flashNode(this._macMapping[mac]);
+                    this._flashQueue.add(this._macMapping[mac]);
                 }
             });
 
@@ -138,18 +146,34 @@ export class MapUi {
         return `hsl(${Math.random() * 360}, 100%, 75%)`;
     }
 
-    private _setNodeHighlight(id: string, highlight: boolean) {
-        this._nodes.update({
-            id: id, borderWidth: highlight ? 4 : 1
+    private _flashNodes() {
+        if (this._flashingNodes.size != 0) {
+            // some nodes still flashing; wait for next time
+            return;
+        }
+
+        this._flashingNodes = new Set(this._flashQueue);
+        this._flashQueue.clear();
+
+        let updateRequest = Array.from(this._flashingNodes).map(nodeId => {
+            return {
+                id: nodeId, borderWidth: 4
+            }
         });
-    }
 
-    private _flashNode(id: string) {
-        this._setNodeHighlight(id, true);
+        this._nodes.update(updateRequest);
 
+        // schedule un-flash
         window.setTimeout(() => {
-            this._setNodeHighlight(id, false);
-        }, 600);
+            let updateRequest = Array.from(this._flashingNodes).map(nodeId => {
+                return {
+                    id: nodeId, borderWidth: 1
+                }
+            });
+
+            this._nodes.update(updateRequest);
+            this._flashingNodes.clear();
+        }, 300);
     }
 
     private _freeze() {
@@ -262,6 +286,7 @@ export class MapUi {
         this._mapMacAddresses();
         this._filterInput.value = await this._datasource.getSniffFilter();
         this._filterInput.addEventListener('keydown', this._boundfilterUpdateHandler);
+
         this._logPrinter = window.setInterval(() => {
             var scroll = false;
 
@@ -273,6 +298,10 @@ export class MapUi {
             if (scroll && this._logAutoscroll.checked && !this._logDisable.checked) {
                 this._logView.scrollTop = this._logView.scrollHeight;
             }
+        }, 500);
+
+        this._flasher = window.setInterval(() => {
+            this._flashNodes();
         }, 500);
     }
 
