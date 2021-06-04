@@ -50,6 +50,7 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
         ip addr add "$new_addr" dev "$ifname"
     }; done
 }; done
+for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 0 > "$f"; done
 '''
 
 DockerCompilerFileTemplates['compose'] = """\
@@ -68,7 +69,9 @@ DockerCompilerFileTemplates['compose_service'] = """\
             - ALL
         sysctls:
             - net.ipv4.ip_forward=1
-        privileged: {privileged}
+            - net.ipv4.conf.default.rp_filter=0
+            - net.ipv4.conf.all.rp_filter=0
+        privileged: true
         networks:
 {networks}{ports}
         labels:
@@ -333,7 +336,7 @@ class Docker(Compiler):
                 primaryIp = node.getInterfaces()[0].getAddress()
             ),
             networks = node_nets,
-            privileged = 'true' if node.isPrivileged() else 'false',
+            # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
             labelList = self.__getNodeMeta(node)
         )
