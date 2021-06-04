@@ -309,6 +309,7 @@ export class MapUi {
         this._datasource.disconnect();
         this._filterInput.removeEventListener('keydown', this._boundfilterUpdateHandler);
         window.clearInterval(this._logPrinter);
+        window.clearInterval(this._flasher);
     }
 
     redraw() {
