@@ -22,6 +22,7 @@ DockerCompilerFileTemplates['start_script'] = """\
 #!/bin/bash
 {startCommands}
 echo "ready! run 'docker exec -it $HOSTNAME /bin/zsh' to attach to this node" >&2
+for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 0 > "$f"; done
 tail -f /dev/null
 """
 
@@ -50,7 +51,6 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
         ip addr add "$new_addr" dev "$ifname"
     }; done
 }; done
-for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 0 > "$f"; done
 '''
 
 DockerCompilerFileTemplates['compose'] = """\
