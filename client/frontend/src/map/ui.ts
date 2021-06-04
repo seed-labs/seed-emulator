@@ -82,8 +82,6 @@ export class MapUi {
 
             this._unfreeze();
 
-            this._flashQueue.add(data.source);
-
             var flashed = new Set<string>();
 
             Object.keys(this._macMapping).forEach(mac => {
@@ -92,6 +90,10 @@ export class MapUi {
                     this._flashQueue.add(this._macMapping[mac]);
                 }
             });
+
+            if (flashed.size > 0) {
+                this._flashQueue.add(data.source);
+            }
 
             // fixme?
             if (data.data.includes('listening')) {
