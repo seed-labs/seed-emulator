@@ -29,6 +29,10 @@ html, body, .container, .map {
     font-weight: bold;
 }
 
+.panel .panel-title.inactive {
+    background-color: #999;
+}
+
 .wrap {
     border: 2px #333 solid;
     background-color: #fff;

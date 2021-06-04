@@ -15,8 +15,14 @@ export interface MapUiConfiguration {
         clearButtonElementId: string,
         autoscrollCheckboxElementId: string,
         disableCheckboxElementId: string
+    },
+    filterControls: {
+        filterModeTabElementId: string,
+        nodeSearchModeTabElementId: string
     }
 }
+
+type FilterMode = 'node-search' | 'filter';
 
 export class MapUi {
     private _mapElement: HTMLElement;
@@ -29,6 +35,9 @@ export class MapUi {
     private _logAutoscroll: HTMLInputElement;
     private _logDisable: HTMLInputElement;
     private _logClear: HTMLElement;
+
+    private _filterModeTab: HTMLElement;
+    private _searchModeTab: HTMLElement;
 
     private _datasource: DataSource;
 
@@ -49,6 +58,10 @@ export class MapUi {
 
     private _macMapping: { [mac: string]: string };
 
+    private _filterMode: FilterMode;
+    private _searchHighlightNodes: Set<string>;
+    private _lastSearchTerm: string;
+
     constructor(config: MapUiConfiguration) {
         this._datasource = config.datasource;
         this._mapElement = document.getElementById(config.mapElementId);
@@ -62,6 +75,9 @@ export class MapUi {
         this._logDisable = document.getElementById(config.logControls.disableCheckboxElementId) as HTMLInputElement;
         this._logClear = document.getElementById(config.logControls.clearButtonElementId);
 
+        this._filterModeTab = document.getElementById(config.filterControls.filterModeTabElementId);
+        this._searchModeTab = document.getElementById(config.filterControls.nodeSearchModeTabElementId);
+
         this._freezed = false;
 
         this._logQueue = [];
@@ -69,7 +85,20 @@ export class MapUi {
         this._flashQueue = new Set<string>();
         this._flashingNodes = new Set<string>();
 
+        this._searchHighlightNodes = new Set<string>();
+
         this._macMapping = {};
+
+        this._filterMode = 'filter';
+        this._lastSearchTerm = '';
+
+        this._searchModeTab.onclick = () => {
+            this._setFilterMode('node-search');
+        };
+
+        this._filterModeTab.onclick = () => {
+            this._setFilterMode('filter');
+        };
 
         this._logClear.onclick = () => {
             this._logBody.innerText = '';
@@ -147,6 +176,47 @@ export class MapUi {
     private _randomColor() {
         return `hsl(${Math.random() * 360}, 100%, 75%)`;
     }
+    
+    private _updateSearchHighlights(highlights: Set<string>) {
+        var newHighlights = new Set<string>();
+        var unHighlighted = new Set<string>();
+
+        highlights.forEach(n => {
+            if (!this._searchHighlightNodes.has(n)) {
+                newHighlights.add(n);
+            }
+        });
+
+        this._searchHighlightNodes.forEach(n => {
+            if (!highlights.has(n)) {
+                unHighlighted.add(n);
+            }
+        });
+
+        unHighlighted.forEach(n => {
+            this._searchHighlightNodes.delete(n);
+        });
+
+        newHighlights.forEach(n => {
+            this._searchHighlightNodes.add(n);
+        });
+
+        var updateRequest = [];
+
+        newHighlights.forEach(n => {
+            updateRequest.push({
+                id: n, borderWidth: 4
+            });
+        });
+
+        unHighlighted.forEach(n => {
+            updateRequest.push({
+                id: n, borderWidth: 1
+            });
+        });
+
+        this._nodes.update(updateRequest);
+    }
 
     private _flashNodes() {
         if (this._flashingNodes.size != 0) {
@@ -156,6 +226,12 @@ export class MapUi {
 
         this._flashingNodes = new Set(this._flashQueue);
         this._flashQueue.clear();
+
+        if (this._filterMode == 'node-search') {
+            // in node search mode, don't flash.
+            this._flashingNodes.clear();
+            return;
+        }
 
         let updateRequest = Array.from(this._flashingNodes).map(nodeId => {
             return {
@@ -196,13 +272,76 @@ export class MapUi {
         this._filterWrap.classList.remove('disabled');
     }
 
-    private async _filterUpdateHandler(event: KeyboardEvent) {
-        if (event.key != 'Enter') return;
+    private async _setFilterMode(mode: FilterMode) {
+        if (mode == this._filterMode) {
+            return;
+        }
 
-        this._blocked = true;
-        this._freeze();
-        this._filterInput.value = await this._datasource.setSniffFilter(this._filterInput.value);
-        this._blocked = false;
+        this._filterMode = mode;
+
+        if (mode == 'filter') {
+            this._updateSearchHighlights(new Set<string>()); // empty search highligths
+            this._filterInput.value = await this._datasource.getSniffFilter();
+            this._filterInput.placeholder = 'Type a BPF expression to animate packet flows on the map...';
+            this._filterModeTab.classList.remove('inactive');
+            this._searchModeTab.classList.add('inactive');
+        }
+
+        if (mode == 'node-search') {
+            this._filterInput.value = this._lastSearchTerm;
+            this._filterInput.placeholder = 'Search networks and nodes...';
+            this._filterModeTab.classList.add('inactive');
+            this._searchModeTab.classList.remove('inactive');
+            this._filterUpdateHandler(null, true);
+        }
+    }
+
+    private async _filterUpdateHandler(event: KeyboardEvent, forced: boolean = false) {
+        if ((!event || event.key != 'Enter') && !forced) {
+            return;
+        }
+
+        let term = this._filterInput.value;
+
+        if (this._filterMode == 'filter') {
+            this._blocked = true;
+            this._freeze();
+            this._filterInput.value = await this._datasource.setSniffFilter(term);
+            this._blocked = false;
+        }
+
+        if (this._filterMode == 'node-search') {
+            var hits = new Set<string>();
+            this._lastSearchTerm = term;
+
+            this._nodes.forEach(node => {
+                var targetString = '';
+
+                if (node.type == 'node') {
+                    let nodeObj = (node.object as EmulatorNode);
+                    let nodeInfo = nodeObj.meta.emulatorInfo;
+
+                    targetString = `${nodeObj.Id} ${nodeInfo.role} as${nodeInfo.asn} ${nodeInfo.name} `;
+
+                    nodeInfo.nets.forEach(net => {
+                        targetString += `${net.name} ${net.address} `;
+                    });
+                }
+
+                if (node.type == 'network') {
+                    let net = (node.object as EmulatorNetwork);
+                    let netInfo = net.meta.emulatorInfo;
+
+                    targetString = `${net.Id} as${netInfo.scope} ${netInfo.name} ${netInfo.prefix}`;
+                }
+
+                if (term != '' && targetString.toLowerCase().includes(term.toLowerCase())) {
+                    hits.add(node.id);
+                }
+            });
+
+            this._updateSearchHighlights(hits);
+        }
     }
 
     private _createInfoPlateValuePair(label: string, text: string): HTMLDivElement {
@@ -286,7 +425,11 @@ export class MapUi {
         await this._datasource.connect();
         this.redraw();
         this._mapMacAddresses();
-        this._filterInput.value = await this._datasource.getSniffFilter();
+
+        if (this._filterMode == 'filter') {
+            this._filterInput.value = await this._datasource.getSniffFilter();
+        }
+
         this._filterInput.addEventListener('keydown', this._boundfilterUpdateHandler);
 
         this._logPrinter = window.setInterval(() => {

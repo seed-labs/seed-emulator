@@ -17,6 +17,10 @@ const mapUi = new MapUi({
         autoscrollCheckboxElementId: 'log-autoscroll',
         clearButtonElementId: 'log-clear',
         disableCheckboxElementId: 'log-disable'
+    },
+    filterControls: {
+        filterModeTabElementId: 'tab-filter-mode',
+        nodeSearchModeTabElementId: 'tab-node-search-mode'
     }
 });
 
