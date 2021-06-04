@@ -4,11 +4,13 @@ import dockerode from 'dockerode';
 import { SeedContainerInfo, Emulator, SeedNetInfo } from '../../utils/seedsim-meta';
 import { Sniffer } from '../../utils/sniffer';
 import WebSocket from 'ws';
+import { Controller } from '../../utils/controller';
 
 const router = express.Router();
 const docker = new dockerode();
 const socketHandler = new SocketHandler(docker);
 const sniffer = new Sniffer(docker);
+const controller = new Controller(docker);
 
 const getContainers: () => Promise<SeedContainerInfo[]> = async function() {
     var containers: dockerode.ContainerInfo[] = await docker.listContainers();
@@ -33,6 +35,10 @@ socketHandler.getLoggers().forEach(logger => logger.setSettings({
 }));
 
 sniffer.getLoggers().forEach(logger => logger.setSettings({
+    minLevel: 'debug'
+}));
+
+controller.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'debug'
 }));
 
@@ -100,6 +106,53 @@ router.get('/container/:id', async function(req, res, next) {
     }
 
     next();
+});
+
+router.get('/container/:id/net', async function(req, res, next) {
+    let id = req.params.id;
+
+    var candidates = (await docker.listContainers())
+        .filter(c => c.Id.startsWith(id));
+
+    if (candidates.length != 1) {
+        res.json({
+            ok: false,
+            result: `no match or multiple match for container ID ${id}.`
+        });
+        next();
+        return;
+    }
+
+    let node = candidates[0];
+
+    res.json({
+        ok: true,
+        result: controller.isNetworkConnected(node.Id)
+    });
+});
+
+router.post('/container/:id/net', express.json(), async function(req, res, next) {
+    let id = req.params.id;
+
+    var candidates = (await docker.listContainers())
+        .filter(c => c.Id.startsWith(id));
+
+    if (candidates.length != 1) {
+        res.json({
+            ok: false,
+            result: `no match or multiple match for container ID ${id}.`
+        });
+        next();
+        return;
+    }
+    
+    let node = candidates[0];
+
+    controller.setNetworkConnected(node.Id, req.body.status);
+    
+    res.json({
+        ok: true
+    });
 });
 
 router.ws('/console/:id', async function(ws, req, next) {

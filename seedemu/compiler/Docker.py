@@ -38,6 +38,23 @@ while read -r expr; do {
 [ "$last_pid" != 0 ] && kill $last_pid
 """
 
+DockerCompilerFileTemplates['seedemu_worker'] = """\
+#!/bin/bash
+
+net_down() {
+    ip -j li | jq -cr '.[] .ifname' | while read -r ifname; do ip link set "$ifname" down; done
+}
+
+net_up() {
+    ip -j li | jq -cr '.[] .ifname' | while read -r ifname; do ip link set "$ifname" up; done
+}
+
+while read -r line; do {
+    [ "$line" = "net_down" ] && net_down
+    [ "$line" = "net_up" ] && net_up
+}; done
+"""
+
 DockerCompilerFileTemplates['replace_address_script'] = '''\
 #!/bin/bash
 ip -j addr | jq -cr '.[]' | while read -r iface; do {
@@ -369,9 +386,11 @@ class Docker(Compiler):
         ))
 
         dockerfile += self.__addFile('/seedemu_sniffer', DockerCompilerFileTemplates['seedemu_sniffer'])
+        dockerfile += self.__addFile('/seedemu_worker', DockerCompilerFileTemplates['seedemu_worker'])
 
         dockerfile += 'RUN chmod +x /start.sh\n'
         dockerfile += 'RUN chmod +x /seedemu_sniffer\n'
+        dockerfile += 'RUN chmod +x /seedemu_worker\n'
 
         for file in node.getFiles():
             (path, content) = file.get()
