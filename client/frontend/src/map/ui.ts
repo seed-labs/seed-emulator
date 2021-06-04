@@ -42,6 +42,8 @@ export class MapUi {
     private _freezed: boolean;
     private _blocked: boolean;
 
+    private _macMapping: { [mac: string]: string };
+
     constructor(config: MapUiConfiguration) {
         this._datasource = config.datasource;
         this._mapElement = document.getElementById(config.mapElementId);
@@ -59,6 +61,8 @@ export class MapUi {
 
         this._logQueue = [];
 
+        this._macMapping = {};
+
         this._logClear.onclick = () => {
             this._logBody.innerText = '';
         };
@@ -72,11 +76,14 @@ export class MapUi {
 
             this._flashNode(data.source);
 
-            if (this._logDisable.checked) {
-                return;
-            }
+            var flashed = new Set<string>();
 
-            let node = this._nodes.get(data.source as string);
+            Object.keys(this._macMapping).forEach(mac => {
+                if (data.data.includes(mac) && !flashed.has(mac)) {
+                    flashed.add(mac);
+                    this._flashNode(this._macMapping[mac]);
+                }
+            });
 
             // fixme?
             if (data.data.includes('listening')) {
@@ -88,6 +95,12 @@ export class MapUi {
                 this._filterInput.classList.add('error');
                 this._filterWrap.classList.add('error');
             }
+
+            if (this._logDisable.checked) {
+                return;
+            }
+
+            let node = this._nodes.get(data.source as string);
 
             let now = new Date();
             let timeString = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}.${now.getMilliseconds()}`;
@@ -136,7 +149,7 @@ export class MapUi {
 
         window.setTimeout(() => {
             this._setNodeHighlight(id, false);
-        }, 300);
+        }, 600);
     }
 
     private _freeze() {
@@ -226,10 +239,27 @@ export class MapUi {
         }
     }
 
+    private _mapMacAddresses() {
+        this._nodes.forEach(vertex => {
+            if (vertex.type != 'node') {
+                return;
+            }
+
+            let node = vertex.object as EmulatorNode;
+
+            Object.keys(node.NetworkSettings.Networks).forEach(key => {
+                let net = node.NetworkSettings.Networks[key];
+                this._macMapping[net.MacAddress] = net.NetworkID;
+            });
+        });
+    }
+
     private _boundfilterUpdateHandler = this._filterUpdateHandler.bind(this);
 
     async start() {
+        await this._datasource.connect();
         this.redraw();
+        this._mapMacAddresses();
         this._filterInput.value = await this._datasource.getSniffFilter();
         this._filterInput.addEventListener('keydown', this._boundfilterUpdateHandler);
         this._logPrinter = window.setInterval(() => {
@@ -252,9 +282,7 @@ export class MapUi {
         window.clearInterval(this._logPrinter);
     }
 
-    async redraw() {
-        await this._datasource.connect();
-
+    redraw() {
         this._edges = new DataSet(this._datasource.edges);
         this._nodes = new DataSet(this._datasource.vertices);
 

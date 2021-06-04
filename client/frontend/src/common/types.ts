@@ -3,7 +3,8 @@ export interface EmulatorNode {
     NetworkSettings: {
         Networks: {
             [name: string]: {
-                NetworkID: string
+                NetworkID: string,
+                MacAddress: string
             }
         }
     

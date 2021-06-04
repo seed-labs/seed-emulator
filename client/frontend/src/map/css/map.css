@@ -106,7 +106,7 @@ a, a:visited {
     background-color: #eee;
 }
 
-.input-wrap.error, .input.error {
+.filter-wrap.error, .filter.error {
     color: red;
     border-color: red;
 }
