@@ -152,7 +152,7 @@ export class DataSource {
                 id: net.Id,
                 label: `${netInfo.scope}/${netInfo.name}`,
                 type: 'network',
-                shape: 'star',
+                shape: netInfo.type == 'global' ? 'star' : 'diamond',
                 object: net
             };
 
@@ -169,10 +169,7 @@ export class DataSource {
                 id: node.Id,
                 label: `${nodeInfo.asn}/${nodeInfo.name}`,
                 type: 'node',
-                shape: 'box',
-                shapeProperties: {
-                    borderRadius: 0
-                },
+                shape: nodeInfo.role == 'Router' ? 'dot' : 'hexagon',
                 object: node
             };
 

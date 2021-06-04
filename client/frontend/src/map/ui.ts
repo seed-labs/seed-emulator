@@ -193,8 +193,8 @@ export class MapUi {
         this._infoPlateElement.appendChild(title);
 
         if (vertex.type == 'network') {
-            title.innerText = `Network: ${vertex.label}`;
             let net = vertex.object as EmulatorNetwork;
+            title.innerText = `${net.meta.emulatorInfo.type == 'global' ? 'Exchange' : 'Network'}: ${vertex.label}`;
 
             this._infoPlateElement.appendChild(this._createInfoPlateValuePair('ID', net.Id.substr(0, 12)));
             this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Name', net.meta.emulatorInfo.name));
@@ -204,8 +204,8 @@ export class MapUi {
         }
 
         if (vertex.type == 'node') {
-            title.innerText = `Host: ${vertex.label}`;
             let node = vertex.object as EmulatorNode;
+            title.innerText = `${node.meta.emulatorInfo.role == 'Router' ? 'Router' : 'Host'}: ${vertex.label}`;
 
             this._infoPlateElement.appendChild(this._createInfoPlateValuePair('ID', node.Id.substr(0, 12)));
             this._infoPlateElement.appendChild(this._createInfoPlateValuePair('ASN', node.meta.emulatorInfo.asn.toString()));
@@ -233,11 +233,14 @@ export class MapUi {
         this._filterInput.value = await this._datasource.getSniffFilter();
         this._filterInput.addEventListener('keydown', this._boundfilterUpdateHandler);
         this._logPrinter = window.setInterval(() => {
+            var scroll = false;
+
             while (this._logQueue.length > 0) {
+                scroll = true;
                 this._logBody.appendChild(this._logQueue.shift());
             }
 
-            if (this._logAutoscroll.checked && !this._logDisable.checked) {
+            if (scroll && this._logAutoscroll.checked && !this._logDisable.checked) {
                 this._logView.scrollTop = this._logView.scrollHeight;
             }
         }, 500);
