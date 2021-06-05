@@ -1,6 +1,6 @@
 import $ from 'jquery';
 import { EmulatorNetwork, EmulatorNode } from '../common/types';
-import { WindowManager } from './window-manager';
+import { WindowManager } from '../common/window-manager';
 
 export class IndexUi {
     private _containerTable: DataTables.Api;

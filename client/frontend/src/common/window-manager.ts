@@ -6,7 +6,7 @@ import $ from 'jquery';
 import 'jquery-ui';
 import 'jquery-ui/ui/widgets/resizable';
 
-import { ConsoleEvent } from '../common/console-event';
+import { ConsoleEvent } from './console-event';
 
 export class Window {
     private _id: string;
