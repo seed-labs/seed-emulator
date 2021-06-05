@@ -1,7 +1,7 @@
 import dockerode from 'dockerode';
 import { LogProducer } from '../interfaces/log-producer';
 import { Logger } from 'tslog';
-import { SessionManager } from './session-manager';
+import { SessionManager, Session } from './session-manager';
 
 export class Sniffer implements LogProducer {
     private _logger: Logger;
@@ -11,19 +11,25 @@ export class Sniffer implements LogProducer {
     constructor(docker: dockerode) {
         this._logger = new Logger({ name: 'Sniffer' });
         this._sessionManager = new SessionManager(docker, 'Sniffer');
+        this._sessionManager.on('new_session', this._listenTo.bind(this));
+    }
+
+    private _listenTo(nodeId: string, session: Session) {
+        this._logger.debug(`got new session for noed ${nodeId}; attaching listener...`);
+
+        session.stream.addListener('data', data => {
+            if (this._listener) {
+                this._listener(nodeId, data);
+            }
+        });
     }
 
     async sniff(nodes: string[], expr: string) {
         this._logger.debug(`sniffing on ${nodes} with expr ${expr}...`);
+
         var sessions = await Promise.all(nodes.map(node => this._sessionManager.getSession(node, ['/seedemu_sniffer'])));
 
         sessions.forEach(session => session.stream.write(`${expr}\r`));
-        sessions.forEach((session, index) => {
-            let nodeId = nodes[index];
-            session.stream.addListener('data', data => {
-                this._listener(nodeId, data);
-            });
-        });
     }
 
     setListener(listener: (nodeId: string, stdout: any) => void) {
