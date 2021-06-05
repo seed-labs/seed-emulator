@@ -172,16 +172,26 @@ router.ws('/console/:id', async function(ws, req, next) {
     next();
 });
 
-var currentSnifferSocket: WebSocket = undefined;
+var snifferSubscribers: WebSocket[] = [];
 var currentSnifferFilter: string = '';
 
 router.post('/sniff', express.json(), async function(req, res, next) {
     sniffer.setListener((nodeId, data) => {
-        if (currentSnifferSocket) {
-            currentSnifferSocket.send(JSON.stringify({
-                source: nodeId, data: data.toString('utf8')
-            }));
-        }
+        var deadSockets: WebSocket[] = [];
+
+        snifferSubscribers.forEach(socket => {
+            if (socket.readyState == 1) {
+                socket.send(JSON.stringify({
+                    source: nodeId, data: data.toString('utf8')
+                }));
+            }
+
+            if (socket.readyState > 1) {
+                deadSockets.push(socket);
+            }
+        });
+
+        deadSockets.forEach(socket => snifferSubscribers.splice(snifferSubscribers.indexOf(socket), 1));
     });
 
     currentSnifferFilter = req.body.filter ?? '';
@@ -210,10 +220,8 @@ router.get('/sniff', function(req, res, next) {
 });
 
 router.ws('/sniff', async function(ws, req, next) {
-    currentSnifferSocket = ws;
-    ws.on('close', () => {
-        currentSnifferSocket = undefined;
-    });
+    snifferSubscribers.push(ws);
+    next();
 });
 
 router.get('/container/:id/bgp', async function (req, res, next) {
