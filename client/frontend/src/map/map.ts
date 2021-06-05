@@ -1,4 +1,7 @@
 import './css/map.css';
+import '../common/css/window-manager.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
 import { DataSource } from './datasource';
 import { MapUi } from './ui';
 
@@ -11,6 +14,7 @@ const mapUi = new MapUi({
     infoPlateElementId: 'info-plate',
     filterInputElementId: 'filter',
     filterWrapElementId: 'filter-wrap',
+    logPanelElementId: 'log-panel',
     logBodyElementId: 'log-body',
     logViewportElementId: 'log-viewport',
     logControls: {
@@ -21,6 +25,10 @@ const mapUi = new MapUi({
     filterControls: {
         filterModeTabElementId: 'tab-filter-mode',
         nodeSearchModeTabElementId: 'tab-node-search-mode'
+    },
+    windowManager: {
+        desktopElementId: 'console-area',
+        taskbarElementId: 'taskbar'
     }
 });
 

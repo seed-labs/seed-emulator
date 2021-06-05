@@ -10,7 +10,7 @@
     <noscript>
         You need javascript to run the map.
     </noscript>
-    <div class="container">
+    <div class="map-area">
         <div class="map" id="map"></div>
         <div class="panel filter-panel">
             <div class="panel-title" id="tab-filter-mode">Filter</div>
@@ -27,7 +27,7 @@
                 </div>
             </div>
         </div>
-        <div class="panel log-panel">
+        <div class="panel log-panel" id="log-panel">
             <div class="panel-title">Log</div>
             <div class="log-wrap wrap" id="log-wrap">
                 <div class="log" id="log-viewport">
@@ -53,6 +53,8 @@
             </div>
         </div>
     </div>
+    <div class="console-area" id="console-area"></div>
+    <div class="taskbar hide" id="taskbar"></div>
 </body>
 <script src="./map.js"></script>
 

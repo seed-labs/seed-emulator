@@ -1,6 +1,7 @@
 import { DataSet } from 'vis-data';
 import { Network } from 'vis-network';
 import { EmulatorNetwork, EmulatorNode } from '../common/types';
+import { WindowManager } from '../common/window-manager';
 import { DataSource, Edge, Vertex } from './datasource';
 
 export interface MapUiConfiguration {
@@ -10,6 +11,7 @@ export interface MapUiConfiguration {
     filterInputElementId: string,
     filterWrapElementId: string,
     logBodyElementId: string,
+    logPanelElementId: string,
     logViewportElementId: string,
     logControls: {
         clearButtonElementId: string,
@@ -19,6 +21,10 @@ export interface MapUiConfiguration {
     filterControls: {
         filterModeTabElementId: string,
         nodeSearchModeTabElementId: string
+    },
+    windowManager: {
+        desktopElementId: string,
+        taskbarElementId: string
     }
 }
 
@@ -30,6 +36,7 @@ export class MapUi {
     private _filterInput: HTMLInputElement;
     private _filterWrap: HTMLElement;
 
+    private _logPanel: HTMLElement;
     private _logView: HTMLElement;
     private _logBody: HTMLElement;
     private _logAutoscroll: HTMLInputElement;
@@ -62,6 +69,8 @@ export class MapUi {
     private _searchHighlightNodes: Set<string>;
     private _lastSearchTerm: string;
 
+    private _windowManager: WindowManager;
+
     constructor(config: MapUiConfiguration) {
         this._datasource = config.datasource;
         this._mapElement = document.getElementById(config.mapElementId);
@@ -69,6 +78,7 @@ export class MapUi {
         this._filterInput = document.getElementById(config.filterInputElementId) as HTMLInputElement;
         this._filterWrap = document.getElementById(config.filterWrapElementId);
 
+        this._logPanel = document.getElementById(config.logPanelElementId);
         this._logView = document.getElementById(config.logViewportElementId);
         this._logBody = document.getElementById(config.logBodyElementId);
         this._logAutoscroll = document.getElementById(config.logControls.autoscrollCheckboxElementId) as HTMLInputElement;
@@ -92,6 +102,8 @@ export class MapUi {
         this._filterMode = 'filter';
         this._lastSearchTerm = '';
 
+        this._windowManager = new WindowManager(config.windowManager.desktopElementId, config.windowManager.taskbarElementId);
+
         this._searchModeTab.onclick = () => {
             this._setFilterMode('node-search');
         };
@@ -103,6 +115,14 @@ export class MapUi {
         this._logClear.onclick = () => {
             this._logBody.innerText = '';
         };
+
+        this._windowManager.on('taskbarchanges', (shown: boolean) => {
+            if (shown) {
+                this._logPanel.classList.add('bump');
+            } else {
+                this._logPanel.classList.remove('bump');
+            }
+        });
 
         this._datasource.on('packet', (data) => {
             if (!data.source || !data.data) {
@@ -470,10 +490,13 @@ export class MapUi {
 
             let consoleLink = document.createElement('a');
             
-            consoleLink.target = '_blank';
-            consoleLink.href = `/console.html#${node.Id.substr(0, 12)}`;
+            consoleLink.href = '#';
             consoleLink.innerText = 'Launch console';
             consoleLink.classList.add('action-link');
+
+            consoleLink.onclick = () => {
+                this._windowManager.createWindow(node.Id.substr(0, 12), vertex.label);
+            };
 
             let netToggle = document.createElement('a');
             let netState = await this._datasource.getNetworkStatus(node.Id);

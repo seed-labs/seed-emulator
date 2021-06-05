@@ -7,11 +7,12 @@ body, h1, h2, h3, h4, h5, h6, p, ol, ul {
     padding: 0;
 }
 
-html, body, .container, .map {
+html, body, .map-area, .map {
     height: 100%;
     width: 100vw;
     overflow: hidden;
     position: relative;
+    line-height: initial;
 }
 
 .panel {
@@ -60,6 +61,10 @@ html, body, .container, .map {
     bottom: 10px;
     left: 10px;
     width: calc(100vw - 20px);
+}
+
+.log-panel.bump {
+    bottom: 35px;
 }
 
 .info-plate-panel {
@@ -114,7 +119,10 @@ html, body, .container, .map {
     color: #666;
 }
 
-.info-plate.loading, .info-plate.loading a, .info-plate.loading a:visited {
+.info-plate.loading,
+.info-plate.loading a,
+.info-plate.loading a:visited,
+.info-plate.loading a:hover {
     background-color: #ddd;
     color: #999;
 }
@@ -125,8 +133,13 @@ html, body, .container, .map {
     overflow-y: scroll;
 }
 
-a, a:visited {
-    color: #000;
+a, a:visited, a:hover {
+    color: #000 !important; /* overwrites bootstrap */
+    text-decoration: underline !important; /* overwrites bootstrap */
+}
+
+label {
+    margin-bottom: 0 !important; /* overwrites bootstrap */
 }
 
 .log th {
