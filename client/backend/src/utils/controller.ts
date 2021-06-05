@@ -106,7 +106,7 @@ export class Controller implements LogProducer {
     async listBgpPeers(node: string): Promise<BgpPeer[]> {
         // potential crash when running on non-router node?
 
-        this._logger.debug(`getting bgp peers on ${node}`);
+        this._logger.debug(`getting bgp peers on ${node}...`);
 
         let result = await this._run(node, 'bird_list_peer');
 
@@ -115,12 +115,17 @@ export class Controller implements LogProducer {
         var peers: BgpPeer[] = [];
 
         lines.forEach(line => {
+            if (line.length < 6) {
+                return;
+            }
             peers.push({
                 name: line[0],
                 protocolState: line[3],
                 bgpState: line[5]
             });
         });
+
+        this._logger.debug(`parsed bird output: `, lines, peers);
 
         return peers;
     }
