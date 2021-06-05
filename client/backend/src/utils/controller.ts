@@ -59,6 +59,7 @@ export class Controller implements LogProducer {
 
                 if (result.id in this._unresolvedPromises) {
                     this._unresolvedPromises[result.id](result);
+                    delete this._unresolvedPromises[result.id];
                 } else {
                     this._logger.warn(`unknow task id ${result.id} from node ${nodeId}: `, result);
                 }
