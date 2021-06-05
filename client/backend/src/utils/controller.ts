@@ -9,6 +9,12 @@ interface ExecutionResult {
     output: string
 }
 
+export interface BgpPeer {
+    name: string;
+    protocolState: string;
+    bgpState: string;
+}
+
 export class Controller implements LogProducer {
     private _logger: Logger;
     private _sessionManager: SessionManager;
@@ -94,6 +100,34 @@ export class Controller implements LogProducer {
         let result = await this._run(node, 'net_status');
 
         return result.output.includes('up');
+    }
+
+    async listBgpPeers(node: string): Promise<BgpPeer[]> {
+        // potential crash when running on non-router node?
+
+        this._logger.debug(`getting bgp peers on ${node}`);
+
+        let result = await this._run(node, 'bird_list_peer');
+
+        let lines = result.output.split('\n').map(s => s.split(/\s+/));
+
+        var peers: BgpPeer[] = [];
+
+        lines.forEach(line => {
+            peers.push({
+                name: line[0],
+                protocolState: line[3],
+                bgpState: line[5]
+            });
+        });
+
+        return peers;
+    }
+
+    async setBgpPeerState(node: string, peer: string, state: boolean) {
+        this._logger.debug(`setting peer session with ${peer} on ${node} to ${state ? 'enabled' : 'disabled'}...`);
+
+        await this._run(node, `bird_peer_${state ? 'up' : 'down'} ${peer}`);
     }
 
     getLoggers(): Logger[] {

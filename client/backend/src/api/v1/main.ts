@@ -129,6 +129,8 @@ router.get('/container/:id/net', async function(req, res, next) {
         ok: true,
         result: await controller.isNetworkConnected(node.Id)
     });
+
+    next();
 });
 
 router.post('/container/:id/net', express.json(), async function(req, res, next) {
@@ -153,6 +155,8 @@ router.post('/container/:id/net', express.json(), async function(req, res, next)
     res.json({
         ok: true
     });
+
+    next();
 });
 
 router.ws('/console/:id', async function(ws, req, next) {
@@ -209,7 +213,59 @@ router.ws('/sniff', async function(ws, req, next) {
     currentSnifferSocket = ws;
     ws.on('close', () => {
         currentSnifferSocket = undefined;
-    })
+    });
+});
+
+router.get('/container/:id/bgp', async function (req, res, next) {
+    let id = req.params.id;
+
+    var candidates = (await docker.listContainers())
+        .filter(c => c.Id.startsWith(id));
+
+    if (candidates.length != 1) {
+        res.json({
+            ok: false,
+            result: `no match or multiple match for container ID ${id}.`
+        });
+        next();
+        return;
+    }
+
+    let node = candidates[0];
+
+    res.json({
+        ok: true,
+        result: await controller.listBgpPeers(node.Id)
+    });
+
+    next();
+});
+
+router.post('/container/:id/bgp/:peer', express.json(), async function (req, res, next) {
+    let id = req.params.id;
+    let peer = req.params.peer;
+
+    var candidates = (await docker.listContainers())
+        .filter(c => c.Id.startsWith(id));
+
+    if (candidates.length != 1) {
+        res.json({
+            ok: false,
+            result: `no match or multiple match for container ID ${id}.`
+        });
+        next();
+        return;
+    }
+
+    let node = candidates[0];
+
+    await controller.setBgpPeerState(node.Id, peer, req.body.status);
+
+    res.json({
+        ok: true
+    });
+
+    next();
 });
 
 export = router;
