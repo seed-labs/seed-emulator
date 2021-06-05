@@ -127,7 +127,7 @@ router.get('/container/:id/net', async function(req, res, next) {
 
     res.json({
         ok: true,
-        result: controller.isNetworkConnected(node.Id)
+        result: await controller.isNetworkConnected(node.Id)
     });
 });
 

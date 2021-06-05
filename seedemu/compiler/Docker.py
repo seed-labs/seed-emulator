@@ -29,7 +29,7 @@ tail -f /dev/null
 DockerCompilerFileTemplates['seedemu_sniffer'] = """\
 #!/bin/bash
 last_pid=0
-while read -r expr; do {
+while read -sr expr; do {
     [ "$last_pid" != 0 ] && kill $last_pid 2> /dev/null
     [ -z "$expr" ] && continue
     tcpdump -e -i any -nn -p -q "$expr" &
@@ -41,17 +41,26 @@ while read -r expr; do {
 DockerCompilerFileTemplates['seedemu_worker'] = """\
 #!/bin/bash
 
-net_down() {
-    ip -j li | jq -cr '.[] .ifname' | while read -r ifname; do ip link set "$ifname" down; done
+net() {
+    [ "$1" = "status" ] && {
+        ip -j link | jq -cr '.[] .operstate' | grep -q UP && echo "up" || echo "down"
+        return
+    }
+
+    ip -j li | jq -cr '.[] .ifname' | while read -r ifname; do ip link set "$ifname" "$1"; done
 }
 
-net_up() {
-    ip -j li | jq -cr '.[] .ifname' | while read -r ifname; do ip link set "$ifname" up; done
-}
+while read -sr line; do {
+    id="`cut -d ';' -f1 <<< "$line"`"
+    cmd="`cut -d ';' -f2 <<< "$line"`"
 
-while read -r line; do {
-    [ "$line" = "net_down" ] && net_down
-    [ "$line" = "net_up" ] && net_up
+    [ "$cmd" = "net_down" ] && output="`net down 2>&1`"
+    [ "$cmd" = "net_up" ] && output="`net up 2>&1`"
+    [ "$cmd" = "net_status" ] && output="`net status 2>&1`"
+
+    printf '_BEGIN_RESULT_'
+    jq -Mcr --arg id "$id" --arg return_value "$?" --arg output "$output" -n '{id: $id | tonumber, return_value: $return_value | tonumber, output: $output }'
+    printf '_END_RESULT_'
 }; done
 """
 
