@@ -20,7 +20,8 @@ export interface MapUiConfiguration {
     },
     filterControls: {
         filterModeTabElementId: string,
-        nodeSearchModeTabElementId: string
+        nodeSearchModeTabElementId: string,
+        suggestionsElementId: string
     },
     windowManager: {
         desktopElementId: string,
@@ -45,6 +46,7 @@ export class MapUi {
 
     private _filterModeTab: HTMLElement;
     private _searchModeTab: HTMLElement;
+    private _suggestions: HTMLElement;
 
     private _datasource: DataSource;
 
@@ -87,6 +89,7 @@ export class MapUi {
 
         this._filterModeTab = document.getElementById(config.filterControls.filterModeTabElementId);
         this._searchModeTab = document.getElementById(config.filterControls.nodeSearchModeTabElementId);
+        this._suggestions = document.getElementById(config.filterControls.suggestionsElementId);
 
         this._freezed = false;
 
@@ -116,6 +119,12 @@ export class MapUi {
             this._logBody.innerText = '';
         };
 
+        this._filterInput.onfocus = () => {
+            if (this._filterMode == 'node-search') {
+                this._updateFilterSuggestions(this._filterInput.value);
+            }
+        };
+        
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
             if (shown) {
                 this._logPanel.classList.add('bump');
@@ -301,6 +310,7 @@ export class MapUi {
 
         if (mode == 'filter') {
             this._updateSearchHighlights(new Set<string>()); // empty search highligths
+            this._suggestions.innerText = '';
             this._filterInput.value = await this._datasource.getSniffFilter();
             this._filterInput.placeholder = 'Type a BPF expression to animate packet flows on the map...';
             this._filterModeTab.classList.remove('inactive');
@@ -316,12 +326,123 @@ export class MapUi {
         }
     }
 
+    private _findNodes(term: string): Vertex[] {
+        var hits: Vertex[] = [];
+
+        this._nodes.forEach(node => {
+            var targetString = '';
+
+            if (node.type == 'node') {
+                let nodeObj = (node.object as EmulatorNode);
+                let nodeInfo = nodeObj.meta.emulatorInfo;
+
+                targetString = `${nodeObj.Id} ${nodeInfo.role} as${nodeInfo.asn} ${nodeInfo.name} `;
+
+                nodeInfo.nets.forEach(net => {
+                    targetString += `${net.name} ${net.address} `;
+                });
+            }
+
+            if (node.type == 'network') {
+                let net = (node.object as EmulatorNetwork);
+                let netInfo = net.meta.emulatorInfo;
+
+                targetString = `${net.Id} as${netInfo.scope} ${netInfo.name} ${netInfo.prefix}`;
+            }
+
+            if (term != '' && targetString.toLowerCase().includes(term.toLowerCase())) {
+                hits.push(node);
+            }
+        });
+
+        return hits;
+    }
+
+    private _updateFilterSuggestions(term: string) {
+        this._suggestions.innerText = '';
+
+        let vertices = this._findNodes(term);
+
+        if (term != '') {
+            let defaultItem = document.createElement('div');
+            defaultItem.className = 'suggestion';
+
+            let defaultName = document.createElement('span');
+            defaultName.className = 'name';
+            defaultName.innerText = term;
+
+            let defailtDetails = document.createElement('span');
+            defailtDetails.className = 'details';
+            defailtDetails.innerText = 'Press enter to show all matches on the map...';
+
+            defaultItem.onclick = () => {
+                this._filterUpdateHandler(undefined, true);
+            };
+
+            defaultItem.appendChild(defaultName);
+            defaultItem.appendChild(defailtDetails);
+
+            this._suggestions.appendChild(defaultItem);
+        }
+
+        vertices.forEach(vertex => {
+            var itemName = vertex.label;
+            var itemDetails = '';
+
+            if (vertex.type == 'node') {
+                let node = vertex.object as EmulatorNode;
+
+                itemDetails = node.meta.emulatorInfo.nets.map(net => net.address).join(', ');
+                itemName = `${node.meta.emulatorInfo.role}: ${itemName}`;
+            }
+
+            if (vertex.type == 'network') {
+                let net = vertex.object as EmulatorNetwork;
+
+                itemDetails = net.meta.emulatorInfo.prefix;
+                itemName = `${net.meta.emulatorInfo.type == 'global' ? 'Exchange' : 'Network'}: ${itemName}`;
+            }
+
+            let item = document.createElement('div');
+            item.className = 'suggestion';
+
+            let name = document.createElement('span');
+            name.className = 'name';
+            name.innerText = itemName;
+
+            let details = document.createElement('span');
+            details.className = 'details';
+            details.innerText = itemDetails;
+
+            item.appendChild(name);
+            item.appendChild(details);
+
+            item.onclick = () => {
+                let set = new Set<string>();
+                set.add(vertex.id);
+                this._updateSearchHighlights(set);
+                this._graph.focus(vertex.id, { animation: true });
+                this._graph.selectNodes([vertex.id]);
+                this._updateInfoPlateWith(vertex.id);
+                this._suggestions.innerText = '';
+            };
+
+            this._suggestions.appendChild(item);
+        });
+    }
+
     private async _filterUpdateHandler(event: KeyboardEvent, forced: boolean = false) {
+        let term = this._filterInput.value;
+
+        if (this._filterMode == 'node-search') {
+            this._updateFilterSuggestions(term);
+        }
+
         if ((!event || event.key != 'Enter') && !forced) {
             return;
         }
 
-        let term = this._filterInput.value;
+        this._suggestions.innerText = '';
 
         if (this._filterMode == 'filter') {
             this._blocked = true;
@@ -334,31 +455,7 @@ export class MapUi {
             var hits = new Set<string>();
             this._lastSearchTerm = term;
 
-            this._nodes.forEach(node => {
-                var targetString = '';
-
-                if (node.type == 'node') {
-                    let nodeObj = (node.object as EmulatorNode);
-                    let nodeInfo = nodeObj.meta.emulatorInfo;
-
-                    targetString = `${nodeObj.Id} ${nodeInfo.role} as${nodeInfo.asn} ${nodeInfo.name} `;
-
-                    nodeInfo.nets.forEach(net => {
-                        targetString += `${net.name} ${net.address} `;
-                    });
-                }
-
-                if (node.type == 'network') {
-                    let net = (node.object as EmulatorNetwork);
-                    let netInfo = net.meta.emulatorInfo;
-
-                    targetString = `${net.Id} as${netInfo.scope} ${netInfo.name} ${netInfo.prefix}`;
-                }
-
-                if (term != '' && targetString.toLowerCase().includes(term.toLowerCase())) {
-                    hits.add(node.id);
-                }
-            });
+            this._findNodes(term).forEach(node => hits.add(node.id));
 
             this._updateSearchHighlights(hits);
         }
@@ -565,7 +662,7 @@ export class MapUi {
             this._filterInput.value = await this._datasource.getSniffFilter();
         }
 
-        this._filterInput.addEventListener('keydown', this._boundfilterUpdateHandler);
+        this._filterInput.addEventListener('keyup', this._boundfilterUpdateHandler);
 
         this._logPrinter = window.setInterval(() => {
             var scroll = false;
@@ -587,7 +684,7 @@ export class MapUi {
 
     stop() {
         this._datasource.disconnect();
-        this._filterInput.removeEventListener('keydown', this._boundfilterUpdateHandler);
+        this._filterInput.removeEventListener('keyup', this._boundfilterUpdateHandler);
         window.clearInterval(this._logPrinter);
         window.clearInterval(this._flasher);
     }
@@ -615,7 +712,14 @@ export class MapUi {
         });
 
         this._graph.on('click', (ev) => {
-            if (ev.nodes.length <= 0) return;
+            if (this._filterMode == 'node-search') {
+                this._suggestions.innerText = '';
+            }
+            
+            if (ev.nodes.length <= 0) {
+                return;
+            }
+
             this._updateInfoPlateWith(ev.nodes[0]);            
         });
     }

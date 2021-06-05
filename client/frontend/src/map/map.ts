@@ -24,7 +24,8 @@ const mapUi = new MapUi({
     },
     filterControls: {
         filterModeTabElementId: 'tab-filter-mode',
-        nodeSearchModeTabElementId: 'tab-node-search-mode'
+        nodeSearchModeTabElementId: 'tab-node-search-mode',
+        suggestionsElementId: 'filter-suggestions'
     },
     windowManager: {
         desktopElementId: 'console-area',

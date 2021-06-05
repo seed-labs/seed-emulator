@@ -44,6 +44,7 @@ html, body, .map-area, .map {
     top: 10px;
     left: 10px;
     width: calc(100vw - 20px);
+    z-index: 10;
 }
 
 .filter {
@@ -54,6 +55,43 @@ html, body, .map-area, .map {
     padding-left: 1rem;
     padding-right: 1rem;
     font-family: 'Courier New', Courier, monospace;
+}
+
+.filter-panel .suggestions {
+    font-family: monospace;
+    font-size: 1.5rem;
+    padding: 5px;
+    border-left: 2px solid #ccc;
+    border-right: 2px solid #ccc;
+    border-bottom: 2px solid #ccc;
+    overflow-y: scroll;
+    max-height: 250px;
+    background-color: #fff;
+}
+
+.filter-panel .suggestions:empty {
+    display: none;
+}
+
+.filter-panel .suggestions .suggestion {
+    line-height: 2rem;
+    padding-left: .5em;
+    padding-right: .5em;
+    cursor: pointer;
+}
+
+.filter-panel .suggestions .suggestion .name {
+    font-weight: bold;
+    padding-right: .5em;
+}
+
+.filter-panel .suggestions .suggestion .details {
+    color: #666;
+    font-size: .8em;
+}
+
+.filter-panel .suggestions .suggestion:hover {
+    background-color: #ccc;
 }
 
 .log-panel {
