@@ -87,6 +87,10 @@ html, body, .map-area, .map {
     margin-bottom: .25em;
 }
 
+.info-plate.loading .title {
+    border-left: 5px solid #999;
+}
+
 .info-plate .section .title {
     font-size: 1rem;
     border-left: none;
@@ -123,8 +127,8 @@ html, body, .map-area, .map {
 .info-plate.loading a,
 .info-plate.loading a:visited,
 .info-plate.loading a:hover {
-    background-color: #ddd;
-    color: #999;
+    background-color: #ddd !important; 
+    color: #999 !important;
 }
 
 .log {
