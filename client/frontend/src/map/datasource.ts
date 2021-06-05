@@ -31,15 +31,12 @@ export class DataSource {
 
     private _packetEventHandler: (nodeId: string) => void;
 
-    private _lastMessage: string;
-
     constructor(apiBase: string, wsProtocol: string = 'ws') {
         this._apiBase = apiBase;
         this._wsProtocol = wsProtocol;
         this._nodes = [];
         this._nets = [];
         this._connected = false;
-        this._lastMessage = '';
     }
 
     private async _load(method: string, url: string, body: string = undefined): Promise<any> {
@@ -90,12 +87,6 @@ export class DataSource {
         this._socket = new WebSocket(`${this._wsProtocol}://${location.host}${this._apiBase}/sniff`);
         this._socket.addEventListener('message', (ev) => {
             let msg = ev.data.toString();
-            
-            if (msg === this._lastMessage) {
-                return; // fixme
-            }
-
-            this._lastMessage = msg;
 
             let object = JSON.parse(msg);
             if (this._packetEventHandler) {
