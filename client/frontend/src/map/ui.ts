@@ -364,35 +364,47 @@ export class MapUi {
     private async _updateInfoPlateWith(nodeId: string) {
         let vertex = this._nodes.get(nodeId);
 
-        this._infoPlateElement.innerText = '';
+        let infoPlate = document.createElement('div');
+        this._infoPlateElement.classList.add('loading');
 
         let title = document.createElement('div');
         title.className = 'title';
-        this._infoPlateElement.appendChild(title);
+        infoPlate.appendChild(title);
 
         if (vertex.type == 'network') {
             let net = vertex.object as EmulatorNetwork;
             title.innerText = `${net.meta.emulatorInfo.type == 'global' ? 'Exchange' : 'Network'}: ${vertex.label}`;
 
-            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('ID', net.Id.substr(0, 12)));
-            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Name', net.meta.emulatorInfo.name));
-            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Scope', net.meta.emulatorInfo.scope));
-            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Type', net.meta.emulatorInfo.type));
-            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Prefix', net.meta.emulatorInfo.prefix));
+            infoPlate.appendChild(this._createInfoPlateValuePair('ID', net.Id.substr(0, 12)));
+            infoPlate.appendChild(this._createInfoPlateValuePair('Name', net.meta.emulatorInfo.name));
+            infoPlate.appendChild(this._createInfoPlateValuePair('Scope', net.meta.emulatorInfo.scope));
+            infoPlate.appendChild(this._createInfoPlateValuePair('Type', net.meta.emulatorInfo.type));
+            infoPlate.appendChild(this._createInfoPlateValuePair('Prefix', net.meta.emulatorInfo.prefix));
         }
 
         if (vertex.type == 'node') {
             let node = vertex.object as EmulatorNode;
             title.innerText = `${node.meta.emulatorInfo.role == 'Router' ? 'Router' : 'Host'}: ${vertex.label}`;
 
-            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('ID', node.Id.substr(0, 12)));
-            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('ASN', node.meta.emulatorInfo.asn.toString()));
-            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Name', node.meta.emulatorInfo.name));
-            this._infoPlateElement.appendChild(this._createInfoPlateValuePair('Role', node.meta.emulatorInfo.role));
+            infoPlate.appendChild(this._createInfoPlateValuePair('ID', node.Id.substr(0, 12)));
+            infoPlate.appendChild(this._createInfoPlateValuePair('ASN', node.meta.emulatorInfo.asn.toString()));
+            infoPlate.appendChild(this._createInfoPlateValuePair('Name', node.meta.emulatorInfo.name));
+            infoPlate.appendChild(this._createInfoPlateValuePair('Role', node.meta.emulatorInfo.role));
+
+            let ipAddresses = document.createElement('div');
+            ipAddresses.classList.add('section');
+
+            let ipTitle = document.createElement('div');
+            ipTitle.className = ' title';
+            ipTitle.innerText = 'IP addresses';
+
+            ipAddresses.appendChild(ipTitle);
 
             node.meta.emulatorInfo.nets.forEach(net => {
-                this._infoPlateElement.appendChild(this._createInfoPlateValuePair(`IP(${net.name})`, net.address));
+                ipAddresses.appendChild(this._createInfoPlateValuePair(net.name, net.address));
             });
+
+            infoPlate.appendChild(ipAddresses);
 
             if (node.meta.emulatorInfo.role == 'Router' || node.meta.emulatorInfo.role == 'Route Server') {
                 let bgpDetails = document.createElement('div');
@@ -405,6 +417,14 @@ export class MapUi {
                 bgpTitle.innerText = 'BGP sessions';
 
                 bgpDetails.appendChild(bgpTitle);
+
+                if (peers.length == 0) {
+                    let noPeers = document.createElement('div');
+                    noPeers.innerText = 'No BGP peers.';
+                    noPeers.classList.add('caption');
+
+                    bgpDetails.appendChild(noPeers);
+                }
 
                 peers.forEach(peer => {
                     let container = document.createElement('div');
@@ -423,6 +443,7 @@ export class MapUi {
                     peerAction.innerText = peer.protocolState != 'down' ? 'Disable' : 'Enable';
                     peerAction.onclick = async () => {
                         await this._datasource.setBgpPeers(node.Id, peer.name, peer.protocolState == 'down');
+                        this._infoPlateElement.classList.add('loading');
                         window.setTimeout(() => {
                             this._updateInfoPlateWith(node.Id);
                         }, 100);
@@ -435,7 +456,7 @@ export class MapUi {
                     bgpDetails.appendChild(container);
                 });
 
-                this._infoPlateElement.appendChild(bgpDetails);
+                infoPlate.appendChild(bgpDetails);
             }
 
             let actions = document.createElement('div');
@@ -467,6 +488,7 @@ export class MapUi {
                     }
                 }
                 await this._datasource.setNetworkStatus(node.Id, !netState);
+                this._infoPlateElement.classList.add('loading');
                 window.setTimeout(() => {
                     this._updateInfoPlateWith(node.Id);
                 }, 100);
@@ -486,8 +508,12 @@ export class MapUi {
             actions.append(netToggle);
             actions.append(reloadLink);
 
-            this._infoPlateElement.appendChild(actions);
+            infoPlate.appendChild(actions);
         }
+
+        this._infoPlateElement.innerText = '';
+        this._infoPlateElement.appendChild(infoPlate);
+        this._infoPlateElement.classList.remove('loading');
     }
 
     private _mapMacAddresses() {

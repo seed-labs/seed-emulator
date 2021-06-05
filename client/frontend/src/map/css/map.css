@@ -75,8 +75,18 @@ html, body, .container, .map {
 }
 
 .info-plate .title {
-    font-size: 1.2em;
+    font-size: 1.15rem;
     font-weight: bold;
+    padding-left: .35em;
+    border-left: 5px solid #333;
+    margin-bottom: .25em;
+}
+
+.info-plate .section .title {
+    font-size: 1rem;
+    border-left: none;
+    margin-bottom: 0;
+    padding-left: 0;
 }
 
 .info-plate .label {
@@ -98,6 +108,15 @@ html, body, .container, .map {
 
 .info-plate .section {
     margin-top: .8em;
+}
+
+.info-plate .caption {
+    color: #666;
+}
+
+.info-plate.loading, .info-plate.loading a, .info-plate.loading a:visited {
+    background-color: #ddd;
+    color: #999;
 }
 
 .log {
