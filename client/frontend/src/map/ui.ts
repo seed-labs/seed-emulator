@@ -361,7 +361,7 @@ export class MapUi {
         return div;
     }
 
-    private _updateInfoPlateWith(nodeId: string) {
+    private async _updateInfoPlateWith(nodeId: string) {
         let vertex = this._nodes.get(nodeId);
 
         this._infoPlateElement.innerText = '';
@@ -394,13 +394,99 @@ export class MapUi {
                 this._infoPlateElement.appendChild(this._createInfoPlateValuePair(`IP(${net.name})`, net.address));
             });
 
+            if (node.meta.emulatorInfo.role == 'Router' || node.meta.emulatorInfo.role == 'Route Server') {
+                let bgpDetails = document.createElement('div');
+                bgpDetails.classList.add('section');
+
+                let peers = await this._datasource.getBgpPeers(node.Id);
+
+                let bgpTitle = document.createElement('div');
+                bgpTitle.className = 'title';
+                bgpTitle.innerText = 'BGP sessions';
+
+                bgpDetails.appendChild(bgpTitle);
+
+                peers.forEach(peer => {
+                    let container = document.createElement('div');
+
+                    let peerName = document.createElement('span');
+                    peerName.classList.add('label');
+                    peerName.innerText = peer.name;
+
+                    let peerStatus = document.createElement('span');
+                    peerStatus.innerText = peer.protocolState != 'down' ? peer.bgpState : 'Disabled';
+
+                    let peerAction = document.createElement('a');
+            
+                    peerAction.href = '#';
+                    peerAction.classList.add('inline-action-link');
+                    peerAction.innerText = peer.protocolState != 'down' ? 'Disable' : 'Enable';
+                    peerAction.onclick = async () => {
+                        await this._datasource.setBgpPeers(node.Id, peer.name, peer.protocolState == 'down');
+                        window.setTimeout(() => {
+                            this._updateInfoPlateWith(node.Id);
+                        }, 100);
+                    };
+
+                    container.appendChild(peerName);
+                    container.appendChild(peerStatus);
+                    container.appendChild(peerAction);
+
+                    bgpDetails.appendChild(container);
+                });
+
+                this._infoPlateElement.appendChild(bgpDetails);
+            }
+
+            let actions = document.createElement('div');
+            actions.classList.add('section');
+
+            let actionTitle = document.createElement('div');
+            actionTitle.className = 'title';
+            actionTitle.innerText = 'Actions';
+
+            actions.appendChild(actionTitle);
+
             let consoleLink = document.createElement('a');
             
             consoleLink.target = '_blank';
             consoleLink.href = `/console.html#${node.Id.substr(0, 12)}`;
             consoleLink.innerText = 'Launch console';
+            consoleLink.classList.add('action-link');
 
-            this._infoPlateElement.appendChild(consoleLink);
+            let netToggle = document.createElement('a');
+            let netState = await this._datasource.getNetworkStatus(node.Id);
+            
+            netToggle.href = '#';
+            netToggle.innerText = netState ? 'Disconnect' : 'Re-connect';
+            netToggle.onclick = async () => {
+                if (netState && node.meta.emulatorInfo.role == 'Host') {
+                    let ok = window.confirm('You are about to disconnect a host node. Note that disconnecting nodes flush their routing table - for host nodes, this includes the default route. You will need to manually re-add the default route if you want to re-connect the host.\n\nProceed anyway?');
+                    if (!ok) {
+                        return;
+                    }
+                }
+                await this._datasource.setNetworkStatus(node.Id, !netState);
+                window.setTimeout(() => {
+                    this._updateInfoPlateWith(node.Id);
+                }, 100);
+            };
+            netToggle.classList.add('action-link');
+
+            let reloadLink = document.createElement('a');
+            
+            reloadLink.href = '#';
+            reloadLink.innerText = 'Refresh';
+            reloadLink.classList.add('action-link');
+            reloadLink.onclick = () => {
+                this._updateInfoPlateWith(node.Id);
+            };
+
+            actions.append(consoleLink);
+            actions.append(netToggle);
+            actions.append(reloadLink);
+
+            this._infoPlateElement.appendChild(actions);
         }
     }
 

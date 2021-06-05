@@ -1,5 +1,5 @@
 import { EdgeOptions, NodeOptions } from 'vis-network';
-import { EmulatorNetwork, EmulatorNode } from '../common/types';
+import { BgpPeer, EmulatorNetwork, EmulatorNode } from '../common/types';
 
 export type DataEvent = 'packet';
 
@@ -108,6 +108,22 @@ export class DataSource {
 
     async setSniffFilter(filter: string): Promise<string> {
         return (await this._load('POST', `${this._apiBase}/sniff`, JSON.stringify({ filter }))).result.currentFilter;
+    }
+
+    async getBgpPeers(node: string): Promise<BgpPeer[]> {
+        return (await this._load('GET', `${this._apiBase}/container/${node}/bgp`)).result;
+    }
+
+    async setBgpPeers(node: string, peer: string, up: boolean) {
+        await this._load('POST', `${this._apiBase}/container/${node}/bgp/${peer}`, JSON.stringify({ status: up }));
+    }
+
+    async getNetworkStatus(node: string): Promise<boolean> {
+        return (await this._load('GET', `${this._apiBase}/container/${node}/net`)).result;
+    }
+
+    async setNetworkStatus(node: string, up: boolean) {
+        await this._load('POST', `${this._apiBase}/container/${node}/net`, JSON.stringify({ status: up }));
     }
 
     on(eventName: DataEvent, callback?: (data: any) => void) {

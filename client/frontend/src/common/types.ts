@@ -33,3 +33,9 @@ export interface EmulatorNetwork {
         }
     }
 };
+
+export interface BgpPeer {
+    name: string;
+    protocolState: string;
+    bgpState: string;
+};

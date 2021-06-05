@@ -83,9 +83,21 @@ html, body, .container, .map {
     font-weight: bold;
 }
 
+.info-plate .inline-action-link {
+    padding-left: .5em;
+}
+
+.info-plate .action-link {
+    display: block;
+}
+
 .info-plate .label:after {
     content: ':';
     padding-right: .5em;
+}
+
+.info-plate .section {
+    margin-top: .8em;
 }
 
 .log {
