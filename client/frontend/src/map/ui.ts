@@ -119,7 +119,7 @@ export class MapUi {
             this._logBody.innerText = '';
         };
 
-        this._filterInput.onfocus = () => {
+        this._filterInput.onclick = () => {
             if (this._filterMode == 'node-search') {
                 this._updateFilterSuggestions(this._filterInput.value);
             }
