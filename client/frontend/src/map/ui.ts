@@ -186,8 +186,7 @@ export class MapUi {
             a.href = '#';
             a.innerText = node.label;
             a.onclick = () => {
-                this._updateInfoPlateWith(node.id);
-                this._graph.selectNodes([node.id]);
+                this._focusNode(node.id);
             };
 
             td1.appendChild(a);
@@ -299,6 +298,12 @@ export class MapUi {
         this._filterInput.disabled = false;
         this._filterInput.classList.remove('disabled');
         this._filterWrap.classList.remove('disabled');
+    }
+
+    private async _focusNode(id: string) {
+        this._graph.focus(id, { animation: true });
+        this._graph.selectNodes([id]);
+        this._updateInfoPlateWith(id);
     }
 
     private async _setFilterMode(mode: FilterMode) {
@@ -418,12 +423,10 @@ export class MapUi {
             item.appendChild(details);
 
             item.onclick = () => {
+                this._focusNode(vertex.id);
                 let set = new Set<string>();
                 set.add(vertex.id);
                 this._updateSearchHighlights(set);
-                this._graph.focus(vertex.id, { animation: true });
-                this._graph.selectNodes([vertex.id]);
-                this._updateInfoPlateWith(vertex.id);
                 this._suggestions.innerText = '';
             };
 
