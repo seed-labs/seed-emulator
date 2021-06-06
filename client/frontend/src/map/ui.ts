@@ -1,5 +1,7 @@
 import { DataSet } from 'vis-data';
 import { Network } from 'vis-network';
+import { bpfCompletionTree } from '../common/bpf';
+import { Completion } from '../common/completion';
 import { EmulatorNetwork, EmulatorNode } from '../common/types';
 import { WindowManager } from '../common/window-manager';
 import { DataSource, Edge, Vertex } from './datasource';
@@ -73,6 +75,10 @@ export class MapUi {
 
     private _windowManager: WindowManager;
 
+    private _bpfCompletion: Completion;
+
+    private _curretSelection: Vertex;
+
     constructor(config: MapUiConfiguration) {
         this._datasource = config.datasource;
         this._mapElement = document.getElementById(config.mapElementId);
@@ -107,6 +113,8 @@ export class MapUi {
 
         this._windowManager = new WindowManager(config.windowManager.desktopElementId, config.windowManager.taskbarElementId);
 
+        this._bpfCompletion = new Completion(bpfCompletionTree);
+
         this._searchModeTab.onclick = () => {
             this._setFilterMode('node-search');
         };
@@ -120,9 +128,7 @@ export class MapUi {
         };
 
         this._filterInput.onclick = () => {
-            if (this._filterMode == 'node-search') {
-                this._updateFilterSuggestions(this._filterInput.value);
-            }
+            this._updateFilterSuggestions(this._filterInput.value);
         };
         
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
@@ -313,9 +319,10 @@ export class MapUi {
 
         this._filterMode = mode;
 
+        this._suggestions.innerText = '';
+
         if (mode == 'filter') {
             this._updateSearchHighlights(new Set<string>()); // empty search highligths
-            this._suggestions.innerText = '';
             this._filterInput.value = await this._datasource.getSniffFilter();
             this._filterInput.placeholder = 'Type a BPF expression to animate packet flows on the map...';
             this._filterModeTab.classList.remove('inactive');
@@ -366,80 +373,130 @@ export class MapUi {
     private _updateFilterSuggestions(term: string) {
         this._suggestions.innerText = '';
 
-        let vertices = this._findNodes(term);
+        if (this._filterMode == 'filter') {
+            this._bpfCompletion.getCompletion(term).forEach(comp => {
+                
+                let item = document.createElement('div');
+                item.className = 'suggestion';
+    
+                var title = comp.fulltext;
+                var fillText = comp.partialword;
 
-        if (term != '') {
-            let defaultItem = document.createElement('div');
-            defaultItem.className = 'suggestion';
+                if (this._curretSelection) {
+                    if (this._curretSelection.type == 'network') {
+                        let prefix = (this._curretSelection.object as EmulatorNetwork).meta.emulatorInfo.prefix;
 
-            let defaultName = document.createElement('span');
-            defaultName.className = 'name';
-            defaultName.innerText = term;
+                        title = title.replace('<net>', prefix);
+                        fillText = fillText.replace('<net>', prefix);
+                    }
 
-            let defailtDetails = document.createElement('span');
-            defailtDetails.className = 'details';
-            defailtDetails.innerText = 'Press enter to show all matches on the map...';
+                    if (this._curretSelection.type == 'node') {
+                        let addresses = (this._curretSelection.object as EmulatorNode).meta.emulatorInfo.nets.map(net => net.address.split('/')[0]);
+                        let addressesExpr = addresses.join(' or ');
 
-            defaultItem.onclick = () => {
-                this._filterUpdateHandler(undefined, true);
-            };
+                        if (addresses.length > 1) {
+                            addressesExpr = `(${addressesExpr})`;
+                        }
 
-            defaultItem.appendChild(defaultName);
-            defaultItem.appendChild(defailtDetails);
+                        title = title.replace('<host>', addressesExpr);
+                        fillText = fillText.replace('<host>', addressesExpr);
+                    }
+                }
 
-            this._suggestions.appendChild(defaultItem);
+                let name = document.createElement('span');
+                name.className = 'name';
+                name.innerText = title;
+    
+                let details = document.createElement('span');
+                details.className = 'details';
+                details.innerText = comp.description;
+    
+                item.appendChild(name);
+                item.appendChild(details);
+                item.onclick = () => {
+                    this._filterInput.value += `${fillText} `;
+                    this._updateFilterSuggestions(this._filterInput.value);
+                };
+
+                this._suggestions.appendChild(item);
+            });
         }
 
-        vertices.forEach(vertex => {
-            var itemName = vertex.label;
-            var itemDetails = '';
+        if (this._filterMode == 'node-search') {
+            let vertices = this._findNodes(term);
 
-            if (vertex.type == 'node') {
-                let node = vertex.object as EmulatorNode;
-
-                itemDetails = node.meta.emulatorInfo.nets.map(net => net.address).join(', ');
-                itemName = `${node.meta.emulatorInfo.role}: ${itemName}`;
+            if (term != '') {
+                let defaultItem = document.createElement('div');
+                defaultItem.className = 'suggestion';
+    
+                let defaultName = document.createElement('span');
+                defaultName.className = 'name';
+                defaultName.innerText = term;
+    
+                let defailtDetails = document.createElement('span');
+                defailtDetails.className = 'details';
+                defailtDetails.innerText = 'Press enter to show all matches on the map...';
+    
+                defaultItem.onclick = () => {
+                    this._filterUpdateHandler(undefined, true);
+                };
+    
+                defaultItem.appendChild(defaultName);
+                defaultItem.appendChild(defailtDetails);
+    
+                this._suggestions.appendChild(defaultItem);
             }
+    
+            vertices.forEach(vertex => {
+                var itemName = vertex.label;
+                var itemDetails = '';
+    
+                if (vertex.type == 'node') {
+                    let node = vertex.object as EmulatorNode;
+    
+                    itemDetails = node.meta.emulatorInfo.nets.map(net => net.address).join(', ');
+                    itemName = `${node.meta.emulatorInfo.role}: ${itemName}`;
+                }
+    
+                if (vertex.type == 'network') {
+                    let net = vertex.object as EmulatorNetwork;
+    
+                    itemDetails = net.meta.emulatorInfo.prefix;
+                    itemName = `${net.meta.emulatorInfo.type == 'global' ? 'Exchange' : 'Network'}: ${itemName}`;
+                }
+    
+                let item = document.createElement('div');
+                item.className = 'suggestion';
+    
+                let name = document.createElement('span');
+                name.className = 'name';
+                name.innerText = itemName;
+    
+                let details = document.createElement('span');
+                details.className = 'details';
+                details.innerText = itemDetails;
+    
+                item.appendChild(name);
+                item.appendChild(details);
+    
+                item.onclick = () => {
+                    this._focusNode(vertex.id);
+                    let set = new Set<string>();
+                    set.add(vertex.id);
+                    this._updateSearchHighlights(set);
+                    this._suggestions.innerText = '';
+                };
+    
+                this._suggestions.appendChild(item);
+            });
+        }
 
-            if (vertex.type == 'network') {
-                let net = vertex.object as EmulatorNetwork;
-
-                itemDetails = net.meta.emulatorInfo.prefix;
-                itemName = `${net.meta.emulatorInfo.type == 'global' ? 'Exchange' : 'Network'}: ${itemName}`;
-            }
-
-            let item = document.createElement('div');
-            item.className = 'suggestion';
-
-            let name = document.createElement('span');
-            name.className = 'name';
-            name.innerText = itemName;
-
-            let details = document.createElement('span');
-            details.className = 'details';
-            details.innerText = itemDetails;
-
-            item.appendChild(name);
-            item.appendChild(details);
-
-            item.onclick = () => {
-                this._focusNode(vertex.id);
-                let set = new Set<string>();
-                set.add(vertex.id);
-                this._updateSearchHighlights(set);
-                this._suggestions.innerText = '';
-            };
-
-            this._suggestions.appendChild(item);
-        });
     }
 
     private async _filterUpdateHandler(event: KeyboardEvent, forced: boolean = false) {
         let term = this._filterInput.value;
 
-        if (this._filterMode == 'node-search') {
-            this._updateFilterSuggestions(term);
-        }
+        this._updateFilterSuggestions(term);
 
         if ((!event || event.key != 'Enter') && !forced) {
             return;
@@ -483,6 +540,8 @@ export class MapUi {
 
     private async _updateInfoPlateWith(nodeId: string) {
         let vertex = this._nodes.get(nodeId);
+
+        this._curretSelection = vertex;
 
         let infoPlate = document.createElement('div');
         this._infoPlateElement.classList.add('loading');
@@ -715,9 +774,7 @@ export class MapUi {
         });
 
         this._graph.on('click', (ev) => {
-            if (this._filterMode == 'node-search') {
-                this._suggestions.innerText = '';
-            }
+            this._suggestions.innerText = '';
             
             if (ev.nodes.length <= 0) {
                 return;
