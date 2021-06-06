@@ -33,6 +33,8 @@ export interface MapUiConfiguration {
 
 type FilterMode = 'node-search' | 'filter';
 
+type SuggestionSelectionAction = 'up' | 'down' | 'clear';
+
 export class MapUi {
     private _mapElement: HTMLElement;
     private _infoPlateElement: HTMLElement;
@@ -64,9 +66,6 @@ export class MapUi {
     private _logPrinter: number;
     private _flasher: number;
 
-    private _freezed: boolean;
-    private _blocked: boolean;
-
     private _macMapping: { [mac: string]: string };
 
     private _filterMode: FilterMode;
@@ -77,7 +76,11 @@ export class MapUi {
 
     private _bpfCompletion: Completion;
 
-    private _curretSelection: Vertex;
+    private _curretNode: Vertex;
+
+    private _suggestionsSelection: number;
+
+    private _ignoreKeyUp: boolean;
 
     constructor(config: MapUiConfiguration) {
         this._datasource = config.datasource;
@@ -97,7 +100,7 @@ export class MapUi {
         this._searchModeTab = document.getElementById(config.filterControls.nodeSearchModeTabElementId);
         this._suggestions = document.getElementById(config.filterControls.suggestionsElementId);
 
-        this._freezed = false;
+        this._suggestionsSelection = -1;
 
         this._logQueue = [];
 
@@ -114,6 +117,49 @@ export class MapUi {
         this._windowManager = new WindowManager(config.windowManager.desktopElementId, config.windowManager.taskbarElementId);
 
         this._bpfCompletion = new Completion(bpfCompletionTree);
+
+        this._filterInput.onkeydown = (event) => {
+            if (event.key == 'ArrowUp') {
+                this._moveSuggestionSelection('up');
+                this._ignoreKeyUp = true;
+
+                return false;
+            }
+    
+            if (event.key == 'ArrowDown') {
+                this._moveSuggestionSelection('down');
+                this._ignoreKeyUp = true;
+
+                return false;
+            }
+
+            if (event.key == 'Tab' && this._suggestionsSelection == -1) {
+                this._ignoreKeyUp = true;
+
+                if (this._suggestions.children.length > 0) {
+                    (this._suggestions.children[0] as HTMLElement).click();
+                }
+
+                return false;
+            }
+
+            if ((event.key == 'Enter' || event.key == 'Tab') && this._suggestionsSelection != -1) {
+                (this._suggestions.children[this._suggestionsSelection] as HTMLElement).click();
+                this._ignoreKeyUp = true;
+                
+                return false;
+            }
+
+            this._ignoreKeyUp = false;
+        };
+
+        this._filterInput.onkeyup = (event) => {
+            if (this._ignoreKeyUp) {
+                return; // fixme: preventDefault / stopPropagation does not work?
+            }
+
+            this._filterUpdateHandler(event);
+        };
 
         this._searchModeTab.onclick = () => {
             this._setFilterMode('node-search');
@@ -143,8 +189,6 @@ export class MapUi {
             if (!data.source || !data.data) {
                 return;
             }
-
-            this._unfreeze();
 
             var flashed = new Set<string>();
 
@@ -288,24 +332,6 @@ export class MapUi {
         }, 300);
     }
 
-    private _freeze() {
-        if (this._freezed) return;
-
-        this._freezed = true;
-        this._filterInput.disabled = true;
-        this._filterInput.classList.add('disabled');
-        this._filterWrap.classList.add('disabled');
-    }
-
-    private _unfreeze() {
-        if (!this._freezed || this._blocked) return;
-
-        this._freezed = false;
-        this._filterInput.disabled = false;
-        this._filterInput.classList.remove('disabled');
-        this._filterWrap.classList.remove('disabled');
-    }
-
     private async _focusNode(id: string) {
         this._graph.focus(id, { animation: true });
         this._graph.selectNodes([id]);
@@ -320,6 +346,7 @@ export class MapUi {
         this._filterMode = mode;
 
         this._suggestions.innerText = '';
+        this._moveSuggestionSelection('clear');
 
         if (mode == 'filter') {
             this._updateSearchHighlights(new Set<string>()); // empty search highligths
@@ -370,6 +397,55 @@ export class MapUi {
         return hits;
     }
 
+    private _moveSuggestionSelection(selection: SuggestionSelectionAction) {
+        let children = this._suggestions.children;
+
+        if (children.length == 0) {
+            return;
+        }
+
+        if (selection == 'clear') {
+            if (children.length == 0) {
+                return;
+            }
+
+            this._suggestionsSelection = -1;
+            Array.from(children).forEach(child => {
+                child.classList.remove('active');
+            });
+        }
+
+        if (selection == 'up') {
+            if (this._suggestionsSelection <= 0) {
+                return;
+            }
+
+            this._suggestionsSelection--;
+
+            children[this._suggestionsSelection + 1].classList.remove('active');
+            children[this._suggestionsSelection].classList.add('active');
+            children[this._suggestionsSelection].scrollIntoView();
+        }
+
+        if (selection == 'down') {
+            if (this._suggestionsSelection == children.length - 1) {
+                return;
+            }
+
+            this._suggestions.focus();
+
+            this._suggestionsSelection++;
+
+            if (this._suggestionsSelection > 0) {
+                children[this._suggestionsSelection - 1].classList.remove('active');
+            }
+
+            children[this._suggestionsSelection].classList.add('active');
+            children[this._suggestionsSelection].scrollIntoView();
+        }
+
+    }
+
     private _updateFilterSuggestions(term: string) {
         this._suggestions.innerText = '';
 
@@ -382,16 +458,16 @@ export class MapUi {
                 var title = comp.fulltext;
                 var fillText = comp.partialword;
 
-                if (this._curretSelection) {
-                    if (this._curretSelection.type == 'network') {
-                        let prefix = (this._curretSelection.object as EmulatorNetwork).meta.emulatorInfo.prefix;
+                if (this._curretNode) {
+                    if (this._curretNode.type == 'network') {
+                        let prefix = (this._curretNode.object as EmulatorNetwork).meta.emulatorInfo.prefix;
 
                         title = title.replace('<net>', prefix);
                         fillText = fillText.replace('<net>', prefix);
                     }
 
-                    if (this._curretSelection.type == 'node') {
-                        let addresses = (this._curretSelection.object as EmulatorNode).meta.emulatorInfo.nets.map(net => net.address.split('/')[0]);
+                    if (this._curretNode.type == 'node') {
+                        let addresses = (this._curretNode.object as EmulatorNode).meta.emulatorInfo.nets.map(net => net.address.split('/')[0]);
                         let addressesExpr = addresses.join(' or ');
 
                         if (addresses.length > 1) {
@@ -415,6 +491,7 @@ export class MapUi {
                 item.appendChild(details);
                 item.onclick = () => {
                     this._filterInput.value += `${fillText} `;
+                    this._moveSuggestionSelection('clear');
                     this._updateFilterSuggestions(this._filterInput.value);
                 };
 
@@ -438,6 +515,7 @@ export class MapUi {
                 defailtDetails.innerText = 'Press enter to show all matches on the map...';
     
                 defaultItem.onclick = () => {
+                    this._moveSuggestionSelection('clear');
                     this._filterUpdateHandler(undefined, true);
                 };
     
@@ -485,6 +563,7 @@ export class MapUi {
                     set.add(vertex.id);
                     this._updateSearchHighlights(set);
                     this._suggestions.innerText = '';
+                    this._moveSuggestionSelection('clear');
                 };
     
                 this._suggestions.appendChild(item);
@@ -496,19 +575,16 @@ export class MapUi {
     private async _filterUpdateHandler(event: KeyboardEvent, forced: boolean = false) {
         let term = this._filterInput.value;
 
+        this._moveSuggestionSelection('clear');
+        this._suggestions.innerText = '';
         this._updateFilterSuggestions(term);
 
-        if ((!event || event.key != 'Enter') && !forced) {
+        if (((!event || event.key != 'Enter') && !forced)) {
             return;
         }
 
-        this._suggestions.innerText = '';
-
         if (this._filterMode == 'filter') {
-            this._blocked = true;
-            this._freeze();
             this._filterInput.value = await this._datasource.setSniffFilter(term);
-            this._blocked = false;
         }
 
         if (this._filterMode == 'node-search') {
@@ -541,7 +617,7 @@ export class MapUi {
     private async _updateInfoPlateWith(nodeId: string) {
         let vertex = this._nodes.get(nodeId);
 
-        this._curretSelection = vertex;
+        this._curretNode = vertex;
 
         let infoPlate = document.createElement('div');
         this._infoPlateElement.classList.add('loading');
@@ -713,8 +789,6 @@ export class MapUi {
         });
     }
 
-    private _boundfilterUpdateHandler = this._filterUpdateHandler.bind(this);
-
     async start() {
         await this._datasource.connect();
         this.redraw();
@@ -723,8 +797,6 @@ export class MapUi {
         if (this._filterMode == 'filter') {
             this._filterInput.value = await this._datasource.getSniffFilter();
         }
-
-        this._filterInput.addEventListener('keyup', this._boundfilterUpdateHandler);
 
         this._logPrinter = window.setInterval(() => {
             var scroll = false;
@@ -746,7 +818,6 @@ export class MapUi {
 
     stop() {
         this._datasource.disconnect();
-        this._filterInput.removeEventListener('keyup', this._boundfilterUpdateHandler);
         window.clearInterval(this._logPrinter);
         window.clearInterval(this._flasher);
     }
@@ -775,6 +846,7 @@ export class MapUi {
 
         this._graph.on('click', (ev) => {
             this._suggestions.innerText = '';
+            this._moveSuggestionSelection('clear');
             
             if (ev.nodes.length <= 0) {
                 return;

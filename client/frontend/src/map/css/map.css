@@ -90,8 +90,12 @@ html, body, .map-area, .map {
     font-size: .8em;
 }
 
-.filter-panel .suggestions .suggestion:hover {
+.filter-panel .suggestions .suggestion.active {
     background-color: #ccc;
+}
+
+.filter-panel .suggestions .suggestion:hover:not(.active) {
+    background-color: #eee;
 }
 
 .log-panel {
