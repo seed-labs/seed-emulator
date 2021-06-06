@@ -62,7 +62,8 @@ export class Completion {
                     word: child.name,
                     partialword: child.name.slice(lastWord.length),
                     fulltext: `${fulltext.join(' ')} ${child.name}`,
-                    description: child.description }
+                    description: child.description
+                };
             });
         }
 
