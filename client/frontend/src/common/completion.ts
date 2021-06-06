@@ -56,7 +56,7 @@ export class Completion {
             pointer = nextPointer;
         });
 
-        if (pointer.type == 'root' || pointer.type == 'keyword') {
+        if (pointer.children) {
             return pointer.children.filter(child => child.name.startsWith(lastWord)).map(child => {
                 return {
                     word: child.name,
