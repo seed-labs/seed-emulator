@@ -413,6 +413,8 @@ export class MapUi {
             Array.from(children).forEach(child => {
                 child.classList.remove('active');
             });
+
+            return;
         }
 
         if (selection == 'up') {
@@ -423,8 +425,6 @@ export class MapUi {
             this._suggestionsSelection--;
 
             children[this._suggestionsSelection + 1].classList.remove('active');
-            children[this._suggestionsSelection].classList.add('active');
-            children[this._suggestionsSelection].scrollIntoView();
         }
 
         if (selection == 'down') {
@@ -439,11 +439,24 @@ export class MapUi {
             if (this._suggestionsSelection > 0) {
                 children[this._suggestionsSelection - 1].classList.remove('active');
             }
-
-            children[this._suggestionsSelection].classList.add('active');
-            children[this._suggestionsSelection].scrollIntoView();
         }
 
+        let current = children[this._suggestionsSelection];
+        current.classList.add('active');
+
+        let boxRect = this._suggestions.getBoundingClientRect();
+        let itemRect = current.getBoundingClientRect();
+
+        let topOffset = itemRect.top - boxRect.top;
+        let bottomOffset = itemRect.bottom - boxRect.bottom;
+
+        if (topOffset < 0) {
+            this._suggestions.scrollBy({top: topOffset - 10, behavior: 'smooth'});
+        }
+
+        if (bottomOffset > 0) {
+            this._suggestions.scrollBy({top: bottomOffset + 10, behavior: 'smooth'});
+        }
     }
 
     private _updateFilterSuggestions(term: string) {
