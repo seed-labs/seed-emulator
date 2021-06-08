@@ -575,13 +575,15 @@ export class MapUi {
     private async _filterUpdateHandler(event: KeyboardEvent, forced: boolean = false) {
         let term = this._filterInput.value;
 
-        this._moveSuggestionSelection('clear');
-        this._suggestions.innerText = '';
-        this._updateFilterSuggestions(term);
-
         if (((!event || event.key != 'Enter') && !forced)) {
+            this._moveSuggestionSelection('clear');
+            this._suggestions.innerText = '';
+            this._updateFilterSuggestions(term);
+
             return;
         }
+
+        this._suggestions.innerText = '';
 
         if (this._filterMode == 'filter') {
             this._filterInput.value = await this._datasource.setSniffFilter(term);
