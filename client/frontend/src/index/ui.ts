@@ -1,20 +1,6 @@
 import $ from 'jquery';
-import { WindowManager } from './window-manager';
-
-export interface Container {
-    Id: string;
-    meta: {
-        nodeInfo: {
-            nets: {
-                name: string,
-                address: string
-            }[],
-            asn: number,
-            name: string,
-            role: string
-        };
-    };
-};
+import { EmulatorNetwork, EmulatorNode } from '../common/types';
+import { WindowManager } from '../common/window-manager';
 
 export class IndexUi {
     private _containerTable: DataTables.Api;
@@ -22,7 +8,8 @@ export class IndexUi {
     private _wm: WindowManager;
     private _containerToolbar: HTMLDivElement;
     private _networkToolbar: HTMLDivElement;
-    private _url: string;
+    private _containerUrl: string;
+    private _networkUrl: string;
 
     constructor(config: {
         containerListElementId: string,
@@ -90,10 +77,10 @@ export class IndexUi {
         this._initNetworkToolbar();
     }
 
-    private _reload() {
-        if (!this._url) return;
+    private _reloadContainers() {
+        if (!this._containerUrl) return;
 
-        this.load(this._url);
+        this.loadContainers(this._containerUrl);
     }
 
     private _createBtn(text: string, className: string, cb: any, iconClassName?: string): HTMLButtonElement {
@@ -184,7 +171,7 @@ export class IndexUi {
         this._containerToolbar.appendChild(this._createBtn(
             'Reload',
             'btn btn-sm btn-light mr-1 mb-1',
-            this._reload.bind(this),
+            this._reloadContainers.bind(this),
             'bi bi-arrow-clockwise'
         ));
     }
@@ -211,8 +198,8 @@ export class IndexUi {
         ));
     }
 
-    private _createRow(container: Container) {
-        var node = container.meta.nodeInfo;
+    private _createNodeRow(container: EmulatorNode) {
+        var node = container.meta.emulatorInfo;
 
         var tr = document.createElement('tr');
 
@@ -275,12 +262,39 @@ export class IndexUi {
         return tr;
     }
 
-    load(url: string) {
-        this._url = url;
+    private _createNetworkRow(network: EmulatorNetwork) {
+        var net = network.meta.emulatorInfo;
 
+        var tr = document.createElement('tr');
+
+        var tds = document.createElement('td');
+        var td0 = document.createElement('td');
+        var td1 = document.createElement('td');
+        var td2 = document.createElement('td');
+        var td3 = document.createElement('td');
+        var td4 = document.createElement('td');
+
+        td0.className = 'text-monospace';
+        td1.className = 'text-monospace';
+        td2.className = 'text-monospace';
+        td3.className = 'text-monospace';
+
+        td0.innerText = net.scope;
+        td1.innerText = net.name;
+        td2.innerText = net.type;
+        td3.innerText = net.prefix;
+        
+        [tds, td0, td1, td2, td3, td4].forEach(td => tr.appendChild(td));
+
+        tr.id = net.name;
+        tr.title = net.name;
+
+        return tr;
+    }
+
+    private _load(url: string, table: DataTables.Api, handler: (data: any) => HTMLTableRowElement) {
         var xhr = new XMLHttpRequest();
-        var table = this._containerTable;
-        var createRow = this._createRow.bind(this);
+        var createRow = handler.bind(this);
 
         table.clear();
 
@@ -290,7 +304,7 @@ export class IndexUi {
                 var res = JSON.parse(xhr.responseText);
                 if (!res.ok) return;
 
-                res.result.forEach((c: Container) => {
+                res.result.forEach((c) => {
                     table.row.add(createRow(c));
                 });
             }
@@ -298,6 +312,16 @@ export class IndexUi {
         };
 
         xhr.send();
+    }
+
+    loadContainers(url: string) {
+        this._containerUrl = url;
+        this._load(url, this._containerTable, this._createNodeRow);
+    }
+
+    loadNetworks(url: string) {
+        this._networkUrl = url;
+        this._load(url, this._networkTable, this._createNetworkRow);
     }
 
 };

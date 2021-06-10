@@ -6,7 +6,10 @@ import $ from 'jquery';
 import 'jquery-ui';
 import 'jquery-ui/ui/widgets/resizable';
 
-import { ConsoleEvent } from '../common/console-event';
+import { ConsoleEvent } from './console-event';
+
+// todo: windows, etc?
+export type WindowManagerEvent = 'taskbarchanges';
 
 export class Window {
     private _id: string;
@@ -276,6 +279,8 @@ export class WindowManager {
     private _nextOffset: number;
     private _activeWindowId: string;
 
+    private _taskBarChangeEventHandler: (shown: boolean) => void;
+
     constructor(desktopElement: string, taskbarElement: string) {
         this._windows = {};
         this._desktop = document.getElementById(desktopElement) as HTMLDivElement;
@@ -295,6 +300,12 @@ export class WindowManager {
                 ksHandler(e);
             }
         });
+    }
+
+    on(event: WindowManagerEvent, handler: (event: any) => void) {
+        if (event == 'taskbarchanges') {
+            this._taskBarChangeEventHandler = handler;
+        }
     }
 
     private _broadcastInput(srcId: string, data: any) {
@@ -416,8 +427,18 @@ export class WindowManager {
         });
 
         if (this._taskbar.children.length == 0) {
+            if (this._taskBarChangeEventHandler) {
+                this._taskBarChangeEventHandler(false);
+            }
+
             this._taskbar.classList.add('hide');
-        } else this._taskbar.classList.remove('hide');
+        } else { 
+            if (this._taskBarChangeEventHandler) {
+                this._taskBarChangeEventHandler(true);
+            }
+
+            this._taskbar.classList.remove('hide');
+        }
     }
 
     private _handleTaskbarClick(id: string) {

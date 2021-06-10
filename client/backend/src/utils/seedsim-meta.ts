@@ -1,6 +1,9 @@
-const META_PREFIX = 'org.seedsecuritylabs.seedsim.meta.';
+import 'dockerode';
+import Dockerode from 'dockerode';
 
-export interface SimulatorNode {
+const META_PREFIX = 'org.seedsecuritylabs.seedemu.meta.';
+
+export interface SeedEmulatorNode {
     name?: string;
     role?: string;
     asn?: number;
@@ -8,14 +11,36 @@ export interface SimulatorNode {
         name?: string;
         address?: string;
     }[];
-};
+}
 
-export class Simulator {
+export interface SeedEmulatorNet {
+    name?: string;
+    scope?: string;
+    type?: string;
+    prefix?: string;
+}
 
-    static ParseMeta(labels: {
+export interface SeedEmulatorMetadata {
+    hasSession: boolean;
+    emulatorInfo: SeedEmulatorNode;
+}
+
+export interface SeedContainerInfo extends Dockerode.ContainerInfo {
+    meta: SeedEmulatorMetadata;
+}
+
+export interface SeedNetInfo extends Dockerode.NetworkInspectInfo {
+    meta: {
+        emulatorInfo: SeedEmulatorNet;
+    }
+}
+
+export class Emulator {
+
+    static ParseNodeMeta(labels: {
         [key: string]: string
-    }): SimulatorNode {
-        var node: SimulatorNode = {
+    }): SeedEmulatorNode {
+        var node: SeedEmulatorNode = {
             nets: []
         };
 
@@ -37,6 +62,25 @@ export class Simulator {
         });
 
         return node;
+    }
+
+    static ParseNetMeta(labels: {
+        [key: string]: string
+    }): SeedEmulatorNet {
+        var net: SeedEmulatorNet = {};
+
+        Object.keys(labels).forEach(label => {
+            if (!label.startsWith(META_PREFIX)) return;
+            var key = label.replace(META_PREFIX, '');
+            var value = labels[label];
+
+            if (key === 'type') net.type = value;
+            if (key === 'scope') net.scope = value;
+            if (key === 'name') net.name = value;
+            if (key === 'prefix') net.prefix = value;
+        });        
+
+        return net;
     }
 
 };

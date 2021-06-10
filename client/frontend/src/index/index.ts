@@ -1,4 +1,5 @@
 import './css/index.css';
+import '../common/css/window-manager.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'datatables.net-bs4/css/dataTables.bootstrap4.min.css'
 import 'datatables.net-select-bs4/css/select.bootstrap4.min.css'
@@ -18,4 +19,5 @@ var ui = new IndexUi({
     taskbarElementId: 'taskbar'
 });
 
-ui.load('/api/v1/container');
+ui.loadContainers('/api/v1/container');
+ui.loadNetworks('/api/v1/network')

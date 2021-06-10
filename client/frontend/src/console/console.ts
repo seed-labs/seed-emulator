@@ -36,7 +36,7 @@ const id = window.location.hash.replace('#', '');
     }
 
     var meta = container.meta;
-    var node = meta.nodeInfo;
+    var node = meta.emulatorInfo;
 
     var info = [];
 

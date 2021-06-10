@@ -22,7 +22,58 @@ DockerCompilerFileTemplates['start_script'] = """\
 #!/bin/bash
 {startCommands}
 echo "ready! run 'docker exec -it $HOSTNAME /bin/zsh' to attach to this node" >&2
+for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 0 > "$f"; done
 tail -f /dev/null
+"""
+
+DockerCompilerFileTemplates['seedemu_sniffer'] = """\
+#!/bin/bash
+last_pid=0
+while read -sr expr; do {
+    [ "$last_pid" != 0 ] && kill $last_pid 2> /dev/null
+    [ -z "$expr" ] && continue
+    tcpdump -e -i any -nn -p -q "$expr" &
+    last_pid=$!
+}; done
+[ "$last_pid" != 0 ] && kill $last_pid
+"""
+
+DockerCompilerFileTemplates['seedemu_worker'] = """\
+#!/bin/bash
+
+net() {
+    [ "$1" = "status" ] && {
+        ip -j link | jq -cr '.[] .operstate' | grep -q UP && echo "up" || echo "down"
+        return
+    }
+
+    ip -j li | jq -cr '.[] .ifname' | while read -r ifname; do ip link set "$ifname" "$1"; done
+}
+
+bgp() {
+    cmd="$1"
+    peer="$2"
+    [ "$cmd" = "bird_peer_down" ] && birdc dis "$2"
+    [ "$cmd" = "bird_peer_up" ] && birdc en "$2"
+}
+
+while read -sr line; do {
+    id="`cut -d ';' -f1 <<< "$line"`"
+    cmd="`cut -d ';' -f2 <<< "$line"`"
+
+    output="no such command."
+
+    [ "$cmd" = "net_down" ] && output="`net down 2>&1`"
+    [ "$cmd" = "net_up" ] && output="`net up 2>&1`"
+    [ "$cmd" = "net_status" ] && output="`net status 2>&1`"
+    [ "$cmd" = "bird_list_peer" ] && output="`birdc s p | grep --color=never BGP 2>&1`"
+
+    [[ "$cmd" == "bird_peer_"* ]] && output="`bgp $cmd 2>&1`"
+
+    printf '_BEGIN_RESULT_'
+    jq -Mcr --arg id "$id" --arg return_value "$?" --arg output "$output" -n '{id: $id | tonumber, return_value: $return_value | tonumber, output: $output }'
+    printf '_END_RESULT_'
+}; done
 """
 
 DockerCompilerFileTemplates['replace_address_script'] = '''\
@@ -56,7 +107,9 @@ DockerCompilerFileTemplates['compose_service'] = """\
             - ALL
         sysctls:
             - net.ipv4.ip_forward=1
-        privileged: {privileged}
+            - net.ipv4.conf.default.rp_filter=0
+            - net.ipv4.conf.all.rp_filter=0
+        privileged: true
         networks:
 {networks}{ports}
         labels:
@@ -88,6 +141,8 @@ DockerCompilerFileTemplates['compose_network'] = """\
         ipam:
             config:
                 - subnet: {prefix}
+        labels:
+{labelList}
 """
 
 class Docker(Compiler):
@@ -137,6 +192,33 @@ class Docker(Compiler):
 
     def getName(self) -> str:
         return "Docker"
+
+    def __getNetMeta(self, net: Network): 
+        (scope, type, name) = net.getRegistryInfo()
+
+        labels = ''
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'type',
+            value = 'global' if scope == 'ix' else 'local'
+        )
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'scope',
+            value = scope
+        )
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'name',
+            value = name
+        )
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'prefix',
+            value = net.getPrefix()
+        )
+
+        return labels
 
     def __getNodeMeta(self, node: Node):
         (scope, type, name) = node.getRegistryInfo()
@@ -292,7 +374,7 @@ class Docker(Compiler):
                 primaryIp = node.getInterfaces()[0].getAddress()
             ),
             networks = node_nets,
-            privileged = 'true' if node.isPrivileged() else 'false',
+            # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
             labelList = self.__getNodeMeta(node)
         )
@@ -324,7 +406,12 @@ class Docker(Compiler):
             startCommands = start_commands
         ))
 
+        dockerfile += self.__addFile('/seedemu_sniffer', DockerCompilerFileTemplates['seedemu_sniffer'])
+        dockerfile += self.__addFile('/seedemu_worker', DockerCompilerFileTemplates['seedemu_worker'])
+
         dockerfile += 'RUN chmod +x /start.sh\n'
+        dockerfile += 'RUN chmod +x /seedemu_sniffer\n'
+        dockerfile += 'RUN chmod +x /seedemu_worker\n'
 
         for file in node.getFiles():
             (path, content) = file.get()
@@ -349,7 +436,8 @@ class Docker(Compiler):
         self.__networks += DockerCompilerFileTemplates['compose_network'].format(
             netId = '{}{}'.format(net_prefix, net.getName()),
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
-            mtu = net.getMtu()
+            mtu = net.getMtu(),
+            labelList = self.__getNetMeta(net)
         )
 
     def _doCompile(self, emulator: Emulator):

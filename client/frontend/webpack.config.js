@@ -3,7 +3,8 @@ const path = require('path');
 let config = {
     entry: {
         index: './src/index/index.ts',
-        console: './src/console/console.ts'
+        console: './src/console/console.ts',
+        map: './src/map/map.ts'
     },
     module: {
         rules: [

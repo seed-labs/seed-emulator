@@ -8,6 +8,8 @@ export interface Session {
     exec: dockerode.Exec
 };
 
+export type SessionEvent = 'new_session';
+
 export class SessionManager implements LogProducer {
     private _logger: Logger;
 
@@ -17,10 +19,12 @@ export class SessionManager implements LogProducer {
 
     private _docker: dockerode;
 
-    constructor(docker: dockerode) {
+    private _newSessionCallback: (nodeId: string, session: Session) => void;
+
+    constructor(docker: dockerode, namespace: String = '') {
         this._sessions = {};
         this._docker = docker;
-        this._logger = new Logger({ name: 'SessionManager' });
+        this._logger = new Logger({ name: `${namespace}SessionManager` });
     }
 
     private async _getContainerRealId(id: string): Promise<string> {
@@ -38,6 +42,12 @@ export class SessionManager implements LogProducer {
 
     hasSession(fullId: string): boolean {
         return this._sessions[fullId] && this._sessions[fullId].stream.writable;
+    }
+
+    on(event: SessionEvent, callback: (nodeId: string, session: Session) => void) {
+        if (event == 'new_session') {
+            this._newSessionCallback = callback;
+        }
     }
 
     async getSession(id: string, command: string[] = ['bash']): Promise<Session> {
@@ -85,6 +95,10 @@ export class SessionManager implements LogProducer {
         this._sessions[fullId] = {
             stream, exec
         };
+
+        if (this._newSessionCallback) {
+            this._newSessionCallback(fullId, this._sessions[fullId]);
+        }
 
         return this._sessions[fullId];
     }
