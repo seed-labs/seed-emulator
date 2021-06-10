@@ -19,6 +19,15 @@ export interface Edge extends EdgeOptions {
     label?: string;
 }
 
+export interface ApiRespond<ResultType> {
+    ok: boolean;
+    result: ResultType;
+}
+
+export interface FilterRespond {
+    currentFilter: string;
+}
+
 export class DataSource {
     private _apiBase: string;
     private _nodes: EmulatorNode[];
@@ -31,6 +40,12 @@ export class DataSource {
 
     private _packetEventHandler: (nodeId: string) => void;
 
+    /**
+     * construct new data provider.
+     * 
+     * @param apiBase api base url.
+     * @param wsProtocol websocket protocol (ws/wss), default to ws.
+     */
     constructor(apiBase: string, wsProtocol: string = 'ws') {
         this._apiBase = apiBase;
         this._wsProtocol = wsProtocol;
@@ -39,7 +54,15 @@ export class DataSource {
         this._connected = false;
     }
 
-    private async _load(method: string, url: string, body: string = undefined): Promise<any> {
+    /**
+     * load data from api.
+     * 
+     * @param method http method.
+     * @param url target url.
+     * @param body (optional) request body.
+     * @returns api respond object.
+     */
+    private async _load<ResultType>(method: string, url: string, body: string = undefined): Promise<ApiRespond<ResultType>> {
         let xhr = new XMLHttpRequest();
 
         xhr.open(method, url);
@@ -61,8 +84,11 @@ export class DataSource {
 
                 var res = JSON.parse(xhr.response);
                 
-                if (res.ok) resolve(res);
-                else reject(res);
+                if (res.ok) {
+                    resolve(res);
+                } else {
+                    reject(res);
+                }
             };
 
             xhr.onerror = function () {
@@ -76,9 +102,13 @@ export class DataSource {
         })
     }
 
+    /**
+     * connect to api: start listening sniffer socket, load nodes/nets list.
+     * call again when connected to reload nodes/nets.
+     */
     async connect() {
-        this._nodes = (await this._load('GET', `${this._apiBase}/container`)).result;
-        this._nets = (await this._load('GET', `${this._apiBase}/network`)).result;
+        this._nodes = (await this._load<EmulatorNode[]>('GET', `${this._apiBase}/container`)).result;
+        this._nets = (await this._load<EmulatorNetwork[]>('GET', `${this._apiBase}/network`)).result;
 
         if (this._connected) {
             return;
@@ -97,35 +127,80 @@ export class DataSource {
         this._connected = true;
     }
 
+    /**
+     * disconnect sniff socket.
+     */
     disconnect() {
         this._connected = false;
         this._socket.close();
     }
 
+    /**
+     * get current sniff filter expression.
+     * 
+     * @returns filter expression.
+     */
     async getSniffFilter(): Promise<string> {
-        return (await this._load('GET', `${this._apiBase}/sniff`)).result.currentFilter;
+        return (await this._load<FilterRespond>('GET', `${this._apiBase}/sniff`)).result.currentFilter;
     }
 
+    /**
+     * set sniff filter expression.
+     * 
+     * @param filter filter expression.
+     * @returns updated filter expression.
+     */
     async setSniffFilter(filter: string): Promise<string> {
-        return (await this._load('POST', `${this._apiBase}/sniff`, JSON.stringify({ filter }))).result.currentFilter;
+        return (await this._load<FilterRespond>('POST', `${this._apiBase}/sniff`, JSON.stringify({ filter }))).result.currentFilter;
     }
 
+    /**
+     * get list of bgp peers of the given node.
+     * 
+     * @param node node id. must be node with router role.
+     * @returns list of peers.
+     */
     async getBgpPeers(node: string): Promise<BgpPeer[]> {
-        return (await this._load('GET', `${this._apiBase}/container/${node}/bgp`)).result;
+        return (await this._load<BgpPeer[]>('GET', `${this._apiBase}/container/${node}/bgp`)).result;
     }
 
+    /**
+     * set bgp peer state.
+     * 
+     * @param node node id. must be node with router role.
+     * @param peer peer name.
+     * @param up protocol state, true = up, false = down.
+     */
     async setBgpPeers(node: string, peer: string, up: boolean) {
         await this._load('POST', `${this._apiBase}/container/${node}/bgp/${peer}`, JSON.stringify({ status: up }));
     }
 
+    /**
+     * get network state of the given node.
+     * 
+     * @param node node id.
+     * @returns true if up, false if down.
+     */
     async getNetworkStatus(node: string): Promise<boolean> {
-        return (await this._load('GET', `${this._apiBase}/container/${node}/net`)).result;
+        return (await this._load<boolean>('GET', `${this._apiBase}/container/${node}/net`)).result;
     }
 
+    /**
+     * set network state of the given node.
+     * 
+     * @param node node id.
+     * @param up true if up, false if down.
+     */
     async setNetworkStatus(node: string, up: boolean) {
         await this._load('POST', `${this._apiBase}/container/${node}/net`, JSON.stringify({ status: up }));
     }
 
+    /**
+     * event handler register.
+     * 
+     * @param eventName event to listen.
+     * @param callback callback.
+     */
     on(eventName: DataEvent, callback?: (data: any) => void) {
         switch(eventName) {
             case 'packet':

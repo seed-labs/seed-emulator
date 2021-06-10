@@ -6,28 +6,31 @@ import { EmulatorNetwork, EmulatorNode } from '../common/types';
 import { WindowManager } from '../common/window-manager';
 import { DataSource, Edge, Vertex } from './datasource';
 
+/**
+ * map UI element bindings.
+ */
 export interface MapUiConfiguration {
-    datasource: DataSource,
-    mapElementId: string,
-    infoPlateElementId: string,
-    filterInputElementId: string,
-    filterWrapElementId: string,
-    logBodyElementId: string,
-    logPanelElementId: string,
-    logViewportElementId: string,
-    logControls: {
-        clearButtonElementId: string,
-        autoscrollCheckboxElementId: string,
-        disableCheckboxElementId: string
+    datasource: DataSource, // data provider
+    mapElementId: string, // element id of the map 
+    infoPlateElementId: string, // element id of the info plate
+    filterInputElementId: string, // element id of the filter/search text input 
+    filterWrapElementId: string, // element id of the filter/search text input wrapper
+    logBodyElementId: string, // element id of the log body (the tbody)
+    logPanelElementId: string, // element id of the log panel
+    logViewportElementId: string, // element id of the log viewport (the table wrapper w/ overflow scroll)
+    logControls: { // controls for log
+        clearButtonElementId: string, // element id of log clear button
+        autoscrollCheckboxElementId: string, // element id of autoscroll checkbox
+        disableCheckboxElementId: string // element id of log disable checkbox
     },
-    filterControls: {
-        filterModeTabElementId: string,
-        nodeSearchModeTabElementId: string,
-        suggestionsElementId: string
+    filterControls: { // filter controls
+        filterModeTabElementId: string, // element id of tab for setting mode to filter
+        nodeSearchModeTabElementId: string, // element id of tab for setting mode to search
+        suggestionsElementId: string // element id of search suggestions
     },
-    windowManager: {
-        desktopElementId: string,
-        taskbarElementId: string
+    windowManager: { // console window manager
+        desktopElementId: string, // elementid for desktop
+        taskbarElementId: string // elementid for taskbar
     }
 }
 
@@ -35,6 +38,9 @@ type FilterMode = 'node-search' | 'filter';
 
 type SuggestionSelectionAction = 'up' | 'down' | 'clear';
 
+/**
+ * map UI controller.
+ */
 export class MapUi {
     private _mapElement: HTMLElement;
     private _infoPlateElement: HTMLElement;
@@ -58,9 +64,12 @@ export class MapUi {
     private _edges: DataSet<Edge, 'id'>;
     private _graph: Network;
 
+    /** list of log elements to be rendered to log body */
     private _logQueue: HTMLElement[];
 
+    /** set of vertex ids scheduled for flashing */
     private _flashQueue: Set<string>;
+    /** set of vertex ids scheduled for un-flash */
     private _flashingNodes: Set<string>;
     
     private _logPrinter: number;
@@ -69,19 +78,35 @@ export class MapUi {
     private _macMapping: { [mac: string]: string };
 
     private _filterMode: FilterMode;
+
+    /** set of vertex ids for nodes/nets currently being highlighted by search  */
     private _searchHighlightNodes: Set<string>;
+    
     private _lastSearchTerm: string;
 
+    /** window manager for consoles.  */
     private _windowManager: WindowManager;
 
+    /** completion provider for bpf expressions. */
     private _bpfCompletion: Completion;
 
+    /** current (or last selected, if none is selected now) vertex. */
     private _curretNode: Vertex;
 
+    /** current suggestion item selection. */
     private _suggestionsSelection: number;
 
+    /**
+     * ignore next keyup event. (set to true when event is already handled in
+     * keydown.)
+     */
     private _ignoreKeyUp: boolean;
 
+    /**
+     * Build a new map UI controller.
+     * 
+     * @param config element bindings.
+     */
     constructor(config: MapUiConfiguration) {
         this._datasource = config.datasource;
         this._mapElement = document.getElementById(config.mapElementId);
@@ -192,6 +217,9 @@ export class MapUi {
 
             var flashed = new Set<string>();
 
+            // find network with matching mac address and flash the network too.
+            // networks objects are never the source, as network cannot run
+            // tcpdump on its own.
             Object.keys(this._macMapping).forEach(mac => {
                 if (data.data.includes(mac) && !flashed.has(mac)) {
                     flashed.add(mac);
@@ -199,16 +227,22 @@ export class MapUi {
                 }
             });
 
+            // at least one mac address matching a net is found, flash the node.
+            // note: when no matching net is found, the "packet" may not be a
+            // packet, but output from tcpdump.
             if (flashed.size > 0) {
                 this._flashQueue.add(data.source);
             }
 
-            // fixme?
+            // tcpdump output: "listening on xxx", meaning tcpdump is running
+            // and the last expressions does not contain error.
             if (data.data.includes('listening')) {
                 this._filterInput.classList.remove('error');
                 this._filterWrap.classList.remove('error');
             }
 
+            // tcpdump output: "error", meaning tcpdump don't like the last 
+            // expression
             if (data.data.includes('error')) { 
                 this._filterInput.classList.add('error');
                 this._filterWrap.classList.add('error');
@@ -251,10 +285,21 @@ export class MapUi {
         });
     }
 
-    private _randomColor() {
+    /**
+     * get a random color.
+     * 
+     * @returns hsl color string.
+     */
+    private _randomColor(): string {
         return `hsl(${Math.random() * 360}, 100%, 75%)`;
     }
     
+    /**
+     * update highlighed nodes on the map. will auto un-highligh previously
+     * highlighted nodes.
+     * 
+     * @param highlights set of vertex ids to highlight.
+     */
     private _updateSearchHighlights(highlights: Set<string>) {
         var newHighlights = new Set<string>();
         var unHighlighted = new Set<string>();
@@ -296,6 +341,9 @@ export class MapUi {
         this._nodes.update(updateRequest);
     }
 
+    /**
+     * flash all nodes in the flash queue and schedule un-flash.
+     */
     private _flashNodes() {
         if (this._flashingNodes.size != 0) {
             // some nodes still flashing; wait for next time
@@ -338,6 +386,11 @@ export class MapUi {
         this._updateInfoPlateWith(id);
     }
 
+    /**
+     * update mode to filter or search.
+     * 
+     * @param mode new filter mode.
+     */
     private async _setFilterMode(mode: FilterMode) {
         if (mode == this._filterMode) {
             return;
@@ -365,6 +418,12 @@ export class MapUi {
         }
     }
 
+    /**
+     * find net or nodes search term.
+     * 
+     * @param term search term.
+     * @returns list of stuffs matching the term.
+     */
     private _findNodes(term: string): Vertex[] {
         var hits: Vertex[] = [];
 
@@ -397,6 +456,11 @@ export class MapUi {
         return hits;
     }
 
+    /**
+     * move filter/search suggestions selection.
+     * 
+     * @param selection move direction.
+     */
     private _moveSuggestionSelection(selection: SuggestionSelectionAction) {
         let children = this._suggestions.children;
 
@@ -459,6 +523,11 @@ export class MapUi {
         }
     }
 
+    /**
+     * update filter/search suggestions.
+     * 
+     * @param term current search/filter term.
+     */
     private _updateFilterSuggestions(term: string) {
         this._suggestions.innerText = '';
 
@@ -585,7 +654,13 @@ export class MapUi {
 
     }
 
-    private async _filterUpdateHandler(event: KeyboardEvent, forced: boolean = false) {
+    /**
+     * commit a filter search.
+     * 
+     * @param event if triggerd by keydown/keyup event, the event.
+     * @param forced if not triggerd by keydown/keyup event, set to true.
+     */
+    private async _filterUpdateHandler(event: KeyboardEvent | undefined, forced: boolean = false) {
         let term = this._filterInput.value;
 
         if (((!event || event.key != 'Enter') && !forced)) {
@@ -612,6 +687,13 @@ export class MapUi {
         }
     }
 
+    /**
+     * create an infoplate label/text field.
+     * 
+     * @param label label for the pair.
+     * @param text text for the pair.
+     * @returns div element of the pair.
+     */
     private _createInfoPlateValuePair(label: string, text: string): HTMLDivElement {
         let div = document.createElement('div');
 
@@ -629,6 +711,11 @@ export class MapUi {
         return div;
     }
 
+    /**
+     * update infoplate with node.
+     * 
+     * @param nodeId node id for any vertex (can be node or net).
+     */
     private async _updateInfoPlateWith(nodeId: string) {
         let vertex = this._nodes.get(nodeId);
 
@@ -789,6 +876,9 @@ export class MapUi {
         this._infoPlateElement.classList.remove('loading');
     }
 
+    /**
+     * map mac addresses to networks.
+     */
     private _mapMacAddresses() {
         this._nodes.forEach(vertex => {
             if (vertex.type != 'node') {
@@ -804,6 +894,9 @@ export class MapUi {
         });
     }
 
+    /**
+     * connect datasource, start mapping, and start the log/flash workers.
+     */
     async start() {
         await this._datasource.connect();
         this.redraw();
@@ -831,12 +924,18 @@ export class MapUi {
         }, 500);
     }
 
+    /**
+     * disconnect datasource and stop log/flash worker.
+     */
     stop() {
         this._datasource.disconnect();
         window.clearInterval(this._logPrinter);
         window.clearInterval(this._flasher);
     }
 
+    /**
+     * redraw map.
+     */
     redraw() {
         this._edges = new DataSet(this._datasource.edges);
         this._nodes = new DataSet(this._datasource.vertices);
