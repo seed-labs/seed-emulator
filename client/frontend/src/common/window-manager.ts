@@ -11,30 +11,75 @@ import { ConsoleEvent } from './console-event';
 // todo: windows, etc?
 export type WindowManagerEvent = 'taskbarchanges';
 
+/**
+ * Console window.
+ */
 export class Window {
     private _id: string;
+
+    /** current title. */
     private _title: string;
+
+    /** current status text (e.g., disconnect/connecting) */
     private _statusText: string;
+
+    /** the window element */
     private _element: HTMLDivElement;
+
+    /** the title text element */
     private _titleElement: HTMLSpanElement;
+
+    /** the body (console) */
     private _frameElement: HTMLIFrameElement;
+
+    /** parent. */
     private _manager: WindowManager;
 
+    /**
+     * the mask element: mouse events will not be sent when mouse is directly
+     * on the iframe; put a mask on the frame when dragging to capture mouse
+     * events.
+     */
     private _maskElement: HTMLDivElement;
+
+    /** the title bar element */
     private _titleBarElement: HTMLDivElement;
+
+    /** current x pos */
     private _x: number;
+
+    /** current y pos */
     private _y: number;
+
+    /** change in x when dragging */
     private _dx: number;
+
+    /** change in y when dragging */
     private _dy: number;
+
+    /** true if currently dragging */
     private _dragging: boolean;
 
     private _bondedMoveHandler: any;
     private _bondedDownHandler: any;
     private _bondedUpHandler: any;
 
+    /** true if currently in input synth */
     private _inSynth: boolean;
+
+    /** the button for toggling synth.  */
     private _synthControlElement: Element;
 
+    /**
+     * create window.
+     * 
+     * @param manager parent. 
+     * @param id window id.
+     * @param title window title.
+     * @param url window body url.
+     * @param top top offset.
+     * @param left left offset.
+     */
     constructor(manager: WindowManager, id: string, title: string, url: string, top: number, left: number) {
         this._manager = manager;
         this._dragging = false;
@@ -128,45 +173,87 @@ export class Window {
         this._element.addEventListener('mouseup', this._bondedUpHandler);
     }
 
+    /**
+     * get window id.
+     * 
+     * @returns id
+     */
     getId(): string {
         return this._id;
     }
 
+    /**
+     * get window title
+     * 
+     * @returns title
+     */
     getTitle(): string {
         return this._title;
     }
 
+    /**
+     * change window title.
+     * 
+     * @param newTitle new title
+     */
     setTitle(newTitle: string) {
         this._title = newTitle;
         this._titleElement.innerText = `${newTitle} ${this._statusText}`;
     }
 
+    /**
+     * get status text.
+     * 
+     * @returns status text
+     */
     getStatusText(): string {
         return this._statusText;
     }
 
+    /**
+     * set status text.
+     * 
+     * @param status status text.
+     */
     setStatusText(status: string) {
         this._statusText = status;
         this._titleElement.innerText = `${this._title} ${status}`;
     }
 
+    /**
+     * block the frame element in this window so mouse events can be captured.
+     */
     block() {
         this._maskElement.classList.remove('hide');
     }
 
+    /**
+     * unblock the frame.
+     */
     unblock() {
         this._maskElement.classList.add('hide');
     }
 
+    /**
+     * get the window element.
+     * 
+     * @returns element.
+     */
     getElement(): Element {
         return this._element;
     }
 
+    /**
+     * close this window.
+     */
     close() {
         this._manager.closeWindow(this._id);
         document.removeEventListener('mousemove', this._bondedMoveHandler);
     }
 
+    /**
+     * pop the window out to a browser window.
+     */
     popOut() {
         var h = this._frameElement.clientHeight;
         var w = this._frameElement.clientWidth;
@@ -177,29 +264,49 @@ export class Window {
             `directories=no,titlebar=no,toolbar=no,location=no,status=no,menubar=no,scrollbars=no,width=${w},height=${h}`);
     }
 
+    /**
+     * minimize the window to task bar.
+     */
     minimize() {
         this._titleBarElement.classList.remove('active');
         this._manager.minimizeWindow(this);
     }
 
+    /**
+     * reload window.
+     */
     reload() {
         this.setStatusText('(connecting...)');
         this._frameElement.contentWindow.location.reload();
     }
 
+    /**
+     * send window to back (i.e., set inactive)
+     */
     toBack() {
         this._titleBarElement.classList.remove('active');
     }
 
+    /**
+     * bring to window to front (i.e., set active)
+     */
     toFront() {
         this._manager.setActiveWindow(this);
         this._titleBarElement.classList.add('active');
     }
 
+    /**
+     * test if this window is in input broadcast.
+     * 
+     * @returns true if in synth, false otherwise.
+     */
     isInSynth(): boolean {
         return this._inSynth;
     }
 
+    /**
+     * toggle synth (input broadcast) on this window.
+     */
     toggleSynth() {
         if (this._inSynth) {
             this._inSynth = false;
@@ -210,6 +317,11 @@ export class Window {
         }
     }
 
+    /**
+     * send text data to this window.
+     * 
+     * @param data data
+     */
     write(data: any) {
         this._frameElement.contentWindow.document.dispatchEvent(new CustomEvent<ConsoleEvent>('console', {
             detail: {
@@ -268,19 +380,37 @@ export class Window {
     }
 };
 
+/**
+ * console window manager.
+ */
 export class WindowManager {
     private _windows: {
         [id: string]: Window
     };
 
+    /** desktop element */
     private _desktop: HTMLDivElement;
+
+    /** taskbar element */
     private _taskbar: HTMLDivElement;
+
+    /** zindex for the last window */
     private _zindex: number;
+
+    /** offset from left/top for the next window */
     private _nextOffset: number;
+
+    /** last active window's id */
     private _activeWindowId: string;
 
     private _taskBarChangeEventHandler: (shown: boolean) => void;
 
+    /**
+     * create window manager.
+     * 
+     * @param desktopElement desktop element id.
+     * @param taskbarElement taskbar element id.
+     */
     constructor(desktopElement: string, taskbarElement: string) {
         this._windows = {};
         this._desktop = document.getElementById(desktopElement) as HTMLDivElement;
@@ -302,12 +432,24 @@ export class WindowManager {
         });
     }
 
+    /**
+     * register event handler.
+     * 
+     * @param event event to listen.
+     * @param handler handler.
+     */
     on(event: WindowManagerEvent, handler: (event: any) => void) {
         if (event == 'taskbarchanges') {
             this._taskBarChangeEventHandler = handler;
         }
     }
 
+    /**
+     * send input to all windows.
+     * 
+     * @param srcId source window.
+     * @param data data.
+     */
     private _broadcastInput(srcId: string, data: any) {
         Object.keys(this._windows).forEach(wid => {
             if (wid == srcId) return;
@@ -319,6 +461,13 @@ export class WindowManager {
         });
     }
 
+    /**
+     * handle keyboard shortcut keys.
+     * 
+     * @param e keyboard event.
+     * @param win window, if the event was triggered in an active window.
+     * @returns true if something happened, false otherwise.
+     */
     private _procressKeyboardEvent(e: KeyboardEvent, win?: Window): boolean {
         if (e.type != 'keydown') return;
 
@@ -365,6 +514,12 @@ export class WindowManager {
         return false;
     }
 
+    /**
+     * handle all key events (from either console via ipc, or current document.)
+     * 
+     * @param e event
+     * @param sourceId source id, if not from current active window.
+     */
     private _keyboardEventListener(e: KeyboardEvent, sourceId?: string) {
         if (!sourceId) sourceId = this._activeWindowId;
 
@@ -374,6 +529,11 @@ export class WindowManager {
         }
     }
 
+    /**
+     * listen to ipc from console.
+     * 
+     * @param ce console event.
+     */
     private _consoleEventListener(ce: ConsoleEvent) {
         if (!this._windows[ce.id]) return;
         var win = this._windows[ce.id];
@@ -406,6 +566,9 @@ export class WindowManager {
         }
     }
 
+    /**
+     * update taskbar element.
+     */
     private _updateTaskbar() {
         this._taskbar.innerHTML = '';
 
@@ -441,6 +604,11 @@ export class WindowManager {
         }
     }
 
+    /**
+     * handle taskbar item click.
+     * 
+     * @param id window id of the clicked item.
+     */
     private _handleTaskbarClick(id: string) {
         if (this._activeWindowId == id) {
             this._windows[id].minimize();
@@ -449,10 +617,20 @@ export class WindowManager {
         }
     }
 
+    /**
+     * get the desktop element.
+     * 
+     * @returns desktop element.
+     */
     getDesktop(): Element {
         return this._desktop;
     }
 
+    /**
+     * close window with the given id.
+     * 
+     * @param id window id
+     */
     closeWindow(id: string) {
         if (this._windows[id]) {
             this._windows[id].getElement().remove();
@@ -462,6 +640,12 @@ export class WindowManager {
         this._updateTaskbar();
     }
 
+    /**
+     * create a new window.
+     * 
+     * @param id container id to start console for.
+     * @param title title of the new window.
+     */
     createWindow(id: string, title: string) {
         if (this._windows[id]) {
             this._windows[id].toFront();
@@ -479,24 +663,41 @@ export class WindowManager {
         this._updateTaskbar();
     }
 
+    /**
+     * get windows.
+     * 
+     * @returns dict, where the keys are ids, and values are window objects.
+     */
     getWindows(): {
         [id: string]: Window
     } {
         return this._windows;
     }
 
+    /**
+     * block all windows, so when mouse is over windows' frame, mouse events
+     * are still triggered.
+     */
     blockWindows() {
         Object.keys(this._windows).forEach(wid => {
             this._windows[wid].block();
         });
     }
 
+    /**
+     * unblock all windows.
+     */
     unblockWindows() {
         Object.keys(this._windows).forEach(wid => {
             this._windows[wid].unblock();
         });
     }
 
+    /**
+     * change active window.
+     * 
+     * @param window window object.
+     */
     setActiveWindow(window: Window) {
         window.getElement().classList.remove('hide');
 
@@ -515,6 +716,11 @@ export class WindowManager {
         this._updateTaskbar();
     }
 
+    /**
+     * minimize the window.
+     * 
+     * @param window window object.
+     */
     minimizeWindow(window: Window) {
         window.getElement().classList.add('hide');
 
