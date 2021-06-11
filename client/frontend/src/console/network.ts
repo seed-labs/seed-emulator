@@ -1,5 +1,8 @@
 const API_PATH = '/api/v1';
 
+/**
+ * console network manager.
+ */
 export class ConsoleNetwork {
     private _id: string;
 
@@ -7,6 +10,11 @@ export class ConsoleNetwork {
         this._id = id;
     }
 
+    /**
+     * get the container details
+     * 
+     * @returns container details.
+     */
     async getContainer(): Promise<any> {
         var xhr = new XMLHttpRequest();
 
@@ -40,6 +48,12 @@ export class ConsoleNetwork {
         });
     }
 
+    /**
+     * get the websocket.
+     * 
+     * @param protocol (optional) websocket protocol (ws/wss), default to ws.
+     * @returns websocket.
+     */
     getSocket(protocol: string = 'ws'): WebSocket {
         return new WebSocket(`${protocol}://${location.host}${API_PATH}/console/${this._id}`);
     }
