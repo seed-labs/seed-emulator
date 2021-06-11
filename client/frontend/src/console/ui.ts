@@ -4,15 +4,39 @@ import { FitAddon } from 'xterm-addon-fit';
 import { ConsoleEvent } from '../common/console-event';
 import Hammer from 'hammerjs';
 
+/**
+ * console UI controller.
+ */
 export class ConsoleUi {
+
+    /** pending notifications. */
     private _notifications: string[];
+
+    /** xtermjs object. */
     private _terminal: Terminal;
+
+    /** info panel element. */
     private _infoPanel: HTMLDivElement;
+    
     private _fit: FitAddon;
+    
+    /** websocket to console. */
     private _socket: WebSocket;
+
+    /** true if attached to a container. */
     private _attached: boolean;
+
+    /** container id. */
     private _id: string;
 
+    /**
+     * construct UI controller.
+     * 
+     * @param id container id.
+     * @param term terminal element.
+     * @param title title for the infoplate.
+     * @param items items for the info plate.
+     */
     constructor(id: string, term: Terminal, title: string, items: {
         label: string,
         text: string
@@ -74,6 +98,9 @@ export class ConsoleUi {
         } else window.onresize = () => sizeChange();
     }
 
+    /**
+     * handlw window size change: resize terminal.
+     */
     private _handleSizeChange() {
         let dim = this._fit.proposeDimensions();
         this._fit.fit();
@@ -82,6 +109,9 @@ export class ConsoleUi {
         }
     }
 
+    /**
+     * draw the next notification.
+     */
     private _nextNotification() {
         if (this._notifications.length == 0) return;
 
@@ -111,12 +141,22 @@ export class ConsoleUi {
         this._terminal.element.appendChild(noteElement);
     }
 
+    /**
+     * create new notification. push to queue if one is already showing.
+     * 
+     * @param text notification text.
+     */
     createNotification(text: string) {
         this._notifications.push(text);
 
         if (this._notifications.length == 1) this._nextNotification();
     }
 
+    /**
+     * attach to console.
+     * 
+     * @param socket websocket.
+     */
     attach(socket: WebSocket) {
         if (this._attached) throw 'already attached.';
         this._attached = true;
@@ -159,6 +199,9 @@ export class ConsoleUi {
         }
     }
 
+    /**
+     * setup ipc with the windowmanager.
+     */
     configureIpc() {
         try {
             if (window.self === window.top) return;
