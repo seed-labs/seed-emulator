@@ -4,10 +4,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 import { DataSource } from './datasource';
 import { MapUi } from './ui';
+import { Configuration } from '../common/configuration';
 
-const API_PATH = '/api/v1';
-
-const datasource = new DataSource(API_PATH);
+const datasource = new DataSource(Configuration.ApiPath);
 const mapUi = new MapUi({
     datasource,
     mapElementId: 'map',
