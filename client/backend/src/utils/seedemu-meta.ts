@@ -35,8 +35,17 @@ export interface SeedNetInfo extends Dockerode.NetworkInspectInfo {
     }
 }
 
+/**
+ * Class with helpers to parse metadata labels.
+ */
 export class Emulator {
 
+    /**
+     * parse node metadata.
+     * 
+     * @param labels labels, where key is label, and value is value.
+     * @returns parsed node metadata object.
+     */
     static ParseNodeMeta(labels: {
         [key: string]: string
     }): SeedEmulatorNode {
@@ -64,6 +73,12 @@ export class Emulator {
         return node;
     }
 
+    /**
+     * parse network metadata.
+     * 
+     * @param labels labels, where key is label, and value is value.
+     * @returns parsed network metadata.
+     */
     static ParseNetMeta(labels: {
         [key: string]: string
     }): SeedEmulatorNet {
