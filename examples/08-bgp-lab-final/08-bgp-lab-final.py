@@ -3,7 +3,7 @@ from seedemu.services import WebService
 from seedemu.compiler import Docker
 from seedemu.core import Emulator, Filter, Binding
 
-sim = Emulator()
+emu = Emulator()
 
 base = Base()
 routing = Routing()
@@ -19,7 +19,7 @@ def make_stub_as(asn: int, exchange: str):
 
     web_server = stub_as.createHost('web')
     web.install('web{}'.format(asn))
-    sim.addBinding(Binding('web{}'.format(asn), filter = Filter(asn = asn, nodeName = 'web')))
+    emu.addBinding(Binding('web{}'.format(asn), filter = Filter(asn = asn, nodeName = 'web')))
 
     router = stub_as.createRouter('router0')
 
@@ -109,15 +109,15 @@ ebgp.addPrivatePeering(102, 3, 161, PeerRelationship.Provider)
 
 ###############################################################################
 
-sim.addLayer(base)
-sim.addLayer(routing)
-sim.addLayer(ebgp)
-sim.addLayer(ibgp)
-sim.addLayer(ospf)
-sim.addLayer(web)
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(ibgp)
+emu.addLayer(ospf)
+emu.addLayer(web)
 
-sim.render()
+emu.render()
 
 ###############################################################################
 
-sim.compile(Docker(), './bgp-lab-final')
+emu.compile(Docker(), './bgp-lab-final')
