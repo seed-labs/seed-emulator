@@ -1,10 +1,10 @@
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Mpls
 from seedemu.compiler import Docker, DistributedDocker, GcpDistributedDocker, Graphviz
 from seedemu.services import WebService
-from seedemu.core import Emulator
+from seedemu.core import Emulator, Binding, Filter
 from os import mkdir
 
-sim = Emulator()
+emu = Emulator()
 
 base = Base()
 routing = Routing()
@@ -50,7 +50,9 @@ mpls.enableOn(150)
 as151 = base.createAutonomousSystem(151)
 
 as151_web = as151.createHost('web')
-web.installByName(151, 'web')
+
+web.install('web151')
+emu.addBinding(Binding('web151', filter = Filter(asn = 151, nodeName = 'web')))
 
 as151_router = as151.createRouter('router0')
 
@@ -68,7 +70,9 @@ as151_router.joinNetwork('ix100')
 as152 = base.createAutonomousSystem(152)
 
 as152_web = as152.createHost('web')
-web.installByName(152, 'web')
+
+web.install('web152')
+emu.addBinding(Binding('web152', filter = Filter(asn = 152, nodeName = 'web')))
 
 as152_router = as152.createRouter('router0')
 
@@ -88,22 +92,22 @@ ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider
 
 ###############################################################################
 
-sim.addLayer(base)
-sim.addLayer(routing)
-sim.addLayer(ebgp)
-sim.addLayer(mpls)
-sim.addLayer(web)
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(mpls)
+emu.addLayer(web)
 
-sim.render()
+emu.render()
 
 ###############################################################################
 
-print(sim.getRegistry())
+print(emu.getRegistry())
 
 ###############################################################################
 
 mkdir('./seedemu-misc')
-sim.compile(Docker(), './seedemu-misc/regular-docker')
-sim.compile(Graphviz(), './seedemu-misc/graphs')
-sim.compile(DistributedDocker(), './seedemu-misc/distributed-docker')
-sim.compile(GcpDistributedDocker(), './seedemu-misc/gcp-distributed-docker')
+emu.compile(Docker(), './seedemu-misc/regular-docker')
+emu.compile(Graphviz(), './seedemu-misc/graphs')
+emu.compile(DistributedDocker(), './seedemu-misc/distributed-docker')
+emu.compile(GcpDistributedDocker(), './seedemu-misc/gcp-distributed-docker')

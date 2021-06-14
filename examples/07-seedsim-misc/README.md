@@ -44,13 +44,13 @@ There is a global class, Registry, which keep tracks of every important objects 
 Most of the objects created in the emulator are derived from the `Printable` class. As the name suggested, they can be printed. To see what classes are printable, check the API documentation. `Registry` is also a printable object, we can print it to check almost all objects created in the emulation:
 
 ```python
-print(Registry())
+print(emu.getRegistry())
 ```
 
 ## Other compiling options
 
 ```python
-docker_compiler.compile('./seedsim-misc/regular-docker')
+emu.compile(Docker(), './seedemu-misc/regular-docker')
 ```
 
 In the examples, we have only used the single-host docker compiler. The emulator, however, does offer various other options to run the emulation distributly.
@@ -58,7 +58,7 @@ In the examples, we have only used the single-host docker compiler. The emulator
 ### Distributed Docker (`DistributedDocker`) compiler
 
 ```python
-dist_compiler.compile('./seedsim-misc/distributed-docker')
+emu.compile(DistributedDocker(), './seedemu-misc/distributed-docker')
 ```
 
 Instead of compiling all nodes into one set of containers, the `DistributedDocker` compiler compiles nodes into multiple sets of containers. Each autonomous system will be in its own set, and each will have its own `docker-compose.yml`. 
@@ -68,7 +68,7 @@ This works by making all internet exchange networks overlay network. To run the 
 ### GCP (Google Cloud Platform) Distributed Docker (`GcpDistributedDocker`) compiler
 
 ```python
-gcp_dist_compiler.compile('./seedsim-misc/gcp-distributed-docker')
+emu.compile(GcpDistributedDocker(), './seedemu-misc/gcp-distributed-docker')
 ```
 
 Instead of creating a docker swarm manually and host the autonomous systems one by one, we can use the GCP Distributed Docker compiler to compile the emulation to a terraform plan; the plan will automatically create virtual machines for the swarm, configure the swarm, and deploy the autonomous systems on them.
@@ -78,7 +78,7 @@ It uses the `DistributedDocker` to generate the containers and will generate an 
 ### Graphs
 
 ```python
-graphviz_compiler.compile('./seedsim-misc/graphs')
+emu.compile(Graphviz(), './seedemu-misc/graphs')
 ```
 
-This is not a real compiler. Instead of comping nodes, the compiler gathers all graphable objects, create the graphs, and dump h Graphviz files.
+This is not a real compiler. Instead of comping nodes, the compiler gathers all graphable objects, create the graphs, and dump the Graphviz files.
