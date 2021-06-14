@@ -1,4 +1,4 @@
-# seedsim: miscellaneous
+# seedemu: miscellaneous
 
 The emulator provides a few other compilers for running the emulation in different environments. It also includes a graphing system for visualizing various topologies. We will go over them in this example. 
 
