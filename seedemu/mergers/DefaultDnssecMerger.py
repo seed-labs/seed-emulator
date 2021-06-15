@@ -2,6 +2,11 @@ from seedemu.core import Merger
 from seedemu.layers import Dnssec
 
 class DefaultDnssecMerger(Merger):
+    """!
+    @brief default DNSSEC layer merger implementation.
+
+    This merger merges zone names with DNSSEC enabled.
+    """
 
     def getName(self) -> str:
         return 'DefaultDnssecMerger'
