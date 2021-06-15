@@ -2,6 +2,12 @@ from .ServiceMerger import ServiceMerger
 from seedemu.services import CymruIpOriginService
 
 class DefaultCymruIpOriginServiceMerger(ServiceMerger):
+    """!
+    @brief default IP origin service merger implementation.
+
+    This is the defualt implementation which invokes the default service merger
+    to handler merging installation targets, and merge manually created records.
+    """
 
     def getName(self) -> str:
         return 'DefaultCymruIpOriginServiceMerger'
@@ -15,7 +21,7 @@ class DefaultCymruIpOriginServiceMerger(ServiceMerger):
     def doMerge(self, objectA: CymruIpOriginService, objectB: CymruIpOriginService) -> CymruIpOriginService:
         new_org: CymruIpOriginService = super().doMerge(objectA, objectB)
         
-        for record in (objectA.getRecords() + objectB.getMagetRecordsppings()):
+        for record in (objectA.getRecords() + objectB.getRecords()):
             new_org.addRecord(record)
 
         return new_org
