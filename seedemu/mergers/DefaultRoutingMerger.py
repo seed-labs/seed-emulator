@@ -2,6 +2,11 @@ from seedemu.core import Merger
 from seedemu.layers import Routing
 
 class DefaultRoutingMerger(Merger):
+    """!
+    @brief default routing layer merger implementation.
+
+    This merger merges direct network lists.
+    """
 
     def getName(self) -> str:
         return 'DefaultRoutingMerger'
