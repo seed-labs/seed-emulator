@@ -2,6 +2,9 @@ from seedemu.core import Merger
 from seedemu.layers import Mpls
 
 class DefaultMplsMerger(Merger):
+    """!
+    @brief default MPLS layer merging implementation.
+    """
 
     def getName(self) -> str:
         return 'DefaultMplsMerger'

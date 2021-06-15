@@ -2,6 +2,9 @@ from seedemu.core import Merger
 from seedemu.layers import Ibgp
 
 class DefaultIbgpMerger(Merger):
+    """!
+    @brief default IBGP layer merging implementation.
+    """
 
     def getName(self) -> str:
         return 'DefaultIbgpMerger'
