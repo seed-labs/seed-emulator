@@ -4,6 +4,9 @@ from typing import Callable
 
 
 class DefaultEbgpMerger(Merger):
+    """!
+    @brief default EBGP layer merging implementation.
+    """
 
     __peeringConflictHandler: Callable[[int, int, int, PeerRelationship, PeerRelationship], PeerRelationship]
     __xcPeeringConflictHandler: Callable[[int, int, int, PeerRelationship, PeerRelationship], PeerRelationship]
@@ -17,6 +20,11 @@ class DefaultEbgpMerger(Merger):
         @param onPeeringRelationshipConflict define handler for handling peering
         relationship conflicts. This should be a function that accepts: (ix,
         asnA, asnB, peeringRelationshipA, peeringRelationshipB) and return a
+        peering relationship. This defaults to use the peering relationship
+        set in the first emulator.
+        @param onXcPeeringRelationshipConflict define handler for handling
+        peering relationship conflicts. This should be a function that accepts:
+        (asnA, asnB, peeringRelationshipA, peeringRelationshipB) and return a
         peering relationship. This defaults to use the peering relationship
         set in the first emulator.
         """
