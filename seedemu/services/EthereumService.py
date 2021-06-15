@@ -2,10 +2,8 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
-from seedemu.core import Node, Printable, Service, Server
-from seedemu.core.enums import NetworkType
-from typing import List, Dict, Tuple, Set
-import pkgutil
+from seedemu.core import Node, Service, Server
+from typing import Dict, List
 
 ETHServerFileTemplates: Dict[str, str] = {}
 
@@ -47,19 +45,29 @@ done
 FINGERPRINT=$(curl -s {node_addr}:8888/enode.txt)
 echo "enode info ready"
 echo $FINGERPRINT, >> /tmp/shared_enode
-
 """
 
-
 class EthereumServer(Server):
-    def __init__(self, serial_number):
+    """!
+    @brief The Ethereum Server
+    """
+
+    __serial_number: int
+
+    def __init__(self, serial_number: int):
+        """!
+        @brief create new eth server.
+
+        @param serial_number serial number of this server.
+        """
         self.__serial_number = serial_number
 
-
-    def configure(self, node: Node, eth):
+    def configure(self, node: Node, eth: 'EthereumService'):
         """!
         @brief configure EthServer node, add all of Node IP in Service.
 
+        @param node node to configure the server on.
+        @param eth reference to eth service.
         """
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumServer configure(): node has not interfaces'
@@ -67,10 +75,12 @@ class EthereumServer(Server):
 
         eth.addNodeIp(str(addr))
 
-    def install(self, node: Node, eth):
+    def install(self, node: Node, eth: 'EthereumService'):
         """!
         @brief ETH server installation step.
 
+        @param node node object
+        @param eth reference to the eth service.
         """
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumServer#install(): node has not interfaces'
@@ -110,11 +120,14 @@ class EthereumServer(Server):
         node.appendStartCommand('nohup geth {} --bootnodes "$(cat /tmp/shared_enode)" --identity="NODE_{}" --networkid=10 --verbosity=6 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0 &'.format(datadir_option, self.__serial_number))
 
 
-
 class EthereumService(Service):
     """!
     @brief The Ethereum network service.
+
     """
+
+    __serial: int
+    __node_ips: List[str]
 
     def __init__(self):
         super().__init__()
@@ -125,9 +138,19 @@ class EthereumService(Service):
         return 'EthereumService'
 
     def addNodeIp(self, addr: str):
+        """!
+        @brief save node's IP.
+
+        Node's IP need to be recorded so we we can let other nodes to bootstrap.
+        """
         self.__node_ips.append(addr)
 
-    def getNodeIps(self):
+    def getNodeIps(self) -> List[str]:
+        """
+        @brief get node IPs.
+
+        @returns list of IP addresses.
+        """
         return self.__node_ips
 
     def _doConfigure(self, node: Node, server: EthereumServer):
