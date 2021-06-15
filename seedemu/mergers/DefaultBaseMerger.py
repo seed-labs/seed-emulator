@@ -3,6 +3,9 @@ from seedemu.layers import Base
 from typing import Dict, Callable
 
 class DefaultBaseMerger(Merger):
+    """!
+    @brief default implementation of base layer merger.
+    """
 
     __asConflictHandler: Callable[[AutonomousSystem, AutonomousSystem], AutonomousSystem]
     __ixConflictHandler: Callable[[InternetExchange, InternetExchange], InternetExchange]
