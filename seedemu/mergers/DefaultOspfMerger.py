@@ -2,6 +2,9 @@ from seedemu.core import Merger
 from seedemu.layers import Ospf
 
 class DefaultOspfMerger(Merger):
+    """!
+    @brief default OSPF layer merging implementation.
+    """
 
     def getName(self) -> str:
         return 'DefaultOspfMerger'
