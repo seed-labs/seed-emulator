@@ -6,17 +6,43 @@ from sys import stderr
 import re, random
 
 class Action(Enum):
+    """!
+    @brief actions to take when a binding matches a node.
+    """
+
+    ## pick randomly from the candidates.
     RANDOM = 0
+
+    ## pick the first candidate.
     FIRST = 1
+
+    ## pick the last candidate.
     LAST = 2
 
 class Filter(Printable):
+    """!
+    @brief the Filter class.
+
+    The filter class is used to define some conditions to narrow down candidates
+    for a binding.
+    """
+
+    ## asn of node
     asn: int
+
+    ## name of node
     nodeName: str
+
+    ## ip address of node (w/o mask)
     ip: str
+
+    ## prefix range of node's IP address
     prefix: str
+
+    ## allow re-use already bound nodes
     allowBound: bool
 
+    ## custom test function
     custom: Callable[[str, Node], bool]
 
     def __init__(
@@ -24,6 +50,26 @@ class Filter(Printable):
         prefix: str = None, custom: Callable[[str, Node], bool] = None,
         allowBound: bool = False
     ):
+        """!
+        @brief create new filter.
+        
+        If no options are given, the filter matches all nodes in the emulation.
+        If more then one options are given, the options are joined with "and"
+        operation - meaning the node must match all given options to be
+        selected.
+
+        @param asn (optional) asn of node. Default to None (any ASN).
+        @param nodeNmae (optional) name of node. Default to None (any name).
+        @param ip (optional) IP address of node (w/o mask). Default to None (any
+        IP).
+        @param prefix (optional) Prefix range of node's IP address (CIDR).
+        Default to None (any prefix).
+        @param custom (optional) custom test function. Must accepts
+        (virtual_node_name, physical_node_object) as input and returns a bool.
+        Default to None (always allow).
+        @param allowBound (optional) allow re-use bound nodes. Default to false.
+        """
+
         self.asn = asn
         self.nodeName = nodeName
         self.ip = ip
@@ -32,12 +78,31 @@ class Filter(Printable):
         self.allowBound = allowBound
 
 class Binding(Printable):
+    """!
+    @brief Binding class. 
 
+    A binding class defines how to bind virtual nodes to physical nodes.
+    """
+
+    ## regexp of virtual node name that should be handlded by this binding.
     source: str
+
+    ## candidate selection after the filter completes.
     action: Action
+
+    ## physical node filter.
     filter: Filter
 
     def __init__(self, source, action = Action.RANDOM, filter = Filter()):
+        """!
+        @brief create new binding.
+
+        @param source virtual node name. can be regexp to match mutiple virtual
+        nodes.
+        @param action (optional) candidate selection. Default to random.
+        @param filter (optional) filter. Default to empty filter (all physical
+        nodes).
+        """
         self.source = source
         self.action = action
         self.filter = filter
@@ -48,7 +113,7 @@ class Binding(Printable):
 
         @param vnode name of vnode.
 
-        @returns true if applies, false otherwise
+        @returns true if applies, false otherwise.
         """
         return re.compile(self.source).match(vnode)
 
@@ -63,7 +128,7 @@ class Binding(Printable):
         @param peek (optional) peek mode - ignore bound attribute and don't set
         it when node is selected.
 
-        @return candidate node, or none if not found
+        @return candidate node, or none if not found.
         """
         if not self.shoudBind(vnode): return None
         self.__log('looking for binding for {}'.format(vnode))
@@ -138,4 +203,9 @@ class Binding(Printable):
         return node
 
     def __log(self, message: str):
+        """!
+        @brief log to stderr.
+
+        @param message message.
+        """
         print('==== Binding: {}: {}'.format(self.source, message), file=stderr)
