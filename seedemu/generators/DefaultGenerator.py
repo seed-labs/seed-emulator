@@ -5,20 +5,42 @@ from . .core import Emulator, AutonomousSystem, InternetExchange
 from . .layers import Base, Routing, Ebgp, Ibgp, Ospf
 
 class DefaultGenerator:
+    """!
+    @brief Default topology generator implementation.
+
+    The topology generator providers a way to generate emulation scenarios from
+    real-world topology.
+
+    WIP.
+    """
 
     __provider: DataProvider
 
-    def __init__(self, provider: DataProvider) -> None:
+    def __init__(self, provider: DataProvider):
+        """!
+        @brief create a new topology generator.
+
+        @param provider data provider.
+        """
         self.__provider = provider
         pass
 
     def __log(self, message: str) -> None:
         """!
         @brief Log to stderr.
+
+        @param message message.
         """
-        print('== DefaultGenerator: {}'.format(message), file=stderr)
+        print('== DefaultGenerator: {}'.format(message), file = stderr)
 
     def __generate(self, asn: int, emulator: Emulator, depth: int):
+        """!
+        @brief recursively (depth-first) generate tology.
+
+        @param asn asn to start on.
+        @param emulator emulator to commit changes on.
+        @param depth levels to traverse.
+        """
         if depth <= 0: return
 
         self.__log('generating AS{}...'.format(asn))
@@ -84,6 +106,14 @@ class DefaultGenerator:
 
 
     def generate(self, startAsn: int, depth: int) -> Emulator:
+        """!
+        @brief generate a new emulation.
+
+        @param startAsn ASN to start on.
+        @param depth levels to traverse.
+
+        @returns generated emulator.
+        """
         sim = Emulator()
         sim.addLayer(Base())
         sim.addLayer(Routing())
