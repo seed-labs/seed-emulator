@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 # encoding: utf-8
 # __author__ = 'Demon'
-from seedsim.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
-from seedsim.compiler import Docker
-from seedsim.services import DomainNameCachingService
-from seedsim.core import Simulator, Binding, Filter, Node
-from typing import List
+from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
+from seedemu.core import Emulator
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()

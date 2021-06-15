@@ -2,10 +2,9 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
-from seedsim.core import Simulator, Binding, Filter, Action
-from seedsim.compiler import Docker
-from seedsim.services import EthereumService
-from seedsim.services import WebService
+from seedemu.core import Simulator, Binding, Filter
+from seedemu.compiler import Docker
+from seedemu.services import EthereumService
 
 
 sim = Simulator()
