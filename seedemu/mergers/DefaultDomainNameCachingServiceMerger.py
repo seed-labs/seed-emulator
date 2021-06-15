@@ -2,6 +2,13 @@ from .ServiceMerger import ServiceMerger
 from seedemu.services import DomainNameCachingService
 
 class DefaultDomainNameCachingServiceMerger(ServiceMerger):
+    """!
+    @brief default domain name caching service merger implementation.
+
+    This is the defualt implementation which invokes the default service merger
+    to handler merging installation targets, and set autoroot to true if any one
+    of the inputs have it set to true.
+    """
 
     def _createService(self) -> DomainNameCachingService:
         return DomainNameCachingService()
