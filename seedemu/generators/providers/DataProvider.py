@@ -1,7 +1,10 @@
-from typing import List, Tuple, Dict
+from typing import List, Dict
 from sys import stderr
 
 class DataProvider:
+    """!
+    @brief data source for the topology generator.
+    """
 
     def getName(self) -> str:
         """!
