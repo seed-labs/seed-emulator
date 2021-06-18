@@ -4,6 +4,8 @@ from .enums import NodeRole
 class Assigner:
     """!
     @brief Default address assigner.
+
+    This replaces python's generator, as that cannot be dumped.
     """
 
     __current: int
@@ -11,11 +13,23 @@ class Assigner:
     __step: int
 
     def __init__(self, start: int, end: int, step: int):
+        """!
+        @brief create a new assigner
+        
+        @param start start
+        @param end end
+        @param step step
+        """
         self.__current = start
         self.__end = end
         self.__step = step
 
     def next(self) -> int:
+        """!
+        @brief get next.
+
+        @returns next value.
+        """
         if self.__step > 0 and self.__current > self.__end:
             assert False, 'out of range.'
         if self.__step < 0 and self.__current < self.__end:
