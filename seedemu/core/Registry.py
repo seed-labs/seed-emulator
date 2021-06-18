@@ -86,6 +86,9 @@ class Registry(Printable):
     __objects: Dict[Tuple[str, str, str], Registrable]
 
     def __init__(self):
+        """!
+        @brief create a new Registry.
+        """
         self.__objects = {}
 
     def register(self, scope: str, type: str, name: str, obj: Registrable) -> Registrable:
@@ -193,6 +196,7 @@ class ScopedRegistry(Registry):
         @brief Scoped Registry ctor.
 
         @param scope scope to bind to.
+        @param parent parent Registry object.
         """
         self.__scope = scope
         self.__reg = parent
