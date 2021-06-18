@@ -9,6 +9,8 @@ class Mergeable(object):
     def getTypeName(self) -> str:
         """!
         @brief Get type name of the current object. 
+
+        @returns type name.
         """
         raise NotImplementedError("getTypeName not implemented.")
 
@@ -18,7 +20,9 @@ class Mergeable(object):
         objects. This is called when merging two object with the same type.
         emulator.
 
-        @param other the other object
+        @param other the other object.
+
+        @returns true if should merge.
         """
         raise NotImplementedError("equals not implemented.")
 
@@ -31,7 +35,12 @@ class Merger(object):
     """
 
     def getName(self) -> str:
-        raise NotImplementedError("getTargetType not implemented.")
+        """!
+        @brief get name of the mergable object.
+
+        @returns name.
+        """
+        raise NotImplementedError("getName not implemented.")
 
     def getTargetType(self) -> str:
         """!
