@@ -12,7 +12,10 @@ class Ris(DataProvider):
 
     __cache: Dict[str, Dict[str, Any]]
 
-    def __init__(self) -> None:
+    def __init__(self):
+        """!
+        @brief Create a new RIS data provider.
+        """
         self.__cache = {}
         self.__cache['prefixes'] = {}
         self.__cache['peers'] = {}
@@ -21,7 +24,7 @@ class Ris(DataProvider):
         super().__init__()
 
     def __ripe(self, verb: str, params: Any) -> Any:
-        """
+        """!
         @brief invoke RIPE API.
 
         @param verb API action.
@@ -39,7 +42,7 @@ class Ris(DataProvider):
         return json['data']
     
     def __peeringdb(self, path: str, params: Any) -> Any:
-        """
+        """!
         @brief invoke PeeringDB API.
 
         @param path API path.
