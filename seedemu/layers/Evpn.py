@@ -82,7 +82,7 @@ class Evpn(Layer):
     """!
     @brief The Evpn (Ethernet VPN) layer.
 
-    This layer add supports for BGP-signeled EVPN.
+    Work in progress. This layer add supports for BGP-signeled EVPN. 
     """
 
     __customers: Set[Tuple[int, int, str, str, int]]
@@ -129,7 +129,7 @@ class Evpn(Layer):
         @param customerAsn customer ASN. If the target network is an internet
         exchange, use 0 as asn.
         @param customerNetworkName customer network name.
-        @param routerNodeName name of the PE router node.
+        @param providerRouterNodeName name of the PE router node.
         @param vni VNI.
         '''
         self.__customers.add((providerAsn, customerAsn, customerNetworkName, providerRouterNodeName, vni))
