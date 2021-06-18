@@ -17,6 +17,9 @@ class BgpLookingGlassServer(Server):
     __proxy_port: int
 
     def __init__(self):
+        """!
+        @brief create a new class BgpLookingGlassServer.
+        """
         super().__init__()
         self.__routers = set()
         self.__frontend_port = 5000
