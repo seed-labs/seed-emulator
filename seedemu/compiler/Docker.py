@@ -182,7 +182,7 @@ class Docker(Compiler):
         @param dummyNetworksPool (optional) dummy networks pool. This should not
         overlap with any "real" networks used in the emulation, including
         loopback IP addresses. 
-        @param dymmyNetworksMask (optional) mask of dummy networks.
+        @param dummyNetworksMask (optional) mask of dummy networks.
         """
         self.__networks = ""
         self.__services = ""
