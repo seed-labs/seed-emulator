@@ -39,6 +39,15 @@ class DefaultEbgpMerger(Merger):
         return 'EbgpLayer'
 
     def doMerge(self, objectA: Ebgp, objectB: Ebgp) -> Ebgp:
+        """!
+        @brief merge two Ebgp layers.
+
+        @param objectA first Ebgp layer.
+        @param objectB second Ebgp layer.
+        
+        @returns merged Ebgp layer.
+        """
+        
         new_private = objectA.getPrivatePeerings()
         new_rs = objectA.getRsPeers()
         new_xc = objectA.getCrossConnectPeerings()

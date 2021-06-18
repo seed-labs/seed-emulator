@@ -67,6 +67,15 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
         return 'DomainNameServiceLayer'
 
     def doMerge(self, objectA: DomainNameService, objectB: DomainNameService) -> DomainNameService:
+        """!
+        @brief merge two DomainNameService.
+
+        @param objectA first DomainNameService.
+        @param objectB second DomainNameService.
+        
+        @returns merged DomainNameService.
+        """
+
         merged: DomainNameService = super().doMerge(objectA, objectB)
         
         self.__mergeZone(objectA.getRootZone(), objectB.getRootZone(), merged.getRootZone())

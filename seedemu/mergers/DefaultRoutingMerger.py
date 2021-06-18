@@ -15,6 +15,14 @@ class DefaultRoutingMerger(Merger):
         return 'RoutingLayer'
 
     def doMerge(self, objectA: Routing, objectB: Routing) -> Routing:
+        """!
+        @brief merge two Routing layers.
+
+        @param objectA first Routing layer.
+        @param objectB second Routing layer.
+        
+        @returns merged Routing layer.
+        """
         new_routing = Routing()
         for (asn, net) in (objectA.getDirects() | objectB.getDirects()):
             new_routing.addDirect(asn, net)

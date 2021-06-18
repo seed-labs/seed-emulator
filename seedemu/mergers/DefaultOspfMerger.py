@@ -13,6 +13,15 @@ class DefaultOspfMerger(Merger):
         return 'OspfLayer'
 
     def doMerge(self, objectA: Ospf, objectB: Ospf) -> Ospf:
+        """!
+        @brief merge two Ospf layers.
+
+        @param objectA first Ospf layer.
+        @param objectB second Ospf layer.
+        
+        @returns merged Ospf layer.
+        """
+        
         new_ospf = Ospf()
 
         for (asn, netname) in (objectA.getStubs() | objectB.getStubs()):

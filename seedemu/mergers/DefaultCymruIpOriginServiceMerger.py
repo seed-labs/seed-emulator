@@ -19,6 +19,15 @@ class DefaultCymruIpOriginServiceMerger(ServiceMerger):
         return CymruIpOriginService()
 
     def doMerge(self, objectA: CymruIpOriginService, objectB: CymruIpOriginService) -> CymruIpOriginService:
+        """!
+        @brief merge two IP origin services.
+
+        @param objectA first IP origin service.
+        @param objectB second IP origin service.
+
+        @returns merged IP origin service.
+        """
+
         new_org: CymruIpOriginService = super().doMerge(objectA, objectB)
         
         for record in (objectA.getRecords() + objectB.getRecords()):

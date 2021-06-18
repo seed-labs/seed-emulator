@@ -17,6 +17,15 @@ class DefaultDomainNameCachingServiceMerger(ServiceMerger):
         return 'DomainNameCachingServiceLayer'
 
     def doMerge(self, objectA: DomainNameCachingService, objectB: DomainNameCachingService) -> DomainNameCachingService:
+        """!
+        @brief merge two DomainNameCachingServices.
+
+        @param objectA first DomainNameCachingService.
+        @param objectB second DomainNameCachingService.
+        
+        @returns merged DomainNameCachingService.
+        """
+
         merged: DomainNameCachingService = super().doMerge(objectA, objectB)
         merged.__auto_root = objectA.__auto_root or objectB.__auto_root
 

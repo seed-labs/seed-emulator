@@ -38,6 +38,15 @@ class DefaultBaseMerger(Merger):
         return 'BaseLayer'
 
     def doMerge(self, objectA: Base, objectB: Base) -> Base:
+        """!
+        @brief merge two base layers.
+
+        @param objectA first base.
+        @param objectB second base.
+
+        @returns merged base.
+        """
+        
         as_objects: Dict[int, AutonomousSystem] = {}
         ix_objects: Dict[int, InternetExchange] = {}
 

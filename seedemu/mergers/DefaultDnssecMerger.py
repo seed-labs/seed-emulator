@@ -15,6 +15,15 @@ class DefaultDnssecMerger(Merger):
         return 'DnssecLayer'
 
     def doMerge(self, objectA: Dnssec, objectB: Dnssec) -> Dnssec:
+        """!
+        @brief perform Dnssec layer merge.
+
+        @param objectA first Dnssec layer.
+        @param objectB second Dnssec layer.
+
+        @returns merged Dnssec layer.
+        """
+
         new_dnssec = Dnssec()
         for zone in (objectA.getEnabledZones() | objectB.getEnabledZones()):
             new_dnssec.enableOn(zone)

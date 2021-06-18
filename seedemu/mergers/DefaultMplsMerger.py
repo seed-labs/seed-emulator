@@ -13,6 +13,14 @@ class DefaultMplsMerger(Merger):
         return 'MplsLayer'
 
     def doMerge(self, objectA: Mpls, objectB: Mpls) -> Mpls:
+        """!
+        @brief merge two Mpls layers.
+
+        @param objectA first Mpls layer.
+        @param objectB second Mpls layer.
+        
+        @returns merged Mpls layer.
+        """
         new_mpls = Mpls()
 
         for (asn, nodename) in (objectA.getEdges() | objectB.getEdges()):
