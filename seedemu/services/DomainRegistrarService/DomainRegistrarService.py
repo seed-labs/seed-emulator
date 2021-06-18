@@ -35,8 +35,6 @@ class DomainRegistrarServer(Server):
     def __init__(self):
         """!
         @brief DomainRegistrarServer constructor.
-
-        @param node node.
         """
         self.__port = 80
 
