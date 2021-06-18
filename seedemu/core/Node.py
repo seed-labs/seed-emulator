@@ -493,6 +493,7 @@ class Node(Printable, Registrable, Configurable):
         blocking command, set fork to true and fork it to the background so
         that it won't block the execution of other commands.
 
+        @param index index to insert command in.
         @param cmd command to add.
         @param fork (optional) fork to command to background?
 
