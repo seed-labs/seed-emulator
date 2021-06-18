@@ -32,6 +32,11 @@ class BgpAttackerComponent(Component):
         self.__data.addLayer(self.__routing)
 
     def get(self) -> Emulator:
+        """!
+        @brief Get the emulator with attacker.
+
+        Merge the emulator to install the component.
+        """
         return self.__data
 
     def addHijackedPrefix(self, prefix: str):
