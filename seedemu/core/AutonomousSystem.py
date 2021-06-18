@@ -2,7 +2,6 @@ from .Graphable import Graphable
 from .Printable import Printable
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
-from .Registry import ScopedRegistry
 from .enums import NetworkType, NodeRole
 from .Node import Node
 from .Emulator import Emulator
@@ -20,7 +19,6 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
     __asn: int
     __subnets: List[IPv4Network]
-    __reg: ScopedRegistry
     __routers: Dict[str, Node]
     __hosts: Dict[str, Node]
     __nets: Dict[str, Network]
@@ -39,18 +37,35 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
 
     def registerNodes(self, emulator: Emulator):
+        """!
+        @brief register all nodes in the as in the emulation.
+
+        Note: this is to be invoked by the renderer.
+
+        @param emulator emulator to register nodes in.
+        """
+
         reg = emulator.getRegistry()
         for (key, val) in self.__hosts.items(): reg.register(str(self.__asn), 'hnode', key, val)
         for (key, val) in self.__routers.items(): reg.register(str(self.__asn), 'rnode', key, val)
         for (key, val) in self.__nets.items(): reg.register(str(self.__asn), 'net', key, val)
 
     def configure(self, emulator: Emulator):
+        """!
+        @brief configure all nodes in the as in the emulation.
+
+        Note: this is to be invoked by the renderer.
+
+        @param emulator emulator to configure nodes in.
+        """
         for host in self.__hosts.values(): host.configure(emulator)
         for router in self.__routers.values(): router.configure(emulator)
 
     def getAsn(self) -> int:
         """!
         @brief Get ASN.
+
+        @returns asn.
         """
         return self.__asn
     
@@ -63,6 +78,8 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         /24 subnet of "10.{asn}.{id}.0/24" will be used, where asn is ASN of
         this AS, and id is a self-incremental value starts from 0.
         @param aac optional. AddressAssignmentConstraint to use.
+
+        @returns Network.
         @throws StopIteration if subnet exhausted.
         """
         assert prefix != "auto" or self.__asn <= 255, "can't use auto: asn > 255"
@@ -85,6 +102,8 @@ class AutonomousSystem(Printable, Graphable, Configurable):
     def getNetworks(self) -> List[str]:
         """!
         @brief Get llist of name of networks.
+
+        @returns list of networks.
         """
         return list(self.__nets.keys())
 
@@ -103,6 +122,8 @@ class AutonomousSystem(Printable, Graphable, Configurable):
     def getRouters(self) -> List[str]:
         """!
         @brief Get llist of name of routers.
+
+        @returns list of routers.
         """
         return list(self.__routers.keys())
 
@@ -138,11 +159,17 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
     def getHosts(self) -> List[str]:
         """!
-        @brief Get llist of name of hosts.
+        @brief Get list of name of hosts.
+
+        @returns list of hosts.
         """
         return list(self.__hosts.keys())
 
     def _doCreateGraphs(self):
+        """!
+        @brief create l2 connection graphs.
+        """
+
         l2graph = self._addGraph('AS{}: Layer 2 Connections'.format(self.__asn), False)
         
         for obj in self.__nets.values():
@@ -173,6 +200,14 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         # todo: better xc graphs?
         
     def print(self, indent: int) -> str:
+        """!
+        @brief print AS details (nets, hosts, routers).
+        
+        @param indent indent.
+
+        @returns printable string.
+        """
+
         out = ' ' * indent
         out += 'AutonomousSystem {}:\n'.format(self.__asn)
 
