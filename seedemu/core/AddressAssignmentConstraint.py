@@ -1,7 +1,11 @@
 from .Printable import Printable
-from .enums import NetworkType, NodeRole
+from .enums import NodeRole
 
 class Assigner:
+    """!
+    @brief Default address assigner.
+    """
+
     __current: int
     __end: int
     __step: int
