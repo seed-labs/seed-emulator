@@ -93,8 +93,6 @@ class BotnetServer(Server):
     def __init__(self):
         """!
         @brief BotnetServer constructor.
-
-        @param node node.
         """
         self.__port = 445
 
@@ -153,9 +151,9 @@ class BotnetClientServer(Server):
         """!
         @brief BotnetClient constructor.
 
-        @param node node.
         @param c2_server C2 server address.
-        @param dga DGA function, used for generating multiple random C2 domains.
+        @param enable_dga (optional) set true to enable DGA.
+        @param dga (optional) DGA function, used for generating multiple random C2 domains.
         """
         self.__c2_server_url = 'http://{}:446//stagers/b6H.py'.format(c2_server)
         self.__c2_server_ip = c2_server
@@ -171,11 +169,11 @@ class BotnetClientServer(Server):
                 dga_source_code = inspect.getsource(dga)
             self.__dropper = BotnetServerFileTemplates['dga_dropper'].format(dga = dga_source_code)
 
-    def setModule(self, filename: str, file_src:str):
+    def setModule(self, filename: str, file_src: str):
         """!
         @brief pass file to bot client into folder /tmp/.
         @param filename the file name will be in tmp folder.
-        @param file_dst file path.
+        @param file_src file path.
         """
 
         file_content = open(file_src, 'r').read()
