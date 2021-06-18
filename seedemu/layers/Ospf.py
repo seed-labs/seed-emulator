@@ -42,8 +42,6 @@ class Ospf(Layer):
     def __init__(self):
         """!
         @brief Ospf (OSPF) layer conscrutor.
-
-        @param emulator emulator.
         """
         super().__init__()
         self.__stubs = set()
@@ -88,7 +86,9 @@ class Ospf(Layer):
 
         @todo handle IX LAN masking?
 
-        @param net network.
+        @param asn asn of the net.
+        @param netname name of the net.
+        
         @throws AssertionError if network is not local.
         """
         self.__masked.add((asn, netname))
@@ -121,7 +121,8 @@ class Ospf(Layer):
         """!
         @brief Test if a network is masked.
 
-        @param net network to test.
+        @param asn to test.
+        @param netname net name in the given as.
         
         @returns if net is masked.
         """

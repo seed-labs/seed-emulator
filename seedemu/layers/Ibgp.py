@@ -26,8 +26,6 @@ class Ibgp(Layer, Graphable):
     def __init__(self):
         """!
         @brief Ibgp (iBGP) layer constructor.
-        
-        @param emulator emulator.
         """
         super().__init__()
         self.__masked = set()
