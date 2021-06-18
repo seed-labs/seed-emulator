@@ -27,22 +27,11 @@ class Filter(Printable):
     for a binding.
     """
 
-    ## asn of node
     asn: int
-
-    ## name of node
     nodeName: str
-
-    ## ip address of node (w/o mask)
     ip: str
-
-    ## prefix range of node's IP address
     prefix: str
-
-    ## allow re-use already bound nodes
     allowBound: bool
-
-    ## custom test function
     custom: Callable[[str, Node], bool]
 
     def __init__(
@@ -59,7 +48,7 @@ class Filter(Printable):
         selected.
 
         @param asn (optional) asn of node. Default to None (any ASN).
-        @param nodeNmae (optional) name of node. Default to None (any name).
+        @param nodeName (optional) name of node. Default to None (any name).
         @param ip (optional) IP address of node (w/o mask). Default to None (any
         IP).
         @param prefix (optional) Prefix range of node's IP address (CIDR).
@@ -70,11 +59,22 @@ class Filter(Printable):
         @param allowBound (optional) allow re-use bound nodes. Default to false.
         """
 
+        ## asn of node
         self.asn = asn
+
+        ## name of node
         self.nodeName = nodeName
+
+        ## ip address of node (w/o mask)
         self.ip = ip
+
+        ## prefix range of node's IP address
         self.prefix = prefix
+
+        ## custom test function
         self.custom = custom
+
+        ## allow re-use already bound nodes
         self.allowBound = allowBound
 
 class Binding(Printable):
@@ -84,13 +84,8 @@ class Binding(Printable):
     A binding class defines how to bind virtual nodes to physical nodes.
     """
 
-    ## regexp of virtual node name that should be handlded by this binding.
     source: str
-
-    ## candidate selection after the filter completes.
     action: Action
-
-    ## physical node filter.
     filter: Filter
 
     def __init__(self, source, action = Action.RANDOM, filter = Filter()):
@@ -103,8 +98,14 @@ class Binding(Printable):
         @param filter (optional) filter. Default to empty filter (all physical
         nodes).
         """
+
+        ## regexp of virtual node name that should be handlded by this binding.
         self.source = source
+
+        ## candidate selection after the filter completes.
         self.action = action
+
+        ## physical node filter.
         self.filter = filter
 
     def shoudBind(self, vnode: str) -> bool:
@@ -124,7 +125,7 @@ class Binding(Printable):
         node object.
 
         @param vnode name of vnode
-        @param regitry registry to select candidate from. 
+        @param registry registry to select candidate from. 
         @param peek (optional) peek mode - ignore bound attribute and don't set
         it when node is selected.
 
