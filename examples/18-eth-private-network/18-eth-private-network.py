@@ -2,12 +2,12 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
-from seedemu.core import Simulator, Binding, Filter
+from seedemu.core import Emulator, Binding, Filter
 from seedemu.compiler import Docker
 from seedemu.services import EthereumService
 
 
-sim = Simulator()
+sim = Emulator()
 eth = EthereumService()
 
 sim.load('base-component.bin')
