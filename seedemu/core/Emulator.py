@@ -384,7 +384,7 @@ class Emulator:
         @throws AssertionError if the emulation is already rendered.
         """
 
-        assert self.__rendered, 'cannot dump emulation after render.'
+        assert not self.__rendered, 'cannot dump emulation after render.'
         with open(fileName, 'wb') as f:
             pickle.dump(self.__registry, f)
 
