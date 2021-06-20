@@ -11,7 +11,7 @@ Run `18-eth-private-network.py`, it would generate the project folder. Here are 
 Firstly, we need to load our base component, so we have:
 
 ```python3
-sim = Simulator()
+sim = Emulator()
 eth = EthereumService()
 
 sim.load('base-component.bin')
@@ -20,17 +20,38 @@ sim.load('base-component.bin')
 Then we can install our ETH nodes. In here, I installed 4 nodes in our ETH network, you can install any number of nodes that you want.
 
 ```python3
-#Create eth node
-eth.install("eth1")
-eth.install("eth2")
-eth.install("eth3")
-eth.install("eth4")
+# create eth node
+e1 = eth.install("eth1")
+e2 = eth.install("eth2")
+e3 = eth.install("eth3")
+e4 = eth.install("eth4")
 ```
 
-Basically, after running all contianers, these ETH nodes will automatically peer each other, so don't worry that you don't know how to set it up properly. Next, we would add bindings for these nodes:
+Basically, after running all contianers, these ETH nodes will automatically peer each other, so don't worry that you don't know how to set it up properly.
+
+You may optionally set nodes as boot nodes:
 
 ```python3
-#Add bindings
+# optionally, set boot nodes.
+e1.setBootNode(True)
+e2.setBootNode(True)
+```
+
+Note the step above is optional. If you do not set any node as boot node, all nodes in the emulation will be each other's boot nodes, which may impact performance if you have a large number of nodes.
+
+To let other nodes know the enode URL of the current node, the boot node hosts a text file with a simple HTTP server containing the URL. By default, it runs on port `8088`. If you have run some other services on the node on that port, you change change the bootnode http server port with `setBootNodeHttpPort`:
+
+```python3
+# optionally, set boot node http server port
+e1.setBootNodeHttpPort(8081)
+```
+
+The step above is optional and put here for demonstration only.
+
+Next, we would add bindings for these nodes:
+
+```python3
+# add bindings
 sim.addBinding(Binding('eth1', filter = Filter(asn = 150)))
 sim.addBinding(Binding('eth2', filter = Filter(asn = 151)))
 sim.addBinding(Binding('eth3', filter = Filter(asn = 152)))

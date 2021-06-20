@@ -39,7 +39,7 @@ while read -r node; do {
     let count=0
     ok=true
 
-    until curl -sHf http://$node:8888/eth-enode-url > /dev/null; do {
+    until curl -sHf http://$node/eth-enode-url > /dev/null; do {
         echo "eth: node $node not ready, waiting..."
         sleep 3
         let count++
@@ -48,7 +48,7 @@ while read -r node; do {
     }; done
 
     ($ok) && {
-        echo "`curl -s http://$node:8888/eth-enode-url`," >> /tmp/eth-node-urls
+        echo "`curl -s http://$node/eth-enode-url`," >> /tmp/eth-node-urls
     }
 }; done < /tmp/eth-nodes
 '''
@@ -58,46 +58,39 @@ class EthereumServer(Server):
     @brief The Ethereum Server
     """
 
-    __serial_number: int
+    __id: int
+    __is_bootnode: bool
+    __bootnode_http_port: int
 
-    def __init__(self, serial_number: int):
+    def __init__(self, id: int):
         """!
         @brief create new eth server.
 
-        @param serial_number serial number of this server.
+        @param id serial number of this server.
         """
-        self.__serial_number = serial_number
+        self.__id = id
+        self.__is_bootnode = False
+        self.__bootnode_http_port = 8088
 
-    def configure(self, node: Node, eth: 'EthereumService'):
-        """!
-        @brief configure EthServer node, add all of Node IP in Service.
-
-        @param node node to configure the server on.
-        @param eth reference to eth service.
-        """
-        ifaces = node.getInterfaces()
-        assert len(ifaces) > 0, 'EthereumServer configure(): node has not interfaces'
-        addr = ifaces[0].getAddress()
-
-        eth.addNodeIp(str(addr))
-
-    def install(self, node: Node, eth: 'EthereumService'):
+    def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
         @brief ETH server installation step.
 
         @param node node object
         @param eth reference to the eth service.
+        @param allBootnode all-bootnode mode: all nodes are boot node.
         """
         ifaces = node.getInterfaces()
-        assert len(ifaces) > 0, 'EthereumServer#install(): node has not interfaces'
-        addr = ifaces[0].getAddress()
+        assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has not interfaces'.format(node.getAsn(), node.getName())
+        addr = str(ifaces[0].getAddress())
+        this_url = '{}:{}'.format(addr, self.getBootNodeHttpPort())
 
         # get other nodes IP for the bootstrapper.
-        enode_ips = eth.getNodeIps()[:]
-        enode_ips.remove(str(addr))
+        bootnodes = eth.getBootNodes()[:]
+        if this_url in bootnodes: bootnodes.remove(this_url)
 
         node.appendFile('/tmp/eth-genesis.json', ETHServerFileTemplates['genesis'])
-        node.appendFile('/tmp/eth-nodes', '\n'.join(enode_ips))
+        node.appendFile('/tmp/eth-nodes', '\n'.join(bootnodes))
         node.appendFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
         node.appendFile('/tmp/eth-password', 'admin') 
 
@@ -118,59 +111,122 @@ class EthereumServer(Server):
         # create account via pre-defined password
         node.appendStartCommand('geth {} --password /tmp/eth-password account new'.format(datadir_option))
 
-        # generate enode url. other nodes will access this to bootstrap the network.
-        node.appendStartCommand('echo "enode://$(bootnode --nodekey /root/.ethereum/geth/nodekey -writeaddress)@{}:30303" > /tmp/eth-enode-url'.format(addr))
+        if allBootnode or self.__is_bootnode:
+            # generate enode url. other nodes will access this to bootstrap the network.
+            node.appendStartCommand('echo "enode://$(bootnode --nodekey /root/.ethereum/geth/nodekey -writeaddress)@{}:30303" > /tmp/eth-enode-url'.format(addr))
 
-        # host the eth-enode-url for other nodes.
-        node.appendStartCommand('python3 -m http.server 8888 -d /tmp', True)
+            # host the eth-enode-url for other nodes.
+            node.appendStartCommand('python3 -m http.server {} -d /tmp'.format(self.__bootnode_http_port), True)
 
         # load enode urls from other nodes
         node.appendStartCommand('chmod +x /tmp/eth-bootstrapper')
         node.appendStartCommand('/tmp/eth-bootstrapper')
 
         # launch Ethereum process.
-        node.appendStartCommand('geth {} --bootnodes "$(cat /tmp/eth-node-urls)" --identity="NODE_{}" --networkid=10 --verbosity=6 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0'.format(datadir_option, self.__serial_number), True)
+        node.appendStartCommand('geth {} --bootnodes "$(cat /tmp/eth-node-urls)" --identity="NODE_{}" --networkid=10 --verbosity=6 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0'.format(datadir_option, self.__id), True)
 
+    def setBootNode(self, isBootNode: bool):
+        """!
+        @brief set bootnode status of this node.
+
+        Note: if no nodes are configured as boot nodes, all nodes will be each
+        other's boot nodes.
+
+        @param isBootNode True to set this node as a bootnode, False otherwise.
+        """
+        self.__is_bootnode = isBootNode
+
+    def isBootNode(self) -> bool:
+        """!
+        @brief get bootnode status of this node.
+
+        @returns True if this node is a boot node. False otherwise.
+        """
+        return self.__is_bootnode
+
+    def setBootNodeHttpPort(self, port: int):
+        """!
+        @brief set the http server port number hosting the enode url file.
+
+        @param port port
+        """
+
+        self.__bootnode_http_port = port
+
+    def getBootNodeHttpPort(self) -> int:
+        """!
+        @brief get the http server port number hosting the enode url file.
+
+        @returns port
+        """
+        return self.__bootnode_http_port
 
 class EthereumService(Service):
     """!
     @brief The Ethereum network service.
 
+    This service allows one to run a private Ethereum network in the emulator.
     """
 
     __serial: int
-    __node_ips: List[str]
+    __all_node_ips: List[str]
+    __boot_node_addresses: List[str]
 
     def __init__(self):
         super().__init__()
         self.__serial = 0
-        self.__node_ips = []
+        self.__all_node_ips = []
+        self.__boot_node_addresses = []
 
     def getName(self):
         return 'EthereumService'
 
-    def addNodeIp(self, addr: str):
-        """!
-        @brief save node's IP.
-
-        Node's IP need to be recorded so we we can let other nodes to bootstrap.
+    def getBootNodes(self) -> List[str]:
         """
-        self.__node_ips.append(addr)
-
-    def getNodeIps(self) -> List[str]:
-        """
-        @brief get node IPs.
+        @brief get bootnode IPs.
 
         @returns list of IP addresses.
         """
-        return self.__node_ips
+        return self.__all_node_ips if len(self.__boot_node_addresses) == 0 else self.__boot_node_addresses
 
     def _doConfigure(self, node: Node, server: EthereumServer):
-        server.configure(node, self)
+        self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
+
+        ifaces = node.getInterfaces()
+        assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
+        addr = '{}:{}'.format(str(ifaces[0].getAddress()), server.getBootNodeHttpPort())
+
+        if server.isBootNode():
+            self._log('adding as{}/{} as bootnode...'.format(node.getAsn(), node.getName()))
+            self.__boot_node_addresses.append(addr)
 
     def _doInstall(self, node: Node, server: EthereumServer):
-        server.install(node, self)
+        self._log('installing eth on as{}/{}...'.format(node.getAsn(), node.getName()))
+        
+        all_bootnodes = len(self.__boot_node_addresses) == 0
+
+        if all_bootnodes:
+            self._log('note: no bootnode configured. all nodes will be each other\'s boot node.')
+
+        server.install(node, self, all_bootnodes)
 
     def _createServer(self) -> Server:
         self.__serial += 1
         return EthereumServer(self.__serial)
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'EthereumService:\n'
+
+        indent += 4
+
+        out += ' ' * indent
+        out += 'Boot Nodes:\n'
+
+        indent += 4
+
+        for node in self.getBootNodes():
+            out += ' ' * indent
+            out += '{}\n'.format(node)
+
+        return out
