@@ -34,7 +34,9 @@ ETHServerFileTemplates['genesis'] = '''{
 }'''
 
 # bootstraper: get enode urls from other eth nodes.
-ETHServerFileTemplates['bootstrapper'] = '''
+ETHServerFileTemplates['bootstrapper'] = '''\
+#!/bin/bash
+
 while read -r node; do {
     let count=0
     ok=true
