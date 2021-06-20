@@ -1,5 +1,8 @@
-const API_PATH = '/api/v1';
+import { Configuration } from "../common/configuration";
 
+/**
+ * console network manager.
+ */
 export class ConsoleNetwork {
     private _id: string;
 
@@ -7,10 +10,15 @@ export class ConsoleNetwork {
         this._id = id;
     }
 
+    /**
+     * get the container details
+     * 
+     * @returns container details.
+     */
     async getContainer(): Promise<any> {
         var xhr = new XMLHttpRequest();
 
-        xhr.open('GET', `${API_PATH}/container/${this._id}`);
+        xhr.open('GET', `${Configuration.ApiPath}/container/${this._id}`);
 
         return new Promise((resolve, reject) => {
             xhr.onload = function () {
@@ -40,7 +48,13 @@ export class ConsoleNetwork {
         });
     }
 
+    /**
+     * get the websocket.
+     * 
+     * @param protocol (optional) websocket protocol (ws/wss), default to ws.
+     * @returns websocket.
+     */
     getSocket(protocol: string = 'ws'): WebSocket {
-        return new WebSocket(`${protocol}://${location.host}${API_PATH}/console/${this._id}`);
+        return new WebSocket(`${protocol}://${location.host}${Configuration.ApiPath}/console/${this._id}`);
     }
 };

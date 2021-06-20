@@ -3,6 +3,13 @@ from seedemu.services import DomainNameService, Zone
 from re import match
 
 class DefaultDomainNameServiceMerger(ServiceMerger):
+    """!
+    @brief default domain name service merger implementation.
+
+    This is the defualt implementation which invokes the default service merger
+    to handler merging installation targets, merge the zone tree, and combine
+    masters.
+    """
 
     def __mergeZone(self, a: Zone, b: Zone, dst: Zone, position: str = ''):
         names = set()
@@ -60,6 +67,15 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
         return 'DomainNameServiceLayer'
 
     def doMerge(self, objectA: DomainNameService, objectB: DomainNameService) -> DomainNameService:
+        """!
+        @brief merge two DomainNameService.
+
+        @param objectA first DomainNameService.
+        @param objectB second DomainNameService.
+        
+        @returns merged DomainNameService.
+        """
+
         merged: DomainNameService = super().doMerge(objectA, objectB)
         
         self.__mergeZone(objectA.getRootZone(), objectB.getRootZone(), merged.getRootZone())

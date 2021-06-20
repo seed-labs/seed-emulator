@@ -29,8 +29,6 @@ class DomainNameCachingServer(Server, Configurable):
     def __init__(self):
         """!
         @brief DomainNameCachingServer constructor.
-
-        @param node node to install on.
         """
         self.__root_servers = []
         self.__configure_resolvconf = False

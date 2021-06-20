@@ -7,34 +7,82 @@ from sys import stderr
 import pickle
 
 class BindingDatabase(Registrable, Printable):
+    """!
+    @brief Registrable wrapper for Bindings.
+
+    classes needs to be Registrable to be saved in the Registry. wrapping
+    bindings database with Registrable allows the bindings to be preserved in
+    dumps.
+    """
+
     db: List[core.Binding]
 
     def __init__(self):
+        """!
+        @brief Create a new binding database.
+        """
+
+        ## Binding database
         self.db = []
 
     def print(self, indentation: int) -> str:
+        """!
+        @brief get printable string.
+
+        @param indentation indentation.
+
+        @returns printable string.
+        """
+
         return ' ' * indentation + 'BindingDatabase\n'
 
 class LayerDatabase(Registrable, Printable):
+    """!
+    @brief Registrable wrapper for Layers.
 
-    db: Dict[str, Tuple[Layer, bool]]
+    classes needs to be Registrable to be saved in the Registry. wrapping
+    layers database with Registrable allows the layers to be preserved in dumps.
+    """
+
+    db: Dict[str, Tuple[core.Layer, bool]]
 
     def __init__(self):
+        """!
+        @brief Build a new layers database.
+        """
+
+        ## Layers database
         self.db = {}
 
     def print(self, indentation: int) -> str:
+        """!
+        @brief get printable string.
+
+        @param indentation indentation.
+
+        @returns printable string.
+        """
+
         return ' ' * indentation + 'LayerDatabase\n'
 
 class Emulator:
+    """!
+    @brief The Emulator class.
+
+    Emulator class is the entry point for emulations. 
+    """
 
     __registry: Registry
     __layers: LayerDatabase
     __dependencies_db: Dict[str, Set[Tuple[str, bool]]]
     __rendered: bool
     __bindings: BindingDatabase
-    __resolved_bindings: Dict[str, Node]
+    __resolved_bindings: Dict[str, core.Node]
 
     def __init__(self):
+        """!
+        @brief Construct a new emulation.
+        """
         self.__rendered = False
         self.__dependencies_db = {}
         self.__resolved_bindings = {}
@@ -74,7 +122,7 @@ class Emulator:
 
         self.__log('entering {}...'.format(layerName))
 
-        hooks: List[Hook] = []
+        hooks: List[core.Hook] = []
         for hook in self.__registry.getByType('seedemu', 'hook'):
             if hook.getTargetLayer() == layerName: hooks.append(hook)
         
@@ -97,6 +145,11 @@ class Emulator:
         self.__layers.db[layerName] = (layer, True)
     
     def __loadDependencies(self, deps: Dict[str, Set[Tuple[str, bool]]]):
+        """!
+        @brief Load dependencies list.
+
+        @param deps dependencies list.
+        """
         for (layer, deps) in deps.items():
             if not layer in self.__dependencies_db:
                 self.__dependencies_db[layer] = deps
@@ -105,26 +158,46 @@ class Emulator:
             self.__dependencies_db[layer] |= deps
 
     def __log(self, message: str):
+        """!
+        @brief log to stderr.
+
+        @param message message.
+        """
         print('== Emulator: {}'.format(message), file=stderr)
 
     def rendered(self) -> bool:
         """!
         @brief test if the emulator is rendered.
 
-        @retrns True if rendered
+        @returns True if rendered
         """
         return self.__rendered
 
-    def addHook(self, hook: Hook):
+    def addHook(self, hook: core.Hook):
+        """!
+        @brief Add a hook.
+
+        @param hook Hook.
+        """
         self.__registry.register('seedemu', 'hook', hook.getName(), hook)
 
-    def addBinding(self, bindng: Binding):
-        self.__bindings.db.append(bindng)
+    def addBinding(self, binding: core.Binding):
+        """!
+        @brief Add a binding.
+
+        @param binding binding.
+        """
+        self.__bindings.db.append(binding)
 
     def getBindings(self) -> List[core.Binding]:
+        """!
+        @brief Get all bindings.
+
+        @returns list of bindings.
+        """
         return self.__bindings.db
 
-    def addLayer(self, layer: Layer):
+    def addLayer(self, layer: core.Layer):
         """!
         @brief Add a layer.
 
@@ -137,13 +210,24 @@ class Emulator:
         self.__registry.register('seedemu', 'layer', lname, layer)
         self.__layers.db[lname] = (layer, False)
 
-    def getLayer(self, layerName: str) -> Layer:
+    def getLayer(self, layerName: str) -> core.Layer:
+        """!
+        @brief Get a layer.
+
+        @param layerName of the layer.
+        @returns layer.
+        """
         return self.__registry.get('seedemu', 'layer', layerName)
 
-    def getLayers(self) -> List[Layer]:
+    def getLayers(self) -> List[core.Layer]:
+        """!
+        @brief Get all layers.
+
+        @returns list of layers.
+        """
         return self.__registry.getByType('seedemu', 'layer')
 
-    def resolvVnode(self, vnode: str) -> Node:
+    def resolvVnode(self, vnode: str) -> core.Node:
         """!
         @brief resolve physical node for the given virtual node.
 
@@ -158,7 +242,7 @@ class Emulator:
             return pnode
         assert False, 'cannot resolve vnode {}'.format(vnode)
 
-    def getBindingFor(self, vnode: str) -> Node:
+    def getBindingFor(self, vnode: str) -> core.Node:
         """!
         @brief get physical node for the given virtual node from the
         pre-populated vnode-pnode mappings.
@@ -185,7 +269,7 @@ class Emulator:
 
     def render(self):
         """!
-        @brief Render.
+        @brief Render to emulation.
 
         @throws AssertionError if dependencies unmet 
         """
@@ -229,7 +313,7 @@ class Emulator:
 
         self.__rendered = True
 
-    def compile(self, compiler: 'Compiler', out: str, override: bool = False):
+    def compile(self, compiler: core.Compiler, output: str, override: bool = False):
         """!
         @brief Compile the simulation.
 
@@ -238,15 +322,27 @@ class Emulator:
         @param override (optional) override the output folder if it already
         exist. False by defualt.
         """
-        compiler.compile(self, out, override)
+        compiler.compile(self, output, override)
 
     def getRegistry(self) -> Registry: 
+        """!
+        @brief Get the Registry.
+
+        @returns Registry.
+        """
         return self.__registry
 
-    def removeLayer(self, layerName: str) -> bool:
-        raise NotImplementedError('todo')
-
     def merge(self, other: Emulator, mergers: List[Merger] = [], vnodePrefix: str = '') -> Emulator:
+        """!
+        @brief merge two emulators.
+
+        @param other the other emulator.
+        @param mergers list of merge handlers.
+        @param vnodePrefix prefix to add to the vnodes from the other emulator.
+
+        @returns new emulator.
+        """
+
         new_layers: Dict[Mergeable] = {}
         other_layers: Dict[Mergeable] = {}
 
@@ -281,11 +377,24 @@ class Emulator:
         return new_sim
 
     def dump(self, fileName: str):
-        assert self.__render, 'cannot dump simulation after render.'
+        """!
+        @brief dump the emulation to file.
+
+        @param fileName output path.
+        @throws AssertionError if the emulation is already rendered.
+        """
+
+        assert not self.__rendered, 'cannot dump emulation after render.'
         with open(fileName, 'wb') as f:
             pickle.dump(self.__registry, f)
 
     def load(self, fileName: str):
+        """!
+        @brief load emulation from file.
+
+        @param fileName path to the dumped emulation.
+        """
+
         with open(fileName, 'rb') as f:
             self.__rendered = False
             self.__dependencies_db = {}

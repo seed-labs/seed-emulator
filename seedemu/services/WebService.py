@@ -26,8 +26,6 @@ class WebServer(Server):
     def __init__(self):
         """!
         @brief WebServer constructor.
-
-        @param node node.
         """
         self.__port = 80
         self.__index = '<h1>{nodeName} at {asn}</h1>'
@@ -73,8 +71,6 @@ class WebService(Service):
     def __init__(self):
         """!
         @brief WebService constructor.
-
-        @param emulator emulator
         """
         super().__init__()
         self.addDependency('Base', False, False)

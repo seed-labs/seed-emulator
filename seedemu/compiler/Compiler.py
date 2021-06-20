@@ -19,7 +19,7 @@ class Compiler:
         class can assume that the current working directory is the output
         folder.
 
-        @param registry rendered simulation.
+        @param emulator emulator object.
         """
         raise NotImplementedError('_doCompile not implemented.')
 
@@ -35,6 +35,7 @@ class Compiler:
         """!
         @brief Compile the simulation.
 
+        @param emulator emulator object.
         @param output output directory path.
         @param override (optional) override the output folder if it already
         exist. False by defualt.
@@ -57,5 +58,7 @@ class Compiler:
     def _log(self, message: str) -> None:
         """!
         @brief Log to stderr.
+
+        @param message message.
         """
         print("== {}Compiler: {}".format(self.getName(), message), file=stderr)

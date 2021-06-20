@@ -67,8 +67,6 @@ class Dnssec(Layer):
     def __init__(self):
         """!
         @brief Dnssec layer constructor.
-
-        @param emulator emulator
         """
         super().__init__()
         self.__zonenames = set()

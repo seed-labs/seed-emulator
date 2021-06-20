@@ -214,8 +214,6 @@ class DomainNameServer(Server):
     def __init__(self):
         """!
         @brief DomainNameServer constructor.
-
-        @param node node to install server on.
         """
         self.__zones = set()
         self.__is_master = False
@@ -353,7 +351,6 @@ class DomainNameService(Service):
         """!
         @brief DomainNameService constructor.
         
-        @param emulator emulator.
         @param autoNameServer add gule records to parents automaically.
         """
         super().__init__()

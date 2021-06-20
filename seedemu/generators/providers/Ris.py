@@ -6,10 +6,16 @@ RIPE_API = 'https://stat.ripe.net/data'
 PEERINGDB_API = 'https://www.peeringdb.com/api'
 
 class Ris(DataProvider):
+    """!
+    @brief data provider based on PeeringDB and RIPE RIS API.
+    """
 
     __cache: Dict[str, Dict[str, Any]]
 
-    def __init__(self) -> None:
+    def __init__(self):
+        """!
+        @brief Create a new RIS data provider.
+        """
         self.__cache = {}
         self.__cache['prefixes'] = {}
         self.__cache['peers'] = {}
@@ -18,6 +24,14 @@ class Ris(DataProvider):
         super().__init__()
 
     def __ripe(self, verb: str, params: Any) -> Any:
+        """!
+        @brief invoke RIPE API.
+
+        @param verb API action.
+        @param params requst params.
+
+        @returns API respond.
+        """
         rslt = requests.get('{}/{}/data.json'.format(RIPE_API, verb), params)
 
         assert rslt.status_code == 200, 'RIPEstat data API returned non-200'
@@ -28,6 +42,14 @@ class Ris(DataProvider):
         return json['data']
     
     def __peeringdb(self, path: str, params: Any) -> Any:
+        """!
+        @brief invoke PeeringDB API.
+
+        @param path API path.
+        @param params requst params.
+
+        @returns API respond.
+        """
         rslt = requests.get('{}/{}'.format(PEERINGDB_API, path), params)
 
         assert rslt.status_code == 200, 'PeeringDB data API returned non-200'

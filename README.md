@@ -33,3 +33,9 @@ To get started with the emulator, install docker, docker-compose, and python3. T
 If a previous emulation was not properly shut down, the networks it created might be left in docker. Those networks can conflict with the networks in the current emulation you try to run. 
 
 To solve this, shut down the previous emulation properly by running `docker-compose down` in the previous emulation folder. If that somehow failed, or the previous emulation folder has been removed, try doing `docker network prune` - it will remove all networks that are not currently in use.
+
+#### I'm getting `Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?`
+
+Docker caches previous build steps. One of the steps was `apt-get update`. This means if the apt repository was updated after the step being cached in a previous emulation build, docker would skip the `apt-get update` step, and the `apt-get install` steps will fail.
+
+To solve this, run build without cache by providing the `--no-cache` option: `docker-compose build --no-cache`.

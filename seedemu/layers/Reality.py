@@ -282,12 +282,13 @@ class Reality(Layer):
         """!
         @brief Reality constructor.
 
-        @param emulator emulator.
         @param hideHops (optional) hide realworld hops from traceroute (by
         setting TTL = 64 to all real world dsts on POSTROUTING), defualt True.
         @param ovpnCa (optional) CA to use for openvpn.
         @param ovpnCert (optional) server certificate to use for openvpn.
         @param ovpnKey (optional) server key to use for openvpn.
+        @param bridgeNetworksPool (optional) subnets pool for the dummy bridge network.
+        @param bridgeNetworksMask (optional) subnets size for the dummy bridge network.
         """
         super().__init__()
         self.__rwnodes = []
@@ -374,7 +375,8 @@ class Reality(Layer):
         @brief Setup VPN server for real-world clients to join a simulated
         network.
 
-        @param net network.
+        @param asobj AS object to enable real world access.
+        @param netname network name.
         @param naddrs number of IP addresses to assign to client pool.
         """
         node = asobj.createRouter('br-{}'.format(netname))

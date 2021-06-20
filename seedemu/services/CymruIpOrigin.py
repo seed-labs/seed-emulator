@@ -30,8 +30,6 @@ class CymruIpOriginService(Service):
     def __init__(self):
         """!
         @brief CymruIpOriginService constructor
-
-        @param emulator emulator.
         """
         super().__init__()
         self.__records = []

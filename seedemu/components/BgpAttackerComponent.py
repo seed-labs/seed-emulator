@@ -2,6 +2,9 @@ from seedemu.core import Component, Emulator, AutonomousSystem
 from seedemu.layers import Base, Router, Routing
 
 class BgpAttackerComponent(Component):
+    """!
+    @brief BGP hijacker component.
+    """
 
     __data: Emulator
     __hijacker_as: AutonomousSystem
@@ -10,6 +13,12 @@ class BgpAttackerComponent(Component):
     __counter: int
 
     def __init__(self, attackerAsn: int):
+        """!
+        @brief Create a new BGP hijacker.
+
+        @param attackerAsn ASN of the hijacker.
+        """
+
         self.__data = Emulator()
         self.__counter = 0
 
@@ -23,9 +32,19 @@ class BgpAttackerComponent(Component):
         self.__data.addLayer(self.__routing)
 
     def get(self) -> Emulator:
+        """!
+        @brief Get the emulator with attacker.
+
+        Merge the emulator to install the component.
+        """
         return self.__data
 
     def addHijackedPrefix(self, prefix: str):
+        """!
+        @brief Add a prefix to hijack.
+
+        @param prefix prefix in CIDR notation.
+        """
         netname = 'h{}'.format(self.__counter)
         self.__hijacker_as.createNetwork(netname, prefix)
         self.__hijacker.joinNetwork(netname)
@@ -33,4 +52,10 @@ class BgpAttackerComponent(Component):
         self.__counter += 1
 
     def joinInternetExchange(self, ix: str, addr: str):
+        """!
+        @brief Join an internet exchange.
+
+        @param ix internet exchange network name.
+        @param addr address in the exchange.
+        """
         self.__hijacker.joinNetwork(ix, addr)

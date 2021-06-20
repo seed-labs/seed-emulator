@@ -56,8 +56,6 @@ class Ebgp(Layer, Graphable):
     def __init__(self):
         """!
         @brief Ebgp layer constructor.
-        
-        @param emulator emulator.
         """
         super().__init__()
         self.__peerings = {}

@@ -17,14 +17,31 @@ class Layer(Printable, Registrable, Configurable, Mergeable):
 
     __dependencies: Dict[str, Set[Tuple[str, bool]]]
 
-    def __init__(self) -> None:
+    def __init__(self):
+        """!
+        @brief create a new layer.
+        """
+
         super().__init__()
         self.__dependencies = {}
 
     def getTypeName(self) -> str:
+        """!
+        @brief get typename of this layer.
+
+        @returns type name.
+        """
         return '{}Layer'.format(self.getName())
 
     def shouldMerge(self, other: Layer) -> bool:
+        """!
+        @brief test if this layer should be merged with another layer.
+
+        @param other the other layer.
+
+        @returns true if yes; will be true if the layer is the same layer.
+        """
+
         return self.getName() == other.getName()
 
     def addDependency(self, layerName: str, reverse: bool, optional: bool):

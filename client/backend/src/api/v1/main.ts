@@ -1,7 +1,7 @@
 import express from 'express';
 import { SocketHandler } from '../../utils/socket-handler';
 import dockerode from 'dockerode';
-import { SeedContainerInfo, Emulator, SeedNetInfo } from '../../utils/seedsim-meta';
+import { SeedContainerInfo, Emulator, SeedNetInfo } from '../../utils/seedemu-meta';
 import { Sniffer } from '../../utils/sniffer';
 import WebSocket from 'ws';
 import { Controller } from '../../utils/controller';

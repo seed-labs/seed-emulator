@@ -86,8 +86,6 @@ class Mpls(Layer, Graphable):
     def __init__(self):
         """!
         @brief Mpls layer constructor.
-        
-        @param emulator emulator.
         """
         super().__init__()
         self.__additional_edges = set()
