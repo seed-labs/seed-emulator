@@ -7,45 +7,51 @@ from typing import Dict, List
 
 ETHServerFileTemplates: Dict[str, str] = {}
 
-#This config file is used for initialing block
-ETHServerFileTemplates['genesis'] = """{
-   "nonce":"0x0000000000000042",
-   "timestamp":"0x0",
-   "parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
-   "extraData":"0x",
-   "gasLimit":"0x80000000",
-   "difficulty":"0x0",
-   "mixhash":"0x0000000000000000000000000000000000000000000000000000000000000000",
-   "coinbase":"0x3333333333333333333333333333333333333333",
-   "config": {
-    "chainId": 10,
-    "homesteadBlock": 0,
-    "eip150Block": 0,
-    "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "eip155Block": 0,
-    "eip158Block": 0,
-    "byzantiumBlock": 0,
-    "constantinopleBlock": 0,
-    "petersburgBlock": 0,
-    "istanbulBlock": 0,
-    "ethash": {}
-  },
- "alloc":{
+# genesis: the start of the chain
+ETHServerFileTemplates['genesis'] = '''{
+        "nonce":"0x0000000000000042",
+        "timestamp":"0x0",
+        "parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+        "extraData":"0x",
+        "gasLimit":"0x80000000",
+        "difficulty":"0x0",
+        "mixhash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+        "coinbase":"0x3333333333333333333333333333333333333333",
+        "config": {
+        "chainId": 10,
+        "homesteadBlock": 0,
+        "eip150Block": 0,
+        "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "eip155Block": 0,
+        "eip158Block": 0,
+        "byzantiumBlock": 0,
+        "constantinopleBlock": 0,
+        "petersburgBlock": 0,
+        "istanbulBlock": 0,
+        "ethash": {}
+    },
+    "alloc":{}
+}'''
 
-   }
-}"""
+# bootstraper: get enode urls from other eth nodes.
+ETHServerFileTemplates['bootstrapper'] = '''
+while read -r node; do {
+    let count=0
+    ok=true
 
-#This downloader is used for downloading enode info from other nodes. Then put them into --bootnodes option.
-ETHServerFileTemplates["downloader"] = """
-until $(curl --output /dev/null --silent --head --fail http://{node_addr}:8888); do
-    echo "node not ready"
-    sleep 3
-done
+    until curl -sHf http://$node:8888/eth-enode-url > /dev/null; do {
+        echo "eth: node $node not ready, waiting..."
+        sleep 3
+        let count++
+        [ $count -gt 20 ] && echo "eth: node $node failed too many times, skipping."
+        ok=false
+    }; done
 
-FINGERPRINT=$(curl -s {node_addr}:8888/enode.txt)
-echo "enode info ready"
-echo $FINGERPRINT, >> /tmp/shared_enode
-"""
+    ($ok) && {
+        echo "`curl -s http://$node:8888/eth-enode-url`," >> /tmp/eth-node-urls
+    }
+}; done < /tmp/eth-nodes
+'''
 
 class EthereumServer(Server):
     """!
@@ -86,38 +92,44 @@ class EthereumServer(Server):
         assert len(ifaces) > 0, 'EthereumServer#install(): node has not interfaces'
         addr = ifaces[0].getAddress()
 
-        #Get other nodes IP and generate the downloader in each of node, because we need download enode key from other nodes.
+        # get other nodes IP for the bootstrapper.
         enode_ips = eth.getNodeIps()[:]
         enode_ips.remove(str(addr))
 
-        downloader_commands = ""
-        for ip in enode_ips:
-            downloader_commands += ETHServerFileTemplates["downloader"].format(node_addr = ip)
+        node.appendFile('/tmp/eth-genesis.json', ETHServerFileTemplates['genesis'])
+        node.appendFile('/tmp/eth-nodes', '\n'.join(enode_ips))
+        node.appendFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
+        node.appendFile('/tmp/eth-password', 'admin') 
 
-        node.appendFile("/tmp/genesis.json", ETHServerFileTemplates['genesis'])
-        node.appendFile("/tmp/downloader.sh", downloader_commands)
-        node.appendFile("/tmp/password", "admin") # ETH account password file
-        node.addSoftware("software-properties-common")
-        node.addBuildCommand("add-apt-repository ppa:ethereum/ethereum")
+        node.addSoftware('software-properties-common')
 
-        #Install geth and bootnode
-        node.addBuildCommand("apt-get install --yes geth bootnode")
-        #Specify the data directory
-        datadir_option = "--datadir /tmp/eth{}".format(self.__serial_number)
-        #Initial block
-        node.appendStartCommand("geth {} init /tmp/genesis.json".format(datadir_option))
-        #Create account via pre-defined password
-        node.appendStartCommand("geth {} --password /tmp/password account new &".format(datadir_option))
-        node.appendStartCommand("sleep 3")
-        #Generate enode URL. Used in --bootnodes option.
-        node.appendStartCommand("echo \"enode://$(bootnode --nodekey /tmp/eth{}/geth/nodekey -writeaddress)@{}:30303\" > /tmp/enode.txt".format(self.__serial_number, addr))
-        #Launch a webserver, provided for other nodes to download its enode info.
-        node.appendStartCommand("python3 -m http.server 8888 -d /tmp &")
-        #Execute downloader.
-        node.appendStartCommand("bash /tmp/downloader.sh")
-        node.appendStartCommand("sleep 2")
-        #Launch Ethereum process.
-        node.appendStartCommand('nohup geth {} --bootnodes "$(cat /tmp/shared_enode)" --identity="NODE_{}" --networkid=10 --verbosity=6 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0 &'.format(datadir_option, self.__serial_number))
+        # tap the eth repo
+        node.addBuildCommand('add-apt-repository ppa:ethereum/ethereum')
+
+        # install geth and bootnode
+        node.addBuildCommand('apt-get install --yes geth bootnode')
+
+        # set the data directory
+        datadir_option = "--datadir /root/.ethereum"
+
+        # genesis
+        node.appendStartCommand('geth {} init /tmp/eth-genesis.json'.format(datadir_option))
+
+        # create account via pre-defined password
+        node.appendStartCommand('geth {} --password /tmp/eth-password account new'.format(datadir_option))
+
+        # generate enode url. other nodes will access this to bootstrap the network.
+        node.appendStartCommand('echo "enode://$(bootnode --nodekey /root/.ethereum/geth/nodekey -writeaddress)@{}:30303" > /tmp/eth-enode-url'.format(addr))
+
+        # host the eth-enode-url for other nodes.
+        node.appendStartCommand('python3 -m http.server 8888 -d /tmp', True)
+
+        # load enode urls from other nodes
+        node.appendStartCommand('chmod +x /tmp/eth-bootstrapper')
+        node.appendStartCommand('/tmp/eth-bootstrapper')
+
+        # launch Ethereum process.
+        node.appendStartCommand('geth {} --bootnodes "$(cat /tmp/eth-node-urls)" --identity="NODE_{}" --networkid=10 --verbosity=6 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0'.format(datadir_option, self.__serial_number), True)
 
 
 class EthereumService(Service):
