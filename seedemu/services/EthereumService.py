@@ -45,8 +45,11 @@ while read -r node; do {
         echo "eth: node $node not ready, waiting..."
         sleep 3
         let count++
-        [ $count -gt 20 ] && echo "eth: node $node failed too many times, skipping."
-        ok=false
+        [ $count -gt 20 ] && {
+            echo "eth: node $node failed too many times, skipping."
+            ok=false
+            break
+        }
     }; done
 
     ($ok) && {
