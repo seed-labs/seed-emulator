@@ -111,7 +111,7 @@ DockerCompilerFileTemplates['compose_service'] = """\
             - net.ipv4.conf.all.rp_filter=0
         privileged: true
         networks:
-{networks}{ports}
+{networks}{ports}{volumes}
         labels:
 {labelList}
 """
@@ -127,6 +127,17 @@ DockerCompilerFileTemplates['compose_ports'] = """\
 
 DockerCompilerFileTemplates['compose_port'] = """\
             - {hostPort}:{nodePort}/{proto}
+"""
+
+DockerCompilerFileTemplates['compose_volumes'] = """\
+        volumes:
+{volumeList}
+"""
+
+DockerCompilerFileTemplates['compose_volume'] = """\
+            - type: bind
+              source: {hostPath}
+              target: {nodePath}
 """
 
 DockerCompilerFileTemplates['compose_service_network'] = """\
@@ -365,6 +376,20 @@ class Docker(Compiler):
                 portList = lst
             )
         
+        _volumes = node.getSharedFolders()
+        volumes = ''
+        if len(volumes) > 0:
+            lst = ''
+            for (nodePath, hostPath) in _volumes.items():
+                lst += DockerCompilerFileTemplates['compose_volume'].format(
+                    hostPath = hostPath,
+                    nodePath = nodePath
+                )
+
+            volumes += DockerCompilerFileTemplates['compose_volumes'].format(
+                volumeList = lst
+            )
+        
         self.__services += DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
             nodeName = self.__naming_scheme.format(
@@ -376,7 +401,8 @@ class Docker(Compiler):
             networks = node_nets,
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
-            labelList = self.__getNodeMeta(node)
+            labelList = self.__getNodeMeta(node),
+            volumes = volumes
         )
 
         dockerfile = DockerCompilerFileTemplates['dockerfile']
