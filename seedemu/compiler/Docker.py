@@ -140,6 +140,10 @@ DockerCompilerFileTemplates['compose_volume'] = """\
               target: {nodePath}
 """
 
+DockerCompilerFileTemplates['compose_storage'] = """\
+            - {nodePath}
+"""
+
 DockerCompilerFileTemplates['compose_service_network'] = """\
             {netId}:
                 ipv4_address: {address}
@@ -377,19 +381,28 @@ class Docker(Compiler):
             )
         
         _volumes = node.getSharedFolders()
+        storages = node.getPersistentStorages()
+        
         volumes = ''
-        if len(volumes) > 0:
+
+        if len(_volumes) > 0 or len(storages) > 0:
             lst = ''
+
             for (nodePath, hostPath) in _volumes.items():
                 lst += DockerCompilerFileTemplates['compose_volume'].format(
                     hostPath = hostPath,
                     nodePath = nodePath
                 )
+            
+            for path in storages:
+                lst += DockerCompilerFileTemplates['compose_storage'].format(
+                    nodePath = path
+                )
 
-            volumes += DockerCompilerFileTemplates['compose_volumes'].format(
+            volumes = DockerCompilerFileTemplates['compose_volumes'].format(
                 volumeList = lst
             )
-        
+
         self.__services += DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
             nodeName = self.__naming_scheme.format(
