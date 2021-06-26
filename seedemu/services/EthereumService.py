@@ -111,10 +111,10 @@ class EthereumServer(Server):
         datadir_option = "--datadir /root/.ethereum"
 
         # genesis
-        node.appendStartCommand('geth {} init /tmp/eth-genesis.json'.format(datadir_option))
+        node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth {} init /tmp/eth-genesis.json'.format(datadir_option))
 
         # create account via pre-defined password
-        node.appendStartCommand('geth {} --password /tmp/eth-password account new'.format(datadir_option))
+        node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth {} --password /tmp/eth-password account new'.format(datadir_option))
 
         if allBootnode or self.__is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
