@@ -98,4 +98,4 @@ emu.render()
 
 ###############################################################################
 
-emu.compile(Docker(), './transit-as')
+emu.compile(Docker(), './output')
