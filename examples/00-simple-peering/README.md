@@ -202,10 +202,10 @@ After rendering the layers, all the nodes and networks are created. They are sti
 In this example, we will use docker on a single host to run the emulation, so we use the `Docker` compiler:
 
 ```python
-emu.compile(Docker(), './simple-peering')
+emu.compile(Docker(), './output')
 ```
 
-Now we can find the output in the `simple-peering` directory. The docker compiler comes with a docker-compose configuration. To bring up the emulation, simply run `docker-compose build && docker-compose up` in the `simple-peering` directory.
+Now we can find the output in the `output` directory. The docker compiler comes with a docker-compose configuration. To bring up the emulation, simply run `docker-compose build && docker-compose up` in the `output` directory.
 
 ## Remarks
 
