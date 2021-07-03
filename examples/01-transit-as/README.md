@@ -128,21 +128,8 @@ as151_router.joinNetwork('ix100')
 
 ## Step 5: Create and set up another autonomous system
 
-```python
-as152 = base.createAutonomousSystem(152)
-as152_web = as152.createHost('web')
-web.install('web152')
-emu.addBinding(Binding('web152', filter = Filter(nodeName = 'web', asn = 152)))
+Similar to Step 4.
 
-as152_router = as152.createRouter('router0')
-as152_net = as152.createNetwork('net0')
-routing.addDirect(152, 'net0')
-
-as152_web.joinNetwork('net0')
-as152_router.joinNetwork('net0')
-
-as152_router.joinNetwork('ix101')
-```
 
 ## Step 6: Set up BGP peering
 
@@ -154,17 +141,8 @@ ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider
 ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
 ```
 
-The `Ebgp::addPrivatePeering` call takes four parameters; internet exchange ID, first ASN, the second ASN, and the relationship. The relationship parameter defaults to `Peer`. The call will configure peering between the two given ASNs in the given exchange. 
-
-The peering relationship can be one of the followings:
-
-- `PeerRelationship.Provider`: The first ASN is considered as the upstream provider of the second ASN. The first ASN will export all routes to the second ASN, and the second ASN will only export its customers' and its own prefixes to the first ASN.
-- `PeerRelationship.Peer`: The two ASNs are considered as peers. Both sides will only export their customers and their own prefixes.
-- `PeerRelationship.Unfiltered`: Make both sides export all routes to each other.
-
-We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MLPA)). Note that the session with RS will always be `Peer` relationship.
-
-The eBGP layer sets up peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
+See [this manual](../manual.md#bgp-private-peering) for the explanation of 
+the use of `Ebgp::addPrivatePeering`. 
 
 
 ## Step 7: render the emulation
