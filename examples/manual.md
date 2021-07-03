@@ -111,9 +111,26 @@ ospf.maskByName('151', 'net0')
 ospf.maskNetwork(as152_net)
 ```
 
+<a name="bgp-rs-peering"></a>
+## BGP: Peering Using Route Server
+
+```
+ebgp.addRsPeer(100, 150)
+```
+
+The `Ebgp::addRsPeer` call takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure the peering between the given ASN and the given internet exchange's route server (i.e., setting up Multi-Lateral Peering Agreement (MLPA)). Note that the session with RS will always be `Peer` relationship.
+
+The eBGP layer sets up peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetwork('ix100')`), the eBGP layer should be able to set up the peeing.
+
+
 
 <a name="bgp-private-peering"></a>
 ## BGP: Private Peering
+
+```
+# Create a private peering between AS150 and AS151 inside IX100
+ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
+```
 
 The `Ebgp::addPrivatePeering` call takes four parameters; internet exchange ID, first ASN, the second ASN, and the relationship. The relationship parameter defaults to `Peer`. The call will configure peering between the two given ASNs in the given exchange. 
 
@@ -123,7 +140,6 @@ The peering relationship can be one of the followings:
 - `PeerRelationship.Peer`: The two ASNs are considered as peers. Both sides will only export their customers and their own prefixes.
 - `PeerRelationship.Unfiltered`: Make both sides export all routes to each other.
 
-We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MLPA)). Note that the session with RS will always be `Peer` relationship.
 
 The eBGP layer sets up peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
