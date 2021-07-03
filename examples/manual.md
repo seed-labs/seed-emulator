@@ -1,6 +1,6 @@
 # Manual
 
-
+<a name="virtual-node-binding"></a>
 ## Virtual node binding & filtering
 
 The constructor of a binding looks like this:
@@ -33,6 +33,7 @@ All constructor parameters are one of the constraints. If more than one constrai
 - `allowBound` allows physical nodes that are already selected by other binding to be selected again.
 
 
+<a name="create-network-with-prefix"></a>
 ## Creating networks with a custom prefix
 
 By default, the network prefix is assigned with the following scheme:
@@ -55,6 +56,7 @@ base.createInternetExchange(33108, prefix = '206.81.80.0/23')
 as11872.createNetwork('net0', prefix = '128.230.0.0/16')
 ```
 
+<a name="assign-ip-to-interface"></a>
 ## Assigning IP addresses to interfaces
 
 The IP addresses in a network are assigned with `AddressAssignmentConstraint`. The default constraints are as follow:
@@ -74,7 +76,7 @@ as11872_router.joinNetwork('ix100', address = '10.100.0.118')
 We may alternatively implement our own `AddressAssignmentConstraint` class instead. Both `createInternetExchange` and `createNetwork` accept the `aac` argument, which will alter the auto address assignment behavior. Foe details, please refer to the API documentation.
 
 
-
+<a name="transit-as-network"></a>
 ## Transit Autonomous System's internal network
 
 We can use OSPF and IBGP for internal routing. IBGP and OSPF layer do not need to be configured explicitly; they are by default enabled on all autonomous systems.
