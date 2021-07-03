@@ -198,6 +198,9 @@ class Node(Printable, Registrable, Configurable):
     __pending_nets: List[Tuple[str, str]]
     __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str]]
 
+    __shared_folders: Dict[str, str]
+    __persistent_storages: List[str] 
+
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
         @brief Node constructor.
@@ -223,6 +226,9 @@ class Node(Printable, Registrable, Configurable):
         self.__pending_nets = []
         self.__xcs = {}
         self.__configured = False
+
+        self.__shared_folders = {}
+        self.__persistent_storages = []
 
         for soft in DEFAULT_SOFTWARES:
             self.__common_software.add(soft)
@@ -534,7 +540,44 @@ class Node(Printable, Registrable, Configurable):
         @returns list of interfaces.
         """
         return self.__interfaces
-        
+
+    def addSharedFolder(self, nodePath: str, hostPath: str):
+        """!
+        @beief Add a new shared folder between the node and host.
+
+        @param nodePath path to the folder inside the container.
+        @param hostPath path to the folder on the emulator host node.
+        """
+        self.__shared_folders[nodePath] = hostPath
+
+    def getSharedFolders(self) -> Dict[str, str]:
+        """!
+        @brief Get shared folders between the node and host.
+
+        @returns dict, where key is the path in container and value is path on
+        host.
+        """
+        return self.__shared_folders
+
+    def addPersistentStorage(self, path: str):
+        """!
+        @brief Add persistent storage to node. 
+
+        Nodes usually start fresh when you re-start them. This allow setting a
+        directory where data will be persistented.
+
+        @param path path to put the persistent storage folder in the container.
+        """
+        self.__persistent_storages.append(path)
+
+    def getPersistentStorages(self) -> List[str]:
+        """!
+        @brief Get persistent storage folders on the node.
+
+        @returns list of persistent storage folder.
+        """
+        return self.__persistent_storages
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'Node {}:\n'.format(self.__name)
