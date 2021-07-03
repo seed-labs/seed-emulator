@@ -111,10 +111,10 @@ class EthereumServer(Server):
         datadir_option = "--datadir /root/.ethereum"
 
         # genesis
-        node.appendStartCommand('geth {} init /tmp/eth-genesis.json'.format(datadir_option))
+        node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth {} init /tmp/eth-genesis.json'.format(datadir_option))
 
         # create account via pre-defined password
-        node.appendStartCommand('geth {} --password /tmp/eth-password account new'.format(datadir_option))
+        node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth {} --password /tmp/eth-password account new'.format(datadir_option))
 
         if allBootnode or self.__is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
@@ -134,6 +134,13 @@ class EthereumServer(Server):
         else:
             node.appendStartCommand('geth {}'.format(common_args), True)
 
+    def getId(self) -> int:
+        """!
+        @brief get ID of this node.
+
+        @returns ID.
+        """
+        return self.__id
 
     def setBootNode(self, isBootNode: bool):
         """!
@@ -182,11 +189,27 @@ class EthereumService(Service):
     __all_node_ips: List[str]
     __boot_node_addresses: List[str]
 
-    def __init__(self):
+    __save_state: bool
+    __save_path: str
+
+    def __init__(self, saveState: bool = False, statePath: str = './eth-states'):
+        """!
+        @brief create a new Ethereum service.
+
+        @param saveState (optional) if true, the service will try to save state
+        of the block chain by saving the datadir of every node. Default to
+        false.
+        @param statePath (optional) path to save containers' datadirs on the
+        host. Default to "./eth-states". 
+        """
+
         super().__init__()
         self.__serial = 0
         self.__all_node_ips = []
         self.__boot_node_addresses = []
+
+        self.__save_state = saveState
+        self.__save_path = statePath
 
     def getName(self):
         return 'EthereumService'
@@ -209,6 +232,9 @@ class EthereumService(Service):
         if server.isBootNode():
             self._log('adding as{}/{} as bootnode...'.format(node.getAsn(), node.getName()))
             self.__boot_node_addresses.append(addr)
+
+        if self.__save_state:
+            node.addSharedFolder('/root/.ethereum', '{}/{}'.format(self.__save_path, server.getId()))
 
     def _doInstall(self, node: Node, server: EthereumServer):
         self._log('installing eth on as{}/{}...'.format(node.getAsn(), node.getName()))
