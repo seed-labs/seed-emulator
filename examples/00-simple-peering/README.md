@@ -2,7 +2,7 @@
 
 This is the most basic example; peer three autonomous systems (AS150, AS151, and AS152) at an internet exchange. Each autonomous system announces a /24 prefix, and each is running a single web server within the network.
 
-## Step 1: import and create required componets
+## Step 1: Import and create required components
 
 ```python
 from seedemu.layers import Base, Routing, Ebgp
@@ -14,7 +14,7 @@ from seedemu.core import Emulator, Binding, Filter
 In this setup, we will need four layers: 
 
 - The `Base` layer provides the base of the emulation; it describes what hosts belong to what autonomous system and how hosts are connected with each other. 
-- The `Routing` layer acts as the base of other routing protocols. `Routing` layer (1) installs BIRD internet routing daemon on every host with router role, (2) provides lower-level APIs for manipulating BIRD's FIB (forwarding information base) and adding new protocols, etc., and (3) setup proper default route on non-router role hosts to point to the first router in the network.
+- The `Routing` layer acts as the base of other routing protocols. `Routing` layer (1) installs BIRD internet routing daemon on every host with router role, (2) provides lower-level APIs for manipulating BIRD's FIB (forwarding information base) and adding new protocols, etc., and (3) set up proper default route on non-router role hosts to point to the first router in the network.
 - The `Ebgp` layer provides API for setting up intra-AS BGP peering.
 - The `WebService` layer provides API for install `nginx` web server on hosts.
 
@@ -31,7 +31,7 @@ ebgp = Ebgp()
 web = WebService()
 ```
 
-## Step 2: create an internet exchange
+## Step 2: Create an internet exchange
 
 ```python
 base.createInternetExchange(100)
@@ -43,9 +43,9 @@ You may optionally set the IX LAN prefix with the `prefix` parameter and the way
 
 Here, the internet exchange `100` is created. It creates the network `ix100`.
 
-## Step 3: create an autonomous system
+## Step 3: Create an autonomous system
 
-### Step 3.1: create the autonomous system instance
+### Step 3.1: Create the autonomous system instance
 
 ```python
 as150 = base.createAutonomousSystem(150)
@@ -53,7 +53,7 @@ as150 = base.createAutonomousSystem(150)
 
 Creating a new autonomous system is simple; just call the `Base::createAutonomousSystem` function. The call returns an `AutonomousSystem` class instance, and it can be used to further create hosts in the autonomous system.
 
-### Step 3.2: create the host
+### Step 3.2: Create the host
 
 Once we have the `AutonomousSystem` instance, we can create a new host for the web service. Creating a new host is also simple; simply call the `AutonomousSystem::createHost` API. The call only takes one parameter, `name`, which is the name of the host, and it will return an `Node` instance on success. In this case, we will name our new host `web`, since we will be hosting `WebService` on it:
 
@@ -77,7 +77,7 @@ emu.addBinding(Binding('web150', filter = Filter(nodeName = 'web', asn = 150)))
 
 There are also other constraints one can use to select candidates. See the remarks section for more details.
 
-### Step 3.3: create the router and setup the network
+### Step 3.3: Create the router and set up the network
 
 Next, we will need a router. Creating a router is similar to creating a host. The `AutonomousSystem::createRouter` takes a name and returns `Node` instance:
 
@@ -116,7 +116,7 @@ Last, put the router into the internet exchange:
 as150_router.joinNetwork('ix100')
 ```
 
-## Step 4: create more autonomous systems
+## Step 4: Create more autonomous systems
 
 Repeat step 3 two more times with different ASNs:
 
@@ -158,7 +158,7 @@ as152_router.joinNetwork('net0')
 as152_router.joinNetwork('ix100')
 ```
 
-## Step 5: setup BGP peering
+## Step 5: Set up BGP peering
 
 Setting up BGP peering is also simple:
 
@@ -180,7 +180,7 @@ Note that the session with RS (`addRsPeer`) will always be `Peer` relationship.
 
 The eBGP layer setup peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetwork('ix100')`), the eBGP layer should be able to setup peeing just fine.
 
-## Step 6: render the emulation
+## Step 6: Render the emulation
 
 We are now done configuring the layers. The next step is to add all layers to the renderer and render the emulation:
 
@@ -193,7 +193,7 @@ emu.addLayer(web)
 emu.render()
 ```
 
-The rendering process is where all the actual "things" happen. Softwares are added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
+The rendering process is where all the actual "things" happen. Software is added to the nodes, routing tables and protocols are configured, and BGP peers are configured.
 
 ## Step 7: compile the emulation
 
@@ -270,7 +270,7 @@ The IP addresses in a network are assigned with `AddressAssignmentConstraint`. T
 - Router nodes: from 254 to 200
 - Router nodes in internet exchange: ASN
 
-For example, in AS150, if a host node joined a local network, it's IP address will be `10.150.0.71`. The next host joined the network will become `10.150.0.72`. If a router joined a local network, it's IP addresss will be `10.150.0.254`, and if the router joined an internet exchange network (say IX100), it will be `10.100.0.150`.
+For example, in AS150, if a host node joined a local network, it's IP address will be `10.150.0.71`. The next host joined the network will become `10.150.0.72`. If a router joined a local network, it's IP address will be `10.150.0.254`, and if the router joined an internet exchange network (say IX100), it will be `10.100.0.150`.
 
 Sometimes it will be useful to override the automated assignment for once. `joinNetwork` accept an `address` argument for overriding the assignment:
 
