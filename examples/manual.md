@@ -110,3 +110,60 @@ ospf.maskByName('151', 'net0')
 # mask with reference
 ospf.maskNetwork(as152_net)
 ```
+
+
+<a name="bgp-private-peering"></a>
+## BGP: Private Peering
+
+The `Ebgp::addPrivatePeering` call takes four parameters; internet exchange ID, first ASN, the second ASN, and the relationship. The relationship parameter defaults to `Peer`. The call will configure peering between the two given ASNs in the given exchange. 
+
+The peering relationship can be one of the followings:
+
+- `PeerRelationship.Provider`: The first ASN is considered as the upstream provider of the second ASN. The first ASN will export all routes to the second ASN, and the second ASN will only export its customers' and its own prefixes to the first ASN.
+- `PeerRelationship.Peer`: The two ASNs are considered as peers. Both sides will only export their customers and their own prefixes.
+- `PeerRelationship.Unfiltered`: Make both sides export all routes to each other.
+
+We may also use the `Ebgp::addRsPeer` call to configure peering; it takes two parameters; the first is an internet exchange ID, and the second is ASN. It will configure peering between the given ASN and the given exchange's route server (i.e., setup Multi-Lateral Peering Agreement (MLPA)). Note that the session with RS will always be `Peer` relationship.
+
+The eBGP layer sets up peering by looking for the router node of the given autonomous system from within the internet exchange network. So as long as there is a router of that AS in the exchange network (i.e., joined the IX with `as15X_router.joinNetworkByName('ix100')`), the eBGP layer should be able to setup peeing just fine.
+
+
+<a name="rendering"></a>
+## Rendering
+
+After configuring all the layers, we need to add the layers to the renderer to render the emulation.
+The rendering process is where all the actual "things" happen. Software is added to the nodes, 
+routing tables and protocols are configured, and BGP peers are configured.
+Here is an example: 
+
+
+```python
+emu.addLayer(base)
+emu.addLayer(routing)
+emu.addLayer(ebgp)
+emu.addLayer(web)
+
+emu.render()
+```
+
+<a name="compilation"></a>
+## Compilation
+
+After all the layers are rendered, all the nodes and networks are created. 
+They are still stored using internal data structures. We need to 
+compile them into the final emulation files. 
+
+In this example, we will use docker on a single host to run the emulation, 
+so we use the `Docker` compiler. The following example generate all
+the docker files inside the `./output` folder. 
+The docker compiler comes with a docker-compose configuration. 
+To run the emulation, simply run `docker-compose build && docker-compose up` 
+in the `output` directory.
+
+
+```python
+emu.compile(Docker(), './output')
+```
+
+
+
