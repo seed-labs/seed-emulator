@@ -88,7 +88,7 @@ r4.joinNetwork('ix101')
 ### Note:
 
 In this particular example, we used OSPF and IBGP for internal routing. IBGP and OSPF layer does not need to be configured explicitly; they are by default enabled on all autonomous systems.
-The default behaviors are as follow (see [this manual](../manual.md) if you want to customize
+The default behaviors are as follow (see [this manual](../manual.md#transit-as-network) if you want to customize
 the behaviors):
 
 - IBGP is configured between all routers within an autonomous system,
