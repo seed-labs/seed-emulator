@@ -87,4 +87,4 @@ emu.render()
 
 ###############################################################################
 
-emu.compile(Docker(), './simple-peering')
+emu.compile(Docker(), './output')
