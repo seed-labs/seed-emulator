@@ -89,7 +89,7 @@ export class Controller implements LogProducer {
             var message: string = data.toString('utf-8');
             this._logger.debug(`message chunk from ${nodeId}: ${message}`);
 
-            if (this._messageBuffer[nodeId].includes('_BEGIN_RESULT_')) {
+            if (message.includes('_BEGIN_RESULT_')) {
                 if (nodeId in this._messageBuffer && this._messageBuffer[nodeId] != '') {
                     this._logger.error(`${nodeId} sents another _BEGIN_RESULT_ while the last message was not finished.`);
                 }
