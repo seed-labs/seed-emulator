@@ -1,10 +1,10 @@
 from seedemu.core import Emulator
 from seedemu.services import DomainNameService
 
-sim = Emulator()
-sim.load('dns-dump.bin')
+emu = Emulator()
+emu.load('dns-dump.bin')
 
-dns: DomainNameService = sim.getLayer('DomainNameService')
+dns: DomainNameService = emu.getLayer('DomainNameService')
 
 print(dns.getZoneServerNames('.'))               # => ['root_server']
 print(dns.getZoneServerNames('com.'))            # => ['com_server']
