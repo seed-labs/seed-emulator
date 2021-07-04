@@ -176,10 +176,12 @@ The docker compiler comes with a docker-compose configuration.
 To run the emulation, simply run `docker-compose build && docker-compose up` 
 in the `output` directory.
 
-
 ```python
 emu.compile(Docker(), './output')
 ```
+
+There are several other compilation options. See [this document](./manual_compiler.md)
+for details.
 
 
 
