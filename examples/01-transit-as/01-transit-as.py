@@ -18,6 +18,7 @@ base.createInternetExchange(100)
 base.createInternetExchange(101)
 
 ###############################################################################
+# Set up the transit AS (AS150)
 
 as150 = base.createAutonomousSystem(150)
 
@@ -43,6 +44,7 @@ r4.joinNetwork('net2')
 r4.joinNetwork('ix101')
 
 ###############################################################################
+# Create and set up the AS 151
 
 as151 = base.createAutonomousSystem(151)
 
@@ -62,6 +64,7 @@ as151_router.joinNetwork('net0')
 as151_router.joinNetwork('ix100')
 
 ###############################################################################
+# Create and set up the AS 152
 
 as152 = base.createAutonomousSystem(152)
 
@@ -81,6 +84,7 @@ as152_router.joinNetwork('net0')
 as152_router.joinNetwork('ix101')
 
 ###############################################################################
+# Add BGP peering
 
 ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
