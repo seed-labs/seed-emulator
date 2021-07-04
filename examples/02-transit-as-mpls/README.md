@@ -1,8 +1,12 @@
 # Transit AS (MPLS)
 
-This example is similar to the regular transit example. In this example, we will configure two internet exchanges, AS150 will be in both exchanges. AS151 and AS152 will be in IX100 and IX101, respectively. AS150 will serve as the transit AS for AS151 and AS152. There will be four hops in AS150. AS151 and AS152 will each announce one /24 prefix and host one web server in the network.
+This topology of this example is exactly the same as that in `01-transit-as`. 
+The only difference in this example is that we will now use MPLS instead of OSPF and
+IBGP in the transit network. With MPLS, non-edge routers don't need to carry
+the BGP routing table at all. Non-edge routes only need to keep track of a
+small amount of MPLS labels, which greatly reduces the resources needed on
+non-edge routes.
 
-In other words, the topology is the exact same as the last example. The only difference in this example is that we will now use MPLS instead of OSPF and IBGP in the transit network. With MPLS, non-edge routers don't need to carry the BGP routing table at all. Non-edge routes only need to keep track of a small amount of MPLS labels, which greatly reduces the resources needed on non-edge routes.
 
 ## Step 0: host system support
 
@@ -52,7 +56,7 @@ as151 -|- as150_r1 -- as150_r2 -- as150_r3 -- as150_r4 -|- as152
        |                                                |
 ```
 
-Since `r2` and `r3` don't carry table from AS151 and AS152, traceroute will look like this:
+Since `r2` and `r3` don't carry the tables from AS151 and AS152, traceroute will look like this:
 
 ```
 HOST: 0e58e675b98b Loss%   Snt   Last   Avg  Best  Wrst StDev
