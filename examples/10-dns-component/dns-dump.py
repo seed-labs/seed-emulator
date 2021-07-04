@@ -10,4 +10,4 @@ dns.install('net_server').addZone(dns.getZone('net.'))
 dns.install('example_com_server').addZone(dns.getZone('example.com.'))
 
 emu.addLayer(dns)
-emu.dump('dns-dump.bin')
+emu.dump('dns-component.bin')

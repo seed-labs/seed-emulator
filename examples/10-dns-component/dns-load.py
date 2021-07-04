@@ -2,7 +2,7 @@ from seedemu.core import Emulator
 from seedemu.services import DomainNameService
 
 emu = Emulator()
-emu.load('dns-dump.bin')
+emu.load('dns-component.bin')
 
 dns: DomainNameService = emu.getLayer('DomainNameService')
 

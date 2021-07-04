@@ -1,17 +1,17 @@
 # DNS Dump and Load Demo
 
 In this example, we demonstrate the component concepts using DNS. 
-This example has two parts: `dump-dns.py` and `load-dns.py`.
+This example has two parts: `dns-dump.py` and `dns-load.py`.
 
 ## Creating and saving the component
 
 We first create a simple DNS infrastructure and 
 then export this entire infrastructure as a component, i.e.,
-saving it in a file (`dump-dns.py`).
+saving it in a file.
 
 ```python
 emu.addLayer(dns)
-emu.dump('dns-dump.bin')
+emu.dump('dns-component.bin')
 ```
 
 ## Loading a pre-built component
@@ -23,7 +23,7 @@ another emulator can be used by another emulator.
 
 ```python
 emu = Emulator()
-emu.load('dns-dump.bin')
+emu.load('dns-component.bin')
 dns: DomainNameService = emu.getLayer('DomainNameService')
 ```
 
