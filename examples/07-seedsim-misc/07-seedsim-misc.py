@@ -106,8 +106,8 @@ print(emu.getRegistry())
 
 ###############################################################################
 
-mkdir('./seedemu-misc')
-emu.compile(Docker(), './seedemu-misc/regular-docker')
-emu.compile(Graphviz(), './seedemu-misc/graphs')
-emu.compile(DistributedDocker(), './seedemu-misc/distributed-docker')
-emu.compile(GcpDistributedDocker(), './seedemu-misc/gcp-distributed-docker')
+mkdir('./output')
+emu.compile(Docker(), './output/regular-docker')
+emu.compile(Graphviz(), './output/graphs')
+emu.compile(DistributedDocker(), './output/distributed-docker')
+emu.compile(GcpDistributedDocker(), './output/gcp-distributed-docker')
