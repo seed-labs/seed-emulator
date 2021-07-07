@@ -30,6 +30,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @param asn ASN for this system.
         @param subnetTemplate template for assigning subnet.
         """
+        super().__init__()
         self.__hosts = {}
         self.__routers = {}
         self.__nets = {}
@@ -165,7 +166,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
         return list(self.__hosts.keys())
 
-    def _doCreateGraphs(self):
+    def _doCreateGraphs(self, emulator: Emulator):
         """!
         @brief create l2 connection graphs.
         """

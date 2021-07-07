@@ -19,9 +19,17 @@ class Graphviz(Compiler):
         return 'Graphviz'
 
     def _doCompile(self, emulator: Emulator):
-        reg = ScopedRegistry('seedemu', emulator.getRegistry())
-        for obj in reg.getByType('graph'):
+        reg = emulator.getRegistry()
+        self._log('collecting graphs in the emulator...')
+
+        for obj in list(reg.getAll().values()):
+            cg = getattr(obj, 'createGraphs', None)
+
+            if not callable(cg): continue
+
             graphs: Graphable = obj
+
             graphs.createGraphs(emulator)
             for graph in graphs.getGraphs().values():
+                self._log('found graph: {}'.format(graph.name))
                 print(graph.toGraphviz(), file=open('{}.dot'.format(self.__slugify(graph.name)), 'w'))
