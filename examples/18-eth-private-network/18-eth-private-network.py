@@ -7,7 +7,7 @@ from seedemu.compiler import Docker
 from seedemu.services import EthereumService
 
 sim = Emulator()
-eth = EthereumService(saveState = True)
+eth = EthereumService()
 
 sim.load('base-component.bin')
 
