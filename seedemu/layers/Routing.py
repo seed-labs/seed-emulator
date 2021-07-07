@@ -144,7 +144,6 @@ class Routing(Layer):
     protocols to use later and as router id.
     """
 
-    __direct_nets: Set[Tuple[str, str]]
     __loopback_assigner: IPv4Network
     __loopback_pos: int
     
@@ -156,7 +155,6 @@ class Routing(Layer):
         IP addresses.
         """
         super().__init__()
-        self.__direct_nets = set()
         self.__loopback_assigner = IPv4Network(loopback_range)
         self.__loopback_pos = 1
         self.addDependency('Base', False, False)
@@ -218,7 +216,7 @@ class Routing(Layer):
 
                 for iface in r_ifaces:
                     net = iface.getNet()
-                    if (scope, net.getName()) in self.__direct_nets:
+                    if net.isDirect():
                         has_localnet = True
                         ifaces += RoutingFileTemplates["rnode_bird_direct_interface"].format(
                             interfaceName = net.getName()
@@ -257,42 +255,8 @@ class Routing(Layer):
     def render(self, emulator: Emulator) -> None:
         pass
 
-    def addDirect(self, asn: int, netname: str):
-        """!
-        @brief Add a network to "direct" protcol by name.
-
-        Mark network as "direct" candidate. All router nodes connected to this
-        network will add the interface attaches to this network to their
-        "direct" protocol block.
-
-        @param asn ASN.
-        @param netname network name.
-        @throws AssertionError if net not exist.
-        @throws AssertionError if try to add non-AS network as direct.
-        """
-        self.__direct_nets.add((str(asn), netname))
-
-    def getDirects(self) -> Set[Tuple[str, str]]:
-        """!
-        @brief Get the set of direct networks.
-
-        @return set of tuple of (asn, netname)
-        """
-        return self.__direct_nets
-
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'RoutingLayer:\n'
-
-        indent += 4
-        out += ' ' * indent
-
-        out += 'Direct Networks:\n'
-
-        indent += 4
-
-        for (asn, netname) in self.__direct_nets:
-            out += ' ' * indent
-            out += 'as{}/{}\n'.format(asn, netname)
+        out += 'RoutingLayer: BIRD 1.6.x\n'
 
         return out
