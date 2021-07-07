@@ -1,15 +1,15 @@
-from seedsim.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship, Dnssec
-from seedsim.services import WebService, DomainNameService, DomainNameCachingService
-from seedsim.services import CymruIpOriginService, ReverseDomainNameService
-from seedsim.compiler import Docker, Graphviz
-from seedsim.hooks import ResolvConfHook
-from seedsim.core import Simulator, Service, Binding, Filter
-from seedsim.layers import Router
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship, Dnssec
+from seedemu.services import WebService, DomainNameService, DomainNameCachingService
+from seedemu.services import CymruIpOriginService, ReverseDomainNameService
+from seedemu.compiler import Docker, Graphviz
+from seedemu.hooks import ResolvConfHook
+from seedemu.core import Emulator, Service, Binding, Filter
+from seedemu.layers import Router
 from typing import List, Tuple, Dict
 
 ###############################################################################
 
-sim = Simulator()
+sim = Emulator()
 
 base = Base()
 routing = Routing()
