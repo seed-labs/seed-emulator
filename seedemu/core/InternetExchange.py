@@ -35,7 +35,7 @@ class InternetExchange(Printable, Configurable):
 
         self.__name = 'ix{}'.format(str(self.__id))
         self.__rs = Node(self.__name, NodeRole.RouteServer, self.__id)
-        self.__net = Network(self.__name, NetworkType.InternetExchange, network, aac)
+        self.__net = Network(self.__name, NetworkType.InternetExchange, network, aac, False)
 
         self.__rs.joinNetwork(self.__name)
 
