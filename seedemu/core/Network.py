@@ -26,7 +26,9 @@ class Network(Printable, Registrable):
 
     __mtu: int
 
-    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None):
+    __direct: bool
+
+    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None, direct: bool = False, ):
         """!
         @brief Network constructor.
 
@@ -53,6 +55,28 @@ class Network(Printable, Registrable):
         self.__d_drop = 0
 
         self.__mtu = 1500
+
+        self.__direct = direct
+
+    def isDirect(self) -> bool:
+        """!
+        @brief test if this network is direct network. A direct network will be
+        added to RIB of routing daemons.
+
+        @returns true if direct, false otherwise.
+        """
+
+        return self.__direct
+
+    def setDirect(self, direct: bool):
+        """!
+        @brief set if this network is direct network. A direct network will be
+        added to RIB of routing daemons.
+
+        @param direct bool, true to set the network as direct, false otherwise.
+        """
+
+        self.__direct = direct
 
     def setMtu(self, mtu: int):
         """!
