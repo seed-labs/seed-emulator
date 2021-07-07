@@ -1,4 +1,3 @@
-from string import ascii_letters
 from .Routing import Router
 from seedemu.core import Registry, ScopedRegistry, Network, Interface, Graphable, Emulator, Layer
 from typing import Tuple, List, Dict
@@ -363,7 +362,7 @@ class Ebgp(Layer, Graphable):
     def render(self, emulator: Emulator) -> None:
         pass
 
-    def _doCreateGraphs(self):
+    def _doCreateGraphs(self, emulator: Emulator):
         # creates the following:
         # - ebgp peering, all ASes in one graph
         # - ebgp peering, one for each ix

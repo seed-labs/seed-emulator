@@ -22,7 +22,7 @@ ebgp = Ebgp()
 ospf = Ospf()
 ibgp = Ibgp()
 
-bgp_attack = BgpAttackerComponent()
+bgp_attack = BgpAttackerComponent(attackerAsn = 66)
 
 ###############################################################################
 
@@ -93,7 +93,7 @@ ebgp.addPrivatePeering(100, 2, 150, PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 2, 151, PeerRelationship.Provider)
 
 # hijacker's session
-ebgp.addPrivatePeering(100, 2, 666, PeerRelationship.Unfiltered)
+ebgp.addPrivatePeering(100, 2, 66, PeerRelationship.Unfiltered)
 
 ###############################################################################
 
