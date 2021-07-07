@@ -70,7 +70,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
         return self.__asn
     
-    def createNetwork(self, name: str, prefix: str = "auto", aac: AddressAssignmentConstraint = None) -> Network:
+    def createNetwork(self, name: str, prefix: str = "auto", direct: bool = True, aac: AddressAssignmentConstraint = None) -> Network:
         """!
         @brief Create a new network.
 
@@ -78,7 +78,10 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @param prefix optional. Network prefix of this network. If not set, a
         /24 subnet of "10.{asn}.{id}.0/24" will be used, where asn is ASN of
         this AS, and id is a self-incremental value starts from 0.
-        @param aac optional. AddressAssignmentConstraint to use.
+        @param direct optional. direct flag of the network. A direct network
+        will be added to RIB of routing daemons. Default to true.
+        @param aac optional. AddressAssignmentConstraint to use. Default to
+        None.
 
         @returns Network.
         @throws StopIteration if subnet exhausted.
@@ -87,7 +90,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
         network = IPv4Network(prefix) if prefix != "auto" else self.__subnets.pop(0)
         assert name not in self.__nets, 'Network with name {} already exist.'.format(name)
-        self.__nets[name] = Network(name, NetworkType.Local, network, aac)
+        self.__nets[name] = Network(name, NetworkType.Local, network, aac, direct)
 
         return self.__nets[name]
 
