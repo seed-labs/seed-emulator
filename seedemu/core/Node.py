@@ -277,7 +277,7 @@ class Node(Printable, Registrable, Configurable):
             else:
                 # netname = 'as{}.{}_as{}.{}'.format(self.getAsn(), self.getName(), peerasn, peername)
                 netname = ''.join(choice(ascii_letters) for i in range(10))
-                net = Network(netname, NetworkType.CrossConnect, localaddr.network)
+                net = Network(netname, NetworkType.CrossConnect, localaddr.network, False) # TODO: XC nets w/ direct flag?
                 self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
                 self.__xcs[(peername, peerasn)] = (localaddr, netname)
 
