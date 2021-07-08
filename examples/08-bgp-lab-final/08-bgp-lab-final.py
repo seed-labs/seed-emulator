@@ -120,4 +120,4 @@ emu.render()
 
 ###############################################################################
 
-emu.compile(Docker(), './bgp-lab-final')
+emu.compile(Docker(), './output')
