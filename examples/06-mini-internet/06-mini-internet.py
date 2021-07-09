@@ -42,7 +42,7 @@ def make_service_as(sim: Emulator, asn: int, services: List[Service], exchange: 
 
     net = service_as.createNetwork('net0')
 
-    routing.addDirect(asn, 'net0')
+    
 
     router.joinNetwork('net0')
 
@@ -69,7 +69,7 @@ def make_dns_as(sim: Emulator, asn: int, zones: List[str], exchange: int):
 
     net = dns_as.createNetwork('net0')
 
-    routing.addDirect(asn, 'net0')
+    
 
     router.joinNetwork('net0')
 
@@ -109,7 +109,7 @@ def make_user_as(sim: Emulator, asn: int, exchange: str):
 
     net = user_as.createNetwork('net0')
 
-    routing.addDirect(asn, 'net0')
+    
 
     real.enableRealWorldAccess(user_as, 'net0')
 
@@ -134,7 +134,7 @@ def make_transit_as(asn: int, exchanges: List[int], intra_ix_links: List[Tuple[i
 
         net = transit_as.createNetwork(name)
 
-        routing.addDirect(asn, name)
+        
 
         routers[a].joinNetwork(name)
         routers[b].joinNetwork(name)
@@ -233,7 +233,7 @@ google_dns.joinNetwork('google_dns_net', '8.8.8.8')
 ldns.install('google_dns')
 sim.addBinding(Binding('google_dns', filter = Filter(asn = 15169)))
 
-routing.addDirect(15169, 'google_dns_net')
+
 
 google_router = google.createRouter('router0')
 

@@ -59,9 +59,9 @@ ebgp.addRsPeer(100, 150)
 ebgp.addRsPeer(100, 151)
 
 routing = Routing()
-routing.addDirectByName(150, "net0")
-routing.addDirectByName(150, "net1")
-routing.addDirectByName(151, "net0")
+
+
+
 
 r = Renderer()
 

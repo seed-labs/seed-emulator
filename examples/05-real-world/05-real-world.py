@@ -48,7 +48,7 @@ r4.joinNetwork('ix101')
 
 as151 = base.createAutonomousSystem(151)
 as151.createNetwork('net0')
-routing.addDirect(151, 'net0')
+
 
 as151.createHost('web').joinNetwork('net0')
 
@@ -64,7 +64,7 @@ real.enableRealWorldAccess(as151, 'net0')
 
 as152 = base.createAutonomousSystem(152)
 as152.createNetwork('net0')
-routing.addDirect(152, 'net0')
+
 
 as152.createHost('web').joinNetwork('net0')
 

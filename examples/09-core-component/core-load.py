@@ -27,7 +27,7 @@ ebgp: Ebgp = emu.getLayer('Ebgp')
 
 as153 = base.createAutonomousSystem(153)
 as153.createNetwork('net0')
-routing.addDirect(153, 'net0')
+
 
 as153_router = as153.createRouter('router0')
 as153_router.joinNetwork('net0')

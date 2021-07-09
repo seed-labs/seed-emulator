@@ -33,7 +33,7 @@ as150_router = as150.createRouter('router0')
 
 as150_net = as150.createNetwork('net0')
 
-routing.addDirect(150, 'net0')
+
 
 root_server.joinNetwork('net0')
 as150_router.joinNetwork('net0')
@@ -54,7 +54,7 @@ as151_router = as151.createRouter('router0')
 
 as151_net = as151.createNetwork('net0')
 
-routing.addDirect(151, 'net0')
+
 
 com_server.joinNetwork('net0')
 arpa_server.joinNetwork('net0')
@@ -85,7 +85,7 @@ as152_router = as152.createRouter('router0')
 
 as152_net = as152.createNetwork('net0')
 
-routing.addDirect(152, 'net0')
+
 
 example_com_web.joinNetwork('net0', '10.152.0.200')
 example_com.addRecord('@ A 10.152.0.100')
@@ -120,7 +120,7 @@ as153_router = as153.createRouter('router0')
 
 as153_net = as153.createNetwork('net0')
 
-routing.addDirect(153, 'net0')
+
 
 local_dns.joinNetwork('net0')
 client.joinNetwork('net0')

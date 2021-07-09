@@ -37,7 +37,7 @@ as150_r0 = as150.createRouter('r0')
 
 as150_n0 = as150.createNetwork('n0')
 
-routing.addDirect(150, 'n0')
+
 
 as150_r0.joinNetwork('n0')
 as150_r0.joinNetwork('ix100')
@@ -65,7 +65,7 @@ as151_r0 = as151.createRouter('r0')
 
 as151_n0 = as151.createNetwork('n0')
 
-routing.addDirect(151, 'n0')
+
 
 as151_r0.joinNetwork('n0')
 as151_r0.joinNetwork('ix101')
