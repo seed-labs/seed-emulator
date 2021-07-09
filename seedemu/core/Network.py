@@ -31,7 +31,7 @@ class Network(Printable, Registrable):
 
     __rap: RemoteAccessProvider
 
-    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None, direct: bool = False, ):
+    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None, direct: bool = False):
         """!
         @brief Network constructor.
 
