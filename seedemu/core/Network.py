@@ -1,4 +1,5 @@
 from ipaddress import IPv4Network, IPv4Address
+from .RemoteAccessProvider import RemoteAccessProvider
 from .Printable import Printable
 from .enums import NetworkType, NodeRole
 from .Registry import Registrable
@@ -27,6 +28,8 @@ class Network(Printable, Registrable):
     __mtu: int
 
     __direct: bool
+
+    __rap: RemoteAccessProvider
 
     def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None, direct: bool = False, ):
         """!
@@ -57,6 +60,8 @@ class Network(Printable, Registrable):
         self.__mtu = 1500
 
         self.__direct = direct
+
+        self.__rap = None
 
     def isDirect(self) -> bool:
         """!
@@ -181,6 +186,29 @@ class Network(Printable, Registrable):
         """
         return self.__connected_nodes
 
+    def enableRemoteAccess(self, provider: RemoteAccessProvider):
+        """!
+        @brief enable remote access on this netowrk.
+
+        @param provider remote access provider to use.
+        """
+        assert self.__type == NetworkType.Local, 'remote access can only be enabled on local networks.'
+        self.__rap = provider
+
+    def disableRemoteAccess(self):
+        """!
+        @brief disable remote access on this network.
+        """
+        self.__rap = None
+
+    def getRemoteAccessProvider(self) -> RemoteAccessProvider:
+        """!
+        @brief get the remote access provider for this network.
+
+        @returns RAP, or None.
+        """
+        return self.__rap
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'Network {} ({}):\n'.format(self.__name, self.__type)
@@ -189,5 +217,10 @@ class Network(Printable, Registrable):
         out += ' ' * indent
         out += 'Prefix: {}\n'.format(self.__prefix)
         out += self.__aac.print(indent)
+
+        if self.__rap != None:
+            indent += 4
+            out += ' ' * indent
+            out += 'Remote access provider: {}\n'.format(self.__rap.getName())
 
         return out
