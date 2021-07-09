@@ -1,7 +1,7 @@
-from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship, Dnssec
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
 from seedemu.services import WebService, DomainNameService, DomainNameCachingService
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService
-from seedemu.compiler import Docker, Graphviz
+from seedemu.raps import OpenVpnRemoteAccessProvider
 from seedemu.hooks import ResolvConfHook
 from seedemu.core import Emulator, Service, Binding, Filter
 from seedemu.layers import Router
@@ -16,7 +16,6 @@ routing = Routing()
 ebgp = Ebgp()
 ibgp = Ibgp()
 ospf = Ospf()
-real = Reality()
 web = WebService()
 dns = DomainNameService()
 ldns = DomainNameCachingService()
@@ -26,9 +25,13 @@ rdns = ReverseDomainNameService()
 
 ###############################################################################
 
+ovpn = OpenVpnRemoteAccessProvider()
+
+###############################################################################
+
 def make_real_as(asn: int, exchange: int, exchange_ip: str):
     real_as = base.createAutonomousSystem(asn)
-    real_router = real.createRealWorldRouter(real_as)
+    real_router = real_as.createRealWorldRouter('rw')
 
     real_router.joinNetwork('ix{}'.format(exchange), exchange_ip)
 
@@ -40,8 +43,6 @@ def make_service_as(asn: int, services: List[Service], exchange: int):
     router = service_as.createRouter('router0')
 
     net = service_as.createNetwork('net0')
-
-    
 
     router.joinNetwork('net0')
 
@@ -92,9 +93,7 @@ def make_user_as(asn: int, exchange: str):
 
     net = user_as.createNetwork('net0')
 
-    
-
-    real.enableRealWorldAccess(user_as, 'net0')
+    net.enableRemoteAccess(ovpn)
 
     router.joinNetwork('net0')
     router.joinNetwork('ix{}'.format(exchange))
@@ -281,7 +280,6 @@ sim.addLayer(routing)
 sim.addLayer(ebgp)
 sim.addLayer(ibgp)
 sim.addLayer(ospf)
-sim.addLayer(real)
 sim.addLayer(web)
 sim.addLayer(dns)
 sim.addLayer(ldns)
