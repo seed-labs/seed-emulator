@@ -1,10 +1,10 @@
 # Mini Internet
 
-This is one of the more sophisticated examples; here, we combine what we have used from previous examples and build a larger emulation. This document assumes the reader has some idea of what each layer does; it will be better to go through the other examples before proceeding with this one. In this example, we will set up:
+This is one of the more sophisticated examples. We combine what we have used from previous examples and build a larger emulation. This document assumes the reader has some idea of what each layer does; it will be better to go through the other examples before proceeding with this one. In this example, we will set up the followings:
 
-- Three tier-1 transit providers: AS2, AS3, and AS4 (buy transit from no one, peer with each other), 
-- two tier-2 transit provider: AS11 (buy transit from AS2 and AS3) and AS12 (buy transit from AS2 and AS4),
-- some content provider and service ASes:
+- Three tier-1 transit providers: AS2, AS3, and AS4 (they do not buy transit from anyone, and they peer with each other), 
+- Two tier-2 transit provider: AS11 (it buys transit from AS2 and AS3) and AS12 (it buys transit from AS2 and AS4),
+- Some content provider and service ASes:
     - AS150: web server, recursive DNS resolver,
     - AS151: web server,
     - AS152: web server,
@@ -17,7 +17,7 @@ This is one of the more sophisticated examples; here, we combine what we have us
     - AS171 & AS172: end-user ASes for OpenVPN access,
     - AS15169 (Google): "Google" recursive DNS resolver, announces the `8.8.8.0/24` prefix, to host the resolver on `8.8.8.8`, and,
     - AS11872 (Syracuse University): real-world AS (announces the prefixes announced by AS11872 in the real-world, and route it to the real-world). 
-- six internet exchanges (100-105), and
+- Six internet exchanges (100-105), and
 - DNSSEC for `as150.net`, `as151.net` and `as152.net`.
 
 The topology is rather complex; here's the Graphviz output of the `Bgp` layer:
@@ -69,24 +69,16 @@ It first creates an AS with the `createAutonomousSystem` call of the base layer.
 ```python
 def make_service_as(sim: Emulator, asn: int, services: List[Service], exchange: int):
     service_as = base.createAutonomousSystem(asn)
-
     router = service_as.createRouter('router0')
-
     net = service_as.createNetwork('net0')
-
     routing.addDirect(asn, 'net0')
-
     router.joinNetwork('net0')
-
     router.joinNetwork('ix{}'.format(exchange))
 
     for service in services:
         name = 's_{}'.format(service.getName().lower())
-
         server = service_as.createHost(name)
-
         server.joinNetwork('net0')
-
         vnodename = 'as{}_{}'.format(asn, name)
 
         service.install(vnodename)
