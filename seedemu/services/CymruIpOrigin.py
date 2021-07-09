@@ -1,6 +1,5 @@
-from .DomainNameService import DomainNameService, DomainNameServer
+from .DomainNameService import DomainNameService
 from seedemu.core import Node, Network, Emulator, Service, Server
-from seedemu.layers import Reality
 from typing import List, Tuple
 from ipaddress import IPv4Network
 
@@ -100,15 +99,6 @@ class CymruIpOriginService(Service):
         reg = emulator.getRegistry()
 
         mappings: List[Tuple[str, str]] = []
-
-        if reg.has('seedemu', 'layer', 'Reality'):
-            real: Reality = reg.get('seedemu', 'layer', 'Reality')
-            for router in real.getRealWorldRouters():
-                (asn, _, name) = router.getRegistryInfo()
-                asn = int(asn)
-                self._log('Collecting real-world route info on as{}/{}...'.format(asn, name))
-                for prefix in router.getRealWorldRoutes():
-                    mappings.append((prefix, asn))
         
         self._log('Collecting all networks in the simulation...')
         for regobj in reg.getAll().items():
