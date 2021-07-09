@@ -1,4 +1,4 @@
-# DNS Dump and Load Demo
+# DNS Component Demo
 
 In this example, we demonstrate the component concepts using DNS. 
 This example has two parts: `dns-dump.py` and `dns-load.py`.
