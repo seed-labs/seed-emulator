@@ -6,9 +6,12 @@ from .enums import NetworkType, NodeRole
 from .Node import Node
 from .Emulator import Emulator
 from .Configurable import Configurable
+from .Node import RealWorldRouter
 from ipaddress import IPv4Network
 from typing import Dict, List
+import requests
 
+RIS_PREFIXLIST_URL = 'https://stat.ripe.net/data/announced-prefixes/data.json'
 
 class AutonomousSystem(Printable, Graphable, Configurable):
     """!
@@ -28,7 +31,8 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @brief AutonomousSystem constructor.
 
         @param asn ASN for this system.
-        @param subnetTemplate template for assigning subnet.
+        @param (optional) subnetTemplate template for assigning subnet.
+        @param (optional) serviceSubnet subnet to use for emulator services.
         """
         super().__init__()
         self.__hosts = {}
@@ -36,6 +40,25 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         self.__nets = {}
         self.__asn = asn
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
+
+    def getPrefixList(self) -> List[str]:
+        """!
+        @brief Helper tool, get real-world prefix list for the current ans by
+        RIPE RIS.
+
+        @throw AssertionError if API failed.
+        """
+
+        rslt = requests.get(RIS_PREFIXLIST_URL, {
+            'resource': self.__asn
+        })
+
+        assert rslt.status_code == 200, 'RIPEstat API returned non-200'
+        
+        json = rslt.json()
+        assert json['status'] == 'ok', 'RIPEstat API returned not-OK'
+ 
+        return [p['prefix'] for p in json['data']['prefixes'] if ':' not in p['prefix']]
 
     def registerNodes(self, emulator: Emulator):
         """!
@@ -47,9 +70,24 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
 
         reg = emulator.getRegistry()
+            
+        for val in list(self.__nets.values()):
+            net: Network = val
+            if net.getRemoteAccessProvider() != None:
+                rap = net.getRemoteAccessProvider()
+
+                brNode = self.createRouter('br-{}'.format(net.getName()))
+                brNet = emulator.getServiceNetwork()
+
+                rap.configureRemoteAccess(self, net, brNode, brNet)
+
+        for router in list(self.__routers.values()):
+            if issubclass(router.__class__, RealWorldRouter):
+                router.joinNetwork(emulator.getServiceNetwork().getName())
+
+        for (key, val) in self.__nets.items(): reg.register(str(self.__asn), 'net', key, val)
         for (key, val) in self.__hosts.items(): reg.register(str(self.__asn), 'hnode', key, val)
         for (key, val) in self.__routers.items(): reg.register(str(self.__asn), 'rnode', key, val)
-        for (key, val) in self.__nets.items(): reg.register(str(self.__asn), 'net', key, val)
 
     def configure(self, emulator: Emulator):
         """!
@@ -122,6 +160,38 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         self.__routers[name] = Node(name, NodeRole.Router, self.__asn)
 
         return self.__routers[name]
+
+    def createRealWorldRouter(self, name: str, hideHops: bool = True, prefixes: List[str] = None) -> Node:
+        """!
+        @brief Create a real-world router node.
+
+        A real-world router nodes are connect to a special service network, 
+        and can route traffic from the emulation to the real world.
+
+        @param name name of the new node.
+        @param (optional) hideHops hide realworld hops from traceroute (by
+        setting TTL = 64 to all real world dsts on POSTROUTING). Default to
+        True.
+        @param prefixes (optional) prefixes to annoucne. If unset, will try to
+        get prefixes from real-world DFZ via RIPE RIS. Default to None (get from
+        RIS)
+        @returns new node.
+        """
+        assert name not in self.__routers, 'Router with name {} already exists.'.format(name)
+
+        router: RealWorldRouter = Node(name, NodeRole.Router, self.__asn)
+        router.__class__ = RealWorldRouter
+        router.initRealWorld(hideHops)
+
+        if prefixes == None:
+            prefixes = self.getPrefixList()
+
+        for prefix in prefixes:
+            router.addRealWorldRoute(prefix)
+
+        self.__routers[name] = router
+
+        return router
 
     def getRouters(self) -> List[str]:
         """!
