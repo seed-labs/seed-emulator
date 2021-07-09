@@ -1,5 +1,52 @@
-from seedemu.core import Component, Emulator, AutonomousSystem
-from seedemu.layers import Base, Router, Routing
+from __future__ import annotations
+from seedemu.core import Component, Emulator, AutonomousSystem, Router, Hook
+from seedemu.layers import Base, Routing
+from typing import Dict, List
+
+BgpAttackerComponentTemplates: Dict[str, str] = {}
+
+BgpAttackerComponentTemplates['hijack_static'] = '''
+    ipv4 {{
+        table t_bgp;
+    }}
+{routes}
+'''
+
+class BgpAttackerInjectorHook(Hook):
+    """!
+    @brief Hook to inject static protocol after the EBGP layer configured the
+    router. (we need the t_bgp table.)
+    """
+    
+    __component: BgpAttackerComponent
+
+    def __init__(self, component: 'BgpAttackerComponent'):
+        """!
+        @brief create the hook.
+
+        @param component the attacker component.
+        """
+        self.__component = component
+
+    def getName(self) -> str:
+        return 'BgpAttackerInjectorAs{}'.format(self.__component.getHijackerAsn())
+
+    def getTargetLayer(self) -> str:
+        return 'Ebgp'
+
+    def postrender(self, emulator: Emulator):
+        prefixes = self.__component.getHijackedPrefixes()
+        self._log('hijacking prefixes: {}'.format(prefixes))
+
+        router = self.__component.getHijackerRouter()
+        if len(prefixes) > 0:
+            routes = ''
+            for prefix in prefixes:
+                routes += '    route {} blackhole;\n'.format(prefix)
+
+            router.addProtocol('static', 'hijacks', BgpAttackerComponentTemplates['hijack_static'].format(
+                routes = routes
+            ))
 
 class BgpAttackerComponent(Component):
     """!
@@ -8,9 +55,9 @@ class BgpAttackerComponent(Component):
 
     __data: Emulator
     __hijacker_as: AutonomousSystem
+    __prefixes: List[str]
     __routing: Routing
     __hijacker: Router
-    __counter: int
 
     def __init__(self, attackerAsn: int):
         """!
@@ -20,7 +67,7 @@ class BgpAttackerComponent(Component):
         """
 
         self.__data = Emulator()
-        self.__counter = 0
+        self.__prefixes = []
 
         base = Base()
         self.__routing = Routing()
@@ -30,6 +77,23 @@ class BgpAttackerComponent(Component):
 
         self.__data.addLayer(base)
         self.__data.addLayer(self.__routing)
+        self.__data.addHook(BgpAttackerInjectorHook(self))
+
+    def getHijackerAsn(self) -> int: 
+        """!
+        @brief Get ASN of the hijacker.
+
+        @returns ASN.
+        """
+        return self.__hijacker_as.getAsn()
+
+    def getHijackerRouter(self) -> Router:
+        """!
+        @brief Get the router object of the hijacker.
+
+        @returns router.
+        """
+        return self.__hijacker
 
     def get(self) -> Emulator:
         """!
@@ -45,10 +109,15 @@ class BgpAttackerComponent(Component):
 
         @param prefix prefix in CIDR notation.
         """
-        netname = 'h{}'.format(self.__counter)
-        self.__hijacker_as.createNetwork(netname, prefix)
-        self.__hijacker.joinNetwork(netname)
-        self.__counter += 1
+        self.__prefixes.append(prefix)
+
+    def getHijackedPrefixes(self) -> List[str]:
+        """!
+        @brief Get hijacked prefixes.
+
+        @returns list of prefixes.
+        """
+        return self.__prefixes
 
     def joinInternetExchange(self, ix: str, addr: str):
         """!
