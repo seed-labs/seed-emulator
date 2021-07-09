@@ -2,6 +2,8 @@ from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedemu.services import WebService
 from seedemu.compiler import Docker
 from seedemu.core import Emulator, Filter, Binding
+from seedemu.components import BgpAttackerComponent
+from seedemu.mergers import DEFAULT_MERGERS
 
 emu = Emulator()
 
@@ -25,7 +27,7 @@ def make_stub_as(asn: int, exchange: str):
 
     net = stub_as.createNetwork('net0')
 
-    
+    routing.addDirect(asn, 'net0')
 
     web_server.joinNetwork('net0')
     router.joinNetwork('net0')
@@ -64,9 +66,9 @@ as2_net_100_101 = as2.createNetwork('n01')
 as2_net_101_102 = as2.createNetwork('n12')
 as2_net_102_100 = as2.createNetwork('n20')
 
-
-
-
+routing.addDirect(2, 'n01')
+routing.addDirect(2, 'n12')
+routing.addDirect(2, 'n20')
 
 as2_100.joinNetwork('n01')
 as2_101.joinNetwork('n01')
@@ -89,10 +91,11 @@ as3_102.joinNetwork('ix102')
 
 as3_net_101_102 = as3.createNetwork('n12')
 
-
+routing.addDirect(2, 'n12')
 
 as3_101.joinNetwork('n12')
 as3_102.joinNetwork('n12')
+
 
 ###############################################################################
 
@@ -116,8 +119,22 @@ emu.addLayer(ibgp)
 emu.addLayer(ospf)
 emu.addLayer(web)
 
-emu.render()
+
+
+###############################################################################
+# Add BGP attacker component
+
+bgp_attacker = BgpAttackerComponent(attackerAsn = 66)
+
+bgp_attacker.addHijackedPrefix('10.151.0.0/25')
+bgp_attacker.addHijackedPrefix('10.151.0.128/25')
+bgp_attacker.joinInternetExchange('ix101', '10.101.0.66')
+
+ebgp.addPrivatePeering(101, 2, 66, PeerRelationship.Unfiltered)
+
+emu_new = emu.merge(bgp_attacker.get(), DEFAULT_MERGERS)
+emu_new.render()
 
 ###############################################################################
 
-emu.compile(Docker(), './output')
+emu_new.compile(Docker(selfManagedNetwork = True), './output2')
