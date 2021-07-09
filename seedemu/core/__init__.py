@@ -2,7 +2,7 @@ from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
 from .AutonomousSystem import AutonomousSystem
 from .InternetExchange import InternetExchange
 from .Network import Network
-from .Node import Node, File, Interface
+from .Node import Node, File, Interface, Router, RealWorldRouter
 from .Printable import Printable
 from .Registry import Registry, ScopedRegistry, Registrable
 from .Graphable import Graphable, Graph, Vertex, Edge
@@ -14,3 +14,4 @@ from .Layer import Layer
 from .Service import Server, Service
 from .Binding import Binding, Filter, Action
 from .Component import Component
+from .RemoteAccessProvider import RemoteAccessProvider

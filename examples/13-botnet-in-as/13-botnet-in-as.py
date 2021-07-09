@@ -38,7 +38,7 @@ def make_stub_as(asn: int, exchange: str):
     router = stub_as.createRouter('router0')
 
     net = stub_as.createNetwork('net0')
-    routing.addDirect(asn, 'net0')
+    
 
     botnet_server.joinNetwork('net0')
     router.joinNetwork('net0')
@@ -85,9 +85,9 @@ as2_net_100_101 = as2.createNetwork('n01')
 as2_net_101_102 = as2.createNetwork('n12')
 as2_net_102_100 = as2.createNetwork('n20')
 
-routing.addDirect(2, 'n01')
-routing.addDirect(2, 'n12')
-routing.addDirect(2, 'n20')
+
+
+
 
 as2_100.joinNetwork('n01')
 as2_101.joinNetwork('n01')
@@ -110,7 +110,7 @@ as3_102.joinNetwork('ix102')
 
 as3_net_101_102 = as3.createNetwork('n12')
 
-routing.addDirect(3, 'n12')
+
 
 as3_101.joinNetwork('n12')
 as3_102.joinNetwork('n12')

@@ -58,7 +58,7 @@ as151_router = as151.createRouter('router0')
 
 as151_net = as151.createNetwork('net0')
 
-routing.addDirect(151, 'net0')
+
 
 as151_web.joinNetwork('net0')
 as151_router.joinNetwork('net0')
@@ -78,7 +78,7 @@ as152_router = as152.createRouter('router0')
 
 as152_net = as152.createNetwork('net0')
 
-routing.addDirect(152, 'net0')
+
 
 as152_web.joinNetwork('net0')
 as152_router.joinNetwork('net0')

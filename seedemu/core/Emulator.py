@@ -1,9 +1,12 @@
 from __future__ import annotations
+from seedemu.core.enums import NetworkType
 from .Merger import Mergeable, Merger
 from .Registry import Registry, Registrable, Printable
+from .Network import Network
 from seedemu import core
 from typing import Dict, Set, Tuple, List
-from sys import stderr
+from sys import prefix, stderr
+from ipaddress import IPv4Network
 import pickle
 
 class BindingDatabase(Registrable, Printable):
@@ -79,9 +82,18 @@ class Emulator:
     __bindings: BindingDatabase
     __resolved_bindings: Dict[str, core.Node]
 
-    def __init__(self):
+    __service_net: Network
+    __service_net_prefix: str
+
+    def __init__(self, serviceNetworkPrefix: str = '192.168.66.0/24'):
         """!
         @brief Construct a new emulation.
+        
+        @param serviceNetworkPrefix (optional) service network prefix for this
+        emulator. A service network is a network that does not take part in the
+        emulation, and provide access between the emulation nodes and the host
+        node. Service network will not be created unless some layer/service/as
+        asks for it.
         """
         self.__rendered = False
         self.__dependencies_db = {}
@@ -92,6 +104,9 @@ class Emulator:
 
         self.__registry.register('seedemu', 'dict', 'layersdb', self.__layers)
         self.__registry.register('seedemu', 'list', 'bindingdb', self.__bindings)
+
+        self.__service_net_prefix = '192.168.160.0/23'
+        self.__service_net = None
 
     def __render(self, layerName, optional: bool, configure: bool):
         """!
@@ -266,6 +281,22 @@ class Emulator:
         """
         assert vnode in self.__resolved_bindings, 'failed to find binding for vnode {}.'.format(vnode)
         return self.__resolved_bindings[vnode]
+
+    def getServiceNetwork(self) -> Network:
+        """!
+        @brief get the for-service network of this emulation. If one does not
+        exist, a new one will be created.
+
+        A for-service network is a network that does not take part in the
+        emulation, and provide access between the emulation nodes and the host
+        node.
+
+        @returns service network.
+        """
+        if self.__service_net == None:
+            self.__service_net = self.__registry.register('seedemu', 'net', '000_svc', Network('000_svc', NetworkType.Bridge, IPv4Network(self.__service_net_prefix), direct = False))
+
+        return self.__service_net
 
     def render(self):
         """!

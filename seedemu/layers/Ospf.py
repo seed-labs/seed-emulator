@@ -145,7 +145,7 @@ class Ospf(Layer):
 
                 if (int(scope), net.getName()) in self.__masked: continue
 
-                if (int(scope), net.getName()) in self.__stubs or net.getType() == NetworkType.InternetExchange:
+                if (int(scope), net.getName()) in self.__stubs or net.getType() != NetworkType.Local:
                     stubs.append(net.getName())
                     continue
 

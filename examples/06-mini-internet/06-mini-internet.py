@@ -1,10 +1,11 @@
-from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship, Dnssec
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
 from seedemu.services import WebService, DomainNameService, DomainNameCachingService
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedemu.compiler import Docker, Graphviz
 from seedemu.hooks import ResolvConfHook
 from seedemu.core import Emulator, Service, Binding, Filter
 from seedemu.layers import Router
+from seedemu.raps import OpenVpnRemoteAccessProvider
 from typing import List, Tuple, Dict
 
 ###############################################################################
@@ -16,7 +17,6 @@ routing = Routing()
 ebgp = Ebgp()
 ibgp = Ibgp()
 ospf = Ospf()
-real = Reality()
 web = WebService()
 dns = DomainNameService()
 ldns = DomainNameCachingService()
@@ -24,13 +24,14 @@ dnssec = Dnssec()
 cymru = CymruIpOriginService()
 rdns = ReverseDomainNameService()
 lg = BgpLookingGlassService()
+ovpn = OpenVpnRemoteAccessProvider()
 
 ###############################################################################
 # Helper function: create real-world autonomous system
 
 def make_real_as(asn: int, exchange: int, exchange_ip: str):
     real_as = base.createAutonomousSystem(asn)
-    real_router = real.createRealWorldRouter(real_as)
+    real_router = real_as.createRealWorldRouter('rw')
     real_router.joinNetwork('ix{}'.format(exchange), exchange_ip)
 
 ###############################################################################
@@ -39,8 +40,6 @@ def make_real_as(asn: int, exchange: int, exchange_ip: str):
 def make_service_as(emu: Emulator, asn: int, services: List[Service], exchange: int):
     service_as = base.createAutonomousSystem(asn)
     service_as.createNetwork('net0')
-    routing.addDirect(asn, 'net0')
-
     router = service_as.createRouter('router0')
     router.joinNetwork('net0')
     router.joinNetwork('ix{}'.format(exchange))
@@ -63,7 +62,6 @@ def make_service_as(emu: Emulator, asn: int, services: List[Service], exchange: 
 def make_dns_as(emu: Emulator, asn: int, zones: List[str], exchange: int):
     dns_as = base.createAutonomousSystem(asn)
     dns_as.createNetwork('net0')
-    routing.addDirect(asn, 'net0')
 
     router = dns_as.createRouter('router0')
     router.joinNetwork('net0')
@@ -88,8 +86,7 @@ def make_dns_as(emu: Emulator, asn: int, zones: List[str], exchange: int):
 def make_user_as(emu: Emulator, asn: int, exchange: str):
     # Create AS and internal network
     user_as = base.createAutonomousSystem(asn)
-    user_as.createNetwork('net0')
-    routing.addDirect(asn, 'net0')
+    net = user_as.createNetwork('net0')
 
     # Create a BGP router and attach it to 2 networks
     router = user_as.createRouter('router0')
@@ -113,7 +110,7 @@ def make_user_as(emu: Emulator, asn: int, exchange: str):
     emu.addBinding(Binding(vnodename, filter = Filter(asn = asn, nodeName = 'looking_glass')))
 
     # Enable the real-world access, i.e. a new VPN server node will be created.
-    real.enableRealWorldAccess(user_as, 'net0')
+    net.enableRemoteAccess(ovpn)
 
 
 ###############################################################################
@@ -134,7 +131,6 @@ def make_transit_as(asn: int, exchanges: List[int], intra_ix_links: List[Tuple[i
         name = 'net_{}_{}'.format(a, b)
 
         net = transit_as.createNetwork(name)
-        routing.addDirect(asn, name)
 
         routers[a].joinNetwork(name)
         routers[b].joinNetwork(name)
@@ -232,7 +228,6 @@ dnssec.enableOn('as152.net.')
 # 
 google = base.createAutonomousSystem(15169)
 google.createNetwork('google_dns_net', '8.8.8.0/24')
-routing.addDirect(15169, 'google_dns_net')
 
 google_router = google.createRouter('router0')
 google_router.joinNetwork('google_dns_net')
@@ -308,7 +303,6 @@ emu.addLayer(routing)
 emu.addLayer(ebgp)
 emu.addLayer(ibgp)
 emu.addLayer(ospf)
-emu.addLayer(real)
 emu.addLayer(web)
 emu.addLayer(dns)
 emu.addLayer(ldns)
@@ -322,4 +316,4 @@ emu.render()
 ###############################################################################
 
 emu.compile(Docker(), './output')
-emu.compile(Graphviz(), './output/_graphs')
+# emu.compile(Graphviz(), './output/_graphs') # FIXME

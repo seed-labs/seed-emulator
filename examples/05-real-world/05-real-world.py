@@ -1,6 +1,7 @@
-from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf, Reality
+from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedemu.services import WebService
 from seedemu.core import Emulator, Binding, Filter
+from seedemu.raps import OpenVpnRemoteAccessProvider
 from seedemu.compiler import Docker
 
 emu = Emulator()
@@ -11,7 +12,10 @@ ebgp = Ebgp()
 ibgp = Ibgp()
 ospf = Ospf()
 web = WebService()
-real = Reality()
+
+###############################################################################
+
+ovpn = OpenVpnRemoteAccessProvider()
 
 ###############################################################################
 
@@ -47,8 +51,8 @@ r4.joinNetwork('ix101')
 # Create AS151
 
 as151 = base.createAutonomousSystem(151)
-as151.createNetwork('net0')
-routing.addDirect(151, 'net0')
+as151_net0 = as151.createNetwork('net0')
+
 
 as151.createHost('web').joinNetwork('net0')
 
@@ -57,14 +61,14 @@ as151_router.joinNetwork('net0')
 as151_router.joinNetwork('ix100')
 
 # Enable the access from machines outside of the emulator
-real.enableRealWorldAccess(as151, 'net0')
+as151_net0.enableRemoteAccess(ovpn)
 
 ###############################################################################
 # Create AS152
 
 as152 = base.createAutonomousSystem(152)
-as152.createNetwork('net0')
-routing.addDirect(152, 'net0')
+as152_net0 = as152.createNetwork('net0')
+
 
 as152.createHost('web').joinNetwork('net0')
 
@@ -73,14 +77,14 @@ as152_router.joinNetwork('net0')
 as152_router.joinNetwork('ix101')
 
 # Enable the access from machines outside of the emulator
-real.enableRealWorldAccess(as152, 'net0')
+as152_net0.enableRemoteAccess(ovpn)
 
 
 ###############################################################################
 # Create a real-world AS
 
 as11872 = base.createAutonomousSystem(11872)
-as11872_router = real.createRealWorldRouter(as11872)
+as11872_router = as11872.createRealWorldRouter('rw')
 as11872_router.joinNetwork('ix101', '10.101.0.118')
 
 ###############################################################################
@@ -108,7 +112,6 @@ emu.addLayer(ebgp)
 emu.addLayer(ibgp)
 emu.addLayer(ospf)
 emu.addLayer(web)
-emu.addLayer(real)
 
 emu.render()
 

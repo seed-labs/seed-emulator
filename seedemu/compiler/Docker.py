@@ -193,7 +193,8 @@ class Docker(Compiler):
         address to containers, then replace those address with "real" address
         when the containers start. This will allow the use of overlapping
         networks in the emulation and will allow the use of the ".1" address on
-        nodes.
+        nodes. Note this will break port forwarding (except for service nodes
+        like real-world access node and remote access node.)
         @param dummyNetworksPool (optional) dummy networks pool. This should not
         overlap with any "real" networks used in the emulation, including
         loopback IP addresses. 

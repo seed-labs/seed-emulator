@@ -24,7 +24,5 @@ class DefaultRoutingMerger(Merger):
         @returns merged Routing layer.
         """
         new_routing = Routing()
-        for (asn, net) in (objectA.getDirects() | objectB.getDirects()):
-            new_routing.addDirect(asn, net)
 
         return new_routing

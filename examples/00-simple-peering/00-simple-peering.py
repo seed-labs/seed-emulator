@@ -22,7 +22,7 @@ as150 = base.createAutonomousSystem(150)
 
 # Create a network 
 as150.createNetwork('net0')
-routing.addDirect(150, 'net0')
+
 
 # Create a router and connect it to two networks
 as150_router = as150.createRouter('router0')
@@ -45,7 +45,7 @@ emu.addBinding(Binding('web150', filter = Filter(nodeName = 'web', asn = 150)))
 
 as151 = base.createAutonomousSystem(151)
 as151.createNetwork('net0')
-routing.addDirect(151, 'net0')
+
 
 as151.createHost('web').joinNetwork('net0')
 web.install('web151')
@@ -62,7 +62,7 @@ as151_router.joinNetwork('ix100')
 
 as152 = base.createAutonomousSystem(152)
 as152.createNetwork('net0')
-routing.addDirect(152, 'net0')
+
 
 
 as152.createHost('web').joinNetwork('net0')

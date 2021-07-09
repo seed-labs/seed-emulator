@@ -17,8 +17,6 @@ h150 = as150.createHost('host0')
 r150 = as150.createRouter('router0')
 as150.createNetwork('net0')
 
-routingA.addDirect(150, 'net0')
-
 h150.joinNetwork('net0')
 r150.joinNetwork('net0')
 r150.joinNetwork('ix100')
@@ -41,8 +39,6 @@ as151 = baseB.createAutonomousSystem(151)
 h151 = as151.createHost('host0')
 r151 = as151.createRouter('router0')
 as151.createNetwork('net0')
-
-routingB.addDirect(151, 'net0')
 
 h151.joinNetwork('net0')
 r151.joinNetwork('net0')
