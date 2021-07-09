@@ -1,26 +1,17 @@
-from seedemu.core import ScopedRegistry, Node, Interface, Network, Emulator, Layer
-from typing import List, Dict, Set, Tuple
+from seedemu.core import ScopedRegistry, Node, Interface, Network, Emulator, Layer, Router, RealWorldRouter
+from typing import List, Dict
 from ipaddress import IPv4Network
 
 RoutingFileTemplates: Dict[str, str] = {}
-
-RoutingFileTemplates["protocol"] = """\
-protocol {protocol} {name} {{{body}}}
-"""
-
-RoutingFileTemplates["pipe"] = """\
-protocol pipe {{
-    table {src};
-    peer table {dst};
-    import {importFilter};
-    export {exportFilter};
-}}
-"""
 
 RoutingFileTemplates["rs_bird"] = """\
 router id {routerId};
 protocol device {{
 }}
+"""
+
+RoutingFileTemplates["rnode_bird_direct_interface"] = """
+    interface "{interfaceName}";
 """
 
 RoutingFileTemplates["rnode_bird"] = """\
@@ -45,88 +36,6 @@ RoutingFileTemplates['rnode_bird_direct'] = """
 {interfaces}
 """
 
-RoutingFileTemplates["rnode_bird_direct_interface"] = """
-    interface "{interfaceName}";
-"""
-
-class Router(Node):
-    """!
-    @brief Node extension class.
-
-    Nodes with routing install will be replaced with this to get the extension
-    methods.
-    """
-
-    __loopback_address: str
-
-    def setLoopbackAddress(self, address: str):
-        """!
-        @brief Set loopback address.
-
-        @param address address.
-        """
-        self.__loopback_address = address
-
-    def getLoopbackAddress(self) -> str:
-        """!
-        @brief Get loopback address.
-
-        @returns address.
-        """
-        return self.__loopback_address
-
-    def addProtocol(self, protocol: str, name: str, body: str):
-        """!
-        @brief Add a new protocol to BIRD on the given node.
-
-        @param protocol protocol type. (e.g., bgp, ospf)
-        @param name protocol name.
-        @param body protocol body.
-        """
-        self.appendFile("/etc/bird/bird.conf", RoutingFileTemplates["protocol"].format(
-            protocol = protocol,
-            name = name,
-            body = body
-        ))
-
-    def addTablePipe(self, src: str, dst: str = 'master4', importFilter: str = 'none', exportFilter: str = 'all', ignoreExist: bool = True):
-        """!
-        @brief add a new routing table pipe.
-        
-        @param src src table.
-        @param dst (optional) dst table (default: master4)
-        @param importFilter (optional) filter for importing from dst table to src table (default: none)
-        @param exportFilter (optional) filter for exporting from src table to dst table (default: all)
-        @param ignoreExist (optional) assert check if table exists. If true, error is silently discarded.
-
-        @throws AssertionError if pipe between two tables already exist and ignoreExist is False.
-        """
-        meta = self.getAttribute('__routing_layer_metadata', {})
-        if 'pipes' not in meta: meta['pipes'] = {}
-        pipes = meta['pipes']
-        if src not in pipes: pipes[src] = []
-        if dst in pipes[src]:
-            assert ignoreExist, 'pipe from {} to {} already exist'.format(src, dst)
-            return
-        pipes[src].append(dst)
-        self.appendFile('/etc/bird/bird.conf', RoutingFileTemplates["pipe"].format(
-            src = src,
-            dst = dst,
-            importFilter = importFilter,
-            exportFilter = exportFilter
-        ))
-
-    def addTable(self, tableName: str):
-        """!
-        @brief Add a new routing table to BIRD on the given node.
-
-        @param tableName name of the new table.
-        """
-        meta = self.getAttribute('__routing_layer_metadata', {})
-        if 'tables' not in meta: meta['tables'] = []
-        tables = meta['tables']
-        if tableName not in tables: self.appendFile('/etc/bird/bird.conf', 'ipv4 table {};\n'.format(tableName))
-        tables.append(tableName)
 
 class Routing(Layer):
     """!
@@ -253,7 +162,13 @@ class Routing(Layer):
                 hnode.appendStartCommand('ip route add default via {} dev {}'.format(rif.getAddress(), rif.getNet().getName()))
 
     def render(self, emulator: Emulator) -> None:
-        pass
+        reg = emulator.getRegistry()
+        for ((scope, type, name), obj) in reg.getAll().items():
+            if type == 'rnode':
+                rnode: Router = obj
+                if issubclass(rnode.__class__, RealWorldRouter):
+                    self._log("Sealing real-world router as{}/{}...".format(rnode.getAsn(), rnode.getName()))
+                    rnode.seal()
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

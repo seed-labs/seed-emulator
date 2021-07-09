@@ -258,6 +258,10 @@ class Node(Printable, Registrable, Configurable):
                 hit = True
                 self.__joinNetwork(reg.get("ix", "net", netname), address)
 
+            if not hit and reg.has("seedemu", "net", netname):
+                hit = True
+                self.__joinNetwork(reg.get("seedemu", "net", netname), address)
+
             assert hit, 'no network matched for name {}'.format(netname)
 
         for (peername, peerasn) in list(self.__xcs.keys()):
@@ -619,5 +623,192 @@ class Node(Printable, Registrable, Configurable):
             out += ' ' * indent
             out += '{}{}\n'.format(cmd, ' (fork)' if fork else '')
         indent -= 4
+
+        return out
+
+RouterFileTemplates: Dict[str, str] = {}
+
+RouterFileTemplates["protocol"] = """\
+protocol {protocol} {name} {{{body}}}
+"""
+
+RouterFileTemplates["pipe"] = """\
+protocol pipe {{
+    table {src};
+    peer table {dst};
+    import {importFilter};
+    export {exportFilter};
+}}
+"""
+
+RouterFileTemplates['rw_configure_script'] = '''\
+#!/bin/bash
+gw="`ip rou show default | cut -d' ' -f3`"
+sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
+'''
+
+class Router(Node):
+    """!
+    @brief Node extension class.
+
+    Nodes with routing install will be replaced with this to get the extension
+    methods.
+    """
+
+    __loopback_address: str
+
+    def setLoopbackAddress(self, address: str):
+        """!
+        @brief Set loopback address.
+
+        @param address address.
+        """
+        self.__loopback_address = address
+
+    def getLoopbackAddress(self) -> str:
+        """!
+        @brief Get loopback address.
+
+        @returns address.
+        """
+        return self.__loopback_address
+
+    def addProtocol(self, protocol: str, name: str, body: str):
+        """!
+        @brief Add a new protocol to BIRD on the given node.
+
+        @param protocol protocol type. (e.g., bgp, ospf)
+        @param name protocol name.
+        @param body protocol body.
+        """
+        self.appendFile("/etc/bird/bird.conf", RouterFileTemplates["protocol"].format(
+            protocol = protocol,
+            name = name,
+            body = body
+        ))
+
+    def addTablePipe(self, src: str, dst: str = 'master4', importFilter: str = 'none', exportFilter: str = 'all', ignoreExist: bool = True):
+        """!
+        @brief add a new routing table pipe.
+        
+        @param src src table.
+        @param dst (optional) dst table (default: master4)
+        @param importFilter (optional) filter for importing from dst table to src table (default: none)
+        @param exportFilter (optional) filter for exporting from src table to dst table (default: all)
+        @param ignoreExist (optional) assert check if table exists. If true, error is silently discarded.
+
+        @throws AssertionError if pipe between two tables already exist and ignoreExist is False.
+        """
+        meta = self.getAttribute('__routing_layer_metadata', {})
+        if 'pipes' not in meta: meta['pipes'] = {}
+        pipes = meta['pipes']
+        if src not in pipes: pipes[src] = []
+        if dst in pipes[src]:
+            assert ignoreExist, 'pipe from {} to {} already exist'.format(src, dst)
+            return
+        pipes[src].append(dst)
+        self.appendFile('/etc/bird/bird.conf', RouterFileTemplates["pipe"].format(
+            src = src,
+            dst = dst,
+            importFilter = importFilter,
+            exportFilter = exportFilter
+        ))
+
+    def addTable(self, tableName: str):
+        """!
+        @brief Add a new routing table to BIRD on the given node.
+
+        @param tableName name of the new table.
+        """
+        meta = self.getAttribute('__routing_layer_metadata', {})
+        if 'tables' not in meta: meta['tables'] = []
+        tables = meta['tables']
+        if tableName not in tables: self.appendFile('/etc/bird/bird.conf', 'ipv4 table {};\n'.format(tableName))
+        tables.append(tableName)
+
+class RealWorldRouter(Router):
+    """!
+    @brief RealWorldRouter class.
+
+    This class extends the router node to supporting routing prefix to real
+    world.
+
+    @todo realworld access.
+    """
+
+    __realworld_routes: List[str]
+    __sealed: bool
+    __hide_hops: bool
+
+    def initRealWorld(self, hideHops: bool):
+        """!
+        @brief init RealWorldRouter.
+        """
+        if hasattr(self, '__sealed'): return
+        self.__realworld_routes = []
+        self.__sealed = False
+        self.__hide_hops = hideHops
+        self.addSoftware('iptables')
+        self.setFile('/rw_configure_script', RouterFileTemplates['rw_configure_script'])
+        self.appendStartCommand('chmod +x /rw_configure_script')
+        self.appendStartCommand('/rw_configure_script')
+
+    def addRealWorldRoute(self, prefix: str):
+        """!
+        @brief Add real world route.
+
+        @param prefix prefix.
+        
+        @throws AssertionError if sealed.
+        """
+        assert not self.__sealed, 'Node sealed.'
+        self.__realworld_routes.append(prefix)
+
+    def getRealWorldRoutes(self) -> List[str]:
+        """!
+        @brief Get list of real world prefixes.
+
+        @returns list of prefixes.
+        """
+        return self.__realworld_routes
+
+    def seal(self):
+        """!
+        @brief seal the realworld router.
+
+        Use this method to "seal" the router (add static protocol.) No new real
+        world routes can be added once the node is sealed.
+        """
+        if self.__sealed: return
+        self.__sealed = True
+        if len(self.__realworld_routes) == 0: return
+        self.addTable('t_rw')
+        statics = '\n    ipv4 { table t_rw; import all; };\n    route ' + ' via !__default_gw__!;\n    route '.join(self.__realworld_routes)
+        statics += ' via !__default_gw__!;\n'
+        for prefix in self.__realworld_routes:
+            # nat matched only
+            self.appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -j MASQUERADE\n'.format(prefix))
+            
+            if self.__hide_hops:
+                # remove realworld hops
+                self.appendFile('/rw_configure_script', 'iptables -t mangle -A POSTROUTING -d {} -j TTL --ttl-set 64\n'.format(prefix))
+
+        self.addProtocol('static', 'real_world', statics)
+        self.addTablePipe('t_rw', 't_bgp')
+        # self.addTablePipe('t_rw', 't_ospf') # TODO
+
+
+    def print(self, indent: int) -> str:
+        out = super(RealWorldRouter, self).print(indent)
+        indent += 4
+
+        out += ' ' * indent
+        out += 'Real-world prefixes:\n'
+
+        indent += 4
+        for prefix in self.__realworld_routes:
+            out += ' ' * indent
+            out += '{}\n'.format(prefix)
+        
 
         return out
