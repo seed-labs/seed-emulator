@@ -404,6 +404,9 @@ class Emulator:
 
         for binding in self.getBindings(): new_sim.addBinding(binding)
         for binding in other.getBindings(): new_sim.addBinding(binding)
+        
+        for hook in self.getRegistry().getByType('seedemu', 'hook'): new_sim.addHook(hook)
+        for hook in other.getRegistry().getByType('seedemu', 'hook'): new_sim.addHook(hook)
 
         return new_sim
 
