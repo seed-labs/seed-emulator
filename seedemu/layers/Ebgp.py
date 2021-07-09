@@ -161,6 +161,18 @@ class Ebgp(Layer, Graphable):
 
         self.__rs_peers.append((ix, peer))
 
+    def addRsPeers(self, ix: int, peers: List[int]):
+        """!
+        @brief Setup RS peering for list of ASes.
+
+        @param ix IXP id.
+        @param peer List of participant ASNs.
+
+        @throws AssertionError if some peering already exist.
+        """
+        for peer in peers:
+            self.addRsPeer(ix, peer)
+
     def getRsPeers(self) -> List[Tuple[int, int]]:
         """!
         @brief Get RS peers.
