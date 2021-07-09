@@ -106,7 +106,14 @@ class CymruIpOriginService(Service):
             if type != 'net': continue
             net: Network = obj
             if asn == 'ix': asn = name.replace('ix', '')
-            mappings.append((net.getPrefix(), int(asn)))
+            
+            asn_val = 0
+            try:
+                asn_val = int(asn)
+            except ValueError:
+                asn_val = 0
+
+            mappings.append((net.getPrefix(), asn_val))
 
         for mapping in mappings:
             (prefix, asn) = mapping
