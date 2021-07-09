@@ -76,7 +76,7 @@ class DefaultGenerator:
 
             current_as.createNetwork(netname, prefix)
             router.joinNetwork(netname)
-            routing.addDirect(asn, netname)
+            
 
             net_count += 1
 
