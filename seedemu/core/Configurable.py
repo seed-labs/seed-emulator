@@ -7,6 +7,9 @@ class Configurable(object):
     Configurable classs are classes that need to be configure before rendering.
     """
 
+    def __init__(self):
+        super().__init__()
+
     def configure(self, emulator: Emulator):
         """!
         @brief Configure the class.

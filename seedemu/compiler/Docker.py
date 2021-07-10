@@ -234,6 +234,18 @@ class Docker(Compiler):
             value = net.getPrefix()
         )
 
+        if net.getDisplayName() != None:
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'displayname',
+                value = net.getDisplayName()
+            )
+        
+        if net.getDescription() != None:
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'description',
+                value = net.getDescription()
+            )
+
         return labels
 
     def __getNodeMeta(self, node: Node):
@@ -273,6 +285,18 @@ class Docker(Compiler):
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key = 'role',
                 value = 'Route Server'
+            )
+
+        if node.getDisplayName() != None:
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'displayname',
+                value = node.getDisplayName()
+            )
+        
+        if node.getDescription() != None:
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'description',
+                value = node.getDescription()
             )
 
         n = 0

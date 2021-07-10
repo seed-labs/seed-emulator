@@ -5,6 +5,7 @@ from .Registry import Registrable
 from .Emulator import Emulator
 from .Configurable import Configurable
 from .enums import NetworkType
+from .Visualization import Vertex
 from ipaddress import IPv4Address, IPv4Interface
 from typing import List, Dict, Set, Tuple
 from string import ascii_letters
@@ -174,7 +175,7 @@ class Interface(Printable):
 
         return out
 
-class Node(Printable, Registrable, Configurable):
+class Node(Printable, Registrable, Configurable, Vertex):
     """!
     @brief Node base class.
 
@@ -210,6 +211,8 @@ class Node(Printable, Registrable, Configurable):
         @param asn network that this node belongs to.
         @param scope scope of the node, if not asn.
         """
+        super().__init__()
+
         self.__interfaces = []
         self.__files = {}
         self.__asn = asn
