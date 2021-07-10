@@ -732,6 +732,14 @@ export class MapUi {
             let net = vertex.object as EmulatorNetwork;
             title.innerText = `${net.meta.emulatorInfo.type == 'global' ? 'Exchange' : 'Network'}: ${vertex.label}`;
 
+            if (net.meta.emulatorInfo.description) {
+                let div = document.createElement('div');
+                div.innerText = net.meta.emulatorInfo.description;
+                div.classList.add('description');
+
+                infoPlate.appendChild(div);
+            }
+
             infoPlate.appendChild(this._createInfoPlateValuePair('ID', net.Id.substr(0, 12)));
             infoPlate.appendChild(this._createInfoPlateValuePair('Name', net.meta.emulatorInfo.name));
             infoPlate.appendChild(this._createInfoPlateValuePair('Scope', net.meta.emulatorInfo.scope));
@@ -742,6 +750,14 @@ export class MapUi {
         if (vertex.type == 'node') {
             let node = vertex.object as EmulatorNode;
             title.innerText = `${node.meta.emulatorInfo.role == 'Router' ? 'Router' : 'Host'}: ${vertex.label}`;
+
+            if (node.meta.emulatorInfo.description) {
+                let div = document.createElement('div');
+                div.innerText = node.meta.emulatorInfo.description;
+                div.classList.add('description');
+
+                infoPlate.appendChild(div);
+            }
 
             infoPlate.appendChild(this._createInfoPlateValuePair('ID', node.Id.substr(0, 12)));
             infoPlate.appendChild(this._createInfoPlateValuePair('ASN', node.meta.emulatorInfo.asn.toString()));
