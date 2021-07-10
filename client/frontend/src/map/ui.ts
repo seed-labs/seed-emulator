@@ -18,10 +18,13 @@ export interface MapUiConfiguration {
     logBodyElementId: string, // element id of the log body (the tbody)
     logPanelElementId: string, // element id of the log panel
     logViewportElementId: string, // element id of the log viewport (the table wrapper w/ overflow scroll)
+    logWrapElementId: string, // element id of the log wrap (hidden when minimized)
     logControls: { // controls for log
         clearButtonElementId: string, // element id of log clear button
         autoscrollCheckboxElementId: string, // element id of autoscroll checkbox
-        disableCheckboxElementId: string // element id of log disable checkbox
+        disableCheckboxElementId: string, // element id of log disable checkbox
+        minimizeToggleElementId: string, // element id of log minimize/unminimize toggle
+        minimizeChevronElementId: string // element id of the chevron icon of the log minimize/unminimize toggle
     },
     filterControls: { // filter controls
         filterModeTabElementId: string, // element id of tab for setting mode to filter
@@ -49,6 +52,7 @@ export class MapUi {
 
     private _logPanel: HTMLElement;
     private _logView: HTMLElement;
+    private _logWrap: HTMLElement;
     private _logBody: HTMLElement;
     private _logAutoscroll: HTMLInputElement;
     private _logDisable: HTMLInputElement;
@@ -57,6 +61,9 @@ export class MapUi {
     private _filterModeTab: HTMLElement;
     private _searchModeTab: HTMLElement;
     private _suggestions: HTMLElement;
+
+    private _logToggle: HTMLElement;
+    private _logToggleChevron: HTMLElement;
 
     private _datasource: DataSource;
 
@@ -102,6 +109,8 @@ export class MapUi {
      */
     private _ignoreKeyUp: boolean;
 
+    private _logMinimized: boolean;
+
     /**
      * Build a new map UI controller.
      * 
@@ -116,6 +125,7 @@ export class MapUi {
 
         this._logPanel = document.getElementById(config.logPanelElementId);
         this._logView = document.getElementById(config.logViewportElementId);
+        this._logWrap = document.getElementById(config.logWrapElementId);
         this._logBody = document.getElementById(config.logBodyElementId);
         this._logAutoscroll = document.getElementById(config.logControls.autoscrollCheckboxElementId) as HTMLInputElement;
         this._logDisable = document.getElementById(config.logControls.disableCheckboxElementId) as HTMLInputElement;
@@ -124,6 +134,11 @@ export class MapUi {
         this._filterModeTab = document.getElementById(config.filterControls.filterModeTabElementId);
         this._searchModeTab = document.getElementById(config.filterControls.nodeSearchModeTabElementId);
         this._suggestions = document.getElementById(config.filterControls.suggestionsElementId);
+
+        this._logToggle = document.getElementById(config.logControls.minimizeToggleElementId);
+        this._logToggleChevron = document.getElementById(config.logControls.minimizeChevronElementId);
+
+        this._logMinimized = true;
 
         this._suggestionsSelection = -1;
 
@@ -142,6 +157,18 @@ export class MapUi {
         this._windowManager = new WindowManager(config.windowManager.desktopElementId, config.windowManager.taskbarElementId);
 
         this._bpfCompletion = new Completion(bpfCompletionTree);
+
+        this._logToggle.onclick = () => {
+            if (this._logMinimized) {
+                this._logWrap.classList.remove('minimized');
+                this._logToggleChevron.className = 'bi bi-chevron-down';
+            } else {
+                this._logWrap.classList.add('minimized');
+                this._logToggleChevron.className = 'bi bi-chevron-up';
+            }
+
+            this._logMinimized = !this._logMinimized;
+        };
 
         this._filterInput.onkeydown = (event) => {
             if (event.key == 'ArrowUp') {
