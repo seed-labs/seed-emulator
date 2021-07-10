@@ -4,9 +4,10 @@ from .Printable import Printable
 from .enums import NetworkType, NodeRole
 from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
+from .Visualization import Vertex
 from typing import Dict, Tuple, List
 
-class Network(Printable, Registrable):
+class Network(Printable, Registrable, Vertex):
     """!
     @brief The network class.
 
@@ -42,6 +43,8 @@ class Network(Printable, Registrable):
         @param prefix prefix of the network.
         @param aac (optional) AddressAssignmentConstraint to use.
         """
+        super().__init__()
+
         self.__name = name
         self.__type = type
         self.__prefix = prefix

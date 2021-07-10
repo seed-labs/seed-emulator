@@ -16,6 +16,7 @@ class Registrable(object):
         """!
         @brief Registerable class constructor.
         """
+        super().__init__()
         self.__scope = 'undefined'
         self._rtype = 'undefined'
         self._rname = 'undefined'

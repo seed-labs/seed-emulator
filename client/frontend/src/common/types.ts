@@ -17,7 +17,9 @@ export interface EmulatorNode {
             }[],
             asn: number,
             name: string,
-            role: string
+            role: string,
+            description?: string,
+            displayname?: string
         };
     };
 };
@@ -26,10 +28,12 @@ export interface EmulatorNetwork {
     Id: string;
     meta: {
         emulatorInfo: {
-            type: string;
-            scope: string;
-            name: string;
-            prefix: string;
+            type: string,
+            scope: string,
+            name: string,
+            prefix: string,
+            description?: string,
+            displayname?: string
         }
     }
 };

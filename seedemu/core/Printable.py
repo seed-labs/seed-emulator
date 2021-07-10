@@ -1,9 +1,12 @@
-class Printable:
+class Printable(object):
     """!
     @brief Printable class.
 
     Implement this class for indentable print.
     """
+
+    def __init__(self):
+        super().__init__()
 
     def print(self, indentation: int = 0) -> str:
         """!
