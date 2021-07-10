@@ -1,4 +1,4 @@
-from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship, Dnssec
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
 from seedemu.services import WebService, DomainNameService, DomainNameCachingService
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedemu.compiler import Docker, Graphviz

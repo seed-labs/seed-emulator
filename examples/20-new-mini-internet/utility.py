@@ -1,4 +1,4 @@
-from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship, Dnssec
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
 from seedemu.services import WebService, DomainNameService, DomainNameCachingService
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedemu.compiler import Docker, Graphviz
@@ -16,7 +16,6 @@ def make_stub_AS(emu: Emulator, base: Base, routing: Routing, asn: int,
     # Create AS and internal network
     stub_as = base.createAutonomousSystem(asn)
     stub_as.createNetwork('net0')
-    routing.addDirect(asn, 'net0')
 
     # Create a BGP router 
     # Attach the router to both the internal and external networks
@@ -68,9 +67,7 @@ def make_transit_AS(base: Base, routing: Routing, asn: int, exchanges: List[int]
     for (a, b) in intra_ix_links:
         name = 'net_{}_{}'.format(a, b)
 
-        net = transit_as.createNetwork(name)
-        routing.addDirect(asn, name)
-
+        transit_as.createNetwork(name)
         routers[a].joinNetwork(name)
         routers[b].joinNetwork(name)
 
