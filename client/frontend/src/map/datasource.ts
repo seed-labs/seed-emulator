@@ -243,7 +243,7 @@ export class DataSource {
             var netInfo = net.meta.emulatorInfo;
             var vertex: Vertex = {
                 id: net.Id,
-                label: `${netInfo.scope}/${netInfo.name}`,
+                label: netInfo.displayname ?? `${netInfo.scope}/${netInfo.name}`,
                 type: 'network',
                 shape: netInfo.type == 'global' ? 'star' : 'diamond',
                 object: net
@@ -260,7 +260,7 @@ export class DataSource {
             var nodeInfo = node.meta.emulatorInfo;
             var vertex: Vertex = {
                 id: node.Id,
-                label: `${nodeInfo.asn}/${nodeInfo.name}`,
+                label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
                 type: 'node',
                 shape: nodeInfo.role == 'Router' ? 'dot' : 'hexagon',
                 object: node
