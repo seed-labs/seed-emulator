@@ -43,6 +43,8 @@ class Network(Printable, Registrable, Vertex):
         @param prefix prefix of the network.
         @param aac (optional) AddressAssignmentConstraint to use.
         """
+        super().__init__()
+
         self.__name = name
         self.__type = type
         self.__prefix = prefix

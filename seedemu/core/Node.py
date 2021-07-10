@@ -211,6 +211,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @param asn network that this node belongs to.
         @param scope scope of the node, if not asn.
         """
+        super().__init__()
+
         self.__interfaces = []
         self.__files = {}
         self.__asn = asn
