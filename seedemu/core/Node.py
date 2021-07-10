@@ -5,6 +5,7 @@ from .Registry import Registrable
 from .Emulator import Emulator
 from .Configurable import Configurable
 from .enums import NetworkType
+from .Visualization import Vertex
 from ipaddress import IPv4Address, IPv4Interface
 from typing import List, Dict, Set, Tuple
 from string import ascii_letters
@@ -174,7 +175,7 @@ class Interface(Printable):
 
         return out
 
-class Node(Printable, Registrable, Configurable):
+class Node(Printable, Registrable, Configurable, Vertex):
     """!
     @brief Node base class.
 

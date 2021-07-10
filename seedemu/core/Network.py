@@ -4,9 +4,10 @@ from .Printable import Printable
 from .enums import NetworkType, NodeRole
 from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
+from .Visualization import Vertex
 from typing import Dict, Tuple, List
 
-class Network(Printable, Registrable):
+class Network(Printable, Registrable, Vertex):
     """!
     @brief The network class.
 
