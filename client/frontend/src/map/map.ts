@@ -16,10 +16,13 @@ const mapUi = new MapUi({
     logPanelElementId: 'log-panel',
     logBodyElementId: 'log-body',
     logViewportElementId: 'log-viewport',
+    logWrapElementId: 'log-wrap',
     logControls: {
         autoscrollCheckboxElementId: 'log-autoscroll',
         clearButtonElementId: 'log-clear',
-        disableCheckboxElementId: 'log-disable'
+        disableCheckboxElementId: 'log-disable',
+        minimizeToggleElementId: 'log-panel-toggle',
+        minimizeChevronElementId: 'log-toggle-chevron'
     },
     filterControls: {
         filterModeTabElementId: 'tab-filter-mode',
