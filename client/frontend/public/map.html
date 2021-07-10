@@ -13,8 +13,8 @@
     <div class="map-area">
         <div class="map" id="map"></div>
         <div class="panel filter-panel">
-            <div class="panel-title" id="tab-filter-mode">Filter</div>
-            <div class="panel-title inactive" id="tab-node-search-mode">Search</div>
+            <div class="panel-title clickable" id="tab-filter-mode">Filter</div>
+            <div class="panel-title inactive clickable" id="tab-node-search-mode">Search</div>
             <div class="filter-wrap wrap" id="filter-wrap">
                 <input class="filter" id="filter" placeholder="Type a BPF expression to animate packet flows on the map..." autocorrect="off" autocapitalize="off" spellcheck="false" />
             </div>
@@ -29,8 +29,11 @@
             </div>
         </div>
         <div class="panel log-panel" id="log-panel">
-            <div class="panel-title">Log</div>
-            <div class="log-wrap wrap" id="log-wrap">
+            <div class="panel-title clickable" id="log-panel-toggle">
+                <span>Log</span>
+                <i class="bi bi-chevron-up" id="log-toggle-chevron"></i>
+            </div>
+            <div class="log-wrap wrap minimized" id="log-wrap">
                 <div class="log" id="log-viewport">
                     <table class="log">
                         <thead>
