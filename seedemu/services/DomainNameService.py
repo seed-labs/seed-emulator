@@ -1,5 +1,4 @@
 from __future__ import annotations
-from seedemu.services.DomainNameCachingService import DomainNameCachingServer
 from seedemu.core import Node, Printable, Emulator, Service, Server
 from seedemu.core.enums import NetworkType
 from typing import List, Dict, Tuple, Set
@@ -248,13 +247,17 @@ class DomainNameServer(Server):
         """
         self.__zones.add((zonename, createNsAndSoa))
 
-    def setMaster(self) -> DomainNameCachingServer:
+        return self
+
+    def setMaster(self) -> DomainNameService:
         """!
         @brief set the name server to be master name server.
 
         @returns self, for chaining API calls.
         """
         self.__is_master = True
+
+        return self
 
     def getNode(self) -> Node:
         """!

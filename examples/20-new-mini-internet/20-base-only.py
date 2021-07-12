@@ -1,4 +1,4 @@
-from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, Reality, PeerRelationship, Dnssec
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
 from seedemu.services import WebService, DomainNameService, DomainNameCachingService
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedemu.compiler import Docker, Graphviz
@@ -20,66 +20,99 @@ web     = WebService()
 
 ###############################################################################
 
-base.createInternetExchange(100)
-base.createInternetExchange(101)
-base.createInternetExchange(102)
-base.createInternetExchange(103)
-base.createInternetExchange(104)
-base.createInternetExchange(105)
+ix100 = base.createInternetExchange(100)
+ix101 = base.createInternetExchange(101)
+ix102 = base.createInternetExchange(102)
+ix103 = base.createInternetExchange(103)
+ix104 = base.createInternetExchange(104)
+ix105 = base.createInternetExchange(105)
+
+# Set map metadata
+ix100.getPeeringLan().setDisplayName('北京')
+ix101.getPeeringLan().setDisplayName('上海')
+
 
 ###############################################################################
 # Create Transit Autonomous Systems 
 
 ## Tier 1 ASes
-make_transit_AS(base, routing, 2, [100, 101, 102], 
+make_transit_AS(base, 2, [100, 101, 102], 
        [(100, 101), (101, 102)] 
 )
 
-make_transit_AS(base, routing, 3, [100, 103, 105], 
+make_transit_AS(base, 3, [100, 103, 105], 
        [(100, 103), (103, 105), (105, 100)]
 )
 
-make_transit_AS(base, routing, 4, [100, 104], 
+make_transit_AS(base, 4, [100, 104], 
        [(100, 104)]
 )
 
 ## Tier 2 ASes
-make_transit_AS(base, routing, 11, [102, 105], [(102, 105)])
-make_transit_AS(base, routing, 12, [101, 104], [(101, 104)])
+make_transit_AS(base, 11, [102, 105], [(102, 105)])
+make_transit_AS(base, 12, [101, 104], [(101, 104)])
 
 
 ###############################################################################
-# Create Stub ASes. "None" means create a host only 
+# Create single-homed stub ASes. "None" means create a host only 
 
-make_stub_AS(emu, base, routing, 151, 100, [web])
-make_stub_AS(emu, base, routing, 150, 101, [web, None])
-make_stub_AS(emu, base, routing, 170, 101, [None, None])
-make_stub_AS(emu, base, routing, 152, 102, [web])
-make_stub_AS(emu, base, routing, 153, 102, [web])
-make_stub_AS(emu, base, routing, 160, 103, [web, web])
-make_stub_AS(emu, base, routing, 161, 103, [web])
-make_stub_AS(emu, base, routing, 162, 103, [web])
-make_stub_AS(emu, base, routing, 154, 104, [web])
-make_stub_AS(emu, base, routing, 155, 105, [web])
-make_stub_AS(emu, base, routing, 171, 105, [])
+make_stub_AS(emu, base, 150, 100, [web, None])
+make_stub_AS(emu, base, 151, 100, [web, None])
 
-# Add a host with customized IP address to AS154 
+make_stub_AS(emu, base, 152, 101, [None, None])
+make_stub_AS(emu, base, 153, 101, [web, None, None])
+
+make_stub_AS(emu, base, 154, 102, [None, web])
+
+make_stub_AS(emu, base, 160, 103, [web, None])
+make_stub_AS(emu, base, 161, 103, [web, None])
+make_stub_AS(emu, base, 162, 103, [web, None])
+
+make_stub_AS(emu, base, 163, 104, [web, None])
+make_stub_AS(emu, base, 164, 104, [None, None])
+
+make_stub_AS(emu, base, 170, 105, [web, None])
+make_stub_AS(emu, base, 171, 105, [None])
+
+
+# Add a host with customized IP address to AS-154 
 as154 = base.getAutonomousSystem(154)
-as154.createHost('host_0').joinNetwork('net0', address = '10.154.0.129')
-
+as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129')
 
 
 ###############################################################################
-# Peering: using router server 
-# I made changes to the Ebgp.py code, changing the default peering relationship to "Unfiltered"
-# (a_export, b_export) = self.__getExportFilters(reg, ix, peer, PeerRelationship.Unfiltered)
+# Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
+# which means each AS will only export its customers and their own prefixes. 
+# We will use this peering relationship to peer all the ASes in an IX.
+# None of them will provide transit service for others. 
 
-ebgp.addRsPeers(100, [2, 3, 4, 151])
-ebgp.addRsPeers(101, [2, 12, 150, 170])
-ebgp.addRsPeers(102, [2, 11, 152, 153])
-ebgp.addRsPeers(103, [3, 160, 161, 162])
-ebgp.addRsPeers(104, [4, 12, 154])
-ebgp.addRsPeers(105, [3, 11, 155, 171])
+ebgp.addRsPeers(100, [2, 3, 4])
+#ebgp.addRsPeers(101, [2, 12, 152, 153])
+#ebgp.addRsPeers(102, [2, 11, 154])
+#ebgp.addRsPeers(103, [3, 160, 161, 162])
+#ebgp.addRsPeers(104, [4, 12, 163, 164])
+#ebgp.addRsPeers(105, [3, 11, 170, 171])
+
+# To buy transit services from another autonomous system, we will use 
+# private peering.  
+
+private_peering_with_isp(ebgp, 100, 2,  [150, 151])
+private_peering_with_isp(ebgp, 100, 3,  [150, 151])
+private_peering_with_isp(ebgp, 100, 4,  [150, 151])
+
+private_peering_with_isp(ebgp, 101, 2,  [12])
+private_peering_with_isp(ebgp, 101, 12, [152, 153])
+
+private_peering_with_isp(ebgp, 102, 2,  [11, 154])
+private_peering_with_isp(ebgp, 102, 11, [154])
+
+private_peering_with_isp(ebgp, 103, 3,  [160, 161, 162])
+
+private_peering_with_isp(ebgp, 104, 4,  [12])
+private_peering_with_isp(ebgp, 104, 12, [163, 164])
+
+private_peering_with_isp(ebgp, 105, 3,  [11, 170])
+private_peering_with_isp(ebgp, 105, 11, [171])
 
 
 ###############################################################################
@@ -92,7 +125,10 @@ emu.addLayer(ibgp)
 emu.addLayer(ospf)
 emu.addLayer(web)
 
-emu.render()
+# Save it to a component file
+emu.dump('base-component.bin')
 
-emu.compile(Docker(), './output')
-#emu.compile(Graphviz(), './output/_graphs')
+# Generate the docker files
+#emu.render()
+#emu.compile(Docker(), './output')
+
