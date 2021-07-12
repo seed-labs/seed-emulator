@@ -1,3 +1,4 @@
+from __future__ import annotations
 from seedemu.core import Node, Emulator, Layer
 from seedemu.core.enums import NetworkType
 from typing import Set, Dict, List, Tuple
@@ -53,7 +54,7 @@ class Ospf(Layer):
     def getName(self) -> str:
         return 'Ospf'
 
-    def markAsStub(self, asn: int, netname: str):
+    def markAsStub(self, asn: int, netname: str) -> Ospf:
         """!
         @brief Set all OSPF interfaces connected to a network as stub
         interfaces.
@@ -65,8 +66,13 @@ class Ospf(Layer):
 
         @param asn ASN to operate on.
         @param netname name of the network.
+        @returns self, for chaining API calls.
+
+        @returns self, for chaining API calls.
         """
         self.__stubs.add((asn, netname))
+
+        return self
 
     def getStubs(self) -> Set[Tuple[int, str]]:
         """!
@@ -76,7 +82,7 @@ class Ospf(Layer):
         """
         return self.__stubs
 
-    def maskNetwork(self, asn: int, netname: str):
+    def maskNetwork(self, asn: int, netname: str) -> Ospf:
         """!
         @brief Remove all OSPF interfaces connected to a network.
 
@@ -90,8 +96,12 @@ class Ospf(Layer):
         @param netname name of the net.
         
         @throws AssertionError if network is not local.
+
+        @returns self, for chaining API calls.
         """
         self.__masked.add((asn, netname))
+
+        return self
 
     def getMaskedNetworks(self) -> Set[Tuple[int, str]]:
         """!
@@ -101,13 +111,17 @@ class Ospf(Layer):
         """
         return self.__masked
 
-    def maskAsn(self, asn: int):
+    def maskAsn(self, asn: int) -> Ospf:
         """!
         @brief Disable OSPF for an AS.
 
         @param asn asn.
+
+        @returns self, for chaining API calls.
         """
         self.__masked_asn.add(asn)
+
+        return self
 
     def getMaskedAsns(self) -> Set[int]:
         """!
