@@ -126,6 +126,16 @@ emu.addHook(ResolvConfHook(['10.153.0.53']))
   abc.addZone().setMaster()
   ```
 
+- (Priority: Medium): Can we return the physical node in the `emu.addBinding()` API?
+  Because sometimes we would like to customize the node after the binding, such
+  as changing its visualization name to a more meaningful name to 
+  reflect the role of the node. Not sure whether the binding actually happens or not 
+  in this `addBinding()` API.
+  ```
+  node = emu.addBinding() 
+  node.API() 
+  ```
+
 - (Priority: Low): During the binding, use `Action.NEW` to bind a virtual node to a new 
   physical node, i.e., the node needs to be created.
 
