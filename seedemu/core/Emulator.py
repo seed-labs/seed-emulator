@@ -200,7 +200,7 @@ class Emulator:
 
         return self
 
-    def addBinding(self, binding: core.Binding):
+    def addBinding(self, binding: core.Binding) -> Emulator:
         """!
         @brief Add a binding.
 
@@ -220,7 +220,7 @@ class Emulator:
         """
         return self.__bindings.db
 
-    def addLayer(self, layer: core.Layer):
+    def addLayer(self, layer: core.Layer) -> Emulator:
         """!
         @brief Add a layer.
 
@@ -310,7 +310,7 @@ class Emulator:
 
         return self.__service_net
 
-    def render(self):
+    def render(self) -> Emulator:
         """!
         @brief Render to emulation.
 
@@ -360,7 +360,7 @@ class Emulator:
 
         return self
 
-    def compile(self, compiler: core.Compiler, output: str, override: bool = False):
+    def compile(self, compiler: core.Compiler, output: str, override: bool = False) -> Emulator:
         """!
         @brief Compile the simulation.
 
@@ -430,7 +430,7 @@ class Emulator:
 
         return new_sim
 
-    def dump(self, fileName: str):
+    def dump(self, fileName: str) -> Emulator:
         """!
         @brief dump the emulation to file.
 
@@ -446,7 +446,7 @@ class Emulator:
 
         return self
 
-    def load(self, fileName: str):
+    def load(self, fileName: str) -> Emulator:
         """!
         @brief load emulation from file.
 
