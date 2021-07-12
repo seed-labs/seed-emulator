@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Set, Dict
 from seedemu.core import Node, Emulator, Layer
 from seedemu.services import DomainNameServer, DomainNameService
@@ -86,14 +87,18 @@ class Dnssec(Layer):
     def getName(self):
         return 'Dnssec'
     
-    def enableOn(self, zonename: str):
+    def enableOn(self, zonename: str) -> Dnssec:
         """!
         @brief Enable DNSSEC on the given zone.
 
         @param zonename zonename. 
+
+        @returns self, for chaining API calls.
         """
         if zonename[-1] != '.': zonename += '.'
         self.__zonenames.add(zonename)
+
+        return self
 
     def getEnabledZones(self) -> Set[str]:
         """!

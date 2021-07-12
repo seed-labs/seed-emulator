@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .Routing import Router
 from seedemu.core import Registry, ScopedRegistry, Network, Interface, Graphable, Emulator, Layer
 from typing import Tuple, List, Dict
@@ -102,7 +103,7 @@ class Ebgp(Layer, Graphable):
     def getName(self) -> str:
         return "Ebgp"
 
-    def addPrivatePeering(self, ix: int, a: int, b: int, abRelationship: PeerRelationship = PeerRelationship.Peer):
+    def addPrivatePeering(self, ix: int, a: int, b: int, abRelationship: PeerRelationship = PeerRelationship.Peer) -> Ebgp:
         """!
         @brief Setup private peering between two ASes in IX.
 
@@ -115,12 +116,16 @@ class Ebgp(Layer, Graphable):
         B. Default to Peer.
 
         @throws AssertionError if peering already exist.
+
+        @returns self, for chaining API calls.
         """
         assert (ix, a, b) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(a, b, ix)
         assert (ix, b, a) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(b, a, ix)
         assert abRelationship == PeerRelationship.Peer or abRelationship == PeerRelationship.Provider or abRelationship == PeerRelationship.Unfiltered, 'unknow peering relationship {}'.format(abRelationship)
 
         self.__peerings[(ix, a, b)] = abRelationship
+
+        return self
 
     def getPrivatePeerings(self) -> Dict[Tuple[int, int, int], PeerRelationship]:
         """!
@@ -130,15 +135,28 @@ class Ebgp(Layer, Graphable):
         """
         return self.__peerings
 
-    def addCrossConnectPeering(self, a: int, b: int, abRelationship: PeerRelationship = PeerRelationship.Peer):
+    def addCrossConnectPeering(self, a: int, b: int, abRelationship: PeerRelationship = PeerRelationship.Peer) -> Ebgp:
         """!
         @brief add cross-connect peering.
+
+        @param a First ASN.
+        @param b Second ASN.
+        @param abRelationship (optional) A and B's relationship. If set to
+        PeerRelationship.Provider, A will export everything to B, if set to
+        PeerRelationship.Peer, A will only export own and customer prefixes to
+        B. Default to Peer.
+
+        @throws AssertionError if peering already exist.
+        
+        @returns self, for chaining API calls.
         """
         assert (a, b) not in self.__xc_peerings, '{} <-> {} already configured as XC peer'.format(a, b)
         assert (b, a) not in self.__xc_peerings, '{} <-> {} already configured as XC peer'.format(b, a)
         assert abRelationship == PeerRelationship.Peer or abRelationship == PeerRelationship.Provider or abRelationship == PeerRelationship.Unfiltered, 'unknow peering relationship {}'.format(abRelationship)
 
         self.__xc_peerings[(a, b)] = abRelationship
+
+        return self
 
     def getCrossConnectPeerings(self) -> Dict[Tuple[int, int], PeerRelationship]:
         """!
@@ -148,7 +166,7 @@ class Ebgp(Layer, Graphable):
         """
         return self.__xc_peerings
 
-    def addRsPeer(self, ix: int, peer: int):
+    def addRsPeer(self, ix: int, peer: int) -> Ebgp:
         """!
         @brief Setup RS peering for an AS.
 
@@ -156,10 +174,14 @@ class Ebgp(Layer, Graphable):
         @param peer Participant ASN.
 
         @throws AssertionError if peering already exist.
+
+        @returns self, for chaining API calls.
         """
         assert (ix, peer) not in self.__rs_peers, '{} already peered with RS at IX{}'.format(peer, ix)
 
         self.__rs_peers.append((ix, peer))
+
+        return self
 
     def addRsPeers(self, ix: int, peers: List[int]):
         """!
@@ -169,9 +191,13 @@ class Ebgp(Layer, Graphable):
         @param peer List of participant ASNs.
 
         @throws AssertionError if some peering already exist.
+
+        @returns self, for chaining API calls.
         """
         for peer in peers:
             self.addRsPeer(ix, peer)
+
+        return self
 
     def getRsPeers(self) -> List[Tuple[int, int]]:
         """!

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .DomainNameService import DomainNameService
 from seedemu.core import Node, Network, Emulator, Service, Server
 from typing import List, Tuple
@@ -41,7 +42,7 @@ class CymruIpOriginService(Service):
     def getName(self) -> str:
         return 'CymruIpOriginService'
 
-    def addMapping(self, prefix: str, asn: int):
+    def addMapping(self, prefix: str, asn: int) -> CymruIpOriginService:
         """!
         @brief Add new prefix -> asn mapping.
 
@@ -49,6 +50,8 @@ class CymruIpOriginService(Service):
         @param asn asn.
 
         @throws AssertionError if prefix invalid.
+
+        @returns self, for chaining API calls.
         """
         [pfx, cidr] = prefix.split('/')
         cidr = int(cidr)
@@ -76,6 +79,8 @@ class CymruIpOriginService(Service):
             record += '.origin.asn TXT "{} | {} | ZZ | SEED | 0000-00-00"'.format(asn, net)
             self.__records.append(record)
 
+        return self
+
     def getRecords(self) -> List[str]:
         """!
         @brief get generated records.
@@ -84,12 +89,16 @@ class CymruIpOriginService(Service):
         """
         return self.__records
 
-    def addRecord(self, record: str):
+    def addRecord(self, record: str) -> CymruIpOriginService:
         """!
         @brief add record directly to the cymru zone. You should use addMapping
         to add mapping and not addRecord, unless you know what you are doing.
+
+        @returns self, for chaining API calls.
         """
         self.__records.append(record)
+
+        return self
 
     def _doInstall(self, node: Node, server: Server): 
         assert False, 'CymruIpOriginService is not a real service and should not be installed this way. Please install a DomainNameService on the node and host the zone "cymru.com." yourself.'

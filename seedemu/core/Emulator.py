@@ -188,21 +188,29 @@ class Emulator:
         """
         return self.__rendered
 
-    def addHook(self, hook: core.Hook):
+    def addHook(self, hook: core.Hook) -> Emulator:
         """!
         @brief Add a hook.
 
         @param hook Hook.
+
+        @returns self, for chaining API calls.
         """
         self.__registry.register('seedemu', 'hook', hook.getName(), hook)
 
-    def addBinding(self, binding: core.Binding):
+        return self
+
+    def addBinding(self, binding: core.Binding) -> Emulator:
         """!
         @brief Add a binding.
 
         @param binding binding.
+
+        @returns self, for chaining API calls.
         """
         self.__bindings.db.append(binding)
+
+        return self
 
     def getBindings(self) -> List[core.Binding]:
         """!
@@ -212,18 +220,22 @@ class Emulator:
         """
         return self.__bindings.db
 
-    def addLayer(self, layer: core.Layer):
+    def addLayer(self, layer: core.Layer) -> Emulator:
         """!
         @brief Add a layer.
 
         @param layer layer to add.
         @throws AssertionError if layer already exist.
+
+        @returns self, for chaining API calls.
         """
 
         lname = layer.getName()
         assert lname not in self.__layers.db, 'layer {} already added.'.format(lname)
         self.__registry.register('seedemu', 'layer', lname, layer)
         self.__layers.db[lname] = (layer, False)
+
+        return self
 
     def getLayer(self, layerName: str) -> core.Layer:
         """!
@@ -298,11 +310,13 @@ class Emulator:
 
         return self.__service_net
 
-    def render(self):
+    def render(self) -> Emulator:
         """!
         @brief Render to emulation.
 
         @throws AssertionError if dependencies unmet 
+        
+        @returns self, for chaining API calls.
         """
         assert not self.__rendered, 'already rendered.'
 
@@ -344,7 +358,9 @@ class Emulator:
 
         self.__rendered = True
 
-    def compile(self, compiler: core.Compiler, output: str, override: bool = False):
+        return self
+
+    def compile(self, compiler: core.Compiler, output: str, override: bool = False) -> Emulator:
         """!
         @brief Compile the simulation.
 
@@ -352,8 +368,12 @@ class Emulator:
         @param output output directory path.
         @param override (optional) override the output folder if it already
         exist. False by defualt.
+
+        @returns self, for chaining API calls.
         """
         compiler.compile(self, output, override)
+
+        return self
 
     def getRegistry(self) -> Registry: 
         """!
@@ -410,23 +430,29 @@ class Emulator:
 
         return new_sim
 
-    def dump(self, fileName: str):
+    def dump(self, fileName: str) -> Emulator:
         """!
         @brief dump the emulation to file.
 
         @param fileName output path.
         @throws AssertionError if the emulation is already rendered.
+
+        @returns self, for chaining API calls.
         """
 
         assert not self.__rendered, 'cannot dump emulation after render.'
         with open(fileName, 'wb') as f:
             pickle.dump(self.__registry, f)
 
-    def load(self, fileName: str):
+        return self
+
+    def load(self, fileName: str) -> Emulator:
         """!
         @brief load emulation from file.
 
         @param fileName path to the dumped emulation.
+
+        @returns self, for chaining API calls.
         """
 
         with open(fileName, 'rb') as f:
@@ -435,3 +461,5 @@ class Emulator:
             self.__registry = pickle.load(f)
             self.__layers = self.__registry.get('seedemu', 'dict', 'layersdb')
             self.__bindings = self.__registry.get('seedemu', 'list', 'bindingdb')
+
+        return self

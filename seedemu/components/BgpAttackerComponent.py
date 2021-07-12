@@ -103,13 +103,17 @@ class BgpAttackerComponent(Component):
         """
         return self.__data
 
-    def addHijackedPrefix(self, prefix: str):
+    def addHijackedPrefix(self, prefix: str) -> BgpAttackerComponent:
         """!
         @brief Add a prefix to hijack.
 
         @param prefix prefix in CIDR notation.
+
+        @returns self, for chaining API calls.
         """
         self.__prefixes.append(prefix)
+
+        return self
 
     def getHijackedPrefixes(self) -> List[str]:
         """!
@@ -119,11 +123,15 @@ class BgpAttackerComponent(Component):
         """
         return self.__prefixes
 
-    def joinInternetExchange(self, ix: str, addr: str):
+    def joinInternetExchange(self, ix: str, addr: str) -> BgpAttackerComponent:
         """!
         @brief Join an internet exchange.
 
         @param ix internet exchange network name.
         @param addr address in the exchange.
+
+        @returns self, for chaining API calls.
         """
         self.__hijacker.joinNetwork(ix, addr)
+
+        return self
