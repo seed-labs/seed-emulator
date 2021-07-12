@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Routing import Router
@@ -101,7 +102,7 @@ class Mpls(Layer, Graphable):
     def getName(self) -> str:
         return 'Mpls'
 
-    def markAsEdge(self, asn: int, nodename: str):
+    def markAsEdge(self, asn: int, nodename: str) -> Mpls:
         """!
         @brief Mark a router node as edge node.
 
@@ -112,8 +113,12 @@ class Mpls(Layer, Graphable):
 
         @param asn asn
         @param nodename name of node
+
+        @returns self, for chaining API calls.
         """
         self.__additional_edges.add((asn, nodename))
+
+        return self
 
     def getEdges(self) -> Set[Tuple[int, str]]:
         """!
@@ -123,7 +128,7 @@ class Mpls(Layer, Graphable):
         """
         return self.__additional_edges
 
-    def enableOn(self, asn: int):
+    def enableOn(self, asn: int) -> Mpls:
         """!
         @brief Use MPLS in an AS.
 
@@ -132,8 +137,12 @@ class Mpls(Layer, Graphable):
         exist.
 
         @param asn ASN.
+
+        @returns self, for chaining API calls.
         """
         self.__enabled.add(asn)
+
+        return self
 
     def getEnabled(self) -> Set[int]:
         """!
