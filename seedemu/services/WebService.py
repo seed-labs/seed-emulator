@@ -1,3 +1,4 @@
+from __future__ import annotations
 from seedemu.core import Node, Service, Server
 from typing import Dict
 
@@ -31,22 +32,30 @@ class WebServer(Server):
         self.__index = '<h1>{nodeName} at {asn}</h1>'
         
 
-    def setPort(self, port: int):
+    def setPort(self, port: int) -> WebServer:
         """!
         @brief Set HTTP port.
 
         @param port port.
+
+        @returns self, for chaining API calls.
         """
         self.__port = port
 
-    def setIndexContent(self, content: str):
+        return self
+
+    def setIndexContent(self, content: str) -> WebServer:
         """!
         @brief Set content of index.html.
 
         @param content content. {nodeName} and {asn} are avalaible and will be
         filled in.
+
+        @returns self, for chaining API calls.
         """
         self.__index = content
+
+        return self
     
     def install(self, node: Node):
         """!
