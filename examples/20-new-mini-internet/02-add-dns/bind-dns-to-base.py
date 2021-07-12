@@ -60,7 +60,30 @@ emu.addLayer(ldns)
 
 
 ###############################################
-# Render and compile
+# Render the emulation and further customization
 emu.render()
+
+# After the rendering, we can now find the physical node for 
+# a given virtual node, and further customize the physical node.
+emu.getBindingFor('a-root-server').setDisplayName('A-Root')
+emu.getBindingFor('b-root-server').setDisplayName('B-Root')
+emu.getBindingFor('a-com-server').setDisplayName('A-COM')
+emu.getBindingFor('b-com-server').setDisplayName('B-COM')
+emu.getBindingFor('a-net-server').setDisplayName('NET')
+emu.getBindingFor('a-edu-server').setDisplayName('EDU')
+emu.getBindingFor('a-cn-server').setDisplayName('A-CN')
+emu.getBindingFor('b-cn-server').setDisplayName('B-CN')
+emu.getBindingFor('ns-twitter-com').setDisplayName('Twitter')
+emu.getBindingFor('ns-google-com').setDisplayName('Google')
+emu.getBindingFor('ns-example-net').setDisplayName('Example')
+emu.getBindingFor('ns-syr-edu').setDisplayName('Syracuse')
+emu.getBindingFor('ns-weibo-cn').setDisplayName('微博')
+
+emu.getBindingFor('global-dns').setDisplayName('Global DNS')
+
+
+###############################################
+# Render the emulation
+
 emu.compile(Docker(), './output')
 
