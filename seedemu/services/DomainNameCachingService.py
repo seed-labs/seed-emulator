@@ -1,3 +1,4 @@
+from __future__ import annotations
 from seedemu.core import Configurable, Service, Server
 from seedemu.core import Node, ScopedRegistry, Emulator
 from .DomainNameService import DomainNameService
@@ -33,14 +34,18 @@ class DomainNameCachingServer(Server, Configurable):
         self.__root_servers = []
         self.__configure_resolvconf = False
 
-    def setConfigureResolvconf(self, configure: bool):
+    def setConfigureResolvconf(self, configure: bool) -> DomainNameCachingServer:
         """!
         @brief Enable or disable set resolv.conf. When true, resolv.conf of all
         other nodes in the AS will be set to this server.
+
+        @returns self, for chaining API calls.
         """
         self.__configure_resolvconf = configure
 
-    def setRootServers(self, servers: List[str]):
+        return self
+
+    def setRootServers(self, servers: List[str]) -> DomainNameCachingServer:
         """!
         @brief Change root server hint.
 
@@ -50,8 +55,12 @@ class DomainNameCachingServer(Server, Configurable):
         overrided.
 
         @param servers list of IP addresses of the root servers.
+
+        @returns self, for chaining API calls.
         """
         self.__root_servers = servers
+
+        return self
 
     def getRootServers(self) -> List[str]:
         """!

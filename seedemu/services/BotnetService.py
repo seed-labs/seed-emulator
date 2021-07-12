@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 # __author__ = 'Demon'
+from __future__ import annotations
 from seedemu.core import Node, Service, Server
 from typing import Dict
 import zlib, base64, marshal, inspect
@@ -2767,14 +2768,17 @@ class BotnetServer(Server):
         """
         self.__port = 445
 
-    def setPort(self, port: int):
+    def setPort(self, port: int) -> BotnetServer:
         """!
         @brief Set C2 port.
 
         @param port port.
+
+        @returns self, for chaining API calls.
         """
         ## ! todo, not support to change port right now
         self.__port = port
+        return self
 
     def install(self, node: Node):
         """!
@@ -2809,22 +2813,28 @@ class BotnetClientServer(Server):
         self.__port = 445
         self.__module = []
 
-    def setPort(self, port: int):
+    def setPort(self, port: int) -> BotnetClientServer:
         """!
         @brief Set HTTP port.
 
         @param port port.
+
+        @returns self, for chaining API calls.
         """
         ## ! todo, not support to change port right now
         self.__port = port
 
-    def setServer(self, c2_server = '127.0.0.1', enable_dga = False, dga = None):
+        return self
+
+    def setServer(self, c2_server = '127.0.0.1', enable_dga = False, dga = None) -> BotnetClientServer:
         """!
         @brief BotnetClient constructor.
 
         @param c2_server C2 server address.
         @param enable_dga (optional) set true to enable DGA.
         @param dga (optional) DGA function, used for generating multiple random C2 domains.
+
+        @returns self, for chaining API calls.
         """
         self.__c2_server_url = 'http://{}:446//stagers/b6H.py'.format(c2_server)
         self.__c2_server_ip = c2_server
@@ -2840,15 +2850,21 @@ class BotnetClientServer(Server):
                 dga_source_code = inspect.getsource(dga)
             self.__dropper = BotnetServerFileTemplates['dga_dropper'].format(dga = dga_source_code)
 
-    def setModule(self, filename: str, file_src: str):
+        return self
+
+    def setModule(self, filename: str, file_src: str) -> BotnetClientServer:
         """!
         @brief pass file to bot client into folder /tmp/.
         @param filename the file name will be in tmp folder.
         @param file_src file path.
+
+        @returns self, for chaining API calls.
         """
 
         file_content = open(file_src, 'r').read()
         self.__module.append({"filename": filename, "file_content": file_content})
+
+        return self
 
     def install(self, node: Node):
         """!

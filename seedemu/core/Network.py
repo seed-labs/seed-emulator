@@ -1,3 +1,4 @@
+from __future__ import annotations
 from ipaddress import IPv4Network, IPv4Address
 from .RemoteAccessProvider import RemoteAccessProvider
 from .Printable import Printable
@@ -76,23 +77,31 @@ class Network(Printable, Registrable, Vertex):
 
         return self.__direct
 
-    def setDirect(self, direct: bool):
+    def setDirect(self, direct: bool) -> Network:
         """!
         @brief set if this network is direct network. A direct network will be
         added to RIB of routing daemons.
 
         @param direct bool, true to set the network as direct, false otherwise.
+
+        @returns self, for chaining API calls.
         """
 
         self.__direct = direct
 
-    def setMtu(self, mtu: int):
+        return self
+
+    def setMtu(self, mtu: int) -> Network:
         """!
         @brief Set MTU of this network.
 
         @param mtu MTU.
+
+        @returns self, for chaining API calls.
         """
         self.__mtu = mtu
+
+        return self
 
     def getMtu(self) -> int:
         """!
@@ -102,7 +111,7 @@ class Network(Printable, Registrable, Vertex):
         """
         return self.__mtu
 
-    def setDefaultLinkProperties(self, latency: int = 0, bandwidth: int = 0, packetDrop: float = 0):
+    def setDefaultLinkProperties(self, latency: int = 0, bandwidth: int = 0, packetDrop: float = 0) -> Network:
         """!
         @brief Set default link properties of interfaces attached to the network.
 
@@ -110,6 +119,8 @@ class Network(Printable, Registrable, Vertex):
         apply on all interfaces, meaning the rtt between two hosts will be 2 * latency.
         @param bandwidth (optional) egress bandwidth of the link in bps, 0 for unlimited, default 0.
         @param packetDrop (optional) link packet drop as percentage, 0 for unlimited, default 0.
+
+        @returns self, for chaining API calls.
         """
         assert latency >= 0, 'invalid latency'
         assert bandwidth >= 0, 'invalid bandwidth'
@@ -119,14 +130,20 @@ class Network(Printable, Registrable, Vertex):
         self.__d_bandwidth = bandwidth
         self.__d_drop = packetDrop
 
-    def setType(self, newType: NetworkType):
+        return self
+
+    def setType(self, newType: NetworkType) -> Network:
         """!
         @brief overrides network type of this network. Do not use this unless
         you know what you are doring.
 
         @param newType new nettype.
+
+        @returns self, for chaining API calls.
         """
         self.__type = newType
+
+        return self
 
     def getDefaultLinkProperties(self) -> Tuple[int, int, int]:
         """!
@@ -189,20 +206,28 @@ class Network(Printable, Registrable, Vertex):
         """
         return self.__connected_nodes
 
-    def enableRemoteAccess(self, provider: RemoteAccessProvider):
+    def enableRemoteAccess(self, provider: RemoteAccessProvider) -> Network:
         """!
         @brief enable remote access on this netowrk.
 
         @param provider remote access provider to use.
+
+        @returns self, for chaining API calls.
         """
         assert self.__type == NetworkType.Local, 'remote access can only be enabled on local networks.'
         self.__rap = provider
 
-    def disableRemoteAccess(self):
+        return self
+
+    def disableRemoteAccess(self) -> Network:
         """!
         @brief disable remote access on this network.
+
+        @returns self, for chaining API calls.
         """
         self.__rap = None
+
+        return self
 
     def getRemoteAccessProvider(self) -> RemoteAccessProvider:
         """!

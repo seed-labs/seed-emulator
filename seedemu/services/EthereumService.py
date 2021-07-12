@@ -2,6 +2,7 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
+from __future__ import annotations
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
 
@@ -142,7 +143,7 @@ class EthereumServer(Server):
         """
         return self.__id
 
-    def setBootNode(self, isBootNode: bool):
+    def setBootNode(self, isBootNode: bool) -> EthereumServer:
         """!
         @brief set bootnode status of this node.
 
@@ -150,8 +151,12 @@ class EthereumServer(Server):
         other's boot nodes.
 
         @param isBootNode True to set this node as a bootnode, False otherwise.
+        
+        @returns self, for chaining API calls.
         """
         self.__is_bootnode = isBootNode
+
+        return self
 
     def isBootNode(self) -> bool:
         """!
@@ -161,14 +166,18 @@ class EthereumServer(Server):
         """
         return self.__is_bootnode
 
-    def setBootNodeHttpPort(self, port: int):
+    def setBootNodeHttpPort(self, port: int) -> EthereumServer:
         """!
         @brief set the http server port number hosting the enode url file.
 
         @param port port
+
+        @returns self, for chaining API calls.
         """
 
         self.__bootnode_http_port = port
+
+        return self
 
     def getBootNodeHttpPort(self) -> int:
         """!

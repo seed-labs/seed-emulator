@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .Base import Base
 from seedemu.core import ScopedRegistry, Node, Graphable, Emulator, Layer
 from typing import List, Set, Dict
@@ -34,7 +35,7 @@ class Ibgp(Layer, Graphable):
     def getName(self) -> str:
         return 'Ibgp'
 
-    def maskAsn(self, asn: int):
+    def maskAsn(self, asn: int) -> Ibgp:
         """!
         @brief Mask an AS.
 
@@ -42,8 +43,12 @@ class Ibgp(Layer, Graphable):
         method to mask an AS and disable iBGP.
 
         @param asn AS to mask.
+
+        @returns self, for chaining API calls.
         """
         self.__masked.add(asn)
+
+        return self
     
     def getMaskedAsns(self) -> Set[int]:
         """!

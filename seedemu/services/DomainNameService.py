@@ -1,4 +1,5 @@
 from __future__ import annotations
+from seedemu.services.DomainNameCachingService import DomainNameCachingServer
 from seedemu.core import Node, Printable, Emulator, Service, Server
 from seedemu.core.enums import NetworkType
 from typing import List, Dict, Tuple, Set
@@ -75,15 +76,19 @@ class Zone(Printable):
         """
         return self.__subzones
 
-    def addRecord(self, record: str):
+    def addRecord(self, record: str) -> Zone:
         """!
         @brief Add a new record to zone.
 
         @todo NS?
+        
+        @returns self, for chaining API calls.
         """
         self.__records.append(record)
 
-    def addGuleRecord(self, fqdn: str, addr: str):
+        return self
+
+    def addGuleRecord(self, fqdn: str, addr: str) -> Zone:
         """!
         @brief Add a new gule record.
 
@@ -91,13 +96,17 @@ class Zone(Printable):
 
         @param fqdn full domain name of the name server.
         @param addr IP address of the name server.
+
+        @returns self, for chaining API calls.
         """
         if fqdn[-1] != '.': fqdn += '.'
         zonename = self.__zonename if self.__zonename != '' else '.' 
         self.__gules.append('{} A {}'.format(fqdn, addr))
         self.__gules.append('{} NS {}'.format(zonename, fqdn))
 
-    def resolveTo(self, name: str, node: Node):
+        return self
+
+    def resolveTo(self, name: str, node: Node) -> Zone:
         """!
         @brief Add a new A record, pointing to the given node.
 
@@ -105,6 +114,8 @@ class Zone(Printable):
         @param node node.
 
         @throws AssertionError if node does not have valid interfaces.
+
+        @returns self, for chaining API calls.
         """
 
         address: str = None
@@ -119,15 +130,20 @@ class Zone(Printable):
         assert address != None, 'Node has no valid interfaces.'
         self.__records.append('{} A {}'.format(name, address))
 
-    def resolveToVnode(self, name: str, vnode: str):
+        return self
+
+    def resolveToVnode(self, name: str, vnode: str) -> Zone:
         """!
         @brief Add a new A record, pointing to the given virtual node name.
 
         @param name name.
         @param vnode  virtual node name.
 
+        @returns self, for chaining API calls.
         """
         self.__pending_records[name] = vnode
+
+        return self
 
     def resolvePendingRecords(self, emulator: Emulator):
         """!
@@ -218,7 +234,7 @@ class DomainNameServer(Server):
         self.__zones = set()
         self.__is_master = False
 
-    def addZone(self, zonename: str, createNsAndSoa: bool = True):
+    def addZone(self, zonename: str, createNsAndSoa: bool = True) -> DomainNameServer:
         """!
         @brief Add a zone to this node.
 
@@ -227,12 +243,16 @@ class DomainNameServer(Server):
 
         You should use DomainNameService.hostZoneOn to host zone on node if you
         want the automated NS record to work.
+
+        @returns self, for chaining API calls.
         """
         self.__zones.add((zonename, createNsAndSoa))
 
-    def setMaster(self):
+    def setMaster(self) -> DomainNameCachingServer:
         """!
         @brief set the name server to be master name server.
+
+        @returns self, for chaining API calls.
         """
         self.__is_master = True
 
@@ -450,21 +470,28 @@ class DomainNameService(Service):
         
         return info
 
-    def addMasterIp(self, zone: str, addr: str):
+    def addMasterIp(self, zone: str, addr: str) -> DomainNameService:
         """!
         @brief add master name server IP address.
 
         @param addr the IP address of master zone server.
         @param zone the zone name, e.g : com.
+
+        @returns self, for chaining API calls.
         """
         if zone in self.__masters.keys():
             self.__masters[zone].append(addr)
         else:
             self.__masters[zone] = [addr]
 
+        return self
+
     def setAllMasterIp(self, masters: Dict[str: List[str]]):
         """!
-        @brief override all master IPs, only used for merger.
+        @brief override all master IPs, to be used for merger. Do not use unless
+        you know what you are doing.
+
+        @param masters master dict.
         """
         self.__masters = masters
 

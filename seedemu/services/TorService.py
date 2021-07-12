@@ -2,6 +2,7 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 
+from __future__ import annotations
 from seedemu.core import Node, Emulator, Service, Server
 from typing import List, Dict, Set
 from enum import Enum
@@ -307,13 +308,17 @@ class TorServer(Server):
         self.__role = TorNodeType.RELAY.value
         self.__hs_link = ()
 
-    def setRole(self, role: Enum):
+    def setRole(self, role: TorNodeType) -> TorServer:
         """!
         @brief User need to set a role of tor server, by default, it's relay node.
 
         @param role specify what type of role in this tor server
+
+        @returns self, for chaining API calls.
         """
         self.__role = role.value
+
+        return self
 
     def getRole(self) -> str:
         """!
@@ -331,16 +336,20 @@ class TorServer(Server):
         """
         return self.__hs_link
 
-    def setLink(self, addr: str, port: int):
+    def setLink(self, addr: str, port: int) -> TorServer:
         """!
         @brief set IP link of HS server, only be invoked by __resolveHSLink()
 
         @param addr address
         @param port port.
+
+        @returns self, for chaining API calls.
         """
         self.__hs_link = (addr, port)
 
-    def linkByVnode(self, vname: str, port: int):
+        return self
+
+    def linkByVnode(self, vname: str, port: int) -> TorServer:
         """!
         @brief set Vnode link of HS server.
         
@@ -350,10 +359,14 @@ class TorServer(Server):
 
         @param vname virtual node name.
         @param port port.
+
+        @returns self, for chaining API calls.
         """
         assert self.getRole() == "HS", "linkByVnode(): only HS type node can bind a host."
         assert len(self.__hs_link) == 0, "linkByVnode(): TorServer already has linked a host."
         self.__hs_link = (vname, port)
+
+        return self
 
     def configure(self, node: Node, tor: 'TorService'):
         """!
@@ -433,13 +446,17 @@ class TorService(Service):
     def _doConfigure(self, node: Node, server: TorServer):
         server.configure(node, self)
 
-    def addDirAuthority(self, addr: str):
+    def addDirAuthority(self, addr: str) -> TorService:
         """!
         @brief add DA.
 
         @param addr address of DA.
+
+        @returns self, for chaining API calls.
         """
         self.__da_nodes.append(addr)
+
+        return self
 
     def getDirAuthority(self) -> List[str]:
         """!
