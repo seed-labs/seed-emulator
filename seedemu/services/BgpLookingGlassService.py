@@ -1,3 +1,4 @@
+from __future__ import annotations
 from seedemu.core import Node, Service, Server, Emulator, ScopedRegistry
 from seedemu.layers.Routing import Router
 from typing import Set, Dict
@@ -41,13 +42,17 @@ class BgpLookingGlassServer(Server):
         node.addBuildCommand('chmod +x /bin/go-bindata')
         node.addBuildCommand('make -C /lg')
 
-    def setFrontendPort(self, port: int):
+    def setFrontendPort(self, port: int) -> BgpLookingGlassServer:
         """!
         @brief set frontend port for looking glass. (default: 5000)
 
         @param port port
+
+        @returns self, for chaining API calls.
         """
         self.__frontend_port = port
+
+        return self
 
     def getFrontendPort(self) -> int:
         """!
@@ -57,13 +62,17 @@ class BgpLookingGlassServer(Server):
         """
         return self.__proxy_port
 
-    def setProxyPort(self, port: int):
+    def setProxyPort(self, port: int) -> BgpLookingGlassServer:
         """!
         @brief set proxy port for looking glass. (default: 8000)
 
         @param port port
+
+        @returns self, for chaining API calls.
         """
         self.__proxy_port = port
+
+        return self
 
     def getProxyPort(self) -> int:
         """!
@@ -73,13 +82,19 @@ class BgpLookingGlassServer(Server):
         """
         return self.__proxy_port
 
-    def attach(self, routerName: str):
+    def attach(self, routerName: str) -> BgpLookingGlassServer:
         """!
         @brief add looking glass node on the router identified by given name.
 
         @param routerName name of the router
+
+        @returns self, for chaining API calls.
         """
         self.__routers.add(routerName)
+
+        return self
+
+        return self
 
     def getAttached(self) -> Set[str]:
         """!
