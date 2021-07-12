@@ -56,22 +56,22 @@ make_transit_AS(base, 12, [101, 104], [(101, 104)])
 ###############################################################################
 # Create single-homed stub ASes. "None" means create a host only 
 
-make_stub_AS(emu, base, 150, 100, [web])
+make_stub_AS(emu, base, 150, 100, [web, None])
 make_stub_AS(emu, base, 151, 100, [web, None])
 
 make_stub_AS(emu, base, 152, 101, [None, None])
-make_stub_AS(emu, base, 153, 101, [web])
+make_stub_AS(emu, base, 153, 101, [web, None, None])
 
 make_stub_AS(emu, base, 154, 102, [None, web])
 
-make_stub_AS(emu, base, 160, 103, [web, web])
-make_stub_AS(emu, base, 161, 103, [web])
-make_stub_AS(emu, base, 162, 103, [web])
+make_stub_AS(emu, base, 160, 103, [web, None])
+make_stub_AS(emu, base, 161, 103, [web, None])
+make_stub_AS(emu, base, 162, 103, [web, None])
 
-make_stub_AS(emu, base, 163, 104, [web])
-make_stub_AS(emu, base, 164, 104, [None])
+make_stub_AS(emu, base, 163, 104, [web, None])
+make_stub_AS(emu, base, 164, 104, [None, None])
 
-make_stub_AS(emu, base, 170, 105, [web])
+make_stub_AS(emu, base, 170, 105, [web, None])
 make_stub_AS(emu, base, 171, 105, [None])
 
 
@@ -129,6 +129,6 @@ emu.addLayer(web)
 emu.dump('base-component.bin')
 
 # Generate the docker files
-emu.render()
-emu.compile(Docker(), './output')
+#emu.render()
+#emu.compile(Docker(), './output')
 
