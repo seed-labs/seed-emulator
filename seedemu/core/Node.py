@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .Printable import Printable
 from .Network import Network
 from .enums import NodeRole
@@ -35,29 +36,41 @@ class File(Printable):
         self.__path = path
         self.__content = content
 
-    def setPath(self, path: str):
+    def setPath(self, path: str) -> File:
         """!
         @brief Update file path.
 
         @param path new path.
+
+        @returns self, for chaining API calls.
         """
         self.__path = path
 
-    def setContent(self, content: str):
+        return self
+
+    def setContent(self, content: str) -> File:
         """!
         @brief Update file content.
 
         @param content content.
+
+        @returns self, for chaining API calls.
         """
         self.__content = content
 
-    def appendContent(self, content: str):
+        return self
+
+    def appendContent(self, content: str) -> File:
         """!
         @brief Append to file.
 
         @param content content.
+
+        @returns self, for chaining API calls.
         """
         self.__content += content
+
+        return self
 
     def get(self) -> Tuple[str, str]:
         """!
@@ -106,13 +119,15 @@ class Interface(Printable):
         self.__bandwidth = b
         self.__drop = d
 
-    def setLinkProperties(self, latency: int = 0, bandwidth: int = 0, packetDrop: float = 0):
+    def setLinkProperties(self, latency: int = 0, bandwidth: int = 0, packetDrop: float = 0) -> Interface:
         """!
         @brief Set link properties.
 
         @param latency (optional) latency to add to the link in ms, default 0.
         @param bandwidth (optional) egress bandwidth of the link in bps, 0 for unlimited, default 0.
         @param packetDrop (optional) link packet drop as percentage, 0 for unlimited, default 0.
+
+        @returns self, for chaining API calls.
         """
 
         assert latency >= 0, 'invalid latency'
@@ -122,6 +137,8 @@ class Interface(Printable):
         self.__latency = latency
         self.__bandwidth = bandwidth
         self.__drop = packetDrop
+
+        return self
 
     def getLinkProperties(self) -> Tuple[int, int, int]:
         """!
@@ -139,15 +156,19 @@ class Interface(Printable):
         """
         return self.__network
 
-    def setAddress(self, address: IPv4Address):
+    def setAddress(self, address: IPv4Address) -> Interface:
         """!
         @brief Set IPv4 address of this interface.
 
         @param address address.
+
+        @returns self, for chaining API calls.
         """
         self.__address = address
 
-    def getAddress(self):
+        return self
+
+    def getAddress(self) -> IPv4Address:
         """!
         @brief Get IPv4 address of this interface.
 
@@ -288,13 +309,15 @@ class Node(Printable, Registrable, Configurable, Vertex):
                 self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
                 self.__xcs[(peername, peerasn)] = (localaddr, netname)
 
-    def addPort(self, host: int, node: int, proto: str = 'tcp'):
+    def addPort(self, host: int, node: int, proto: str = 'tcp') -> Node:
         """!
         @brief Add port forwarding.
 
         @param host port of the host.
         @param node port of the node.
         @param proto protocol.
+
+        @returns self, for chaining API calls.
         """
         self.__ports.append((host, node, proto))
 
@@ -303,10 +326,11 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @brief Get port forwardings.
 
         @returns list of tuple of ports (host, node).
+        
         """
         return self.__ports
 
-    def setPrivileged(self, privileged: bool):
+    def setPrivileged(self, privileged: bool) -> Node:
         """!
         @brief Set or unset the node as privileged node.
 
@@ -314,6 +338,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         in order to do some privileged operations.
 
         @param privileged (optional) set if node is privileged.
+
+        @returns self, for chaining API calls.
         """
         self.__privileged = privileged
 
@@ -344,26 +370,31 @@ class Node(Printable, Registrable, Configurable, Vertex):
         
         net.associate(self)
 
-    def joinNetwork(self, netname: str, address: str = "auto"):
+    def joinNetwork(self, netname: str, address: str = "auto") -> Node:
         """!
         @brief Connect the node to a network.
         @param netname name of the network.
         @param address (optional) override address assigment.
 
         @returns assigned IP address
-        @throws AssertionError if network does not exist.
+
+        @returns self, for chaining API calls.
         """
         assert not self.__configured, 'Node already configured.'
 
         self.__pending_nets.append((netname, address))
 
-    def crossConnect(self, peerasn: int, peername: str, address: str):
+        return self
+
+    def crossConnect(self, peerasn: int, peername: str, address: str) -> Node:
         """!
         @brief create new p2p cross-connect connection to a remote node.
         @param peername node name of the peer node.
         @param peerasn asn of the peer node.
         @param address address to use on the interface in CIDR notiation. Must
         be within the same subnet.
+
+        @returns self, for chaining API calls.
         """
         assert peername != self.getName() or peerasn != self.getName(), 'cannot XC to self.'
         self.__xcs[(peername, peerasn)] = (IPv4Interface(address), None)
@@ -433,26 +464,34 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__files.values()
 
-    def setFile(self, path: str, content: str):
+    def setFile(self, path: str, content: str) -> Node:
         """!
         @brief Set content of the file.
 
         @param path path of the file. Will be created if not exist, and will be
         override if already exist.
         @param content file content.
+
+        @returns self, for chaining API calls.
         """
         self.getFile(path).setContent(content)
 
-    def appendFile(self, path: str, content: str):
+        return self
+
+    def appendFile(self, path: str, content: str) -> Node:
         """!
         @brief Append content to a file.
 
         @param path path of the file. Will be created if not exist.
         @param content content to append.
+
+        @returns self, for chaining API calls.
         """
         self.getFile(path).appendContent(content)
 
-    def addSoftware(self, name: str):
+        return self
+
+    def addSoftware(self, name: str) -> Node:
         """!
         @brief Add new software to node.
 
@@ -460,8 +499,12 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         Use this to add software to the node. For example, if using the "docker"
         compiler, this will be added as an "apt-get install" line in Dockerfile.
+
+        @returns self, for chaining API calls.
         """
         self.__softwares.add(name)
+
+        return self
 
     def getSoftwares(self) -> Set[str]:
         """!
@@ -479,16 +522,20 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__common_software
 
-    def addBuildCommand(self, cmd: str):
+    def addBuildCommand(self, cmd: str) -> Node:
         """!
         @brief Add new command to build step.
 
-        @param cmd command to add.
-
         Use this to add build steps to the node. For example, if using the
         "docker" compiler, this will be added as a "RUN" line in Dockerfile.
+
+        @param cmd command to add.
+
+        @returns self, for chaining API calls.
         """
         self.__build_commands.append(cmd)
+
+        return self
     
     def getBuildCommands(self) -> List[str]:
         """!
@@ -498,24 +545,28 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__build_commands
 
-    def insertStartCommand(self, index: int, cmd: str, fork: bool = False):
+    def insertStartCommand(self, index: int, cmd: str, fork: bool = False) -> Node:
         """!
         @brief Add new command to start script.
 
         The command should not be a blocking command. If you need to run a
         blocking command, set fork to true and fork it to the background so
         that it won't block the execution of other commands.
+
+        Use this to add start steps to the node. For example, if using the
+        "docker" compiler, this will be added to start.sh.
 
         @param index index to insert command in.
         @param cmd command to add.
         @param fork (optional) fork to command to background?
 
-        Use this to add start steps to the node. For example, if using the
-        "docker" compiler, this will be added to start.sh.
+        @returns self, for chaining API calls.
         """
         self.__start_commands.insert(index, (cmd, fork))
 
-    def appendStartCommand(self, cmd: str, fork: bool = False):
+        return self
+
+    def appendStartCommand(self, cmd: str, fork: bool = False) -> Node:
         """!
         @brief Add new command to start script.
 
@@ -528,8 +579,12 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         Use this to add start steps to the node. For example, if using the
         "docker" compiler, this will be added to start.sh.
+
+        @returns self, for chaining API calls.
         """
         self.__start_commands.append((cmd, fork))
+
+        return self
 
     def getStartCommands(self) -> List[Tuple[str, bool]]:
         """!
@@ -548,14 +603,18 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__interfaces
 
-    def addSharedFolder(self, nodePath: str, hostPath: str):
+    def addSharedFolder(self, nodePath: str, hostPath: str) -> Node:
         """!
         @beief Add a new shared folder between the node and host.
 
         @param nodePath path to the folder inside the container.
         @param hostPath path to the folder on the emulator host node.
+
+        @returns self, for chaining API calls.
         """
         self.__shared_folders[nodePath] = hostPath
+
+        return self
 
     def getSharedFolders(self) -> Dict[str, str]:
         """!
@@ -566,7 +625,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__shared_folders
 
-    def addPersistentStorage(self, path: str):
+    def addPersistentStorage(self, path: str) -> Node:
         """!
         @brief Add persistent storage to node. 
 
@@ -574,8 +633,12 @@ class Node(Printable, Registrable, Configurable, Vertex):
         directory where data will be persistented.
 
         @param path path to put the persistent storage folder in the container.
+
+        @returns self, for chaining API calls.
         """
         self.__persistent_storages.append(path)
+
+        return self
 
     def getPersistentStorages(self) -> List[str]:
         """!
@@ -676,13 +739,15 @@ class Router(Node):
         """
         return self.__loopback_address
 
-    def addProtocol(self, protocol: str, name: str, body: str):
+    def addProtocol(self, protocol: str, name: str, body: str) -> Router:
         """!
         @brief Add a new protocol to BIRD on the given node.
 
         @param protocol protocol type. (e.g., bgp, ospf)
         @param name protocol name.
         @param body protocol body.
+
+        @returns self, for chaining API calls.
         """
         self.appendFile("/etc/bird/bird.conf", RouterFileTemplates["protocol"].format(
             protocol = protocol,
@@ -690,7 +755,9 @@ class Router(Node):
             body = body
         ))
 
-    def addTablePipe(self, src: str, dst: str = 'master4', importFilter: str = 'none', exportFilter: str = 'all', ignoreExist: bool = True):
+        return self
+
+    def addTablePipe(self, src: str, dst: str = 'master4', importFilter: str = 'none', exportFilter: str = 'all', ignoreExist: bool = True) -> Router:
         """!
         @brief add a new routing table pipe.
         
@@ -701,6 +768,8 @@ class Router(Node):
         @param ignoreExist (optional) assert check if table exists. If true, error is silently discarded.
 
         @throws AssertionError if pipe between two tables already exist and ignoreExist is False.
+
+        @returns self, for chaining API calls.
         """
         meta = self.getAttribute('__routing_layer_metadata', {})
         if 'pipes' not in meta: meta['pipes'] = {}
@@ -717,17 +786,23 @@ class Router(Node):
             exportFilter = exportFilter
         ))
 
-    def addTable(self, tableName: str):
+        return self
+
+    def addTable(self, tableName: str) -> Router:
         """!
         @brief Add a new routing table to BIRD on the given node.
 
         @param tableName name of the new table.
+
+        @returns self, for chaining API calls.
         """
         meta = self.getAttribute('__routing_layer_metadata', {})
         if 'tables' not in meta: meta['tables'] = []
         tables = meta['tables']
         if tableName not in tables: self.appendFile('/etc/bird/bird.conf', 'ipv4 table {};\n'.format(tableName))
         tables.append(tableName)
+
+        return self
 
 class RealWorldRouter(Router):
     """!
@@ -756,16 +831,20 @@ class RealWorldRouter(Router):
         self.appendStartCommand('chmod +x /rw_configure_script')
         self.appendStartCommand('/rw_configure_script')
 
-    def addRealWorldRoute(self, prefix: str):
+    def addRealWorldRoute(self, prefix: str) -> RealWorldRouter:
         """!
         @brief Add real world route.
 
         @param prefix prefix.
         
         @throws AssertionError if sealed.
+
+        @returns self, for chaining API calls.
         """
         assert not self.__sealed, 'Node sealed.'
         self.__realworld_routes.append(prefix)
+
+        return self
 
     def getRealWorldRoutes(self) -> List[str]:
         """!
