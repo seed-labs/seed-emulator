@@ -20,12 +20,17 @@ web     = WebService()
 
 ###############################################################################
 
-base.createInternetExchange(100)
-base.createInternetExchange(101)
-base.createInternetExchange(102)
-base.createInternetExchange(103)
-base.createInternetExchange(104)
-base.createInternetExchange(105)
+ix100 = base.createInternetExchange(100)
+ix101 = base.createInternetExchange(101)
+ix102 = base.createInternetExchange(102)
+ix103 = base.createInternetExchange(103)
+ix104 = base.createInternetExchange(104)
+ix105 = base.createInternetExchange(105)
+
+# Set map metadata
+ix100.getPeeringLan().setDisplayName('北京')
+ix101.getPeeringLan().setDisplayName('上海')
+
 
 ###############################################################################
 # Create Transit Autonomous Systems 
