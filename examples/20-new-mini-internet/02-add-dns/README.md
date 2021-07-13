@@ -116,6 +116,28 @@ emu.addHook(ResolvConfHook(['10.153.0.53']))
 ```
 
 
+## Customization
+
+After we bind the DNS virtual nodes to physical nodes, we may want to 
+customize the physical nodes based on their new roles, such as 
+changing their display name to something relevant to their roles. 
+However, this needs to be done after the rendering,
+because virtual nodes are only bound to physical nodes when the emulator is 
+rendered, since the physical node may not even exist when one creates a binding. 
+Even if a physical node matching the condition does exists at that time, 
+there is no guarantee that the same physical node will be picked (consider 
+a binding w/ empty filter: any physical node can be picked). 
+
+After the rendering, we can get an instance of the physical node
+and then do the customization. See the following examples: 
+
+```
+emu.render()
+emu.getBindingFor('a-root-server').setDisplayName('A-Root')
+emu.getBindingFor('global-dns').setDisplayName('Global DNS')
+```
+
+
 ## Suggestions
 
 - (Priority: High): Several DNS-related APIs should return `self` to allow API chaining.
@@ -126,15 +148,6 @@ emu.addHook(ResolvConfHook(['10.153.0.53']))
   abc.addZone().setMaster()
   ```
 
-- (Priority: Medium): Can we return the physical node in the `emu.addBinding()` API?
-  Because sometimes we would like to customize the node after the binding, such
-  as changing its visualization name to a more meaningful name to 
-  reflect the role of the node. Not sure whether the binding actually happens or not 
-  in this `addBinding()` API.
-  ```
-  node = emu.addBinding() 
-  node.API() 
-  ```
 
 - (Priority: Low): During the binding, use `Action.NEW` to bind a virtual node to a new 
   physical node, i.e., the node needs to be created.
