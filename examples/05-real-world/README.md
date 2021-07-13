@@ -70,7 +70,7 @@ as11872 = base.createAutonomousSystem(11872)
 Then, create a real world router:
 
 ```python
-as11872_router = as11872.createRealWorldRouter(as11872)
+as11872_router = as11872.createRealWorldRouter('rw')
 ```
 
 The `createRealWorldRouter` call takes three parameters:
