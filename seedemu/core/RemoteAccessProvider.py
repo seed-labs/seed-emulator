@@ -14,11 +14,11 @@ class RemoteAccessProvider(object):
         """
         print("==== {}RemoteAccessProvider: {}".format(self.getName(), message), file=stderr)
 
-    def configureRemoteAccess(self, asObject: AutonomousSystem, netObject: Network, brNode: Node, brNet: Network):
+    def configureRemoteAccess(self, emulator: Emulator, netObject: Network, brNode: Node, brNet: Network):
         """!
         @brief configure remote access on a given network at given AS.
 
-        @param asObject AS object reference.
+        @param emulator emulator object reference.
         @param netObject network object reference.
         @param brNode reference to a service node that is not part of the
         emulation. This node can be used to run software (like VPN server) for

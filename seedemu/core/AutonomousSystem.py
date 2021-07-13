@@ -79,7 +79,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
                 brNode = self.createRouter('br-{}'.format(net.getName()))
                 brNet = emulator.getServiceNetwork()
 
-                rap.configureRemoteAccess(self, net, brNode, brNet)
+                rap.configureRemoteAccess(emulator, net, brNode, brNet)
 
         for router in list(self.__routers.values()):
             if issubclass(router.__class__, RealWorldRouter):
