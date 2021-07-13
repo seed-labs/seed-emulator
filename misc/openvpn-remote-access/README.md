@@ -2,7 +2,7 @@
 
 The `ovpn-client.ovpn` file contains the defualt OpenVPN client configuration for the OpenVPN remote access provider.
 
-For details about remote access providers, see example 05 (real-world).
+For details about remote access providers, see [example 05](../../examples/05-real-world) (real-world).
 
 To connect to the OpenVPN server, first do `docker ps` to find out the port number:
 
@@ -16,15 +16,19 @@ f39950cf7abc   output_rnode_11872_rw      "/start.sh"              23 minutes ag
 ...
 ```
 
-Here, two networks are opened for remote access (AS151/net0, AS152/net0). The OpenVPN servers are hosted by nodes that start with the prefix `br-` (`152_br-net0` and `151_br-net0` here.) You can see their ports under the `PORTS` column. Here, AS152/net0 are avaliable on port 65001, and AS151/net0 are avaliable on port 65000.
+Here, two networks are configured for remote access (`AS151/net0`, `AS152/net0`). The OpenVPN servers are hosted by nodes that start with the prefix `br-` (`152_br-net0` and `151_br-net0` here). You can see their ports under the `PORTS` column. Here, `AS152/net0` are avaliable on port `65001`, and `AS151/net0` are avaliable on port `65000`.
 
-To connect to the networks, on a sperate host (other then the docker host), do the followings:
+To connect to a network, on a separate host (other then the docker host), do the followings:
 
 ```
 # openvpn --config ovpn-client.ovpn --remote <docker_host> <port> 
 ```
 
-Where the `<docker_host>` is the IP address or hostname of the docker host and `<port>` is the port number of the server you would like to connect to. If it worked, you would see something like this:
+Where the `<docker_host>` is the IP address or hostname of the docker host and the `<port>` is the port number of the server you would like to connect to. 
+
+Note that it is important that you use a separate host to run the OpenVPN client. If you run it directly on the emulator host and configured the default routes, that will create a loop when the emulator tries to route the traffic to the real world (AS11872 in example 05).
+
+If it worked, you will see something like this:
 
 ```
 # openvpn --config ovpn-client.ovpn --remote 172.16.0.1 65000
@@ -40,7 +44,7 @@ Fri Jul  9 17:24:28 2021 /sbin/ip addr add dev tap0 10.151.0.71/24 broadcast 10.
 Fri Jul  9 17:24:28 2021 Initialization Sequence Completed
 ```
 
-You are now connected to the emulator's network:
+You are now connected to the AS151's  `net0`:
 
 ```
 $ ip -4 -br ad
@@ -53,14 +57,14 @@ default via 172.16.0.1 dev ens33
 172.16.0.0/24 dev ens33 proto kernel scope link src 172.16.0.3
 ```
 
-However, note that there is no defualt route configured. Add defualt routes manually if you want to use the emulator as defualt route:
+However, note that there is no defualt route configured. Add the defualt routes manually if you want to use the AS151's router as your internet connection:
 
 ```
 # ip route add 0.0.0.0/1 via 10.151.0.254
 # ip route add 128.0.0.0/1 via 10.151.0.254
 ```
 
-And you should now be able to connted to other nodes in the emulator now:
+And you should now be able to connect to other nodes in the emulator now:
 
 ```
 $ traceroute 10.152.0.79
