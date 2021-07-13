@@ -3,10 +3,36 @@
 The topology of this example is the same as that in `01-transit-as`. 
 In AS151 and AS152, we will host VPN servers that are accessible from outside of the emulator, so real-world hosts can connect to the emulation. In addition, we also add a real-world autonomous system, AS11872 (Syracuse University). This autonomous system will collect the real prefixes from the real Internet, announce them inside the emulator. Packets reaching this AS will exit the emulator and be routed to the real destination. 
 
-
 ## Step 1: Import and create required components
 
-This part is the same as that in `01-transit-as`. 
+Most of this part is the same as that in `01-transit-as`. The only difference is the following:
+
+```python
+ovpn = OpenVpnRemoteAccessProvider()
+```
+
+This creates an OpenVPN remote access provider. A remote access provider contains the logic to enable remote access to a network. It takes the following options:
+
+- `startPort`: The starting port number to assign to the OpenVPN servers. Default to `65000`.
+- `naddrs`: Number of addresses to reserve from the network. Default to `8`.
+- `ovpnCa`: CA to use for the OpenVPN server. Default to `None` (uses bulletin CA).
+- `ovpnCert`: Server certificate to use for the OpenVPN server. Default to `None` (uses bulletin certificate).
+- `ovpnKey`: Server key to use for the OpenVPN server. Default to `None` (uses bulletin key).
+
+The way a remote access provider work is that the emulator will provide the remote access provider with:
+
+- The network to enable remote access on. 
+- A for-service bridging network: this network is not a part of the emulation. Instead, it was used by special services like this to communicate with the emulator host.
+- A bridging node: this node is not a part of emulation. It is a special node that will have access to both the for-service bridging network and the network to enable remote access on.
+
+Then, what a remote access provider usually do is:
+
+- Start a VPN server, listen for incoming connections on the for-service bridge network, so the emulator host can port-forward to the VPN server and allow hosts in the real world to connect.
+- Add the VPN server interface and the network to enable remote access on to the same bridge so that clients can access the network.
+
+In the OpenVPN access provider, besides the two steps above, also reserve some IP addresses (8 by default) for the client IP address pool.
+
+However, note that a remote access provider does not necessarily create a VPN server - they can also be a VPN client that connects to another emulator or just a regular Linux bridge, to connect to, say, a network created by some other virtualization software.
 
 
 ## Step 2: create the internet exchanges
@@ -21,18 +47,14 @@ This part is the same as that in `01-transit-as`.
 
 ## Step 4: Create and set up autonomous systems
 
-Most part of this is the same as that in `01-transit-as`. 
-The only difference is the following:
+Most part of this is the same as that in `01-transit-as`. The only difference is the following:
 
 
 ```python
-real.enableRealWorldAccess(as151, 'net0')
+as151_net0.enableRemoteAccess(ovpn)
 ```
 
-The `Reality::enableRealWorldAccess` call enables real-world access to a network by hosting an OpenVPN server. The server will be reachable from the real world; we can check the server port by doing `docker ps` once the emulation is up. 
-
-`enableRealWorldAccess` accepts three parameters; the first is the reference to the AS object, the second one is the name of network, and the third one, `naddr`, is an optional parameter for specifying how many host IP addresses to allocate to the server (default to 8). It uses the network's IP assigner to get IP addresses for host-role nodes. For details, check the `AddressAssignmentConstraint` in the remarks section.
-
+The `Network::enableRemoteAccess` call enables remote access to a network. `enableRemoteAccess` takes only one parameter, the remote access proivder. See step 1 for details.
 
 
 ## Step 5: create the real-world customer autonomous system
@@ -46,12 +68,14 @@ as11872 = base.createAutonomousSystem(11872)
 Then, create a real world router:
 
 ```python
-as11872_router = real.createRealWorldRouter(as11872)
+as11872_router = as11872.createRealWorldRouter(as11872)
 ```
 
-The `createRealWorldRouter` call takes three parameters; the first is the reference to the autonomous system object to create the router, the second, `nodename`, is the name of router node (default to `rw`), and the third, `prefixes` is a list of prefixes (default to `None`). Here, we let it default to `None`, so the layer will get the prefixes list for us.
+The `createRealWorldRouter` call takes three parameters:
 
-If `prefixes` is set to `None` (the `NoneType`, not empty list), the layer will automatically fetch the list of prefixes announced by the autonomous system in the real world. Otherwise, it will use the list of prefixes we specified.
+- `name`: name of the node.
+- `hideHops`: enable hide hops feature. When `True`, the router will hide real world hops from traceroute. This works by setting TTL = 64 to all real world destinations on `POSTROUTING`. Default to `True`.
+- `prefixes`: list of prefix. Can be a list of prefixes or `None`. When set to `None`, the router will automatically fetch the list of prefixes announced by the autonomous system in the real world. Default to `None`.
 
 The `createRealWorldRouter` returns a `RealWorldRouter` instance. `RealWorldRouter` class was derived from the regular router node class; it adds an `addRealWorldRoute` method to router class. `addRealWorldRoute` accepts one parameter, `prefix`, and will route the given prefix to real-world.
 
@@ -86,3 +110,11 @@ emu.addBinding(Binding('web2', filter = Filter(asn = 152, nodeName = 'web')))
 ```
 
 ## Step 8: Render and compile the emulation
+
+After everything is done, we can render and compile the emulation. This part is the 
+same as the other examples. 
+
+```
+emu.render()
+emu.compile(Docker(), './output')
+```
