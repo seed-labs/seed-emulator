@@ -101,4 +101,4 @@ emu.render()
 ###############################################################################
 # Compilation
 
-emu.compile(Docker(), './output')
+emu.compile(Docker(clientEnabled = True), './output')
