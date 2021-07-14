@@ -21,6 +21,8 @@ How to use:
 2. do `docker-compose build && docker-compose up` in this folder.
 3. visit [http://localhost:8080/](http://localhost:8080/) for list, and [http://localhost:8080/map.html](http://localhost:8080/map.html) for map.
 
+Alternatively, set `clientEnabled = True` when using `Docker` compiler. Note that `seedemu-client` allows unauthenticated console access to all nodes, which can potentially allow root access to your emulator host. Only run `seedemu-client` on trusted networks.
+
 Note on the map:
 
 - try not to click on any nodes or start packet capture on the map until the emulation is fully started (i.e., all containers are created).

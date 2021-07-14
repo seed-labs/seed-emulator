@@ -7,6 +7,8 @@ from hashlib import md5
 from os import mkdir, chdir
 from ipaddress import IPv4Network, IPv4Address
 
+SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
+
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
 DockerCompilerFileTemplates['dockerfile'] = """\
@@ -160,6 +162,16 @@ DockerCompilerFileTemplates['compose_network'] = """\
 {labelList}
 """
 
+DockerCompilerFileTemplates['seedemu_client'] = """\
+    seedsim-client:
+        image: {clientImage}
+        container_name: seedemu_client
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+            - {clientPort}:8080/tcp
+"""
+
 class Docker(Compiler):
     """!
     @brief The Docker compiler class.
@@ -174,19 +186,24 @@ class Docker(Compiler):
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
 
+    __client_enabled: bool
+    __client_port: int
+
     def __init__(
         self,
         namingScheme: str = "as{asn}{role}-{name}-{primaryIp}",
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
-        dummyNetworksMask: int = 24
+        dummyNetworksMask: int = 24,
+        clientEnabled: bool = False,
+        clientPort: int = 8080
     ):
         """!
         @brief Docker compiler constructor.
 
         @param namingScheme (optional) node naming scheme. Avaliable variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
-        {primaryIp}
+        {primaryIp}. Default to as{asn}{role}-{name}-{primaryIp}.
         @param selfManagedNetwork (optional) use self-managed network. Enable
         this to manage the network inside containers instead of using docker's
         network management. This works by first assigning "dummy" prefix and
@@ -194,17 +211,26 @@ class Docker(Compiler):
         when the containers start. This will allow the use of overlapping
         networks in the emulation and will allow the use of the ".1" address on
         nodes. Note this will break port forwarding (except for service nodes
-        like real-world access node and remote access node.)
+        like real-world access node and remote access node.) Default to False.
         @param dummyNetworksPool (optional) dummy networks pool. This should not
         overlap with any "real" networks used in the emulation, including
-        loopback IP addresses. 
-        @param dummyNetworksMask (optional) mask of dummy networks.
+        loopback IP addresses. Default to 10.128.0.0/9.
+        @param dummyNetworksMask (optional) mask of dummy networks. Default to
+        24.
+        @param clientEnabled (optional) set if seedemu client should be enabled.
+        Default to False. Note that the seedemu client allows unauthenticated
+        access to all nodes, which can potentially allow root access to the
+        emulator host. Only enable seedemu in a trusted network.
+        @param clientPort (optional) set seedemu client port. Default to 8080.
         """
         self.__networks = ""
         self.__services = ""
         self.__naming_scheme = namingScheme
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
+
+        self.__client_enabled = clientEnabled
+        self.__client_port = clientPort
 
     def getName(self) -> str:
         return "Docker"
@@ -530,6 +556,14 @@ class Docker(Compiler):
             if type == 'snode':
                 self._log('compiling service node {}...'.format(name))
                 self.__compileNode(obj)
+
+        if self.__client_enabled:
+            self._log('enabling seedemu-client...')
+
+            self.__services += DockerCompilerFileTemplates['seedemu_client'].format(
+                clientImage = SEEDEMU_CLIENT_IMAGE,
+                clientPort = self.__client_port
+            )
 
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(
