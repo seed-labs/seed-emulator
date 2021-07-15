@@ -1,10 +1,10 @@
-# Creating new layer
+# Creating a new layer
 
 The different functionality of the emulator is separated into different layers. `Base` layer, for example, describes the base of the emulation: what autonomous systems (AS) and internet exchanges (IX) are in the emulator, what nodes and networks are in each of the AS, and how nodes are connected with networks. `Bgp` layer, on the other hands, describes how ASes and where are peered with each other, and what's the relation between the peers.
 
 To add new functionality into the emulator that works with the entire emulation as a whole, you can create a new layer. Note that if you are creating something that only works with a single node, like a service (like a webapp), you should create a service instead.
 
-Creating a new layer in the emulator generally consists of the following steps:
+This guide is going to cover the following topics:
 
 - Render and configuration.
 - Why layers.
