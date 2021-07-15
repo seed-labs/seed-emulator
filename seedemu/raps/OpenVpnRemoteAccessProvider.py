@@ -1,4 +1,4 @@
-from seedemu.core import RemoteAccessProvider, AutonomousSystem, Network, Node
+from seedemu.core import RemoteAccessProvider, Emulator, Network, Node
 from seedemu.core.enums import NodeRole
 from typing import Dict
 from itertools import repeat
@@ -202,8 +202,8 @@ class OpenVpnRemoteAccessProvider(RemoteAccessProvider):
     def getName(self) -> str:
         return 'OpenVpn'
 
-    def configureRemoteAccess(self, asObject: AutonomousSystem, netObject: Network, brNode: Node, brNet: Network):
-        self._log('setting up OpenVPN remote access for {} in AS{}...'.format(netObject.getName(), asObject.getAsn()))
+    def configureRemoteAccess(self, emulator: Emulator, netObject: Network, brNode: Node, brNet: Network):
+        self._log('setting up OpenVPN remote access for {} in AS{}...'.format(netObject.getName(), brNode.getAsn()))
 
         brNode.addSoftware('openvpn')
         brNode.addSoftware('bridge-utils')
