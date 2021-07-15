@@ -58,6 +58,9 @@ emu.addHook(ResolvConfHook(['10.153.0.53']))
 # Add the ldns layer
 emu.addLayer(ldns)
 
+# Dump to a file
+emu.dump('base_with_dns.bin')
+
 
 ###############################################
 # Render the emulation and further customization
