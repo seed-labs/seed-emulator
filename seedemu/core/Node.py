@@ -876,7 +876,7 @@ class RealWorldRouter(Router):
                 self.appendFile('/rw_configure_script', 'iptables -t mangle -A POSTROUTING -d {} -j TTL --ttl-set 64\n'.format(prefix))
 
         self.addProtocol('static', 'real_world', statics)
-        self.addTablePipe('t_rw', 't_bgp')
+        self.addTablePipe('t_rw', 't_bgp', exportFilter = 'filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; }')
         # self.addTablePipe('t_rw', 't_ospf') # TODO
 
 
