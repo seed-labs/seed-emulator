@@ -10,7 +10,6 @@ Before proceeding with this guide, please go over the "creating a new layer" gui
 
 - Implementing the `Server` interface.
 - Implementing and working with the `Service` interface.
-- `Service` class implementation details.
 
 ## Implementing the `Server` interface
 
@@ -55,5 +54,3 @@ Sometimes a service may need to do some extra configuration on the service itsel
 `DomainNameService` needs to add NS records to zone files after the virtual nodes are bound to physical nodes since before that, it does not know what IP address the servers will have. This is done by overriding the `render` implementation. Remember that the `Service` is just a special kind of `Layer`, so it still has all methods from the `Layer` interface. Services can still add logics to the render method. Just remember to call `super().render(emulator)`, so that the service interface can handle the rest of the installation process. 
 
 `CymruIpOriginService`, on the other hand, needs to collect IP addresses in the emulator, create a new zone in the DNS layer. It does so by overriding the `configure` method of the `Layer` interface and collect IP there. It also calls `super().configure(emulator)` so the servers are properly configured and bound to physical nodes.
-
-## `Service` class implementation details
