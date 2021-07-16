@@ -7,8 +7,8 @@ BgpAttackerComponentTemplates: Dict[str, str] = {}
 
 BgpAttackerComponentTemplates['hijack_static'] = '''
     ipv4 {{
-        table t_bgp;
-    }}
+        table t_hijack;
+    }};
 {routes}
 '''
 
@@ -37,8 +37,11 @@ class BgpAttackerInjectorHook(Hook):
     def postrender(self, emulator: Emulator):
         prefixes = self.__component.getHijackedPrefixes()
         self._log('hijacking prefixes: {}'.format(prefixes))
-
+        
         router = self.__component.getHijackerRouter()
+        router.addTable('t_hijack')
+        router.addTablePipe('t_hijack', 't_bgp', exportFilter = 'filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; }')
+
         if len(prefixes) > 0:
             routes = ''
             for prefix in prefixes:
