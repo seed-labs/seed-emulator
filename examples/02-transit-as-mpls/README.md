@@ -10,18 +10,20 @@ non-edge routes.
 
 ## Step 0: host system support
 
-MPLS requires support from the Linux kernel; for this example to work properly, load the MPLS kernel module on the emulator host with the following command, as root:
+MPLS requires support from the Linux kernel; for this example to work properly,
+load the MPLS kernel module on the emulator host with the following command, as
+root:
 
 ```
 # modprobe mpls_router
 ```
 
-## Step 1: Import and create required components
+## Import and create required components
 
 In this setup, only the `Mpls` layer is new, so we will only
 discuss this layer.
 
-- The `Mpls` layer automatically setup MPLS. The default behavior for the MPLS layer are as follow:
+- The `Mpls` layer automatically sets up MPLS. The default behavior for the MPLS layer are as follow:
     - First, it classifies router nodes as edge routers and non-edge routers. Routers with at least one connection to an internet exchange or to a network with host role nodes connected are considered as edge routers. All other routers are considered as non-edge routers.
     - Then, for all edge routers, it setup LDP, OSPF and IBGP full mesh sessions between them. For all non-edge routers, it setup only LDP and OSPF.
 
@@ -29,14 +31,9 @@ discuss this layer.
 mpls = Mpls()
 ```
 
-## Step 2: Create the internet exchanges
+## Create a transit autonomous system
 
-See the `00-simple-peering` example.
-
-## Step 3: Create a transit autonomous system
-
-
-### Step: configure MPLS
+### Configure MPLS
 
 Unlike OSPF and IBGP, MPLS needs to be explicitly enabled for an autonomous system. This can be done by `Mpls::enableOn`:
 
@@ -84,26 +81,3 @@ listening on net1, link-type EN10MB (Ethernet), capture size 262144 bytes
 4 packets received by filter
 0 packets dropped by kernel
 ```
-
-## Step 4: Set up AS150 and AS151 
-
-See the `00-simple-peering` example.
-
-
-## Step 5: Set up BGP peering
-
-```python
-# Peer AS150 with AS151 inside Internet Exchange 100
-ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
-
-# Peer AS150 with AS152 inside Internet Exchange 101
-ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
-```
-
-See [this manual](../manual.md#bgp-private-peering) for the explanation of
-the use of `Ebgp::addPrivatePeering`.
-
-
-## Step 6: Render and compile the emulation
-
-See the [this manual](../manual.md#render-and-compile) for details. 
