@@ -1,10 +1,18 @@
 from __future__ import annotations
 from .Routing import Router
 from seedemu.core import Registry, ScopedRegistry, Network, Interface, Graphable, Emulator, Layer
+from seedemu.core.enums import NodeRole
 from typing import Tuple, List, Dict
 from enum import Enum
 
 EbgpFileTemplates: Dict[str, str] = {}
+
+EbgpFileTemplates["bgp_commons"] = """\
+define LOCAL_COMM = ({localAsn}, 0, 0);
+define CUSTOMER_COMM = ({localAsn}, 1, 0);
+define PEER_COMM = ({localAsn}, 2, 0);
+define PROVIDER_COMM = ({localAsn}, 3, 0);
+"""
 
 EbgpFileTemplates["rs_bird_peer"] =  """
     ipv4 {{
@@ -19,7 +27,11 @@ EbgpFileTemplates["rs_bird_peer"] =  """
 EbgpFileTemplates["rnode_bird_peer"] = """
     ipv4 {{
         table t_bgp;
-        import {importFilter};
+        import filter {{
+            bgp_large_community.add({importCommunity});
+            bgp_local_pref = {bgpPref};
+            accept;
+        }};
         export {exportFilter};
         next hop self;
     }};
@@ -63,43 +75,124 @@ class Ebgp(Layer, Graphable):
         self.__rs_peers = []
         self.addDependency('Routing', False, False)
 
-    def __getAsPrefixes(self, reg: Registry, a: int) -> List[str]:
-        sr = ScopedRegistry(str(a), reg)
-        nets = []
-        for net in sr.getByType('net'):
-            netobj: Network = net
-            nets.append(str(netobj.getPrefix()))
+    def __createPeer(self, nodeA: Router, nodeB: Router, addrA: str, addrB: str, rel: PeerRelationship) -> None:
 
-        return nets
+        rsNode: Router = None
+        routerA: Router = None
+        routerB: Router = None
 
-    def __getCustomerPrefixes(self, reg: Registry, a: int) -> List[int]:
-        nets = []
-        for (_, _a, b), r in self.__peerings.items():
-            if a != _a or r != PeerRelationship.Provider: continue
-            nets += self.__getAsPrefixes(reg, b)
-        
-        return nets
+        # for both nodes
+        for node in [nodeA, nodeB]:
+            if node.getRole() == NodeRole.RouteServer:
+                rsNode = node
+                continue
+            
+            if routerA == None: routerA = node
+            elif routerB == None: routerB = node
 
-    def __getExportFilters(self, reg: Registry, a: int, b: int, rel: PeerRelationship) -> Tuple[str, str]:
-        if rel == PeerRelationship.Unfiltered: return ('all', 'all')
+            if not node.getAttribute('__bgp_bootstrapped', False):
+                self._log('Bootstraping as{}/{} for BGP...'.format(node.getAsn(), node.getName()))
+                
+                node.setAttribute('__bgp_bootstrapped', True)
+                node.appendFile('/etc/bird/bird.conf', EbgpFileTemplates['bgp_commons'].format(localAsn = node.getAsn()))
 
-        a_prefixes = self.__getAsPrefixes(reg, a)
-        a_cust_prefixes = self.__getCustomerPrefixes(reg, a)
-        a_all = a_prefixes + a_cust_prefixes
+            # create table for bgp
+            node.addTable('t_bgp')
 
-        b_prefixes = self.__getAsPrefixes(reg, b)
-        b_cust_prefixes = self.__getCustomerPrefixes(reg, b)
-        b_all = b_prefixes + b_cust_prefixes
+            # pipe all routes in bgp table to main table
+            node.addTablePipe('t_bgp')
 
-        a_export = 'all'
-        b_export = 'none' if len(b_all) == 0 else 'where net ~ [{}]'.format(','.join(b_all))
+            # pipe direct routes to bgp, set LOCAL community, set pref 40
+            node.addTablePipe('t_direct', 't_bgp', exportFilter = 'filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; }')
+
+
+
+        assert routerA != None, 'both nodes are RS node. cannot setup peering.'
+        assert routerA != routerB, 'cannot peer with oneself.'
+
+        if rsNode != None:
+            rsNode.addProtocol('bgp', 'p_as{}'.format(routerA.getAsn()), EbgpFileTemplates["rs_bird_peer"].format(
+                localAddress = addrA,
+                localAsn = rsNode.getAsn(),
+                peerAddress = addrB,
+                peerAsn = routerA.getAsn()
+            ))
+
+            routerA.addProtocol('bgp', 'p_rs{}'.format(rsNode.getAsn()), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = addrB,
+                localAsn = routerA.getAsn(),
+                peerAddress = addrA,
+                peerAsn = rsNode.getAsn(),
+                exportFilter = "where bgp_large_community ~ [LOCAL_COMM, CUSTOMER_COMM]",
+                importCommunity = "PEER_COMM",
+                bgpPref = 20
+            ))
+
+            return
         
         if rel == PeerRelationship.Peer:
-            a_export = 'none' if len(a_all) == 0 else 'where net ~ [{}]'.format(','.join(a_all))
+            routerA.addProtocol('bgp', 'p_as{}'.format(routerB.getAsn()), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = addrA,
+                localAsn = routerA.getAsn(),
+                peerAddress = addrB,
+                peerAsn = routerB.getAsn(),
+                exportFilter = "where bgp_large_community ~ [LOCAL_COMM, CUSTOMER_COMM]",
+                importCommunity = "PEER_COMM",
+                bgpPref = 20
+            ))
 
-        return (a_export, b_export)
+            routerB.addProtocol('bgp', 'p_as{}'.format(routerA.getAsn()), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = addrB,
+                localAsn = routerB.getAsn(),
+                peerAddress = addrA,
+                peerAsn = routerA.getAsn(),
+                exportFilter = "where bgp_large_community ~ [LOCAL_COMM, CUSTOMER_COMM]",
+                importCommunity = "PEER_COMM",
+                bgpPref = 20
+            ))
 
-    
+        if rel == PeerRelationship.Provider:
+            routerA.addProtocol('bgp', 'c_as{}'.format(routerB.getAsn()), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = addrA,
+                localAsn = routerA.getAsn(),
+                peerAddress = addrB,
+                peerAsn = routerB.getAsn(),
+                exportFilter = "all",
+                importCommunity = "CUSTOMER_COMM",
+                bgpPref = 30
+            ))
+
+            routerB.addProtocol('bgp', 'u_as{}'.format(routerA.getAsn()), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = addrB,
+                localAsn = routerB.getAsn(),
+                peerAddress = addrA,
+                peerAsn = routerA.getAsn(),
+                exportFilter = "where bgp_large_community ~ [LOCAL_COMM, CUSTOMER_COMM]",
+                importCommunity = "PROVIDER_COMM",
+                bgpPref = 10
+            ))
+
+        if rel == PeerRelationship.Unfiltered:
+            routerA.addProtocol('bgp', 'x_as{}'.format(routerB.getAsn()), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = addrA,
+                localAsn = routerA.getAsn(),
+                peerAddress = addrB,
+                peerAsn = routerB.getAsn(),
+                exportFilter = "all",
+                importCommunity = "CUSTOMER_COMM",
+                bgpPref = 30
+            ))
+
+            routerB.addProtocol('bgp', 'x_as{}'.format(routerA.getAsn()), EbgpFileTemplates["rnode_bird_peer"].format(
+                localAddress = addrB,
+                localAsn = routerB.getAsn(),
+                peerAddress = addrA,
+                peerAsn = routerA.getAsn(),
+                exportFilter = "all",
+                importCommunity = "PROVIDER_COMM",
+                bgpPref = 10
+            ))   
+
     def getName(self) -> str:
         return "Ebgp"
 
@@ -205,7 +298,7 @@ class Ebgp(Layer, Graphable):
 
         @returns list of tuple of (ix, peerAsn)
         """
-        return self.__rs_peers
+        return self.__rs_peers 
 
     def configure(self, emulator: Emulator) -> None:
         reg = emulator.getRegistry()
@@ -234,26 +327,7 @@ class Ebgp(Layer, Graphable):
             assert p_ixnode != None, 'cannot resolve peering: as{} not in ix{}'.format(peer, ix)
             self._log("adding peering: {} as {} (RS) <-> {} as {}".format(rs_if.getAddress(), ix, p_ixif.getAddress(), peer))
 
-            ix_rs.addProtocol('bgp', 'p_as{}'.format(peer), EbgpFileTemplates["rs_bird_peer"].format(
-                localAddress = rs_if.getAddress(),
-                localAsn = ix,
-                peerAddress = p_ixif.getAddress(),
-                peerAsn = peer
-            )) 
-
-            (a_export, b_export) = self.__getExportFilters(reg, ix, peer, PeerRelationship.Peer)
-
-            p_ixnode.addTable('t_bgp')
-            p_ixnode.addTablePipe('t_bgp')
-            p_ixnode.addTablePipe('t_direct', 't_bgp')
-            p_ixnode.addProtocol('bgp', 'p_rs{}'.format(ix), EbgpFileTemplates["rnode_bird_peer"].format(
-                localAddress = p_ixif.getAddress(),
-                localAsn = peer,
-                peerAddress = rs_if.getAddress(),
-                peerAsn = ix,
-                exportFilter = b_export,
-                importFilter = "all"
-            ))
+            self.__createPeer(ix_rs, p_ixnode, rs_if.getAddress(), p_ixif.getAddress(), PeerRelationship.Peer)
 
         for (a, b), rel in self.__xc_peerings.items():
             a_reg = ScopedRegistry(str(a), reg)
@@ -288,42 +362,7 @@ class Ebgp(Layer, Graphable):
 
             self._log("adding XC peering: {} as {} <-({})-> {} as {}".format(a_addr, a, rel, b_addr, b))
 
-            (a_export, b_export) = self.__getExportFilters(reg, a, b, rel)
-            
-            a_proto_pfx = 'p_'
-            b_proto_pfx = 'p_'
-
-            if rel == PeerRelationship.Provider:
-                a_proto_pfx = 'c_'
-                b_proto_pfx = 'u_'
-
-            if rel == PeerRelationship.Unfiltered:
-                a_proto_pfx = 'c_'
-                b_proto_pfx = 'c_'
-
-            a_router.addTable('t_bgp')
-            a_router.addTablePipe('t_bgp')
-            a_router.addTablePipe('t_direct', 't_bgp')
-            a_router.addProtocol('bgp', '{}as{}'.format(a_proto_pfx, b), EbgpFileTemplates["rnode_bird_peer"].format(
-                localAddress = a_addr,
-                localAsn = a,
-                peerAddress = b_addr,
-                peerAsn = b,
-                exportFilter = a_export,
-                importFilter = "all"
-            ))
-
-            b_router.addTable('t_bgp')
-            b_router.addTablePipe('t_bgp')
-            b_router.addTablePipe('t_direct', 't_bgp')
-            b_router.addProtocol('bgp', '{}as{}'.format(b_proto_pfx, a), EbgpFileTemplates["rnode_bird_peer"].format(
-                localAddress = b_addr,
-                localAsn = b,
-                peerAddress = a_addr,
-                peerAsn = a,
-                exportFilter = b_export,
-                importFilter = "all"
-            ))
+            self.__createPeer(a_router, b_router, a_addr, b_addr, rel)
 
         for (ix, a, b), rel in self.__peerings.items():
             ix_reg = ScopedRegistry('ix', reg)
@@ -360,42 +399,7 @@ class Ebgp(Layer, Graphable):
 
             self._log("adding IX peering: {} as {} <-({})-> {} as {}".format(a_ixif.getAddress(), a, rel, b_ixif.getAddress(), b))
 
-            (a_export, b_export) = self.__getExportFilters(reg, a, b, rel)
-            
-            a_proto_pfx = 'p_'
-            b_proto_pfx = 'p_'
-
-            if rel == PeerRelationship.Provider:
-                a_proto_pfx = 'c_'
-                b_proto_pfx = 'u_'
-
-            if rel == PeerRelationship.Unfiltered:
-                a_proto_pfx = 'c_'
-                b_proto_pfx = 'c_'
-
-            a_ixnode.addTable('t_bgp')
-            a_ixnode.addTablePipe('t_bgp')
-            a_ixnode.addTablePipe('t_direct', 't_bgp')
-            a_ixnode.addProtocol('bgp', '{}as{}'.format(a_proto_pfx, b), EbgpFileTemplates["rnode_bird_peer"].format(
-                localAddress = a_ixif.getAddress(),
-                localAsn = a,
-                peerAddress = b_ixif.getAddress(),
-                peerAsn = b,
-                exportFilter = a_export,
-                importFilter = "all"
-            ))
-
-            b_ixnode.addTable('t_bgp')
-            b_ixnode.addTablePipe('t_bgp')
-            b_ixnode.addTablePipe('t_direct', 't_bgp')
-            b_ixnode.addProtocol('bgp', '{}as{}'.format(b_proto_pfx, a), EbgpFileTemplates["rnode_bird_peer"].format(
-                localAddress = b_ixif.getAddress(),
-                localAsn = b,
-                peerAddress = a_ixif.getAddress(),
-                peerAsn = a,
-                exportFilter = b_export,
-                importFilter = "all"
-            ))
+            self.__createPeer(a_ixnode, b_ixnode, a_ixif.getAddress(), b_ixif.getAddress(), rel)
 
     def render(self, emulator: Emulator) -> None:
         pass
