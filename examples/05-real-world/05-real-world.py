@@ -19,7 +19,7 @@ base.createInternetExchange(100)
 base.createInternetExchange(101)
 
 ###############################################################################
-# Create AS-150 with 3 internet networks
+# Create a transit AS (AS-150)
 
 as150 = base.createAutonomousSystem(150)
 
@@ -39,43 +39,48 @@ as150.createRouter('r4').joinNetwork('net2').joinNetwork('ix101')
 
 as151 = base.createAutonomousSystem(151)
 
-# Create a network and enable the access from machines outside of the emulator
+# Create a network and enable the access from real world
 as151.createNetwork('net0').enableRemoteAccess(ovpn)
-
-# Create a host and a router
-as151.createHost('web').joinNetwork('net0')
 as151.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
+
+# Create a web host
+as151.createHost('web').joinNetwork('net0')
+web.install('web1')
+emu.addBinding(Binding('web1', filter = Filter(asn = 151, nodeName = 'web')))
 
 
 ###############################################################################
 # Create AS-152
 
 as152 = base.createAutonomousSystem(152)
+
+# Create a network and enable the access from real world
 as152.createNetwork('net0').enableRemoteAccess(ovpn)
-as152.createHost('web').joinNetwork('net0')
 as152.createRouter('router0').joinNetwork('net0').joinNetwork('ix101')
+
+# Create a web host
+as152.createHost('web').joinNetwork('net0')
+web.install('web2')
+emu.addBinding(Binding('web2', filter = Filter(asn = 152, nodeName = 'web')))
 
 
 ###############################################################################
-# Create a real-world AS
+# Create a real-world AS. 
+# AS11872 is the Syracuse University's autonomous system
+# The network prefixes announced by this AS will be collected from the real Internet
+# Packets coming into this AS will be routed out to the real world. 
 
 as11872 = base.createAutonomousSystem(11872)
 as11872.createRealWorldRouter('rw').joinNetwork('ix101', '10.101.0.118')
 
+
 ###############################################################################
 # BGP peering 
 
-ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
-ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(100, 150, 151,   abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 150, 152,   abRelationship = PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 150, 11872, abRelationship = PeerRelationship.Unfiltered)
 
-###############################################################################
-# Create two virtual nodes that run web services, bind them to physical nodes
-
-web.install('web1')
-web.install('web2')
-emu.addBinding(Binding('web1', filter = Filter(asn = 151, nodeName = 'web')))
-emu.addBinding(Binding('web2', filter = Filter(asn = 152, nodeName = 'web')))
 
 ###############################################################################
 # Rendering
