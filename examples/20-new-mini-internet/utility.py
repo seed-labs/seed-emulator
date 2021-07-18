@@ -120,3 +120,10 @@ def private_peering_with_isp(ebgp: Ebgp, exchange: int,
         ebgp.addPrivatePeering(exchange, isp, customer, 
                                abRelationship = PeerRelationship.Provider)
 
+# This is used for BGP attack demo
+def private_peering_with_isp_unfiltered(ebgp: Ebgp, exchange: int, 
+                             isp: int, customers: [int]):
+    for customer in customers:
+        ebgp.addPrivatePeering(exchange, isp, customer, 
+                               abRelationship = PeerRelationship.Unfiltered)
+
