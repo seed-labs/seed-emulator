@@ -14,7 +14,7 @@ Responses from the outside will come back to this real-world AS
 and be routed to the final destination in the emulator.
 
 
-## Import and create required components
+## Import and Create Required Components
 
 Most of this part is the same as that in `01-transit-as`. The only difference is the following:
 
@@ -61,7 +61,7 @@ as151.createNetwork('net0').enableRemoteAccess(ovpn)
 The `Network::enableRemoteAccess` call enables remote access to a network. `enableRemoteAccess` takes only one parameter, the remote access provider.
 
 
-## Create a real-world stub AS 
+## Create a Real-World Stub AS 
 
 A real-world AS is an AS, so we will first create an AS:
 
