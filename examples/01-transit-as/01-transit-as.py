@@ -78,8 +78,13 @@ emu.addLayer(ibgp)
 emu.addLayer(ospf)
 emu.addLayer(web)
 
-emu.render()
+###############################################################################
+# Save the emulation as a component (can be reused by other emulation)
+
+emu.dump('base-component.bin')
 
 ###############################################################################
+# Generate the docker file
 
+emu.render()
 emu.compile(Docker(), './output')
