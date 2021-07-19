@@ -56,7 +56,7 @@ as150.createRouter('r4').joinNetwork('net2').joinNetwork('ix101')
 In this particular example, we used OSPF and IBGP for internal routing. IBGP
 and OSPF layers do not need to be configured explicitly; they are by default
 enabled on all autonomous systems.  The default behaviors are as follow (see
-[this manual](../manual.md#transit-as-network) if you want to customize
+[this manual](/docs/user_manual/manual.md#transit-as-network) if you want to customize
 the behaviors):
 
 - IBGP is configured between all routers within an autonomous system,
@@ -69,7 +69,7 @@ the behaviors):
 We use private peering to peer the transit `AS150` with the two stub 
 `AS151` and `AS152`. The peering relationship is `Provider`, i.e.,
 `AS150` is the stub ASes' internet service provider. 
-See [this manual](docs/user_manual/bgp_peering.md) for the 
+See [this manual](/docs/user_manual/bgp_peering.md) for the 
 detailed explanation of BGP peering.
 
 ```python

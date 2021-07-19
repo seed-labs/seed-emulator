@@ -31,7 +31,7 @@ This creates an OpenVPN remote access provider. A remote access provider contain
 - `ovpnKey`: Server key to use for the OpenVPN server. Default to `None` (uses bulletin key).
 
 For details on how to connect to the OpenVPN server with bulletin CA/cert/key,
-see [misc/openvpn-remote-access](../../misc/openvpn-remote-access).
+see [misc/openvpn-remote-access](/misc/openvpn-remote-access).
 
 The way a remote access provider works is that the emulator 
 will provide the remote access provider with the followings:
