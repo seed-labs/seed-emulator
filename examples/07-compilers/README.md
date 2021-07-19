@@ -18,6 +18,6 @@ emu.compile(DistributedDocker(), './output/distributed-docker')
 emu.compile(GcpDistributedDocker(), './output/gcp-distributed-docker')
 ```
 
-Here is the [manual for the compilers](docs/user_manual/compiler.md),
-and the [manual for the registry](docs/user_manual/misc.md#registry).
+Here is the [manual for the compilers](/docs/user_manual/compiler.md),
+and the [manual for the registry](/docs/user_manual/misc.md#registry).
 
