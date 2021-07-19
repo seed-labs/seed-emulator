@@ -62,7 +62,7 @@ create hosts and networks in the autonomous system.
 as150.createNetwork('net0')
 ```
 
-The `AutonomousSystem::createNetwork` calls create a new local network (as opposed to the networks created by `Base::createInternetExchange`), which can only be joined by nodes from within the autonomous system. Similar to the `createInternetExchange` call, the `createNetwork` call also automatically assigns network prefixes; it uses `10.{asn}.{id}.0/24` by default. `createNetwork` call also accept `prefix` and `aac` parameter for configuring prefix and setting up auto address assignment. For details, see [this manual](../manual.md#create-network-with-prefix).
+The `AutonomousSystem::createNetwork` calls create a new local network (as opposed to the networks created by `Base::createInternetExchange`), which can only be joined by nodes from within the autonomous system. Similar to the `createInternetExchange` call, the `createNetwork` call also automatically assigns network prefixes; it uses `10.{asn}.{id}.0/24` by default. `createNetwork` call also accept `prefix` and `aac` parameter for configuring prefix and setting up auto address assignment. For details, see [this manual](/docs/user_manual/manual.md#create-network-with-prefix).
 
 
 ### Step 3.3: Create a router and connect it to two networks
@@ -131,7 +131,7 @@ emu.addBinding(Binding('web150', filter = Filter(nodeName = 'web', asn = 150)))
 ```
 
 There are also other constraints one can use to select candidates. 
-See [this manual](../manual.md#virtual-node-binding) for details. 
+See [this manual](/docs/user_manual/component.md#virtual-node-binding) for details. 
 
 
 
@@ -149,7 +149,7 @@ ebgp.addRsPeer(100, 152)
 ```
 
 Their peering relationship be default is `Peer` type.  
-See [this manual](docs/manual/manual.md#bgp-rs-peering) for detailed 
+See [this manual](/docs/user_manual/bgp_peering.md) for detailed 
 discussions on this `Ebgp::addRsPeer` call.
 
 
@@ -158,10 +158,10 @@ discussions on this `Ebgp::addRsPeer` call.
 Render the emulation. This is when the actual "things" happen: 
 software is added to the nodes, routing tables and protocols are configured, 
 and BGP peers are configured, etc.
-See [this manual](docs/manual/manual.md#rendering).
+See [this manual](/docs/user_manual/manual.md#rendering).
 
 
 ## Step 6: Compile the emulation
 
-Generate the emulation files. See [this manual](docs/manual/manual.md#compilation).
+Generate the emulation files. See [this manual](/docs/user_manual/compiler.md).
 
