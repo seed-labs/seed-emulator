@@ -220,6 +220,28 @@ class Ebgp(Layer, Graphable):
 
         return self
 
+    def addPrivatePeerings(self, ix: int, as: List[int], bs: List[int], abRelationship: PeerRelationship = PeerRelationship.Peer) -> Ebgp:
+        """!
+        @brief Setup private peering between two sets of ASes in IX.
+
+        @param ix IXP id.
+        @param as First set of ASNs.
+        @param bs Second set of ASNs.
+        @param abRelationship (optional) A and B's relationship. If set to
+        PeerRelationship.Provider, A will export everything to B, if set to
+        PeerRelationship.Peer, A will only export own and customer prefixes to
+        B. Default to Peer.
+
+        @throws AssertionError if peering already exist.
+
+        @returns self, for chaining API calls.
+        """
+        for a in as:
+            for b in bs:
+                self.addPrivatePeering(ix, a, b, abRelationship)
+
+        return self
+
     def getPrivatePeerings(self) -> Dict[Tuple[int, int, int], PeerRelationship]:
         """!
         @brief Get private peerings.
