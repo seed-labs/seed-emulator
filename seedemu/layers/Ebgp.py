@@ -220,7 +220,7 @@ class Ebgp(Layer, Graphable):
 
         return self
 
-    def addPrivatePeerings(self, ix: int, as: List[int], bs: List[int], abRelationship: PeerRelationship = PeerRelationship.Peer) -> Ebgp:
+    def addPrivatePeerings(self, ix: int, a_asns: List[int], b_asns: List[int], abRelationship: PeerRelationship = PeerRelationship.Peer) -> Ebgp:
         """!
         @brief Setup private peering between two sets of ASes in IX.
 
@@ -236,8 +236,8 @@ class Ebgp(Layer, Graphable):
 
         @returns self, for chaining API calls.
         """
-        for a in as:
-            for b in bs:
+        for a in a_asns:
+            for b in b_asns:
                 self.addPrivatePeering(ix, a, b, abRelationship)
 
         return self
