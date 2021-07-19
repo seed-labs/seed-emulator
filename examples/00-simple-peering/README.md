@@ -15,7 +15,7 @@ In this setup, we will need four layers:
 
 - The `Base` layer provides the base of the emulation; it describes what hosts belong to what autonomous system and how hosts are connected with one another. 
 - The `Routing` layer acts as the base of the routing protocols. It does the following: (1) installing BIRD internet routing daemon on every host with the router role, (2) providing lower-level APIs for manipulating BIRD's FIB (forwarding information base) and adding new protocols, etc., and (3) setting up proper default route on non-router role hosts to point to the first router in the network.
-- The `Ebgp` layer provides APIs for setting up intra-AS BGP peering.
+- The `Ebgp` layer provides APIs for setting up External BGP peering.
 - The `WebService` layer provides APIs for installing the `nginx` web server on hosts.
 
 We will compile the emulation to docker containers.
@@ -23,12 +23,12 @@ We will compile the emulation to docker containers.
 Once the classes are imported, initialize them:
 
 ```python
-emu = Emulator()
+emu     = Emulator()
 
-base = Base()
+base    = Base()
 routing = Routing()
-ebgp = Ebgp()
-web = WebService()
+ebgp    = Ebgp()
+web     = WebService()
 ```
 
 ## Step 2: Create an internet exchange
@@ -53,7 +53,8 @@ as150 = base.createAutonomousSystem(150)
 ```
 
 The call returns an `AutonomousSystem` class instance, and it can be used to further 
-create hosts in the autonomous system.
+create hosts and networks in the autonomous system.
+
 
 ### Step 3.2: Create an internal network
 
@@ -63,14 +64,6 @@ as150.createNetwork('net0')
 
 The `AutonomousSystem::createNetwork` calls create a new local network (as opposed to the networks created by `Base::createInternetExchange`), which can only be joined by nodes from within the autonomous system. Similar to the `createInternetExchange` call, the `createNetwork` call also automatically assigns network prefixes; it uses `10.{asn}.{id}.0/24` by default. `createNetwork` call also accept `prefix` and `aac` parameter for configuring prefix and setting up auto address assignment. For details, see [this manual](../manual.md#create-network-with-prefix).
 
-We now have the network, it is not in the FIB yet, and thus will not be announce to BGP peers. We need to let our routing daemon know we want the network in FIB. This can be done by:
-
-```python
-routing.addDirect(150, 'net0')
-```
-
-The `Routing::addDirect` call marks a network as a "direct" network. A "direct" network will be added to the `direct` protocol block of BIRD, so the prefix of the directly connected network will be loaded into FIB.
-
 
 ### Step 3.3: Create a router and connect it to two networks
 
@@ -79,9 +72,7 @@ network in the internet exchange `ix100`. Basically, we are making this router
 a BGP router.
 
 ```
-as150_router = as150.createRouter('router0')
-as150_router.joinNetwork('net0')
-as150_router.joinNetwork('ix100')
+as150.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
 ```
 
 The `Node::joinNetwork` call connects a node to a network. It first searches through the local networks, then global networks. Internet exchanges, for example, are considered as global network. It can also optionally takes another parameter, `address`, to override the auto address assignment. 
@@ -100,6 +91,7 @@ The `AutonomousSystem::createHost` API takes one parameter, `name`,
 which is the name of the host, and it will return an `Node` instance on
 success. In this case, we will name our new host `web`, since we will be
 hosting `WebService` on it:
+
 
 ### Step 3.5: Run a web server on this host
 
@@ -131,7 +123,7 @@ To bind a virtual node, we
 need `Binding` and `Filter`. `Binding` allows us to define binding for a given
 virtual node name. `Filter` allows us to define some constraints on what
 physical nodes are considered as binding candidates. Here, we want to bind to
-the node with the name `web` under AS150. So we can add a binding like this to
+the node with the name `web` in AS-150. So we can add a binding like this to
 the emulator:
 
 ```python
@@ -143,14 +135,12 @@ See [this manual](../manual.md#virtual-node-binding) for details.
 
 
 
-## Step 4: Create more autonomous systems
+## Step 4: Set up BGP peering
 
-Repeat Step 3 two more times with different ASNs:
-
-
-## Step 5: Set up BGP peering
-
-Setting up BGP peering is done at the eBGP layer:
+Once we have created the autonomous systems, we need to 
+set up the peering among them. 
+Setting up BGP peering is done at the eBGP layer. The following
+peers the `AS-150`, `AS-151`, and `AS-152` at the Internet Exchange `IX-100`. 
 
 ```python
 ebgp.addRsPeer(100, 150)
@@ -158,15 +148,20 @@ ebgp.addRsPeer(100, 151)
 ebgp.addRsPeer(100, 152)
 ```
 
-See [this manual](../manual.md#bgp-rs-peering) for detailed 
+Their peering relationship be default is `Peer` type.  
+See [this manual](docs/manual/manual.md#bgp-rs-peering) for detailed 
 discussions on this `Ebgp::addRsPeer` call.
 
 
-## Step 6: Render the emulation
+## Step 5: Render the emulation
 
-See [this manual](../manual.md#rendering).
+Render the emulation. This is when the actual "things" happen: 
+software is added to the nodes, routing tables and protocols are configured, 
+and BGP peers are configured, etc.
+See [this manual](docs/manual/manual.md#rendering).
 
-## Step 7: Compile the emulation
 
-See [this manual](../manual.md#compilation).
+## Step 6: Compile the emulation
+
+Generate the emulation files. See [this manual](docs/manual/manual.md#compilation).
 

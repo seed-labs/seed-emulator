@@ -1,11 +1,12 @@
 # Transit AS
 
-This is a more in-depth example; in this example, we will configure two internet exchanges, AS150 will be in both exchanges. AS151 and AS152 will be in IX100 and IX101, respectively. AS150 will serve as the transit AS for AS151 and AS152. There will be four hops in AS150. AS151 and AS152 will each announce one /24 prefix and host one web server in the network.
+In this example, we introduce a transit autonomous system, which provides
+transit service to other ASes. `AS150` serves as the transit AS for `AS151` and
+`AS152`. Most part of this example is the same as that in the 
+`00-simple-peering` example, so we will not repeat all the explanation. 
 
-Most part of this example is the same as that in the `00-simple-peering` example,
-so we will not repeat all the explanation. 
 
-## Step 1: Create layers
+## Create layers
 
 In this setup, in addition to the layers created in the `00-simple-peering` example, 
 we add two new layers: 
@@ -14,21 +15,17 @@ we add two new layers:
 - The `Ospf` layer: automatically sets up OSPF routing on all routers within an autonomous system.
 
 
-## Step 2: Create the internet exchanges
 
-```python
-base.createInternetExchange(100)
-base.createInternetExchange(101)
-```
-Two internet exchanges are created. 
-This adds two new networks, `ix100` and `ix101`, to the emulation.
+## Create a transit autonomous system
+
+A transit AS peers with other ASes at multiple internet exchange points, so it can
+pull traffic from one place to another. To connect the BGP routers at these 
+different locations, a transit AS typically has multiple internal networks. 
 
 
-## Step 3: Create a transit autonomous system
+### 1. Create AS150 and its internal networks
 
-### Step 3.1: Create AS150 and its internal networks
-
-Since we plan to have four hops in AS150, we will need three internal networks to connect the routers together.
+In our emulator, we create three internal networks for `AS150`. 
 
 ```python
 as150 = base.createAutonomousSystem(150)
@@ -37,40 +34,29 @@ as150.createNetwork('net1')
 as150.createNetwork('net2')
 ```
 
-### Step 3.2: Create routers
+### 2. Create routers 
 
-We need four routers. 
+We create four routers. The routers `r1` and `r4` are edge routers, and 
+they are BGP routers, so they, on one end, connect to the network inside 
+an Internet exchange, and on the other end, connect to an internal network.
+The other two internal routers `r2` and `r3` provide a path from
+the edge routers, so traffic from one IX can be routed to the other IX
+via the internal networks. 
 
-```python
-r1 = as150.createRouter('r1')
-r2 = as150.createRouter('r2')
-r3 = as150.createRouter('r3')
-r4 = as150.createRouter('r4')
-```
-
-### Step 3.3: Attach routers to networks
-
-We need to connect the routers to the networks. We use `r1` and `r4` as the eBGP routers,
-so they need to connect to the network in the corresponding internet exchange. The 
-`r2` and `r3` are just internal routers. 
 
 ```python
-r1.joinNetwork('ix100')
-r1.joinNetwork('net0')
-
-r2.joinNetwork('net0')
-r2.joinNetwork('net1')
-
-r3.joinNetwork('net1')
-r3.joinNetwork('net2')
-
-r4.joinNetwork('net2')
-r4.joinNetwork('ix101')
+as150.createRouter('r1').joinNetwork('net0').joinNetwork('ix100')
+as150.createRouter('r2').joinNetwork('net0').joinNetwork('net1')
+as150.createRouter('r3').joinNetwork('net1').joinNetwork('net2')
+as150.createRouter('r4').joinNetwork('net2').joinNetwork('ix101')
 ```
+
 ### Note:
 
-In this particular example, we used OSPF and IBGP for internal routing. IBGP and OSPF layer does not need to be configured explicitly; they are by default enabled on all autonomous systems.
-The default behaviors are as follow (see [this manual](../manual.md#transit-as-network) if you want to customize
+In this particular example, we used OSPF and IBGP for internal routing. IBGP
+and OSPF layers do not need to be configured explicitly; they are by default
+enabled on all autonomous systems.  The default behaviors are as follow (see
+[this manual](../manual.md#transit-as-network) if you want to customize
 the behaviors):
 
 - IBGP is configured between all routers within an autonomous system,
@@ -78,29 +64,19 @@ the behaviors):
 - Passive OSPF is enabled on all other connected networks.
 
 
-## Step 4: Create and set up stub autonomous systems
+## Set up BGP peering
 
-This part is the same as the `00-simple-peering` example, so we will not 
-repeat the explanation.
-
-
-## Step 5: Set up BGP peering
+We use private peering to peer the transit `AS150` with the two stub 
+`AS151` and `AS152`. The peering relationship is `Provider`, i.e.,
+`AS150` is the stub ASes' internet service provider. 
+See [this manual](docs/user_manual/bgp_peering.md) for the 
+detailed explanation of BGP peering.
 
 ```python
-# Peer AS150 with AS151 inside Internet Exchange 100
 ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
-
-# Peer AS150 with AS152 inside Internet Exchange 101
 ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
 ```
 
-See [this manual](../manual.md#bgp-private-peering) for the explanation of 
-the use of `Ebgp::addPrivatePeering`. 
-
-
-## Step 7: Render and compile the emulation
-
-Same as the `00-simple-peering` example.
 
 
 

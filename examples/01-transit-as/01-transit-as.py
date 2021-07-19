@@ -18,74 +18,54 @@ base.createInternetExchange(100)
 base.createInternetExchange(101)
 
 ###############################################################################
-# Set up the transit AS (AS150)
+# Create and set up the transit AS (AS-150)
 
 as150 = base.createAutonomousSystem(150)
 
+# Create 3 internal networks
 as150.createNetwork('net0')
 as150.createNetwork('net1')
 as150.createNetwork('net2')
 
-r1 = as150.createRouter('r1')
-r2 = as150.createRouter('r2')
-r3 = as150.createRouter('r3')
-r4 = as150.createRouter('r4')
-
-r1.joinNetwork('ix100')
-r1.joinNetwork('net0')
-
-r2.joinNetwork('net0')
-r2.joinNetwork('net1')
-
-r3.joinNetwork('net1')
-r3.joinNetwork('net2')
-
-r4.joinNetwork('net2')
-r4.joinNetwork('ix101')
+# Create four routers and link them in a linear structure:
+# ix100 <--> r1 <--> r2 <--> r3 <--> r4 <--> ix101
+# r1 and r2 are BGP routers because they are connected to internet exchanges
+as150.createRouter('r1').joinNetwork('net0').joinNetwork('ix100')
+as150.createRouter('r2').joinNetwork('net0').joinNetwork('net1')
+as150.createRouter('r3').joinNetwork('net1').joinNetwork('net2')
+as150.createRouter('r4').joinNetwork('net2').joinNetwork('ix101')
 
 ###############################################################################
-# Create and set up the AS 151
+# Create and set up the stub AS (AS-151)
 
 as151 = base.createAutonomousSystem(151)
 
-as151_web = as151.createHost('web')
+# Create an internal network and a router
+as151.createNetwork('net0')
+as151.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
+
+# Create a web-service node 
+as151.createHost('web').joinNetwork('net0')
 web.install('web151')
 emu.addBinding(Binding('web151', filter = Filter(nodeName = 'web', asn = 151)))
 
-as151_router = as151.createRouter('router0')
-
-as151_net = as151.createNetwork('net0')
-
-
-
-as151_web.joinNetwork('net0')
-as151_router.joinNetwork('net0')
-
-as151_router.joinNetwork('ix100')
 
 ###############################################################################
-# Create and set up the AS 152
+# Create and set up the stub AS (AS-152)
 
 as152 = base.createAutonomousSystem(152)
+as152.createNetwork('net0')
+as152.createRouter('router0').joinNetwork('net0').joinNetwork('ix101')
 
-as152_web = as152.createHost('web')
+as152_web = as152.createHost('web').joinNetwork('net0')
 web.install('web152')
 emu.addBinding(Binding('web152', filter = Filter(nodeName = 'web', asn = 152)))
 
-as152_router = as152.createRouter('router0')
-
-as152_net = as152.createNetwork('net0')
-
-
-
-as152_web.joinNetwork('net0')
-as152_router.joinNetwork('net0')
-
-as152_router.joinNetwork('ix101')
 
 ###############################################################################
 # Add BGP peering
 
+# Make AS-150 the internet service provider for AS-151 and AS-152
 ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
 

@@ -113,7 +113,9 @@ private_peering_with_isp(ebgp, 102, 11, [154])
 private_peering_with_isp(ebgp, 103, 3,  [160, 161, 162])
 
 private_peering_with_isp(ebgp, 104, 4,  [12])
-private_peering_with_isp(ebgp, 104, 12, [163, 164])
+private_peering_with_isp(ebgp, 104, 12, [164])
+# We use AS-163 the BGP attacker, it needs to use the "unfiltered" peering
+private_peering_with_isp_unfiltered(ebgp, 104, 4, [163])
 
 private_peering_with_isp(ebgp, 105, 3,  [11, 170])
 private_peering_with_isp(ebgp, 105, 11, [171])

@@ -35,7 +35,7 @@ def make_transit_AS(base: Base, asn: int, exchanges: List[int],
 
 
 ###############################################################################
-# Helper function: create a single-homed stub autonomous system 
+# Helper function: create a stub autonomous system 
 # We will only create one internal network
 
 def make_stub_AS(emu: Emulator, base: Base, asn: int, 
@@ -49,31 +49,6 @@ def make_stub_AS(emu: Emulator, base: Base, asn: int,
     router = stub_as.createRouter('router0')
     router.joinNetwork('net0')
     router.joinNetwork('ix{}'.format(exchange))
-
-    # Create a host node for each specified service
-    create_hosts_on_network(emu, stub_as, 'net0', services, 0)
-
-
-
-
-###############################################################################
-# Helper function: create a multi-homed stub autonomous system
-# For the sake of simplicity, we will only create one internal network, 
-# and connect all the BGP routers to this single internal network.
-# We can create another utility function for a more sophisticated setup.
-
-def make_multihomed_stub_AS_in_multi_ix(emu: Emulator, base: Base, asn: int, 
-                           exchanges: List[int], services: List[Service]):
-    # Create AS and an internal network
-    stub_as = base.createAutonomousSystem(asn)
-    stub_as.createNetwork('net0')
-
-    # Create a BGP router for each internet exchange.
-    # Internally, connect them to the same internal network.
-    for ix in exchanges:
-        router = stub_as.createRouter('r{}'.format(ix))
-        router.joinNetwork('ix{}'.format(ix))
-        router.joinNetwork('net0')
 
     # Create a host node for each specified service
     create_hosts_on_network(emu, stub_as, 'net0', services, 0)
@@ -119,4 +94,11 @@ def private_peering_with_isp(ebgp: Ebgp, exchange: int,
     for customer in customers:
         ebgp.addPrivatePeering(exchange, isp, customer, 
                                abRelationship = PeerRelationship.Provider)
+
+# This is used for BGP attack demo
+def private_peering_with_isp_unfiltered(ebgp: Ebgp, exchange: int, 
+                             isp: int, customers: [int]):
+    for customer in customers:
+        ebgp.addPrivatePeering(exchange, isp, customer, 
+                               abRelationship = PeerRelationship.Unfiltered)
 
