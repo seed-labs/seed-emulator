@@ -225,8 +225,8 @@ class Ebgp(Layer, Graphable):
         @brief Setup private peering between two sets of ASes in IX.
 
         @param ix IXP id.
-        @param as First set of ASNs.
-        @param bs Second set of ASNs.
+        @param a_asns First set of ASNs.
+        @param b_asns Second set of ASNs.
         @param abRelationship (optional) A and B's relationship. If set to
         PeerRelationship.Provider, A will export everything to B, if set to
         PeerRelationship.Peer, A will only export own and customer prefixes to
