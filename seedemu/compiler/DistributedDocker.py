@@ -1,7 +1,6 @@
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Registry, ScopedRegistry, Node, Network
+from seedemu.core import Registry, ScopedRegistry, Node, Network, Compiler
 from seedemu.core.enums import NodeRole
-from .Compiler import Compiler
 from typing import Dict
 from hashlib import md5
 from os import mkdir, chdir, rmdir

@@ -1,6 +1,5 @@
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Registry
-from .Compiler import Compiler
+from seedemu.core import Registry, Compiler
 from .DistributedDocker import DistributedDocker
 from typing import Dict
 from hashlib import md5
