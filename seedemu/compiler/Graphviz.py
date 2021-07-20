@@ -1,10 +1,4 @@
-from seedemu.core.Emulator import Emulator
-from .Compiler import Compiler
-from seedemu.core import Registry, ScopedRegistry, Node, Graphable
-from typing import Dict
-from unicodedata import normalize
-import re
-
+from seedemu.core import Emulator, Compiler, Registry, ScopedRegistry, Node, Graphable
 
 class Graphviz(Compiler):
     """!

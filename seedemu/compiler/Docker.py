@@ -1,7 +1,6 @@
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network
+from seedemu.core import Node, Network, Compiler
 from seedemu.core.enums import NodeRole, NetworkType
-from .Compiler import Compiler
 from typing import Dict, Generator
 from hashlib import md5
 from os import mkdir, chdir
@@ -235,7 +234,15 @@ class Docker(Compiler):
     def getName(self) -> str:
         return "Docker"
 
-    def __getNetMeta(self, net: Network): 
+    def _getNetMeta(self, net: Network) -> str: 
+        """!
+        @brief get net metadata lables.
+
+        @param net net object.
+
+        @returns metadata lables string.
+        """
+
         (scope, type, name) = net.getRegistryInfo()
 
         labels = ''
@@ -274,7 +281,14 @@ class Docker(Compiler):
 
         return labels
 
-    def __getNodeMeta(self, node: Node):
+    def _getNodeMeta(self, node: Node) -> str:
+        """!
+        @brief get node metadata lables.
+
+        @param node node object.
+
+        @returns metadata lables string.
+        """
         (scope, type, name) = node.getRegistryInfo()
 
         labels = ''
@@ -343,13 +357,20 @@ class Docker(Compiler):
 
         return labels
 
-    def __nodeRoleToString(self, role: NodeRole):
+    def _nodeRoleToString(self, role: NodeRole):
+        """!
+        @brief convert node role to prefix string
+
+        @param role node role
+
+        @returns prefix string
+        """
         if role == NodeRole.Host: return 'h'
         if role == NodeRole.Router: return 'r'
         if role == NodeRole.RouteServer: return 'rs'
         assert False, 'unknow node role {}'.format(role)
 
-    def __contextToPrefix(self, scope: str, type: str) -> str:
+    def _contextToPrefix(self, scope: str, type: str) -> str:
         """!
         @brief Convert context to prefix.
 
@@ -360,26 +381,31 @@ class Docker(Compiler):
         """
         return '{}_{}_'.format(type, scope)
 
-    def __addFile(self, path: str, content: str) -> str:
+    def _addFile(self, path: str, content: str) -> str:
         """!
         @brief Stage file to local folder and return Dockerfile command.
 
         @param path path to file. (in container)
         @param content content of the file.
+
+        @returns COPY expression for dockerfile.
         """
 
         staged_path = md5(path.encode('utf-8')).hexdigest()
         print(content, file=open(staged_path, 'w'))
         return 'COPY {} {}\n'.format(staged_path, path)
 
-    def __compileNode(self, node: Node):
+    def _compileNode(self, node: Node) -> str:
         """!
-        @brief Compile a single node.
+        @brief Compile a single node. Will create folder for node and the
+        dockerfile.
 
         @param node node to compile.
+
+        @returns docker-compose service string.
         """
         (scope, type, _) = node.getRegistryInfo()
-        prefix = self.__contextToPrefix(scope, type)
+        prefix = self._contextToPrefix(scope, type)
         real_nodename = '{}{}'.format(prefix, node.getName())
 
         node_nets = ''
@@ -388,7 +414,7 @@ class Docker(Compiler):
         for iface in node.getInterfaces():
             net = iface.getNet()
             (netscope, _, _) = net.getRegistryInfo()
-            net_prefix = self.__contextToPrefix(netscope, 'net') 
+            net_prefix = self._contextToPrefix(netscope, 'net') 
             if net.getType() == NetworkType.Bridge: net_prefix = ''
             real_netname = '{}{}'.format(net_prefix, net.getName())
             address = iface.getAddress()
@@ -454,21 +480,6 @@ class Docker(Compiler):
                 volumeList = lst
             )
 
-        self.__services += DockerCompilerFileTemplates['compose_service'].format(
-            nodeId = real_nodename,
-            nodeName = self.__naming_scheme.format(
-                asn = node.getAsn(),
-                role = self.__nodeRoleToString(node.getRole()),
-                name = node.getName(),
-                primaryIp = node.getInterfaces()[0].getAddress()
-            ),
-            networks = node_nets,
-            # privileged = 'true' if node.isPrivileged() else 'false',
-            ports = ports,
-            labelList = self.__getNodeMeta(node),
-            volumes = volumes
-        )
-
         dockerfile = DockerCompilerFileTemplates['dockerfile']
         mkdir(real_nodename)
         chdir(real_nodename)
@@ -486,18 +497,18 @@ class Docker(Compiler):
         if self.__self_managed_network:
             start_commands += 'chmod +x /replace_address.sh\n'
             start_commands += '/replace_address.sh\n'
-            dockerfile += self.__addFile('/replace_address.sh', DockerCompilerFileTemplates['replace_address_script'])
-            dockerfile += self.__addFile('/dummy_addr_map.txt', dummy_addr_map)
+            dockerfile += self._addFile('/replace_address.sh', DockerCompilerFileTemplates['replace_address_script'])
+            dockerfile += self._addFile('/dummy_addr_map.txt', dummy_addr_map)
 
         for (cmd, fork) in node.getStartCommands():
             start_commands += '{}{}\n'.format(cmd, ' &' if fork else '')
 
-        dockerfile += self.__addFile('/start.sh', DockerCompilerFileTemplates['start_script'].format(
+        dockerfile += self._addFile('/start.sh', DockerCompilerFileTemplates['start_script'].format(
             startCommands = start_commands
         ))
 
-        dockerfile += self.__addFile('/seedemu_sniffer', DockerCompilerFileTemplates['seedemu_sniffer'])
-        dockerfile += self.__addFile('/seedemu_worker', DockerCompilerFileTemplates['seedemu_worker'])
+        dockerfile += self._addFile('/seedemu_sniffer', DockerCompilerFileTemplates['seedemu_sniffer'])
+        dockerfile += self._addFile('/seedemu_worker', DockerCompilerFileTemplates['seedemu_worker'])
 
         dockerfile += 'RUN chmod +x /start.sh\n'
         dockerfile += 'RUN chmod +x /seedemu_sniffer\n'
@@ -505,14 +516,36 @@ class Docker(Compiler):
 
         for file in node.getFiles():
             (path, content) = file.get()
-            dockerfile += self.__addFile(path, content)
+            dockerfile += self._addFile(path, content)
 
         dockerfile += 'CMD ["/start.sh"]\n'
         print(dockerfile, file=open('Dockerfile', 'w'))
 
         chdir('..')
 
-    def __compileNet(self, net: Network):
+        return DockerCompilerFileTemplates['compose_service'].format(
+            nodeId = real_nodename,
+            nodeName = self.__naming_scheme.format(
+                asn = node.getAsn(),
+                role = self._nodeRoleToString(node.getRole()),
+                name = node.getName(),
+                primaryIp = node.getInterfaces()[0].getAddress()
+            ),
+            networks = node_nets,
+            # privileged = 'true' if node.isPrivileged() else 'false',
+            ports = ports,
+            labelList = self._getNodeMeta(node),
+            volumes = volumes
+        )
+
+    def _compileNet(self, net: Network) -> str:
+        """!
+        @brief compile a network.
+
+        @param net net object.
+
+        @returns docker-compose network string.
+        """
         (scope, _, _) = net.getRegistryInfo()
         if self.__self_managed_network and net.getType() != NetworkType.Bridge:
             pfx = next(self.__dummy_network_pool)
@@ -520,14 +553,14 @@ class Docker(Compiler):
             net.setAttribute('dummy_prefix_index', 2)
             self._log('self-managed network: using dummy prefix {}'.format(pfx))
 
-        net_prefix = self.__contextToPrefix(scope, 'net')
+        net_prefix = self._contextToPrefix(scope, 'net')
         if net.getType() == NetworkType.Bridge: net_prefix = ''
 
-        self.__networks += DockerCompilerFileTemplates['compose_network'].format(
+        return DockerCompilerFileTemplates['compose_network'].format(
             netId = '{}{}'.format(net_prefix, net.getName()),
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
             mtu = net.getMtu(),
-            labelList = self.__getNetMeta(net)
+            labelList = self._getNetMeta(net)
         )
 
     def _doCompile(self, emulator: Emulator):
@@ -537,25 +570,25 @@ class Docker(Compiler):
 
             if type == 'net':
                 self._log('creating network: {}/{}...'.format(scope, name))
-                self.__compileNet(obj)
+                self.__networks += self._compileNet(obj)
 
         for ((scope, type, name), obj) in registry.getAll().items():
 
             if type == 'rnode':
                 self._log('compiling router node {} for as{}...'.format(name, scope))
-                self.__compileNode(obj)
+                self.__services += self._compileNode(obj)
 
             if type == 'hnode':
                 self._log('compiling host node {} for as{}...'.format(name, scope))
-                self.__compileNode(obj)
+                self.__services += self._compileNode(obj)
 
             if type == 'rs':
                 self._log('compiling rs node for {}...'.format(name))
-                self.__compileNode(obj)
+                self.__services += self._compileNode(obj)
 
             if type == 'snode':
                 self._log('compiling service node {}...'.format(name))
-                self.__compileNode(obj)
+                self.__services += self._compileNode(obj)
 
         if self.__client_enabled:
             self._log('enabling seedemu-client...')
