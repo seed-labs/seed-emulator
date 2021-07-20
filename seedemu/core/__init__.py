@@ -15,3 +15,4 @@ from .Service import Server, Service
 from .Binding import Binding, Filter, Action
 from .Component import Component
 from .RemoteAccessProvider import RemoteAccessProvider
+from .Compiler import Compiler
