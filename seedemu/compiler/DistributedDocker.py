@@ -1,4 +1,4 @@
-from .Docker import Docker
+from .Docker import Docker, DockerCompilerFileTemplates
 from seedemu.core import Emulator, ScopedRegistry, Node, Network
 from seedemu.core.enums import NodeRole
 from typing import Dict
@@ -54,7 +54,7 @@ class DistributedDocker(Docker):
     def __compileIxNetMaster(self, net) -> str:
         (scope, _, _) = net.getRegistryInfo()
         return DistributedDockerCompilerFileTemplates['compose_network_ix_master'].format(
-            netId = '{}{}'.format(self.__contextToPrefix(scope, 'net'), net.getName()),
+            netId = '{}{}'.format(self._contextToPrefix(scope, 'net'), net.getName()),
             prefix = net.getPrefix(),
             labelList = self._getNetMeta(net)
         )
@@ -62,7 +62,7 @@ class DistributedDocker(Docker):
     def __compileIxNetWorker(self, net) -> str:
         (scope, _, _) = net.getRegistryInfo()
         return DistributedDockerCompilerFileTemplates['compose_network_ix_worker'].format(
-            netId = '{}{}'.format(self.__contextToPrefix(scope, 'net'), net.getName()),
+            netId = '{}{}'.format(self._contextToPrefix(scope, 'net'), net.getName()),
             labelList = self._getNetMeta(net)
         )
 
@@ -88,28 +88,28 @@ class DistributedDocker(Docker):
 
                 if type == 'rnode':
                     self._log('compiling router node {} for as{}...'.format(name, scope))
-                    services += self.__compileNode(obj)
+                    services += self._compileNode(obj)
 
                 if type == 'hnode':
                     self._log('compiling host node {} for as{}...'.format(name, scope))
-                    services += self.__compileNode(obj)
+                    services += self._compileNode(obj)
 
                 if type == 'rs':
                     self._log('compiling rs node for {}...'.format(name))
-                    services += self.__compileNode(obj)
+                    services += self._compileNode(obj)
 
                 if type == 'snode':
                     self._log('compiling service node {}...'.format(name))
-                    services += self.__compileNode(obj)
+                    services += self._compileNode(obj)
 
                 if type == 'net':
                     self._log('creating network: {}/{}...'.format(scope, name))
-                    networks += self.__compileIxNetMaster(obj) if scope == 'ix' else self.__compileNet(obj)
+                    networks += self.__compileIxNetMaster(obj) if scope == 'ix' else self._compileNet(obj)
 
             if len(services) > 0 or len(networks) > 0 :
                 if scope != 'ix': networks += ix_nets
                 self._log('creating docker-compose.yml...'.format(scope, name))
-                print(DistributedDockerCompilerFileTemplates['compose'].format(
+                print(DockerCompilerFileTemplates['compose'].format(
                     services = services,
                     networks = networks
                 ), file=open('docker-compose.yml', 'w'))
