@@ -395,11 +395,14 @@ class Docker(Compiler):
         print(content, file=open(staged_path, 'w'))
         return 'COPY {} {}\n'.format(staged_path, path)
 
-    def _compileNode(self, node: Node):
+    def _compileNode(self, node: Node) -> str:
         """!
-        @brief Compile a single node.
+        @brief Compile a single node. Will create folder for node and the
+        dockerfile.
 
         @param node node to compile.
+
+        @returns docker-compose service string.
         """
         (scope, type, _) = node.getRegistryInfo()
         prefix = self._contextToPrefix(scope, type)
@@ -477,21 +480,6 @@ class Docker(Compiler):
                 volumeList = lst
             )
 
-        self.__services += DockerCompilerFileTemplates['compose_service'].format(
-            nodeId = real_nodename,
-            nodeName = self.__naming_scheme.format(
-                asn = node.getAsn(),
-                role = self._nodeRoleToString(node.getRole()),
-                name = node.getName(),
-                primaryIp = node.getInterfaces()[0].getAddress()
-            ),
-            networks = node_nets,
-            # privileged = 'true' if node.isPrivileged() else 'false',
-            ports = ports,
-            labelList = self._getNodeMeta(node),
-            volumes = volumes
-        )
-
         dockerfile = DockerCompilerFileTemplates['dockerfile']
         mkdir(real_nodename)
         chdir(real_nodename)
@@ -535,11 +523,28 @@ class Docker(Compiler):
 
         chdir('..')
 
-    def _compileNet(self, net: Network):
+        return DockerCompilerFileTemplates['compose_service'].format(
+            nodeId = real_nodename,
+            nodeName = self.__naming_scheme.format(
+                asn = node.getAsn(),
+                role = self._nodeRoleToString(node.getRole()),
+                name = node.getName(),
+                primaryIp = node.getInterfaces()[0].getAddress()
+            ),
+            networks = node_nets,
+            # privileged = 'true' if node.isPrivileged() else 'false',
+            ports = ports,
+            labelList = self._getNodeMeta(node),
+            volumes = volumes
+        )
+
+    def _compileNet(self, net: Network) -> str:
         """!
         @brief compile a network.
 
         @param net net object.
+
+        @returns docker-compose network string.
         """
         (scope, _, _) = net.getRegistryInfo()
         if self.__self_managed_network and net.getType() != NetworkType.Bridge:
@@ -551,7 +556,7 @@ class Docker(Compiler):
         net_prefix = self._contextToPrefix(scope, 'net')
         if net.getType() == NetworkType.Bridge: net_prefix = ''
 
-        self.__networks += DockerCompilerFileTemplates['compose_network'].format(
+        return DockerCompilerFileTemplates['compose_network'].format(
             netId = '{}{}'.format(net_prefix, net.getName()),
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
             mtu = net.getMtu(),
@@ -565,25 +570,25 @@ class Docker(Compiler):
 
             if type == 'net':
                 self._log('creating network: {}/{}...'.format(scope, name))
-                self._compileNet(obj)
+                self.__networks += self._compileNet(obj)
 
         for ((scope, type, name), obj) in registry.getAll().items():
 
             if type == 'rnode':
                 self._log('compiling router node {} for as{}...'.format(name, scope))
-                self._compileNode(obj)
+                self.__services += self._compileNode(obj)
 
             if type == 'hnode':
                 self._log('compiling host node {} for as{}...'.format(name, scope))
-                self._compileNode(obj)
+                self.__services += self._compileNode(obj)
 
             if type == 'rs':
                 self._log('compiling rs node for {}...'.format(name))
-                self._compileNode(obj)
+                self.__services += self._compileNode(obj)
 
             if type == 'snode':
                 self._log('compiling service node {}...'.format(name))
-                self._compileNode(obj)
+                self.__services += self._compileNode(obj)
 
         if self.__client_enabled:
             self._log('enabling seedemu-client...')
