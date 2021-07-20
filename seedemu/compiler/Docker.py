@@ -234,7 +234,7 @@ class Docker(Compiler):
     def getName(self) -> str:
         return "Docker"
 
-    def __getNetMeta(self, net: Network): 
+    def _getNetMeta(self, net: Network): 
         (scope, type, name) = net.getRegistryInfo()
 
         labels = ''
@@ -273,7 +273,7 @@ class Docker(Compiler):
 
         return labels
 
-    def __getNodeMeta(self, node: Node):
+    def _getNodeMeta(self, node: Node):
         (scope, type, name) = node.getRegistryInfo()
 
         labels = ''
@@ -464,7 +464,7 @@ class Docker(Compiler):
             networks = node_nets,
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
-            labelList = self.__getNodeMeta(node),
+            labelList = self._getNodeMeta(node),
             volumes = volumes
         )
 
@@ -526,7 +526,7 @@ class Docker(Compiler):
             netId = '{}{}'.format(net_prefix, net.getName()),
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
             mtu = net.getMtu(),
-            labelList = self.__getNetMeta(net)
+            labelList = self._getNetMeta(net)
         )
 
     def _doCompile(self, emulator: Emulator):
