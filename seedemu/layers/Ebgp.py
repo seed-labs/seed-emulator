@@ -303,7 +303,7 @@ class Ebgp(Layer, Graphable):
         @brief Setup RS peering for list of ASes.
 
         @param ix IXP id.
-        @param peer List of participant ASNs.
+        @param peers List of participant ASNs.
 
         @throws AssertionError if some peering already exist.
 

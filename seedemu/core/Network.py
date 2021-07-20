@@ -43,6 +43,8 @@ class Network(Printable, Registrable, Vertex):
         @param type type of the network.
         @param prefix prefix of the network.
         @param aac (optional) AddressAssignmentConstraint to use.
+        @param direct (optional) mark network as direct. A direct network will be
+        loaded to RIB by routing layer. Default to False.
         """
         super().__init__()
 

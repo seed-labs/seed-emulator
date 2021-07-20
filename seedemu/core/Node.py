@@ -605,7 +605,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     def addSharedFolder(self, nodePath: str, hostPath: str) -> Node:
         """!
-        @beief Add a new shared folder between the node and host.
+        @@brief Add a new shared folder between the node and host.
 
         @param nodePath path to the folder inside the container.
         @param hostPath path to the folder on the emulator host node.

@@ -6,6 +6,9 @@ class Printable(object):
     """
 
     def __init__(self):
+        """!
+        @brief construct a new Printable object.
+        """
         super().__init__()
 
     def print(self, indentation: int = 0) -> str:

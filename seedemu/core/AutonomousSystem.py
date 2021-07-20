@@ -31,8 +31,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @brief AutonomousSystem constructor.
 
         @param asn ASN for this system.
-        @param (optional) subnetTemplate template for assigning subnet.
-        @param (optional) serviceSubnet subnet to use for emulator services.
+        @param subnetTemplate (optional) template for assigning subnet.
         """
         super().__init__()
         self.__hosts = {}
@@ -169,7 +168,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         and can route traffic from the emulation to the real world.
 
         @param name name of the new node.
-        @param (optional) hideHops hide realworld hops from traceroute (by
+        @param hideHops (optional) hide realworld hops from traceroute (by
         setting TTL = 64 to all real world dsts on POSTROUTING). Default to
         True.
         @param prefixes (optional) prefixes to annoucne. If unset, will try to

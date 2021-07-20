@@ -9,6 +9,9 @@ class Vertex(object):
     __description: str
 
     def __init__(self) -> None:
+        """!
+        @brief create a new vertex.
+        """
         super().__init__()
         self.__displayname = None
         self.__description = None

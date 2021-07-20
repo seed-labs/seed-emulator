@@ -8,6 +8,9 @@ class Configurable(object):
     """
 
     def __init__(self):
+        """!
+        @brief create a new Configurable object.
+        """
         super().__init__()
 
     def configure(self, emulator: Emulator):
