@@ -222,8 +222,11 @@ class OpenVpnRemoteAccessProvider(RemoteAccessProvider):
 
         brNode.setFile('/ovpn_startup', OpenVpnRapFileTemplates['ovpn_startup_script'])
 
+        # note: ovpn_startup will invoke interface_setup, and replace interface_setup script with a dummy. 
         brNode.appendStartCommand('chmod +x /ovpn_startup')
         brNode.appendStartCommand('/ovpn_startup {}'.format(netObject.getName()))
+
+        brNode.appendStartCommand('ip route add default via {} dev {}'.format(brNet.getPrefix()[1], brNet.getName()))
 
         brNode.joinNetwork(brNet.getName())
         brNode.joinNetwork(netObject.getName())
