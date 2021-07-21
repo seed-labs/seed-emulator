@@ -2,7 +2,7 @@
 
 The `ovpn-client.ovpn` file contains the defualt OpenVPN client configuration for the OpenVPN remote access provider.
 
-For details about remote access providers, see [example 05](../../examples/05-real-world) (real-world).
+For details about remote access providers, see [example 03](/examples/03-real-world) (real-world).
 
 To connect to the OpenVPN server, first do `docker ps` to find out the port number:
 
