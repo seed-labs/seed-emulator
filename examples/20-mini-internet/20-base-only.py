@@ -28,12 +28,12 @@ ix104 = base.createInternetExchange(104)
 ix105 = base.createInternetExchange(105)
 
 # Customize names for a demo in a keynote speech in China
-ix100.getPeeringLan().setDisplayName('北京')
-ix101.getPeeringLan().setDisplayName('上海')
-ix102.getPeeringLan().setDisplayName('广州')
-ix103.getPeeringLan().setDisplayName('常州')
-ix104.getPeeringLan().setDisplayName('武汉')
-ix105.getPeeringLan().setDisplayName('成都')
+#ix100.getPeeringLan().setDisplayName('北京')
+#ix101.getPeeringLan().setDisplayName('上海')
+#ix102.getPeeringLan().setDisplayName('广州')
+#ix103.getPeeringLan().setDisplayName('常州')
+#ix104.getPeeringLan().setDisplayName('武汉')
+#ix105.getPeeringLan().setDisplayName('成都')
 
 
 ###############################################################################
