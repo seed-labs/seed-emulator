@@ -250,7 +250,13 @@ export class MapUi {
             Object.keys(this._macMapping).forEach(mac => {
                 if (data.data.includes(mac) && !flashed.has(mac)) {
                     flashed.add(mac);
-                    this._flashQueue.add(this._macMapping[mac]);
+                    let nodeId = this._macMapping[mac];
+
+                    if (this._nodes.get(nodeId) === null) {
+                        return;
+                    }
+                    
+                    this._flashQueue.add(nodeId);
                 }
             });
 
