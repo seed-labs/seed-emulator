@@ -188,6 +188,8 @@ class Docker(Compiler):
     __client_enabled: bool
     __client_port: int
 
+    __client_hide_svcnet: bool
+
     def __init__(
         self,
         namingScheme: str = "as{asn}{role}-{name}-{primaryIp}",
@@ -195,7 +197,8 @@ class Docker(Compiler):
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
         clientEnabled: bool = False,
-        clientPort: int = 8080
+        clientPort: int = 8080,
+        clientHideServiceNet: bool = True
     ):
         """!
         @brief Docker compiler constructor.
@@ -221,6 +224,8 @@ class Docker(Compiler):
         access to all nodes, which can potentially allow root access to the
         emulator host. Only enable seedemu in a trusted network.
         @param clientPort (optional) set seedemu client port. Default to 8080.
+        @param clientHideServiceNet (optional) hide service network for the
+        client map by not adding metadata on the net. Default to True.
         """
         self.__networks = ""
         self.__services = ""
@@ -230,6 +235,8 @@ class Docker(Compiler):
 
         self.__client_enabled = clientEnabled
         self.__client_port = clientPort
+
+        self.__client_hide_svcnet = clientHideServiceNet
 
     def getName(self) -> str:
         return "Docker"
@@ -246,6 +253,12 @@ class Docker(Compiler):
         (scope, type, name) = net.getRegistryInfo()
 
         labels = ''
+
+        if self.__client_hide_svcnet and scope == 'seedemu' and name == '000_svc':
+            return DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'dummy',
+                value = 'dummy label for hidden node/net'
+            )
 
         labels += DockerCompilerFileTemplates['compose_label_meta'].format(
             key = 'type',
