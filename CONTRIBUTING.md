@@ -1,4 +1,4 @@
-# Contributing to SEED Labs
+# Contributing to SEEDEmulator Project
 
 Thanks for checking out the SEEDEmulator project! We're excited to hear and
 learn from you. We've put together the following guidelines to help you
