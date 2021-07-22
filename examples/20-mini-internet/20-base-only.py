@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
 from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
 from seedemu.services import WebService, DomainNameService, DomainNameCachingService
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
@@ -5,9 +8,11 @@ from seedemu.compiler import Docker, Graphviz
 from seedemu.hooks import ResolvConfHook
 from seedemu.core import Emulator, Service, Binding, Filter
 from seedemu.layers import Router
+from seedemu.raps import OpenVpnRemoteAccessProvider
+from seedemu.utilities import Makers
+
 from typing import List, Tuple, Dict
 
-from utility import *
 
 ###############################################################################
 emu     = Emulator()
@@ -17,6 +22,8 @@ ebgp    = Ebgp()
 ibgp    = Ibgp()
 ospf    = Ospf()
 web     = WebService()
+ovpn    = OpenVpnRemoteAccessProvider()
+
 
 ###############################################################################
 
@@ -28,60 +35,71 @@ ix104 = base.createInternetExchange(104)
 ix105 = base.createInternetExchange(105)
 
 # Customize names for a demo in a keynote speech in China
-#ix100.getPeeringLan().setDisplayName('北京')
-#ix101.getPeeringLan().setDisplayName('上海')
-#ix102.getPeeringLan().setDisplayName('广州')
-#ix103.getPeeringLan().setDisplayName('常州')
-#ix104.getPeeringLan().setDisplayName('武汉')
-#ix105.getPeeringLan().setDisplayName('成都')
+ix100.getPeeringLan().setDisplayName('NYC')
+ix101.getPeeringLan().setDisplayName('San Jose')
+ix102.getPeeringLan().setDisplayName('Chicago')
+ix103.getPeeringLan().setDisplayName('Miami')
+ix104.getPeeringLan().setDisplayName('Boston')
+ix105.getPeeringLan().setDisplayName('Huston')
 
 
 ###############################################################################
 # Create Transit Autonomous Systems 
 
 ## Tier 1 ASes
-make_transit_AS(base, 2, [100, 101, 102], 
+Makers.makeTransitAs(base, 2, [100, 101, 102], 
        [(100, 101), (101, 102)] 
 )
 
-make_transit_AS(base, 3, [100, 103, 105], 
+Makers.makeTransitAs(base, 3, [100, 103, 105], 
        [(100, 103), (103, 105), (105, 100)]
 )
 
-make_transit_AS(base, 4, [100, 104], 
+Makers.makeTransitAs(base, 4, [100, 104], 
        [(100, 104)]
 )
 
 ## Tier 2 ASes
-make_transit_AS(base, 11, [102, 105], [(102, 105)])
-make_transit_AS(base, 12, [101, 104], [(101, 104)])
+Makers.makeTransitAs(base, 11, [102, 105], [(102, 105)])
+Makers.makeTransitAs(base, 12, [101, 104], [(101, 104)])
 
 
 ###############################################################################
 # Create single-homed stub ASes. "None" means create a host only 
 
-make_stub_AS(emu, base, 150, 100, [web, None])
-make_stub_AS(emu, base, 151, 100, [web, None])
+Makers.makeStubAs(emu, base, 150, 100, [web, None])
+Makers.makeStubAs(emu, base, 151, 100, [web, None])
 
-make_stub_AS(emu, base, 152, 101, [None, None])
-make_stub_AS(emu, base, 153, 101, [web, None, None])
+Makers.makeStubAs(emu, base, 152, 101, [None, None])
+Makers.makeStubAs(emu, base, 153, 101, [web, None, None])
 
-make_stub_AS(emu, base, 154, 102, [None, web])
+Makers.makeStubAs(emu, base, 154, 102, [None, web])
 
-make_stub_AS(emu, base, 160, 103, [web, None])
-make_stub_AS(emu, base, 161, 103, [web, None])
-make_stub_AS(emu, base, 162, 103, [web, None])
+Makers.makeStubAs(emu, base, 160, 103, [web, None])
+Makers.makeStubAs(emu, base, 161, 103, [web, None])
+Makers.makeStubAs(emu, base, 162, 103, [web, None])
 
-make_stub_AS(emu, base, 163, 104, [web, None])
-make_stub_AS(emu, base, 164, 104, [None, None])
+Makers.makeStubAs(emu, base, 163, 104, [web, None])
+Makers.makeStubAs(emu, base, 164, 104, [None, None])
 
-make_stub_AS(emu, base, 170, 105, [web, None])
-make_stub_AS(emu, base, 171, 105, [None])
+Makers.makeStubAs(emu, base, 170, 105, [web, None])
+Makers.makeStubAs(emu, base, 171, 105, [None])
 
 
 # Add a host with customized IP address to AS-154 
 as154 = base.getAutonomousSystem(154)
 as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129')
+
+
+# Create real-world AS.
+# AS11872 is the Syracuse University's autonomous system
+
+as11872 = base.createAutonomousSystem(11872)
+as11872.createRealWorldRouter('rw').joinNetwork('ix102', '10.102.0.118')
+
+# Allow outside computer to VPN into AS-152's network
+as152 = base.getAutonomousSystem(152)
+as152.getNetwork('net0').enableRemoteAccess(ovpn)
 
 
 ###############################################################################
@@ -91,34 +109,28 @@ as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129')
 # None of them will provide transit service for others. 
 
 ebgp.addRsPeers(100, [2, 3, 4])
-#ebgp.addRsPeers(101, [2, 12, 152, 153])
-#ebgp.addRsPeers(102, [2, 11, 154])
-#ebgp.addRsPeers(103, [3, 160, 161, 162])
-#ebgp.addRsPeers(104, [4, 12, 163, 164])
-#ebgp.addRsPeers(105, [3, 11, 170, 171])
 
-# To buy transit services from another autonomous system, we will use 
-# private peering.  
+# To buy transit services from another autonomous system, 
+# we will use private peering  
 
-private_peering_with_isp(ebgp, 100, 2,  [150, 151])
-private_peering_with_isp(ebgp, 100, 3,  [150, 151])
-private_peering_with_isp(ebgp, 100, 4,  [150, 151])
+ebgp.addPrivatePeerings(100, [2],  [150], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(100, [3],  [151], PeerRelationship.Provider)
 
-private_peering_with_isp(ebgp, 101, 2,  [12])
-private_peering_with_isp(ebgp, 101, 12, [152, 153])
+ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)
 
-private_peering_with_isp(ebgp, 102, 2,  [11, 154])
-private_peering_with_isp(ebgp, 102, 11, [154])
+ebgp.addPrivatePeerings(102, [2],  [11, 154], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(102, [11], [154, 11872], PeerRelationship.Provider)
 
-private_peering_with_isp(ebgp, 103, 3,  [160, 161, 162])
+ebgp.addPrivatePeerings(103, [3],  [160, 161, 162], PeerRelationship.Provider)
 
-private_peering_with_isp(ebgp, 104, 4,  [12])
-private_peering_with_isp(ebgp, 104, 12, [164])
-# We use AS-163 the BGP attacker, it needs to use the "unfiltered" peering
-private_peering_with_isp_unfiltered(ebgp, 104, 4, [163])
+ebgp.addPrivatePeerings(104, [12], [164], PeerRelationship.Provider)
 
-private_peering_with_isp(ebgp, 105, 3,  [11, 170])
-private_peering_with_isp(ebgp, 105, 11, [171])
+# We use AS-163 for BGP attack, it needs to use the "unfiltered" peering
+ebgp.addPrivatePeerings(104, [4],  [163], PeerRelationship.Unfiltered)
+
+ebgp.addPrivatePeerings(105, [3],  [11, 170], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(105, [11], [171], PeerRelationship.Provider)
 
 
 ###############################################################################
