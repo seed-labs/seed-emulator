@@ -47,16 +47,16 @@ ix105.getPeeringLan().setDisplayName('Huston')
 # Create Transit Autonomous Systems 
 
 ## Tier 1 ASes
-Makers.makeTransitAs(base, 2, [100, 101, 102], 
-       [(100, 101), (101, 102)] 
+Makers.makeTransitAs(base, 2, [100, 101, 102, 105], 
+       [(100, 101), (101, 102), (100, 105)] 
 )
 
-Makers.makeTransitAs(base, 3, [100, 103, 105], 
-       [(100, 103), (103, 105), (105, 100)]
+Makers.makeTransitAs(base, 3, [100, 103, 104, 105], 
+       [(100, 103), (100, 105), (103, 105), (103, 104)]
 )
 
-Makers.makeTransitAs(base, 4, [100, 104], 
-       [(100, 104)]
+Makers.makeTransitAs(base, 4, [100, 102, 104], 
+       [(100, 104), (102, 104)]
 )
 
 ## Tier 2 ASes
@@ -109,21 +109,25 @@ as152.getNetwork('net0').enableRemoteAccess(ovpn)
 # None of them will provide transit service for others. 
 
 ebgp.addRsPeers(100, [2, 3, 4])
+ebgp.addRsPeers(102, [2, 4])
+ebgp.addRsPeers(104, [3, 4])
+ebgp.addRsPeers(105, [2, 3])
 
 # To buy transit services from another autonomous system, 
 # we will use private peering  
 
-ebgp.addPrivatePeerings(100, [2],  [150], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(100, [3],  [151], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(100, [2],  [150, 151], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(100, [3],  [150], PeerRelationship.Provider)
 
 ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
 ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)
 
-ebgp.addPrivatePeerings(102, [2],  [11, 154], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(102, [2, 4],  [11, 154], PeerRelationship.Provider)
 ebgp.addPrivatePeerings(102, [11], [154, 11872], PeerRelationship.Provider)
 
 ebgp.addPrivatePeerings(103, [3],  [160, 161, 162], PeerRelationship.Provider)
 
+ebgp.addPrivatePeerings(104, [3, 4], [12], PeerRelationship.Provider)
 ebgp.addPrivatePeerings(104, [12], [164], PeerRelationship.Provider)
 
 # We use AS-163 for BGP attack, it needs to use the "unfiltered" peering
