@@ -130,8 +130,11 @@ class Binding(Printable):
 
         f = self.filter
 
+        assert f.custom == None, 'binding: NEW: custom filter function is not supported with NEW action.'
         assert f.asn == None or f.asn in base.getAsns(), 'binding: NEW: AS{} is set in filter but not in emulator.'.format(f.asn)
         assert f.ip == None or f.prefix == None, 'binding: NEW: both ip and prefix is set. Please set only one of them.'
+
+        if f.allowBound: self.__log('binding: NEW: WARN: allowBound has not effect when using Action.NEW')
 
         asn = f.asn
         netName = None
