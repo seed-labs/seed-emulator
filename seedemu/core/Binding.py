@@ -1,5 +1,7 @@
-from seedemu.core import Printable, Node, Registry, Emulator
-from seedemu.layers import Base
+from __future__ import annotations
+from .Printable import Printable
+from .Emulator import Emulator
+from .Node import Node
 from enum import Enum
 from typing import List, Callable
 from ipaddress import IPv4Network, IPv4Address
@@ -124,7 +126,7 @@ class Binding(Printable):
 
         reg = emulator.getRegistry()
 
-        base: Base = emulator.getLayer('Base')
+        base = emulator.getLayer('Base')
 
         f = self.filter
 
