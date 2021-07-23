@@ -16,39 +16,19 @@ web     = WebService()
 base.createInternetExchange(100)
 
 ###############################################################################
-# Create and set up AS150
+# Create and set up AS150 to AS155
 
-as150 = base.createAutonomousSystem(150)
-as150.createNetwork('net0')
-as150.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
-
-###############################################################################
-# Create and set up AS151
-
-as151 = base.createAutonomousSystem(151)
-as151.createNetwork('net0')
-as151.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
-
-###############################################################################
-# Create and set up AS-152
-
-as152 = base.createAutonomousSystem(152)
-as152.createNetwork('net0')
-as152.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
-
-###############################################################################
-# Peering these ASes at Internet Exchange IX-100
-
-ebgp.addRsPeer(100, 150)
-ebgp.addRsPeer(100, 151)
-ebgp.addRsPeer(100, 152)
+for asn in range(150, 155):
+    asObject = base.createAutonomousSystem(asn)
+    asObject.createNetwork('net0')
+    asObject.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
+    ebgp.addRsPeer(100, asn)
 
 ###############################################################################
 # Create some virtual nodes for web services
 
-web.install('w150')
-web.install('w151')
-web.install('w152')
+for asn in range(150, 155):
+    web.install('w{}'.format(asn))
 
 ###############################################################################
 # Creating bindings with NEW action (creates physical node automatically,
@@ -62,6 +42,9 @@ emu.addBinding(Binding('w151', filter = Filter(asn = 151), action = Action.NEW))
 
 # create physical node with address 10.152.0.71. (since 10.152.0.71 is in AS152, the node will be in AS152)
 emu.addBinding(Binding('w152', filter = Filter(ip = '10.152.0.71'), action = Action.NEW))
+
+# create physical node for the rest of nodes in randomly picked AS, with random nodeName/IP/net.
+emu.addBinding(Binding('w.*', action = Action.NEW))
 
 ###############################################################################
 # Rendering 
