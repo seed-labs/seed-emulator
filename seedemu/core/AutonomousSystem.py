@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .Graphable import Graphable
 from .Printable import Printable
 from .Network import Network
@@ -26,6 +27,8 @@ class AutonomousSystem(Printable, Graphable, Configurable):
     __hosts: Dict[str, Node]
     __nets: Dict[str, Network]
 
+    __name_servers: List[str]
+
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
         @brief AutonomousSystem constructor.
@@ -39,6 +42,30 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         self.__nets = {}
         self.__asn = asn
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
+        self.__name_servers = []
+
+    def setNameServers(self, servers: List[str]) -> AutonomousSystem:
+        """!
+        @brief set recursive name servers to use on nodes in this AS. Overwrites
+        emulator-level settings.
+
+        @param servers list of IP addresses of recursive name servers. Set to
+        empty list to use default (i.e., do not change, or use emulator-level
+        settings)
+
+        @returns self, for chaining API calls.
+        """
+        self.__name_servers = servers
+
+        return self
+
+    def getNameServers(self) -> List[str]:
+        """!
+        @brief get configured recursive name servers for nodes in this AS.
+
+        @returns list of IP addresses of recursive name servers
+        """
+        return self.__name_servers
 
     def getPrefixList(self) -> List[str]:
         """!
@@ -96,8 +123,17 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
         @param emulator emulator to configure nodes in.
         """
-        for host in self.__hosts.values(): host.configure(emulator)
-        for router in self.__routers.values(): router.configure(emulator)
+        for host in self.__hosts.values():
+            if len(host.getNameServers()) == 0:
+                host.setNameServers(self.__name_servers)
+            
+            host.configure(emulator)
+        
+        for router in self.__routers.values():
+            if len(router.getNameServers()) == 0:
+                router.setNameServers(self.__name_servers)
+
+            router.configure(emulator)
 
     def getAsn(self) -> int:
         """!

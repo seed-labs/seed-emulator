@@ -223,6 +223,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __shared_folders: Dict[str, str]
     __persistent_storages: List[str] 
 
+    __name_servers: List[str]
+
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
         @brief Node constructor.
@@ -256,6 +258,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         for soft in DEFAULT_SOFTWARES:
             self.__common_software.add(soft)
+
+        self.__name_servers = []
 
     def configure(self, emulator: Emulator):
         """!
@@ -308,6 +312,36 @@ class Node(Printable, Registrable, Configurable, Vertex):
                 net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False) # TODO: XC nets w/ direct flag?
                 self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
                 self.__xcs[(peername, peerasn)] = (localaddr, netname)
+
+        if len(self.__name_servers) == 0:
+            return
+        
+        self.appendStartCommand(': > /etc/resolv.conf')
+        for s in self.__name_servers:
+            self.appendStartCommand('echo "nameserver {}" >> /etc/resolv.conf'.format(s))
+
+    def setNameServers(self, servers: List[str]) -> Node:
+        """!
+        @brief set recursive name servers to use on this node. Overwrites
+        AS-level and emulator-level settings.
+
+        @param servers list of IP addresses of recursive name servers. Set to
+        empty list to use default (i.e., do not change, or use
+        AS-level/emulator-level settings)
+
+        @returns self, for chaining API calls.
+        """
+        self.__name_servers = servers
+
+        return self
+
+    def getNameServers(self) -> List[str]:
+        """!
+        @brief get configured recursive name servers on this node.
+
+        @returns list of IP addresses of recursive name servers
+        """
+        return self.__name_servers
 
     def addPort(self, host: int, node: int, proto: str = 'tcp') -> Node:
         """!
