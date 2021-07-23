@@ -1,18 +1,18 @@
 # Labs Based on Internet Emulator
 
-The objective of this project is two-fold: (1) create education-oriented 
-Internet emulators, and (2) develop hands-on lab exercises based on the emulators. 
-The needs from these labs will also help drive the development of the 
+The objective of this project is two-fold: (1) create education-oriented
+Internet emulators, and (2) develop hands-on lab exercises based on the emulators.
+The needs from these labs will also help drive the development of the
 emulator. This folder hold the labs developed from this project.
 We welcome contribution from the community.
 
-In this document, we provide some initial lab ideas that could benefit from the emulators. 
-New ideas are welcome and they will constantly be added to this wish list. 
+In this document, we provide some initial lab ideas that could benefit from the emulators.
+New ideas are welcome and they will constantly be added to this wish list.
 
 ## BGP Related Labs 
 
-These will be a series of labs that help students understand 
-how BGP works and how it can be attacked. It can be used for teaching the 
+These will be a series of labs that help students understand
+how BGP works and how it can be attacked. It can be used for teaching the
 following:
 
 - How BGP works in the real world
@@ -22,7 +22,7 @@ following:
 ## Yesterday-Once-More Labs 
 
 These labs will recreate interesting cybersecurity 
-incidents happened in the past, including attacks, mistakes, and disasters.  
+incidents happened in the past, including attacks, mistakes, and disasters.
 We would like to take students back to the past to experience, observe,
 or even change the "history". These will be a series of labs,
 one for each past incident. Here is the list of ideas:
@@ -41,7 +41,7 @@ one for each past incident. Here is the list of ideas:
 
 ## Blockchain and Smart Contract Labs
 
-We are currently implement the Blockchain service. Using this service, 
+We are currently implement the Blockchain service. Using this service,
 we can build a blockchain component, which is essentially an overlay network 
 with the nodes running the Ethereum software. This example demonstrates
 how the needs for lab development can drive the development of the Emulator software.
