@@ -6,7 +6,6 @@ a DNS component. This component can be loaded into other emulators, which
 means deploying the DNS infrastructure in those emulators. 
 In this mini DNS, we created the following nameservers:
 
-- 
 - Root servers: `a-root-server` and `b-root-server`
 - COM servers: `a-com-server` and `b-com-server`
 - NET server: `a-net-server`
@@ -24,7 +23,7 @@ In this mini DNS, we created the following nameservers:
 We will create the DNS infrastructure at the DNS layer, 
 so each node created is a virtual node, which is not bound to
 any physical node. This is very important, because we are building
-a component, which can be deployed in different emulator. 
+a component, which can be deployed in different emulators. 
 
 ```
 dns.install('a-root-server').addZone('.').setMaster()   # Master server

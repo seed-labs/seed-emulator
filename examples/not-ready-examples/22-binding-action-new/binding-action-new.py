@@ -41,7 +41,7 @@ emu.addBinding(Binding('w150', filter = Filter(nodeName = 'web', asn = 150), act
 emu.addBinding(Binding('w151', filter = Filter(asn = 151), action = Action.NEW))
 
 # create physical node with address 10.152.0.71. (since 10.152.0.71 is in AS152, the node will be in AS152)
-emu.addBinding(Binding('w152', filter = Filter(ip = '10.152.0.71'), action = Action.NEW))
+emu.addBinding(Binding('w152', filter = Filter(ip = '10.152.0.81'), action = Action.NEW))
 
 # create physical node for the rest of nodes in randomly picked AS, with random nodeName/IP/net.
 emu.addBinding(Binding('w.*', action = Action.NEW))

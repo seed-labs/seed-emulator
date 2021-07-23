@@ -94,10 +94,20 @@ However, the `/etc/resolve.conf` is dynamically updated after the container
 has started, so we cannot add this record when we build the container. 
 Our solution is to create a hook, which adds a command to the 
 container startup script, so adding the local DNS server record
-can be done after the container starts. 
+can be done after the container starts. We have created the following 
+APIs to allow users to set the local DNS server at the emulator, AS,
+and node levels. 
 
 ```
-emu.addHook(ResolvConfHook(['10.153.0.53']))
+# At the AS level
+base.getAutonomousSystem(160).setNameServers(['10.152.0.53'])
+base.getAutonomousSystem(170).setNameServers(['10.152.0.53'])
+
+# At the emulator level
+base.setNameServers(['10.153.0.53'])
+
+# At the node level (not included in the example)
+node.setNameServers(['10.152.0.53'])
 ```
 
 
@@ -121,33 +131,4 @@ emu.render()
 emu.getBindingFor('a-root-server').setDisplayName('A-Root')
 emu.getBindingFor('global-dns').setDisplayName('Global DNS')
 ```
-
-
-## Suggestions
-
-- (Priority: High): Several DNS-related APIs should return `self` to allow API chaining.
-  For example, `addZone()`, `setMaster()`, `addRecord()`, etc. Typically, these set-APIs
-  do not return anything. If we let them return `self`, we can do the following:
-  ```
-  xyz.addRecord().addRecord().addRecord()
-  abc.addZone().setMaster()
-  ```
-
-
-- (Priority: Low): During the binding, use `Action.NEW` to bind a virtual node to a new 
-  physical node, i.e., the node needs to be created.
-
-- (Priority: Low): The way to set the local DNS server is not clear. 
-  I hope to be able to do the 
-  following: the `localDNS` argument could be an IP address (physical node) 
-  or a virtual node name, the `overwrite` option indicates whether to overwrite 
-  the existing setting if a node already has set the local DNS:
-  - `emu.setLocalDNS(localDNS, overwrite=true/false)`: 
-     set the local DNS for the entire emulation. This will be a wrapper of 
-     the `addHook` API (we will keep `addHook` public because it could be 
-     quite useful for other scenarios).
-
-  - `as.setLocalDNS()`: for the entire autonomous system
-  - `network.setLocalDNS()`: for the entire network
-  - `node.setLocalDNS()`: for a node
 

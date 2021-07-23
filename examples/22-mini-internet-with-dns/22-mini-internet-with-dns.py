@@ -37,23 +37,27 @@ emu.addBinding(Binding('ns-syr-edu', filter=Filter(asn=164), action=Action.FIRST
 emu.addBinding(Binding('ns-weibo-cn', filter=Filter(asn=170), action=Action.FIRST))
 
 #####################################################################################
-# Create a local DNS server (virtual node). We will use this server
-# as the local DNS server for all the nodes in the emulator.
+# Create two local DNS servers (virtual node).
 ldns = DomainNameCachingService()
-ldns.install('global-dns')
+ldns.install('global-dns-1')
+ldns.install('global-dns-2')
 
-# Create a new host in AS-153, use it to host the local DNS server.
+# Create two new host in AS-152 and AS-153, use them to host the local DNS server.
 # We can also host it on an existing node.
 base: Base = emu.getLayer('Base')
+as152 = base.getAutonomousSystem(152)
+as152.createHost('local-dns-1').joinNetwork('net0', address = '10.152.0.53')
 as153 = base.getAutonomousSystem(153)
-as153.createHost('local-dns').joinNetwork('net0', address = '10.153.0.53')
-emu.addBinding(Binding('global-dns', filter = Filter(asn=153, nodeName="local-dns")))
+as153.createHost('local-dns-2').joinNetwork('net0', address = '10.153.0.53')
+emu.addBinding(Binding('global-dns-1', filter = Filter(asn=152, nodeName="local-dns-1")))
+emu.addBinding(Binding('global-dns-2', filter = Filter(asn=153, nodeName="local-dns-2")))
 
-# Add 10.153.0.53 as the local DNS server for all the nodes in the emulation
-# We need to use the hook approach, because this setting is added to a container
-# as the container boots up, so we cannot add it when building the container.
-# Using the hook approach, we can run commands on a container after it starts.
-emu.addHook(ResolvConfHook(['10.153.0.53']))
+# Add 10.152.0.53 as the local DNS server for AS-160 and AS-170
+# Add 10.153.0.53 as the local DNS server for all the other nodes
+# We can also set this for individual nodes
+base.getAutonomousSystem(160).setNameServers(['10.152.0.53'])
+base.getAutonomousSystem(170).setNameServers(['10.152.0.53'])
+base.setNameServers(['10.153.0.53'])
 
 # Add the ldns layer
 emu.addLayer(ldns)
@@ -82,7 +86,8 @@ emu.getBindingFor('ns-example-net').setDisplayName('Example')
 emu.getBindingFor('ns-syr-edu').setDisplayName('Syracuse')
 emu.getBindingFor('ns-weibo-cn').setDisplayName('微博')
 
-emu.getBindingFor('global-dns').setDisplayName('Global DNS')
+emu.getBindingFor('global-dns-1').setDisplayName('Global DNS-1')
+emu.getBindingFor('global-dns-2').setDisplayName('Global DNS-2')
 
 
 ###############################################
