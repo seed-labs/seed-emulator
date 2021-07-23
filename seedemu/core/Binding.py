@@ -130,7 +130,7 @@ class Binding(Printable):
 
         f = self.filter
 
-        assert f.asn in base.getAsns(), 'binding: NEW: AS{} is set in filter but not in emulator.'.format(f.asn)
+        assert f.asn == None or f.asn in base.getAsns(), 'binding: NEW: AS{} is set in filter but not in emulator.'.format(f.asn)
         assert f.ip == None or f.prefix == None, 'binding: NEW: both ip and prefix is set. Please set only one of them.'
 
         asn = f.asn
