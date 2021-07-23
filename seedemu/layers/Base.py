@@ -1,3 +1,4 @@
+from __future__ import annotations
 from seedemu.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Emulator, Layer
 from typing import Dict, List
 
@@ -40,6 +41,8 @@ class Base(Layer, Graphable):
     __ases: Dict[int, AutonomousSystem]
     __ixes: Dict[int, InternetExchange]
 
+    __name_servers: List[str]
+
     def __init__(self):
         """!
         @brief Base layer constructor.
@@ -47,13 +50,18 @@ class Base(Layer, Graphable):
         super().__init__()
         self.__ases = {}
         self.__ixes = {}
+        self.__name_servers = []
 
     def getName(self) -> str:
         return "Base"
 
     def configure(self, emulator: Emulator):
         self._log('registering nodes...')
-        for asobj in self.__ases.values(): asobj.registerNodes(emulator)
+        for asobj in self.__ases.values():
+            if len(asobj.getNameServers()) == 0:
+                asobj.setNameServers(self.__name_servers)
+
+            asobj.registerNodes(emulator)
 
         self._log('setting up internet exchanges...')
         for ix in self.__ixes.values(): ix.configure(emulator)
@@ -81,6 +89,27 @@ class Base(Layer, Graphable):
 
     def render(self, emulator: Emulator) -> None:
         pass
+
+    def setNameServers(self, servers: List[str]) -> Base:
+        """!
+        @brief set recursive name servers to use on all nodes. Can be override
+        by calling setNameServers at AS level or node level.
+
+        @param servers list of IP addresses of recursive name servers. 
+
+        @returns self, for chaining API calls.
+        """
+        self.__name_servers = servers
+
+        return self
+
+    def getNameServers(self) -> List[str]:
+        """!
+        @brief get configured recursive name servers for all nodes.
+
+        @returns list of IP addresses of recursive name servers
+        """
+        return self.__name_servers
 
     def createAutonomousSystem(self, asn: int) -> AutonomousSystem:
         """!
