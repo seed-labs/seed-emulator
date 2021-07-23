@@ -34,18 +34,10 @@ figure out where you can best be helpful.
     
 - **Developing lab exercises**. The emulator created from this project is 
   intended for being used as a platform for lab exercises, especially in
-  the field of cybersecurity and networking. You can help 
+  the field of cybersecurity and networking. The proposed lab ideas
+  can be found in the [labs/](./labs/) folder. You can help develop
+  these labs or propose new ideas. 
 
-  - *Yesterday-Once-More Labs*: recreating those interesting cybersecurity incidents
-    happened in the past, so we can take students back to the past to experience, 
-    participate, or even change the "history". 
-  - *Blockchain and Smart Contract Lab*: we can deploy a customized blockchain
-    inside an emulator, and design labs to attack smart contract.
-  - *Morris Worm Lab*: recreate the Morris Worm, and see release it inside the emulator.
-    We do need to install vulnerable software on all the nodes. 
-  - *BGP Attack Lab*  
-  - *Botnet Lab*
-  - *Darknet Lab*
 
 ## Community
 
