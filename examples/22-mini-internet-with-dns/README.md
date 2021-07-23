@@ -94,10 +94,20 @@ However, the `/etc/resolve.conf` is dynamically updated after the container
 has started, so we cannot add this record when we build the container. 
 Our solution is to create a hook, which adds a command to the 
 container startup script, so adding the local DNS server record
-can be done after the container starts. 
+can be done after the container starts. We have created the following 
+APIs to allow users to set the local DNS server at the emulator, AS,
+and node levels. 
 
 ```
-emu.addHook(ResolvConfHook(['10.153.0.53']))
+# At the AS level
+base.getAutonomousSystem(160).setNameServers(['10.152.0.53'])
+base.getAutonomousSystem(170).setNameServers(['10.152.0.53'])
+
+# At the emulator level
+base.setNameServers(['10.153.0.53'])
+
+# At the node level (not included in the example)
+node.setNameServers(['10.152.0.53'])
 ```
 
 
