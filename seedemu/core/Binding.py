@@ -208,6 +208,9 @@ class Binding(Printable):
         # create the host in as
         host = asObject.createHost(nodeName)
 
+        # set name servers
+        host.setNameServers(asObject.getNameServers())
+
         # join net
         host.joinNetwork(netName, 'auto' if f.ip == None else f.ip)
 
@@ -216,8 +219,6 @@ class Binding(Printable):
 
         # configure - usually this is done by AS in configure stage, since we have passed that point, we need to do it ourself.
         host.configure(emulator)
-
-        self.__created = host
 
         return host
 
