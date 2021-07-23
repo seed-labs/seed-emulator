@@ -1,9 +1,12 @@
-from seedemu.core import Printable, Node, Registry
+from __future__ import annotations
+from .Printable import Printable
+from .Emulator import Emulator
+from .Node import Node
 from enum import Enum
 from typing import List, Callable
-from ipaddress import IPv4Network
+from ipaddress import IPv4Network, IPv4Address
 from sys import stderr
-import re, random
+import re, random, string
 
 class Action(Enum):
     """!
@@ -18,6 +21,11 @@ class Action(Enum):
 
     ## pick the last candidate.
     LAST = 2
+
+    ## create a node matching the given conditions. Note that 'NEW' nodes are
+    # only created during render, and attempt to resolve it beforehand
+    # (like resolvVnode) is not possible.
+    NEW = 3
 
 class Filter(Printable):
     """!
@@ -108,6 +116,109 @@ class Binding(Printable):
         ## physical node filter.
         self.filter = filter
 
+    def __create(self, emulator: Emulator) -> Node:
+        """!
+        @brief create a node matching given condition.
+
+        @returns node created.
+        """
+        self.__log('binding: NEW: try to create a node matching filter condition(s)...')
+
+        reg = emulator.getRegistry()
+
+        base = emulator.getLayer('Base')
+
+        f = self.filter
+
+        assert f.asn == None or f.asn in base.getAsns(), 'binding: NEW: AS{} is set in filter but not in emulator.'.format(f.asn)
+        assert f.ip == None or f.prefix == None, 'binding: NEW: both ip and prefix is set. Please set only one of them.'
+
+        asn = f.asn
+        netName = None
+
+        # ip is set: find net matching the condition.
+        if f.ip != None:
+            self.__log('binding: NEW: IP {} is given to host: finding networks with this IP in range.'.format(f.ip))
+            for _asn in base.getAsns():
+                hit = False
+                if f.asn != None and f.asn != _asn: continue
+                
+                asObject = base.getAutonomousSystem(_asn)
+                for net in asObject.getNetworks():
+                    netObject = asObject.getNetwork(net)
+
+                    if IPv4Address(f.ip) in netObject.getPrefix():
+                        self.__log('match found: as{}/{}'.format(_asn, net))
+                        asn = _asn
+                        netName = net
+                        hit = True
+                        break
+
+                if hit: break
+        
+        # prefix is set: find net matching the condition
+        if f.prefix != None:
+            self.__log('binding: NEW: Prefix {} is given to host: finding networks in range.'.format(f.prefix))
+
+            for _asn in base.getAsns():
+                hit = False
+                if f.asn != None and f.asn != _asn: continue
+                
+                asObject = base.getAutonomousSystem(_asn)
+                for net in asObject.getNetworks():
+                    netObject = asObject.getNetwork(net)
+
+                    if IPv4Network(f.prefix).overlaps(netObject.getPrefix()):
+                        self.__log('binding: NEW: match found: as{}/{}'.format(_asn, net))
+                        asn = _asn
+                        netName = net
+                        hit = True
+                        break
+
+                if hit: break
+
+        if f.prefix != None or f.ip != None:
+            assert netName != None, 'binding: NEW: cannot satisfy prefix/ip rule set by filter.'
+        
+        # no as selected: randomly choose one
+        if asn == None:
+            asn = random.choice(base.getAsns())
+            self.__log('binding: NEW: asn not set, using random as: {}'.format(asn))
+
+        asObject = base.getAutonomousSystem(asn)
+
+        # no net selected: randomly choose one
+        if netName == None:
+            netName = random.choice(asObject.getNetworks())
+            self.__log('binding: NEW: ip/prefix not set, using random net: as{}/{}'.format(asn, netName))
+
+
+        nodeName = f.nodeName
+        
+        # no nodename given: randomly create one
+        if nodeName == None:
+            nodeName = ''.join(random.choice(string.ascii_letters) for i in range(10))
+            self.__log('binding: NEW: nodeName not set, using random name: {}'.format(nodeName))
+
+        self.__log('binding: NEW: creating new host...'.format(nodeName))
+
+        # create the host in as
+        host = asObject.createHost(nodeName)
+
+        # join net
+        host.joinNetwork(netName, 'auto' if f.ip == None else f.ip)
+
+        # register - usually this is done by AS in configure stage, since we have passed that point, we need to do it ourself.
+        reg.register(str(asn), 'hnode', nodeName, host)
+
+        # configure - usually this is done by AS in configure stage, since we have passed that point, we need to do it ourself.
+        host.configure(emulator)
+
+        self.__created = host
+
+        return host
+
+
     def shoudBind(self, vnode: str) -> bool:
         """!
         @brief test if this binding applies to a virtual node.
@@ -118,14 +229,14 @@ class Binding(Printable):
         """
         return re.compile(self.source).match(vnode)
 
-    def getCandidate(self, vnode: str, registry: Registry, peek: bool = False) -> Node:
+    def getCandidate(self, vnode: str, emulator: Emulator, peek: bool = False) -> Node:
         """!
-        @brief get a binding candidate from given registry. Note that this will
+        @brief get a binding candidate from given emulator. Note that this will
         make change to the node by adding a "bound =  true" attribute to the
         node object.
 
         @param vnode name of vnode
-        @param registry registry to select candidate from. 
+        @param emulator emulator to select candidate from. 
         @param peek (optional) peek mode - ignore bound attribute and don't set
         it when node is selected.
 
@@ -133,6 +244,16 @@ class Binding(Printable):
         """
         if not self.shoudBind(vnode): return None
         self.__log('looking for binding for {}'.format(vnode))
+
+        if self.action == Action.NEW:
+            if peek: return None
+
+            node = self.__create(emulator)
+            node.setAttribute('bound', True)
+
+            return node
+            
+        registry = emulator.getRegistry()
 
         candidates: List[Node] = []
 

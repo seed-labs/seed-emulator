@@ -264,7 +264,7 @@ class Emulator:
         """
         if vnode in self.__resolved_bindings: return self.__resolved_bindings[vnode]
         for binding in self.getBindings():
-            pnode = binding.getCandidate(vnode, self.__registry, True)
+            pnode = binding.getCandidate(vnode, self, True)
             if pnode == None: continue
             return pnode
         assert False, 'cannot resolve vnode {}'.format(vnode)
@@ -341,7 +341,7 @@ class Emulator:
         for binding in self.getBindings():
             for vnode in vnodes:
                 if vnode in self.__resolved_bindings: continue
-                pnode = binding.getCandidate(vnode, self.__registry)
+                pnode = binding.getCandidate(vnode, self)
                 if pnode == None: continue
                 self.__log('vnode {} bound to as{}/{}'.format(vnode, pnode.getAsn(), pnode.getName()))
                 self.__resolved_bindings[vnode] = pnode
