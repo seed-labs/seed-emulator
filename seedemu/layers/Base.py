@@ -183,7 +183,7 @@ class Base(Layer, Graphable):
 
         @returns List of ASNs.
         """
-        return self.__ases.keys()
+        return list(self.__ases.keys())
 
     def getInternetExchangeIds(self) -> List[int]:
         """!
@@ -191,7 +191,7 @@ class Base(Layer, Graphable):
 
         @returns List of IX IDs.
         """
-        return self.__ixes.keys()
+        return list(self.__ixes.keys())
 
     def _doCreateGraphs(self, emulator: Emulator):
         graph = self._addGraph('Layer 2 Connections', False)
