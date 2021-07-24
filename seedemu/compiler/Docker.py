@@ -13,7 +13,6 @@ DockerCompilerFileTemplates: Dict[str, str] = {}
 DockerCompilerFileTemplates['dockerfile'] = """\
 FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
-RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc
 RUN echo 'exec zsh' > /root/.bashrc
 """
 
@@ -500,6 +499,8 @@ class Docker(Compiler):
 
         soft = node.getSoftwares()
         if len(soft) > 0: dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(soft)))
+
+        dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
 
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
