@@ -20,7 +20,7 @@ python3 client.py
 BotnetServerFileTemplates['server_init_script'] = '''\
 #!/bin/bash
 cd /tmp/byob/byob
-echo -e 'exit\\ny' | python3 server.py --port $1
+echo -e 'exit\\ny' | python3 server.py --port $2
 python3 client.py --name 'client' $1 $2
 '''
 
@@ -118,8 +118,14 @@ class BotnetClientServer(Server):
     def install(self, node: Node):
         assert self.__server != None, 'botnet-client on as{}/{} has no server configured!'.format(node.getAsn(), node.getName())
 
-        # botnet-client needs py3.
-        node.addSoftware('python3')
+        # get dependencies
+        node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') 
+
+        # get byob
+        node.addBuildCommand('curl https://raw.githubusercontent.com/malwaredllc/byob/master/byob/requirements.txt > /tmp/byob-requirements.txt')
+
+        # get byob dependencies
+        node.addBuildCommand('pip3 install -r /tmp/byob-requirements.txt')
 
         # script to get dropper from server.
         node.setFile('/client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner'])
