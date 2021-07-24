@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
 from seedemu.core import Emulator
 from seedemu.mergers import DEFAULT_MERGERS
 from seedemu.layers import Base, Routing, Ebgp

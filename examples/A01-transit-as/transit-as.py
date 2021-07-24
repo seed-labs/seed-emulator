@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
 from seedemu.services import WebService
 from seedemu.core import Emulator, Binding, Filter

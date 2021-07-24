@@ -31,8 +31,8 @@ emulator. It consists of three steps:
 ## Loading the DNS Infrastructure and Base Network
 
 ```
-emuA.load('../20-mini-internet/base-component.bin')
-emuB.load('../21-dns-component/dns-component.bin')
+emuA.load('../B00-mini-internet/base-component.bin')
+emuB.load('../B01-dns-component/dns-component.bin')
 emu = emuA.merge(emuB, DEFAULT_MERGERS)
 ```
 

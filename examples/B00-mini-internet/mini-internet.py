@@ -128,18 +128,16 @@ ebgp.addPrivatePeerings(102, [11], [154, 11872], PeerRelationship.Provider)
 ebgp.addPrivatePeerings(103, [3],  [160, 161, 162], PeerRelationship.Provider)
 
 ebgp.addPrivatePeerings(104, [3, 4], [12], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(104, [4],  [163], PeerRelationship.Provider)
 ebgp.addPrivatePeerings(104, [12], [164], PeerRelationship.Provider)
-
-# We use AS-163 for BGP attack, it needs to use the "unfiltered" peering
-ebgp.addPrivatePeerings(104, [4],  [163], PeerRelationship.Unfiltered)
 
 ebgp.addPrivatePeerings(105, [3],  [11, 170], PeerRelationship.Provider)
 ebgp.addPrivatePeerings(105, [11], [171], PeerRelationship.Provider)
 
 
 ###############################################################################
-# Add layers to the emulator, render and compile
 
+# Add layers to the emulator
 emu.addLayer(base)
 emu.addLayer(routing)
 emu.addLayer(ebgp)
@@ -147,10 +145,10 @@ emu.addLayer(ibgp)
 emu.addLayer(ospf)
 emu.addLayer(web)
 
-# Save it to a component file
+# Save it to a component file, so it can be used by other emulators
 emu.dump('base-component.bin')
 
-# Generate the docker files
+# Uncomment the following if you want to generate the final emulation files
 #emu.render()
 #emu.compile(Docker(), './output')
 

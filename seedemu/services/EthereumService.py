@@ -106,7 +106,7 @@ class EthereumServer(Server):
         node.addBuildCommand('add-apt-repository ppa:ethereum/ethereum')
 
         # install geth and bootnode
-        node.addBuildCommand('apt-get install --yes geth bootnode')
+        node.addBuildCommand('apt-get update && apt-get install --yes geth bootnode')
 
         # set the data directory
         datadir_option = "--datadir /root/.ethereum"
