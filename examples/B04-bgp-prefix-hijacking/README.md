@@ -41,12 +41,12 @@ the Internet.
 
 
 ```
-protocol static {
+protocol static hijacks {
     ipv4 {
         table t_bgp;
     };
-    route 10.153.0.0/25 blackhole;
-    route 10.153.0.128/25 blackhole;
+    route 10.153.0.0/25 blackhole   { bgp_large_community.add(LOCAL_COMM); };
+    route 10.153.0.128/25 blackhole { bgp_large_community.add(LOCAL_COMM); };
 }
 ```
 
