@@ -1,6 +1,6 @@
 # Transit AS (MPLS)
 
-This topology of this example is exactly the same as that in `01-transit-as`. 
+This topology of this example is exactly the same as that in `A01-transit-as`. 
 The only difference in this example is that we will now use MPLS instead of OSPF and
 IBGP in the transit network. With MPLS, non-edge routers don't need to carry
 the BGP routing table at all. Non-edge routes only need to keep track of a

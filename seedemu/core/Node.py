@@ -12,7 +12,7 @@ from typing import List, Dict, Set, Tuple
 from string import ascii_letters
 from random import choice
 
-DEFAULT_SOFTWARES: List[str] = ['curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc']
+DEFAULT_SOFTWARE: List[str] = ['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat']
 
 class File(Printable):
     """!
@@ -256,7 +256,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__shared_folders = {}
         self.__persistent_storages = []
 
-        for soft in DEFAULT_SOFTWARES:
+        for soft in DEFAULT_SOFTWARE:
             self.__common_software.add(soft)
 
         self.__name_servers = []

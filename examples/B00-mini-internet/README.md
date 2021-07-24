@@ -1,9 +1,15 @@
 # Mini Internet
 
 This is a comprehensive example. It creates 6 Internet exchanges,
-5 transit ASes, and 12 stub ASes. The emulator generated from this 
-example is saved to a component file, and be used by 
-several other examples as the basis.
+5 transit ASes, and 12 stub ASes. One of the ASes (`AS-11872`) is a real-world
+autonomous system, which announces the real-work network prefixes 
+to the emulator. Packets to these prefixes will be routed out to the 
+real Internet. Another AS (`AS-152`) allows machines from the outside
+to join the emulation (via VPN), so they can interact with the machines
+inside the emulator.
+
+The emulator generated from this example is saved to a component file, 
+and be used by several other examples as the basis.
 
 
 ## Using Utility Functions

@@ -77,7 +77,7 @@ class Routing(Layer):
         """
         node.addBuildCommand('mkdir -p /usr/share/doc/bird2/examples/')
         node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
-        node.addBuildCommand('apt-get install -y --no-install-recommends bird2')
+        node.addBuildCommand('apt-get update && apt-get install -y --no-install-recommends bird2')
 
     def configure(self, emulator: Emulator):
         reg = emulator.getRegistry()
