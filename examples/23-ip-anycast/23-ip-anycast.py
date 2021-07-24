@@ -7,29 +7,35 @@ from seedemu.layers import Base, Ebgp, PeerRelationship
 
 emu = Emulator()
 
-# Load the pre-built components and merge them
+# Load the pre-built component
 emu.load('../20-mini-internet/base-component.bin')
-
-# Create a new AS, AS-180, but 
 base: Base = emu.getLayer('Base')
-as180 = base.createAutonomousSystem(180)
-
-as180.createNetwork('net0', '10.180.0.0/24')
-as180.createHost('host-0').joinNetwork('net0', address = '10.180.0.100')
-as180.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
-
-as180.createNetwork('net1', '10.180.0.0/24')
-as180.createHost('host-1').joinNetwork('net1', address = '10.180.0.100')
-as180.createRouter('router1').joinNetwork('net1').joinNetwork('ix105')
-
-# Peer with others
 ebgp: Ebgp = emu.getLayer('Ebgp')
-ebgp.addPrivatePeerings(100, [4],  [180], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(105, [3],  [180], PeerRelationship.Provider)
+
+# Create a new AS with two disjoint networks, but the
+# IP prefix of these two networks are the same.
+as180 = base.createAutonomousSystem(180)
+as180.createNetwork('net0', '10.180.0.0/24')
+as180.createNetwork('net1', '10.180.0.0/24')
+
+# Create a host on each network, but assign them the same IP address
+as180.createHost('host-0').joinNetwork('net0', address = '10.180.0.100')
+as180.createHost('host-1').joinNetwork('net1', address = '10.180.0.100')
+
+# Attach one network to IX-100 (via BGP router)
+# Peer AS-180 with AS-3 and AS-4
+as180.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
+ebgp.addPrivatePeerings(100, [3, 4],  [180], PeerRelationship.Provider)
+
+# Attach the other network to IX-105 (via a different BGP router)
+# Peer AS-180 with AS-2 and AS-3
+as180.createRouter('router1').joinNetwork('net1').joinNetwork('ix105')
+ebgp.addPrivatePeerings(105, [2, 3],  [180], PeerRelationship.Provider)
 
 
 ###############################################
-
 emu.render()
+
+# We need to set the selfManagedNetwork option to True (see README)
 emu.compile(Docker(selfManagedNetwork=True), './output')
 
