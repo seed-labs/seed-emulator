@@ -16,10 +16,11 @@ bot_client = BotnetClientService() # Create botnet client service instance
 base = emu.getLayer('Base') 
 hosts = base.getAutonomousSystem(150).getHosts() 
 
-bot.install("c2_server")
-emu.addBinding(Binding("c2_server", filter = Filter(asn = 150, nodeName=hosts[0], allowBound=True)))
-
 c2_server_ip = "10.150.0.71"
+
+bot.install("c2_server")
+emu.addBinding(Binding("c2_server", filter = Filter(ip = c2_server_ip, allowBound = True)))
+
 
 for asn in [151,152,153,154]:
     vname = "bot" + str(asn)
