@@ -1,7 +1,7 @@
 # IP Anycast 
 
 The purpose of this example is to demonstrate the IP anycast feature.
-We will use the emulator from example-20 as the base. 
+We will use the emulator from example-B00 as the base. 
 The IP anycast technology allows multiple computers on the Internet to have 
 the same IP address. When another machine sends a packet to this IP address,
 one of the computers will get the packet. Exactly which one will 

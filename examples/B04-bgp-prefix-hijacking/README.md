@@ -2,7 +2,7 @@
 
 This example demonstrates how to launch the network prefix hijacking
 attack inside the emulator. It uses the mini-Internet built from 
-Example-20 as the base.
+Example-B00 as the base.
 
 
 # Creating a Malicious Autonomous System
@@ -89,7 +89,7 @@ It will be more fun to launch such an attack on the real autonomous system,
 but without doing real damages to the real world. This is made possible 
 by the emulator. We can add a real-world autonomous system inside the emulator.
 
-The emulator built by Example-20 already includes a real-world AS, `AS-11872`.
+The emulator built by Example-B00 already includes a real-world AS, `AS-11872`.
 It announces several network prefixes to the emulator, and these network 
 prefixes are real and they are owned by the real-world `AS-11872`. 
 Inside the emulator, packets going to these network prefixes 
