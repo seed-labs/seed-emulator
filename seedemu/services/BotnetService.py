@@ -35,6 +35,7 @@ class BotnetServer(Server):
         """!
         @brief BotnetServer constructor.
         """
+        super().__init__()
         self.__port = 445
 
     def setPort(self, port: int) -> BotnetServer:
@@ -93,7 +94,9 @@ class BotnetClientServer(Server):
         """!
         @brief BotnetClient constructor.
         """
-        self.__module = []
+        super().__init__()
+        self.__server = None
+        self.__port = 446
 
     def setServer(self, server: str, port: int = 446) -> BotnetClientServer:
         """!
@@ -113,6 +116,8 @@ class BotnetClientServer(Server):
         return self
 
     def install(self, node: Node):
+        assert self.__server != None, 'botnet-client on as{}/{} has no server configured!'.format(node.getAsn(), node.getName())
+
         # botnet-client needs py3.
         node.addSoftware('python3')
 
