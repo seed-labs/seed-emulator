@@ -19,8 +19,10 @@ following:
   aspects of BGP, such as peering agreement, tier status of autonomous system. 
   There were many disputes related to BGP (mostly due to the business interests),
   maybe we can recreate some of the disputes in the emulation.
-- How IP anycast is supported (used by DNS root servers) 
-- BGP attacks: Network prefix hijacking
+- How IP anycast is supported (used by DNS root servers): 
+  see [Example-23](/examples/23-ip-anycast). 
+- BGP attacks: Network prefix hijacking:
+  see [Example-24](/examples/24-bgp-prefix-hijacking). 
 
 ## Yesterday-Once-More Labs 
 
@@ -49,7 +51,9 @@ See examples 21 and 22. It can be used to teach the following:
   This lab is intended to help student understand how DNS really works
   in the real world. We will design activities to help students understand 
   the technologies, such as IP anycast for root servers, domain registration,
-  setting up nameserver, etc. 
+  setting up nameserver, etc.  
+  See [Example-21](/examples/21-dns-component) and 
+  [Example-22](22-mini-internet-with-dns)
 - Various DNS attacks: the DNS cache poisoning attack and DNS rebinding attack are
   already covered in the SEED labs. There are many other attacks on DNS, some of 
   which can benefit from this emulator.
