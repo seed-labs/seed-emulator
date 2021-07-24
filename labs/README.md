@@ -53,7 +53,7 @@ See examples 21 and 22. It can be used to teach the following:
   the technologies, such as IP anycast for root servers, domain registration,
   setting up nameserver, etc.  
   See [Example-21](/examples/21-dns-component) and 
-  [Example-22](22-mini-internet-with-dns)
+  [Example-22](/examples/22-mini-internet-with-dns)
 - Various DNS attacks: the DNS cache poisoning attack and DNS rebinding attack are
   already covered in the SEED labs. There are many other attacks on DNS, some of 
   which can benefit from this emulator.
