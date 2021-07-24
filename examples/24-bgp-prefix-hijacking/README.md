@@ -1,6 +1,6 @@
 # BGP Attack: Network Prefix Hijacking
 
-This example demonstrate how to launch the network prefix hijacking
+This example demonstrates how to launch the network prefix hijacking
 attack inside the emulator. It uses the mini-Internet built from 
 Example-20 as the base.
 
@@ -22,7 +22,7 @@ as199.createRouter('router0').joinNetwork('net0').joinNetwork('ix105')
 ebgp.addPrivatePeerings(105, [2],  [199], PeerRelationship.Unfiltered)
 ```
 
-# Hijacking Network Prefix
+# Hijacking AS-153's Network Prefix
 
 We would like to use `AS-199` to hijack the network `10.153.0.0/24`. 
 To do that, we need to modify the BGP setup on the BGP router inside
@@ -58,7 +58,7 @@ using the following command.
 ```
 
 
-# Hijacking AS-199's Network Prefix
+# Testing
 
 We can pick any hosts on the emulator Internet, run the following command, 
 and we will not be able to get any reply, because the packets are hijacked
