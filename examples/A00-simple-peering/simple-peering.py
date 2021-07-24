@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
 from seedemu.layers import Base, Routing, Ebgp
 from seedemu.services import WebService
 from seedemu.compiler import Docker
