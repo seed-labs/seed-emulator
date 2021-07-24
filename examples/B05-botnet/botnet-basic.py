@@ -26,7 +26,7 @@ for asn in [151,152,153,154]:
     vname = "bot" + str(asn)
     asn_base = base.getAutonomousSystem(asn)
     c = bot_client.install(vname)
-    c.setServer(c2_server=c2_server_ip)
+    c.setServer(server = c2_server_ip)
     emu.addBinding(Binding(vname, filter = Filter(asn=asn, nodeName=asn_base.getHosts()[0], allowBound=True)))
 
 emu.addLayer(bot)
