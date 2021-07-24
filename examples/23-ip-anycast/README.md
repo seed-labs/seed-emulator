@@ -8,9 +8,11 @@ one of the computers will get the packet. Exactly which one will
 get the packet depends on BGP routing. IP anycast is naturally supported by BGP.
 
 One of the well-known applications of IP anycast is the DNS root servers. 
-DNS root server F has multiple machines geographically located 
-in many different places around the world. They all share the same IP
-address `192.5.5.241`. When a DNS client sends a request to this 
+Some of the DNS root servers, such as the F server, 
+have multiple machines geographically located in many different places around the world, 
+but they have the same IP address.
+For example, all the F servers have the same IP address `192.5.5.241`. 
+When a DNS client sends a request to this 
 IP address, one of the F servers will get the request. 
 
 
@@ -28,7 +30,7 @@ as180.createNetwork('net1', '10.180.0.0/24')
 as180.createHost('host-0').joinNetwork('net0', address = '10.180.0.100')
 as180.createHost('host-1').joinNetwork('net1', address = '10.180.0.100')
 ```
-It should be noted that this AS has two disjoint part, one has `net0`, and the 
+It should be noted that this AS has two disjoint parts: one has `net0`, and the 
 other has `net1`. These two networks are not connected by any router.
 We then connect one part of the AS to `ix100`, and connect the other part
 of the AS to `ix105`, and peer the AS with other ASes at these two locations.
@@ -52,16 +54,15 @@ We can ping `10.180.0.100` from one of the hosts in the emulator,
 we set the filter to `icmp`. We should be able to see the 
 traffic going to one of the `10.180.0.100` hosts. If we disable 
 this location's BGP session, we will see that the traffic 
-immediately switches to another `10.180.0.100` host. 
-
+immediately switches to the other `10.180.0.100` host. 
 We should also be able to find two hosts inside the emulator,
-they will talk to different `10.180.0.100` hosts. 
+such that they talk to a different `10.180.0.100` host. 
 
 
 ## UDP Testing
 
-We can run a UDP server on each host using `nc -luk 9090`, 
-then from another machine, we send a UDP message to `10.180.0.100`. 
+We can run a UDP server on each of the `10.180.0.100` host using `nc -luk 9090`. 
+Then from another machine, we send a UDP message to `10.180.0.100`. 
 One of the hosts will receive the message, depending on where the client 
 is located. If we disable the BGP session at one of the locations,
 we can see that the UDP message will go to the other server. 
