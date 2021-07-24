@@ -20,7 +20,8 @@ as199.createHost('host-0').joinNetwork('net0')
 # Attach it to ix-105 and peer with AS-2
 # We need to use the Unfiltered peering type for the attack to work
 as199.createRouter('router0').joinNetwork('net0').joinNetwork('ix105')
-ebgp.addPrivatePeerings(105, [2],  [199], PeerRelationship.Unfiltered)
+#ebgp.addPrivatePeerings(105, [2],  [199], PeerRelationship.Unfiltered)
+ebgp.addPrivatePeerings(105, [2],  [199], PeerRelationship.Provider)
 
 
 ###############################################
