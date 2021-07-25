@@ -138,15 +138,15 @@ class BotnetServer(Server):
         node.appendStartCommand('git -C /tmp/byob/ apply /byob.patch')
 
         # add the init script to server
-        node.setFile('/server_init_script', BotnetServerFileTemplates['server_init_script'])
-        node.appendStartCommand('chmod +x /server_init_script')
+        node.setFile('/tmp/byob_server_init_script', BotnetServerFileTemplates['server_init_script'])
+        node.appendStartCommand('chmod +x /tmp/byob_server_init_script')
 
         # start the server & make dropper/stager/payload
-        node.appendStartCommand('/server_init_script "{}" "{}"'.format(address, self.__port))
+        node.appendStartCommand('/tmp/byob_server_init_script "{}" "{}"'.format(address, self.__port))
 
         # script to start byob shell on correct port
-        node.setFile('/start-byob-shell', BotnetServerFileTemplates['start-byob-shell'].format(self.__port))
-        node.appendStartCommand('chmod +x /start-byob-shell')
+        node.setFile('/bin/start-byob-shell', BotnetServerFileTemplates['start-byob-shell'].format(self.__port))
+        node.appendStartCommand('chmod +x /bin/start-byob-shell')
          
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -227,15 +227,15 @@ class BotnetClientServer(Server):
 
         # script to get dropper from server.
         if self.__dga == None:
-            node.setFile('/client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner'])
+            node.setFile('/tmp/byob_client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner'])
         else:
             fork = True
             node.setFile('/dga', self.__dga)
-            node.setFile('/client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner_dga'])
+            node.setFile('/tmp/byob_client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner_dga'])
 
         # get and run dropper from server.
-        node.appendStartCommand('chmod +x /client_dropper_runner')
-        node.appendStartCommand('/client_dropper_runner "{}" "{}"'.format(self.__server, self.__port), fork)
+        node.appendStartCommand('chmod +x /tmp/byob_client_dropper_runner')
+        node.appendStartCommand('/tmp/byob_client_dropper_runner "{}" "{}"'.format(self.__server, self.__port), fork)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
