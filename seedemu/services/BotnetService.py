@@ -32,7 +32,7 @@ while true; do {
         python3 client.py
     }
     sleep 1
-}
+}; done
 '''
 
 BotnetServerFileTemplates['server_init_script'] = '''\
@@ -216,12 +216,12 @@ class BotnetClientServer(Server):
         # script to get dropper from server.
         if self.__dga == None:
             node.setFile('/client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner'])
-            node.appendStartCommand('chmod +x /client_dropper_runner')
         else:
             node.setFile('/dga', self.__dga)
             node.setFile('/client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner_dga'])
 
         # get and run dropper from server.
+        node.appendStartCommand('chmod +x /client_dropper_runner')
         node.appendStartCommand('/client_dropper_runner "{}" "{}"'.format(self.__server, self.__port))
 
     def print(self, indent: int) -> str:
