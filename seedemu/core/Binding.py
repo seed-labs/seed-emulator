@@ -200,7 +200,7 @@ class Binding(Printable):
         
         # no nodename given: randomly create one
         if nodeName == None:
-            nodeName = ''.join(random.choice(string.ascii_letters) for i in range(10))
+            nodeName = ''.join(random.choice(string.ascii_lowercase) for i in range(10))
             self.__log('binding: NEW: nodeName not set, using random name: {}'.format(nodeName))
 
         self.__log('binding: NEW: creating new host...'.format(nodeName))
