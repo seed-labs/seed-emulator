@@ -45,7 +45,7 @@ emu.addBinding(Binding('attacker', filter = Filter(asn = 162)))
 ldns.install('global-dns')
 emu.addBinding(Binding('global-dns', filter = Filter(nodeName="gdns", ip = '10.153.0.53'), action = Action.NEW))
 
-# mini dns infra: step 3: make everyone use the said recursive server
+# mini dns infra: step 4: make everyone use the said recursive server
 base = emu.getLayer('Base')
 base.setNameServers(['10.153.0.53'])
 
