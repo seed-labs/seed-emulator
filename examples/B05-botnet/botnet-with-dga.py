@@ -44,7 +44,7 @@ emu.addBinding(Binding('global-dns', filter = Filter(nodeName="gdns", ip = '10.1
 # not really how it works in real-world. in real world, one would use TLD.
 DGA_SCRIPT = '''\
 #!/bin/bash
-for i in {1..10}; do echo "$RANDOM.attacker.com"; done
+for i in {1..10}; do echo "$RANDOM.attacker.com:446"; done
 '''
 
 ##########################################
