@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from seedemu.core import Emulator, Binding, Filter
-from seedemu.services import BotnetService, BotnetClientService
-from seedemu.services import DomainRegistrarService
+from seedemu.core import Emulator, Binding, Filter, Action
+from seedemu.services import BotnetService, BotnetClientService, DomainNameService, DomainNameCachingService
 from seedemu.compiler import Docker
 
 emu = Emulator()
@@ -12,53 +11,65 @@ emu.load('../B00-mini-internet/base-component.bin')
 
 bot = BotnetService()
 bot_client = BotnetClientService()
-domain_registrar = DomainRegistrarService()
+dns = DomainNameService()
 
 ###########################################
 
-def dga() -> list:
-    #Generate 10 domains for the given time.
-    domain_list = []
-    domain = ""
-    import math, datetime
-    today = datetime.datetime.utcnow()
-    hour = today.hour
-    day = today.day
-    minute = today.minute
-    minute = int(math.ceil(minute/5))*5
+c2_server_ip = "10.150.0.71"
 
-    for i in range(16):
-        day = ((day ^ 8 * day) >> 11) ^ ((day & 0xFFFFFFF0) << 17)
-        hour = ((hour ^ 4 * hour) >> 25) ^ 16 * (hour & 0xFFFFFFF8)
-        minute = ((minute ^ (minute << 13)) >> 19) ^ ((minute & 0xFFFFFFFE) << 12)
-        domain += chr(((day ^ hour ^ minute) % 25) + 97)
-        if i > 6:
-            domain_list.append(domain+ ".com")
+###########################################
 
-    return domain_list
+dns.install('root').addZone('.')
+dns.install('com').addZone('com.')
+dns.install('attacker').addZone('attacker.com.')
+
+###########################################
+
+dns.getZone('attacker.com').addRecord('* A {}'.format(c2_server_ip))
+
+###########################################
+
+emu.addBinding(Binding('root', filter=Filter(asn=171)))
+emu.addBinding(Binding('com', filter=Filter(asn=161)))
+emu.addBinding(Binding('attacker', filter=Filter(asn=162)))
+
+###########################################
+
+ldns = DomainNameCachingService()
+ldns.install('global-dns')
+emu.addBinding(Binding('global-dns', filter = Filter(nodeName="gdns", ip = '10.153.0.53'), action = Action.NEW))
+
+###########################################
+
+# not really how it works in real-world. in real world, one would use TLD.
+DGA_SCRIPT = '''\
+#!/bin/bash
+for i in {1..10}; do echo "$RANDOM.attacker.com:446"; done
+'''
 
 ##########################################
 base_layer = emu.getLayer('Base')
+base_layer.setNameServers(['10.153.0.53'])
+
 x = base_layer.getAutonomousSystem(150)
 hosts = x.getHosts()
 
 bot.install("c2_server")
-emu.addBinding(Binding("c2_server", filter = Filter(asn = 150, nodeName=hosts[0], allowBound=True)))
+emu.addBinding(Binding("c2_server", filter = Filter(ip = c2_server_ip, allowBound=True)))
 
 for asn in [151,152,153,154,160]:
     vname = "bot" + str(asn)
     asn_base = base_layer.getAutonomousSystem(asn)
     c = bot_client.install(vname)
-    c.setServer(enable_dga=True, dga=dga)
+    c.setDga(DGA_SCRIPT)
     emu.addBinding(Binding(vname, filter = Filter(asn = asn, nodeName=asn_base.getHosts()[0], allowBound=True)))
 
 
-domain_registrar.install("domain_registrar")
-emu.addBinding(Binding("domain_registrar", filter = Filter(asn = 161, nodeName="s_com_dns",  allowBound=True)))
 
 emu.addLayer(bot)
 emu.addLayer(bot_client)
-emu.addLayer(domain_registrar)
+emu.addLayer(dns)
+emu.addLayer(ldns)
 emu.render()
 
 ###############################################################################

@@ -139,6 +139,18 @@ class Routing(Layer):
                 rnode.appendStartCommand('bird -d', True)
                 
                 if has_localnet: rnode.addProtocol('direct', 'local_nets', RoutingFileTemplates['rnode_bird_direct'].format(interfaces = ifaces))
+            
+    def render(self, emulator: Emulator):
+        reg = emulator.getRegistry()
+        for ((scope, type, name), obj) in reg.getAll().items():
+            if type == 'rs' or type == 'rnode':
+                assert issubclass(obj.__class__, Router), 'routing: render: adding new RS/Router after routing layer configured is not currently supported.'
+
+            if type == 'rnode':
+                rnode: Router = obj
+                if issubclass(rnode.__class__, RealWorldRouter):
+                    self._log("Sealing real-world router as{}/{}...".format(rnode.getAsn(), rnode.getName()))
+                    rnode.seal()
 
             if type == 'hnode':
                 hnode: Node = obj
@@ -161,17 +173,8 @@ class Routing(Layer):
                 hnode.appendStartCommand('ip rou del default 2> /dev/null')
                 hnode.appendStartCommand('ip route add default via {} dev {}'.format(rif.getAddress(), rif.getNet().getName()))
 
-    def render(self, emulator: Emulator) -> None:
-        reg = emulator.getRegistry()
-        for ((scope, type, name), obj) in reg.getAll().items():
-            if type == 'rnode':
-                rnode: Router = obj
-                if issubclass(rnode.__class__, RealWorldRouter):
-                    self._log("Sealing real-world router as{}/{}...".format(rnode.getAsn(), rnode.getName()))
-                    rnode.seal()
-
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'RoutingLayer: BIRD 1.6.x\n'
+        out += 'RoutingLayer: BIRD 2.0.x\n'
 
         return out
