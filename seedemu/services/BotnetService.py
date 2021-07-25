@@ -134,8 +134,8 @@ class BotnetServer(Server):
         node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
 
         # patch byob - removes external request for getting IP location, which won't work if "real" internet is not connected.
-        node.setFile('/byob.patch', BotnetServerFileTemplates['server_patch'])
-        node.appendStartCommand('git -C /tmp/byob/ apply /byob.patch')
+        node.setFile('/tmp/byob.patch', BotnetServerFileTemplates['server_patch'])
+        node.appendStartCommand('git -C /tmp/byob/ apply /tmp/byob.patch')
 
         # add the init script to server
         node.setFile('/tmp/byob_server_init_script', BotnetServerFileTemplates['server_init_script'])
@@ -220,7 +220,7 @@ class BotnetClientServer(Server):
 
         # get byob dependencies.
         node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') 
-        node.addBuildCommand('curl https://raw.githubusercontent.com/malwaredllc/byob/master/byob/requirements.txt > /tmp/byob-requirements.txt')
+        node.addBuildCommand('curl https://raw.githubusercontent.com/malwaredllc/byob/{}/byob/requirements.txt > /tmp/byob-requirements.txt'.format(BYOB_VERSION))
         node.addBuildCommand('pip3 install -r /tmp/byob-requirements.txt')
 
         fork = False
