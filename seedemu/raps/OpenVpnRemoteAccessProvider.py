@@ -142,17 +142,6 @@ ifconfig-pool {addressStart} {addressEnd} {addressMask}
 
 OpenVpnRapFileTemplates['ovpn_startup_script'] = '''\
 #!/bin/bash
-[ ! -e /interface_setup ] && {
-    echo "Looks like you do not have routing layer in this emulation. OpenVPN remote access WILL NOT work."
-    exit 1
-}
-chmod +x /interface_setup
-/interface_setup
-mv interface_setup interface_setup.bak
-cat > interface_setup << EOF
-#!/bin/bash
-exit 0
-EOF
 [ ! -d /dev/net ] && mkdir /dev/net
 mknod /dev/net/tun c 10 200 > /dev/null 2>&1
 openvpn --config /ovpn-server.conf &
