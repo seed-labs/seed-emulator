@@ -97,6 +97,7 @@ class BotnetServer(Server):
     """
 
     __port: int
+    __files: Dict[str, str]
 
     def __init__(self):
         """!
@@ -104,6 +105,7 @@ class BotnetServer(Server):
         """
         super().__init__()
         self.__port = 445
+        self.__files = {}
 
     def setPort(self, port: int) -> BotnetServer:
         """!
@@ -121,11 +123,31 @@ class BotnetServer(Server):
         self.__port = port
         return self
 
+    def addFile(self, content: str, path: str):
+        """!
+        @brief Add a file to the C2 server. You can use this API to add files
+        onto the physical node of the C2 server. This can be useful for
+        preparing attack scripts for uploading to the client.
+
+        @param content file content.
+        @param path full file path. (ex: /tmp/ddos.py)
+
+        @returns self, for chaining API calls.
+        """
+        
+        self.__files[path] = content
+
+        return self
+
     def install(self, node: Node):
         """!
         @brief Install the Botnet C2 server.
         """
         address = str(node.getInterfaces()[0].getAddress())
+
+        # add user files
+        for (path, body) in self.__files.values():
+            node.setFile(path, body)
 
         # get byob & its dependencies
         node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') 
