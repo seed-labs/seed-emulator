@@ -160,7 +160,7 @@ class BotnetClientServer(Server):
         super().__init__()
         self.__server = None
         self.__port = 446
-        self.__dga
+        self.__dga = None
 
     def setServer(self, server: str, port: int = 446) -> BotnetClientServer:
         """!
