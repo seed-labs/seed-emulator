@@ -69,6 +69,7 @@ class Base(Layer, Graphable):
         self._log('setting up autonomous systems...')
         for asobj in self.__ases.values(): asobj.configure(emulator)
 
+    def render(self, emulator: Emulator) -> None:
         for ((scope, type, name), obj) in emulator.getRegistry().getAll().items():
 
             if not (type == 'rs' or type == 'rnode' or type == 'hnode'):
@@ -84,11 +85,8 @@ class Base(Layer, Graphable):
 
             node.setFile('/ifinfo.txt', ifinfo)
             node.setFile('/interface_setup', BaseFileTemplates['interface_setup_script'])
-            node.appendStartCommand('chmod +x /interface_setup')
-            node.appendStartCommand('/interface_setup')
-
-    def render(self, emulator: Emulator) -> None:
-        pass
+            node.insertStartCommand(0, '/interface_setup')
+            node.insertStartCommand(0, 'chmod +x /interface_setup')
 
     def setNameServers(self, servers: List[str]) -> Base:
         """!
