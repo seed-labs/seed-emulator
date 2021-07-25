@@ -43,11 +43,10 @@ emu.addBinding(Binding('attacker', filter = Filter(asn = 162)))
 
 # mini dns infra: step 3: create a recursive server
 ldns.install('global-dns')
-emu.addBinding(Binding('global-dns', filter = Filter(nodeName="gdns", ip = '10.153.0.53'), action = Action.NEW))
+emu.addBinding(Binding('global-dns', filter = Filter(nodeName = 'gdns', ip = '10.153.0.53'), action = Action.NEW))
 
 # mini dns infra: step 4: make everyone use the said recursive server
-base = emu.getLayer('Base')
-base.setNameServers(['10.153.0.53'])
+emu.getLayer('Base').setNameServers(['10.153.0.53'])
 
 # create and bind bot controller
 bot.install('bot_controller')
@@ -64,7 +63,5 @@ emu.addLayer(botClient)
 emu.addLayer(dns)
 emu.addLayer(ldns)
 emu.render()
-
-###############################################################################
 
 emu.compile(Docker(), './output')
