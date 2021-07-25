@@ -139,6 +139,12 @@ class Routing(Layer):
                 rnode.appendStartCommand('bird -d', True)
                 
                 if has_localnet: rnode.addProtocol('direct', 'local_nets', RoutingFileTemplates['rnode_bird_direct'].format(interfaces = ifaces))
+            
+    def render(self, emulator: Emulator):
+        reg = emulator.getRegistry()
+        for ((scope, type, name), obj) in reg.getAll().items():
+            if type == 'rs' or type == 'rnode':
+                assert issubclass(obj.__class__, Router), 'routing: render: adding new RS/Router after routing layer configured is not currently supported.'
 
             if type == 'hnode':
                 hnode: Node = obj
