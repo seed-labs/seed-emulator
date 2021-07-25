@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship
 from seedemu.services import WebService
@@ -9,7 +12,7 @@ from seedemu.compiler import Docker
 # Need to go to 01-transit-as and generate the component first
 
 emu = Emulator()
-emu.load('../01-transit-as/base-component.bin')
+emu.load('../A01-transit-as/base-component.bin')
 
 
 ###############################################################################

@@ -1,6 +1,6 @@
 # Using a Pre-built Component
 
-In Example `01-transit-as`, we have saved the emulator in
+In Example `A01-transit-as`, we have saved the emulator in
 a file as a component. In this example, we demonstrate how 
 we can load it into another emulation. 
 
