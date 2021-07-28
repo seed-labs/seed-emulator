@@ -734,8 +734,6 @@ class Docker(Compiler):
 
         (image, soft) = self._selectImageFor(node)
 
-        dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
-
         if not node.hasAttribute('__soft_install_tiers') and len(soft) > 0:
             dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(soft)))
 
@@ -744,6 +742,7 @@ class Docker(Compiler):
             for softList in softLists:
                 dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(softList)))
 
+        dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
 
