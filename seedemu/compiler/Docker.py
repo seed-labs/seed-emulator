@@ -1,7 +1,8 @@
+from __future__ import annotations
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Node, Network, Compiler
 from seedemu.core.enums import NodeRole, NetworkType
-from typing import Dict, Generator, List, Set
+from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
 from os import mkdir, chdir
 from ipaddress import IPv4Network, IPv4Address
@@ -231,6 +232,10 @@ class Docker(Compiler):
 
     __client_hide_svcnet: bool
 
+    __images: Dict[str, Tuple[DockerImage, int]]
+    __forced_image: str
+    __disable_images: bool
+
     def __init__(
         self,
         namingScheme: str = "as{asn}{role}-{name}-{primaryIp}",
@@ -279,8 +284,59 @@ class Docker(Compiler):
 
         self.__client_hide_svcnet = clientHideServiceNet
 
+        self.__images = {}
+        self.__forced_image = None
+        self.__disable_images = False
+
     def getName(self) -> str:
         return "Docker"
+
+    def addImage(self, image: DockerImage, priority: int = 0) -> Docker:
+        """!
+        @brief add an candidate image to the compiler.
+
+        @param image image to add.
+        @param priority (optional) priority of this image. Used when one or more
+        images with same number of missing software exist. The one with highest
+        priority wins. If two or more images with same priority and same number
+        of missing software exist, the one added the last will be used. All
+        built-in images has priority of 0. Default to 0.
+
+        @returns self, for chaining api calls.
+        """
+        assert image.getName() not in self.__images, 'image with name {} already exists.'.format(image.getName())
+        self.__images[image.getName()] = (image.getName(), priority)
+
+        return self
+
+    def forceImage(self, imageName: str) -> Docker:
+        """!
+        @brief forces the docker compiler to use a image, identified by the
+        imageName. Image with such name must be added to the docker compiler
+        with the addImage method, or the docker compiler will fail at compile
+        time. Set to None to disable the force behavior.
+
+        @param imageName name of the image.
+
+        @returns self, for chaining api calls.
+        """
+        self.__forced_image = imageName
+
+        return self
+
+    def disableImages(self, disabled: bool = True) -> Docker:
+        """!
+        @brief forces the docker compiler to not use any images and build
+        everything for starch. Set to False to disable the behavior.
+
+        @paarm disabled (option) disabled image if True. Default to True.
+
+        @returns self, for chaining api calls.
+        """
+        self.__disable_images = disabled
+
+        return self
+    
 
     def _getNetMeta(self, net: Network) -> str: 
         """!
