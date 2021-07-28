@@ -542,7 +542,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         return self
 
-    def getSoftwares(self) -> Set[str]:
+    def getSoftware(self) -> Set[str]:
         """!
         @brief Get set of software.
 
