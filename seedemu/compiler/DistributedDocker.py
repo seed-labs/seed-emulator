@@ -111,8 +111,11 @@ class DistributedDocker(Docker):
                 self._log('creating docker-compose.yml...'.format(scope, name))
                 print(DockerCompilerFileTemplates['compose'].format(
                     services = services,
-                    networks = networks
+                    networks = networks,
+                    dummies = self._makeDummies()
                 ), file=open('docker-compose.yml', 'w'))
+
+                self._used_images = set()
 
                 print('COMPOSE_PROJECT_NAME=sim_{}'.format(scope), file=open('.env', 'w'))
 

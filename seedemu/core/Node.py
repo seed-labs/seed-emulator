@@ -536,7 +536,11 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns self, for chaining API calls.
         """
-        self.__softwares.add(name)
+        if ' ' in name:
+            for soft in name.split(' '):
+                self.__softwares.add(soft)
+        else: 
+            self.__softwares.add(name)
 
         return self
 
