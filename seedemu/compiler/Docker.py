@@ -413,17 +413,18 @@ class Docker(Compiler):
 
                 for (soft, nodes) in val.items():
                     if len(nodes) == commRequired:
-                        self._log('adding software "{}" to step {} for image "{}" since it is referenced by {} nodes.'.format(soft, step, key, len(nodes)))
                         currentTier.add(soft)
                         for node in nodes: currentTierNodes.add(node)
                 
                 for node in currentTierNodes:
                     if not node.hasAttribute('__soft_install_tiers'):
                         node.setAttribute('__soft_install_tiers', [])
-                    
+
                     node.getAttribute('__soft_install_tiers').append(currentTier)
                 
+
                 if len(currentTier) > 0:
+                    self._log('the following software has been grouped together in step {}: {} since they are referenced by {} nodes.'.format(step, currentTier, len(currentTierNodes)))
                     step += 1
                 
     
