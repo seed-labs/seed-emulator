@@ -1,7 +1,8 @@
+from __future__ import annotations
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Node, Network, Compiler
 from seedemu.core.enums import NodeRole, NetworkType
-from typing import Dict, Generator
+from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
 from os import mkdir, chdir
 from ipaddress import IPv4Network, IPv4Address
@@ -11,7 +12,6 @@ SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
 DockerCompilerFileTemplates['dockerfile'] = """\
-FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 RUN echo 'exec zsh' > /root/.bashrc
 """
@@ -92,9 +92,18 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
 DockerCompilerFileTemplates['compose'] = """\
 version: "3.4"
 services:
+{dummies}
 {services}
 networks:
 {networks}
+"""
+
+DockerCompilerFileTemplates['compose_dummy'] = """\
+    {imageDigest}:
+        build:
+            context: .
+            dockerfile: dummies/{imageDigest}
+        image: {imageDigest}
 """
 
 DockerCompilerFileTemplates['compose_service'] = """\
@@ -168,6 +177,54 @@ DockerCompilerFileTemplates['seedemu_client'] = """\
             - {clientPort}:8080/tcp
 """
 
+class DockerImage(object):
+    """!
+    @brief The DockerImage class.
+
+    This class repersents a candidate image for docker compiler.
+    """
+
+    __software: Set[str]
+    __name: str
+
+    def __init__(self, name: str, software: List[str]) -> None:
+        """!
+        @brief create a new docker image.
+
+        @param name name of the image. Can be name of a local image, image on
+        dockerhub, or image in private repo.
+        @param software set of software pre-installed in the image, so the
+        docker compiler can skip them when compiling.
+        """
+        super().__init__()
+
+        self.__name = name
+        self.__software = set()
+
+        for soft in software:
+            self.__software.add(soft)
+
+    def getName(self) -> str:
+        """!
+        @brief get the name of this image.
+
+        @returns name.
+        """
+        return self.__name
+
+    def getSoftware(self) -> Set[str]:
+        """!
+        @brief get set of software installed on this image.
+        
+        @return set.
+        """
+        return self.__software
+
+
+DefaultImages: List[DockerImage] = []
+
+DefaultImages.append(DockerImage('ubuntu:20.04', []))
+
 class Docker(Compiler):
     """!
     @brief The Docker compiler class.
@@ -186,6 +243,11 @@ class Docker(Compiler):
     __client_port: int
 
     __client_hide_svcnet: bool
+
+    __images: Dict[str, Tuple[DockerImage, int]]
+    __forced_image: str
+    __disable_images: bool
+    _used_images: Set[str]
 
     def __init__(
         self,
@@ -235,8 +297,119 @@ class Docker(Compiler):
 
         self.__client_hide_svcnet = clientHideServiceNet
 
+        self.__images = {}
+        self.__forced_image = None
+        self.__disable_images = False
+        self._used_images = set()
+
+        for image in DefaultImages:
+            self.addImage(image)
+
     def getName(self) -> str:
         return "Docker"
+
+    def addImage(self, image: DockerImage, priority: int = 0) -> Docker:
+        """!
+        @brief add an candidate image to the compiler.
+
+        @param image image to add.
+        @param priority (optional) priority of this image. Used when one or more
+        images with same number of missing software exist. The one with highest
+        priority wins. If two or more images with same priority and same number
+        of missing software exist, the one added the last will be used. All
+        built-in images has priority of 0. Default to 0.
+
+        @returns self, for chaining api calls.
+        """
+        assert image.getName() not in self.__images, 'image with name {} already exists.'.format(image.getName())
+        self.__images[image.getName()] = (image, priority)
+
+        return self
+
+    def getImages(self) -> List[Tuple[DockerImage, int]]:
+        """!
+        @brief get list of images configured.
+
+        @returns list of tuple of images and priority.
+        """
+
+        return list(self.__images.values())
+
+    def forceImage(self, imageName: str) -> Docker:
+        """!
+        @brief forces the docker compiler to use a image, identified by the
+        imageName. Image with such name must be added to the docker compiler
+        with the addImage method, or the docker compiler will fail at compile
+        time. Set to None to disable the force behavior.
+
+        @param imageName name of the image.
+
+        @returns self, for chaining api calls.
+        """
+        self.__forced_image = imageName
+
+        return self
+
+    def disableImages(self, disabled: bool = True) -> Docker:
+        """!
+        @brief forces the docker compiler to not use any images and build
+        everything for starch. Set to False to disable the behavior.
+
+        @paarm disabled (option) disabled image if True. Default to True.
+
+        @returns self, for chaining api calls.
+        """
+        self.__disable_images = disabled
+
+        return self
+    
+    def _selectImageFor(self, node: Node) -> Tuple[DockerImage, Set[str]]:
+        """!
+        @brief select image for the given node.
+
+        @param node node.
+
+        @returns tuple of selected image and set of missinge software.
+        """
+        nodeSoft = node.getSoftwares() | node.getCommonSoftware()
+
+        if self.__disable_images:
+            self._log('disable-imaged configured, using base image.')
+            (image, _) = self.__images['ubuntu:20.04']
+            return (image, nodeSoft - image.getSoftware())
+
+        if self.__forced_image != None:
+            assert self.__forced_image in self.__images, 'forced-image configured, but image {} does not exist.'.format(self.__forced_image)
+
+            (image, _) = self.__images[self.__forced_image]
+
+            self._log('force-image configured, using image: {}'.format(image.getName()))
+
+            return (image, nodeSoft - image.getSoftware())
+        
+        candidates: List[Tuple[DockerImage, int]] = []
+        minMissing = len(nodeSoft)
+
+        for (image, prio) in self.__images.values():
+            missing = len(nodeSoft - image.getSoftware())
+
+            if missing < minMissing:
+                candidates = []
+                minMissing = missing
+
+            if missing <= minMissing: 
+                candidates.append((image, prio))
+
+        assert len(candidates) > 0, '_electImageFor ended w/ no images?'
+
+        (selected, maxPiro) = candidates[0]
+
+        for (candidate, prio) in candidates:
+            if prio >= maxPiro:
+                selected = candidate
+
+        return (selected, nodeSoft - selected.getSoftware())
+
 
     def _getNetMeta(self, net: Network) -> str: 
         """!
@@ -494,13 +667,12 @@ class Docker(Compiler):
         mkdir(real_nodename)
         chdir(real_nodename)
 
-        commsoft = node.getCommonSoftware()
-        if len(commsoft) > 0: dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(commsoft)))
-
-        soft = node.getSoftwares()
+        (image, soft) = self._selectImageFor(node)
         if len(soft) > 0: dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(soft)))
 
         dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
+        dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
+        self._used_images.add(image.getName())
 
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
@@ -575,6 +747,33 @@ class Docker(Compiler):
             labelList = self._getNetMeta(net)
         )
 
+    def _makeDummies(self) -> str:
+        """!
+        @brief create dummy services to get around docker pull limits.
+        
+        @returns docker-compose service string.
+        """
+        mkdir('dummies')
+        chdir('dummies')
+
+        dummies = ''
+
+        for image in self._used_images:
+            self._log('adding dummy service for image {}...'.format(image))
+
+            imageDigest = md5(image.encode('utf-8')).hexdigest()
+            
+            dummies += DockerCompilerFileTemplates['compose_dummy'].format(
+                imageDigest = imageDigest
+            )
+
+            dockerfile = 'FROM {}\n'.format(image)
+            print(dockerfile, file=open(imageDigest, 'w'))
+
+        chdir('..')
+
+        return dummies
+
     def _doCompile(self, emulator: Emulator):
         registry = emulator.getRegistry()
 
@@ -613,5 +812,6 @@ class Docker(Compiler):
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(
             services = self.__services,
-            networks = self.__networks
+            networks = self.__networks,
+            dummies = self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))
