@@ -322,7 +322,7 @@ class Docker(Compiler):
         @returns self, for chaining api calls.
         """
         assert image.getName() not in self.__images, 'image with name {} already exists.'.format(image.getName())
-        self.__images[image.getName()] = (image.getName(), priority)
+        self.__images[image.getName()] = (image, priority)
 
         return self
 
@@ -398,7 +398,7 @@ class Docker(Compiler):
                 minMissing = missing
 
             if missing <= minMissing: 
-                candidates.add((image, prio))
+                candidates.append((image, prio))
 
         assert len(candidates) > 0, '_electImageFor ended w/ no images?'
 
@@ -667,16 +667,11 @@ class Docker(Compiler):
         mkdir(real_nodename)
         chdir(real_nodename)
 
-        commsoft = node.getCommonSoftware()
-        if len(commsoft) > 0: dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(commsoft)))
-
-        soft = node.getSoftwares()
-
         (image, soft) = self._selectImageFor(node)
         if len(soft) > 0: dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(soft)))
 
         dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
-        dockerfile = 'FROM {}\n'.format(md5(image.getName()).hexdigest()) + dockerfile
+        dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
 
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
@@ -764,7 +759,9 @@ class Docker(Compiler):
         dummies = ''
 
         for image in self._used_images:
-            imageDigest = md5(image).hexdigest()
+            self._log('adding dummy service for image {}...'.format(image))
+
+            imageDigest = md5(image.encode('utf-8')).hexdigest()
             
             dummies += DockerCompilerFileTemplates['compose_dummy'].format(
                 imageDigest = imageDigest
@@ -774,6 +771,8 @@ class Docker(Compiler):
             print(dockerfile, file=open(imageDigest, 'w'))
 
         chdir('..')
+
+        return dummies
 
     def _doCompile(self, emulator: Emulator):
         registry = emulator.getRegistry()
