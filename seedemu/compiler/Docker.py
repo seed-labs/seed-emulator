@@ -247,7 +247,7 @@ class Docker(Compiler):
     __images: Dict[str, Tuple[DockerImage, int]]
     __forced_image: str
     __disable_images: bool
-    __used_images: Set[str]
+    _used_images: Set[str]
 
     def __init__(
         self,
@@ -300,7 +300,7 @@ class Docker(Compiler):
         self.__images = {}
         self.__forced_image = None
         self.__disable_images = False
-        self.__used_images = set()
+        self._used_images = set()
 
         for image in DefaultImages:
             self.addImage(image)
@@ -677,7 +677,7 @@ class Docker(Compiler):
 
         dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
         dockerfile = 'FROM {}\n'.format(md5(image.getName()).hexdigest()) + dockerfile
-        self.__used_images.add(image.getName())
+        self._used_images.add(image.getName())
 
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
@@ -763,7 +763,7 @@ class Docker(Compiler):
 
         dummies = ''
 
-        for image in self.__used_images:
+        for image in self._used_images:
             imageDigest = md5(image).hexdigest()
             
             dummies += DockerCompilerFileTemplates['compose_dummy'].format(
