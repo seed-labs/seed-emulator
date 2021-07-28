@@ -362,6 +362,70 @@ class Docker(Compiler):
         self.__disable_images = disabled
 
         return self
+
+    def _groupSoftware(self, emulator: Emulator):
+        """!
+        @brief Group apt-get install calls to maximize docker cache. 
+
+        @param emulator emulator to load nodes from.
+        """
+
+        registry = emulator.getRegistry()
+        
+        # { [imageName]: { [softName]: [nodeRef] } }
+        softGroups: Dict[str, Dict[str, List[Node]]] = {}
+
+        # { [imageName]: useCount }
+        groupIter: Dict[str, int] = {}
+
+        for ((scope, type, name), obj) in registry.getAll().items():
+            if type != 'rnode' and type != 'hnode' and type != 'snode' and type != 'rs' and type != 'snode': 
+                continue
+
+            node: Node = obj
+
+            (img, _) = self._selectImageFor(node)
+            imgName = img.getName()
+
+            if not imgName in groupIter:
+                groupIter[imgName] = 0
+
+            groupIter[imgName] += 1
+
+            if not imgName in softGroups:
+                softGroups[imgName] = {}
+
+            group = softGroups[imgName]
+
+            for soft in node.getSoftware():
+                if soft not in group:
+                    group[soft] = []
+                group[soft].append(node)
+
+        for (key, val) in softGroups.items():
+            maxIter = groupIter[key]
+            self._log('grouping software for image "{}" - {} references.'.format(key, maxIter))
+            step = 1
+
+            for commRequired in range(maxIter, 0, -1):
+                currentTier: Set[str] = set()
+                currentTierNodes: Set[Node] = set()
+
+                for (soft, nodes) in val.items():
+                    if len(nodes) == commRequired:
+                        self._log('adding software "{}" to step {} for image "{}" since it is referenced by {} nodes.'.format(soft, step, key, len(nodes)))
+                        currentTier.add(soft)
+                        for node in nodes: currentTierNodes.add(node)
+                
+                for node in currentTierNodes:
+                    if not node.hasAttribute('__soft_install_tiers'):
+                        node.setAttribute('__soft_install_tiers', [])
+                    
+                    node.getAttribute('__soft_install_tiers').append(currentTier)
+                
+                if len(currentTier) > 0:
+                    step += 1
+                
     
     def _selectImageFor(self, node: Node) -> Tuple[DockerImage, Set[str]]:
         """!
@@ -371,7 +435,7 @@ class Docker(Compiler):
 
         @returns tuple of selected image and set of missinge software.
         """
-        nodeSoft = node.getSoftwares() | node.getCommonSoftware()
+        nodeSoft = node.getSoftware()
 
         if self.__disable_images:
             self._log('disable-imaged configured, using base image.')
@@ -668,11 +732,18 @@ class Docker(Compiler):
         chdir(real_nodename)
 
         (image, soft) = self._selectImageFor(node)
-        if len(soft) > 0: dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(soft)))
 
         dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
+
+        if not node.hasAttribute('__soft_install_tiers') and len(soft) > 0:
+            dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(soft)))
+
+        if node.hasAttribute('__soft_install_tiers'):
+            softLists: List[List[str]] = node.getAttribute('__soft_install_tiers')
+            for softList in softLists:
+                dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(softList)))
 
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
@@ -776,6 +847,8 @@ class Docker(Compiler):
 
     def _doCompile(self, emulator: Emulator):
         registry = emulator.getRegistry()
+
+        self._groupSoftware(emulator)
 
         for ((scope, type, name), obj) in registry.getAll().items():
 
