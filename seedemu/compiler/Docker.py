@@ -213,6 +213,10 @@ class DockerImage(object):
         return self.__software
 
 
+DefaultImages: List[DockerImage] = []
+
+DefaultImages.append(DockerImage('ubuntu:20.04', []))
+
 class Docker(Compiler):
     """!
     @brief The Docker compiler class.
@@ -288,6 +292,9 @@ class Docker(Compiler):
         self.__forced_image = None
         self.__disable_images = False
 
+        for image in DefaultImages:
+            self.addImage(image)
+
     def getName(self) -> str:
         return "Docker"
 
@@ -354,6 +361,11 @@ class Docker(Compiler):
 
         @returns selected image.
         """
+
+        if self.__disable_images:
+            self._log('disable-imaged configured, using base image.')
+            (image, _) = self.__images['ubuntu:20.04']
+            return image
 
         if self.__forced_image != None:
             assert self.__forced_image in self.__images, 'forced-image configured, but image {} does not exist.'.format(self.__forced_image)
