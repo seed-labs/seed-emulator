@@ -309,6 +309,15 @@ class Docker(Compiler):
 
         return self
 
+    def getImages(self) -> List[Tuple[DockerImage, int]]:
+        """!
+        @brief get list of images configured.
+
+        @returns list of tuple of images and priority.
+        """
+
+        return list(self.__images.values())
+
     def forceImage(self, imageName: str) -> Docker:
         """!
         @brief forces the docker compiler to use a image, identified by the
@@ -337,6 +346,48 @@ class Docker(Compiler):
 
         return self
     
+    def _selectImageFor(self, node: Node) -> DockerImage:
+        """!
+        @brief select image for the given node.
+
+        @param node node.
+
+        @returns selected image.
+        """
+
+        if self.__forced_image != None:
+            assert self.__forced_image in self.__images, 'forced-image configured, but image {} does not exist.'.format(self.__forced_image)
+
+            (image, _) = self.__images[self.__forced_image]
+
+            self._log('force-image configured, using image: {}'.format(image.getName()))
+
+            return image
+        
+        nodeSoft = node.getSoftwares() | node.getCommonSoftware()
+        candidates: List[Tuple[DockerImage, int]] = []
+        minMissing = len(nodeSoft)
+
+        for (image, prio) in self.__images.values():
+            missing = len(nodeSoft - image.getSoftware())
+
+            if missing < minMissing:
+                candidates = []
+                minMissing = missing
+
+            if missing <= minMissing: 
+                candidates.add((image, prio))
+
+        assert len(candidates) > 0, '_electImageFor ended w/ no images?'
+
+        (selected, maxPiro) = candidates[0]
+
+        for (candidate, prio) in candidates:
+            if prio >= maxPiro:
+                selected = candidate
+
+        return selected
+
 
     def _getNetMeta(self, net: Network) -> str: 
         """!
