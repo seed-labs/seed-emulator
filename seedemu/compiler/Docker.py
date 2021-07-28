@@ -12,7 +12,6 @@ SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
 DockerCompilerFileTemplates['dockerfile'] = """\
-FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 RUN echo 'exec zsh' > /root/.bashrc
 """
@@ -97,6 +96,14 @@ services:
 {services}
 networks:
 {networks}
+"""
+
+DockerCompilerFileTemplates['compose_dummy'] = """\
+    {imageDigest}:
+        build:
+            context: .
+            dockerfile: dummies/{imageDigest}
+        image: {imageDigest}
 """
 
 DockerCompilerFileTemplates['compose_service'] = """\
@@ -664,9 +671,13 @@ class Docker(Compiler):
         if len(commsoft) > 0: dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(commsoft)))
 
         soft = node.getSoftwares()
+
+        (image, soft) = self._selectImageFor(node)
         if len(soft) > 0: dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(soft)))
 
         dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
+        dockerfile = 'FROM {}\n'.format(md5(image.getName()).hexdigest()) + dockerfile
+        self.__used_images.add(image.getName())
 
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
@@ -741,6 +752,29 @@ class Docker(Compiler):
             labelList = self._getNetMeta(net)
         )
 
+    def _makeDummies(self) -> str:
+        """!
+        @brief create dummy services to get around docker pull limits.
+        
+        @returns docker-compose service string.
+        """
+        mkdir('dummies')
+        chdir('dummies')
+
+        dummies = ''
+
+        for image in self.__used_images:
+            imageDigest = md5(image).hexdigest()
+            
+            dummies += DockerCompilerFileTemplates['compose_dummy'].format(
+                imageDigest = imageDigest
+            )
+
+            dockerfile = 'FROM {}\n'.format(image)
+            print(dockerfile, file=open(imageDigest, 'w'))
+
+        chdir('..')
+
     def _doCompile(self, emulator: Emulator):
         registry = emulator.getRegistry()
 
@@ -779,5 +813,6 @@ class Docker(Compiler):
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(
             services = self.__services,
-            networks = self.__networks
+            networks = self.__networks,
+            dummies = self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))
