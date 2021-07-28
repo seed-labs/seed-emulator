@@ -93,6 +93,7 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
 DockerCompilerFileTemplates['compose'] = """\
 version: "3.4"
 services:
+{dummies}
 {services}
 networks:
 {networks}
@@ -239,6 +240,7 @@ class Docker(Compiler):
     __images: Dict[str, Tuple[DockerImage, int]]
     __forced_image: str
     __disable_images: bool
+    __used_images: Set[str]
 
     def __init__(
         self,
@@ -291,6 +293,7 @@ class Docker(Compiler):
         self.__images = {}
         self.__forced_image = None
         self.__disable_images = False
+        self.__used_images = set()
 
         for image in DefaultImages:
             self.addImage(image)
@@ -353,19 +356,20 @@ class Docker(Compiler):
 
         return self
     
-    def _selectImageFor(self, node: Node) -> DockerImage:
+    def _selectImageFor(self, node: Node) -> Tuple[DockerImage, Set[str]]:
         """!
         @brief select image for the given node.
 
         @param node node.
 
-        @returns selected image.
+        @returns tuple of selected image and set of missinge software.
         """
+        nodeSoft = node.getSoftwares() | node.getCommonSoftware()
 
         if self.__disable_images:
             self._log('disable-imaged configured, using base image.')
             (image, _) = self.__images['ubuntu:20.04']
-            return image
+            return (image, nodeSoft - image.getSoftware())
 
         if self.__forced_image != None:
             assert self.__forced_image in self.__images, 'forced-image configured, but image {} does not exist.'.format(self.__forced_image)
@@ -374,9 +378,8 @@ class Docker(Compiler):
 
             self._log('force-image configured, using image: {}'.format(image.getName()))
 
-            return image
+            return (image, nodeSoft - image.getSoftware())
         
-        nodeSoft = node.getSoftwares() | node.getCommonSoftware()
         candidates: List[Tuple[DockerImage, int]] = []
         minMissing = len(nodeSoft)
 
@@ -398,7 +401,7 @@ class Docker(Compiler):
             if prio >= maxPiro:
                 selected = candidate
 
-        return selected
+        return (selected, nodeSoft - selected.getSoftware())
 
 
     def _getNetMeta(self, net: Network) -> str: 
