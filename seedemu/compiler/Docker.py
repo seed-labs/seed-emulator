@@ -1,7 +1,7 @@
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Node, Network, Compiler
 from seedemu.core.enums import NodeRole, NetworkType
-from typing import Dict, Generator
+from typing import Dict, Generator, List, Set
 from hashlib import md5
 from os import mkdir, chdir
 from ipaddress import IPv4Network, IPv4Address
@@ -167,6 +167,50 @@ DockerCompilerFileTemplates['seedemu_client'] = """\
         ports:
             - {clientPort}:8080/tcp
 """
+
+class DockerImage(object):
+    """!
+    @brief The DockerImage class.
+
+    This class repersents a candidate image for docker compiler.
+    """
+
+    __software: Set[str]
+    __name: str
+
+    def __init__(self, name: str, software: List[str]) -> None:
+        """!
+        @brief create a new docker image.
+
+        @param name name of the image. Can be name of a local image, image on
+        dockerhub, or image in private repo.
+        @param software set of software pre-installed in the image, so the
+        docker compiler can skip them when compiling.
+        """
+        super().__init__()
+
+        self.__name = name
+        self.__software = set()
+
+        for soft in software:
+            self.__software.add(soft)
+
+    def getName(self) -> str:
+        """!
+        @brief get the name of this image.
+
+        @returns name.
+        """
+        return self.__name
+
+    def getSoftware(self) -> Set[str]:
+        """!
+        @brief get set of software installed on this image.
+        
+        @return set.
+        """
+        return self.__software
+
 
 class Docker(Compiler):
     """!
