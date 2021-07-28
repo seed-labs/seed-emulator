@@ -214,7 +214,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __start_commands: List[Tuple[str, bool]]
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
-    __common_software: Set[str]
 
     __configured: bool
     __pending_nets: List[Tuple[str, str]]
@@ -243,7 +242,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__name = name
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
-        self.__common_software = set()
         self.__build_commands = []
         self.__start_commands = []
         self.__ports = []
@@ -257,7 +255,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__persistent_storages = []
 
         for soft in DEFAULT_SOFTWARE:
-            self.__common_software.add(soft)
+            self.__softwares.add(soft)
 
         self.__name_servers = []
 
@@ -551,14 +549,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns set of softwares.
         """
         return self.__softwares
-
-    def getCommonSoftware(self) -> Set[str]:
-        """!
-        @brief Get set of common software.
-
-        @returns set of softwares.
-        """
-        return self.__common_software
 
     def addBuildCommand(self, cmd: str) -> Node:
         """!
