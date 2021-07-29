@@ -89,9 +89,8 @@ as153.getHost('host_1').addSoftware('telnet')
 ebgp = Ebgp()
 
 # Make AS-3 the internet service provider for all the stub ASes
-ebgp.addPrivatePeering(100, 3, 151, abRelationship = PeerRelationship.Provider)
-ebgp.addPrivatePeering(101, 3, 152, abRelationship = PeerRelationship.Provider)
-ebgp.addPrivatePeering(101, 3, 153, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering (100, 3,   151, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeerings(101, [3], [152, 153], abRelationship = PeerRelationship.Provider)
 
 # Peer AS-152 and AS-153 directly as peers
 ebgp.addPrivatePeering(101, 152, 153, abRelationship = PeerRelationship.Peer)
@@ -122,6 +121,12 @@ emu.addLayer(Routing())
 emu.addLayer(Ibgp())
 emu.addLayer(Ospf())
 
+###############################################################################
+# Save it to a component file, so it can be used by other emulators
+
+# This is optional
+emu.dump('base-component.bin')
+
 
 ###############################################################################
 # Rendering: This is where the actual binding happens
@@ -131,13 +136,6 @@ emu.render()
 # Change the display name for the nodes hosting the web services
 emu.getBindingFor('web01').setDisplayName('Web-1')
 emu.getBindingFor('web02').setDisplayName('Web-2')
-
-
-###############################################################################
-# Save it to a component file, so it can be used by other emulators
-
-# This is optional
-emu.dump('base-component.bin')
 
 
 ###############################################################################
