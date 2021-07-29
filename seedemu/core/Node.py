@@ -855,9 +855,6 @@ class RealWorldRouter(Router):
         self.__sealed = False
         self.__hide_hops = hideHops
         self.addSoftware('iptables')
-        self.setFile('/rw_configure_script', RouterFileTemplates['rw_configure_script'])
-        self.appendStartCommand('chmod +x /rw_configure_script')
-        self.appendStartCommand('/rw_configure_script')
 
     def addRealWorldRoute(self, prefix: str) -> RealWorldRouter:
         """!
@@ -892,6 +889,9 @@ class RealWorldRouter(Router):
         if self.__sealed: return
         self.__sealed = True
         if len(self.__realworld_routes) == 0: return
+        self.setFile('/rw_configure_script', RouterFileTemplates['rw_configure_script'])
+        self.insertStartCommand(0, '/rw_configure_script')
+        self.insertStartCommand(0, 'chmod +x /rw_configure_script')
         self.addTable('t_rw')
         statics = '\n    ipv4 { table t_rw; import all; };\n    route ' + ' via !__default_gw__!;\n    route '.join(self.__realworld_routes)
         statics += ' via !__default_gw__!;\n'
