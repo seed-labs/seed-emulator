@@ -9,6 +9,10 @@ emu = Emulator()
 # Create the base layer
 base = Base()
 
+# Create a  web service layer
+web  = WebService()
+
+
 
 ###############################################################################
 # Create Internet exchanges
@@ -28,8 +32,8 @@ Makers.makeTransitAs(base, 4, [100, 101, 102],
        [(100, 101), (101, 102), (100, 102)]
 )
 
-Makers.makeStubAs(emu, base, 160, 100, [None, None])
-Makers.makeStubAs(emu, base, 161, 101, [None, None])
+Makers.makeStubAs(emu, base, 160, 100, [web, None])
+Makers.makeStubAs(emu, base, 161, 101, [None, web])
 Makers.makeStubAs(emu, base, 162, 102, [None, None])
 Makers.makeStubAs(emu, base, 163, 102, [None, None])
 
@@ -39,8 +43,8 @@ Makers.makeStubAs(emu, base, 163, 102, [None, None])
 
 ovpn    = OpenVpnRemoteAccessProvider()
 
-as152 = base.getAutonomousSystem(162)
-as152.getNetwork('net0').enableRemoteAccess(ovpn)
+as162 = base.getAutonomousSystem(162)
+as162.getNetwork('net0').enableRemoteAccess(ovpn)
 
 
 ###############################################################################
@@ -68,6 +72,7 @@ ebgp.addPrivatePeering (102, 162,  163, PeerRelationship.Peer)
 
 emu.addLayer(base)
 emu.addLayer(ebgp)
+emu.addLayer(web)
 
 emu.addLayer(Routing())
 emu.addLayer(Ibgp())
