@@ -467,7 +467,7 @@ export class MapUi {
                 let nodeObj = (node.object as EmulatorNode);
                 let nodeInfo = nodeObj.meta.emulatorInfo;
 
-                targetString = `${nodeObj.Id} ${nodeInfo.role} as${nodeInfo.asn} ${nodeInfo.name} `;
+                targetString = `${nodeObj.Id} ${nodeInfo.role} as${nodeInfo.asn} ${nodeInfo.name} ${nodeInfo.displayname ?? ''} ${nodeInfo.description ?? ''}`;
 
                 nodeInfo.nets.forEach(net => {
                     targetString += `${net.name} ${net.address} `;
@@ -478,7 +478,7 @@ export class MapUi {
                 let net = (node.object as EmulatorNetwork);
                 let netInfo = net.meta.emulatorInfo;
 
-                targetString = `${net.Id} as${netInfo.scope} ${netInfo.name} ${netInfo.prefix}`;
+                targetString = `${net.Id} as${netInfo.scope} ${netInfo.name} ${netInfo.prefix} ${netInfo.displayname ?? ''} ${netInfo.description ?? ''}`;
             }
 
             if (term != '' && targetString.toLowerCase().includes(term.toLowerCase())) {
