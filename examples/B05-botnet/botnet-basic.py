@@ -7,34 +7,49 @@ from seedemu.compiler import Docker
 
 emu = Emulator()
 
-# load the pre-built component
+# Load the pre-built component
 emu.load('../B00-mini-internet/base-component.bin')
 
-# create services for botnet controller and client
+###############################################################################
+# Build a botnet
+
+# Create services for botnet controller and client
 bot = BotnetService()
 botClient = BotnetClientService()
 
-# pick an IP for botnet controller
+# Pick an IP for botnet controller
 controllerIp = '10.150.0.66'
 
-# create a virtual node for bot controller
-bot.install('bot_controller')
+# Create a virtual node for bot controller,
+# and add a file to this node
+f = open("./ddos.py", "r")
+bot.install('bot_controller').addFile(f.read(), "/tmp/ddos.py")
 
-# use binding with NEW action to create a new physical node for the controller.
+# Bind the virtual node to a physical node (create a new one)
 emu.addBinding(Binding('bot_controller', filter = Filter(ip = controllerIp), action = Action.NEW))
 
 for asn in [151, 152, 153, 154]:
     vname = 'bot{}'.format(asn)
 
-    # create a virtual node for bot client
+    # Create a virtual node for each bot client
     botClient.install(vname).setServer(server = controllerIp)
 
-    # use binding with NEW action to create a new physical node for the client.
+    # Bind the virtual node to a physical node (new)
     emu.addBinding(Binding(vname, filter = Filter(asn = asn), action = Action.NEW))
+
+###############################################################################
 
 emu.addLayer(bot)
 emu.addLayer(botClient)
 emu.render()
+
+###############################################################################
+# Customize the display names of the controller and bots.
+
+emu.getBindingFor('bot_controller').setDisplayName('Bot-Controller'.format(asn))
+for asn in [151, 152, 153, 154]:
+    vname = 'bot{}'.format(asn)
+    emu.getBindingFor(vname).setDisplayName('Bot-{}'.format(asn))
 
 ###############################################################################
 

@@ -5,9 +5,11 @@ from seedemu.core import Emulator
 from seedemu.services import DomainNameService, DomainNameCachingService
 
 emu = Emulator()
-dns = DomainNameService()
 
 ###########################################################
+# Create a DNS layer
+dns = DomainNameService()
+
 # Create two nameservers for the root zone
 dns.install('a-root-server').addZone('.').setMaster()   # Master server
 dns.install('b-root-server').addZone('.')               # Slave server
