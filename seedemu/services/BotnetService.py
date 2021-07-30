@@ -2,7 +2,7 @@
 # encoding: utf-8
 # __author__ = 'Demon'
 from __future__ import annotations
-from seedemu.core import Node, Service, Server
+from seedemu.core import Node, Service, Server, Emulator
 from typing import Dict
 
 BYOB_VERSION='3924dd6aea6d0421397cdf35f692933b340bfccf'
@@ -169,6 +169,10 @@ class BotnetServer(Server):
         # script to start byob shell on correct port
         node.setFile('/bin/start-byob-shell', BotnetServerFileTemplates['start-byob-shell'].format(self.__port))
         node.appendStartCommand('chmod +x /bin/start-byob-shell')
+
+        # set attributes for client to find us
+        node.setAttribute('botnet_addr', address)
+        node.setAttribute('botnet_port', self.__port + 1)
          
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -182,8 +186,8 @@ class BotnetClientServer(Server):
     """
 
     __server: str
-    __port: int
     __dga: str
+    __emulator: Emulator
 
     def __init__(self):
         """!
@@ -194,20 +198,25 @@ class BotnetClientServer(Server):
         self.__port = 446
         self.__dga = None
 
-    def setServer(self, server: str, port: int = 446) -> BotnetClientServer:
+    def useBindingFrom(self, emulator: Emulator):
+        """!
+        @brief set the emulator for the client to look for server from.
+
+        note: to be called by the render procress. 
+
+        @param emulator emulator.
+        """
+        self.__emulator = emulator
+
+    def setServer(self, server: str) -> BotnetClientServer:
         """!
         @brief BotnetClient constructor.
 
-        @param server BYOB server address.
-        @param port (optional) control server BYOB modules port. Note that this
-        is NOT the BYOB port, but the port for HTTP server hosting BYOB modules.
-        It will be your BYOB port plus one. Default to 446 since defualt BYOB
-        port is 445.
+        @param server name of the BYOB server virtual node.
 
         @returns self, for chaining API calls.
         """
         self.__server = server
-        self.__port = port
 
         return self
 
@@ -255,9 +264,16 @@ class BotnetClientServer(Server):
             node.setFile('/dga', self.__dga)
             node.setFile('/tmp/byob_client_dropper_runner', BotnetServerFileTemplates['client_dropper_runner_dga'])
 
+        server: Node = self.__emulator.getBindingFor(self.__server)
+
+        addr = server.getAttribute('botnet_addr', None)
+        port = server.getAttribute('botnet_port', None)
+
+        assert addr != None and port != None, 'cannot find server details from botnet controller the node on {} (as{}/{}). is botnet controller installed on it?'.format(self.__server, server.getAsn(), server.getName())
+
         # get and run dropper from server.
         node.appendStartCommand('chmod +x /tmp/byob_client_dropper_runner')
-        node.appendStartCommand('/tmp/byob_client_dropper_runner "{}" "{}"'.format(self.__server, self.__port), fork)
+        node.appendStartCommand('/tmp/byob_client_dropper_runner "{}" "{}"'.format(addr, port), fork)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -292,12 +308,21 @@ class BotnetClientService(Service):
     @brief Botnet client service.
     """
 
+    __emulator: Emulator
+
     def __init__(self):
         """!
         @brief BotnetService constructor.
         """
         super().__init__()
         self.addDependency('Base', False, False)
+
+    def _doConfigure(self, node: Node, server: Server):
+        server.useBindingFrom(self.__emulator)
+
+    def configure(self, emulator: Emulator):
+        self.__emulator = emulator
+        return super().configure(emulator)
 
     def _createServer(self) -> Server:
         return BotnetClientServer()
