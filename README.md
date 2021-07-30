@@ -27,7 +27,7 @@ including Blockchain, Botnet, and many other useful elements of the Internet.
 
 To get started with the emulator, install docker, docker-compose, and python3. Then, take a look at the [examples/](./examples/) folder for examples. Detailed explanation is provided in the README file, as well as in the comments of the code. To run an example:
 
-1. Pick an example, say `00-simple-peering`. 
+1. Pick an example, say `A00-simple-peering`. 
 2. Add `seedemu` to `PYTHONPATH`. This can be done by running `source development.env` under the project root directory.
 3. Build the emulation. For this example, run `python3 examples/00-simple-peering/00-simple-peering.py`. The container files will be created inside the `output/` folder. 
 4. Build and run the containers. First `cd output/`, then do `docker-compose build && docker-compose up`. The emulator will start running. Give it a minute or two (or longer if your emulator is large) to let the routers do their jobs.
