@@ -146,7 +146,7 @@ class BotnetServer(Server):
         address = str(node.getInterfaces()[0].getAddress())
 
         # add user files
-        for (path, body) in self.__files.values():
+        for (path, body) in self.__files.items():
             node.setFile(path, body)
 
         # get byob & its dependencies
