@@ -1,7 +1,7 @@
 Internet Emulator
 ---
 
-The objective of the SEEDEmulator project is to help create emulators of 
+The objective of the SEED-Emulator project is to help create emulators of 
 the Internet. These emulators are for educational uses, and they can be
 used as the platform for designing hands-on lab exercises for various subjects,
 including cybersecurity, networking, etc.
@@ -29,7 +29,7 @@ To get started with the emulator, install docker, docker-compose, and python3. T
 
 1. Pick an example, say `A00-simple-peering`. 
 2. Add `seedemu` to `PYTHONPATH`. This can be done by running `source development.env` under the project root directory.
-3. Build the emulation. For this example, run `python3 examples/00-simple-peering/00-simple-peering.py`. The container files will be created inside the `output/` folder. 
+3. Build the emulation. For this example, run `python3 examples/A00-simple-peering/simple-peering.py`. The container files will be created inside the `output/` folder. 
 4. Build and run the containers. First `cd output/`, then do `docker-compose build && docker-compose up`. The emulator will start running. Give it a minute or two (or longer if your emulator is large) to let the routers do their jobs.
 5. Optionally, start the seedemu web client. Open a new terminal window, navigate to the project root directory, cd to `client/`, and run `docker-compose build && docker-compose up`. Then point your browser to http://127.0.0.1:8080, and you will see the entire emulator. Use the filter box if you want to see the packet flow.
 
@@ -39,8 +39,8 @@ Documentation is in progress inside the [docs/](./docs/) folder.
 
 ## Contributing
 
-Contributions to SEEDEmulator are always welcome. For contribution guidelines, please see [CONTRIBUTING](./CONTRIBUTING.md).
+Contributions to SEED-Emulator are always welcome. For contribution guidelines, please see [CONTRIBUTING](./CONTRIBUTING.md).
 
 ## License
 
-The software is licensed under the GNU General Public License v3.0 license, with copyright by The SEEDEmulator Developers (see [LICENSE](./LICENSE.txt)).
+The software is licensed under the GNU General Public License v3.0 license, with copyright by The SEED-Emulator Developers (see [LICENSE](./LICENSE.txt)).
