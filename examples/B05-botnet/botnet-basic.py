@@ -43,7 +43,7 @@ emu.render()
 ###############################################################################
 # Customize the display names of the controller and bots.
 
-emu.getBindingFor('bot_controller').setDisplayName('Bot-Controller'.format(asn))
+emu.getBindingFor('bot_controller').setDisplayName('Bot-Controller')
 for asn in [151, 152, 153, 154]:
     vname = 'bot{}'.format(asn)
     emu.getBindingFor(vname).setDisplayName('Bot-{}'.format(asn))
