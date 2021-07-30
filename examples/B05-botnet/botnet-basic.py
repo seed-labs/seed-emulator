@@ -32,7 +32,7 @@ for asn in [151, 152, 153, 154]:
     vname = 'bot{}'.format(asn)
 
     # Create a virtual node for each bot client
-    botClient.install(vname).setServer(server = controllerIp)
+    botClient.install(vname).setServer('bot_controller')
 
     # Bind the virtual node to a physical node (new)
     emu.addBinding(Binding(vname, filter = Filter(asn = asn), action = Action.NEW))
