@@ -5,6 +5,7 @@
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.compiler import Docker
 from seedemu.services import EthereumService
+from contractDeployment import generateSmartContractCommand
 
 sim = Emulator()
 eth = EthereumService()
@@ -20,6 +21,10 @@ e4 = eth.install("eth4")
 # optionally, set boot nodes.
 e1.setBootNode(True)
 e2.setBootNode(True)
+
+#Generate and deploy Smart Contract on node eth1
+SmartContractCommand = generateSmartContractCommand("dummy.sol")
+e1.deploySmartContract(SmartContractCommand)
 
 # optionally, set boot node http server port
 e1.setBootNodeHttpPort(8081)

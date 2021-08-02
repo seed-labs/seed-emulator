@@ -67,6 +67,7 @@ class EthereumServer(Server):
     __id: int
     __is_bootnode: bool
     __bootnode_http_port: int
+    __smart_contract: str
 
     def __init__(self, id: int):
         """!
@@ -77,6 +78,7 @@ class EthereumServer(Server):
         self.__id = id
         self.__is_bootnode = False
         self.__bootnode_http_port = 8088
+        self.__smart_contract = ""
 
     def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
@@ -135,6 +137,9 @@ class EthereumServer(Server):
         else:
             node.appendStartCommand('geth {}'.format(common_args), True)
 
+        if len(self.__smart_contract) > 1 :
+            node.appendStartCommand('(\n {})&'.format(self.__smart_contract))
+
     def getId(self) -> int:
         """!
         @brief get ID of this node.
@@ -142,6 +147,18 @@ class EthereumServer(Server):
         @returns ID.
         """
         return self.__id
+
+    def deploySmartContract(self, contract: str) -> EthereumServer:
+        """!
+        @brief set contract values that gets executed when nodes are launched.
+
+        @param set of commands that gets executed in conjuction with the smart 
+        contract code in a specefic node.
+
+        @returns self, for chaining API calls.
+        """
+        self.__smart_contract = contract
+        return self
 
     def setBootNode(self, isBootNode: bool) -> EthereumServer:
         """!
