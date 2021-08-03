@@ -31,7 +31,18 @@ class EthereumConsoleManager():
 		display_contract_Info = "testContract"
 		finalCommand = "{},{},{},{},{}".format(abi, byte_code, unlock_account, contract_command, display_contract_Info)
 
-		SmartContractCommand = " sleep 600 \n\
+		SmartContractCommand = " \t \twhile true \n\
+		do \n\
+		\t balanceCommand=\"geth --exec 'eth.getBalance(eth.accounts[0])' attach\" \n\
+		\t balance=$(eval \"$BalanceCommand\") \n\
+		\t minimumBalance=1000000 \n\
+		\t if [ $balance -lt $minimumBalance ] \n\
+		\t then \n \
+		\t \t sleep 60 \n \
+		\t else \n \
+		\t \t break \n \
+		\t fi \n \
+		done \n \
 		gethCommand=\'{}\'\n\
 		finalCommand=\'geth --exec \"$gethCommand\" attach\'\n\
 		result=$(eval \"$finalCommand\")\n\
