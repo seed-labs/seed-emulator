@@ -43,7 +43,14 @@ class EthereumConsoleManager():
 
 	def addMinerStartCommand(self, node: Node):	
 		command = SmartContractCommand = " sleep 10\n\
+		geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
 		geth --exec 'miner.start(5)' attach \n\
+		"
+		node.appendStartCommand('(\n {})&'.format(command))
+
+	def createNewAccountCommand(self, node: Node):
+		command = SmartContractCommand = " sleep 10\n\
+		geth --password /tmp/eth-password account new \n\
 		"
 		node.appendStartCommand('(\n {})&'.format(command))
 
@@ -61,3 +68,8 @@ class EthereumConsoleManager():
 		for (server, node) in ethereum_service.getTargets():
 			if(ethereum_server == server):
 				self.addMinerStartCommand(node)
+
+	def createNewAccountInNode(self, ethereum_server:EthereumServer, ethereum_service: EthereumService):		
+		for (server, node) in ethereum_service.getTargets():
+			if(ethereum_server == server):
+				self.createNewAccountCommand(node)
