@@ -36,6 +36,7 @@ sim.addLayer(eth)
 sim.render()
 
 #Generate and deploy Smart Contract on node eth1
+esm.startMinerInAllNodes(eth)
 esm.deploySmartContractOn(e1, eth,"dummy.sol")
 
 sim.compile(Docker(), './eth-private-network')

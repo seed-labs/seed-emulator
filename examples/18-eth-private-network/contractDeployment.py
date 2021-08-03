@@ -31,9 +31,7 @@ class EthereumConsoleManager():
 		display_contract_Info = "testContract"
 		finalCommand = "{},{},{},{},{}".format(abi, byte_code, unlock_account, contract_command, display_contract_Info)
 
-		SmartContractCommand = " sleep 30\n\
-		geth --exec 'miner.start(5)' attach \n\
-		sleep 600 \n\
+		SmartContractCommand = " sleep 600 \n\
 		gethCommand=\'{}\'\n\
 		finalCommand=\'geth --exec \"$gethCommand\" attach\'\n\
 		result=$(eval \"$finalCommand\")\n\
@@ -43,12 +41,23 @@ class EthereumConsoleManager():
 		".format(finalCommand)
 		return SmartContractCommand
 
+	def addMinerStartCommand(self, node: Node):	
+		command = SmartContractCommand = " sleep 10\n\
+		geth --exec 'miner.start(5)' attach \n\
+		"
+		node.appendStartCommand('(\n {})&'.format(command))
+
 	def deploySmartContractOn(self, ethereum_server:EthereumServer, ethereum_service: EthereumService, contract_file_name: str):
 		for (server, node) in ethereum_service.getTargets():
 			if(ethereum_server == server):
-				print("akarsh=======>")
-				print(node)
 				smartContractCommand = self.generateSmartContractCommand(contract_file_name)
 				node.appendStartCommand('(\n {})&'.format(smartContractCommand))
-			
-		
+
+	def startMinerInAllNodes(self, ethereum_service: EthereumService):
+		for (server, node) in ethereum_service.getTargets():
+			self.addMinerStartCommand(node)
+
+	def startMinerInNode(self, ethereum_server:EthereumServer, ethereum_service: EthereumService):
+		for (server, node) in ethereum_service.getTargets():
+			if(ethereum_server == server):
+				self.addMinerStartCommand(node)
