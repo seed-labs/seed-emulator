@@ -31,10 +31,11 @@ class EthereumConsoleManager():
 		display_contract_Info = "testContract"
 		finalCommand = "{},{},{},{},{}".format(abi, byte_code, unlock_account, contract_command, display_contract_Info)
 
-		SmartContractCommand = " \t \twhile true \n\
+		SmartContractCommand = "sleep 30 \n \
+		while true \n\
 		do \n\
 		\t balanceCommand=\"geth --exec 'eth.getBalance(eth.accounts[0])' attach\" \n\
-		\t balance=$(eval \"$BalanceCommand\") \n\
+		\t balance=$(eval \"$balanceCommand\") \n\
 		\t minimumBalance=1000000 \n\
 		\t if [ $balance -lt $minimumBalance ] \n\
 		\t then \n \
@@ -43,6 +44,7 @@ class EthereumConsoleManager():
 		\t \t break \n \
 		\t fi \n \
 		done \n \
+		echo \"Balance ========> $balance\" \n\
 		gethCommand=\'{}\'\n\
 		finalCommand=\'geth --exec \"$gethCommand\" attach\'\n\
 		result=$(eval \"$finalCommand\")\n\
@@ -53,14 +55,14 @@ class EthereumConsoleManager():
 		return SmartContractCommand
 
 	def addMinerStartCommand(self, node: Node):	
-		command = SmartContractCommand = " sleep 10\n\
+		command = SmartContractCommand = " sleep 20\n\
 		geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
 		geth --exec 'miner.start(5)' attach \n\
 		"
 		node.appendStartCommand('(\n {})&'.format(command))
 
 	def createNewAccountCommand(self, node: Node):
-		command = SmartContractCommand = " sleep 10\n\
+		command = SmartContractCommand = " sleep 20\n\
 		geth --password /tmp/eth-password account new \n\
 		"
 		node.appendStartCommand('(\n {})&'.format(command))
