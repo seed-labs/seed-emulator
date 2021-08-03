@@ -5,7 +5,7 @@
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.compiler import Docker
 from seedemu.services import EthereumService
-from contractDeployment import EthereumConsoleManager
+from EthereumConsoleManager import EthereumConsoleManager
 
 sim = Emulator()
 eth = EthereumService()
