@@ -11,6 +11,7 @@ API's
 	Note: These API's can only be called after the Emulator's render process is complete.
 
 ## 1: Create new account:
+
 - In here we have exposed an API which creates an new account in the specified miner nodes.
 - By default when we launch a new miner node it gets created with a new account. 
 		
@@ -21,6 +22,7 @@ API's
 	where e2 representes the 2nd miner node in which I want to create a new Account.
 	
 ##2: Start Miner Node:
+
 - In here we have exposed an API which starts miner in specfic nodes or all miner nodes.
 - If we dont call this API. By default the miner nodes after launch they stay idle instead of mining.
 		
@@ -31,6 +33,7 @@ API's
 		esm.startMinerInNode(e2, eth) // to start Miner node in e2
 
 ##3: Deploy Smart Contract:
+
 - In here we have exposed an API which deploys an smart Contract into the Ethereum blockchain.
 - The deployment takes some time (approx 10-15 min) beacuse deploying an contract requires ethers and as soon as we launch a miner node our account does not have ethers as a result we need to mine before deploying the contract.
 - By default if we are using our custom API minimum ethers required to deploy a smart contract is 1000000 ethers so that miners can pick the smart contract on as it has higher returns and it is always deducted from the first account of the miner (further development can be made to make the api configurable). 
