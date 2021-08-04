@@ -21,7 +21,7 @@ API's
 		
 	where e2 representes the 2nd miner node in which I want to create a new Account.
 	
-##2: Start Miner Node:
+## 2: Start Miner Node:
 
 - In here we have exposed an API which starts miner in specfic nodes or all miner nodes.
 - If we dont call this API. By default the miner nodes after launch they stay idle instead of mining.
@@ -32,7 +32,7 @@ API's
 		esm.startMinerInAllNodes(eth) // to start in all node (e1 and e2)
 		esm.startMinerInNode(e2, eth) // to start Miner node in e2
 
-##3: Deploy Smart Contract:
+## 3: Deploy Smart Contract:
 
 - In here we have exposed an API which deploys an smart Contract into the Ethereum blockchain.
 - The deployment takes some time (approx 10-15 min) beacuse deploying an contract requires ethers and as soon as we launch a miner node our account does not have ethers as a result we need to mine before deploying the contract.
