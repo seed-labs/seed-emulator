@@ -1,14 +1,16 @@
 ## Advance Ethereum API's
 - we have created a set of API's which perform certain operation's when Miner nodes are launched these api perform certain ethereum operations.
 
-API's 
-	Before Calling any api we need to create a Object of EthereumConsoleManager which attaches the commands to the respective Ethereum miner nodes.
-	The Object can be created by 
-	```
-	esm = EthereumConsoleManager()
-	```
-	Now using the EthereumConsoleManager object we can call certain API which perform certain tasks.
-	Note: These API's can only be called after the Emulator's render process is complete.
+## API's
+
+- Before Calling any api we need to create a Object of EthereumConsoleManager which attaches the commands to the respective Ethereum miner nodes.
+- The Object can be created by 
+
+	```esm = EthereumConsoleManager()```
+	
+- Now using the EthereumConsoleManager object we can call certain API which perform certain tasks.
+
+- Note: These API's can only be called after the Emulator's render process is complete.
 
 ## 1: Create new account:
 
@@ -36,12 +38,17 @@ API's
 
 - In here we have exposed an API which deploys an smart Contract into the Ethereum blockchain.
 - The deployment takes some time (approx 10-15 min) beacuse deploying an contract requires ethers and as soon as we launch a miner node our account does not have ethers as a result we need to mine before deploying the contract.
-- By default if we are using our custom API minimum ethers required to deploy a smart contract is 1000000 ethers so that miners can pick the smart contract on as it has higher returns and it is always deducted from the first account of the miner (further development can be made to make the api configurable). 
-- inroder for the api to work we need to install Solidity with a version above 0.8.0 Install can be found [here](https://docs.soliditylang.org/en/v0.8.0/installing-solidity.html#linux-packages)
+- By default if we are using our custom API minimum ethers required to deploy a smart contract is 1000000 ethers so that miners can pick the smart contract. As it has higher returns and it is always deducted from the first account of the miner (further development can be made to make the api configurable). 
+- Inroder to deploy your contract write the file in solidity and generate the abi and bin file out of it. Please install Solidity with a version above 0.8.0 Installation can be found [here](https://docs.soliditylang.org/en/v0.8.0/installing-solidity.html#linux-packages)
+- Once installed we can generate the abi and bin file by following command.
+
+	```solc --abi <Solidity-filename.sol> | awk '/JSON ABI/{x=1}x' | sed 1d > contract.abi```
+	```solc --bin <Solidity-filename.sol> | awk '/Binary:/{x=1;next}x' | sed 1d > contract.abi```
+-Then we can supply the file Path to our Api's
 
 		eth = EthereumService()
 		e1 = eth.install("eth1")
-		esm.deploySmartContractOn(e1, eth, "./examples/18-eth-private-network/dummy.sol") // here dummy.sol representes the path to the solidity file which is our smart contract.
+		esm.deploySmartContractOn(e1, eth, "./examples/19-SmartContract/SmartContract/contract.bin", "./examples/19-SmartContract/SmartContract/contract.abi") // here we need to pass the bin and abi file generated from .sol file the order of the command should be maintained.
 	
 	Once the contract gets deployed onto the network a transaction.txt file gets generated with hash of the contract. This file can be found in the miner node for example in our case it will be node e1.
 
@@ -80,7 +87,7 @@ API's
 
 		abi = <contents-of-the-abi-file-generated>
 		contract = eth.contract(abi).at("<contract-address")
-	.abi file can be found inside examples/18-eth-private-network
+	.abi file can be found inside examples/19-eth-private-network/SmartContract
 ![](pics/ContractObject.png)
 
 - Step-2: As a ethereum miner node we can have many accounts as a result when an account recives ethers miner need to specify the default account 

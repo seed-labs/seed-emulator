@@ -15,19 +15,9 @@ class EthereumConsoleManager():
 		file.close()
 		return data.replace("\n","")
 
-	def generate_abi_bin(self, file_name):
-		abiCommand = "solc --abi " + file_name + " | awk '/JSON ABI/{x=1}x' | sed 1d > ./examples/19-SmartContract/contract.abi"
-		binCommand = "solc --bin " + file_name + " | awk '/Binary:/{x=1;next}x' > ./examples/19-SmartContract/contract.bin"
-
-		print(abiCommand)
-
-		os.system(abiCommand) #need to change api
-		os.system(binCommand)
-
-	def generateSmartContractCommand(self, file_name):
-		self.generate_abi_bin(file_name)
-		abi = "abi = {}".format(self.getContent("./examples/19-SmartContract/contract.abi"))
-		byte_code = "byteCode = \"0x{}\"".format(self.getContent("./examples/19-SmartContract/contract.bin"))
+	def generateSmartContractCommand(self, contract_file_bin, contract_file_abi):
+		abi = "abi = {}".format(self.getContent(contract_file_abi))
+		byte_code = "byteCode = \"0x{}\"".format(self.getContent(contract_file_bin))
 		unlock_account = "personal.unlockAccount(eth.accounts[0], \"{}\")".format("admin")
 		contract_command = "testContract = eth.contract(abi).new({ from: eth.accounts[0], data: byteCode, gas: 1000000})"
 		display_contract_Info = "testContract"
@@ -56,24 +46,18 @@ class EthereumConsoleManager():
 		".format(finalCommand)
 		return SmartContractCommand
 
+	def deploySmartContractOn(self, ethereum_server:EthereumServer, ethereum_service: EthereumService, contract_file_bin: str, contract_file_abi: str):
+		for (server, node) in ethereum_service.getTargets():
+			if(ethereum_server == server):
+				smartContractCommand = self.generateSmartContractCommand(contract_file_bin, contract_file_abi)
+				node.appendStartCommand('(\n {})&'.format(smartContractCommand))	
+
 	def addMinerStartCommand(self, node: Node):	
 		command = SmartContractCommand = " sleep 20\n\
 		geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
 		geth --exec 'miner.start(5)' attach \n\
 		"
 		node.appendStartCommand('(\n {})&'.format(command))
-
-	def createNewAccountCommand(self, node: Node):
-		command = SmartContractCommand = " sleep 20\n\
-		geth --password /tmp/eth-password account new \n\
-		"
-		node.appendStartCommand('(\n {})&'.format(command))
-
-	def deploySmartContractOn(self, ethereum_server:EthereumServer, ethereum_service: EthereumService, contract_file_name: str):
-		for (server, node) in ethereum_service.getTargets():
-			if(ethereum_server == server):
-				smartContractCommand = self.generateSmartContractCommand(contract_file_name)
-				node.appendStartCommand('(\n {})&'.format(smartContractCommand))
 
 	def startMinerInAllNodes(self, ethereum_service: EthereumService):
 		for (server, node) in ethereum_service.getTargets():
@@ -83,6 +67,12 @@ class EthereumConsoleManager():
 		for (server, node) in ethereum_service.getTargets():
 			if(ethereum_server == server):
 				self.addMinerStartCommand(node)
+
+	def createNewAccountCommand(self, node: Node):
+		command = SmartContractCommand = " sleep 20\n\
+		geth --password /tmp/eth-password account new \n\
+		"
+		node.appendStartCommand('(\n {})&'.format(command))
 
 	def createNewAccountInNode(self, ethereum_server:EthereumServer, ethereum_service: EthereumService):		
 		for (server, node) in ethereum_service.getTargets():
