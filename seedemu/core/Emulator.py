@@ -1,5 +1,5 @@
 from __future__ import annotations
-from seedemu.core.enums import NetworkType
+from seedemu.core.enums import NetworkType, NodeRole
 from .Merger import Mergeable, Merger
 from .Registry import Registry, Registrable, Printable
 from .Network import Network
@@ -19,6 +19,7 @@ class BindingDatabase(Registrable, Printable):
     """
 
     db: List[core.Binding]
+    vpnodes: Dict[str, core.Node]
 
     def __init__(self):
         """!
@@ -27,6 +28,9 @@ class BindingDatabase(Registrable, Printable):
 
         ## Binding database
         self.db = []
+
+        ## virtual "physical nodes"
+        self.vpnodes = {}
 
     def print(self, indentation: int) -> str:
         """!
@@ -346,6 +350,15 @@ class Emulator:
                 self.__log('vnode {} bound to as{}/{}'.format(vnode, pnode.getAsn(), pnode.getName()))
                 self.__resolved_bindings[vnode] = pnode
 
+        self.__log('applying changes made to virtual physical nodes to real physical nodes...')
+        vpnodes = self.__bindings.vpnodes
+        for (vnode, pnode) in self.__resolved_bindings.items():
+            if not vnode in vpnodes: continue
+            vpnode = vpnodes[vnode]
+
+            self.__log('applying changes made on vnode {} to pnode as{}/{}...'.format(vnode, pnode.getAsn(), pnode.getName()))
+            pnode.copySettings(vpnode)
+
         for layerName in self.__layers.db.keys():
             self.__render(layerName, False, True)
 
@@ -382,6 +395,26 @@ class Emulator:
         @returns Registry.
         """
         return self.__registry
+
+    def getVirtualNode(self, vnode_name: str) -> core.Node:
+        """!
+        @brief get a virtual "physical" node.
+
+        This API allows you to create a "virtual" physical node for a virtual
+        node. A real "Node" instance will be returned, you can make any changes
+        to it, and those changes will be copied to the real physical node the
+        virtual node has bound to during render.
+
+        Note that all the APIs that require the node to be in an AS will not
+        work. Like `getAsn`, `joinNetwork`, etc. You will get an error if you
+        use them.
+
+        @returns node
+        """
+        if vnode_name not in self.__bindings.vpnodes:
+            self.__bindings.vpnodes[vnode_name] = core.Node(vnode_name, NodeRole.Host, 0)
+
+        return self.__bindings.vpnodes[vnode_name]
 
     def merge(self, other: Emulator, mergers: List[Merger] = [], vnodePrefix: str = '') -> Emulator:
         """!
