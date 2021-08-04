@@ -77,7 +77,6 @@ class EthereumServer(Server):
         self.__id = id
         self.__is_bootnode = False
         self.__bootnode_http_port = 8088
-        self.__smart_contract = ""
 
     def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
@@ -134,7 +133,7 @@ class EthereumServer(Server):
         if len(bootnodes) > 0:
             node.appendStartCommand('geth --bootnodes "$(cat /tmp/eth-node-urls)" {}'.format(common_args), True)
         else:
-            node.appendStartCommand('geth {}'.format(common_args), True)            
+            node.appendStartCommand('geth {}'.format(common_args), True)         
 
     def getId(self) -> int:
         """!
