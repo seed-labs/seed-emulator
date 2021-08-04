@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding: utf-8
 # __author__ = 'Demon'
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Ibgp, Ospf
