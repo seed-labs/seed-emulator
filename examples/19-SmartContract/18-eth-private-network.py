@@ -5,9 +5,11 @@
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.compiler import Docker
 from seedemu.services import EthereumService
+from EthereumConsoleManager import EthereumConsoleManager
 
 sim = Emulator()
 eth = EthereumService()
+esm = EthereumConsoleManager()
 
 sim.load('base-component.bin')
 
@@ -32,5 +34,10 @@ sim.addBinding(Binding('eth4', filter = Filter(asn = 153)))
 
 sim.addLayer(eth)
 sim.render()
+
+#Generate and deploy Smart Contract on node eth1
+esm.startMinerInAllNodes(eth)
+esm.deploySmartContractOn(e1, eth, "./examples/18-eth-private-network/dummy.sol")
+esm.createNewAccountInNode(e2, eth)
 
 sim.compile(Docker(), './eth-private-network')
