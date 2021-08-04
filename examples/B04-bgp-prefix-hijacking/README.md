@@ -50,6 +50,12 @@ protocol static hijacks {
 }
 ```
 
+Note: in the real world, the longest prefix allowed in the DFZ is /24. So
+realistically, a /25 prefix will not be accepted by any of the peers, and
+therefore hijacking with /25 prefixes will not work (but one can still hijack a
+/23 with two /24s with the same principle). In our emulator, we did not enforce
+the maximum prefix length. 
+
 After making the change, ask the BGP router to reload configuration file
 using the following command.
 
