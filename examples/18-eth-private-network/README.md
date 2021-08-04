@@ -174,38 +174,37 @@ API's
 	Now using the EthereumConsoleManager object we can call certain API which perform certain tasks.
 	Note: These API's can only be called after the Emulator's render process is complete.
 
-	## 1: Create new account:
-		- In here we have exposed an API which creates an new account in the specified miner nodes.
-		- By default when we launch a new miner node it gets created with a new account. 
-		```
+## 1: Create new account:
+- In here we have exposed an API which creates an new account in the specified miner nodes.
+- By default when we launch a new miner node it gets created with a new account. 
+		
 		eth = EthereumService()
 		e2 = eth.install("eth2")
 		esm.createNewAccountInNode(e2, eth)
-		```` 
-		where e2 representes the 2nd miner node in which I want to create a new Account.
+		
+	where e2 representes the 2nd miner node in which I want to create a new Account.
 	
-	##2: Start Miner Node:
-		- In here we have exposed an API which starts miner in specfic nodes or all miner nodes.
-		- If we dont call this API. By default the miner nodes after launch they stay idle instead of mining.
-		```
+##2: Start Miner Node:
+- In here we have exposed an API which starts miner in specfic nodes or all miner nodes.
+- If we dont call this API. By default the miner nodes after launch they stay idle instead of mining.
+		
 		eth = EthereumService()
 		e1 = eth.install("eth1")
 		e2 = eth.install("eth2")
 		esm.startMinerInAllNodes(eth) // to start in all node (e1 and e2)
 		esm.startMinerInNode(e2, eth) // to start Miner node in e2
-		````
 
-	##3: Deploy Smart Contract:
-		- In here we have exposed an API which deploys an smart Contract into the Ethereum blockchain.
-		- The deployment takes some time (approx 10-15 min) beacuse deploying an contract requires ethers and as soon as we launch a miner node our account does not have ethers as a result we need to mine before deploying the contract.
-		- By default if we are using our custom API minimum ethers required to deploy a smart contract is 1000000 ethers so that miners can pick the smart contract on as it has higher returns and it is always deducted from the first account of the miner (further development can be made to make the api configurable). 
-		- inroder for the api to work we need to install Solidity with a version above 0.8.0 Install can be found [here](https://docs.soliditylang.org/en/v0.8.0/installing-solidity.html#linux-packages)
-		```
+##3: Deploy Smart Contract:
+- In here we have exposed an API which deploys an smart Contract into the Ethereum blockchain.
+- The deployment takes some time (approx 10-15 min) beacuse deploying an contract requires ethers and as soon as we launch a miner node our account does not have ethers as a result we need to mine before deploying the contract.
+- By default if we are using our custom API minimum ethers required to deploy a smart contract is 1000000 ethers so that miners can pick the smart contract on as it has higher returns and it is always deducted from the first account of the miner (further development can be made to make the api configurable). 
+- inroder for the api to work we need to install Solidity with a version above 0.8.0 Install can be found [here](https://docs.soliditylang.org/en/v0.8.0/installing-solidity.html#linux-packages)
+
 		eth = EthereumService()
 		e1 = eth.install("eth1")
 		esm.deploySmartContractOn(e1, eth, "./examples/18-eth-private-network/dummy.sol") // here dummy.sol representes the path to the solidity file which is our smart contract.
-		````
-		Once the contract gets deployed onto the network a transaction.txt file gets generated with hash of the contract. This file can be found in the miner node for example in our case it will be node e1.
+	
+	Once the contract gets deployed onto the network a transaction.txt file gets generated with hash of the contract. This file can be found in the miner node for example in our case it will be node e1.
 
 	Once The Contract is Deployed we can perform certain task on them with the Geth console.
 	By default we have supplied a dummy.sol file which acts as a bank account ( such as storing ethers and transferring the ethers from contract to any specfied account).
