@@ -16,16 +16,16 @@ class EthereumConsoleManager():
 		return data.replace("\n","")
 
 	def generate_abi_bin(self, file_name):
-		abiCommand = "solc --abi " + file_name + " | awk '/JSON ABI/{x=1}x' | sed 1d > contract.abi"
-		binCommand = "solc --bin " + file_name + " | awk '/Binary:/{x=1;next}x' > contract.bin"
+		abiCommand = "solc --abi " + file_name + " | awk '/JSON ABI/{x=1}x' | sed 1d > ./examples/18-eth-private-network/contract.abi"
+		binCommand = "solc --bin " + file_name + " | awk '/Binary:/{x=1;next}x' > ./examples/18-eth-private-network/contract.bin"
 
 		os.system(abiCommand) #need to change api
 		os.system(binCommand)
 
 	def generateSmartContractCommand(self, file_name):
 		self.generate_abi_bin(file_name)
-		abi = "abi = {}".format(self.getContent("contract.abi"))
-		byte_code = "byteCode = \"0x{}\"".format(self.getContent("contract.bin"))
+		abi = "abi = {}".format(self.getContent("./examples/18-eth-private-network/contract.abi"))
+		byte_code = "byteCode = \"0x{}\"".format(self.getContent("./examples/18-eth-private-network/contract.bin"))
 		unlock_account = "personal.unlockAccount(eth.accounts[0], \"{}\")".format("admin")
 		contract_command = "testContract = eth.contract(abi).new({ from: eth.accounts[0], data: byteCode, gas: 1000000})"
 		display_contract_Info = "testContract"
