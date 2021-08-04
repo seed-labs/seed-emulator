@@ -269,6 +269,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @param emulator Emulator object to use to configure.
         """
         assert not self.__configured, 'Node already configured.'
+        assert not self.__asn == 0, 'Virtual physical node must not be used in render/configure'
 
         reg = emulator.getRegistry()
 
@@ -329,6 +330,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns self, for chaining API calls.
         """
+        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+
         self.__name_servers = servers
 
         return self
@@ -339,6 +342,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns list of IP addresses of recursive name servers
         """
+        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+
         return self.__name_servers
 
     def addPort(self, host: int, node: int, proto: str = 'tcp') -> Node:
@@ -353,7 +358,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         self.__ports.append((host, node, proto))
 
-    def getPorts(self) -> List[Tuple[int, int]]:
+    def getPorts(self) -> List[Tuple[int, int, str]]:
         """!
         @brief Get port forwardings.
 
@@ -412,6 +417,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns self, for chaining API calls.
         """
+        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
         assert not self.__configured, 'Node already configured.'
 
         self.__pending_nets.append((netname, address))
@@ -428,6 +434,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns self, for chaining API calls.
         """
+        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
         assert peername != self.getName() or peerasn != self.getName(), 'cannot XC to self.'
         self.__xcs[(peername, peerasn)] = (IPv4Interface(address), None)
 
@@ -440,6 +447,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns tuple of IP address and XC network name. XC network name will
         be None if the network has not yet been created.
         """
+        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
         assert (peername, peerasn) in self.__xcs, 'as{}/{} is not in the XC list.'.format(peerasn, peername)
         return self.__xcs[(peername, peerasn)]
 
@@ -449,6 +457,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns dict, where key is (peer node name, peer node asn) and value is (address on interface, netname)
         """
+        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
         return self.__xcs
 
     def getName(self) -> str:
@@ -463,8 +472,9 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """!
         @brief Get node parent AS ASN.
 
-        @returns asm.
+        @returns asn.
         """
+        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
         return self.__asn
 
     def getRole(self) -> NodeRole:
@@ -675,6 +685,26 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns list of persistent storage folder.
         """
         return self.__persistent_storages
+
+    def copySettings(self, node: Node):
+        """!
+        @brief copy settings from another node.
+
+        @param node node to copy from.
+        """
+        if node.getDisplayName() != None: self.setDisplayName(node.getDisplayName())
+        if node.getDescription() != None: self.setDescription(node.getDescription())
+        
+        for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
+        for p in node.getPersistentStorages(): self.addPersistentStorage(p)
+        for c in node.getStartCommands(): self.appendStartCommand(c)
+        for c in node.getBuildCommands(): self.addBuildCommand(c)
+        for s in node.getSoftware(): self.addSoftware(s)
+
+        for file in node.getFiles():
+            (path, content) = file.get()
+            self.setFile(path, content)
+        
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
