@@ -697,7 +697,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for p in node.getPersistentStorages(): self.addPersistentStorage(p)
-        for c in node.getStartCommands(): self.appendStartCommand(c)
+        for (c, f) in node.getStartCommands(): self.appendStartCommand(c, f)
         for c in node.getBuildCommands(): self.addBuildCommand(c)
         for s in node.getSoftware(): self.addSoftware(s)
 
