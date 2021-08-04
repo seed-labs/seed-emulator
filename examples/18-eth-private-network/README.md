@@ -212,26 +212,23 @@ API's
 
 ### Now in order to send ethers from one account to the smart contract (all the commands gets executed in the ethereum console except step 1).
 
-	 ## Step-1: Get the Transcations hash of the Contract by reading the transaction.txt file from smart contract deployed node.
-
+	 - Step-1: Get the Transcations hash of the Contract by reading the transaction.txt file from smart contract deployed node.
 ![](pics/transactions-txt.png)
 
-	 ## Step-2: launch the ethereum console of any Miner node and perform the following command.
+	 - Step-2: launch the ethereum console of any Miner node and perform the following command.
 	 ```
 		geth attach 
-	````
-	This command connects us to the ethereum network and gives us a Go-ethereum console
-
+	 ```
+	 This command connects us to the ethereum network and gives us a Go-ethereum console
 ![](pics/geth-console.png)
 
-	## Step-3: Now we need to get the smart contract address so that we can perform the transcations ( here we can consider the smart constract is like the bank account address), here we supply the transcation hash to ethereum network which will give us the address of the contract
+	- Step-3: Now we need to get the smart contract address so that we can perform the transcations ( here we can consider the smart constract is like the bank account address), here we supply the transcation hash to ethereum network which will give us the address of the contract
 	```
 		eth.getTransactionReceipt("<Contract-hash>") 
 	````
-
 ![](pics/transcationsRecipt.png)
 
-	## Step-4: Now we send some ethers from our account to smart contract. This needs to be done in 2 commands which goes as below 
+	- Step-4: Now we send some ethers from our account to smart contract. This needs to be done in 2 commands which goes as below 
 	```
 		personal.unlockAccount(eth.accounts[0], "admin") //which opens the account to perform the transactions.
 		eth.sendTransaction ({ from: "<From-account-number>", to: "Smart-contract-address", value: "<ethers-you-want-to-transfer" })
@@ -241,29 +238,27 @@ API's
 
 ### Now in order to send ethers from smart contract to specfic account.(all the commands gets executed in the ethereum console)
 	
-	## Step-1: In here if we need to call smart Contract specfic api we need to re-create the Contract object so that we can perform certain task or call the api's of the smart contract.
+	- Step-1: In here if we need to call smart Contract specfic api we need to re-create the Contract object so that we can perform certain task or call the api's of the smart contract.
 	```
 		abi = <contents-of-the-abi-file-generated>
 		contract = eth.contract(abi).at("<contract-address")
 	````
 	.abi file can be found inside examples/18-eth-private-network
-
 ![](pics/ContractObject.png)
 
-	## Step-2: As a ethereum miner node we can have many accounts as a result when an account recives ethers miner need to specify the default account 
+	- Step-2: As a ethereum miner node we can have many accounts as a result when an account recives ethers miner need to specify the default account 
 	```
 		eth.defaultAccount = eth.accounts[0]
 	````
-
 ![](pics/defaultAccount.png)
 	
-	## Step-3: now we need to unlock our account so that it can recives the ethers from the smartContract
+	- Step-3: now we need to unlock our account so that it can recives the ethers from the smartContract
 	```
 		personal.unlockAccount(eth.accounts[0], "admin") //which opens the account to perform the transactions.
 	````
 ![](pics/unlockAccount.png)
 	
-	## Step-4: now we call the smart contract api which transfers the ethers from smart contract to specfic accounts
+	- Step-4: now we call the smart contract api which transfers the ethers from smart contract to specfic accounts
 	```
 		personal.unlockAccount(eth.accounts[0], "admin") //which opens the account to perform the transactions.
 	````
