@@ -7,11 +7,11 @@ from seedemu.compiler import Docker
 from seedemu.services import EthereumService
 from EthereumConsoleManager import EthereumConsoleManager
 
-sim = Emulator()
+emu = Emulator()
 eth = EthereumService()
 esm = EthereumConsoleManager()
 
-sim.load('base-component.bin')
+emu.load('base-component.bin')
 
 # create eth node
 e1 = eth.install("eth1")
@@ -27,17 +27,22 @@ e2.setBootNode(True)
 e1.setBootNodeHttpPort(8081)
 
 # add bindings
-sim.addBinding(Binding('eth1', filter = Filter(asn = 150)))
-sim.addBinding(Binding('eth2', filter = Filter(asn = 151)))
-sim.addBinding(Binding('eth3', filter = Filter(asn = 152)))
-sim.addBinding(Binding('eth4', filter = Filter(asn = 153)))
+emu.addBinding(Binding('eth1', filter = Filter(asn = 150)))
+emu.addBinding(Binding('eth2', filter = Filter(asn = 151)))
+emu.addBinding(Binding('eth3', filter = Filter(asn = 152)))
+emu.addBinding(Binding('eth4', filter = Filter(asn = 153)))
 
-sim.addLayer(eth)
-sim.render()
+emu.addLayer(eth)
+emu.render()
 
 #Generate and deploy Smart Contract on node eth1
-esm.startMinerInAllNodes(eth)
-esm.deploySmartContractOn(e1, eth, "./examples/19-SmartContract/dummy.sol")
+esm.startMinerInNode(e1,eth)
+esm.deploySmartContractOn(e1, eth, "./examples/19-SmartContract/SmartContract/contract.bin", "./examples/19-SmartContract/SmartContract/contract.abi")
 esm.createNewAccountInNode(e2, eth)
 
-sim.compile(Docker(), './eth-private-network')
+emu.getBindingFor('eth1').setDisplayName('ethereumNode-1')
+emu.getBindingFor('eth2').setDisplayName('ethereumNode-2')
+emu.getBindingFor('eth3').setDisplayName('ethereumNode-3')
+emu.getBindingFor('eth4').setDisplayName('ethereumNode-4')
+
+emu.compile(Docker(), './output')
