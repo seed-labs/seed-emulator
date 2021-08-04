@@ -131,9 +131,9 @@ class EthereumServer(Server):
         # launch Ethereum process.
         common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=6 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0'.format(datadir_option, self.__id)
         if len(bootnodes) > 0:
-            node.appendStartCommand('geth --bootnodes "$(cat /tmp/eth-node-urls)" {}'.format(common_args), True)
+            node.appendStartCommand('nice -n 19 geth --bootnodes "$(cat /tmp/eth-node-urls)" {}'.format(common_args), True)
         else:
-            node.appendStartCommand('geth {}'.format(common_args), True)
+            node.appendStartCommand('nice -n 19 geth {}'.format(common_args), True)
 
     def getId(self) -> int:
         """!
