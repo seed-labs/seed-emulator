@@ -133,7 +133,7 @@ class EthereumServer(Server):
         if len(bootnodes) > 0:
             node.appendStartCommand('geth --bootnodes "$(cat /tmp/eth-node-urls)" {}'.format(common_args), True)
         else:
-            node.appendStartCommand('geth {}'.format(common_args), True)         
+            node.appendStartCommand('geth {}'.format(common_args), True)
 
     def getId(self) -> int:
         """!
