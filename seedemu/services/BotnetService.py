@@ -125,6 +125,9 @@ class BotnetServer(Server):
 
     def addFile(self, content: str, path: str):
         """!
+        @deprecated to be removed in future version. use
+        emulator.getVirtualNode(nodename).setFile instead.
+
         @brief Add a file to the C2 server. You can use this API to add files
         onto the physical node of the C2 server. This can be useful for
         preparing attack scripts for uploading to the client.
