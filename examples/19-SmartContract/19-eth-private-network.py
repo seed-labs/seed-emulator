@@ -7,13 +7,12 @@ from seedemu.compiler import Docker
 
 # Use the local copy for now (we made changes)
 from EthereumService import EthereumService
+from SmartContract import SmartContract
 #from seedemu.services import EthereumService
-
-from EthereumConsoleManager import EthereumConsoleManager
 
 emu = Emulator()
 eth = EthereumService()
-esm = EthereumConsoleManager()
+smart_contract = SmartContract("./Contracts/contract.bin", "./Contracts/contract.abi")
 
 emu.load('base-component.bin')
 
@@ -28,6 +27,12 @@ e4 = eth.install("eth4")
 e1.setBootNode(True).setBootNodeHttpPort(8081)
 e2.setBootNode(True)
 
+#deploy Smart Contract on node eth1 and start miner in all nodes
+e1.deploySmartContract(smart_contract).startMiner()
+e2.createNewAccount().startMiner()
+e3.startMiner()
+e4.startMiner()
+
 # add bindings
 emu.addBinding(Binding('eth1', filter = Filter(asn = 150)))
 emu.addBinding(Binding('eth2', filter = Filter(asn = 151)))
@@ -36,14 +41,6 @@ emu.addBinding(Binding('eth4', filter = Filter(asn = 153)))
 
 emu.addLayer(eth)
 emu.render()
-
-#Generate and deploy Smart Contract on node eth1
-esm.startMinerInNode(e1, eth)
-esm.startMinerInNode(e2, eth)
-esm.startMinerInNode(e3, eth)
-esm.startMinerInNode(e4, eth)
-esm.deploySmartContractOn(e1, eth, "./SmartContract/contract.bin", "./SmartContract/contract.abi")
-esm.createNewAccountInNode(e2, eth)
 
 # Customization 
 emu.getBindingFor('eth1').setDisplayName('Ethereum-1')

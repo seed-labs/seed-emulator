@@ -3,15 +3,6 @@
 
 ## API's
 
-- Before Calling any api we need to create a Object of EthereumConsoleManager which attaches the commands to the respective Ethereum miner nodes.
-- The Object can be created by 
-
-	```esm = EthereumConsoleManager()```
-	
-- Now using the EthereumConsoleManager object we can call certain API which perform certain tasks.
-
-- Note: These API's can only be called after the Emulator's render process is complete.
-
 ## 1: Create new account:
 
 - In here we have exposed an API which creates an new account in the specified miner nodes.
@@ -19,7 +10,7 @@
 		
 		eth = EthereumService()
 		e2 = eth.install("eth2")
-		esm.createNewAccountInNode(e2, eth)
+		e2.createNewAccount()
 		
 	where e2 representes the 2nd miner node in which I want to create a new Account.
 	
@@ -31,8 +22,8 @@
 		eth = EthereumService()
 		e1 = eth.install("eth1")
 		e2 = eth.install("eth2")
-		esm.startMinerInAllNodes(eth) // to start in all node (e1 and e2)
-		esm.startMinerInNode(e2, eth) // to start Miner node in e2
+		e1.startMiner() // starts miner in node ethereum node 1
+		e2.createNewAccount().startMiner() // we chain the api as well
 
 ## 3: Deploy Smart Contract:
 
@@ -48,7 +39,8 @@
 
 		eth = EthereumService()
 		e1 = eth.install("eth1")
-		esm.deploySmartContractOn(e1, eth, "./examples/19-SmartContract/SmartContract/contract.bin", "./examples/19-SmartContract/SmartContract/contract.abi") // here we need to pass the bin and abi file generated from .sol file the order of the command should be maintained.
+		smart_contract = SmartContract("./SmartContract/contract.bin", "./SmartContract/contract.abi") // here we need to pass the bin and abi file generated from .sol file the order of the command should be maintained.
+		e1.deploySmartContract(smart_contract) 
 	
 	Once the contract gets deployed onto the network a transaction.txt file gets generated with hash of the contract. This file can be found in the miner node for example in our case it will be node e1.
 
