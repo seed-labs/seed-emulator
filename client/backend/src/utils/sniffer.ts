@@ -29,7 +29,13 @@ export class Sniffer implements LogProducer {
 
         var sessions = await Promise.all(nodes.map(node => this._sessionManager.getSession(node, ['/seedemu_sniffer'])));
 
-        sessions.forEach(session => session.stream.write(`${expr}\r`));
+        sessions.forEach(session => {
+            try {
+                session.stream.write(`${expr}\r`);
+            } catch (e) {
+                this._logger.error("error communicating with node.");
+            }
+        });
     }
 
     setListener(listener: (nodeId: string, stdout: any) => void) {
