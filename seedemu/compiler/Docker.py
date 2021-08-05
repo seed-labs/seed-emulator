@@ -251,7 +251,7 @@ class Docker(Compiler):
 
     def __init__(
         self,
-        namingScheme: str = "as{asn}{role}-{name}-{primaryIp}",
+        namingScheme: str = "as{asn}{role}-{displayName}-{primaryIp}",
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
@@ -264,7 +264,9 @@ class Docker(Compiler):
 
         @param namingScheme (optional) node naming scheme. Avaliable variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
-        {primaryIp}. Default to as{asn}{role}-{name}-{primaryIp}.
+        {primaryIp} and {displayName}. {displayName} will automaically fall
+        back to {name} if 
+        Default to as{asn}{role}-{displayName}-{primaryIp}.
         @param selfManagedNetwork (optional) use self-managed network. Enable
         this to manage the network inside containers instead of using docker's
         network management. This works by first assigning "dummy" prefix and
@@ -785,8 +787,9 @@ class Docker(Compiler):
                 asn = node.getAsn(),
                 role = self._nodeRoleToString(node.getRole()),
                 name = node.getName(),
+                displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
                 primaryIp = node.getInterfaces()[0].getAddress()
-            ),
+            ).lower(),
             networks = node_nets,
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,

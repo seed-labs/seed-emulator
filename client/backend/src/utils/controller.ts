@@ -108,7 +108,12 @@ export class Controller implements LogProducer {
                 return;
             }
 
-            let json = this._messageBuffer[nodeId].split('_BEGIN_RESULT_')[1].split('_END_RESULT_')[0];
+            let json = this._messageBuffer[nodeId]?.split('_BEGIN_RESULT_')[1]?.split('_END_RESULT_')[0];
+
+            if (!json) {
+                this._logger.warn(`end-of-message seen, but messsage incomplete for node ${nodeId}?`);
+                return;
+            }
 
             this._logger.debug(`message from ${nodeId}: "${json}"`);
 
