@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 from seedemu.core import Node, Service, Server
+from SmartContract import SmartContract
 from typing import Dict, List
 
 ETHServerFileTemplates: Dict[str, str] = {}
@@ -67,6 +68,9 @@ class EthereumServer(Server):
     __id: int
     __is_bootnode: bool
     __bootnode_http_port: int
+    __smart_contract: SmartContract
+    __start_Miner_node: bool
+    __create_new_account: bool
 
     def __init__(self, id: int):
         """!
@@ -77,6 +81,34 @@ class EthereumServer(Server):
         self.__id = id
         self.__is_bootnode = False
         self.__bootnode_http_port = 8088
+        self.__smart_contract = None
+        self.__start_Miner_node = False
+        self.__create_new_account = False
+
+    def __createNewAccountCommand(self, node: Node):
+        """!
+        @brief generates a shell command which creates a new account in ethereum network.
+
+        @param ethereum node on which we want to deploy the changes.
+        
+        """
+        command = " sleep 20\n\
+        geth --password /tmp/eth-password account new \n\
+        "
+        node.appendStartCommand('(\n {})&'.format(command))
+
+    def __addMinerStartCommand(self, node: Node):
+        """!
+        @brief generates a shell command which start miner as soon as it the miner is booted up.
+
+        @param ethereum node on which we want to deploy the changes.
+        
+        """   
+        command = " sleep 20\n\
+        geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
+        geth --exec 'miner.start(5)' attach \n\
+        "
+        node.appendStartCommand('(\n {})&'.format(command))
 
     def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
@@ -135,6 +167,16 @@ class EthereumServer(Server):
         else:
             node.appendStartCommand('nice -n 19 geth {}'.format(common_args), True)
 
+        if self.__create_new_account :
+            self.__createNewAccountCommand(node)
+
+        if self.__start_Miner_node :
+            self.__addMinerStartCommand(node)
+
+        if self.__smart_contract != None :
+            smartContractCommand = self.__smart_contract.generateSmartContractCommand()
+            node.appendStartCommand('(\n {})&'.format(smartContractCommand))
+
     def getId(self) -> int:
         """!
         @brief get ID of this node.
@@ -186,6 +228,36 @@ class EthereumServer(Server):
         @returns port
         """
         return self.__bootnode_http_port
+
+    def createNewAccount(self) -> EthereumServer:
+        """!
+        @brief Call this api to create a new account.
+
+        @returns self, for chaining API calls.
+        """
+        self.__create_new_account = True
+
+        return self
+
+    def startMiner(self) -> EthereumServer:
+        """!
+        @brief Call this api to start Miner in the node.
+
+        @returns self, for chaining API calls.
+        """
+        self.__start_Miner_node = True
+
+        return self
+
+    def deploySmartContract(self, smart_contract: SmartContract) -> EthereumServer:
+        """!
+        @brief Call this api to deploy smartContract on the node.
+
+        @returns self, for chaining API calls.
+        """
+        self.__smart_contract = smart_contract
+
+        return self
 
 class EthereumService(Service):
     """!
