@@ -474,7 +474,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns asn.
         """
-        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
         return self.__asn
 
     def getRole(self) -> NodeRole:
