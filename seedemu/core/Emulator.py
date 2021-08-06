@@ -409,12 +409,42 @@ class Emulator:
         work. Like `getAsn`, `joinNetwork`, etc. You will get an error if you
         use them.
 
+        @param vnode_name virtual node name.
+
         @returns node
         """
         if vnode_name not in self.__bindings.vpnodes:
             self.__bindings.vpnodes[vnode_name] = core.Node(vnode_name, NodeRole.Host, 0)
 
         return self.__bindings.vpnodes[vnode_name]
+
+    def setVirtualNode(self, vnode_name: str, node: core.Node) -> Emulator:
+        """!
+        @brief set a virtual node.
+
+        This API allows you to overwrite an existing, or create new virtual node
+        with the given node object.
+
+        You should use the getVirtualNode API instead, unless you know what you
+        are doing.
+
+        @param vnode_name virtual node name.
+        @param node virtual physical node.
+
+        @returns self, for chaining API calls.
+        """
+        assert node.getAsn() == 0, 'vponde asn must be 0.'
+        self.__bindings.vpnodes[vnode_name] = node
+
+        return self
+
+    def getVirtualNodes(self) -> Dict[str, core.Node]:
+        """!
+        @brief get dict of virtual "physical" nodes.
+
+        @return dict of nodes where key is virual node name.
+        """
+        return self.__bindings.vpnodes
 
     def merge(self, other: Emulator, mergers: List[Merger] = [], vnodePrefix: str = '') -> Emulator:
         """!
@@ -460,6 +490,9 @@ class Emulator:
         
         for hook in self.getRegistry().getByType('seedemu', 'hook'): new_sim.addHook(hook)
         for hook in other.getRegistry().getByType('seedemu', 'hook'): new_sim.addHook(hook)
+
+        for (v, n) in other.getVirtualNodes().items(): new_sim.setVirtualNode(v, n)
+        for (v, n) in self.getVirtualNodes().items(): new_sim.setVirtualNode(v, n)
 
         return new_sim
 
