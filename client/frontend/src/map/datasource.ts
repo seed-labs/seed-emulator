@@ -1,7 +1,7 @@
 import { EdgeOptions, NodeOptions } from 'vis-network';
 import { BgpPeer, EmulatorNetwork, EmulatorNode } from '../common/types';
 
-export type DataEvent = 'packet';
+export type DataEvent = 'packet' | 'dead';
 
 export interface Vertex extends NodeOptions {
     id: string;
@@ -39,6 +39,7 @@ export class DataSource {
     private _connected: boolean;
 
     private _packetEventHandler: (nodeId: string) => void;
+    private _errorHandler: (error: any) => void;
 
     /**
      * construct new data provider.
@@ -124,6 +125,18 @@ export class DataSource {
             }
         });
 
+        this._socket.addEventListener('error', (ev) => {
+            if (this._errorHandler) {
+                this._errorHandler(ev);
+            }
+        });
+
+        this._socket.addEventListener('close', (ev) => {
+            if (this._errorHandler) {
+                this._errorHandler(ev);
+            }
+        });
+
         this._connected = true;
     }
 
@@ -206,6 +219,8 @@ export class DataSource {
             case 'packet':
                 this._packetEventHandler = callback;
                 break;
+            case 'dead':
+                this._errorHandler = callback;
         }
     }
 

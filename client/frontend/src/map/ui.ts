@@ -237,6 +237,13 @@ export class MapUi {
             }
         });
 
+        this._datasource.on('dead', (error) => {
+            let restart = window.confirm('It seems like the backend for seedemu-client has crashed. You should refresh this page to get the connection to the backend re-established.\n\nRefreshing will close all console windows and redraw the map. Use "Ok" to refresh or "cancel" to stay on this page.');
+            if (restart) {
+                window.location.reload();
+            }
+        });
+        
         this._datasource.on('packet', (data) => {
             if (!data.source || !data.data) {
                 return;
