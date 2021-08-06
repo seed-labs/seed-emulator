@@ -5,6 +5,7 @@ from seedemu.core.enums import NodeRole, NetworkType
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
 from os import mkdir, chdir
+from re import sub
 from ipaddress import IPv4Network, IPv4Address
 
 SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
@@ -781,15 +782,19 @@ class Docker(Compiler):
 
         chdir('..')
 
+        name = self.__naming_scheme.format(
+            asn = node.getAsn(),
+            role = self._nodeRoleToString(node.getRole()),
+            name = node.getName(),
+            displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
+            primaryIp = node.getInterfaces()[0].getAddress()
+        )
+
+        name = sub(r'[^a-zA-Z0-9_.-]', '_', name)
+
         return DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
-            nodeName = self.__naming_scheme.format(
-                asn = node.getAsn(),
-                role = self._nodeRoleToString(node.getRole()),
-                name = node.getName(),
-                displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
-                primaryIp = node.getInterfaces()[0].getAddress()
-            ).lower(),
+            nodeName = name,
             networks = node_nets,
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
