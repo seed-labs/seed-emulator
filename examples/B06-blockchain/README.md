@@ -62,7 +62,7 @@ $ mkdir -p eth-states/2
 $ mkdir -p eth-states/6 
 ```
 
-## A.4 Starting the Emulator 
+## A.4 Start the Emulator 
 
 Now we can run the docker-compose commands inside the `output` folder
 to build the containers and then start them.
@@ -73,10 +73,10 @@ $ docker-compose build
 $ docker-compose up
 ```
 
-We can use our map tool to visualize the network (see `manual` here). However,
+We can use our map tool to visualize the network. However,
 Firefox is going to consume quite a bit of resources (CPU and RAM). It is better
 to leave them to the Ethereum, which needs a lot of resources. Therefore,
-we will access the containers from the terminal, instead from the map.
+we will access the containers from the terminal, instead of from the map.
 
 We have added `Ethereum` to the names of the containers used as Ethereum nodes. 
 This way, we can easily list them:
@@ -122,10 +122,11 @@ To exit, press ctrl-d
 
 After the emulator starts, we need to wait for a while, 10 to 15 minutes, because
 Ethereum takes time to initialize. During this period, mining will not start, so 
-we will not earn any ethers. If we check the balance on any miner node, 
+we will not earn any ether. If we check the balance on any miner node, 
 we will get zero initially. If we see a non-zero value, that means the mining 
 has already started, and the blockchain is fully functional. It should be 
-noted that two of the nodes are not miners (`Ethereum-5` and `Ethereum-6`),
+noted that two of the ethereum nodes in our constraction 
+are not miners (`Ethereum-5` and `Ethereum-6`),
 so if you check their balance,
 theirs will still be zero.
 
@@ -148,7 +149,7 @@ get it using `eth.accounts[0]`.
 
 To use any account created on the node, we need to unlock it, because 
 the account data (including a private key) are password protected.
-The default password `admin` is hardcoded in the emulator. 
+The password `admin` is hardcoded in the emulator. 
 
 ```	
 > eth.accounts
@@ -159,7 +160,7 @@ The default password `admin` is hardcoded in the emulator.
 true
 ```	
 
-We also need to know the receipt's account address. This can 
+We also need to know the recipient's account address. This can 
 be obtained from its host nodes (using `eth.accounts`). 
 We can also go to the `output/eth-states/N/keystore/` folder (N
 should be replaced by the node number), because all the 
@@ -172,8 +173,8 @@ UTC--2021-08-07T13-51-52.142916284Z--326025535363043c0ab13404ebafacb8947e420b
 UTC--2021-08-07T13-52-20.060346038Z--c20ab9a1ab88c9fae8305b302836ee7734c6afbe
 ```
 
-We select one of the accounts. Let's pick a non-mining node, so its
-balance is zero. We will send some ethers to this account.
+We select one of the accounts. Let's pick a non-mining node (the 2nd one),
+so its balance is zero. We will send some ethers to this account.
 
 ```
 > target_account = "0xc20ab9a1ab88c9fae8305b302836ee7734c6afbe"
@@ -185,7 +186,7 @@ balance is zero. We will send some ethers to this account.
 
 ## B.3 Create Transactions 
 
-Now we can send a transaction to target account from the geth console.
+Now from the geth console, we can create a transaction to send ethers to the target account.
 After waiting for a few seconds, we check the balance again. We will
 see that the target account's balance become `99999`, while the sender's account's
 balance gets deducted. 
@@ -202,11 +203,11 @@ balance gets deducted.
 ```
 
 If you see an authentication error, it means that you forgot to unlock your 
-account, or the unlocking period has already expired (so you need to unlock
+account, or the unlocking period has already expired (you need to unlock
 it again).
 
 
-## B.4 Get Transaction Receipts
+## B.4 Get Transaction Information
 
 The transaction hash value will be printed out after we run `eth.sendTransaction()`.
 We can use this hash to get the details about this transaction. 
@@ -245,8 +246,8 @@ If you want to do that, you need to install the Solidity program,
 and use it to compile your own program to `abi` and `bin` files. 
 Please install Solidity with
 a version above 0.8.0. Installation can be 
-found [here](https://docs.soliditylang.org/en/v0.8.0/installing-solidity.html#linux-packages)
-We can generate the `abi` and `bin` file using the following command.
+found [here](https://docs.soliditylang.org/en/v0.8.0/installing-solidity.html#linux-packages).
+We can generate the `abi` and `bin` files using the following command.
 
 ```
 solc --abi <filename.sol> | awk '/JSON ABI/{x=1}x' | sed 1d > contract.abi
@@ -256,7 +257,7 @@ solc --bin <filename.sol> | awk '/Binary:/{x=1;next}x' | sed 1d > contract.abi
 ## C.2 Deploy Smart Contract
 
 To deploy a smart contract in the Emulator, we first need to create a 
-`SmartContract` object using the compiled `abi` and `bin` file, and 
+`SmartContract` object using the generated `abi` and `bin` files, and 
 then invoke the `deploySmartContract()` API on the node that 
 we want to use to deploy the contract.
 
@@ -271,7 +272,7 @@ ether, so the contract will not be deployed, until the mining gets
 started (so nodes can earn ethers). Our emulator automatically checks 
 the balance before deploying the contract. 
 By default, if we are using our custom API, the minimum ethers required 
-to deploy a smart contract is 1000000 ethers. 
+to deploy a smart contract is 1000000 (in wei). 
 Our further development will make this value configurable. 
 
 
@@ -308,7 +309,7 @@ the contract-deploying node to get the hash value.
 }
 ```
 
-Using this transaction hash, we can get the transaction receipt, which
+Using this transaction hash, we can get the transaction receipt, 
 which contains the address of the smart contract. This operation can be 
 done on any node. 
 
