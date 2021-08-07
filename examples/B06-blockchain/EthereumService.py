@@ -161,7 +161,7 @@ class EthereumServer(Server):
         node.appendStartCommand('/tmp/eth-bootstrapper')
 
         # launch Ethereum process.
-        common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=6 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0'.format(datadir_option, self.__id)
+        common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0'.format(datadir_option, self.__id)
         if len(bootnodes) > 0:
             node.appendStartCommand('nice -n 19 geth --bootnodes "$(cat /tmp/eth-node-urls)" {}'.format(common_args), True)
         else:
