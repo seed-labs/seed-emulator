@@ -59,6 +59,69 @@ while read -r node; do {
 }; done < /tmp/eth-nodes
 '''
 
+class SmartContract():
+
+    __abi_file_name: str
+    __bin_file_name: str
+
+    def __init__(self, contract_file_bin, contract_file_abi):
+        self.__abi_file_name = contract_file_abi
+        self.__bin_file_name = contract_file_bin
+
+    def __getContent(self, file_name):
+        """!
+        @brief get Content of the file_name.
+
+        @param file_name from which we want to read data.
+        
+        @returns Contents of the file_name.
+        """
+        file = open(file_name, "r")
+        data = file.read()
+        file.close()
+        return data.replace("\n","")
+        
+
+    def generateSmartContractCommand(self):
+        """!
+        @brief generates a shell command which deploys the smart Contract on the ethereum network.
+
+        @param contract_file_bin binary file of the smart Contract.
+
+        @param contract_file_abi abi file of the smart Contract.
+        
+        @returns shell command in the form of string.
+        """
+        abi = "abi = {}".format(self.__getContent(self.__abi_file_name))
+        byte_code = "byteCode = \"0x{}\"".format(self.__getContent(self.__bin_file_name))
+        unlock_account = "personal.unlockAccount(eth.accounts[0], \"{}\")".format("admin")
+        contract_command = "testContract = eth.contract(abi).new({ from: eth.accounts[0], data: byteCode, gas: 1000000})"
+        display_contract_Info = "testContract"
+        finalCommand = "{},{},{},{},{}".format(abi, byte_code, unlock_account, contract_command, display_contract_Info)
+
+        SmartContractCommand = "sleep 30 \n \
+        while true \n\
+        do \n\
+        \t balanceCommand=\"geth --exec 'eth.getBalance(eth.accounts[0])' attach\" \n\
+        \t balance=$(eval \"$balanceCommand\") \n\
+        \t minimumBalance=1000000 \n\
+        \t if [ $balance -lt $minimumBalance ] \n\
+        \t then \n \
+        \t \t sleep 60 \n \
+        \t else \n \
+        \t \t break \n \
+        \t fi \n \
+        done \n \
+        echo \"Balance ========> $balance\" \n\
+        gethCommand=\'{}\'\n\
+        finalCommand=\'geth --exec \"$gethCommand\" attach\'\n\
+        result=$(eval \"$finalCommand\")\n\
+        touch transaction.txt\n\
+        echo \"transaction hash $result\" \n\
+        echo \"$result\" >> transaction.txt\n\
+        ".format(finalCommand)
+        return SmartContractCommand
+
 class EthereumServer(Server):
     """!
     @brief The Ethereum Server
@@ -67,6 +130,9 @@ class EthereumServer(Server):
     __id: int
     __is_bootnode: bool
     __bootnode_http_port: int
+    __smart_contract: SmartContract
+    __start_Miner_node: bool
+    __create_new_account: bool
 
     def __init__(self, id: int):
         """!
@@ -77,6 +143,34 @@ class EthereumServer(Server):
         self.__id = id
         self.__is_bootnode = False
         self.__bootnode_http_port = 8088
+        self.__smart_contract = None
+        self.__start_Miner_node = False
+        self.__create_new_account = False
+
+    def __createNewAccountCommand(self, node: Node):
+        """!
+        @brief generates a shell command which creates a new account in ethereum network.
+
+        @param ethereum node on which we want to deploy the changes.
+        
+        """
+        command = " sleep 20\n\
+        geth --password /tmp/eth-password account new \n\
+        "
+        node.appendStartCommand('(\n {})&'.format(command))
+
+    def __addMinerStartCommand(self, node: Node):
+        """!
+        @brief generates a shell command which start miner as soon as it the miner is booted up.
+
+        @param ethereum node on which we want to deploy the changes.
+        
+        """   
+        command = " sleep 20\n\
+        geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
+        geth --exec 'miner.start(5)' attach \n\
+        "
+        node.appendStartCommand('(\n {})&'.format(command))
 
     def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
@@ -129,11 +223,21 @@ class EthereumServer(Server):
         node.appendStartCommand('/tmp/eth-bootstrapper')
 
         # launch Ethereum process.
-        common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=6 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0'.format(datadir_option, self.__id)
+        common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0'.format(datadir_option, self.__id)
         if len(bootnodes) > 0:
             node.appendStartCommand('nice -n 19 geth --bootnodes "$(cat /tmp/eth-node-urls)" {}'.format(common_args), True)
         else:
             node.appendStartCommand('nice -n 19 geth {}'.format(common_args), True)
+
+        if self.__create_new_account :
+            self.__createNewAccountCommand(node)
+
+        if self.__start_Miner_node :
+            self.__addMinerStartCommand(node)
+
+        if self.__smart_contract != None :
+            smartContractCommand = self.__smart_contract.generateSmartContractCommand()
+            node.appendStartCommand('(\n {})&'.format(smartContractCommand))
 
     def getId(self) -> int:
         """!
@@ -186,6 +290,36 @@ class EthereumServer(Server):
         @returns port
         """
         return self.__bootnode_http_port
+
+    def createNewAccount(self) -> EthereumServer:
+        """!
+        @brief Call this api to create a new account.
+
+        @returns self, for chaining API calls.
+        """
+        self.__create_new_account = True
+
+        return self
+
+    def startMiner(self) -> EthereumServer:
+        """!
+        @brief Call this api to start Miner in the node.
+
+        @returns self, for chaining API calls.
+        """
+        self.__start_Miner_node = True
+
+        return self
+
+    def deploySmartContract(self, smart_contract: SmartContract) -> EthereumServer:
+        """!
+        @brief Call this api to deploy smartContract on the node.
+
+        @returns self, for chaining API calls.
+        """
+        self.__smart_contract = smart_contract
+
+        return self
 
 class EthereumService(Service):
     """!
