@@ -3,10 +3,6 @@
 
 from seedemu import *
 
-# Use the local copy for now (we made changes)
-from EthereumService import EthereumService
-from SmartContract import SmartContract
-
 emu = Emulator()
 
 # Create the Ethereum layer
