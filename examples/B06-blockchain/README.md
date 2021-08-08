@@ -125,7 +125,7 @@ Ethereum takes time to initialize. During this period, mining will not start, so
 we will not earn any ether. If we check the balance on any miner node, 
 we will get zero initially. If we see a non-zero value, that means the mining 
 has already started, and the blockchain is fully functional. It should be 
-noted that two of the ethereum nodes in our constraction 
+noted that two of the ethereum nodes in our construction 
 are not miners (`Ethereum-5` and `Ethereum-6`),
 so if you check their balance,
 theirs will still be zero.
