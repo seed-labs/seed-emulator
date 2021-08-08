@@ -22,12 +22,10 @@ base: Base = emu.getLayer('Base')
 
 as151 = base.getAutonomousSystem(151)
 as151.getRouter('router0').setDisplayName('AS151 Core Router')
-as151.getRouter('router0').setDisplayName('AS151 Core Router')
 as151.getHost('web').setDisplayName('example.com')
 
 ix100_lan = base.getInternetExchange(100).getPeeringLan()
-ix100_lan.setDisplayName('Seattle')
-ix100_lan.setDescription('The Seattle Internet Exchange')
+ix100_lan.setDisplayName('Seattle').setDescription('The Seattle Internet Exchange')
 
 ix101_lan = base.getInternetExchange(101).getPeeringLan()
 ix101_lan.setDisplayName('New York')
