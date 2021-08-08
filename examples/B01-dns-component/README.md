@@ -51,6 +51,17 @@ dns.getZone('twitter.com.').addRecord('@ A 1.1.1.1')
 dns.getZone('google.com.').addRecord('@ A 2.2.2.2')
 ```
 
+##  Customization for visualization
+
+When the nodes are displayed on the map, we would like to display a more 
+friendly name, instead of the unique name assigned to each virtual node. 
+We can do the following. When this virtual node is bound to a physical 
+node, the display name will be inherited by the physical node. 
+
+```
+emu.getVirtualNode('a-root-server').setDisplayName('Root-A')
+```
+
 ##  Saving the DNS component to File
 
 After adding the DNS layer to the emulator, we can save the entire DNS

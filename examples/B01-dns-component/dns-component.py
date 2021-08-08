@@ -36,6 +36,22 @@ dns.getZone('example.net.').addRecord('@ A 3.3.3.3')
 dns.getZone('syr.edu.').addRecord('@ A 128.230.18.63') 
 dns.getZone('weibo.cn.').addRecord('@ A 5.5.5.5').addRecord('www A 5.5.5.6')
 
+# Customize the display names (for visualization purpose)
+emu.getVirtualNode('a-root-server').setDisplayName('Root-A')
+emu.getVirtualNode('b-root-server').setDisplayName('Root-B')
+emu.getVirtualNode('a-com-server').setDisplayName('COM-A')
+emu.getVirtualNode('b-com-server').setDisplayName('COM-B')
+emu.getVirtualNode('a-net-server').setDisplayName('NET')
+emu.getVirtualNode('a-edu-server').setDisplayName('EDU')
+emu.getVirtualNode('a-cn-server').setDisplayName('CN-A')
+emu.getVirtualNode('b-cn-server').setDisplayName('CN-B')
+emu.getVirtualNode('ns-twitter-com').setDisplayName('twitter.com')
+emu.getVirtualNode('ns-google-com').setDisplayName('google.com')
+emu.getVirtualNode('ns-example-net').setDisplayName('example.net')
+emu.getVirtualNode('ns-syr-edu').setDisplayName('syr.edu')
+emu.getVirtualNode('ns-weibo-cn').setDisplayName('weibo.cn')
+
+
 ###########################################################
 emu.addLayer(dns)
 emu.dump('dns-component.bin')
