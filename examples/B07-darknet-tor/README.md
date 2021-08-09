@@ -1,7 +1,7 @@
 # Darknet (Tor Network)
 
 
-In this example, we show how to deploy a Darknet (Tor) inside the
+In this example, we show how to deploy a darknet (Tor) inside the
 SEED Emulator. We first create several types of Tor nodes,
 and deploy them in randomly selected autonomous systems.
 See the comments in the code for detailed explanation of the code. 
@@ -10,7 +10,7 @@ Here is the table of contents:
 
 - [Deploy a Tor network inside the emulator](#deploy-tor)
 - [Protect sender's identity](#sender-anonymity)
-- [Protect server's identity](#server-anonymity-contract)
+- [Protect server's identity](#server-anonymity)
 - [Visit the secret web server](#visit-secret-server)
 - [Notes on lab designs](#note-lab-design)
 
@@ -50,7 +50,7 @@ vnodes = {
 
 - CLIENT node: This node will run a SOCKS5 proxy server. It helps outside machines
   to connect to the Tor network without using any Tor-aware software. If outside 
-  machines already have Tor-ware software, such as Tor browser, they do not need to go 
+  machines already have Tor-aware software, such as Tor browser, they do not need to go 
   through any CLIENT node, because they are basically CLIENT nodes.
 
 - RELAY node: This node relays the traffic to the next node. 
@@ -59,7 +59,7 @@ vnodes = {
   nodes that send the data to the destination. 
 
 - HS (Hidden Service) node: This type of node is used to protect the server's 
-  location. See [this section](#server-anonymity-contract) for details.
+  location. See [this section](#server-anonymity) for details.
 
 
 <a name="sender-anonymity"></a>
@@ -149,7 +149,7 @@ We then create a HS (Hidden Service) node, and link
 this node to our secret web server. If we want to visit the protected
 web server, our request will reach this HS node, which will then
 forward our traffic to the final destination. 
-The following code create the HS node and like to the web server.
+The following code create the HS node and link it to the web server.
 
 ```
 tor.install('hidden-service').setRole(TorNodeType.HS).linkByVnode("webserver", 80)
@@ -201,7 +201,7 @@ you can see what has caused the issue.
 <a name="note-lab-design"></a>
 ## Note for Lab Design (Furture Work)
 
-When we design labs based on Darknet, we need to find ways to show students that Tor is 
+When we design labs based on darknet, we need to find ways to show students that Tor is 
 protecting the communication. We need to show how the Tor works internally.
 We can use a tool called `nyx` (see notes above) to 
 connect to the control port of CLIENT node. This tool will show the path 
