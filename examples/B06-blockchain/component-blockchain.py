@@ -27,7 +27,7 @@ e3.startMiner()
 e4.startMiner()
 
 # Create more accounts on e5 and e6
-e5.createNewAccount().createNewAccount().createNewAccount()
+e5.createNewAccount(3)
 e6.createNewAccount().createNewAccount()
 
 # Create a smart contract and deploy it from node e3 
