@@ -132,7 +132,7 @@ class EthereumServer(Server):
     __bootnode_http_port: int
     __smart_contract: SmartContract
     __start_Miner_node: bool
-    __create_new_account: bool
+    __create_new_account: int
 
     def __init__(self, id: int):
         """!
@@ -145,32 +145,35 @@ class EthereumServer(Server):
         self.__bootnode_http_port = 8088
         self.__smart_contract = None
         self.__start_Miner_node = False
-        self.__create_new_account = False
+        self.__create_new_account = 0
 
     def __createNewAccountCommand(self, node: Node):
-        """!
-        @brief generates a shell command which creates a new account in ethereum network.
-
-        @param ethereum node on which we want to deploy the changes.
-        
-        """
-        command = " sleep 20\n\
-        geth --password /tmp/eth-password account new \n\
-        "
-        node.appendStartCommand('(\n {})&'.format(command))
+        if self.__create_new_account > 0:
+            """!
+            @brief generates a shell command which creates a new account in ethereum network.
+    
+            @param ethereum node on which we want to deploy the changes.
+            
+            """
+            command = " sleep 20\n\
+            geth --password /tmp/eth-password account new \n\
+            "
+            for count in range(self.__create_new_account):
+                node.appendStartCommand('(\n {})&'.format(command))
 
     def __addMinerStartCommand(self, node: Node):
-        """!
-        @brief generates a shell command which start miner as soon as it the miner is booted up.
-
-        @param ethereum node on which we want to deploy the changes.
-        
-        """   
-        command = " sleep 20\n\
-        geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
-        geth --exec 'miner.start(5)' attach \n\
-        "
-        node.appendStartCommand('(\n {})&'.format(command))
+        if self.__start_Miner_node:
+            """!
+            @brief generates a shell command which start miner as soon as it the miner is booted up.
+            
+            @param ethereum node on which we want to deploy the changes.
+            
+            """   
+            command = " sleep 20\n\
+            geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
+            geth --exec 'miner.start(5)' attach \n\
+            "
+            node.appendStartCommand('(\n {})&'.format(command))
 
     def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
@@ -229,11 +232,8 @@ class EthereumServer(Server):
         else:
             node.appendStartCommand('nice -n 19 geth {}'.format(common_args), True)
 
-        if self.__create_new_account :
-            self.__createNewAccountCommand(node)
-
-        if self.__start_Miner_node :
-            self.__addMinerStartCommand(node)
+        self.__createNewAccountCommand(node)
+        self.__addMinerStartCommand(node)
 
         if self.__smart_contract != None :
             smartContractCommand = self.__smart_contract.generateSmartContractCommand()
@@ -291,14 +291,14 @@ class EthereumServer(Server):
         """
         return self.__bootnode_http_port
 
-    def createNewAccount(self) -> EthereumServer:
+    def createNewAccount(self, number_of_accounts = 0) -> EthereumServer:
         """!
         @brief Call this api to create a new account.
 
         @returns self, for chaining API calls.
         """
-        self.__create_new_account = True
-
+        self.__create_new_account = number_of_accounts or self.__create_new_account + 1
+        
         return self
 
     def startMiner(self) -> EthereumServer:
