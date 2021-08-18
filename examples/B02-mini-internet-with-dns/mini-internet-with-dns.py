@@ -37,10 +37,14 @@ emu.addBinding(Binding('ns-syr-edu', filter=Filter(asn=164), action=Action.FIRST
 emu.addBinding(Binding('ns-weibo-cn', filter=Filter(asn=170), action=Action.FIRST))
 
 #####################################################################################
-# Create two local DNS servers (virtual node).
+# Create two local DNS servers (virtual nodes).
 ldns = DomainNameCachingService()
 ldns.install('global-dns-1')
 ldns.install('global-dns-2')
+
+# Customize the display name (for visualization purpose)
+emu.getVirtualNode('global-dns-1').setDisplayName('Global DNS-1')
+emu.getVirtualNode('global-dns-2').setDisplayName('Global DNS-2')
 
 # Create two new host in AS-152 and AS-153, use them to host the local DNS server.
 # We can also host it on an existing node.
@@ -49,6 +53,8 @@ as152 = base.getAutonomousSystem(152)
 as152.createHost('local-dns-1').joinNetwork('net0', address = '10.152.0.53')
 as153 = base.getAutonomousSystem(153)
 as153.createHost('local-dns-2').joinNetwork('net0', address = '10.153.0.53')
+
+# Bind the Local DNS virtual nodes to physical nodes
 emu.addBinding(Binding('global-dns-1', filter = Filter(asn=152, nodeName="local-dns-1")))
 emu.addBinding(Binding('global-dns-2', filter = Filter(asn=153, nodeName="local-dns-2")))
 
@@ -72,22 +78,22 @@ emu.render()
 
 # After the rendering, we can now find the physical node for 
 # a given virtual node, and further customize the physical node.
-emu.getBindingFor('a-root-server').setDisplayName('A-Root')
-emu.getBindingFor('b-root-server').setDisplayName('B-Root')
-emu.getBindingFor('a-com-server').setDisplayName('A-COM')
-emu.getBindingFor('b-com-server').setDisplayName('B-COM')
-emu.getBindingFor('a-net-server').setDisplayName('NET')
-emu.getBindingFor('a-edu-server').setDisplayName('EDU')
-emu.getBindingFor('a-cn-server').setDisplayName('A-CN')
-emu.getBindingFor('b-cn-server').setDisplayName('B-CN')
-emu.getBindingFor('ns-twitter-com').setDisplayName('Twitter')
-emu.getBindingFor('ns-google-com').setDisplayName('Google')
-emu.getBindingFor('ns-example-net').setDisplayName('Example')
-emu.getBindingFor('ns-syr-edu').setDisplayName('Syracuse')
-emu.getBindingFor('ns-weibo-cn').setDisplayName('微博')
+# Note: In our newer design, the display name customization can be 
+# done when building the virtual nodes, so we are commenting out this part.
+#emu.getBindingFor('a-root-server').setDisplayName('A-Root')
+#emu.getBindingFor('b-root-server').setDisplayName('B-Root')
+#emu.getBindingFor('a-com-server').setDisplayName('A-COM')
+#emu.getBindingFor('b-com-server').setDisplayName('B-COM')
+#emu.getBindingFor('a-net-server').setDisplayName('NET')
+#emu.getBindingFor('a-edu-server').setDisplayName('EDU')
+#emu.getBindingFor('a-cn-server').setDisplayName('A-CN')
+#emu.getBindingFor('b-cn-server').setDisplayName('B-CN')
+#emu.getBindingFor('ns-twitter-com').setDisplayName('Twitter')
+#emu.getBindingFor('ns-google-com').setDisplayName('Google')
+#emu.getBindingFor('ns-example-net').setDisplayName('Example')
+#emu.getBindingFor('ns-syr-edu').setDisplayName('Syracuse')
+#emu.getBindingFor('ns-weibo-cn').setDisplayName('微博')
 
-emu.getBindingFor('global-dns-1').setDisplayName('Global DNS-1')
-emu.getBindingFor('global-dns-2').setDisplayName('Global DNS-2')
 
 
 ###############################################

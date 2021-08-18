@@ -34,7 +34,7 @@ ix103 = base.createInternetExchange(103)
 ix104 = base.createInternetExchange(104)
 ix105 = base.createInternetExchange(105)
 
-# Customize names for a demo in a keynote speech in China
+# Customize names (for visualization purpose)
 ix100.getPeeringLan().setDisplayName('NYC-100')
 ix101.getPeeringLan().setDisplayName('San Jose-101')
 ix102.getPeeringLan().setDisplayName('Chicago-102')
@@ -149,6 +149,6 @@ emu.addLayer(web)
 emu.dump('base-component.bin')
 
 # Uncomment the following if you want to generate the final emulation files
-#emu.render()
-#emu.compile(Docker(), './output')
+emu.render()
+emu.compile(Docker(), './output')
 

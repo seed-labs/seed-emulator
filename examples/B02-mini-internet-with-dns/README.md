@@ -132,3 +132,10 @@ emu.getBindingFor('a-root-server').setDisplayName('A-Root')
 emu.getBindingFor('global-dns').setDisplayName('Global DNS')
 ```
 
+**Note:** While we can still use the method above to customize the 
+physical nodes, in our new design, we allow the customization to be
+done on virtual nodes. When they are bound to physical nodes, the 
+customization will be carried to the physical nodes. This way,
+the customization can be done when a virtual node is created, instead
+of waiting for it to be bound to a physical node.
+Our DNS component is already modified to use the new design. 

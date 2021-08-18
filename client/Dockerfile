@@ -1,4 +1,5 @@
 FROM node:14
+COPY start.sh /
 WORKDIR /usr/src/app
 COPY . .
 WORKDIR /usr/src/app/frontend
@@ -9,4 +10,4 @@ WORKDIR /usr/src/app/backend
 RUN npm install
 RUN npm install -D typescript
 RUN ./node_modules/.bin/tsc
-ENTRYPOINT ["node", "bin/main.js"]
+ENTRYPOINT ["sh", "/start.sh"]
