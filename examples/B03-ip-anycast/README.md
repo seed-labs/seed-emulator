@@ -43,6 +43,17 @@ as180.createRouter('router1').joinNetwork('net1').joinNetwork('ix105')
 ebgp.addPrivatePeerings(105, [2, 3],  [180], PeerRelationship.Provider)
 ```
 
+When compiling the emulation to generate the docker files, we need 
+to set the `selfManagedNetwork` option to True. Without this option,
+the network will be entirely managed by Docker, which will not 
+allow us to have two networks with the same IP prefix. Using
+this option will solve this problem.
+
+```
+emu.compile(Docker(selfManagedNetwork=True), './output')
+```
+
+
 Now, we have deployed two hosts using the IP anycast technology. 
 When other machines send a packet to `10.180.0.100`, one of these two
 hosts will get the packet. 
