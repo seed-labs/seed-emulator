@@ -1,4 +1,4 @@
-export SAVE_STATE=False
+export SAVE_STATE=True
 cd ../B00-mini-internet/
 ./mini-internet.py
 cd ../B06-blockchain/
