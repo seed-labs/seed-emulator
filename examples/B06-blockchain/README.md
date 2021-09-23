@@ -9,7 +9,14 @@
 <a name="emulator"></a>
 # Build Emulator with Blockchain
 
-## A.1 Create the Blockchain Component
+## A.1 Automated setup
+
+Make sure driver.sh has the executable permission by running `chmod +x driver.sh`
+./driver.sh will automate each of the steps mentioned below.
+If any issue occurs, it would be best to do them manually.
+
+
+## A.2 Create the Blockchain Component
 
 We create the Blockchain in `component-blockchain.py`. This 
 program generates a Ethereum component, which can be deployed
@@ -21,7 +28,7 @@ Please refer to the comments in the code to understand
 how the layer is built.
 
 
-## A.2 Deploying the Blockchain
+## A.3 Deploying the Blockchain
 
 We deploy the blockchain in `blockchain.py`. It first loads two pre-built
 components, a base-layer component and a blockchain component. The 
@@ -43,7 +50,7 @@ emu.addBinding(Binding('eth1', filter = Filter(asn = 151)))
 ...
 ```
 
-## A.3 Generate the Emulation Files and Set Up the Data Folders
+## A.4 Generate the Emulation Files and Set Up the Data Folders
 
 After running the two Python programs (make sure to also run the B00 example 
 to generate the base layer first), we will get the `output` folder, which
@@ -62,7 +69,7 @@ $ mkdir -p eth-states/2
 $ mkdir -p eth-states/6 
 ```
 
-## A.4 Start the Emulator 
+## A.5 Start the Emulator 
 
 Now we can run the docker-compose commands inside the `output` folder
 to build the containers and then start them.
