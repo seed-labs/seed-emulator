@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 from seedemu import *
+from env import getSaveState
 
 emu = Emulator()
 
@@ -9,7 +10,8 @@ emu = Emulator()
 # saveState=True: will set the blockchain folder using `volumes`, 
 # so the blockchain data will be preserved when containers are deleted.
 # Note: right now we need to manually create the folder for each node (see README.md). 
-eth = EthereumService(saveState = True)
+eth = EthereumService(saveState = getSaveState("component_blockchain.py"))
+
 
 # Create Ethereum nodes (nodes in this layer are virtual)
 e1 = eth.install("eth1")

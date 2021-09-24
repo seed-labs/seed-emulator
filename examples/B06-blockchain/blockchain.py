@@ -4,7 +4,7 @@
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.mergers import DEFAULT_MERGERS
 from seedemu.compiler import Docker
-
+from env import getSaveState
 
 emuA = Emulator()
 emuB = Emulator()
@@ -22,6 +22,23 @@ emu.addBinding(Binding('eth4', filter = Filter(asn = 164)))
 emu.addBinding(Binding('eth5', filter = Filter(asn = 150)))
 emu.addBinding(Binding('eth6', filter = Filter(asn = 170)))
 
+# Callback that will modify the output directory
+output = './output'
+
+def updateEthStates(compiler):
+    if getSaveState("blockchain.py"):
+        compiler.createDirectoryAtBase(output, "eth-states/")
+        for i in range(1, 7):
+            compiler.createDirectoryAtBase(output, "eth-states/" + str(i))
+    else : # Currently This will never run (check comment below)
+        compiler.deleteDirectoryAtBase(output, "eth-states/")
+
 # Render and compile
 emu.render()
-emu.compile(Docker(), './output')
+
+compiler = Docker()
+
+# If output directory exists and override is set to false, we call exit(1)
+# updateOutputdirectory will not be called
+emu.compile(compiler, output).updateOutputDirectory(compiler, [updateEthStates])
+
