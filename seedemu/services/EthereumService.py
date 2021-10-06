@@ -133,7 +133,7 @@ class EthereumServer(Server):
     __smart_contract: SmartContract
     __start_Miner_node: bool
     __create_new_account: int
-
+    __isRemixNode: bool
     def __init__(self, id: int):
         """!
         @brief create new eth server.
@@ -146,6 +146,7 @@ class EthereumServer(Server):
         self.__smart_contract = None
         self.__start_Miner_node = False
         self.__create_new_account = 0
+        self.__isRemixNode = False
 
     def __createNewAccountCommand(self, node: Node):
         if self.__create_new_account > 0:
@@ -227,6 +228,9 @@ class EthereumServer(Server):
 
         # launch Ethereum process.
         common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0'.format(datadir_option, self.__id)
+        if self.isRemixNode():
+            remix_args = "--http --http.port=5555 --http.corsdomain '*' --http.api web3,eth,debug,personal,net"
+            common_args = '{} {}'.format(common_args, remix_args)
         if len(bootnodes) > 0:
             node.appendStartCommand('nice -n 19 geth --bootnodes "$(cat /tmp/eth-node-urls)" {}'.format(common_args), True)
         else:
@@ -290,6 +294,18 @@ class EthereumServer(Server):
         @returns port
         """
         return self.__bootnode_http_port
+
+    def setAsRemixNode(self) -> EthereumServer:
+        """!
+        @brief setting a node as a remix node makes it possible for the remix IDE to connect to the node
+        """
+        self.__isRemixNode = True
+
+    def isRemixNode(self) -> bool:
+        """!
+        @brief returns wheter a node is a remix node or not
+        """
+        return self.__isRemixNode
 
     def createNewAccount(self, number_of_accounts = 0) -> EthereumServer:
         """!
