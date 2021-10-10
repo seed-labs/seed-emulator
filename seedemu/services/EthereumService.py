@@ -135,6 +135,7 @@ class EthereumServer(Server):
     __create_new_account: int
     __isRemixNode: bool
     __unlockAccounts: bool
+
     def __init__(self, id: int):
         """!
         @brief create new eth server.
@@ -180,7 +181,6 @@ class EthereumServer(Server):
             for i in range(self.__create_new_account + 1):
                 full_command += base_command.format(str(i))
 
-            print(full_command)
             node.appendStartCommand('(\n {})&'.format(full_command))
 
     def __addMinerStartCommand(self, node: Node):
