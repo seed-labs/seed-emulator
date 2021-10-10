@@ -30,7 +30,7 @@ e4.startMiner()
 
 # Create more accounts on e5 and e6
 e5.startMiner()
-e6.startMiner().createNewAccount(9).setAsRemixNode()
+e6.startMiner().createNewAccount(2).unlockAccounts().setAsRemixNode()
 
 # Create a smart contract and deploy it from node e3 
 # We need to put the compiled smart contracts inside the Contracts/ folder

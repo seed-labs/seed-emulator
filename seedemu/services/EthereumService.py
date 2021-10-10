@@ -134,6 +134,7 @@ class EthereumServer(Server):
     __start_Miner_node: bool
     __create_new_account: int
     __isRemixNode: bool
+    __unlockAccounts: bool
     def __init__(self, id: int):
         """!
         @brief create new eth server.
@@ -147,6 +148,7 @@ class EthereumServer(Server):
         self.__start_Miner_node = False
         self.__create_new_account = 0
         self.__isRemixNode = False
+        self.__unlockAccounts = False
 
     def __createNewAccountCommand(self, node: Node):
         if self.__create_new_account > 0:
@@ -159,8 +161,27 @@ class EthereumServer(Server):
             command = " sleep 20\n\
             geth --password /tmp/eth-password account new \n\
             "
+
             for count in range(self.__create_new_account):
                 node.appendStartCommand('(\n {})&'.format(command))
+
+    def __unlockAccountsCommand(self, node: Node):
+        if self.__unlockAccounts:
+            """!
+            @brief automatically unlocking the accounts in a node.
+            Currently used to automatically be able to use our emulator using Remix.
+            """
+
+            base_command = "sleep 20\n\
+            geth --exec 'personal.unlockAccount(eth.accounts[{}],\"admin\",0)' attach\n\
+            "
+            
+            full_command = ""
+            for i in range(self.__create_new_account + 1):
+                full_command += base_command.format(str(i))
+
+            print(full_command)
+            node.appendStartCommand('(\n {})&'.format(full_command))
 
     def __addMinerStartCommand(self, node: Node):
         if self.__start_Miner_node:
@@ -172,7 +193,7 @@ class EthereumServer(Server):
             """   
             command = " sleep 20\n\
             geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
-            geth --exec 'miner.start(5)' attach \n\
+            geth --exec 'miner.start(20)' attach \n\
             "
             node.appendStartCommand('(\n {})&'.format(command))
 
@@ -237,6 +258,7 @@ class EthereumServer(Server):
             node.appendStartCommand('nice -n 19 geth {}'.format(common_args), True)
 
         self.__createNewAccountCommand(node)
+        self.__unlockAccountsCommand(node)
         self.__addMinerStartCommand(node)
 
         if self.__smart_contract != None :
@@ -317,6 +339,14 @@ class EthereumServer(Server):
         
         return self
 
+    def unlockAccounts(self) -> EthereumServer:
+        """!
+        @brief This is mainly used to unlock the accounts in the remix node to make it directly possible for transactions to be 
+        executed through Remix without the need to access the geth account in the docker container and unlocking manually
+        """
+        self.__unlockAccounts = True
+        return self
+        
     def startMiner(self) -> EthereumServer:
         """!
         @brief Call this api to start Miner in the node.
