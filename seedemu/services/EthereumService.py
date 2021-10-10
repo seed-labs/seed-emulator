@@ -323,6 +323,8 @@ class EthereumServer(Server):
         """
         self.__isRemixNode = True
 
+        return self
+
     def isRemixNode(self) -> bool:
         """!
         @brief returns wheter a node is a remix node or not
@@ -345,6 +347,7 @@ class EthereumServer(Server):
         executed through Remix without the need to access the geth account in the docker container and unlocking manually
         """
         self.__unlockAccounts = True
+
         return self
         
     def startMiner(self) -> EthereumServer:
