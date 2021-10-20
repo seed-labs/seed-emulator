@@ -75,4 +75,4 @@ You will now see a new entry under the "Deployed Contracts".
 
 Step 1: Change the "Value" integer from 0 to 1 and click on the "attack" function in your malicious smart contract. Click on the "getBalance" function in the vicim contract, it shows 0 ether! Click on the "getBalance" function in the malicious contract, it shows 5 ether!
 
-Step 10: The stolen money is now in the malicious contract and not in the malicious user's account. Click on the "cashOut" function and check the amount of ether the malicious account has under the "Account" list.
+Step 2: The stolen money is now in the malicious contract and not in the malicious user's account. Click on the "cashOut" function and check the amount of ether the malicious account has under the "Account" list.
