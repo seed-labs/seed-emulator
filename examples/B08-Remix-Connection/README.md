@@ -8,15 +8,13 @@
 
 ## A.1 Background
 
-Remix is an online IDE used to writee, deploy, and interact with smart contracts.
+Remix is an online IDE used to write, deploy, and interact with smart contracts.
 One feature of Remix we want to make use of is connecting to a Web3 provider.
 Our emulator is a Web3 provider and we will be deploying our smart contracts from Remix to our private network.
-
 
 ## A.2 How it works
 
 One of the nodes in our private network runs an HTTP server which accepts connections from Remix.
-
 
 ## A.3 Build dependencies
 
@@ -47,7 +45,7 @@ In the Deploy and run transactions section, you can connect to the network of yo
 
 ## A.7 Connect Remix to our network
 
-This section covers how to use section 3 of remix.
+This section covers how to use section 3 of Remix.
 Navigate to the "Deploy and run transactions" section.
 Find the "environment" dropdown.
 Select "Web3 Provider", a popup will show up.
