@@ -38,6 +38,7 @@ Remix has 5 main sections in its sidebar:
 - Deploy and run transactions
 - Debugger
 - Plugin manager
+
 We  are interested in the first 3 sections.
 In the File explorer section, you can create your smart contracts inside the contracts folder.
 In the Solidity compiler section, you can select the compiler version of your choice depending on the version you are using in your code.
