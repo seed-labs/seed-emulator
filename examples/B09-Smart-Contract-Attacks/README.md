@@ -25,11 +25,17 @@ In the third section, Deploy and run transactions, you can connect to the networ
 ## Creating your smart contracts
 
 This part is related to section 1 of the Remix IDE.
-Navigate to the "File explorer" section..
+  
+Navigate to the "File explorer" section.
+  
 Find the "contracts" folder.
+  
 Right click on the folder and select "New File".
+  
 Go to examples/B09-Smart-Contract-Attacks/Contracts.
+  
 Copy/Paste the contracts you need (e.g., DaoVictim.sol, DaoMalicious.sol).
+  
 Make sure the new files you created in Remix match the name of the contracts.
 
 ## Compiling your smart contracts
