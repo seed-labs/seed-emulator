@@ -46,6 +46,7 @@ Go to the "Solidity Compiler" section.
 Select the appropriate compiler version from the "Compiler" dropdown.
 
 Option 1: Save the file, this should automatically compile the contracts.
+  
 Option 2: Click on Compile button.
 
 ## Deploying your smart contracts
