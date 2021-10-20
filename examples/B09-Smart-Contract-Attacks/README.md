@@ -11,11 +11,12 @@ Connecting to Remix IDE (check example B08-Remix-Connection)
 
 ## About Remix
 Remix has 5 main sections in its sidebar:
-	- File explorer
-	- Solidity compiler
-	- Deploy and run transactions
-	- Debugger
-	- Plugin manager
+- File explorer
+- Solidity compiler
+- Deploy and run transactions
+- Debugger
+- Plugin manager
+
 We are interested in the first 3
 In the first section, File explorer, you can create your smart contracts inside the contracts folder.
 In the second section, Solidity compiler, you can select the solidity compiler of your choice depending on what version you are using in your code.
