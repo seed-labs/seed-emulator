@@ -2,7 +2,6 @@
 # encoding: utf-8
 
 from seedemu import *
-from env import getSaveState
 
 emu = Emulator()
 
@@ -10,7 +9,7 @@ emu = Emulator()
 # saveState=True: will set the blockchain folder using `volumes`, 
 # so the blockchain data will be preserved when containers are deleted.
 # Note: right now we need to manually create the folder for each node (see README.md). 
-eth = EthereumService(saveState = getSaveState("component_blockchain.py"))
+eth = EthereumService(saveState = True)
 
 
 # Create Ethereum nodes (nodes in this layer are virtual)
@@ -29,8 +28,8 @@ e3.startMiner()
 e4.startMiner()
 
 # Create more accounts on e5 and e6
-e5.startMiner()
-e6.startMiner().createNewAccount(2).unlockAccounts().setAsRemixNode()
+e5.startMiner().createNewAccount(3)
+e6.createNewAccount().createNewAccount()
 
 # Create a smart contract and deploy it from node e3 
 # We need to put the compiled smart contracts inside the Contracts/ folder
@@ -43,7 +42,7 @@ emu.getVirtualNode('eth2').setDisplayName('Ethereum-2')
 emu.getVirtualNode('eth3').setDisplayName('Ethereum-3')
 emu.getVirtualNode('eth4').setDisplayName('Ethereum-4')
 emu.getVirtualNode('eth5').setDisplayName('Ethereum-5')
-emu.getVirtualNode('eth6').setDisplayName('Ethereum-6').addPort(8545, 5555)
+emu.getVirtualNode('eth6').setDisplayName('Ethereum-6')
 
 # Add the layer and save the component to a file
 emu.addLayer(eth)
