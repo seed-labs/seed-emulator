@@ -358,6 +358,14 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         self.__ports.append((host, node, proto))
 
+    def addPortForwarding(self, host: int, node: int, proto:str = 'tcp') -> Node:
+        """!
+        @brief Achieves the same as the addPort function. 
+        @brief Keeping addPort to avoid breaking other examples.
+        @brief Just a more descriptive name.
+        """
+        self.__ports.append((host, node, proto))
+
     def getPorts(self) -> List[Tuple[int, int, str]]:
         """!
         @brief Get port forwardings.

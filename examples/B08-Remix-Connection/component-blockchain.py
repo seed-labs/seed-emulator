@@ -28,8 +28,8 @@ e3.startMiner()
 e4.startMiner()
 
 # Create more accounts on e5 and e6
-e5.startMiner().createNewAccount(3)
-e6.createNewAccount().createNewAccount()
+e5.startMiner()
+e6.startMiner().createNewAccount(2).unlockAccounts().setAsRemixNode()
 
 # Create a smart contract and deploy it from node e3 
 # We need to put the compiled smart contracts inside the Contracts/ folder
@@ -42,7 +42,7 @@ emu.getVirtualNode('eth2').setDisplayName('Ethereum-2')
 emu.getVirtualNode('eth3').setDisplayName('Ethereum-3')
 emu.getVirtualNode('eth4').setDisplayName('Ethereum-4')
 emu.getVirtualNode('eth5').setDisplayName('Ethereum-5')
-emu.getVirtualNode('eth6').setDisplayName('Ethereum-6')
+emu.getVirtualNode('eth6').setDisplayName('Ethereum-6').addPortForwarding(8545, 8549)
 
 # Add the layer and save the component to a file
 emu.addLayer(eth)
