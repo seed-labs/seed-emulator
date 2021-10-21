@@ -42,7 +42,7 @@ emu.getVirtualNode('eth2').setDisplayName('Ethereum-2')
 emu.getVirtualNode('eth3').setDisplayName('Ethereum-3')
 emu.getVirtualNode('eth4').setDisplayName('Ethereum-4')
 emu.getVirtualNode('eth5').setDisplayName('Ethereum-5')
-emu.getVirtualNode('eth6').setDisplayName('Ethereum-6').addPortForwarding(8545, 5555)
+emu.getVirtualNode('eth6').setDisplayName('Ethereum-6').addPortForwarding(8545, 8549)
 
 # Add the layer and save the component to a file
 emu.addLayer(eth)
