@@ -11,11 +11,12 @@ Connecting to Remix IDE (check example B08-Remix-Connection)
 
 ## About Remix
 Remix has 5 main sections in its sidebar:
-	- File explorer
-	- Solidity compiler
-	- Deploy and run transactions
-	- Debugger
-	- Plugin manager
+- File explorer
+- Solidity compiler
+- Deploy and run transactions
+- Debugger
+- Plugin manager
+
 We are interested in the first 3
 In the first section, File explorer, you can create your smart contracts inside the contracts folder.
 In the second section, Solidity compiler, you can select the solidity compiler of your choice depending on what version you are using in your code.
@@ -24,11 +25,17 @@ In the third section, Deploy and run transactions, you can connect to the networ
 ## Creating your smart contracts
 
 This part is related to section 1 of the Remix IDE.
-Navigate to the "File explorer" section..
+  
+Navigate to the "File explorer" section.
+  
 Find the "contracts" folder.
+  
 Right click on the folder and select "New File".
+  
 Go to examples/B09-Smart-Contract-Attacks/Contracts.
+  
 Copy/Paste the contracts you need (e.g., DaoVictim.sol, DaoMalicious.sol).
+  
 Make sure the new files you created in Remix match the name of the contracts.
 
 ## Compiling your smart contracts
@@ -39,6 +46,7 @@ Go to the "Solidity Compiler" section.
 Select the appropriate compiler version from the "Compiler" dropdown.
 
 Option 1: Save the file, this should automatically compile the contracts.
+  
 Option 2: Click on Compile button.
 
 ## Deploying your smart contracts
@@ -67,4 +75,4 @@ You will now see a new entry under the "Deployed Contracts".
 
 Step 1: Change the "Value" integer from 0 to 1 and click on the "attack" function in your malicious smart contract. Click on the "getBalance" function in the vicim contract, it shows 0 ether! Click on the "getBalance" function in the malicious contract, it shows 5 ether!
 
-Step 10: The stolen money is now in the malicious contract and not in the malicious user's account. Click on the "cashOut" function and check the amount of ether the malicious account has under the "Account" list.
+Step 2: The stolen money is now in the malicious contract and not in the malicious user's account. Click on the "cashOut" function and check the amount of ether the malicious account has under the "Account" list.
