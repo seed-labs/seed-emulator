@@ -1,0 +1,32 @@
+#apis {
+	display: flex;
+    	flex-direction: column;
+    	flex-wrap: wrap;
+    	align-content: flex-start;
+	margin: 10px 0;
+}
+
+.api {
+	border: 1px solid lightblue;
+    	padding: 5px;
+    	margin: 0 0 10px 0;
+	width: 100%;
+}
+
+.apiActionContainer {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	align-content: center;
+	align-items: center;
+}
+
+.apiBtn {
+	text-align: center;
+}
+
+.apiBtn, .apiParams {
+	height: 100%;
+}
+

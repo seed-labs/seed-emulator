@@ -1,0 +1,36 @@
+<div id="blockchainInterface">
+
+<div id="ethereumNodes">
+
+	<select id="nodes">
+		{{#each containers}}
+			<option class="node" 
+				value="{{Names}}"
+				data-id="{{Id}}">{{Names}}
+			</option>
+		{{/each}}
+	</select>
+
+</div>
+
+<div id="apis">
+	{{#each apis}}
+		<div class="api" id="{{command}}">
+			<div class="apiTextContainer">
+				<h3> Description </h3>
+				<p>{{description}} </p>
+			</div>
+			<div class="apiActionContainer">
+				<input class="apiBtn" type="button" value="{{name}}" data-command="{{command}}"/>
+				{{#each parameters}}
+					<{{el}} class="apiParams" placeholder="{{name}}" required="{{required}}"/>
+				{{/each}}
+			</div>
+			<div class="apiActionOutputContainer">
+				<h3> Output </h3>
+			</div>
+		</div>
+	{{/each}}
+</div>
+
+</div>
