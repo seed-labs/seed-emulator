@@ -14,6 +14,7 @@ is a set of docker container folders/files. When these containers are built and
 started, they form a small-size Internet. New building blocks are being added,
 including Blockchain, Botnet, and many other useful elements of the Internet. 
 
+![The Web UI](docs/assets/web-ui.png)
 
 ## Table of Contents
 
