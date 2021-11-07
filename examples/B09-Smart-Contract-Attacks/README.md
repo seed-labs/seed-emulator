@@ -2,10 +2,10 @@
 
 - [Low-level functions in solidity](#solidity)
 - [Smart Contract Attacks](#attacks-steps)
-- [Attack explanation](#explanation)
+- [Reasoning behind the DAO attack](#explanation)
 
 <a name="solidity">
-# Solidity
+# Low-level functions in solidity
 
 ## Terms
 
