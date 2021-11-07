@@ -5,12 +5,14 @@
 - [Attack explanation](#explanation)
 
 <a name="solidity">
-# Terms
+# Solidity
+
+## Terms
 
 - EOA: account holder
 - CA: Smart contract
 
-# Low-level functions
+## Low-level functions
 
 When using the solidity programming language, we have access to a couple of functions/apis which let us send ether from one EOA/CA to another or even perform other tasks.
 Some of these functions are:
@@ -22,7 +24,7 @@ The "call" function can be used for two reasons:
 - Sending ether to an EOA or CA
 - Calling a function in a certain contract
 
-# Fallback function
+## Fallback function
 As stated in the solidity documentation "The fallback function is executed on a call to the contract if none of the other functions match the given function signature, or if no data was supplied at all and there is no receive Ether function.". This means that calling a non-existing function in a certain contract or sending ether to this contract (given that it does not implement the receive function) will trigger the fallback function.
 
 <a name="attacks-steps">
@@ -102,22 +104,23 @@ Step 2: The stolen money is now in the malicious contract and not in the malicio
 
 
 <a name="explanation">
+# Reasoning behind the DAO attack
 
-# Error propagation
+## Error propagation
 
 Error handling and error propagation are some of the main concepts when learning how to code.
 When an error is thrown, we either expect the error to be handled and for changed states to revert back to their previous value, or for the code to crash.
 Some low-level functions such as "call" fail to propagate errors thrown from deeper functions and return a false value, this is why it is not recommended for solidity developers to use this function.
 If not handled properly and in case of an error, we might have scenarios where some variables never reverted back to their original states.
 
-# Reentrancy attack
+## Reentrancy attack
 
 As mentioned above, using the "call" api triggers the fallback function when sending ether or when calling a non-existing function in a contract (maybe because of a typo).
 What an attacker can do is import the vulnerable CA into his malicious CA and add a fallback function in his own CA.
 If the vulnerable CA tries to send ether to the malicious contract (when calling a certain function in the vulnerable program), the fallback function in the malicious CA will be triggered.
 This means that a CA can potentially run external code without even knowing about it.
 
-# DAO attack
+## DAO attack
 
 In our Victim CA, the "withdraw" function uses the "call" api to send money to the CA that requests its money back.
 The Malicious user takes advantage of that and exploits this by implementing a fallback function in his CA.
@@ -125,11 +128,11 @@ The withdraw function will be invoked over and over again from the malicious fal
 The flow looks like that once the malicious contract withdraws money:
 - Malicious calls withdraw -> withdraw function uses "call" to send money to the malicious CA -> fallback function triggered in the malicious CA -> fallback function reinvokes the "withdraw" function -> steps repeated until no ether is left in the contract
 
-# Consequences
+## Consequences
 
 The "balances[msg.sender] -= amount" will never be reached.
 The attacker will be able to withdraw all the ether in the contract because the check "require(balances[msg.sender] >= amount);" will always succeed.
-# Counter-measure
+## Counter-measure
 
 Fixing this issue turns out to be simple. All the owner of the victim contract should do is update the balance of the sender before actually sending ether using the "call" api
 This causes the check "require(balances[msg.sender] >= amount);" to fail the next time the Malicious CA tries to invoke the "withdraw" function.
