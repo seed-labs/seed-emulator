@@ -25,16 +25,12 @@ function responseHandler({command, output}) {
 
 document.addEventListener('DOMContentLoaded',function () {
 	
-	const nodes = document.getElementsByClassName('node');
 	const nodesParentContainer = document.getElementById('nodes');
 	
 	window.containerId = nodesParentContainer.options[nodesParentContainer.selectedIndex].dataset.id;
-	
-	for(let i = 0; i< nodes.length; i++) {
-		nodes[i].addEventListener('click',function(event) {
-			window.containerId = event.target.dataset.id;	
-		})
-	}
+	nodesParentContainer.addEventListener('change', (event) => {
+		window.containerId = event.target.options[event.target.selectedIndex].dataset.id;
+	})
 
 	const apiButtons = document.getElementsByClassName('apiBtn');
 	for (let i = 0; i<apiButtons.length; i++) {
