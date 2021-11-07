@@ -31,11 +31,11 @@ document.addEventListener('DOMContentLoaded',function () {
 	nodesParentContainer.addEventListener('change', (event) => {
 		window.containerId = event.target.options[event.target.selectedIndex].dataset.id;
 	})
-
+	
 	const apiButtons = document.getElementsByClassName('apiBtn');
 	for (let i = 0; i<apiButtons.length; i++) {
 		apiButtons[i].addEventListener('click', (event) => {
-			xmlHttpRequestHandler('POST', 'http://localhost:3000', {
+			xmlHttpRequestHandler('POST', 'http://localhost:'+window.blockchainPort, {
 				command: event.target.dataset.command,
 				containerId: window.containerId,
 				params: (function(){

@@ -10,7 +10,7 @@ const getCommand = require('./commands.ts')
 const docker = new Docker()
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 app.engine('handlebars', handlebars());
 app.set('view engine', 'handlebars');
@@ -23,6 +23,7 @@ app.get('/', async (req, res) => {
 	try {
 		const containers = await DockerOdeWrapper.docker.listContainers(docker)
 		res.render('home', {
+			port,
 			apis,
 			containers: containers.filter(container => container.Names[0].includes('Ethereum')) 
 		})
