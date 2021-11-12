@@ -12,7 +12,7 @@ function xmlHttpRequestHandler(type, url, data={}, callback) {
 
 
 function responseHandler({command, output}) {
-	const div = document.getElementById(command).querySelector('.apiActionOutputContainer')
+	const div = document.getElementById(command).querySelector('.apiOutputContainer')
 	const outputElement = document.getElementById(command + "-output") || document.createElement('p')
 	const sanitizedOutput = output.replace(/[^ -~]+/g, "")
 	outputElement.innerHTML = "";
