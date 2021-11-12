@@ -13,20 +13,20 @@
 
 </div>
 
-<div id="apis">
+<div id="apis" class="margin-10-0">
 	{{#each apis}}
-		<div class="api" id="{{command}}">
-			<div class="apiTextContainer">
+		<div class="api section" id="{{command}}">
+			<div class="apiTextContainer text-section">
 				<h3> Description </h3>
 				<p>{{description}} </p>
 			</div>
-			<div class="apiActionContainer">
+			<div class="apiActionContainer action-section">
 				<input class="apiBtn" type="button" value="{{name}}" data-command="{{command}}"/>
 				{{#each parameters}}
 					<{{el}} class="apiParams" placeholder="{{name}}" required="{{required}}"/>
 				{{/each}}
 			</div>
-			<div class="apiActionOutputContainer">
+			<div class="apiOutputContainer text-section">
 				<h3> Output </h3>
 			</div>
 		</div>
