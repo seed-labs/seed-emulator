@@ -32,12 +32,7 @@ const DockerOdeWrapper = {
 							console.log(`Command \"${command}\" executed successfully`);
 							return helpers.demuxStream(stream)
 								.then((output) => {	
-									console.log('Exec output: ', output)
-									if(output.error) {
-										return reject(output.data)
-									} else {
-										return resolve(output.data)
-									}
+									resolve(output)
 								})
 
 						}

@@ -23,7 +23,7 @@ const helpers = {
     				} else {
       					if (buffer.length >= nextDataLength) {
         					let content = bufferSlice(nextDataLength);
-        					if (nextDataType === 1) {
+						if (nextDataType === 1) {
 							output += content;
         					} else {
 							error += content
@@ -43,9 +43,25 @@ const helpers = {
 			}
 			stream.on('data', (data) => {
 				processData(data)
-				resolve({error: !!error, data: !!error ? error : output});
+			})
+			stream.on('end', () => {
+				resolve(output)
 			})
 		})
+	},
+	regex: /([{,]\s*)(\S+)\s*(:)/mg,
+	stringToJsonString(s) {
+		console.log("converting string: ", s)
+		return s.replace(this.regex, '$1"$2"$3')
+	},
+	sanitizeGethStreamString(s) {
+		return s.replace(/\.\.\./g, "").replace(/function\(\)/g, "\"function()\"").replace(/undefined/g, null)
+	},
+	castGethParameters(value, type) {
+		if(type === 'string' || type === 'address') {
+			return `"${value}"`
+		}
+		return value
 	}
 }
 
