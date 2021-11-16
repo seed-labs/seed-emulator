@@ -48,7 +48,12 @@ router.post('/', async(req, res) => {
 	try {
 		const {params, action, containerId} = req.body;
 		const container = await DockerOdeWrapper.docker.getContainer(docker, containerId);
-		const output = await DockerOdeWrapper.container.exec(docker, container, getCommand(action, params))
+		let output = await DockerOdeWrapper.container.exec(docker, container, getCommand(action, params))
+		
+		if(action === 'invokeContractFunction') {
+			output = await DockerOdeWrapper.container.exec(docker, container, getCommand(action, params, {call:true}))
+		}
+		
 		res.send({
 			action,
 			response: sanitizeOutputForAction[action](output)

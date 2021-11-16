@@ -24,7 +24,7 @@ function responseHandler({command, output}) {
 
 
 document.addEventListener('DOMContentLoaded',function () {
-	
+
 	const nodesParentContainer = document.getElementById('nodes');
 	
 	window.containerId = nodesParentContainer.options[nodesParentContainer.selectedIndex].dataset.id;

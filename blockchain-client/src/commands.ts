@@ -38,9 +38,8 @@ const commands = {
 		return `geth attach --exec eth.pendingTransactions`
 	},
 	deploySmartContract(account, abi, bytecode, params) {
-		abi = abi.replace(" ", "\t")
 		if(params.length) {
-			//return `geth attach --exec eth.contract(${abi}).new(${params},{from :"${account}", data:bytecode, gas: 1000000})` 
+			return `geth attach --exec eth.contract(${abi}).new(${params},{from:"${account}",data:"${bytecode}",gas:1000000})` 
 		} else {
 			return `geth attach --exec eth.contract(${abi}).new({from:"${account}",data:"${bytecode}",gas:1000000})`
 
@@ -50,19 +49,30 @@ const commands = {
 		return `geth attach --exec eth.getTransactionReceipt("${hash}")` 
 	},
 	getContractByAddress(abi,address) {
-		abi=abi.replace(" ", "\t")
-		console.log('abi: ', abi)
-		console.log('address: ', address)
 		return `geth attach --exec eth.contract(${abi}).at("${address}")`
 	},
-	invokeContractFunction(funcName,defaultAccount ,params) {
-		const [contractInfo, ...otherParams] = params;
-		const abi = contractInfo.abi.replace(" ", "\t")
-		let command = `geth attach --exec eth.defaultAccount=${helpers.castGethParameters(defaultAccount, 'address')};sc=eth.contract(${abi}).at(${helpers.castGethParameters(contractInfo.address, "address")});sc[${helpers.castGethParameters(funcName, 'string')}](`
-		let i = 0;
-		command += helpers.castGethParameters(otherParams[i].value, otherParams[i].type)
-		for(i = 1; i < otherParams.length; i++) {
-			command+="," + helpers.castGethParameters(otherParams[i].value, otherParams[i].type); 
+	invokeContractFunction(funcInfo, parameters, additional=[]) {
+		const {funcName, payable} = funcInfo
+		const [defaultAccount, {abi, address}, value] = additional;
+		const parameterString = this.generateCallString(parameters, {payable, value})
+		const tail = this.options.call ? '.call' + parameterString : parameterString;
+		
+		return `geth attach --exec eth.defaultAccount="${defaultAccount}";` + 
+			`sc=eth.contract(${abi}).at("${address}");` +
+			`sc["${funcName}"]${tail}`
+	},
+	generateCallString(parameters=[], options={}) {
+		let command = "("
+		if(parameters.length) {
+			let i = 0;
+			command += helpers.castGethParameters(parameters[i].value, parameters[i].type)
+			for(i = 1; i < parameters.length; i++) {
+				command+=`,"${parameters[i].value}"`; 
+			}
+		}
+		if(options.payable) {
+			const stringObj = `{value:${options.value * Math.pow(10,18)}}`
+			command += parameters.length ?`,${stringObj}` : stringObj
 		}
 		command += ")"
 		return command;
@@ -70,11 +80,12 @@ const commands = {
 	
 }
 
-function getCommand(name, params=[]) {
+function getCommand(name, params=[], options={}) {
 	if(commands[name]) {
+		commands.options = options
 		//console.log("spread params are: ", ...params)
 		return commands[name](...params)
 	}
 }
 
-module.exports = getCommand;
+module.exports = getCommand

@@ -1,6 +1,16 @@
 let url;
 const deployedContracts = []
 
+function getSanitizedAbiValue(abi) {
+	return JSON.stringify(JSON.parse(abi.replaceAll(" ", "\t"))
+		.map((f)=>{
+			if(f.stateMutability === 'payable') {
+				f.payable=true
+			}
+			return f;
+		}))
+}
+
 function displayDeployedContractFunctions(func) {
 	if(func.name) {
 		const numOfParameters = func.inputs.length;
@@ -10,8 +20,13 @@ function displayDeployedContractFunctions(func) {
 		functionButton.setAttribute('data-action', 'invokeContractFunction')
 		functionButton.setAttribute('data-abi', deployedContracts.length - 1)
 
+		if(func.payable) {
+			functionButton.setAttribute('data-payable', true)
+		}
+
 		const parentContainer = document.querySelector(`.deployedContractContainer[data-abi="${deployedContracts.length-1}"]`);
 		parentContainer.appendChild(functionButton)
+
 		func.inputs.forEach((input) => {
 			const paramInput = document.createElement('input')
 			paramInput.placeholder = input.name
@@ -22,12 +37,27 @@ function displayDeployedContractFunctions(func) {
 		
 		functionButton.addEventListener('click', (event) =>{
 			const params = document.getElementsByClassName(func.name+"-param")
-			const paramValues = []
-			Array.from(params).forEach((param) => {paramValues.push({value: param.value, type: param.dataset.type})})
-			paramValues.unshift(deployedContracts[event.target.dataset.abi])
+			const functionInfo = {
+				funcName: event.target.value,
+				payable: event.target.dataset.payable
+			}
+			const functionParameters = Array.from(params).map((param) => {
+					return {
+						value: param.value, 
+						type: param.dataset.type
+					}
+				})
+			const {abi, address} = deployedContracts[event.target.dataset.abi]
+			const valueEl = document.querySelector('#paymentSection input')
+			const value = valueEl.value || undefined
+			const additionalData = [
+				window.selectedAccount, 
+				{abi: getSanitizedAbiValue(abi), address}, 
+				document.querySelector('#paymentSection input').value || undefined
+			]
 			xmlHttpRequestHandler('POST', url, {
 				action: event.target.dataset.action,
-				params: [event.target.value,window.selectedAccount ,paramValues],
+				params: [functionInfo, functionParameters, additionalData],
 				containerId: window.containerId
 			}, responseHandler)
 		})
@@ -48,22 +78,34 @@ function xmlHttpRequestHandler(type, url, data={}, callback) {
 
 
 function responseHandler({action, response}) {
-	if(action === 'deploySmartContract') {
-		document.getElementById('displayTransactionOutput').innerHTML = response
-	} else if(action === 'getTransactionReceipt') { 
-		document.getElementById('displayTransactionReceipt').innerHTML = response
-	} else if (action ==="getContractByAddress") {
-		const abi = document.getElementById("abi").value
-		const address = document.getElementById("smartContractAddress").value
-		deployedContracts.push({abi, address})
-		const contractContainer = document.createElement('div')
-		contractContainer.className = 'deployedContractContainer'
-		contractContainer.setAttribute('data-abi', deployedContracts.length - 1)
-		document.getElementById('displayContract').appendChild(contractContainer)
-		JSON.parse(abi).forEach((f) => {
-			displayDeployedContractFunctions(f);
-		})
+	if(responseHandler[action]) {
+		responseHandler[action](response);
 	}
+}
+
+responseHandler.deploySmartContract = function(response) {
+	document.getElementById('displayTransactionOutput').innerHTML = response
+}
+
+responseHandler.getTransactionReceipt = function(response) {
+	document.getElementById('displayTransactionReceipt').innerHTML = response
+}
+
+responseHandler.getContractByAddress = function(response) {
+	const abi = getSanitizedAbiValue(document.getElementById("abi").value)
+	const address = document.getElementById("smartContractAddress").value
+	deployedContracts.push({abi, address})
+	const contractContainer = document.createElement('div')
+	contractContainer.className = 'deployedContractContainer'
+	contractContainer.setAttribute('data-abi', deployedContracts.length - 1)
+	document.getElementById('displayContract').appendChild(contractContainer)
+	JSON.parse(abi).forEach((f) => {
+		displayDeployedContractFunctions(f);
+	})
+}
+
+responseHandler.invokeContractFunction = function(response) {
+	console.log('Invoked smart contract function: ', response);
 }
 
 window.addEventListener('DOMContentLoaded', ()=> {
@@ -82,9 +124,9 @@ window.addEventListener('DOMContentLoaded', ()=> {
 	const deployButton = document.getElementById('deploy')
 
 	deployButton.addEventListener('click', (event) => {
-		const abi = abiTextArea.value;
+		const abi = getSanitizedAbiValue(abiTextArea.value);
 		const bytecode = bytecodeTextArea.value.substring(0,2) !== '0x' ? '0x' + bytecodeTextArea.value : bytecodeTextArea.value;	
-		const params = parametersInput.value;
+		const params = parametersInput.value.split(",").map(p => JSON.stringify(p)).join(",");
 
 		if(!abi || !bytecode) {
 			alert("Abi and Bytecode are mandatory")
@@ -116,7 +158,7 @@ window.addEventListener('DOMContentLoaded', ()=> {
 	getContractButton.addEventListener('click', (event)=> {
 		xmlHttpRequestHandler('POST', url, {
 			action: event.target.dataset.action,
-			params: [abiTextArea.value, contractAddressInput.value],
+			params: [getSanitizedAbiValue(abiTextArea.value), contractAddressInput.value],
 			containerId: window.containerId
 		}, responseHandler)
 	})

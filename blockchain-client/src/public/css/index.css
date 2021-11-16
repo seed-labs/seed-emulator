@@ -44,7 +44,7 @@
 	justify-content: center;
 }
 
-#contract-params {
+#units,#contract-params {
 	display: none;
 }
 
