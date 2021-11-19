@@ -2,7 +2,7 @@ let url;
 const deployedContracts = []
 
 function getSanitizedAbiValue(abi) {
-	return JSON.stringify(JSON.parse(abi.replaceAll(" ", "\t"))
+	return JSON.stringify(JSON.parse(abi)
 		.map((f)=>{
 			if(f.stateMutability === 'payable') {
 				f.payable=true
@@ -34,11 +34,17 @@ function displayDeployedContractFunctions(func) {
 			paramInput.setAttribute('data-type', input.type)
 			parentContainer.appendChild(paramInput)
 		})
+
+		const outputContainer = document.createElement('div')
+		outputContainer.className= func.name + "-output"
+		outputContainer.setAttribute('data-abi', deployedContracts.length - 1)
+		parentContainer.appendChild(outputContainer);
 		
 		functionButton.addEventListener('click', (event) =>{
 			const params = document.getElementsByClassName(func.name+"-param")
 			const functionInfo = {
 				funcName: event.target.value,
+				abiIndex: event.target.dataset.abi,
 				payable: event.target.dataset.payable
 			}
 			const functionParameters = Array.from(params).map((param) => {
@@ -60,6 +66,8 @@ function displayDeployedContractFunctions(func) {
 				params: [functionInfo, functionParameters, additionalData],
 				containerId: window.containerId
 			}, responseHandler)
+
+			valueEl.value = ''
 		})
 	}
 }
@@ -106,6 +114,23 @@ responseHandler.getContractByAddress = function(response) {
 
 responseHandler.invokeContractFunction = function(response) {
 	console.log('Invoked smart contract function: ', response);
+	const {output, funcName, abiIndex} = JSON.parse(response);
+	const el = document.querySelector(`.${funcName}-output[data-abi="${abiIndex}"]`)
+	if(el) {
+		el.innerHTML = output
+	}
+	
+}
+
+async function copyToClipboard(text) {
+	/*const dummy = document.createElement("textarea");
+    	document.body.appendChild(dummy);
+    	dummy.value = text;
+    	dummy.select();
+    	document.execCommand("copy");
+    	document.body.removeChild(dummy);
+	*/
+	return await navigator.clipboard.writeText(text)
 }
 
 window.addEventListener('DOMContentLoaded', ()=> {
@@ -117,28 +142,41 @@ window.addEventListener('DOMContentLoaded', ()=> {
 	accounts.addEventListener('change', (event)=> {
   		window.selectedAccount = event.target.options[event.target.selectedIndex].value
 	})
+
+	const copy = document.getElementById("copySelectedAccount")
+	
+	copy.addEventListener('click', ()=> {
+		copyToClipboard(window.selectedAccount)	
+	})
 	
 	const abiTextArea = document.getElementById('abi');
 	const bytecodeTextArea = document.getElementById('bytecode');
 	const parametersInput = document.getElementById('contract-params');
 	const deployButton = document.getElementById('deploy')
 
+	const valueEl = document.querySelector('#paymentSection input')
+
 	deployButton.addEventListener('click', (event) => {
 		const abi = getSanitizedAbiValue(abiTextArea.value);
+		window.deployedAbi = abi
 		const bytecode = bytecodeTextArea.value.substring(0,2) !== '0x' ? '0x' + bytecodeTextArea.value : bytecodeTextArea.value;	
 		const params = parametersInput.value.split(",").map(p => JSON.stringify(p)).join(",");
-
+		const value = valueEl.value || undefined;
+			
 		if(!abi || !bytecode) {
 			alert("Abi and Bytecode are mandatory")
 			return
 		}
-
+		
 		xmlHttpRequestHandler('POST', url, {
-			params: [window.selectedAccount, abi, bytecode, params],
+			params: [window.selectedAccount, abi, bytecode, params, value],
 			action: event.target.dataset.action,
 			containerId: window.containerId
 		}, responseHandler)
 
+		//bytecodeTextArea.value = ''
+		//parametersInput.value = ''
+		valueEl.value = ''
 	})
 
 	const getTransactionReceiptButton = document.getElementById("getTransactionReceipt");

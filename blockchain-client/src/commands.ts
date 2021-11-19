@@ -37,18 +37,29 @@ const commands = {
 	viewPendingTransactions() {
 		return `geth attach --exec eth.pendingTransactions`
 	},
-	deploySmartContract(account, abi, bytecode, params) {
+	deploySmartContract(account, abi, bytecode, params, value) {
+		abi = abi.replace(" ", "\t")
+		let base = `{from:"${account}",data:"${bytecode}",gas:1000000`
 		if(params.length) {
-			return `geth attach --exec eth.contract(${abi}).new(${params},{from:"${account}",data:"${bytecode}",gas:1000000})` 
-		} else {
-			return `geth attach --exec eth.contract(${abi}).new({from:"${account}",data:"${bytecode}",gas:1000000})`
-
+			base = params +',' + base;
 		}
+		if(value) {
+			base += `,value:${value}`
+		}
+		base += '}'
+		
+		//if(params.length) {
+		//	return `geth attach --exec eth.contract(${abi}).new(${params},{from:"${account}",data:"${bytecode}",gas:1000000})` 
+		//} else {
+		//	return `geth attach --exec eth.contract(${abi}).new()`
+		//}
+		return `geth attach --exec eth.contract(${abi}).new(${base})`
 	},
 	getTransactionReceipt(hash) {
 		return `geth attach --exec eth.getTransactionReceipt("${hash}")` 
 	},
 	getContractByAddress(abi,address) {
+		abi = abi.replace(" ", "\t")
 		return `geth attach --exec eth.contract(${abi}).at("${address}")`
 	},
 	invokeContractFunction(funcInfo, parameters, additional=[]) {
@@ -56,16 +67,18 @@ const commands = {
 		const [defaultAccount, {abi, address}, value] = additional;
 		const parameterString = this.generateCallString(parameters, {payable, value})
 		const tail = this.options.call ? '.call' + parameterString : parameterString;
+
+		sanitizedAbi = abi.replace(" ", "\t")
 		
 		return `geth attach --exec eth.defaultAccount="${defaultAccount}";` + 
-			`sc=eth.contract(${abi}).at("${address}");` +
+			`sc=eth.contract(${sanitizedAbi}).at("${address}");` +
 			`sc["${funcName}"]${tail}`
 	},
 	generateCallString(parameters=[], options={}) {
 		let command = "("
 		if(parameters.length) {
 			let i = 0;
-			command += helpers.castGethParameters(parameters[i].value, parameters[i].type)
+			command += `"${parameters[i].value}"`
 			for(i = 1; i < parameters.length; i++) {
 				command+=`,"${parameters[i].value}"`; 
 			}

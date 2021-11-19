@@ -51,7 +51,12 @@ router.post('/', async(req, res) => {
 		let output = await DockerOdeWrapper.container.exec(docker, container, getCommand(action, params))
 		
 		if(action === 'invokeContractFunction') {
-			output = await DockerOdeWrapper.container.exec(docker, container, getCommand(action, params, {call:true}))
+			// giving some time for the network to mine the actual transaction
+			output = JSON.stringify({
+				output: await DockerOdeWrapper.container.exec(docker, container, getCommand(action, params, {call:true})),
+				funcName: params[0].funcName,
+				abiIndex: params[0].abiIndex
+			})
 		}
 		
 		res.send({
