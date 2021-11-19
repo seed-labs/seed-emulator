@@ -32,7 +32,7 @@ const DockerOdeWrapper = {
 							console.log(`Command \"${command}\" executed successfully`);
 							return helpers.demuxStream(stream)
 								.then((output) => {	
-									resolve(output)
+									return resolve(output)
 								})
 
 						}
