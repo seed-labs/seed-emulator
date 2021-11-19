@@ -9,7 +9,7 @@ from re import sub
 from ipaddress import IPv4Network, IPv4Address
 
 SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
-ETH_SEEDEMU_CLIENT_IMAGE='rawisader/seedemu-eth-client:v1'
+ETH_SEEDEMU_CLIENT_IMAGE='rawisader/seedemu-eth-client'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
