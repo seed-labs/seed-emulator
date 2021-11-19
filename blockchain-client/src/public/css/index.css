@@ -37,6 +37,11 @@
 	height: 100%;
 }
 
+#accountsSection {
+	display: flex;
+	flex-direction: row;
+}
+
 #deploymentSection {
 	display: flex;
 	flex-direction: column;
@@ -44,7 +49,7 @@
 	justify-content: center;
 }
 
-#units,#contract-params {
+#units {
 	display: none;
 }
 
