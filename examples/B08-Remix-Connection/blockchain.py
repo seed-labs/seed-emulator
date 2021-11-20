@@ -47,5 +47,5 @@ emu.render()
 
 # If output directory exists and override is set to false, we call exit(1)
 # updateOutputdirectory will not be called
-emu.compile(Docker(), output)
+emu.compile(Docker(ethClientEnabled=True, clientEnabled=True), output)
 updateEthStates()

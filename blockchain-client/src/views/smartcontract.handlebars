@@ -1,0 +1,65 @@
+<div id="smartContractContainer">
+	<div id="accountsSection">
+		<select id="accounts">
+			{{#each accounts}}
+			<option class="account" 
+				value="{{this}}">{{this}}
+			</option>
+		{{/each}}
+		</select>
+		<input id="copySelectedAccount" type="button" value="copy"></input>	
+	</div>
+	<div class="section margin-10-0" id="paymentSection">
+			<label> Value: </label>
+			<input placeholder="Amount in ether">
+			<select id="units">
+				<option class="unit" value="Ether">
+				<option class="unit" value="Wei">
+			</select>
+	</div>
+	<div class="section margin-10-0" id="deploymentSection">
+		<div class="text-section">
+			<h3> Deploy contract </h3>
+		</div>
+		<div class="action-section flex-direction-column">
+			<textarea id="abi" placeholder="abi"></textarea>
+			<textarea id="bytecode" placeholder="bytecode"></textarea>
+			<input id="contract-params" placeholder="Comma-separated parameters">
+			<input id="deploy" value="Deploy" type="button" data-action="deploySmartContract">
+		</div>
+		<div class"text-section">
+			<h3> Transaction Hash </h3>
+			<div id="displayTransactionOutput"></div>
+		</div>
+	</div>
+	<div class="section margin-10-0" id="transaction">
+		<div class="text-section">
+			<h3> Get Contract Address</h3>
+		</div>
+		<div class"action-section">
+			<input id="getTransactionReceipt" value="Get contract address" type="button" data-action="getTransactionReceipt">
+			<input id="transactionHash" placeholder="Transaction hash">
+		</div>
+		<div class="text-section">
+			<h3> Contract address </h3>
+			<div id="displayTransactionReceipt"> </div>
+		</div>
+	</div>	
+	<div class="section margin-10-0" id="deployedSection">
+		<div class="text-section">
+			<h3> Deployed Contracts </h3>
+		</div>
+		<div class="action-section">
+			<input id="getSmartContract" value="Get Contract" type="button" data-action="getContractByAddress">
+			<input id="smartContractAddress" placeholder="Contract address">
+		</div>
+		<div class="text-section"> 
+			<h3> Contracts </h3>
+			<div id="displayContract"></div>
+		</div>
+	</div>
+</div>
+<script type="text/javascript" src="/js/smartcontracts.js"></script>
+<script>
+	window.containerId = '{{containerId}}'
+</script>
