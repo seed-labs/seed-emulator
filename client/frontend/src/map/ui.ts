@@ -35,6 +35,7 @@ export interface MapUiConfiguration {
         replayButtonElementId: string, // element id of replay button
         replaySpeedMultiplierElementId: string, // element id of replay speed multiplier
         currentSpeedElementId: string, // element id of current replay speed display
+        eventsLeftElementId: string // element id of events left display
     },
     windowManager: { // console window manager
         desktopElementId: string, // elementid for desktop
@@ -78,6 +79,7 @@ export class MapUi {
     private _replayButton: HTMLElement;
     private _replayMultiplier: HTMLInputElement;
     private _replayMultiplierDisplay: HTMLElement;
+    private _eventsLeft: HTMLElement;
 
     private _datasource: DataSource;
 
@@ -160,6 +162,7 @@ export class MapUi {
         this._replayButton = document.getElementById(config.replayControls.replayButtonElementId);
         this._replayMultiplier = document.getElementById(config.replayControls.replaySpeedMultiplierElementId) as HTMLInputElement;
         this._replayMultiplierDisplay = document.getElementById(config.replayControls.currentSpeedElementId);
+        this._eventsLeft = document.getElementById(config.replayControls.eventsLeftElementId);
 
         this._logMinimized = true;
 
@@ -1018,6 +1021,7 @@ export class MapUi {
         if (this._replaying || forceStop) {
             this._replaying = false;
             this._replayButton.innerText = 'start replay';
+            this._eventsLeft.innerText = '';
             window.clearTimeout(this._replayTask);
             return;
         }
@@ -1029,7 +1033,7 @@ export class MapUi {
     }
 
     private _doReplay() {
-        console.log(`${this._playlist.length} event(s) left.`);
+        this._eventsLeft.innerText = `${this._playlist.length} event(s) left.`;
 
         if (!this._replaying) {
             return;

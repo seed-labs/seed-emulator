@@ -33,6 +33,7 @@ const mapUi = new MapUi({
         replayButtonElementId: 'log-replay',
         replaySpeedMultiplierElementId: 'multiplier',
         currentSpeedElementId: 'current-multiplier',
+        eventsLeftElementId: 'events-left'
     },
     windowManager: {
         desktopElementId: 'console-area',
