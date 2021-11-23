@@ -31,6 +31,11 @@ export interface MapUiConfiguration {
         nodeSearchModeTabElementId: string, // element id of tab for setting mode to search
         suggestionsElementId: string // element id of search suggestions
     },
+    replayControls: { // replay controls
+        replayButtonElementId: string, // element id of replay button
+        replaySpeedMultiplierElementId: string, // element id of replay speed multiplier
+        currentSpeedElementId: string, // element id of current replay speed display
+    },
     windowManager: { // console window manager
         desktopElementId: string, // elementid for desktop
         taskbarElementId: string // elementid for taskbar
@@ -64,6 +69,10 @@ export class MapUi {
 
     private _logToggle: HTMLElement;
     private _logToggleChevron: HTMLElement;
+
+    private _replayButton: HTMLElement;
+    private _replayMultiplier: HTMLInputElement;
+    private _replayMultiplierDisplay: HTMLElement;
 
     private _datasource: DataSource;
 
@@ -138,6 +147,10 @@ export class MapUi {
         this._logToggle = document.getElementById(config.logControls.minimizeToggleElementId);
         this._logToggleChevron = document.getElementById(config.logControls.minimizeChevronElementId);
 
+        this._replayButton = document.getElementById(config.replayControls.replayButtonElementId);
+        this._replayMultiplier = document.getElementById(config.replayControls.replaySpeedMultiplierElementId) as HTMLInputElement;
+        this._replayMultiplierDisplay = document.getElementById(config.replayControls.currentSpeedElementId);
+
         this._logMinimized = true;
 
         this._suggestionsSelection = -1;
@@ -157,6 +170,14 @@ export class MapUi {
         this._windowManager = new WindowManager(config.windowManager.desktopElementId, config.windowManager.taskbarElementId);
 
         this._bpfCompletion = new Completion(bpfCompletionTree);
+
+        this._replayMultiplier.onchange = () => {
+            this._replayMultiplierDisplay.innerText = this._replayMultiplier.value;
+        };
+
+        this._replayButton.onclick = () => {
+            this._replay();
+        };
 
         this._logToggle.onclick = () => {
             if (this._logMinimized) {
@@ -948,6 +969,13 @@ export class MapUi {
                 this._macMapping[net.MacAddress] = net.NetworkID;
             });
         });
+    }
+
+    /**
+     * replay events in log.
+     */
+    private _replay() {
+        // todo
     }
 
     /**

@@ -29,6 +29,11 @@ const mapUi = new MapUi({
         nodeSearchModeTabElementId: 'tab-node-search-mode',
         suggestionsElementId: 'filter-suggestions'
     },
+    replayControls: {
+        replayButtonElementId: 'log-replay',
+        replaySpeedMultiplierElementId: 'multiplier',
+        currentSpeedElementId: 'current-multiplier',
+    },
     windowManager: {
         desktopElementId: 'console-area',
         taskbarElementId: 'taskbar'
