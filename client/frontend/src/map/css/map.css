@@ -222,3 +222,11 @@ label {
 .input-wrap.disabled, .input.disabled {
     background-color: #ccc;
 }
+
+#multiplier {
+    width: 200px;
+}
+
+#current-multiplier::after {
+    content: 'x';
+}

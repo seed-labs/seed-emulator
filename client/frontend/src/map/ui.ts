@@ -31,6 +31,12 @@ export interface MapUiConfiguration {
         nodeSearchModeTabElementId: string, // element id of tab for setting mode to search
         suggestionsElementId: string // element id of search suggestions
     },
+    replayControls: { // replay controls
+        replayButtonElementId: string, // element id of replay button
+        replaySpeedMultiplierElementId: string, // element id of replay speed multiplier
+        currentSpeedElementId: string, // element id of current replay speed display
+        eventsLeftElementId: string // element id of events left display
+    },
     windowManager: { // console window manager
         desktopElementId: string, // elementid for desktop
         taskbarElementId: string // elementid for taskbar
@@ -40,6 +46,11 @@ export interface MapUiConfiguration {
 type FilterMode = 'node-search' | 'filter';
 
 type SuggestionSelectionAction = 'up' | 'down' | 'clear';
+
+interface Event {
+    nodes: string[],
+    at: number
+};
 
 /**
  * map UI controller.
@@ -64,6 +75,11 @@ export class MapUi {
 
     private _logToggle: HTMLElement;
     private _logToggleChevron: HTMLElement;
+
+    private _replayButton: HTMLElement;
+    private _replayMultiplier: HTMLInputElement;
+    private _replayMultiplierDisplay: HTMLElement;
+    private _eventsLeft: HTMLElement;
 
     private _datasource: DataSource;
 
@@ -111,6 +127,11 @@ export class MapUi {
 
     private _logMinimized: boolean;
 
+    private _events: Event[];
+    private _playlist: Event[];
+    private _replaying: boolean;
+    private _replayTask: number;
+
     /**
      * Build a new map UI controller.
      * 
@@ -138,7 +159,16 @@ export class MapUi {
         this._logToggle = document.getElementById(config.logControls.minimizeToggleElementId);
         this._logToggleChevron = document.getElementById(config.logControls.minimizeChevronElementId);
 
+        this._replayButton = document.getElementById(config.replayControls.replayButtonElementId);
+        this._replayMultiplier = document.getElementById(config.replayControls.replaySpeedMultiplierElementId) as HTMLInputElement;
+        this._replayMultiplierDisplay = document.getElementById(config.replayControls.currentSpeedElementId);
+        this._eventsLeft = document.getElementById(config.replayControls.eventsLeftElementId);
+
         this._logMinimized = true;
+
+        this._replaying = false;
+        this._events = [];
+        this._playlist = [];
 
         this._suggestionsSelection = -1;
 
@@ -157,6 +187,14 @@ export class MapUi {
         this._windowManager = new WindowManager(config.windowManager.desktopElementId, config.windowManager.taskbarElementId);
 
         this._bpfCompletion = new Completion(bpfCompletionTree);
+
+        this._replayMultiplier.onchange = () => {
+            this._replayMultiplierDisplay.innerText = this._replayMultiplier.value;
+        };
+
+        this._replayButton.onclick = () => {
+            this._replay();
+        };
 
         this._logToggle.onclick = () => {
             if (this._logMinimized) {
@@ -223,6 +261,7 @@ export class MapUi {
 
         this._logClear.onclick = () => {
             this._logBody.innerText = '';
+            this._events = [];
         };
 
         this._filterInput.onclick = () => {
@@ -245,7 +284,13 @@ export class MapUi {
         });
         
         this._datasource.on('packet', (data) => {
+            // bad data?
             if (!data.source || !data.data) {
+                return;
+            }
+
+            // replaying?
+            if (this._replaying) {
                 return;
             }
 
@@ -274,6 +319,15 @@ export class MapUi {
                 this._flashQueue.add(data.source);
             }
 
+            let now = new Date();
+
+            if (this._flashQueue.size > 0) {
+                this._events.push({
+                    at: now.valueOf(),
+                    nodes: Array.from(this._flashQueue)
+                });
+            }
+
             // tcpdump output: "listening on xxx", meaning tcpdump is running
             // and the last expressions does not contain error.
             if (data.data.includes('listening')) {
@@ -294,7 +348,6 @@ export class MapUi {
 
             let node = this._nodes.get(data.source as string);
 
-            let now = new Date();
             let timeString = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}.${now.getMilliseconds()}`;
 
             let tr = document.createElement('tr');
@@ -384,7 +437,11 @@ export class MapUi {
     /**
      * flash all nodes in the flash queue and schedule un-flash.
      */
-    private _flashNodes() {
+    private _flashNodes(replayTrigger: boolean = false) {
+        if (this._replaying && !replayTrigger) {
+            return;
+        }
+
         if (this._flashingNodes.size != 0) {
             // some nodes still flashing; wait for next time
             return;
@@ -407,6 +464,12 @@ export class MapUi {
 
         this._nodes.update(updateRequest);
 
+        var unflashTime = 300;
+
+        if (this._replaying) {
+            unflashTime /= Number.parseFloat(this._replayMultiplier.value);
+        }
+
         // schedule un-flash
         window.setTimeout(() => {
             let updateRequest = Array.from(this._flashingNodes).map(nodeId => {
@@ -416,8 +479,9 @@ export class MapUi {
             });
 
             this._nodes.update(updateRequest);
+            console.log(this._flashingNodes);
             this._flashingNodes.clear();
-        }, 300);
+        }, Math.floor(unflashTime));
     }
 
     private async _focusNode(id: string) {
@@ -948,6 +1012,50 @@ export class MapUi {
                 this._macMapping[net.MacAddress] = net.NetworkID;
             });
         });
+    }
+
+    /**
+     * replay events in log.
+     */
+    private _replay(forceStop: boolean = false) {
+        if (this._replaying || forceStop) {
+            this._replaying = false;
+            this._replayButton.innerText = 'start replay';
+            this._eventsLeft.innerText = '';
+            window.clearTimeout(this._replayTask);
+            return;
+        }
+
+        this._replaying = true;
+        this._replayButton.innerText = 'stop replay'; 
+        this._playlist = this._events.slice();
+        this._doReplay();
+    }
+
+    private _doReplay() {
+        this._eventsLeft.innerText = `${this._playlist.length} event(s) left.`;
+
+        if (!this._replaying) {
+            return;
+        }
+
+        if (this._playlist.length <= 0) {
+            this._replay(true);
+            return;
+        }
+
+        let current = this._playlist.shift();
+        current.nodes.forEach(node => this._flashQueue.add(node));
+
+        if (this._playlist.length > 0) {
+            let next = this._playlist[0];
+            let delay = (next.at - current.at) / Number.parseFloat(this._replayMultiplier.value);
+            this._replayTask = window.setTimeout(() => this._doReplay(), Math.floor(delay));
+        } else {
+            this._replay(true);
+        }
+
+        this._flashNodes(true);
     }
 
     /**
