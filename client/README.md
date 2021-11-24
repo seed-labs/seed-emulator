@@ -1,7 +1,7 @@
-seedsim-client
+seedemu-client
 ---
 
-This is a work-in-progress prototype of the seedsim client. 
+This is a work-in-progress prototype of the seedemu client. 
 
 What's working:
 

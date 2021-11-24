@@ -169,7 +169,7 @@ DockerCompilerFileTemplates['compose_network'] = """\
 """
 
 DockerCompilerFileTemplates['seedemu_client'] = """\
-    seedsim-client:
+    seedemu-client:
         image: {clientImage}
         container_name: seedemu_client
         volumes:
