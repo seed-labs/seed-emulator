@@ -1028,6 +1028,11 @@ export class MapUi {
             e.lines.forEach(line => {
                 let time = line.split(' ')[0];
                 let [ h, m, _s ] = time.split(':');
+                
+                if (!h || !m || !_s) {
+                    return;
+                }
+
                 let [ s, ms ] = _s.split('.');
 
                 let nodes: string[] = [e.source];
