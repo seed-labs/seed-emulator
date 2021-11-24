@@ -1233,7 +1233,8 @@ export class MapUi {
         // reached the end.
         if (this._replayPos >= this._playlist.length) {
             this._replayStatus = 'paused';
-            this._replayStatusText.innerText = 'Replay paused.';
+            this._replayStatusText.innerText = 'End of record.';
+            this._updateReplayControls();
             return;
         }
 
