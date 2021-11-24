@@ -31,8 +31,7 @@ const mapUi = new MapUi({
     },
     replayControls: {
         replayButtonElementId: 'log-replay',
-        replaySpeedMultiplierElementId: 'multiplier',
-        currentSpeedElementId: 'current-multiplier',
+        intervalElementId: 'interval',
         eventsLeftElementId: 'events-left'
     },
     windowManager: {

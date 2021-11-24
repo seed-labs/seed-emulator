@@ -33,8 +33,7 @@ export interface MapUiConfiguration {
     },
     replayControls: { // replay controls
         replayButtonElementId: string, // element id of replay button
-        replaySpeedMultiplierElementId: string, // element id of replay speed multiplier
-        currentSpeedElementId: string, // element id of current replay speed display
+        intervalElementId: string, // element id of interval 
         eventsLeftElementId: string // element id of events left display
     },
     windowManager: { // console window manager
@@ -48,6 +47,11 @@ type FilterMode = 'node-search' | 'filter';
 type SuggestionSelectionAction = 'up' | 'down' | 'clear';
 
 interface Event {
+    lines: string[],
+    source: string
+};
+
+interface PlaylistItem {
     nodes: string[],
     at: number
 };
@@ -77,8 +81,7 @@ export class MapUi {
     private _logToggleChevron: HTMLElement;
 
     private _replayButton: HTMLElement;
-    private _replayMultiplier: HTMLInputElement;
-    private _replayMultiplierDisplay: HTMLElement;
+    private _interval: HTMLInputElement;
     private _eventsLeft: HTMLElement;
 
     private _datasource: DataSource;
@@ -128,7 +131,7 @@ export class MapUi {
     private _logMinimized: boolean;
 
     private _events: Event[];
-    private _playlist: Event[];
+    private _playlist: PlaylistItem[];
     private _replaying: boolean;
     private _replayTask: number;
 
@@ -160,8 +163,7 @@ export class MapUi {
         this._logToggleChevron = document.getElementById(config.logControls.minimizeChevronElementId);
 
         this._replayButton = document.getElementById(config.replayControls.replayButtonElementId);
-        this._replayMultiplier = document.getElementById(config.replayControls.replaySpeedMultiplierElementId) as HTMLInputElement;
-        this._replayMultiplierDisplay = document.getElementById(config.replayControls.currentSpeedElementId);
+        this._interval = document.getElementById(config.replayControls.intervalElementId) as HTMLInputElement;
         this._eventsLeft = document.getElementById(config.replayControls.eventsLeftElementId);
 
         this._logMinimized = true;
@@ -187,10 +189,6 @@ export class MapUi {
         this._windowManager = new WindowManager(config.windowManager.desktopElementId, config.windowManager.taskbarElementId);
 
         this._bpfCompletion = new Completion(bpfCompletionTree);
-
-        this._replayMultiplier.onchange = () => {
-            this._replayMultiplierDisplay.innerText = this._replayMultiplier.value;
-        };
 
         this._replayButton.onclick = () => {
             this._replay();
@@ -294,7 +292,7 @@ export class MapUi {
                 return;
             }
 
-            var flashed = new Set<string>();
+            let flashed = new Set<string>();
 
             // find network with matching mac address and flash the network too.
             // networks objects are never the source, as network cannot run
@@ -320,12 +318,10 @@ export class MapUi {
             }
 
             let now = new Date();
+            let lines: string[] = data.data.split('\r\n').filter(line => line !== '');
 
-            if (this._flashQueue.size > 0) {
-                this._events.push({
-                    at: now.valueOf(),
-                    nodes: Array.from(this._flashQueue)
-                });
+            if (lines.length > 0) {
+                this._events.push({ lines: lines, source: data.source });
             }
 
             // tcpdump output: "listening on xxx", meaning tcpdump is running
@@ -464,10 +460,10 @@ export class MapUi {
 
         this._nodes.update(updateRequest);
 
-        var unflashTime = 300;
-
-        if (this._replaying) {
-            unflashTime /= Number.parseFloat(this._replayMultiplier.value);
+        let interval = Number.parseInt(this._interval.value);
+        var unflash = this._replaying ? interval - 100 : 300;
+        if (unflash < 0) {
+            unflash = interval;
         }
 
         // schedule un-flash
@@ -479,9 +475,8 @@ export class MapUi {
             });
 
             this._nodes.update(updateRequest);
-            console.log(this._flashingNodes);
             this._flashingNodes.clear();
-        }, Math.floor(unflashTime));
+        }, unflash);
     }
 
     private async _focusNode(id: string) {
@@ -1028,8 +1023,43 @@ export class MapUi {
 
         this._replaying = true;
         this._replayButton.innerText = 'stop replay'; 
-        this._playlist = this._events.slice();
+        let refDate = new Date();
+
+        let playlist: PlaylistItem[] = [];
+
+        this._events.forEach(e => {
+            e.lines.forEach(line => {
+                let time = line.split(' ')[0];
+                let [ h, m, _s ] = time.split(':');
+                let [ s, ms ] = _s.split('.');
+
+                let nodes: string[] = [e.source];
+                let added: Set<string> = new Set();
+                let date = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), parseInt(h), parseInt(m), parseInt(s), parseInt(ms));
+
+                Object.keys(this._macMapping).forEach(mac => {
+                    if (line.includes(mac) && !added.has(mac)) {
+                        added.add(mac);
+
+                        let nodeId = this._macMapping[mac];
+    
+                        if (this._nodes.get(nodeId) === null) {
+                            return;
+                        }
+                        
+                        nodes.push(nodeId);
+                    }
+                });
+
+                playlist.push({ nodes: nodes, at: date.valueOf() });
+            });
+
+        })
+        
+        this._playlist = playlist.sort((a, b) => a.at - b.at);
+
         this._doReplay();
+        this._logToggle.click();
     }
 
     private _doReplay() {
@@ -1046,16 +1076,13 @@ export class MapUi {
 
         let current = this._playlist.shift();
         current.nodes.forEach(node => this._flashQueue.add(node));
+        this._flashNodes(true);
 
         if (this._playlist.length > 0) {
-            let next = this._playlist[0];
-            let delay = (next.at - current.at) / Number.parseFloat(this._replayMultiplier.value);
-            this._replayTask = window.setTimeout(() => this._doReplay(), Math.floor(delay));
+            this._replayTask = window.setTimeout(() => this._doReplay(), Number.parseInt(this._interval.value));
         } else {
             this._replay(true);
         }
-
-        this._flashNodes(true);
     }
 
     /**
