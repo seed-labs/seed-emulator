@@ -461,10 +461,7 @@ export class MapUi {
         this._nodes.update(updateRequest);
 
         let interval = Number.parseInt(this._interval.value);
-        var unflash = this._replaying ? interval - 100 : 300;
-        if (unflash < 0) {
-            unflash = interval;
-        }
+        var unflash = this._replaying ? interval : 300;
 
         // schedule un-flash
         window.setTimeout(() => {
