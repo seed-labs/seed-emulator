@@ -30,9 +30,14 @@ const mapUi = new MapUi({
         suggestionsElementId: 'filter-suggestions'
     },
     replayControls: {
-        replayButtonElementId: 'log-replay',
-        intervalElementId: 'interval',
-        eventsLeftElementId: 'events-left'
+        recordButtonElementId: 'replay-record',
+        replayButtonElementId: 'replay-replay',
+        stopButtonElementId: 'replay-stop',
+        forwardButtonElementId: 'replay-forward',
+        backwardButtonElementId: 'replay-backward',
+        seekBarElementId: 'replay-seek',
+        intervalElementId: 'replay-interval',
+        statusElementId: 'replay-status'
     },
     windowManager: {
         desktopElementId: 'console-area',

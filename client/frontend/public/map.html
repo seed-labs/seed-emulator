@@ -29,15 +29,15 @@
                         <button id="replay-record" title="start recording"><i class="bi bi-record-fill"></i></button>
                         <button id="replay-replay" title="start / pause replay"><i class="bi bi-play-fill"></i></button>
                         <button id="replay-stop" title="stop replay" disabled><i class="bi bi-stop-fill"></i></button>
-                        <button id="replay-step-backward" title="step backward" disabled><i class="bi bi-arrow-left-short"></i></button>
-                        <button id="replay-step-forward" title="step forward" disabled><i class="bi bi-arrow-right-short"></i></button>
+                        <button id="replay-backward" title="step backward" disabled><i class="bi bi-arrow-left-short"></i></button>
+                        <button id="replay-forward" title="step forward" disabled><i class="bi bi-arrow-right-short"></i></button>
                     </div>
                     <div>
                         <input type="range" id="replay-seek" name="cowbell" min="0" max="1" value="0" step="1" disabled>
                     </div>
                     <div>
                         <label for="interval">event interval (ms)</label>
-                        <input type="number" id="interval" value="200">
+                        <input type="number" id="replay-interval" value="200">
                     </div>
                 </div>
             </div>
