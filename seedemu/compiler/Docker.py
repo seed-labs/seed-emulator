@@ -189,6 +189,11 @@ DockerCompilerFileTemplates['seedemu-eth-client'] = """\
             - {ethClientPort}:3000/tcp
 """
 
+DockerCompilerFileTemplates['zshrc_pre'] = """\
+export NOPRECMD=1
+alias st=set_title
+"""
+
 class DockerImage(object):
     """!
     @brief The DockerImage class.
@@ -777,6 +782,7 @@ class Docker(Compiler):
             start_commands += '/replace_address.sh\n'
             dockerfile += self._addFile('/replace_address.sh', DockerCompilerFileTemplates['replace_address_script'])
             dockerfile += self._addFile('/dummy_addr_map.txt', dummy_addr_map)
+            dockerfile += self._addFile('/root/.zshrc.pre', DockerCompilerFileTemplates['zshrc_pre'])
 
         for (cmd, fork) in node.getStartCommands():
             start_commands += '{}{}\n'.format(cmd, ' &' if fork else '')
