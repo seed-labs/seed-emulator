@@ -209,6 +209,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __role: NodeRole
     __interfaces: List[Interface]
     __files: Dict[str, File]
+    __imported_files: Dict[str, str]
     __softwares: Set[str]
     __build_commands: List[str]
     __start_commands: List[Tuple[str, bool]]
@@ -237,6 +238,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         self.__interfaces = []
         self.__files = {}
+        self.__imported_files = {}
         self.__asn = asn
         self.__role = role
         self.__name = name
@@ -537,6 +539,29 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns self, for chaining API calls.
         """
         self.getFile(path).appendContent(content)
+
+        return self
+
+    def getImportedFiles(self) -> Dict[str, str]:
+        """!
+        @brief Get imported files.
+
+        @returns dict of imported files, where key = path of the file in the
+        container, value = path of the file on the host.
+        """
+        return self.__imported_files
+    
+    def importFile(self, hostpath: str, containerpath: str) -> Node:
+        """!
+        @brief Import a file from the host to the container.
+
+        @param hostpath path of the file on the host. (should be absolute to
+        prevent issues)
+        @param containerpath path of the file in the container.
+
+        @returns self, for chaining API calls.
+        """
+        self.__imported_files[containerpath] = hostpath
 
         return self
 

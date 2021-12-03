@@ -7,6 +7,7 @@ from hashlib import md5
 from os import mkdir, chdir
 from re import sub
 from ipaddress import IPv4Network, IPv4Address
+from shutil import copyfile
 
 SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
 ETH_SEEDEMU_CLIENT_IMAGE='rawisader/seedemu-eth-client'
@@ -669,6 +670,20 @@ class Docker(Compiler):
         staged_path = md5(path.encode('utf-8')).hexdigest()
         print(content, file=open(staged_path, 'w'))
         return 'COPY {} {}\n'.format(staged_path, path)
+    
+    def _importFile(self, path: str, hostpath: str) -> str:
+        """!
+        @brief Stage file to local folder and return Dockerfile command.
+
+        @param path path to file. (in container)
+        @param hostpath path to file. (on host)
+
+        @returns COPY expression for dockerfile.
+        """
+
+        staged_path = md5(path.encode('utf-8')).hexdigest()
+        copyfile(hostpath, staged_path)
+        return 'COPY {} {}\n'.format(staged_path, path)
 
     def _compileNode(self, node: Node) -> str:
         """!
@@ -801,6 +816,9 @@ class Docker(Compiler):
         for file in node.getFiles():
             (path, content) = file.get()
             dockerfile += self._addFile(path, content)
+
+        for (cpath, hpath) in node.getImportedFiles().items():
+            dockerfile += self._importFile(cpath, hpath)
 
         dockerfile += 'CMD ["/start.sh"]\n'
         print(dockerfile, file=open('Dockerfile', 'w'))
