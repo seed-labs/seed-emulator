@@ -7,8 +7,10 @@ from hashlib import md5
 from os import mkdir, chdir
 from re import sub
 from ipaddress import IPv4Network, IPv4Address
+from shutil import copyfile
 
 SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
+ETH_SEEDEMU_CLIENT_IMAGE='rawisader/seedemu-eth-client'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -178,6 +180,21 @@ DockerCompilerFileTemplates['seedemu_client'] = """\
             - {clientPort}:8080/tcp
 """
 
+DockerCompilerFileTemplates['seedemu-eth-client'] = """\
+    seedemu-eth-client:
+        image: {ethClientImage}
+        container_name: seedemu-eth-client
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+            - {ethClientPort}:3000/tcp
+"""
+
+DockerCompilerFileTemplates['zshrc_pre'] = """\
+export NOPRECMD=1
+alias st=set_title
+"""
+
 class DockerImage(object):
     """!
     @brief The DockerImage class.
@@ -243,6 +260,9 @@ class Docker(Compiler):
     __client_enabled: bool
     __client_port: int
 
+    __eth_client_enabled: bool
+    __eth_client_port: int
+
     __client_hide_svcnet: bool
 
     __images: Dict[str, Tuple[DockerImage, int]]
@@ -258,6 +278,8 @@ class Docker(Compiler):
         dummyNetworksMask: int = 24,
         clientEnabled: bool = False,
         clientPort: int = 8080,
+        ethClientEnabled: bool = False,
+        ethClientPort: int = 3000,
         clientHideServiceNet: bool = True
     ):
         """!
@@ -297,6 +319,9 @@ class Docker(Compiler):
 
         self.__client_enabled = clientEnabled
         self.__client_port = clientPort
+
+        self.__eth_client_enabled = ethClientEnabled
+        self.__eth_client_port = ethClientPort
 
         self.__client_hide_svcnet = clientHideServiceNet
 
@@ -645,6 +670,20 @@ class Docker(Compiler):
         staged_path = md5(path.encode('utf-8')).hexdigest()
         print(content, file=open(staged_path, 'w'))
         return 'COPY {} {}\n'.format(staged_path, path)
+    
+    def _importFile(self, path: str, hostpath: str) -> str:
+        """!
+        @brief Stage file to local folder and return Dockerfile command.
+
+        @param path path to file. (in container)
+        @param hostpath path to file. (on host)
+
+        @returns COPY expression for dockerfile.
+        """
+
+        staged_path = md5(path.encode('utf-8')).hexdigest()
+        copyfile(hostpath, staged_path)
+        return 'COPY {} {}\n'.format(staged_path, path)
 
     def _compileNode(self, node: Node) -> str:
         """!
@@ -758,6 +797,7 @@ class Docker(Compiler):
             start_commands += '/replace_address.sh\n'
             dockerfile += self._addFile('/replace_address.sh', DockerCompilerFileTemplates['replace_address_script'])
             dockerfile += self._addFile('/dummy_addr_map.txt', dummy_addr_map)
+            dockerfile += self._addFile('/root/.zshrc.pre', DockerCompilerFileTemplates['zshrc_pre'])
 
         for (cmd, fork) in node.getStartCommands():
             start_commands += '{}{}\n'.format(cmd, ' &' if fork else '')
@@ -776,6 +816,9 @@ class Docker(Compiler):
         for file in node.getFiles():
             (path, content) = file.get()
             dockerfile += self._addFile(path, content)
+
+        for (cpath, hpath) in node.getImportedFiles().items():
+            dockerfile += self._importFile(cpath, hpath)
 
         dockerfile += 'CMD ["/start.sh"]\n'
         print(dockerfile, file=open('Dockerfile', 'w'))
@@ -889,6 +932,14 @@ class Docker(Compiler):
             self.__services += DockerCompilerFileTemplates['seedemu_client'].format(
                 clientImage = SEEDEMU_CLIENT_IMAGE,
                 clientPort = self.__client_port
+            )
+
+        if self.__eth_client_enabled:
+            self._log('enabling seedemu-eth-client...')
+
+            self.__services += DockerCompilerFileTemplates['seedemu-eth-client'].format(
+                ethClientImage = ETH_SEEDEMU_CLIENT_IMAGE,
+                ethClientPort = self.__eth_client_port,
             )
 
         self._log('creating docker-compose.yml...'.format(scope, name))

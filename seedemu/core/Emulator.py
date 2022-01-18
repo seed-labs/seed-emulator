@@ -387,6 +387,16 @@ class Emulator:
         compiler.compile(self, output, override)
 
         return self
+    
+    def updateOutputDirectory(self, compiler: core.Compiler, callbacks: list) -> Emulator:
+        """!
+        @brief update the output directory in a flexible way. Each service might need to update it in a different way
+        @param compiler to use
+        @param callbacks which is a list of custom functions that will be executed to update the output directory
+        """
+
+        for func in callbacks:
+            func(compiler)
 
     def getRegistry(self) -> Registry: 
         """!

@@ -132,7 +132,9 @@ class EthereumServer(Server):
     __bootnode_http_port: int
     __smart_contract: SmartContract
     __start_Miner_node: bool
-    __create_new_account: bool
+    __create_new_account: int
+    __enable_external_connection: bool
+    __unlockAccounts: bool
 
     def __init__(self, id: int):
         """!
@@ -145,32 +147,55 @@ class EthereumServer(Server):
         self.__bootnode_http_port = 8088
         self.__smart_contract = None
         self.__start_Miner_node = False
-        self.__create_new_account = False
+        self.__create_new_account = 0
+        self.__enable_external_connection = False
+        self.__unlockAccounts = False
 
     def __createNewAccountCommand(self, node: Node):
-        """!
-        @brief generates a shell command which creates a new account in ethereum network.
+        if self.__create_new_account > 0:
+            """!
+            @brief generates a shell command which creates a new account in ethereum network.
+    
+            @param ethereum node on which we want to deploy the changes.
+            
+            """
+            command = " sleep 20\n\
+            geth --password /tmp/eth-password account new \n\
+            "
 
-        @param ethereum node on which we want to deploy the changes.
-        
-        """
-        command = " sleep 20\n\
-        geth --password /tmp/eth-password account new \n\
-        "
-        node.appendStartCommand('(\n {})&'.format(command))
+            for count in range(self.__create_new_account):
+                node.appendStartCommand('(\n {})&'.format(command))
+
+    def __unlockAccountsCommand(self, node: Node):
+        if self.__unlockAccounts:
+            """!
+            @brief automatically unlocking the accounts in a node.
+            Currently used to automatically be able to use our emulator using Remix.
+            """
+
+            base_command = "sleep 20\n\
+            geth --exec 'personal.unlockAccount(eth.accounts[{}],\"admin\",0)' attach\n\
+            "
+            
+            full_command = ""
+            for i in range(self.__create_new_account + 1):
+                full_command += base_command.format(str(i))
+
+            node.appendStartCommand('(\n {})&'.format(full_command))
 
     def __addMinerStartCommand(self, node: Node):
-        """!
-        @brief generates a shell command which start miner as soon as it the miner is booted up.
-
-        @param ethereum node on which we want to deploy the changes.
-        
-        """   
-        command = " sleep 20\n\
-        geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
-        geth --exec 'miner.start(5)' attach \n\
-        "
-        node.appendStartCommand('(\n {})&'.format(command))
+        if self.__start_Miner_node:
+            """!
+            @brief generates a shell command which start miner as soon as it the miner is booted up.
+            
+            @param ethereum node on which we want to deploy the changes.
+            
+            """   
+            command = " sleep 20\n\
+            geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
+            geth --exec 'miner.start(20)' attach \n\
+            "
+            node.appendStartCommand('(\n {})&'.format(command))
 
     def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
@@ -223,17 +248,18 @@ class EthereumServer(Server):
         node.appendStartCommand('/tmp/eth-bootstrapper')
 
         # launch Ethereum process.
-        common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --mine --allow-insecure-unlock --rpc --rpcport=8549 --rpcaddr 0.0.0.0'.format(datadir_option, self.__id)
+        common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --mine --allow-insecure-unlock --http --http.addr 0.0.0.0 --http.port 8549'.format(datadir_option, self.__id)
+        if self.externalConnectionEnabled():
+            remix_args = "--http.corsdomain '*' --http.api web3,eth,debug,personal,net"
+            common_args = '{} {}'.format(common_args, remix_args)
         if len(bootnodes) > 0:
             node.appendStartCommand('nice -n 19 geth --bootnodes "$(cat /tmp/eth-node-urls)" {}'.format(common_args), True)
         else:
             node.appendStartCommand('nice -n 19 geth {}'.format(common_args), True)
 
-        if self.__create_new_account :
-            self.__createNewAccountCommand(node)
-
-        if self.__start_Miner_node :
-            self.__addMinerStartCommand(node)
+        self.__createNewAccountCommand(node)
+        self.__unlockAccountsCommand(node)
+        self.__addMinerStartCommand(node)
 
         if self.__smart_contract != None :
             smartContractCommand = self.__smart_contract.generateSmartContractCommand()
@@ -291,16 +317,39 @@ class EthereumServer(Server):
         """
         return self.__bootnode_http_port
 
-    def createNewAccount(self) -> EthereumServer:
+    def enableExternalConnection(self) -> EthereumServer:
+        """!
+        @brief setting a node as a remix node makes it possible for the remix IDE to connect to the node
+        """
+        self.__enable_external_connection = True
+
+        return self
+
+    def externalConnectionEnabled(self) -> bool:
+        """!
+        @brief returns wheter a node is a remix node or not
+        """
+        return self.__enable_external_connection
+
+    def createNewAccount(self, number_of_accounts = 0) -> EthereumServer:
         """!
         @brief Call this api to create a new account.
 
         @returns self, for chaining API calls.
         """
-        self.__create_new_account = True
-
+        self.__create_new_account = number_of_accounts or self.__create_new_account + 1
+        
         return self
 
+    def unlockAccounts(self) -> EthereumServer:
+        """!
+        @brief This is mainly used to unlock the accounts in the remix node to make it directly possible for transactions to be 
+        executed through Remix without the need to access the geth account in the docker container and unlocking manually
+        """
+        self.__unlockAccounts = True
+
+        return self
+        
     def startMiner(self) -> EthereumServer:
         """!
         @brief Call this api to start Miner in the node.

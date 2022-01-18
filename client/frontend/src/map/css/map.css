@@ -117,16 +117,31 @@ html, body, .map-area, .map {
     display: none;
 }
 
+.replay-panel {
+    top: 85px;
+    right: 10px;
+    width: 300px;
+    height: 133px;
+}
+
 .info-plate-panel {
     font-family: 'Courier New', Courier, monospace;
-    top: 85px;
+    top: 225px;
     right: 10px;
     min-width: 300px;
 }
 
-.info-plate {
+.info-plate, .replay-plate {
     padding: .25em;
     font-size: .85em;
+}
+
+.replay-plate div {
+    margin-bottom: 5px;
+}
+
+#replay-seek {
+    width: 100%;
 }
 
 .info-plate .title {
@@ -221,4 +236,12 @@ label {
 
 .input-wrap.disabled, .input.disabled {
     background-color: #ccc;
+}
+
+#multiplier {
+    width: 200px;
+}
+
+#current-multiplier::after {
+    content: 'x';
 }

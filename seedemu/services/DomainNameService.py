@@ -333,6 +333,7 @@ class DomainNameServer(Server):
         node.addSoftware('bind9')
         node.appendStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
         node.setFile('/etc/bind/named.conf.options', DomainNameServiceFileTemplates['named_options'])
+        node.setFile('/etc/bind/named.conf.zones', '')
 
         for (_zonename, auto_ns_soa) in self.__zones:
             zone = dns.getZone(_zonename)

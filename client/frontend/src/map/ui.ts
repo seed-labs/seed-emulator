@@ -31,6 +31,16 @@ export interface MapUiConfiguration {
         nodeSearchModeTabElementId: string, // element id of tab for setting mode to search
         suggestionsElementId: string // element id of search suggestions
     },
+    replayControls: { // replay controls
+        recordButtonElementId: string, // element id of record button
+        replayButtonElementId: string, // element id of replay button
+        stopButtonElementId: string, // element id of stop button
+        backwardButtonElementId: string, // element id of backward button
+        forwardButtonElementId: string, // element id of forward button
+        seekBarElementId: string, // element id of seek bar
+        intervalElementId: string, // element id of interval input
+        statusElementId: string // element id of status 
+    },
     windowManager: { // console window manager
         desktopElementId: string, // elementid for desktop
         taskbarElementId: string // elementid for taskbar
@@ -40,6 +50,16 @@ export interface MapUiConfiguration {
 type FilterMode = 'node-search' | 'filter';
 
 type SuggestionSelectionAction = 'up' | 'down' | 'clear';
+
+interface Event {
+    lines: string[],
+    source: string
+};
+
+interface PlaylistItem {
+    nodes: string[],
+    at: number
+};
 
 /**
  * map UI controller.
@@ -64,6 +84,15 @@ export class MapUi {
 
     private _logToggle: HTMLElement;
     private _logToggleChevron: HTMLElement;
+
+    private _replayButton: HTMLButtonElement;
+    private _recordButton: HTMLButtonElement;
+    private _forwardButton: HTMLButtonElement;
+    private _backwardButton: HTMLButtonElement;
+    private _stopButton: HTMLButtonElement;
+    private _replaySeekBar: HTMLInputElement;
+    private _interval: HTMLInputElement;
+    private _replayStatusText: HTMLElement;
 
     private _datasource: DataSource;
 
@@ -111,6 +140,14 @@ export class MapUi {
 
     private _logMinimized: boolean;
 
+    private _events: Event[];
+    private _playlist: PlaylistItem[];
+    private _replayStatus: 'stopped' | 'playing' | 'paused';
+    private _recording: boolean;
+    private _replayTask: number;
+    private _replayPos: number;
+    private _seeking: boolean;
+
     /**
      * Build a new map UI controller.
      * 
@@ -138,7 +175,22 @@ export class MapUi {
         this._logToggle = document.getElementById(config.logControls.minimizeToggleElementId);
         this._logToggleChevron = document.getElementById(config.logControls.minimizeChevronElementId);
 
+        this._replayButton = document.getElementById(config.replayControls.replayButtonElementId) as HTMLButtonElement;
+        this._recordButton = document.getElementById(config.replayControls.recordButtonElementId) as HTMLButtonElement;
+        this._stopButton = document.getElementById(config.replayControls.stopButtonElementId) as HTMLButtonElement;
+        this._forwardButton = document.getElementById(config.replayControls.forwardButtonElementId) as HTMLButtonElement;
+        this._backwardButton = document.getElementById(config.replayControls.backwardButtonElementId) as HTMLButtonElement;
+        this._replaySeekBar = document.getElementById(config.replayControls.seekBarElementId) as HTMLInputElement;
+        this._interval = document.getElementById(config.replayControls.intervalElementId) as HTMLInputElement;
+        this._replayStatusText = document.getElementById(config.replayControls.statusElementId);
+
         this._logMinimized = true;
+
+        this._replayStatus = 'stopped';
+        this._events = [];
+        this._recording = false;
+        this._seeking = false;
+        this._playlist = [];
 
         this._suggestionsSelection = -1;
 
@@ -157,6 +209,38 @@ export class MapUi {
         this._windowManager = new WindowManager(config.windowManager.desktopElementId, config.windowManager.taskbarElementId);
 
         this._bpfCompletion = new Completion(bpfCompletionTree);
+
+        this._replayButton.onclick = () => {
+            this._replayPlayPause();
+        };
+
+        this._stopButton.onclick = () => {
+            this._replayStop();
+        };
+
+        this._recordButton.onclick = () => {
+            this._recordStartStop();
+        };
+
+        this._forwardButton.onclick = () => {
+            this._replaySeek(1);
+        };
+
+        this._backwardButton.onclick = () => {
+            this._replaySeek(-1);
+        };
+
+        this._replaySeekBar.onchange = () => {
+            this._replaySeek(Number.parseInt(this._replaySeekBar.value), true);
+        };
+
+        this._replaySeekBar.onmousedown = () => {
+            this._seeking = true;
+        };
+
+        this._replaySeekBar.onmouseup = () => {
+            this._seeking = false;
+        };
 
         this._logToggle.onclick = () => {
             if (this._logMinimized) {
@@ -223,6 +307,7 @@ export class MapUi {
 
         this._logClear.onclick = () => {
             this._logBody.innerText = '';
+            this._events = [];
         };
 
         this._filterInput.onclick = () => {
@@ -245,11 +330,17 @@ export class MapUi {
         });
         
         this._datasource.on('packet', (data) => {
+            // bad data?
             if (!data.source || !data.data) {
                 return;
             }
 
-            var flashed = new Set<string>();
+            // replaying?
+            if (this._replayStatus !== 'stopped') {
+                return;
+            }
+
+            let flashed = new Set<string>();
 
             // find network with matching mac address and flash the network too.
             // networks objects are never the source, as network cannot run
@@ -274,6 +365,13 @@ export class MapUi {
                 this._flashQueue.add(data.source);
             }
 
+            let now = new Date();
+            let lines: string[] = data.data.split('\r\n').filter(line => line !== '');
+
+            if (lines.length > 0 && this._recording) {
+                this._events.push({ lines: lines, source: data.source });
+            }
+
             // tcpdump output: "listening on xxx", meaning tcpdump is running
             // and the last expressions does not contain error.
             if (data.data.includes('listening')) {
@@ -294,7 +392,6 @@ export class MapUi {
 
             let node = this._nodes.get(data.source as string);
 
-            let now = new Date();
             let timeString = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}.${now.getMilliseconds()}`;
 
             let tr = document.createElement('tr');
@@ -385,6 +482,11 @@ export class MapUi {
      * flash all nodes in the flash queue and schedule un-flash.
      */
     private _flashNodes() {
+        // during replay, do not flash nodes - they are controlled by the replayer.
+        if (this._replayStatus !== 'stopped') {
+            return;
+        }
+
         if (this._flashingNodes.size != 0) {
             // some nodes still flashing; wait for next time
             return;
@@ -948,6 +1050,218 @@ export class MapUi {
                 this._macMapping[net.MacAddress] = net.NetworkID;
             });
         });
+    }
+
+    private _updateReplayControls() {
+        if (this._replayStatus === 'playing' || this._replayStatus === 'paused') {
+            this._replayButton.disabled = false;
+            this._recordButton.disabled = true;
+            this._stopButton.disabled = false;
+            this._forwardButton.disabled = false;
+            this._backwardButton.disabled = false;
+            this._replaySeekBar.disabled = false;
+            this._interval.disabled = this._replayStatus === 'playing';
+
+            this._replaySeekBar.max = (this._playlist.length - 1).toString();
+            this._replayButton.innerHTML = this._replayStatus === 'playing' ? '<i class="bi bi-pause"></i>' : '<i class="bi bi-play-fill"></i>';
+            this._recordButton.innerHTML = '<i class="bi bi-record-fill"></i>';
+        }
+
+        if (this._replayStatus === 'stopped') {
+            this._replayButton.disabled = this._recording;
+            this._recordButton.disabled = false;
+            this._stopButton.disabled = true;
+            this._forwardButton.disabled = true;
+            this._backwardButton.disabled = true;
+            this._replaySeekBar.disabled = true;
+            this._interval.disabled = false;
+
+            this._replayButton.innerHTML = '<i class="bi bi-play-fill"></i>';
+            this._recordButton.innerHTML = this._recording ? '<i class="bi bi-stop-fill"></i>' : '<i class="bi bi-record-fill"></i>';
+        }
+    }
+
+    /**
+     * stop replay
+     */
+    private _replayStop() {
+        if (this._replayStatus === 'stopped') {
+            return;
+        }
+
+        this._replayStatus = 'stopped';
+        window.clearTimeout(this._replayTask);
+
+        // un-flash nodes.
+        let unflashRequest = Array.from(this._flashingNodes).map(nodeId => {
+            return {
+                id: nodeId, borderWidth: 1
+            }
+        });
+        this._nodes.update(unflashRequest);
+        this._flashingNodes.clear();
+        this._updateReplayControls();
+        this._replayStatusText.innerText = 'Replay stopped.';
+    }
+
+    /**
+     * seek to a specific time
+     * @param offset offset from current time.
+     * @param absolute offset is absolute time.
+     */
+    private _replaySeek(offset: number, absolute: boolean = false) {
+        if (this._replayStatus === 'stopped') {
+            return;
+        }
+
+        this._replayStatus = 'paused';
+        this._updateReplayControls();
+
+        if (absolute) {
+            this._replayPos = offset;
+        } else {
+            this._replayPos += offset;
+        }
+
+        this._doReplay(true);
+    }
+    
+    /**
+     * toggle recording.
+     */
+    private _recordStartStop() {
+        if (this._replayStatus !== 'stopped') {
+            return;
+        }
+
+        if (this._recording) {
+            this._recording = false;
+            this._replayStatusText.innerText = 'Replay stopped.';
+            this._recordButton.innerHTML = '<i class="bi bi-stop-fill"></i>';
+            this._updateReplayControls();
+        } else {
+            this._events = [];
+            this._recording = true;
+            this._replayStatusText.innerText = 'Recording events...';
+            this._recordButton.innerHTML = '<i class="bi bi-record-fill"></i>';
+            this._updateReplayControls();
+        }
+    }
+
+    private _buildPlayList() : PlaylistItem[] {
+        let refDate = new Date();
+
+        let playlist: PlaylistItem[] = [];
+
+        this._events.forEach(e => {
+            e.lines.forEach(line => {
+                let time = line.split(' ')[0];
+                let [ h, m, _s ] = time.split(':');
+                
+                if (!h || !m || !_s) {
+                    return;
+                }
+
+                let [ s, ms ] = _s.split('.');
+
+                let nodes: string[] = [e.source];
+                let added: Set<string> = new Set();
+                let date = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), parseInt(h), parseInt(m), parseInt(s), parseInt(ms));
+
+                Object.keys(this._macMapping).forEach(mac => {
+                    if (line.includes(mac) && !added.has(mac)) {
+                        added.add(mac);
+
+                        let nodeId = this._macMapping[mac];
+    
+                        if (this._nodes.get(nodeId) === null) {
+                            return;
+                        }
+                        
+                        nodes.push(nodeId);
+                    }
+                });
+
+                playlist.push({ nodes: nodes, at: date.valueOf() });
+            });
+
+        });
+        
+        return playlist.sort((a, b) => a.at - b.at);
+    }
+
+    /**
+     * toggle play / pause replay.
+     */
+    private _replayPlayPause() {
+        if (this._recording) {
+            return;
+        }
+
+        if (this._replayStatus === 'stopped') {
+            this._replayPos = 0;
+            this._replayStatusText.innerText = 'Replay stopped.';
+            this._replayStatus = 'playing';
+            this._playlist = this._buildPlayList();
+            this._doReplay();
+            this._updateReplayControls();
+        } else if (this._replayStatus === 'playing') {
+            this._replayStatus = 'paused';
+            this._updateReplayControls();
+        } else if (this._replayStatus === 'paused') {
+            this._replayStatus = 'playing';
+            this._updateReplayControls();
+        }
+    }
+
+    private _doReplay(once: boolean = false) {
+        // not playing.
+        if (this._replayStatus === 'stopped') {
+            return;
+        }
+
+        if (!once) {
+            this._replayTask = window.setTimeout(() => this._doReplay(), Number.parseInt(this._interval.value));
+        }
+
+        this._replayStatusText.innerText = `${this._replayStatus === 'paused' ? 'Paused' : 'Playing'}: ${this._replayPos}/${this._playlist.length} event(s) left.`;
+
+        if (!this._seeking) {
+            this._replaySeekBar.value = this._replayPos.toString();
+        }
+
+        // reached the end.
+        if (this._replayPos >= this._playlist.length) {
+            this._replayStatus = 'paused';
+            this._replayStatusText.innerText = 'End of record.';
+            this._replaySeekBar.value = '0';
+            this._replayPos = 0;
+            this._updateReplayControls();
+            return;
+        }
+
+        // un-flash nodes.
+        let unflashRequest = Array.from(this._flashingNodes).map(nodeId => {
+            return {
+                id: nodeId, borderWidth: 1
+            }
+        });
+        this._nodes.update(unflashRequest);
+        this._flashingNodes.clear();
+    
+        // flash nodes from this event.
+        let current = this._playlist[this._replayPos];
+        current.nodes.forEach(node => this._flashingNodes.add(node));
+        let flashRequest = Array.from(this._flashingNodes).map(nodeId => {
+            return {
+                id: nodeId, borderWidth: 4
+            }
+        });
+        this._nodes.update(flashRequest);
+
+        if (this._replayStatus === 'playing') {
+            ++this._replayPos;
+        }
     }
 
     /**

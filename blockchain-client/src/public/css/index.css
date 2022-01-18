@@ -1,0 +1,68 @@
+#apis,#smartContractContainer {
+	display: flex;
+    	flex-direction: column;
+    	flex-wrap: wrap;
+    	align-content: flex-start;
+}
+
+.margin-10-0 {
+	margin: 10px 0 !important;
+}
+
+.flex-direction-column {
+	flex-direction: column !important;
+}
+
+.section {
+	border: 1px solid lightblue;
+    	padding: 5px;
+    	margin: 0 0 10px 0;
+	width: 100%;
+}
+
+.action-section {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	align-content: start;
+	align-items: start;
+}
+
+.apiBtn {
+	text-align: center;
+}
+
+.apiBtn, .apiParams {
+	height: 100%;
+}
+
+#accountsSection {
+	display: flex;
+	flex-direction: row;
+}
+
+#deploymentSection {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+#units {
+	display: none;
+}
+
+#displayContract {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: wrap;
+    	justify-content: flex-start;
+    	align-items: flex-start;
+    	gap: 20px;
+}
+
+.deployedContractContainer {
+	display: flex;
+	flex-direction: column;
+}
