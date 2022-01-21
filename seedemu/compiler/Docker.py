@@ -195,6 +195,13 @@ export NOPRECMD=1
 alias st=set_title
 """
 
+DockerCompilerFileTemplates['local_image'] = """\
+    {imageName}:
+        build:
+            context: {dirName}
+        image: {imageName}
+"""
+
 class DockerImage(object):
     """!
     @brief The DockerImage class.
@@ -204,8 +211,10 @@ class DockerImage(object):
 
     __software: Set[str]
     __name: str
+    __local: bool
+    __dirName: str
 
-    def __init__(self, name: str, software: List[str]) -> None:
+    def __init__(self, name: str, software: List[str], local: bool = False, dirName: str = None) -> None:
         """!
         @brief create a new docker image.
 
@@ -213,11 +222,17 @@ class DockerImage(object):
         dockerhub, or image in private repo.
         @param software set of software pre-installed in the image, so the
         docker compiler can skip them when compiling.
+        @param local (optional) set this image as a local image. A local image
+        is built ocally instead of pulled from the docker hub. Default to False.
+        @param dirName (optional) directory name of the local image (when local
+        is True). Default to None. None means use the name of the image.
         """
         super().__init__()
 
         self.__name = name
         self.__software = set()
+        self.__local = local
+        self.__dirName = dirName if dirName != None else name
 
         for soft in software:
             self.__software.add(soft)
@@ -238,6 +253,21 @@ class DockerImage(object):
         """
         return self.__software
 
+    def getDirName(self) -> str:
+        """!
+        @brief returns the directory name of this image.
+
+        @return directory name.
+        """
+        return self.__dirName
+    
+    def isLocal(self) -> bool:
+        """!
+        @brief returns True if this image is local.
+
+        @return True if this image is local.
+        """
+        return self.__local
 
 DefaultImages: List[DockerImage] = []
 
@@ -899,6 +929,13 @@ class Docker(Compiler):
 
     def _doCompile(self, emulator: Emulator):
         registry = emulator.getRegistry()
+
+        for (image, ) in self.__images.values():
+            if image.getName() not in self._used_images or not image.isLocal(): continue
+            self.__services += DockerCompilerFileTemplates['local_image'].format(
+                imageName = image.getName(),
+                dirName = image.getDirName()
+            )
 
         self._groupSoftware(emulator)
 
