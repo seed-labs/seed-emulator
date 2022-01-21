@@ -930,13 +930,6 @@ class Docker(Compiler):
     def _doCompile(self, emulator: Emulator):
         registry = emulator.getRegistry()
 
-        for (image, ) in self.__images.values():
-            if image.getName() not in self._used_images or not image.isLocal(): continue
-            self.__services += DockerCompilerFileTemplates['local_image'].format(
-                imageName = image.getName(),
-                dirName = image.getDirName()
-            )
-
         self._groupSoftware(emulator)
 
         for ((scope, type, name), obj) in registry.getAll().items():
@@ -979,9 +972,18 @@ class Docker(Compiler):
                 ethClientPort = self.__eth_client_port,
             )
 
+        local_images = ''
+
+        for (image, _) in self.__images.values():
+            if image.getName() not in self._used_images or not image.isLocal(): continue
+            local_images += DockerCompilerFileTemplates['local_image'].format(
+                imageName = image.getName(),
+                dirName = image.getDirName()
+            )
+
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(
             services = self.__services,
             networks = self.__networks,
-            dummies = self._makeDummies()
+            dummies = local_images + self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))
