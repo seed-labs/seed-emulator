@@ -250,7 +250,7 @@ class EthereumServer(Server):
         # launch Ethereum process.
         common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --mine --allow-insecure-unlock --http --http.addr 0.0.0.0 --http.port 8549'.format(datadir_option, self.__id)
         if self.externalConnectionEnabled():
-            remix_args = "--http.corsdomain '*' --http.api web3,eth,debug,personal,net"
+            remix_args = "--http.corsdomain 'https://remix.ethereum.org' --http.api web3,eth,debug,personal,net"
             common_args = '{} {}'.format(common_args, remix_args)
         if len(bootnodes) > 0:
             node.appendStartCommand('nice -n 19 geth --bootnodes "$(cat /tmp/eth-node-urls)" {}'.format(common_args), True)
