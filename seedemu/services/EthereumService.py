@@ -130,6 +130,7 @@ class EthereumServer(Server):
     __id: int
     __is_bootnode: bool
     __bootnode_http_port: int
+    __geth_http_port: int
     __smart_contract: SmartContract
     __start_Miner_node: bool
     __create_new_account: int
@@ -145,6 +146,7 @@ class EthereumServer(Server):
         self.__id = id
         self.__is_bootnode = False
         self.__bootnode_http_port = 8088
+        self.__geth_http_port = 8545
         self.__smart_contract = None
         self.__start_Miner_node = False
         self.__create_new_account = 0
@@ -248,7 +250,7 @@ class EthereumServer(Server):
         node.appendStartCommand('/tmp/eth-bootstrapper')
 
         # launch Ethereum process.
-        common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --mine --allow-insecure-unlock --http --http.addr 0.0.0.0 --http.port 8549'.format(datadir_option, self.__id)
+        common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --mine --allow-insecure-unlock --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, self.getGethHttpPort())
         if self.externalConnectionEnabled():
             remix_args = "--http.corsdomain 'https://remix.ethereum.org' --http.api web3,eth,debug,personal,net"
             common_args = '{} {}'.format(common_args, remix_args)
@@ -309,13 +311,38 @@ class EthereumServer(Server):
 
         return self
 
+
     def getBootNodeHttpPort(self) -> int:
         """!
         @brief get the http server port number hosting the enode url file.
 
         @returns port
         """
+
         return self.__bootnode_http_port
+
+    def setGethHttpPort(self, port: int) -> EthereumServer:
+        """!
+        @brief set the http server port number for normal ethereum nodes
+
+        @param port port
+
+        @returns self, for chaining API calls
+        """
+        
+        self.__geth_http_port = port
+        
+        return self
+
+    def getGethHttpPort(self) -> int:
+        """!
+        @brief get the http server port number for normal ethereum nodes
+
+        @returns int
+        """
+                
+        return self.__geth_http_port
+
 
     def enableExternalConnection(self) -> EthereumServer:
         """!
