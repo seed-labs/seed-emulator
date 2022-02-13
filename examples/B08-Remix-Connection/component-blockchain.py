@@ -29,20 +29,29 @@ e4.startMiner()
 
 # Create more accounts on e5 and e6
 e5.startMiner()
-e6.startMiner().createNewAccount(2).unlockAccounts().enableExternalConnection()
+e6.startMiner().createNewAccount(2).unlockAccounts()
 
 # Create a smart contract and deploy it from node e3 
 # We need to put the compiled smart contracts inside the Contracts/ folder
 smart_contract = SmartContract("./Contracts/contract.bin", "./Contracts/contract.abi")
 e3.deploySmartContract(smart_contract)
 
+# Set node port that accepts connections
+e3.enableExternalConnection()
+e6.enableExternalConnection().setGethHttpPort(8549)
+
+# Get node port that accepts connections
+# Same api used in the EthereumService to set the listening port
+e3_port_forward = e3.getGethHttpPort() # Uses default 8545 port
+e6_port_forward = e6.getGethHttpPort() # Uses custom 8549 port
+
 # Customizing the display names (for visualization purpose)
 emu.getVirtualNode('eth1').setDisplayName('Ethereum-1')
 emu.getVirtualNode('eth2').setDisplayName('Ethereum-2')
-emu.getVirtualNode('eth3').setDisplayName('Ethereum-3')
+emu.getVirtualNode('eth3').setDisplayName('Ethereum-3').addPortForwarding(8545, e3_port_forward)
 emu.getVirtualNode('eth4').setDisplayName('Ethereum-4')
 emu.getVirtualNode('eth5').setDisplayName('Ethereum-5')
-emu.getVirtualNode('eth6').setDisplayName('Ethereum-6').addPortForwarding(8545, 8549)
+emu.getVirtualNode('eth6').setDisplayName('Ethereum-6').addPortForwarding(8546, e6_port_forward)
 
 # Add the layer and save the component to a file
 emu.addLayer(eth)
