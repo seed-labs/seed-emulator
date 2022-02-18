@@ -304,7 +304,7 @@ web.appendStartCommand('/etc/init.d/dovecot restart')
 dns = emu.getLayer("DomainNameService")
 asn_162.createHost('host_2').joinNetwork('net0','10.162.0.72')
 dns.install('ns-seedmail-edu').addZone('seedmail.edu.')
-dns.getZone('seedmail.edu.').addRecord('mail.seedmail.edu. A 10.162.0.75').addRecord("@ MX 10 mail.seedmail.edu.")
+dns.getZone('seedmail.edu.').addRecord('@ A 10.162.0.75').addRecord('mail.seedmail.edu. A 10.162.0.75').addRecord("@ MX 10 mail.seedmail.edu.")
 emu.addBinding(Binding('ns-seedmail-edu', filter=Filter(asn=162, ip="10.162.0.72")))
 emu.getVirtualNode('ns-seedmail-edu').setDisplayName('seedmail.edu')
 ##############################################################################################################
@@ -318,7 +318,6 @@ web_150.updateNetwork('net0', address='10.150.0.75')
 web_150.addSoftware('mutt')
 web_150.setFile('/root/.muttrc', MailServerFileTemplates['mutt_rc'])
 web_150.setDisplayName('mail_client')
-
 ##############################################################################################################
 
 
