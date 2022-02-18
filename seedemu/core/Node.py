@@ -433,6 +433,26 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__pending_nets.append((netname, address))
 
         return self
+    
+    def updateNetwork(self, netname:str, address: str= "auto") -> Node:
+        """!
+        @brief Update connection of the node to a network.
+        @param netname name of the network.
+        @param address (optional) override address assigment.
+
+        @returns assigned IP address
+
+        @returns self, for chaining API calls.
+        """
+        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+        
+        for pending_netname, pending_address in self.__pending_nets:
+            if pending_netname == netname:
+                self.__pending_nets.remove((pending_netname, pending_address))
+            
+        self.__pending_nets.append((netname, address))
+
+        return self
 
     def crossConnect(self, peerasn: int, peername: str, address: str) -> Node:
         """!
