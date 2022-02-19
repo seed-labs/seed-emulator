@@ -316,11 +316,11 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         if len(self.__name_servers) == 0:
             return
-        
-        self.appendStartCommand(': > /etc/resolv.conf')
-        for s in self.__name_servers:
-            self.appendStartCommand('echo "nameserver {}" >> /etc/resolv.conf'.format(s))
 
+        self.insertStartCommand(0,': > /etc/resolv.conf')
+        for idx, s in enumerate(self.__name_servers, start=1):
+            self.insertStartCommand(idx, 'echo "nameserver {}" >> /etc/resolv.conf'.format(s))
+ 
     def setNameServers(self, servers: List[str]) -> Node:
         """!
         @brief set recursive name servers to use on this node. Overwrites
