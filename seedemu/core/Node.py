@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from .Printable import Printable
 from .Network import Network
 from .enums import NodeRole
@@ -10,6 +9,7 @@ from .enums import NetworkType
 from .Visualization import Vertex
 from ipaddress import IPv4Address, IPv4Interface
 from typing import List, Dict, Set, Tuple
+from string import ascii_letters
 from random import choice
 
 from seedemu import *
