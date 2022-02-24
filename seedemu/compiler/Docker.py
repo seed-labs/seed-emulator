@@ -495,14 +495,6 @@ class Docker(Compiler):
         @returns tuple of selected image and set of missinge software.
         """
         nodeSoft = node.getSoftware()
-        node_image = node.getImage()
-
-        if node_image != None:
-            self._log('node has a specific image configuration, using image: {}'.format(node_image.getName()))
-            
-            image = node_image
-
-            return (image, nodeSoft - image.getSoftware())
 
         if self.__disable_images:
             self._log('disable-imaged configured, using base image.')
