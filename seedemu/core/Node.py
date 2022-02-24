@@ -12,8 +12,6 @@ from typing import List, Dict, Set, Tuple
 from string import ascii_letters
 from random import choice
 
-from seedemu import *
-
 DEFAULT_SOFTWARE: List[str] = ['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat']
 
 class File(Printable):
