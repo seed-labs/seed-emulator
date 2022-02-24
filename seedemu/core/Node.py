@@ -217,7 +217,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __start_commands: List[Tuple[str, bool]]
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
-    __image: DockerImage
 
     __configured: bool
     __pending_nets: List[Tuple[str, str]]
@@ -251,7 +250,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__start_commands = []
         self.__ports = []
         self.__privileged = False
-        self.__image = None
 
         self.__pending_nets = []
         self.__xcs = {}
@@ -519,25 +517,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns role.
         """
         return self.__role
-
-    def getImage(self) -> DockerImage:
-        """!
-        @brief Get a image for this Node object
-
-        @returns DockerImage.
-        """
-        return self.__image
-
-    def setImage(self, image: DockerImage) -> Node:
-        """!
-        @brief Set image of the node.
-
-        @param DockerImage to set
-
-        @returns self, for chaining API calls.
-        """
-        self.__image = image
-        return self
 
     def getFile(self, path: str) -> File:
         """!
