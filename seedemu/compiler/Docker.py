@@ -298,6 +298,7 @@ class Docker(Compiler):
     __images: Dict[str, Tuple[DockerImage, int]]
     __forced_image: str
     __disable_images: bool
+    __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
 
     def __init__(
@@ -359,6 +360,7 @@ class Docker(Compiler):
         self.__forced_image = None
         self.__disable_images = False
         self._used_images = set()
+        self.__image_per_node_list = {}
 
         for image in DefaultImages:
             self.addImage(image)
@@ -420,6 +422,11 @@ class Docker(Compiler):
         self.__disable_images = disabled
 
         return self
+
+    def setImageOverride(self, node:Node, image:DockerImage):
+        asn = node.getAsn()
+        name = node.getName()
+        self.__image_per_node_list[(asn, name)]=image
 
     def _groupSoftware(self, emulator: Emulator):
         """!
@@ -495,6 +502,12 @@ class Docker(Compiler):
         @returns tuple of selected image and set of missinge software.
         """
         nodeSoft = node.getSoftware()
+        nodeKey = (node.getAsn(), node.getName())
+
+        if nodeKey in self.__image_per_node_list:
+            image = self.__image_per_node_list[nodeKey]
+            self._log('image-per-node configured, using {}'.format(image.getName()))
+            return (image, nodeSoft - image.getSoftware())
 
         if self.__disable_images:
             self._log('disable-imaged configured, using base image.')
