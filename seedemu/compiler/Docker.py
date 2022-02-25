@@ -1,5 +1,4 @@
 from __future__ import annotations
-from platform import node
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Node, Network, Compiler
 from seedemu.core.enums import NodeRole, NetworkType
