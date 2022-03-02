@@ -236,7 +236,7 @@ class EthereumServer(Server):
         
         # launch Ethereum process.
         # Base common geth flags
-        common_flags = '{} --identity="NODE_{}" --networkid=10 --nodiscover --syncmode "full" --verbosity=6 --allow-insecure-unlock --port 3030{} --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, self.__id + 1,  self.getGethHttpPort())
+        common_flags = '{} --identity="NODE_{}" --networkid=10 --verbosity=6 --allow-insecure-unlock --port 3030{} --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, self.__id + 1,  self.getGethHttpPort())
         
         # Flags updated to accept external connections
         if self.externalConnectionEnabled():
