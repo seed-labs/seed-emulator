@@ -5,34 +5,9 @@
 from __future__ import annotations
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
+from .GenesisPoW import genesis
 
 ETHServerFileTemplates: Dict[str, str] = {}
-
-# genesis: the start of the chain
-ETHServerFileTemplates['genesis'] = '''{
-        "nonce":"0x0000000000000042",
-        "timestamp":"0x0",
-        "parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
-        "extraData":"0x",
-        "gasLimit":"0x80000000",
-        "difficulty":"0x0",
-        "mixhash":"0x0000000000000000000000000000000000000000000000000000000000000000",
-        "coinbase":"0x3333333333333333333333333333333333333333",
-        "config": {
-        "chainId": 10,
-        "homesteadBlock": 0,
-        "eip150Block": 0,
-        "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "eip155Block": 0,
-        "eip158Block": 0,
-        "byzantiumBlock": 0,
-        "constantinopleBlock": 0,
-        "petersburgBlock": 0,
-        "istanbulBlock": 0,
-        "ethash": {}
-    },
-    "alloc":{}
-}'''
 
 # bootstraper: get enode urls from other eth nodes.
 ETHServerFileTemplates['bootstrapper'] = '''\
@@ -41,10 +16,9 @@ ETHServerFileTemplates['bootstrapper'] = '''\
 while read -r node; do {
     let count=0
     ok=true
-
     until curl -sHf http://$node/eth-enode-url > /dev/null; do {
         echo "eth: node $node not ready, waiting..."
-        sleep 3
+        sleep 20
         let count++
         [ $count -gt 20 ] && {
             echo "eth: node $node failed too many times, skipping."
@@ -199,6 +173,11 @@ class EthereumServer(Server):
             "
             node.appendStartCommand('(\n {})&'.format(command))
 
+    def __deploySmartContractCommand(self, node: Node):
+        if self.__smart_contract != None :
+            smartContractCommand = self.__smart_contract.generateSmartContractCommand()
+            node.appendStartCommand('(\n {})&'.format(smartContractCommand))
+
     def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
         @brief ETH server installation step.
@@ -211,13 +190,16 @@ class EthereumServer(Server):
         assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has not interfaces'.format(node.getAsn(), node.getName())
         addr = str(ifaces[0].getAddress())
         this_url = '{}:{}'.format(addr, self.getBootNodeHttpPort())
-
+        print("========================= addr {}, url {}".format(addr, this_url))
         # get other nodes IP for the bootstrapper.
         bootnodes = eth.getBootNodes()[:]
+        print("========================= bootnodes!", bootnodes, self.__id)
         if this_url in bootnodes: bootnodes.remove(this_url)
+        
+        isEthereumNode = len(bootnodes) > 0
 
-        node.appendFile('/tmp/eth-genesis.json', ETHServerFileTemplates['genesis'])
-        node.appendFile('/tmp/eth-nodes', '\n'.join(bootnodes))
+        node.appendFile('/tmp/eth-genesis.json', genesis)
+        node.appendFile('/tmp/eth-nodes', '\n'.join(eth.getBootNodes()[:]))
         node.appendFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
         node.appendFile('/tmp/eth-password', 'admin') 
 
@@ -237,35 +219,54 @@ class EthereumServer(Server):
 
         # create account via pre-defined password
         node.appendStartCommand('[ -z `ls -A /root/.ethereum/keystore` ] && geth {} --password /tmp/eth-password account new'.format(datadir_option))
-
+         
         if allBootnode or self.__is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
-            node.appendStartCommand('echo "enode://$(bootnode --nodekey /root/.ethereum/geth/nodekey -writeaddress)@{}:30303" > /tmp/eth-enode-url'.format(addr))
-
+            # Default port is 30301, you can change the custom port with the next command
+            node.appendStartCommand('echo "enode://$(bootnode -nodekey /root/.ethereum/geth/nodekey -writeaddress)@{}:30301" > /tmp/eth-enode-url'.format(addr))
+            # Default port is 30301, use -addr :<port> to specify a custom port
+            node.appendStartCommand('bootnode -nodekey /root/.ethereum/geth/nodekey -verbosity 9 -addr {}:30301 > /tmp/bootnode-logs &'.format(addr))          
             # host the eth-enode-url for other nodes.
             node.appendStartCommand('python3 -m http.server {} -d /tmp'.format(self.__bootnode_http_port), True)
 
         # load enode urls from other nodes
         node.appendStartCommand('chmod +x /tmp/eth-bootstrapper')
-        node.appendStartCommand('/tmp/eth-bootstrapper')
-
+        if not(eth.isManual()):
+            node.appendStartCommand('/tmp/eth-bootstrapper')
+        
         # launch Ethereum process.
-        common_args = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --mine --allow-insecure-unlock --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, self.getGethHttpPort())
+        # Base common geth flags
+        common_flags = '{} --identity="NODE_{}" --networkid=10 --nodiscover --syncmode "full" --verbosity=6 --allow-insecure-unlock --port 3030{} --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, self.__id + 1,  self.getGethHttpPort())
+        
+        # Flags updated to accept external connections
         if self.externalConnectionEnabled():
-            remix_args = "--http.corsdomain 'https://remix.ethereum.org' --http.api web3,eth,debug,personal,net"
-            common_args = '{} {}'.format(common_args, remix_args)
-        if len(bootnodes) > 0:
-            node.appendStartCommand('nice -n 19 geth --bootnodes "$(cat /tmp/eth-node-urls)" {}'.format(common_args), True)
-        else:
-            node.appendStartCommand('nice -n 19 geth {}'.format(common_args), True)
+            whitelist_flags = "--http.corsdomain 'https://remix.ethereum.org' --http.api web3,eth,debug,personal,net"
+            common_flags = '{} {}'.format(common_flags, whitelist_flags)
+        
+        # Base geth command
+        geth_command = 'nice -n 19 geth {}'.format(common_flags)
+        
+        # Manual vs automated geth command execution
+        # In the manual approach, the geth command is only thrown in a file in /tmp/run.sh
+        # In the automated approach, the /tmp/run.sh file is executed by the start.sh (Virtual node) 
+        
+        # Echoing the geth command to /tmp/run.sh in each container
+        #if isEthereumNode:
+        node.appendStartCommand('echo \'{} --bootnodes "$(cat /tmp/eth-node-urls)"\' > /tmp/run.sh'.format(geth_command), True)
+        #else:
+        #    node.appendStartCommand('echo \'{}\' > /tmp/run.sh'.format(geth_command), True) 
+       
+        # Making run.sh executable
+        node.appendStartCommand('sleep 10; chmod +x /tmp/run.sh')
 
-        self.__createNewAccountCommand(node)
-        self.__unlockAccountsCommand(node)
-        self.__addMinerStartCommand(node)
+        # Adding /tmp/run.sh in start.sh file to automate them
+        if not(eth.isManual()):
+            node.appendStartCommand('/tmp/run.sh')
 
-        if self.__smart_contract != None :
-            smartContractCommand = self.__smart_contract.generateSmartContractCommand()
-            node.appendStartCommand('(\n {})&'.format(smartContractCommand))
+            self.__createNewAccountCommand(node)
+            self.__unlockAccountsCommand(node)
+            self.__addMinerStartCommand(node)
+            self.__deploySmartContractCommand(node)
 
     def getId(self) -> int:
         """!
@@ -410,14 +411,21 @@ class EthereumService(Service):
 
     __save_state: bool
     __save_path: str
+    
+    __manual_execution: bool
 
-    def __init__(self, saveState: bool = False, statePath: str = './eth-states'):
+    def __init__(self, saveState: bool = False, manual: bool = False, statePath: str = './eth-states'):
         """!
         @brief create a new Ethereum service.
 
         @param saveState (optional) if true, the service will try to save state
         of the block chain by saving the datadir of every node. Default to
         false.
+
+        @param manual (optional) if true, the user will have to execute a shell script
+        provided in the directory to trigger some commands inside the containers and start
+        mining
+
         @param statePath (optional) path to save containers' datadirs on the
         host. Default to "./eth-states". 
         """
@@ -430,6 +438,8 @@ class EthereumService(Service):
         self.__save_state = saveState
         self.__save_path = statePath
 
+        self.__manual_execution = manual
+
     def getName(self):
         return 'EthereumService'
 
@@ -440,6 +450,14 @@ class EthereumService(Service):
         @returns list of IP addresses.
         """
         return self.__all_node_ips if len(self.__boot_node_addresses) == 0 else self.__boot_node_addresses
+    
+    def isManual(self) -> bool:
+        """
+        @brief Returns whether the nodes execution will be manual or not
+
+        @returns bool
+        """
+        return self.__manual_execution
 
     def _doConfigure(self, node: Node, server: EthereumServer):
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
