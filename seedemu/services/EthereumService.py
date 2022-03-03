@@ -18,9 +18,9 @@ while read -r node; do {
     ok=true
     until curl -sHf http://$node/eth-enode-url > /dev/null; do {
         echo "eth: node $node not ready, waiting..."
-        sleep 20
+        sleep 3
         let count++
-        [ $count -gt 20 ] && {
+        [ $count -gt 60 ] && {
             echo "eth: node $node failed too many times, skipping."
             ok=false
             break
@@ -169,7 +169,7 @@ class EthereumServer(Server):
             """   
             command = " sleep 20\n\
             geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
-            geth --exec 'miner.start(20)' attach \n\
+            geth --exec 'miner.start(1)' attach \n\
             "
             node.appendStartCommand('(\n {})&'.format(command))
 
@@ -190,10 +190,8 @@ class EthereumServer(Server):
         assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has not interfaces'.format(node.getAsn(), node.getName())
         addr = str(ifaces[0].getAddress())
         this_url = '{}:{}'.format(addr, self.getBootNodeHttpPort())
-        print("========================= addr {}, url {}".format(addr, this_url))
         # get other nodes IP for the bootstrapper.
         bootnodes = eth.getBootNodes()[:]
-        print("========================= bootnodes!", bootnodes, self.__id)
         if this_url in bootnodes: bootnodes.remove(this_url)
         
         isEthereumNode = len(bootnodes) > 0
@@ -236,7 +234,8 @@ class EthereumServer(Server):
         
         # launch Ethereum process.
         # Base common geth flags
-        common_flags = '{} --identity="NODE_{}" --networkid=10 --verbosity=6 --allow-insecure-unlock --port 3030{} --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, self.__id + 1,  self.getGethHttpPort())
+        base_port = 30301 + self.__id
+        common_flags = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --allow-insecure-unlock --port {} --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, base_port,  self.getGethHttpPort())
         
         # Flags updated to accept external connections
         if self.externalConnectionEnabled():
@@ -251,17 +250,15 @@ class EthereumServer(Server):
         # In the automated approach, the /tmp/run.sh file is executed by the start.sh (Virtual node) 
         
         # Echoing the geth command to /tmp/run.sh in each container
-        #if isEthereumNode:
-        node.appendStartCommand('echo \'{} --bootnodes "$(cat /tmp/eth-node-urls)"\' > /tmp/run.sh'.format(geth_command), True)
-        #else:
-        #    node.appendStartCommand('echo \'{}\' > /tmp/run.sh'.format(geth_command), True) 
+        node.appendStartCommand('echo \'{} --bootnodes "$(cat /tmp/eth-node-urls)"\' > /tmp/run.sh'.format(geth_command), True) 
        
         # Making run.sh executable
-        node.appendStartCommand('sleep 10; chmod +x /tmp/run.sh')
+        node.appendStartCommand('sleep 10')
+        node.appendStartCommand('chmod +x /tmp/run.sh')
 
         # Adding /tmp/run.sh in start.sh file to automate them
         if not(eth.isManual()):
-            node.appendStartCommand('/tmp/run.sh')
+            node.appendStartCommand('/tmp/run.sh &')
 
             self.__createNewAccountCommand(node)
             self.__unlockAccountsCommand(node)
