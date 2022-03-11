@@ -5,7 +5,8 @@
 from __future__ import annotations
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
-from .GenesisPoW import genesis
+from .GenesisPoW import genesis as PoW
+from .GenesisPoA import genesis as PoA
 
 ETHServerFileTemplates: Dict[str, str] = {}
 
@@ -196,7 +197,7 @@ class EthereumServer(Server):
         
         isEthereumNode = len(bootnodes) > 0
 
-        node.appendFile('/tmp/eth-genesis.json', genesis)
+        node.appendFile('/tmp/eth-genesis.json', PoA)
         node.appendFile('/tmp/eth-nodes', '\n'.join(eth.getBootNodes()[:]))
         node.appendFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
         node.appendFile('/tmp/eth-password', 'admin') 
@@ -216,8 +217,7 @@ class EthereumServer(Server):
         node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth {} init /tmp/eth-genesis.json'.format(datadir_option))
 
         # create account via pre-defined password
-        node.appendStartCommand('[ -z `ls -A /root/.ethereum/keystore` ] && geth {} --password /tmp/eth-password account new'.format(datadir_option))
-         
+        node.appendStartCommand('[ -z `ls -A /root/.ethereum/keystore` ] && geth {} --password /tmp/eth-password account new'.format(datadir_option)) 
         if allBootnode or self.__is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
             # Default port is 30301, you can change the custom port with the next command
@@ -235,7 +235,7 @@ class EthereumServer(Server):
         # launch Ethereum process.
         # Base common geth flags
         base_port = 30301 + self.__id
-        common_flags = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --allow-insecure-unlock --port {} --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, base_port,  self.getGethHttpPort())
+        common_flags = '{} --identity="NODE_{}" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port {} --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, base_port,  self.getGethHttpPort())
         
         # Flags updated to accept external connections
         if self.externalConnectionEnabled():
