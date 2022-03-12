@@ -7,6 +7,11 @@ from seedemu.core import Node, Service, Server
 from typing import Dict, List
 from .GenesisPoW import genesis
 
+from eth_account import Account
+import json
+from datetime import datetime, timezone
+from hexbytes import HexBytes
+
 ETHServerFileTemplates: Dict[str, str] = {}
 
 # bootstraper: get enode urls from other eth nodes.
@@ -32,6 +37,32 @@ while read -r node; do {
     }
 }; done < /tmp/eth-nodes
 '''
+
+class EthAccount():
+    """
+    @brief Ethereum Local Account.
+    """
+
+    address: str    # account address
+    key: HexBytes   # account private key
+    keystore_content: str   # the content of keystore file
+    keystore_filename:str   # the name of keystore file 
+    alloc_balance: str
+    account: Account
+
+    def __init__(self, alloc_balance:str = "0",password:str = "admin") -> None:
+        """
+        @brief create a Ethereum Local Account when initialize
+        """
+        self.account = Account.create()
+        self.address = self.account.address
+        self.alloc_balance = alloc_balance
+        # encrypt private for Ethereum Client, like geth and generate the content of keystore file
+        encrypted = Account.encrypt(self.account.key, password=password)
+        self.keystore_content = json.dumps(encrypted)
+        # generate the name of the keyfile
+        datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
+        self.keystore_filename = "UTC--"+datastr+"--"+encrypted["address"]    
 
 class SmartContract():
 
@@ -110,6 +141,7 @@ class EthereumServer(Server):
     __create_new_account: int
     __enable_external_connection: bool
     __unlockAccounts: bool
+    __predefine_accounts: List[EthAccount]
 
     def __init__(self, id: int):
         """!
@@ -126,6 +158,7 @@ class EthereumServer(Server):
         self.__create_new_account = 0
         self.__enable_external_connection = False
         self.__unlockAccounts = False
+        self.__predefine_accounts = []
 
     def __createNewAccountCommand(self, node: Node):
         if self.__create_new_account > 0:
@@ -196,6 +229,21 @@ class EthereumServer(Server):
         
         isEthereumNode = len(bootnodes) > 0
 
+        # import keystore file to /tmp/keystore
+        if len(self.__predefine_accounts) > 0:
+            for account in self.__predefine_accounts:
+                node.appendFile("/tmp/keystore/"+account.keystore_filename, account.keystore_content)
+        
+        # update genesis.json for allocating balance
+        if len(eth.getAllPredefineAccounts()) > 0:
+            global genesis
+            genesisJson = json.loads(genesis)
+            alloc_dict = dict()
+            for account in eth.getAllPredefineAccounts():
+                alloc_dict[account.address[2:]] = {"balance":"{}".format(account.alloc_balance)}
+            genesisJson["alloc"] = alloc_dict
+            genesis = json.dumps(genesisJson)
+
         node.appendFile('/tmp/eth-genesis.json', genesis)
         node.appendFile('/tmp/eth-nodes', '\n'.join(eth.getBootNodes()[:]))
         node.appendFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
@@ -264,6 +312,10 @@ class EthereumServer(Server):
             self.__unlockAccountsCommand(node)
             self.__addMinerStartCommand(node)
             self.__deploySmartContractCommand(node)
+        
+        # import predefine accounts after network is initiated
+        for account in self.__predefine_accounts:
+            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename),True)
 
     def getId(self) -> int:
         """!
@@ -365,6 +417,29 @@ class EthereumServer(Server):
         self.__create_new_account = number_of_accounts or self.__create_new_account + 1
         
         return self
+    
+    def createNewPredefineAccount(self, balance: str = "0", number: int = 1, password: str = "admin") -> EthereumServer:
+        """
+        @brief Call this api to create a new predefine account with balance
+
+        @param number the number of predefine account need to create
+        @param balance the balance need to be allocated to the predefine accounts
+        @param password the password of account for the Ethereum client
+
+        @returns self
+        """  
+        for _ in range(number):
+            account = EthAccount(balance,password)
+            self.__predefine_accounts.append(account)
+
+        return self
+    
+    def getPredefineAccount(self) -> List[EthAccount]:
+        """
+        @brief Call this api to get the predefine accounts for this node
+        """
+
+        return self.__predefine_accounts
 
     def unlockAccounts(self) -> EthereumServer:
         """!
@@ -405,6 +480,7 @@ class EthereumService(Service):
     __serial: int
     __all_node_ips: List[str]
     __boot_node_addresses: List[str]
+    __all_node_predefine_accounts: List[EthAccount]
 
     __save_state: bool
     __save_path: str
@@ -431,6 +507,7 @@ class EthereumService(Service):
         self.__serial = 0
         self.__all_node_ips = []
         self.__boot_node_addresses = []
+        self.__all_node_predefine_accounts = []
 
         self.__save_state = saveState
         self.__save_path = statePath
@@ -455,6 +532,14 @@ class EthereumService(Service):
         @returns bool
         """
         return self.__manual_execution
+    
+    def getAllPredefineAccounts(self) -> List[EthAccount]:
+        """
+        @brief get all predefined accounts in all nodes
+        
+        @returns list of EthAccount
+        """
+        return self.__all_node_predefine_accounts
 
     def _doConfigure(self, node: Node, server: EthereumServer):
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
@@ -466,6 +551,9 @@ class EthereumService(Service):
         if server.isBootNode():
             self._log('adding as{}/{} as bootnode...'.format(node.getAsn(), node.getName()))
             self.__boot_node_addresses.append(addr)
+
+        if len(server.getPredefineAccount()) > 0:
+            self.__all_node_predefine_accounts.extend(server.getPredefineAccount())
 
         if self.__save_state:
             node.addSharedFolder('/root/.ethereum', '{}/{}'.format(self.__save_path, server.getId()))
