@@ -191,6 +191,19 @@ class Base(Layer, Graphable):
         """
         return list(self.__ixes.keys())
 
+    def getNodesByName(self, name:str) -> List[Node]:
+        """!
+        @brief Get list of Nodes by name.
+
+        @returns List of Nodes whose name is start with input_name.
+        """
+        nodes = []
+        for _as in self.__ases.values():
+            for host_name in _as.getHosts():
+                if host_name.startswith(name):
+                    nodes.append(_as.getHost(host_name))
+        return nodes
+        
     def _doCreateGraphs(self, emulator: Emulator):
         graph = self._addGraph('Layer 2 Connections', False)
         for asobj in self.__ases.values():

@@ -316,11 +316,11 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         if len(self.__name_servers) == 0:
             return
-        
-        self.appendStartCommand(': > /etc/resolv.conf')
-        for s in self.__name_servers:
-            self.appendStartCommand('echo "nameserver {}" >> /etc/resolv.conf'.format(s))
 
+        self.insertStartCommand(0,': > /etc/resolv.conf')
+        for idx, s in enumerate(self.__name_servers, start=1):
+            self.insertStartCommand(idx, 'echo "nameserver {}" >> /etc/resolv.conf'.format(s))
+ 
     def setNameServers(self, servers: List[str]) -> Node:
         """!
         @brief set recursive name servers to use on this node. Overwrites
@@ -430,6 +430,26 @@ class Node(Printable, Registrable, Configurable, Vertex):
         assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
         assert not self.__configured, 'Node already configured.'
 
+        self.__pending_nets.append((netname, address))
+
+        return self
+    
+    def updateNetwork(self, netname:str, address: str= "auto") -> Node:
+        """!
+        @brief Update connection of the node to a network.
+        @param netname name of the network.
+        @param address (optional) override address assigment.
+
+        @returns assigned IP address
+
+        @returns self, for chaining API calls.
+        """
+        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+        
+        for pending_netname, pending_address in self.__pending_nets:
+            if pending_netname == netname:
+                self.__pending_nets.remove((pending_netname, pending_address))
+            
         self.__pending_nets.append((netname, address))
 
         return self
