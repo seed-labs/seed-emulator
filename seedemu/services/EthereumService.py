@@ -340,7 +340,7 @@ class EthereumServer(Server):
         node.appendStartCommand('chmod +x /tmp/run.sh')
         
         # moving keystore to the proper folder
-        for account in self.__prefunded_accounts:
+        for account in self.getPrefundedAccounts():
             node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename),True)
 
         # Adding /tmp/run.sh in start.sh file to automate them
