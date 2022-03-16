@@ -268,17 +268,17 @@ class EthereumServer(Server):
         isEthereumNode = len(bootnodes) > 0
 
         # import keystore file to /tmp/keystore
-        if len(self.__prefunded_accounts) > 0:
-            for account in self.__prefunded_accounts:
+        node_specific_prefunded_accounts = self.getPrefundedAccounts()
+        if len(node_specific_prefunded_accounts) > 0:
+            for account in node_specific_prefunded_accounts:
                 node.appendFile("/tmp/keystore/"+account.keystore_filename, account.keystore_content)
       
         # todo: add api to set consensus per node so that we can have more than one consensus in the same network
-        consensus = eth.getBaseConsensusMechanism()
-        print("========= consensus set is {}".format(consensus)) 
+        consensus = eth.getBaseConsensusMechanism() 
         genesis = PoA if consensus == 'poa' else PoW
 
         # update genesis.json
-        genesis = self.__updateGenesis(genesis, eth.getAllPredefineAccounts())
+        genesis = self.__updateGenesis(genesis, eth.getAllPrefundedAccounts())
     
         node.appendFile('/tmp/eth-genesis.json', genesis)
         node.appendFile('/tmp/eth-nodes', '\n'.join(eth.getBootNodes()[:]))
@@ -469,7 +469,7 @@ class EthereumServer(Server):
 
         return self
     
-    def getPredefineAccount(self) -> List[EthAccount]:
+    def getPrefundedAccounts(self) -> List[EthAccount]:
         """
         @brief Call this api to get the prefunded accounts for this node
         """
@@ -515,7 +515,7 @@ class EthereumService(Service):
     __serial: int
     __all_node_ips: List[str]
     __boot_node_addresses: List[str]
-    __all_node_predefine_accounts: List[EthAccount]
+    __joined_prefunded_accounts: List[EthAccount]
 
     __save_state: bool
     __save_path: str
@@ -543,7 +543,7 @@ class EthereumService(Service):
         self.__serial = 0
         self.__all_node_ips = []
         self.__boot_node_addresses = []
-        self.__all_node_predefine_accounts = []
+        self.__joined_prefunded_accounts = []
 
         self.__save_state = saveState
         self.__save_path = statePath
@@ -570,13 +570,13 @@ class EthereumService(Service):
         """
         return self.__manual_execution
     
-    def getAllPredefineAccounts(self) -> List[EthAccount]:
+    def getAllPrefundedAccounts(self) -> List[EthAccount]:
         """
-        @brief get all predefined accounts in all nodes
+        @brief Get a joined list of all the created prefunded accounts on all nodes
         
         @returns list of EthAccount
         """
-        return self.__all_node_predefine_accounts
+        return self.__joined_prefunded_accounts
 
     def setBaseConsensusMechanism(self, mechanism:str="poa") -> bool:
         """
@@ -604,8 +604,8 @@ class EthereumService(Service):
             self._log('adding as{}/{} as bootnode...'.format(node.getAsn(), node.getName()))
             self.__boot_node_addresses.append(addr)
 
-        if len(server.getPredefineAccount()) > 0:
-            self.__all_node_predefine_accounts.extend(server.getPredefineAccount())
+        if len(server.getPrefundedAccounts()) > 0:
+            self.__joined_prefunded_accounts.extend(server.getPrefundedAccounts())
 
         if self.__save_state:
             node.addSharedFolder('/root/.ethereum', '{}/{}'.format(self.__save_path, server.getId()))
