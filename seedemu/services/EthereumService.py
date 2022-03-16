@@ -5,7 +5,8 @@
 from __future__ import annotations
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
-from .GenesisPoW import genesis
+from .GenesisPoW import genesis as PoW
+from .GenesisPoA import genesis as PoA
 
 from eth_account import Account
 import json
@@ -141,7 +142,7 @@ class EthereumServer(Server):
     __create_new_account: int
     __enable_external_connection: bool
     __unlockAccounts: bool
-    __predefine_accounts: List[EthAccount]
+    __prefunded_accounts: List[EthAccount]
 
     def __init__(self, id: int):
         """!
@@ -158,7 +159,7 @@ class EthereumServer(Server):
         self.__create_new_account = 0
         self.__enable_external_connection = False
         self.__unlockAccounts = False
-        self.__predefine_accounts = []
+        self.__prefunded_accounts = []
 
     def __createNewAccountCommand(self, node: Node):
         if self.__create_new_account > 0:
@@ -210,6 +211,42 @@ class EthereumServer(Server):
         if self.__smart_contract != None :
             smartContractCommand = self.__smart_contract.generateSmartContractCommand()
             node.appendStartCommand('(\n {})&'.format(smartContractCommand))
+    
+    def __updateGenesis(self, genesis, prefunded_accounts):
+        genesisJson = json.loads(genesis)
+        if len(prefunded_accounts) > 0:
+            # These functions can be done inside the same loop
+            # Separated for clarity
+            genesisJson["alloc"] = self.__generateGenesisAlloc(prefunded_accounts)
+            genesisJson["extraData"] = self.__generateGenesisExtraData(prefunded_accounts)
+
+        return json.dumps(genesisJson)
+
+    def __generateGenesisAlloc(self, prefunded_accounts) -> dict:
+        '''
+        @brief creates prefunded accounts
+        '''
+        alloc = dict()
+        for account in prefunded_accounts:
+            alloc[account.address[2:]] = {"balance":"{}".format(account.alloc_balance)}
+       
+        return alloc
+
+    def __generateGenesisExtraData(self, prefunded_accounts) -> str:
+        '''
+        @brief Clique extradata field, used to define PoA validators/sealers must match the following format:
+        First part: 32bytes vanity, meaning whatever you want here since it’s expressed as an hex string (64 chars long as one byte is 2 chars), using puppeth tool, it's filled with 0s.
+        Second part: concatenated list of sealers/validators nodes addresses. Each address written as hex string without the “0x” prefix and must be 20 bytes long (40 chars long as one byte is 2 chars).
+        Third part: a 65 bytes signature suffix called proposer seal. It’s used to identify the proposer of the new validator in a block. Given we talk here about the genesis file, this seal has no reason to be because no specific node proposed it, it’s the base on which everyone agree before starting. So it must be filled with zeros (65 zeros). Puppeth tool puts 130 0s.
+        
+        @returns the fully generated extraData field for the genesis
+        '''
+        extraData = "0x" + "0" * 64
+        for account in prefunded_accounts:
+            extraData = extraData + account.address[2:]
+        
+        return extraData + "0" * 130
+
 
     def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
@@ -219,6 +256,7 @@ class EthereumServer(Server):
         @param eth reference to the eth service.
         @param allBootnode all-bootnode mode: all nodes are boot node.
         """
+
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has not interfaces'.format(node.getAsn(), node.getName())
         addr = str(ifaces[0].getAddress())
@@ -230,20 +268,18 @@ class EthereumServer(Server):
         isEthereumNode = len(bootnodes) > 0
 
         # import keystore file to /tmp/keystore
-        if len(self.__predefine_accounts) > 0:
-            for account in self.__predefine_accounts:
+        node_specific_prefunded_accounts = self.getPrefundedAccounts()
+        if len(node_specific_prefunded_accounts) > 0:
+            for account in node_specific_prefunded_accounts:
                 node.appendFile("/tmp/keystore/"+account.keystore_filename, account.keystore_content)
-        
-        # update genesis.json for allocating balance
-        if len(eth.getAllPredefineAccounts()) > 0:
-            global genesis
-            genesisJson = json.loads(genesis)
-            alloc_dict = dict()
-            for account in eth.getAllPredefineAccounts():
-                alloc_dict[account.address[2:]] = {"balance":"{}".format(account.alloc_balance)}
-            genesisJson["alloc"] = alloc_dict
-            genesis = json.dumps(genesisJson)
+      
+        # todo: add api to set consensus per node so that we can have more than one consensus in the same network
+        consensus = eth.getBaseConsensusMechanism() 
+        genesis = PoA if consensus == 'poa' else PoW
 
+        # update genesis.json
+        genesis = self.__updateGenesis(genesis, eth.getAllPrefundedAccounts())
+    
         node.appendFile('/tmp/eth-genesis.json', genesis)
         node.appendFile('/tmp/eth-nodes', '\n'.join(eth.getBootNodes()[:]))
         node.appendFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
@@ -264,8 +300,7 @@ class EthereumServer(Server):
         node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth {} init /tmp/eth-genesis.json'.format(datadir_option))
 
         # create account via pre-defined password
-        node.appendStartCommand('[ -z `ls -A /root/.ethereum/keystore` ] && geth {} --password /tmp/eth-password account new'.format(datadir_option))
-         
+        node.appendStartCommand('[ -z `ls -A /root/.ethereum/keystore` ] && geth {} --password /tmp/eth-password account new'.format(datadir_option)) 
         if allBootnode or self.__is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
             # Default port is 30301, you can change the custom port with the next command
@@ -283,7 +318,7 @@ class EthereumServer(Server):
         # launch Ethereum process.
         # Base common geth flags
         base_port = 30301 + self.__id
-        common_flags = '{} --identity="NODE_{}" --networkid=10 --verbosity=2 --allow-insecure-unlock --port {} --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, base_port,  self.getGethHttpPort())
+        common_flags = '{} --identity="NODE_{}" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port {} --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, base_port,  self.getGethHttpPort())
         
         # Flags updated to accept external connections
         if self.externalConnectionEnabled():
@@ -303,6 +338,10 @@ class EthereumServer(Server):
         # Making run.sh executable
         node.appendStartCommand('sleep 10')
         node.appendStartCommand('chmod +x /tmp/run.sh')
+        
+        # moving keystore to the proper folder
+        for account in self.getPrefundedAccounts():
+            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename),True)
 
         # Adding /tmp/run.sh in start.sh file to automate them
         if not(eth.isManual()):
@@ -312,10 +351,6 @@ class EthereumServer(Server):
             self.__unlockAccountsCommand(node)
             self.__addMinerStartCommand(node)
             self.__deploySmartContractCommand(node)
-        
-        # import predefine accounts after network is initiated
-        for account in self.__predefine_accounts:
-            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename),True)
 
     def getId(self) -> int:
         """!
@@ -418,28 +453,28 @@ class EthereumServer(Server):
         
         return self
     
-    def createNewPredefineAccount(self, balance: str = "0", number: int = 1, password: str = "admin") -> EthereumServer:
+    def createPrefundedAccounts(self, balance: str = "0", number: int = 1, password: str = "admin") -> EthereumServer:
         """
-        @brief Call this api to create a new predefine account with balance
+        @brief Call this api to create new prefunded account with balance
 
-        @param number the number of predefine account need to create
-        @param balance the balance need to be allocated to the predefine accounts
+        @param number the number of prefunded account need to create
+        @param balance the balance need to be allocated to the prefunded accounts
         @param password the password of account for the Ethereum client
 
         @returns self
         """  
         for _ in range(number):
             account = EthAccount(balance,password)
-            self.__predefine_accounts.append(account)
+            self.__prefunded_accounts.append(account)
 
         return self
     
-    def getPredefineAccount(self) -> List[EthAccount]:
+    def getPrefundedAccounts(self) -> List[EthAccount]:
         """
-        @brief Call this api to get the predefine accounts for this node
+        @brief Call this api to get the prefunded accounts for this node
         """
 
-        return self.__predefine_accounts
+        return self.__prefunded_accounts
 
     def unlockAccounts(self) -> EthereumServer:
         """!
@@ -480,12 +515,13 @@ class EthereumService(Service):
     __serial: int
     __all_node_ips: List[str]
     __boot_node_addresses: List[str]
-    __all_node_predefine_accounts: List[EthAccount]
+    __joined_prefunded_accounts: List[EthAccount]
 
     __save_state: bool
     __save_path: str
     
     __manual_execution: bool
+    __consensus_mechanism: str
 
     def __init__(self, saveState: bool = False, manual: bool = False, statePath: str = './eth-states'):
         """!
@@ -507,12 +543,13 @@ class EthereumService(Service):
         self.__serial = 0
         self.__all_node_ips = []
         self.__boot_node_addresses = []
-        self.__all_node_predefine_accounts = []
+        self.__joined_prefunded_accounts = []
 
         self.__save_state = saveState
         self.__save_path = statePath
 
         self.__manual_execution = manual
+        self.__consensus_mechanism = 'poa'
 
     def getName(self):
         return 'EthereumService'
@@ -533,13 +570,28 @@ class EthereumService(Service):
         """
         return self.__manual_execution
     
-    def getAllPredefineAccounts(self) -> List[EthAccount]:
+    def getAllPrefundedAccounts(self) -> List[EthAccount]:
         """
-        @brief get all predefined accounts in all nodes
+        @brief Get a joined list of all the created prefunded accounts on all nodes
         
         @returns list of EthAccount
         """
-        return self.__all_node_predefine_accounts
+        return self.__joined_prefunded_accounts
+
+    def setBaseConsensusMechanism(self, mechanism:str="poa") -> bool:
+        """
+        @brief select a consensus mechanism for the blockchain network. Default is Proof of authority
+
+        @returns bool
+        """
+        self.__consensus_mechanism = mechanism
+        return True
+
+    def getBaseConsensusMechanism(self) -> str:
+        """
+        @returns the consensus mechanism for the current network
+        """
+        return self.__consensus_mechanism
 
     def _doConfigure(self, node: Node, server: EthereumServer):
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
@@ -552,8 +604,8 @@ class EthereumService(Service):
             self._log('adding as{}/{} as bootnode...'.format(node.getAsn(), node.getName()))
             self.__boot_node_addresses.append(addr)
 
-        if len(server.getPredefineAccount()) > 0:
-            self.__all_node_predefine_accounts.extend(server.getPredefineAccount())
+        if len(server.getPrefundedAccounts()) > 0:
+            self.__joined_prefunded_accounts.extend(server.getPrefundedAccounts())
 
         if self.__save_state:
             node.addSharedFolder('/root/.ethereum', '{}/{}'.format(self.__save_path, server.getId()))
