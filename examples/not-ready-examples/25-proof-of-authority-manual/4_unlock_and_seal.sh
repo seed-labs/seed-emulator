@@ -1,3 +1,6 @@
+# Only unlock and run the miners/sealers
+# In component-blockchain.py, i am using mod 3
+# These are the same commands for both proof of work and proof of authority
 start=1
 end=$(docker ps | grep Ethereum | wc -l)
 
