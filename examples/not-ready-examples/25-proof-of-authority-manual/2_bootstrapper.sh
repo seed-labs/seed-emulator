@@ -1,3 +1,5 @@
+# Run bootstrapper on all ethereum nodes
+# All nodes need to be aware of the bootnodes
 start=1
 end=$(docker ps | grep Ethereum | wc -l)
 for (( node=$start; node<=$end; node++ ))
