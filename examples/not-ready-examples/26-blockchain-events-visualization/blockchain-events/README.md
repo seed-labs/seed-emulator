@@ -8,15 +8,16 @@
 - This code is the base for the blockchain visualization. We successfully capture events from our blockchain network.
 - The main file is the `index.js`.
 - Make sure to `npm i` before trying to run the code
-- It first creates a map between container ids and ethereum accounts.
-- When all accounts are mapped, we set listeners inside the emulator blockchain network using web3.
+- In the code, I first create a map between container ids and ethereum accounts.
+- When all accounts are mapped, I set listeners inside the emulator blockchain network using web3.
 - The first few lines connect to our ethereum nodes using web3.
-- Make sure to check which ports are open for connection inside `component-blockchain.py` or the code will break.
+- Make sure to check which ports are open for connection inside `component-blockchain.py` or the code will break because the connections will fail.
 
 # Todos, tasks, and ideas
 - Since this code was still experimental and in development, it can be cleaned up. Remove the unused functions and dependencies.
 - Go to `https://web3js.readthedocs.io/en/v1.2.11/web3-eth-subscribe.html` and select the necessary information we can extract from the events we currently listen to: `pendingTransactions` and `newBlockHeaders`.
-- Visualize the event data using the map (e.g. if account 1 in container 1 is sending data to account 2 in container 2, maybe we can blink the whole path from container 1 to container 2)
+- You can also see the data retrieved by simply running a blockchain emulator and running this code. You can `console.log` everything you get back in the event listeners.
+- Visualize the event data using the map (e.g. if account 1 in container 1 is sending a transaction to account 2 in container 2, maybe we can blink the whole path from container 1 to container 2)
 - web3 also supports an API called `clearSubscriptions` where you can stop all your listeners (in our case both events i mentioned above). Maybe you can trigger it through the UI too to avoid wasting resources when we don't want to visualize the blockchain anymore.
 - On the map we want to be able to differentiate miners/sealers from other nodes
 - On the map we want to be able to identify bootnodes from other nodes
