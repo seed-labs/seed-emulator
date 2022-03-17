@@ -7,6 +7,7 @@
 - This code was never merged because it was still in development.
 - This code is the base for the blockchain visualization. We successfully capture events from our blockchain network.
 - The main file is the `index.js`.
+- Make sure to `npm i` before trying to run the code
 - It first creates a map between container ids and ethereum accounts.
 - When all accounts are mapped, we set listeners inside the emulator blockchain network using web3.
 - The first few lines connect to our ethereum nodes using web3.
