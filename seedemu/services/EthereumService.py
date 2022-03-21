@@ -143,6 +143,7 @@ class EthereumServer(Server):
     __enable_external_connection: bool
     __unlockAccounts: bool
     __prefunded_accounts: List[EthAccount]
+    __consensus_mechanism: str
 
     def __init__(self, id: int):
         """!
@@ -160,6 +161,7 @@ class EthereumServer(Server):
         self.__enable_external_connection = False
         self.__unlockAccounts = False
         self.__prefunded_accounts = []
+        self.__consensus_mechanism = "" # keep as empty to make sure the OR statement works in the install function
 
     def __createNewAccountCommand(self, node: Node):
         if self.__create_new_account > 0:
@@ -273,8 +275,8 @@ class EthereumServer(Server):
             for account in node_specific_prefunded_accounts:
                 node.appendFile("/tmp/keystore/"+account.keystore_filename, account.keystore_content)
       
-        # todo: add api to set consensus per node so that we can have more than one consensus in the same network
-        consensus = eth.getBaseConsensusMechanism() 
+        # We can specify nodes to use a consensus different from the base one
+        consensus = self.getConsensusMechanism() or eth.getBaseConsensusMechanism() 
         genesis = PoA if consensus == 'poa' else PoW
 
         # update genesis.json
@@ -351,6 +353,20 @@ class EthereumServer(Server):
             self.__unlockAccountsCommand(node)
             self.__addMinerStartCommand(node)
             self.__deploySmartContractCommand(node)
+
+    def setConsensusMechanism(self, consensus:str='pow') -> EthereumServer:
+        '''
+        @brief We can have more than one consensus mechanism at the same time
+        The base consensus (poa) applies to all of the nodes by default except if this API is called
+        We can set a different consensus for the nodes of our choice
+        '''
+        self.__consensus_mechanism = consensus
+        
+        return self
+
+    def getConsensusMechanism(self) -> str:
+
+        return self.__consensus_mechanism
 
     def getId(self) -> int:
         """!
@@ -505,6 +521,7 @@ class EthereumServer(Server):
 
         return self
 
+
 class EthereumService(Service):
     """!
     @brief The Ethereum network service.
@@ -521,7 +538,7 @@ class EthereumService(Service):
     __save_path: str
     
     __manual_execution: bool
-    __consensus_mechanism: str
+    __base_consensus_mechanism: str
 
     def __init__(self, saveState: bool = False, manual: bool = False, statePath: str = './eth-states'):
         """!
@@ -549,7 +566,7 @@ class EthereumService(Service):
         self.__save_path = statePath
 
         self.__manual_execution = manual
-        self.__consensus_mechanism = 'poa'
+        self.__base_consensus_mechanism = 'poa' # set by default in case the API is not used
 
     def getName(self):
         return 'EthereumService'
@@ -584,14 +601,14 @@ class EthereumService(Service):
 
         @returns bool
         """
-        self.__consensus_mechanism = mechanism
+        self.__base_consensus_mechanism = mechanism
         return True
 
     def getBaseConsensusMechanism(self) -> str:
         """
         @returns the consensus mechanism for the current network
         """
-        return self.__consensus_mechanism
+        return self.__base_consensus_mechanism
 
     def _doConfigure(self, node: Node, server: EthereumServer):
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
