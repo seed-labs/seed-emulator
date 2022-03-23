@@ -51,7 +51,7 @@ class DHCPServer(Server):
         """!
         @brief DHCPServer Constructor.
         """
-        self.__name_servers = "#option domain-name-servers none"
+        self.__name_servers = "#option domain-name-servers none;"
 
 
 
@@ -86,7 +86,7 @@ class DHCPServer(Server):
                 if riface.getNet() == hnet:
                     rif = riface
                     break
-                
+
         assert rif != None, 'Host {} in as{} in network {}: no router'.format(self.__node.getname, scope, hnet.getName())
                 
         subnet = hnet.getPrefix().with_netmask.split('/')[0]
