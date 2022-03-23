@@ -4,12 +4,12 @@ from ipaddress import IPv4Address, IPv4Network
 
 DHCPServiceFileTemplates: Dict[str, str] = {}
 
-DHCPServiceFileTemplates['isc_dhcp_server_conf'] = '''
+DHCPServiceFileTemplates['isc_dhcp_server_conf'] = '''\
 INTERFACESv4="{iface}"
 INTERFACESv6=""
 '''
 
-DHCPServiceFileTemplates['dhcpd_conf'] = '''
+DHCPServiceFileTemplates['dhcpd_conf'] = '''\
 # option definitions common to all supported networks...
 # option domain-name "example.org";
 # option domain-name-servers server.example.org;
@@ -25,15 +25,18 @@ ddns-update-style none;
 
 # A slightly different configuration for an internal subnet.
 subnet {subnet} netmask {netmask} {{
-  range {ip_start} {ip_end};
-  #option domain-name-servers server.example.org;
-  #option domain-name "example.org";
-  option subnet-mask {netmask};
-  option routers {router};
-  option broadcast-address {broadcast_address};
-  default-lease-time 600;
-  max-lease-time 7200;
+    range {ip_start} {ip_end};
+    {name_servers}
+    option subnet-mask {netmask};
+    option routers {router};
+    option broadcast-address {broadcast_address};
+    default-lease-time 600;
+    max-lease-time 7200;
 }}
+'''
+
+DHCPServiceFileTemplates['dhcpd_conf_dns'] = '''\
+option domain-name-servers {name_servers};\
 '''
 
 class DHCPServer(Server):
@@ -42,6 +45,15 @@ class DHCPServer(Server):
     """
     __node: Node
     __emulator: Emulator
+    __name_servers: str
+
+    def __init__(self):
+        """!
+        @brief DHCPServer Constructor.
+        """
+        self.__name_servers = "#option domain-name-servers none"
+
+
 
     def configure(self, node: Node, emulator:Emulator):
         """!
@@ -49,10 +61,8 @@ class DHCPServer(Server):
         """
         self.__node = node
         self.__emulator = emulator
+
                 
-
-        
-
     def install(self, node:Node):
         """!
         @brief Install the service
@@ -62,12 +72,11 @@ class DHCPServer(Server):
 
         ifaces = self.__node.getInterfaces()
         assert len(ifaces) > 0, 'node {} has no interfaces'.format(node.getName())
-        hif: Interface = ifaces[0]
-            
+        
         reg = self.__emulator.getRegistry()
         (scope, _, _) = node.getRegistryInfo()
         rif: Interface = None
-        
+        hif: Interface = ifaces[0]
         hnet: Network = hif.getNet()
 
         cur_scope = ScopedRegistry(scope, reg)
@@ -77,7 +86,9 @@ class DHCPServer(Server):
                 if riface.getNet() == hnet:
                     rif = riface
                     break
-        
+                
+        assert rif != None, 'Host {} in as{} in network {}: no router'.format(self.__node.getname, scope, hnet.getName())
+                
         subnet = hnet.getPrefix().with_netmask.split('/')[0]
         netmask = hnet.getPrefix().with_netmask.split('/')[1]
         iface_name = hnet.getName()
@@ -87,10 +98,16 @@ class DHCPServer(Server):
         ip_start += ".20"
         ip_end += ".60"
 
+        nameServers:list = self.__node.getNameServers()
+
+        if len(nameServers) > 0:
+            self.__name_servers =  DHCPServiceFileTemplates['dhcpd_conf_dns'].format(name_servers = ", ".join(nameServers))       
+
         node.setFile('/etc/default/isc-dhcp-server', DHCPServiceFileTemplates['isc_dhcp_server_conf'].format(iface=iface_name))
         node.setFile('/etc/dhcp/dhcpd.conf', DHCPServiceFileTemplates['dhcpd_conf'].format(
             subnet = subnet,
             netmask = netmask, 
+            name_servers = self.__name_servers,
             ip_start = ip_start,
             ip_end = ip_end,
             router = router_address, 
@@ -98,6 +115,7 @@ class DHCPServer(Server):
         ))
 
         node.appendStartCommand('/etc/init.d/isc-dhcp-server restart')
+
     
     def print(self, indent: int) -> str:
         out = ' ' * indent
