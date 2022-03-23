@@ -46,14 +46,24 @@ class DHCPServer(Server):
     __node: Node
     __emulator: Emulator
     __name_servers: str
+    __ip_address_start: str
+    __ip_address_end: str
 
     def __init__(self):
         """!
         @brief DHCPServer Constructor.
         """
         self.__name_servers = "#option domain-name-servers none;"
+        self.__ip_address_start = ".20"
+        self.__ip_address_end = ".60"
 
 
+    def setIpRange(self, ip_address_start:int, ip_address_end:int):
+        assert ip_address_start != None and ip_address_start >= 10, "spare first 10 IPs for services"
+        assert ip_address_start != None and ip_address_end <= 70, "spare IPs over 70 for emulator's hosts"
+
+        self.__ip_address_start = "."+str(ip_address_start)
+        self.__ip_address_end = "."+str(ip_address_end)
 
     def configure(self, node: Node, emulator:Emulator):
         """!
@@ -95,8 +105,8 @@ class DHCPServer(Server):
         router_address = rif.getAddress()
         broadcast_address = hnet.getPrefix().broadcast_address
         ip_start = ip_end = '.'.join(subnet.split(".")[0:3])
-        ip_start += ".20"
-        ip_end += ".60"
+        ip_start += self.__ip_address_start
+        ip_end += self.__ip_address_end
 
         nameServers:list = self.__node.getNameServers()
 
