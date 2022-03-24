@@ -303,7 +303,6 @@ class Docker(Compiler):
     __forced_image: str
     __disable_images: bool
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
-
     _used_images: Set[str]
 
     def __init__(
@@ -349,7 +348,6 @@ class Docker(Compiler):
         """
         self.__networks = ""
         self.__services = ""
-        self.__volumes = ""
         self.__naming_scheme = namingScheme
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
