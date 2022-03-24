@@ -94,8 +94,6 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
 
 DockerCompilerFileTemplates['compose'] = """\
 version: "3.4"
-volumes:
-{volumes}
 services:
 {dummies}
 {services}
@@ -128,10 +126,6 @@ DockerCompilerFileTemplates['compose_service'] = """\
 {labelList}
 """
 
-DockerCompilerFileTemplates['compose_global_volume'] = """\
-    {globalVolumeName}:
-"""
-
 DockerCompilerFileTemplates['compose_label_meta'] = """\
             org.seedsecuritylabs.seedemu.meta.{key}: "{value}"
 """
@@ -162,6 +156,10 @@ DockerCompilerFileTemplates['compose_storage'] = """\
 
 DockerCompilerFileTemplates['compose_service_network'] = """\
             {netId}:
+{address}
+"""
+
+DockerCompilerFileTemplates['compose_service_network_address'] = """\
                 ipv4_address: {address}
 """
 
@@ -306,9 +304,6 @@ class Docker(Compiler):
     __disable_images: bool
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
 
-    __global_volumes: list[str]
-    __global_volumes_node_list: Dict[Tuple[str, str], list[str]]
-
     _used_images: Set[str]
 
     def __init__(
@@ -372,25 +367,12 @@ class Docker(Compiler):
         self.__disable_images = False
         self._used_images = set()
         self.__image_per_node_list = {}
-        self.__global_volumes = []
-        self.__global_volumes_node_list = {}
 
         for image in DefaultImages:
             self.addImage(image)
 
     def getName(self) -> str:
         return "Docker"
-
-    def addGlobalVolume(self, volume_name: str) -> Docker:
-        """!
-        @brief add a Global Volume that can be shared among containers
-
-        @param volum_name volume name to add
-
-        @returns self, for chaining api calls.
-        """
-        self.__global_volumes.append(volume_name)
-        return self
 
     def addImage(self, image: DockerImage, priority: int = 0) -> Docker:
         """!
@@ -447,15 +429,6 @@ class Docker(Compiler):
 
         return self
     
-    def setGlobalVolume(self, node:Node, global_volume:str, folder:str):
-        assert global_volume in self.__global_volumes, 'To use global_volume, need to addGlobalVolume first'
-        asn = node.getAsn()
-        name = node.getName()
-        if (asn, name) in self.__global_volumes_node_list:
-            self.__global_volumes_node_list[(asn, name)].append(global_volume+":"+folder)
-        else:
-            self.__global_volumes_node_list[(asn, name)] = [global_volume+":"+folder]
-
     def setImageOverride(self, node:Node, image:DockerImage):
         asn = node.getAsn()
         name = node.getName()
@@ -804,6 +777,11 @@ class Docker(Compiler):
                     node.getAsn(), node.getName()
                 ))
 
+            if address == None:
+                address = ""
+            else:
+                address = DockerCompilerFileTemplates['compose_service_network_address'].format(address = address)
+
             node_nets += DockerCompilerFileTemplates['compose_service_network'].format(
                 netId = real_netname,
                 address = address
@@ -828,7 +806,7 @@ class Docker(Compiler):
         
         volumes = ''
 
-        if len(_volumes) > 0 or len(storages) > 0 or len(self.__global_volumes_node_list):
+        if len(_volumes) > 0 or len(storages) > 0:
             lst = ''
 
             for (nodePath, hostPath) in _volumes.items():
@@ -840,14 +818,6 @@ class Docker(Compiler):
             for path in storages:
                 lst += DockerCompilerFileTemplates['compose_storage'].format(
                     nodePath = path
-                )
-
-        nodeKey = (node.getAsn(), node.getName())
-
-        if nodeKey in self.__image_per_node_list:
-            for global_volume in self.__global_volumes_node_list[nodeKey]:
-                lst += DockerCompilerFileTemplates['compose_storage'].format(
-                    nodePath = global_volume
                 )
 
             volumes = DockerCompilerFileTemplates['compose_volumes'].format(
@@ -953,17 +923,6 @@ class Docker(Compiler):
             mtu = net.getMtu(),
             labelList = self._getNetMeta(net)
         )
-    def _compileGolbalVolume(self, volume_name: str)->str:
-        """!
-        @brief compile a global volumes.
-
-        @param volume_name str.
-
-        @returns docker-compose global volume string.
-        """
-        return DockerCompilerFileTemplates['compose_global_volume'].format(
-            globalVolumeName = volume_name
-        )
 
     def _makeDummies(self) -> str:
         """!
@@ -996,10 +955,6 @@ class Docker(Compiler):
         registry = emulator.getRegistry()
 
         self._groupSoftware(emulator)
-
-        for global_volume in self.__global_volumes:
-            self._log('creating volumes: {}...'.format(global_volume))
-            self.__volumes += self._compileGolbalVolume(global_volume)
 
         for ((scope, type, name), obj) in registry.getAll().items():
 
@@ -1052,7 +1007,6 @@ class Docker(Compiler):
 
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(
-            volumes = self.__volumes,
             services = self.__services,
             networks = self.__networks,
             dummies = local_images + self._makeDummies()

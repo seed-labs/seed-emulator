@@ -408,6 +408,10 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         
         if address == "auto": _addr = net.assign(self.__role, self.__asn)
+        elif address == "dhcp": 
+            _addr = None
+            self.addSoftware('isc-dhcp-client')
+            self.appendStartCommand('ip addr flush {iface}; dhclient;'.format(iface=net.getName()))
         else: _addr = IPv4Address(address)
 
         _iface = Interface(net)
