@@ -179,6 +179,51 @@ class Network(Printable, Registrable, Vertex):
         """
         return self.__prefix
 
+    def setHostIpRange(self, hostStart:int , hostEnd: int, hostStep: int):
+        """!
+        @brief Set IP Range for host nodes
+
+        @param hostStart start address offset of host nodes.
+        @param hostEnd end address offset of host nodes.
+        @param hostStep end step of host address.
+        """
+
+        self.__aac.setHostIpRange(hostStart, hostEnd, hostStep)
+        self.__assigners[NodeRole.Host] = self.__aac.getOffsetAssigner(NodeRole.Host)
+
+        return self
+        
+    def setDhcpIpRange(self, dhcpStart:int, dhcpEnd: int):
+        """!
+        @brief Set IP Range for DHCP Server to use
+        
+        @param dhcpStart start address offset of dhcp clients.
+        @param dhcpEnd end address offset of dhcp clients.
+        """
+        self.__aac.setDhcpIpRange(dhcpStart, dhcpEnd)
+        return self
+
+
+    def setRouterIpRange(self, routerStart:int, routerEnd:int, routerStep: int):
+        
+        """!
+        @brief Set IP Range for router nodes
+
+        @param routerStart start address offset of router nodes.
+        @param routerEnd end address offset of router nodes.
+        @param routerStep end step of router address.
+        """
+        
+        self.__aac.setRouterIpRange(routerStart, routerEnd, routerStep)
+        self.__assigners[NodeRole.Router] = self.__aac.getOffsetAssigner(NodeRole.Router)
+        return self
+
+    def getDhcpIpRange(self) -> list:
+        """!
+        @brief Get IP range for DHCP server to use.
+        """
+        return self.__aac.getDhcpIpRange()
+
     def assign(self, nodeRole: NodeRole, asn: int = -1) -> IPv4Address:
         """!
         @brief Assign IP for interface.
