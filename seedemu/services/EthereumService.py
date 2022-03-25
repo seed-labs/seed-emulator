@@ -5,8 +5,6 @@
 from __future__ import annotations
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
-from .GenesisPoW import genesis as PoW
-from .GenesisPoA import genesis as PoA
 
 from eth_account import Account
 import json
@@ -38,6 +36,68 @@ while read -r node; do {
     }
 }; done < /tmp/eth-nodes
 '''
+
+genesisPoA = '''{
+      "config": {
+        "chainId": 10,
+        "homesteadBlock": 0,
+        "eip150Block": 0,
+        "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "eip155Block": 0,
+        "eip158Block": 0,
+        "byzantiumBlock": 0,
+        "constantinopleBlock": 0,
+        "petersburgBlock": 0,
+        "istanbulBlock": 0,
+        "clique": {
+          "period": 15,
+          "epoch": 30000
+        }
+      },
+      "nonce": "0x0",
+      "timestamp": "0x622a4e1a",
+      "extraData": "0x00000000000000000000000000000000000000000000000000000000000000001943c0d246e3d57ed3acdfa931f63349f9a851b637f10a73416468193d5a730734ac47526bb56745389a47b4903d06738a4693a40ead52a1d5b5f7c741b8c9b34a90f87d938867877d822264c9a615f848a3596372e19d5d8778112a48b1a786fccb300248c3af013add2ec54667648cf27a7ce9def5c45353cf63e8727766b189c3cfea4b910b2eb12982e1571479c79f371a6a34dc8569a127a9ce3957bdba59d8e23d77059d95c60a03c9f20aac16bafe791a5b53d933f7f27793e126393b3bb07734069b8efa61cd689c9b533b2ce3512b1b139f8e210d1e3dbd6e3fa93d866c3c75141a26de8844c5f2132b4c239f1246982d794cc6a4add27dd436dbf0432adfcba0b4069d6dd736c8eef80f83d2234cc32d69bc36a53ae2f0edac2b2321e2f487327846ae4a89e8ccb4f7fdd0357f91d52f6e3e0cb1e5f4ad36e0658fe8d3a0100d4e0e0fda62d590ce59afcde3a8b7f0f0a6b0dd80f000911a238f89d74b7c71648e3db1f762d02c18e929ed177da63769dc6bfae52fd442fad09769bcb5acb9434ccc52e9cbc14ed5ad44970000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "gasLimit": "0x47b760",
+      "difficulty": "0x1",
+      "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "coinbase": "0x0000000000000000000000000000000000000000",
+      "alloc": {},
+      "number": "0x0",
+      "gasUsed": "0x0",
+      "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "baseFeePerGas": null
+    }
+    '''
+
+genesisPoW = '''{
+            "nonce":"0x0",
+            "timestamp":"0x621549f1",
+            "parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+            "extraData":"0x",
+            "gasLimit":"0x80000000",
+            "difficulty":"0x0",
+            "mixhash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+            "coinbase":"0x0000000000000000000000000000000000000000",
+            "number": "0x0",
+            "gasUsed": "0x0",
+            "baseFeePerGas": null,
+            "config": {
+                "chainId": 10,
+                "homesteadBlock": 0,
+                "eip150Block": 0,
+                "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "eip155Block": 0,
+                "eip158Block": 0,
+                "byzantiumBlock": 0,
+                "constantinopleBlock": 0,
+                "petersburgBlock": 0,
+                "istanbulBlock": 0,
+                "ethash": {}
+            },
+            "alloc": {}
+      }
+    }
+    '''
 
 class EthAccount():
     """
@@ -277,7 +337,7 @@ class EthereumServer(Server):
       
         # We can specify nodes to use a consensus different from the base one
         consensus = self.getConsensusMechanism() or eth.getBaseConsensusMechanism() 
-        genesis = PoA if consensus == 'poa' else PoW
+        genesis = genesisPoA if consensus == 'poa' else genesisPoW
 
         # update genesis.json
         genesis = self.__updateGenesis(genesis, eth.getAllPrefundedAccounts())
