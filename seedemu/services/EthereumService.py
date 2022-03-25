@@ -5,6 +5,7 @@
 from __future__ import annotations
 from enum import Enum
 from operator import ge
+import os
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
 
@@ -192,7 +193,7 @@ class EthAccount():
         print("importing account...")
         return Account.from_key(Account.decrypt(keyfile_json=keyfile,password=password))
     
-    def __createAccount() -> Account:
+    def __createAccount(self) -> Account:
         """
         @brief create account
         """
@@ -354,6 +355,13 @@ class EthereumServer(Server):
         genesis.setSealer(prefunded_accounts)
         return genesis
 
+    def __saveAccountKeystoreFile(self, account: EthAccount, saveDirectory: str):
+        saveDirectory = saveDirectory+'/{}/'.format(self.__id)
+        os.makedirs(saveDirectory, exist_ok=True)
+        f = open(saveDirectory+account.keystore_filename, "w")
+        f.write(account.keystore_content)
+        f.close()
+    
     def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
         @brief ETH server installation step.
@@ -573,7 +581,7 @@ class EthereumServer(Server):
         
         return self
     
-    def createPrefundedAccounts(self, balance: str = "0", number: int = 1, password: str = "admin") -> EthereumServer:
+    def createPrefundedAccounts(self, balance: str = "0", number: int = 1, password: str = "admin", saveDirectory:str = None) -> EthereumServer:
         """
         @brief Call this api to create new prefunded account with balance
 
@@ -582,11 +590,12 @@ class EthereumServer(Server):
         @param password the password of account for the Ethereum client
 
         @returns self
-        """  
-        for _ in range(number):
+        """
+        for _ in range(number):    
             account = EthAccount(balance,password)
+            if saveDirectory:
+                self.__saveAccountKeystoreFile(account=account, saveDirectory=saveDirectory)
             self.__prefunded_accounts.append(account)
-
         return self
     
     def getPrefundedAccounts(self) -> List[EthAccount]:
