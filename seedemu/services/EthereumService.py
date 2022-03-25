@@ -598,6 +598,13 @@ class EthereumServer(Server):
             self.__prefunded_accounts.append(account)
         return self
     
+    def importPrefundedAccount(self, keyfileDirectory:str, password:str = "admin", balance: str = "0") -> EthereumServer:
+        f = open(keyfileDirectory, "r")
+        keystoreFileContent = f.read()
+        account = EthAccount(alloc_balance=balance, password=password,keyfile=keystoreFileContent)
+        self.__prefunded_accounts.append(account)
+        return self
+    
     def getPrefundedAccounts(self) -> List[EthAccount]:
         """
         @brief Call this api to get the prefunded accounts for this node
