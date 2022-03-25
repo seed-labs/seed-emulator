@@ -9,10 +9,10 @@ emu = Emulator()
 # Load the pre-built component
 
 # (1) mini-internet-with-dns
-#emu.load('../../B02-mini-internet-with-dns/base_with_dns.bin')
+emu.load('../../B02-mini-internet-with-dns/base_with_dns.bin')
 
 # (2) nano-internet without dns
-emu.load('../../A20-nano-internet/base-component.bin')
+#emu.load('../../A20-nano-internet/base-component.bin')
 
 base:Base = emu.getLayer('Base')
 
@@ -21,7 +21,7 @@ dhcp = DHCPService()
 
 # Default DhcpIpRange : x.x.x.101 ~ x.x.x.120
 # Set DhcpIpRange : x.x.x.125 ~ x.x.x.140
-dhcp.install('dhcp-01').setIpRange(125, 140)
+dhcp.install('dhcp-01')
 
 # Customize the display name (for visualization purpose)
 emu.getVirtualNode('dhcp-01').setDisplayName('DHCP Server')
