@@ -156,6 +156,10 @@ DockerCompilerFileTemplates['compose_storage'] = """\
 
 DockerCompilerFileTemplates['compose_service_network'] = """\
             {netId}:
+{address}
+"""
+
+DockerCompilerFileTemplates['compose_service_network_address'] = """\
                 ipv4_address: {address}
 """
 
@@ -422,7 +426,7 @@ class Docker(Compiler):
         self.__disable_images = disabled
 
         return self
-
+    
     def setImageOverride(self, node:Node, image:DockerImage):
         asn = node.getAsn()
         name = node.getName()
@@ -770,6 +774,11 @@ class Docker(Compiler):
                     d_address, d_prefix.prefixlen, iface.getAddress(), iface.getNet().getPrefix().prefixlen,
                     node.getAsn(), node.getName()
                 ))
+
+            if address == None:
+                address = ""
+            else:
+                address = DockerCompilerFileTemplates['compose_service_network_address'].format(address = address)
 
             node_nets += DockerCompilerFileTemplates['compose_service_network'].format(
                 netId = real_netname,
