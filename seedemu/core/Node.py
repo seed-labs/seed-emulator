@@ -411,7 +411,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         elif address == "dhcp": 
             _addr = None
             self.addSoftware('isc-dhcp-client')
-            self.appendStartCommand('ip addr flush {iface}; dhclient;'.format(iface=net.getName()))
+            self.appendStartCommand('ip addr flush {iface}; dhclient {iface};'.format(iface=net.getName()))
         else: _addr = IPv4Address(address)
 
         _iface = Interface(net)
