@@ -410,8 +410,24 @@ class Node(Printable, Registrable, Configurable, Vertex):
         if address == "auto": _addr = net.assign(self.__role, self.__asn)
         elif address == "dhcp": 
             _addr = None
+            self.__name_servers = []
             self.addSoftware('isc-dhcp-client')
-            self.appendStartCommand('ip addr flush {iface}; dhclient;'.format(iface=net.getName()))
+            self.setFile('dhclient.sh', '''\
+            #!/bin/bash  
+            ip addr flush {iface}
+            err=$(dhclient {iface} 2>&1)
+
+            if [ -z "$err" ]
+            then
+                    echo "dhclient success"
+            else
+                    filename=$(echo $err | cut -d "'" -f 2)
+                    cp $filename /etc/resolv.conf
+                    rm $filename
+            fi                
+            '''.format(iface=net.getName()))
+            self.appendStartCommand('chmod +x dhclient.sh; ./dhclient.sh')
+            
         else: _addr = IPv4Address(address)
 
         _iface = Interface(net)
