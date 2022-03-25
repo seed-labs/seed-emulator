@@ -11,7 +11,6 @@ from typing import Dict, List
 from eth_account import Account
 import json
 from datetime import datetime, timezone
-from hexbytes import HexBytes
 
 ETHServerFileTemplates: Dict[str, str] = {}
 
@@ -40,10 +39,16 @@ while read -r node; do {
 '''
 
 class ConsensusMechanism(Enum):
+    '''
+    @brief Consensus Mechanism Enum. POA for Proof of Authority, POW for Proof Of Work
+    '''
     POA = 'poa'
     POW = 'pow'
 
 class Genesis():
+    '''
+    @brief Genesis manage class
+    '''
     __genesisPoA = '''{
     "config": {
         "chainId": 10,
@@ -113,6 +118,9 @@ class Genesis():
         self.__genesis = json.loads(self.__genesisPoA) if self.__consensusMechaism == ConsensusMechanism.POA else json.loads(self.__genesisPoW)
     
     def allocAccount(self, accounts:List[EthAccount]) -> Genesis:
+        '''
+        @brief alloce balance to account on genesis. It will update the genesis file
+        '''
         for account in accounts:
             self.__alllocAccount(account.address,account.alloc_balance)
         return self
@@ -154,17 +162,20 @@ class EthAccount():
     """
 
     address: str    # account address
-    key: HexBytes   # account private key
     keystore_content: str   # the content of keystore file
     keystore_filename:str   # the name of keystore file 
     alloc_balance: str
     account: Account
 
-    def __init__(self, alloc_balance:str = "0",password:str = "admin") -> None:
+    def __init__(self, alloc_balance:str = "0",password:str = "admin", keyfile: str = None) -> None:
         """
         @brief create a Ethereum Local Account when initialize
+
+        @param alloc_balance the balance need to be alloc
+        @param password encrypt password for creating new account, decrypt password for importing account
+        @param keyfile content of the keystore file. If this parameter is None, this function will create a new account, if not, it will import account from keyfile
         """
-        self.account = Account.create()
+        self.account = self.__importAccout(keyfile=keyfile, password=password) if keyfile else self.__createAccount()
         self.address = self.account.address
         self.alloc_balance = alloc_balance
         # encrypt private for Ethereum Client, like geth and generate the content of keystore file
@@ -172,7 +183,22 @@ class EthAccount():
         self.keystore_content = json.dumps(encrypted)
         # generate the name of the keyfile
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
-        self.keystore_filename = "UTC--"+datastr+"--"+encrypted["address"]    
+        self.keystore_filename = "UTC--"+datastr+"--"+encrypted["address"] 
+    
+    def __importAccout(self, keyfile: str, password = "admin") -> Account:
+        """
+        @brief import account from keyfile
+        """
+        print("importing account...")
+        return Account.from_key(Account.decrypt(keyfile_json=keyfile,password=password))
+    
+    def __createAccount() -> Account:
+        """
+        @brief create account
+        """
+        print("creating account...")
+        return  Account.create()
+
 
 class SmartContract():
 
