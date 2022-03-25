@@ -3,6 +3,8 @@
 # __author__ = 'Demon'
 
 from __future__ import annotations
+from enum import Enum
+from operator import ge
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
 
@@ -37,8 +39,13 @@ while read -r node; do {
 }; done < /tmp/eth-nodes
 '''
 
-genesisPoA = '''{
-      "config": {
+class ConsensusMechanism(Enum):
+    POA = 'poa'
+    POW = 'pow'
+
+class Genesis():
+    __genesisPoA = '''{
+    "config": {
         "chainId": 10,
         "homesteadBlock": 0,
         "eip150Block": 0,
@@ -50,54 +57,96 @@ genesisPoA = '''{
         "petersburgBlock": 0,
         "istanbulBlock": 0,
         "clique": {
-          "period": 15,
-          "epoch": 30000
+        "period": 15,
+        "epoch": 30000
         }
-      },
-      "nonce": "0x0",
-      "timestamp": "0x622a4e1a",
-      "extraData": "0x00000000000000000000000000000000000000000000000000000000000000001943c0d246e3d57ed3acdfa931f63349f9a851b637f10a73416468193d5a730734ac47526bb56745389a47b4903d06738a4693a40ead52a1d5b5f7c741b8c9b34a90f87d938867877d822264c9a615f848a3596372e19d5d8778112a48b1a786fccb300248c3af013add2ec54667648cf27a7ce9def5c45353cf63e8727766b189c3cfea4b910b2eb12982e1571479c79f371a6a34dc8569a127a9ce3957bdba59d8e23d77059d95c60a03c9f20aac16bafe791a5b53d933f7f27793e126393b3bb07734069b8efa61cd689c9b533b2ce3512b1b139f8e210d1e3dbd6e3fa93d866c3c75141a26de8844c5f2132b4c239f1246982d794cc6a4add27dd436dbf0432adfcba0b4069d6dd736c8eef80f83d2234cc32d69bc36a53ae2f0edac2b2321e2f487327846ae4a89e8ccb4f7fdd0357f91d52f6e3e0cb1e5f4ad36e0658fe8d3a0100d4e0e0fda62d590ce59afcde3a8b7f0f0a6b0dd80f000911a238f89d74b7c71648e3db1f762d02c18e929ed177da63769dc6bfae52fd442fad09769bcb5acb9434ccc52e9cbc14ed5ad44970000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      "gasLimit": "0x47b760",
-      "difficulty": "0x1",
-      "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-      "coinbase": "0x0000000000000000000000000000000000000000",
-      "alloc": {},
-      "number": "0x0",
-      "gasUsed": "0x0",
-      "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-      "baseFeePerGas": null
+    },
+    "nonce": "0x0",
+    "timestamp": "0x622a4e1a",
+    "extraData": "0x00000000000000000000000000000000000000000000000000000000000000001943c0d246e3d57ed3acdfa931f63349f9a851b637f10a73416468193d5a730734ac47526bb56745389a47b4903d06738a4693a40ead52a1d5b5f7c741b8c9b34a90f87d938867877d822264c9a615f848a3596372e19d5d8778112a48b1a786fccb300248c3af013add2ec54667648cf27a7ce9def5c45353cf63e8727766b189c3cfea4b910b2eb12982e1571479c79f371a6a34dc8569a127a9ce3957bdba59d8e23d77059d95c60a03c9f20aac16bafe791a5b53d933f7f27793e126393b3bb07734069b8efa61cd689c9b533b2ce3512b1b139f8e210d1e3dbd6e3fa93d866c3c75141a26de8844c5f2132b4c239f1246982d794cc6a4add27dd436dbf0432adfcba0b4069d6dd736c8eef80f83d2234cc32d69bc36a53ae2f0edac2b2321e2f487327846ae4a89e8ccb4f7fdd0357f91d52f6e3e0cb1e5f4ad36e0658fe8d3a0100d4e0e0fda62d590ce59afcde3a8b7f0f0a6b0dd80f000911a238f89d74b7c71648e3db1f762d02c18e929ed177da63769dc6bfae52fd442fad09769bcb5acb9434ccc52e9cbc14ed5ad44970000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "gasLimit": "0x47b760",
+    "difficulty": "0x1",
+    "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "coinbase": "0x0000000000000000000000000000000000000000",
+    "alloc": {
+    },
+    "number": "0x0",
+    "gasUsed": "0x0",
+    "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "baseFeePerGas": null
     }
     '''
 
-genesisPoW = '''{
-            "nonce":"0x0",
-            "timestamp":"0x621549f1",
-            "parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
-            "extraData":"0x",
-            "gasLimit":"0x80000000",
-            "difficulty":"0x0",
-            "mixhash":"0x0000000000000000000000000000000000000000000000000000000000000000",
-            "coinbase":"0x0000000000000000000000000000000000000000",
-            "number": "0x0",
-            "gasUsed": "0x0",
-            "baseFeePerGas": null,
-            "config": {
-                "chainId": 10,
-                "homesteadBlock": 0,
-                "eip150Block": 0,
-                "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "eip155Block": 0,
-                "eip158Block": 0,
-                "byzantiumBlock": 0,
-                "constantinopleBlock": 0,
-                "petersburgBlock": 0,
-                "istanbulBlock": 0,
-                "ethash": {}
-            },
-            "alloc": {}
-      }
+    __genesisPoW = '''{
+        "nonce":"0x0",
+        "timestamp":"0x621549f1",
+        "parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+        "extraData":"0x",
+        "gasLimit":"0x80000000",
+        "difficulty":"0x0",
+        "mixhash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+        "coinbase":"0x0000000000000000000000000000000000000000",
+        "number": "0x0",
+        "gasUsed": "0x0",
+        "baseFeePerGas": null,
+        "config": {
+            "chainId": 10,
+            "homesteadBlock": 0,
+            "eip150Block": 0,
+            "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "eip155Block": 0,
+            "eip158Block": 0,
+            "byzantiumBlock": 0,
+            "constantinopleBlock": 0,
+            "petersburgBlock": 0,
+            "istanbulBlock": 0,
+            "ethash": {
+            }
+        },
+        "alloc": {
+        }
     }
     '''
+    
+    def __init__(self, consensus:ConsensusMechanism) -> None:
+        self.__consensusMechaism = consensus
+        self.__genesis = json.loads(self.__genesisPoA) if self.__consensusMechaism == ConsensusMechanism.POA else json.loads(self.__genesisPoW)
+    
+    def allocAccount(self, accounts:List[EthAccount]) -> Genesis:
+        for account in accounts:
+            self.__alllocAccount(account.address,account.alloc_balance)
+        return self
+
+    def setSealer(self, accounts:List[EthAccount]) -> Genesis:
+        self.__replaceExtraData(self.__generateGenesisExtraData(accounts))
+        return self
+
+    def __generateGenesisExtraData(self, prefunded_accounts: List[EthAccount]) -> str:
+        '''
+        @brief Clique extradata field, used to define PoA validators/sealers must match the following format:
+        First part: 32bytes vanity, meaning whatever you want here since it’s expressed as an hex string (64 chars long as one byte is 2 chars), using puppeth tool, it's filled with 0s.
+        Second part: concatenated list of sealers/validators nodes addresses. Each address written as hex string without the “0x” prefix and must be 20 bytes long (40 chars long as one byte is 2 chars).
+        Third part: a 65 bytes signature suffix called proposer seal. It’s used to identify the proposer of the new validator in a block. Given we talk here about the genesis file, this seal has no reason to be because no specific node proposed it, it’s the base on which everyone agree before starting. So it must be filled with zeros (65 zeros). Puppeth tool puts 130 0s.
+        
+        @returns the fully generated extraData field for the genesis
+        '''
+        extraData = "0x" + "0" * 64
+        for account in prefunded_accounts:
+            extraData = extraData + account.address[2:]
+        
+        return extraData + "0" * 130
+    
+    def __alllocAccount(self, address:str, balance:str) -> None:
+        self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
+        
+    def __replaceExtraData(self, content:str) -> None:
+        self.__genesis["extraData"] = content
+
+    def __str__(self) -> str:
+        return json.dumps(self.__genesis)
+
+    def __repr__(self) -> str:
+        return json.dumps(self.__genesis)
 
 class EthAccount():
     """
@@ -203,7 +252,7 @@ class EthereumServer(Server):
     __enable_external_connection: bool
     __unlockAccounts: bool
     __prefunded_accounts: List[EthAccount]
-    __consensus_mechanism: str
+    __consensus_mechanism: ConsensusMechanism
 
     def __init__(self, id: int):
         """!
@@ -221,7 +270,7 @@ class EthereumServer(Server):
         self.__enable_external_connection = False
         self.__unlockAccounts = False
         self.__prefunded_accounts = []
-        self.__consensus_mechanism = "" # keep as empty to make sure the OR statement works in the install function
+        self.__consensus_mechanism = None # keep as empty to make sure the OR statement works in the install function
 
     def __createNewAccountCommand(self, node: Node):
         if self.__create_new_account > 0:
@@ -274,41 +323,10 @@ class EthereumServer(Server):
             smartContractCommand = self.__smart_contract.generateSmartContractCommand()
             node.appendStartCommand('(\n {})&'.format(smartContractCommand))
     
-    def __updateGenesis(self, genesis, prefunded_accounts):
-        genesisJson = json.loads(genesis)
-        if len(prefunded_accounts) > 0:
-            # These functions can be done inside the same loop
-            # Separated for clarity
-            genesisJson["alloc"] = self.__generateGenesisAlloc(prefunded_accounts)
-            genesisJson["extraData"] = self.__generateGenesisExtraData(prefunded_accounts)
-
-        return json.dumps(genesisJson)
-
-    def __generateGenesisAlloc(self, prefunded_accounts) -> dict:
-        '''
-        @brief creates prefunded accounts
-        '''
-        alloc = dict()
-        for account in prefunded_accounts:
-            alloc[account.address[2:]] = {"balance":"{}".format(account.alloc_balance)}
-       
-        return alloc
-
-    def __generateGenesisExtraData(self, prefunded_accounts) -> str:
-        '''
-        @brief Clique extradata field, used to define PoA validators/sealers must match the following format:
-        First part: 32bytes vanity, meaning whatever you want here since it’s expressed as an hex string (64 chars long as one byte is 2 chars), using puppeth tool, it's filled with 0s.
-        Second part: concatenated list of sealers/validators nodes addresses. Each address written as hex string without the “0x” prefix and must be 20 bytes long (40 chars long as one byte is 2 chars).
-        Third part: a 65 bytes signature suffix called proposer seal. It’s used to identify the proposer of the new validator in a block. Given we talk here about the genesis file, this seal has no reason to be because no specific node proposed it, it’s the base on which everyone agree before starting. So it must be filled with zeros (65 zeros). Puppeth tool puts 130 0s.
-        
-        @returns the fully generated extraData field for the genesis
-        '''
-        extraData = "0x" + "0" * 64
-        for account in prefunded_accounts:
-            extraData = extraData + account.address[2:]
-        
-        return extraData + "0" * 130
-
+    def __updateGenesis(self, genesis: Genesis, prefunded_accounts:List[EthAccount]) -> Genesis:
+        genesis.allocAccount(prefunded_accounts)
+        genesis.setSealer(prefunded_accounts)
+        return genesis
 
     def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
         """!
@@ -337,12 +355,12 @@ class EthereumServer(Server):
       
         # We can specify nodes to use a consensus different from the base one
         consensus = self.getConsensusMechanism() or eth.getBaseConsensusMechanism() 
-        genesis = genesisPoA if consensus == 'poa' else genesisPoW
+        genesis = Genesis(consensus=consensus)
 
         # update genesis.json
         genesis = self.__updateGenesis(genesis, eth.getAllPrefundedAccounts())
     
-        node.appendFile('/tmp/eth-genesis.json', genesis)
+        node.appendFile('/tmp/eth-genesis.json', str(genesis))
         node.appendFile('/tmp/eth-nodes', '\n'.join(eth.getBootNodes()[:]))
         node.appendFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
         node.appendFile('/tmp/eth-password', 'admin') 
@@ -414,7 +432,7 @@ class EthereumServer(Server):
             self.__addMinerStartCommand(node)
             self.__deploySmartContractCommand(node)
 
-    def setConsensusMechanism(self, consensus:str='pow') -> EthereumServer:
+    def setConsensusMechanism(self, consensus:ConsensusMechanism=ConsensusMechanism.POA) -> EthereumServer:
         '''
         @brief We can have more than one consensus mechanism at the same time
         The base consensus (poa) applies to all of the nodes by default except if this API is called
@@ -424,7 +442,7 @@ class EthereumServer(Server):
         
         return self
 
-    def getConsensusMechanism(self) -> str:
+    def getConsensusMechanism(self) -> ConsensusMechanism:
 
         return self.__consensus_mechanism
 
@@ -598,7 +616,7 @@ class EthereumService(Service):
     __save_path: str
     
     __manual_execution: bool
-    __base_consensus_mechanism: str
+    __base_consensus_mechanism: ConsensusMechanism
 
     def __init__(self, saveState: bool = False, manual: bool = False, statePath: str = './eth-states'):
         """!
@@ -626,7 +644,7 @@ class EthereumService(Service):
         self.__save_path = statePath
 
         self.__manual_execution = manual
-        self.__base_consensus_mechanism = 'poa' # set by default in case the API is not used
+        self.__base_consensus_mechanism = ConsensusMechanism.POA # set by default in case the API is not used
 
     def getName(self):
         return 'EthereumService'
@@ -655,7 +673,7 @@ class EthereumService(Service):
         """
         return self.__joined_prefunded_accounts
 
-    def setBaseConsensusMechanism(self, mechanism:str="poa") -> bool:
+    def setBaseConsensusMechanism(self, mechanism:ConsensusMechanism = ConsensusMechanism.POA) -> bool:
         """
         @brief select a consensus mechanism for the blockchain network. Default is Proof of authority
 
@@ -664,7 +682,7 @@ class EthereumService(Service):
         self.__base_consensus_mechanism = mechanism
         return True
 
-    def getBaseConsensusMechanism(self) -> str:
+    def getBaseConsensusMechanism(self) -> ConsensusMechanism:
         """
         @returns the consensus mechanism for the current network
         """
