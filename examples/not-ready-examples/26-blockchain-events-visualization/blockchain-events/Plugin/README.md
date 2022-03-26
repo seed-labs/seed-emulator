@@ -1,0 +1,11 @@
+## notes
+- This is the base for experimental visualization plugin
+- The blockchainPluginSimulator.js is an example of plugin which has a certain structure
+- The PluginInterface makes sure all of us follows the same structure
+- Each project will have to have its own plugin with the same structure to make sure we handle data the same way on the client map
+- The blockchain plugin should be a "merge" of both "blockchainPluginSimulator.js" and "index.js" in the upper directory which uses docker and web3 to connect to our emulator
+- In the `index.js` of the current directoy, you can see that I set an onMessage listener to listen to blockchain events. I also call a `run` function. The run initializes the plugin and tells `index.js` (or maybe the map) what are the configs of the plugin you are running such as the filters, colors, etc.
+- The reason they are separate is to make sure we attach the onMessage listener before asking for data. This way we solve the race condition and the possibility of not receiving the configs of the plugin itself.
+- Using the configs, we will know how to update the search bar of the UI on the map.
+- Once a command is executed (has to be relevant to one of the events we support and that we send in the config), we just need to attach the same event using the `attach` function
+- Once we are done, we need to `detach` it. This function is still not implemented
