@@ -9,3 +9,5 @@
 - Using the configs, we will know how to update the search bar of the UI on the map.
 - Once a command is executed (has to be relevant to one of the events we support and that we send in the config), we just need to attach the same event using the `attach` function
 - Once we are done, we need to `detach` it. This function is still not implemented
+- The data you need to send to the main listener being the onMessage listener have to be all of the ones we currently simulate in the `blockchainPluginSimulator` in addition to the ones in the `index.js` in the previous directly.
+- We have two types of data we can send: `settings` which is emitted from the plugin to the main onMessage handler to specify everything we need to know such as the filters/commands we can use, the colors, etc., and `data` which is the event you emit after actually gathering data from the emulator that need to be displayed.
