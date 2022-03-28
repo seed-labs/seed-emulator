@@ -12,7 +12,7 @@ emu = Emulator()
 # Note: right now we need to manually create the folder for each node (see README.md). 
 eth = EthereumService(saveState = True, manual=False)
 
-eth.setBaseConsensusMechanism("poa")
+eth.setBaseConsensusMechanism(ConsensusMechanism.POA)
 
 # Create Ethereum nodes (nodes in this layer are virtual)
 start=1
@@ -48,7 +48,7 @@ start = end
 end = start + 2
 for i in range(start, end):
     e = eth.install("eth{}".format(i))
-    e.setConsensusMechanism("pow")
+    e.setConsensusMechanism(ConsensusMechanism.POW)
     e.unlockAccounts().startMiner()
     emu.getVirtualNode("eth{}".format(i)).setDisplayName('Ethereum-pow-{}'.format(i))
 

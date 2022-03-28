@@ -9,7 +9,6 @@ import os
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
 
-from eth_account import Account
 import json
 from datetime import datetime, timezone
 
@@ -118,12 +117,12 @@ class Genesis():
         self.__consensusMechaism = consensus
         self.__genesis = json.loads(self.__genesisPoA) if self.__consensusMechaism == ConsensusMechanism.POA else json.loads(self.__genesisPoW)
     
-    def allocAccount(self, accounts:List[EthAccount]) -> Genesis:
+    def allocateBalance(self, accounts:List[EthAccount]) -> Genesis:
         '''
-        @brief alloce balance to account on genesis. It will update the genesis file
+        @brief allocate balance to account on genesis. It will update the genesis file
         '''
         for account in accounts:
-            self.__alllocAccount(account.address,account.alloc_balance)
+            self.__allocateBalance(account.address,account.alloc_balance)
         return self
 
     def setSealer(self, accounts:List[EthAccount]) -> Genesis:
@@ -145,7 +144,7 @@ class Genesis():
         
         return extraData + "0" * 130
     
-    def __alllocAccount(self, address:str, balance:str) -> None:
+    def __allocateBalance(self, address:str, balance:str) -> None:
         self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
         
     def __replaceExtraData(self, content:str) -> None:
@@ -166,7 +165,6 @@ class EthAccount():
     keystore_content: str   # the content of keystore file
     keystore_filename:str   # the name of keystore file 
     alloc_balance: str
-    account: Account
 
     def __init__(self, alloc_balance:str = "0",password:str = "admin", keyfile: str = None) -> None:
         """
@@ -176,29 +174,31 @@ class EthAccount():
         @param password encrypt password for creating new account, decrypt password for importing account
         @param keyfile content of the keystore file. If this parameter is None, this function will create a new account, if not, it will import account from keyfile
         """
+        from eth_account import Account
+        self.lib_eth_account = Account
         self.account = self.__importAccout(keyfile=keyfile, password=password) if keyfile else self.__createAccount()
         self.address = self.account.address
         self.alloc_balance = alloc_balance
         # encrypt private for Ethereum Client, like geth and generate the content of keystore file
-        encrypted = Account.encrypt(self.account.key, password=password)
+        encrypted = self.lib_eth_account.encrypt(self.account.key, password=password)
         self.keystore_content = json.dumps(encrypted)
         # generate the name of the keyfile
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
         self.keystore_filename = "UTC--"+datastr+"--"+encrypted["address"] 
     
-    def __importAccout(self, keyfile: str, password = "admin") -> Account:
+    def __importAccout(self, keyfile: str, password = "admin"):
         """
         @brief import account from keyfile
         """
         print("importing account...")
-        return Account.from_key(Account.decrypt(keyfile_json=keyfile,password=password))
+        return self.lib_eth_account.from_key(self.lib_eth_account.decrypt(keyfile_json=keyfile,password=password))
     
-    def __createAccount(self) -> Account:
+    def __createAccount(self):
         """
         @brief create account
         """
         print("creating account...")
-        return  Account.create()
+        return  self.lib_eth_account.create()
 
 
 class SmartContract():
@@ -351,7 +351,7 @@ class EthereumServer(Server):
             node.appendStartCommand('(\n {})&'.format(smartContractCommand))
     
     def __updateGenesis(self, genesis: Genesis, prefunded_accounts:List[EthAccount]) -> Genesis:
-        genesis.allocAccount(prefunded_accounts)
+        genesis.allocateBalance(prefunded_accounts)
         genesis.setSealer(prefunded_accounts)
         return genesis
 
