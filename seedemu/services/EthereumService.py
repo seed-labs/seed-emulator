@@ -118,12 +118,12 @@ class Genesis():
         self.__consensusMechaism = consensus
         self.__genesis = json.loads(self.__genesisPoA) if self.__consensusMechaism == ConsensusMechanism.POA else json.loads(self.__genesisPoW)
     
-    def allocAccount(self, accounts:List[EthAccount]) -> Genesis:
+    def allocateBalance(self, accounts:List[EthAccount]) -> Genesis:
         '''
-        @brief alloce balance to account on genesis. It will update the genesis file
+        @brief allocate balance to account on genesis. It will update the genesis file
         '''
         for account in accounts:
-            self.__alllocAccount(account.address,account.alloc_balance)
+            self.__allocateBalance(account.address,account.alloc_balance)
         return self
 
     def setSealer(self, accounts:List[EthAccount]) -> Genesis:
@@ -145,7 +145,7 @@ class Genesis():
         
         return extraData + "0" * 130
     
-    def __alllocAccount(self, address:str, balance:str) -> None:
+    def __allocateBalance(self, address:str, balance:str) -> None:
         self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
         
     def __replaceExtraData(self, content:str) -> None:
@@ -351,7 +351,7 @@ class EthereumServer(Server):
             node.appendStartCommand('(\n {})&'.format(smartContractCommand))
     
     def __updateGenesis(self, genesis: Genesis, prefunded_accounts:List[EthAccount]) -> Genesis:
-        genesis.allocAccount(prefunded_accounts)
+        genesis.allocateBalance(prefunded_accounts)
         genesis.setSealer(prefunded_accounts)
         return genesis
 
