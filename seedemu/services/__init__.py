@@ -3,7 +3,7 @@ from .BotnetService import BotnetClientService, BotnetClientServer, BotnetServic
 from .DomainRegistrarService import DomainRegistrarService, DomainRegistrarServer
 from .DomainNameService import DomainNameServer, DomainNameService, Zone
 from .TorService import TorService, TorServer, TorNodeType
-from .EthereumService import EthereumService, EthereumServer, SmartContract
+from .EthereumService import EthereumService, EthereumServer, SmartContract, ConsensusMechanism
 from .DomainNameCachingService import DomainNameCachingServer, DomainNameCachingService
 from .CymruIpOrigin import CymruIpOriginService, CymruIpOriginServer
 from .ReverseDomainNameService import ReverseDomainNameService, ReverseDomainNameServer
