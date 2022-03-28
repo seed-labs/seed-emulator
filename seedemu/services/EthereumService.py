@@ -9,7 +9,6 @@ import os
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
 
-from eth_account import Account
 import json
 from datetime import datetime, timezone
 
@@ -166,7 +165,6 @@ class EthAccount():
     keystore_content: str   # the content of keystore file
     keystore_filename:str   # the name of keystore file 
     alloc_balance: str
-    account: Account
 
     def __init__(self, alloc_balance:str = "0",password:str = "admin", keyfile: str = None) -> None:
         """
@@ -176,29 +174,31 @@ class EthAccount():
         @param password encrypt password for creating new account, decrypt password for importing account
         @param keyfile content of the keystore file. If this parameter is None, this function will create a new account, if not, it will import account from keyfile
         """
+        from eth_account import Account
+        self.lib_eth_account = Account
         self.account = self.__importAccout(keyfile=keyfile, password=password) if keyfile else self.__createAccount()
         self.address = self.account.address
         self.alloc_balance = alloc_balance
         # encrypt private for Ethereum Client, like geth and generate the content of keystore file
-        encrypted = Account.encrypt(self.account.key, password=password)
+        encrypted = self.lib_eth_account.encrypt(self.account.key, password=password)
         self.keystore_content = json.dumps(encrypted)
         # generate the name of the keyfile
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
         self.keystore_filename = "UTC--"+datastr+"--"+encrypted["address"] 
     
-    def __importAccout(self, keyfile: str, password = "admin") -> Account:
+    def __importAccout(self, keyfile: str, password = "admin"):
         """
         @brief import account from keyfile
         """
         print("importing account...")
-        return Account.from_key(Account.decrypt(keyfile_json=keyfile,password=password))
+        return self.lib_eth_account.from_key(self.lib_eth_account.decrypt(keyfile_json=keyfile,password=password))
     
-    def __createAccount(self) -> Account:
+    def __createAccount(self):
         """
         @brief create account
         """
         print("creating account...")
-        return  Account.create()
+        return  self.lib_eth_account.create()
 
 
 class SmartContract():
