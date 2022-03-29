@@ -6,6 +6,9 @@ diagram as below.
 ![](pics/diagram-1.jpg)
 
 
+## Physical Devices Installation Example
+![](pics/diagram-3.jpg)
+
 ## Step 1) Deploy a dhcp server
 ```
 # Create a DHCP server (virtual node).
@@ -30,17 +33,19 @@ as151.createHost('dhcp-server').joinNetwork('net0')
 
 ```
 usage: ./bridge.sh -i {interface} -a {ASN}
-
-ex) 
-./bridge.sh -i eth0 -a 151
 ```
 
-You can get the interface name through `ip addr` command.
-It will be easier to find it before running the emulator 
-as lots of virtual interfaces will be created once the emulator is up. 
+You can get the interface name through `ip -br addr | grep -vE 'veth|br'` command.
+This command will show you network interfaces name without `veth` or `br`.
+![](pics/diagram-2.jpg)
 
-## Step 3) Connect the wifi access point to the switch
 
+In this example, the physical interface name that I use is `enx00e04cadd82a`. And the ASN that I use is 151 as I installed the dhcp server at asn-151.
+So the command will be as below.
+
+` ./bridge.sh -i enx00e04cadd82a -a 151`
+
+Once the phyical network interface is bridged to the docker's bridge interface, DHCP server inside the emulator will assign the ip to the Wifi Accesspoint. Once you connect to the Wifi from the Phyisical Devices, the devices can connect (ping or visit webpages) to the hosts inside the emulators. 
 
 
 
