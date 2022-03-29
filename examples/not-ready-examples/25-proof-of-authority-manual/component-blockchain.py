@@ -20,10 +20,10 @@ end=31
 sealers=[]
 bootnodes=[]
 hport=8544
-cport=8549
+cport=8545
 
 # Currently the minimum amount to have to be a validator in proof of stake
-balance = 32 * pow(10, 8)
+balance = 32 * pow(10, 18)
 
 # Setting a third of nodes as bootnodes
 for i in range(start, end):
