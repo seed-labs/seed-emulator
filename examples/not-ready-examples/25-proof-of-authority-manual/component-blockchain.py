@@ -10,17 +10,18 @@ emu = Emulator()
 # manual: requires you to trigger the /tmp/run.sh bash files in each container to lunch the ethereum nodes
 # so the blockchain data will be preserved when containers are deleted.
 # Note: right now we need to manually create the folder for each node (see README.md). 
-eth = EthereumService(saveState = True, manual=True)
+eth = EthereumService(saveState = True, manual=False)
 
 eth.setBaseConsensusMechanism(ConsensusMechanism.POA)
 
 # Create Ethereum nodes (nodes in this layer are virtual)
 start=1
-end=31
+end=7
 sealers=[]
 bootnodes=[]
 hport=8544
-cport=8545
+#cport=8545 #will be http -> remix
+cport=8546 #will be ws -> visualization and subscriptions
 
 # Currently the minimum amount to have to be a validator in proof of stake
 balance = 32 * pow(10, 18)

@@ -436,7 +436,10 @@ class EthereumServer(Server):
         
         # Flags updated to accept external connections
         if self.externalConnectionEnabled():
-            whitelist_flags = "--http.corsdomain 'https://remix.ethereum.org' --http.api web3,eth,debug,personal,net"
+            apis = "web3,eth,debug,personal,net"
+            http_whitelist_domains = "*"
+            ws_whitelist_domains = "*"
+            whitelist_flags = "--http.corsdomain \"{}\" --http.api {} --ws --ws.addr 0.0.0.0 --ws.port {} --ws.api {} --ws.origins \"{}\" ".format(http_whitelist_domains, apis, 8546, apis, ws_whitelist_domains)
             common_flags = '{} {}'.format(common_flags, whitelist_flags)
         
         # Base geth command
