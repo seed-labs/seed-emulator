@@ -574,6 +574,7 @@ export class MapUi {
         }
 
         if(mode == 'blockchain'){
+            this._filterInput.placeholder = 'Please input the blockchain command...';
             this._filterModeTab.classList.add('inactive');
             this._searchModeTab.classList.add('inactive');
             this._blockchain.classList.remove('inactive');
