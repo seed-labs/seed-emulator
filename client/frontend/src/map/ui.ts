@@ -317,13 +317,14 @@ export class MapUi {
             this._updateFilterSuggestions(this._filterInput.value);
         };
 
-	this._blockchain.onclick = () => {
-		console.log('clicked on blockchain')
+	    this._blockchain.onclick = () => {
+		    console.log('clicked on blockchain');
+            this._setFilterMode('blockchain');
 		//const plugin = new Plugin(PluginEnum.blockchain)
 		//plugin.onMessage((data) => {
 		//	console.log("")
 		//})
-	}
+	    };
         
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
             if (shown) {
@@ -560,6 +561,7 @@ export class MapUi {
             this._filterInput.placeholder = 'Type a BPF expression to animate packet flows on the map...';
             this._filterModeTab.classList.remove('inactive');
             this._searchModeTab.classList.add('inactive');
+            this._blockchain.classList.add('inactive');
         }
 
         if (mode == 'node-search') {
@@ -567,7 +569,14 @@ export class MapUi {
             this._filterInput.placeholder = 'Search networks and nodes...';
             this._filterModeTab.classList.add('inactive');
             this._searchModeTab.classList.remove('inactive');
+            this._blockchain.classList.add('inactive');
             this._filterUpdateHandler(null, true);
+        }
+
+        if(mode == 'blockchain'){
+            this._filterModeTab.classList.add('inactive');
+            this._searchModeTab.classList.add('inactive');
+            this._blockchain.classList.remove('inactive');
         }
     }
 
