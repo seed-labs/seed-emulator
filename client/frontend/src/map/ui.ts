@@ -29,7 +29,8 @@ export interface MapUiConfiguration {
     filterControls: { // filter controls
         filterModeTabElementId: string, // element id of tab for setting mode to filter
         nodeSearchModeTabElementId: string, // element id of tab for setting mode to search
-        suggestionsElementId: string // element id of search suggestions
+        suggestionsElementId: string, // element id of search suggestions
+    	blockchainTabElementId: string
     },
     replayControls: { // replay controls
         recordButtonElementId: string, // element id of record button
@@ -47,7 +48,7 @@ export interface MapUiConfiguration {
     }
 }
 
-type FilterMode = 'node-search' | 'filter';
+type FilterMode = 'node-search' | 'filter' | 'blockchain';
 
 type SuggestionSelectionAction = 'up' | 'down' | 'clear';
 
@@ -81,6 +82,7 @@ export class MapUi {
     private _filterModeTab: HTMLElement;
     private _searchModeTab: HTMLElement;
     private _suggestions: HTMLElement;
+    private _blockchain: HTMLElement;
 
     private _logToggle: HTMLElement;
     private _logToggleChevron: HTMLElement;
@@ -171,6 +173,7 @@ export class MapUi {
         this._filterModeTab = document.getElementById(config.filterControls.filterModeTabElementId);
         this._searchModeTab = document.getElementById(config.filterControls.nodeSearchModeTabElementId);
         this._suggestions = document.getElementById(config.filterControls.suggestionsElementId);
+	this._blockchain = document.getElementById(config.filterControls.blockchainTabElementId);
 
         this._logToggle = document.getElementById(config.logControls.minimizeToggleElementId);
         this._logToggleChevron = document.getElementById(config.logControls.minimizeChevronElementId);
@@ -313,6 +316,14 @@ export class MapUi {
         this._filterInput.onclick = () => {
             this._updateFilterSuggestions(this._filterInput.value);
         };
+
+	this._blockchain.onclick = () => {
+		console.log('clicked on blockchain')
+		//const plugin = new Plugin(PluginEnum.blockchain)
+		//plugin.onMessage((data) => {
+		//	console.log("")
+		//})
+	}
         
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
             if (shown) {
