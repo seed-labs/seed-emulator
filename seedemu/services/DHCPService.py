@@ -46,12 +46,16 @@ class DHCPServer(Server):
     __node: Node
     __emulator: Emulator
     __name_servers: str
+    __dhcp_start: int
+    __dhcp_end: int
+    __is_range_changed: bool
 
     def __init__(self):
         """!
         @brief DHCPServer Constructor.
         """
         self.__name_servers = "#option domain-name-servers none;"
+        self.__is_range_changed = False
 
     def configure(self, node: Node, emulator:Emulator):
         """!
@@ -60,7 +64,16 @@ class DHCPServer(Server):
         self.__node = node
         self.__emulator = emulator
 
-                
+    def setIpRange(self, dhcpStart:int, dhcpEnd: int) -> DHCPServer:
+        """!
+        @brief set DHCP IP range
+        """
+        self.__dhcp_start = dhcpStart
+        self.__dhcp_end = dhcpEnd
+        self.__is_range_changed = True
+        
+        return self
+
     def install(self, node:Node):
         """!
         @brief Install the service
@@ -93,6 +106,9 @@ class DHCPServer(Server):
         router_address = rif.getAddress()
         broadcast_address = hnet.getPrefix().broadcast_address
         
+        if (self.__is_range_changed):
+            hnet.setDhcpIpRange(self.__dhcp_start, self.__dhcp_end)
+            
         ip_address_start, ip_address_end = hnet.getDhcpIpRange()
         ip_start = ip_end = '.'.join(subnet.split(".")[0:3])
         ip_start += "." + ip_address_start

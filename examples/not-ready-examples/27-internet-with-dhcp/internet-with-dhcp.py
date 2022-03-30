@@ -9,10 +9,10 @@ emu = Emulator()
 # Load the pre-built component
 
 # (1) mini-internet-with-dns
-#emu.load('../../B02-mini-internet-with-dns/base_with_dns.bin')
+emu.load('../../B02-mini-internet-with-dns/base_with_dns.bin')
 
 # (2) nano-internet without dns
-emu.load('../../A20-nano-internet/base-component.bin')
+#emu.load('../../A20-nano-internet/base-component.bin')
 
 base:Base = emu.getLayer('Base')
 

@@ -7,12 +7,13 @@ Help()
    # Display Help
    echo "Add description of the script functions here."
    echo
-   echo "Syntax: scriptTemplate [-i|h|a]"
+   echo "Syntax: bridge.sh [-i|h|a]"
+   echo "example: bridge.sh -i eth0 -a 150"
    echo "options:"
    echo "i     set physical interface name."
    echo "a     set asn where dhcp server installed."
    echo "h     Print this Help."
-   echo
+   echo ""
 }
 
 ############################################################
@@ -32,18 +33,38 @@ while getopts ":h:a:i:" option; do
       a) # Enter an ASN
          ASN=$OPTARG;;
       i) # Enter an Physicial interface card name
-	 iface=$OPTARG;;
+	      iface=$OPTARG;;
      \?) # Invalid option
          echo "Error: Invalid option"
          exit;;
    esac
 done
 
-a=$(ip addr show to 10.$ASN.0.1)
+if [ -z "$ASN" ]
+then 
+   echo "Error: option(-a) ASN needed"
+   exit
+fi
 
-b=$(echo $a | cut -d ':' -f 2)
+if [ -z "$iface" ]
+then
+   echo "Error: option(-i) iface name needed"
+   exit
+fi
 
+br=$(echo $(ip addr show to 10.$ASN.0.1) | cut -d ':' -f 2 )
 
-echo $b
-sudo ip link set $iface master $b
-echo "hello world!$ASN, $iface"
+if [ -z "$br" ]
+then
+   echo "Error: Invalid ASN"
+fi
+
+error=$(sudo ip link set $iface master $br 2>&1)
+
+if [ -z "$error" ]
+then
+   echo "$iface is bridged to $br successfully"
+else
+   echo $error
+fi
+
