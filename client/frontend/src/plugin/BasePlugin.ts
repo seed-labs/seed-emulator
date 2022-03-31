@@ -1,5 +1,6 @@
 import EventEmitter from '../../../common/EventEmitter';
-import PluginEnum from '../../../common/PluginEnum';
+import PluginEnum from './PluginEnum';
+import BlockchainPlugin from './BlockchainPlugin';
 
 const supported_plugins = [...Object.values(PluginEnum)];
 
@@ -21,8 +22,7 @@ class BasePlugin {
   run() {
     // find a way to run/fetch modules based type
     if (this.__type === PluginEnum.blockchain) {
-      //const plugin = require('./blockchainPluginSimulator');
-      //this.__plugin = new plugin();
+      this.__plugin = new BlockchainPlugin();
       console.log("created plugin of type blockchain")
     }
   }
@@ -31,11 +31,11 @@ class BasePlugin {
     this.__plugin.attach(`${filter}`, params);
   }
 
-  onMessage(callback:Function) {
+  onMessage(callback:(...args: any[]) => void) {
     this.__local_emitter.on('message', callback);
   }
 
-  onError(callback:Function) {
+  onError(callback:(...args: any[]) => void) {
     this.__local_emitter.on('error', callback);
   }
 
