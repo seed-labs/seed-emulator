@@ -296,7 +296,7 @@ class EthereumServer(Server):
         self.__create_new_account = 0
         self.__enable_external_connection = False
         self.__unlockAccounts = False
-        self.__prefunded_accounts = []
+        self.__prefunded_accounts = [EthAccount(alloc_balance=str(32 * pow(10, 18)), password="admin")] #create a prefunded account by default. It ensure POA network works when create/import prefunded account is not called.
         self.__consensus_mechanism = None # keep as empty to make sure the OR statement works in the install function
 
     def __createNewAccountCommand(self, node: Node):
