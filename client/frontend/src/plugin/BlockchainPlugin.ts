@@ -1,8 +1,9 @@
-const EventEmitter = require('../../../common/EventEmitter');
-const PluginEnum = require('../../../common/PluginEnum');
-const PluginInterface = require('./PluginInterface')
+import EventEmitter from '../../../common/EventEmitter';
+import PluginEnum from './PluginEnum';
+import PluginInterface from './PluginInterface';
 
 const supported_plugin_events = ['pendingTransactions', 'newBlockHeaders'];
+
 const event_type = {
   settings: 'settings',
   data: 'data',
@@ -11,31 +12,45 @@ const event_type = {
 const settings = {
   filters: [...supported_plugin_events],
   interactions: {}, //or array
-  decoration: [], // or object
+  decoration: Array(), // or object
 };
 
 // need to create an interface for all plugins to follow this one
-class BlockchainPlugin extends PluginInterface {
+class BlockchainPlugin implements PluginInterface {
+  private __message_event: string;
+  private __local_emitter: any;
+  private __accountsToContainerMap: object;
+  private __settings: {
+    filters: string[]; 
+    interactions: {}; //or array
+    decoration: any[];
+  };
+  
   constructor() {
-    super()
     this.__message_event = `message:${PluginEnum.blockchain}`;
     this.__local_emitter = EventEmitter.emitters[PluginEnum.blockchain];
     this.__settings = settings;
+    this.__accountsToContainerMap = {};
     this.emit({
       eventType: event_type.settings,
       data: this.__settings,
     });
+    this.__driver();
   }
 
-  emit(data) {
+  async __driver() {
+    
+  }
+
+  emit(data:object) {
     console.log(`FROM type ${PluginEnum.blockchain} - emitting data ${JSON.stringify(data)} to main handler`);
-    this.__local_emitter.emit(this.__message_event, JSON.stringify(data));
+    this.__local_emitter.emit(this.__message_event, data);
   }
 
-  attach(supportedEvent) {
+  attach(supportedEvent:string, params:string) {
     // attach supported event and emit data to
     console.log(`FROM type ${PluginEnum.blockchain} - attaching event ${supportedEvent}`);
-
+    console.log("parameters passed are: ", params)
     setInterval(() => {
       //Timestamp
       // Node ID
@@ -43,23 +58,28 @@ class BlockchainPlugin extends PluginInterface {
       // Event type
       // Type-specific data
       this.emit(this.structureData({
-        nodeId: '',
         path: {
-          source: 'source node',
-          destination: 'destination node'
+          sourceId: 'source node',
+          sourceName: 'source Name',
+          destinationId: 'destination node',
+          destinationName: 'destination Name'
         },
         data: {
-          event: supportedEvent,
-          contractId: '',
+          filter: supportedEvent,
+          contractAddress: '',
+          blockNumber: 8,
+          blockHash:'',
+          blockMiner:'',
+          sourceAddress:'',
+          destinationAddress:''
         },
       }));
     }, 1000);
   }
 
-  structureData(data = {}) {
+  structureData(data:any) {
     return {
       timestamp: Date.now(),
-      nodeId: data.nodeId,
       path: data.path,
       eventType: event_type.data,
       data: data.data,
@@ -68,4 +88,4 @@ class BlockchainPlugin extends PluginInterface {
   }
 }
 
-module.exports = BlockchainPlugin;
+export default BlockchainPlugin;

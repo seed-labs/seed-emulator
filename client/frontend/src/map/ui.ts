@@ -5,6 +5,9 @@ import { Completion } from '../common/completion';
 import { EmulatorNetwork, EmulatorNode } from '../common/types';
 import { WindowManager } from '../common/window-manager';
 import { DataSource, Edge, Vertex } from './datasource';
+import BasePlugin from '../plugin/BasePlugin'
+import PluginEnum from '../plugin/PluginEnum';
+
 
 /**
  * map UI element bindings.
@@ -83,6 +86,7 @@ export class MapUi {
     private _searchModeTab: HTMLElement;
     private _suggestions: HTMLElement;
     private _blockchain: HTMLElement;
+    private _currentPlugin: BasePlugin;
 
     private _logToggle: HTMLElement;
     private _logToggleChevron: HTMLElement;
@@ -320,10 +324,36 @@ export class MapUi {
 	    this._blockchain.onclick = () => {
 		    console.log('clicked on blockchain');
             this._setFilterMode('blockchain');
-		//const plugin = new Plugin(PluginEnum.blockchain)
-		//plugin.onMessage((data) => {
-		//	console.log("")
-		//})
+		    const plugin = new BasePlugin(PluginEnum.blockchain)
+		    plugin.onMessage((data) => {
+		    	console.log("Blockchain onMessage data received");
+                console.log(data)
+		    })
+            plugin.run();
+            this._currentPlugin = plugin;
+
+            this._filterInput.addEventListener("keypress",function(event){
+                var keyCode =(<HTMLInputElement> document.getElementById("filter"));
+
+                if(event.key == "Enter"){
+                    var cmdStr = new String(keyCode.value);
+                    var splitted = cmdStr.split(" ", 3); 
+                    console.log(splitted[0]);
+                    console.log(splitted[1]);
+                    console.log(splitted[2]);
+                    
+                    if(splitted[0] && splitted[0].toLocaleLowerCase() =="start"){
+                        plugin.attach(splitted[1],splitted[2]);
+                    }
+                    else if(splitted[0] && splitted[0].toLocaleLowerCase()=="stop"){
+                        //plugin.detach;
+                    }
+                    
+
+                }
+           })
+            
+            
 	    };
         
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
@@ -574,7 +604,9 @@ export class MapUi {
         }
 
         if(mode == 'blockchain'){
+                       
             this._filterInput.placeholder = 'Please input the blockchain command...';
+
             this._filterModeTab.classList.add('inactive');
             this._searchModeTab.classList.add('inactive');
             this._blockchain.classList.remove('inactive');

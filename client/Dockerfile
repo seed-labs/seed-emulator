@@ -10,5 +10,4 @@ WORKDIR /usr/src/app/backend
 RUN npm install
 RUN npm install -D typescript
 RUN ./node_modules/.bin/tsc
-WORKDIR /usr/src/app
 ENTRYPOINT ["sh", "/start.sh"]
