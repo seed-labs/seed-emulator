@@ -278,6 +278,7 @@ class EthereumServer(Server):
     __create_new_account: int
     __enable_external_connection: bool
     __unlockAccounts: bool
+    __geth_mode: str
     __prefunded_accounts: List[EthAccount]
     __consensus_mechanism: ConsensusMechanism
 
@@ -296,6 +297,7 @@ class EthereumServer(Server):
         self.__create_new_account = 0
         self.__enable_external_connection = False
         self.__unlockAccounts = False
+        self.__geth_mode = None
         self.__prefunded_accounts = []
         self.__consensus_mechanism = None # keep as empty to make sure the OR statement works in the install function
 
@@ -338,11 +340,17 @@ class EthereumServer(Server):
             
             @param ethereum node on which we want to deploy the changes.
             
-            """   
-            command = " sleep 20\n\
-            geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
-            geth --exec 'miner.start(1)' attach \n\
-            "
+            """ 
+            if self.getMode() == "light":
+                command = " sleep 20\n\
+                geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
+                geth --exec 'miner.start(1)' attach \n\
+                "  
+            else:
+                command = " sleep 20\n\
+                geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
+                geth --exec 'miner.start(5)' attach \n\
+                "
             node.appendStartCommand('(\n {})&'.format(command))
 
     def __deploySmartContractCommand(self, node: Node):
@@ -433,7 +441,10 @@ class EthereumServer(Server):
         # Base common geth flags
         base_port = 30301 + self.__id
         common_flags = '{} --identity="NODE_{}" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port {} --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id, base_port,  self.getGethHttpPort())
-        
+        # performance tunning flags
+        if self.getMode() == "light":
+            optimization_flags = '--cache 512 --cache.database 25 --cache.gc 15 --cache.noprefetch'
+            common_flags = '{} {}'.format(common_flags, optimization_flags)
         # Flags updated to accept external connections
         if self.externalConnectionEnabled():
             apis = "web3,eth,debug,personal,net"
@@ -536,6 +547,27 @@ class EthereumServer(Server):
         """
 
         return self.__bootnode_http_port
+    
+    def setMode(self, mode: str) -> EthereumServer:
+        """!
+        @brief set the mode of geth.
+
+        @param mode mode
+
+        @returns self, for chaining API calls.
+        """
+
+        self.__geth_mode = mode
+
+        return self
+
+    def getMode(self) -> str:
+        """!
+        @brief get the mode of geth.
+
+        @returns mode
+        """
+        return self.__geth_mode
 
     def setGethHttpPort(self, port: int) -> EthereumServer:
         """!
