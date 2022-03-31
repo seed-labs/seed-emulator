@@ -331,6 +331,29 @@ export class MapUi {
 		    })
             plugin.run();
             this._currentPlugin = plugin;
+
+            this._filterInput.addEventListener("keypress",function(event){
+                var keyCode =(<HTMLInputElement> document.getElementById("filter"));
+
+                if(event.key == "Enter"){
+                    var cmdStr = new String(keyCode.value);
+                    var splitted = cmdStr.split(" ", 3); 
+                    console.log(splitted[0]);
+                    console.log(splitted[1]);
+                    console.log(splitted[2]);
+                    
+                    if(splitted[0] =="start" || splitted[0] == "Start"){
+                        plugin.attach(splitted[1],splitted[2]);
+                    }
+                    else if(splitted[0]=="end"){
+                        //plugin.detach;
+                    }
+                    
+
+                }
+           })
+            
+            
 	    };
         
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
@@ -581,6 +604,7 @@ export class MapUi {
         }
 
         if(mode == 'blockchain'){
+                       
             this._filterInput.placeholder = 'Please input the blockchain command...';
 
             this._filterModeTab.classList.add('inactive');
