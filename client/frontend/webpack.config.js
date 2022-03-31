@@ -1,4 +1,5 @@
 const path = require('path');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 let config = {
     entry: {
@@ -33,6 +34,9 @@ let config = {
     resolve: {
         extensions: ['.ts', '.js'],
     },
+    plugins: [
+        new NodePolyfillPlugin()
+    ],
     output: {
         filename: '[name].js',
         path: path.resolve(__dirname, 'public'),
