@@ -86,6 +86,7 @@ export class MapUi {
     private _searchModeTab: HTMLElement;
     private _suggestions: HTMLElement;
     private _blockchain: HTMLElement;
+    private _currentPlugin: BasePlugin;
 
     private _logToggle: HTMLElement;
     private _logToggleChevron: HTMLElement;
@@ -329,6 +330,7 @@ export class MapUi {
                 console.log(data)
 		    })
             plugin.run();
+            this._currentPlugin = plugin;
 	    };
         
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
