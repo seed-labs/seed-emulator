@@ -1,13 +1,14 @@
-import Emitter from 'event-emitter';
+import {EventEmitter as Emitter} from 'events';
+// import PluginEnum from './PluginEnum';
 
 interface Emitters {
-  [key: number]: any
+  [key:number]: Emitter
 }
 
 class EventEmitter {
-  static emitters:Emitters = {};
+  static emitters:Emitters = {}
   private __type: number;
-  private __local_emitter: typeof Emitter;
+  private __local_emitter: Emitter;
 
   constructor(type:number) {
     this.__type = type;
@@ -15,15 +16,15 @@ class EventEmitter {
     EventEmitter.emitters[type] = this.__local_emitter;
   }
 
-  on(event:string, callback:Function) {
+  on(event:string, callback:(...args: any[]) => void) {
     this.__local_emitter.on(`${event}:${this.__type}`, callback);
   }
 
-  once(event:string, callback:Function) {
+  once(event:string, callback:(...args: any[]) => void) {
     this.__local_emitter.once(`${event}:${this.__type}`, callback);
   }
 
-  off(event:string, callback:Function) {
+  off(event:string, callback:(...args: any[]) => void) {
     this.__local_emitter.off(`${event}:${this.__type}`, callback);
   }
 
