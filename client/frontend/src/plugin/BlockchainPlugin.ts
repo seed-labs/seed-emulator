@@ -19,6 +19,7 @@ const settings = {
 class BlockchainPlugin implements PluginInterface {
   private __message_event: string;
   private __local_emitter: any;
+  private __accountsToContainerMap: object;
   private __settings: {
     filters: string[]; 
     interactions: {}; //or array
@@ -29,10 +30,16 @@ class BlockchainPlugin implements PluginInterface {
     this.__message_event = `message:${PluginEnum.blockchain}`;
     this.__local_emitter = EventEmitter.emitters[PluginEnum.blockchain];
     this.__settings = settings;
+    this.__accountsToContainerMap = {};
     this.emit({
       eventType: event_type.settings,
       data: this.__settings,
     });
+    this.__driver();
+  }
+
+  async __driver() {
+    
   }
 
   emit(data:object) {
@@ -51,14 +58,20 @@ class BlockchainPlugin implements PluginInterface {
       // Event type
       // Type-specific data
       this.emit(this.structureData({
-        nodeId: '',
         path: {
-          source: 'source node',
-          destination: 'destination node'
+          sourceId: 'source node',
+          sourceName: 'source Name',
+          destinationId: 'destination node',
+          destinationName: 'destination Name'
         },
         data: {
-          event: supportedEvent,
-          contractId: '',
+          filter: supportedEvent,
+          contractAddress: '',
+          blockNumber: 8,
+          blockHash:'',
+          blockMiner:'',
+          sourceAddress:'',
+          destinationAddress:''
         },
       }));
     }, 1000);
@@ -67,7 +80,6 @@ class BlockchainPlugin implements PluginInterface {
   structureData(data:any) {
     return {
       timestamp: Date.now(),
-      nodeId: data.nodeId,
       path: data.path,
       eventType: event_type.data,
       data: data.data,

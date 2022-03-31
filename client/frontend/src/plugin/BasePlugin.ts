@@ -28,8 +28,7 @@ class BasePlugin {
   }
 
   attach(filter:string, params:string) {
-    //this.__plugin.attach(`${filter}`, params);
-    console.log("attach begined");
+    this.__plugin.attach(`${filter}`, params);
   }
 
   onMessage(callback:(...args: any[]) => void) {

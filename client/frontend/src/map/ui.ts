@@ -342,10 +342,10 @@ export class MapUi {
                     console.log(splitted[1]);
                     console.log(splitted[2]);
                     
-                    if(splitted[0] =="start" || splitted[0] == "Start"){
+                    if(splitted[0] && splitted[0].toLocaleLowerCase() =="start"){
                         plugin.attach(splitted[1],splitted[2]);
                     }
-                    else if(splitted[0]=="end"){
+                    else if(splitted[0] && splitted[0].toLocaleLowerCase()=="stop"){
                         //plugin.detach;
                     }
                     
