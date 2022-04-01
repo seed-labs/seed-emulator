@@ -749,6 +749,13 @@ class EthereumService(Service):
 
         if self.__save_state:
             node.addSharedFolder('/root/.ethereum', '{}/{}'.format(self.__save_path, server.getId()))
+    
+    def install(self, vnode: str) -> EthereumServer:
+        """!
+        @brief Override function of Sevice.install
+        Here is downcasting the return for IntelliSense :)
+        """
+        return super().install(vnode)
 
     def _doInstall(self, node: Node, server: EthereumServer):
         self._log('installing eth on as{}/{}...'.format(node.getAsn(), node.getName()))
