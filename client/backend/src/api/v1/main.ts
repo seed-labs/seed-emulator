@@ -5,6 +5,7 @@ import { SeedContainerInfo, Emulator, SeedNetInfo } from '../../utils/seedemu-me
 import { Sniffer } from '../../utils/sniffer';
 import WebSocket from 'ws';
 import { Controller } from '../../utils/controller';
+import BasePlugin from '../../plugin/BasePlugin'
 
 const router = express.Router();
 const docker = new dockerode();
@@ -41,6 +42,13 @@ sniffer.getLoggers().forEach(logger => logger.setSettings({
 controller.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'warn'
 }));
+
+router.post('/plugin/:type', async function(req, res, next) {
+	const type = parseInt(req.params.type)
+	console.log(`Running type ${type}`)
+	next()
+})
+
 
 router.get('/network', async function(req, res, next) {
     var networks = await docker.listNetworks();
