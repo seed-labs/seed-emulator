@@ -28,7 +28,11 @@ class BasePlugin {
   }
 
   attach(filter:string, params:string) {
-    this.__plugin.attach(`${filter}`, params);
+    this.__plugin.attach(filter, params);
+  }
+
+  detach(filter:string) {
+   this.__plugin.detach(filter);
   }
 
   onMessage(callback:(...args: any[]) => void) {

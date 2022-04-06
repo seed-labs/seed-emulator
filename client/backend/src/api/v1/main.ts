@@ -91,7 +91,7 @@ router.post('/plugin/:type/command', async (req, res, next) => {
       			break;
    		}
    		case "stop": {
-      			//plugin.detach(subscription, params)
+      			plugin.detach(subscription)
       			break;
    		}
    		default: {
