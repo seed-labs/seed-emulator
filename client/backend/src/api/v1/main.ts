@@ -43,16 +43,6 @@ controller.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'warn'
 }));
 
-// Testing, need to be removed
-router.get('/plugin/:type', async function(req, res, next) {
-	const type = parseInt(req.params.type)
-	console.log(`Running type ${type}`)
-	res.json({
-		rawi: true
-	})
-	next()
-})
-
 const currently_running_types: number[] = [];
 const currently_running_plugins: {[key: number]: BasePlugin} = {};
 
@@ -69,7 +59,7 @@ router.post('/plugin/:type/init', async (req, res, next) => {
 	plugin.onMessage(function(data) {
 		console.log(data)
 	})
-	plugin.run()
+	plugin.run(await getContainers())
 	console.log(`Done initializing plugin of type ${type}`)	
 	next();
 })

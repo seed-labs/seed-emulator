@@ -1,6 +1,7 @@
 import EventEmitter from './EventEmitter';
 import PluginEnum from './PluginEnum';
 import BlockchainPlugin from './BlockchainPlugin';
+import { SeedContainerInfo } from '../utils/seedemu-meta';
 
 const supported_plugins = [...Object.values(PluginEnum)];
 
@@ -19,10 +20,10 @@ class BasePlugin {
     this.__local_emitter = new EventEmitter(type);
   }
 
-  run() {
+  run(containers?:SeedContainerInfo[]) {
     // find a way to run/fetch modules based type
     if (this.__type === PluginEnum.blockchain) {
-      this.__plugin = new BlockchainPlugin();
+      this.__plugin = new BlockchainPlugin(containers);
       console.log("created plugin of type blockchain")
     }
   }
