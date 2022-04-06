@@ -11,8 +11,6 @@ const event_type = {
 
 const settings = {
   filters: [...supported_plugin_events],
-  interactions: {}, //or array
-  decoration: Array(), // or object
 };
 
 // need to create an interface for all plugins to follow this one
