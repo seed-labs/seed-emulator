@@ -19,9 +19,7 @@ class BlockchainPlugin implements PluginInterface {
   private __local_emitter: any;
   private __accountsToContainerMap: object;
   private __settings: {
-    filters: string[]; 
-    interactions: {}; //or array
-    decoration: any[];
+    filters: string[];
   };
   
   constructor() {
@@ -33,11 +31,6 @@ class BlockchainPlugin implements PluginInterface {
       eventType: event_type.settings,
       data: this.__settings,
     });
-    this.__driver();
-  }
-
-  async __driver() {
-    
   }
 
   emit(data:object) {
@@ -50,38 +43,31 @@ class BlockchainPlugin implements PluginInterface {
     console.log(`FROM type ${PluginEnum.blockchain} - attaching event ${supportedEvent}`);
     console.log("parameters passed are: ", params)
     setInterval(() => {
-      //Timestamp
-      // Node ID
-      // Thread ID: multiple threads can be visualized using different colors
-      // Event type
-      // Type-specific data
       this.emit(this.structureData({
-        path: {
-          sourceId: 'source node',
-          sourceName: 'source Name',
-          destinationId: 'destination node',
-          destinationName: 'destination Name'
-        },
+        containerId: "", 
         data: {
-          filter: supportedEvent,
-          contractAddress: '',
-          blockNumber: 8,
-          blockHash:'',
-          blockMiner:'',
-          sourceAddress:'',
-          destinationAddress:''
+          color: {
+	 	background: "red",
+	        border: "red"	
+	  },
+	  borderWidth: 1,
+	  shape: "triangle"
         },
       }));
     }, 1000);
   }
 
+
+  detach(supportedEvent:string) {
+	console.log(`About to detach event ${supportedEvent}`)
+  }
+
   structureData(data:any) {
     return {
-      timestamp: Date.now(),
-      path: data.path,
       eventType: event_type.data,
+      timestamp: Date.now(),
+      containerId: data.containerId,
       data: data.data,
-      //action type -> flash, highlight
     };
   }
 }
