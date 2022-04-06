@@ -43,9 +43,62 @@ controller.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'warn'
 }));
 
-router.post('/plugin/:type', async function(req, res, next) {
+// Testing, need to be removed
+router.get('/plugin/:type', async function(req, res, next) {
 	const type = parseInt(req.params.type)
 	console.log(`Running type ${type}`)
+	res.json({
+		rawi: true
+	})
+	next()
+})
+
+const currently_running_types: number[] = [];
+const currently_running_plugins: {[key: number]: BasePlugin} = {};
+
+router.post('/plugin/:type/init', async (req, res, next) => {
+	const type = parseInt(req.params.type);
+	if(currently_running_types.includes(type)) {
+		console.log(`Plugin of type ${type} is already running`);
+		next();
+		return;
+	}
+	currently_running_types.push(type);
+	const plugin = new BasePlugin(type);
+	currently_running_plugins[type] = plugin;
+	plugin.onMessage(function(data) {
+		console.log(data)
+	})
+	plugin.run()
+	console.log(`Done initializing plugin of type ${type}`)	
+	next();
+})
+
+router.post('/plugin/:type/command', async (req, res, next) => {
+	const type = parseInt(req.params.type);
+	if(!currently_running_types.includes(type)) {
+		console.log(`Cannot run command with uninitialized plugin of type ${type}`)
+		next();
+		return;
+	}
+	
+	const [command, subscription, params] = req.body.command.split(" ");
+	const plugin = currently_running_plugins[type];
+
+	switch(command) {
+   		case "start": {
+      			plugin.attach(subscription, params)
+      			break;
+   		}
+   		case "stop": {
+      			//plugin.detach(subscription, params)
+      			break;
+   		}
+   		default: {
+      			break;
+		}
+	}
+
 	next()
 })
 
