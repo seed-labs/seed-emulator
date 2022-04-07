@@ -31,7 +31,7 @@ class BlockchainPlugin implements PluginInterface {
     this.__local_emitter = EventEmitter.emitters[PluginEnum.blockchain];
     this.__settings = settings;
     this.__accountsToContainerMap = {};
-    this.__containers = containers || [];
+    this.__containers = this.__setContainers(containers);
     this.__driver()
   }
 
@@ -87,9 +87,10 @@ class BlockchainPlugin implements PluginInterface {
 */
   }
 
-  setContainers(containers:SeedContainerInfo[]) {
-	this.__containers = containers.filter(container => container.Names[0].includes('Ethereum'))
-  	console.log(this.__containers.length)
+  __setContainers(containers:SeedContainerInfo[] = []) {
+	const c = containers.filter(container => container.Names[0].includes('Ethereum'))
+  	console.log(c.length)
+  	return c
   }
 
   emit(data:object) {
