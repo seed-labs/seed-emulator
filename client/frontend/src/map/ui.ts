@@ -319,7 +319,6 @@ export class MapUi {
             this._updateFilterSuggestions(this._filterInput.value);
         };
 
-        //@todo make sure to handle muliple clicks
 	this._blockchain.onclick = async() => {
            	this._setFilterMode('blockchain');   
 		// send post request
