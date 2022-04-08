@@ -46,6 +46,24 @@ controller.getLoggers().forEach(logger => logger.setSettings({
 const currently_running_types: number[] = [];
 const currently_running_plugins: {[key: number]: BasePlugin} = {};
 
+router.ws('/blockchain', function(ws, req, next) {
+    const type = 1;
+    if(!currently_running_types.includes(type)) {
+		console.log(`Cannot run command with uninitialized plugin of type ${type}`)
+		next();
+		return;
+	}
+    const plugin = currently_running_plugins[type];
+
+    plugin.onMessage(function(data){
+
+        ws.send(JSON.stringify(data));
+
+    })
+
+    next();
+});
+
 router.post('/plugin/:type/init', async (req, res, next) => {
 	const type = parseInt(req.params.type);
 	if(currently_running_types.includes(type)) {
@@ -57,7 +75,7 @@ router.post('/plugin/:type/init', async (req, res, next) => {
 	const plugin = new BasePlugin(type);
 	currently_running_plugins[type] = plugin;
 	plugin.onMessage(function(data) {
-		console.log(data)
+        console.log(data);
 	})
 	plugin.run(await getContainers())
 	console.log(`Done initializing plugin of type ${type}`)	

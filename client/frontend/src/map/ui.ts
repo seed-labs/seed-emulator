@@ -5,7 +5,7 @@ import { Completion } from '../common/completion';
 import { EmulatorNetwork, EmulatorNode } from '../common/types';
 import { WindowManager } from '../common/window-manager';
 import { DataSource, Edge, Vertex } from './datasource';
-import { data } from 'jquery';
+import { data, event } from 'jquery';
 
 
 /**
@@ -323,6 +323,14 @@ export class MapUi {
 	    this._blockchain.onclick = () => {
 		    console.log('clicked on blockchain');
             this._setFilterMode('blockchain');
+
+            const ws = new WebSocket('ws://localhost:8080/api/v1/blockchain');
+            ws.onopen = ()=>{
+                console.log("ws client connect");
+            };
+            ws.onmessage = (event)=>{
+                console.log(event.data)
+            }
 
             //get the user input
             this._filterInput.addEventListener("keypress",function(event){
