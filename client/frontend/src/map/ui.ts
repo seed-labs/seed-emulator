@@ -5,8 +5,7 @@ import { Completion } from '../common/completion';
 import { EmulatorNetwork, EmulatorNode } from '../common/types';
 import { WindowManager } from '../common/window-manager';
 import { DataSource, Edge, Vertex } from './datasource';
-import BasePlugin from '../plugin/BasePlugin'
-import PluginEnum from '../plugin/PluginEnum';
+import { data, event } from 'jquery';
 
 
 /**
@@ -86,7 +85,6 @@ export class MapUi {
     private _searchModeTab: HTMLElement;
     private _suggestions: HTMLElement;
     private _blockchain: HTMLElement;
-    private _currentPlugin: BasePlugin;
 
     private _logToggle: HTMLElement;
     private _logToggleChevron: HTMLElement;
@@ -321,17 +319,20 @@ export class MapUi {
             this._updateFilterSuggestions(this._filterInput.value);
         };
 
+        //@todo make sure to handle muliple clicks
 	    this._blockchain.onclick = () => {
 		    console.log('clicked on blockchain');
             this._setFilterMode('blockchain');
-		    const plugin = new BasePlugin(PluginEnum.blockchain)
-		    plugin.onMessage((data) => {
-		    	console.log("Blockchain onMessage data received");
-                console.log(data)
-		    })
-            plugin.run();
-            this._currentPlugin = plugin;
 
+            const ws = new WebSocket('ws://localhost:8080/api/v1/blockchain');
+            ws.onopen = ()=>{
+                console.log("ws client connect");
+            };
+            ws.onmessage = (event)=>{
+                console.log(event.data)
+            }
+
+            //get the user input
             this._filterInput.addEventListener("keypress",function(event){
                 var keyCode =(<HTMLInputElement> document.getElementById("filter"));
 
@@ -341,15 +342,6 @@ export class MapUi {
                     console.log(splitted[0]);
                     console.log(splitted[1]);
                     console.log(splitted[2]);
-                    
-                    if(splitted[0] && splitted[0].toLocaleLowerCase() =="start"){
-                        plugin.attach(splitted[1],splitted[2]);
-                    }
-                    else if(splitted[0] && splitted[0].toLocaleLowerCase()=="stop"){
-                        //plugin.detach;
-                    }
-                    
-
                 }
            })
             
