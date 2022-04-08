@@ -43,69 +43,74 @@ controller.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'warn'
 }));
 
-const currently_running_types: number[] = [];
-const currently_running_plugins: {[key: number]: BasePlugin} = {};
+// used to be able to run many plugins simultaneously
+const instantiated_types: number[] = [];
+const instantiated_plugins: {[key: number]: BasePlugin} = {};
 
-router.ws('/blockchain', function(ws, req, next) {
-    const type = 1;
-    if(!currently_running_types.includes(type)) {
-		console.log(`Cannot run command with uninitialized plugin of type ${type}`)
-		next();
-		return;
-	}
-    const plugin = currently_running_plugins[type];
-
-    plugin.onMessage(function(data){
-
-        ws.send(JSON.stringify(data));
-
-    })
-
-    next();
-});
 
 router.post('/plugin/:type/init', async (req, res, next) => {
 	const type = parseInt(req.params.type);
-	if(currently_running_types.includes(type)) {
+	if(instantiated_types.includes(type)) {
 		console.log(`Plugin of type ${type} is already running`);
 		next();
 		return;
 	}
-	currently_running_types.push(type);
-	const plugin = new BasePlugin(type);
-	currently_running_plugins[type] = plugin;
-	plugin.onMessage(function(data) {
-        console.log(data);
-	})
-	plugin.run(await getContainers())
-	console.log(`Done initializing plugin of type ${type}`)	
+	instantiated_types.push(type);
+	instantiated_plugins[type] = new BasePlugin(type);
+	console.log(`Done creating plugin of type ${type}`)	
 	next();
 })
 
-router.post('/plugin/:type/command', async (req, res, next) => {
+// Used to be able to run many plugins simultaneously
+const running_listeners: number[] = []
+const running_ws: {[key: number]: WebSocket} = {};
+
+router.ws('/plugin/:type/command/', (ws, req, next) => {
+	
 	const type = parseInt(req.params.type);
-	if(!currently_running_types.includes(type)) {
+	if(running_ws[type]) {
+		console.log(`Clearing previous socket for type ${type}`)
+		running_ws[type].close();
+	}
+	running_ws[type] = ws
+
+	if(!instantiated_types.includes(type)) {
 		console.log(`Cannot run command with uninitialized plugin of type ${type}`)
 		next();
 		return;
 	}
-	
-	const [command, subscription, params] = req.body.command.split(" ");
-	const plugin = currently_running_plugins[type];
 
-	switch(command) {
-   		case "start": {
-      			plugin.attach(subscription, params)
-      			break;
-   		}
-   		case "stop": {
-      			plugin.detach(subscription)
-      			break;
-   		}
-   		default: {
-      			break;
+	// triggered when the user enters a command in the map
+	running_ws[type].on('message', async (message) => {
+		const data = message.toString()
+		// Need to handle json.parse with try and catch!	
+		const [command, subscription, params] =  JSON.parse(data).command.split(" ");
+
+		if(!running_listeners.includes(type)) {
+			instantiated_plugins[type].onMessage(function(data) {
+				// readyState 1 means open
+				if(running_ws[type].readyState == 1) {
+					running_ws[type].send(JSON.stringify(data))
+				}
+			})
+			instantiated_plugins[type].run(await getContainers())
+			running_listeners.push(type)
 		}
-	}
+	
+		switch(command) {
+   			case "start": {
+      				instantiated_plugins[type].attach(subscription, params)
+      				break;
+   			}
+   			case "stop": {
+      				instantiated_plugins[type].detach(subscription)
+      				break;
+   			}
+   			default: {
+      				break;
+			}
+		}
+	})
 
 	next()
 })

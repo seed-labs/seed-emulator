@@ -320,33 +320,29 @@ export class MapUi {
         };
 
         //@todo make sure to handle muliple clicks
-	    this._blockchain.onclick = () => {
-		    console.log('clicked on blockchain');
-            this._setFilterMode('blockchain');
+	this._blockchain.onclick = async() => {
+           	this._setFilterMode('blockchain');   
+		// send post request
+		const type = 1 // 1 represents blockchain in PluginEnum.ts
+		await this._datasource.initPlugin(type)
+		const url = `ws://localhost:8080/api/v1/plugin/${type}/command/`
+                const ws = new WebSocket(url)
+            	ws.onmessage = (event) => {
+			console.log("==== DATA FROM SOCKET ====\n", event.data)
+		}
 
-            const ws = new WebSocket('ws://localhost:8080/api/v1/blockchain');
-            ws.onopen = ()=>{
-                console.log("ws client connect");
-            };
-            ws.onmessage = (event)=>{
-                console.log(event.data)
-            }
+		this._filterInput.addEventListener("keypress",function(event){
+                	const keyCode =(<HTMLInputElement> document.getElementById("filter"));
 
-            //get the user input
-            this._filterInput.addEventListener("keypress",function(event){
-                var keyCode =(<HTMLInputElement> document.getElementById("filter"));
-
-                if(event.key == "Enter"){
-                    var cmdStr = new String(keyCode.value);
-                    var splitted = cmdStr.split(" ", 3); 
-                    console.log(splitted[0]);
-                    console.log(splitted[1]);
-                    console.log(splitted[2]);
-                }
-           })
-            
-            
-	    };
+                	if(event.key == "Enter"){
+			
+				ws.send(JSON.stringify({
+					command: new String(keyCode.value) 
+				}))
+				
+                	}
+           	})
+	};
         
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
             if (shown) {
