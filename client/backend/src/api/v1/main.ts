@@ -53,11 +53,17 @@ router.post('/plugin/:type/init', async (req, res, next) => {
 	if(instantiated_types.includes(type)) {
 		console.log(`Plugin of type ${type} is already running`);
 		next();
+		res.json({
+        		ok: true
+   		});
 		return;
 	}
 	instantiated_types.push(type);
 	instantiated_plugins[type] = new BasePlugin(type);
 	console.log(`Done creating plugin of type ${type}`)	
+	res.json({
+        	ok: true
+    	});
 	next();
 })
 
@@ -65,7 +71,7 @@ router.post('/plugin/:type/init', async (req, res, next) => {
 const running_listeners: number[] = []
 const running_ws: {[key: number]: WebSocket} = {};
 
-router.ws('/plugin/:type/command/', (ws, req, next) => {
+router.ws('/plugin/:type/command/', async (ws, req, next) => {
 	
 	const type = parseInt(req.params.type);
 	if(running_ws[type]) {
@@ -80,22 +86,12 @@ router.ws('/plugin/:type/command/', (ws, req, next) => {
 		return;
 	}
 
+
 	// triggered when the user enters a command in the map
-	running_ws[type].on('message', async (message) => {
+	running_ws[type].on('message', (message) => {
 		const data = message.toString()
 		// Need to handle json.parse with try and catch!	
 		const [command, subscription, params] =  JSON.parse(data).command.split(" ");
-
-		if(!running_listeners.includes(type)) {
-			instantiated_plugins[type].onMessage(function(data) {
-				// readyState 1 means open
-				if(running_ws[type].readyState == 1) {
-					running_ws[type].send(JSON.stringify(data))
-				}
-			})
-			instantiated_plugins[type].run(await getContainers())
-			running_listeners.push(type)
-		}
 	
 		switch(command) {
    			case "start": {
@@ -111,6 +107,18 @@ router.ws('/plugin/:type/command/', (ws, req, next) => {
 			}
 		}
 	})
+
+	 if(!running_listeners.includes(type)) {
+                instantiated_plugins[type].onMessage(function(data) {
+                        // readyState 1 means open
+                        // Sending data to client
+                        if(running_ws[type].readyState == 1) {
+                                running_ws[type].send(JSON.stringify(data))
+                        }
+                })
+                instantiated_plugins[type].run(await getContainers())
+                running_listeners.push(type)
+          }
 
 	next()
 })
