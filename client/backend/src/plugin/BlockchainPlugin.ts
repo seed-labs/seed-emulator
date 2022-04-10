@@ -14,25 +14,6 @@ const status = {
   error: 'error'
 }
 
-const visualize = {
-  pendingTransaction:{
-    color: {
-      background: "orange",
-      border: "orange"	
-     },
-     borderWidth: 2,
-    //  size: 80,
-    //  shape: "triangle"
-  },
-  newBlockHeaders: {
-    color: {
-      background: "purple",
-      border: "purple"	
-     },
-     borderWidth: 2,
-  }
-}
-
 const event_type = {
   settings: 'settings',
   data: 'data',
@@ -62,7 +43,7 @@ class BlockchainPlugin implements PluginInterface {
     this.__driver()
   }
 
-  __driver() {
+  async __driver() {
     this.emit({
       eventType: event_type.settings,
       data: this.__settings,
@@ -78,21 +59,19 @@ class BlockchainPlugin implements PluginInterface {
       }
       return (web3.eth.getAccounts())
         .then((accounts:string[]) => {
-          // console.log(`${ip}-seedemu-accounts: `, accounts)
           accounts.forEach(account => {
             this.__accountsToContainerMap[account.toLowerCase()] = container.Id;
           });
       })
     })
-    
+
     setTimeout(() => {
       console.log(this.__accountsToContainerMap)
     },3000)
   }
 
   __setContainers(containers:SeedContainerInfo[] = []) {
-	const c = containers.filter(container => container.Names[0].includes('miner'))
-  	return c
+	return containers.filter(container => container.Names[0].includes('Ethereum'))
   }
 
   emit(data:object) {
@@ -100,37 +79,77 @@ class BlockchainPlugin implements PluginInterface {
     this.__local_emitter.emit(this.__message_event, data);
   }
 
-  attach(supportedEvent:string, params:string) {
-    // attach supported event and emit data to
-    console.log(`FROM type ${PluginEnum.blockchain} - attaching event ${supportedEvent}`);
-    this.__web3.eth.subscribe(supportedEvent, (error:any, result:any) => {
-      if(error || !Array.isArray(result)){
-        this.emit({
-          status: status.error,
-          error
-        })
-        return;
-      }
-      const {from, to, contract} = handleSubscriptionResults(this.__web3, supportedEvent, result);
-      const containerId = this.__accountsToContainerMap[from];
-      
-      const data = visualize[supportedEvent];
-      if(supportedEvent === subscriptions.pendingTransactions && contract) {
-        data.color.background = 'pink'
-        data.color.border = 'pink'
-      }
+  attach(supportedEvent: any, params: string) {
+	console.log(`FROM type ${PluginEnum.blockchain} - attaching event ${supportedEvent}`);
+  	this.__web3.eth.subscribe(supportedEvent, (error: any, result:any) => {
+		if(error || !Array.isArray(result)) {
+			this.emit({
+				status: status.error,
+				error
+			})
+			return;
+		}
 
-      this.emit(this.structureData({
-        status: status.success,
-        containerId,
-        data
-      }))
-    })
+		const res = this.__handleSubscriptionResults(supportedEvent, result);
+		const containerId = this.__accountsToContainerMap[res.from];
+		let data = {
+			borderWidth: 2,
+			colors: {}
+		}
+		if(supportedEvent === subscriptions.pendingTransactions && res.contract) {
+              		data.colors = {
+                     		background: "pink",
+                      		border: "pink"
+              		}
+      		}
+		else if(supportedEvent === subscriptions.pendingTransactions) {
+              		data.colors = {
+                      		background: "orange",
+                      		border: "orange"
+              	}
+      		} else if(supportedEvent === subscriptions.newBlockHeaders) {
+              		data.colors = {
+                      		background: "purple",
+                      		border: "purple"
+              		}
+      		} 
+		this.emit(this.structureData({
+        		status: status.success,
+        		containerId,
+        		data
+      		}))
+	})
+  }
+  __handleSubscriptionResults(supportedEvent:any, result:any): any {
+  	if(supportedEvent === subscriptions.newBlockHeaders) {
+      		return {
+        		from: result.miner.toLowerCase(),
+			to: null,
+			contract: null,
+      		} 
+  	} else if (supportedEvent === subscriptions.pendingTransactions) {
+      		return this.__getTransactionReceipt(result)
+  	}
   }
 
+  __getTransactionReceipt(transactionHash: any): any {
+  	this.__web3.eth.getTransactionReceipt(transactionHash, (error:any, receipt:any) => {
+		if(receipt !== null) {
+      			return {
+        			from: receipt.from.toLowerCase(),
+        			to: receipt.to ? receipt.to.toLowerCase() : '',
+        			contract: receipt.contractAddress
+      			}
+		} else {
+			setTimeout(() => {
+				this.__getTransactionReceipt(transactionHash)
+			},1000)
+		}
+	})
+  }
 
-  detach(supportedEvent:string) {
-	  console.log(`About to detach event ${supportedEvent}`)
+  detach(supportedEvent:any) {
+	console.log(`About to detach event ${supportedEvent}`)
   	// unsubscribe using web3
   }
 
@@ -138,38 +157,10 @@ class BlockchainPlugin implements PluginInterface {
     return {
       eventType: event_type.data,
       timestamp: Date.now(),
-      status: data.status,
       containerId: data.containerId,
       data: data.data,
     };
-  }  
-}
-
-
-function handleSubscriptionResults(web3:Web3, subscription:string, result:any) {
-	if(subscription === subscriptions.newBlockHeaders) {
-      return {
-        from: result.miner.toLowerCase()
-      } 
-  } else if (subscription === subscriptions.pendingTransactions) {
-      return getTransactionReceipt(web3, result)
   }
-}
-
-function getTransactionReceipt(web3: Web3, transactionHash:string) {
-	web3.eth.getTransactionReceipt(transactionHash, (error:any, receipt:any) => {
-		if(receipt !== null) {
-      return {
-        from: receipt.from.toLowerCase(),
-        to: receipt.to ? receipt.to.toLowerCase() : '',
-        contract: receipt.contractAddress
-      }
-		} else {
-			setTimeout(() => {
-				getTransactionReceipt(web3, transactionHash)
-			},1000)
-		}
-	})
 }
 
 export default BlockchainPlugin;
