@@ -110,8 +110,8 @@ class BlockchainPlugin implements PluginInterface {
 	       		status: status.success,
 			containerId: this.__accountsToContainerMap[result.miner.toLowerCase()],
 			data: {
-				borderWidth: 2,
-				colors: {
+				borderWidth: 4,
+				color: {
 					background: "purple",
 					border: "purple"
 				}
@@ -129,8 +129,8 @@ class BlockchainPlugin implements PluginInterface {
                         	status: status.success,
                         	containerId: this.__accountsToContainerMap[receipt.from.toLowerCase()],
                         	data: {
-                                	borderWidth: 2,
-                                	colors: {
+                                	borderWidth: 4,
+                                	color: {
                                         	background: !!receipt.contractAddress ? "pink" : "orange",
                                         	border: !!receipt.contractAddress ? "pink" : "orange"
                                 	}
