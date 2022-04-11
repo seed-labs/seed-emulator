@@ -53,7 +53,13 @@ class BlockchainPlugin implements PluginInterface {
     this.__containers.map((container, index) => {
       const split = container.Names[0].split("-");
       const ip = split[split.length - 1];
-      const web3 = new Web3(`ws://${ip}:8546`);
+      const web3 = new Web3(new Web3.providers.WebsocketProvider(`ws://${ip}:8546`, {
+      	clientConfig: {
+      		// Useful to keep a connection alive
+      		keepalive: true,
+      		keepaliveInterval: 60000 // ms
+    	},
+      }));
       if (!this.__web3) {
         this.__web3 = web3;
       }
@@ -148,6 +154,7 @@ class BlockchainPlugin implements PluginInterface {
     return {
       eventType: event_type.data,
       timestamp: Date.now(),
+      status: data.status,
       containerId: data.containerId,
       data: data.data,
     };
