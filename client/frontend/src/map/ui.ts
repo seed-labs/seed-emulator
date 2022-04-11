@@ -327,7 +327,17 @@ export class MapUi {
 		const url = `ws://localhost:8080/api/v1/plugin/${type}/command/`
                 const ws = new WebSocket(url)
             	ws.onmessage = (event) => {
-			console.log("==== DATA FROM SOCKET ====\n", event.data)
+			//console.log("==== DATA FROM SOCKET ====\n", event.data)
+			const data = JSON.parse(event.data)
+			if(!data.containerId) {
+				return;
+			}
+			const visualize = {
+				...data.data,
+				id: data.containerId,
+			}
+			console.log(visualize);
+			this._nodes.update(visualize);
 		}
 
 		this._filterInput.addEventListener("keypress",function(event){
