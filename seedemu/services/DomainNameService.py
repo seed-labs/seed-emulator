@@ -445,16 +445,6 @@ class DomainNameService(Service):
         if (len(zone.getSubZones().values()) == 0): return
         self._log('Collecting subzones NSes of "{}"...'.format(zone.getName()))
         for subzone in zone.getSubZones().values():
-            '''if zone == self.__rootZone:
-                delete_record = []
-                for record in zone.getRecords():
-                    if record.startswith(subzone.getName()):
-                        delete_record.append(record)
-                for record in delete_record:
-                    print("##################")
-                    print(record)
-                    zone.deleteRecord(record)
-                    '''
             for gule in subzone.getGuleRecords(): zone.addRecord(gule)
             self.__autoNameServer(subzone)
 

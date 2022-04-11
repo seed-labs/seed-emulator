@@ -26,6 +26,7 @@ class DomainNameCachingServer(Server, Configurable):
     __root_servers: List[str]
     __configure_resolvconf: bool
     __emulator: Emulator
+    __pending_forward_zones: Dict[str, str]
 
     def __init__(self):
         """!
@@ -33,6 +34,7 @@ class DomainNameCachingServer(Server, Configurable):
         """
         self.__root_servers = []
         self.__configure_resolvconf = False
+        self.__pending_forward_zones = {}
 
     def setConfigureResolvconf(self, configure: bool) -> DomainNameCachingServer:
         """!
@@ -74,17 +76,40 @@ class DomainNameCachingServer(Server, Configurable):
         """
         return self.__root_servers
 
+    def addForwardZone(self, zone: str, vnode: str) -> DomainNameCachingServer:
+        """!
+        @brief Add a new forward zone, foward to the given virtual node name.
+
+        @param name zone name.
+        @param vnode  virtual node name.
+
+        @returns self, for chaining API calls.
+        """
+        self.__pending_forward_zones[zone] = vnode
+
+        return self
+
     def configure(self, emulator: Emulator):
         self.__emulator = emulator
 
     def install(self, node: Node):
         node.addSoftware('bind9')
         node.setFile('/etc/bind/named.conf.options', DomainNameCachingServiceFileTemplates['named_options'])
+        node.setFile('/etc/bind/named.conf.local','')
         if len(self.__root_servers) > 0:
             hint = '\n'.join(self.__root_servers)
             node.setFile('/usr/share/dns/root.hints', hint)
             node.setFile('/etc/bind/db.root', hint)
         node.appendStartCommand('service named start')
+
+        for (zone_name, vnode_name) in self.__pending_forward_zones.items():
+            pnode = self.__emulator.resolvVnode(vnode_name)
+
+            ifaces = pnode.getInterfaces()
+            assert len(ifaces) > 0, 'resolvePendingRecords(): node as{}/{} has no interfaces'.format(pnode.getAsn(), pnode.getName())
+            vnode_addr = ifaces[0].getAddress()
+            node.appendFile('/etc/bind/named.conf.local',
+                        'zone "{}" {{ type forward; forwarders {{ {}; }}; }};\n'.format(zone_name, vnode_addr))
 
         if not self.__configure_resolvconf: return
 
