@@ -54,7 +54,7 @@ class BlockchainPlugin implements PluginInterface {
       const split = container.Names[0].split("-");
       const ip = split[split.length - 1];
       const web3 = new Web3(`ws://${ip}:8546`);
-      if (index === 0) {
+      if (!this.__web3) {
         this.__web3 = web3;
       }
       return (web3.eth.getAccounts())
@@ -82,64 +82,48 @@ class BlockchainPlugin implements PluginInterface {
   attach(supportedEvent: any, params: string) {
 	console.log(`FROM type ${PluginEnum.blockchain} - attaching event ${supportedEvent}`);
   	this.__web3.eth.subscribe(supportedEvent, (error: any, result:any) => {
-		if(error || !Array.isArray(result)) {
+		if(error) {
 			this.emit({
 				status: status.error,
 				error
 			})
 			return;
 		}
-
-		const res = this.__handleSubscriptionResults(supportedEvent, result);
-		const containerId = this.__accountsToContainerMap[res.from];
-		let data = {
-			borderWidth: 2,
-			colors: {}
-		}
-		if(supportedEvent === subscriptions.pendingTransactions && res.contract) {
-              		data.colors = {
-                     		background: "pink",
-                      		border: "pink"
-              		}
-      		}
-		else if(supportedEvent === subscriptions.pendingTransactions) {
-              		data.colors = {
-                      		background: "orange",
-                      		border: "orange"
-              	}
-      		} else if(supportedEvent === subscriptions.newBlockHeaders) {
-              		data.colors = {
-                      		background: "purple",
-                      		border: "purple"
-              		}
-      		} 
-		this.emit(this.structureData({
-        		status: status.success,
-        		containerId,
-        		data
-      		}))
+		this.__handleSubscriptionResults(supportedEvent, result);
 	})
   }
-  __handleSubscriptionResults(supportedEvent:any, result:any): any {
+  __handleSubscriptionResults(supportedEvent:any, result:any) {
   	if(supportedEvent === subscriptions.newBlockHeaders) {
-      		return {
-        		from: result.miner.toLowerCase(),
-			to: null,
-			contract: null,
-      		} 
+	       this.emit(this.structureData({
+	       		status: status.success,
+			containerId: this.__accountsToContainerMap[result.miner.toLowerCase()],
+			data: {
+				borderWidth: 2,
+				colors: {
+					background: "purple",
+					border: "purple"
+				}
+			}
+	       }))	
   	} else if (supportedEvent === subscriptions.pendingTransactions) {
-      		return this.__getTransactionReceipt(result)
+      		this.__getTransactionReceipt(result)
   	}
   }
 
-  __getTransactionReceipt(transactionHash: any): any {
+  __getTransactionReceipt(transactionHash: any) {
   	this.__web3.eth.getTransactionReceipt(transactionHash, (error:any, receipt:any) => {
 		if(receipt !== null) {
-      			return {
-        			from: receipt.from.toLowerCase(),
-        			to: receipt.to ? receipt.to.toLowerCase() : '',
-        			contract: receipt.contractAddress
-      			}
+			this.emit(this.structureData({
+                        	status: status.success,
+                        	containerId: this.__accountsToContainerMap[receipt.from.toLowerCase()],
+                        	data: {
+                                	borderWidth: 2,
+                                	colors: {
+                                        	background: !!receipt.contractAddress ? "pink" : "orange",
+                                        	border: !!receipt.contractAddress ? "pink" : "orange"
+                                	}
+                        	}
+               		}))
 		} else {
 			setTimeout(() => {
 				this.__getTransactionReceipt(transactionHash)
