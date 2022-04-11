@@ -332,12 +332,10 @@ export class MapUi {
 			if(!data.containerId) {
 				return;
 			}
-			const visualize = {
+			this._nodes.update({
 				...data.data,
-				id: data.containerId,
-			}
-			console.log(visualize);
-			this._nodes.update(visualize);
+				id: data.containerId
+			});
 		}
 
 		this._filterInput.addEventListener("keypress",function(event){
