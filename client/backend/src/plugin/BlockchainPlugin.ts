@@ -81,7 +81,7 @@ class BlockchainPlugin implements PluginInterface {
 
   attach(supportedEvent: any, params: string) {
 	console.log(`FROM type ${PluginEnum.blockchain} - attaching event ${supportedEvent}`);
-  	this.__web3.eth.subscribe(supportedEvent, (error: any, result:any) => {
+  	const subscription = this.__web3.eth.subscribe(supportedEvent, (error: any, result:any) => {
 		if(error) {
 			this.emit({
 				status: status.error,
@@ -90,6 +90,12 @@ class BlockchainPlugin implements PluginInterface {
 			return;
 		}
 		this.__handleSubscriptionResults(supportedEvent, result);
+	})
+	this.__local_emitter.on(`detach:${PluginEnum.blockchain}:${supportedEvent}`, () => {
+		subscription.unsubscribe(function(error, success){
+    			if(success)
+        			console.log('Successfully unsubscribed!');
+		});
 	})
   }
   __handleSubscriptionResults(supportedEvent:any, result:any) {
@@ -135,6 +141,7 @@ class BlockchainPlugin implements PluginInterface {
   detach(supportedEvent:any) {
 	console.log(`About to detach event ${supportedEvent}`)
   	// unsubscribe using web3
+	this.__local_emitter.emit(`detach:${PluginEnum.blockchain}:${supportedEvent}`)
   }
 
   structureData(data:any) {
