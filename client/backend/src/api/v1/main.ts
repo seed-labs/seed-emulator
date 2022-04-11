@@ -52,10 +52,10 @@ router.post('/plugin/:type/init', async (req, res, next) => {
 	const type = parseInt(req.params.type);
 	if(instantiated_types.includes(type)) {
 		console.log(`Plugin of type ${type} is already running`);
-		next();
 		res.json({
         		ok: true
    		});
+		next();
 		return;
 	}
 	instantiated_types.push(type);
