@@ -104,6 +104,8 @@ export class MapUi {
     private _edges: DataSet<Edge, 'id'>;
     private _graph: Network;
 
+    private _groups: any;
+
     /** list of log elements to be rendered to log body */
     private _logQueue: HTMLElement[];
 
@@ -327,15 +329,33 @@ export class MapUi {
 		const url = `ws://localhost:8080/api/v1/plugin/${type}/command/`
                 const ws = new WebSocket(url)
             	ws.onmessage = (event) => {
-			//console.log("==== DATA FROM SOCKET ====\n", event.data)
 			const data = JSON.parse(event.data)
 			if(!data.containerId) {
 				return;
 			}
+			
+			const node = Array.from(this._nodes.map(node => {
+				return {
+					id: node.id,
+					group: node.group
+				}
+			})).filter(node => node.id === data.containerId)[0]
+			console.log(node)
+			const {color} = this._groups[node.group]
+			
 			this._nodes.update({
 				...data.data,
 				id: data.containerId
 			});
+
+			//un-flash	
+			setTimeout(() => {
+				this._nodes.update({
+					id: data.containerId,
+					borderWidth: 1,
+					color
+				})
+			},500)
 		}
 
 		this._filterInput.addEventListener("keypress",function(event){
@@ -1368,6 +1388,8 @@ export class MapUi {
                 }
             }
         });
+
+	this._groups = groups;
 
         this._graph = new Network(this._mapElement, {
             nodes: this._nodes,
