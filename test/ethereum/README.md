@@ -2,7 +2,7 @@
 
 ## Overview
 
-This folder contains the all unit testing cases for EthereumSevice using library [unittest](https://docs.python.org/3/library/unittest.html), a unit testing included in python. This unit testing will going to build and run the container for unit testing by asserting the output of command run on specific container.
+This folder contains the all unit testing cases for EthereumService using library [unittest](https://docs.python.org/3/library/unittest.html), a unit testing included in python. This unit testing will going to build and run the container for unit testing by asserting the output of command run on specific container.
 
 This unit testing is an example to show how to write the unit test cases for seed-emulator.
 
