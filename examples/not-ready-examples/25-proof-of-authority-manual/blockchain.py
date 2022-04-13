@@ -17,7 +17,7 @@ emu = emuA.merge(emuB, DEFAULT_MERGERS)
 
 # Binding virtual nodes to physical nodes
 start=1
-end=31
+end=7
 for i in range(start, end):
     emu.addBinding(Binding('eth{}'.format(i)))
 
