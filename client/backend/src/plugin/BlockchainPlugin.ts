@@ -76,6 +76,22 @@ class BlockchainPlugin implements PluginInterface {
     },3000)
   }
 
+  getMessageEvent():string {
+  	return this.__message_event;
+  }
+
+  getLocalEmitter():any {
+ 	return this.__local_emitter;
+  }
+
+  getSettings():  {  filters: string[];  } {
+ 	return this.__settings; 
+  }
+
+  getContainers(): SeedContainerInfo[] {
+  	return this.__containers;
+  }
+
   __setContainers(containers:SeedContainerInfo[] = []) {
 	return containers.filter(container => container.Names[0].includes('Ethereum'))
   }
@@ -145,9 +161,9 @@ class BlockchainPlugin implements PluginInterface {
   }
 
   detach(supportedEvent:any) {
-	console.log(`About to detach event ${supportedEvent}`)
+  	console.log(`About to detach event ${supportedEvent}`)
   	// unsubscribe using web3
-	this.__local_emitter.emit(`detach:${PluginEnum.blockchain}:${supportedEvent}`)
+  	this.__local_emitter.emit(`detach:${PluginEnum.blockchain}:${supportedEvent}`)
   }
 
   structureData(data:any) {
