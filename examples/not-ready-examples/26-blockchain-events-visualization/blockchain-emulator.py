@@ -149,6 +149,6 @@ emu.addLayer(web)
 emu.dump('base-component.bin')
 
 # Uncomment the following if you want to generate the final emulation files
-emu.render()
-emu.compile(Docker(), './output')
+#emu.render()
+#emu.compile(Docker(), './output')
 
