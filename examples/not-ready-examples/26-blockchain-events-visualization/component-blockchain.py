@@ -32,13 +32,12 @@ for i in range(start, end):
     if i%3 == 0:
         e.setBootNode(True)
         bootnodes.append(i)
-        emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}-{}'.format("bootnode",i))
+        emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}'.format(i))
     else:
         e.createPrefundedAccounts(balance, 1)
         e.unlockAccounts().startMiner() 
         sealers.append(i)
-        emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}-{}'.format("miner",i))
-        #emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum--{}-{}-{}'.format(eth.getBaseConsensusMechanism(),"miner",i))         
+        emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}'.format(i))
     
     e.enableExternalConnection() # not recommended for sealers in production mode
     emu.getVirtualNode('eth{}'.format(i)).addPortForwarding(hport, cport)
