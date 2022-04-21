@@ -52,6 +52,7 @@
 
 
 - `3_geth_attach.sh` runs the `geth` command to run the ethereum nodes on each container
+- It is only after you run the `geth` command on the containers that the blockchain network starts running
 - Once you run this file, you shoud see an output similar to the picture below
 
 ![Geth attach done](images/geth-attach-done.png)
