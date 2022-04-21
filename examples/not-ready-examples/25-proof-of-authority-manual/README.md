@@ -10,6 +10,9 @@
 - At the top of the `component-blockchain.py`, you can find the python statements which creates a new instance of the `EthereumService`
 - This constructor takes as one of its parameters the `manual` flag.
 - This flag has a default value of `False`, so if it is not explicitely set as `True` as the constructor parameter, the blockchain execution will be automated by us.
+- The file should look something like the picture below
+
+![Manual mode](images/manual-mode.png)
 
 ## Selecting a consensus mechanism
 - We provide two APIs to select the consensus mechanism: `setBaseConsensusMechanism` and `setBaseConsensusMechanism`
