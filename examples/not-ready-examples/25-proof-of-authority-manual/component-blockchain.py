@@ -38,7 +38,7 @@ for i in range(start, end):
         sealers.append(i)
     
     e.enableExternalConnection() # not recommended for sealers in production mode
-    emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}'.format(i)).addPortForwarding(hport, cport)
+    emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}-poa'.format(i)).addPortForwarding(hport, cport)
     hport = hport + 1
 
 print("There are {} sealers and {} bootnodes".format(len(sealers), len(bootnodes)))
@@ -51,7 +51,7 @@ for i in range(start, end):
     e = eth.install("eth{}".format(i))
     e.setConsensusMechanism(ConsensusMechanism.POW)
     e.unlockAccounts().startMiner()
-    emu.getVirtualNode("eth{}".format(i)).setDisplayName('Ethereum-{}'.format(i))
+    emu.getVirtualNode("eth{}".format(i)).setDisplayName('Ethereum-{}-pow'.format(i))
 
 print("Created {} nodes that use PoW consensus mechanism".format(end - start))
 
