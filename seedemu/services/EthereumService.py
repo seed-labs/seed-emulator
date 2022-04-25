@@ -689,7 +689,7 @@ class EthereumService(Service):
         self.__save_path = statePath
 
         self.__manual_execution = manual
-        self.__base_consensus_mechanism = ConsensusMechanism.POA # set by default in case the API is not used
+        self.__base_consensus_mechanism = ConsensusMechanism.POW # set by default in case the API is not used
 
     def getName(self):
         return 'EthereumService'
