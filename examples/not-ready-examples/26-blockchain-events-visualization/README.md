@@ -1,5 +1,8 @@
 # Visualization
 
+## build
+- Go to the PoA manual execution example and follow the README file to build the emulator
+
 ## Concept
 - The visualization is built on a plugin-type architecture.
 - We can now create a new plugin for different projects that fetch data from the emulator and passes it to the frontend
