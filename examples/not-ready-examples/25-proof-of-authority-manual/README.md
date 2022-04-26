@@ -23,8 +23,9 @@
 - To apply a certain consensus to a virtual node, we would do it in this way: `e = e.install("eth"); e.setConsensusMechanism(<consensus>)`
 
 ## Port Forwarding
-- We can currently open one of two ports on the containers when running the example
-- Port 8545 which is the default HTTP port. This one is used to connect the Remix IDE to our emulator
+- We currently open two ports on the containers when our `geth` command runs on the containers
+- Port 8545 which is the default HTTP port. This one is used to connect the Remix IDE to our emulator and for the jsonrpc request done to fetch the signers of a certain block for our visualization.
+- Remix can only connect to an http endpoint which is a Web3 provider, and the jsonrcp request needs to be an http post request.
 - Port 8546 which is the default WS port. This one is used for the visualization as event subscriptions are only supported when connected using websockets
 
 ## Creating prefunded accounts
