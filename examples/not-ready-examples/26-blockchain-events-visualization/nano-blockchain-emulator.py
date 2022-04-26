@@ -15,7 +15,7 @@ def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int):
     router.joinNetwork("net0")
     router.joinNetwork('ix{}'.format(exchange))
 
-    for counter in range(3):
+    for counter in range(5):
        host = stub_as.createHost('host_{}'.format(counter))
        host.joinNetwork("net0")
 
@@ -78,8 +78,4 @@ emu.addLayer(ebgp)
 emu.addLayer(ibgp)
 emu.addLayer(ospf)
 
-emu.render()
-# Use the "morris-worm-base" custom base image
-docker = Docker()
-emu.compile(docker, './output', override = True)
-# Copy the base container image to the output folder
+emu.dump('base-component.bin')
