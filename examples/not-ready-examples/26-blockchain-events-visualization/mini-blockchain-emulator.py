@@ -8,27 +8,21 @@ def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int):
     # Create AS and internal network
     stub_as = base.createAutonomousSystem(asn)
     stub_as.createNetwork("net0")
-#     stub_as.createNetwork("net1")
-    #stub_as.createNetwork("net2")
+    stub_as.createNetwork("net1")
     # Create a BGP router
     # Attach the router to both the internal and external networks
     router = stub_as.createRouter('router0')
     router.joinNetwork("net0")
-#     router.joinNetwork("net1")
-    #router.joinNetwork("net2")
+    router.joinNetwork("net1")
     router.joinNetwork('ix{}'.format(exchange))
 
-    for counter in range(2):
+    for counter in range(3):
        host = stub_as.createHost('host_{}'.format(counter))
        host.joinNetwork("net0")
 
-#     for counter in range(3, 6):
-#        host = stub_as.createHost('host_{}'.format(counter))
-#        host.joinNetwork("net1")
-
-    #for counter in range(4, 6):
-    #   host = stub_as.createHost('host_{}'.format(counter))
-    #   host.joinNetwork("net2")
+    for counter in range(3, 6):
+       host = stub_as.createHost('host_{}'.format(counter))
+       host.joinNetwork("net1")
 
 ###############################################################################
 emu     = Emulator()
@@ -45,12 +39,6 @@ ix103 = base.createInternetExchange(103)
 ix104 = base.createInternetExchange(104)
 ix105 = base.createInternetExchange(105)
 
-ix100.getPeeringLan().setDisplayName('NYC-100')
-ix101.getPeeringLan().setDisplayName('San Jose-101')
-ix102.getPeeringLan().setDisplayName('Chicago-102')
-ix103.getPeeringLan().setDisplayName('Miami-103')
-ix104.getPeeringLan().setDisplayName('Boston-104')
-ix105.getPeeringLan().setDisplayName('Huston-105')
 ###############################################################################
 # Create Transit Autonomous Systems 
 ## Tier 1 ASes
@@ -91,35 +79,17 @@ ebgp.addRsPeers(104, [3, 4])
 ebgp.addRsPeers(105, [2, 3])
 # To buy transit services from another autonomous system, 
 # we will use private peering  
-# ebgp.addPrivatePeerings(100, [2],  [150, 151], PeerRelationship.Provider)
-# ebgp.addPrivatePeerings(100, [3],  [150], PeerRelationship.Provider)
-# ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
-# ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)
-# ebgp.addPrivatePeerings(102, [2, 4],  [11, 154], PeerRelationship.Provider)
-# ebgp.addPrivatePeerings(103, [3],  [160, 161, 162], PeerRelationship.Provider)
-# ebgp.addPrivatePeerings(104, [3, 4], [12], PeerRelationship.Provider)
-# ebgp.addPrivatePeerings(104, [4],  [163], PeerRelationship.Provider)
-# ebgp.addPrivatePeerings(104, [12], [164], PeerRelationship.Provider)
-# ebgp.addPrivatePeerings(105, [3],  [11, 170], PeerRelationship.Provider)
-# ebgp.addPrivatePeerings(105, [11], [171], PeerRelationship.Provider)
-
-
-ebgp.addPrivatePeerings(100, [2],  [3], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(100, [2],  [150,151], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(101, [2],  [152,153], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(102, [2],  [154], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(105, [2],  [170,171], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(103, [3],  [160,161,162], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(104, [3],  [163,164], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(100, [2],  [4], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(102, [4],  [11], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(104, [4],  [12], PeerRelationship.Provider)
-
-
+ebgp.addPrivatePeerings(100, [2],  [150, 151], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(100, [3],  [150], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(102, [2, 4],  [11, 154], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(103, [3],  [160, 161, 162], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(104, [3, 4], [12], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(104, [4],  [163], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(104, [12], [164], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(105, [3],  [11, 170], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(105, [11], [171], PeerRelationship.Provider)
 
 ###############################################################################
 # Add layers to the emulator
@@ -130,8 +100,3 @@ emu.addLayer(ibgp)
 emu.addLayer(ospf)
 
 emu.dump('base-component.bin')
-emu.render()
-# Use the "morris-worm-base" custom base image
-docker = Docker()
-emu.compile(docker, './output', override = True)
-# Copy the base container image to the output folder
