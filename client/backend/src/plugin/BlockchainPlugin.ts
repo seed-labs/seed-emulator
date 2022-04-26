@@ -160,9 +160,9 @@ class BlockchainPlugin implements PluginInterface {
         This function is the one that handles all cases including the PoA edge case that we currently described.
   
   	@fix The assumption mentioned above about having the "miner" field always set to 0x00000... when running PoA and listening to the newBlockHeaders event is wrong. In PoA, the "miner"
-        field is set to 0 unless a proposal is made. Assuming A proposes that B becomes a new signer on the blockchain, the "miner" property of the block header will be set to B.
+        field is true unless a proposal is made. Assuming A proposes that B becomes a new signer on the blockchain, the "miner" property of the block header will be set to B.
         How could this affect the visualization? We will be flashing a node that we don't want
-        @solution Figure out what consensus was run by the node that added the block, and force run the axios code if we have PoA and newBlockHeaders at the same time instead of checking if 
+        @solution Figure out what consensus was run by the node that added the block (in case we run more than one consensus in our emulator), and run the axios code if we have PoA and newBlockHeaders at the same time instead of checking if 
         __accountsToContainerMap has the address (this will be true when A proposes B)
   */
 
