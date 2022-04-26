@@ -12,11 +12,11 @@ emu = Emulator()
 # Note: right now we need to manually create the folder for each node (see README.md). 
 eth = EthereumService(saveState = True, manual=False)
 
-eth.setBaseConsensusMechanism(ConsensusMechanism.POW)
+eth.setBaseConsensusMechanism(ConsensusMechanism.POA)
 
 # Create Ethereum nodes (nodes in this layer are virtual)
 start=1
-end=7
+end=15
 sealers=[]
 bootnodes=[]
 hport=8544
@@ -32,13 +32,12 @@ for i in range(start, end):
     if i%3 == 0:
         e.setBootNode(True)
         bootnodes.append(i)
-        emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}'.format(i))
     else:
         e.createPrefundedAccounts(balance, 1)
         e.unlockAccounts().startMiner() 
         sealers.append(i)
-        emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}'.format(i))
-    
+        
+    emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}-poa'.format(i))
     e.enableExternalConnection() # not recommended for sealers in production mode
     emu.getVirtualNode('eth{}'.format(i)).addPortForwarding(hport, cport)
     #emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}'.format(i)).addPortForwarding(hport, cport)

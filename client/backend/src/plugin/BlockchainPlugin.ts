@@ -1,4 +1,5 @@
 import Web3 from 'web3'
+import axios from 'axios'
 import EventEmitter from './EventEmitter';
 import PluginEnum from './PluginEnum';
 import PluginInterface from './PluginInterface';
@@ -29,6 +30,8 @@ class BlockchainPlugin implements PluginInterface {
   private __local_emitter: any;
   private __accountsToContainerMap:  {[key: string]: string};
   private __containers: SeedContainerInfo[];
+  private __http_url: string;
+  private __websocket_url: string;
   private __settings: {
     filters: string[];
   };
@@ -53,7 +56,9 @@ class BlockchainPlugin implements PluginInterface {
     this.__containers.map((container, index) => {
       const split = container.Names[0].split("-");
       const ip = split[split.length - 1];
-      const web3 = new Web3(new Web3.providers.WebsocketProvider(`ws://${ip}:8546`, {
+      this.__http_url = `http://${ip}:8545`
+      this.__websocket_url = `ws://${ip}:8546`    
+      const web3 = new Web3(new Web3.providers.WebsocketProvider(this.__websocket_url, {
       	clientConfig: {
       		// Useful to keep a connection alive
       		keepalive: true,
@@ -120,11 +125,12 @@ class BlockchainPlugin implements PluginInterface {
 		});
 	})
   }
-  __handleSubscriptionResults(supportedEvent:any, result:any) {
-  	if(supportedEvent === subscriptions.newBlockHeaders) {
+  async __handleSubscriptionResults(supportedEvent:any, result:any) {
+  	
+        if(supportedEvent === subscriptions.newBlockHeaders) {
 	       this.emit(this.structureData({
 	       		status: status.success,
-			containerId: this.__accountsToContainerMap[result.miner.toLowerCase()],
+			containerId: await this.__getContainerId(result.miner, result.number),
 			data: {
 				borderWidth: 4,
 				color: {
@@ -138,12 +144,39 @@ class BlockchainPlugin implements PluginInterface {
   	}
   }
 
+  async __getContainerId(address:string, blockNumber:number) {
+	const addr = address.toLowerCase() 
+	const self = this;
+	return new Promise((resolve, reject) => {
+		if(self.__accountsToContainerMap[addr]) {
+			return resolve(self.__accountsToContainerMap[addr])
+		} else {
+			return axios.post(this.__http_url, {
+				jsonrpc: '2.0',
+				id: Date.now(),
+				method: 'clique_getSnapshot',
+				params: [self.__web3.utils.toHex(blockNumber)]
+			}, {
+				headers: {
+					'Content-Type': 'application/json',
+					'Access-Control-Allow-Origin': '*'
+				}
+			}).then(function(result) {
+				return resolve(self.__accountsToContainerMap[result.data.result.recents[blockNumber]])
+			}).catch(function(e) {
+				return reject(e)
+			})
+		}
+	})
+  }
+
   __getTransactionReceipt(transactionHash: any) {
-  	this.__web3.eth.getTransactionReceipt(transactionHash, (error:any, receipt:any) => {
+	const self = this;
+  	this.__web3.eth.getTransactionReceipt(transactionHash, async (error:any, receipt:any) => {
 		if(receipt !== null) {
 			this.emit(this.structureData({
                         	status: status.success,
-                        	containerId: this.__accountsToContainerMap[receipt.from.toLowerCase()],
+                        	containerId: await self.__getContainerId(receipt.from, receipt.number),
                         	data: {
                                 	borderWidth: 4,
                                 	color: {

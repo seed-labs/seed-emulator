@@ -436,7 +436,7 @@ class EthereumServer(Server):
         
         # Flags updated to accept external connections
         if self.externalConnectionEnabled():
-            apis = "web3,eth,debug,personal,net"
+            apis = "web3,eth,debug,personal,net,clique"
             http_whitelist_domains = "*"
             ws_whitelist_domains = "*"
             whitelist_flags = "--http.corsdomain \"{}\" --http.api {} --ws --ws.addr 0.0.0.0 --ws.port {} --ws.api {} --ws.origins \"{}\" ".format(http_whitelist_domains, apis, 8546, apis, ws_whitelist_domains)

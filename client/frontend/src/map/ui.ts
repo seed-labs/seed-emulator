@@ -113,6 +113,9 @@ export class MapUi {
     private _flashQueue: Set<string>;
     /** set of vertex ids scheduled for un-flash */
     private _flashingNodes: Set<string>;
+
+    private __filters: string[];
+    /** save the filter type for plugin in  */
     
     private _logPrinter: number;
     private _flasher: number;
@@ -327,9 +330,13 @@ export class MapUi {
 		const type = 1 // 1 represents blockchain in PluginEnum.ts
 		await this._datasource.initPlugin(type)
 		const url = `ws://localhost:8080/api/v1/plugin/${type}/command/`
-                const ws = new WebSocket(url)
-            	ws.onmessage = (event) => {
+        const ws = new WebSocket(url)
+        ws.onmessage = (event) => {
 			const data = JSON.parse(event.data)
+            if(data.eventType === "settings"){
+                this.__filters = data.data.filters;
+                return;
+            }
 			if(!data.containerId) {
 				return;
 			}
@@ -620,7 +627,7 @@ export class MapUi {
 
         if(mode == 'blockchain'){
                        
-            this._filterInput.placeholder = 'Please input the blockchain command...';
+            this._filterInput.placeholder = 'Please input the blockchain command...<action> <filter> <params>';
 
             this._filterModeTab.classList.add('inactive');
             this._searchModeTab.classList.add('inactive');
@@ -860,6 +867,38 @@ export class MapUi {
     
                 this._suggestions.appendChild(item);
             });
+        }
+
+        if(this._filterMode =="blockchain"){
+            let command: string[] = ['start ', 'stop '];
+            let eventType: string[] = this.__filters || ['newBlockHeaders', 'pendingTransactions'];
+            command.forEach(mycmd =>{
+                eventType.forEach(myEvent =>{
+                    var itemName = myEvent;
+                    var itemDetails = '';
+    
+                    let item = document.createElement('div');
+                    item.className = 'suggestion';
+        
+                    let name = document.createElement('span');
+                    name.className = 'name';
+                    itemName = mycmd.concat(myEvent);
+                    name.innerText = itemName;
+        
+                    let details = document.createElement('span');
+                    details.className = 'details';
+                    details.innerText = itemDetails;
+        
+                    item.appendChild(name);
+                    item.appendChild(details);
+                    item.onclick = () => {
+                        this._moveSuggestionSelection('clear');
+                        this._updateFilterSuggestions(this._filterInput.value);
+                    };
+                    
+                    this._suggestions.appendChild(item);
+                })  
+            })
         }
 
     }
