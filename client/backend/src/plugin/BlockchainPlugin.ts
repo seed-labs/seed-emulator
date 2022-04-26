@@ -144,6 +144,22 @@ class BlockchainPlugin implements PluginInterface {
   	}
   }
 
+  /*
+	@desc This function is one of the most important functions in this code
+        In our current implementation, we have support for two events: newBlockHeaders and pendingTransactions
+        When listening to the pendingTransactions, regardless of whether we are using Proof of work or Proof of authority, all of the transactions have the "from" attribute
+        which refers to the ethereum account that triggered the transaction. This "from" attribute always has a valid address
+        The problem comes when we are listening to newBlockHeaders with Proof of authority.
+        When using Proof of work and the newBlockHeaders event is triggered, we get the miner's address in the result through the "miner" property. We then figure out in what
+        container this address is and we flash this container on the frontend.
+        When using Proof of authority, the "miner" attribute always has a value of "0x000000..." which doesn't match with any of the existing accounts or containers. Flashing then fails
+	because account "0x000000..." is not in any container.
+        To be able to get the signer of a certain block we have to use axios to create a jsonrpc request as web3 does not have a direct api to fetch them. For example, in PoW, if i want
+        to fetch all accounts, i can write "web3.eth.accounts", but I cannot write "web3.clique.getSigners" as clique is not available.
+        Documentation states that performing a jsonrpc will solve our issue
+        This function is the one that handles all cases including the PoA edge case that we currently described.
+  */
+
   async __getContainerId(address:string, blockNumber:number) {
 	const addr = address.toLowerCase() 
 	const self = this;
