@@ -87,7 +87,7 @@ router.ws('/plugin/:type/command/', async (ws, req, next) => {
 	}
 
 
-	// triggered when the user enters a command in the map
+	// This is triggered when the user enters a command in the map
 	running_ws[type].on('message', (message) => {
 		const data = message.toString()
 		// Need to handle json.parse with try and catch!	
@@ -108,6 +108,7 @@ router.ws('/plugin/:type/command/', async (ws, req, next) => {
 		}
 	})
 
+	// This runs when the socket connection is established from the client
 	 if(!running_listeners.includes(type)) {
                 instantiated_plugins[type].onMessage(function(data) {
                         // readyState 1 means open
