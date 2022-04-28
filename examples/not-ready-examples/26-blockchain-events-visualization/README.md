@@ -122,7 +122,7 @@
 - Delete this default route using `ip route del default` then add a new default route using `ip route add default via <ip>` where <ip> is the ip of the BGP router in the map. Any packet that doesn't match other routing rules will be routed by default to this new ip that you provide.
 - Go to the map, select the search tab, and look for your ASN, in this case `151`. In our convention, all of the nodes in the same network are of the same color. Find the BGP router of the same color, click on it, and copy its ip address from the side panel on the map. This will be the <ip> mentioned above.
 
-`
+```
 version: "3"
 
 services:
@@ -147,4 +147,4 @@ networks:
     emulator_net_3_net3:
         external: true
 
-`
+```
