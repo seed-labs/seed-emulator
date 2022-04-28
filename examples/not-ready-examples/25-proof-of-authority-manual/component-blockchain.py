@@ -10,18 +10,18 @@ emu = Emulator()
 # manual: requires you to trigger the /tmp/run.sh bash files in each container to lunch the ethereum nodes
 # so the blockchain data will be preserved when containers are deleted.
 # Note: right now we need to manually create the folder for each node (see README.md). 
-eth = EthereumService(saveState = True, manual=False)
+eth = EthereumService(saveState = True, manual=True)
 
 eth.setBaseConsensusMechanism(ConsensusMechanism.POA)
 
 # Create Ethereum nodes (nodes in this layer are virtual)
 start=1
-end=7
+end=15
 sealers=[]
 bootnodes=[]
 hport=8544
-#cport=8545 #will be http -> remix
-cport=8546 #will be ws -> visualization and subscriptions
+#cport=8545 remix
+cport=8546 # visualization
 
 # Currently the minimum amount to have to be a validator in proof of stake
 balance = 32 * pow(10, 18)
@@ -38,12 +38,22 @@ for i in range(start, end):
         sealers.append(i)
     
     e.enableExternalConnection() # not recommended for sealers in production mode
-    emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}'.format(i)).addPortForwarding(hport, cport)
+    emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}-poa'.format(i)).addPortForwarding(hport, cport)
     hport = hport + 1
 
 print("There are {} sealers and {} bootnodes".format(len(sealers), len(bootnodes)))
 print("Sealers {}".format(sealers))
 print("Bootnodes {}".format(bootnodes))
+
+start = end
+end = start + 1
+for i in range(start, end):
+    e = eth.install("eth{}".format(i))
+    e.setConsensusMechanism(ConsensusMechanism.POW)
+    e.unlockAccounts().startMiner()
+    emu.getVirtualNode("eth{}".format(i)).setDisplayName('Ethereum-{}-pow'.format(i))
+
+print("Created {} nodes that use PoW consensus mechanism".format(end - start))
 
 # Add the layer and save the component to a file
 emu.addLayer(eth)

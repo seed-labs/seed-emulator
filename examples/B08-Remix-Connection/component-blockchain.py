@@ -42,7 +42,7 @@ e6.enableExternalConnection().setGethHttpPort(8545)
 # Get node port that accepts connections
 # Same api used in the EthereumService to set the listening port
 e3_port_forward = e3.getGethHttpPort() # Uses default 8545 port
-e6_port_forward = e6.getGethHttpPort() # Uses custom 8549 port
+e6_port_forward = e6.getGethHttpPort() # Uses custom port, in this case also using 8545
 
 # Customizing the display names (for visualization purpose)
 emu.getVirtualNode('eth1').setDisplayName('Ethereum-1')
