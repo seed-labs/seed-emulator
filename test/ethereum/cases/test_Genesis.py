@@ -9,7 +9,7 @@ class TestGenesis(unittest.TestCase):
         cls.eth_accounts = []
         for i in range(5):
             with open('../resources/keystore/'+test_account_file_name[i]) as f:
-                cls.eth_accounts.append(EthAccount(alloc_balance="999999999",password="admin", keyfile=f.read()))
+                cls.eth_accounts.append(EthAccount(alloc_balance=999999999,password="admin", keyfile=f.read()))
         return super().setUpClass
     
     def test_init_poa(self) -> None:

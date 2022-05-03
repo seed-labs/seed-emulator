@@ -49,7 +49,7 @@ class TestEthAccount(unittest.TestCase):
     #     # self.assertEqual(sum([1, 2, 3]), 6, "Should be 6")
 
     def test_create_account(self):
-        account = EthAccount(alloc_balance="0", password="admin", keyfile = None)
+        account = EthAccount(alloc_balance=0, password="admin", keyfile = None)
         self.assertIsNotNone(account.keystore_content)
         self.assertIsNotNone(account.keystore_filename)
         self.assertIsNotNone(account.alloc_balance)
@@ -57,39 +57,17 @@ class TestEthAccount(unittest.TestCase):
 
     def test_create_account_invalid_balance_negative_decimal(self):
         with self.assertRaises(AssertionError) as ctx:
-            EthAccount(alloc_balance="-1", password="admin", keyfile = None)
-        self.assertEqual("Invalid Balance: -1", str(ctx.exception))
+            EthAccount(alloc_balance=-1, password="admin", keyfile = None)
+        self.assertEqual("Invalid Balance Range: -1", str(ctx.exception))
 
     def test_create_account_valid_balance_decimal(self):
-        account = EthAccount(alloc_balance="14124", password="admin", keyfile = None)
-        self.assertEqual(account.alloc_balance, "14124")
-
-    def test_create_account_invalid_balance_hexadecimal(self):
-        with self.assertRaises(AssertionError) as ctx:
-            EthAccount(alloc_balance="0xkfoangegdsamk", password="admin", keyfile = None)
-        self.assertEqual("Invalid Balance: 0xkfoangegdsamk", str(ctx.exception))
-
-    def test_create_account_invalid_balance_hexadecimal_no_prefix(self):
-        with self.assertRaises(AssertionError) as ctx:
-            EthAccount(alloc_balance="kfoangegdsamk", password="admin", keyfile = None)
-        self.assertEqual("Invalid Balance: kfoangegdsamk", str(ctx.exception))
-
-    def test_create_account_valid_balance_hexadecimal(self):
-        account = EthAccount(alloc_balance="0xbbcadd00", password="admin", keyfile = None)
-        self.assertEqual(account.alloc_balance, "0xbbcadd00")
-
-    def test_create_account_valid_balance_hexadecimal_no_prefix(self):
-        account = EthAccount(alloc_balance="bbcadd00", password="admin", keyfile = None)
-        self.assertEqual(account.alloc_balance, "bbcadd00")
-
-    def test_create_account_valid_balance_hexadecimal_mix_case(self):
-        account = EthAccount(alloc_balance="bbcaDDFF00", password="admin", keyfile = None)
-        self.assertEqual(account.alloc_balance, "bbcaDDFF00")
+        account = EthAccount(alloc_balance=14124, password="admin", keyfile = None)
+        self.assertEqual(account.alloc_balance, 14124)
 
     def test_import_account(self):
         correct_keystore_file = '{"address": "675eb8226a35256f638712db74878f0a15d3d56e", "crypto": {"cipher": "aes-128-ctr", "cipherparams": {"iv": "cbc176365f3894af5e95cd2704ee61c4"}, "ciphertext": "371c37784906c9d37abc3900c958c752f41b60f6dfaeddc4bf2a6d2d774b028b", "kdf": "scrypt", "kdfparams": {"dklen": 32, "n": 262144, "r": 1, "p": 8, "salt": "93794d233d59b0ff5daa6e5eca345c4a"}, "mac": "b139214451b8559567a2d06d7a6d1109b107b23ed8b809c1e6ca6d1c9ec15526"}, "id": "464b1168-fcb5-45c0-8c48-5adc0f255ade", "version": 3}'
         correct_address = '0x675eb8226a35256f638712db74878f0a15d3d56e'
-        account = EthAccount(alloc_balance="0", password="admin", keyfile=correct_keystore_file)
+        account = EthAccount(alloc_balance=0, password="admin", keyfile=correct_keystore_file)
         self.assertIsNotNone(account.keystore_content)
         self.assertIsNotNone(account.keystore_filename)
         self.assertIsNotNone(account.alloc_balance)

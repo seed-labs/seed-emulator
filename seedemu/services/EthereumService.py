@@ -69,7 +69,7 @@ class Genesis():
     },
     "nonce": "0x0",
     "timestamp": "0x622a4e1a",
-    "extraData": "0x00000000000000000000000000000000000000000000000000000000000000001943c0d246e3d57ed3acdfa931f63349f9a851b637f10a73416468193d5a730734ac47526bb56745389a47b4903d06738a4693a40ead52a1d5b5f7c741b8c9b34a90f87d938867877d822264c9a615f848a3596372e19d5d8778112a48b1a786fccb300248c3af013add2ec54667648cf27a7ce9def5c45353cf63e8727766b189c3cfea4b910b2eb12982e1571479c79f371a6a34dc8569a127a9ce3957bdba59d8e23d77059d95c60a03c9f20aac16bafe791a5b53d933f7f27793e126393b3bb07734069b8efa61cd689c9b533b2ce3512b1b139f8e210d1e3dbd6e3fa93d866c3c75141a26de8844c5f2132b4c239f1246982d794cc6a4add27dd436dbf0432adfcba0b4069d6dd736c8eef80f83d2234cc32d69bc36a53ae2f0edac2b2321e2f487327846ae4a89e8ccb4f7fdd0357f91d52f6e3e0cb1e5f4ad36e0658fe8d3a0100d4e0e0fda62d590ce59afcde3a8b7f0f0a6b0dd80f000911a238f89d74b7c71648e3db1f762d02c18e929ed177da63769dc6bfae52fd442fad09769bcb5acb9434ccc52e9cbc14ed5ad44970000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "extraData": "0x0",
     "gasLimit": "0x47b760",
     "difficulty": "0x1",
     "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -127,7 +127,7 @@ class Genesis():
         return self
 
     def setSealer(self, accounts:List[EthAccount]) -> Genesis:
-        self.__replaceExtraData(self.__generateGenesisExtraData(accounts))
+        if len(accounts) > 0: self.__replaceExtraData(self.__generateGenesisExtraData(accounts))
         return self
 
     def __generateGenesisExtraData(self, prefunded_accounts: List[EthAccount]) -> str:
@@ -165,9 +165,9 @@ class EthAccount():
     address: str    # account address
     keystore_content: str   # the content of keystore file
     keystore_filename:str   # the name of keystore file 
-    alloc_balance: str
+    alloc_balance: int
 
-    def __init__(self, alloc_balance:str = "0",password:str = "admin", keyfile: str = None) -> None:
+    def __init__(self, alloc_balance:int = 0,password:str = "admin", keyfile: str = None) -> None:
         """
         @brief create a Ethereum Local Account when initialize
 
@@ -188,16 +188,12 @@ class EthAccount():
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
         self.keystore_filename = "UTC--"+datastr+"--"+encrypted["address"]
 
-    def __validate_balance(self, alloc_balance: str):
+    def __validate_balance(self, alloc_balance:int):
         """
         validate balance
-        It only allow positive decimal or positive hexadecimal
+        It only allow positive decimal integer
         """
-        prog_dec = re.compile('^[1-9]\d*|0$')
-        result_dec = prog_dec.match(alloc_balance)
-        prog_hex = re.compile('^0[xX][0-9a-fA-F]+|[0-9a-fA-F]+$')
-        result_hex = prog_hex.match(alloc_balance)
-        assert bool(result_dec) or bool(result_hex) , "Invalid Balance: {}".format(alloc_balance)
+        assert alloc_balance>=0 , "Invalid Balance Range: {}".format(alloc_balance)
     
     def __importAccout(self, keyfile: str, password = "admin"):
         """
@@ -309,7 +305,7 @@ class EthereumServer(Server):
         self.__create_new_account = 0
         self.__enable_external_connection = False
         self.__unlockAccounts = False
-        self.__prefunded_accounts = [EthAccount(alloc_balance=str(32 * pow(10, 18)), password="admin")] #create a prefunded account by default. It ensure POA network works when create/import prefunded account is not called.
+        self.__prefunded_accounts = [EthAccount(alloc_balance=32 * pow(10, 18), password="admin")] #create a prefunded account by default. It ensure POA network works when create/import prefunded account is not called.
         self.__consensus_mechanism = None # keep as empty to make sure the OR statement works in the install function
 
     def __createNewAccountCommand(self, node: Node):
@@ -597,7 +593,7 @@ class EthereumServer(Server):
         
         return self
     
-    def createPrefundedAccounts(self, balance: str = "0", number: int = 1, password: str = "admin", saveDirectory:str = None) -> EthereumServer:
+    def createPrefundedAccounts(self, balance: int = 0, number: int = 1, password: str = "admin", saveDirectory:str = None) -> EthereumServer:
         """
         @brief Call this api to create new prefunded account with balance
 
@@ -608,13 +604,13 @@ class EthereumServer(Server):
         @returns self
         """
         for _ in range(number):    
-            account = EthAccount(balance,password)
+            account = EthAccount(alloc_balance=balance,password=password)
             if saveDirectory:
                 self.__saveAccountKeystoreFile(account=account, saveDirectory=saveDirectory)
             self.__prefunded_accounts.append(account)
         return self
     
-    def importPrefundedAccount(self, keyfileDirectory:str, password:str = "admin", balance: str = "0") -> EthereumServer:
+    def importPrefundedAccount(self, keyfileDirectory:str, password:str = "admin", balance: int = 0) -> EthereumServer:
         f = open(keyfileDirectory, "r")
         keystoreFileContent = f.read()
         account = EthAccount(alloc_balance=balance, password=password,keyfile=keystoreFileContent)
