@@ -101,7 +101,7 @@
 - To create a new plugin, your class has to implement the `PluginInterface` to add the proper functions. You also need to add your class inside `BasePlugin.ts`
 - You plugin is the one that will fetch data from the emulator and pass it to the `onMessage` inside the websocket route
 
-![](./images/plugin-architecture)
+![](./images/plugin-architecture.png)
 
 ### Blockchain plugin
 - The `BlockchainPlugin.ts` implements `PluginInterface.ts`
