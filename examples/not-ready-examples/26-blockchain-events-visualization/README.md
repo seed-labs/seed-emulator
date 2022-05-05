@@ -1,7 +1,16 @@
 # Visualization
 
-## build
-- Go to the PoA manual execution example and follow the README file to build the emulator
+## Build
+- Run either `mini-blockchain-emulator.py` or `nano-blockchain-emulator.py` to generate a bin file
+- Run the `component-blockchain.py`
+- Go to the `emulator` folder
+- Run `dcbuild`
+- Check the section below for the `dcup`
+
+## Notice
+- Due to a bug in docker, you might not be able to bring the containers up
+- We provide a file called `lazy_start.sh` which brings up containers gradually
+- Copy the file in the `emulator` folder and run it after executing the `dcbuild` alias
 
 ## Concept
 - The visualization is built on a plugin-type architecture.
@@ -11,7 +20,7 @@
 - The client is divided into two project, the frontend, and the backend
 - Both projects use typescript as a base language
 - Both projects are technically node projects where we can install external npm packages
-- The frontend is clucless about the processing that happens on the backend.
+- The frontend is clueless about the processing that happens on the backend.
 - The data received on the frontend is in no way an indicator of which plugin is running
 
 ## Frontend
@@ -30,19 +39,34 @@
 - Most of the work was added to the `frontend/src/map/ui.ts` file
 - The bulk of the work happens when the user clicks on the `Blockchain` tab above the search bar
 - For all plugins, we will make use of two APIs provided on the backend server to be able to fetch data
-- To create a new plugin, call `await this._datasource.initPlugin(type)`
+- To create a new plugin, call
+```
+    await this._datasource.initPlugin(type)
+```
 - This function sends a POST request to `/api/v1/plugin/:type/init` on the server side
 - The type must match one of the types in `backend/src/plugin/PluginEnum.ts`
-- Once this is called on the frontend, a new plugin of type `type` is created on the server side
+- Once this is called on the frontend, a new manager plugin of type `type` is created on the server side
 - After that, we need create a WebSocket connection with the server
-- The socket is created in this way: `const url = 'ws://localhost:8080/api/v1/plugin/${type}/command/'; const ws = new WebSocket(url);`
+- The socket is created in this way: 
+```
+    const url = 'ws://localhost:8080/api/v1/plugin/${type}/command/'; 
+    const ws = new WebSocket(url);
+```
 - This connection is the one which we will make use of to pass data to/from frontend/backend
-- To get messages from the backend, we add an `onmessage` listener by writing `ws.onmessage = (event) => {...}`
-- To send data to the backend, we use the function `ws.send(JSON.stringify(...))`
-- One example of data sent from the frontend to the backend is `
-{
-	command: "start newBlockHeaders xyz"
-}`
+- To get messages from the backend, we add an `onmessage` listener by writing 
+```
+    ws.onmessage = (event) => {...}
+```
+- To send data to the backend, we use the function
+```
+    ws.send(JSON.stringify(...))
+```
+- One example of data sent from the frontend to the backend is 
+```
+    {
+    	command: "start newBlockHeaders xyz"
+    }
+```
 
 ## Backend
 
@@ -52,11 +76,20 @@
 - The routes are added in `/backend/src/api/v1/main.ts`
 - We created two new express routes which will be used by all future plugins
 - The first one is reached by doing a POST request to `/api/v1/plugin/:type/init`. This is the route that creates a new plugin on the backend side. This plugin is the one that will fetch data from the emulator's docker containers
-- To receive data from the plugin instance itself, we add a `instantiated_plugins[type].onMessage(function(data) {...})`
-- The second express route is reached by creating a new socket connection to `ap1/v1//plugin/:type/command/`. In this route, we set a `message` listener to get data from the frontend by writing `running_ws[type].on('message', (message) => {...})`
+- To receive data from the plugin instance itself, we add
+```
+    instantiated_plugins[type].onMessage(function(data) {...})
+```
+- The second express route is reached by creating a new socket connection to `ap1/v1//plugin/:type/command/`. In this route, we set a `message` listener to get data from the frontend by writing
+```
+    running_ws[type].on('message', (message) => {...})
+```
 - The data received by the frontend should be an object that has the `command` property. This `command` property is a string of the from `<action> <filter> <params>` where the `<action>` takes the values of `start` or `stop`, the `<filter>` takes the values of the events you want listen to from the emulator (plugin specific), and the `params` field is optional
 - Now that the socket connection received the full command from the frontend, we can run our plugin code depending on the `<action>` provided
-- To send data to the frontend, we use the `running_ws[type].send(JSON.stringify(...))`
+- To send data to the frontend, we use the
+```
+    running_ws[type].send(JSON.stringify(...))
+```
 
 
 ### Plugin architecture
@@ -68,22 +101,36 @@
 - To create a new plugin, your class has to implement the `PluginInterface` to add the proper functions. You also need to add your class inside `BasePlugin.ts`
 - You plugin is the one that will fetch data from the emulator and pass it to the `onMessage` inside the websocket route
 
+![](./images/plugin-architecture)
+
 ### Blockchain plugin
 - The `BlockchainPlugin.ts` implements `PluginInterface.ts`
 - This plugin is the one that connects to the Ethereum nodes using Web3 and fetches the data from the emulator
 - When the user sends `start newBlockHeaders xyz`, we use Web3 to attach event listeners inside the Ethereum nodes.
-- To connect to the Ethereum nodes using web3, we use `const web3 = new Web3(new Web3.providers.WebsocketProvider(`ws://${ip}:8546`, {
+- To connect to the Ethereum nodes using web3, we use
+```
+const web3 = new Web3(new Web3.providers.WebsocketProvider(ws://${ip}:8546, {
         clientConfig: {
                 // Useful to keep a connection alive
                 keepalive: true,
                 keepaliveInterval: 60000 // ms
         },
-      }));`
+      }));
+```
 - Our ethereum nodes expose port 8546 for external websocket connections. We do this using the `geth` ethereum client.
 - The data received by web3 includes new blocks that are mined, and new trddansactions that are performed.
-- To listen to `newBlockHeaders`, we use: `const subscription = web3.eth.subscribe("newBlockHeaders", (error, result) => {...})`
-- The Ethereum nodes will now start sending to our Plugin instance data which we will relay using the `onMessage` and then using `running_ws[type].send(JSON.stringify(...))` to send the data to the frontend
-- When the user sends `stop newBlockHeaders`, we use ` subscription.unsubscribe((error, success) => {...})`
+- To listen to `newBlockHeaders`, we use:
+```
+    const subscription = web3.eth.subscribe("newBlockHeaders", (error, result) => {...})
+```
+- The Ethereum nodes will now start sending to our Plugin instance data which we will relay using the `onMessage` and then uses this command to send data to the frontend 
+``` 
+    running_ws[type].send(JSON.stringify(...)) 
+``` 
+- When the user sends `stop newBlockHeaders`, we use
+```
+    subscription.unsubscribe((error, success) => {...})
+```
 - The Ethereum nodes will now stop sending us data.
 
 
@@ -91,20 +138,26 @@
 
 - The data sent to the frontend is in no way representative of what plugin is running on the backend.
 - The data is only relevant to the visualization itself.
-- The data is structured in the following way: ` {
+- The data is structured in the following way: 
+``` 
+    {
       eventType: event_type.data,
       timestamp: Date.now(),
       status: data.status, // success or error
       containerId: data.containerId, // node to highlight
       data: data.data, // configs for vis-network library to highligh nodes
-    };`
-- `data.data` looks like: ` {
-                                borderWidth: 4,
-                                color: {
-                                        background: "purple",
-                                        border: "purple"
-                                }
-                        }`
+    }
+```
+- `data.data` looks like:
+```
+    {
+            borderWidth: 4,
+            color: {
+                    background: "purple",
+                    border: "purple"
+            }
+    }
+```
 
 ### docker-compose.yml
 
