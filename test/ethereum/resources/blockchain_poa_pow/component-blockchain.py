@@ -23,7 +23,7 @@ hport=8544
 cport=8549
 
 # Currently the minimum amount to have to be a validator in proof of stake
-balance = str(32 * pow(10, 8))
+balance = 32 * pow(10, 8)
 
 
 

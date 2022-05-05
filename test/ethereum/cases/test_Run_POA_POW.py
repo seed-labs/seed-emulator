@@ -58,17 +58,12 @@ class TestRunPOAPOW(unittest.TestCase):
     
     def test_mining(self):
         # check mining
-        for index, eth in enumerate(self.eth_array):
+        for index, result in enumerate(["true","true","false","true","true","true","true"]):
             if index + 1 % 3 == 0 and index + 1 <=6:
                 # boot node is not mining
-                cmd="docker exec -t {} geth attach --exec 'eth.mining'".format(eth)
+                cmd="docker exec -t {} geth attach --exec 'eth.mining'".format(self.eth_array[index])
                 output = subprocess.check_output(cmd, shell=True).decode("utf-8").strip()
-                self.assertEqual("false",removeColoredText(output))
-            # all node except boot node is mining
-            else:
-                cmd="docker exec -t {} geth attach --exec 'eth.mining'".format(eth)
-                output = subprocess.check_output(cmd, shell=True).decode("utf-8").strip()
-                self.assertEqual("true",removeColoredText(output))
+                self.assertEqual(result,removeColoredText(output))
         
     
     def test_consensus_mechanism(self):

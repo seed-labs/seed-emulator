@@ -33,7 +33,7 @@ e5.startMiner().createNewAccount(3)
 e6.createNewAccount()
 
 # Create prefunded accounts on e3
-e3.createPrefundedAccounts("8989898989", 1, "admin")
+e3.createPrefundedAccounts(8989898989, 1, "admin")
 
 # Import prefunded accounts on e4
 e4.importPrefundedAccount(keyfileDirectory = "../keystore/UTC--2022-03-25T16-41-21.542086000Z--675eb8226a35256f638712db74878f0a15d3d56e",password="admin", balance="989898989898")
