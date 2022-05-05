@@ -51,7 +51,8 @@ for i in range(start, end):
     e = eth.install("eth{}".format(i))
     e.setConsensusMechanism(ConsensusMechanism.POW)
     e.unlockAccounts().startMiner()
-    emu.getVirtualNode("eth{}".format(i)).setDisplayName('Ethereum-{}-pow'.format(i))
+    e.enableExternalConnection()
+    emu.getVirtualNode("eth{}".format(i)).setDisplayName('Ethereum-{}-pow'.format(i)).addPortForwarding(hport, cport)
 
 print("Created {} nodes that use PoW consensus mechanism".format(end - start))
 
