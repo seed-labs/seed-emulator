@@ -11,7 +11,6 @@ emu = Emulator()
 # Note: right now we need to manually create the folder for each node (see README.md). 
 eth = EthereumService(saveState = True)
 
-
 # Create Ethereum nodes (nodes in this layer are virtual)
 e1 = eth.install("eth1")
 e2 = eth.install("eth2")
@@ -38,12 +37,12 @@ e3.deploySmartContract(smart_contract)
 
 # Set node port that accepts connections
 e3.enableExternalConnection()
-e6.enableExternalConnection().setGethHttpPort(8549)
+e6.enableExternalConnection().setGethHttpPort(8545)
 
 # Get node port that accepts connections
 # Same api used in the EthereumService to set the listening port
 e3_port_forward = e3.getGethHttpPort() # Uses default 8545 port
-e6_port_forward = e6.getGethHttpPort() # Uses custom 8549 port
+e6_port_forward = e6.getGethHttpPort() # Uses custom port, in this case also using 8545
 
 # Customizing the display names (for visualization purpose)
 emu.getVirtualNode('eth1').setDisplayName('Ethereum-1')

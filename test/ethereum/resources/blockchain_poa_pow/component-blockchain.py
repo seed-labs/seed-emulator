@@ -12,7 +12,7 @@ emu = Emulator()
 # Note: right now we need to manually create the folder for each node (see README.md). 
 eth = EthereumService(saveState = True, manual=False)
 
-eth.setBaseConsensusMechanism("poa")
+eth.setBaseConsensusMechanism(ConsensusMechanism.POA)
 
 # Create Ethereum nodes (nodes in this layer are virtual)
 start=1
@@ -24,6 +24,8 @@ cport=8549
 
 # Currently the minimum amount to have to be a validator in proof of stake
 balance = 32 * pow(10, 8)
+
+
 
 # Setting a third of nodes as bootnodes
 for i in range(start, end):
@@ -37,7 +39,7 @@ for i in range(start, end):
         sealers.append(i)
     
     e.enableExternalConnection() # not recommended for sealers in production mode
-    emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-poa-{}'.format(i)).addPortForwarding(hport, cport)
+    emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}'.format(i)).addPortForwarding(hport, cport)
     hport = hport + 1
 
 print("There are {} sealers and {} bootnodes".format(len(sealers), len(bootnodes)))
@@ -48,9 +50,9 @@ start = end
 end = start + 2
 for i in range(start, end):
     e = eth.install("eth{}".format(i))
-    e.setConsensusMechanism("pow")
+    e.setConsensusMechanism(ConsensusMechanism.POW)
     e.unlockAccounts().startMiner()
-    emu.getVirtualNode("eth{}".format(i)).setDisplayName('Ethereum-pow-{}'.format(i))
+    emu.getVirtualNode("eth{}".format(i)).setDisplayName('Ethereum-{}'.format(i))
 
 print("Created {} nodes that use PoW consensus mechanism".format(end - start))
 
