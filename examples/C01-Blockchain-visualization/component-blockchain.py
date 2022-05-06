@@ -38,7 +38,7 @@ for i in range(start, end):
         sealers.append(i)
     
     e.enableExternalConnection() # not recommended for sealers in production mode
-    emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}-pow'.format(i)).addPortForwarding(hport, cport)
+    emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}-poa'.format(i)).addPortForwarding(hport, cport)
     hport = hport + 1
 
 print("There are {} miners and {} bootnodes".format(len(sealers), len(bootnodes)))
