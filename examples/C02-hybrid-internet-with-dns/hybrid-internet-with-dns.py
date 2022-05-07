@@ -13,7 +13,7 @@ emuB = Emulator()
 
 # Load the pre-built components and merge them
 emuA.load('../C00-hybrid-internet/base-component.bin')
-emuB.load('./hybrid-dns-component.bin')
+emuB.load('../C01-hybrid-dns-component/hybrid-dns-component.bin')
 emu = emuA.merge(emuB, DEFAULT_MERGERS)
 
 
@@ -26,9 +26,10 @@ emu.addBinding(Binding('a-root-server', filter=Filter(asn=171), action=Action.FI
 emu.addBinding(Binding('ns-google-com', filter=Filter(asn=153), action=Action.FIRST))
 emu.addBinding(Binding('ns-twitter-com', filter=Filter(asn=161), action=Action.FIRST))
 #####################################################################################
+
 #####################################################################################
 # Create a local DNS servers (virtual nodes).
-
+# Add forward zone so that the DNS queries from emulator can be forwarded to the emulator's Nameserver not the real ones.
 ldns = DomainNameCachingService()
 ldns.install('global-dns-1').addForwardZone('google.com.', 'ns-google-com').addForwardZone('twitter.com.', 'ns-twitter-com')
 

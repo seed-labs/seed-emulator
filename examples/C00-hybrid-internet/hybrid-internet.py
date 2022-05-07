@@ -12,7 +12,6 @@ ebgp    = Ebgp()
 ibgp    = Ibgp()
 ospf    = Ospf()
 web     = WebService()
-dhcp    = DHCPService()
 ovpn    = OpenVpnRemoteAccessProvider()
 
 
@@ -59,7 +58,7 @@ Makers.makeTransitAs(base, 12, [101, 104], [(101, 104)])
 # Create single-homed stub ASes. "None" means create a host only 
 
 Makers.makeStubAs(emu, base, 150, 100, [web, None])
-Makers.makeStubAs(emu, base, 151, 100, [web, dhcp, None])
+Makers.makeStubAs(emu, base, 151, 100, [web, None])
 
 Makers.makeStubAs(emu, base, 152, 101, [None, None])
 Makers.makeStubAs(emu, base, 153, 101, [web, None, None])
@@ -82,8 +81,13 @@ Makers.makeStubAs(emu, base, 171, 105, [None])
 as11872 = base.createAutonomousSystem(11872)
 as11872.createRealWorldRouter('rw-11872-syr').joinNetwork('ix102', '10.102.0.118')
 
+
+###############################################################################
+# Create hybrid AS.
+# AS99999 is the emulator's autonomous system that routes the traffics to the real-world internet
 as99999 = base.createAutonomousSystem(99999)
 as99999.createRealWorldRouter('rw-real-world', prefixes=['0.0.0.0/1', '128.0.0.0/1']).joinNetwork('ix100', '10.100.0.99')
+###############################################################################
 
 
 ###############################################################################
@@ -128,7 +132,6 @@ emu.addLayer(ebgp)
 emu.addLayer(ibgp)
 emu.addLayer(ospf)
 emu.addLayer(web)
-emu.addLayer(dhcp)
 
 
 # Save it to a component file, so it can be used by other emulators
