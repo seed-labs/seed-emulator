@@ -5,11 +5,12 @@ to home (such as Spectrum). The scenario is described in the
 diagram as below.
 ![](pics/BYOI-1.jpg)
 
-##Tables
-[1. Connecting Emulator to WiFi](#connecting-emulator-to-wifi)
-[1.1 Single WiFi Access Point](#1-single-wifi-access-point)
-[1.2 Multiple WiFi Access Points](#2-multiple-wifi-access-points)
-[2. Distributed Emulators(switch verstion)](#distributed-emulation-switch-version)
+## Tables
+
+### [1. Connecting Emulator to WiFi](#connecting-emulator-to-wifi)
+#### [1.1 Single WiFi Access Point](#1-single-wifi-access-point)
+#### [1.2 Multiple WiFi Access Points](#2-multiple-wifi-access-points)
+### [2. Distributed Emulators(switch verstion)](#distributed-emulation-switch-version)
 
 ## Connecting Emulator to WiFi
 ### (1) Single WiFi Access Point
