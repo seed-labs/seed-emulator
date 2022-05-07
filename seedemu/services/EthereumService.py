@@ -9,9 +9,9 @@ import os
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
 
-from eth_account import Account
 import json
 from datetime import datetime, timezone
+import re
 
 ETHServerFileTemplates: Dict[str, str] = {}
 
@@ -69,7 +69,7 @@ class Genesis():
     },
     "nonce": "0x0",
     "timestamp": "0x622a4e1a",
-    "extraData": "0x00000000000000000000000000000000000000000000000000000000000000001943c0d246e3d57ed3acdfa931f63349f9a851b637f10a73416468193d5a730734ac47526bb56745389a47b4903d06738a4693a40ead52a1d5b5f7c741b8c9b34a90f87d938867877d822264c9a615f848a3596372e19d5d8778112a48b1a786fccb300248c3af013add2ec54667648cf27a7ce9def5c45353cf63e8727766b189c3cfea4b910b2eb12982e1571479c79f371a6a34dc8569a127a9ce3957bdba59d8e23d77059d95c60a03c9f20aac16bafe791a5b53d933f7f27793e126393b3bb07734069b8efa61cd689c9b533b2ce3512b1b139f8e210d1e3dbd6e3fa93d866c3c75141a26de8844c5f2132b4c239f1246982d794cc6a4add27dd436dbf0432adfcba0b4069d6dd736c8eef80f83d2234cc32d69bc36a53ae2f0edac2b2321e2f487327846ae4a89e8ccb4f7fdd0357f91d52f6e3e0cb1e5f4ad36e0658fe8d3a0100d4e0e0fda62d590ce59afcde3a8b7f0f0a6b0dd80f000911a238f89d74b7c71648e3db1f762d02c18e929ed177da63769dc6bfae52fd442fad09769bcb5acb9434ccc52e9cbc14ed5ad44970000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "extraData": "0x0",
     "gasLimit": "0x47b760",
     "difficulty": "0x1",
     "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -118,16 +118,16 @@ class Genesis():
         self.__consensusMechaism = consensus
         self.__genesis = json.loads(self.__genesisPoA) if self.__consensusMechaism == ConsensusMechanism.POA else json.loads(self.__genesisPoW)
     
-    def allocAccount(self, accounts:List[EthAccount]) -> Genesis:
+    def allocateBalance(self, accounts:List[EthAccount]) -> Genesis:
         '''
-        @brief alloce balance to account on genesis. It will update the genesis file
+        @brief allocate balance to account on genesis. It will update the genesis file
         '''
         for account in accounts:
-            self.__alllocAccount(account.address,account.alloc_balance)
+            self.__allocateBalance(account.address,account.alloc_balance)
         return self
 
     def setSealer(self, accounts:List[EthAccount]) -> Genesis:
-        self.__replaceExtraData(self.__generateGenesisExtraData(accounts))
+        if len(accounts) > 0: self.__replaceExtraData(self.__generateGenesisExtraData(accounts))
         return self
 
     def __generateGenesisExtraData(self, prefunded_accounts: List[EthAccount]) -> str:
@@ -145,7 +145,7 @@ class Genesis():
         
         return extraData + "0" * 130
     
-    def __alllocAccount(self, address:str, balance:str) -> None:
+    def __allocateBalance(self, address:str, balance:str) -> None:
         self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
         
     def __replaceExtraData(self, content:str) -> None:
@@ -165,10 +165,9 @@ class EthAccount():
     address: str    # account address
     keystore_content: str   # the content of keystore file
     keystore_filename:str   # the name of keystore file 
-    alloc_balance: str
-    account: Account
+    alloc_balance: int
 
-    def __init__(self, alloc_balance:str = "0",password:str = "admin", keyfile: str = None) -> None:
+    def __init__(self, alloc_balance:int = 0,password:str = "admin", keyfile: str = None) -> None:
         """
         @brief create a Ethereum Local Account when initialize
 
@@ -176,29 +175,39 @@ class EthAccount():
         @param password encrypt password for creating new account, decrypt password for importing account
         @param keyfile content of the keystore file. If this parameter is None, this function will create a new account, if not, it will import account from keyfile
         """
+        from eth_account import Account
+        self.lib_eth_account = Account
         self.account = self.__importAccout(keyfile=keyfile, password=password) if keyfile else self.__createAccount()
         self.address = self.account.address
+        self.__validate_balance(alloc_balance=alloc_balance)
         self.alloc_balance = alloc_balance
         # encrypt private for Ethereum Client, like geth and generate the content of keystore file
-        encrypted = Account.encrypt(self.account.key, password=password)
+        encrypted = self.lib_eth_account.encrypt(self.account.key, password=password)
         self.keystore_content = json.dumps(encrypted)
         # generate the name of the keyfile
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
-        self.keystore_filename = "UTC--"+datastr+"--"+encrypted["address"] 
+        self.keystore_filename = "UTC--"+datastr+"--"+encrypted["address"]
+
+    def __validate_balance(self, alloc_balance:int):
+        """
+        validate balance
+        It only allow positive decimal integer
+        """
+        assert alloc_balance>=0 , "Invalid Balance Range: {}".format(alloc_balance)
     
-    def __importAccout(self, keyfile: str, password = "admin") -> Account:
+    def __importAccout(self, keyfile: str, password = "admin"):
         """
         @brief import account from keyfile
         """
         print("importing account...")
-        return Account.from_key(Account.decrypt(keyfile_json=keyfile,password=password))
+        return self.lib_eth_account.from_key(self.lib_eth_account.decrypt(keyfile_json=keyfile,password=password))
     
-    def __createAccount(self) -> Account:
+    def __createAccount(self):
         """
         @brief create account
         """
         print("creating account...")
-        return  Account.create()
+        return  self.lib_eth_account.create()
 
 
 class SmartContract():
@@ -296,7 +305,7 @@ class EthereumServer(Server):
         self.__create_new_account = 0
         self.__enable_external_connection = False
         self.__unlockAccounts = False
-        self.__prefunded_accounts = []
+        self.__prefunded_accounts = [EthAccount(alloc_balance=32 * pow(10, 18), password="admin")] #create a prefunded account by default. It ensure POA network works when create/import prefunded account is not called.
         self.__consensus_mechanism = None # keep as empty to make sure the OR statement works in the install function
 
     def __createNewAccountCommand(self, node: Node):
@@ -351,7 +360,7 @@ class EthereumServer(Server):
             node.appendStartCommand('(\n {})&'.format(smartContractCommand))
     
     def __updateGenesis(self, genesis: Genesis, prefunded_accounts:List[EthAccount]) -> Genesis:
-        genesis.allocAccount(prefunded_accounts)
+        genesis.allocateBalance(prefunded_accounts)
         genesis.setSealer(prefunded_accounts)
         return genesis
 
@@ -436,7 +445,10 @@ class EthereumServer(Server):
         
         # Flags updated to accept external connections
         if self.externalConnectionEnabled():
-            whitelist_flags = "--http.corsdomain 'https://remix.ethereum.org' --http.api web3,eth,debug,personal,net"
+            apis = "web3,eth,debug,personal,net,clique"
+            http_whitelist_domains = "*"
+            ws_whitelist_domains = "*"
+            whitelist_flags = "--http.corsdomain \"{}\" --http.api {} --ws --ws.addr 0.0.0.0 --ws.port {} --ws.api {} --ws.origins \"{}\" ".format(http_whitelist_domains, apis, 8546, apis, ws_whitelist_domains)
             common_flags = '{} {}'.format(common_flags, whitelist_flags)
         
         # Base geth command
@@ -581,7 +593,7 @@ class EthereumServer(Server):
         
         return self
     
-    def createPrefundedAccounts(self, balance: str = "0", number: int = 1, password: str = "admin", saveDirectory:str = None) -> EthereumServer:
+    def createPrefundedAccounts(self, balance: int = 0, number: int = 1, password: str = "admin", saveDirectory:str = None) -> EthereumServer:
         """
         @brief Call this api to create new prefunded account with balance
 
@@ -592,13 +604,13 @@ class EthereumServer(Server):
         @returns self
         """
         for _ in range(number):    
-            account = EthAccount(balance,password)
+            account = EthAccount(alloc_balance=balance,password=password)
             if saveDirectory:
                 self.__saveAccountKeystoreFile(account=account, saveDirectory=saveDirectory)
             self.__prefunded_accounts.append(account)
         return self
     
-    def importPrefundedAccount(self, keyfileDirectory:str, password:str = "admin", balance: str = "0") -> EthereumServer:
+    def importPrefundedAccount(self, keyfileDirectory:str, password:str = "admin", balance: int = 0) -> EthereumServer:
         f = open(keyfileDirectory, "r")
         keystoreFileContent = f.read()
         account = EthAccount(alloc_balance=balance, password=password,keyfile=keystoreFileContent)
@@ -686,7 +698,7 @@ class EthereumService(Service):
         self.__save_path = statePath
 
         self.__manual_execution = manual
-        self.__base_consensus_mechanism = ConsensusMechanism.POA # set by default in case the API is not used
+        self.__base_consensus_mechanism = ConsensusMechanism.POW # set by default in case the API is not used
 
     def getName(self):
         return 'EthereumService'
@@ -746,6 +758,13 @@ class EthereumService(Service):
 
         if self.__save_state:
             node.addSharedFolder('/root/.ethereum', '{}/{}'.format(self.__save_path, server.getId()))
+    
+    def install(self, vnode: str) -> EthereumServer:
+        """!
+        @brief Override function of Sevice.install
+        Here is downcasting the return for IntelliSense :)
+        """
+        return super().install(vnode)
 
     def _doInstall(self, node: Node, server: EthereumServer):
         self._log('installing eth on as{}/{}...'.format(node.getAsn(), node.getName()))
