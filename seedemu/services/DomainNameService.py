@@ -4,8 +4,10 @@ from seedemu.core.enums import NetworkType
 from typing import List, Dict, Tuple, Set
 from re import sub
 from random import randint
+import requests
 
 DomainNameServiceFileTemplates: Dict[str, str] = {}
+ROOT_ZONE_URL = 'https://www.internic.net/domain/root.zone'
 
 DomainNameServiceFileTemplates['named_options'] = '''\
 options {
@@ -84,6 +86,18 @@ class Zone(Printable):
         @returns self, for chaining API calls.
         """
         self.__records.append(record)
+
+        return self
+    
+    def deleteRecord(self, record: str) -> Zone:
+        """!
+        @brief Delete the record from zone.
+
+        @todo NS?
+        
+        @returns self, for chaining API calls.
+        """
+        self.__records.remove(record)
 
         return self
 
@@ -225,6 +239,7 @@ class DomainNameServer(Server):
     __zones: Set[Tuple[str, bool]]
     __node: Node
     __is_master: bool
+    __is_real_root: bool
 
     def __init__(self):
         """!
@@ -232,6 +247,7 @@ class DomainNameServer(Server):
         """
         self.__zones = set()
         self.__is_master = False
+        self.__is_real_root = False
 
     def addZone(self, zonename: str, createNsAndSoa: bool = True) -> DomainNameServer:
         """!
@@ -249,13 +265,23 @@ class DomainNameServer(Server):
 
         return self
 
-    def setMaster(self) -> DomainNameService:
+    def setMaster(self) -> DomainNameServer:
         """!
         @brief set the name server to be master name server.
 
         @returns self, for chaining API calls.
         """
         self.__is_master = True
+
+        return self
+
+    def setRealRootNS(self) -> DomainNameServer:
+        """!
+        @brief set the name server to be a real root name server.
+
+        @returns self, for chaining API calls.
+        """
+        self.__is_real_root = True
 
         return self
 
@@ -287,6 +313,29 @@ class DomainNameServer(Server):
             out += '{}\n'.format(zone)
 
         return out
+
+        
+    def __getRealRootRecords(self):
+        """!
+        @brief Helper tool, get real-world prefix list for the current ans by
+        RIPE RIS.
+
+        @throw AssertionError if API failed.
+        """
+        rules = []
+        rslt = requests.get(ROOT_ZONE_URL)
+
+        assert rslt.status_code == 200, 'RIPEstat API returned non-200'
+        
+        rules_byte = rslt.iter_lines()
+        
+        for rule_byte in rules_byte:
+            line_str:str = rule_byte.decode('utf-8')
+            if not line_str.startswith('.'):
+                rules.append(line_str)
+        
+        return rules
+
 
     def configure(self, node: Node, dns: DomainNameService):
         """!
@@ -323,6 +372,10 @@ class DomainNameServer(Server):
                 zone.addGuleRecord('ns{}.{}'.format(str(ns_number), zonename), addr)
                 zone.addRecord('ns{}.{} A {}'.format(str(ns_number), zonename, addr))
                 zone.addRecord('@ NS ns{}.{}'.format(str(ns_number), zonename))
+                
+            if zone.getName() == "." and self.__is_real_root:
+                for record in self.__getRealRootRecords():
+                    zone.addRecord(record)
 
     def install(self, node: Node, dns: DomainNameService):
         """!
