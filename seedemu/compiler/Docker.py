@@ -661,6 +661,12 @@ class Docker(Compiler):
                 key = 'description',
                 value = node.getDescription()
             )
+        
+        if node.getService() != None:
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'service',
+                value = node.getService()
+            )
 
         n = 0
         for iface in node.getInterfaces():
@@ -744,7 +750,7 @@ class Docker(Compiler):
         (scope, type, _) = node.getRegistryInfo()
         prefix = self._contextToPrefix(scope, type)
         real_nodename = '{}{}'.format(prefix, node.getName())
-
+        print(real_nodename)    
         node_nets = ''
         dummy_addr_map = ''
 
@@ -961,7 +967,7 @@ class Docker(Compiler):
                 self.__networks += self._compileNet(obj)
 
         for ((scope, type, name), obj) in registry.getAll().items():
-
+            print(name)
             if type == 'rnode':
                 self._log('compiling router node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)

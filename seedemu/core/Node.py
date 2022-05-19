@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing_extensions import Self
 from .Printable import Printable
 from .Network import Network
 from .enums import NodeRole
@@ -207,6 +208,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __asn: int
     __scope: str
     __role: NodeRole
+    __service: str
     __interfaces: List[Interface]
     __files: Dict[str, File]
     __imported_files: Dict[str, str]
@@ -242,6 +244,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__asn = asn
         self.__role = role
         self.__name = name
+        self.__service = None
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
         self.__build_commands = []
@@ -536,6 +539,25 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__role
 
+    def setService(self, service:str) -> Node:
+        """!
+        @brief Set service of current node
+
+        @returns self, for chaining API calls.
+        """
+        self.__service = service
+
+        return self
+
+    def getService(self) -> str:
+        """!
+        @brief Get service of current node
+        
+        @returns service 
+        """
+
+        return self.__service
+        
     def getFile(self, path: str) -> File:
         """!
         @brief Get a file object, and create if not exist.
