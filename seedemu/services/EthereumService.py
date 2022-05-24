@@ -289,6 +289,8 @@ class EthereumServer(Server):
     __unlockAccounts: bool
     __prefunded_accounts: List[EthAccount]
     __consensus_mechanism: ConsensusMechanism
+    __geth_binary: str
+    __geth_client: str
 
     def __init__(self, id: int):
         """!
@@ -307,6 +309,7 @@ class EthereumServer(Server):
         self.__unlockAccounts = False
         self.__prefunded_accounts = [EthAccount(alloc_balance=32 * pow(10, 18), password="admin")] #create a prefunded account by default. It ensure POA network works when create/import prefunded account is not called.
         self.__consensus_mechanism = None # keep as empty to make sure the OR statement works in the install function
+        self.__geth_binary = ""
 
     def __createNewAccountCommand(self, node: Node):
         if self.__create_new_account > 0:
@@ -317,8 +320,8 @@ class EthereumServer(Server):
             
             """
             command = " sleep 20\n\
-            geth --password /tmp/eth-password account new \n\
-            "
+            {} --password /tmp/eth-password account new \n\
+            ".format(self.__geth_client)
 
             for count in range(self.__create_new_account):
                 node.appendStartCommand('(\n {})&'.format(command))
@@ -331,12 +334,12 @@ class EthereumServer(Server):
             """
 
             base_command = "sleep 20\n\
-            geth --exec 'personal.unlockAccount(eth.accounts[{}],\"admin\",0)' attach\n\
+            {} --exec 'personal.unlockAccount(eth.accounts[{}],\"admin\",0)' attach\n\
             "
             
             full_command = ""
             for i in range(self.__create_new_account + 1):
-                full_command += base_command.format(str(i))
+                full_command += base_command.format(self.__geth_client, str(i))
 
             node.appendStartCommand('(\n {})&'.format(full_command))
 
@@ -349,9 +352,9 @@ class EthereumServer(Server):
             
             """   
             command = " sleep 20\n\
-            geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
-            geth --exec 'miner.start(1)' attach \n\
-            "
+            {} --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
+            {} --exec 'miner.start(1)' attach \n\
+            ".format(self.__geth_client, self.__geth_client)
             node.appendStartCommand('(\n {})&'.format(command))
 
     def __deploySmartContractCommand(self, node: Node):
@@ -409,21 +412,29 @@ class EthereumServer(Server):
         node.appendFile('/tmp/eth-password', 'admin') 
 
         node.addSoftware('software-properties-common')
-
         # tap the eth repo
-        node.addBuildCommand('add-apt-repository ppa:ethereum/ethereum')
-
+        node.addBuildCommand('add-apt-repository ppa:ethereum/ethereum')  
         # install geth and bootnode
-        node.addBuildCommand('apt-get update && apt-get install --yes geth bootnode')
-
+        install_command = 'apt-get update && apt-get install --yes bootnode {}' 
+        #node.addBuildCommand('apt-get update && apt-get install --yes geth bootnode')
+       
+       
+        geth_client = "geth"
+        if self.getLocalGethBinary():
+            geth_client = "bash -c /root/.ethereum/{}".format(self.__geth_binary)
+            node.addBuildCommand(install_command.format(''))
+        else:
+            node.addBuildCommand(install_command.format(geth_client))
+        
+        self.__geth_client = geth_client
         # set the data directory
         datadir_option = "--datadir /root/.ethereum"
 
         # genesis
-        node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth {} init /tmp/eth-genesis.json'.format(datadir_option))
+        node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && {} {} init /tmp/eth-genesis.json'.format(geth_client,datadir_option))
 
         # create account via pre-defined password
-        node.appendStartCommand('[ -z `ls -A /root/.ethereum/keystore` ] && geth {} --password /tmp/eth-password account new'.format(datadir_option)) 
+        node.appendStartCommand('[ -z `ls -A /root/.ethereum/keystore` ] && {} {} --password /tmp/eth-password account new'.format(geth_client, datadir_option)) 
         if allBootnode or self.__is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
             # Default port is 30301, you can change the custom port with the next command
@@ -451,8 +462,11 @@ class EthereumServer(Server):
             whitelist_flags = "--http.corsdomain \"{}\" --http.api {} --ws --ws.addr 0.0.0.0 --ws.port {} --ws.api {} --ws.origins \"{}\" ".format(http_whitelist_domains, apis, 8546, apis, ws_whitelist_domains)
             common_flags = '{} {}'.format(common_flags, whitelist_flags)
         
+        if not self.isDiscoverable():
+            common_flags = '{} {}'.format(common_flags, "--nodiscover")
+
         # Base geth command
-        geth_command = 'nice -n 19 geth {}'.format(common_flags)
+        geth_command = 'nice -n 19 {} {}'.format(geth_client, common_flags)
         
         # Manual vs automated geth command execution
         # In the manual approach, the geth command is only thrown in a file in /tmp/run.sh
@@ -477,6 +491,33 @@ class EthereumServer(Server):
             self.__unlockAccountsCommand(node)
             self.__addMinerStartCommand(node)
             self.__deploySmartContractCommand(node)
+
+    def useLocalGethBinary(self, executable:str) -> EthereumServer:
+        """
+        @brief setting the filename of modified geth binary
+        """
+        self.__geth_binary = executable
+
+        return self
+
+    def getLocalGethBinary(self) -> str:
+        """
+        @brief getting the binary name
+        """
+        return self.__geth_binary
+
+    def setNoDiscover(self) -> EthereumServer:
+        """
+        @brief setting the --nodiscover geth flag
+        """
+        self.__is_discoverable = False
+        return self
+
+    def isDiscoverable(self) -> str:
+        """
+        @brief making sure nodes can automatically discover their peers
+        """
+        return self.__is_discoverable
 
     def setConsensusMechanism(self, consensus:ConsensusMechanism=ConsensusMechanism.POA) -> EthereumServer:
         '''
