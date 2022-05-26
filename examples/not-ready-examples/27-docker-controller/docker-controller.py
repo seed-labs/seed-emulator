@@ -12,6 +12,7 @@ controller = DockerController()
 # classname is assigned using Label:org.seedsecuritylabs.seedemu.meta.class
 webContainers = controller.getContainersByClassName("WebService")
 
+# Get container by container name
 container = controller.getContainerById("as151r-router0-10.151.0.254")
 
 # Execute command on containers

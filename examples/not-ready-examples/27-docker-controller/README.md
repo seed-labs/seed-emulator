@@ -52,5 +52,61 @@ This example demonstrates the uses of DockerController class. DockerController c
 ## DockerController Class
 
 ### Function List
-- [x] works
-- [x] works too
+- [x] get containers
+    - getContainerById
+    - getContainersByClass
+```
+# Get containers by classname 
+# returns container list with classname
+# classname is assigned using Label:org.seedsecuritylabs.seedemu.meta.class
+webContainers = controller.getContainersByClassName("WebService")
+
+# Get container by container name
+container = controller.getContainerById("as151r-router0-10.151.0.254")
+```
+- [x] get network information; get 'ip addr' result from the container
+    - getNetworkInfo()
+```
+# Get networkInfo
+# get result of 'ip addr' inside the container 
+networkInfo = controller.getNetworkInfo(container)
+print("networkInfo: \n", networkInfo)
+```
+- [ ] other useful Info : Think about it
+- [x] execute command inside the container and retrieve the result
+    - execContainer()
+    - execContainers()
+```
+# Execute command on containers
+# returns a result
+ls_result = controller.execContainers(webContainers, 'id')
+print("ls_result: \n",ls_result)
+```
+- [ ] install software dynamically inside a container
+- [x] get file from a container
+    - readFile()
+```
+# Read file from container
+# It just print a file yet.
+controller.readFile(webContainers[0], fileName='/seedemu_worker')
+```
+- [x] add new nodes
+    - addNode()
+```
+####################################################################
+# Add new node
+# create a new node to a existing base-componenet.
+emu = Emulator()
+
+emu.load('./base-component.bin')
+
+base:Base = emu.getLayer('Base')
+as151 = base.getAutonomousSystem(151)
+as151.createHost('dynamic-node').joinNetwork('net0', address='10.151.0.99')
+
+# Run a new container based on the added node info. 
+controller.addNode(emu, scope='151', name='dynamic-node', type='hnode')
+```
+- [ ] add new networks
+- [ ] delete nodes
+- [ ] start/stop nodes
