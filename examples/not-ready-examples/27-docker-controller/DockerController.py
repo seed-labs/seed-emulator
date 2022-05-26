@@ -1,3 +1,4 @@
+from xmlrpc.client import boolean
 import docker
 from docker import DockerClient
 from docker.models.containers  import *
@@ -91,11 +92,13 @@ class DockerController:
             print(tar.extractfile(member.name).read().decode())
 
 
-    def addNode(self, emu:Emulator, scope:str, name:str, type:str='hnode'):
+    def _addNode(self, emu:Emulator, scope:str, name:str, type:str='hnode', rendered:boolean=False):
         client = self.__client
         output = "output"
         
-        emu.render()
+        if not rendered:
+            emu.render()
+
         obj = emu.getRegistry().get(type=type, scope=scope, name=name)
         docker = Docker()
 
@@ -114,7 +117,7 @@ class DockerController:
 
         networks = list(dcInfo['networks'].keys())
         
-        client.images.build(path=output+"/"+buildPath, tag=output+buildPath)
+        client.images.build(path=output+"/"+buildPath, tag=output+"_"+buildPath)
         
 
         if client.containers.list(all=True, filters={'name':dcInfo['container_name']}) != []:
@@ -122,7 +125,7 @@ class DockerController:
             client.containers.prune()    
 
         
-        container = client.containers.create(image = name, 
+        container = client.containers.create(image = output+"_"+buildPath, 
                             cap_add=['ALL'], 
                             sysctls={'net.ipv4.ip_forward':1, 
                                         'net.ipv4.conf.default.rp_filter':0, 
@@ -138,6 +141,16 @@ class DockerController:
         
         container.start()
 
+    def addNodes(self, emu:Emulator, baseFile:str):
+        baseEmulator = Emulator()
+        baseEmulator.load(baseFile)
+        baseEmulator.render()
+        emu.render()
+
+        newNodes = emu.getRegistry().getAll().keys() - baseEmulator.getRegistry().getAll().keys()
+
+        for scope, type, name in newNodes:
+            self._addNode(emu, scope=scope, type=type, name=name, rendered=True)
 
     
 

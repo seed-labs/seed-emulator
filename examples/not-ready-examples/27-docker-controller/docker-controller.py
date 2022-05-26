@@ -38,8 +38,14 @@ emu = Emulator()
 emu.load('./base-component.bin')
 
 base:Base = emu.getLayer('Base')
+web:WebService = emu.getLayer('WebService')
+web.install('web-dynamic')
 as151 = base.getAutonomousSystem(151)
 as151.createHost('dynamic-node').joinNetwork('net0', address='10.151.0.99')
 
+as161 = base.getAutonomousSystem(161)
+as161.createHost('dynamic-web').joinNetwork('net0')
+emu.addBinding(Binding('web-dynamic', filter = Filter(nodeName = 'dynamic-web', asn = 161)))
+
 # Run a new container based on the added node info. 
-controller.addNode(emu, scope='151', name='dynamic-node', type='hnode')
+controller.addNodes(emu, './base-component.bin')
