@@ -84,7 +84,6 @@ class DockerController:
     #tarFile update needed
     def readFile(self, container:Container, fileName:str):
         bits, stat = container.get_archive(fileName)
-        #fileBytes:bytes = ""
         file = b"".join(bits)
 
         tar = tarfile.TarFile(fileobj=io.BytesIO(file))
