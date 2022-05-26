@@ -4,7 +4,7 @@ This example demonstrates the uses of DockerController class. DockerController c
 ## Docker sdk summary
 ### Client Class
 * from_env() : local connect
-    ```
+    ```python
     client = docker.from_env()
     ```
 
@@ -12,7 +12,7 @@ This example demonstrates the uses of DockerController class. DockerController c
     * enable TCP connection for external connection to Docker
 (https://gist.github.com/styblope/dc55e0ad2a9848f2cc3307d4819d819f)     
     
-    ```
+    ```python
     client = docker.DockerClient(base_url='https://127.0.0.1:1234')
     ```
 ### Containers Class
@@ -92,7 +92,7 @@ This example demonstrates the uses of DockerController class. DockerController c
 - [x] get containers
     - getContainerById
     - getContainersByClass
-```
+```python
 # Get containers by classname 
 # returns container list with classname
 # classname is assigned using Label:org.seedsecuritylabs.seedemu.meta.class
@@ -103,7 +103,7 @@ container = controller.getContainerById("as151r-router0-10.151.0.254")
 ```
 - [x] get network information; get 'ip addr' result from the container
     - getNetworkInfo()
-```
+```python
 # Get networkInfo
 # get result of 'ip addr' inside the container 
 networkInfo = controller.getNetworkInfo(container)
@@ -113,7 +113,7 @@ print("networkInfo: \n", networkInfo)
 - [x] execute command inside the container and retrieve the result
     - execContainer()
     - execContainers()
-```
+```python
 # Execute command on containers
 # returns a result
 ls_result = controller.execContainers(webContainers, 'id')
@@ -122,14 +122,14 @@ print("ls_result: \n",ls_result)
 - [ ] install software dynamically inside a container
 - [x] get file from a container
     - readFile()
-```
+```python
 # Read file from container
 # It just print a file yet.
 controller.readFile(webContainers[0], fileName='/seedemu_worker')
 ```
 - [x] add new nodes
     - addNode()
-```
+```python
 ####################################################################
 # Add new node
 # create a new node to a existing base-componenet.
