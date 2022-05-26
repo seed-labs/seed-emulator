@@ -27,7 +27,7 @@ This example demonstrates the uses of DockerController class. DockerController c
     * `docker container prune`
 
     
-### Container
+### Container Class
 * attrs
     <details>
     <summary> container.attrs details </summary>
@@ -73,7 +73,7 @@ This example demonstrates the uses of DockerController class. DockerController c
 * stop() : stop the container
     * `docker stop`
     
-### Networks
+### Networks Class
 * create() : create a network
     * `docker network create`
 * get() : get a network by its ID
@@ -82,7 +82,7 @@ This example demonstrates the uses of DockerController class. DockerController c
 * prune() : delete unused networks
     * `docker networks prune`
 
-### Network
+### Network Class
 * connect() : connect a container to this network
 * disconnect() : disconnect a container from this network
 
