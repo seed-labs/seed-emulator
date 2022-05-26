@@ -87,48 +87,65 @@ This example demonstrates the uses of DockerController class. DockerController c
 * disconnect() : disconnect a container from this network
 
 ## DockerController Class
-
 ### Function List
+
+- [ ] support docker demon connection from remote
 - [x] get containers
-    - getContainerById
-    - getContainersByClass
+    - [getContainerById](#getcontainerbyid--get-container-by-id)
+    - [getContainersByClass](#getcontainersbyclass--get-container-list-by-classname)
+- [x] get network information; get 'ip addr' result from the container
+    - [getNetworkInfo()](#getnetworkinfo--get-ip-addr-result-from-the-container)
+- [ ] other useful Info : Think about it
+- [x] execute command inside the container and retrieve the result
+    - [execContainer()](#execcontainer-execcontainers--execute-command-inside-the-container-and-retrieve-the-result)
+    - [execContainers()](#execcontainer-execcontainers--execute-command-inside-the-container-and-retrieve-the-result)
+- [ ] install software dynamically inside a container
+- [ ] set file to a container
+- [x] get file from a container
+    - [readFile()](#readfile--get-file-from-a-container)
+- [x] add new nodes
+    - [addNodes()](#addnodes--dynamically-add-new-nodes)
+- [ ] add new networks
+- [ ] delete nodes
+- [ ] start/stop nodes
+
+#### `getContainerById()` : get container by Id
+```python
+# Get container by container name
+container = controller.getContainerById("as151r-router0-10.151.0.254")
+```
+
+#### `getContainersByClass()` : get container list by classname
 ```python
 # Get containers by classname 
 # returns container list with classname
 # classname is assigned using Label:org.seedsecuritylabs.seedemu.meta.class
 webContainers = controller.getContainersByClassName("WebService")
-
-# Get container by container name
-container = controller.getContainerById("as151r-router0-10.151.0.254")
 ```
-- [x] get network information; get 'ip addr' result from the container
-    - getNetworkInfo()
+
+#### `getNetworkInfo()` : get 'ip addr' result from the container
 ```python
 # Get networkInfo
 # get result of 'ip addr' inside the container 
 networkInfo = controller.getNetworkInfo(container)
 print("networkInfo: \n", networkInfo)
 ```
-- [ ] other useful Info : Think about it
-- [x] execute command inside the container and retrieve the result
-    - execContainer()
-    - execContainers()
+
+#### `execContainer()`, `execContainers()` : execute command inside the container and retrieve the result
 ```python
 # Execute command on containers
 # returns a result
 ls_result = controller.execContainers(webContainers, 'id')
 print("ls_result: \n",ls_result)
 ```
-- [ ] install software dynamically inside a container
-- [x] get file from a container
-    - readFile()
+
+#### `readFile()` : get file from a container
 ```python
 # Read file from container
 # It just print a file yet.
 controller.readFile(webContainers[0], fileName='/seedemu_worker')
 ```
-- [x] add new nodes
-    - addNode()
+#### `addNodes()` : dynamically add new nodes
 ```python
 ####################################################################
 # Add new node
@@ -144,6 +161,3 @@ as151.createHost('dynamic-node').joinNetwork('net0', address='10.151.0.99')
 # Run a new container based on the added node info. 
 controller.addNode(emu, scope='151', name='dynamic-node', type='hnode')
 ```
-- [ ] add new networks
-- [ ] delete nodes
-- [ ] start/stop nodes

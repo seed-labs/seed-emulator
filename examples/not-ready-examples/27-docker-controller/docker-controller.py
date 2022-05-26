@@ -47,5 +47,11 @@ as161 = base.getAutonomousSystem(161)
 as161.createHost('dynamic-web').joinNetwork('net0')
 emu.addBinding(Binding('web-dynamic', filter = Filter(nodeName = 'dynamic-web', asn = 161)))
 
-# Run a new container based on the added node info. 
+# Run a new containers 
+# - compare new emu with base-component.bin and get newly added nodes.
+# - create Dockerfiles for newly added nodes
+# - create Images
+# - create Containers
+# - assign ip address
+# - run
 controller.addNodes(emu, './base-component.bin')
