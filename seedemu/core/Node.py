@@ -208,7 +208,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __asn: int
     __scope: str
     __role: NodeRole
-    __service: str
+    __class: str
     __interfaces: List[Interface]
     __files: Dict[str, File]
     __imported_files: Dict[str, str]
@@ -244,7 +244,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__asn = asn
         self.__role = role
         self.__name = name
-        self.__service = None
+        self.__class = None
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
         self.__build_commands = []
@@ -539,24 +539,24 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__role
 
-    def setService(self, service:str) -> Node:
+    def setClass(self, className:str) -> Node:
         """!
-        @brief Set service of current node
+        @brief Set class of current node
 
         @returns self, for chaining API calls.
         """
-        self.__service = service
+        self.__class = className
 
         return self
 
-    def getService(self) -> str:
+    def getClass(self) -> str:
         """!
         @brief Get service of current node
         
         @returns service 
         """
 
-        return self.__service
+        return self.__class
         
     def getFile(self, path: str) -> File:
         """!

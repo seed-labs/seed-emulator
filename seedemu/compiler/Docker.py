@@ -662,10 +662,10 @@ class Docker(Compiler):
                 value = node.getDescription()
             )
         
-        if node.getService() != None:
+        if node.getClass() != None:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key = 'service',
-                value = node.getService()
+                key = 'class',
+                value = node.getClass()
             )
 
         n = 0
