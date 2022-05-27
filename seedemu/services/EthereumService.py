@@ -280,7 +280,7 @@ class EthereumServer(Server):
 
     __id: int
     __is_bootnode: bool
-    __is_discoverable: bool 
+    __auto_discover: bool 
     __bootnode_http_port: int
     __geth_http_port: int
     __smart_contract: SmartContract
@@ -301,7 +301,7 @@ class EthereumServer(Server):
         """
         self.__id = id
         self.__is_bootnode = False
-        self.__is_discoverable = True
+        self.__auto_discover = True
         self.__bootnode_http_port = 8088
         self.__geth_http_port = 8545
         self.__smart_contract = None
@@ -464,7 +464,7 @@ class EthereumServer(Server):
             whitelist_flags = "--http.corsdomain \"{}\" --http.api {} --ws --ws.addr 0.0.0.0 --ws.port {} --ws.api {} --ws.origins \"{}\" ".format(http_whitelist_domains, apis, 8546, apis, ws_whitelist_domains)
             common_flags = '{} {}'.format(common_flags, whitelist_flags)
         
-        if not self.isDiscoverable():
+        if not self.isAutoDiscover():
             common_flags = '{} {}'.format(common_flags, "--nodiscover")
 
         # Base geth command
@@ -508,18 +508,18 @@ class EthereumServer(Server):
         """
         return self.__geth_binary
 
-    def setNoDiscover(self) -> EthereumServer:
+    def setAutoDiscover(self, autoDiscover = True) -> EthereumServer:
         """
-        @brief setting the --nodiscover geth flag
+        @brief setting the automatic peer discovery to true/false
         """
-        self.__is_discoverable = False
+        self.__auto_discover = autoDiscover
         return self
 
-    def isDiscoverable(self) -> str:
+    def isAutoDiscover(self) -> str:
         """
         @brief making sure nodes can automatically discover their peers
         """
-        return self.__is_discoverable
+        return self.__auto_discover
 
     def setConsensusMechanism(self, consensus:ConsensusMechanism=ConsensusMechanism.POA) -> EthereumServer:
         '''
