@@ -280,6 +280,7 @@ class EthereumServer(Server):
 
     __id: int
     __is_bootnode: bool
+    __is_discoverable: bool 
     __bootnode_http_port: int
     __geth_http_port: int
     __smart_contract: SmartContract
@@ -300,6 +301,7 @@ class EthereumServer(Server):
         """
         self.__id = id
         self.__is_bootnode = False
+        self.__is_discoverable = True
         self.__bootnode_http_port = 8088
         self.__geth_http_port = 8545
         self.__smart_contract = None
