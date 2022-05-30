@@ -45,7 +45,8 @@ class DockerController:
         assert containers is not [], "No container className is "+className
         return containers
 
-    def execContainer(self, container:Container, cmd, detach:bool=False, workdir:str=None) -> str:
+    # spell out whole thing when naming method.
+    def executeCommandInContainer(self, container:Container, cmd, detach:bool=False, workdir:str=None) -> str:
         """!
         Args:
             cmd (str or list): Command to be executed
@@ -66,11 +67,11 @@ class DockerController:
         """
         result = container.exec_run(cmd=cmd, detach=detach, workdir=workdir)
         
-        assert result.exit_code == 0, "exit_code: "+result.exit_code+"\n"+result.output.decode()
+        assert result.exit_code == 0, "exit_code: "+str(result.exit_code)+"\n"+result.output.decode()
 
         return result.output.decode()
 
-    def execContainers(self, containers:ContainerCollection, cmd, detach:bool=False, workdir:str=None) -> Dict:
+    def executeCommandInContainers(self, containers:ContainerCollection, cmd, detach:bool=False, workdir:str=None) -> Dict:
         results={}
         for container in containers:
             result = container.exec_run(cmd=cmd, detach=detach, workdir=workdir)
@@ -79,11 +80,12 @@ class DockerController:
         return results
 
     def getNetworkInfo(self, container:Container) -> str:
-        networkInfo = self.execContainer(container=container, cmd="ip addr")
+        # check 'ip addr' has json output format (-j)
+        networkInfo = self.executeCommandInContainer(container=container, cmd="ip addr")
         return networkInfo
 
     #tarFile update needed
-    def readFile(self, container:Container, fileName:str):
+    def copyFileToContainer(self, container:Container, fileName:str):
         bits, stat = container.get_archive(fileName)
         file = b"".join(bits)
 
@@ -92,66 +94,33 @@ class DockerController:
             print(tar.extractfile(member.name).read().decode())
 
 
-    def _addNode(self, emu:Emulator, scope:str, name:str, type:str='hnode', rendered:boolean=False):
+    def buildImage(self, buildPath:str, tag:str):        
+        self.__client.images.build(path=buildPath, tag=buildPath)
+        
+
+    def startContainer(self, name:str, image:str, networks:list, labels:dict):
         client = self.__client
         output = "output"
-        
-        if not rendered:
-            emu.render()
-
-        obj = emu.getRegistry().get(type=type, scope=scope, name=name)
-        docker = Docker()
-
-        buildPath = "_".join([type, scope, name])
-        
-        cur = getcwd()
-        if path.exists(output):
-            rmtree(output)
-            
-        mkdir(output)
-        chdir(output)
-
-        dcInfo = yaml.safe_load(docker._compileNode(obj))[buildPath]
-
-        chdir(cur)
-
-        networks = list(dcInfo['networks'].keys())
-        
-        client.images.build(path=output+"/"+buildPath, tag=output+"_"+buildPath)
-        
 
         if client.containers.list(all=True, filters={'name':dcInfo['container_name']}) != []:
             client.containers.list(all=True, filters={'name':dcInfo['container_name']})[0].stop()
             client.containers.prune()    
 
         
-        container = client.containers.create(image = output+"_"+buildPath, 
+        container = client.containers.create(image = image, 
                             cap_add=['ALL'], 
                             sysctls={'net.ipv4.ip_forward':1, 
                                         'net.ipv4.conf.default.rp_filter':0, 
                                         'net.ipv4.conf.all.rp_filter':0},
                             privileged=True,
-                            name=dcInfo['container_name'], 
-                            network=output+"_"+networks[0],
-                            labels=dict(dcInfo['labels']))
+                            name=name, 
+                            network=networks[0],
+                            labels=labels)
 
-        self.__client.networks.get(output+"_"+networks[0]).disconnect(container)
+        client.networks.get(output+"_"+networks[0]).disconnect(container)
         for network in networks:
-            self.__client.networks.get(output+"_"+network).connect(container, ipv4_address=dcInfo['networks'][network]['ipv4_address'])
+            client.networks.get(output+"_"+network).connect(container, ipv4_address=dcInfo['networks'][network]['ipv4_address'])
         
         container.start()
-
-    def addNodes(self, emu:Emulator, baseFile:str):
-        baseEmulator = Emulator()
-        baseEmulator.load(baseFile)
-        baseEmulator.render()
-        emu.render()
-
-        newNodes = emu.getRegistry().getAll().keys() - baseEmulator.getRegistry().getAll().keys()
-
-        for scope, type, name in newNodes:
-            self._addNode(emu, scope=scope, type=type, name=name, rendered=True)
-
-    
 
 
