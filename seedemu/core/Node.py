@@ -539,6 +539,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__role
 
+    # enable to belong to multiple classes
+    # -> appendClass
     def setClass(self, className:str) -> Node:
         """!
         @brief Set class of current node

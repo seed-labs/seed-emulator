@@ -17,12 +17,12 @@ container = controller.getContainerById("as151r-router0-10.151.0.254")
 
 # Execute command on containers
 # returns a result
-ls_result = controller.execContainers(webContainers, 'id')
-print("ls_result: \n",ls_result)
+ls_result = controller.executeCommandInContainers(webContainers, 'id')
+print("id_result: \n",ls_result)
 
 # Read file from container
 # It just print a file yet.
-controller.readFile(webContainers[0], fileName='/seedemu_worker')
+controller.copyFileToContainer(webContainers[0], fileName='/seedemu_worker')
 
 
 # Get networkInfo
@@ -30,6 +30,7 @@ controller.readFile(webContainers[0], fileName='/seedemu_worker')
 networkInfo = controller.getNetworkInfo(container)
 print("networkInfo: \n", networkInfo)
 
+''' Need to be revised. 
 ####################################################################
 # Add new node
 # create a new node to a existing base-componenet.
@@ -54,4 +55,5 @@ emu.addBinding(Binding('web-dynamic', filter = Filter(nodeName = 'dynamic-web', 
 # - create Containers
 # - assign ip address
 # - run
-controller.addNodes(emu, './base-component.bin')
+
+#controller.addNodes(emu, './base-component.bin')'''
