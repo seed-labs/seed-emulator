@@ -3,7 +3,7 @@ import docker
 from docker import DockerClient
 from docker.models.containers  import *
 import tarfile
-import io
+import io, json
 from os import mkdir, chdir, getcwd, path
 from shutil import rmtree
 import yaml
@@ -11,7 +11,6 @@ from seedemu import *
 
 ContainerLabel: Dict[str, str] = {}
 ContainerLabel['class'] = 'org.seedsecuritylabs.seedemu.meta.class'
-
 
 class DockerController:
     """!
@@ -37,12 +36,12 @@ class DockerController:
     def getContainersByClassName(self, className:str) -> ContainerCollection:
         all_containers = self.__client.containers.list()
         containers = []
+        classes = []
         for container in all_containers:
             if ContainerLabel['class'] in container.attrs['Config']['Labels'].keys():
-               if container.attrs['Config']['Labels'][ContainerLabel['class']] == className:
-                   containers.append(container)
-
-        assert containers is not [], "No container className is "+className
+                classes = json.loads(container.attrs['Config']['Labels'][ContainerLabel['class']])
+                if className in classes:
+                    containers.append(container)
         return containers
 
     # spell out whole thing when naming method.
@@ -72,6 +71,7 @@ class DockerController:
         return result.output.decode()
 
     def executeCommandInContainers(self, containers:ContainerCollection, cmd, detach:bool=False, workdir:str=None) -> Dict:
+        assert containers != [], 'containers is empty'
         results={}
         for container in containers:
             result = container.exec_run(cmd=cmd, detach=detach, workdir=workdir)
@@ -79,20 +79,25 @@ class DockerController:
 
         return results
 
-    def getNetworkInfo(self, container:Container) -> str:
-        # check 'ip addr' has json output format (-j)
-        networkInfo = self.executeCommandInContainer(container=container, cmd="ip addr")
+    def getNetworkInfo(self, container:Container) -> dict:
+        networkInfo = json.loads(self.executeCommandInContainer(container=container, cmd="ip -j addr"))
         return networkInfo
 
     #tarFile update needed
-    def copyFileToContainer(self, container:Container, fileName:str):
-        bits, stat = container.get_archive(fileName)
+    def copyFileFromContainer(self, container:Container, src:str):
+        bits, stat = container.get_archive(src)
+        file = b"".join(bits)
+
+        tar = tarfile.TarFile(fileobj=io.BytesIO(file))
+        tar.extractall()
+        
+    def printFileFromContainer(self, container:Container, src:str):
+        bits, stat = container.get_archive(src)
         file = b"".join(bits)
 
         tar = tarfile.TarFile(fileobj=io.BytesIO(file))
         for member in tar:
             print(tar.extractfile(member.name).read().decode())
-
 
     def buildImage(self, buildPath:str, tag:str):        
         self.__client.images.build(path=buildPath, tag=buildPath)

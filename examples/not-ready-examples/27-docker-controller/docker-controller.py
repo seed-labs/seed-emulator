@@ -22,7 +22,7 @@ print("id_result: \n",ls_result)
 
 # Read file from container
 # It just print a file yet.
-controller.copyFileToContainer(webContainers[0], fileName='/seedemu_worker')
+controller.copyFileFromContainer(webContainers[0], src='/seedemu_worker')
 
 
 # Get networkInfo
@@ -42,7 +42,7 @@ base:Base = emu.getLayer('Base')
 web:WebService = emu.getLayer('WebService')
 web.install('web-dynamic')
 as151 = base.getAutonomousSystem(151)
-as151.createHost('dynamic-node').joinNetwork('net0', address='10.151.0.99')
+as151.createHost('dynamic-snode').joinNetwork('net0', address='10.151.0.99')
 
 as161 = base.getAutonomousSystem(161)
 as161.createHost('dynamic-web').joinNetwork('net0')

@@ -1,5 +1,5 @@
 from seedemu import *
-
+'''
 # move this to utility
 def addNodes(self, emu:Emulator, baseFile:str):
     output = "output"
@@ -37,3 +37,4 @@ def addNode(self, emu:Emulator, scope:str, name:str, type:str='hnode', rendered:
         dcInfo = yaml.safe_load(docker._compileNode(obj))[buildPath]
 
         networks = list(dcInfo['networks'].keys())
+        '''

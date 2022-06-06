@@ -8,6 +8,7 @@ from os import mkdir, chdir
 from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
+import json
 
 SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
 ETH_SEEDEMU_CLIENT_IMAGE='rawisader/seedemu-eth-client'
@@ -428,6 +429,12 @@ class Docker(Compiler):
         return self
     
     def setImageOverride(self, node:Node, image:DockerImage):
+        """!
+        @brief set the docker compiler to use a image on the specified Node.
+
+        @param node node
+        @param image image to use
+        """
         asn = node.getAsn()
         name = node.getName()
         self.__image_per_node_list[(asn, name)]=image
@@ -662,10 +669,10 @@ class Docker(Compiler):
                 value = node.getDescription()
             )
         
-        if node.getClass() != None:
+        if len(node.getClasses()) > 0:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key = 'class',
-                value = node.getClass()
+                value = json.dumps(node.getClasses()).replace("\"", "\\\"")
             )
 
         n = 0
@@ -750,7 +757,6 @@ class Docker(Compiler):
         (scope, type, _) = node.getRegistryInfo()
         prefix = self._contextToPrefix(scope, type)
         real_nodename = '{}{}'.format(prefix, node.getName())
-        print(real_nodename)    
         node_nets = ''
         dummy_addr_map = ''
 
@@ -967,7 +973,6 @@ class Docker(Compiler):
                 self.__networks += self._compileNet(obj)
 
         for ((scope, type, name), obj) in registry.getAll().items():
-            print(name)
             if type == 'rnode':
                 self._log('compiling router node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)

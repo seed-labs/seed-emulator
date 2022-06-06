@@ -208,7 +208,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __asn: int
     __scope: str
     __role: NodeRole
-    __class: str
+    __classes: List[str]
     __interfaces: List[Interface]
     __files: Dict[str, File]
     __imported_files: Dict[str, str]
@@ -244,7 +244,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__asn = asn
         self.__role = role
         self.__name = name
-        self.__class = None
+        self.__classes = []
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
         self.__build_commands = []
@@ -539,26 +539,24 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__role
 
-    # enable to belong to multiple classes
-    # -> appendClass
-    def setClass(self, className:str) -> Node:
+    def appendClassName(self, className:str) -> Node:
         """!
-        @brief Set class of current node
+        @brief Append class to a current node
 
         @returns self, for chaining API calls.
         """
-        self.__class = className
+        self.__classes.append(className)
 
         return self
 
-    def getClass(self) -> str:
+    def getClasses(self) -> str:
         """!
         @brief Get service of current node
         
         @returns service 
         """
 
-        return self.__class
+        return self.__classes
         
     def getFile(self, path: str) -> File:
         """!

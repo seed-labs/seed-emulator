@@ -478,6 +478,8 @@ class EthereumServer(Server):
             self.__addMinerStartCommand(node)
             self.__deploySmartContractCommand(node)
 
+        node.appendClass('EthereumService')
+
     def setConsensusMechanism(self, consensus:ConsensusMechanism=ConsensusMechanism.POA) -> EthereumServer:
         '''
         @brief We can have more than one consensus mechanism at the same time
