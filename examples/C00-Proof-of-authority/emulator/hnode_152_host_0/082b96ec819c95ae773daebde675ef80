@@ -1,0 +1,18 @@
+#!/bin/bash
+chmod +x /interface_setup
+/interface_setup
+ip rou del default 2> /dev/null
+ip route add default via 10.152.0.254 dev net0
+[ ! -e "/root/.ethereum/geth/nodekey" ] && geth --datadir /root/.ethereum init /tmp/eth-genesis.json
+[ -z `ls -A /root/.ethereum/keystore` ] && geth --datadir /root/.ethereum --password /tmp/eth-password account new
+chmod +x /tmp/eth-bootstrapper
+echo 'nice -n 19 geth --datadir /root/.ethereum --identity="NODE_1" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port 30302 --http --http.addr 0.0.0.0 --http.port 8545 --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique --ws --ws.addr 0.0.0.0 --ws.port 8546 --ws.api web3,eth,debug,personal,net,clique --ws.origins "*"  --bootnodes "$(cat /tmp/eth-node-urls)"' > /tmp/run.sh &
+sleep 10
+chmod +x /tmp/run.sh
+cp /tmp/keystore/<bound method EthAccount.getKeyStoreFileName of <seedemu.services.EthereumService.EthAccount object at 0x7f8a9e51ba90>> /root/.ethereum/keystore/ &
+cp /tmp/keystore/<bound method EthAccount.getKeyStoreFileName of <seedemu.services.EthereumService.EthAccount object at 0x7f8a9d7cb7c0>> /root/.ethereum/keystore/ &
+
+echo "ready! run 'docker exec -it $HOSTNAME /bin/zsh' to attach to this node" >&2
+for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 0 > "$f"; done
+tail -f /dev/null
+
