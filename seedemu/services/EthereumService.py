@@ -334,8 +334,6 @@ class EthereumServer(Server):
         self.__unlockAccounts = False
         self.__prefunded_accounts = [EthAccount(alloc_balance=32 * pow(10, 18), password="admin")] #create a prefunded account by default. It ensure POA network works when create/import prefunded account is not called.
         self.__consensus_mechanism = consensusMechanism
-        
-        # Kyungrok's Comment : I don't get why we need geth_bianry in this class. 
         self.__geth_client = "geth"
         self.__geth_binary = ""
 
@@ -445,24 +443,20 @@ class EthereumServer(Server):
         install_command = 'apt-get update && apt-get install --yes bootnode {}' 
         #node.addBuildCommand('apt-get update && apt-get install --yes geth bootnode')
        
-       
-        geth_client = "geth"
         if self.getLocalGethBinary():
-            geth_client = "bash -c /root/.ethereum/{}".format(self.__geth_binary)
+            self.__geth_client = "bash -c /root/.ethereum/{}".format(self.__geth_binary)
             node.addBuildCommand(install_command.format(''))
         else:
-            node.addBuildCommand(install_command.format(geth_client))
-        
-        self.__geth_client = geth_client
+            node.addBuildCommand(install_command.format(self.__geth_client))
 
         # set the data directory
         datadir_option = "--datadir /root/.ethereum"
 
         # genesis
-        node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && {} {} init /tmp/eth-genesis.json'.format(geth_client,datadir_option))
+        node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && {} {} init /tmp/eth-genesis.json'.format(self.__geth_client,datadir_option))
 
         # create account via pre-defined password
-        node.appendStartCommand('[ -z `ls -A /root/.ethereum/keystore` ] && {} {} --password /tmp/eth-password account new'.format(geth_client, datadir_option)) 
+        node.appendStartCommand('[ -z `ls -A /root/.ethereum/keystore` ] && {} {} --password /tmp/eth-password account new'.format(self.__geth_client, datadir_option)) 
         if allBootnode or self.__is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
             # Default port is 30301, you can change the custom port with the next command
@@ -494,7 +488,7 @@ class EthereumServer(Server):
             common_flags = '{} {}'.format(common_flags, "--nodiscover")
 
         # Base geth command
-        geth_command = 'nice -n 19 {} {}'.format(geth_client, common_flags)
+        geth_command = 'nice -n 19 {} {}'.format(self.__geth_client, common_flags)
         
         # Manual vs automated geth command execution
         # In the manual approach, the geth command is only thrown in a file in /tmp/run.sh
