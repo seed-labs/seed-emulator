@@ -428,12 +428,14 @@ class Docker(Compiler):
 
         return self
     
-    def setImageOverride(self, node:Node, imageName:DockerImage):
+    def setImageOverride(self, node:Node, imageName:DockerImage) -> Docker:
         """!
         @brief set the docker compiler to use a image on the specified Node.
 
-        @param node node
-        @param image image to use
+        @param node target node to override image.
+        @param imageName name of the image to use.
+
+        @returns self, for chaining api calls.      
         """
         asn = node.getAsn()
         name = node.getName()
