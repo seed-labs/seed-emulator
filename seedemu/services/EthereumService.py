@@ -514,7 +514,7 @@ class EthereumServer(Server):
             self.__addMinerStartCommand(node)
             self.__deploySmartContractCommand(node)
 
-        node.appendClass('EthereumService')
+        node.appendClassName('EthereumService')
     
     def useLocalGethBinary(self, executable:str) -> EthereumServer:
         """
