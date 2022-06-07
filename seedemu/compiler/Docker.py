@@ -428,7 +428,7 @@ class Docker(Compiler):
 
         return self
     
-    def setImageOverride(self, node:Node, image:DockerImage):
+    def setImageOverride(self, node:Node, imageName:DockerImage):
         """!
         @brief set the docker compiler to use a image on the specified Node.
 
@@ -437,7 +437,7 @@ class Docker(Compiler):
         """
         asn = node.getAsn()
         name = node.getName()
-        self.__image_per_node_list[(asn, name)]=image
+        self.__image_per_node_list[(asn, name)]=imageName
 
     def _groupSoftware(self, emulator: Emulator):
         """!
@@ -516,7 +516,12 @@ class Docker(Compiler):
         nodeKey = (node.getAsn(), node.getName())
 
         if nodeKey in self.__image_per_node_list:
-            image = self.__image_per_node_list[nodeKey]
+            image_name = self.__image_per_node_list[nodeKey]
+
+            assert image_name in self.__images, 'image-per-node configured, but image {} does not exist.'.format(image_name)
+
+            (image, _) = self.__images[image_name]
+
             self._log('image-per-node configured, using {}'.format(image.getName()))
             return (image, nodeSoft - image.getSoftware())
 
