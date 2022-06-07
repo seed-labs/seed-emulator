@@ -17,12 +17,12 @@ container = controller.getContainerById("as151r-router0-10.151.0.254")
 
 # Execute command on containers
 # returns a result
-ls_result = controller.execContainers(webContainers, 'id')
-print("ls_result: \n",ls_result)
+ls_result = controller.executeCommandInContainers(webContainers, 'id')
+print("id_result: \n",ls_result)
 
 # Read file from container
 # It just print a file yet.
-controller.readFile(webContainers[0], fileName='/seedemu_worker')
+controller.copyFileFromContainer(webContainers[0], src='/seedemu_worker')
 
 
 # Get networkInfo
@@ -30,6 +30,7 @@ controller.readFile(webContainers[0], fileName='/seedemu_worker')
 networkInfo = controller.getNetworkInfo(container)
 print("networkInfo: \n", networkInfo)
 
+''' Need to be revised. 
 ####################################################################
 # Add new node
 # create a new node to a existing base-componenet.
@@ -38,8 +39,21 @@ emu = Emulator()
 emu.load('./base-component.bin')
 
 base:Base = emu.getLayer('Base')
+web:WebService = emu.getLayer('WebService')
+web.install('web-dynamic')
 as151 = base.getAutonomousSystem(151)
-as151.createHost('dynamic-node').joinNetwork('net0', address='10.151.0.99')
+as151.createHost('dynamic-snode').joinNetwork('net0', address='10.151.0.99')
 
-# Run a new container based on the added node info. 
-controller.addNode(emu, scope='151', name='dynamic-node', type='hnode')
+as161 = base.getAutonomousSystem(161)
+as161.createHost('dynamic-web').joinNetwork('net0')
+emu.addBinding(Binding('web-dynamic', filter = Filter(nodeName = 'dynamic-web', asn = 161)))
+
+# Run a new containers 
+# - compare new emu with base-component.bin and get newly added nodes.
+# - create Dockerfiles for newly added nodes
+# - create Images
+# - create Containers
+# - assign ip address
+# - run
+
+#controller.addNodes(emu, './base-component.bin')'''

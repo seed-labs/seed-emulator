@@ -65,7 +65,7 @@ class WebServer(Server):
         node.setFile('/var/www/html/index.html', self.__index.format(asn = node.getAsn(), nodeName = node.getName()))
         node.setFile('/etc/nginx/sites-available/default', WebServerFileTemplates['nginx_site'].format(port = self.__port))
         node.appendStartCommand('service nginx start')
-        node.setClass("WebService")
+        node.appendClass("WebService")
         
     def print(self, indent: int) -> str:
         out = ' ' * indent

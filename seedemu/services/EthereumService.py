@@ -513,6 +513,8 @@ class EthereumServer(Server):
             self.__unlockAccountsCommand(node)
             self.__addMinerStartCommand(node)
             self.__deploySmartContractCommand(node)
+
+        node.appendClass('EthereumService')
     
     def useLocalGethBinary(self, executable:str) -> EthereumServer:
         """
@@ -541,7 +543,8 @@ class EthereumServer(Server):
         """
         return self.__auto_discover
 
-    def setConsensusMechanism(self, consensus:ConsensusMechanism) -> EthereumServer:
+
+    def setConsensusMechanism(self, consensus:ConsensusMechanism=ConsensusMechanism.POA) -> EthereumServer:
         '''
         @brief We can have more than one consensus mechanism at the same time
         The base consensus (poa) applies to all of the nodes by default except if this API is called

@@ -19,10 +19,8 @@ web_containers = []
 for container in containers:
     #print(container.attrs['Config']['Labels'].keys())
     if 'org.seedsecuritylabs.seedemu.meta.class' in container.attrs['Config']['Labels'].keys():
-        print('hi')
         if container.attrs['Config']['Labels']['org.seedsecuritylabs.seedemu.meta.class'] == "WebService":
             web_containers.append(container)
-            print('hi')
 
 for web in web_containers:
     print(web.name)
