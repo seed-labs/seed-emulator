@@ -11,7 +11,7 @@ emuA = Emulator()
 emuB = Emulator()
 
 # Load the pre-built components and merge them
-emuA.load('./base-component.bin')
+emuA.load('../B00-mini-internet/base-component.bin')
 emuB.load('./component-blockchain.bin')
 emu = emuA.merge(emuB, DEFAULT_MERGERS)
 

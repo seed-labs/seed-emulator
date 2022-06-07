@@ -12,11 +12,11 @@ emu = Emulator()
 # Note: right now we need to manually create the folder for each node (see README.md). 
 eth = EthereumService(saveState = True, manual=False)
 
-eth.setBaseConsensusMechanism(ConsensusMechanism.POW)
+eth.setBaseConsensusMechanism(ConsensusMechanism.POA)
 
 # Create Ethereum nodes (nodes in this layer are virtual)
 start=1
-end=15
+end=16
 sealers=[]
 bootnodes=[]
 hport=8544
@@ -41,22 +41,10 @@ for i in range(start, end):
     emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-{}-poa'.format(i)).addPortForwarding(hport, cport)
     hport = hport + 1
 
-print("There are {} sealers and {} bootnodes".format(len(sealers), len(bootnodes)))
-print("Sealers {}".format(sealers))
+print("There are {} miners and {} bootnodes".format(len(sealers), len(bootnodes)))
+print("Miner {}".format(sealers))
 print("Bootnodes {}".format(bootnodes))
 
-'''
-start = end
-end = start + 1
-for i in range(start, end):
-    e = eth.install("eth{}".format(i))
-    e.setConsensusMechanism(ConsensusMechanism.POW)
-    e.unlockAccounts().startMiner()
-    e.enableExternalConnection()
-    emu.getVirtualNode("eth{}".format(i)).setDisplayName('Ethereum-{}-pow'.format(i)).addPortForwarding(hport, cport)
-
-print("Created {} nodes that use PoW consensus mechanism".format(end - start))
-'''
 # Add the layer and save the component to a file
 emu.addLayer(eth)
 emu.dump('component-blockchain.bin')
