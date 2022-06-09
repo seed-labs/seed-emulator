@@ -317,7 +317,7 @@ class DomainNameServer(Server):
         
     def __getRealRootRecords(self):
         """!
-        @brief Helper tool, get real-world prefix list for the current ans by
+        @brief Helper tool, get real-world root zone records list by
         RIPE RIS.
 
         @throw AssertionError if API failed.
