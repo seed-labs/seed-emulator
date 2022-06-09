@@ -1,7 +1,10 @@
-from seedemu import *
-'''
-# move this to utility
-def addNodes(self, emu:Emulator, baseFile:str):
+
+from seedemu import Emulator, Docker
+from os import *
+from shutil import rmtree
+import yaml
+
+def compileNewNodes(self, emu:Emulator, baseFile:str):
     output = "output"
     baseEmulator = Emulator()
     baseEmulator.load(baseFile)
@@ -18,11 +21,11 @@ def addNodes(self, emu:Emulator, baseFile:str):
     chdir(output)
 
     for scope, type, name in newNodes:
-        self._addNode(emu, scope=scope, type=type, name=name, rendered=True, output=output)
+        compileNewNode(emu, scope=scope, type=type, name=name, rendered=True, output=output)
 
     chdir(cur)
 
-def addNode(self, emu:Emulator, scope:str, name:str, type:str='hnode', rendered:boolean=False, output:str="output"):
+def compileNewNode(self, emu:Emulator, scope:str, name:str, type:str='hnode', rendered:bool=False, output:str="output"):
         client = self.__client 
         
         if not rendered:
@@ -35,6 +38,3 @@ def addNode(self, emu:Emulator, scope:str, name:str, type:str='hnode', rendered:
         
         
         dcInfo = yaml.safe_load(docker._compileNode(obj))[buildPath]
-
-        networks = list(dcInfo['networks'].keys())
-        '''

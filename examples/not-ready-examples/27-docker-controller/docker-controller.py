@@ -22,12 +22,12 @@ print("id_result: \n",ls_result)
 
 # Read file from container
 # It just print a file yet.
-controller.copyFileFromContainer(webContainers[0], src='/seedemu_worker')
+webContainers[0].copyFileFromContainer(src='/seedemu_worker', dst='.')
 
 
 # Get networkInfo
 # get result of 'ip addr' inside the container 
-networkInfo = controller.getNetworkInfo(container)
+networkInfo = container.getNetworkInfo()
 print("networkInfo: \n", networkInfo)
 
 ''' Need to be revised. 

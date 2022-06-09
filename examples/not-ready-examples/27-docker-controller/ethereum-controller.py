@@ -4,14 +4,14 @@
 from EthereumController import *
 
 controller = EthereumController()
-ethContainers = controller.getEthContainers()
+ethContainers = controller.getEthereumContainers()
 '''
 ethServers = controller.getEthServers()
 ethServers[0].getAccount()
 '''
-account0 = controller.getAccount(ethContainers[0])
-balance0 = controller.getBalanceByContainer(ethContainers[0])
-unlock = controller.unlockAccount(ethContainers[0], account0, "admin")
+account0 = ethContainers[0].getAccount()
+balance0 = ethContainers[0].getBalanceByAccount(account0)
+unlock = ethContainers[0].unlockAccount(account0, "admin")
 
 
 print(ethContainers)
