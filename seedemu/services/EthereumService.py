@@ -213,6 +213,9 @@ class EthAccount():
         self.__account = self.__importAccount(keyfile=keyfile, password=password) if keyfile else self.__createAccount()
         self.__address = self.__account.address
 
+        print("#######################################")
+        print(self.__address)
+
         assert alloc_balance>=0 , "Invalid Balance Range: {}".format(alloc_balance)
         self.__alloc_balance = alloc_balance
 
@@ -412,9 +415,11 @@ class EthereumServer(Server):
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has not interfaces'.format(node.getAsn(), node.getName())
         addr = str(ifaces[0].getAddress())
+
         this_url = '{}:{}'.format(addr, self.getBootNodeHttpPort())
         # get other nodes IP for the bootstrapper.
         bootnodes = eth.getBootNodes()[:]
+        # if the node itself is a bootnode, remove it from the bootnode list.
         if this_url in bootnodes: bootnodes.remove(this_url)
 
         # import keystore file to /tmp/keystore
@@ -423,6 +428,7 @@ class EthereumServer(Server):
             for account in node_specific_prefunded_accounts:
                 node.appendFile("/tmp/keystore/"+account.getKeyStoreFileName(), account.getKeyStoreContent())
       
+        # (?) Not sure that we need this api. Think the situation that both POW and POA is running in one emulator is needed?
         # We can specify nodes to use a consensus different from the base one
         genesis = Genesis(consensus=self.__consensus_mechanism)
 
@@ -430,7 +436,7 @@ class EthereumServer(Server):
         genesis = self.__updateGenesis(genesis, eth.getAllPrefundedAccounts())
     
         node.appendFile('/tmp/eth-genesis.json', str(genesis))
-        node.appendFile('/tmp/eth-nodes', '\n'.join(eth.getBootNodes()[:]))
+        node.appendFile('/tmp/eth-nodes', '\n'.join(bootnodes))
         node.appendFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
         node.appendFile('/tmp/eth-password', 'admin') 
 
