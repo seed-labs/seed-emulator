@@ -16,14 +16,18 @@ name is available.
    Honghao Zeng (magicnat)
 ```
 
-## Lead Developers
+## Core Developers
 ```
+(in the order of join time)
+   Wenliang Du (kevin-w-du)
    Honghao Zeng (magicnat)
+   Kyungrok Won (wonkr)
 ```
 
-## Developers
+## Contributors
 ```
 (in alphabetical order)
    Keyi Li (kevin1993s)
+   Rawi Sader (RawinSader)
 ```
 
