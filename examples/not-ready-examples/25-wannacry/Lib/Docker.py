@@ -8,7 +8,6 @@ from os import mkdir, chdir
 from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
-import json
 
 SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
 ETH_SEEDEMU_CLIENT_IMAGE='rawisader/seedemu-eth-client'
@@ -157,10 +156,6 @@ DockerCompilerFileTemplates['compose_storage'] = """\
 
 DockerCompilerFileTemplates['compose_service_network'] = """\
             {netId}:
-{address}
-"""
-
-DockerCompilerFileTemplates['compose_service_network_address'] = """\
                 ipv4_address: {address}
 """
 
@@ -427,19 +422,11 @@ class Docker(Compiler):
         self.__disable_images = disabled
 
         return self
-    
-    def setImageOverride(self, node:Node, imageName:DockerImage) -> Docker:
-        """!
-        @brief set the docker compiler to use a image on the specified Node.
 
-        @param node target node to override image.
-        @param imageName name of the image to use.
-
-        @returns self, for chaining api calls.      
-        """
+    def setImageOverride(self, node:Node, image:DockerImage):
         asn = node.getAsn()
         name = node.getName()
-        self.__image_per_node_list[(asn, name)]=imageName
+        self.__image_per_node_list[(asn, name)]=image
 
     def _groupSoftware(self, emulator: Emulator):
         """!
@@ -518,12 +505,7 @@ class Docker(Compiler):
         nodeKey = (node.getAsn(), node.getName())
 
         if nodeKey in self.__image_per_node_list:
-            image_name = self.__image_per_node_list[nodeKey]
-
-            assert image_name in self.__images, 'image-per-node configured, but image {} does not exist.'.format(image_name)
-
-            (image, _) = self.__images[image_name]
-
+            image = self.__image_per_node_list[nodeKey]
             self._log('image-per-node configured, using {}'.format(image.getName()))
             return (image, nodeSoft - image.getSoftware())
 
@@ -675,12 +657,6 @@ class Docker(Compiler):
                 key = 'description',
                 value = node.getDescription()
             )
-        
-        if len(node.getClasses()) > 0:
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key = 'class',
-                value = json.dumps(node.getClasses()).replace("\"", "\\\"")
-            )
 
         n = 0
         for iface in node.getInterfaces():
@@ -764,6 +740,7 @@ class Docker(Compiler):
         (scope, type, _) = node.getRegistryInfo()
         prefix = self._contextToPrefix(scope, type)
         real_nodename = '{}{}'.format(prefix, node.getName())
+
         node_nets = ''
         dummy_addr_map = ''
 
@@ -793,11 +770,6 @@ class Docker(Compiler):
                     d_address, d_prefix.prefixlen, iface.getAddress(), iface.getNet().getPrefix().prefixlen,
                     node.getAsn(), node.getName()
                 ))
-
-            if address == None:
-                address = ""
-            else:
-                address = DockerCompilerFileTemplates['compose_service_network_address'].format(address = address)
 
             node_nets += DockerCompilerFileTemplates['compose_service_network'].format(
                 netId = real_netname,
@@ -980,6 +952,7 @@ class Docker(Compiler):
                 self.__networks += self._compileNet(obj)
 
         for ((scope, type, name), obj) in registry.getAll().items():
+
             if type == 'rnode':
                 self._log('compiling router node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)

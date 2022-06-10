@@ -17,7 +17,6 @@ dhcp = DHCPService()
 # Default DhcpIpRange : x.x.x.101 ~ x.x.x.120
 # Set DhcpIpRange : x.x.x.125 ~ x.x.x.140
 dhcp.install('dhcp-01').setIpRange(125, 140)
-dhcp.install('dhcp-02')
 
 # Customize the display name (for visualization purpose)
 emu.getVirtualNode('dhcp-01').setDisplayName('DHCP Server 1')
