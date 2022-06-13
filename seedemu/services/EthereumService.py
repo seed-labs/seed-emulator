@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 from enum import Enum
-from operator import ge
 import os
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
 
 import json
 from datetime import datetime, timezone
-import re
 
 ETHServerFileTemplates: Dict[str, str] = {}
 GenesisFileTemplates: Dict[str, str] = {}
@@ -213,8 +211,6 @@ class EthAccount():
         self.__account = self.__importAccount(keyfile=keyfile, password=password) if keyfile else self.__createAccount()
         self.__address = self.__account.address
 
-        print("#######################################")
-        print(self.__address)
 
         assert alloc_balance>=0 , "Invalid Balance Range: {}".format(alloc_balance)
         self.__alloc_balance = alloc_balance
@@ -403,7 +399,7 @@ class EthereumServer(Server):
         f.write(account.__keystore_content)
         f.close()
     
-    def install(self, node: Node, eth: 'EthereumService', allBootnode: bool):
+    def install(self, node: Node, eth: EthereumService, allBootnode: bool):
         """!
         @brief ETH server installation step.
 
@@ -509,7 +505,7 @@ class EthereumServer(Server):
         
         # moving keystore to the proper folder
         for account in self.getPrefundedAccounts():
-            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.getKeyStoreFileName),True)
+            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.getKeyStoreFileName()),True)
 
         # Adding /tmp/run.sh in start.sh file to automate them
         if not(eth.isManual()):
