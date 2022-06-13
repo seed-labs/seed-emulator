@@ -151,7 +151,11 @@ class Genesis():
         @brief allocate balance to account on genesis. It will update the genesis file
         '''
         for account in accounts:
-            self.__allocateBalance(account.getAddress(),account.getAllocBalance())
+            address = account.getAddress()
+            balance = account.getAllocBalance()
+
+            assert account.getAllocBalance() >= 0, "balance cannot have a negative value. Requested Balance Value : {}".format(account.getAllocBalance())
+            self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
         return self
 
     def setSealer(self, accounts:List[EthAccount]) -> Genesis:
@@ -173,20 +177,19 @@ class Genesis():
             extraData = extraData + account.getAddress()[2:]
         
         return extraData + "0" * 130
-    
-    def __allocateBalance(self, address:str, balance:str) -> None:
-        assert balance >= 0, "balance cannot have a negative value. Requested Balance Value : {}".format(balance)
-        self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
         
     def __replaceExtraData(self, content:str) -> None:
         assert content != "", "content cannot be a blank."
         self.__genesis["extraData"] = content
 
-    def __str__(self) -> str:
+    def getGenesisBlock(self) -> str:
+        '''
+        @brief get a json format of genesis block
+        
+        returns genesis
+        '''
         return json.dumps(self.__genesis)
 
-    def __repr__(self) -> str:
-        return json.dumps(self.__genesis)
 
 class EthAccount():
     """
@@ -386,11 +389,6 @@ class EthereumServer(Server):
         if self.__smart_contract != None :
             smartContractCommand = self.__smart_contract.generateSmartContractCommand()
             node.appendStartCommand('(\n {})&'.format(smartContractCommand))
-    
-    def __updateGenesis(self, genesis: Genesis, prefunded_accounts:List[EthAccount]) -> Genesis:
-        genesis.allocateBalance(prefunded_accounts)
-        genesis.setSealer(prefunded_accounts)
-        return genesis
 
     def __saveAccountKeystoreFile(self, account: EthAccount, saveDirectory: str):
         saveDirectory = saveDirectory+'/{}/'.format(self.__id)
@@ -429,9 +427,10 @@ class EthereumServer(Server):
         genesis = Genesis(consensus=self.__consensus_mechanism)
 
         # update genesis.json
-        genesis = self.__updateGenesis(genesis, eth.getAllPrefundedAccounts())
+        genesis.allocateBalance(eth.getAllPrefundedAccounts())
+        genesis.setSealer(eth.getAllPrefundedAccounts())
     
-        node.appendFile('/tmp/eth-genesis.json', str(genesis))
+        node.appendFile('/tmp/eth-genesis.json', genesis.getGenesisBlock())
         node.appendFile('/tmp/eth-nodes', '\n'.join(bootnodes))
         node.appendFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
         node.appendFile('/tmp/eth-password', 'admin') 
