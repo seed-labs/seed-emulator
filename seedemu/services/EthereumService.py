@@ -158,6 +158,14 @@ class Genesis():
             self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
         return self
 
+    def getGenesisBlock(self) -> str:
+        '''
+        @brief get a json format of genesis block
+        
+        returns genesis
+        '''
+        return json.dumps(self.__genesis)
+
     def setSealer(self, accounts:List[EthAccount]) -> Genesis:
         if len(accounts) > 0: self.__replaceExtraData(self.__generateGenesisExtraData(accounts))
         return self
@@ -182,13 +190,7 @@ class Genesis():
         assert content != "", "content cannot be a blank."
         self.__genesis["extraData"] = content
 
-    def getGenesisBlock(self) -> str:
-        '''
-        @brief get a json format of genesis block
-        
-        returns genesis
-        '''
-        return json.dumps(self.__genesis)
+    
 
 
 class EthAccount():
@@ -660,7 +662,7 @@ class EthereumServer(Server):
         
         return self
     
-    def createPrefundedAccounts(self, balance: int = 0, number: int = 1, password: str = "admin", saveDirectory:str = None) -> EthereumServer:
+    def createPrefundedAccounts(self, balance: int, number: int = 1, password: str = "admin", saveDirectory:str = None) -> EthereumServer:
         """
         @brief Call this api to create new prefunded account with balance
 
@@ -670,6 +672,9 @@ class EthereumServer(Server):
 
         @returns self
         """
+
+        assert balance >= 0, "Invalid Balance Range: {}".format(balance)
+
         for _ in range(number):    
             account = EthAccount(alloc_balance=balance,password=password)
             if saveDirectory:
@@ -678,7 +683,8 @@ class EthereumServer(Server):
         return self
     
     def importPrefundedAccount(self, keyfileDirectory:str, password:str = "admin", balance: int = 0) -> EthereumServer:
-        assert os.path.exists(str), "keyFile does not exist. path : {}".format(keyfileDirectory)
+        assert keyfileDirectory and os.path.exists(keyfileDirectory), "keyFile does not exist. path : {}".format(keyfileDirectory)
+
         f = open(keyfileDirectory, "r")
         keystoreFileContent = f.read()
         account = EthAccount(alloc_balance=balance, password=password,keyfile=keystoreFileContent)
