@@ -694,6 +694,8 @@ class EthereumServer(Server):
     def getPrefundedAccounts(self) -> List[EthAccount]:
         """
         @brief Call this api to get the prefunded accounts for this node
+
+        @returns prefunded accounts.
         """
 
         return self.__prefunded_accounts
@@ -702,6 +704,8 @@ class EthereumServer(Server):
         """!
         @brief This is mainly used to unlock the accounts in the remix node to make it directly possible for transactions to be 
         executed through Remix without the need to access the geth account in the docker container and unlocking manually
+
+        @returns self, for chaining API calls.
         """
         self.__unlockAccounts = True
 
