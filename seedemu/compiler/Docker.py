@@ -428,7 +428,7 @@ class Docker(Compiler):
 
         return self
     
-    def setImageOverride(self, node:Node, imageName:DockerImage) -> Docker:
+    def setImageOverride(self, node:Node, imageName:str) -> Docker:
         """!
         @brief set the docker compiler to use a image on the specified Node.
 
