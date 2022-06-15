@@ -11,8 +11,6 @@ from typing import Dict, List
 import json
 from datetime import datetime, timezone
 
-from seedemu.raps.OpenVpnRemoteAccessProvider import OpenVpnRemoteAccessProvider
-
 ETHServerFileTemplates: Dict[str, str] = {}
 GenesisFileTemplates: Dict[str, str] = {}
 
@@ -363,7 +361,7 @@ class EthereumServer(Server):
             node.appendStartCommand('(\n {})&'.format(full_command))
 
     def __addMinerStartCommand(self, node: Node):
-        if self.__start_Miner_node:
+        if not self.__start_Miner_node:
             """!
             @brief generates a shell command which start miner as soon as it the miner is booted up.
             
