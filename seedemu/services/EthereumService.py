@@ -248,6 +248,9 @@ class EthAccount():
         self.lib_eth_account = Account
         self.__account = self.__importAccount(keyfile=keyfile, password=password) if keyfile else self.__createAccount()
         self.__address = self.__account.address
+
+        assert alloc_balance >= 0, "balance cannot have a negative value. Requested Balance Value : {}".format(alloc_balance)
+            
         self.__alloc_balance = alloc_balance
 
         # encrypt private for Ethereum Client, like geth and generate the content of keystore file
