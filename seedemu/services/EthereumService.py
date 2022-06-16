@@ -346,7 +346,7 @@ class EthereumServer(Server):
     """
 
     __id: int
-    __is_bootnode: BOOLEAN
+    __is_bootnode: bool
     __bootnode_http_port: int
     __smart_contract: SmartContract
     __accounts: List[EthAccount]

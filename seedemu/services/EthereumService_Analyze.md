@@ -61,11 +61,37 @@ EthereumService Analyze
         - Create a genesis file 
             : prefund accounts
         - Run bootnodes.
+        - geth execute
+        - prepare to use geth
     Dynamic Control Step : seedemu-controller(client)
         - Run Nodes
         - Deploy Contract
 
+nice -n 19 geth --datadir /root/.ethereum --identity="NODE_5" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port 30303 --miner.etherbase "0xaC308b082Ac319034826a974F69995eac080577e" --mine --miner.thread=1 --bootnodes "$(cat /tmp/eth-node-urls)"
         
 
+    nice -n 19 geth --datadir /root/.ethereum --identity="NODE_5" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port 30303 --bootnodes "$(cat /tmp/eth-node-urls)"
     
+    --miner.etherbase "0x66095C03ce0Ad157f17AEBfF73db01790Bf824B6" --mine --miner.threads=1 
+    --unlock 0 --password "/tmp/eth-password"  
+    --http --http.addr 0.0.0.0 --http.port 8545 --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique
+    --nodiscover
+
     
+GethCommandTemplates['base'] = '''\
+nice -n 19 geth --datadir {datadir} --identity="NODE_5" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port 30303 '''
+
+GethCommandTemplates['mine'] = '''\
+--miner.etherbase "{coinbase}" --mine --miner.thread={num_of_threads} '''
+
+GethCommandTemplates['unlock'] = '''\
+--unlock "{accounts}" --password "{passwordFile}" '''
+
+GethCommandTemplates['http'] = '''\
+--http --http.addr 0.0.0.0 --http.port {gethHttpPort} --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique '''
+
+GethCommandTemplates['nodiscover'] = '''\
+--nodiscover '''
+
+GethCommandTemplates['bootnodes'] = '''\
+--bootnodes "$(cat /tmp/eth-node-urls)" '''
