@@ -165,8 +165,6 @@ class Genesis():
         self.__consensusMechaism = consensus
         self.__genesis = json.loads(GenesisFileTemplates[self.__consensusMechaism.value]) 
 
-    def setCustomGenesis(self, genesis:str):
-        self.__genesis = json.loads(genesis)
     
     def allocateBalance(self, accounts:List[EthAccount]) -> Genesis:
         '''
