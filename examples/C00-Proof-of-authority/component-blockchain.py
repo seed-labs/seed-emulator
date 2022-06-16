@@ -10,7 +10,7 @@ emu = Emulator()
 # manual: requires you to trigger the /tmp/run.sh bash files in each container to lunch the ethereum nodes
 # so the blockchain data will be preserved when containers are deleted.
 # Note: right now we need to manually create the folder for each node (see README.md). 
-eth = EthereumService(saveState = True, manual=True)
+eth = EthereumService(saveState = True)
 
 eth.setBaseConsensusMechanism(ConsensusMechanism.POA)
 
@@ -33,7 +33,7 @@ for i in range(start, end):
         e.setBootNode(True)
         bootnodes.append(i)
     else:
-        e.createPrefundedAccounts(balance, 1)
+        e.createAccounts(1, balance)
         e.unlockAccounts().startMiner() 
         sealers.append(i)
     
