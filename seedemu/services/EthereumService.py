@@ -3,6 +3,7 @@
 # __author__ = 'Demon'
 
 from __future__ import annotations
+from ctypes.wintypes import BOOLEAN
 from enum import Enum
 import os
 from seedemu.core import Node, Service, Server
@@ -13,6 +14,8 @@ from datetime import datetime, timezone
 
 ETHServerFileTemplates: Dict[str, str] = {}
 GenesisFileTemplates: Dict[str, str] = {}
+GethCommandTemplates: Dict[str, str] = {}
+
 
 # bootstraper: get enode urls from other eth nodes.
 ETHServerFileTemplates['bootstrapper'] = '''\
@@ -127,6 +130,23 @@ GenesisFileTemplates['pow'] = '''\
 }
 '''
 
+GethCommandTemplates['base'] = '''\
+nice -n 19 geth --datadir {datadir} --identity="NODE_5" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port 30303 '''
+
+GethCommandTemplates['mine'] = '''\
+--miner.etherbase "{coinbase}" --mine --miner.threads={num_of_threads} '''
+
+GethCommandTemplates['unlock'] = '''\
+--unlock "{accounts}" --password "/tmp/eth-password" '''
+
+GethCommandTemplates['http'] = '''\
+--http --http.addr 0.0.0.0 --http.port {gethHttpPort} --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique '''
+
+GethCommandTemplates['nodiscover'] = '''\
+--nodiscover '''
+
+GethCommandTemplates['bootnodes'] = '''\
+--bootnodes "$(cat /tmp/eth-node-urls)" '''
 class ConsensusMechanism(Enum):
     '''
     @brief Consensus Mechanism Enum. POA for Proof of Authority, POW for Proof Of Work
@@ -207,6 +227,8 @@ class EthAccount():
     __keystore_content: str   # the content of keystore file
     __keystore_filename:str   # the name of keystore file 
     __alloc_balance: int
+    __password: str
+
 
     def __init__(self, alloc_balance:int = 0,password:str = "admin", keyfile: str = None):
         """
@@ -229,6 +251,7 @@ class EthAccount():
         # generate the name of the keyfile
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
         self.__keystore_filename = "UTC--"+datastr+"--"+encrypted["address"]
+        self.__password = password
 
     
     def __importAccount(self, keyfile: str, password = "admin"):
@@ -258,6 +281,9 @@ class EthAccount():
 
     def getKeyStoreContent(self) -> str:
         return self.__keystore_content
+
+    def getPassword(self) -> str:
+        return self.__password
 
 
 class SmartContract():
@@ -302,24 +328,33 @@ class SmartContract():
         
         return ETHServerFileTemplates['smartcontract'].format(finalCommand)
 
+
+
 class EthereumServer(Server):
     """!
     @brief The Ethereum Server
     """
 
     __id: int
-    __is_bootnode: bool
-    __no_discover: bool 
+    __is_bootnode: BOOLEAN
     __bootnode_http_port: int
-    __geth_http_port: int
     __smart_contract: SmartContract
-    __start_Miner_node: bool
-    __enable_external_connection: bool
-    __unlockAccounts: bool
     __accounts: List[EthAccount]
     __consensus_mechanism: ConsensusMechanism
+
     __use_custom_geth: bool
     __custom_geth_binary_path: str
+
+    __data_dir: str
+    __no_discover: bool 
+    __enable_http: bool
+    __geth_http_port: int
+    __unlock_accounts: bool
+    __start_mine: bool
+    __miner_thread: int
+    __etherbase_account: str
+
+
 
     def __init__(self, id: int):
         """!
@@ -329,50 +364,25 @@ class EthereumServer(Server):
         """
         self.__id = id
         self.__is_bootnode = False
-        self.__no_discover = False
+        
         self.__bootnode_http_port = 8088
-        self.__geth_http_port = 8545
         self.__smart_contract = None
-        self.__start_Miner_node = False
-        self.__enable_external_connection = False
-        self.__unlockAccounts = False
         self.__accounts = [EthAccount(alloc_balance=32 * pow(10, 18), password="admin")] #create a prefunded account by default. It ensure POA network works when create/import prefunded account is not called.
         self.__consensus_mechanism = ConsensusMechanism.POW
 
         self.__use_custom_geth = False
         self.__custom_geth_binary_path = None
 
+        self.__data_dir = "/root/.ethereum"
+        self.__no_discover = False
+        self.__enable_http = False
+        self.__geth_http_port = 8545
+        self.__unlock_accounts = False
+        self.__start_mine = False
+        self.__miner_thread = 1
+        self.__etherbase_account = self.__accounts[0].getAddress()
 
-    def __unlockAccountsCommand(self, node: Node):
-        if self.__unlockAccounts:
-            """!
-            @brief automatically unlocking the accounts in a node.
-            Currently used to automatically be able to use our emulator using Remix.
-            """
 
-            base_command = "sleep 20\n\
-            geth --exec 'personal.unlockAccount(eth.accounts[{}],\"admin\",0)' attach\n\
-            "
-            
-            full_command = ""
-            for i in range(len(self.__accounts)):
-                full_command += base_command.format(str(i))
-
-            node.appendStartCommand('(\n {})&'.format(full_command))
-
-    def __addMinerStartCommand(self, node: Node):
-        if not self.__start_Miner_node:
-            """!
-            @brief generates a shell command which start miner as soon as it the miner is booted up.
-            
-            @param ethereum node on which we want to deploy the changes.
-            
-            """   
-            command = " sleep 20\n\
-            geth --exec 'eth.defaultAccount = eth.accounts[0]' attach \n\
-            geth --exec 'miner.start(1)' attach \n\
-            "
-            #node.appendStartCommand('(\n {})&'.format(command))
 
     def __deploySmartContractCommand(self, node: Node):
         if self.__smart_contract != None :
@@ -400,7 +410,7 @@ class EthereumServer(Server):
 
         # import keystore file to /tmp/keystore
         for account in self.__accounts:
-            node.appendFile("/tmp/keystore/"+account.getKeyStoreFileName(), account.getKeyStoreContent())
+            node.setFile("/tmp/keystore/"+account.getKeyStoreFileName(), account.getKeyStoreContent())
       
         # We can specify nodes to use a consensus different from the base one
         #####################################
@@ -413,10 +423,13 @@ class EthereumServer(Server):
         genesis.allocateBalance(eth.getAllPrefundedAccounts())
         genesis.setSealer(eth.getAllPrefundedAccounts())
     
-        node.appendFile('/tmp/eth-genesis.json', genesis.getGenesisBlock())
-        node.appendFile('/tmp/eth-nodes', '\n'.join(bootnodes))
-        node.appendFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
-        node.appendFile('/tmp/eth-password', 'admin') 
+        node.setFile('/tmp/eth-genesis.json', genesis.getGenesisBlock())
+        node.setFile('/tmp/eth-nodes', '\n'.join(bootnodes))
+        node.setFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
+        account_passwords = []
+        for account in self.__accounts:
+            account_passwords.append(account.getPassword())
+        node.setFile('/tmp/eth-password', '\n'.join(account_passwords))
 
         node.addSoftware('software-properties-common')
 
@@ -447,50 +460,46 @@ class EthereumServer(Server):
 
         # load enode urls from other nodes
         node.appendStartCommand('chmod +x /tmp/eth-bootstrapper')
-        if not(eth.isManual()):
+
+        if not(eth.isManual()) or self.__no_discover:
             node.appendStartCommand('/tmp/eth-bootstrapper')
         
-        # launch Ethereum process.
-        common_flags = '{} --identity="NODE_{}" --miner.etherbase "{}" --mine --miner.threads=1 --unlock 0 --password "/tmp/eth-password" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port 30303 --http --http.addr 0.0.0.0 --http.port {}'.format(datadir_option, self.__id,  self.__accounts[0].getAddress(), self.__geth_http_port)
-        apis = "web3,eth,debug,personal,net,clique"
-        http_whitelist_domains = "*"
-        whitelist_flags = "--http.corsdomain \"{}\" --http.api {} ".format(http_whitelist_domains, apis)
-        common_flags = '{} {}'.format(common_flags, whitelist_flags)
-        # Flags updated to accept external connections
-        if self.externalConnectionEnabled():
-            apis = "web3,eth,debug,personal,net,clique"
-            http_whitelist_domains = "*"
-            ws_whitelist_domains = "*"
-            whitelist_flags = "--http.corsdomain \"{}\" --http.api {} --ws --ws.addr 0.0.0.0 --ws.port {} --ws.api {} --ws.origins \"{}\" ".format(http_whitelist_domains, apis, 8546, apis, ws_whitelist_domains)
-            common_flags = '{} {}'.format(common_flags, whitelist_flags)
-        
-        if self.__no_discover:
-            common_flags = '{} {}'.format(common_flags, "--nodiscover")
 
-        # Base geth command
-        geth_command = 'nice -n 19 geth {}'.format(common_flags)
+        # launch Ethereum process.
+        geth_start_command = GethCommandTemplates['base'].format(datadir=self.__data_dir)
+
+        if self.__start_mine:
+            geth_start_command += GethCommandTemplates['mine'].format(coinbase=self.__accounts[0].getAddress(), num_of_threads=self.__miner_thread)
+        if self.__unlock_accounts:
+            accounts = []
+            for account in self.__accounts:
+                accounts.append(account.getAddress())
+            geth_start_command += GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
+        if self.__enable_http:
+            geth_start_command += GethCommandTemplates['http'].format(gethHttpPort=self.__geth_http_port)
+        if self.__no_discover:
+            geth_start_command += GethCommandTemplates['nodiscover']
+        else:
+            geth_start_command += GethCommandTemplates['bootnodes']
+
         
         # Manual vs automated geth command execution
         # In the manual approach, the geth command is only thrown in a file in /tmp/run.sh
         # In the automated approach, the /tmp/run.sh file is executed by the start.sh (Virtual node) 
         
         # Echoing the geth command to /tmp/run.sh in each container
-        node.appendStartCommand('echo \'{} --bootnodes "$(cat /tmp/eth-node-urls)"\' > /tmp/run.sh'.format(geth_command), True) 
+        node.appendStartCommand('echo \'{} \' > /tmp/run.sh'.format(geth_start_command)) 
        
         # Making run.sh executable
-        node.appendStartCommand('sleep 10')
         node.appendStartCommand('chmod +x /tmp/run.sh')
         
         # moving keystore to the proper folder
         for account in self.getAccounts():
-            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.getKeyStoreFileName()),True)
+            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.getKeyStoreFileName()))
 
         # Adding /tmp/run.sh in start.sh file to automate them
         if not(eth.isManual()):
             node.appendStartCommand('/tmp/run.sh &')
-
-            self.__unlockAccountsCommand(node)
-            self.__addMinerStartCommand(node)
             self.__deploySmartContractCommand(node)
 
         node.appendClassName('EthereumService')
@@ -618,7 +627,7 @@ class EthereumServer(Server):
         """!
         @brief setting a node as a remix node makes it possible for the remix IDE to connect to the node
         """
-        self.__enable_external_connection = True
+        self.__enable_http = True
 
         return self
 
@@ -626,10 +635,10 @@ class EthereumServer(Server):
         """!
         @brief returns wheter a node is a remix node or not
         """
-        return self.__enable_external_connection
+        return self.__enable_http
 
     
-    def createNewAccount(self, number: int = 1, password: str = "admin", balance: int=0) -> EthereumServer:
+    def createAccounts(self, number: int = 1, balance: int=0, password: str = "admin") -> EthereumServer:
         """
         @brief Call this api to create a new account
 
@@ -671,7 +680,7 @@ class EthereumServer(Server):
 
         @returns self, for chaining API calls.
         """
-        self.__unlockAccounts = True
+        self.__unlock_accounts = True
 
         return self
         
@@ -681,7 +690,7 @@ class EthereumServer(Server):
 
         @returns self, for chaining API calls.
         """
-        self.__start_Miner_node = True
+        self.__start_mine = True
 
         return self
 
