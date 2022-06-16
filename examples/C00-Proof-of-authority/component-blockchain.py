@@ -31,7 +31,6 @@ for i in range(start, end):
     e = eth.install("eth{}".format(i))
     if i%3 == 0:
         e.setBootNode(True)
-        e.unlockAccounts().startMiner() 
         bootnodes.append(i)
     else:
         e.createAccounts(1, balance)

@@ -798,10 +798,11 @@ class EthereumService(Service):
         if server.isBootNode():
             self._log('adding as{}/{} as bootnode...'.format(node.getAsn(), node.getName()))
             self.__boot_node_addresses.append(addr)
-
+        else:
+            self.__joined_sealer_accounts.append(server.getAccounts()[0])
         if len(server.getAccounts()) > 0:
             self.__joined_accounts.extend(server.getAccounts())
-            self.__joined_sealer_accounts.append(server.getAccounts()[0])
+            
 
         if self.__save_state:
             node.addSharedFolder('/root/.ethereum', '{}/{}/ethereum'.format(self.__save_path, server.getId()))
