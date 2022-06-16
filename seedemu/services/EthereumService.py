@@ -3,7 +3,6 @@
 # __author__ = 'Demon'
 
 from __future__ import annotations
-from ctypes.wintypes import BOOLEAN
 from enum import Enum
 import os
 from seedemu.core import Node, Service, Server
