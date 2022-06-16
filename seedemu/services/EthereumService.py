@@ -367,15 +367,6 @@ class EthereumServer(Server):
     def __generateGethStartCommand(self, node: Node):
         geth_start_command = GethCommandTemplates['base'].format(datadir=self.__data_dir)
 
-        if self.__start_mine:
-            geth_start_command += GethCommandTemplates['mine'].format(coinbase=self.__coinbase, num_of_threads=self.__miner_thread)
-        if self.__unlock_accounts:
-            accounts = []
-            for account in self.__accounts:
-                accounts.append(account.getAddress())
-            geth_start_command += GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
-        if self.__enable_http:
-            geth_start_command += GethCommandTemplates['http'].format(gethHttpPort=self.__geth_http_port)
         if self.__no_discover:
             geth_start_command += GethCommandTemplates['nodiscover']
         else:
@@ -383,6 +374,15 @@ class EthereumServer(Server):
             # load enode urls from other nodes
             node.appendStartCommand('chmod +x /tmp/eth-bootstrapper')
             node.appendStartCommand('/tmp/eth-bootstrapper')
+        if self.__unlock_accounts:
+            accounts = []
+            for account in self.__accounts:
+                accounts.append(account.getAddress())
+            geth_start_command += GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
+        if self.__start_mine:
+            geth_start_command += GethCommandTemplates['mine'].format(coinbase=self.__coinbase, num_of_threads=self.__miner_thread)
+        if self.__enable_http:
+            geth_start_command += GethCommandTemplates['http'].format(gethHttpPort=self.__geth_http_port)
         if self.__custom_geth_command_option:
             geth_start_command += self.__custom_geth_command_option
 
@@ -475,6 +475,8 @@ class EthereumServer(Server):
         if self.__is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
             node.appendStartCommand('echo "enode://$(bootnode -nodekey /root/.ethereum/geth/nodekey -writeaddress)@{}:30301" > /tmp/eth-enode-url'.format(addr))
+            # Default port is 30301, use -addr :<port> to specify a custom port
+            node.appendStartCommand('bootnode -nodekey /root/.ethereum/geth/nodekey -verbosity 9 -addr {}:30301 > /tmp/bootnode-logs &'.format(addr))          
             # host the eth-enode-url for other nodes.
             node.appendStartCommand('python3 -m http.server {} -d /tmp'.format(self.__bootnode_http_port), True)
 
