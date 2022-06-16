@@ -39,6 +39,8 @@ def updateEthStates():
         createDirectoryAtBase(output, "eth-states/")
         for i in range(start, end):
             createDirectoryAtBase(output, "eth-states/" + str(i))
+            createDirectoryAtBase(output, "eth-states/" + str(i)+"/ethereum")
+            createDirectoryAtBase(output, "eth-states/" + str(i)+"/ethash")
 
 # Render and compile
 emu.render()
