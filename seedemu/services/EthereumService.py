@@ -438,7 +438,7 @@ class EthereumServer(Server):
 
         # update genesis.json
         self.__genesis.allocateBalance(eth.getAllAccounts())
-        self.__genesis.setSealer(eth.getAllAccounts())
+        self.__genesis.setSealer(eth.getAllSealerAccounts())
     
         node.setFile('/tmp/eth-genesis.json', self.__genesis.getGenesis())
         node.setFile('/tmp/eth-nodes', '\n'.join(bootnodes))
@@ -707,6 +707,7 @@ class EthereumService(Service):
     __serial: int
     __boot_node_addresses: List[str]
     __joined_accounts: List[EthAccount]
+    __joined_sealer_accounts: List[EthAccount]
 
     __save_state: bool
     __save_path: str
@@ -734,6 +735,7 @@ class EthereumService(Service):
         self.__serial = 0
         self.__boot_node_addresses = []
         self.__joined_accounts = []
+        self.__joined_sealer_accounts = []
 
         self.__save_state = saveState
         self.__save_path = statePath
@@ -768,6 +770,9 @@ class EthereumService(Service):
         """
         return self.__joined_accounts
 
+    def getAllSealerAccounts(self) -> List[EthAccount]:
+        return self.__joined_sealer_accounts
+
     def setBaseConsensusMechanism(self, mechanism:ConsensusMechanism) -> bool:
         """
         @brief select a consensus mechanism for the blockchain network. Default is Proof of authority
@@ -796,6 +801,7 @@ class EthereumService(Service):
 
         if len(server.getAccounts()) > 0:
             self.__joined_accounts.extend(server.getAccounts())
+            self.__joined_sealer_accounts.append(server.getAccounts()[0])
 
         if self.__save_state:
             node.addSharedFolder('/root/.ethereum', '{}/{}/ethereum'.format(self.__save_path, server.getId()))

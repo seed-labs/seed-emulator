@@ -31,6 +31,7 @@ for i in range(start, end):
     e = eth.install("eth{}".format(i))
     if i%3 == 0:
         e.setBootNode(True)
+        e.unlockAccounts().startMiner() 
         bootnodes.append(i)
     else:
         e.createAccounts(1, balance)
@@ -45,7 +46,7 @@ print("There are {} sealers and {} bootnodes".format(len(sealers), len(bootnodes
 print("Sealers {}".format(sealers))
 print("Bootnodes {}".format(bootnodes))
 
-start = end
+'''start = end
 end = start + 1
 for i in range(start, end):
     e = eth.install("eth{}".format(i))
@@ -54,7 +55,7 @@ for i in range(start, end):
     e.enableExternalConnection()
     emu.getVirtualNode("eth{}".format(i)).setDisplayName('Ethereum-{}-pow'.format(i)).addPortForwarding(hport, cport)
 
-print("Created {} nodes that use PoW consensus mechanism".format(end - start))
+print("Created {} nodes that use PoW consensus mechanism".format(end - start))'''
 
 # Add the layer and save the component to a file
 emu.addLayer(eth)
