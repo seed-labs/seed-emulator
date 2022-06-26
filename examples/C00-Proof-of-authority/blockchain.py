@@ -21,7 +21,7 @@ end=16
 for i in range(start, end):
     emu.addBinding(Binding('eth{}'.format(i)))
 
-output = './emulator'
+output = './output'
 
 def createDirectoryAtBase(base:str, directory:str, override:bool = False):
     cur = getcwd()
