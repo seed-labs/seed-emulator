@@ -144,6 +144,9 @@ GethCommandTemplates['unlock'] = '''\
 GethCommandTemplates['http'] = '''\
 --http --http.addr 0.0.0.0 --http.port {gethHttpPort} --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique '''
 
+GethCommandTemplates['ws'] = '''\
+--ws --ws.addr 0.0.0.0 --ws.port {gethWsPort} --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique '''
+
 GethCommandTemplates['nodiscover'] = '''\
 --nodiscover '''
 
@@ -365,6 +368,8 @@ class EthereumServer(Server):
     __no_discover: bool 
     __enable_http: bool
     __geth_http_port: int
+    __enable_ws: bool
+    __geth_ws_port: int
     __unlock_accounts: bool
     __start_mine: bool
     __miner_thread: int
@@ -390,8 +395,10 @@ class EthereumServer(Server):
 
         self.__data_dir = "/root/.ethereum"
         self.__no_discover = False
+        self.__enable_ws = False
         self.__enable_http = False
         self.__geth_http_port = 8545
+        self.__geth_ws_port = 8546
         self.__unlock_accounts = False
         self.__start_mine = False
         self.__miner_thread = 1
@@ -411,6 +418,8 @@ class EthereumServer(Server):
             geth_start_command += GethCommandTemplates['bootnodes']
         if self.__enable_http:
             geth_start_command += GethCommandTemplates['http'].format(gethHttpPort=self.__geth_http_port)
+        if self.__enable_ws:
+            geth_start_command += GethCommandTemplates['ws'].format(gethWsPort=self.__geth_ws_port)
         if self.__custom_geth_command_option:
             geth_start_command += self.__custom_geth_command_option
         if self.__unlock_accounts:
@@ -634,6 +643,7 @@ class EthereumServer(Server):
         @brief setting a node as a remix node makes it possible for the remix IDE to connect to the node
         """
         self.__enable_http = True
+        self.__enable_ws = True
 
         return self
 
