@@ -5,8 +5,6 @@ import { Completion } from '../common/completion';
 import { EmulatorNetwork, EmulatorNode } from '../common/types';
 import { WindowManager } from '../common/window-manager';
 import { DataSource, Edge, Vertex } from './datasource';
-import { data, event } from 'jquery';
-
 
 /**
  * map UI element bindings.
@@ -31,8 +29,7 @@ export interface MapUiConfiguration {
     filterControls: { // filter controls
         filterModeTabElementId: string, // element id of tab for setting mode to filter
         nodeSearchModeTabElementId: string, // element id of tab for setting mode to search
-        suggestionsElementId: string, // element id of search suggestions
-    	blockchainTabElementId: string
+        suggestionsElementId: string // element id of search suggestions
     },
     replayControls: { // replay controls
         recordButtonElementId: string, // element id of record button
@@ -50,7 +47,7 @@ export interface MapUiConfiguration {
     }
 }
 
-type FilterMode = 'node-search' | 'filter' | 'blockchain';
+type FilterMode = 'node-search' | 'filter';
 
 type SuggestionSelectionAction = 'up' | 'down' | 'clear';
 
@@ -84,7 +81,6 @@ export class MapUi {
     private _filterModeTab: HTMLElement;
     private _searchModeTab: HTMLElement;
     private _suggestions: HTMLElement;
-    private _blockchain: HTMLElement;
 
     private _logToggle: HTMLElement;
     private _logToggleChevron: HTMLElement;
@@ -104,8 +100,6 @@ export class MapUi {
     private _edges: DataSet<Edge, 'id'>;
     private _graph: Network;
 
-    private _groups: any;
-
     /** list of log elements to be rendered to log body */
     private _logQueue: HTMLElement[];
 
@@ -113,9 +107,6 @@ export class MapUi {
     private _flashQueue: Set<string>;
     /** set of vertex ids scheduled for un-flash */
     private _flashingNodes: Set<string>;
-
-    private __filters: string[];
-    /** save the filter type for plugin in  */
     
     private _logPrinter: number;
     private _flasher: number;
@@ -180,7 +171,6 @@ export class MapUi {
         this._filterModeTab = document.getElementById(config.filterControls.filterModeTabElementId);
         this._searchModeTab = document.getElementById(config.filterControls.nodeSearchModeTabElementId);
         this._suggestions = document.getElementById(config.filterControls.suggestionsElementId);
-	this._blockchain = document.getElementById(config.filterControls.blockchainTabElementId);
 
         this._logToggle = document.getElementById(config.logControls.minimizeToggleElementId);
         this._logToggleChevron = document.getElementById(config.logControls.minimizeChevronElementId);
@@ -323,60 +313,6 @@ export class MapUi {
         this._filterInput.onclick = () => {
             this._updateFilterSuggestions(this._filterInput.value);
         };
-
-	this._blockchain.onclick = async() => {
-           	this._setFilterMode('blockchain');   
-		// send post request
-		const type = 1 // 1 represents blockchain in PluginEnum.ts
-		await this._datasource.initPlugin(type)
-		const url = `ws://localhost:8080/api/v1/plugin/${type}/command/`
-        const ws = new WebSocket(url)
-        ws.onmessage = (event) => {
-			const data = JSON.parse(event.data)
-            if(data.eventType === "settings"){
-                this.__filters = data.data.filters;
-                return;
-            }
-			if(!data.containerId) {
-				return;
-			}
-			
-			const node = Array.from(this._nodes.map(node => {
-				return {
-					id: node.id,
-					group: node.group
-				}
-			})).filter(node => node.id === data.containerId)[0]
-			console.log(node)
-			const {color} = this._groups[node.group]
-			
-			this._nodes.update({
-				...data.data,
-				id: data.containerId
-			});
-
-			//un-flash	
-			setTimeout(() => {
-				this._nodes.update({
-					id: data.containerId,
-					borderWidth: 1,
-					color
-				})
-			},500)
-		}
-
-		this._filterInput.addEventListener("keypress",function(event){
-                	const keyCode =(<HTMLInputElement> document.getElementById("filter"));
-
-                	if(event.key == "Enter"){
-			
-				ws.send(JSON.stringify({
-					command: new String(keyCode.value) 
-				}))
-				
-                	}
-           	})
-	};
         
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
             if (shown) {
@@ -613,7 +549,6 @@ export class MapUi {
             this._filterInput.placeholder = 'Type a BPF expression to animate packet flows on the map...';
             this._filterModeTab.classList.remove('inactive');
             this._searchModeTab.classList.add('inactive');
-            this._blockchain.classList.add('inactive');
         }
 
         if (mode == 'node-search') {
@@ -621,17 +556,7 @@ export class MapUi {
             this._filterInput.placeholder = 'Search networks and nodes...';
             this._filterModeTab.classList.add('inactive');
             this._searchModeTab.classList.remove('inactive');
-            this._blockchain.classList.add('inactive');
             this._filterUpdateHandler(null, true);
-        }
-
-        if(mode == 'blockchain'){
-                       
-            this._filterInput.placeholder = 'Please input the blockchain command...<action> <filter> <params>';
-
-            this._filterModeTab.classList.add('inactive');
-            this._searchModeTab.classList.add('inactive');
-            this._blockchain.classList.remove('inactive');
         }
     }
 
@@ -867,38 +792,6 @@ export class MapUi {
     
                 this._suggestions.appendChild(item);
             });
-        }
-
-        if(this._filterMode =="blockchain"){
-            let command: string[] = ['start ', 'stop '];
-            let eventType: string[] = this.__filters || ['newBlockHeaders', 'pendingTransactions'];
-            command.forEach(mycmd =>{
-                eventType.forEach(myEvent =>{
-                    var itemName = myEvent;
-                    var itemDetails = '';
-    
-                    let item = document.createElement('div');
-                    item.className = 'suggestion';
-        
-                    let name = document.createElement('span');
-                    name.className = 'name';
-                    itemName = mycmd.concat(myEvent);
-                    name.innerText = itemName;
-        
-                    let details = document.createElement('span');
-                    details.className = 'details';
-                    details.innerText = itemDetails;
-        
-                    item.appendChild(name);
-                    item.appendChild(details);
-                    item.onclick = () => {
-                        this._moveSuggestionSelection('clear');
-                        this._updateFilterSuggestions(this._filterInput.value);
-                    };
-                    
-                    this._suggestions.appendChild(item);
-                })  
-            })
         }
 
     }
@@ -1427,8 +1320,6 @@ export class MapUi {
                 }
             }
         });
-
-	this._groups = groups;
 
         this._graph = new Network(this._mapElement, {
             nodes: this._nodes,

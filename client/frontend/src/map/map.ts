@@ -27,8 +27,7 @@ const mapUi = new MapUi({
     filterControls: {
         filterModeTabElementId: 'tab-filter-mode',
         nodeSearchModeTabElementId: 'tab-node-search-mode',
-        suggestionsElementId: 'filter-suggestions',
-	blockchainTabElementId: 'tab-node-blockchain-plugin'
+        suggestionsElementId: 'filter-suggestions'
     },
     replayControls: {
         recordButtonElementId: 'replay-record',
