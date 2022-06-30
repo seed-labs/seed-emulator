@@ -4,7 +4,8 @@
 
 from __future__ import annotations
 from enum import Enum
-import os
+from os import mkdir, path,makedirs
+from shutil import rmtree
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
 
@@ -281,7 +282,7 @@ class EthAccount():
         """
         @brief import account from keyfile
         """
-        assert os.path.exists(keyfile), "EthAccount::__importAccount: keyFile does not exist. path : {}".format(keyfile)
+        assert path.exists(keyfile), "EthAccount::__importAccount: keyFile does not exist. path : {}".format(keyfile)
 
         return self.lib_eth_account.from_key(self.lib_eth_account.decrypt(keyfile_json=keyfile,password=password))
     
@@ -445,6 +446,7 @@ class EthereumServer(Server):
         """
 
         node.appendClassName('EthereumService')
+        node.setLabel('consensus', self.__consensus_mechanism.value)
 
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has no interfaces'.format(node.getAsn(), node.getName())
@@ -520,7 +522,7 @@ class EthereumServer(Server):
 
         @returns self, for chaining API calls.
         """
-        assert os.path.exists(customGethBinaryPath), "EthereumServer::setCustomGeth: custom geth binary file does not exist. path : {}".format(customGethBinaryPath)
+        assert path.exists(customGethBinaryPath), "EthereumServer::setCustomGeth: custom geth binary file does not exist. path : {}".format(customGethBinaryPath)
 
         self.__custom_geth_binary_path = customGethBinaryPath
 
@@ -673,7 +675,7 @@ class EthereumServer(Server):
     
     def importAccount(self, keyfileDirectory:str, password:str = "admin", balance: int = 0) -> EthereumServer:
         
-        assert os.path.exists(keyfileDirectory), "EthereumServer::importAccount: keyFile does not exist. path : {}".format(keyfileDirectory)
+        assert path.exists(keyfileDirectory), "EthereumServer::importAccount: keyFile does not exist. path : {}".format(keyfileDirectory)
 
         f = open(keyfileDirectory, "r")
         keystoreFileContent = f.read()
@@ -744,8 +746,9 @@ class EthereumService(Service):
 
     __save_state: bool
     __save_path: str
+    __override: bool
 
-    def __init__(self, saveState: bool = False, statePath: str = './eth-states'):
+    def __init__(self, saveState: bool = False, savePath: str = './eth-states', override:bool=False):
         """!
         @brief create a new Ethereum service.
 
@@ -753,8 +756,12 @@ class EthereumService(Service):
         of the block chain by saving the datadir of every node. Default to
         false.
 
-        @param statePath (optional) path to save containers' datadirs on the
+        @param savePath (optional) path to save containers' datadirs on the
         host. Default to "./eth-states". 
+
+        @param override (optional) override the output folder if it already
+        exist. False by defualt.
+
         """
 
         super().__init__()
@@ -766,7 +773,8 @@ class EthereumService(Service):
         self.__joined_signer_accounts = []
 
         self.__save_state = saveState
-        self.__save_path = statePath
+        self.__save_path = savePath
+        self.__override = override
 
     def getName(self):
         return 'EthereumService'
@@ -807,9 +815,27 @@ class EthereumService(Service):
                 self.__joined_signer_accounts.append(server.getAccounts()[0])
             
         if self.__save_state:
-            node.addSharedFolder('/root/.ethereum', '{}/{}/ethereum'.format(self.__save_path, server.getId()))
-            node.addSharedFolder('/root/.ethash', '{}/{}/ethash'.format(self.__save_path, server.getId()))
-
+            node.addSharedFolder('/root/.ethereum', '../{}/{}/ethereum'.format(self.__save_path, server.getId()))
+            node.addSharedFolder('/root/.ethash', '../{}/{}/ethash'.format(self.__save_path, server.getId()))
+            makedirs('{}/{}/ethereum'.format(self.__save_path, server.getId()))
+            print(1)
+            makedirs('{}/{}/ethash'.format(self.__save_path, server.getId()))
+    
+    def configure(self, emulator: Emulator):
+        if self.__save_state:
+            self._createSharedFolder()
+        super().configure(emulator)
+        
+    def _createSharedFolder(self):
+        if path.exists(self.__save_path):
+            if self.__override:
+                self._log('eth_state folder "{}" already exist, overriding.'.format(self.__save_path))
+                rmtree(self.__save_path)
+            else:
+                self._log('eth_state folder "{}" already exist. Set "override = True" when calling compile() to override.'.format(self.__save_path))
+                exit(1)
+        mkdir(self.__save_path)
+        
     def _doInstall(self, node: Node, server: EthereumServer):
         self._log('installing eth on as{}/{}...'.format(node.getAsn(), node.getName()))
 
