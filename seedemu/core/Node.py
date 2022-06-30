@@ -208,6 +208,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __scope: str
     __role: NodeRole
     __classes: List[str]
+    __label: Dict[str, str]
     __interfaces: List[Interface]
     __files: Dict[str, File]
     __imported_files: Dict[str, str]
@@ -244,6 +245,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__role = role
         self.__name = name
         self.__classes = []
+        self.__label = {}
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
         self.__build_commands = []
@@ -548,7 +550,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         return self
 
-    def getClasses(self) -> str:
+    def getClasses(self) -> list:
         """!
         @brief Get service of current node
         
@@ -556,6 +558,19 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
 
         return self.__classes
+
+    def setLabel(self, key:str, value:str) -> Node:
+        """!
+        @brief Add Label to a current node
+
+        @returns self, for chaining API calls.
+        """
+
+        self.__label[key] = value
+        return self
+
+    def getLabel(self) -> dict:
+        return self.__label
         
     def getFile(self, path: str) -> File:
         """!
