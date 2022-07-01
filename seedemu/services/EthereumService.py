@@ -6,8 +6,9 @@ from __future__ import annotations
 from enum import Enum
 from os import mkdir, path,makedirs
 from shutil import rmtree
-from seedemu.core import Node, Service, Server
-from typing import Dict, List
+import string
+from seedemu.core import Node, Service, Server, Emulator
+from typing import Dict, List, Tuple
 
 import json
 from datetime import datetime, timezone
@@ -251,7 +252,7 @@ class EthAccount():
     __password: str
 
 
-    def __init__(self, alloc_balance:int = 0,password:str = "admin", keyfile: str = None):
+    def __init__(self, alloc_balance:int = 0,password:str = "admin", keyfilePath: str = None):
         """
         @brief create a Ethereum Local Account when initialize
 
@@ -262,7 +263,7 @@ class EthAccount():
         from eth_account import Account
         self.lib_eth_account = Account
 
-        self.__account = self.__importAccount(keyfile=keyfile, password=password) if keyfile else self.__createAccount()
+        self.__account = self.__importAccount(keyfilePath=keyfilePath, password=password) if keyfilePath else self.__createAccount()
         self.__address = self.__account.address
 
         assert alloc_balance >= 0, "EthAccount::__init__: balance cannot have a negative value. Requested Balance Value : {}".format(alloc_balance)
@@ -278,13 +279,14 @@ class EthAccount():
         self.__password = password
 
     
-    def __importAccount(self, keyfile: str, password = "admin"):
+    def __importAccount(self, keyfilePath: str, password = "admin"):
         """
         @brief import account from keyfile
         """
-        assert path.exists(keyfile), "EthAccount::__importAccount: keyFile does not exist. path : {}".format(keyfile)
-
-        return self.lib_eth_account.from_key(self.lib_eth_account.decrypt(keyfile_json=keyfile,password=password))
+        assert path.exists(keyfilePath), "EthAccount::__importAccount: keyFile does not exist. path : {}".format(keyfilePath)
+        f = open(keyfilePath, "r")
+        keyfileContent = f.read()
+        return self.lib_eth_account.from_key(self.lib_eth_account.decrypt(keyfile_json=keyfileContent,password=password))
     
     def __createAccount(self):
         """
@@ -360,6 +362,7 @@ class EthereumServer(Server):
     __bootnode_http_port: int
     __smart_contract: SmartContract
     __accounts: List[EthAccount]
+    __accounts_info: List[Tuple[int, str, str]]
     __consensus_mechanism: ConsensusMechanism
 
     __custom_geth_binary_path: str
@@ -388,6 +391,7 @@ class EthereumServer(Server):
         self.__bootnode_http_port = 8088
         self.__smart_contract = None
         self.__accounts = []
+        self.__accounts_info = [(0, "admin", None)]
         self.__consensus_mechanism = ConsensusMechanism.POW
         self.__genesis = Genesis(self.__consensus_mechanism)
 
@@ -460,7 +464,7 @@ class EthereumServer(Server):
         node.setFile('/tmp/eth-genesis.json', self.__genesis.getGenesis())
     
         account_passwords = []
-        
+
         for account in self.__accounts:
             node.setFile("/tmp/keystore/"+account.getKeyStoreFileName(), account.getKeyStoreContent())
             account_passwords.append(account.getPassword())
@@ -483,7 +487,7 @@ class EthereumServer(Server):
         # genesis
         node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth --datadir {} init /tmp/eth-genesis.json'.format(self.__data_dir))
         # copy keystore to the proper folder
-        for account in self.getAccounts():
+        for account in self.__accounts:
             node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.getKeyStoreFileName()))
 
         if self.__is_bootnode:
@@ -556,6 +560,10 @@ class EthereumServer(Server):
         '''
         self.__consensus_mechanism = consensusMechanism
         self.__genesis = Genesis(self.__consensus_mechanism)
+        if consensusMechanism == ConsensusMechanism.POA:
+            self.__accounts_info[0] = (32 * pow(10, 18), "admin", None)
+        elif consensusMechanism == ConsensusMechanism.POW:
+            self.__accounts_info[0] = (0, "admin", None)
         
         return self
 
@@ -655,10 +663,26 @@ class EthereumServer(Server):
         """
         return self.__enable_http
 
+
+    def createAccount(self, balance:int=0, password:str="admin") -> EthereumServer:
+        """
+        @brief call this api to create new accounts
+
+        @param balance the balance to be allocated to the account
+        @param password the password to encrypt private key
+
+        @returns self, for chaining API calls.
+
+        """
+
+        self.__accounts_info.append((balance, password, None))
+
+        return self
+
     
     def createAccounts(self, number: int = 1, balance: int=0, password: str = "admin") -> EthereumServer:
         """
-        @brief Call this api to create a new account
+        @brief Call this api to create new accounts
 
         @param number the number of account need to create
         @param balance the balance need to be allocated to the accounts
@@ -668,29 +692,52 @@ class EthereumServer(Server):
         """
 
         for _ in range(number):    
-            account = EthAccount(alloc_balance=balance,password=password)
+            self.__accounts_info.append((balance, password, None))
+
+        return self
+
+    def _createAccounts(self, eth:EthereumService) -> EthereumServer:
+        """
+        @brief Call this api to create new accounts from account_info
+
+        @returns self, for chaining API calls.
+        """
+        for balance, password, keyfilePath in self.__accounts_info:
+            if keyfilePath:
+                eth._log('importing eth account...')
+            else:
+                eth._log('creating eth account...')
+
+            account = EthAccount(alloc_balance=balance,password=password, keyfilePath=keyfilePath)
             self.__accounts.append(account)
 
-        return self
+        return self    
     
-    def importAccount(self, keyfileDirectory:str, password:str = "admin", balance: int = 0) -> EthereumServer:
+    def importAccount(self, keyfilePath:str, password:str = "admin", balance: int = 0) -> EthereumServer:
         
-        assert path.exists(keyfileDirectory), "EthereumServer::importAccount: keyFile does not exist. path : {}".format(keyfileDirectory)
+        assert path.exists(keyfilePath), "EthereumServer::importAccount: keyFile does not exist. path : {}".format(keyfilePath)
 
-        f = open(keyfileDirectory, "r")
-        keystoreFileContent = f.read()
-        account = EthAccount(alloc_balance=balance, password=password,keyfile=keystoreFileContent)
-        self.__accounts.append(account)
+        self.__accounts_info.append((balance, password, keyfilePath))
         return self
     
-    def getAccounts(self) -> List[EthAccount]:
+    def getAccounts(self) -> List[Tuple(int, str, str)]:
         """
         @brief Call this api to get the accounts for this node
 
-        @returns accounts.
+        @returns accounts_info.
+        """
+
+        return self.__accounts_info
+
+    def _getAccounts(self) -> List[EthAccount]:
+        """
+        @brief Call this api to get the accounts for this node
+        
+        @returns accounts
         """
 
         return self.__accounts
+        
 
     def unlockAccounts(self) -> EthereumServer:
         """!
@@ -809,10 +856,12 @@ class EthereumService(Service):
             self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), server.getConsensusMechanism().value))
             self.__boot_node_addresses[server.getConsensusMechanism()].append(addr)
         
-        if len(server.getAccounts()) > 0:
-            self.__joined_accounts.extend(server.getAccounts())
+        server._createAccounts(self)
+        
+        if len(server._getAccounts()) > 0:
+            self.__joined_accounts.extend(server._getAccounts())
             if server.getConsensusMechanism() == ConsensusMechanism.POA and server.isStartMiner():
-                self.__joined_signer_accounts.append(server.getAccounts()[0])
+                self.__joined_signer_accounts.append(server._getAccounts()[0])
             
         if self.__save_state:
             node.addSharedFolder('/root/.ethereum', '../{}/{}/ethereum'.format(self.__save_path, server.getId()))
