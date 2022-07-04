@@ -16,7 +16,7 @@ We will create the Blockchain nodes at the Ethereum layer,
 so each node created is a virtual node so that they can be deployed
 in different emulators.
 
-```
+```python
 # Create the Ethereum layer
 # saveState=True: will set the blockchain folder using `volumes`, 
 # so the blockchain data will be preserved when containers are deleted.
@@ -48,7 +48,7 @@ The default port number of the http server is 8088 and it can be
 customized. If bootnode does not set to any node, we should specify 
 peer nodes urls manually. 
 
-```
+```python
 # Set bootnode on e1. The other nodes can use these bootnodes to find peers.
 e1.setBootNode(True).setBootNodeHttpPort(8090)
 ``` 
@@ -65,7 +65,7 @@ an individual account customizing balance and password. On the other
 hand, using a `createAccounts` method, you create a bulk of accounts 
 that have same amount of balance and a same password.
 
-```
+```python
 # Create more accounts with Balance on e3 and e6
 # Create one account with createAccount() method
 # Create multiple accounts with createAccounts() method
@@ -77,7 +77,7 @@ e6.createAccounts(3, balance = 32*pow(10,18), password="admin")
 
 When you want to reuse an existing account, you can use `importAccount` method.
 
-```
+```python
 e4.importAccount(keyfilePath = "./keystore/UTC--2022-03-25T16-41-21.542086000Z--675eb8226a35256f638712db74878f0a15d3d56e",password="admin", balance=9000000000)
 ```
 
@@ -103,7 +103,7 @@ The options will append to the `base start command`.
 Occationally, it is needed to set customed `geth` binary instead of the original one
 to conduct experiment. In this case, you can use `setCustomGeth()` method.
 
-```
+```python
 # set customized geth binary file instead of installing original geth.
 e3.setCustomGeth("./custom_geth")
 ```
