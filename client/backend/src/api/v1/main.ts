@@ -5,7 +5,6 @@ import { SeedContainerInfo, Emulator, SeedNetInfo } from '../../utils/seedemu-me
 import { Sniffer } from '../../utils/sniffer';
 import WebSocket from 'ws';
 import { Controller } from '../../utils/controller';
-import BasePlugin from '../../plugin/BasePlugin'
 
 const router = express.Router();
 const docker = new dockerode();
@@ -42,88 +41,6 @@ sniffer.getLoggers().forEach(logger => logger.setSettings({
 controller.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'warn'
 }));
-
-// used to be able to run many plugins simultaneously
-const instantiated_types: number[] = [];
-const instantiated_plugins: {[key: number]: BasePlugin} = {};
-
-
-router.post('/plugin/:type/init', async (req, res, next) => {
-	const type = parseInt(req.params.type);
-	if(instantiated_types.includes(type)) {
-		console.log(`Plugin of type ${type} is already running`);
-		res.json({
-        		ok: true
-   		});
-		next();
-		return;
-	}
-	instantiated_types.push(type);
-	instantiated_plugins[type] = new BasePlugin(type);
-	console.log(`Done creating plugin of type ${type}`)	
-	res.json({
-        	ok: true
-    	});
-	next();
-})
-
-// Used to be able to run many plugins simultaneously
-const running_listeners: number[] = []
-const running_ws: {[key: number]: WebSocket} = {};
-
-router.ws('/plugin/:type/command/', async (ws, req, next) => {
-	
-	const type = parseInt(req.params.type);
-	if(running_ws[type]) {
-		console.log(`Clearing previous socket for type ${type}`)
-		running_ws[type].close();
-	}
-	running_ws[type] = ws
-
-	if(!instantiated_types.includes(type)) {
-		console.log(`Cannot run command with uninitialized plugin of type ${type}`)
-		next();
-		return;
-	}
-
-
-	// This is triggered when the user enters a command in the map
-	running_ws[type].on('message', (message) => {
-		const data = message.toString()
-		// Need to handle json.parse with try and catch!	
-		const [command, subscription, params] =  JSON.parse(data).command.split(" ");
-	
-		switch(command) {
-   			case "start": {
-      				instantiated_plugins[type].attach(subscription, params)
-      				break;
-   			}
-   			case "stop": {
-      				instantiated_plugins[type].detach(subscription)
-      				break;
-   			}
-   			default: {
-      				break;
-			}
-		}
-	})
-
-	// This runs when the socket connection is established from the client
-	 if(!running_listeners.includes(type)) {
-                instantiated_plugins[type].onMessage(function(data) {
-                        // readyState 1 means open
-                        // Sending data to client
-                        if(running_ws[type].readyState == 1) {
-                                running_ws[type].send(JSON.stringify(data))
-                        }
-                })
-                instantiated_plugins[type].run(await getContainers())
-                running_listeners.push(type)
-          }
-
-	next()
-})
-
 
 router.get('/network', async function(req, res, next) {
     var networks = await docker.listNetworks();

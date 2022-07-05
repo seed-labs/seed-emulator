@@ -29,8 +29,8 @@ e3.startMiner()
 e4.startMiner()
 
 # Create more accounts on e5 and e6
-e5.startMiner().createNewAccount(3)
-e6.createNewAccount()
+e5.startMiner().createAccounts(3)
+e6.createAccounts()
 
 # Create prefunded accounts on e3
 e3.createPrefundedAccounts(8989898989, 1, "admin")

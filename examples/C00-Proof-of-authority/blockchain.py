@@ -21,7 +21,7 @@ end=16
 for i in range(start, end):
     emu.addBinding(Binding('eth{}'.format(i)))
 
-output = './emulator'
+output = './output'
 
 def createDirectoryAtBase(base:str, directory:str, override:bool = False):
     cur = getcwd()
@@ -39,6 +39,8 @@ def updateEthStates():
         createDirectoryAtBase(output, "eth-states/")
         for i in range(start, end):
             createDirectoryAtBase(output, "eth-states/" + str(i))
+            createDirectoryAtBase(output, "eth-states/" + str(i)+"/ethereum")
+            createDirectoryAtBase(output, "eth-states/" + str(i)+"/ethash")
 
 # Render and compile
 emu.render()

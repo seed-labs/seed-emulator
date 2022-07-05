@@ -11,7 +11,6 @@ from shutil import copyfile
 import json
 
 SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
-ETH_SEEDEMU_CLIENT_IMAGE='rawisader/seedemu-eth-client'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -185,16 +184,6 @@ DockerCompilerFileTemplates['seedemu_client'] = """\
             - {clientPort}:8080/tcp
 """
 
-DockerCompilerFileTemplates['seedemu-eth-client'] = """\
-    seedemu-eth-client:
-        image: {ethClientImage}
-        container_name: seedemu-eth-client
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-        ports:
-            - {ethClientPort}:3000/tcp
-"""
-
 DockerCompilerFileTemplates['zshrc_pre'] = """\
 export NOPRECMD=1
 alias st=set_title
@@ -295,9 +284,6 @@ class Docker(Compiler):
     __client_enabled: bool
     __client_port: int
 
-    __eth_client_enabled: bool
-    __eth_client_port: int
-
     __client_hide_svcnet: bool
 
     __images: Dict[str, Tuple[DockerImage, int]]
@@ -314,8 +300,6 @@ class Docker(Compiler):
         dummyNetworksMask: int = 24,
         clientEnabled: bool = False,
         clientPort: int = 8080,
-        ethClientEnabled: bool = False,
-        ethClientPort: int = 3000,
         clientHideServiceNet: bool = True
     ):
         """!
@@ -355,9 +339,6 @@ class Docker(Compiler):
 
         self.__client_enabled = clientEnabled
         self.__client_port = clientPort
-
-        self.__eth_client_enabled = ethClientEnabled
-        self.__eth_client_port = ethClientPort
 
         self.__client_hide_svcnet = clientHideServiceNet
 
@@ -682,6 +663,11 @@ class Docker(Compiler):
                 value = json.dumps(node.getClasses()).replace("\"", "\\\"")
             )
 
+        for key, value in node.getLabel().items():
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = key,
+                value = value
+            )
         n = 0
         for iface in node.getInterfaces():
             net = iface.getNet()
@@ -1002,14 +988,6 @@ class Docker(Compiler):
             self.__services += DockerCompilerFileTemplates['seedemu_client'].format(
                 clientImage = SEEDEMU_CLIENT_IMAGE,
                 clientPort = self.__client_port
-            )
-
-        if self.__eth_client_enabled:
-            self._log('enabling seedemu-eth-client...')
-
-            self.__services += DockerCompilerFileTemplates['seedemu-eth-client'].format(
-                ethClientImage = ETH_SEEDEMU_CLIENT_IMAGE,
-                ethClientPort = self.__eth_client_port,
             )
 
         local_images = ''

@@ -1,4 +1,5 @@
 **/output/*
+**/eth-states/*
 **/__pycache__/*
 *.out
 *.o

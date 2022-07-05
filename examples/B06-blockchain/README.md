@@ -1,22 +1,151 @@
 ## Table of Content
 
+- [Build a Blockchain Component](#blockchain-component)
 - [Build emulator with blockchain](#emulator)
 - [Use blockchain](#use-blockchain)
 - [Smart contract](#smart-contract)
 - [Manually deploy a smart contract](#smart-contract-manual)
 
 --------------------
+<a name="blockchain-component"></a>
+# Build a Blockchain Component
+
+## A.1 Creating Virtual Blockchain Node
+
+We will create the Blockchain nodes at the Ethereum layer, 
+so each node created is a virtual node so that they can be deployed
+in different emulators.
+
+```python
+# Create the Ethereum layer
+# saveState=True: will set the blockchain folder using `volumes`, 
+# so the blockchain data will be preserved when containers are deleted.
+eth = EthereumService(saveState = True, override=True)
+
+
+# Create POW Ethereum nodes (nodes in this layer are virtual)
+# Default consensus mechanism is POW. 
+e1 = eth.install("eth1").setConsensusMechanism(ConsensusMechanism.POW)
+e2 = eth.install("eth2")
+e3 = eth.install("eth3")
+e4 = eth.install("eth4")
+
+# Create POA Ethereum nodes
+e5 = eth.install("eth5").setConsensusMechanism(ConsensusMechanism.POA)
+e6 = eth.install("eth6").setConsensusMechanism(ConsensusMechanism.POA)
+e7 = eth.install("eth7").setConsensusMechanism(ConsensusMechanism.POA)
+e8 = eth.install("eth8").setConsensusMechanism(ConsensusMechanism.POA)
+```
+
+
+## A.2 Setting a Node as a Bootnode
+
+We can set a node as a bootnode that bootstraps all blockchain nodes.
+If a node is set as a bootnode, it will run a http server that sends 
+its blockchain node url so that the other nodes can connect to it. 
+The default port number of the http server is 8088 and it can be 
+customized. If bootnode does not set to any node, we should specify 
+peer nodes urls manually. 
+
+```python
+# Set bootnode on e1. The other nodes can use these bootnodes to find peers.
+e1.setBootNode(True).setBootNodeHttpPort(8090)
+``` 
+
+## A.3 Creating Accounts
+
+By default, one account will be created per node. In POW Consensus, 
+the account will be created with no balance. In the case of POA Consensus, 
+the account will have 32*pow(10,18) balance as the node will not get sealing
+(mining) rewards in POA. 
+If you want to create additional accounts you can use `createAccount` 
+or `createAccounts` method. Using a `createAccount`, you can create 
+an individual account customizing balance and password. On the other
+hand, using a `createAccounts` method, you create a bulk of accounts 
+that have same amount of balance and a same password.
+
+```python
+# Create more accounts with Balance on e3 and e7
+# Create one account with createAccount() method
+# Create multiple accounts with createAccounts() method
+e3.createAccount(balance= 32 * pow(10,18), password="admin")
+e7.createAccounts(3, balance = 32*pow(10,18), password="admin")
+```
+
+## A.4 Importing Accounts
+
+When you want to reuse an existing account, you can use `importAccount` method.
+
+```python
+# Import account with balance 0 on e2
+e2.importAccount(keyfilePath='./resources/keyfile_to_import', password="admin", balance=0)
+```
+
+## A.5 Setting Geth Command Options
+
+We use `go-ethereum;geth` software to run blockchains on emulator.
+When the containers are up, they will install `geth` and run it with the command
+which is generated from EthereumService Class. We can customized the
+`geth start command` with the following methods.
+The `base start command` is `geth --datadir /root/.ethereum --identity="NODE_5" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port 30303`
+
+- `setNoDiscover()` = --nodiscover
+- `enableGethHttp()` = --http --http.addr 0.0.0.0 --http.port 8545 --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique
+- `enableGethWs()` = --ws --ws.addr 0.0.0.0 --ws.port 8546 --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique
+- `unlockAccounts()` = --unlock "{accounts}" --password "{accounts_passwords}"
+- `startMiner()` = --mine --miner.threads=1
+
+You can also set further options using `setCustomGethCommandOption()` method. 
+The options will append to the `base start command`. 
+
+```python
+# Start mining on e1,e2 and e5,e6
+# To start mine(seal) in POA consensus, the account should be unlocked first. 
+e1.setBootNode(True).setBootNodeHttpPort(8090).startMiner()
+e2.startMiner()
+e5.setBootNode(True).unlockAccounts().startMiner()
+e6.unlockAccounts().startMiner()
+
+# Enable http connection on e3 
+# Set geth http port to 8540 (Default : 8545)
+e3.enableGethHttp().setGethHttpPort(8540)
+
+# Set custom geth command option on e4
+# Possible to enable geth http using setCustomGethCommandOption() method 
+# instead of using enableGethHttp() method
+e4.setCustomGethCommandOption("--http --http.addr 0.0.0.0")
+
+# Enable ws connection on e5 geth
+# Set geth ws port to 8541 (Default : 8546)
+e5.enableGethWs().setGethWsPort(8541)
+
+# Set nodiscover option on e8 geth
+e8.setNoDiscover()
+```
+## A.6 Setting Custom Geth Binary
+
+Occationally, it is needed to set customed `geth` binary instead of the original one
+to conduct experiment. In this case, you can use `setCustomGeth()` method.
+
+```python
+# Set custom geth binary file instead of installing an original file.
+e3.setCustomGeth("./resources/custom_geth")
+```
+
+## A.7 Setting Custom Genesis
+
+If you want to deploy your customed genesis file on a blockchain,
+you can set the customed genesis using the `setGenesis()` method.
+
+```python
+# Set custom genesis on e4 geth
+e4.setGenesis(CustomGenesisFileContent)
+```
+
 <a name="emulator"></a>
 # Build Emulator with Blockchain
 
-## A.1 Automated setup
-
-Make sure driver.sh has the executable permission by running `chmod +x driver.sh`
-./driver.sh will automate each of the steps mentioned below.
-If any issue occurs, it would be best to do them manually.
-
-
-## A.2 Create the Blockchain Component
+## B.1 Create the Blockchain Component
 
 We create the Blockchain in `component-blockchain.py`. This 
 program generates a Ethereum component, which can be deployed
@@ -28,7 +157,7 @@ Please refer to the comments in the code to understand
 how the layer is built.
 
 
-## A.3 Deploying the Blockchain
+## B.2 Deploying the Blockchain
 
 We deploy the blockchain in `blockchain.py`. It first loads two pre-built
 components, a base-layer component and a blockchain component. The 
@@ -50,26 +179,18 @@ emu.addBinding(Binding('eth1', filter = Filter(asn = 151)))
 ...
 ```
 
-## A.4 Generate the Emulation Files and Set Up the Data Folders
+## B.4 Generate the Emulation Files and Set Up the Data Folders
 
 After running the two Python programs (make sure to also run the B00 example 
 to generate the base layer first), we will get the `output` folder, which
 contains all the Docker files for the emulation.
 
 If we set `saveState=True` when creating the `EthereumService` object, 
-we need to manually create the folders inside the `output` folder, because 
-these folders will be used to hold the blockchain data on each ethereum node.
-In the future, we will do it automatically.
+`eth-states` folder will be created automatically and 
+used to hold the blockchain data on each ethereum node.
 
-```
-$ cd output
-$ mkdir -p eth-states/1 
-$ mkdir -p eth-states/2 
-...
-$ mkdir -p eth-states/6 
-```
 
-## A.5 Start the Emulator 
+## B.5 Start the Emulator 
 
 Now we can run the docker-compose commands inside the `output` folder
 to build the containers and then start them.
@@ -108,7 +229,7 @@ root@f6fb88f9e09d / #
 <a name="use-blockchain"></a>
 # Use Blockchain
 
-## B.1 Access the Blockchain Network
+## C.1 Access the Blockchain Network
 
 Once we are inside an Ethereum container, we can use the `geth` 
 command to access the Blockchain. 
@@ -146,7 +267,7 @@ theirs will still be zero.
 527937500000000000000
 ```
 
-## B.2 Get Account Numbers
+## C.2 Get Account Numbers
 
 A typical transaction involves sending some ethers from our account 
 to another account. First, we need to get the account numbers. All the 
@@ -191,7 +312,7 @@ so its balance is zero. We will send some ethers to this account.
 897750000000000000000
 ```
 
-## B.3 Create Transactions 
+## C.3 Create Transactions 
 
 Now from the geth console, we can create a transaction to send ethers to the target account.
 After waiting for a few seconds, we check the balance again. We will
@@ -214,7 +335,7 @@ account, or the unlocking period has already expired (you need to unlock
 it again).
 
 
-## B.4 Get Transaction Information
+## C.4 Get Transaction Information
 
 The transaction hash value will be printed out after we run `eth.sendTransaction()`.
 We can use this hash to get the details about this transaction. 
@@ -245,7 +366,7 @@ It shows which block this transaction is added to.
 <a name="smart-contract"></a>
 # Smart Contract
 
-## C.1 Example 
+## D.1 Example 
 
 In this example, we have provided an smart contract program 
 inside the `Contract/` folder. You can also write one yourself.
@@ -261,7 +382,7 @@ solc --abi <filename.sol> | awk '/JSON ABI/{x=1}x' | sed 1d > contract.abi
 solc --bin <filename.sol> | awk '/Binary:/{x=1;next}x' | sed 1d > contract.abi
 ```
 
-## C.2 Deploy Smart Contract
+## D.2 Deploy Smart Contract
 
 To deploy a smart contract in the Emulator, we first need to create a 
 `SmartContract` object using the generated `abi` and `bin` files, and 
@@ -283,7 +404,7 @@ to deploy a smart contract is 1000000 (in wei).
 Our further development will make this value configurable. 
 
 
-## C.3 Get the Smart Contract Address
+## D.3 Get the Smart Contract Address
 
 Once the contract is deployed, we can perform certain tasks on it.
 The supplied program `contract.sol` acts as a bank account. We can 
@@ -341,7 +462,7 @@ done on any node.
 }
 ```
 
-## C.4 Send Ethers to Contract
+## D.4 Send Ethers to Contract
 	 
 We can treat the contract as a bank account, and can send ethers to this account. 	 
 This is similar to sending ethers to a normal account. All we need to do is to
@@ -361,7 +482,7 @@ create a transaction.
 **Note:** It takes a little bit of time for the transaction to be added to the blockchain.
 	
 
-## C.5 Invoke Smart Contract APIs
+## D.5 Invoke Smart Contract APIs
 
 To invoke the APIs in a smart contract is little bit more complicated. Let us look
 at the source code of the smart contract example (in `Contracts/contract.sol`).
