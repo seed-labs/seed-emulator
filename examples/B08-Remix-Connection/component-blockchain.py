@@ -36,8 +36,8 @@ smart_contract = SmartContract("./Contracts/contract.bin", "./Contracts/contract
 e3.deploySmartContract(smart_contract)
 
 # Set node port that accepts connections
-e3.enableExternalConnection()
-e6.enableExternalConnection().setGethHttpPort(8545)
+e3.enableGethHttp()
+e6.enableGethHttp().setGethHttpPort(8545)
 
 # Get node port that accepts connections
 # Same api used in the EthereumService to set the listening port
