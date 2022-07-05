@@ -4,7 +4,6 @@
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.mergers import DEFAULT_MERGERS
 from seedemu.compiler import Docker
-from os import mkdir, chdir, getcwd, path
 
 
 emuA = Emulator()
@@ -23,29 +22,9 @@ emu.addBinding(Binding('eth4', filter = Filter(asn = 164)))
 emu.addBinding(Binding('eth5', filter = Filter(asn = 150)))
 emu.addBinding(Binding('eth6', filter = Filter(asn = 170)))
 
-output = './output'
-
-def createDirectoryAtBase(base:str, directory:str, override:bool = False):
-    cur = getcwd()
-    if path.exists(base):
-        chdir(base)
-        if override:
-            rmtree(directory)
-        mkdir(directory)
-    chdir(cur)
-
-
-saveState = True
-def updateEthStates():
-    if saveState:
-        createDirectoryAtBase(output, "eth-states/")
-        for i in range(1, 7):
-            createDirectoryAtBase(output, "eth-states/" + str(i))
-
 # Render and compile
 emu.render()
 
 # If output directory exists and override is set to false, we call exit(1)
 # updateOutputdirectory will not be called
-emu.compile(Docker(), output)
-updateEthStates()
+emu.compile(Docker(), './output')
