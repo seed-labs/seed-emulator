@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 from enum import Enum
-from os import mkdir, path,makedirs
+from os import mkdir, path, makedirs, system
 from shutil import rmtree
 import string
 from seedemu.core import Node, Service, Server, Emulator
@@ -286,6 +286,7 @@ class EthAccount():
         assert path.exists(keyfilePath), "EthAccount::__importAccount: keyFile does not exist. path : {}".format(keyfilePath)
         f = open(keyfilePath, "r")
         keyfileContent = f.read()
+        f.close()
         return self.lib_eth_account.from_key(self.lib_eth_account.decrypt(keyfile_json=keyfileContent,password=password))
     
     def __createAccount(self):
@@ -450,6 +451,7 @@ class EthereumServer(Server):
         """
 
         node.appendClassName('EthereumService')
+        node.setLabel('node_id', self.getId())
         node.setLabel('consensus', self.__consensus_mechanism.value)
 
         ifaces = node.getInterfaces()
@@ -480,7 +482,8 @@ class EthereumServer(Server):
         # install geth and bootnode
         if self.__custom_geth_binary_path : 
             node.addBuildCommand('apt-get update && apt-get install --yes bootnode')
-            node.importFile(self.__custom_geth_binary_path, '/usr/bin/geth')
+            node.importFile("../../"+self.__custom_geth_binary_path, '/usr/bin/geth')
+            node.appendStartCommand("chmod +x /usr/bin/geth")
         else:
             node.addBuildCommand('apt-get update && apt-get install --yes geth bootnode')
 
@@ -532,6 +535,22 @@ class EthereumServer(Server):
 
         return self
 
+    def setCustomGethCommandOption(self, customOptions:str) -> EthereumServer:
+        """
+        @brief set custom geth start command option
+
+        @param customOptions options to set
+
+        @returns self, for chaining API calls.
+        """
+        assert customOptions.startswith("--"), "option should start with '--'"
+        assert ";" not in customOptions, "letter ';' cannot contain in the options"
+        assert "&" not in customOptions, "letter '|' cannot contain in the options"
+        assert "|" not in customOptions, "letter '|' cannot contain in the options"
+
+        self.__custom_geth_command_option = customOptions
+        return self
+        
     def setGenesis(self, genesis:str) -> EthereumServer:
         """
         @brief set custom genesis
@@ -647,22 +666,57 @@ class EthereumServer(Server):
                 
         return self.__geth_http_port
 
-
-    def enableExternalConnection(self) -> EthereumServer:
+    def setGethWsPort(self, port: int) -> EthereumServer:
         """!
-        @brief setting a node as a remix node makes it possible for the remix IDE to connect to the node
+        @brief set the ws server port number for normal ethereum nodes
+
+        @param port port
+
+        @returns self, for chaining API calls
+        """
+        
+        self.__geth_ws_port = port
+        
+        return self
+
+    def getGethWsPort(self) -> int:
+        """!
+        @brief get the ws server port number for normal ethereum nodes
+
+        @returns int
+        """
+                
+        return self.__geth_ws_port
+
+
+    def enableGethHttp(self) -> EthereumServer:
+        """!
+        @brief setting a geth to enable http connection 
         """
         self.__enable_http = True
+
+        return self
+
+    def isGethHttpEnabled(self) -> bool:
+        """!
+        @brief returns whether a geth enabled http connection or not
+        """
+        return self.__enable_http
+
+    def enableGethWs(self) -> EthereumServer:
+        """!
+        @brief setting a geth to enable ws connection
+        """
         self.__enable_ws = True
 
         return self
 
-    def externalConnectionEnabled(self) -> bool:
+    def isGethWsEnabled(self) -> bool:
         """!
-        @brief returns wheter a node is a remix node or not
+        @brief returns whether a geth enabled ws connection or not
         """
-        return self.__enable_http
 
+        return self.__enable_ws
 
     def createAccount(self, balance:int=0, password:str="admin") -> EthereumServer:
         """
@@ -867,7 +921,6 @@ class EthereumService(Service):
             node.addSharedFolder('/root/.ethereum', '../{}/{}/ethereum'.format(self.__save_path, server.getId()))
             node.addSharedFolder('/root/.ethash', '../{}/{}/ethash'.format(self.__save_path, server.getId()))
             makedirs('{}/{}/ethereum'.format(self.__save_path, server.getId()))
-            print(1)
             makedirs('{}/{}/ethash'.format(self.__save_path, server.getId()))
     
     def configure(self, emulator: Emulator):
@@ -879,6 +932,7 @@ class EthereumService(Service):
         if path.exists(self.__save_path):
             if self.__override:
                 self._log('eth_state folder "{}" already exist, overriding.'.format(self.__save_path))
+                system('sudo chown -R seed {}'.format(self.__save_path))
                 rmtree(self.__save_path)
             else:
                 self._log('eth_state folder "{}" already exist. Set "override = True" when calling compile() to override.'.format(self.__save_path))
