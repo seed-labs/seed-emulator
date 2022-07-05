@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 from enum import Enum
-from os import mkdir, path, makedirs, system
+from os import mkdir, path, makedirs, rename
 from shutil import rmtree
 from seedemu.core import Node, Service, Server, Emulator
 from typing import Dict, List, Tuple
@@ -918,8 +918,14 @@ class EthereumService(Service):
         if path.exists(self.__save_path):
             if self.__override:
                 self._log('eth_state folder "{}" already exist, overriding.'.format(self.__save_path))
-                system('sudo chown -R seed {}'.format(self.__save_path))
-                rmtree(self.__save_path)
+                i = 1
+                while True:
+                    rename_save_path = "{}-{}".format(self.__save_path, i)
+                    if not path.exists(rename_save_path):
+                        rename(self.__save_path, rename_save_path)
+                        break
+                    else:
+                        i = i+1
             else:
                 self._log('eth_state folder "{}" already exist. Set "override = True" when calling compile() to override.'.format(self.__save_path))
                 exit(1)
