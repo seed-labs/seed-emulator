@@ -1,5 +1,5 @@
 **/output/*
-**/eth-states/*
+**/eth-states*/*
 **/__pycache__/*
 *.out
 *.o
