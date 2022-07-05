@@ -21,6 +21,8 @@ emu.addBinding(Binding('eth3', filter = Filter(asn = 163)))
 emu.addBinding(Binding('eth4', filter = Filter(asn = 164)))
 emu.addBinding(Binding('eth5', filter = Filter(asn = 150)))
 emu.addBinding(Binding('eth6', filter = Filter(asn = 170)))
+emu.addBinding(Binding('eth7', filter = Filter(asn = 161)))
+emu.addBinding(Binding('eth8', filter = Filter(asn = 162)))
 
 # Render and compile
 emu.render()

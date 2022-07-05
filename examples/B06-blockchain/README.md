@@ -20,22 +20,21 @@ in different emulators.
 # Create the Ethereum layer
 # saveState=True: will set the blockchain folder using `volumes`, 
 # so the blockchain data will be preserved when containers are deleted.
-eth = EthereumService(saveState = True)
+eth = EthereumService(saveState = True, override=True)
 
 
 # Create POW Ethereum nodes (nodes in this layer are virtual)
-# Default ConsensusMechanism is POW 
-# So you can set a consensMechanism as POW explicitly. 
-# Without the method, the node will be set as a POW node.
-# Thus, e1 follows POW consensus as well.
-e1 = eth.install("eth1")
-e2 = eth.install("eth2").setConsensusMechanism(ConsensusMechanism.POW)
-e3 = eth.install("eth3").setConsensusMechanism(ConsensusMechanism.POW)
+# Default consensus mechanism is POW. 
+e1 = eth.install("eth1").setConsensusMechanism(ConsensusMechanism.POW)
+e2 = eth.install("eth2")
+e3 = eth.install("eth3")
+e4 = eth.install("eth4")
 
 # Create POA Ethereum nodes
-e4 = eth.install("eth4").setConsensusMechanism(ConsensusMechanism.POA)
 e5 = eth.install("eth5").setConsensusMechanism(ConsensusMechanism.POA)
 e6 = eth.install("eth6").setConsensusMechanism(ConsensusMechanism.POA)
+e7 = eth.install("eth7").setConsensusMechanism(ConsensusMechanism.POA)
+e8 = eth.install("eth8").setConsensusMechanism(ConsensusMechanism.POA)
 ```
 
 
@@ -66,11 +65,11 @@ hand, using a `createAccounts` method, you create a bulk of accounts
 that have same amount of balance and a same password.
 
 ```python
-# Create more accounts with Balance on e3 and e6
+# Create more accounts with Balance on e3 and e7
 # Create one account with createAccount() method
 # Create multiple accounts with createAccounts() method
 e3.createAccount(balance= 32 * pow(10,18), password="admin")
-e6.createAccounts(3, balance = 32*pow(10,18), password="admin")
+e7.createAccounts(3, balance = 32*pow(10,18), password="admin")
 ```
 
 ## A.4 Importing Accounts
@@ -78,7 +77,8 @@ e6.createAccounts(3, balance = 32*pow(10,18), password="admin")
 When you want to reuse an existing account, you can use `importAccount` method.
 
 ```python
-e4.importAccount(keyfilePath = "./keystore/UTC--2022-03-25T16-41-21.542086000Z--675eb8226a35256f638712db74878f0a15d3d56e",password="admin", balance=9000000000)
+# Import account with balance 0 on e2
+e2.importAccount(keyfilePath='./resources/keyfile_to_import', password="admin", balance=0)
 ```
 
 ## A.5 Setting Geth Command Options
@@ -98,14 +98,38 @@ The `base start command` is `geth --datadir /root/.ethereum --identity="NODE_5" 
 You can also set further options using `setCustomGethCommandOption()` method. 
 The options will append to the `base start command`. 
 
+```python
+# Start mining on e1,e2 and e5,e6
+# To start mine(seal) in POA consensus, the account should be unlocked first. 
+e1.setBootNode(True).setBootNodeHttpPort(8090).startMiner()
+e2.startMiner()
+e5.setBootNode(True).unlockAccounts().startMiner()
+e6.unlockAccounts().startMiner()
+
+# Enable http connection on e3 
+# Set geth http port to 8540 (Default : 8545)
+e3.enableGethHttp().setGethHttpPort(8540)
+
+# Set custom geth command option on e4
+# Possible to enable geth http using setCustomGethCommandOption() method 
+# instead of using enableGethHttp() method
+e4.setCustomGethCommandOption("--http --http.addr 0.0.0.0")
+
+# Enable ws connection on e5 geth
+# Set geth ws port to 8541 (Default : 8546)
+e5.enableGethWs().setGethWsPort(8541)
+
+# Set nodiscover option on e8 geth
+e8.setNoDiscover()
+```
 ## A.6 Setting Custom Geth Binary
 
 Occationally, it is needed to set customed `geth` binary instead of the original one
 to conduct experiment. In this case, you can use `setCustomGeth()` method.
 
 ```python
-# set customized geth binary file instead of installing original geth.
-e3.setCustomGeth("./custom_geth")
+# Set custom geth binary file instead of installing an original file.
+e3.setCustomGeth("./resources/custom_geth")
 ```
 
 ## A.7 Setting Custom Genesis
@@ -113,6 +137,10 @@ e3.setCustomGeth("./custom_geth")
 If you want to deploy your customed genesis file on a blockchain,
 you can set the customed genesis using the `setGenesis()` method.
 
+```python
+# Set custom genesis on e4 geth
+e4.setGenesis(CustomGenesisFileContent)
+```
 
 <a name="emulator"></a>
 # Build Emulator with Blockchain
