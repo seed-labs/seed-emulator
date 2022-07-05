@@ -55,29 +55,6 @@ class Compiler:
         self._doCompile(emulator)
         chdir(cur)
 
-    def createDirectoryAtBase(self, base:str, directory: str, override: bool = False):
-        """!
-        @brief Creating a directory at a certain base depending on your current directory
-        @param base is the folder in which we want to create an inner directory
-        @param directory is the name of the directory that will be created
-        @param override (optional) overrides the inner directory if it already exists. False by default.
-        """
-        cur = getcwd()
-        if path.exists(base):
-            chdir(base)
-            if override:
-                self._log('folder "{}" already exists, overriding.'.format(directory))
-                rmtree(directory)
-            mkdir(directory)
-            chdir(cur)
-
-    def deleteDirectoryAtBase(self, base: str, directory: str):
-        cur = getcwd()
-        if path.exists(base):
-            chdir(base)
-            if path.exists(directory):
-                rmtree(directory)
-
     def _log(self, message: str) -> None:
         """!
         @brief Log to stderr.

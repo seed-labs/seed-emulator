@@ -28,7 +28,7 @@ e4.startMiner()
 
 # Create more accounts on e5 and e6
 e5.startMiner()
-e6.startMiner().createNewAccount(2).unlockAccounts()
+e6.startMiner().createAccounts(2).unlockAccounts()
 
 # Create a smart contract and deploy it from node e3 
 # We need to put the compiled smart contracts inside the Contracts/ folder
@@ -36,8 +36,8 @@ smart_contract = SmartContract("./Contracts/contract.bin", "./Contracts/contract
 e3.deploySmartContract(smart_contract)
 
 # Set node port that accepts connections
-e3.enableExternalConnection()
-e6.enableExternalConnection().setGethHttpPort(8545)
+e3.enableGethHttp()
+e6.enableGethHttp().setGethHttpPort(8545)
 
 # Get node port that accepts connections
 # Same api used in the EthereumService to set the listening port

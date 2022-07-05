@@ -148,14 +148,6 @@ export class DataSource {
         this._socket.close();
     }
 
-    async initPlugin(type:number) {
-	try {
-		(await this._load<FilterRespond>('POST', `${this._apiBase}/plugin/${type}/init`))
-    	} catch(e) {
-		console.log(e)
-	}
-    }
-
     /**
      * get current sniff filter expression.
      * 
