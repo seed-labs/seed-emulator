@@ -6,7 +6,6 @@ from __future__ import annotations
 from enum import Enum
 from os import mkdir, path, makedirs, system
 from shutil import rmtree
-import string
 from seedemu.core import Node, Service, Server, Emulator
 from typing import Dict, List, Tuple
 
@@ -21,7 +20,6 @@ GethCommandTemplates: Dict[str, str] = {}
 # bootstrapper: get enode urls from other eth nodes.
 ETHServerFileTemplates['bootstrapper'] = '''\
 #!/bin/bash
-
 while read -r node; do {
     let count=0
     ok=true
@@ -35,35 +33,18 @@ while read -r node; do {
             break
         }
     }; done
-
     ($ok) && {
         echo "`curl -s http://$node/eth-enode-url`," >> /tmp/eth-node-urls
     }
 }; done < /tmp/eth-nodes
 '''
 
-ETHServerFileTemplates['smartcontract'] = '''\
-sleep 30
-while true
-do
-    balanceCommand="geth --exec 'eth.getBalance(eth.accounts[0])' attach"
-    balance=$(eval "$balanceCommand")
-    minimumBalance=1000000
-    if [ $balance -lt $minimumBalance ]
-    then
-        sleep 60
-    else
-        break
-    fi
-done
-echo "Balance ========> $balance"
-gethCommand='{}'
-finalCommand='geth --exec "$gethCommand" attach'
-result=$(eval "$finalCommand")
-touch transaction.txt
-echo "transaction hash $result"
-echo "$result" >> transaction.txt
-'''
+class ConsensusMechanism(Enum):
+    '''
+    @brief Consensus Mechanism Enum. POA for Proof of Authority, POW for Proof Of Work
+    '''
+    POA = 'poa'
+    POW = 'pow'
 
 GenesisFileTemplates['POA'] = '''\
 {
@@ -96,8 +77,8 @@ GenesisFileTemplates['POA'] = '''\
     "gasUsed": "0x0",
     "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "baseFeePerGas": null
-}
-'''
+    }
+    '''
 
 GenesisFileTemplates['POW'] = '''\
 {
@@ -255,7 +236,6 @@ class EthAccount():
     def __init__(self, alloc_balance:int = 0,password:str = "admin", keyfilePath: str = None):
         """
         @brief create a Ethereum Local Account when initialize
-
         @param alloc_balance the balance need to be alloc
         @param password encrypt password for creating new account, decrypt password for importing account
         @param keyfile content of the keystore file. If this parameter is None, this function will create a new account, if not, it will import account from keyfile
@@ -278,6 +258,12 @@ class EthAccount():
         self.__keystore_filename = "UTC--"+datastr+"--"+encrypted["address"]
         self.__password = password
 
+    def __validate_balance(self, alloc_balance:int):
+        """
+        validate balance
+        It only allow positive decimal integer
+        """
+        assert alloc_balance>=0 , "Invalid Balance Range: {}".format(alloc_balance)
     
     def __importAccount(self, keyfilePath: str, password = "admin"):
         """
@@ -320,10 +306,9 @@ class SmartContract():
         self.__abi_file_name = contract_file_abi
         self.__bin_file_name = contract_file_bin
 
-    def __getContent(self, file_name) -> str:
+    def __getContent(self, file_name):
         """!
         @brief get Content of the file_name.
-
         @param file_name from which we want to read data.
         
         @returns Contents of the file_name.
@@ -337,9 +322,7 @@ class SmartContract():
     def generateSmartContractCommand(self):
         """!
         @brief generates a shell command which deploys the smart Contract on the ethereum network.
-
         @param contract_file_bin binary file of the smart Contract.
-
         @param contract_file_abi abi file of the smart Contract.
         
         @returns shell command in the form of string.
@@ -350,8 +333,29 @@ class SmartContract():
         contract_command = "testContract = eth.contract(abi).new({ from: eth.accounts[0], data: byteCode, gas: 1000000})"
         display_contract_Info = "testContract"
         finalCommand = "{},{},{},{},{}".format(abi, byte_code, unlock_account, contract_command, display_contract_Info)
-        
-        return ETHServerFileTemplates['smartcontract'].format(finalCommand)
+
+        SmartContractCommand = "sleep 30 \n \
+        while true \n\
+        do \n\
+        \t balanceCommand=\"geth --exec 'eth.getBalance(eth.accounts[0])' attach\" \n\
+        \t balance=$(eval \"$balanceCommand\") \n\
+        \t minimumBalance=1000000 \n\
+        \t if [ $balance -lt $minimumBalance ] \n\
+        \t then \n \
+        \t \t sleep 60 \n \
+        \t else \n \
+        \t \t break \n \
+        \t fi \n \
+        done \n \
+        echo \"Balance ========> $balance\" \n\
+        gethCommand=\'{}\'\n\
+        finalCommand=\'geth --exec \"$gethCommand\" attach\'\n\
+        result=$(eval \"$finalCommand\")\n\
+        touch transaction.txt\n\
+        echo \"transaction hash $result\" \n\
+        echo \"$result\" >> transaction.txt\n\
+        ".format(finalCommand)
+        return SmartContractCommand
 
 class EthereumServer(Server):
     """!
@@ -383,7 +387,6 @@ class EthereumServer(Server):
     def __init__(self, id: int):
         """!
         @brief create new eth server.
-
         @param id serial number of this server.
         """
         self.__id = id
@@ -444,7 +447,6 @@ class EthereumServer(Server):
     def install(self, node: Node, eth: EthereumService):
         """!
         @brief ETH server installation step.
-
         @param node node object
         @param eth reference to the eth service.
         @param allBootnode all-bootnode mode: all nodes are boot node.
@@ -475,7 +477,6 @@ class EthereumServer(Server):
             
 
         node.addSoftware('software-properties-common')
-
         # tap the eth repo
         node.addBuildCommand('add-apt-repository ppa:ethereum/ethereum')
 
@@ -593,7 +594,6 @@ class EthereumServer(Server):
     def getId(self) -> int:
         """!
         @brief get ID of this node.
-
         @returns ID.
         """
         return self.__id
@@ -601,10 +601,8 @@ class EthereumServer(Server):
     def setBootNode(self, isBootNode: bool) -> EthereumServer:
         """!
         @brief set bootnode status of this node.
-
         Note: if no nodes are configured as boot nodes, all nodes will be each
         other's boot nodes.
-
         @param isBootNode True to set this node as a bootnode, False otherwise.
         
         @returns self, for chaining API calls.
@@ -616,7 +614,6 @@ class EthereumServer(Server):
     def isBootNode(self) -> bool:
         """!
         @brief get bootnode status of this node.
-
         @returns True if this node is a boot node. False otherwise.
         """
         return self.__is_bootnode
@@ -624,9 +621,7 @@ class EthereumServer(Server):
     def setBootNodeHttpPort(self, port: int) -> EthereumServer:
         """!
         @brief set the http server port number hosting the enode url file.
-
         @param port port
-
         @returns self, for chaining API calls.
         """
 
@@ -638,7 +633,6 @@ class EthereumServer(Server):
     def getBootNodeHttpPort(self) -> int:
         """!
         @brief get the http server port number hosting the enode url file.
-
         @returns port
         """
 
@@ -647,9 +641,7 @@ class EthereumServer(Server):
     def setGethHttpPort(self, port: int) -> EthereumServer:
         """!
         @brief set the http server port number for normal ethereum nodes
-
         @param port port
-
         @returns self, for chaining API calls
         """
         
@@ -660,7 +652,6 @@ class EthereumServer(Server):
     def getGethHttpPort(self) -> int:
         """!
         @brief get the http server port number for normal ethereum nodes
-
         @returns int
         """
                 
@@ -807,7 +798,6 @@ class EthereumServer(Server):
     def startMiner(self) -> EthereumServer:
         """!
         @brief Call this api to start Miner in the node.
-
         @returns self, for chaining API calls.
         """
         self.__start_mine = True
@@ -825,7 +815,6 @@ class EthereumServer(Server):
     def deploySmartContract(self, smart_contract: SmartContract) -> EthereumServer:
         """!
         @brief Call this api to deploy smartContract on the node.
-
         @returns self, for chaining API calls.
         """
         self.__smart_contract = smart_contract
@@ -836,7 +825,6 @@ class EthereumServer(Server):
 class EthereumService(Service):
     """!
     @brief The Ethereum network service.
-
     This service allows one to run a private Ethereum network in the emulator.
     """
 
@@ -852,7 +840,6 @@ class EthereumService(Service):
     def __init__(self, saveState: bool = False, savePath: str = './eth-states', override:bool=False):
         """!
         @brief create a new Ethereum service.
-
         @param saveState (optional) if true, the service will try to save state
         of the block chain by saving the datadir of every node. Default to
         false.
@@ -883,7 +870,6 @@ class EthereumService(Service):
     def getBootNodes(self, consensusMechanism:ConsensusMechanism) -> List[str]:
         """
         @brief get bootnode IPs.
-
         @returns list of IP addresses.
         """
         return self.__boot_node_addresses[consensusMechanism]
