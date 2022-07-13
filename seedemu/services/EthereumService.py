@@ -5,7 +5,6 @@
 from __future__ import annotations
 from enum import Enum
 from os import mkdir, path, makedirs, rename
-from shutil import rmtree
 from seedemu.core import Node, Service, Server, Emulator
 from typing import Dict, List, Tuple
 
@@ -249,14 +248,14 @@ class EthAccount():
         assert alloc_balance >= 0, "EthAccount::__init__: balance cannot have a negative value. Requested Balance Value : {}".format(alloc_balance)
             
         self.__alloc_balance = alloc_balance
+        self.__password = password
 
-        encrypted = self.lib_eth_account.encrypt(self.__account.key, password=password)
+        encrypted = self.encryptAccount()
         self.__keystore_content = json.dumps(encrypted)
-
+        
         # generate the name of the keyfile
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
         self.__keystore_filename = "UTC--"+datastr+"--"+encrypted["address"]
-        self.__password = password
 
     def __validate_balance(self, alloc_balance:int):
         """
@@ -290,6 +289,12 @@ class EthAccount():
     def getKeyStoreFileName(self) -> str:
         return self.__keystore_filename
 
+    def encryptAccount(self):
+        while True:
+            keystore = self.lib_eth_account.encrypt(self.__account.key, password=self.__password)
+            if len(keystore['crypto']['cipherparams']['iv']) == 32:
+                return keystore
+                
     def getKeyStoreContent(self) -> str:
         return self.__keystore_content
 
