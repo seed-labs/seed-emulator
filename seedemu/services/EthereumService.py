@@ -115,7 +115,7 @@ GenesisFileTemplates['POA_extra_data'] = '''\
 0x0000000000000000000000000000000000000000000000000000000000000000{signer_addresses}0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'''
 
 GethCommandTemplates['base'] = '''\
-nice -n 19 geth --datadir {datadir} --identity="NODE_5" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port 30303 '''
+nice -n 19 geth --datadir {datadir} --identity="NODE_{node_id}" --networkid=10 --syncmode {syncmode} --snapshot={snapshot} --verbosity=2 --allow-insecure-unlock --port 30303 '''
 
 GethCommandTemplates['mine'] = '''\
 --miner.etherbase "{coinbase}" --mine --miner.threads={num_of_threads} '''
@@ -134,6 +134,7 @@ GethCommandTemplates['nodiscover'] = '''\
 
 GethCommandTemplates['bootnodes'] = '''\
 --bootnodes "$(cat /tmp/eth-node-urls)" '''
+
 class ConsensusMechanism(Enum):
     """!
     @brief Consensus Mechanism Enum.
@@ -144,6 +145,14 @@ class ConsensusMechanism(Enum):
     # POW for Proof of Work
     POW = 'POW'
 
+class Syncmode(Enum):
+    """!
+    @brief geth syncmode Enum.
+    """
+    SNAP = 'snap'
+    FULL = 'full'
+    LIGHT = 'light'
+    
 
 class Genesis():
     """!
@@ -379,6 +388,8 @@ class EthereumServer(Server):
     __custom_geth_command_option: str
 
     __data_dir: str
+    __syncmode: Syncmode
+    __snapshot: bool
     __no_discover: bool 
     __enable_http: bool
     __geth_http_port: int
@@ -408,6 +419,8 @@ class EthereumServer(Server):
         self.__custom_geth_command_option = None
 
         self.__data_dir = "/root/.ethereum"
+        self.__syncmode = Syncmode.FULL
+        self.__snapshot = False
         self.__no_discover = False
         self.__enable_ws = False
         self.__enable_http = False
@@ -424,7 +437,7 @@ class EthereumServer(Server):
 
         @returns geth command. 
         """
-        geth_start_command = GethCommandTemplates['base'].format(datadir=self.__data_dir)
+        geth_start_command = GethCommandTemplates['base'].format(node_id=self.__id, datadir=self.__data_dir, syncmode=self.__syncmode.value, snapshot=self.__snapshot)
 
         if self.__no_discover:
             geth_start_command += GethCommandTemplates['nodiscover']
@@ -565,6 +578,18 @@ class EthereumServer(Server):
         """
         self.__genesis.setGenesis(genesis)
 
+        return self
+
+    def setSyncmode(self, syncmode:Syncmode) -> EthereumServer:
+        """
+        @brief setting geth syncmode (default: snap)
+        
+        @param syncmode use Syncmode enum options.
+                Syncmode.SNAP, Syncmode.FULL, Syncmode.LIGHT
+
+        @returns self, for chaining API calls.
+        """
+        self.__syncmode = syncmode
         return self
 
     def setNoDiscover(self, noDiscover:bool = True) -> EthereumServer:
@@ -806,6 +831,7 @@ class EthereumServer(Server):
         @returns self, for chaining API calls.
         """
         self.__start_mine = True
+        self.__syncmode = Syncmode.FULL
 
         return self
 
