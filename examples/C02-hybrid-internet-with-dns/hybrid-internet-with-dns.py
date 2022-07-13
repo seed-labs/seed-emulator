@@ -12,8 +12,8 @@ emuA = Emulator()
 emuB = Emulator()
 
 # Load the pre-built components and merge them
-emuA.load('../C00-hybrid-internet/base-component.bin')
-emuB.load('../C01-hybrid-dns-component/hybrid-dns-component.bin')
+emuA.load('../00-hybrid-internet/base-component.bin')
+emuB.load('../01-hybrid-dns-component/hybrid-dns-component.bin')
 emu = emuA.merge(emuB, DEFAULT_MERGERS)
 
 

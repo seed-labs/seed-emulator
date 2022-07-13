@@ -7,7 +7,7 @@ from seedemu import *
 emu = Emulator()
 
 # Load the pre-built component
-emu.load('../C02-hybrid-internet-with-dns/hybrid_base_with_dns.bin')
+emu.load('../02-hybrid-internet-with-dns/hybrid_base_with_dns.bin')
 
 base:Base = emu.getLayer('Base')
 
@@ -15,8 +15,9 @@ base:Base = emu.getLayer('Base')
 dhcp = DHCPService()
 
 # Default DhcpIpRange : x.x.x.101 ~ x.x.x.120
-# Set DhcpIpRange : x.x.x.125 ~ x.x.x.140
+# Set DhcpIpRange :     x.x.x.125 ~ x.x.x.140
 dhcp.install('dhcp-01').setIpRange(125, 140)
+dhcp.install('dhcp-02').setIpRange(125, 140)
 
 # Customize the display name (for visualization purpose)
 emu.getVirtualNode('dhcp-01').setDisplayName('DHCP Server 1')
@@ -34,8 +35,8 @@ as161.createHost('dhcp-server-02').joinNetwork('net0')
 # Create new host in AS-151, use it to host the Host which use dhcp instead of static ip
 as151.createHost('dhcp-client').joinNetwork('net0', address = "dhcp")
 
-# Defulat HostIpRange : x.x.x.71 - x.x.x.99
-# Set HostIpRange : x.x.x.90 - x.x.x.99
+# Default HostIpRange : x.x.x.71 - x.x.x.99
+# Set HostIpRange :     x.x.x.90 - x.x.x.99
 # We can also change DhcpIpRange and RouterIpRange with the same way.
 as151.getNetwork('net0').setHostIpRange(90, 99, 1)
 
@@ -49,5 +50,5 @@ emu.addLayer(dhcp)
 # Render the emulation
 emu.render()
 
-# Compil the emulation
-emu.compile(Docker(), './output', override=True)
+# Compile the emulation
+emu.compile(Docker(clientEnabled = True), './output', override=True)
