@@ -101,14 +101,13 @@ ebgp.addPrivatePeering(101, 152, 153, abRelationship = PeerRelationship.Peer)
 
 # Create the WebService layer
 web = WebService()
-dhcp = DHCPService()
 
 # Create web service nodes (virtual nodes)
-dhcp.install('dhcp01')
+web.install('web01')
 web.install('web02')
 
 # Bind the virtual nodes to physical nodes
-emu.addBinding(Binding('dhcp01', filter = Filter(nodeName = 'host0', asn = 151)))
+emu.addBinding(Binding('web01', filter = Filter(nodeName = 'host0', asn = 151)))
 emu.addBinding(Binding('web02', filter = Filter(nodeName = 'host0', asn = 152)))
 
 
@@ -117,7 +116,7 @@ emu.addBinding(Binding('web02', filter = Filter(nodeName = 'host0', asn = 152)))
 emu.addLayer(base)
 emu.addLayer(ebgp)
 emu.addLayer(web)
-emu.addLayer(dhcp)
+
 emu.addLayer(Routing())
 emu.addLayer(Ibgp())
 emu.addLayer(Ospf())
@@ -131,10 +130,11 @@ emu.dump('base-component.bin')
 
 ###############################################################################
 # Rendering: This is where the actual binding happens
+
 emu.render()
 
 # Change the display name for the nodes hosting the web services
-emu.getBindingFor('dhcp01').setDisplayName('dhcp-1')
+emu.getBindingFor('web01').setDisplayName('Web-1')
 emu.getBindingFor('web02').setDisplayName('Web-2')
 
 
@@ -142,7 +142,8 @@ emu.getBindingFor('web02').setDisplayName('Web-2')
 # Compilation
 
 # Generate the Docker files
-emu.compile(Docker(), './output', override=True)
+emu.compile(Docker(), './output')
+
 # Generate other type of outputs
 #emu.compile(Graphviz(), './others/graphs')
 #emu.compile(DistributedDocker(), './others/distributed-docker')
