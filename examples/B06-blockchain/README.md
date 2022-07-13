@@ -87,13 +87,15 @@ We use `go-ethereum;geth` software to run blockchains on emulator.
 When the containers are up, they will install `geth` and run it with the command
 which is generated from EthereumService Class. We can customized the
 `geth start command` with the following methods.
-The `base start command` is `geth --datadir /root/.ethereum --identity="NODE_5" --networkid=10 --syncmode full --verbosity=2 --allow-insecure-unlock --port 30303`
+The `base start command` is `geth --datadir {datadir} --identity="NODE_{node_id}" --networkid=10 --syncmode {syncmode} --snapshot={snapshot} --verbosity=2 --allow-insecure-unlock --port 30303 `
 
 - `setNoDiscover()` = --nodiscover
 - `enableGethHttp()` = --http --http.addr 0.0.0.0 --http.port 8545 --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique
 - `enableGethWs()` = --ws --ws.addr 0.0.0.0 --ws.port 8546 --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique
 - `unlockAccounts()` = --unlock "{accounts}" --password "{accounts_passwords}"
 - `startMiner()` = --mine --miner.threads=1
+- `setSyncmode()` = --syncmode (snap|full|light)
+- `setSnapshot()` = --snapshot (true|false)
 
 You can also set further options using `setCustomGethCommandOption()` method. 
 The options will append to the `base start command`. 
