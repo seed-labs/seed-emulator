@@ -599,6 +599,16 @@ class EthereumServer(Server):
         self.__no_discover = noDiscover
         return self
 
+    def setSnapshot(self, snapshot:bool = True) -> EthereumServer:
+        """!
+        @breif set geth snapshot 
+        
+        @param snapshot bool
+
+        @returns self, for chainging API calls.
+        """
+        self.__snapshot = snapshot
+        return self
 
     def setConsensusMechanism(self, consensusMechanism:ConsensusMechanism) -> EthereumServer:
         '''
