@@ -207,6 +207,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __asn: int
     __scope: str
     __role: NodeRole
+    __classes: List[str]
+    __label: Dict[str, str]
     __interfaces: List[Interface]
     __files: Dict[str, File]
     __imported_files: Dict[str, str]
@@ -242,6 +244,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__asn = asn
         self.__role = role
         self.__name = name
+        self.__classes = []
+        self.__label = {}
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
         self.__build_commands = []
@@ -316,11 +320,11 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         if len(self.__name_servers) == 0:
             return
-        
-        self.appendStartCommand(': > /etc/resolv.conf')
-        for s in self.__name_servers:
-            self.appendStartCommand('echo "nameserver {}" >> /etc/resolv.conf'.format(s))
 
+        self.insertStartCommand(0,': > /etc/resolv.conf')
+        for idx, s in enumerate(self.__name_servers, start=1):
+            self.insertStartCommand(idx, 'echo "nameserver {}" >> /etc/resolv.conf'.format(s))
+ 
     def setNameServers(self, servers: List[str]) -> Node:
         """!
         @brief set recursive name servers to use on this node. Overwrites
@@ -408,6 +412,26 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         
         if address == "auto": _addr = net.assign(self.__role, self.__asn)
+        elif address == "dhcp": 
+            _addr = None
+            self.__name_servers = []
+            self.addSoftware('isc-dhcp-client')
+            self.setFile('dhclient.sh', '''\
+            #!/bin/bash  
+            ip addr flush {iface}
+            err=$(dhclient {iface} 2>&1)
+
+            if [ -z "$err" ]
+            then
+                    echo "dhclient success"
+            else
+                    filename=$(echo $err | cut -d "'" -f 2)
+                    cp $filename /etc/resolv.conf
+                    rm $filename
+            fi                
+            '''.format(iface=net.getName()))
+            self.appendStartCommand('chmod +x dhclient.sh; ./dhclient.sh')
+            
         else: _addr = IPv4Address(address)
 
         _iface = Interface(net)
@@ -430,6 +454,26 @@ class Node(Printable, Registrable, Configurable, Vertex):
         assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
         assert not self.__configured, 'Node already configured.'
 
+        self.__pending_nets.append((netname, address))
+
+        return self
+    
+    def updateNetwork(self, netname:str, address: str= "auto") -> Node:
+        """!
+        @brief Update connection of the node to a network.
+        @param netname name of the network.
+        @param address (optional) override address assigment.
+
+        @returns assigned IP address
+
+        @returns self, for chaining API calls.
+        """
+        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+        
+        for pending_netname, pending_address in self.__pending_nets:
+            if pending_netname == netname:
+                self.__pending_nets.remove((pending_netname, pending_address))
+            
         self.__pending_nets.append((netname, address))
 
         return self
@@ -496,6 +540,38 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__role
 
+    def appendClassName(self, className:str) -> Node:
+        """!
+        @brief Append class to a current node
+
+        @returns self, for chaining API calls.
+        """
+        self.__classes.append(className)
+
+        return self
+
+    def getClasses(self) -> list:
+        """!
+        @brief Get service of current node
+        
+        @returns service 
+        """
+
+        return self.__classes
+
+    def setLabel(self, key:str, value:str) -> Node:
+        """!
+        @brief Add Label to a current node
+
+        @returns self, for chaining API calls.
+        """
+
+        self.__label[key] = value
+        return self
+
+    def getLabel(self) -> dict:
+        return self.__label
+        
     def getFile(self, path: str) -> File:
         """!
         @brief Get a file object, and create if not exist.

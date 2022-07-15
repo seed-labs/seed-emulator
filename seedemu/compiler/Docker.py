@@ -8,9 +8,9 @@ from os import mkdir, chdir
 from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
+import json
 
 SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
-ETH_SEEDEMU_CLIENT_IMAGE='rawisader/seedemu-eth-client'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -156,6 +156,10 @@ DockerCompilerFileTemplates['compose_storage'] = """\
 
 DockerCompilerFileTemplates['compose_service_network'] = """\
             {netId}:
+{address}
+"""
+
+DockerCompilerFileTemplates['compose_service_network_address'] = """\
                 ipv4_address: {address}
 """
 
@@ -178,16 +182,6 @@ DockerCompilerFileTemplates['seedemu_client'] = """\
             - /var/run/docker.sock:/var/run/docker.sock
         ports:
             - {clientPort}:8080/tcp
-"""
-
-DockerCompilerFileTemplates['seedemu-eth-client'] = """\
-    seedemu-eth-client:
-        image: {ethClientImage}
-        container_name: seedemu-eth-client
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-        ports:
-            - {ethClientPort}:3000/tcp
 """
 
 DockerCompilerFileTemplates['zshrc_pre'] = """\
@@ -290,14 +284,12 @@ class Docker(Compiler):
     __client_enabled: bool
     __client_port: int
 
-    __eth_client_enabled: bool
-    __eth_client_port: int
-
     __client_hide_svcnet: bool
 
     __images: Dict[str, Tuple[DockerImage, int]]
     __forced_image: str
     __disable_images: bool
+    __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
 
     def __init__(
@@ -308,8 +300,6 @@ class Docker(Compiler):
         dummyNetworksMask: int = 24,
         clientEnabled: bool = False,
         clientPort: int = 8080,
-        ethClientEnabled: bool = False,
-        ethClientPort: int = 3000,
         clientHideServiceNet: bool = True
     ):
         """!
@@ -350,15 +340,13 @@ class Docker(Compiler):
         self.__client_enabled = clientEnabled
         self.__client_port = clientPort
 
-        self.__eth_client_enabled = ethClientEnabled
-        self.__eth_client_port = ethClientPort
-
         self.__client_hide_svcnet = clientHideServiceNet
 
         self.__images = {}
         self.__forced_image = None
         self.__disable_images = False
         self._used_images = set()
+        self.__image_per_node_list = {}
 
         for image in DefaultImages:
             self.addImage(image)
@@ -420,6 +408,19 @@ class Docker(Compiler):
         self.__disable_images = disabled
 
         return self
+    
+    def setImageOverride(self, node:Node, imageName:str) -> Docker:
+        """!
+        @brief set the docker compiler to use a image on the specified Node.
+
+        @param node target node to override image.
+        @param imageName name of the image to use.
+
+        @returns self, for chaining api calls.      
+        """
+        asn = node.getAsn()
+        name = node.getName()
+        self.__image_per_node_list[(asn, name)]=imageName
 
     def _groupSoftware(self, emulator: Emulator):
         """!
@@ -495,6 +496,17 @@ class Docker(Compiler):
         @returns tuple of selected image and set of missinge software.
         """
         nodeSoft = node.getSoftware()
+        nodeKey = (node.getAsn(), node.getName())
+
+        if nodeKey in self.__image_per_node_list:
+            image_name = self.__image_per_node_list[nodeKey]
+
+            assert image_name in self.__images, 'image-per-node configured, but image {} does not exist.'.format(image_name)
+
+            (image, _) = self.__images[image_name]
+
+            self._log('image-per-node configured, using {}'.format(image.getName()))
+            return (image, nodeSoft - image.getSoftware())
 
         if self.__disable_images:
             self._log('disable-imaged configured, using base image.')
@@ -644,7 +656,18 @@ class Docker(Compiler):
                 key = 'description',
                 value = node.getDescription()
             )
+        
+        if len(node.getClasses()) > 0:
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'class',
+                value = json.dumps(node.getClasses()).replace("\"", "\\\"")
+            )
 
+        for key, value in node.getLabel().items():
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = key,
+                value = value
+            )
         n = 0
         for iface in node.getInterfaces():
             net = iface.getNet()
@@ -727,7 +750,6 @@ class Docker(Compiler):
         (scope, type, _) = node.getRegistryInfo()
         prefix = self._contextToPrefix(scope, type)
         real_nodename = '{}{}'.format(prefix, node.getName())
-
         node_nets = ''
         dummy_addr_map = ''
 
@@ -757,6 +779,11 @@ class Docker(Compiler):
                     d_address, d_prefix.prefixlen, iface.getAddress(), iface.getNet().getPrefix().prefixlen,
                     node.getAsn(), node.getName()
                 ))
+
+            if address == None:
+                address = ""
+            else:
+                address = DockerCompilerFileTemplates['compose_service_network_address'].format(address = address)
 
             node_nets += DockerCompilerFileTemplates['compose_service_network'].format(
                 netId = real_netname,
@@ -939,7 +966,6 @@ class Docker(Compiler):
                 self.__networks += self._compileNet(obj)
 
         for ((scope, type, name), obj) in registry.getAll().items():
-
             if type == 'rnode':
                 self._log('compiling router node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
@@ -962,14 +988,6 @@ class Docker(Compiler):
             self.__services += DockerCompilerFileTemplates['seedemu_client'].format(
                 clientImage = SEEDEMU_CLIENT_IMAGE,
                 clientPort = self.__client_port
-            )
-
-        if self.__eth_client_enabled:
-            self._log('enabling seedemu-eth-client...')
-
-            self.__services += DockerCompilerFileTemplates['seedemu-eth-client'].format(
-                ethClientImage = ETH_SEEDEMU_CLIENT_IMAGE,
-                ethClientPort = self.__eth_client_port,
             )
 
         local_images = ''
