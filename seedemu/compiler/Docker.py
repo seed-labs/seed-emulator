@@ -10,7 +10,7 @@ from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
 
-SEEDEMU_CLIENT_IMAGE='magicnat/seedemu-client'
+SEEDEMU_CLIENT_IMAGE='handsonsecurity/seedemu-map'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
