@@ -50,14 +50,19 @@ GenesisFileTemplates['POA'] = '''\
     "config": {
         "chainId": 10,
         "homesteadBlock": 0,
+        "homesteadBlock": 0,
         "eip150Block": 0,
-        "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "eip155Block": 0,
         "eip158Block": 0,
         "byzantiumBlock": 0,
         "constantinopleBlock": 0,
         "petersburgBlock": 0,
         "istanbulBlock": 0,
+        "muirGlacierBlock": 0,
+        "berlinBlock": 0,
+        "londonBlock": 0,
+        "arrowGlacierBlock": 0,
+        "grayGlacierBlock": 0,
         "clique": {
         "period": 15,
         "epoch": 30000
@@ -95,14 +100,19 @@ GenesisFileTemplates['POW'] = '''\
         "config": {
             "chainId": 10,
             "homesteadBlock": 0,
+            "homesteadBlock": 0,
             "eip150Block": 0,
-            "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "eip155Block": 0,
             "eip158Block": 0,
             "byzantiumBlock": 0,
             "constantinopleBlock": 0,
             "petersburgBlock": 0,
             "istanbulBlock": 0,
+            "muirGlacierBlock": 0,
+            "berlinBlock": 0,
+            "londonBlock": 0,
+            "arrowGlacierBlock": 0,
+            "grayGlacierBlock": 0,
             "ethash": {
             }
         },
