@@ -50,7 +50,6 @@ GenesisFileTemplates['POA'] = '''\
     "config": {
         "chainId": 10,
         "homesteadBlock": 0,
-        "homesteadBlock": 0,
         "eip150Block": 0,
         "eip155Block": 0,
         "eip158Block": 0,
@@ -99,7 +98,6 @@ GenesisFileTemplates['POW'] = '''\
         "baseFeePerGas": null,
         "config": {
             "chainId": 10,
-            "homesteadBlock": 0,
             "homesteadBlock": 0,
             "eip150Block": 0,
             "eip155Block": 0,
