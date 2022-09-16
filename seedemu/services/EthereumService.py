@@ -51,6 +51,7 @@ GenesisFileTemplates['POA'] = '''\
         "chainId": 10,
         "homesteadBlock": 0,
         "eip150Block": 0,
+        "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "eip155Block": 0,
         "eip158Block": 0,
         "byzantiumBlock": 0,
@@ -100,6 +101,7 @@ GenesisFileTemplates['POW'] = '''\
             "chainId": 10,
             "homesteadBlock": 0,
             "eip150Block": 0,
+            "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "eip155Block": 0,
             "eip158Block": 0,
             "byzantiumBlock": 0,
@@ -132,10 +134,13 @@ GethCommandTemplates['unlock'] = '''\
 --unlock "{accounts}" --password "/tmp/eth-password" '''
 
 GethCommandTemplates['http'] = '''\
---http --http.addr 0.0.0.0 --http.port {gethHttpPort} --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique '''
+--http --http.addr 0.0.0.0 --http.port {gethHttpPort} --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique,engine '''
 
 GethCommandTemplates['ws'] = '''\
---ws --ws.addr 0.0.0.0 --ws.port {gethWsPort} --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique '''
+--ws --ws.addr 0.0.0.0 --ws.port {gethWsPort} --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique,engine '''
+
+GethCommandTemplates['pos'] = '''\
+--authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.vhosts "*" --authrpc.jwtsecret /tmp/jwt.hex --override.terminaltotaldifficulty 100 '''
 
 GethCommandTemplates['nodiscover'] = '''\
 --nodiscover '''
@@ -438,6 +443,7 @@ class EthereumServer(Server):
         self.__start_mine = False
         self.__miner_thread = 1
         self.__coinbase = ""
+        self.__enable_pos = False
 
     def __generateGethStartCommand(self):
         """!
@@ -455,6 +461,8 @@ class EthereumServer(Server):
             geth_start_command += GethCommandTemplates['http'].format(gethHttpPort=self.__geth_http_port)
         if self.__enable_ws:
             geth_start_command += GethCommandTemplates['ws'].format(gethWsPort=self.__geth_ws_port)
+        if self.__enable_pos:
+            geth_start_command += GethCommandTemplates['pos']
         if self.__custom_geth_command_option:
             geth_start_command += self.__custom_geth_command_option
         if self.__unlock_accounts:
@@ -492,6 +500,7 @@ class EthereumServer(Server):
             self.__genesis.setSigner(eth.getAllSignerAccounts()) 
     
         node.setFile('/tmp/eth-genesis.json', self.__genesis.getGenesis())
+        node.setFile('/tmp/jwt.hex', '0xae7177335e3d4222160e08cecac0ace2cecce3dc3910baada14e26b11d2009fc')
     
         account_passwords = []
 
@@ -629,7 +638,7 @@ class EthereumServer(Server):
         self.__consensus_mechanism = consensusMechanism
         self.__genesis = Genesis(self.__consensus_mechanism)
         if consensusMechanism == ConsensusMechanism.POA:
-            self.__accounts_info[0] = (32 * pow(10, 18), "admin", None)
+            self.__accounts_info[0] = (200 * pow(10, 18), "admin", None)
         elif consensusMechanism == ConsensusMechanism.POW:
             self.__accounts_info[0] = (0, "admin", None)
         
@@ -727,6 +736,16 @@ class EthereumServer(Server):
                 
         return self.__geth_ws_port
 
+    def enablePoS(self) -> EthereumServer:
+        """!
+        @brief set configurations to enable PoS (Merge)
+
+        @returns self, for chaining API calls
+        """
+
+        self.__enable_pos = True
+
+        return self
 
     def enableGethHttp(self) -> EthereumServer:
         """!
