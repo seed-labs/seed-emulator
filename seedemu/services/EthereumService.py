@@ -558,7 +558,7 @@ class EthereumServer(Server):
 #!/bin/bash
 
 kill -9 `ps -aux | grep 'geth --data' | cut -d " " -f 10 | head -n 1`
-
+sleep 3
 {} &
 """.format(self.__generateGethStartCommand()))
             node.appendStartCommand('chmod +x /restart_geth.sh')
