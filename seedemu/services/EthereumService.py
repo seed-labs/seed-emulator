@@ -140,7 +140,7 @@ GethCommandTemplates['ws'] = '''\
 --ws --ws.addr 0.0.0.0 --ws.port {gethWsPort} --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique,engine '''
 
 GethCommandTemplates['pos'] = '''\
---authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.vhosts "*" --authrpc.jwtsecret /tmp/jwt.hex --override.terminaltotaldifficulty 500 '''
+--authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.vhosts "*" --authrpc.jwtsecret /tmp/jwt.hex --override.terminaltotaldifficulty 200 '''
 
 GethCommandTemplates['nodiscover'] = '''\
 --nodiscover '''
@@ -552,6 +552,16 @@ class EthereumServer(Server):
 
         # launch Ethereum process.
         node.appendStartCommand(self.__generateGethStartCommand(), True) 
+
+        if(self.__enable_pos):
+            node.setFile("/restart_geth.sh", """
+#!/bin/bash
+
+kill -9 `ps -aux | grep 'geth --data' | cut -d " " -f 10 | head -n 1`
+
+{} &
+""".format(self.__generateGethStartCommand()))
+            node.appendStartCommand('chmod +x /restart_geth.sh')
        
         if self.__smart_contract != None :
             smartContractCommand = self.__smart_contract.generateSmartContractCommand()
