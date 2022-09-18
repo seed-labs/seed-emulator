@@ -135,15 +135,14 @@ for asn in asns:
         e:EthereumServer = eth.install("eth{}".format(i)).setConsensusMechanism(ConsensusMechanism.POA)
         e.enablePoS()
         e.setCustomGeth("./bin/geth")
+        e.unlockAccounts()
         if id == 0:
             e.setBootNode(True)
             if asn == 150:
                 emu.getVirtualNode('eth{}'.format(i)).addPortForwarding(30301, 30301)
         if id == 1:
             e.startMiner()
-            e.unlockAccounts()
         if id == 2 and asn == 150:
-            e.unlockAccounts()
             e.enableGethHttp()
             #smart_contract = SmartContract("./Contracts/contract.bin", "./Contracts/contract.abi") 
             #e.deploySmartContract(smart_contract)
