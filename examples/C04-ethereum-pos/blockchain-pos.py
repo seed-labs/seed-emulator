@@ -28,7 +28,7 @@ def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int, hosts_total: 
 #    exit(0)
 #hosts_total = int(sys.argv[1])
 
-hosts_total = int(3)
+hosts_total = int(5)
 
 ###############################################################################
 emu     = Emulator()
@@ -43,56 +43,24 @@ ospf    = Ospf()
 
 ix100 = base.createInternetExchange(100)
 ix101 = base.createInternetExchange(101)
-ix102 = base.createInternetExchange(102)
-ix103 = base.createInternetExchange(103)
-ix104 = base.createInternetExchange(104)
 
 # Customize names (for visualization purpose)
 ix100.getPeeringLan().setDisplayName('NYC-100')
 ix101.getPeeringLan().setDisplayName('San Jose-101')
-ix102.getPeeringLan().setDisplayName('Chicago-102')
-ix103.getPeeringLan().setDisplayName('Miami-103')
-ix104.getPeeringLan().setDisplayName('Boston-104')
-
 
 ###############################################################################
 # Create Transit Autonomous Systems 
 
 ## Tier 1 ASes
-Makers.makeTransitAs(base, 2, [100, 101, 102], 
-       [(100, 101), (101, 102)] 
+Makers.makeTransitAs(base, 2, [100, 101], 
+       [(100, 101)] 
 )
-
-Makers.makeTransitAs(base, 3, [100, 103, 104], 
-       [(100, 103), (103, 104)]
-)
-
-Makers.makeTransitAs(base, 4, [100, 102, 104], 
-       [(100, 104), (102, 104)]
-)
-
-## Tier 2 ASes
-Makers.makeTransitAs(base, 12, [101, 104], [(101, 104)])
-
 
 ###############################################################################
 # Create single-homed stub ASes. "None" means create a host only 
 
 makeStubAs(emu, base, 150, 100, hosts_total)
-makeStubAs(emu, base, 151, 100, hosts_total)
-
-makeStubAs(emu, base, 152, 101, hosts_total)
-makeStubAs(emu, base, 153, 101, hosts_total)
-
-makeStubAs(emu, base, 154, 102, hosts_total)
-
-makeStubAs(emu, base, 160, 103, hosts_total)
-makeStubAs(emu, base, 161, 103, hosts_total)
-makeStubAs(emu, base, 162, 103, hosts_total)
-
-makeStubAs(emu, base, 163, 104, hosts_total)
-makeStubAs(emu, base, 164, 104, hosts_total)
-
+makeStubAs(emu, base, 151, 101, hosts_total)
 
 ###############################################################################
 # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
@@ -100,56 +68,39 @@ makeStubAs(emu, base, 164, 104, hosts_total)
 # We will use this peering relationship to peer all the ASes in an IX.
 # None of them will provide transit service for others. 
 
-ebgp.addRsPeers(100, [2, 3, 4])
-ebgp.addRsPeers(102, [2, 4])
-ebgp.addRsPeers(104, [3, 4])
+ebgp.addRsPeers(100, [2])
+ebgp.addRsPeers(101, [2])
 
 # To buy transit services from another autonomous system, 
 # we will use private peering  
 
-ebgp.addPrivatePeerings(100, [2],  [150, 151], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(100, [3],  [150], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(100, [2],  [150], PeerRelationship.Provider)
 
-ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(102, [2, 4],  [154], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(103, [3],  [160, 161, 162], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(104, [3, 4], [12], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(104, [4],  [163], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(104, [12], [164], PeerRelationship.Provider)
-
-
+ebgp.addPrivatePeerings(101, [2],  [151], PeerRelationship.Provider)
 
 ###############################################################################
 # Create the Ethereum layer
 
 eth = EthereumService()
 docker = Docker()
-asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
+asns = [150, 151]
 i = 1
 for asn in asns:
     for id in range(hosts_total):
         e:EthereumServer = eth.install("eth{}".format(i)).setConsensusMechanism(ConsensusMechanism.POA)
-        e.enablePoS()
+        e.enablePoS(terminal_total_difficulty=100)
         e.setCustomGeth("./bin/geth")
         e.unlockAccounts()
-        if id == 0:
-            e.setBootNode(True)
-            if asn == 150:
-                emu.getVirtualNode('eth{}'.format(i)).addPortForwarding(30301, 30301)
-        if id == 1:
-            e.startMiner()
-        if id == 2 and asn == 150:
-            e.enableGethHttp()
-            #smart_contract = SmartContract("./Contracts/contract.bin", "./Contracts/contract.abi") 
-            #e.deploySmartContract(smart_contract)
-            emu.getVirtualNode('eth{}'.format(i)).addPortForwarding(8545, 8545)
-            emu.getVirtualNode('eth{}'.format(i)).addPortForwarding(8551, 8551)
-
-                
+        e.startMiner()
+        if asn == 150:
+            if id == 0:
+                e.setBootNode(True)
+                smart_contract = SmartContract("./contract/deploy.bin", "./contract/deploy.abi") 
+                e.deploySmartContract(smart_contract)
+            if id == 2:
+                e.enableGethHttp()
+                emu.getVirtualNode('eth{}'.format(i)).addPortForwarding(8545, 8545)
+                emu.getVirtualNode('eth{}'.format(i)).addPortForwarding(8551, 8551)                   
         emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POA-{}'.format(i))
         emu.addBinding(Binding('eth{}'.format(i), filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         i = i+1
@@ -218,3 +169,4 @@ emu.render()
 
 emu.compile(docker, './output', override = True)
 os.system('cp ./z_start.sh ./output/')
+os.system('mkdir ./output/local-testnet')

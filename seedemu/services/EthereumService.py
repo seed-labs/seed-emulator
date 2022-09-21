@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 from enum import Enum
+from ipaddress import ip_address
 from os import mkdir, path, makedirs, rename
 from seedemu.core import Node, Service, Server, Emulator
 from typing import Dict, List, Tuple
@@ -14,6 +15,7 @@ from datetime import datetime, timezone
 ETHServerFileTemplates: Dict[str, str] = {}
 GenesisFileTemplates: Dict[str, str] = {}
 GethCommandTemplates: Dict[str, str] = {}
+
 
 
 # bootstrapper: get enode urls from other eth nodes.
@@ -36,6 +38,28 @@ while read -r node; do {
         echo "`curl -s http://$node/eth-enode-url`," >> /tmp/eth-node-urls
     }
 }; done < /tmp/eth-nodes
+'''
+
+ETHServerFileTemplates['beacon_bootstrapper'] = '''\
+#!/bin/bash
+while read -r node; do {{
+    let count=0
+    ok=true
+    until curl -sHf http://$node/beacon-boot-url > /dev/null; do {{
+        echo "eth: node $node not ready, waiting..."
+        sleep 3
+        let count++
+        [ $count -gt 60 ] && {{
+            echo "eth: node $node failed too many times, skipping."
+            ok=false
+            break
+        }}
+    }}; done
+    ($ok) && {{
+        {bc_start_command}
+        {vc_start_command}
+    }}
+}}; done < /tmp/eth-nodes
 '''
 
 class ConsensusMechanism(Enum):
@@ -140,13 +164,49 @@ GethCommandTemplates['ws'] = '''\
 --ws --ws.addr 0.0.0.0 --ws.port {gethWsPort} --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique,engine '''
 
 GethCommandTemplates['pos'] = '''\
---authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.vhosts "*" --authrpc.jwtsecret /tmp/jwt.hex --override.terminaltotaldifficulty 200 '''
+--authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.vhosts "*" --authrpc.jwtsecret /tmp/jwt.hex --override.terminaltotaldifficulty {difficulty} '''
 
 GethCommandTemplates['nodiscover'] = '''\
 --nodiscover '''
 
 GethCommandTemplates['bootnodes'] = '''\
 --bootnodes "$(cat /tmp/eth-node-urls)" '''
+
+LIGHTHOUSE_BN_CMD = """lighthouse --debug-level info bn --datadir /local-testnet/node_{node_id} --testnet-dir /local-testnet/testnet --enable-private-discovery --staking --enr-address {ip_address}  --enr-udp-port 9000 --enr-tcp-port 9000 --port 9000 --http-address {ip_address} --http-port 8000 --disable-packet-filter --target-peers {target_peers} --execution-endpoint http://localhost:8551 --execution-jwt /tmp/jwt.hex &"""
+
+LIGHTHOUSE_VC_CMD = """lighthouse --debug-level info vc --datadir /local-testnet/node_{node_id} --testnet-dir /local-testnet/testnet --init-slashing-protection --beacon-nodes http://{ip_address}:8000 --suggested-fee-recipient {acct_address} &"""
+
+LIGHTHOUSE_BOOTNODE_CMD = """lighthouse boot_node --testnet-dir /local-testnet/testnet --port 30305 --listen-address {ip_address} --disable-packet-filter --network-dir /lighthouse/local-testnet/bootnode &"""
+
+GenesisFileTemplates['beacon_genesis'] = '''\
+CONFIG_NAME: mainnet
+PRESET_BASE: mainnet
+TERMINAL_TOTAL_DIFFICULTY: "{terminal_total_difficulty}"
+TERMINAL_BLOCK_HASH: "0x0000000000000000000000000000000000000000000000000000000000000000"
+TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: "18446744073709551615"
+SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY: "128"
+MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: "1"
+GENESIS_FORK_VERSION: "0x42424242"
+GENESIS_DELAY: "0"
+ALTAIR_FORK_VERSION: "0x01000000"
+ALTAIR_FORK_EPOCH: "0"
+BELLATRIX_FORK_VERSION: "0x02000000"
+BELLATRIX_FORK_EPOCH: "5"
+SECONDS_PER_SLOT: "3"
+SECONDS_PER_ETH1_BLOCK: "15"
+MIN_VALIDATOR_WITHDRAWABILITY_DELAY: "256"
+SHARD_COMMITTEE_PERIOD: "256"
+ETH1_FOLLOW_DISTANCE: "1"
+INACTIVITY_SCORE_BIAS: "4"
+INACTIVITY_SCORE_RECOVERY_RATE: "16"
+EJECTION_BALANCE: "16000000000"
+MIN_PER_EPOCH_CHURN_LIMIT: "4"
+CHURN_LIMIT_QUOTIENT: "65536"
+PROPOSER_SCORE_BOOST: "40"
+DEPOSIT_CHAIN_ID: "10"
+DEPOSIT_NETWORK_ID: "10"
+DEPOSIT_CONTRACT_ADDRESS: "0x309e98717e7f4212d7c78c0be6d999e4e6aac414"
+'''
 
 class ConsensusMechanism(Enum):
     """!
@@ -412,6 +472,7 @@ class EthereumServer(Server):
     __start_mine: bool
     __miner_thread: int
     __coinbase: str
+    __terminal_total_difficulty: int
 
     def __init__(self, id: int):
         """!
@@ -444,6 +505,7 @@ class EthereumServer(Server):
         self.__miner_thread = 1
         self.__coinbase = ""
         self.__enable_pos = False
+        self.__terminal_total_difficulty = 100
 
     def __generateGethStartCommand(self):
         """!
@@ -462,7 +524,7 @@ class EthereumServer(Server):
         if self.__enable_ws:
             geth_start_command += GethCommandTemplates['ws'].format(gethWsPort=self.__geth_ws_port)
         if self.__enable_pos:
-            geth_start_command += GethCommandTemplates['pos']
+            geth_start_command += GethCommandTemplates['pos'].format(difficulty=self.__terminal_total_difficulty)
         if self.__custom_geth_command_option:
             geth_start_command += self.__custom_geth_command_option
         if self.__unlock_accounts:
@@ -529,6 +591,13 @@ class EthereumServer(Server):
         for account in self.__accounts:
             node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.getKeyStoreFileName()))
 
+        if(self.__enable_pos):
+            node.addSharedFolder("/local-testnet", "./local-testnet")
+            node.importFile("/home/won/.cargo/bin/lighthouse", "/usr/bin/lighthouse")
+            node.importFile("/home/won/.cargo/bin/lcli", "/usr/bin/lcli")
+            node.appendStartCommand("chmod +x /usr/bin/lighthouse")
+            node.appendStartCommand("chmod +x /usr/bin/lcli")
+
         if self.__is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
             node.appendStartCommand('[ ! -e "/root/.ethereum/geth/bootkey" ] && bootnode -genkey /root/.ethereum/geth/bootkey')
@@ -537,6 +606,19 @@ class EthereumServer(Server):
             # Default port is 30301, use -addr :<port> to specify a custom port
             node.appendStartCommand('bootnode -nodekey /root/.ethereum/geth/bootkey -verbosity 9 -addr {}:30301 2> /tmp/bootnode-logs &'.format(addr))          
             
+            if self.__enable_pos:
+                node.appendStartCommand('lcli generate-bootnode-enr --ip {} --udp-port 30305 --tcp-port 30305 --genesis-fork-version 0x42424242 --output-dir /local-testnet/bootnode'.format(addr))
+                node.setFile("/tmp/config.yaml", GenesisFileTemplates['beacon_genesis'].format(terminal_total_difficulty=self.__terminal_total_difficulty))
+                node.appendStartCommand('mkdir /local-testnet/testnet')
+                node.appendStartCommand('bootnode_enr=`cat /local-testnet/bootnode/enr.dat`')
+                node.appendStartCommand('echo "- $bootnode_enr" > /local-testnet/testnet/boot_enr.yaml')
+                node.appendStartCommand('cp /tmp/config.yaml /local-testnet/testnet/config.yaml')
+                node.appendStartCommand('lcli insecure-validators --count 10 --base-dir /local-testnet/ --node-count 10')
+                node.appendStartCommand('GENESIS_TIME=`date +%s`')
+                node.appendStartCommand('''echo 'MIN_GENESIS_TIME: "'$GENESIS_TIME'"' >> /local-testnet/testnet/config.yaml''')
+                node.appendStartCommand('''echo '3' > /local-testnet/testnet/deploy_block.txt''')
+                node.appendStartCommand('''lcli interop-genesis --spec mainnet --genesis-time $GENESIS_TIME --testnet-dir ./local-testnet/testnet 10''')
+                node.appendStartCommand(LIGHTHOUSE_BOOTNODE_CMD.format(ip_address=addr))
             # host the eth-enode-url for other nodes.
             node.appendStartCommand('python3 -m http.server {} -d /tmp'.format(self.__bootnode_http_port), True)
         
@@ -544,25 +626,24 @@ class EthereumServer(Server):
         bootnodes = eth.getBootNodes(self.__consensus_mechanism)[:]
         if len(bootnodes) > 0 :
             node.setFile('/tmp/eth-nodes', '\n'.join(bootnodes))
+            
             node.setFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
 
             # load enode urls from other nodes
             node.appendStartCommand('chmod +x /tmp/eth-bootstrapper')
             node.appendStartCommand('/tmp/eth-bootstrapper')
+            if self.__enable_pos:
+                node.setFile('/tmp/beacon-bootstrapper', ETHServerFileTemplates['beacon_bootstrapper'].format(bc_start_command=LIGHTHOUSE_BN_CMD.format(node_id=self.getId(),ip_address=addr, target_peers=3), 
+                                        vc_start_command=LIGHTHOUSE_VC_CMD.format(node_id=self.getId(),ip_address=addr, acct_address="0x11d0B73242ec1D60A7f67DF9440e511cC84c6b18")
+                                        ))
+                node.appendStartCommand('chmod +x /tmp/beacon-bootstrapper')
+                node.appendStartCommand('/tmp/beacon-bootstrapper')
 
         # launch Ethereum process.
         node.appendStartCommand(self.__generateGethStartCommand(), True) 
 
-        if(self.__enable_pos):
-            node.setFile("/restart_geth.sh", """
-#!/bin/bash
-
-kill -9 `ps -aux | grep 'geth --data' | cut -d " " -f 10 | head -n 1`
-sleep 3
-{} &
-""".format(self.__generateGethStartCommand()))
-            node.appendStartCommand('chmod +x /restart_geth.sh')
-       
+        
+                  
         if self.__smart_contract != None :
             smartContractCommand = self.__smart_contract.generateSmartContractCommand()
             node.appendStartCommand('(\n {})&'.format(smartContractCommand))
@@ -746,7 +827,7 @@ sleep 3
                 
         return self.__geth_ws_port
 
-    def enablePoS(self) -> EthereumServer:
+    def enablePoS(self, terminal_total_difficulty:int = 100) -> EthereumServer:
         """!
         @brief set configurations to enable PoS (Merge)
 
@@ -754,6 +835,7 @@ sleep 3
         """
 
         self.__enable_pos = True
+        self.__terminal_total_difficulty = terminal_total_difficulty
 
         return self
 
