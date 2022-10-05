@@ -5,7 +5,7 @@
 - execution-chain software : geth
 - beacon-chain software : lighthouse
 
-# Requirement
+# Requirements
 
 ## Lighthouse Installation – Build from source
 
@@ -27,7 +27,69 @@
 - make
 - make install-lcli
 
-# How to run Geth and Lighthouse on Seedchain.
+# Using Beacon Setup Node
+
+## Beacon Setup Node Requirements
+
+1. For Debug purpose, the setup node should independant from the Ethereum Network so that we do not have to re-build whole ethereum node again and again.
+
+2. When the setup node distributes validator key resources, it should be done by ethereum Id.
+   => the setup node should know 1) How many validatory keys to create. 2) Which ethereum nodes will request a key resource.
+
+3. Setup node will run geth as well to deploy a deposit contract.
+   => The setup node should know geth bootnodes' ip to bootstrap with other gethnodes.
+   However, while meeting requirement 1, to know a geth bootnode is quite complicate.
+   So I chose not to run geth node inside the setup node. Instead, I use ethreum node from the network to deploy the contract.
+
+## How to Run
+
+1. Run blockchain-pos.py
+
+- before running the script, need to change one argument at line 131.
+- update the LIGHTHOUSE_BIN_PATH value
+  `LIGHTHOUSE_BIN_PATH="/home/won/.cargo/bin/lighthouse"`
+
+- after running the script, it will generate `beacon-setup-node.sh` which runs the beacon-setup-node.py with arguments.
+
+2. Run `beacon-setup-node.sh`
+
+- This composes beacon-setup-node.
+
+3. Run ethereum containers
+
+```
+cd output
+dcbuild
+dcup
+```
+
+4. Run beacon setup node
+
+```
+cd beacon-node
+dcbuild
+dcup
+```
+
+## Design
+
+Design 1) Create an Independant Beacon Setup Node manually (Current Design)
+
+Satisfy Requirement 1,2
+
+As this node is seperated from the Ethereum Network, we should specify some information about the Ethereum Network to compose this node. The needed information is as below.
+
+- TERMINAL_TOTAL_DIFFICULTY
+- VALIDATOR_IDS
+- BOOTNODE_IP
+
+Design 2) Create a Server class for a Beacon Setup Node (Implemented But Not Using)
+
+Satisfy Requirement 2,3
+
+As the server class is a part of EthereumService class, it is dependant to Ethereum Network. And it is not suitable for debugging purpose.
+
+# How to run Geth and Lighthouse on Seedchain. (Manual Steps)
 
 ## 1. Run geth nodes with SEED Emulator
 

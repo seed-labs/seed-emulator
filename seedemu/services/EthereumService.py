@@ -38,6 +38,42 @@ while read -r node; do {
 }; done < /tmp/eth-nodes
 '''
 
+ETHServerFileTemplates['beacon_bootstrapper'] = '''\
+#!/bin/bash
+while read -r node; do {{
+    let count=0
+    ok=true
+    validator=false
+    until curl --http0.9 -sHf http://$node/testnet > /dev/null; do {{
+        echo "eth: node $node not ready, waiting..."
+        sleep 3
+        let count++
+        [ $count -gt 60 ] && {{
+            echo "eth: node $node failed too many times, skipping."
+            ok=false
+            break
+        }}
+    }}; done
+    ($ok) && {{
+        validator={is_validator}
+        bootnode={is_bootnode}
+        ($validator) && {{
+            curl --http0.9 -s http://$node/eth-{eth_id} > /tmp/eth.tar.gz
+            tar -xzvf /tmp/eth.tar.gz -C /tmp
+        }}
+        ($bootnode) && {{
+            curl --http0.9 -s http://$node/bootnode > /tmp/bootnode.tar.gz
+            tar -xzvf /tmp/bootnode.tar.gz -C /tmp
+        }}
+        curl --http0.9 -s http://$node/testnet > /tmp/testnet.tar.gz
+        tar -xzvf /tmp/testnet.tar.gz -C /tmp
+        {bootnode_start_command}
+        {bc_start_command}
+        {vc_start_command}
+    }}
+}}; done < /tmp/beacon-setup-node
+'''
+
 class ConsensusMechanism(Enum):
     '''
     @brief Consensus Mechanism Enum. POA for Proof of Authority, POW for Proof Of Work
@@ -140,13 +176,49 @@ GethCommandTemplates['ws'] = '''\
 --ws --ws.addr 0.0.0.0 --ws.port {gethWsPort} --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique,engine '''
 
 GethCommandTemplates['pos'] = '''\
---authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.vhosts "*" --authrpc.jwtsecret /tmp/jwt.hex --override.terminaltotaldifficulty 200 '''
+--authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.vhosts "*" --authrpc.jwtsecret /tmp/jwt.hex --override.terminaltotaldifficulty {difficulty} '''
 
 GethCommandTemplates['nodiscover'] = '''\
 --nodiscover '''
 
 GethCommandTemplates['bootnodes'] = '''\
 --bootnodes "$(cat /tmp/eth-node-urls)" '''
+
+LIGHTHOUSE_BN_CMD = """lighthouse --debug-level info bn --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --enable-private-discovery --staking --enr-address {ip_address}  --enr-udp-port 9000 --enr-tcp-port 9000 --port 9000 --http-address {ip_address} --http-port 8000 --disable-packet-filter --target-peers {target_peers} --execution-endpoint http://localhost:8551 --execution-jwt /tmp/jwt.hex &"""
+
+LIGHTHOUSE_VC_CMD = """lighthouse --debug-level info vc --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --init-slashing-protection --beacon-nodes http://{ip_address}:8000 --suggested-fee-recipient {acct_address} &"""
+
+LIGHTHOUSE_BOOTNODE_CMD = """lighthouse boot_node --testnet-dir /tmp/local-testnet/testnet --port 30305 --listen-address {ip_address} --disable-packet-filter --network-dir /tmp/local-testnet/bootnode &"""
+
+# GenesisFileTemplates['beacon_genesis'] = '''\
+# CONFIG_NAME: mainnet
+# PRESET_BASE: mainnet
+# TERMINAL_TOTAL_DIFFICULTY: "{terminal_total_difficulty}"
+# TERMINAL_BLOCK_HASH: "0x0000000000000000000000000000000000000000000000000000000000000000"
+# TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: "18446744073709551615"
+# SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY: "128"
+# MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: "1"
+# GENESIS_FORK_VERSION: "0x42424242"
+# GENESIS_DELAY: "0"
+# ALTAIR_FORK_VERSION: "0x01000000"
+# ALTAIR_FORK_EPOCH: "0"
+# BELLATRIX_FORK_VERSION: "0x02000000"
+# BELLATRIX_FORK_EPOCH: "1"
+# EPOCHS_PER_ETH1_VOTING_PERIOD: "1"
+# SECONDS_PER_SLOT: "3"
+# SECONDS_PER_ETH1_BLOCK: "15"
+# MIN_VALIDATOR_WITHDRAWABILITY_DELAY: "256"
+# SHARD_COMMITTEE_PERIOD: "256"
+# ETH1_FOLLOW_DISTANCE: "1"
+# INACTIVITY_SCORE_BIAS: "4"
+# INACTIVITY_SCORE_RECOVERY_RATE: "16"
+# EJECTION_BALANCE: "16000000000"
+# MIN_PER_EPOCH_CHURN_LIMIT: "4"
+# CHURN_LIMIT_QUOTIENT: "65536"
+# PROPOSER_SCORE_BOOST: "40"
+# DEPOSIT_CHAIN_ID: "10"
+# DEPOSIT_NETWORK_ID: "10"
+# '''
 
 class ConsensusMechanism(Enum):
     """!
@@ -165,7 +237,14 @@ class Syncmode(Enum):
     SNAP = 'snap'
     FULL = 'full'
     LIGHT = 'light'
-    
+
+class EthereumServerTypes(Enum):
+    """!
+    @brief ethereum server type enum.
+    """
+    ETH_NODE = 'eth_node'
+    BEACON_SETUP_NODE = 'beacon_setup_node'
+
 
 class Genesis():
     """!
@@ -252,6 +331,7 @@ class EthAccount():
     __keystore_filename:str  
     __alloc_balance: int
     __password: str
+    
 
 
     def __init__(self, alloc_balance:int = 0,password:str = "admin", keyfilePath: str = None):
@@ -392,10 +472,13 @@ class EthereumServer(Server):
     __id: int
     __is_bootnode: bool
     __bootnode_http_port: int
+    __beacon_bootnode_http_port: int
     __smart_contract: SmartContract
     __accounts: List[EthAccount]
     __accounts_info: List[Tuple[int, str, str]]
-    __consensus_mechanism: ConsensusMechanism
+    _consensus_mechanism: ConsensusMechanism
+
+    _is_beacon_setup_node: bool
 
     __custom_geth_binary_path: str
     __custom_geth_command_option: str
@@ -412,6 +495,8 @@ class EthereumServer(Server):
     __start_mine: bool
     __miner_thread: int
     __coinbase: str
+    _terminal_total_difficulty: int
+    __lighthouse_bin_path: str
 
     def __init__(self, id: int):
         """!
@@ -420,13 +505,16 @@ class EthereumServer(Server):
         """
         self.__id = id
         self.__is_bootnode = False
-        
+        self.__is_beacon_validator = False
+        self.__beacon_validator_count = 100
         self.__bootnode_http_port = 8088
         self.__smart_contract = None
         self.__accounts = []
         self.__accounts_info = [(0, "admin", None)]
-        self.__consensus_mechanism = ConsensusMechanism.POW
-        self.__genesis = Genesis(self.__consensus_mechanism)
+        self._consensus_mechanism = ConsensusMechanism.POW
+        self.__genesis = Genesis(self._consensus_mechanism)
+
+        self._is_beacon_setup_node = False
 
         self.__custom_geth_binary_path = None
         self.__custom_geth_command_option = None
@@ -444,6 +532,8 @@ class EthereumServer(Server):
         self.__miner_thread = 1
         self.__coinbase = ""
         self.__enable_pos = False
+        self._terminal_total_difficulty = 100
+        self.__lighthouse_bin_path = ""
 
     def __generateGethStartCommand(self):
         """!
@@ -462,7 +552,7 @@ class EthereumServer(Server):
         if self.__enable_ws:
             geth_start_command += GethCommandTemplates['ws'].format(gethWsPort=self.__geth_ws_port)
         if self.__enable_pos:
-            geth_start_command += GethCommandTemplates['pos']
+            geth_start_command += GethCommandTemplates['pos'].format(difficulty=self._terminal_total_difficulty)
         if self.__custom_geth_command_option:
             geth_start_command += self.__custom_geth_command_option
         if self.__unlock_accounts:
@@ -472,7 +562,7 @@ class EthereumServer(Server):
             geth_start_command += GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
         if self.__start_mine:
             assert len(self.__accounts) > 0, 'EthereumServer::__generateGethStartCommand: To start mine, ethereum server need at least one account.'
-            if self.__consensus_mechanism == ConsensusMechanism.POA:
+            if self._consensus_mechanism == ConsensusMechanism.POA:
                 assert self.__unlock_accounts, 'EthereumServer::__generateGethStartCommand: To start mine in POA(clique), accounts should be unlocked first.'
             geth_start_command += GethCommandTemplates['mine'].format(coinbase=self.__coinbase, num_of_threads=self.__miner_thread)
         
@@ -488,7 +578,7 @@ class EthereumServer(Server):
 
         node.appendClassName('EthereumService')
         node.setLabel('node_id', self.getId())
-        node.setLabel('consensus', self.__consensus_mechanism.value)
+        node.setLabel('consensus', self._consensus_mechanism.value)
 
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has no interfaces'.format(node.getAsn(), node.getName())
@@ -496,7 +586,7 @@ class EthereumServer(Server):
 
         # update genesis.json
         self.__genesis.allocateBalance(eth.getAllAccounts())
-        if self.__consensus_mechanism == ConsensusMechanism.POA:
+        if self._consensus_mechanism == ConsensusMechanism.POA:
             self.__genesis.setSigner(eth.getAllSignerAccounts()) 
     
         node.setFile('/tmp/eth-genesis.json', self.__genesis.getGenesis())
@@ -529,6 +619,11 @@ class EthereumServer(Server):
         for account in self.__accounts:
             node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.getKeyStoreFileName()))
 
+        if(self.__enable_pos):
+            node.importFile(self.__lighthouse_bin_path, "/usr/bin/lighthouse")
+            node.appendStartCommand("chmod +x /usr/bin/lighthouse")
+            
+
         if self.__is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
             node.appendStartCommand('[ ! -e "/root/.ethereum/geth/bootkey" ] && bootnode -genkey /root/.ethereum/geth/bootkey')
@@ -536,14 +631,13 @@ class EthereumServer(Server):
             
             # Default port is 30301, use -addr :<port> to specify a custom port
             node.appendStartCommand('bootnode -nodekey /root/.ethereum/geth/bootkey -verbosity 9 -addr {}:30301 2> /tmp/bootnode-logs &'.format(addr))          
-            
-            # host the eth-enode-url for other nodes.
             node.appendStartCommand('python3 -m http.server {} -d /tmp'.format(self.__bootnode_http_port), True)
-        
+
         # get other nodes IP for the bootstrapper.
-        bootnodes = eth.getBootNodes(self.__consensus_mechanism)[:]
+        bootnodes = eth.getBootNodes(self._consensus_mechanism)[:]
         if len(bootnodes) > 0 :
             node.setFile('/tmp/eth-nodes', '\n'.join(bootnodes))
+            
             node.setFile('/tmp/eth-bootstrapper', ETHServerFileTemplates['bootstrapper'])
 
             # load enode urls from other nodes
@@ -552,17 +646,30 @@ class EthereumServer(Server):
 
         # launch Ethereum process.
         node.appendStartCommand(self.__generateGethStartCommand(), True) 
-
-        if(self.__enable_pos):
-            node.setFile("/restart_geth.sh", """
-#!/bin/bash
-
-kill -9 `ps -aux | grep 'geth --data' | cut -d " " -f 10 | head -n 1`
-sleep 3
-{} &
-""".format(self.__generateGethStartCommand()))
-            node.appendStartCommand('chmod +x /restart_geth.sh')
-       
+        
+        if len(bootnodes) > 0 and self.__enable_pos and (not self._is_beacon_setup_node):
+            beacon_setup_node = eth.getBeaconSetupNodeIp()
+            if beacon_setup_node == '':
+                beacon_setup_node = self.getBeaconSetupNodeIp()
+            bootnode_start_command = ""
+            bc_start_command = LIGHTHOUSE_BN_CMD.format(eth_id=self.getId(),ip_address=addr, target_peers=3)
+            vc_start_command = ""
+            if self.__is_bootnode:
+                bootnode_start_command = LIGHTHOUSE_BOOTNODE_CMD.format(ip_address=addr)
+            if self.__is_beacon_validator:
+                vc_start_command = LIGHTHOUSE_VC_CMD.format(eth_id=self.getId(), ip_address=addr, acct_address=self.__accounts[0].getAddress())
+            node.setFile('/tmp/beacon-setup-node', beacon_setup_node)
+            node.setFile('/tmp/beacon-bootstrapper', ETHServerFileTemplates['beacon_bootstrapper'].format( 
+                                    is_validator="true" if self.__is_beacon_validator else "false",
+                                    is_bootnode="true" if self.__is_bootnode else "false",
+                                    eth_id=self.getId(),
+                                    bootnode_start_command=bootnode_start_command,
+                                    bc_start_command=bc_start_command,
+                                    vc_start_command=vc_start_command
+                        ))
+            node.appendStartCommand('chmod +x /tmp/beacon-bootstrapper')
+            node.appendStartCommand('/tmp/beacon-bootstrapper')
+                  
         if self.__smart_contract != None :
             smartContractCommand = self.__smart_contract.generateSmartContractCommand()
             node.appendStartCommand('(\n {})&'.format(smartContractCommand))
@@ -645,10 +752,10 @@ sleep 3
 
         @returns self, for chaining API calls. 
         '''
-        self.__consensus_mechanism = consensusMechanism
-        self.__genesis = Genesis(self.__consensus_mechanism)
+        self._consensus_mechanism = consensusMechanism
+        self.__genesis = Genesis(self._consensus_mechanism)
         if consensusMechanism == ConsensusMechanism.POA:
-            self.__accounts_info[0] = (200 * pow(10, 18), "admin", None)
+            self.__accounts_info[0] = (30 * pow(10, 18), "admin", None)
         elif consensusMechanism == ConsensusMechanism.POW:
             self.__accounts_info[0] = (0, "admin", None)
         
@@ -656,7 +763,7 @@ sleep 3
 
     def getConsensusMechanism(self) -> ConsensusMechanism:
 
-        return self.__consensus_mechanism
+        return self._consensus_mechanism
 
     def getId(self) -> int:
         """!
@@ -746,7 +853,7 @@ sleep 3
                 
         return self.__geth_ws_port
 
-    def enablePoS(self) -> EthereumServer:
+    def enablePoS(self, lighthouse_bin_path:str, terminal_total_difficulty:int = 50) -> EthereumServer:
         """!
         @brief set configurations to enable PoS (Merge)
 
@@ -754,6 +861,8 @@ sleep 3
         """
 
         self.__enable_pos = True
+        self._terminal_total_difficulty = terminal_total_difficulty
+        self.__lighthouse_bin_path = lighthouse_bin_path
 
         return self
 
@@ -899,6 +1008,167 @@ sleep 3
 
         return self
 
+    def setPreActivatedValidatorCount(self, count:int=10):
+        self.__beacon_validator_count = count
+        self.__accounts_info[0] = (32 * pow(10, 18)*(self.__beacon_validator_count+2), "admin", None)
+        return self
+
+    def enablePOSValidator(self, is_beacon_validator:bool=True):
+        self.__is_beacon_validator = is_beacon_validator
+        return self
+
+    def isValidator(self):
+        return self.__is_beacon_validator
+
+    def isBeaconSetupNode(self):
+        return self._is_beacon_setup_node
+
+    def setBeaconSetupNodeIp(self, ip_address):
+        self.__beacon_setup_node_ip = ip_address
+        return self
+
+    def getBeaconSetupNodeIp(self):
+        return self.__beacon_setup_node_ip
+
+
+
+class BeaconSetupServer(EthereumServer):
+    """!
+    @brief The WebServer class.
+    """
+
+    BEACON_GENESIS = '''\
+CONFIG_NAME: mainnet
+PRESET_BASE: mainnet
+TERMINAL_TOTAL_DIFFICULTY: "{terminal_total_difficulty}"
+TERMINAL_BLOCK_HASH: "0x0000000000000000000000000000000000000000000000000000000000000000"
+TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: "18446744073709551615"
+SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY: "128"
+MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: "1"
+GENESIS_FORK_VERSION: "0x42424242"
+GENESIS_DELAY: "0"
+ALTAIR_FORK_VERSION: "0x01000000"
+ALTAIR_FORK_EPOCH: "0"
+BELLATRIX_FORK_VERSION: "0x02000000"
+BELLATRIX_FORK_EPOCH: "1"
+EPOCHS_PER_ETH1_VOTING_PERIOD: "1"
+SECONDS_PER_SLOT: "3"
+SECONDS_PER_ETH1_BLOCK: "15"
+MIN_VALIDATOR_WITHDRAWABILITY_DELAY: "256"
+SHARD_COMMITTEE_PERIOD: "256"
+ETH1_FOLLOW_DISTANCE: "1"
+INACTIVITY_SCORE_BIAS: "4"
+INACTIVITY_SCORE_RECOVERY_RATE: "16"
+EJECTION_BALANCE: "16000000000"
+MIN_PER_EPOCH_CHURN_LIMIT: "4"
+CHURN_LIMIT_QUOTIENT: "65536"
+PROPOSER_SCORE_BOOST: "40"
+DEPOSIT_CHAIN_ID: "10"
+DEPOSIT_NETWORK_ID: "10"
+'''
+
+    BEACON_BOOTNODE_HTTP_SERVER = '''\
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+eth_id = 0
+
+class SeedHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        response = open("/local-testnet/{{}}.tar.gz".format(self.path), "rb")
+        self.wfile.write(response.read())
+        response.close()
+
+httpd = HTTPServer(('0.0.0.0', {beacon_bootnode_http_port}), SeedHTTPRequestHandler)
+httpd.serve_forever()
+'''
+
+    PREPARE_RESOURCE_TO_SEND = '''\
+#!/bin/bash
+let i=0
+while read -r ethId; do {
+    let i++
+    mv /local-testnet/node_$i /local-testnet/eth-$ethId
+    tar -czvf /local-testnet/eth-$ethId.tar.gz /local-testnet/eth-$ethId
+}; done < /tmp/validator-ids
+tar -czvf /local-testnet/testnet.tar.gz /local-testnet/testnet
+tar -czvf /local-testnet/bootnode.tar.gz /local-testnet/bootnode
+'''
+    DEPLOY_CONTRACT = '''\
+let count=0
+ok=true
+until curl -sHf http://localhost:8545 > /dev/null; do {{
+    echo "eth: geth not ready, waiting..."
+    sleep 3
+    let count++
+    [ $count -gt 60 ] && {{
+        echo "eth: geth connection failed too many times, skipping."
+        ok=false
+        break
+    }}
+}}; done
+($ok) && {{
+    lcli deploy-deposit-contract --eth1-http http://localhost:8545 --confirmations 1 --validator-count {validator_count} > contract_address.txt
+}}
+'''
+
+    _beacon_setup_http_port: int
+
+    def __init__(self, id:int):
+        """!
+        @brief WebServer constructor.
+        """
+        super().__init__(id)
+        self._is_beacon_setup_node = True
+        self._beacon_setup_http_port = 8090
+
+    def install(self, node: Node, eth: EthereumService):
+        """!
+        @brief Install the service.
+        """
+        super().install(node, eth)
+
+        validator_ids = eth.getValidatorIds()
+        validator_counts = len(validator_ids)
+
+        bootnode_ip = eth.getBootNodes(self._consensus_mechanism)[0].split(":")[0]
+
+        node.importFile("/home/won/.cargo/bin/lcli", "/usr/bin/lcli")
+        node.appendStartCommand("chmod +x /usr/bin/lcli")
+        node.appendStartCommand('lcli generate-bootnode-enr --ip {} --udp-port 30305 --tcp-port 30305 --genesis-fork-version 0x42424242 --output-dir /local-testnet/bootnode'.format(bootnode_ip))
+        node.setFile("/tmp/config.yaml", self.BEACON_GENESIS.format(terminal_total_difficulty=self._terminal_total_difficulty))
+        node.setFile("/tmp/validator-ids", "\n".join(validator_ids))
+        node.appendStartCommand('mkdir /local-testnet/testnet')
+        node.appendStartCommand('bootnode_enr=`cat /local-testnet/bootnode/enr.dat`')
+        node.appendStartCommand('echo "- $bootnode_enr" > /local-testnet/testnet/boot_enr.yaml')
+        node.appendStartCommand('cp /tmp/config.yaml /local-testnet/testnet/config.yaml')
+        #node.appendStartCommand('sleep 30')
+        node.appendStartCommand(self.DEPLOY_CONTRACT.format(validator_count = validator_counts))
+        #node.appendStartCommand('lcli deploy-deposit-contract --eth1-http http://localhost:8545 --confirmations 1 --validator-count {validator_count} > contract_address.txt'.format(validator_count = validator_counts))
+        node.appendStartCommand('lcli insecure-validators --count {validator_count} --base-dir /local-testnet/ --node-count {validator_count}'.format(validator_count = validator_counts))
+        node.appendStartCommand('GENESIS_TIME=`date +%s`')
+        node.appendStartCommand('''CONTRACT_ADDRESS=`head -1 contract_address.txt | cut -d '"' -f 2`''')
+        node.appendStartCommand('''echo 'DEPOSIT_CONTRACT_ADDRESS: "'$CONTRACT_ADDRESS'"' >> /local-testnet/testnet/config.yaml''')
+        node.appendStartCommand('''echo 'MIN_GENESIS_TIME: "'$GENESIS_TIME'"' >> /local-testnet/testnet/config.yaml''')
+        node.appendStartCommand('''echo '3' > /local-testnet/testnet/deploy_block.txt''')
+        node.appendStartCommand('''lcli interop-genesis --spec mainnet --genesis-time $GENESIS_TIME --testnet-dir /local-testnet/testnet {validator_count}'''.format(validator_count = validator_counts))
+        node.setFile("/tmp/prepare_resource.sh", self.PREPARE_RESOURCE_TO_SEND)
+        node.appendStartCommand("chmod +x /tmp/prepare_resource.sh")
+        node.appendStartCommand("/tmp/prepare_resource.sh")
+        node.setFile('/local-testnet/beacon_bootnode_http_server.py', self.BEACON_BOOTNODE_HTTP_SERVER.format(beacon_bootnode_http_port=self._beacon_setup_http_port))
+        node.appendStartCommand('python3 /local-testnet/beacon_bootnode_http_server.py', True)
+
+    def getBeaconSetupHttpPort(self) -> int:
+        return self._beacon_setup_http_port
+
+    def setBeaconSetupHttpPort(self, port:int) -> BeaconSetupServer:
+        self._beacon_setup_http_port = port
+        return self
+
+    def print(self, indent: int) -> str:
+        out = ' ' * indent
+        out += 'Beacon Setup server object.\n'
+
+        return out
 
 class EthereumService(Service):
     """!
@@ -910,6 +1180,8 @@ class EthereumService(Service):
     __boot_node_addresses: Dict[ConsensusMechanism, List[str]]
     __joined_accounts: List[EthAccount]
     __joined_signer_accounts: List[EthAccount]
+    __validator_ids: List[str]
+    __beacon_setup_node_address: str
 
     __save_state: bool
     __save_path: str
@@ -937,6 +1209,8 @@ class EthereumService(Service):
         self.__boot_node_addresses[ConsensusMechanism.POA] = []
         self.__joined_accounts = []
         self.__joined_signer_accounts = []
+        self.__validator_ids = []
+        self.__beacon_setup_node_address = ''
 
         self.__save_state = saveState
         self.__save_path = savePath
@@ -963,23 +1237,37 @@ class EthereumService(Service):
     def getAllSignerAccounts(self) -> List[EthAccount]:
         return self.__joined_signer_accounts
 
+    def getValidatorIds(self) -> List[str]:
+        return self.__validator_ids
+
+    def getBeaconSetupNodeIp(self) -> str:
+        return self.__beacon_setup_node_address
+
     def _doConfigure(self, node: Node, server: EthereumServer):
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
 
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
         addr = '{}:{}'.format(str(ifaces[0].getAddress()), server.getBootNodeHttpPort())
+        #addr = '{}'.format(str(ifaces[0].getAddress()))
 
         if server.isBootNode():
             self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), server.getConsensusMechanism().value))
             self.__boot_node_addresses[server.getConsensusMechanism()].append(addr)
-        
+
+        if server.isBeaconSetupNode():
+            server:BeaconSetupServer
+            self.__beacon_setup_node_address = '{}:{}'.format(ifaces[0].getAddress(), server.getBeaconSetupHttpPort())
+
         server._createAccounts(self)
         
         if len(server._getAccounts()) > 0:
             self.__joined_accounts.extend(server._getAccounts())
             if server.getConsensusMechanism() == ConsensusMechanism.POA and server.isStartMiner():
                 self.__joined_signer_accounts.append(server._getAccounts()[0])
+
+        if server.isValidator():
+            self.__validator_ids.append(str(server.getId()))
             
         if self.__save_state:
             node.addSharedFolder('/root/.ethereum', '../{}/{}/ethereum'.format(self.__save_path, server.getId()))
@@ -1014,9 +1302,23 @@ class EthereumService(Service):
 
         server.install(node, self)
 
-    def _createServer(self) -> Server:
-        self.__serial += 1
-        return EthereumServer(self.__serial)
+    def _createServer(self, server_type:EthereumServerTypes) -> Server:
+        if server_type == EthereumServerTypes.BEACON_SETUP_NODE:
+            return BeaconSetupServer(99999)
+        else:
+            self.__serial += 1
+            return EthereumServer(self.__serial)
+
+    def install(self, vnode: str, server_type: EthereumServerTypes = EthereumServerTypes.ETH_NODE) -> Server:
+        """!
+        @brief install the service on a node identified by given name.
+        """
+        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
+
+        s = self._createServer(server_type)
+        self._pending_targets[vnode] = s
+
+        return self._pending_targets[vnode]
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
