@@ -30,7 +30,7 @@ def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int, hosts_total: 
 #    exit(0)
 #hosts_total = int(sys.argv[1])
 
-hosts_total = int(1)
+hosts_total = int(4)
 
 ###############################################################################
 emu     = Emulator()
@@ -129,6 +129,7 @@ asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
 TERMINAL_TOTAL_DIFFICULTY=50
 LIGHTHOUSE_BIN_PATH="/home/won/.cargo/bin/lighthouse"
+
 i = 1
 for asn in asns:
     for id in range(hosts_total):
@@ -178,6 +179,9 @@ os.system('cp ./z_start.sh ./output/')
 
 BEACON_SETUP_NODE_COMMAND_SH = """\
 #!/bin/bash
+
+rm -rf beacon-node/
+rm -rf hnode_150_beacon-setup-node/
 ./beacon-setup-node.py {} '{}' {}
 """
 f = open("beacon-setup-node.sh", "w")
