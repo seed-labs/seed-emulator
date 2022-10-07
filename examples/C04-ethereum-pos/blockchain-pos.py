@@ -30,7 +30,7 @@ def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int, hosts_total: 
 #    exit(0)
 #hosts_total = int(sys.argv[1])
 
-hosts_total = int(4)
+hosts_total = int(10)
 
 ###############################################################################
 emu     = Emulator()
@@ -128,25 +128,27 @@ docker = Docker()
 asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
 TERMINAL_TOTAL_DIFFICULTY=50
-LIGHTHOUSE_BIN_PATH="/home/won/.cargo/bin/lighthouse"
 
 i = 1
 for asn in asns:
     for id in range(hosts_total):
         
         e:EthereumServer = eth.install("eth{}".format(i)).setConsensusMechanism(ConsensusMechanism.POA)    
-        e.enablePoS(LIGHTHOUSE_BIN_PATH, TERMINAL_TOTAL_DIFFICULTY)
+        e.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
         e.unlockAccounts()
-        e.startMiner()
         e.setBeaconSetupNodeIp('10.150.0.99:8090')
                 
         if asn == asns[0]:
             if id == 0:
                 e.setBootNode(True)
+                e.createAccount(balance=32*pow(10,18), password = "admin")
+                e.setBaseAccountBalance(balance=32*pow(10,18)*(4*hosts_total+1))
                 e.enableGethHttp()
 
         if asn in [151,153,154,160]:
-            e.enablePOSValidator(True)    
+            e.enablePOSValidator(True) 
+            e.startMiner()
+           
                 
         emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POA-{}'.format(i))
         emu.addBinding(Binding('eth{}'.format(i), filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
@@ -175,6 +177,7 @@ emu.addLayer(eth)
 emu.render()
 
 emu.compile(docker, './output', override = True)
+
 os.system('cp ./z_start.sh ./output/')
 
 BEACON_SETUP_NODE_COMMAND_SH = """\
