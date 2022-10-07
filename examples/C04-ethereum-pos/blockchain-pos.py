@@ -30,7 +30,7 @@ def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int, hosts_total: 
 #    exit(0)
 #hosts_total = int(sys.argv[1])
 
-hosts_total = int(5)
+hosts_total = int(8)
 
 ###############################################################################
 emu     = Emulator()
