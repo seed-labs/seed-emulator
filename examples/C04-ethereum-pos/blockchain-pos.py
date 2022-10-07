@@ -30,7 +30,7 @@ def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int, hosts_total: 
 #    exit(0)
 #hosts_total = int(sys.argv[1])
 
-hosts_total = int(8)
+hosts_total = int(10)
 
 ###############################################################################
 emu     = Emulator()
@@ -136,7 +136,6 @@ for asn in asns:
         e:EthereumServer = eth.install("eth{}".format(i)).setConsensusMechanism(ConsensusMechanism.POA)    
         e.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
         e.unlockAccounts()
-        e.startMiner()
         e.setBeaconSetupNodeIp('10.150.0.99:8090')
                 
         if asn == asns[0]:
@@ -147,7 +146,9 @@ for asn in asns:
                 e.enableGethHttp()
 
         if asn in [151,153,154,160]:
-            e.enablePOSValidator(True)    
+            e.enablePOSValidator(True) 
+            e.startMiner()
+           
                 
         emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POA-{}'.format(i))
         emu.addBinding(Binding('eth{}'.format(i), filter=Filter(asn=asn, nodeName='host_{}'.format(id))))

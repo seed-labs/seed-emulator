@@ -184,9 +184,9 @@ GethCommandTemplates['nodiscover'] = '''\
 GethCommandTemplates['bootnodes'] = '''\
 --bootnodes "$(cat /tmp/eth-node-urls)" '''
 
-LIGHTHOUSE_BN_CMD = """lighthouse --debug-level info bn --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --enable-private-discovery --staking --enr-address {ip_address}  --enr-udp-port 9000 --enr-tcp-port 9000 --port 9000 --http-address {ip_address} --http-port 8000 --disable-packet-filter --target-peers {target_peers} --execution-endpoint http://localhost:8551 --execution-jwt /tmp/jwt.hex &"""
+LIGHTHOUSE_BN_CMD = """nice -n 19 lighthouse --debug-level info bn --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --enable-private-discovery --staking --enr-address {ip_address}  --enr-udp-port 9000 --enr-tcp-port 9000 --port 9000 --http-address {ip_address} --http-port 8000 --disable-packet-filter --target-peers {target_peers} --execution-endpoint http://localhost:8551 --execution-jwt /tmp/jwt.hex &"""
 
-LIGHTHOUSE_VC_CMD = """lighthouse --debug-level info vc --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --init-slashing-protection --beacon-nodes http://{ip_address}:8000 --suggested-fee-recipient {acct_address} &"""
+LIGHTHOUSE_VC_CMD = """nice -n 19 lighthouse --debug-level info vc --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --init-slashing-protection --beacon-nodes http://{ip_address}:8000 --suggested-fee-recipient {acct_address} &"""
 
 LIGHTHOUSE_BOOTNODE_CMD = """lighthouse boot_node --testnet-dir /tmp/local-testnet/testnet --port 30305 --listen-address {ip_address} --disable-packet-filter --network-dir /tmp/local-testnet/bootnode &"""
 
@@ -496,7 +496,6 @@ class EthereumServer(Server):
     __miner_thread: int
     __coinbase: str
     _terminal_total_difficulty: int
-    __lighthouse_bin_path: str
 
     def __init__(self, id: int):
         """!
@@ -533,7 +532,6 @@ class EthereumServer(Server):
         self.__coinbase = ""
         self.__enable_pos = False
         self._terminal_total_difficulty = 100
-        self.__lighthouse_bin_path = ""
 
     def __generateGethStartCommand(self):
         """!
@@ -620,8 +618,11 @@ class EthereumServer(Server):
             node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.getKeyStoreFileName()))
 
         if(self.__enable_pos):
-            node.importFile(self.__lighthouse_bin_path, "/usr/bin/lighthouse")
-            node.appendStartCommand("chmod +x /usr/bin/lighthouse")
+            node.addBuildCommand("curl -L https://github.com/sigp/lighthouse/releases/download/v3.1.2/lighthouse-v3.1.2-x86_64-unknown-linux-gnu.tar.gz > /lighthouse.tar.gz")
+            node.addBuildCommand("tar -xzvf /lighthouse.tar.gz -C /usr/bin")
+        
+        #     node.importFile(self.__lighthouse_bin_path, "/usr/bin/lighthouse")
+        #     node.appendStartCommand("chmod +x /usr/bin/lighthouse")
             
 
         if self.__is_bootnode:
@@ -853,7 +854,7 @@ class EthereumServer(Server):
                 
         return self.__geth_ws_port
 
-    def enablePoS(self, lighthouse_bin_path:str, terminal_total_difficulty:int = 50) -> EthereumServer:
+    def enablePoS(self, terminal_total_difficulty:int = 50) -> EthereumServer:
         """!
         @brief set configurations to enable PoS (Merge)
 
@@ -862,8 +863,6 @@ class EthereumServer(Server):
 
         self.__enable_pos = True
         self._terminal_total_difficulty = terminal_total_difficulty
-        self.__lighthouse_bin_path = lighthouse_bin_path
-
         return self
 
     def enableGethHttp(self) -> EthereumServer:
@@ -1029,6 +1028,10 @@ class EthereumServer(Server):
 
     def getBeaconSetupNodeIp(self):
         return self.__beacon_setup_node_ip
+
+    def setBaseAccountBalance(self, balance:int):
+        self.__accounts_info[0] = (balance, "admin", None)
+        return self
 
 
 
