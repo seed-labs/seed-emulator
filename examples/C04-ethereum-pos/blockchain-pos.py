@@ -30,7 +30,7 @@ def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int, hosts_total: 
 #    exit(0)
 #hosts_total = int(sys.argv[1])
 
-hosts_total = int(10)
+hosts_total = int(3)
 
 ###############################################################################
 emu     = Emulator()
@@ -135,26 +135,31 @@ for asn in asns:
         
         e:EthereumServer = eth.install("eth{}".format(i)).setConsensusMechanism(ConsensusMechanism.POA)    
         e.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
+        e.setBeaconPeerCounts(10)
         e.unlockAccounts()
         e.setBeaconSetupNodeIp('10.150.0.99:8090')
-                
+        e.enableGethHttp()
+
+        # if i in range(1,5):
+        #     e.enableGethHttp()
+        #     emu.getVirtualNode("eth{}".format(i)).addPortForwarding(8545+(i-1), e.getGethHttpPort())
+
+        e.enableGethHttp()
         if asn == asns[0]:
             if id == 0:
                 e.setBootNode(True)
                 e.createAccount(balance=32*pow(10,18), password = "admin")
-                e.setBaseAccountBalance(balance=32*pow(10,18)*(4*hosts_total+1))
-                e.enableGethHttp()
+                e.setBaseAccountBalance(balance=32*pow(10,18)*(4*hosts_total+5))
 
         if asn in [151,153,154,160]:
             e.enablePOSValidator(True) 
-            e.startMiner()
-           
+            e.startMiner()       
                 
         emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POA-{}'.format(i))
         emu.addBinding(Binding('eth{}'.format(i), filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         
         i = i+1
-
+        
 # ###################################################
 # # Beacon Setup Node 
 # asn150 = base.getAutonomousSystem(150)

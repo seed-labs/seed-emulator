@@ -55,9 +55,9 @@ GENESIS_DELAY: "0"
 ALTAIR_FORK_VERSION: "0x01000000"
 ALTAIR_FORK_EPOCH: "0"
 BELLATRIX_FORK_VERSION: "0x02000000"
-BELLATRIX_FORK_EPOCH: "1"
+BELLATRIX_FORK_EPOCH: "0"
 EPOCHS_PER_ETH1_VOTING_PERIOD: "1"
-SECONDS_PER_SLOT: "3"
+SECONDS_PER_SLOT: "15"
 SECONDS_PER_ETH1_BLOCK: "15"
 MIN_VALIDATOR_WITHDRAWABILITY_DELAY: "256"
 SHARD_COMMITTEE_PERIOD: "256"
@@ -119,8 +119,8 @@ beacon_setup_node.appendStartCommand('mkdir /local-testnet/testnet')
 beacon_setup_node.appendStartCommand('bootnode_enr=`cat /local-testnet/bootnode/enr.dat`')
 beacon_setup_node.appendStartCommand('echo "- $bootnode_enr" > /local-testnet/testnet/boot_enr.yaml')
 beacon_setup_node.appendStartCommand('cp /tmp/config.yaml /local-testnet/testnet/config.yaml')
-beacon_setup_node.appendStartCommand(DEPLOY_CONTRACT.format(geth_node_ip=GETHNODE_IP, validator_count = VALIDATOR_COUNT))
-beacon_setup_node.appendStartCommand('lcli insecure-validators --count {validator_count} --base-dir /local-testnet/ --node-count {validator_count}'.format(validator_count = VALIDATOR_COUNT))
+beacon_setup_node.appendStartCommand(DEPLOY_CONTRACT.format(geth_node_ip=GETHNODE_IP, validator_count = VALIDATOR_COUNT+3))
+beacon_setup_node.appendStartCommand('lcli insecure-validators --count {validator_count} --base-dir /local-testnet/ --node-count {validator_count}'.format(validator_count = VALIDATOR_COUNT+3))
 beacon_setup_node.appendStartCommand('GENESIS_TIME=`date +%s`')
 beacon_setup_node.appendStartCommand('''CONTRACT_ADDRESS=`head -1 contract_address.txt | cut -d '"' -f 2`''')
 beacon_setup_node.appendStartCommand('''echo 'DEPOSIT_CONTRACT_ADDRESS: "'$CONTRACT_ADDRESS'"' >> /local-testnet/testnet/config.yaml''')

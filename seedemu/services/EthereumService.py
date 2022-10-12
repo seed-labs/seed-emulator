@@ -161,7 +161,7 @@ GenesisFileTemplates['POA_extra_data'] = '''\
 0x0000000000000000000000000000000000000000000000000000000000000000{signer_addresses}0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'''
 
 GethCommandTemplates['base'] = '''\
-nice -n 19 geth --datadir {datadir} --identity="NODE_{node_id}" --networkid=10 --syncmode {syncmode} --snapshot={snapshot} --verbosity=2 --allow-insecure-unlock --port 30303 '''
+geth --datadir {datadir} --identity="NODE_{node_id}" --networkid=10 --syncmode {syncmode} --snapshot={snapshot} --verbosity=2 --allow-insecure-unlock --port 30303 '''
 
 GethCommandTemplates['mine'] = '''\
 --miner.etherbase "{coinbase}" --mine --miner.threads={num_of_threads} '''
@@ -184,9 +184,9 @@ GethCommandTemplates['nodiscover'] = '''\
 GethCommandTemplates['bootnodes'] = '''\
 --bootnodes "$(cat /tmp/eth-node-urls)" '''
 
-LIGHTHOUSE_BN_CMD = """nice -n 19 lighthouse --debug-level info bn --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --enable-private-discovery --staking --enr-address {ip_address}  --enr-udp-port 9000 --enr-tcp-port 9000 --port 9000 --http-address {ip_address} --http-port 8000 --disable-packet-filter --target-peers {target_peers} --execution-endpoint http://localhost:8551 --execution-jwt /tmp/jwt.hex &"""
+LIGHTHOUSE_BN_CMD = """lighthouse --debug-level info bn --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --enable-private-discovery --staking --enr-address {ip_address}  --enr-udp-port 9000 --enr-tcp-port 9000 --port 9000 --http-address {ip_address} --http-port 8000 --disable-packet-filter --target-peers {target_peers} --execution-endpoint http://localhost:8551 --execution-jwt /tmp/jwt.hex &"""
 
-LIGHTHOUSE_VC_CMD = """nice -n 19 lighthouse --debug-level info vc --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --init-slashing-protection --beacon-nodes http://{ip_address}:8000 --suggested-fee-recipient {acct_address} &"""
+LIGHTHOUSE_VC_CMD = """lighthouse --debug-level info vc --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --init-slashing-protection --beacon-nodes http://{ip_address}:8000 --suggested-fee-recipient {acct_address} --http &"""
 
 LIGHTHOUSE_BOOTNODE_CMD = """lighthouse boot_node --testnet-dir /tmp/local-testnet/testnet --port 30305 --listen-address {ip_address} --disable-packet-filter --network-dir /tmp/local-testnet/bootnode &"""
 
@@ -473,6 +473,7 @@ class EthereumServer(Server):
     __is_bootnode: bool
     __bootnode_http_port: int
     __beacon_bootnode_http_port: int
+    __beacon_peer_counts:int
     __smart_contract: SmartContract
     __accounts: List[EthAccount]
     __accounts_info: List[Tuple[int, str, str]]
@@ -505,6 +506,7 @@ class EthereumServer(Server):
         self.__id = id
         self.__is_bootnode = False
         self.__is_beacon_validator = False
+        self.__beacon_peer_counts = 5
         self.__beacon_validator_count = 100
         self.__bootnode_http_port = 8088
         self.__smart_contract = None
@@ -540,6 +542,9 @@ class EthereumServer(Server):
         @returns geth command. 
         """
         geth_start_command = GethCommandTemplates['base'].format(node_id=self.__id, datadir=self.__data_dir, syncmode=self.__syncmode.value, snapshot=self.__snapshot)
+
+        if self._consensus_mechanism == ConsensusMechanism.POW:
+            geth_start_command = "nice -n 19 " + geth_start_command
 
         if self.__no_discover:
             geth_start_command += GethCommandTemplates['nodiscover']
@@ -653,7 +658,7 @@ class EthereumServer(Server):
             if beacon_setup_node == '':
                 beacon_setup_node = self.getBeaconSetupNodeIp()
             bootnode_start_command = ""
-            bc_start_command = LIGHTHOUSE_BN_CMD.format(eth_id=self.getId(),ip_address=addr, target_peers=3)
+            bc_start_command = LIGHTHOUSE_BN_CMD.format(eth_id=self.getId(),ip_address=addr, target_peers=self.__beacon_peer_counts)
             vc_start_command = ""
             if self.__is_bootnode:
                 bootnode_start_command = LIGHTHOUSE_BOOTNODE_CMD.format(ip_address=addr)
@@ -1031,6 +1036,10 @@ class EthereumServer(Server):
 
     def setBaseAccountBalance(self, balance:int):
         self.__accounts_info[0] = (balance, "admin", None)
+        return self
+
+    def setBeaconPeerCounts(self, peer_counts:int):
+        self.__beacon_peer_counts = peer_counts
         return self
 
 
