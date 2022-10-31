@@ -1255,29 +1255,8 @@ class EthereumService(Service):
     def getBeaconSetupNodeIp(self) -> str:
         return self.__beacon_setup_node_address
 
-    def setDisplayName(self, node:Node, server: EthereumServer):
-        displayName = 'Ethereum-{consensus}-{id}{role}'
-        if node.getDisplayName() != None: 
-            return
-        else:
-            consensus = server.getConsensusMechanism().name
-            id = server.getId()
-            role = ""
-            if server.isStartMiner():
-                if consensus == "POW":
-                    role += "-Miner"
-                else:
-                    role += "-Signer"
-            if server.isBootNode():
-                role += "-BootNode"
-            node.setDisplayName(displayName.format(consensus=consensus, id=id, role=role))
-
-
-
     def _doConfigure(self, node: Node, server: EthereumServer):
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
-
-        self.setDisplayName(node, server)
 
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()

@@ -558,6 +558,15 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
 
         return self.__classes
+    
+    def setClasses(self, classes:list) -> list:
+        """!
+        @brief Set service of current node
+        
+        @returns self for chaining API calls. 
+        """
+        self.__classes = classes
+        return self
 
     def setLabel(self, key:str, value:str) -> Node:
         """!
@@ -802,6 +811,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         if node.getDisplayName() != None: self.setDisplayName(node.getDisplayName())
         if node.getDescription() != None: self.setDescription(node.getDescription())
+        if node.getClasses() != None: self.setClasses(node.getClasses())
         
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for p in node.getPersistentStorages(): self.addPersistentStorage(p)
