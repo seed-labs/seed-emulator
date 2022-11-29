@@ -5,3 +5,4 @@ from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Dnssec import Dnssec
 from .Mpls import Mpls
+from .Scion import Scion
