@@ -127,7 +127,7 @@ eth = EthereumService()
 docker = Docker()
 asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
-TERMINAL_TOTAL_DIFFICULTY=50
+TERMINAL_TOTAL_DIFFICULTY=20
 
 i = 1
 for asn in asns:
@@ -135,41 +135,43 @@ for asn in asns:
         
         e:EthereumServer = eth.install("eth{}".format(i)).setConsensusMechanism(ConsensusMechanism.POA)    
         e.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
+        e.appendClassName('Ethereum-POA-{}'.format(i))
+
         e.setBeaconPeerCounts(10)
         e.unlockAccounts()
-        e.setBeaconSetupNodeIp('10.150.0.99:8090')
         e.enableGethHttp()
-
-        # if i in range(1,5):
-        #     e.enableGethHttp()
-        #     emu.getVirtualNode("eth{}".format(i)).addPortForwarding(8545+(i-1), e.getGethHttpPort())
-
-        e.enableGethHttp()
+        
         if asn == asns[0]:
             if id == 0:
                 e.setBootNode(True)
                 e.createAccount(balance=32*pow(10,18), password = "admin")
                 e.setBaseAccountBalance(balance=32*pow(10,18)*(4*hosts_total+5))
+        if asn in [152, 162]:
+            if id == 0:
+                e.enablePOSValidatorAtRunning()
+            if id == 1:
+                e.enablePOSValidatorAtRunning(is_mananual=True)
 
         if asn in [151,153,154,160]:
-            e.enablePOSValidator(True) 
-            e.startMiner()       
-                
+            e.enablePOSValidatorAtGenesis() 
+            e.startMiner()
+        
         emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POA-{}'.format(i))
         emu.addBinding(Binding('eth{}'.format(i), filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         
         i = i+1
         
-# ###################################################
-# # Beacon Setup Node 
-# asn150 = base.getAutonomousSystem(150)
-# asn150.createHost('beacon_setup_host').joinNetwork('net0', address="10.150.0.99")
-# beacon_setup_node:EthereumServer = eth.install('eth99999', EthereumServerTypes.BEACON_SETUP_NODE).setConsensusMechanism(ConsensusMechanism.POA)
-# beacon_setup_node.enableGethHttp()
-# beacon_setup_node.enablePoS(terminal_total_difficulty)
-# beacon_setup_node.unlockAccounts()
-# emu.getVirtualNode('eth99999').setDisplayName('Ethereum-POA-99999')
-# emu.addBinding(Binding('eth99999', filter=Filter(asn=150, nodeName='beacon_setup_host')))
+###################################################
+# Beacon Setup Node 
+asn150 = base.getAutonomousSystem(150)
+asn150.createHost('beacon_setup_host').joinNetwork('net0', address="10.150.0.99")
+beacon_setup_node:EthereumServer = eth.install('eth99999').setConsensusMechanism(ConsensusMechanism.POA)
+beacon_setup_node.setBeaconSetupNode()
+beacon_setup_node.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
+
+emu.getVirtualNode('eth99999'.format(i)).setDisplayName('Ethereum-Beacon-Setup')
+emu.addBinding(Binding('eth99999', filter=Filter(asn=150, nodeName='beacon_setup_host')))
+
 
 # Add layers to the emulator
 emu.addLayer(base)
@@ -181,19 +183,14 @@ emu.addLayer(eth)
 
 emu.render()
 
+docker.addImage(DockerImage('rafaelawon/seedemu-lighthouse-base', [], local=False), priority=-1)
+docker.addImage(DockerImage('rafaelawon/seedemu-lcli-base', [], local=False), priority=-2)
+
+beacon_nodes = base.getNodesByName('host')
+for beacon in beacon_nodes:
+   docker.setImageOverride(beacon, 'rafaelawon/seedemu-lighthouse-base')
+
+beacon_setup = base.getNodesByName('beacon_setup_host')
+docker.setImageOverride(beacon_setup[0], 'rafaelawon/seedemu-lcli-base')
+
 emu.compile(docker, './output', override = True)
-
-os.system('cp ./z_start.sh ./output/')
-
-BEACON_SETUP_NODE_COMMAND_SH = """\
-#!/bin/bash
-
-rm -rf beacon-node/
-rm -rf hnode_150_beacon-setup-node/
-./beacon-setup-node.py {} '{}' {}
-"""
-f = open("beacon-setup-node.sh", "w")
-f.write(BEACON_SETUP_NODE_COMMAND_SH.format(TERMINAL_TOTAL_DIFFICULTY, ",".join(eth.getValidatorIds()),eth.getBootNodes(ConsensusMechanism.POA)[0].split(":")[0]))
-f.close()
-
-os.system("chmod +x beacon-setup-node.sh")

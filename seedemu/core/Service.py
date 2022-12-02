@@ -13,6 +13,11 @@ class Server(Printable):
 
     The Server class is the handler for installed services.
     """
+    __class_names: list
+
+    def __init__(self):
+        super().__init__()
+        self.__class_names = []
 
     def install(self, node: Node):
         """!
@@ -22,6 +27,23 @@ class Server(Printable):
         """
         raise NotImplementedError('install not implemented')
 
+    def getClassNames(self):
+        return self.__class_names
+    
+    def appendClassName(self, class_name:str):
+        """!
+        @brief Append Class Name
+        The method called by User. 
+
+        @param class_name class name.
+
+        @return self.
+        """
+
+        self.__class_names.append(class_name)
+
+        return self
+        
 class Service(Layer):
     """!
     @brief Service base class.
@@ -53,6 +75,15 @@ class Service(Layer):
         @param server server.
         """
         server.install(node)
+
+    def _doSetClassNames(self, node:Node, server:Server) -> Node:
+        """!
+        @brief set the class names on node. 
+
+        @param node node.
+        @param server server.
+        """
+        server.setClassNames(node)
 
     def _doConfigure(self, node: Node, server: Server):
         """!
@@ -125,6 +156,8 @@ class Service(Layer):
     def render(self, emulator: Emulator):
         for (server, node) in self.__targets:
             self._doInstall(node, server)
+            for className in server.getClassNames():
+                node.appendClassName(className)
         
     def getConflicts(self) -> List[str]:
         """!
