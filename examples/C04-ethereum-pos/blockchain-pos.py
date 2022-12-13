@@ -2,9 +2,6 @@
 # encoding: utf-8
 
 from seedemu import *
-import os
-
-from seedemu.services.EthereumService import EthereumServerTypes
 
 def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int, hosts_total: int):
 
@@ -23,12 +20,6 @@ def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int, hosts_total: 
        name = 'host_{}'.format(counter)
        host = stub_as.createHost(name)
        host.joinNetwork(network)
-
-#n = len(sys.argv)
-#if n < 2:
-#    print("Please provide the number of hosts per networks")
-#    exit(0)
-#hosts_total = int(sys.argv[1])
 
 hosts_total = int(3)
 
@@ -129,48 +120,48 @@ asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
 TERMINAL_TOTAL_DIFFICULTY=20
 
+###################################################
+# Ethereum Node
+
 i = 1
 for asn in asns:
-    for id in range(hosts_total):
-        
+    for id in range(hosts_total):        
+        # Create POA Ethereum nodes
         e:EthereumServer = eth.install("eth{}".format(i)).setConsensusMechanism(ConsensusMechanism.POA)    
-        e.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
-        e.appendClassName('Ethereum-POA-{}'.format(i))
-
-        e.setBeaconPeerCounts(10)
+        # Create Docker Container Label named 'Ethereum-POS-i'
+        e.appendClassName('Ethereum-POS-{}'.format(i))
+        # unlock execution layer(Geth) accounts to enable sign & send transaction via http api.
         e.unlockAccounts()
+        # enable Geth to communicate with geth node via http
         e.enableGethHttp()
+
+        # enable PoS
+        e.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
+        e.setBeaconPeerCounts(10)
         
-        if asn == asns[0]:
+        if asn == 150:
             if id == 0:
+                e.setBeaconSetupNode()
+            if id == 1:
                 e.setBootNode(True)
-                e.createAccount(balance=32*pow(10,18), password = "admin")
-                e.setBaseAccountBalance(balance=32*pow(10,18)*(4*hosts_total+5))
         if asn in [152, 162]:
             if id == 0:
                 e.enablePOSValidatorAtRunning()
             if id == 1:
-                e.enablePOSValidatorAtRunning(is_mananual=True)
+                e.enablePOSValidatorAtRunning(is_manual=True)
 
         if asn in [151,153,154,160]:
-            e.enablePOSValidatorAtGenesis() 
+            e.enablePOSValidatorAtGenesis()
             e.startMiner()
         
-        emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POA-{}'.format(i))
+        if e.isBeaconSetupNode():
+            emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-BeaconSetup')
+        else:
+            emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POS-{}'.format(i))
+
         emu.addBinding(Binding('eth{}'.format(i), filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         
         i = i+1
-        
-###################################################
-# Beacon Setup Node 
-asn150 = base.getAutonomousSystem(150)
-asn150.createHost('beacon_setup_host').joinNetwork('net0', address="10.150.0.99")
-beacon_setup_node:EthereumServer = eth.install('eth99999').setConsensusMechanism(ConsensusMechanism.POA)
-beacon_setup_node.setBeaconSetupNode()
-beacon_setup_node.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
-
-emu.getVirtualNode('eth99999'.format(i)).setDisplayName('Ethereum-Beacon-Setup')
-emu.addBinding(Binding('eth99999', filter=Filter(asn=150, nodeName='beacon_setup_host')))
 
 
 # Add layers to the emulator
@@ -190,7 +181,7 @@ beacon_nodes = base.getNodesByName('host')
 for beacon in beacon_nodes:
    docker.setImageOverride(beacon, 'rafaelawon/seedemu-lighthouse-base')
 
-beacon_setup = base.getNodesByName('beacon_setup_host')
-docker.setImageOverride(beacon_setup[0], 'rafaelawon/seedemu-lcli-base')
+beacon_setup = base.getNodeByAsnAndName(150, 'host_0')
+docker.setImageOverride(beacon_setup, 'rafaelawon/seedemu-lcli-base')
 
 emu.compile(docker, './output', override = True)

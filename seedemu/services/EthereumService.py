@@ -377,6 +377,10 @@ class EthAccount():
     def getAllocBalance(self) -> str:
         return self.__alloc_balance
 
+    def setAllocBalance(self, balance:int):
+        self.__alloc_balance = balance
+        return self
+
     def getKeyStoreFileName(self) -> str:
         return self.__keystore_filename
 
@@ -692,7 +696,7 @@ class EthereumServer(Server):
         # launch Ethereum process.
         node.appendStartCommand(self.__generateGethStartCommand(), True) 
         
-        if self.__enable_pos: # and (not self.__is_beacon_setup_node):
+        if self.__enable_pos: 
             self.__install_beacon(node, eth)
                   
         if self.__smart_contract != None :
@@ -889,6 +893,12 @@ class EthereumServer(Server):
         self.__terminal_total_difficulty = terminal_total_difficulty
         return self
 
+    def isPoSEnabled(self) -> bool:
+        """!
+        @brief returns whether a node enabled PoS or not
+        """
+        return self.__enable_pos
+
     def enableGethHttp(self) -> EthereumServer:
         """!
         @brief setting a geth to enable http connection 
@@ -1043,9 +1053,9 @@ class EthereumServer(Server):
     def isValidatorAtGenesis(self):
         return self.__is_beacon_validator_at_genesis
 
-    def enablePOSValidatorAtRunning(self, is_mananual:bool=False):
+    def enablePOSValidatorAtRunning(self, is_manual:bool=False):
         self.__is_beacon_validator_at_running = True
-        self.__is_manual_deposit_for_validator = is_mananual
+        self.__is_manual_deposit_for_validator = is_manual
         return self
 
     def isBeaconSetupNode(self):
@@ -1312,6 +1322,17 @@ class EthereumService(Service):
         if self.__save_state:
             self._createSharedFolder()
         super().configure(emulator)
+        for (vnode, server) in self._pending_targets.items():
+            node = emulator.getBindingFor(vnode)
+            if server.isBootNode() and server.isPoSEnabled():
+                ifaces = node.getInterfaces()
+                assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
+                addr = str(ifaces[0].getAddress())
+                bootnode_ip = self.getBootNodes(server.getConsensusMechanism())[0].split(":")[0]
+                if addr == bootnode_ip:
+                    validator_count = len(self.getValidatorIds())
+                    index = self.__joined_accounts.index(server._getAccounts()[0])
+                    self.__joined_accounts[index].setAllocBalance(balance=32*pow(10,18)*(validator_count+1))
         
     def _createSharedFolder(self):
         if path.exists(self.__save_path):

@@ -203,6 +203,11 @@ class Base(Layer, Graphable):
                 if host_name.startswith(name):
                     nodes.append(_as.getHost(host_name))
         return nodes
+    
+    def getNodeByAsnAndName(self, asn:id, name:str) -> Node:
+        _as = self.__ases[asn]
+        node = _as.getHost(name)
+        return node
         
     def _doCreateGraphs(self, emulator: Emulator):
         graph = self._addGraph('Layer 2 Connections', False)
