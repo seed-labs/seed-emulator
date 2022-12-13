@@ -135,7 +135,7 @@ for asn in asns:
         
         e:EthereumServer = eth.install("eth{}".format(i)).setConsensusMechanism(ConsensusMechanism.POA)    
         e.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
-        e.appendClassName('Ethereum-POA-{}'.format(i))
+        e.appendClassName('Ethereum-POS-{}'.format(i))
 
         e.setBeaconPeerCounts(10)
         e.unlockAccounts()
@@ -156,7 +156,7 @@ for asn in asns:
             e.enablePOSValidatorAtGenesis() 
             e.startMiner()
         
-        emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POA-{}'.format(i))
+        emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POS-{}'.format(i))
         emu.addBinding(Binding('eth{}'.format(i), filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         
         i = i+1
