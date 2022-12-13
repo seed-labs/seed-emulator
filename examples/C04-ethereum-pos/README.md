@@ -8,6 +8,7 @@ blockchain with proof-of-authority and then transits to proof-of-stake.
 With proof-of-authority, we can allocate a balance to specific accounts
 and we do not need to wait for miner to accumulate enough Ethereum to
 stake for proof-of-stake consensus.
+
 ![](pics/POS-1.png)
 
 ## Table of contents
@@ -21,6 +22,109 @@ stake for proof-of-stake consensus.
 ### [3. Understanding How Beaconchain Conducts PoS Mechanism](#3-understanding-pos-implementation-in-ethereum)
 
 # 1. Emulate `The Merge`
+
+## 1.1 Internet Emulator Base
+
+In this example, we emulate the internet with 10 stub ASes.
+
+ASes : [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
+
+Each stub AS has 3 hosts, and the emulator has 30 hosts in total
+
+For example, the ips of 3 hosts in each AS 150 and AS 151 will be assigned as below
+
+- 10.150.0.71
+- 10.150.0.72
+- 10.150.0.73
+- 10.151.0.71
+- 10.151.0.72
+- 10.151.0.73
+
+## 1.2 Creating Ethereum POA Node
+
+We create the Ethereum POA nodes at the Ethereum layer.
+
+```python
+eth = EthereumService()
+asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
+
+for asn in asns:
+    for id in range(hosts_total):
+        # Create POA Ethereum nodes
+        e:EthereumServer = eth.install("eth{}".format(i)).setConsensusMechanism(ConsensusMechanism.POA)
+        # Create Docker Container Label named 'Ethereum-POS-i'
+        e.appendClassName('Ethereum-POS-{}'.format(i))
+        # unlock execution layer(Geth) accounts to enable sign & send transaction via http api.
+        e.unlockAccounts()
+        # enable Geth to communicate with geth node via http
+        e.enableGethHttp()
+```
+
+## 1.3 Enable POS
+
+To make a consensus transition from POA to POS, we need to
+set a node to enable POS. When enable POS, we can set `terminal_total_difficulty`, which is the value to designate when the Merge is happen. In POA, difficulty is tend to increase by 2 for every one block. And in this example, a block
+is sealed for every 15 seconds. If we set `terminal_total_difficulty` to 20,
+the Ethereum blockchain will keep POA for approximately 150sec (20/2\*15) and then conduct the Merge to change the consensus mechanism to POS.
+The reason why we keep POA for a while is we have deploy a `deposit contract` to stake for validators before the switch to POS.
+
+```python
+e.enablePoS(terminal_total_difficulty=20)
+```
+
+## 1.4 Creating Beacon Setup Node
+
+In order to run Ethereum PoS, you need to run not only the mainnet (execution layer) but also the beacon chain (consensus layer). In this example, we use Geth software
+to run execution layer and Lighthouse to run consensus layer.
+To run a beacon node, config information is needed.  
+Like we set genesis.yaml when running Geth, genesis configurations is needed when running Lighthouse. A Beacon Setup Node take care of configuration files which is needed to run Beacon Node. The following code shows how to create beacon setup node.
+The Beacon Setup Node is essential to run POS.
+
+```python
+e.enablePoS(terminal_total_difficulty=20)
+e.setBeaconSetupNode()
+```
+
+The role of a Beacon Setup Node
+
+- generate config files for beaconchain
+- create validator keys
+- deposit for validators that is enabled at the point of Genesis.
+- distributes all those data to the other nodes.
+
+A Beacon Setup Node does not run any ethereum node. It's only role is to generate
+and distribute data for beacon nodes. To deposit for validators, it makes an api request to the Geth node and send transactions. By default, it will connect to one of node that runs the bootnode.
+
+# 1.5 Add Validator
+
+There are 2 ways to add validator in this emulator
+
+- Enable validator at genesis
+- Enable validator at running
+
+We can specifies which validators will be activated from the genesis state as well.
+This way is to enable validator at genesis.
+But once the beaconchain is initiated, there is no way to add validators in genesis configurations.
+To be a validator, we need to stake 32 Ethereum and wait until the validator is activated.
+The activation requires a specific amount of time to get the validator's stake information
+from the execution layer, verify the data, and wait until the validator to be activated.
+We emulate this by enable validator at running.
+
+```python
+e.enablePOSValidatorAtGenesis()
+e.enablePOSValidatorAtRunning(is_manual=False)
+e.enablePOSValidatorAtRunning(is_manual=True)
+```
+
+If we use the method: `enablePOSValidatorAtRunning()` with parameter `is_manual=False`,
+A new validator will be added automatically once the emulator runs.
+However, if `is_manual` is set to `True`, we need to run deposit.sh script by manual.
+All other tasks will be executed but deposit action. It will create a validator key and
+run validator node with lighthouse. But it will not be activated until we stake 32 Ethereum
+by executing the `deposit.sh` script under `/tmp` folder. The following example shows how to
+run the `deposit.sh`.
+
+![](pics/POS-3.png)
 
 # 2. Introduction to PoS
 
@@ -47,6 +151,7 @@ In proof-of-stake, the biggest difference from the proof-of-work is that there i
 ## 3.2 Time Period
 
 ![](https://ethos.dev/assets/images/posts/beacon-chain/Beacon-Chain-Slots-and-Epochs.png.webp)
+
 (source : https://ethos.dev/beacon-chain )
 
 - 1 Epoch = 32 Slots
@@ -63,6 +168,7 @@ A validator needs two keys. One key is a wallet address key which is used in the
 Only the validator key with 32 Ethereum stakes can conduct those works. To stake 32 Ethereum, a validator should send 32 Ethereum to the deposit contract with the information of the validator key using the wallet key in the execution layer. Then the 32 Ethereum is staked in the deposit contract. Then, the validator also need to run validator node with that validator key. As the beacon chain can retrieve the data of the deposit contract in mainnet through http apis, it can recognize which validator key has staked 32 Ethereum from the running validator nodes.
 
 ![](https://storage.googleapis.com/ethereum-hackmd/upload_f76a1c2499efcaabcf2aa167986a06d3.png)
+
 (source : https://notes.ethereum.org/7CFxjwMgQSWOHIxLgJP2Bw)
 
 Once the beacon chain recognizes the deposit, the validator is added to the queue and waits for the validator activation. After the activation process, the validator becomes to join in validating and attesting a block. Waiting for the beacon chain to recognize the execution layer block containing g the deposit takes generally 4 to 7.4 hours. This time is decided by the value of “ETH1_FOLLOW_DISTANCE” and “ETH1_VOTING_PERIOD” (We need to keep in mind those variables as we will modify that value later when emulating the Ethereum pos blockchain.). And every 4 validators in the queue will be activated per one epoch. The activation of 4 validators takes generally 6.4 minutes.
@@ -93,6 +199,7 @@ An attester casts for two votes. One is for the LMD GHOST vote and the other one
 And the Casper FFG vote is a vote for the checkpoint in its current epoch called target and includes a prior checkpoint called source. “Checkpoint” is a block in the first slot of an epoch and if there is no such block, then the checkpoint is the preceding most recent block.
 
 ![](https://ethos.dev/assets/images/posts/beacon-chain/Beacon-Chain-Checkpoints.jpg.webp)
+
 (source : https://ethos.dev/beacon-chain)
 
 - FFG vote of Validators at Epoch N
