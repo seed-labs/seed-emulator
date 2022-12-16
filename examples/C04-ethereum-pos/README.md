@@ -13,33 +13,33 @@ stake for proof-of-stake consensus.
 
 ## Table of contents
 
-### [1. Emulate The Merge](#1-emulate-the-merge)
+### [1. Emulate The Merge](#1-emulate-the-merge-1)
 
-#### [1.1 Internet Emulator Base](#11-internet-emulator-base)
+#### [1.1 Internet Emulator Base](#11-internet-emulator-base-1)
 
-#### [1.2 Creating Ethereum POA Node](#12-creating-ethereum-poa-node)
+#### [1.2 Creating Ethereum POA Node](#12-creating-ethereum-poa-node-1)
 
-#### [1.3 Enable POS](#13-enable-pos)
+#### [1.3 Enable POS](#13-enable-pos-1)
 
-#### [1.4 Creating Beacon Setup Node](#14-creating-beacon-setup-node)
+#### [1.4 Creating Beacon Setup Node](#14-creating-beacon-setup-node-1)
 
-#### [1.5 Add Validator](#15-add-validator)
+#### [1.5 Add Validator](#15-add-validator-1)
 
-### [2. Introduction to PoS](#2-introduction-to-pos)
+### [2. Introduction to PoS](#2-introduction-to-pos-1)
 
-#### [2.1 Ethereum Upgrades](#21-ethereum-upgrades)
+#### [2.1 Ethereum Upgrades](#21-ethereum-upgrades-1)
 
-### [3. Understanding How Beaconchain Conducts PoS Mechanism](#3-understanding-pos-implementation-in-ethereum)
+### [3. Understanding How Beaconchain Conducts PoS Mechanism](#3-understanding-pos-implementation-in-ethereum-1)
 
-#### [3.1 Beacon Chain](#31-beacon-chain)
+#### [3.1 Beacon Chain](#31-beacon-chain-1)
 
-#### [3.2 Time Period](#32-time-period)
+#### [3.2 Time Period](#32-time-period-1)
 
-#### [3.3 Staking and Validator Activation](#33-staking-and-validator-activation)
+#### [3.3 Staking and Validator Activation](#33-staking-and-validator-activation-1)
 
-#### [3.4 The Roles of Validators](#34-the-roles-of-validators)
+#### [3.4 The Roles of Validators](#34-the-roles-of-validators-1)
 
-#### [3.5 Gasper](#35-gasper)
+#### [3.5 Gasper](#35-gasper-1)
 
 # 1. Emulate `The Merge`
 
