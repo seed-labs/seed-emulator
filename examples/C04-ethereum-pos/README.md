@@ -1,4 +1,4 @@
-# Ethereum PoS - The Merge
+# How to run Ethereum PoS private network - The Merge
 
 In this example, we show how the SEED Emulator to emulate
 The Merge that is an upgrade to proof-of-stake.
