@@ -180,7 +180,7 @@ GethCommandTemplates['http'] = '''\
 --http --http.addr 0.0.0.0 --http.port {gethHttpPort} --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique,engine '''
 
 GethCommandTemplates['ws'] = '''\
---ws --ws.addr 0.0.0.0 --ws.port {gethWsPort} --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique,engine '''
+--ws --ws.addr 0.0.0.0 --ws.port {gethWsPort} --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique,engine,admin,txpool,les '''
 
 GethCommandTemplates['pos'] = '''\
 --authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.vhosts "*" --authrpc.jwtsecret /tmp/jwt.hex --override.terminaltotaldifficulty {difficulty} '''
@@ -306,6 +306,19 @@ class Genesis():
             signerAddresses = signerAddresses + account.getAddress()[2:]
         
         self.__genesis["extraData"] = GenesisFileTemplates['POA_extra_data'].format(signer_addresses=signerAddresses)
+
+        return self
+
+    def setGasLimit(self, gasLimit:int) -> Genesis:
+        """!
+        @brief set GasLimit (the limit of gas cost per block)
+
+        @param int
+        
+        @returns self, for chaining API calls
+        """
+
+        self.__genesis["gasLimit"] = hex(gasLimit) 
 
         return self
 
@@ -1082,6 +1095,18 @@ class EthereumServer(Server):
 
     def setBeaconSetupHttpPort(self, port:int):
         self.__beacon_setup_http_port = port
+        return self
+
+    def setGasLimitPerBlock(self, gasLimit:int):
+        """!
+        @brief set GasLimit at Genesis 
+        (the limit of gas cost per block)
+
+        @param int
+        
+        @returns self, for chaining API calls
+        """
+        self.__genesis.setGasLimit(gasLimit)
         return self
 
 
