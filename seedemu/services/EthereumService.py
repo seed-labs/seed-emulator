@@ -177,7 +177,7 @@ GethCommandTemplates['unlock'] = '''\
 --unlock "{accounts}" --password "/tmp/eth-password" '''
 
 GethCommandTemplates['http'] = '''\
---http --http.addr 0.0.0.0 --http.port {gethHttpPort} --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique,engine '''
+--http --http.addr 0.0.0.0 --http.port {gethHttpPort} --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique,engine,admin,txpool,les '''
 
 GethCommandTemplates['ws'] = '''\
 --ws --ws.addr 0.0.0.0 --ws.port {gethWsPort} --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique,engine,admin,txpool,les '''
