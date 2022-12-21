@@ -309,6 +309,19 @@ class Genesis():
 
         return self
 
+    def setGasLimit(self, gasLimit:int) -> Genesis:
+        """!
+        @brief set GasLimit (the limit of gas cost per block)
+
+        @param int
+        
+        @returns self, for chaining API calls
+        """
+
+        self.__genesis["gasLimit"] = hex(gasLimit) 
+
+        return self
+
 
 class EthAccount():
     """
@@ -1082,6 +1095,18 @@ class EthereumServer(Server):
 
     def setBeaconSetupHttpPort(self, port:int):
         self.__beacon_setup_http_port = port
+        return self
+
+    def setGasLimitPerBlock(self, gasLimit:int):
+        """!
+        @brief set GasLimit at Genesis 
+        (the limit of gas cost per block)
+
+        @param int
+        
+        @returns self, for chaining API calls
+        """
+        self.__genesis.setGasLimit(gasLimit)
         return self
 
 

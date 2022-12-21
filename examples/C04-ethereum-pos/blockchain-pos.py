@@ -115,7 +115,7 @@ ebgp.addPrivatePeerings(104, [4],  [163], PeerRelationship.Provider)
 ebgp.addPrivatePeerings(104, [12], [164], PeerRelationship.Provider)
 
 eth = EthereumService()
-docker = Docker()
+docker = Docker(clientEnabled=True)
 asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
 TERMINAL_TOTAL_DIFFICULTY=20
@@ -138,6 +138,7 @@ for asn in asns:
         # enable PoS
         e.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
         e.setBeaconPeerCounts(10)
+        e.setGasLimitPerBlock(210000)
         
         if asn == 150:
             if id == 0:
