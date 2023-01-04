@@ -93,6 +93,18 @@ class Genesis():
 
         return self
 
+    def setChainId(self, chainId:int) -> Genesis:
+        """!
+        @brief set ChainId
+        @param int
+        @returns self, for chaining API calls
+        """
+
+        self.__genesis["config"]["chainId"] = chainId
+
+        return self
+
+
 class EthAccount():
     """
     @brief Ethereum Local Account.
