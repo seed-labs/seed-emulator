@@ -295,7 +295,7 @@ class EthereumService(Service):
 
     def _createServer(self, blockchain: Blockchain = None) -> Server:
         self.__serial += 1
-        assert blockchain is not None
+        assert blockchain != None, 'EthereumService::_createServer(): create server using Blockchain::createNode() not EthereumService::install()'.format()
         consensus = blockchain.getConsensusMechanism()
         if consensus == ConsensusMechanism.POA:
             return PoAServer(self.__serial, blockchain)
