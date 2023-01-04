@@ -9,6 +9,7 @@ class ConsensusMechanism(Enum):
     POA = 'POA'
     # POW for Proof of Work
     POW = 'POW'
+    POS = 'POS'
 
 class Syncmode(Enum):
     """!
