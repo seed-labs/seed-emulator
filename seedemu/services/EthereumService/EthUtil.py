@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from os import path
 from .EthTemplates import GenesisFileTemplates
+from web3 import Web3
 
 class Genesis():
     """!
@@ -53,6 +54,23 @@ class Genesis():
 
             assert balance >= 0, "Genesis::allocateBalance: balance cannot have a negative value. Requested Balance Value : {}".format(account.getAllocBalance())
             self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
+
+        return self
+
+    def addExternalAccount(self, address:str, balance:int) -> Genesis:
+        """!
+        @brief allocate balance to an external account by setting alloc field of genesis file.
+
+        @param address : external account's address to allocate balance
+
+        @param balance
+
+        @returns self, for chaining calls.
+        """
+
+        assert balance >= 0, "Genesis::allocateBalance: balance cannot have a negative value. Requested Balance Value : {}".format(balance)
+        checksum_address = Web3.toChecksumAddress(address)
+        self.__genesis["alloc"][checksum_address[2:]] = {"balance":"{}".format(balance)}
 
         return self
 

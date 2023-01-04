@@ -189,6 +189,21 @@ class Blockchain:
         eth = self.__eth_service
         self.__pending_targets.append(vnode)
         return eth.install(vnode, self)
+    
+    def addExternalAccount(self, address: str, balance: int) -> Blockchain:
+        """!
+        @brief allocate balance to an external account by setting alloc field of genesis file.
+
+        @param address : external account's address to allocate balance
+
+        @param balance
+
+        @returns self, for chaining calls.
+        """
+
+        self.__genesis.addExternalAccount(address, balance)
+        
+        return self
 
     def _log(self, message: str) -> None:
         """!
