@@ -3,7 +3,7 @@ from seedemu.core import Node, Server
 from .EthEnum import *
 from .EthUtil import *
 from typing import Tuple, List
-from seedemu.services import EthereumService
+from seedemu.services.EthereumService import *
 from .EthTemplates import EthServerFileTemplates, GethCommandTemplates
 from .EthTemplates.LighthouseCommandTemplates import *
 
@@ -110,6 +110,8 @@ class EthereumServer(Server):
         node.appendClassName('EthereumService')
         node.setLabel('node_id', self.getId())
         node.setLabel('consensus', self._consensus_mechanism.value)
+        node.setLabel('blockchain', self._blockchain.getChainName())
+        node.setLabel('chain_id', self._blockchain.getChainId())
 
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has no interfaces'.format(node.getAsn(), node.getName())
