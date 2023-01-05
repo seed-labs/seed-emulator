@@ -26,3 +26,10 @@ class EthereumServerTypes(Enum):
     ETH_NODE = 'eth_node'
     BEACON_SETUP_NODE = 'beacon_setup_node'
 
+class EthUnit(Enum):
+    """!
+    @brief ethereum unit type enum
+    """
+    WEI = 1
+    GWEI = pow(10, 9)
+    ETHER = pow(10, 18)
