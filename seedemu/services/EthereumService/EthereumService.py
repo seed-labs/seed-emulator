@@ -18,13 +18,17 @@ class Blockchain:
     __genesis: Genesis
     __eth_service: EthereumService
     __boot_node_addresses: Dict[ConsensusMechanism, List[str]]
-    __joined_accounts: List[EthAccount]
-    __joined_signer_accounts: List[EthAccount]
+    __joined_accounts: List[SEEDAccount]
+    __joined_signer_accounts: List[SEEDAccount]
     __validator_ids: List[str]
     __beacon_setup_node_address: str
     __chain_id:int
     __pending_targets:list
     __chain_name:str
+    __local_key_index:int 
+    __mnemonic:str
+    __total_accounts_per_node: int
+    __account_balance: int
 
     def __init__(self, service:EthereumService, chainName: str, consensus:ConsensusMechanism):
         self.__eth_service = service
@@ -37,6 +41,9 @@ class Blockchain:
         self.__validator_ids = []
         self.__beacon_setup_node_address = ''
         self.__pending_targets = []
+        self.__mnemonic = "great awesome fun seed security lab protect system network prevent attack future"
+        self.__total_accounts_per_node = 1
+        self.__account_balance = 32 * EthUnit.ETHER.value
 
     def _doConfigure(self, node:Node, server:EthereumServer):
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
@@ -83,10 +90,10 @@ class Blockchain:
                 if addr == bootnode_ip:
                     validator_count = len(self.getValidatorIds())
                     index = self.__joined_accounts.index(server._getAccounts()[0])
-                    self.__joined_accounts[index].setAllocBalance(balance=32*pow(10,18)*(validator_count+1))
+                    self.__joined_accounts[index].balance = 32*pow(10,18)*(validator_count+1)
         
         if self.__consensus == ConsensusMechanism.POA:
-            self.__genesis.allocateBalance(self.getAllAccounts())
+            self.__genesis.addAccounts(self.getAllAccounts())
             self.__genesis.setSigner(self.getAllSignerAccounts())
     
     def getBootNodes(self) -> List[str]:
@@ -190,7 +197,7 @@ class Blockchain:
         self.__pending_targets.append(vnode)
         return eth.install(vnode, self)
     
-    def addExternalAccount(self, address: str, balance: int) -> Blockchain:
+    def addLocalAccount(self, address: str, balance: int, unit:EthUnit=EthUnit.ETHER) -> Blockchain:
         """!
         @brief allocate balance to an external account by setting alloc field of genesis file.
 
@@ -200,16 +207,32 @@ class Blockchain:
 
         @returns self, for chaining calls.
         """
-
-        self.__genesis.addExternalAccount(address, balance)
+        balance = balance * unit.value
+        self.__genesis.addLocalAccount(address, balance)
         
         return self
+
+    def addLocalAccountFromMnemonic(self, mnemonic:str, total:int, balance:int, password:str="admin", unit:EthUnit=EthUnit.ETHER):
+        balance = balance * unit.value
+        mnemonic_account = MnemonicAccounts(eth_id=0, mnemonic = mnemonic, balance=balance, password=password)
+        mnemonic_account.restoreAccounts(total, balance)
+        self.__genesis.addAccounts(mnemonic_account.getAccounts())
 
     def getChainName(self) -> str:
         return self.__chain_name
 
     def getChainId(self) -> int:
         return self.__chain_id
+
+    def setEthAccountParameters(self, mnemonic:str, balance:int, total_per_node:int):
+        self.__mnemonic = mnemonic
+        self.__account_balance = balance
+        self.__total_accounts_per_node = total_per_node
+
+        return self
+
+    def getEthAccountParameters(self):
+        return self.__mnemonic, self.__account_balance, self.__total_accounts_per_node
 
 
     def _log(self, message: str) -> None:

@@ -5,6 +5,6 @@
 from __future__ import annotations
 from .EthTemplates import *
 from .EthEnum import ConsensusMechanism, Syncmode, EthereumServerTypes
-from .EthUtil import Genesis, EthAccount, SmartContract
+from .EthUtil import Genesis, SEEDAccount, SmartContract, EthAccount
 from .EthereumServer import *
 from .EthereumService import *

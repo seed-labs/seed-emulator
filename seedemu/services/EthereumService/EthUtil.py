@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from os import path
 from .EthTemplates import GenesisFileTemplates
 from web3 import Web3
-
+from sys import stderr
 class Genesis():
     """!
     @brief Genesis manage class
@@ -40,7 +40,7 @@ class Genesis():
         """
         return json.dumps(self.__genesis)
 
-    def allocateBalance(self, accounts:List[EthAccount]) -> Genesis:
+    def addAccounts(self, accounts:List[SEEDAccount]) -> Genesis:
         """!
         @brief allocate balance to account by setting alloc field of genesis file.
 
@@ -49,17 +49,17 @@ class Genesis():
         @returns self, for chaining calls.
         """
         for account in accounts:
-            address = account.getAddress()
-            balance = account.getAllocBalance()
+            address = account.address
+            balance = account.balance
 
-            assert balance >= 0, "Genesis::allocateBalance: balance cannot have a negative value. Requested Balance Value : {}".format(account.getAllocBalance())
+            assert balance >= 0, "Genesis::addAccounts: balance cannot have a negative value. Requested Balance Value : {}".format(account.getBalance())
             self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
 
         return self
 
-    def addExternalAccount(self, address:str, balance:int) -> Genesis:
+    def addLocalAccount(self, address:str, balance:int) -> Genesis:
         """!
-        @brief allocate balance to an external account by setting alloc field of genesis file.
+        @brief allocate balance to a local account by setting alloc field of genesis file.
 
         @param address : external account's address to allocate balance
 
@@ -74,7 +74,7 @@ class Genesis():
 
         return self
 
-    def setSigner(self, accounts:List[EthAccount]) -> Genesis:
+    def setSigner(self, accounts:List[SEEDAccount]) -> Genesis:
         """!
         @brief set initial signers by setting extraData field of genesis file. 
         
@@ -92,7 +92,7 @@ class Genesis():
         signerAddresses = ''
 
         for account in accounts:
-            signerAddresses = signerAddresses + account.getAddress()[2:]
+            signerAddresses = signerAddresses + account.address[2:]
         
         self.__genesis["extraData"] = GenesisFileTemplates['POA_extra_data'].format(signer_addresses=signerAddresses)
 
@@ -122,21 +122,82 @@ class Genesis():
 
         return self
 
+LOCAL_ACCOUNT_KEY_DERIVATION_PATH = "m/44'/60'/0'/0/{index}" 
+ETH_ACCOUNT_KEY_DERIVATION_PATH   = "m/44'/60'/{id}'/0/{index}" 
+class MnemonicAccounts():
+    __base_balance:int
+    __mnemonic:str
+    __index:int
+    __eth_id:int
+    __accounts:List[SEEDAccount]
+
+    def __init__(self, eth_id:int, mnemonic:str=None, balance:int=10, password="admin"):
+        from eth_account import Account
+        self.lib_eth_account = Account
+        self.lib_eth_account.enable_unaudited_hdwallet_features()
+
+        self.__eth_id = eth_id
+        self.__mnemonic = "great awesome fun seed security lab protect system network prevent attack future" if mnemonic is None else mnemonic
+        self.__base_balance = balance
+        self.__index = 0
+        self.__accounts = []
+        self.__password = password
+
+    def createAccounts(self, total:int, balance:int=-1):
+        for i in range(total):
+            self.createAccount(balance)
+
+    def createAccount(self, balance:int=-1):
+        self._log('creating eth account...')
+        balance = self.__base_balance if balance < 0 else balance
+        acct = self.lib_eth_account.from_mnemonic(self.__mnemonic, account_path=ETH_ACCOUNT_KEY_DERIVATION_PATH.format(id=self.__eth_id, index=self.__index))
+        address = Web3.toChecksumAddress(acct.address)
+        keystore_content = json.dumps(acct.encrypt(password='admin'))
+        datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
+        keystore_filename = "UTC--"+datastr+"--"+address
+        self.__accounts.append(SEEDAccount(address, balance, keystore_filename, keystore_content, self.__password))
+        self.__index += 1
+
+    def restoreAccounts(self, total, balance:int=-1):
+        for i in range(total):
+            self._log('restoring eth account from mnemonic...')
+            balance = self.__base_balance if balance < 0 else balance
+            acct = self.lib_eth_account.from_mnemonic(self.__mnemonic, account_path=ETH_ACCOUNT_KEY_DERIVATION_PATH.format(id=self.__eth_id, index=self.__index))
+            address = Web3.toChecksumAddress(acct.address)
+            self.__accounts.append(SEEDAccount(address, balance, "", "", ""))
+            self.__index += 1
+
+
+    def getAccounts(self):
+        return self.__accounts
+    
+    def _log(self, message: str) -> None:
+        """!
+        @brief Log to stderr.
+        """
+        print("==== MnemonicAccounts: {}".format(message), file=stderr)
+
+class SEEDAccount():
+    address: str    
+    keystore_content: str  
+    keystore_filename:str  
+    balance: int
+    password: str
+
+    def __init__(self, address:str, balance:int, keystore_filename:str, keystore_content:str,  password:str):
+        self.address = address
+        self.keystore_content = keystore_content
+        self.keystore_filename = keystore_filename
+        self.balance = balance
+        self.password = password
 
 class EthAccount():
     """
     @brief Ethereum Local Account.
     """
+    __account: SEEDAccount
 
-    __address: str    
-    __keystore_content: str  
-    __keystore_filename:str  
-    __alloc_balance: int
-    __password: str
-    
-
-
-    def __init__(self, alloc_balance:int = 0,password:str = "admin", keyfilePath: str = None):
+    def __init__(self, balance:int = 0,password:str = "admin", keyfilePath: str = None):
         """
         @brief create a Ethereum Local Account when initialize
         @param alloc_balance the balance need to be alloc
@@ -146,32 +207,25 @@ class EthAccount():
         from eth_account import Account
         self.lib_eth_account = Account
 
-        self.__account = self.__importAccount(keyfilePath=keyfilePath, password=password) if keyfilePath else self.__createAccount()
-        self.__address = self.__account.address
+        account = self.__importAccount(keyfilePath=keyfilePath, password=password) if keyfilePath else self.__createAccount()
+        address = account.address
 
-        assert alloc_balance >= 0, "EthAccount::__init__: balance cannot have a negative value. Requested Balance Value : {}".format(alloc_balance)
-            
-        self.__alloc_balance = alloc_balance
-        self.__password = password
+        assert balance >= 0, "EthAccount::__init__: balance cannot have a negative value. Requested Balance Value : {}".format(balance)
 
-        encrypted = self.encryptAccount()
-        self.__keystore_content = json.dumps(encrypted)
+        encrypted = self.encryptAccount(account)
+        keystore_content = json.dumps(encrypted)
         
         # generate the name of the keyfile
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
-        self.__keystore_filename = "UTC--"+datastr+"--"+encrypted["address"]
+        keystore_filename = "UTC--"+datastr+"--"+encrypted["address"]
 
-    def __validate_balance(self, alloc_balance:int):
-        """
-        validate balance
-        It only allow positive decimal integer
-        """
-        assert alloc_balance>=0 , "Invalid Balance Range: {}".format(alloc_balance)
+        self.__account = SEEDAccount(address, balance, keystore_filename, keystore_content, password)
     
     def __importAccount(self, keyfilePath: str, password = "admin"):
         """
         @brief import account from keyfile
         """
+        self._log('importing eth account...')
         assert path.exists(keyfilePath), "EthAccount::__importAccount: keyFile does not exist. path : {}".format(keyfilePath)
         f = open(keyfilePath, "r")
         keyfileContent = f.read()
@@ -182,32 +236,23 @@ class EthAccount():
         """
         @brief create account
         """
+        self._log('creating eth account...')
         return  self.lib_eth_account.create()
 
-    def getAddress(self) -> str:
-        return self.__address
-
-    def getAllocBalance(self) -> str:
-        return self.__alloc_balance
-
-    def setAllocBalance(self, balance:int):
-        self.__alloc_balance = balance
-        return self
-
-    def getKeyStoreFileName(self) -> str:
-        return self.__keystore_filename
-
-    def encryptAccount(self):
+    def encryptAccount(self, account):
         while True:
-            keystore = self.lib_eth_account.encrypt(self.__account.key, password=self.__password)
+            keystore = self.lib_eth_account.encrypt(account.key, password=self.__account.password)
             if len(keystore['crypto']['cipherparams']['iv']) == 32:
                 return keystore
-                
-    def getKeyStoreContent(self) -> str:
-        return self.__keystore_content
 
-    def getPassword(self) -> str:
-        return self.__password
+    def getAccount(self):
+        return self.__account
+
+    def _log(self, message: str) -> None:
+        """!
+        @brief Log to stderr.
+        """
+        print("==== EthAccount: {}".format(message), file=stderr)
 
 
 class SmartContract():

@@ -17,8 +17,9 @@ class EthereumServer(Server):
     _is_bootnode: bool
     _bootnode_http_port: int
     _smart_contract: SmartContract
-    _accounts: List[EthAccount]
-    _accounts_info: List[Tuple[int, str, str]]
+    _accounts: List[SEEDAccount]
+    #_accounts_info: List[Tuple[int, str, str]]
+    _mnemonic_accounts: MnemonicAccounts
     _consensus_mechanism: ConsensusMechanism
 
     _custom_geth_binary_path: str
@@ -53,7 +54,10 @@ class EthereumServer(Server):
         self._bootnode_http_port = 8088
         self._smart_contract = None
         self._accounts = []
-        self._accounts_info = [(0, "admin", None)]
+        #self._accounts_info = [(0, "admin", None)]
+        mnemonic, balance, total = self._blockchain.getEthAccountParameters()
+        self._mnemonic_accounts = MnemonicAccounts(self._id, mnemonic=mnemonic, balance=balance)
+        self._mnemonic_accounts.createAccounts(total)
         self._consensus_mechanism = blockchain.getConsensusMechanism()
 
         self._custom_geth_binary_path = None
@@ -72,6 +76,7 @@ class EthereumServer(Server):
         self._miner_thread = 1
         self._coinbase = ""
         self._geth_start_command = ""
+        
 
     def generateGethStartCommand(self):
         """!
@@ -94,7 +99,7 @@ class EthereumServer(Server):
         if self._unlock_accounts:
             accounts = []
             for account in self._accounts:
-                accounts.append(account.getAddress())
+                accounts.append(account.address)
             self._geth_start_command += GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
 
     
@@ -125,8 +130,8 @@ class EthereumServer(Server):
         account_passwords = []
 
         for account in self._accounts:
-            node.setFile("/tmp/keystore/"+account.getKeyStoreFileName(), account.getKeyStoreContent())
-            account_passwords.append(account.getPassword())
+            node.setFile("/tmp/keystore/"+account.keystore_filename, account.keystore_content)
+            account_passwords.append(account.password)
 
         node.setFile('/tmp/eth-password', '\n'.join(account_passwords))
 
@@ -148,7 +153,7 @@ class EthereumServer(Server):
         
         # copy keystore to the proper folder
         for account in self._accounts:
-            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.getKeyStoreFileName()))
+            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename))
 
         if self._is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
@@ -356,35 +361,36 @@ class EthereumServer(Server):
 
         return self._enable_ws
 
-    def createAccount(self, balance:int=0, password:str="admin") -> EthereumServer:
+    def createAccount(self, balance:int, unit:EthUnit=EthUnit.ETHER) -> EthereumServer:
         """
         @brief call this api to create new accounts
 
         @param balance the balance to be allocated to the account
-        @param password the password to encrypt private key
+        @param unit EthUnit (Default: EthUnit.Ether)
 
         @returns self, for chaining API calls.
 
         """
 
-        self._accounts_info.append((balance, password, None))
+        balance = balance * unit.value
+        self._mnemonic_accounts.createAccount(balance)
 
         return self
 
     
-    def createAccounts(self, number: int = 1, balance: int=0, password: str = "admin") -> EthereumServer:
+    def createAccounts(self, total:int, balance:int, unit:EthUnit=EthUnit.ETHER) -> EthereumServer:
         """
         @brief Call this api to create new accounts
 
-        @param number the number of account need to create
+        @param total a total number of account need to create
         @param balance the balance need to be allocated to the accounts
-        @param password the password of account for the Ethereum client
+        @param unit EthUnit (Default: EthUnit.Ether)
 
         @returns self, for chaining API calls.
         """
 
-        for _ in range(number):    
-            self._accounts_info.append((balance, password, None))
+        balance = balance * unit.value
+        self._mnemonic_accounts.createAccounts(total, balance)
 
         return self
 
@@ -394,34 +400,27 @@ class EthereumServer(Server):
 
         @returns self, for chaining API calls.
         """
-        for balance, password, keyfilePath in self._accounts_info:
-            if keyfilePath:
-                eth._log('importing eth account...')
-            else:
-                eth._log('creating eth account...')
-
-            account = EthAccount(alloc_balance=balance,password=password, keyfilePath=keyfilePath)
-            self._accounts.append(account)
+        self._accounts.extend(self._mnemonic_accounts.getAccounts())
 
         return self    
     
     def importAccount(self, keyfilePath:str, password:str = "admin", balance: int = 0) -> EthereumServer:
         
         assert path.exists(keyfilePath), "EthereumServer::importAccount: keyFile does not exist. path : {}".format(keyfilePath)
-
-        self._accounts_info.append((balance, password, keyfilePath))
+        account = SEEDAccount(balance=balance,password=password, keyfilePath=keyfilePath).getAccount()
+        self._accounts.append(account)
         return self
     
-    def getAccounts(self) -> List[Tuple(int, str, str)]:
-        """
-        @brief Call this api to get the accounts for this node
+    # def getAccounts(self) -> List[Tuple(int, str, str)]:
+    #     """
+    #     @brief Call this api to get the accounts for this node
 
-        @returns accounts_info.
-        """
+    #     @returns accounts_info.
+    #     """
 
-        return self._accounts_info
+    #     return self._accounts_info
 
-    def _getAccounts(self) -> List[EthAccount]:
+    def _getAccounts(self) -> List[SEEDAccount]:
         """
         @brief Call this api to get the accounts for this node
         
@@ -481,7 +480,7 @@ class PoAServer(EthereumServer):
         """
 
         super().__init__(id, blockchain)
-        self._accounts_info = [(32*pow(10, 18), "admin", None)]
+        #self._accounts_info = [(32*pow(10, 18), "admin", None)]
     
     def generateGethStartCommand(self):
         super().generateGethStartCommand()
@@ -611,9 +610,9 @@ class PoSServer(PoAServer):
     def getBeaconSetupNodeIp(self):
         return self.__beacon_setup_node_ip
 
-    def setBaseAccountBalance(self, balance:int):
-        self._accounts_info[0] = (balance, "admin", None)
-        return self
+    # def setBaseAccountBalance(self, balance:int):
+    #     self._accounts_info[0] = (balance, "admin", None)
+    #     return self
 
     def setBeaconPeerCounts(self, peer_counts:int):
         self.__beacon_peer_counts = peer_counts
