@@ -224,9 +224,9 @@ class Blockchain:
     def getChainId(self) -> int:
         return self.__chain_id
 
-    def setEthAccountParameters(self, mnemonic:str, balance:int, total_per_node:int):
+    def setEthAccountParameters(self, mnemonic:str, balance:int, total_per_node:int, unit:EthUnit=EthUnit.ETHER):
         self.__mnemonic = mnemonic
-        self.__account_balance = balance
+        self.__account_balance = balance * unit.value
         self.__total_accounts_per_node = total_per_node
 
         return self
