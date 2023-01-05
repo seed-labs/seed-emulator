@@ -205,6 +205,13 @@ class Blockchain:
         
         return self
 
+    def getChainName(self) -> str:
+        return self.__chain_name
+
+    def getChainId(self) -> int:
+        return self.__chain_id
+
+
     def _log(self, message: str) -> None:
         """!
         @brief Log to stderr.
