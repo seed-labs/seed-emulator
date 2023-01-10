@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .EthEnum import ConsensusMechanism
-from .EthUtil import Genesis, EthAccount
+from .EthUtil import Genesis, EthAccount, AccountStructure
 from .EthereumServer import *
 
 from os import mkdir, path, makedirs, rename
@@ -18,19 +18,21 @@ class Blockchain:
     __genesis: Genesis
     __eth_service: EthereumService
     __boot_node_addresses: Dict[ConsensusMechanism, List[str]]
-    __joined_accounts: List[SEEDAccount]
-    __joined_signer_accounts: List[SEEDAccount]
+    __joined_accounts: List[AccountStructure]
+    __joined_signer_accounts: List[AccountStructure]
     __validator_ids: List[str]
     __beacon_setup_node_address: str
     __chain_id:int
     __pending_targets:list
     __chain_name:str
-    __local_key_index:int 
-    __mnemonic:str
+    __emu_mnemonic:str
     __total_accounts_per_node: int
-    __account_balance: int
+    __emu_account_balance: int
+    __local_mnemonic:str
+    __local_accounts_total:int
+    __local_account_balance:int
 
-    def __init__(self, service:EthereumService, chainName: str, consensus:ConsensusMechanism):
+    def __init__(self, service:EthereumService, chainName: str, chainId: int, consensus:ConsensusMechanism):
         self.__eth_service = service
         self.__consensus = consensus
         self.__chain_name = chainName
@@ -41,9 +43,13 @@ class Blockchain:
         self.__validator_ids = []
         self.__beacon_setup_node_address = ''
         self.__pending_targets = []
-        self.__mnemonic = "great awesome fun seed security lab protect system network prevent attack future"
+        self.__emu_mnemonic = "great awesome fun seed security lab protect system network prevent attack future"
         self.__total_accounts_per_node = 1
-        self.__account_balance = 32 * EthUnit.ETHER.value
+        self.__emu_account_balance = 32 * EthUnit.ETHER.value
+        self.__local_mnemonic = "great amazing fun seed lab protect network system security prevent attack future"
+        self.__local_accounts_total = 5
+        self.__local_account_balance = 10 * EthUnit.ETHER.value
+        self.__chain_id = chainId
 
     def _doConfigure(self, node:Node, server:EthereumServer):
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
@@ -79,6 +85,9 @@ class Blockchain:
             makedirs('{}/{}/{}/ethash'.format(save_path, self.__chain_name, server.getId()))
 
     def configure(self, emulator:Emulator, pending_targets:Dict[str, Server]):
+        localAccounts = EthAccount().createLocalAccountsFromMnemonic(mnemonic=self.__local_mnemonic, balance=self.__local_account_balance, total=self.__local_accounts_total)
+        self.__genesis.addAccounts(localAccounts)
+        self.__genesis.setChainId(self.__chain_id)
         for vnode in self.__pending_targets:
             node = emulator.getBindingFor(vnode)
             server = pending_targets[vnode]
@@ -189,7 +198,6 @@ class Blockchain:
         """
 
         self.__chain_id = chainId
-        self.__genesis.setChainId(self.__chain_id)
         return self
 
     def createNode(self, vnode: str) -> EthereumServer:
@@ -212,11 +220,12 @@ class Blockchain:
         
         return self
 
-    def addLocalAccountFromMnemonic(self, mnemonic:str, total:int, balance:int, password:str="admin", unit:EthUnit=EthUnit.ETHER):
+    # in addition to default local accounts 
+    def addLocalAccountsFromMnemonic(self, mnemonic:str, total:int, balance:int, unit:EthUnit=EthUnit.ETHER):
         balance = balance * unit.value
-        mnemonic_account = MnemonicAccounts(eth_id=0, mnemonic = mnemonic, balance=balance, password=password)
-        mnemonic_account.restoreAccounts(total, balance)
-        self.__genesis.addAccounts(mnemonic_account.getAccounts())
+        ethAccount = EthAccount()
+        mnemonic_account = ethAccount.createLocalAccountsFromMnemonic(mnemonic = mnemonic, balance=balance, total=total)
+        self.__genesis.addAccounts(mnemonic_account)
 
     def getChainName(self) -> str:
         return self.__chain_name
@@ -224,16 +233,20 @@ class Blockchain:
     def getChainId(self) -> int:
         return self.__chain_id
 
-    def setEthAccountParameters(self, mnemonic:str, balance:int, total_per_node:int, unit:EthUnit=EthUnit.ETHER):
-        self.__mnemonic = mnemonic
-        self.__account_balance = balance * unit.value
+    def setEmuAccountParameters(self, mnemonic:str, balance:int, total_per_node:int, unit:EthUnit=EthUnit.ETHER):
+        self.__emu_mnemonic = mnemonic
+        self.__emu_account_balance = balance * unit.value
         self.__total_accounts_per_node = total_per_node
-
         return self
 
-    def getEthAccountParameters(self):
-        return self.__mnemonic, self.__account_balance, self.__total_accounts_per_node
+    def getEmuAccountParameters(self):
+        return self.__emu_mnemonic, self.__emu_account_balance, self.__total_accounts_per_node
 
+    def setLocalAccountParameters(self, mnemonic:str, balance:int, total:int, unit:EthUnit=EthUnit.ETHER):
+        self.__local_mnemonic = mnemonic
+        self.__local_account_balance = balance * unit.value
+        self.__local_accounts_total = total
+        return self
 
     def _log(self, message: str) -> None:
         """!
@@ -253,8 +266,7 @@ class EthereumService(Service):
     __save_state: bool
     __save_path: str
     __override: bool
-
-
+    __blockchain_id: int
     __serial: int
 
     def __init__(self, saveState: bool = False, savePath: str = './eth-states', override:bool=False):
@@ -279,7 +291,7 @@ class EthereumService(Service):
         self.__save_path = savePath
         self.__override = override
         self.__blockchains = {}
-        
+        self.__blockchain_id = 1337
 
     def getName(self):
         return 'EthereumService'
@@ -357,8 +369,11 @@ class EthereumService(Service):
 
         return self._pending_targets[vnode]
 
-    def createBlockchain(self, chainName:str, consensus: ConsensusMechanism):
-        blockchain = Blockchain(self, chainName, consensus)
+    def createBlockchain(self, chainName:str, consensus: ConsensusMechanism, chainId: int = -1):
+        if chainId < 0 : 
+            chainId = self.__blockchain_id
+            self.__blockchain_id += 1
+        blockchain = Blockchain(self, chainName, chainId, consensus)
         self.__blockchains[chainName] = blockchain
         return blockchain
 
