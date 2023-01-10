@@ -137,7 +137,6 @@ class AccountStructure():
         self.password = password
 
 # Make the class stateless.
-EthAccount().importAccount()
 class EthAccount():
     """
     @brief Ethereum Local Account.
