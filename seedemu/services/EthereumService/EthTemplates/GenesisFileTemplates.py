@@ -5,7 +5,7 @@ GenesisFileTemplates: Dict[str, str] = {}
 GenesisFileTemplates['POA'] = '''\
 {
     "config": {
-        "chainId": 10,
+        "chainId": 1337,
         "homesteadBlock": 0,
         "eip150Block": 0,
         "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -55,7 +55,7 @@ GenesisFileTemplates['POW'] = '''\
         "gasUsed": "0x0",
         "baseFeePerGas": null,
         "config": {
-            "chainId": 10,
+            "chainId": 1337,
             "homesteadBlock": 0,
             "eip150Block": 0,
             "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",

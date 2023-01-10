@@ -17,9 +17,8 @@ class EthereumServer(Server):
     _is_bootnode: bool
     _bootnode_http_port: int
     _smart_contract: SmartContract
-    _accounts: List[SEEDAccount]
-    #_accounts_info: List[Tuple[int, str, str]]
-    _mnemonic_accounts: MnemonicAccounts
+    _accounts: List[AccountStructure]
+    _mnemonic_accounts: List[AccountStructure]
     _consensus_mechanism: ConsensusMechanism
 
     _custom_geth_binary_path: str
@@ -55,9 +54,8 @@ class EthereumServer(Server):
         self._smart_contract = None
         self._accounts = []
         #self._accounts_info = [(0, "admin", None)]
-        mnemonic, balance, total = self._blockchain.getEthAccountParameters()
-        self._mnemonic_accounts = MnemonicAccounts(self._id, mnemonic=mnemonic, balance=balance)
-        self._mnemonic_accounts.createAccounts(total)
+        mnemonic, balance, total = self._blockchain.getEmuAccountParameters()
+        self._mnemonic_accounts = EthAccount().createEmulatorAccountsFromMnemonic(self._id, mnemonic=mnemonic, balance=balance, total=total, password="admin")
         self._consensus_mechanism = blockchain.getConsensusMechanism()
 
         self._custom_geth_binary_path = None
@@ -373,8 +371,6 @@ class EthereumServer(Server):
         """
 
         balance = balance * unit.value
-        self._mnemonic_accounts.createAccount(balance)
-
         return self
 
     
@@ -390,7 +386,7 @@ class EthereumServer(Server):
         """
 
         balance = balance * unit.value
-        self._mnemonic_accounts.createAccounts(total, balance)
+        self._mnemonic_accounts.createEmulatorAccounts(total, balance)
 
         return self
 
@@ -400,14 +396,14 @@ class EthereumServer(Server):
 
         @returns self, for chaining API calls.
         """
-        self._accounts.extend(self._mnemonic_accounts.getAccounts())
+        self._accounts.extend(self._mnemonic_accounts)
 
         return self    
     
     def importAccount(self, keyfilePath:str, password:str = "admin", balance: int = 0) -> EthereumServer:
         
         assert path.exists(keyfilePath), "EthereumServer::importAccount: keyFile does not exist. path : {}".format(keyfilePath)
-        account = SEEDAccount(balance=balance,password=password, keyfilePath=keyfilePath).getAccount()
+        account = EthAccount().importAccount(balance=balance,password=password, keyfilePath=keyfilePath)
         self._accounts.append(account)
         return self
     
@@ -420,7 +416,7 @@ class EthereumServer(Server):
 
     #     return self._accounts_info
 
-    def _getAccounts(self) -> List[SEEDAccount]:
+    def _getAccounts(self) -> List[AccountStructure]:
         """
         @brief Call this api to get the accounts for this node
         
