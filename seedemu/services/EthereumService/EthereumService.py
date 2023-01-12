@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from .EthEnum import ConsensusMechanism
+from .EthEnum import ConsensusMechanism, EthUnit
 from .EthUtil import Genesis, EthAccount, AccountStructure
-from .EthereumServer import *
-
+from .EthereumServer import EthereumServer, PoAServer, PoWServer, PoSServer
 from os import mkdir, path, makedirs, rename
 from seedemu.core import Node, Service, Server, Emulator
 from typing import Dict, List
@@ -31,12 +30,13 @@ class Blockchain:
     __local_mnemonic:str
     __local_accounts_total:int
     __local_account_balance:int
+    __terminal_total_difficulty:int
 
     def __init__(self, service:EthereumService, chainName: str, chainId: int, consensus:ConsensusMechanism):
         self.__eth_service = service
         self.__consensus = consensus
         self.__chain_name = chainName
-        self.__genesis = Genesis(self.__consensus)
+        self.__genesis = Genesis(ConsensusMechanism.POA) if self.__consensus == ConsensusMechanism.POS else Genesis(self.__consensus)
         self.__boot_node_addresses = []
         self.__joined_accounts = []
         self.__joined_signer_accounts = []
@@ -50,6 +50,7 @@ class Blockchain:
         self.__local_accounts_total = 5
         self.__local_account_balance = 10 * EthUnit.ETHER.value
         self.__chain_id = chainId
+        self.__terminal_total_difficulty = 20
 
     def _doConfigure(self, node:Node, server:EthereumServer):
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
@@ -84,7 +85,8 @@ class Blockchain:
             makedirs('{}/{}/{}/ethereum'.format(save_path, self.__chain_name, server.getId()))
             makedirs('{}/{}/{}/ethash'.format(save_path, self.__chain_name, server.getId()))
 
-    def configure(self, emulator:Emulator, pending_targets:Dict[str, Server]):
+    def configure(self, emulator:Emulator):
+        pending_targets = self.__eth_service.getPendingTargets()
         localAccounts = EthAccount().createLocalAccountsFromMnemonic(mnemonic=self.__local_mnemonic, balance=self.__local_account_balance, total=self.__local_accounts_total)
         self.__genesis.addAccounts(localAccounts)
         self.__genesis.setChainId(self.__chain_id)
@@ -101,7 +103,7 @@ class Blockchain:
                     index = self.__joined_accounts.index(server._getAccounts()[0])
                     self.__joined_accounts[index].balance = 32*pow(10,18)*(validator_count+1)
         
-        if self.__consensus == ConsensusMechanism.POA:
+        if self.__consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] :
             self.__genesis.addAccounts(self.getAllAccounts())
             self.__genesis.setSigner(self.getAllSignerAccounts())
     
@@ -170,6 +172,9 @@ class Blockchain:
         self.__terminal_total_difficulty = terminal_total_difficulty
         return self
 
+    def getTerminalTotalDifficulty(self) -> int:
+        return self.__terminal_total_difficulty
+        
     def isPoSEnabled(self) -> bool:
         """!
         @brief returns whether a node enabled PoS or not
@@ -200,10 +205,10 @@ class Blockchain:
         self.__chain_id = chainId
         return self
 
-    def createNode(self, vnode: str) -> EthereumServer:
+    def createNode(self, vnode: str):
         eth = self.__eth_service
         self.__pending_targets.append(vnode)
-        return eth.install(vnode, self)
+        return eth.installByBlockchain(vnode, self)
     
     def addLocalAccount(self, address: str, balance: int, unit:EthUnit=EthUnit.ETHER) -> Blockchain:
         """!
@@ -311,7 +316,7 @@ class EthereumService(Service):
             self._createSharedFolder()
         super().configure(emulator)
         for blockchain in self.__blockchains.values():
-            blockchain.configure(emulator, self._pending_targets)
+            blockchain.configure(emulator)
         
     def _createSharedFolder(self):
         if path.exists(self.__save_path):
@@ -343,28 +348,28 @@ class EthereumService(Service):
             return PoAServer(self.__serial, blockchain)
         if consensus == ConsensusMechanism.POW:
             return PoWServer(self.__serial, blockchain)
+        if consensus == ConsensusMechanism.POS:
+            return PoSServer(self.__serial, blockchain)
 
-    # def install(self, vnode: str, blockchain: Blockchain) -> Server:
-    #     """!
-    #     @brief install the service on a node identified by given name.
-    #     """
-    #     if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
-
-    #     s = self._createServer(blockchain)
-    #     self._pending_targets[vnode] = s
-
-    #     return self._pending_targets[vnode]
-
-    def install(self, vnode: str, *args) -> Server:
+    def installByBlockchain(self, vnode: str, blockchain: Blockchain) -> Server:
         """!
         @brief install the service on a node identified by given name.
         """
         if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
-        if len(args) == 0:
-            s = self._createServer()
-        elif len(args) == 1:
-            blockchain = args[0]
-            s = self._createServer(blockchain)
+
+        s = self._createServer(blockchain)
+        self._pending_targets[vnode] = s
+
+        return self._pending_targets[vnode]
+
+    def install(self, vnode: str) -> Server:
+        """!
+        @brief install the service on a node identified by given name.
+        """
+        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
+        
+        s = self._createServer()
+        
         self._pending_targets[vnode] = s
 
         return self._pending_targets[vnode]

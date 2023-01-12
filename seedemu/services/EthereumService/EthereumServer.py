@@ -2,7 +2,7 @@ from __future__ import annotations
 from seedemu.core import Node, Server
 from .EthEnum import *
 from .EthUtil import *
-from typing import Tuple, List
+from typing import List
 from seedemu.services.EthereumService import *
 from .EthTemplates import EthServerFileTemplates, GethCommandTemplates
 from .EthTemplates.LighthouseCommandTemplates import *
@@ -519,7 +519,7 @@ class PoSServer(PoAServer):
 
         self.__is_beacon_setup_node = False
         self.__beacon_setup_http_port = 8090
-        self.__terminal_total_difficulty = 20
+        self.__terminal_total_difficulty = self._blockchain.getTerminalTotalDifficulty()
         self.__is_beacon_validator_at_genesis = False
         self.__is_beacon_validator_at_running = False
         self.__is_manual_deposit_for_validator = False
@@ -555,7 +555,7 @@ class PoSServer(PoAServer):
             if not self.__is_manual_deposit_for_validator:
                 validator_deposit_sh = "/tmp/deposit.sh"
         if self.__is_beacon_validator_at_genesis or self.__is_beacon_validator_at_running:
-            vc_start_command = LIGHTHOUSE_VC_CMD.format(eth_id=self.getId(), ip_address=addr, acct_address=self._accounts[0].getAddress())
+            vc_start_command = LIGHTHOUSE_VC_CMD.format(eth_id=self.getId(), ip_address=addr, acct_address=self._accounts[0].address)
             
         node.setFile('/tmp/beacon-setup-node', beacon_setup_node)
         node.setFile('/tmp/beacon-bootstrapper', EthServerFileTemplates['beacon_bootstrapper'].format( 
@@ -580,8 +580,8 @@ class PoSServer(PoAServer):
             beacon_setup_node.install(node, self._blockchain)
             return 
         
-        if self.__enable_pos: 
-            self.__install_beacon(node, eth)
+        super().install(node,eth)
+        self.__install_beacon(node, eth)
 
     def enablePOSValidatorAtGenesis(self):
         self.__is_beacon_validator_at_genesis = True
@@ -709,7 +709,7 @@ while true; do {{
         @brief Install the service.
         """
         
-        validator_ids = self.__blockchain.getValidatorIds()
+        validator_ids = blockchain.getValidatorIds()
         validator_counts = len(validator_ids)
 
         bootnode_ip = blockchain.getBootNodes()[0].split(":")[0]
