@@ -70,7 +70,7 @@ class Blockchain:
         
         if len(server._getAccounts()) > 0:
             self.__joined_accounts.extend(server._getAccounts())
-            if self.__consensus == ConsensusMechanism.POA and server.isStartMiner():
+            if self.__consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] and server.isStartMiner():
                 self.__joined_signer_accounts.append(server._getAccounts()[0])
 
         if self.__consensus == ConsensusMechanism.POS and server.isValidatorAtGenesis():
