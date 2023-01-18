@@ -54,9 +54,8 @@ class EthereumServer(Server):
         self._bootnode_http_port = 8088
         self._smart_contract = None
         self._accounts = []
-        #self._accounts_info = [(0, "admin", None)]
         mnemonic, balance, total = self._blockchain.getEmuAccountParameters()
-        self._mnemonic_accounts = EthAccount().createEmulatorAccountsFromMnemonic(self._id, mnemonic=mnemonic, balance=balance, total=total, password="admin")
+        self._mnemonic_accounts = EthAccount.createEmulatorAccountsFromMnemonic(self._id, mnemonic=mnemonic, balance=balance, total=total, password="admin")
         self._consensus_mechanism = blockchain.getConsensusMechanism()
 
         self._custom_geth_binary_path = None
@@ -78,7 +77,7 @@ class EthereumServer(Server):
         self._geth_start_command = ""
         
 
-    def generateGethStartCommand(self):
+    def _generateGethStartCommand(self):
         """!
         @brief generate geth start commands from the properties. 
 
@@ -99,34 +98,17 @@ class EthereumServer(Server):
             for account in self._accounts:
                 accounts.append(account.address)
             self._geth_options['unlock'] = GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
-
         self._geth_start_command = GethCommandTemplates['base'].format(node_id=self._id, datadir=self._data_dir, syncmode=self._syncmode.value, snapshot=self._snapshot, option=self._geth_options)
         
-        # if self._no_discover:
-        #     self._geth_start_command += GethCommandTemplates['nodiscover']
-        # else:
-        #     self._geth_start_command += GethCommandTemplates['bootnodes']
-        # if self._enable_http:
-        #     self._geth_start_command += GethCommandTemplates['http'].format(gethHttpPort=self._geth_http_port)
-        # if self._enable_ws:
-        #     self._geth_start_command += GethCommandTemplates['ws'].format(gethWsPort=self._geth_ws_port)
-        # if self._custom_geth_command_option:
-        #     self._geth_start_command += self._custom_geth_command_option
-        # if self._unlock_accounts:
-        #     accounts = []
-        #     for account in self._accounts:
-        #         accounts.append(account.address)
-        #     self._geth_start_command += GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
-
-    
     def install(self, node: Node, eth: EthereumService):
         """!
         @brief ETH server installation step.
+        
         @param node node object
         @param eth reference to the eth service.
         @param allBootnode all-bootnode mode: all nodes are boot node.
+        
         """
-
 
         node.appendClassName('EthereumService')
         node.setLabel('node_id', self.getId())
@@ -381,7 +363,7 @@ class EthereumServer(Server):
         """
         @brief call this api to create new accounts
 
-        @param balance the balance to be allocated to the account
+        @param balance the balance to be allocated to the account.
         @param unit EthUnit (Default: EthUnit.Ether)
 
         @returns self, for chaining API calls.
@@ -394,11 +376,11 @@ class EthereumServer(Server):
     
     def createAccounts(self, total:int, balance:int, unit:EthUnit=EthUnit.ETHER) -> EthereumServer:
         """
-        @brief Call this api to create new accounts
+        @brief Call this api to create new accounts.
 
-        @param total a total number of account need to create
-        @param balance the balance need to be allocated to the accounts
-        @param unit EthUnit (Default: EthUnit.Ether)
+        @param total The total number of account need to create.
+        @param balance The balance to allocate to the accounts.
+        @param unit The unit of Ethereum. EthUnit (Default: EthUnit.Ether).
 
         @returns self, for chaining API calls.
         """
@@ -418,21 +400,22 @@ class EthereumServer(Server):
 
         return self    
     
-    def importAccount(self, keyfilePath:str, password:str = "admin", balance: int = 0) -> EthereumServer:
-        
+    def importAccount(self, keyfilePath:str, password:str = "admin", balance: int = 0, unit:EthUnit=EthUnit.ETHER) -> EthereumServer:
+        """
+        @brief Call this api to import an account.
+
+        @param keyfilePath The keyfile path to import.
+        @param password The password to decrypt the keyfile.
+        @param balance The balance to allocate to the account.
+
+        @returns self, for chaining API calls.
+        """
+
         assert path.exists(keyfilePath), "EthereumServer::importAccount: keyFile does not exist. path : {}".format(keyfilePath)
-        account = EthAccount().importAccount(balance=balance,password=password, keyfilePath=keyfilePath)
+        account = EthAccount.importAccount(balance=balance,password=password, keyfilePath=keyfilePath)
         self._accounts.append(account)
         return self
     
-    # def getAccounts(self) -> List[Tuple(int, str, str)]:
-    #     """
-    #     @brief Call this api to get the accounts for this node
-
-    #     @returns accounts_info.
-    #     """
-
-    #     return self._accounts_info
 
     def _getAccounts(self) -> List[AccountStructure]:
         """
@@ -458,6 +441,7 @@ class EthereumServer(Server):
     def startMiner(self) -> EthereumServer:
         """!
         @brief Call this api to start Miner in the node.
+
         @returns self, for chaining API calls.
         """
         self._start_mine = True
@@ -467,7 +451,7 @@ class EthereumServer(Server):
 
     def isStartMiner(self) -> bool:
         """!
-        @brief call this api to get startMiner status in the node.
+        @brief Call this api to get startMiner status in the node.
         
         @returns __start_mine status.
         """
@@ -489,36 +473,33 @@ class EthereumServer(Server):
 class PoAServer(EthereumServer):
     def __init__(self, id: int, blockchain: Blockchain):
         """!
-        @brief create new eth server.
-        @param id serial number of this server.
+        @brief Create new eth server.
+
+        @param id The serial number of this server.
         """
 
         super().__init__(id, blockchain)
-        #self._accounts_info = [(32*pow(10, 18), "admin", None)]
-    
-    def generateGethStartCommand(self):
-        # if self._start_mine:
-        #     assert len(self._accounts) > 0, 'EthereumServer::__generateGethStartCommand: To start mine, ethereum server need at least one account.'
-        #     assert self._unlock_accounts, 'EthereumServer::__generateGethStartCommand: To start mine in POA(clique), accounts should be unlocked first.'
-        #     self._geth_start_command += GethCommandTemplates['mine'].format(coinbase=self._coinbase, num_of_threads=self._miner_thread)
+        
+    def _generateGethStartCommand(self):
         if self._start_mine:
             assert len(self._accounts) > 0, 'EthereumServer::__generateGethStartCommand: To start mine, ethereum server need at least one account.'
             assert self._unlock_accounts, 'EthereumServer::__generateGethStartCommand: To start mine in POA(clique), accounts should be unlocked first.'
             self._geth_options['mine'] = GethCommandTemplates['mine'].format(coinbase=self._coinbase, num_of_threads=self._miner_thread)
-        super().generateGethStartCommand()
+        super()._generateGethStartCommand()
         
 
 class PoWServer(EthereumServer):
     def __init__(self, id:int, blockchain:Blockchain):
         """!
-        @brief create new eth server.
-        @param id serial number of this server.
+        @brief Create new eth server.
+
+        @param id The serial number of this server.
         """
 
         super().__init__(id, blockchain)
     
-    def generateGethStartCommand(self):
-        super().generateGethStartCommand()
+    def _generateGethStartCommand(self):
+        super()._generateGethStartCommand()
 
         self._geth_start_command = "nice -n 19 " + self._geth_start_command
         if self._start_mine:
@@ -533,8 +514,9 @@ class PoSServer(PoAServer):
 
     def __init__(self, id: int, blockchain:Blockchain):
         """!
-        @brief create new eth server.
-        @param id serial number of this server.
+        @brief Create new eth server.
+
+        @param id Serial number of this server.
         """
 
         super().__init__(id, blockchain)
@@ -547,18 +529,9 @@ class PoSServer(PoAServer):
         self.__is_manual_deposit_for_validator = False
         self.__beacon_peer_counts = 5
 
-    def generateGethStartCommand(self):
+    def _generateGethStartCommand(self):
         self._geth_options['pos'] = GethCommandTemplates['pos'].format(difficulty=self.__terminal_total_difficulty)
-        # if self._unlock_accounts:
-        #     accounts = []
-        #     for account in self._accounts:
-        #         accounts.append(account.address)
-        #     self._geth_start_command += GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
-        # # if self._start_mine:
-        #     assert len(self._accounts) > 0, 'EthereumServer::__generateGethStartCommand: To start mine, ethereum server need at least one account.'
-        #     assert self._unlock_accounts, 'EthereumServer::__generateGethStartCommand: To start mine in POA(clique), accounts should be unlocked first.'
-        #     self._geth_start_command += GethCommandTemplates['mine'].format(coinbase=self._coinbase, num_of_threads=self._miner_thread)
-        super().generateGethStartCommand()
+        super()._generateGethStartCommand()
         
     def __install_beacon(self, node:Node, eth:EthereumService):
         ifaces = node.getInterfaces()

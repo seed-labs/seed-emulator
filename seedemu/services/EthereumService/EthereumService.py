@@ -33,6 +33,16 @@ class Blockchain:
     __terminal_total_difficulty:int
 
     def __init__(self, service:EthereumService, chainName: str, chainId: int, consensus:ConsensusMechanism):
+        """!
+        @brief The Blockchain class initializer.
+
+        @param service The EthereumService that creates the Blockchain class instance.
+        @param chainName The name of the Blockchain to create.
+        @param chainid The chain id of the Blockchain to create.
+        @param consensus The consensus of the Blockchain to create (supports POA, POS, POW).
+
+        @returns An instance of The Blockchain class.
+        """
         self.__eth_service = service
         self.__consensus = consensus
         self.__chain_name = chainName
@@ -76,7 +86,7 @@ class Blockchain:
         if self.__consensus == ConsensusMechanism.POS and server.isValidatorAtGenesis():
             self.__validator_ids.append(str(server.getId()))
         
-        server.generateGethStartCommand()
+        server._generateGethStartCommand()
 
         if self.__eth_service.isSave():
             save_path = self.__eth_service.getSavePath()
@@ -87,8 +97,9 @@ class Blockchain:
 
     def configure(self, emulator:Emulator):
         pending_targets = self.__eth_service.getPendingTargets()
-        localAccounts = EthAccount().createLocalAccountsFromMnemonic(mnemonic=self.__local_mnemonic, balance=self.__local_account_balance, total=self.__local_accounts_total)
+        localAccounts = EthAccount.createLocalAccountsFromMnemonic(mnemonic=self.__local_mnemonic, balance=self.__local_account_balance, total=self.__local_accounts_total)
         self.__genesis.addAccounts(localAccounts)
+        self.__genesis.addAccounts(self.getAllAccounts())
         self.__genesis.setChainId(self.__chain_id)
         for vnode in self.__pending_targets:
             node = emulator.getBindingFor(vnode)
@@ -104,150 +115,207 @@ class Blockchain:
                     self.__joined_accounts[index].balance = 32*pow(10,18)*(validator_count+1)
         
         if self.__consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] :
-            self.__genesis.addAccounts(self.getAllAccounts())
             self.__genesis.setSigner(self.getAllSignerAccounts())
     
     def getBootNodes(self) -> List[str]:
-        """
-        @brief get bootnode IPs.
-        @returns list of IP addresses.
+        """!
+        @brief Get bootnode IPs.
+
+        @returns List of bootnodes IP addresses.
         """
         return self.__boot_node_addresses
 
-    def getAllAccounts(self) -> List[EthAccount]:
-        """
-        @brief Get a joined list of all the created accounts on all nodes
+    def getAllAccounts(self) -> List[AccountStructure]:
+        """!
+        @brief Get a joined list of all the created accounts on all nodes in the blockchain.
         
-        @returns list of EthAccount
+        @returns List of accounts.
         """
         return self.__joined_accounts
 
-    def getAllSignerAccounts(self) -> List[EthAccount]:
+    def getAllSignerAccounts(self) -> List[AccountStructure]:
+        """!
+        @brief Get a list of all signer accounts on all nodes in the blockchain.
+        
+        returns List of signer accounts.
+        """
         return self.__joined_signer_accounts
 
     def getValidatorIds(self) -> List[str]:
+        """!
+        @brief Get a list of all validators ids on all nodes in the blockchain.
+        
+        @returns List of all validators ids.
+        """
         return self.__validator_ids
 
     def getBeaconSetupNodeIp(self) -> str:
+        """!
+        @brief Get the IP of a beacon setup node.
+
+        @returns The IP address.
+        """
         return self.__beacon_setup_node_address
 
     def setGenesis(self, genesis:str) -> EthereumServer:
-        """
-        @brief set custom genesis
+        """!
+        @brief Set the custom genesis.
         
-        @returns self, for chaining API calls.
+        @param genesis The genesis file contents to set. 
+
+        @returns Self, for chaining API calls.
         """
         self.__genesis.setGenesis(genesis)
 
         return self
 
     def getGenesis(self) -> Genesis:
+        """!
+        @brief Get the genesis file content.
+
+        @returns Genesis. 
+        """
         return self.__genesis
 
     def setConsensusMechanism(self, consensusMechanism:ConsensusMechanism) -> EthereumServer:
-        '''
-        @brief set ConsensusMechanism
+        """!
+        @brief Set consensus mechanism of this blockchain.
 
-        @param consensusMechanism supports POW and POA.
+        @param consensusMechanism Consensus mechanism to set (supports POW, POA and POS).
 
-        @returns self, for chaining API calls. 
-        '''
+        @returns Self, for chaining API calls. 
+        """
         self.__consensus = consensusMechanism
         self.__genesis = Genesis(self.__consensus)
         
         return self
 
     def getConsensusMechanism(self) -> ConsensusMechanism:
+        """!
+        @brief Get the consensusm mechanism of this blockchain.
 
+        @returns ConensusMecanism
+        """
         return self.__consensus
     
-    def enablePoS(self, terminal_total_difficulty:int = 50) -> EthereumServer:
-        """!
-        @brief set configurations to enable PoS (Merge)
-
-        @returns self, for chaining API calls
-        """
-
-        self.__enable_pos = True
-        self.__terminal_total_difficulty = terminal_total_difficulty
-        return self
-
     def getTerminalTotalDifficulty(self) -> int:
         return self.__terminal_total_difficulty
-        
-    def isPoSEnabled(self) -> bool:
-        """!
-        @brief returns whether a node enabled PoS or not
-        """
-        return self.__enable_pos
 
     def setGasLimitPerBlock(self, gasLimit:int):
         """!
-        @brief set GasLimit at Genesis 
-        (the limit of gas cost per block)
+        @brief Set GasLimit at Genesis (the limit of gas cost per block).
 
-        @param int
+        @param gasLimit The gas limit per block.
         
-        @returns self, for chaining API calls
+        @returns Self, for chaining API calls.
         """
         self.__genesis.setGasLimit(gasLimit)
         return self
 
     def setChainId(self, chainId:int):
         """!
-        @brief set network Id at Genesit
+        @brief Set chain Id at Genesis.
 
-        @param int
+        @param chainId The chain Id to set.
 
-        @returns self, for chaining API calls
+        @returns Self, for chaining API calls
         """
 
         self.__chain_id = chainId
         return self
 
-    def createNode(self, vnode: str):
+    def createNode(self, vnode: str) -> EthereumServer:
+        """!
+        @brief Create a node belongs to this blockchain.
+
+        @param vnode The name of vnode.
+
+        @returns EthereumServer
+        """
         eth = self.__eth_service
         self.__pending_targets.append(vnode)
         return eth.installByBlockchain(vnode, self)
     
     def addLocalAccount(self, address: str, balance: int, unit:EthUnit=EthUnit.ETHER) -> Blockchain:
         """!
-        @brief allocate balance to an external account by setting alloc field of genesis file.
+        @brief Allocate balance to an external account by setting alloc field of genesis file.
 
-        @param address : external account's address to allocate balance
+        @param address The External account's address.
+        @param balance The balance to allocate.
+        @param unit The unit of Ethereum.
 
-        @param balance
-
-        @returns self, for chaining calls.
+        @returns Self, for chaining calls.
         """
         balance = balance * unit.value
         self.__genesis.addLocalAccount(address, balance)
         
         return self
 
-    # in addition to default local accounts 
-    def addLocalAccountsFromMnemonic(self, mnemonic:str, total:int, balance:int, unit:EthUnit=EthUnit.ETHER):
+    def addLocalAccountsFromMnemonic(self, mnemonic:str, total:int, balance:int, unit:EthUnit=EthUnit.ETHER) -> Blockchain:
+        """!
+        @brief Add local account from the given Mnemonic in addition to default local accounts.
+
+        @param mnemonic The mnemonic phrase to generate accounts from.
+        @param total The total number of accounts to generate.
+        @param balance The balance to allocate to the generated accounts.
+
+        @returns Self, for chaining calls.
+        """
         balance = balance * unit.value
-        ethAccount = EthAccount()
-        mnemonic_account = ethAccount.createLocalAccountsFromMnemonic(mnemonic = mnemonic, balance=balance, total=total)
+        mnemonic_account = EthAccount.createLocalAccountsFromMnemonic(mnemonic = mnemonic, balance=balance, total=total)
         self.__genesis.addAccounts(mnemonic_account)
 
     def getChainName(self) -> str:
+        """!
+        @brief Get the name of the blockchain.
+
+        @returns The name of this blockchain.
+        """
         return self.__chain_name
 
     def getChainId(self) -> int:
+        """!
+        @brief Get the chain Id of the blockchain.
+        
+        @returns The chain Id of this blockchain.
+        """
         return self.__chain_id
 
     def setEmuAccountParameters(self, mnemonic:str, balance:int, total_per_node:int, unit:EthUnit=EthUnit.ETHER):
+        """!
+        @brief Set mnemonic, balance, and total_per_node value to customize the account generation in this blockchain.
+
+        @param mnemonic The mnemonic phrase to generate the accounts per a node in this blockchain.
+        @param balance The balance to allocate to the generated accounts.
+        @param total_per_node The total number of the accounts to generate per a node in this blockchain.
+        @param unit The unit of Ethereum.
+
+        @returns Self, for chaining calls.
+        """
         self.__emu_mnemonic = mnemonic
         self.__emu_account_balance = balance * unit.value
         self.__total_accounts_per_node = total_per_node
         return self
 
     def getEmuAccountParameters(self):
+        """!
+        @brief Get values of mnemonic, balance, and total_per_node value used for the account generation.
+        
+        returns The value of mnemonic, balance, and total_per_node.
+        """
         return self.__emu_mnemonic, self.__emu_account_balance, self.__total_accounts_per_node
 
     def setLocalAccountParameters(self, mnemonic:str, balance:int, total:int, unit:EthUnit=EthUnit.ETHER):
+        """!
+        @brief Set mnemonic, balance, and total_per_node value to customize the local account generation.
+
+        @param mnemonic The mnemonic phrase to generate the local accounts.
+        @param balance The balance to allocate to the generated accounts.
+        @param total The total number of the local accounts.
+        @param unit The unit of Ethereum.
+
+        @returns Self, for chaining calls.
+        """
         self.__local_mnemonic = mnemonic
         self.__local_account_balance = balance * unit.value
         self.__local_accounts_total = total
@@ -256,6 +324,8 @@ class Blockchain:
     def _log(self, message: str) -> None:
         """!
         @brief Log to stderr.
+
+        @returns None.
         """
         print("==== Blockchain Sub Layer: {}".format(message), file=stderr)
 
@@ -276,19 +346,18 @@ class EthereumService(Service):
 
     def __init__(self, saveState: bool = False, savePath: str = './eth-states', override:bool=False):
         """!
-        @brief create a new Ethereum service.
-        @param saveState (optional) if true, the service will try to save state
+        @brief The EthereumService class initializer.
+
+        @param saveState (optional) If true, the service will try to save state
         of the block chain by saving the datadir of every node. Default to
         false.
-
-        @param savePath (optional) path to save containers' datadirs on the
+        @param savePath (optional) The path to save containers' datadirs on the
         host. Default to "./eth-states". 
-
-        @param override (optional) override the output folder if it already
+        @param override (optional) If true, override the output folder if it already
         exist. False by defualt.
 
+        @returns An instance of the EthereumService class.
         """
-
         super().__init__()
 
         self.__serial = 0
@@ -351,9 +420,15 @@ class EthereumService(Service):
         if consensus == ConsensusMechanism.POS:
             return PoSServer(self.__serial, blockchain)
 
-    def installByBlockchain(self, vnode: str, blockchain: Blockchain) -> Server:
+    def installByBlockchain(self, vnode: str, blockchain: Blockchain) -> EthereumServer:
         """!
-        @brief install the service on a node identified by given name.
+        @brief Install the service on a node identified by given name. 
+                This API is called by Blockchain Class. 
+
+        @param vnode The name of the virtual node. 
+        @param blockchain The blockchain that the created node is belongs to.
+        
+        @returns EthereumServer.
         """
         if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
 
@@ -362,19 +437,17 @@ class EthereumService(Service):
 
         return self._pending_targets[vnode]
 
-    def install(self, vnode: str) -> Server:
-        """!
-        @brief install the service on a node identified by given name.
-        """
-        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
-        
-        s = self._createServer()
-        
-        self._pending_targets[vnode] = s
-
-        return self._pending_targets[vnode]
-
     def createBlockchain(self, chainName:str, consensus: ConsensusMechanism, chainId: int = -1):
+        """!
+        @brief Create an instance of Blockchain class which is a sub-layer of the EthereumService.
+
+        @param chainName The name of the Blockchain.
+        @param consensus The consensus mechanism of the blockchain.
+        @param chainId The chain id of the Blockchain.
+
+        @returns an instance of Blockchain class.
+        """
+        
         if chainId < 0 : 
             chainId = self.__blockchain_id
             self.__blockchain_id += 1
