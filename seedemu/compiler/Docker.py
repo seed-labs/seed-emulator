@@ -281,8 +281,8 @@ class Docker(Compiler):
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
 
-    __client_enabled: bool
-    __client_port: int
+    __map_client_enabled: bool
+    __map_client_port: int
 
     __client_hide_svcnet: bool
 
@@ -298,8 +298,8 @@ class Docker(Compiler):
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
-        clientEnabled: bool = False,
-        clientPort: int = 8080,
+        mapClientEnabled: bool = False,
+        mapClientPort: int = 8080,
         clientHideServiceNet: bool = True
     ):
         """!
@@ -337,8 +337,8 @@ class Docker(Compiler):
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
-        self.__client_enabled = clientEnabled
-        self.__client_port = clientPort
+        self.__map_client_enabled = mapClientEnabled
+        self.__map_client_port = mapClientPort
 
         self.__client_hide_svcnet = clientHideServiceNet
 
@@ -984,12 +984,12 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
-        if self.__client_enabled:
+        if self.__map_client_enabled:
             self._log('enabling seedemu-client...')
 
             self.__services += DockerCompilerFileTemplates['seedemu_client'].format(
                 clientImage = SEEDEMU_CLIENT_IMAGE,
-                clientPort = self.__client_port
+                clientPort = self.__map_client_port
             )
 
         local_images = ''
