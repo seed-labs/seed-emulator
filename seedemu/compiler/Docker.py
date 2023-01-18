@@ -281,8 +281,8 @@ class Docker(Compiler):
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
 
-    __client_enabled: bool
-    __client_port: int
+    __map_client_enabled: bool
+    __map_client_port: int
 
     __client_hide_svcnet: bool
 
@@ -298,8 +298,8 @@ class Docker(Compiler):
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
-        clientEnabled: bool = False,
-        clientPort: int = 8080,
+        mapClientEnabled: bool = False,
+        mapClientPort: int = 8080,
         clientHideServiceNet: bool = True
     ):
         """!
@@ -337,8 +337,8 @@ class Docker(Compiler):
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
-        self.__client_enabled = clientEnabled
-        self.__client_port = clientPort
+        self.__map_client_enabled = mapClientEnabled
+        self.__map_client_port = mapClientPort
 
         self.__client_hide_svcnet = clientHideServiceNet
 
@@ -349,12 +349,12 @@ class Docker(Compiler):
         self.__image_per_node_list = {}
 
         for image in DefaultImages:
-            self.addImage(image)
+            self.addImage(image, priority=0)
 
     def getName(self) -> str:
         return "Docker"
 
-    def addImage(self, image: DockerImage, priority: int = 0) -> Docker:
+    def addImage(self, image: DockerImage, priority: int = -1) -> Docker:
         """!
         @brief add an candidate image to the compiler.
 
@@ -363,7 +363,9 @@ class Docker(Compiler):
         images with same number of missing software exist. The one with highest
         priority wins. If two or more images with same priority and same number
         of missing software exist, the one added the last will be used. All
-        built-in images has priority of 0. Default to 0.
+        built-in images has priority of 0. Default to -1. All built-in images are
+        prior to the added candidate image. To set a candidate image to a node, 
+        use setImageOverride() method. 
 
         @returns self, for chaining api calls.
         """
@@ -982,12 +984,12 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
-        if self.__client_enabled:
+        if self.__map_client_enabled:
             self._log('enabling seedemu-client...')
 
             self.__services += DockerCompilerFileTemplates['seedemu_client'].format(
                 clientImage = SEEDEMU_CLIENT_IMAGE,
-                clientPort = self.__client_port
+                clientPort = self.__map_client_port
             )
 
         local_images = ''
