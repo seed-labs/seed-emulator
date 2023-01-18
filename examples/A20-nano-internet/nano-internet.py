@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 from seedemu import *
+import os
 
 
 # Create the Emulator 
@@ -67,6 +68,8 @@ as152 = base.createAutonomousSystem(152)
 as152.createNetwork('net0')
 as152.createRouter('router0').joinNetwork('net0').joinNetwork('ix101')
 as152.createHost('host0').joinNetwork('net0')
+as152.createHost('host1').joinNetwork('net0')
+as152.createHost('host2').joinNetwork('net0')
 
 # Install additional software on a host
 as152.getHost('host0').addSoftware('telnet')
@@ -103,13 +106,13 @@ ebgp.addPrivatePeering(101, 152, 153, abRelationship = PeerRelationship.Peer)
 web = WebService()
 
 # Create web service nodes (virtual nodes)
-web.install('web01')
-web.install('web02')
+# add Class label to the Conatiner (please refer README.md for further information.)
+web01 = web.install('web01').appendClassName("SEEDWeb")
+web02 = web.install('web02').appendClassName("SyrWeb")
 
 # Bind the virtual nodes to physical nodes
 emu.addBinding(Binding('web01', filter = Filter(nodeName = 'host0', asn = 151)))
 emu.addBinding(Binding('web02', filter = Filter(nodeName = 'host0', asn = 152)))
-
 
 ###############################################################################
 
@@ -141,8 +144,22 @@ emu.getBindingFor('web02').setDisplayName('Web-2')
 ###############################################################################
 # Compilation
 
+docker = Docker()
+
+# Use the "handsonsecurity/seed-ubuntu:small" custom image from dockerhub
+docker.addImage(DockerImage('handsonsecurity/seed-ubuntu:small', [], local = False), priority=-1)
+docker.setImageOverride(as152.getHost('host1'), 'handsonsecurity/seed-ubuntu:small')
+
+# Use the "seed-ubuntu-large" custom image from local
+docker.addImage(DockerImage('seed-ubuntu-large', [], local = True), priority=-1)
+docker.setImageOverride(as152.getHost('host2'), 'seed-ubuntu-large')
+
 # Generate the Docker files
-emu.compile(Docker(), './output')
+emu.compile(docker, './output')
+
+# Copy the base container image to the output folder
+# the base container image should be located under the ouput folder to add it as custom image.
+os.system('cp -r seed-ubuntu-large ./output')
 
 # Generate other type of outputs
 #emu.compile(Graphviz(), './others/graphs')
