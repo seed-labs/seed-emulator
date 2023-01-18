@@ -177,38 +177,47 @@ class EthAccount():
                 return keystore
 
     @staticmethod
-    def createEmulatorAccountsFromMnemonic(id:int, mnemonic:str, balance, total, password):
+    def createEmulatorAccountFromMnemonic(id:int, mnemonic:str, balance:int, index:int, password:str):
         from eth_account import Account
         Account.enable_unaudited_hdwallet_features()
 
+        EthAccount._log('creating node_{} emulator account {} from mnemonic...'.format(id, index))
+        acct = Account.from_mnemonic(mnemonic, account_path=ETH_ACCOUNT_KEY_DERIVATION_PATH.format(id=id, index=index))
+        address = Web3.toChecksumAddress(acct.address)
+        
+        keystore_content = json.dumps(acct.encrypt(password='admin'))
+        datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
+        keystore_filename = "UTC--"+datastr+"--"+address
+        
+        return AccountStructure(address, balance, keystore_filename, keystore_content, password)
+
+    @staticmethod
+    def createEmulatorAccountsFromMnemonic(id:int, mnemonic:str, balance:int, total:int, password:str):
         accounts = []
         index = 0 
-
-        for i in range(total):
-            EthAccount._log('creating emulator accounts...')
-            acct = Account.from_mnemonic(mnemonic, account_path=ETH_ACCOUNT_KEY_DERIVATION_PATH.format(id=id, index=index))
-            address = Web3.toChecksumAddress(acct.address)
-            
-            keystore_content = json.dumps(acct.encrypt(password='admin'))
-            datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
-            keystore_filename = "UTC--"+datastr+"--"+address
-            
-            accounts.append(AccountStructure(address, balance, keystore_filename, keystore_content, password))
+        for i in range(total):    
+            accounts.append(EthAccount.createEmulatorAccountFromMnemonic(id, mnemonic, balance, index, password))
             index += 1
         
         return accounts
 
     @staticmethod
-    def createLocalAccountsFromMnemonic(mnemonic:str, balance, total):
+    def createLocalAccountFromMnemonic(mnemonic:str, balance:int, index:int):
         from eth_account import Account
         Account.enable_unaudited_hdwallet_features()
+
+        EthAccount._log('creating local account {} from mnemonic...'.format(index))
+        acct = Account.from_mnemonic(mnemonic, account_path=LOCAL_ACCOUNT_KEY_DERIVATION_PATH.format(index=index))
+        address = Web3.toChecksumAddress(acct.address)
+
+        return AccountStructure(address, balance, "", "", "")
+
+    @staticmethod
+    def createLocalAccountsFromMnemonic(mnemonic:str, balance:int, total:int):
         accounts = []
         index = 0 
         for i in range(total):
-            EthAccount._log('creating local accounts from mnemonic...')
-            acct = Account.from_mnemonic(mnemonic, account_path=LOCAL_ACCOUNT_KEY_DERIVATION_PATH.format(index=index))
-            address = Web3.toChecksumAddress(acct.address)
-            accounts.append(AccountStructure(address, balance, "", "", ""))
+            accounts.append(EthAccount.createLocalAccountFromMnemonic(mnemonic, balance, index))
             index += 1
 
         return accounts

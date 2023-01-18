@@ -54,8 +54,8 @@ class EthereumServer(Server):
         self._bootnode_http_port = 8088
         self._smart_contract = None
         self._accounts = []
-        mnemonic, balance, total = self._blockchain.getEmuAccountParameters()
-        self._mnemonic_accounts = EthAccount.createEmulatorAccountsFromMnemonic(self._id, mnemonic=mnemonic, balance=balance, total=total, password="admin")
+        self._mnemonic, self._account_base_balance, self._account_total = self._blockchain.getEmuAccountParameters()
+        self._mnemonic_accounts = EthAccount.createEmulatorAccountsFromMnemonic(self._id, mnemonic=self._mnemonic, balance=self._account_base_balance, total=self._account_total, password="admin")
         self._consensus_mechanism = blockchain.getConsensusMechanism()
 
         self._custom_geth_binary_path = None
@@ -359,7 +359,7 @@ class EthereumServer(Server):
 
         return self._enable_ws
 
-    def createAccount(self, balance:int, unit:EthUnit=EthUnit.ETHER) -> EthereumServer:
+    def createAccount(self, balance:int, unit:EthUnit=EthUnit.ETHER, password="admin") -> EthereumServer:
         """
         @brief call this api to create new accounts
 
@@ -371,10 +371,12 @@ class EthereumServer(Server):
         """
 
         balance = balance * unit.value
+        self._mnemonic_accounts.append(EthAccount.createEmulatorAccountFromMnemonic(self._id, mnemonic=self._mnemonic, balance=balance, index=self._account_total, password=password))
+        self._account_total += 1
         return self
 
-    
-    def createAccounts(self, total:int, balance:int, unit:EthUnit=EthUnit.ETHER) -> EthereumServer:
+    # it should depend on createAccount() method
+    def createAccounts(self, total:int, balance:int, unit:EthUnit=EthUnit.ETHER, password="admin") -> EthereumServer:
         """
         @brief Call this api to create new accounts.
 
@@ -385,8 +387,8 @@ class EthereumServer(Server):
         @returns self, for chaining API calls.
         """
 
-        balance = balance * unit.value
-        self._mnemonic_accounts.createEmulatorAccounts(total, balance)
+        for i in range(total):
+            self.createAccount(balance, unit, password)
 
         return self
 
