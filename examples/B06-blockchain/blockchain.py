@@ -71,18 +71,11 @@ e2.startMiner()
 e5.setBootNode(True).unlockAccounts().startMiner()
 e6.unlockAccounts().startMiner()
 
-# ?? Initially accounts was created randomly. Now we have change it to create from mnemonic words. 
-# Should we need to keep this api? As of now, blockchain layer will manage how many accounts with how much balance to create. This is uniformly same in every node.
-# Suggested API - remove createAccount and modify createAccounts as below. In each server, they can only set values of balance and total.
-# Thus, all the nodes in the same chain should use the same mnemonic words, which can be reset in blockchain layer.
-# And balance and total amount of accounts can be vary per server(node). 
-# EthereumServer::createAccounts(balance, total)
-
-# # Create more accounts with Balance on e3 and e7
-# # Create one account with createAccount() method
-# # Create multiple accounts with createAccounts() method
-# e3.createAccount(balance= 32 * pow(10,18), password="admin").unlockAccounts()
-# e7.createAccounts(3, balance = 32*pow(10,18), password="admin")
+# Create more accounts with Balance on e3 and e7
+# Create one account with createAccount() method
+# Create multiple accounts with createAccounts() method
+e3.createAccount(balance=20, unit=EthUnit.ETHER, password="admin").unlockAccounts()
+e7.createAccounts(total=3, balance=30, unit=EthUnit.ETHER, password="admin")
 
 # Import account with balance 0 on e2
 e2.importAccount(keyfilePath='./resources/keyfile_to_import', password="admin", balance=10)

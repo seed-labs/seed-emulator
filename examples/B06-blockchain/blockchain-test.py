@@ -73,6 +73,19 @@ class MultipleChainsTestCase(ut.TestCase):
         for account in accounts:
             self.assertTrue(self.wallet2._web3.eth.getBalance(account.address) >= 32*EthUnit.ETHER.value)
 
+    def test_pow_create_account(self):
+        account = EthAccount.createEmulatorAccountFromMnemonic(3, mnemonic="great awesome fun seed security lab protect system network prevent attack future", balance=20*EthUnit.ETHER.value, index=1, password="admin")
+        self.assertTrue(self.wallet1._web3.eth.getBalance(account.address) >= 20*EthUnit.ETHER.value)
+
+    def test_pow_create_accounts(self):
+        accounts = []
+        for index in range(1, 4):
+            accounts.append(EthAccount.createEmulatorAccountFromMnemonic(7, mnemonic="great awesome fun seed security lab protect system network prevent attack future", balance=30*EthUnit.ETHER.value, index=index, password="admin"))
+        
+        for account in accounts:
+            self.assertTrue(self.wallet2._web3.eth.getBalance(account.address) >= 30*EthUnit.ETHER.value)
+
+
 if __name__ == "__main__":    
     
     test_suite = ut.TestLoader().loadTestsFromTestCase(MultipleChainsTestCase)
