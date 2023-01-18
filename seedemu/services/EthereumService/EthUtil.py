@@ -137,46 +137,47 @@ class AccountStructure():
         self.password = password
 
 # Make the class stateless.
+
+
+LOCAL_ACCOUNT_KEY_DERIVATION_PATH = "m/44'/60'/0'/0/{index}" 
+ETH_ACCOUNT_KEY_DERIVATION_PATH   = "m/44'/60'/{id}'/0/{index}" 
 class EthAccount():
     """
     @brief Ethereum Local Account.
     """
-    def __init__(self):
-        from eth_account import Account
-        self.lib_eth_account = Account
     
-    # Use @staticmethod 
-    def importAccount(self, keyfilePath: str, balance:int, password = "admin"):
+    @staticmethod 
+    def importAccount(keyfilePath: str, balance:int, password = "admin"):
         """
         @brief import account from keyfile
         """
-        self._log('importing eth account...')
+        from eth_account import Account
+        EthAccount._log('importing eth account...')
         assert path.exists(keyfilePath), "EthAccount::__importAccount: keyFile does not exist. path : {}".format(keyfilePath)
         f = open(keyfilePath, "r")
         keyfileContent = f.read()
         f.close()
         
-        account = self.lib_eth_account.from_key(self.lib_eth_account.decrypt(keyfile_json=keyfileContent,password=password))
+        account = Account.from_key(Account.decrypt(keyfile_json=keyfileContent,password=password))
 
-        encrypted = self.__encryptAccount(account)
-        keystore_content = json.dumps(encrypted)
+        #encrypted = EthAccount.__encryptAccount(account)
+        keystore_content = json.dumps(account.encrypt(password=password))
 
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
-        keystore_filename = "UTC--"+datastr+"--"+encrypted["address"]
+        keystore_filename = "UTC--"+datastr+"--"+account.address
 
         return AccountStructure(account.address, balance, keystore_filename, keystore_content, password)
 
-    def __encryptAccount(self, account):
+    @staticmethod
+    def __encryptAccount(account):
+        from eth_account import Account
         while True:
-            keystore = self.lib_eth_account.encrypt(account.key, password=account.password)
+            keystore = Account.encrypt(account.key, password=account.password)
             if len(keystore['crypto']['cipherparams']['iv']) == 32:
                 return keystore
 
-
-    LOCAL_ACCOUNT_KEY_DERIVATION_PATH = "m/44'/60'/0'/0/{index}" 
-    ETH_ACCOUNT_KEY_DERIVATION_PATH   = "m/44'/60'/{id}'/0/{index}" 
-
-    def createEmulatorAccountsFromMnemonic(self, id:int, mnemonic:str, balance, total, password):
+    @staticmethod
+    def createEmulatorAccountsFromMnemonic(id:int, mnemonic:str, balance, total, password):
         from eth_account import Account
         Account.enable_unaudited_hdwallet_features()
 
@@ -184,8 +185,8 @@ class EthAccount():
         index = 0 
 
         for i in range(total):
-            self._log('creating emulator accounts...')
-            acct = Account.from_mnemonic(mnemonic, account_path=self.ETH_ACCOUNT_KEY_DERIVATION_PATH.format(id=id, index=index))
+            EthAccount._log('creating emulator accounts...')
+            acct = Account.from_mnemonic(mnemonic, account_path=ETH_ACCOUNT_KEY_DERIVATION_PATH.format(id=id, index=index))
             address = Web3.toChecksumAddress(acct.address)
             
             keystore_content = json.dumps(acct.encrypt(password='admin'))
@@ -197,21 +198,23 @@ class EthAccount():
         
         return accounts
 
-    def createLocalAccountsFromMnemonic(self, mnemonic:str, balance, total):
+    @staticmethod
+    def createLocalAccountsFromMnemonic(mnemonic:str, balance, total):
         from eth_account import Account
         Account.enable_unaudited_hdwallet_features()
         accounts = []
         index = 0 
         for i in range(total):
-            self._log('creating local accounts from mnemonic...')
-            acct = Account.from_mnemonic(mnemonic, account_path=self.LOCAL_ACCOUNT_KEY_DERIVATION_PATH.format(index=index))
+            EthAccount._log('creating local accounts from mnemonic...')
+            acct = Account.from_mnemonic(mnemonic, account_path=LOCAL_ACCOUNT_KEY_DERIVATION_PATH.format(index=index))
             address = Web3.toChecksumAddress(acct.address)
             accounts.append(AccountStructure(address, balance, "", "", ""))
             index += 1
 
         return accounts
- 
-    def _log(self, message: str) -> None:
+
+    @staticmethod
+    def _log(message: str) -> None:
         """!
         @brief Log to stderr.
         """
