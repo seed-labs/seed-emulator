@@ -349,12 +349,12 @@ class Docker(Compiler):
         self.__image_per_node_list = {}
 
         for image in DefaultImages:
-            self.addImage(image)
+            self.addImage(image, priority=0)
 
     def getName(self) -> str:
         return "Docker"
 
-    def addImage(self, image: DockerImage, priority: int = 0) -> Docker:
+    def addImage(self, image: DockerImage, priority: int = -1) -> Docker:
         """!
         @brief add an candidate image to the compiler.
 
@@ -363,7 +363,9 @@ class Docker(Compiler):
         images with same number of missing software exist. The one with highest
         priority wins. If two or more images with same priority and same number
         of missing software exist, the one added the last will be used. All
-        built-in images has priority of 0. Default to 0.
+        built-in images has priority of 0. Default to -1. All built-in images are
+        prior to the added candidate image. To set a candidate image to a node, 
+        use setImageOverride() method. 
 
         @returns self, for chaining api calls.
         """
