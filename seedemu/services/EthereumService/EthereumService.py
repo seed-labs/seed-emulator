@@ -78,10 +78,13 @@ class Blockchain:
 
         server._createAccounts(self)
         
-        if len(server._getAccounts()) > 0:
-            self.__joined_accounts.extend(server._getAccounts())
+        accounts = server._getAccounts()
+        if len(accounts) > 0:
+            if self.__consensus == ConsensusMechanism.POS and server.isValidatorAtRunning():
+                accounts[0].balance = 33 * EthUnit.ETHER.value
+            self.__joined_accounts.extend(accounts)
             if self.__consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] and server.isStartMiner():
-                self.__joined_signer_accounts.append(server._getAccounts()[0])
+                self.__joined_signer_accounts.append(accounts[0])
 
         if self.__consensus == ConsensusMechanism.POS and server.isValidatorAtGenesis():
             self.__validator_ids.append(str(server.getId()))
@@ -99,7 +102,6 @@ class Blockchain:
         pending_targets = self.__eth_service.getPendingTargets()
         localAccounts = EthAccount.createLocalAccountsFromMnemonic(mnemonic=self.__local_mnemonic, balance=self.__local_account_balance, total=self.__local_accounts_total)
         self.__genesis.addAccounts(localAccounts)
-        self.__genesis.addAccounts(self.getAllAccounts())
         self.__genesis.setChainId(self.__chain_id)
         for vnode in self.__pending_targets:
             node = emulator.getBindingFor(vnode)
@@ -109,10 +111,16 @@ class Blockchain:
                 assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
                 addr = str(ifaces[0].getAddress())
                 bootnode_ip = self.getBootNodes()[0].split(":")[0]
+                print("#######################################")
+                print(addr)
+                print(bootnode_ip)
                 if addr == bootnode_ip:
+                    print("#######################################")
                     validator_count = len(self.getValidatorIds())
                     index = self.__joined_accounts.index(server._getAccounts()[0])
-                    self.__joined_accounts[index].balance = 32*pow(10,18)*(validator_count+1)
+                    self.__joined_accounts[index].balance = 32*pow(10,18)*(validator_count+2)
+        
+        self.__genesis.addAccounts(self.getAllAccounts())
         
         if self.__consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] :
             self.__genesis.setSigner(self.getAllSignerAccounts())
@@ -177,7 +185,7 @@ class Blockchain:
         """
         return self.__genesis
 
-    def setConsensusMechanism(self, consensusMechanism:ConsensusMechanism) -> EthereumServer:
+    def setConsensusMechanism(self, consensus:ConsensusMechanism) -> EthereumServer:
         """!
         @brief Set consensus mechanism of this blockchain.
 
@@ -185,7 +193,7 @@ class Blockchain:
 
         @returns Self, for chaining API calls. 
         """
-        self.__consensus = consensusMechanism
+        self.__consensus = consensus
         self.__genesis = Genesis(self.__consensus)
         
         return self

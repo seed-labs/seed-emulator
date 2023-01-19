@@ -98,7 +98,7 @@ class EthereumServer(Server):
             for account in self._accounts:
                 accounts.append(account.address)
             self._geth_options['unlock'] = GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
-        self._geth_start_command = GethCommandTemplates['base'].format(node_id=self._id, datadir=self._data_dir, syncmode=self._syncmode.value, snapshot=self._snapshot, option=self._geth_options)
+        self._geth_start_command = GethCommandTemplates['base'].format(node_id=self._id, chain_id=self._blockchain.getChainId(), datadir=self._data_dir, syncmode=self._syncmode.value, snapshot=self._snapshot, option=self._geth_options)
         
     def install(self, node: Node, eth: EthereumService):
         """!
@@ -596,6 +596,9 @@ class PoSServer(PoAServer):
     def isValidatorAtGenesis(self):
         return self.__is_beacon_validator_at_genesis
 
+    def isValidatorAtRunning(self):
+        return self.__is_beacon_validator_at_running
+
     def enablePOSValidatorAtRunning(self, is_manual:bool=False):
         self.__is_beacon_validator_at_running = True
         self.__is_manual_deposit_for_validator = is_manual
@@ -659,6 +662,7 @@ CHURN_LIMIT_QUOTIENT: "32"
 PROPOSER_SCORE_BOOST: "40"
 DEPOSIT_CHAIN_ID: "{chain_id}"
 DEPOSIT_NETWORK_ID: "{chain_id}"
+NETWORK_ID: "{chain_id}"
 MAX_COMMITTEES_PER_SLOT: "10"
 INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: "8"'''
 
@@ -691,7 +695,7 @@ tar -czvf /local-testnet/bootnode.tar.gz /local-testnet/bootnode
 
     DEPLOY_CONTRACT = '''\
 while true; do {{
-    lcli deploy-deposit-contract --eth1-http http://{geth_node_ip}:8545 --confirmations 1 --validator-count {validator_count} > contract_address.txt
+    lcli deploy-deposit-contract --eth1-http http://{geth_node_ip}:8545 --confirmations 1 --validator-count {validator_count} --testnet-dir local-testnet/testnet > contract_address.txt
     CONTRACT_ADDRESS=`head -1 contract_address.txt | cut -d '"' -f 2`
     if [[ $CONTRACT_ADDRESS = 0x* ]]; then
         break
