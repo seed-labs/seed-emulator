@@ -161,7 +161,7 @@ class EthAccount():
         account = Account.from_key(Account.decrypt(keyfile_json=keyfileContent,password=password))
 
         #encrypted = EthAccount.__encryptAccount(account)
-        keystore_content = json.dumps(account.encrypt(password=password))
+        keystore_content = json.dumps(EthAccount.__encryptAccount(account=account, password=password))
 
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
         keystore_filename = "UTC--"+datastr+"--"+account.address
@@ -169,10 +169,10 @@ class EthAccount():
         return AccountStructure(account.address, balance, keystore_filename, keystore_content, password)
 
     @staticmethod
-    def __encryptAccount(account):
+    def __encryptAccount(account, password:str):
         from eth_account import Account
         while True:
-            keystore = Account.encrypt(account.key, password=account.password)
+            keystore = Account.encrypt(account.key, password=password)
             if len(keystore['crypto']['cipherparams']['iv']) == 32:
                 return keystore
 
@@ -185,7 +185,7 @@ class EthAccount():
         acct = Account.from_mnemonic(mnemonic, account_path=ETH_ACCOUNT_KEY_DERIVATION_PATH.format(id=id, index=index))
         address = Web3.toChecksumAddress(acct.address)
         
-        keystore_content = json.dumps(acct.encrypt(password='admin'))
+        keystore_content = json.dumps(EthAccount.__encryptAccount(account=acct, password=password))
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
         keystore_filename = "UTC--"+datastr+"--"+address
         
