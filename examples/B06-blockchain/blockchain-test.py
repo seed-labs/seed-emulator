@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
 import unittest as ut
 from SEEDBlockchain import Wallet
 from web3 import Web3
