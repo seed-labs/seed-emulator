@@ -160,7 +160,6 @@ class EthAccount():
         
         account = Account.from_key(Account.decrypt(keyfile_json=keyfileContent,password=password))
 
-        #encrypted = EthAccount.__encryptAccount(account)
         keystore_content = json.dumps(EthAccount.__encryptAccount(account=account, password=password))
 
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
