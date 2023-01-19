@@ -3,185 +3,110 @@
 
 from seedemu import *
 
-def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int, hosts_total: int):
+hosts_total_per_as = 3
 
-    # Create AS and internal network
-    network = "net0"
-    stub_as = base.createAutonomousSystem(asn)
-    stub_as.createNetwork(network)
+# Create Emulator Base with 10 Stub AS (150-154, 160-164) using Makers utility method.
+# It will create hosts(physical node) named `host_{}`.format(counter), counter starts from 0. 
+emu = Makers.makeEmulatorBaseWith10StubASAndHosts(hosts_total_per_as)
 
-    # Create a BGP router
-    # Attach the router to both the internal and external networks
-    router = stub_as.createRouter('router0')
-    router.joinNetwork(network)
-    router.joinNetwork('ix{}'.format(exchange))
-
-    for counter in range(hosts_total):
-       name = 'host_{}'.format(counter)
-       host = stub_as.createHost(name)
-       host.joinNetwork(network)
-
-hosts_total = int(3)
-
-###############################################################################
-emu     = Emulator()
-base    = Base()
-routing = Routing()
-ebgp    = Ebgp()
-ibgp    = Ibgp()
-ospf    = Ospf()
-
-
-###############################################################################
-
-ix100 = base.createInternetExchange(100)
-ix101 = base.createInternetExchange(101)
-ix102 = base.createInternetExchange(102)
-ix103 = base.createInternetExchange(103)
-ix104 = base.createInternetExchange(104)
-
-# Customize names (for visualization purpose)
-ix100.getPeeringLan().setDisplayName('NYC-100')
-ix101.getPeeringLan().setDisplayName('San Jose-101')
-ix102.getPeeringLan().setDisplayName('Chicago-102')
-ix103.getPeeringLan().setDisplayName('Miami-103')
-ix104.getPeeringLan().setDisplayName('Boston-104')
-
-
-###############################################################################
-# Create Transit Autonomous Systems 
-
-## Tier 1 ASes
-Makers.makeTransitAs(base, 2, [100, 101, 102], 
-       [(100, 101), (101, 102)] 
-)
-
-Makers.makeTransitAs(base, 3, [100, 103, 104], 
-       [(100, 103), (103, 104)]
-)
-
-Makers.makeTransitAs(base, 4, [100, 102, 104], 
-       [(100, 104), (102, 104)]
-)
-
-## Tier 2 ASes
-Makers.makeTransitAs(base, 12, [101, 104], [(101, 104)])
-
-
-###############################################################################
-# Create single-homed stub ASes. "None" means create a host only 
-
-makeStubAs(emu, base, 150, 100, hosts_total)
-makeStubAs(emu, base, 151, 100, hosts_total)
-
-makeStubAs(emu, base, 152, 101, hosts_total)
-makeStubAs(emu, base, 153, 101, hosts_total)
-
-makeStubAs(emu, base, 154, 102, hosts_total)
-
-makeStubAs(emu, base, 160, 103, hosts_total)
-makeStubAs(emu, base, 161, 103, hosts_total)
-makeStubAs(emu, base, 162, 103, hosts_total)
-
-makeStubAs(emu, base, 163, 104, hosts_total)
-makeStubAs(emu, base, 164, 104, hosts_total)
-
-
-###############################################################################
-# Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
-# which means each AS will only export its customers and their own prefixes. 
-# We will use this peering relationship to peer all the ASes in an IX.
-# None of them will provide transit service for others. 
-
-ebgp.addRsPeers(100, [2, 3, 4])
-ebgp.addRsPeers(102, [2, 4])
-ebgp.addRsPeers(104, [3, 4])
-
-# To buy transit services from another autonomous system, 
-# we will use private peering  
-
-ebgp.addPrivatePeerings(100, [2],  [150, 151], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(100, [3],  [150], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(102, [2, 4],  [154], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(103, [3],  [160, 161, 162], PeerRelationship.Provider)
-
-ebgp.addPrivatePeerings(104, [3, 4], [12], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(104, [4],  [163], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(104, [12], [164], PeerRelationship.Provider)
-
+# Create the Ethereum layer
 eth = EthereumService()
-docker = Docker(mapClientEnabled=True)
-asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
-TERMINAL_TOTAL_DIFFICULTY=20
+# Create the Blockchain layer which is a sub-layer of Ethereum layer.
+# chainName="pos": set the blockchain name as "pos"
+# consensus="ConsensusMechnaism.POS" : set the consensus of the blockchain as "ConsensusMechanism.POS".
+# supported consensus option: ConsensusMechanism.POA, ConsensusMechanism.POW, ConsensusMechanism.POS
+blockchain = eth.createBlockchain(chainName="pos", consensus=ConsensusMechanism.POS)
+
+asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
 ###################################################
 # Ethereum Node
 
 i = 1
 for asn in asns:
-    for id in range(hosts_total):        
-        # Create POA Ethereum nodes
-        e:EthereumServer = eth.install("eth{}".format(i)).setConsensusMechanism(ConsensusMechanism.POA)    
+    for id in range(hosts_total_per_as):        
+        # Create a blockchain virtual node named "eth{}".format(i)
+        e:EthereumServer = blockchain.createNode("eth{}".format(i))   
+        
         # Create Docker Container Label named 'Ethereum-POS-i'
         e.appendClassName('Ethereum-POS-{}'.format(i))
-        # unlock execution layer(Geth) accounts to enable sign & send transaction via http api.
-        e.unlockAccounts()
-        # enable Geth to communicate with geth node via http
+
+        # Enable Geth to communicate with geth node via http
         e.enableGethHttp()
 
-        # enable PoS
-        e.enablePoS(TERMINAL_TOTAL_DIFFICULTY)
-        e.setBeaconPeerCounts(10)
-        
-        if asn == 150:
-            if id == 0:
+        # Set host in asn 150 with id 0 (ip : 10.150.0.71) as BeaconSetupNode.
+        if asn == 150 and id == 0:
                 e.setBeaconSetupNode()
-            if id == 1:
+
+        # Set host in asn 150 with id 1 (ip : 10.150.0.72) as BootNode. 
+        # This node will serve as a BootNode in both execution layer (geth) and consensus layer (lighthouse).
+        if asn == 150 and id == 1:
                 e.setBootNode(True)
+
+        # Set hosts in asn 152 and 162 with id 0 and 1 as validator node. 
+        # Validator is added by deposit 32 Ethereum and is activated in realtime after the Merge.
+        # isManual=True : deposit 32 Ethereum by manual. 
+        #                 Other than deposit part, create validator key and running a validator node is done by codes.  
         if asn in [152, 162]:
             if id == 0:
                 e.enablePOSValidatorAtRunning()
             if id == 1:
                 e.enablePOSValidatorAtRunning(is_manual=True)
 
+        # Set hosts in asn 152, 153, 154, and 160 as validator node.
+        # These validators are activated by default from genesis status.
+        # Before the Merge, when the consensus in this blockchain is still POA, 
+        # these hosts will be the signer nodes.
         if asn in [151,153,154,160]:
             e.enablePOSValidatorAtGenesis()
             e.startMiner()
-        
+
+        # Customizing the display names (for visualiztion purpose)
         if e.isBeaconSetupNode():
             emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-BeaconSetup')
         else:
             emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POS-{}'.format(i))
 
+        # Binding the virtual node to the physical node. 
         emu.addBinding(Binding('eth{}'.format(i), filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
-        
+
         i = i+1
 
 
-# Add layers to the emulator
-emu.addLayer(base)
-emu.addLayer(routing)
-emu.addLayer(ebgp)
-emu.addLayer(ibgp)
-emu.addLayer(ospf)
+# Add layer to the emulator
 emu.addLayer(eth)
 
 emu.render()
 
+docker = Docker(mapClientEnabled=True)
+# Use the "handsonsecurity/seed-ubuntu:small" custom image from dockerhub
+
+# Add the 'rafaelawon/seedemu-lighthouse-base' custom image from dockerhub.
+# This image contains custom lighthouse software.
 docker.addImage(DockerImage('rafaelawon/seedemu-lighthouse-base', [], local=False), priority=-1)
+
+# Add the 'rafaelawon/seedemu-lighthouse-base' custom image from dockerhub.
+# This image contains custom lcli software.
 docker.addImage(DockerImage('rafaelawon/seedemu-lcli-base', [], local=False), priority=-2)
 
-beacon_nodes = base.getNodesByName('host')
-for beacon in beacon_nodes:
-   docker.setImageOverride(beacon, 'rafaelawon/seedemu-lighthouse-base')
+base = emu.getLayer('Base')
 
+# Get the physical nodes of all hosts from Base layer.
+# The name of physical nodes generated from Makers.makeEmulatorBaseWith10StubASAndHosts() is 'host_{}'
+# Base::getNodesByName('host') returns the physical nodes whose name starts with 'host'.
+hosts = base.getNodesByName('host')
+
+# Set all host nodes to use the custom 'seedemu-lighthouse-base' image.
+for host in hosts:
+   docker.setImageOverride(host, 'rafaelawon/seedemu-lighthouse-base')
+
+# Get the physical node of beacon setup node. 
+# The host in asn 150 with id 0 (ip : 10.150.0.71) is set as BeaconSetupNode.
+# Base::getNodeByAsnAndName(150, 'host_0') returns the physical node whose name is 'host_0' in AS 150.
 beacon_setup = base.getNodeByAsnAndName(150, 'host_0')
+
+# Set the node to use the custom 'seedemu-lcli-base' image.
 docker.setImageOverride(beacon_setup, 'rafaelawon/seedemu-lcli-base')
 
 emu.compile(docker, './output', override = True)
