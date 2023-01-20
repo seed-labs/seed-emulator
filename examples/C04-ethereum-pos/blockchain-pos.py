@@ -3,11 +3,11 @@
 
 from seedemu import *
 
-hosts_total_per_as = 3
-
 # Create Emulator Base with 10 Stub AS (150-154, 160-164) using Makers utility method.
+# hosts_per_stub_as=3 : create 3 hosts per one stub AS.
 # It will create hosts(physical node) named `host_{}`.format(counter), counter starts from 0. 
-emu = Makers.makeEmulatorBaseWith10StubASAndHosts(hosts_total_per_as)
+hosts_per_stub_as = 3
+emu = Makers.makeEmulatorBaseWith10StubASAndHosts(hosts_per_stub_as = hosts_per_stub_as)
 
 # Create the Ethereum layer
 eth = EthereumService()
