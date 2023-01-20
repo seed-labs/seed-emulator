@@ -207,6 +207,11 @@ class Blockchain:
         return self.__consensus
     
     def getTerminalTotalDifficulty(self) -> int:
+        """!
+        @brief Get the value of the terminal total difficulty.
+        
+        @returns terminal_total_difficulty.
+        """
         return self.__terminal_total_difficulty
 
     def setGasLimitPerBlock(self, gasLimit:int):
