@@ -206,12 +206,24 @@ class Blockchain:
         """
         return self.__consensus
     
-    def getTerminalTotalDifficulty(self) -> int:
+    def setTerminalTotalDifficulty(self, ttd:int):
         """!
-        @brief Get the value of the terminal total difficulty.
+        @brief Set the terminal total difficuly, which is the value to designate
+                when the Merge is happen. In POA, difficulty is tend to increase by 2
+                for every one block. For example, if the terminal_total_difficulty is 
+                set to 20, the Ethereum blockchain will keep POA consensus for approximately
+                150 sec (20/2*15) and then stop signing the block until the Merge happens.
+                Default to 20. 
+
+        @param ttd The terminal total difficulty to set.
         
-        @returns terminal_total_difficulty.
+        @returns Self, for chaining API calls.
         """
+        self.__terminal_total_difficulty = ttd
+
+        return self
+
+    def getTerminalTotalDifficulty(self) -> int:
         return self.__terminal_total_difficulty
 
     def setGasLimitPerBlock(self, gasLimit:int):
