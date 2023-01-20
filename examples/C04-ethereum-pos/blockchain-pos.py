@@ -25,7 +25,7 @@ asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
 i = 1
 for asn in asns:
-    for id in range(hosts_total_per_as):        
+    for id in range(hosts_per_stub_as):        
         # Create a blockchain virtual node named "eth{}".format(i)
         e:EthereumServer = blockchain.createNode("eth{}".format(i))   
         
