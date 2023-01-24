@@ -323,11 +323,11 @@ class Docker(Compiler):
         loopback IP addresses. Default to 10.128.0.0/9.
         @param dummyNetworksMask (optional) mask of dummy networks. Default to
         24.
-        @param clientEnabled (optional) set if seedemu client should be enabled.
+        @param mapClientEnabled (optional) set if seedemu client should be enabled.
         Default to False. Note that the seedemu client allows unauthenticated
         access to all nodes, which can potentially allow root access to the
         emulator host. Only enable seedemu in a trusted network.
-        @param clientPort (optional) set seedemu client port. Default to 8080.
+        @param mapClientPort (optional) set seedemu client port. Default to 8080.
         @param clientHideServiceNet (optional) hide service network for the
         client map by not adding metadata on the net. Default to True.
         """
