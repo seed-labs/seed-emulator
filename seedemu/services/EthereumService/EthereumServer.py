@@ -664,7 +664,10 @@ DEPOSIT_CHAIN_ID: "{chain_id}"
 DEPOSIT_NETWORK_ID: "{chain_id}"
 NETWORK_ID: "{chain_id}"
 MAX_COMMITTEES_PER_SLOT: "10"
-INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: "8"'''
+INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: "8"
+TARGET_COMMITTEE_SIZE: "3"
+TARGET_AGGREGATORS_PER_COMMITTEE: "2"
+'''
 
     BEACON_BOOTNODE_HTTP_SERVER = '''\
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -700,6 +703,8 @@ while true; do {{
     if [[ $CONTRACT_ADDRESS = 0x* ]]; then
         break
     fi
+    echo "beacon setup: geth not ready"
+    sleep 3
 }}; done
 '''
     
