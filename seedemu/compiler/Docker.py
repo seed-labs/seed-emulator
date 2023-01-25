@@ -298,8 +298,8 @@ class Docker(Compiler):
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
-        mapClientEnabled: bool = False,
-        mapClientPort: int = 8080,
+        internetMapEnabled: bool = False,
+        internetMapPort: int = 8080,
         clientHideServiceNet: bool = True
     ):
         """!
@@ -323,11 +323,11 @@ class Docker(Compiler):
         loopback IP addresses. Default to 10.128.0.0/9.
         @param dummyNetworksMask (optional) mask of dummy networks. Default to
         24.
-        @param clientEnabled (optional) set if seedemu client should be enabled.
-        Default to False. Note that the seedemu client allows unauthenticated
+        @param internetMapEnabled (optional) set if seedemu internetMap should be enabled.
+        Default to False. Note that the seedemu internetMap allows unauthenticated
         access to all nodes, which can potentially allow root access to the
         emulator host. Only enable seedemu in a trusted network.
-        @param clientPort (optional) set seedemu client port. Default to 8080.
+        @param internetMapPort (optional) set seedemu internetMap port. Default to 8080.
         @param clientHideServiceNet (optional) hide service network for the
         client map by not adding metadata on the net. Default to True.
         """
@@ -337,8 +337,8 @@ class Docker(Compiler):
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
-        self.__map_client_enabled = mapClientEnabled
-        self.__map_client_port = mapClientPort
+        self.__map_client_enabled = internetMapEnabled
+        self.__map_client_port = internetMapPort
 
         self.__client_hide_svcnet = clientHideServiceNet
 

@@ -82,7 +82,7 @@ emu.addLayer(eth)
 
 emu.render()
 
-docker = Docker(mapClientEnabled=True)
+docker = Docker(internetMapEnabled=True)
 # Use the "handsonsecurity/seed-ubuntu:small" custom image from dockerhub
 
 # Add the 'rafaelawon/seedemu-lighthouse-base' custom image from dockerhub.

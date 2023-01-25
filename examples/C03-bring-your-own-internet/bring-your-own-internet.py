@@ -51,4 +51,4 @@ emu.addLayer(dhcp)
 emu.render()
 
 # Compile the emulation
-emu.compile(Docker(mapClientEnabled = True), './output', override=True)
+emu.compile(Docker(internetMapEnabled = True), './output', override=True)
