@@ -34,8 +34,6 @@ class BeaconClient:
 class POSTestCase(ut.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        os.system("rm -rf test_log")
-        os.system("mkdir test_log")
         os.system("/bin/bash run.sh 2> /dev/null &")
         
         cls.wallet = Wallet(chain_id=1337)
@@ -70,7 +68,7 @@ class POSTestCase(ut.TestCase):
             time.sleep(20)
         self.assertTrue(isMerged)
 
-    def test_pos_chain_connection(self):
+    def test_pos_geth_connection(self):
         #print(len(self.beacon_client.getValidatorList()))
         url_1 = 'http://10.151.0.72:8545'
         i = 1
@@ -97,6 +95,9 @@ class POSTestCase(ut.TestCase):
 
 if __name__ == "__main__":    
     result = []
+
+    os.system("rm -rf test_log")
+    os.system("mkdir test_log")
     
     for i in range(50):
         os.system("mkdir ./test_log/test_%d"%i)
