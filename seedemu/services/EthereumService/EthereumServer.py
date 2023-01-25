@@ -697,14 +697,26 @@ tar -czvf /local-testnet/bootnode.tar.gz /local-testnet/bootnode
 '''
 
     DEPLOY_CONTRACT = '''\
+until curl --http0.9 -sHf http://{geth_node_ip}:8545 > /dev/null; do {{
+        echo "beacon-setup-node: geth node is not ready, waiting..."
+        sleep 3
+        let count++
+        [ $count -gt 60 ] && {{
+            echo "beacon-setup-node: geth node connection failed too many times, skipping."
+            ok=false
+            break
+        }}
+    }}; done
+
 while true; do {{
-    lcli deploy-deposit-contract --eth1-http http://{geth_node_ip}:8545 --confirmations 1 --validator-count {validator_count} --testnet-dir local-testnet/testnet > contract_address.txt
+    lcli deploy-deposit-contract --eth1-http http://{geth_node_ip}:8545 --confirmations 1 --validator-count {validator_count} > contract_address.txt
     CONTRACT_ADDRESS=`head -1 contract_address.txt | cut -d '"' -f 2`
     if [[ $CONTRACT_ADDRESS = 0x* ]]; then
         break
     fi
-    echo "beacon setup: geth not ready"
-    sleep 3
+    echo "beacon-setup-node: Waiting for Validator Deposit..."
+    sleep 10
+
 }}; done
 '''
     
