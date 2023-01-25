@@ -1,0 +1,9 @@
+1. Test from create emulator files and build.
+
+   - result : 1(error) of 70(tests)
+   - test items
+     1. Geth Node Run
+     2. Merge
+     3. Send Transaction after Merge
+
+2. Test without generating emulator files : just do dcup and dcdown

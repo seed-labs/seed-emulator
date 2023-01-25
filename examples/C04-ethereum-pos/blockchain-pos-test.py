@@ -34,7 +34,8 @@ class BeaconClient:
 class POSTestCase(ut.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        os.system("/bin/bash build.sh")
+        os.system("rm -rf test_log")
+        os.system("mkdir test_log")
         os.system("/bin/bash run.sh 2> /dev/null &")
         
         cls.wallet = Wallet(chain_id=1337)
@@ -45,24 +46,23 @@ class POSTestCase(ut.TestCase):
         cls.result = True
         return super().setUpClass()
         
-    # @classmethod
-    # def tearDownClass(cls) -> None:
-    #     '''
-    #     A classmethod to destruct the some thing after this test case is finished.
-    #     For this test case, it will down the containers and remove the networks of this test case
-    #     '''
+    @classmethod
+    def tearDownClass(cls) -> None:
+        '''
+        A classmethod to destruct the some thing after this test case is finished.
+        For this test case, it will down the containers and remove the networks of this test case
+        '''
         
         
-    #     return super().tearDownClass()
+        return super().tearDownClass()
     
     def test_pos_chain_merged(self):
         start_time = time.time()
         isMerged = False
-        print("")
         while True:
             latestBlockNumber = self.wallet._web3.eth.getBlock('latest').number
             print("current blockNumber : ", latestBlockNumber)
-            if latestBlockNumber > 11:
+            if latestBlockNumber > 13:
                 isMerged = True
                 break
             if time.time() - start_time > 600:
@@ -87,33 +87,29 @@ class POSTestCase(ut.TestCase):
                 print(e)
                 time.sleep(20)
                 i += 1
-
         self.assertTrue(self.wallet._web3.isConnected())
    
     def test_pos_send_transaction(self):
         recipient = self.wallet.getAccountAddressByName('Bob')
         txhash = self.wallet.sendTransaction(recipient, 0.1, sender_name='David', wait=True, verbose=False)
-
         self.assertTrue(self.wallet.getTransactionReceipt(txhash)["status"], 1)
-    
-   
+
 
 if __name__ == "__main__":    
     result = []
-    os.system("rm -rf test_log")
-    os.system("mkdir test_log")
-    for i in range(40):
+    
+    for i in range(50):
         os.system("mkdir ./test_log/test_%d"%i)
         test_suite = ut.TestSuite()
-        test_suite.addTest(POSTestCase('test_pos_chain_connection'))
+        test_suite.addTest(POSTestCase('test_pos_geth_connection'))
         test_suite.addTest(POSTestCase('test_pos_chain_merged'))
         test_suite.addTest(POSTestCase('test_pos_send_transaction'))
         res = ut.TextTestRunner(verbosity=2).run(test_suite)
-        if not res.wasSuccessful():
-            os.system("mv output /test_log/test_%d/"%(i))
+
         os.system("/bin/bash down.sh 2> /dev/null")
         succeed = "succeed" if res.wasSuccessful() else "failed"
-        os.system("mv log ./test_log/test_%d/log_%s"%(i, succeed))
+        os.system("mv ./test_log/log ./test_log/test_%d/log_%s"%(i, succeed))
+
         print("Emulator Down")
         result.append(res)
 
