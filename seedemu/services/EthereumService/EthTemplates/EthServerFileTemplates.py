@@ -35,11 +35,11 @@ while read -r node; do {{
     ok=true
     validator=false
     until curl --http0.9 -sHf http://$node/testnet > /dev/null; do {{
-        echo "eth: node $node not ready, waiting..."
-        sleep 3
+        echo "eth: beacon-setup node $node not ready, waiting..."
+        sleep 10
         let count++
         [ $count -gt 60 ] && {{
-            echo "eth: node $node failed too many times, skipping."
+            echo "eth: connection to beacon-setup node $node failed too many times, skipping."
             ok=false
             break
         }}
