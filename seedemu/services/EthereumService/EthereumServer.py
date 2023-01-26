@@ -665,8 +665,8 @@ DEPOSIT_NETWORK_ID: "{chain_id}"
 NETWORK_ID: "{chain_id}"
 MAX_COMMITTEES_PER_SLOT: "10"
 INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: "8"
-TARGET_COMMITTEE_SIZE: "3"
-TARGET_AGGREGATORS_PER_COMMITTEE: "2"
+TARGET_COMMITTEE_SIZE: "{target_committee_size}"
+TARGET_AGGREGATORS_PER_COMMITTEE: "{target_aggregator_per_committee}"
 '''
 
     BEACON_BOOTNODE_HTTP_SERVER = '''\
@@ -732,7 +732,9 @@ while true; do {{
         node.addBuildCommand('apt-get update && apt-get install -y --no-install-recommends software-properties-common python3 python3-pip')
         node.addBuildCommand('pip install web3')
         node.appendStartCommand('lcli generate-bootnode-enr --ip {} --udp-port 30305 --tcp-port 30305 --genesis-fork-version 0x42424242 --output-dir /local-testnet/bootnode'.format(bootnode_ip))
-        node.setFile("/tmp/config.yaml", self.BEACON_GENESIS.format(terminal_total_difficulty=self.__terminal_total_difficulty, chain_id=blockchain.getChainId()))
+        node.setFile("/tmp/config.yaml", self.BEACON_GENESIS.format(terminal_total_difficulty=self.__terminal_total_difficulty, chain_id=blockchain.getChainId(), 
+                                                                    target_committee_size=blockchain.getTargetCommitteeSize(), 
+                                                                    target_aggregator_per_committee = blockchain.getTargetAggregatorPerCommittee()))
         node.setFile("/tmp/validator-ids", "\n".join(validator_ids))
         node.appendStartCommand('mkdir /local-testnet/testnet')
         node.appendStartCommand('bootnode_enr=`cat /local-testnet/bootnode/enr.dat`')

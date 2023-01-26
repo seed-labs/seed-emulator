@@ -31,6 +31,8 @@ class Blockchain:
     __local_accounts_total:int
     __local_account_balance:int
     __terminal_total_difficulty:int
+    __target_aggregater_per_committee:int
+    __target_committee_size:int
 
     def __init__(self, service:EthereumService, chainName: str, chainId: int, consensus:ConsensusMechanism):
         """!
@@ -61,6 +63,8 @@ class Blockchain:
         self.__local_account_balance = 10 * EthUnit.ETHER.value
         self.__chain_id = chainId
         self.__terminal_total_difficulty = 20
+        self.__target_aggregater_per_committee = 2
+        self.__target_committee_size = 3
 
     def _doConfigure(self, node:Node, server:EthereumServer):
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
@@ -351,6 +355,44 @@ class Blockchain:
         self.__local_account_balance = balance * unit.value
         self.__local_accounts_total = total
         return self
+
+    def setTargetAggregatorPerCommittee(self, target_aggregator_per_committee:int):
+        """!
+        @brief Set target aggregator per committee for Beacon chain.
+        
+        @param target_aggregator_per_committee The target value of the number of aggregator per committee to set.
+        
+        @returns Self, for chaining calls.
+        """
+        self.__target_aggregater_per_committee = target_aggregator_per_committee
+        return self
+
+    def getTargetAggregatorPerCommittee(self):
+        """!
+        @brief Get the value of target aggregator per committee for Beacon chain.
+        
+        @returns The value of target_aggregator_per_committee.
+        """
+        return self.__target_aggregater_per_committee
+
+    def setTargetCommitteeSize(self, target_committee_size:int):
+        """!
+        @brief Set target committee size for Beacon chain.
+
+        @param target_committee_size The target value of committee size to set.
+
+        @returns Self, for chaining calls.
+        """
+        self.__target_committee_size = target_committee_size
+        return self
+
+    def getTargetCommitteeSize(self):
+        """!
+        @brief Get the value of target committee size for Beacon Chain.
+
+        @returns The value of target_committee_size.
+        """
+        return self.__target_committee_size
 
     def _log(self, message: str) -> None:
         """!
