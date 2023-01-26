@@ -709,6 +709,16 @@ until curl --http0.9 -sHf http://{geth_node_ip}:8545 > /dev/null; do {{
     }}; done
 
 while true; do {{
+    blockNumber=`curl --data '{{"method":"eth_blockNumber","params":[],"id":1,"jsonrpc":"2.0"}}' -H "Content-Type: application/json" -X POST http://{geth_node_ip}:8545 | jq -r '.result' | cut -d 'x' -f 2`
+    echo "current blockNumber :" $(( 16#$blockNumber ))
+    if [ $(( 16#$blockNumber )) -gt 5 ]
+    then
+            break
+    fi
+    sleep 3
+}}; done
+
+while true; do {{
     lcli deploy-deposit-contract --eth1-http http://{geth_node_ip}:8545 --confirmations 1 --validator-count {validator_count} > contract_address.txt
     CONTRACT_ADDRESS=`head -1 contract_address.txt | cut -d '"' -f 2`
     if [[ $CONTRACT_ADDRESS = 0x* ]]; then
@@ -740,6 +750,7 @@ while true; do {{
         validator_counts = len(validator_ids)
 
         bootnode_ip = blockchain.getBootNodes()[0].split(":")[0]
+        miner_ip = blockchain.getMinerNodes()[0]
         
         node.addBuildCommand('apt-get update && apt-get install -y --no-install-recommends software-properties-common python3 python3-pip')
         node.addBuildCommand('pip install web3')
@@ -752,7 +763,7 @@ while true; do {{
         node.appendStartCommand('bootnode_enr=`cat /local-testnet/bootnode/enr.dat`')
         node.appendStartCommand('echo "- $bootnode_enr" > /local-testnet/testnet/boot_enr.yaml')
         node.appendStartCommand('cp /tmp/config.yaml /local-testnet/testnet/config.yaml')
-        node.appendStartCommand(self.DEPLOY_CONTRACT.format(geth_node_ip=bootnode_ip, validator_count = validator_counts))
+        node.appendStartCommand(self.DEPLOY_CONTRACT.format(geth_node_ip=miner_ip, validator_count = validator_counts))
         node.appendStartCommand('lcli insecure-validators --count {validator_count} --base-dir /local-testnet/ --node-count {validator_count}'.format(validator_count = validator_counts))
         node.appendStartCommand('GENESIS_TIME=`date +%s`')
         node.appendStartCommand('''CONTRACT_ADDRESS=`head -1 contract_address.txt | cut -d '"' -f 2`''')

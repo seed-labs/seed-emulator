@@ -50,6 +50,7 @@ class Blockchain:
         self.__chain_name = chainName
         self.__genesis = Genesis(ConsensusMechanism.POA) if self.__consensus == ConsensusMechanism.POS else Genesis(self.__consensus)
         self.__boot_node_addresses = []
+        self.__miner_node_address = []
         self.__joined_accounts = []
         self.__joined_signer_accounts = []
         self.__validator_ids = []
@@ -76,9 +77,13 @@ class Blockchain:
         if server.isBootNode():
             self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self.__consensus.value))
             self.__boot_node_addresses.append(addr)
-
-        if self.__consensus == ConsensusMechanism.POS and server.isBeaconSetupNode():
-            self.__beacon_setup_node_address = '{}:{}'.format(ifaces[0].getAddress(), server.getBeaconSetupHttpPort())
+        
+        if self.__consensus == ConsensusMechanism.POS:
+            if server.isStartMiner():
+                self._log('adding as{}/{} as consensus-{} miner...'.format(node.getAsn(), node.getName(), self.__consensus.value))
+                self.__miner_node_address.append(str(ifaces[0].getAddress())) 
+            if server.isBeaconSetupNode():
+                self.__beacon_setup_node_address = '{}:{}'.format(ifaces[0].getAddress(), server.getBeaconSetupHttpPort())
 
         server._createAccounts(self)
         
@@ -110,15 +115,15 @@ class Blockchain:
         for vnode in self.__pending_targets:
             node = emulator.getBindingFor(vnode)
             server = pending_targets[vnode]
-            if self.__consensus == ConsensusMechanism.POS and server.isBootNode():
+            if self.__consensus == ConsensusMechanism.POS and server.isStartMiner():
                 ifaces = node.getInterfaces()
                 assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
                 addr = str(ifaces[0].getAddress())
-                bootnode_ip = self.getBootNodes()[0].split(":")[0]
+                miner_ip = self.__miner_node_address[0]
                 print("#######################################")
                 print(addr)
-                print(bootnode_ip)
-                if addr == bootnode_ip:
+                print(miner_ip)
+                if addr == miner_ip:
                     print("#######################################")
                     validator_count = len(self.getValidatorIds())
                     index = self.__joined_accounts.index(server._getAccounts()[0])
@@ -136,6 +141,14 @@ class Blockchain:
         @returns List of bootnodes IP addresses.
         """
         return self.__boot_node_addresses
+
+    def getMinerNodes(self) -> List[str]:
+        """!
+        @brief Get miner node IPs.
+
+        @retuns List of miner nodes IP addresseds.
+        """
+        return self.__miner_node_address
 
     def getAllAccounts(self) -> List[AccountStructure]:
         """!
