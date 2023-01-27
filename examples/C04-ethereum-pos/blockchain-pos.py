@@ -19,7 +19,7 @@ eth = EthereumService()
 blockchain = eth.createBlockchain(chainName="pos", consensus=ConsensusMechanism.POS)
 
 # set `terminal_total_difficulty`, which is the value to designate when the Merge is happen.
-blockchain.setTerminalTotalDifficulty(40)
+blockchain.setTerminalTotalDifficulty(30)
 
 asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
