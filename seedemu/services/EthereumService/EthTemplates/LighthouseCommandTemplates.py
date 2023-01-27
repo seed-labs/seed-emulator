@@ -1,8 +1,8 @@
 
 
-LIGHTHOUSE_BN_CMD = """lighthouse --debug-level info bn --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --enable-private-discovery --staking --enr-address {ip_address}  --enr-udp-port 9000 --enr-tcp-port 9000 --port 9000 --http-address {ip_address} --http-port 8000 --disable-packet-filter --target-peers {target_peers} --execution-endpoint http://localhost:8551 --execution-jwt /tmp/jwt.hex &"""
+LIGHTHOUSE_BN_CMD = """lighthouse --debug-level info bn --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --enable-private-discovery --staking --enr-address {ip_address}  --enr-udp-port 9000 --enr-tcp-port 9000 --port 9000 --http-address {ip_address} --http-port 8000 --http-allow-origin "*" --disable-packet-filter --target-peers {target_peers} --execution-endpoint http://localhost:8551 --execution-jwt /tmp/jwt.hex &"""
 
-LIGHTHOUSE_VC_CMD = """lighthouse --debug-level info vc --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --init-slashing-protection --beacon-nodes http://{ip_address}:8000 --suggested-fee-recipient {acct_address} --http --http-address 0.0.0.0 --unencrypted-http-transport &"""
+LIGHTHOUSE_VC_CMD = """lighthouse --debug-level info vc --datadir /tmp/local-testnet/eth-{eth_id} --testnet-dir /tmp/local-testnet/testnet --init-slashing-protection --beacon-nodes http://{ip_address}:8000 --suggested-fee-recipient {acct_address} --http --http-address 0.0.0.0 --http-allow-origin "*" --unencrypted-http-transport &"""
 
 LIGHTHOUSE_WALLET_CREATE_CMD = """lighthouse account_manager wallet create --testnet-dir /tmp/local-testnet/testnet --datadir /tmp/local-testnet/eth-{eth_id} --name "seed" --password-file /tmp/seed.pass"""
 
