@@ -1,0 +1,75 @@
+Creating network "output_default" with the default driver
+Creating network "output_net_2_net_100_101" with the default driver
+Creating network "output_net_2_net_101_102" with the default driver
+Creating network "output_net_3_net_100_103" with the default driver
+Creating network "output_net_ix_ix103" with the default driver
+Creating network "output_net_3_net_103_104" with the default driver
+Creating network "output_net_4_net_100_104" with the default driver
+Creating network "output_net_4_net_102_104" with the default driver
+Creating network "output_net_12_net_101_104" with the default driver
+Creating network "output_net_150_net0" with the default driver
+Creating network "output_net_151_net0" with the default driver
+Creating network "output_net_152_net0" with the default driver
+Creating network "output_net_153_net0" with the default driver
+Creating network "output_net_154_net0" with the default driver
+Creating network "output_net_160_net0" with the default driver
+Creating network "output_net_161_net0" with the default driver
+Creating network "output_net_162_net0" with the default driver
+Creating network "output_net_163_net0" with the default driver
+Creating network "output_net_164_net0" with the default driver
+Creating as4r-r100-10.100.0.4 ... 
+Creating output_736d8759ffdf80052e6fbd49e1837b75_1 ... 
+Creating as163r-router0-10.163.0.254               ... 
+Creating as152h-Ethereum-POS-6-10.152.0.72         ... 
+Creating as163h-Ethereum-POS-17-10.163.0.71        ... 
+Creating as152r-router0-10.152.0.254               ... 
+Creating as164r-router0-10.164.0.254               ... 
+Creating as163h-Ethereum-POS-18-10.163.0.72        ... 
+Creating as3r-r104-10.104.0.3                      ... 
+Creating as2r-r100-10.100.0.2                      ... 
+Creating as154r-router0-10.154.0.254               ... 
+Creating as3r-r103-10.103.0.3                      ... 
+Creating as150h-Ethereum-BeaconSetup-10.150.0.71   ... 
+Creating output_cfee3a34e9c68ac1d16035a81a926786_1 ... 
+Creating as162r-router0-10.162.0.254               ... 
+Creating as160h-Ethereum-POS-12-10.160.0.72        ... 
+Creating as4r-r102-10.102.0.4                      ... 
+Creating as150h-Ethereum-POS-2-10.150.0.72         ... 
+Creating seedemu_client                            ... 
+Creating as2r-r101-10.101.0.2                      ... 
+Creating as161r-router0-10.161.0.254               ... 
+Creating as152h-Ethereum-POS-5-10.152.0.71         ... 
+Creating as151h-Ethereum-POS-4-10.151.0.72         ... 
+Creating as103rs-ix103-10.103.0.103                ... 
+Creating as160r-router0-10.160.0.254               ... 
+Creating as100rs-ix100-10.100.0.100                ... 
+Creating as12r-r101-10.101.0.12                    ... 
+Creating as151h-Ethereum-POS-3-10.151.0.71         ... 
+Creating as2r-r102-10.102.0.2                      ... 
+Creating as162h-Ethereum-POS-15-10.162.0.71        ... 
+Creating as153h-Ethereum-POS-7-10.153.0.71         ... 
+Creating as160h-Ethereum-POS-11-10.160.0.71        ... 
+Creating as12r-r104-10.104.0.12                    ... 
+Creating as104rs-ix104-10.104.0.104                ... 
+Creating as162h-Ethereum-POS-16-10.162.0.72        ... 
+Creating as161h-Ethereum-POS-13-10.161.0.71        ... 
+Creating as150r-router0-10.150.0.254               ... 
+Creating as153r-router0-10.153.0.254               ... 
+[37A[2KCreating output_736d8759ffdf80052e6fbd49e1837b75_1 ... [32mdone[0m[37B[35A[2KCreating as152h-Ethereum-POS-6-10.152.0.72         ... [32mdone[0m[35B[38A[2KCreating as4r-r100-10.100.0.4                      ... [32mdone[0m[38BCreating as102rs-ix102-10.102.0.102                ... 
+Host is already in use by another container
+[21A[2KCreating seedemu_client                            ... [31merror[0m[21B
+ERROR: for seedemu_client  Cannot start service seedemu-client: driver failed programming external connectivity on endpoint seedemu_client (f2ba5d659c169a7bf61e236b6c11ab3ebe59430159f7d2ca4c7ca5516693b037): Bind for 0.0.0.0:8080 failed: port is already allocated
+Creating output_980bcbc1e5330d91a733d157d079d81e_1 ... 
+[36A[2KCreating as163h-Ethereum-POS-17-10.163.0.71        ... [32mdone[0m[36B[27A[2KCreating output_cfee3a34e9c68ac1d16035a81a926786_1 ... [32mdone[0m[27B[33A[2KCreating as163h-Ethereum-POS-18-10.163.0.72        ... [32mdone[0m[33BCreating as153h-Ethereum-POS-8-10.153.0.72         ... 
+[39A[2KCreating as163r-router0-10.163.0.254               ... [32mdone[0m[39BCreating as154h-Ethereum-POS-9-10.154.0.71         ... 
+[21A[2KCreating as152h-Ethereum-POS-5-10.152.0.71         ... [32mdone[0m[21BCreating as151r-router0-10.151.0.254               ... 
+[28A[2KCreating as160h-Ethereum-POS-12-10.160.0.72        ... [32mdone[0m[28BCreating as164h-Ethereum-POS-19-10.164.0.71        ... 
+Creating as101rs-ix101-10.101.0.101                ... 
+[28A[2KCreating as150h-Ethereum-POS-2-10.150.0.72         ... [32mdone[0m[28BCreating as161h-Ethereum-POS-14-10.161.0.72        ... 
+Creating as154h-Ethereum-POS-10-10.154.0.72        ... 
+[35A[2KCreating as150h-Ethereum-BeaconSetup-10.150.0.71   ... [32mdone[0m[35BCreating as3r-r100-10.100.0.3                      ... 
+Creating as4r-r104-10.104.0.4                      ... 
+[24A[2KCreating as100rs-ix100-10.100.0.100                ... [32mdone[0m[24B[43A[2KCreating as164r-router0-10.164.0.254               ... [32mdone[0m[43B[27A[2KCreating as151h-Ethereum-POS-4-10.151.0.72         ... [32mdone[0m[27BCreating as164h-Ethereum-POS-20-10.164.0.72        ... 
+[27A[2KCreating as103rs-ix103-10.103.0.103                ... [32mdone[0m[27B[26A[2KCreating as160r-router0-10.160.0.254               ... [32mdone[0m[26B[40A[2KCreating as154r-router0-10.154.0.254               ... [32mdone[0m[40B[20A[2KCreating as153h-Ethereum-POS-7-10.153.0.71         ... [32mdone[0m[20B[31A[2KCreating as161r-router0-10.161.0.254               ... [32mdone[0m[31B[42A[2KCreating as3r-r104-10.104.0.3                      ... [32mdone[0m[42B[23A[2KCreating as151h-Ethereum-POS-3-10.151.0.71         ... [32mdone[0m[23B[36A[2KCreating as162r-router0-10.162.0.254               ... [32mdone[0m[36B[16A[2KCreating as162h-Ethereum-POS-16-10.162.0.72        ... [32mdone[0m[16B[45A[2KCreating as152r-router0-10.152.0.254               ... [32mdone[0m[45B[41A[2KCreating as2r-r100-10.100.0.2                      ... [32mdone[0m[41B[15A[2KCreating as161h-Ethereum-POS-13-10.161.0.71        ... [32mdone[0m[15B[19A[2KCreating as160h-Ethereum-POS-11-10.160.0.71        ... [32mdone[0m[19B[21A[2KCreating as162h-Ethereum-POS-15-10.162.0.71        ... [32mdone[0m[21B[22A[2KCreating as2r-r102-10.102.0.2                      ... [32mdone[0m[22B[24A[2KCreating as12r-r101-10.101.0.12                    ... [32mdone[0m[24B[34A[2KCreating as4r-r102-10.102.0.4                      ... [32mdone[0m[34B[17A[2KCreating as104rs-ix104-10.104.0.104                ... [32mdone[0m[17B[13A[2KCreating as153r-router0-10.153.0.254               ... [32mdone[0m[13B[18A[2KCreating as12r-r104-10.104.0.12                    ... [32mdone[0m[18B[9A[2KCreating as154h-Ethereum-POS-9-10.154.0.71         ... [32mdone[0m[9B[14A[2KCreating as150r-router0-10.150.0.254               ... [32mdone[0m[14B[8A[2KCreating as151r-router0-10.151.0.254               ... [32mdone[0m[8B[39A[2KCreating as3r-r103-10.103.0.3                      ... [32mdone[0m[39B[11A[2KCreating output_980bcbc1e5330d91a733d157d079d81e_1 ... [32mdone[0m[11B[30A[2KCreating as2r-r101-10.101.0.2                      ... [32mdone[0m[30B[7A[2KCreating as164h-Ethereum-POS-19-10.164.0.71        ... [32mdone[0m[7B[12A[2KCreating as102rs-ix102-10.102.0.102                ... [32mdone[0m[12B[10A[2KCreating as153h-Ethereum-POS-8-10.153.0.72         ... [32mdone[0m[10B[6A[2KCreating as101rs-ix101-10.101.0.101                ... [32mdone[0m[6B[4A[2KCreating as154h-Ethereum-POS-10-10.154.0.72        ... [32mdone[0m[4B[5A[2KCreating as161h-Ethereum-POS-14-10.161.0.72        ... [32mdone[0m[5B[1A[2KCreating as164h-Ethereum-POS-20-10.164.0.72        ... [32mdone[0m[1B[3A[2KCreating as3r-r100-10.100.0.3                      ... [32mdone[0m[3B[2A[2KCreating as4r-r104-10.104.0.4                      ... [32mdone[0m[2B
+ERROR: for seedemu-client  Cannot start service seedemu-client: driver failed programming external connectivity on endpoint seedemu_client (f2ba5d659c169a7bf61e236b6c11ab3ebe59430159f7d2ca4c7ca5516693b037): Bind for 0.0.0.0:8080 failed: port is already allocated
+Encountered errors while bringing up the project.

@@ -1,0 +1,135 @@
+
+==========Trial 1==========
+Connection failed
+
+==========Trial 2==========
+Connection failed
+
+==========Trial 3==========
+Connection Succeed:  http://10.151.0.72:8545
+Connection Succeed:  http://10.152.0.72:8545
+Connection Succeed:  http://10.153.0.72:8545
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  1
+Total in txpool: 0 (http://10.151.0.72:8545)
+Total in txpool: 0 (http://10.152.0.72:8545)
+Total in txpool: 0 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  1
+Total in txpool: 0 (http://10.151.0.72:8545)
+Total in txpool: 0 (http://10.152.0.72:8545)
+Total in txpool: 0 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  2
+Total in txpool: 0 (http://10.151.0.72:8545)
+Total in txpool: 0 (http://10.152.0.72:8545)
+Total in txpool: 0 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  3
+Total in txpool: 0 (http://10.151.0.72:8545)
+Total in txpool: 0 (http://10.152.0.72:8545)
+Total in txpool: 0 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  3
+Total in txpool: 0 (http://10.151.0.72:8545)
+Total in txpool: 0 (http://10.152.0.72:8545)
+Total in txpool: 0 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  4
+Total in txpool: 0 (http://10.151.0.72:8545)
+Total in txpool: 0 (http://10.152.0.72:8545)
+Total in txpool: 0 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  5
+Total in txpool: 0 (http://10.151.0.72:8545)
+Total in txpool: 0 (http://10.152.0.72:8545)
+Total in txpool: 0 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  5
+Total in txpool: 0 (http://10.151.0.72:8545)
+Total in txpool: 0 (http://10.152.0.72:8545)
+Total in txpool: 0 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  6
+Total in txpool: 1 (http://10.151.0.72:8545)
+Total in txpool: 1 (http://10.152.0.72:8545)
+Total in txpool: 1 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  7
+Total in txpool: 0 (http://10.151.0.72:8545)
+Total in txpool: 0 (http://10.152.0.72:8545)
+Total in txpool: 0 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  7
+Total in txpool: 0 (http://10.151.0.72:8545)
+Total in txpool: 0 (http://10.152.0.72:8545)
+Total in txpool: 0 (http://10.153.0.72:8545)
+
+========================================
+Waiting for contract deployment...
+current blockNumber :  8
+Total in txpool: 1 (http://10.151.0.72:8545)
+Total in txpool: 1 (http://10.152.0.72:8545)
+Total in txpool: 1 (http://10.153.0.72:8545)
+++++Deposit Succeed++++
+Deposit contract address: "0xa1ad48288461ee030a2f391128d055faef5263c9"
+Submitting deposit for validator 0...
+Submitting deposit for validator 1...
+Submitting deposit for validator 2...
+Submitting deposit for validator 3...
+Submitting deposit for validator 4...
+Submitting deposit for validator 5...
+Submitting deposit for validator 6...
+Submitting deposit for validator 7...
+Submitting deposit for validator 8...
+Submitting deposit for validator 9...
+Submitting deposit for validator 10...
+Submitting deposit for validator 11...
+Submitting deposit for validator 12...
+Submitting deposit for validator 13...
+Submitting deposit for validator 14...
+Submitting deposit for validator 15...
+
+
+========================================
+Terminal total difficulty is set to 40.
+The blockNumber will not increase from 20, if the merge is failed.
+So we will assume that the blockNumber is over 24, the merge is succeed.
+========================================
+current blockNumber :  8
+current blockNumber :  9
+current blockNumber :  11
+current blockNumber :  12
+current blockNumber :  13
+current blockNumber :  15
+current blockNumber :  17
+current blockNumber :  18
+current blockNumber :  20
+current blockNumber :  22
+current blockNumber :  23
+current blockNumber :  25
+Emulator Down
+==========Test #0=========
+score: 4 of 4 (0 errors, 0 failures)
