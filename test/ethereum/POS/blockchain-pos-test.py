@@ -14,32 +14,10 @@ import sys
 from web3.middleware import geth_poa_middleware
 
 
-class BeaconClient:
-    """!
-    @brief The BeaconClient class.  
-    """
-
-    def __init__(self):
-        """!
-        @brief BeaconClient constructor.
-        """
-
-        self._beacon_node_url = 'http://10.151.0.71:8000'
-        
-    
-
-    def getValidatorList(self):
-        return self._request_api("eth/v1/beacon/states/head/validators")['data']
-
-
-    def _request_api(self, api):
-        return requests.get(self._beacon_node_url+"/"+api).json()
-    
-
 class POSTestCase(ut.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        os.system("/bin/bash run.sh 2> /dev/null &")
+        os.system("/bin/bash ./emulator-code/run.sh 2> /dev/null &")
         
         cls.wallet1 = Wallet(chain_id=1337)
         for name in ['Alice', 'Bob', 'Charlie', 'David', 'Eve']:
@@ -48,7 +26,6 @@ class POSTestCase(ut.TestCase):
         cls.wallet2 = Wallet(chain_id=1337)
         cls.wallet3 = Wallet(chain_id=1337)
 
-        cls.beacon_client = BeaconClient()
         cls.result = True
         return super().setUpClass()
         
@@ -58,31 +35,11 @@ class POSTestCase(ut.TestCase):
         A classmethod to destruct the some thing after this test case is finished.
         For this test case, it will down the containers and remove the networks of this test case
         '''
-        os.system("/bin/bash down.sh 2> /dev/null")
+        os.system("/bin/bash ./emulator-code/down.sh 2> /dev/null")
         
         return super().tearDownClass()
     
-    def test_pos_chain_merged(self):
-        start_time = time.time()
-        isMerged = False
-        printLog("\n========================================")
-        printLog("Terminal total difficulty is set to 40.")
-        printLog("The blockNumber will not increase from 20, if the merge is failed.")
-        printLog("So we will assume that the blockNumber is over 24, the merge is succeed.")
-        printLog("========================================")
-        while True:
-            latestBlockNumber = self.wallet1._web3.eth.getBlock('latest').number
-            printLog("current blockNumber : ", latestBlockNumber)
-            if latestBlockNumber > 24:
-                isMerged = True
-                break
-            if time.time() - start_time > 600:
-                break
-            time.sleep(20)
-        self.assertTrue(isMerged)
-
     def test_pos_geth_connection(self):
-        #printLog(len(self.beacon_client.getValidatorList()))
         url_1 = 'http://10.151.0.72:8545'
         url_2 = 'http://10.152.0.72:8545'
         url_3 = 'http://10.153.0.72:8545'
@@ -106,6 +63,9 @@ class POSTestCase(ut.TestCase):
                 time.sleep(20)
                 i += 1
         self.assertTrue(self.wallet1._web3.isConnected())
+        self.assertTrue(self.wallet2._web3.isConnected())
+        self.assertTrue(self.wallet3._web3.isConnected())
+
 
     def test_pos_contract_deployment(self):
         client = docker.from_env()
@@ -137,6 +97,25 @@ class POSTestCase(ut.TestCase):
                 break
             time.sleep(10)
         self.assertTrue(contract_deployed)
+
+    def test_pos_chain_merged(self):
+        start_time = time.time()
+        isMerged = False
+        printLog("\n========================================")
+        printLog("Terminal total difficulty is set to 30.")
+        printLog("The blockNumber will not increase from 15, if the merge is failed.")
+        printLog("So we will assume that the blockNumber is over 17, the merge is succeed.")
+        printLog("========================================")
+        while True:
+            latestBlockNumber = self.wallet1._web3.eth.getBlock('latest').number
+            printLog("current blockNumber : ", latestBlockNumber)
+            if latestBlockNumber > 17:
+                isMerged = True
+                break
+            if time.time() - start_time > 600:
+                break
+            time.sleep(20)
+        self.assertTrue(isMerged)
 
     def test_pos_send_transaction(self):
         recipient = self.wallet1.getAccountAddressByName('Bob')
@@ -197,8 +176,8 @@ if __name__ == "__main__":
         test_suite = ut.TestSuite()
         test_suite.addTest(POSTestCase('test_pos_geth_connection'))
         test_suite.addTest(POSTestCase('test_pos_contract_deployment'))
-        # test_suite.addTest(POSTestCase('test_pos_chain_merged'))
-        # test_suite.addTest(POSTestCase('test_pos_send_transaction'))
+        test_suite.addTest(POSTestCase('test_pos_chain_merged'))
+        test_suite.addTest(POSTestCase('test_pos_send_transaction'))
         res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
         succeed = "succeed" if res.wasSuccessful() else "failed"
