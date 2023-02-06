@@ -272,6 +272,9 @@ class Scion(Layer):
         reg = emulator.getRegistry()
         self._configure_links(reg)
         with TemporaryDirectory(prefix="seed_scion") as tempdir:
+            # XXX(benthor): hack to inspect temporary files after script termination
+            tempdir = "/tmp/seed_scion"
+            os.mkdir(tempdir)
             self._gen_scion_crypto(tempdir)
             for ((scope, type, name), obj) in reg.getAll().items():
                 # Install and configure SCION on a router
@@ -418,18 +421,41 @@ class Scion(Layer):
 
     def _install_scion(self, node: Node):
         """Install SCION packages on the node."""
-        node.addSoftware("apt-transport-https")
-        node.addSoftware("ca-certificates")
         node.addBuildCommand(
             'echo "deb [trusted=yes] https://packages.netsec.inf.ethz.ch/debian all main"'
             ' > /etc/apt/sources.list.d/scionlab.list')
         node.addBuildCommand("apt-get update && apt-get install -y scionlab")
+        node.addSoftware("apt-transport-https")
+        node.addSoftware("ca-certificates")
 
     def _provision_router(self, rnode: Router, tempdir: str):
+        # DONE: Copy crypto material from tempdir (rnode.setFile)
+
+        #XXX(benthor): not sure if keeping paths reflecting ISD-AS
+        # data on the container is a good idea. It might be easier for
+        # if filenames were reproducible. on the other hand, having
+        # this meta-data in the file names might help with debugging
+        asn = rnode.getAsn()
+        isd = self.getAsIsd(asn)
+        hostdir = os.path.join(tempdir, f"AS{asn}", "crypto")
+        if self.__ases[asn].is_core:
+            for kind in ["sensitive", "regular"]:
+                crtp = os.path.join("voting", f"ISD{isd}-AS{asn}.{kind}.crt")
+                keyp = os.path.join("voting", f"{kind}-voting.key")
+                rnode.importFile(os.path.join(hostdir, crtp), os.path.join("/crypto", crtp))
+                rnode.importFile(os.path.join(hostdir, keyp), os.path.join("/crypto", keyp))
+            for kind in ["root", "ca"]:
+                crtp = os.path.join("ca", f"ISD{isd}-AS{asn}.{kind}.crt")
+                keyp = os.path.join("ca", f"cp-{kind}.key")
+                rnode.importFile(os.path.join(hostdir, crtp), os.path.join("/crypto", crtp))
+                rnode.importFile(os.path.join(hostdir, keyp), os.path.join("/crypto", keyp))
+        pemp = os.path.join("as", f"ISD{isd}-AS{asn}.pem")
+        keyp = os.path.join("as", "cp-as.key")
+        rnode.importFile(os.path.join(hostdir, pemp), os.path.join("/crypto", pemp))
+        rnode.importFile(os.path.join(hostdir, keyp), os.path.join("/crypto", keyp))
+
         # TODO: Build and install SCION config files
-        # TODO: Copy crypto material from tempdir (rnode.setFile)
         # TODO: Make sure the container runs SCION on startup (rnode.appendStartCommand)
-        pass
 
     def _provision_host(self, hnode: Node, tempdir: str):
         # TODO: Same as _provision_router but for an end host
