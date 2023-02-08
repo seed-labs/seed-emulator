@@ -2,6 +2,8 @@ import dataclasses
 import io
 import os
 import subprocess
+import base64
+from os.path import join as pjoin
 from dataclasses import dataclass
 from enum import Enum
 from tempfile import TemporaryDirectory
@@ -401,7 +403,7 @@ class Scion(Layer):
 
     def _gen_topofile(self, tempdir: str) -> str:
         """Generate a standard SCION .topo file representing the emulated network."""
-        path = os.path.join(tempdir, "seed.topo")
+        path = pjoin(tempdir, "seed.topo")
         with open(path, 'w') as f:
             f.write("ASes:\n")
             for asn, asys in self.__ases.items():
@@ -431,28 +433,39 @@ class Scion(Layer):
     def _provision_router(self, rnode: Router, tempdir: str):
         # DONE: Copy crypto material from tempdir (rnode.setFile)
 
-        #XXX(benthor): not sure if keeping paths reflecting ISD-AS
-        # data on the container is a good idea. It might be easier for
-        # if filenames were reproducible. on the other hand, having
-        # this meta-data in the file names might help with debugging
+        #XXX(benthor): not sure if keeping filenames reflecting ISD-AS
+        # data on the container is a good idea. Generating config
+        # files might be easier if filenames were static and the same
+        # across nodes. On the other hand, having this meta-data in
+        # the file names might help with debugging
         asn = rnode.getAsn()
         isd = self.getAsIsd(asn)
-        hostdir = os.path.join(tempdir, f"AS{asn}", "crypto")
+        base = '/crypto'
+        def myImport(name):
+            rnode.importFile(pjoin(tempdir, f"AS{asn}", "crypto", name), pjoin(base, name))
         if self.__ases[asn].is_core:
             for kind in ["sensitive", "regular"]:
-                crtp = os.path.join("voting", f"ISD{isd}-AS{asn}.{kind}.crt")
-                keyp = os.path.join("voting", f"{kind}-voting.key")
-                rnode.importFile(os.path.join(hostdir, crtp), os.path.join("/crypto", crtp))
-                rnode.importFile(os.path.join(hostdir, keyp), os.path.join("/crypto", keyp))
+                myImport(pjoin("voting", f"ISD{isd}-AS{asn}.{kind}.crt"))
+                myImport(pjoin("voting", f"{kind}-voting.key"))
+                myImport(pjoin("voting", f"{kind}.tmpl"))
             for kind in ["root", "ca"]:
-                crtp = os.path.join("ca", f"ISD{isd}-AS{asn}.{kind}.crt")
-                keyp = os.path.join("ca", f"cp-{kind}.key")
-                rnode.importFile(os.path.join(hostdir, crtp), os.path.join("/crypto", crtp))
-                rnode.importFile(os.path.join(hostdir, keyp), os.path.join("/crypto", keyp))
-        pemp = os.path.join("as", f"ISD{isd}-AS{asn}.pem")
-        keyp = os.path.join("as", "cp-as.key")
-        rnode.importFile(os.path.join(hostdir, pemp), os.path.join("/crypto", pemp))
-        rnode.importFile(os.path.join(hostdir, keyp), os.path.join("/crypto", keyp))
+                myImport(pjoin("ca", f"ISD{isd}-AS{asn}.{kind}.crt"))
+                myImport(pjoin("ca", f"cp-{kind}.key"))
+                myImport(pjoin("ca", f"cp-{kind}.tmpl"))
+        myImport(pjoin("as", f"ISD{isd}-AS{asn}.pem"))
+        myImport(pjoin("as", "cp-as.key"))
+        myImport(pjoin("as", "cp-as.tmpl"))
+
+        #XXX(benthor): Is this filename really that stable?
+        trcname = f"ISD{isd}-B1-S1.trc"
+        rnode.importFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(base, "certs", trcname))
+
+        # key generation stolen from scion tools/topology/cert.py
+        rnode.setFile(pjoin(base, 'keys', 'master0.key'), base64.b64encode(os.urandom(16)).decode())
+        rnode.setFile(pjoin(base, 'keys', 'master1.key'), base64.b64encode(os.urandom(16)).decode())
+
+        
+
 
         # TODO: Build and install SCION config files
         # TODO: Make sure the container runs SCION on startup (rnode.appendStartCommand)
