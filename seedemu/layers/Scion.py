@@ -52,9 +52,15 @@ class _AutonomousSystem:
     is_core: str = False
     cert_issuer: Optional[int] = None
     # Next IFID assigned to a link
-    _next_ifid: int = dataclasses.field(default=1, kw_only=True)
+    #XXX(benthor): kw_only was introduced in python 3.10 but we want to run under 3.9
+    #_next_ifid: int = dataclasses.field(default=1, kw_only=True)
+    _next_ifid: int = dataclasses.field(default=1)
+    
     # Next UDP port assigned to a link per router
-    _next_port: Dict[str, int] = dataclasses.field(default_factory=dict, kw_only=True)
+
+    #XXX(benthor): kw_only was introduced in python 3.10 but we want to run under 3.9
+    #_next_port: Dict[str, int] = dataclasses.field(default_factory=dict, kw_only=True)
+    _next_port: Dict[str, int] = dataclasses.field(default_factory=dict)
 
     def get_next_ifid(self) -> int:
         ifid = self._next_ifid
@@ -430,9 +436,8 @@ class Scion(Layer):
         node.addSoftware("apt-transport-https")
         node.addSoftware("ca-certificates")
 
-    def _provision_router(self, rnode: Router, tempdir: str):
-        # DONE: Copy crypto material from tempdir (rnode.setFile)
 
+    def _provision_router_crypto(self, rnode: Router, tempdir: str):
         #XXX(benthor): not sure if keeping filenames reflecting ISD-AS
         # data on the container is a good idea. Generating config
         # files might be easier if filenames were static and the same
@@ -440,9 +445,9 @@ class Scion(Layer):
         # the file names might help with debugging
         asn = rnode.getAsn()
         isd = self.getAsIsd(asn)
-        base = '/crypto'
+        base = '/conf'
         def myImport(name):
-            rnode.importFile(pjoin(tempdir, f"AS{asn}", "crypto", name), pjoin(base, name))
+            rnode.importFile(pjoin(tempdir, f"AS{asn}", "crypto", name), pjoin(base, "crypto", name))
         if self.__ases[asn].is_core:
             for kind in ["sensitive", "regular"]:
                 myImport(pjoin("voting", f"ISD{isd}-AS{asn}.{kind}.crt"))
@@ -456,13 +461,18 @@ class Scion(Layer):
         myImport(pjoin("as", "cp-as.key"))
         myImport(pjoin("as", "cp-as.tmpl"))
 
-        #XXX(benthor): Is this filename really that stable?
+        #XXX(benthor): respect certificate issuer here?
         trcname = f"ISD{isd}-B1-S1.trc"
         rnode.importFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(base, "certs", trcname))
 
         # key generation stolen from scion tools/topology/cert.py
         rnode.setFile(pjoin(base, 'keys', 'master0.key'), base64.b64encode(os.urandom(16)).decode())
         rnode.setFile(pjoin(base, 'keys', 'master1.key'), base64.b64encode(os.urandom(16)).decode())
+        
+        
+    def _provision_router(self, rnode: Router, tempdir: str):
+        # DONE: Copy crypto material from tempdir (rnode.setFile)
+        self._provision_router_crypto(rnode, tempdir)
 
         
 
