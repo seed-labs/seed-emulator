@@ -23,6 +23,15 @@ as150_router = as150.createRouter('br1')
 as151_router = as151.createRouter('br1')
 as152_router = as152.createRouter('br1')
 
+as150.createNetwork('net150')
+as151.createNetwork('net151')
+as152.createNetwork('net152')
+
+as150_router.joinNetwork('net150')
+as151_router.joinNetwork('net151')
+as152_router.joinNetwork('net152')
+
+
 scion.setAsIsd(150, 1)
 scion.setAsIsd(151, 1)
 scion.setAsIsd(152, 1)
@@ -41,6 +50,10 @@ as152_router.crossConnect(150, 'br1', '10.150.2.3/29')
 #ebgp.addPrivatePeering(100, 151, 152)
 #ebgp.addPrivatePeering(100, 152, 150)
 #ebgp.addCrossConnectPeering(150, 153, PeerRelationship.Provider)
+
+scion.setInternalNet(150, 'net150')
+scion.setInternalNet(151, 'net151')
+scion.setInternalNet(152, 'net152')
 
 scion.addXcLink(150, 151, ScLinkType.Transit)
 scion.addXcLink(150, 152, ScLinkType.Transit)

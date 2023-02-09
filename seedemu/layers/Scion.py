@@ -3,6 +3,7 @@ import io
 import os
 import subprocess
 import base64
+import json
 from os.path import join as pjoin
 from dataclasses import dataclass
 from enum import Enum
@@ -11,6 +12,8 @@ from typing import Dict, List, NamedTuple, Optional, Tuple
 
 from seedemu.core import (Emulator, File, Interface, Layer, Network, Node,
                           Registry, Router, ScopedRegistry)
+
+from seedemu.core.enums import NodeRole
 
 
 class LinkType(Enum):
@@ -84,12 +87,38 @@ class _LinkEp:
     ifid: int
     ip: str
     port: int
+    # TODO: add MTU?
 
 
 class _LinkConfig(NamedTuple):
     a: _LinkEp
     b: _LinkEp
     rel: LinkType
+
+    def to_dict(self, asn: int, mtu: int) -> Dict:
+        """return dictionary representation from the perspective of asn"""
+        assert asn == self.a.asn or asn == self.b.asn, "link not configured for given asn"
+        # TODO: handle peer and core link types
+        link_to = "child"
+        public = f"{self.a.ip}:{self.a.port}"
+        remote = f"{self.b.ip}:{self.b.port}"
+        ifid = str(self.a.ifid)
+        remoteAS = f"{self.b.isd}-{self.b.asn}"
+        if asn == self.b.asn:
+            link_to = "parent"
+            public, remote = remote, public
+            ifid = str(self.b.ifid)
+            remoteAS = f"{self.a.isd}-{self.a.asn}"
+        return {
+            ifid: {
+                "underlay": {
+                    "public": public,
+                    "remote": remote,
+                },
+                "isd_as": remoteAS,
+                "link_to": link_to,
+                "mtu": mtu, 
+            }}
 
 
 def _format_ia(isd: int, asn: int) -> str:
@@ -111,6 +140,8 @@ class Scion(Layer):
     __ix_links: Dict[Tuple[int, int, int], LinkType]
     __link_cfg: List[_LinkConfig]
 
+    __as_internal_nets: Dict[int, str]
+
     def __init__(self):
         """!
         @brief SCION layer constructor.
@@ -121,6 +152,7 @@ class Scion(Layer):
         self.__links = {}
         self.__ix_links = {}
         self.__link_cfg = []
+        self.__as_internal_nets = {}
         self.addDependency('Base', False, False)
         self.addDependency('Routing', False, False)
 
@@ -142,6 +174,25 @@ class Scion(Layer):
 
         return self
 
+
+    def setInternalNet(self, asn: int, net: str):
+        assert asn in self.__ases
+        self.__as_internal_nets[asn]=net
+
+    def getASRouters(self, asn: int) -> List[Router]:
+        """!
+        @brief XXX add description
+
+        @param asn
+
+        @returns List of routers
+        """
+        #XXX maybe this is overengineered
+        result = set()
+        result.update([link_cfg.a.router for link_cfg in filter(lambda c: c.a.asn == asn, self.__link_cfg)])
+        result.update([link_cfg.b.router for link_cfg in filter(lambda c: c.b.asn == asn, self.__link_cfg)])
+        return list(result)
+    
     def getIsds(self) -> List[Tuple[int, str]]:
         """!
         @brief Get a list of all ISDs.
@@ -286,11 +337,14 @@ class Scion(Layer):
             self._gen_scion_crypto(tempdir)
             for ((scope, type, name), obj) in reg.getAll().items():
                 # Install and configure SCION on a router
+                #print(scope, type, name)
                 if type == 'rnode':
                     rnode: Router = obj
+                    asn = rnode.getAsn()
                     if rnode.hasAttribute("scion"):
+                        internal_network = reg.get(str(asn), 'net', self.__as_internal_nets[asn])
                         self._install_scion(rnode)
-                        self._provision_router(rnode, tempdir)
+                        self._provision_router(rnode, internal_network, tempdir)
                 # Install and configure SCION on an end host
                 elif type == 'hnode':
                     hnode: Node = obj
@@ -371,6 +425,15 @@ class Scion(Layer):
         else:
             assert False
 
+    def _get_xc_underlays(self, rnode: Router) -> List[_LinkConfig]:
+        """XXX(benthor): is this the way to go?
+        """
+        res = []
+        for link_cfg in self.__link_cfg:
+            if link_cfg.a.router == rnode or link_cfg.b.router == rnode:
+                res.append(link_cfg)
+        return res
+
     def _create_link(self,
                      a_asn: int, b_asn: int,
                      a_router: Router, b_router: Router,
@@ -437,17 +500,12 @@ class Scion(Layer):
         node.addSoftware("ca-certificates")
 
 
-    def _provision_router_crypto(self, rnode: Router, tempdir: str):
-        #XXX(benthor): not sure if keeping filenames reflecting ISD-AS
-        # data on the container is a good idea. Generating config
-        # files might be easier if filenames were static and the same
-        # across nodes. On the other hand, having this meta-data in
-        # the file names might help with debugging
-        asn = rnode.getAsn()
+    def _provision_node_crypto(self, node: Node, basedir: str, tempdir: str):
+        asn = node.getAsn()
         isd = self.getAsIsd(asn)
-        base = '/conf'
+        base = basedir
         def myImport(name):
-            rnode.importFile(pjoin(tempdir, f"AS{asn}", "crypto", name), pjoin(base, "crypto", name))
+            node.importFile(pjoin(tempdir, f"AS{asn}", "crypto", name), pjoin(base, "crypto", name))
         if self.__ases[asn].is_core:
             for kind in ["sensitive", "regular"]:
                 myImport(pjoin("voting", f"ISD{isd}-AS{asn}.{kind}.crt"))
@@ -463,21 +521,63 @@ class Scion(Layer):
 
         #XXX(benthor): respect certificate issuer here?
         trcname = f"ISD{isd}-B1-S1.trc"
-        rnode.importFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(base, "certs", trcname))
+        node.importFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(base, "certs", trcname))
 
         # key generation stolen from scion tools/topology/cert.py
-        rnode.setFile(pjoin(base, 'keys', 'master0.key'), base64.b64encode(os.urandom(16)).decode())
-        rnode.setFile(pjoin(base, 'keys', 'master1.key'), base64.b64encode(os.urandom(16)).decode())
+        node.setFile(pjoin(base, 'keys', 'master0.key'), base64.b64encode(os.urandom(16)).decode())
+        node.setFile(pjoin(base, 'keys', 'master1.key'), base64.b64encode(os.urandom(16)).decode())
         
+    def _provision_node_topology(self, node: Node, network: Network, basedir: str, tempdir: str):
+        asn = node.getAsn()
+        isd = self.getAsIsd(asn)
+
+        isd_as = f"{isd}-{asn}"
+        attributes = []
+        if self.__ases[asn].is_core:
+            attributes = ["authoritative", "core", "issuing", "voting"]
+
+        border_routers = dict()
+        for router in self.getASRouters(asn):
+            #print(router)
+            linkCfgs = self._get_xc_underlays(router)
+            for i in range(0, len(linkCfgs)):
+                linkCfg = linkCfgs[i]
+                routerName = f"{router.getName()}-{i+1}"
+                border_routers[routerName] = {
+                    "internal_addr": f"{(network.assign(NodeRole.Router))}:30042",
+                    "interfaces": linkCfg.to_dict(asn, network.getMtu()-100) #XXX what is a safe MTU?
+                }
+
+        cs_name = "cs1"
+        cs_addr = f"{(network.assign(NodeRole.Host))}:30252"
+        control_service = { cs_name: { 'addr': cs_addr }}
+                
+        topology = {
+            'attributes': attributes,
+            'isd_as': isd_as,
+            'mtu': network.getMtu()-100, #XXX
+            'control_service': control_service,
+            'discovery_service': control_service,
+            'border_routers': border_routers,
+            'colibri_service': {},
+        }
+            
+        node.setFile(pjoin(basedir, 'topology.json'), json.dumps(topology, indent=2))
+            
+            
+            
         
-    def _provision_router(self, rnode: Router, tempdir: str):
+    def _provision_router(self, rnode: Router, network: Network, tempdir: str):
+        basedir = '/conf'
+        
         # DONE: Copy crypto material from tempdir (rnode.setFile)
-        self._provision_router_crypto(rnode, tempdir)
-
-        
-
+        self._provision_node_crypto(rnode, basedir, tempdir)
 
         # TODO: Build and install SCION config files
+        self._provision_node_topology(rnode, network, basedir, tempdir)
+        
+
+
         # TODO: Make sure the container runs SCION on startup (rnode.appendStartCommand)
 
     def _provision_host(self, hnode: Node, tempdir: str):
