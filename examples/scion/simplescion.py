@@ -40,10 +40,10 @@ scion.setCoreAs(150, True)
 scion.setCertIssuer(151, 150)
 scion.setCertIssuer(152, 150)
 
-as150_router.crossConnect(151, 'br1', '10.150.1.2/29')
-as150_router.crossConnect(152, 'br1', '10.150.2.2/29')
-as151_router.crossConnect(150, 'br1', '10.150.1.3/29')
-as152_router.crossConnect(150, 'br1', '10.150.2.3/29')
+as150_router.crossConnect(151, 'br1', '10.150.254.2/29')
+as150_router.crossConnect(152, 'br1', '10.150.253.2/29')
+as151_router.crossConnect(150, 'br1', '10.150.254.3/29')
+as152_router.crossConnect(150, 'br1', '10.150.253.3/29')
 
 # BGP Peering
 #ebgp.addPrivatePeering(100, 150, 151)

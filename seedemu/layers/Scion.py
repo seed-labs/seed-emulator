@@ -343,8 +343,11 @@ class Scion(Layer):
                     asn = rnode.getAsn()
                     if rnode.hasAttribute("scion"):
                         internal_network = reg.get(str(asn), 'net', self.__as_internal_nets[asn])
-                        self._install_scion(rnode)
-                        self._provision_router(rnode, internal_network, tempdir)
+                        for interface in rnode.getInterfaces():
+                            if interface.getNet() == internal_network:
+                                self._install_scion(rnode)
+                                self._provision_router(rnode, interface, tempdir)
+                                break
                 # Install and configure SCION on an end host
                 elif type == 'hnode':
                     hnode: Node = obj
@@ -527,7 +530,7 @@ class Scion(Layer):
         node.setFile(pjoin(base, 'keys', 'master0.key'), base64.b64encode(os.urandom(16)).decode())
         node.setFile(pjoin(base, 'keys', 'master1.key'), base64.b64encode(os.urandom(16)).decode())
         
-    def _provision_node_configs(self, node: Node, network: Network, basedir: str, tempdir: str):
+    def _provision_node_configs(self, node: Node, interface: Interface, basedir: str, tempdir: str):
         asn = node.getAsn()
         isd = self.getAsIsd(asn)
         general = lambda name: f'[general]\nid = "{name}"\nconfig_dir = "{basedir}"\n\n[log.console]\nlevel = "info"\n\n'
@@ -545,9 +548,10 @@ class Scion(Layer):
             for i in range(0, len(linkCfgs)):
                 linkCfg = linkCfgs[i]
                 routerName = f"{router.getName()}-{i+1}"
+                addr = interface.getAddress()
                 border_routers[routerName] = {
-                    "internal_addr": f"{(network.assign(NodeRole.Router))}:30042",
-                    "interfaces": linkCfg.to_dict(asn, network.getMtu()-100) #XXX what is a safe MTU?
+                    "internal_addr": f"{addr}:{30042+i}",
+                    "interfaces": linkCfg.to_dict(asn, 1400) #XXX what is a safe MTU?
                 }
                 node.setFile(
                     pjoin(basedir, routerName+".toml"),
@@ -556,13 +560,13 @@ class Scion(Layer):
                 
 
         cs_name = "cs1"
-        cs_addr = f"{(network.assign(NodeRole.Host))}:30252"
+        cs_addr = f"{interface.getAddress()}:30252"
         control_service = { cs_name: { 'addr': cs_addr }}
                 
         topology = {
             'attributes': attributes,
             'isd_as': isd_as,
-            'mtu': network.getMtu()-100, #XXX
+            'mtu': 1400, #XXX
             'control_service': control_service,
             'discovery_service': control_service,
             'border_routers': border_routers,
@@ -585,20 +589,21 @@ class Scion(Layer):
             pjoin(basedir, 'sd.toml'),
             f'{general(sd)}{trust(sd)}{path(sd)}',
         )
-            
+
+        node.setFile(pjoin(basedir, 'disp.toml'), '[dispatcher]\nid = "dispatcher"\n')
             
         
-    def _provision_router(self, rnode: Router, network: Network, tempdir: str):
+    def _provision_router(self, rnode: Router, interface: Interface, tempdir: str):
         basedir = '/conf'
         
         # DONE: Copy crypto material from tempdir (rnode.setFile)
         self._provision_node_crypto(rnode, basedir, tempdir)
 
         # DONE: Build and install SCION config files
-        self._provision_node_configs(rnode, network, basedir, tempdir)
+        self._provision_node_configs(rnode, interface, basedir, tempdir)
 
         print(rnode)
-
+        
         # TODO: Make sure the container runs SCION on startup (rnode.appendStartCommand)
 
     def _provision_host(self, hnode: Node, tempdir: str):
