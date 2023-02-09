@@ -527,9 +527,11 @@ class Scion(Layer):
         node.setFile(pjoin(base, 'keys', 'master0.key'), base64.b64encode(os.urandom(16)).decode())
         node.setFile(pjoin(base, 'keys', 'master1.key'), base64.b64encode(os.urandom(16)).decode())
         
-    def _provision_node_topology(self, node: Node, network: Network, basedir: str, tempdir: str):
+    def _provision_node_configs(self, node: Node, network: Network, basedir: str, tempdir: str):
         asn = node.getAsn()
         isd = self.getAsIsd(asn)
+        general = lambda name: f'[general]\nid = "{name}"\nconfig_dir = "{basedir}"\n\n[log.console]\nlevel = "info"\n\n'
+        
 
         isd_as = f"{isd}-{asn}"
         attributes = []
@@ -547,6 +549,11 @@ class Scion(Layer):
                     "internal_addr": f"{(network.assign(NodeRole.Router))}:30042",
                     "interfaces": linkCfg.to_dict(asn, network.getMtu()-100) #XXX what is a safe MTU?
                 }
+                node.setFile(
+                    pjoin(basedir, routerName+".toml"),
+                    general(routerName),
+                )
+                
 
         cs_name = "cs1"
         cs_addr = f"{(network.assign(NodeRole.Host))}:30252"
@@ -563,7 +570,21 @@ class Scion(Layer):
         }
             
         node.setFile(pjoin(basedir, 'topology.json'), json.dumps(topology, indent=2))
-            
+
+
+        trust = lambda name: f'[trust_db]\nconnection = "/cache/{name}.trust.db"\n\n'
+        path  = lambda name: f'[path_db]\nconnection = "/cache/{name}.path.db"\n\n'
+        beacon = f'[beacon_db]\nconnection = "/cache/{cs_name}.beacon.db"\n\n'
+        node.setFile(
+            pjoin(basedir, 'cs1.toml'),
+            f'{general(cs_name)}{trust(cs_name)}{beacon}{path(cs_name)}[ca]\nmode = "in-process"',
+        )
+
+        sd = "sd1"
+        node.setFile(
+            pjoin(basedir, 'sd.toml'),
+            f'{general(sd)}{trust(sd)}{path(sd)}',
+        )
             
             
         
@@ -573,10 +594,10 @@ class Scion(Layer):
         # DONE: Copy crypto material from tempdir (rnode.setFile)
         self._provision_node_crypto(rnode, basedir, tempdir)
 
-        # TODO: Build and install SCION config files
-        self._provision_node_topology(rnode, network, basedir, tempdir)
-        
+        # DONE: Build and install SCION config files
+        self._provision_node_configs(rnode, network, basedir, tempdir)
 
+        print(rnode)
 
         # TODO: Make sure the container runs SCION on startup (rnode.appendStartCommand)
 
