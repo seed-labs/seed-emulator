@@ -51,9 +51,9 @@ as152_router.crossConnect(150, 'br1', '10.150.253.3/29')
 #ebgp.addPrivatePeering(100, 152, 150)
 #ebgp.addCrossConnectPeering(150, 153, PeerRelationship.Provider)
 
-scion.setInternalNet(150, 'net150')
-scion.setInternalNet(151, 'net151')
-scion.setInternalNet(152, 'net152')
+# scion.setInternalNet(150, 'net150')
+# scion.setInternalNet(151, 'net151')
+# scion.setInternalNet(152, 'net152')
 
 scion.addXcLink(150, 151, ScLinkType.Transit)
 scion.addXcLink(150, 152, ScLinkType.Transit)
