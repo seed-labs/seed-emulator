@@ -7,6 +7,7 @@ import subprocess
 from dataclasses import dataclass
 from enum import Enum
 from os.path import join as pjoin
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import ClassVar, Dict, List, NamedTuple, Optional, Tuple, Iterable
 
@@ -69,21 +70,24 @@ class _LinkConfig(NamedTuple):
         """Return dictionary representation from the perspective of asn"""
         assert asn == self.a.asn or asn == self.b.asn, "link not configured for given asn"
 
+        if asn == self.a.asn:
+            public = f"{self.a.ip}:{self.a.port}"
+            remote = f"{self.b.ip}:{self.b.port}"
+            remote_as = f"{self.b.isd}-{self.b.asn}"
+        elif asn == self.b.asn:
+            public = f"{self.b.ip}:{self.b.port}"
+            remote = f"{self.a.ip}:{self.a.port}"
+            remote_as = f"{self.a.isd}-{self.a.asn}"
+
         if self.rel == LinkType.Transit:
             if asn == self.a.asn:
                 link_to = "child"
-                public = f"{self.a.ip}:{self.a.port}"
-                remote = f"{self.b.ip}:{self.b.port}"
-                ifid = str(self.a.ifid)
-                remote_as = f"{self.b.isd}-{self.b.asn}"
-            elif asn == self.b.asn:
+            else:
                 link_to = "parent"
-                public = f"{self.b.ip}:{self.b.port}"
-                remote = f"{self.a.ip}:{self.a.port}"
-                ifid = str(self.b.ifid)
-                remote_as = f"{self.a.isd}-{self.a.asn}"
+        elif self.rel == LinkType.Core:
+            link_to = "core"
         else:
-            # TODO: handle peer and core link types
+            # TODO: handle peer links
             pass
 
         return {
@@ -124,11 +128,11 @@ class _AutonomousSystem:
 
     def get_next_port(self, router_name: str) -> int:
         try:
-            return self._next_port[router_name]
+            port = self._next_port[router_name]
         except KeyError:
-            default_port = 50000
-            self._next_port[router_name] = default_port
-            return default_port
+            port = 50000
+        self._next_port[router_name] = port + 1
+        return port
 
     def get_cs_name(self):
         return self._cs_name
@@ -371,8 +375,8 @@ class Scion(Layer):
 
         with TemporaryDirectory(prefix="seed_scion") as tempdir:
             # XXX(benthor): hack to inspect temporary files after script termination
-            tempdir = "/tmp/seed_scion"
-            os.mkdir(tempdir)
+            # tempdir = "/tmp/seed_scion"
+            # os.mkdir(tempdir)
             self._gen_scion_crypto(tempdir)
             for ((scope, type, name), obj) in reg.getAll().items():
                 # Install and configure SCION on a router
@@ -494,7 +498,7 @@ class Scion(Layer):
         self._log("Calling scion-pki")
         try:
             result = subprocess.run(
-                ["scion-pki", "testcrypto", "-t", topofile, "-o", tempdir, "--as-validity", "30d"],
+                ["scion-pki", "testcrypto", "-t", topofile, "-o", tempdir], # , "--as-validity", "30d"],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
             )
         except FileNotFoundError:
@@ -533,7 +537,9 @@ class Scion(Layer):
         node.addSoftware("ca-certificates")
 
     def _provision_router(self, rnode: Router, tempdir: str):
-        basedir = '/etc/scion'
+        asn = rnode.getAsn()
+        asys = self.__ases[asn]
+        basedir = Path('/etc/scion')
 
         # DONE: Copy crypto material from tempdir (rnode.setFile)
         self._provision_node_crypto(rnode, basedir, tempdir)
@@ -541,9 +547,13 @@ class Scion(Layer):
         # DONE: Build and install SCION config files
         self._provision_node_configs(rnode, basedir, tempdir)
 
-        print(rnode)
-
-        # TODO: Make sure the container runs SCION on startup (rnode.appendStartCommand)
+        # DONE: Make sure the container runs SCION on startup (rnode.appendStartCommand)
+        rnode.appendStartCommand(f"scion-dispatcher --config {basedir/'dispatcher.toml'} >> /var/log/scion-dispatcher.log 2>&1", fork=True)
+        rnode.appendStartCommand(f"sciond --config {basedir/'sciond.toml'} >> /var/log/sciond.log 2>&1", fork=True)
+        if rnode == asys.cs_node:
+            rnode.appendStartCommand(f"scion-control-service --config {basedir/'cs1.toml'} >> /var/log/scion-control-service.log 2>&1 ", fork=True)
+        br_config = "{}.toml".format(rnode.getName())
+        rnode.appendStartCommand(f"scion-border-router --config {basedir/br_config} >> /var/log/scion-border-router.log 2>&1", fork=True)
 
     def _provision_host(self, hnode: Node, tempdir: str):
         # TODO: Same as _provision_router but for an end host
@@ -553,8 +563,23 @@ class Scion(Layer):
         asn = node.getAsn()
         isd = self.getAsIsd(asn)
         base = basedir
+
+        def copyFile(src, dst):
+            # Tempdir will be gone when imports are resolved, therefore we must use setFile
+            with open(src, 'rt', encoding='utf8') as file:
+                content = file.read()
+                # FIXME: The Docker compiler adds an extra newline in generated files
+                # (see seedemu/compiler/Docker.py:724).
+                # SCION does not accept PEM files with an extra newline, so we strip a newline here
+                # that is later added again. This could be considered a bug in the emulator, SCION,
+                # or both.
+                if content.endswith('\n'):
+                    content = content[:-1]
+            node.setFile(dst, content)
+
         def myImport(name):
-            node.importFile(pjoin(tempdir, f"AS{asn}", "crypto", name), pjoin(base, "crypto", name))
+            copyFile(pjoin(tempdir, f"AS{asn}", "crypto", name), pjoin(base, "crypto", name))
+
         if self.__ases[asn].is_core:
             for kind in ["sensitive", "regular"]:
                 myImport(pjoin("voting", f"ISD{isd}-AS{asn}.{kind}.crt"))
@@ -570,7 +595,7 @@ class Scion(Layer):
 
         #XXX(benthor): respect certificate issuer here?
         trcname = f"ISD{isd}-B1-S1.trc"
-        node.importFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(base, "certs", trcname))
+        copyFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(base, "certs", trcname))
 
         # key generation stolen from scion tools/topology/cert.py
         node.setFile(pjoin(base, 'keys', 'master0.key'), base64.b64encode(os.urandom(16)).decode())
@@ -584,6 +609,8 @@ class Scion(Layer):
         general = lambda name: f'[general]\nid = "{name}"\nconfig_dir = "{basedir}"\n\n[log.console]\nlevel = "info"\n\n'
         trust = lambda name: f'[trust_db]\nconnection = "/cache/{name}.trust.db"\n\n'
         path  = lambda name: f'[path_db]\nconnection = "/cache/{name}.path.db"\n\n'
+
+        node.addBuildCommand("mkdir -p /cache")
 
         # AS Topology
         node.setFile(pjoin(basedir, 'topology.json'), json.dumps(asys.topology, indent=2))
@@ -605,9 +632,9 @@ class Scion(Layer):
         # Sciond
         sd = "sd1"
         node.setFile(
-            pjoin(basedir, 'sd.toml'),
+            pjoin(basedir, 'sciond.toml'),
             f'{general(sd)}{trust(sd)}{path(sd)}',
         )
 
         # Dispatcher
-        node.setFile(pjoin(basedir, 'disp.toml'), '[dispatcher]\nid = "dispatcher"\n')
+        node.setFile(pjoin(basedir, 'dispatcher.toml'), '[dispatcher]\nid = "dispatcher"\n')
