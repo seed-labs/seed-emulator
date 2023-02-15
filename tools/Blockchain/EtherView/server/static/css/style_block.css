@@ -1,0 +1,48 @@
+body {
+  background: #f3f3f3;
+}
+
+.sketchy {
+  border: 3px solid #333333;
+  border-radius: 2% 6% 5% 4% / 1% 1% 2% 4%;
+  background: #ffffff;
+  position: relative;
+}
+
+h1 {
+  padding-bottom: 10px;
+}
+
+select,
+input {
+  font-size: medium;
+}
+
+label,
+span {
+  font-size: medium;
+  margin: 10px auto;
+  text-align: center;
+}
+
+.sub-content {
+  width: 50%;
+  text-align: center;
+}
+
+.main-content {
+  display: flex;
+  height: 100%;
+  margin-bottom: 10px;
+}
+
+@media screen and (max-width: 1050px) {
+  .main-content {
+    display: flex;
+    flex-direction: column;
+  }
+  .sub-content {
+    width: 100%;
+    text-align: center;
+  }
+}

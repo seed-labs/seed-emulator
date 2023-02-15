@@ -10,7 +10,8 @@ from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
 
-SEEDEMU_CLIENT_IMAGE='handsonsecurity/seedemu-map'
+SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-map'
+SEEDEMU_ETHER_VIEW_IMAGE='rafaelawon/seedemu-etherview:1.0'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -174,14 +175,24 @@ DockerCompilerFileTemplates['compose_network'] = """\
 {labelList}
 """
 
-DockerCompilerFileTemplates['seedemu_client'] = """\
+DockerCompilerFileTemplates['seedemu_internet_map'] = """\
     seedemu-client:
         image: {clientImage}
-        container_name: seedemu_client
+        container_name: seedemu_internet_map
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:
             - {clientPort}:8080/tcp
+"""
+
+DockerCompilerFileTemplates['seedemu_ether_view'] = """\
+    seedemu-client:
+        image: {clientImage}
+        container_name: seedemu_ether_view
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+            - {clientPort}:5000/tcp
 """
 
 DockerCompilerFileTemplates['zshrc_pre'] = """\
@@ -281,8 +292,11 @@ class Docker(Compiler):
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
 
-    __map_client_enabled: bool
-    __map_client_port: int
+    __internet_map_enabled: bool
+    __internet_map_port: int
+
+    __ether_view_enabled: bool
+    __ether_view_port: int
 
     __client_hide_svcnet: bool
 
@@ -300,6 +314,8 @@ class Docker(Compiler):
         dummyNetworksMask: int = 24,
         internetMapEnabled: bool = False,
         internetMapPort: int = 8080,
+        etherViewEnabled: bool = False,
+        etherViewPort: int = 5000,
         clientHideServiceNet: bool = True
     ):
         """!
@@ -328,6 +344,9 @@ class Docker(Compiler):
         access to all nodes, which can potentially allow root access to the
         emulator host. Only enable seedemu in a trusted network.
         @param internetMapPort (optional) set seedemu internetMap port. Default to 8080.
+        @param etherViewEnabled (optional) set if seedemu EtherView should be enabled.
+        Default to False. 
+        @param etherViewPort (optional) set seedemu EtherView port. Default to 5000.
         @param clientHideServiceNet (optional) hide service network for the
         client map by not adding metadata on the net. Default to True.
         """
@@ -337,8 +356,11 @@ class Docker(Compiler):
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
-        self.__map_client_enabled = internetMapEnabled
-        self.__map_client_port = internetMapPort
+        self.__internet_map_enabled = internetMapEnabled
+        self.__internet_map_port = internetMapPort
+
+        self.__ether_view_enabled = etherViewEnabled
+        self.__ether_view_port = etherViewPort
 
         self.__client_hide_svcnet = clientHideServiceNet
 
@@ -984,12 +1006,20 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
-        if self.__map_client_enabled:
-            self._log('enabling seedemu-client...')
+        if self.__internet_map_enabled:
+            self._log('enabling seedemu-internet-map...')
 
-            self.__services += DockerCompilerFileTemplates['seedemu_client'].format(
-                clientImage = SEEDEMU_CLIENT_IMAGE,
-                clientPort = self.__map_client_port
+            self.__services += DockerCompilerFileTemplates['seedemu_internet_map'].format(
+                clientImage = SEEDEMU_INTERNET_MAP_IMAGE,
+                clientPort = self.__internet_map_port
+            )
+        
+        if self.__ether_view_enabled:
+            self._log('enabling seedemu-ether-view...')
+
+            self.__services += DockerCompilerFileTemplates['seedemu_ether_view'].format(
+                clientImage = SEEDEMU_ETHER_VIEW_IMAGE,
+                clientPort = self.__ether_view_port
             )
 
         local_images = ''
