@@ -1,0 +1,10 @@
+version: "3"
+
+services:
+    seedemu-eth-client:
+        build: .
+        container_name: seedemu_eth_client
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+            - 5000:5000
