@@ -6,7 +6,7 @@ import os
 import subprocess
 from dataclasses import dataclass
 from enum import Enum
-from os.path import join as pjoin
+from os.path import join as pjoin, isfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import ClassVar, Dict, List, NamedTuple, Optional, Tuple, Iterable
@@ -598,15 +598,31 @@ class Scion(Layer):
         copyFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(base, "certs", trcname))
 
         # key generation stolen from scion tools/topology/cert.py
-        node.setFile(pjoin(base, 'keys', 'master0.key'), base64.b64encode(os.urandom(16)).decode())
-        node.setFile(pjoin(base, 'keys', 'master1.key'), base64.b64encode(os.urandom(16)).decode())
+        # Master keys are generated only once per AS
+        # XXX(marten): Was not sure where else to put the creation of the keys, that's why we just
+        # create them once if they are not available
+        pathMasterKey0 = pjoin(tempdir, f"AS{asn}", "keys", "master0.key")
+        pathMasterKey1 = pjoin(tempdir, f"AS{asn}", "keys", "master1.key")
+
+        if not isfile(pathMasterKey0):
+            with open(pathMasterKey0, 'w') as f:
+                f.write(base64.b64encode(os.urandom(16)).decode())
+                f.close()
+
+        if not isfile(pathMasterKey1):
+            with open(pathMasterKey1, 'w') as f:
+                f.write(base64.b64encode(os.urandom(16)).decode())
+                f.close()
+
+        copyFile(pathMasterKey0, pjoin(base, "keys", "master0.key"))
+        copyFile(pathMasterKey1, pjoin(base, "keys", "master1.key"))
 
     def _provision_node_configs(self, node: Node, basedir: str, tempdir: str):
         asn = node.getAsn()
         isd = self.getAsIsd(asn)
         asys = self.__ases[asn]
 
-        general = lambda name: f'[general]\nid = "{name}"\nconfig_dir = "{basedir}"\n\n[log.console]\nlevel = "info"\n\n'
+        general = lambda name: f'[general]\nid = "{name}"\nconfig_dir = "{basedir}"\n\n[log.console]\nlevel = "debug"\n\n'
         trust = lambda name: f'[trust_db]\nconnection = "/cache/{name}.trust.db"\n\n'
         path  = lambda name: f'[path_db]\nconnection = "/cache/{name}.path.db"\n\n'
 
@@ -626,7 +642,7 @@ class Scion(Layer):
             beacon = f'[beacon_db]\nconnection = "/cache/{cs_name}.beacon.db"\n\n'
             node.setFile(
                 pjoin(basedir, 'cs1.toml'),
-                f'{general(cs_name)}{trust(cs_name)}{beacon}{path(cs_name)}[ca]\nmode = "in-process"',
+                f'{general(cs_name)}{trust(cs_name)}{beacon}{path(cs_name)}',
             )
 
         # Sciond
