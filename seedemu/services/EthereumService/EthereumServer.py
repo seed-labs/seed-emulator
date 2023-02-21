@@ -7,6 +7,8 @@ from seedemu.services.EthereumService import *
 from .EthTemplates import EthServerFileTemplates, GethCommandTemplates
 from .EthTemplates.LighthouseCommandTemplates import *
 
+ETH_LABEL_META = 'ethereum.{key}'
+
 class EthereumServer(Server):
     """!
     @brief The Ethereum Server
@@ -38,7 +40,9 @@ class EthereumServer(Server):
     _miner_thread: int
     _coinbase: str
     
-    _geth_start_command:str
+    _geth_start_command: str
+
+    _role: list
 
     def __init__(self, id: int, blockchain:Blockchain):
         """!
@@ -75,6 +79,8 @@ class EthereumServer(Server):
         self._miner_thread = 1
         self._coinbase = ""
         self._geth_start_command = ""
+
+        self._role = []
         
 
     def _generateGethStartCommand(self):
@@ -111,10 +117,14 @@ class EthereumServer(Server):
         """
 
         node.appendClassName('EthereumService')
-        node.setLabel('node_id', self.getId())
-        node.setLabel('consensus', self._consensus_mechanism.value)
-        node.setLabel('blockchain', self._blockchain.getChainName())
-        node.setLabel('chain_id', self._blockchain.getChainId())
+        node.setLabel(ETH_LABEL_META.format(key='node_id'), self.getId())
+        node.setLabel(ETH_LABEL_META.format(key='consensus'), self._consensus_mechanism.value)
+        node.setLabel(ETH_LABEL_META.format(key='chain_name'), self._blockchain.getChainName())
+        node.setLabel(ETH_LABEL_META.format(key='chain_id'), self._blockchain.getChainId())
+        
+        if self.isBootNode(): self._role.append("bootnode")
+        if self.isStartMiner(): self._role.append("miner")
+        node.setLabel(ETH_LABEL_META.format(key='role'), json.dumps(self._role).replace("\"", "\\\""))
 
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has no interfaces'.format(node.getAsn(), node.getName())
@@ -585,6 +595,11 @@ class PoSServer(PoAServer):
             beacon_setup_node = BeaconSetupServer(ttd=self.__terminal_total_difficulty)
             beacon_setup_node.install(node, self._blockchain)
             return 
+        
+        if self.__is_beacon_validator_at_genesis:
+            self._role.append("validator_at_genesis")
+        if self.__is_beacon_validator_at_running:
+            self._role.append("validator_at_running")
         
         super().install(node,eth)
         self.__install_beacon(node, eth)
