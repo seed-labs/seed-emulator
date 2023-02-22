@@ -10,7 +10,8 @@ from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
 
-SEEDEMU_CLIENT_IMAGE='handsonsecurity/seedemu-map'
+SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-map'
+SEEDEMU_ETHER_VIEW_IMAGE='rafaelawon/seedemu-etherview:latest'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -174,14 +175,24 @@ DockerCompilerFileTemplates['compose_network'] = """\
 {labelList}
 """
 
-DockerCompilerFileTemplates['seedemu_client'] = """\
-    seedemu-client:
+DockerCompilerFileTemplates['seedemu_internet_map'] = """\
+    seedemu-internet-client:
         image: {clientImage}
-        container_name: seedemu_client
+        container_name: seedemu_internet_map
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:
             - {clientPort}:8080/tcp
+"""
+
+DockerCompilerFileTemplates['seedemu_ether_view'] = """\
+    seedemu-ether-client:
+        image: {clientImage}
+        container_name: seedemu_ether_view
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+            - {clientPort}:5000/tcp
 """
 
 DockerCompilerFileTemplates['zshrc_pre'] = """\
@@ -281,8 +292,11 @@ class Docker(Compiler):
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
 
-    __client_enabled: bool
-    __client_port: int
+    __internet_map_enabled: bool
+    __internet_map_port: int
+
+    __ether_view_enabled: bool
+    __ether_view_port: int
 
     __client_hide_svcnet: bool
 
@@ -298,8 +312,10 @@ class Docker(Compiler):
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
-        clientEnabled: bool = False,
-        clientPort: int = 8080,
+        internetMapEnabled: bool = False,
+        internetMapPort: int = 8080,
+        etherViewEnabled: bool = False,
+        etherViewPort: int = 5000,
         clientHideServiceNet: bool = True
     ):
         """!
@@ -323,11 +339,14 @@ class Docker(Compiler):
         loopback IP addresses. Default to 10.128.0.0/9.
         @param dummyNetworksMask (optional) mask of dummy networks. Default to
         24.
-        @param clientEnabled (optional) set if seedemu client should be enabled.
-        Default to False. Note that the seedemu client allows unauthenticated
+        @param internetMapEnabled (optional) set if seedemu internetMap should be enabled.
+        Default to False. Note that the seedemu internetMap allows unauthenticated
         access to all nodes, which can potentially allow root access to the
         emulator host. Only enable seedemu in a trusted network.
-        @param clientPort (optional) set seedemu client port. Default to 8080.
+        @param internetMapPort (optional) set seedemu internetMap port. Default to 8080.
+        @param etherViewEnabled (optional) set if seedemu EtherView should be enabled.
+        Default to False. 
+        @param etherViewPort (optional) set seedemu EtherView port. Default to 5000.
         @param clientHideServiceNet (optional) hide service network for the
         client map by not adding metadata on the net. Default to True.
         """
@@ -337,8 +356,11 @@ class Docker(Compiler):
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
-        self.__client_enabled = clientEnabled
-        self.__client_port = clientPort
+        self.__internet_map_enabled = internetMapEnabled
+        self.__internet_map_port = internetMapPort
+
+        self.__ether_view_enabled = etherViewEnabled
+        self.__ether_view_port = etherViewPort
 
         self.__client_hide_svcnet = clientHideServiceNet
 
@@ -349,12 +371,12 @@ class Docker(Compiler):
         self.__image_per_node_list = {}
 
         for image in DefaultImages:
-            self.addImage(image)
+            self.addImage(image, priority=0)
 
     def getName(self) -> str:
         return "Docker"
 
-    def addImage(self, image: DockerImage, priority: int = 0) -> Docker:
+    def addImage(self, image: DockerImage, priority: int = -1) -> Docker:
         """!
         @brief add an candidate image to the compiler.
 
@@ -363,7 +385,9 @@ class Docker(Compiler):
         images with same number of missing software exist. The one with highest
         priority wins. If two or more images with same priority and same number
         of missing software exist, the one added the last will be used. All
-        built-in images has priority of 0. Default to 0.
+        built-in images has priority of 0. Default to -1. All built-in images are
+        prior to the added candidate image. To set a candidate image to a node, 
+        use setImageOverride() method. 
 
         @returns self, for chaining api calls.
         """
@@ -721,7 +745,7 @@ class Docker(Compiler):
         """
 
         staged_path = md5(path.encode('utf-8')).hexdigest()
-        print(content, file=open(staged_path, 'w'))
+        print(content, end='', file=open(staged_path, 'w'))
         return 'COPY {} {}\n'.format(staged_path, path)
     
     def _importFile(self, path: str, hostpath: str) -> str:
@@ -982,12 +1006,20 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
-        if self.__client_enabled:
-            self._log('enabling seedemu-client...')
+        if self.__internet_map_enabled:
+            self._log('enabling seedemu-internet-map...')
 
-            self.__services += DockerCompilerFileTemplates['seedemu_client'].format(
-                clientImage = SEEDEMU_CLIENT_IMAGE,
-                clientPort = self.__client_port
+            self.__services += DockerCompilerFileTemplates['seedemu_internet_map'].format(
+                clientImage = SEEDEMU_INTERNET_MAP_IMAGE,
+                clientPort = self.__internet_map_port
+            )
+        
+        if self.__ether_view_enabled:
+            self._log('enabling seedemu-ether-view...')
+
+            self.__services += DockerCompilerFileTemplates['seedemu_ether_view'].format(
+                clientImage = SEEDEMU_ETHER_VIEW_IMAGE,
+                clientPort = self.__ether_view_port
             )
 
         local_images = ''

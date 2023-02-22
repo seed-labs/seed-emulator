@@ -28,6 +28,8 @@ class WebServer(Server):
         """!
         @brief WebServer constructor.
         """
+        super().__init__()
+
         self.__port = 80
         self.__index = '<h1>{nodeName} at {asn}</h1>'
         

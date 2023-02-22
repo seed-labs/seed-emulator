@@ -32,6 +32,7 @@ class DomainNameCachingServer(Server, Configurable):
         """!
         @brief DomainNameCachingServer constructor.
         """
+        super().__init__()
         self.__root_servers = []
         self.__configure_resolvconf = False
         self.__pending_forward_zones = {}

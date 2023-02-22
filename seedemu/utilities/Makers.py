@@ -1,4 +1,5 @@
-from seedemu.layers import Base
+from seedemu.layers import Base, Ebgp, Routing, Ibgp, Ospf
+from seedemu.layers.Ebgp import PeerRelationship
 from seedemu.core import Binding, Filter, Emulator, Service, Router, AutonomousSystem
 from typing import List, Tuple, Dict
 
@@ -104,3 +105,118 @@ def makeStubAs(emu: Emulator, base: Base, asn: int, exchange: int,
 
     # Create a host node for each specified service
     createHostsOnNetwork(emu, stub_as, 'net0', services)
+
+def makeStubAsWithHosts(emu: Emulator, base: Base, asn: int, exchange: int, hosts_total: int):
+
+    # Create AS and internal network
+    network = "net0"
+    stub_as = base.createAutonomousSystem(asn)
+    stub_as.createNetwork(network)
+
+    # Create a BGP router
+    # Attach the router to both the internal and external networks
+    router = stub_as.createRouter('router0')
+    router.joinNetwork(network)
+    router.joinNetwork('ix{}'.format(exchange))
+
+    for counter in range(hosts_total):
+       name = 'host_{}'.format(counter)
+       host = stub_as.createHost(name)
+       host.joinNetwork(network)
+
+def makeEmulatorBaseWith10StubASAndHosts(hosts_per_stub_as: int) -> Emulator:
+    ###############################################################################
+    emu     = Emulator()
+    base    = Base()
+    routing = Routing()
+    ebgp    = Ebgp()
+    ibgp    = Ibgp()
+    ospf    = Ospf()
+
+
+    ###############################################################################
+
+    ix100 = base.createInternetExchange(100)
+    ix101 = base.createInternetExchange(101)
+    ix102 = base.createInternetExchange(102)
+    ix103 = base.createInternetExchange(103)
+    ix104 = base.createInternetExchange(104)
+
+    # Customize names (for visualization purpose)
+    ix100.getPeeringLan().setDisplayName('NYC-100')
+    ix101.getPeeringLan().setDisplayName('San Jose-101')
+    ix102.getPeeringLan().setDisplayName('Chicago-102')
+    ix103.getPeeringLan().setDisplayName('Miami-103')
+    ix104.getPeeringLan().setDisplayName('Boston-104')
+
+
+    ###############################################################################
+    # Create Transit Autonomous Systems 
+
+    ## Tier 1 ASes
+    makeTransitAs(base, 2, [100, 101, 102], 
+        [(100, 101), (101, 102)] 
+    )
+
+    makeTransitAs(base, 3, [100, 103, 104], 
+        [(100, 103), (103, 104)]
+    )
+
+    makeTransitAs(base, 4, [100, 102, 104], 
+        [(100, 104), (102, 104)]
+    )
+
+    ## Tier 2 ASes
+    makeTransitAs(base, 12, [101, 104], [(101, 104)])
+
+
+    ###############################################################################
+    # Create single-homed stub ASes. "None" means create a host only 
+
+    makeStubAsWithHosts(emu, base, 150, 100, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 151, 100, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 152, 101, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 153, 101, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 154, 102, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 160, 103, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 161, 103, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 162, 103, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 163, 104, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 164, 104, hosts_per_stub_as)
+    
+
+    ###############################################################################
+    # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
+    # which means each AS will only export its customers and their own prefixes. 
+    # We will use this peering relationship to peer all the ASes in an IX.
+    # None of them will provide transit service for others. 
+
+    ebgp.addRsPeers(100, [2, 3, 4])
+    ebgp.addRsPeers(102, [2, 4])
+    ebgp.addRsPeers(104, [3, 4])
+
+    # To buy transit services from another autonomous system, 
+    # we will use private peering  
+
+    ebgp.addPrivatePeerings(100, [2],  [150, 151], PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(100, [3],  [150], PeerRelationship.Provider)
+
+    ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)
+
+    ebgp.addPrivatePeerings(102, [2, 4],  [154], PeerRelationship.Provider)
+
+    ebgp.addPrivatePeerings(103, [3],  [160, 161, 162], PeerRelationship.Provider)
+
+    ebgp.addPrivatePeerings(104, [3, 4], [12], PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(104, [4],  [163], PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(104, [12], [164], PeerRelationship.Provider)
+
+    # Add layers to the emulator
+    emu.addLayer(base)
+    emu.addLayer(routing)
+    emu.addLayer(ebgp)
+    emu.addLayer(ibgp)
+    emu.addLayer(ospf)
+
+    return emu

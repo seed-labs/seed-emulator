@@ -305,6 +305,8 @@ class TorServer(Server):
         """!
         @brief TorServer constructor.
         """
+        super().__init__()
+
         self.__role = TorNodeType.RELAY.value
         self.__hs_link = ()
 

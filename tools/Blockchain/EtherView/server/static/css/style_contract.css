@@ -1,0 +1,74 @@
+body{
+    background-color: rgb(204, 201, 201);
+}
+
+
+.address-bn{
+    font-size: small;
+}
+
+.top-content{
+
+    text-align: center;
+
+    border-radius: 10px;
+    padding-bottom: 5px;
+    margin-bottom: 1.5%;
+}
+
+.bg-color{
+    background-color: white;
+}
+
+.state-margin{
+    margin: auto 2%;
+}
+
+#contract-state-box{
+    font-size: small;
+    height: 30vh;
+    border-style: solid;
+    overflow-x:auto;
+}
+
+.interaction-block{
+    width: 100%;
+    height:50vh;
+    display: inline-block;
+    overflow: scroll;
+    margin-right: 1%;
+}
+
+.main-content{
+    display: flex;
+}
+
+#gas-limit-box{
+
+    width: 50%;
+}
+
+.terminal-block{
+    width: 100%;
+    height:50vh;
+    display: inline-block;
+    overflow: scroll;
+    margin-left: 1%;
+}
+
+.border-rounded{
+    border-radius: 10px;
+}
+
+label{
+    font-size: small;
+}
+
+select{
+    width: 50%;
+    font-size: small;
+}
+
+h3{
+    text-align:center;
+}

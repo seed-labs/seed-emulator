@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block style %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style_contract.css') }}">
+<script type="text/javascript" src="{{ url_for('static', filename='js/script_contract_interact.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="top-content bg-color">
+    <div>Contract Name</div>
+    <p class="address-bn"><span abi="{{data['contract-address'][43:]}}" id="contract-address">{{data["contract-address"][:42]}} </span></p>
+    <p class="state-margin" style="text-align: left; font-size: medium;">Contract State:</p>
+    <div id="contract-state-box" class="state-margin border-rounded"></div>
+</div>
+<div class="main-content">
+    <div class="interaction-block bg-color border-rounded">
+        <h3>Contract interaction</h3>
+        <div>
+            <div>
+                <label>Choose an account:</label>
+                <select name="account" id="account">
+                    {% for wallet, address in data.address %}
+                        <option>{{wallet + ":" + address}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label>Gas limit: <input id="gas-limit-box" type="number" min="0"></label>
+            </div>
+            <div>
+                <label>Value: <input id="value-box" type="number" min="0"></label>
+            </div>
+        </div>
+        <div class="abi-interaction-block">
+            <input type="button" value="get_alice_balance" onclick="get_alice_balance()">
+            <input type="button" value="get_bob_balance" onclick="get_bob_balance()">
+            <input type="button" value="withdraw" onclick="withdraw()">
+            <input type="button" value="deposit" onclick="deposit()">
+
+        </div>
+    </div>
+    <div class="terminal-block bg-color border-rounded">
+        <h3>output</h3>
+        <div id="contract-call-output"></div>
+    </div>
+    
+</div>
+{% endblock %}
