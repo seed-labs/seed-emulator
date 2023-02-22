@@ -176,7 +176,7 @@ DockerCompilerFileTemplates['compose_network'] = """\
 """
 
 DockerCompilerFileTemplates['seedemu_internet_map'] = """\
-    seedemu-client:
+    seedemu-internet-client:
         image: {clientImage}
         container_name: seedemu_internet_map
         volumes:
@@ -186,7 +186,7 @@ DockerCompilerFileTemplates['seedemu_internet_map'] = """\
 """
 
 DockerCompilerFileTemplates['seedemu_ether_view'] = """\
-    seedemu-client:
+    seedemu-ether-client:
         image: {clientImage}
         container_name: seedemu_ether_view
         volumes:
