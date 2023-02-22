@@ -7,6 +7,8 @@ from os import path
 from .EthTemplates import GenesisFileTemplates
 from web3 import Web3
 from sys import stderr
+from time import time
+
 class Genesis():
     """!
     @brief Genesis manage class
@@ -17,7 +19,8 @@ class Genesis():
     
     def __init__(self, consensus:ConsensusMechanism):
         self.__consensusMechanism = consensus
-        self.__genesis = json.loads(GenesisFileTemplates[self.__consensusMechanism.value]) 
+        self.__genesis = json.loads(GenesisFileTemplates[self.__consensusMechanism.value])
+        self.__genesis["timestamp"] = hex(int((time())))
 
 
     def setGenesis(self, customGenesis:str):
