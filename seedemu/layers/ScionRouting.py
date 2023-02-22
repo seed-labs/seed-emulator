@@ -38,6 +38,19 @@ _Templates["dispatcher"] = """\
 id = "dispatcher"
 """
 
+_CommandTemplates: Dict[str, str] = {}
+
+_CommandTemplates["br"] = "scion-border-router --config /etc/scion/{name}.toml >> /var/log/scion-border-router.log 2>&1"
+
+_CommandTemplates["cs"] = """\
+bash -c 'until [ -e /run/shm/dispatcher/default.sock ]; do sleep 1; done;\
+scion-control-service --config /etc/scion/{name}.toml >> /var/log/scion-control-service.log 2>&1'\
+"""
+
+_CommandTemplates["disp"] = "scion-dispatcher --config /etc/scion/dispatcher.toml >> /var/log/scion-dispatcher.log 2>&1"
+
+_CommandTemplates["sciond"] = "sciond --config /etc/scion/sciond.toml >> /var/log/sciond.log 2>&1"
+
 
 class ScionRouting(Routing):
     """!
@@ -62,16 +75,15 @@ class ScionRouting(Routing):
                     rnode.initScionRouter()
 
                 self.__install_scion(rnode)
-                self.__append_scion_command(rnode)
                 name = rnode.getName()
-                rnode.appendStartCommand(f"scion-border-router --config /etc/scion/{name}.toml >> /var/log/scion-border-router.log 2>&1", fork=True)
+                rnode.appendStartCommand(_CommandTemplates['br'].format(name=name), fork=True)
 
             elif type == 'csnode':
                 csnode: Node = obj
                 self.__install_scion(csnode)
                 self.__append_scion_command(csnode)
                 name = csnode.getName()
-                csnode.appendStartCommand(f"scion-control-service --config /etc/scion/{name}.toml >> /var/log/scion-control-service.log 2>&1 ", fork=True)
+                csnode.appendStartCommand(_CommandTemplates['cs'].format(name=name), fork=True)
 
             elif type == 'hnode':
                 hnode: Node = obj
@@ -89,8 +101,8 @@ class ScionRouting(Routing):
 
     def __append_scion_command(self, node: Node):
         """Append commands for starting the SCION host stack on the node."""
-        node.appendStartCommand("scion-dispatcher --config /etc/scion/dispatcher.toml >> /var/log/scion-dispatcher.log 2>&1", fork=True)
-        node.appendStartCommand("sciond --config /etc/scion/sciond.toml >> /var/log/sciond.log 2>&1", fork=True)
+        node.appendStartCommand(_CommandTemplates["disp"], fork=True)
+        node.appendStartCommand(_CommandTemplates["sciond"], fork=True)
 
     def render(self, emulator: Emulator):
         """!
