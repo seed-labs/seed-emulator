@@ -4,7 +4,7 @@ var block_number = emulator_parameters["block_number"];
 window.onload = function () {
   let button = document.getElementById("new-block-button");
   button.setAttribute("onclick", "show_new_block()");
-
+  set_navigator();
   show_block(block_number);
 };
 

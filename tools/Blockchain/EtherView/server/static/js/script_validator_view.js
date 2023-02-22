@@ -7,6 +7,7 @@ async function init() {
     if (providers!=null) {
         set_provider_selector();
     }
+    await set_navigator();
     
     update_validator();
     update_current_slot();

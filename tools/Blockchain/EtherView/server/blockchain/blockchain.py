@@ -278,3 +278,9 @@ def get_web3_providers():
         providers.append("http://%s:8545" % node['ip']) 
 
     return providers
+
+@blockchain.route('/get_consensus')
+def get_consensus():
+    resp = Response(json.dumps(app.consensus, cls=HexJsonEncoder, indent=5))
+    resp.headers['Content-Type'] = 'application/json'
+    return resp

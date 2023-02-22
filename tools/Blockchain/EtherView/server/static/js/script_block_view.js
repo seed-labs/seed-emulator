@@ -16,6 +16,7 @@ async function init() {
   // get all the current addresses from the server
   //get_web3_providers('/get_web3_providers');
   update_view();
+  await set_navigator();
 
   window.setInterval(update_view, waiting_time * 1000);
   window.setInterval(update_timestamp, 1000);

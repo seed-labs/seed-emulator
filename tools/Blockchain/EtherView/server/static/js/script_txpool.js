@@ -11,7 +11,7 @@ async function init() {
     provider.url = provider_urls[i];
     providers.push(provider);
   }
-
+  await set_navigator();
   await update_txpool();
 
   window.setInterval(update_txpool, 3 * 1000);

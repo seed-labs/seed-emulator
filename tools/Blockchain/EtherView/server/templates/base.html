@@ -24,14 +24,16 @@
       type="text/javascript"
       src="{{ url_for('static', filename='js/script_common.js') }}"
     ></script>
+    <script
+      type="text/javascript"
+      src="{{ url_for('static', filename='js/script_base.js') }}"
+    ></script>
     {% block style%} {% endblock %} {% block title%} {% endblock%}
   </head>
   <body>
-    <div class="sidenav">
+    <div class="sidenav" id="side_nav">
       <a href="{{ url_for('general.account_view') }}">Balance</a>
       <a href="{{ url_for('general.block_view') }}">Blocks</a>
-      <a href="{{ url_for('beaconchain.validator_view') }}">Validators</a>
-      <a href="{{ url_for('beaconchain.slot_view') }}">Slots</a>
       <a href="{{url_for('general.txpool')}}">TxPool</a>
     </div>
     <div>

@@ -14,7 +14,7 @@ async function init() {
 
   providers = await get_web3_providers("/get_web3_providers");
   if (providers != null) set_provider_selector();
-
+  await set_navigator();
   update_balance();
 
   window.setInterval(update_balance, waiting_time * 1000);

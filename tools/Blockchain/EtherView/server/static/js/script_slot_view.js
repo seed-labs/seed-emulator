@@ -12,9 +12,13 @@ async function init() {
   if (providers != null) {
     set_provider_selector();
   }
+  await set_navigator();
 
   update_current_slot();
   init_slot();
+
+
+
 
   window.setInterval(update_current_slot, 10000);
   window.setInterval(update_slot, 10000);
