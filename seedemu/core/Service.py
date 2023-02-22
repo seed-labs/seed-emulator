@@ -13,6 +13,11 @@ class Server(Printable):
 
     The Server class is the handler for installed services.
     """
+    __class_names: list
+
+    def __init__(self):
+        super().__init__()
+        self.__class_names = []
 
     def install(self, node: Node):
         """!
@@ -22,6 +27,23 @@ class Server(Printable):
         """
         raise NotImplementedError('install not implemented')
 
+    def getClassNames(self):
+        return self.__class_names
+    
+    def appendClassName(self, class_name:str):
+        """!
+        @brief Append Class Name
+        The method called by User. 
+
+        @param class_name class name.
+
+        @return self.
+        """
+
+        self.__class_names.append(class_name)
+
+        return self
+        
 class Service(Layer):
     """!
     @brief Service base class.
@@ -29,13 +51,13 @@ class Service(Layer):
     The base class for all Services.
     """
 
-    __pending_targets: Dict[str, Server]
+    _pending_targets: Dict[str, Server]
     
     __targets: Set[Tuple[Server, Node]]
 
     def __init__(self):
         super().__init__()
-        self.__pending_targets = {}
+        self._pending_targets = {}
         self.__targets = set()
 
     def _createServer(self) -> Server:
@@ -53,6 +75,15 @@ class Service(Layer):
         @param server server.
         """
         server.install(node)
+
+    def _doSetClassNames(self, node:Node, server:Server) -> Node:
+        """!
+        @brief set the class names on node. 
+
+        @param node node.
+        @param server server.
+        """
+        server.setClassNames(node)
 
     def _doConfigure(self, node: Node, server: Server):
         """!
@@ -99,24 +130,24 @@ class Service(Layer):
         This method sets a prepend a prefix to all virtual node names.
         """
         new_dict = {}
-        for k, v in self.__pending_targets.items():
+        for k, v in self._pending_targets.items():
             new_dict[prefix + k] = v
         
-        self.__pending_targets = new_dict
+        self._pending_targets = new_dict
 
     def install(self, vnode: str) -> Server:
         """!
         @brief install the service on a node identified by given name.
         """
-        if vnode in self.__pending_targets.keys(): return self.__pending_targets[vnode]
+        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
 
         s = self._createServer()
-        self.__pending_targets[vnode] = s
+        self._pending_targets[vnode] = s
 
-        return self.__pending_targets[vnode]
+        return self._pending_targets[vnode]
 
     def configure(self, emulator: Emulator):
-        for (vnode, server) in self.__pending_targets.items():
+        for (vnode, server) in self._pending_targets.items():
             pnode = emulator.getBindingFor(vnode)
             self._log('looking for binding for {}...'.format(vnode))
             self.__configureServer(server, pnode)
@@ -125,6 +156,8 @@ class Service(Layer):
     def render(self, emulator: Emulator):
         for (server, node) in self.__targets:
             self._doInstall(node, server)
+            for className in server.getClassNames():
+                node.appendClassName(className)
         
     def getConflicts(self) -> List[str]:
         """!
@@ -149,11 +182,11 @@ class Service(Layer):
 
         @param targets new targets.
         """
-        self.__pending_targets = targets
+        self._pending_targets = targets
 
     def getPendingTargets(self) -> Dict[str, Server]:
         """!
         @brief Get a set of pending vnode to install the service on.
         """
-        return self.__pending_targets
+        return self._pending_targets
 

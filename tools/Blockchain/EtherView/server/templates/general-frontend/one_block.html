@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block style %}
+
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style_one_block.css') }}">
+
+<script>
+   var emulator_parameters = {};
+{% for variable, value in data.items() %}
+   emulator_parameters["{{ variable }}"] = "{{ value }}";
+{% endfor %}
+</script>
+
+<script type="text/javascript" src="{{ url_for('static', filename='js/script_one_block.js') }}"></script>
+{% endblock %}
+
+
+{% block content %}
+
+<div style="font-size:12px;">
+   <button id="new-block-button">Get a new block</button>
+   <input type="text" id="new-block-number" placeholder="block number" size=10>
+</div>
+
+<hr>
+
+<h2 id="page-title">Block</h2>
+<div class='container'>
+    <table class='block-table' text-align=left'>
+        <tbody id="block-table-body">
+
+        </tbody>
+    </table>
+</div>
+
+
+{% endblock %}

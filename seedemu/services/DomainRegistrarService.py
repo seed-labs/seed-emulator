@@ -161,6 +161,8 @@ class DomainRegistrarServer(Server):
         """!
         @brief DomainRegistrarServer constructor.
         """
+        super().__init__()
+
         self.__port = 80
 
     def setPort(self, port: int):

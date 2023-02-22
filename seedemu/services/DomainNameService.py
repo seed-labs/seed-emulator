@@ -245,6 +245,8 @@ class DomainNameServer(Server):
         """!
         @brief DomainNameServer constructor.
         """
+        super().__init__()
+        
         self.__zones = set()
         self.__is_master = False
         self.__is_real_root = False

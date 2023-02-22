@@ -1,0 +1,62 @@
+{% extends "base.html" %} {% block style %}
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="{{ url_for('static', filename='css/style_tab.css') }}"
+/>
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="{{ url_for('static', filename='css/style_general.css') }}"
+/>
+<script
+  type="text/javascript"
+  src="{{ url_for('static', filename='js/script_one_slot.js') }}"
+></script>
+<script
+  type="text/javascript"
+  src="{{ url_for('static', filename='js/script_beacon_common.js') }}"
+></script>
+<script type="text/javascript">
+  var slot_number = "{{ slotNumber }}";
+</script>
+
+{% endblock %} {% block content %}
+
+<h1>Slot Details</h1>
+<select
+  class="selectpicker form-select-sm"
+  aria-label=".form-select-sm example"
+  id="provider-selector"
+></select>
+<h5 style="margin: 0 auto" id="current_epoch">Current Epoch:</h5>
+
+<h5 style="margin: 0 auto" id="current_slot">Current Slot:</h5>
+
+<div class="main-tab" id="mainTab" style="overflow-x: auto">
+  <!-- Tab links -->
+  <div class="tab">
+    <button
+      class="tablinks"
+      onclick="openTab(event, 'Overview')"
+      id="defaultOpen"
+    >
+      Overview
+    </button>
+    <button class="tablinks" onclick="openTab(event, 'Transactions')">
+      Transactions
+    </button>
+    <button class="tablinks" onclick="openTab(event, 'Attestations')">
+      Attestations
+    </button>
+  </div>
+
+  <!-- Tab content -->
+  <div id="Overview" class="tabcontent"></div>
+
+  <div id="Transactions" class="tabcontent"></div>
+
+  <div id="Attestations" class="tabcontent"></div>
+
+  {% endblock %}
+</div>

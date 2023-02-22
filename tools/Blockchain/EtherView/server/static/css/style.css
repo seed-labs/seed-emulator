@@ -1,0 +1,210 @@
+/* start of side bar style */
+
+body {
+    font-family: "Garamond", serif;
+}
+  
+.sidenav {
+    height: 100%;
+    width: 180px;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    background-color: #111;
+    overflow-x: hidden;
+    padding-top: 200px;
+}
+  
+.sidenav a {
+    text-align: center;
+    padding: 30px 8px 20px 10px;
+    text-decoration: none;
+    font-size: 25px;
+    color: #818181;
+    display: block;
+}
+  
+.sidenav a:hover {
+    color: #f1f1f1;
+}
+  
+.main {
+    margin-left: 160px; /* Same as the width of the sidenav */
+    font-size: 18px; /* Increased text to enable scrolling */
+    padding: 0px 40px;
+}
+  
+@media screen and (max-height: 450px) {
+    .sidenav {padding-top: 15px;}
+    .sidenav a {font-size: 18px;}
+}
+
+/* end of sidebar style */
+
+h1 {
+    text-align: center;
+}
+
+/* start of drop down in general-frontend.html and wallet.html */
+
+/* .network-dropdown-form label{
+    font-weight: bold;
+    font-size: x-large;
+}
+
+.network-dropdown-form select{
+    size: 100px;
+} */
+
+.dropdown-form label{
+    font-weight: bold;
+    font-size: large;
+}
+
+.dropdown-form select{
+    size: 100px;
+}
+
+#networks{
+    width: 150px;
+    height: 30px;
+    text-align: center;
+    font-size: large;
+    /* font-weight: bold; */
+}
+
+#keys{
+    width: 150px;
+    height: 30px;
+    text-align: center;
+    font-size: large;
+    font-weight: bold;
+}
+
+/* end of drop down in general-frontend.html and wallet.html */
+
+.global-wallet-view-dropdown label{
+    font-weight: bold;
+    font-size: large;
+}
+
+.global-wallet-view-dropdown select {
+    size: 100px;
+}
+
+/* start of main table in general-frontend.html */
+
+/*.main_table{
+    width: 400px;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.main_table tbody{
+  display:block;
+  width: 100%;
+  overflow: auto;
+  height: 100px;
+}
+
+.main_table thead tr {
+   display: block;
+}
+
+.main_table thead {
+  background: black;
+  color:#fff;
+}
+
+.main_table th, .main_table td {
+  padding: 5px;
+  text-align: left;
+  width: 200px;
+}*/
+
+
+.main-table {
+/*    padding-top: 35px;*/
+    text-align: center;
+    height: 700px;
+    overflow-y: scroll;
+    border: 1px solid;
+    border-radius: 15px;
+
+}
+
+.block-table {
+    text-align: left;
+    height: 700px;
+    overflow-y: scroll;
+    border: 1px solid;
+    border-radius: 15px;
+}
+
+
+.tran-table{
+/*    padding-top: 35px;*/
+    text-align: center;
+    height: 500px;
+    overflow-y: scroll;
+    border: 1px solid;
+    border-radius: 15px;
+}
+
+/* table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    width: 100%;
+    border: 1px solid #ddd;
+  } */
+  
+th, td {
+text-align: center;
+padding: 10px;
+} 
+
+tr:nth-child(even){background-color: #f2f2f2;} 
+
+/* end of main table in general-frontend.html */
+
+/* start of buttons in wallet.html */
+
+.tx-button-group{
+    padding-top: 10px;
+    text-align: left;
+}
+
+#send_eth {
+    text-align: center; 
+    margin: 15px;
+    padding: 8px 25px;
+    display: inline-block;
+ }
+
+/* end of buttons in wallet.html */
+
+/* start of input fields for address in wallet.html */
+
+#request_address {
+    width: 400px;
+    height: 30px;
+}
+
+#send_address {
+    width: 400px;
+    height: 30px;
+}
+
+/* end of input fields for address in wallet.html */
+
+#heading-label {
+    font-size: x-large;
+}
+
+#subheading-label {
+    font-size: medium;
+}
+
+
+
