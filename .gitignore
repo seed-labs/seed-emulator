@@ -1,5 +1,6 @@
 **/output/*
 **/eth-states*/*
+**/test_log/*
 **/__pycache__/*
 *.out
 *.o
