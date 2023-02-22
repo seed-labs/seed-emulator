@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 from seedemu.compiler import Docker, Graphviz
-from seedemu.core import Emulator
+from seedemu.core import Emulator, Binding, Filter
 from seedemu.layers import ScionBase, ScionRouting, ScionIsd, Scion, Ebgp, PeerRelationship
 from seedemu.layers.Scion import LinkType as ScLinkType
+from seedemu.services import WebService
 
 # Initialize
 emu = Emulator()
@@ -12,7 +13,7 @@ routing = ScionRouting()
 scion_isd = ScionIsd()
 scion = Scion()
 ebgp = Ebgp()
-
+web = WebService()
 
 # SCION ISDs
 base.createIsolationDomain(1)
@@ -28,6 +29,9 @@ as150.createControlService('cs1').joinNetwork('net0')
 as150_router = as150.createRouter('br0')
 as150_router.joinNetwork('net0').joinNetwork('ix100')
 as150_router.crossConnect(153, 'br0', '10.50.0.2/29')
+as150.createHost('web').joinNetwork('net0')
+web.install('web150')
+emu.addBinding(Binding('web150', filter = Filter(nodeName='web', asn=150)))
 
 # AS-151
 as151 = base.createAutonomousSystem(151)

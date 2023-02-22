@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 from seedemu.compiler import Docker, Graphviz
-from seedemu.core import Emulator
+from seedemu.core import Emulator, Binding, Filter
 from seedemu.layers import ScionBase, ScionRouting, Ospf, ScionIsd, Scion
 from seedemu.layers.Scion import LinkType as ScLinkType
+from seedemu.services import WebService
 
 # Initialize
 emu = Emulator()
@@ -12,6 +13,7 @@ routing = ScionRouting()
 ospf = Ospf()
 scion_isd = ScionIsd()
 scion = Scion()
+web = WebService()
 
 # SCION ISDs
 base.createIsolationDomain(1)
@@ -29,9 +31,7 @@ as150.createNetwork('net0')
 as150.createNetwork('net1')
 as150.createNetwork('net2')
 as150.createNetwork('net3')
-# XXX(lschulz) Doesn't work. BFD fails because intra-AS routing does not work as required.
-# (Not all BR interface can see each other)
-as150.createControlService('cs1').joinNetwork('net0').joinNetwork('net1').joinNetwork('net2').joinNetwork('net3')
+as150.createControlService('cs1').joinNetwork('net0')
 as150_br0 = as150.createRouter('br0')
 as150_br1 = as150.createRouter('br1')
 as150_br2 = as150.createRouter('br2')
@@ -40,6 +40,9 @@ as150_br0.joinNetwork('net0').joinNetwork('net1').joinNetwork('ix100')
 as150_br1.joinNetwork('net1').joinNetwork('net2').joinNetwork('ix101')
 as150_br2.joinNetwork('net2').joinNetwork('net3').joinNetwork('ix102')
 as150_br3.joinNetwork('net3').joinNetwork('net0').joinNetwork('ix103')
+as150.createHost('web').joinNetwork('net0')
+web.install('web150')
+emu.addBinding(Binding('web150', filter = Filter(nodeName='web', asn=150)))
 
 # Non-core ASes
 asn_ix = {
@@ -65,6 +68,7 @@ emu.addLayer(routing)
 emu.addLayer(ospf)
 emu.addLayer(scion_isd)
 emu.addLayer(scion)
+emu.addLayer(web)
 
 emu.render()
 

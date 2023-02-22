@@ -121,7 +121,7 @@ class ScionIsd(Layer):
         with TemporaryDirectory(prefix="seed_scion") as tempdir:
             self.__gen_scion_crypto(base_layer, tempdir)
             for ((scope, type, name), obj) in reg.getAll().items():
-                if type in ['rnode', 'csnode']:
+                if type in ['rnode', 'csnode', 'hnode']:
                     node: Node = obj
                     asn = node.getAsn()
                     as_: ScionAutonomousSystem = base_layer.getAutonomousSystem(asn)
