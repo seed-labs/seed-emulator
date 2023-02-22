@@ -128,20 +128,8 @@ class ScionAutonomousSystem(AutonomousSystem):
         for router in self.getRouters():
             rnode: ScionRouter = self.getRouter(router)
 
-            # XXX(lschulz) Check intra-AS routing
-            # Find a suitable address for the internal interface
-            intaddr = None
-            for iface in rnode.getInterfaces():
-                for node in iface.getNet().getAssociations():
-                    if node.getAsn() == rnode.getAsn():
-                        intaddr = iface.getAddress()
-                        break
-                if intaddr is not None:
-                    break
-            assert intaddr is not None
-
             border_routers[rnode.getName()] = {
-                "internal_addr": f"{intaddr}:30042",
+                "internal_addr": f"{rnode.getLoopbackAddress()}:30042",
                 "interfaces": rnode.getScionInterfaces()
             }
 
