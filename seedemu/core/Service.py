@@ -51,13 +51,13 @@ class Service(Layer):
     The base class for all Services.
     """
 
-    _pending_targets: Dict[str, Server]
+    __pending_targets: Dict[str, Server]
     
     __targets: Set[Tuple[Server, Node]]
 
     def __init__(self):
         super().__init__()
-        self._pending_targets = {}
+        self.__pending_targets = {}
         self.__targets = set()
 
     def _createServer(self) -> Server:
@@ -130,24 +130,24 @@ class Service(Layer):
         This method sets a prepend a prefix to all virtual node names.
         """
         new_dict = {}
-        for k, v in self._pending_targets.items():
+        for k, v in self.__pending_targets.items():
             new_dict[prefix + k] = v
         
-        self._pending_targets = new_dict
+        self.__pending_targets = new_dict
 
     def install(self, vnode: str) -> Server:
         """!
         @brief install the service on a node identified by given name.
         """
-        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
+        if vnode in self.__pending_targets.keys(): return self.__pending_targets[vnode]
 
         s = self._createServer()
-        self._pending_targets[vnode] = s
+        self.__pending_targets[vnode] = s
 
-        return self._pending_targets[vnode]
+        return self.__pending_targets[vnode]
 
     def configure(self, emulator: Emulator):
-        for (vnode, server) in self._pending_targets.items():
+        for (vnode, server) in self.__pending_targets.items():
             pnode = emulator.getBindingFor(vnode)
             self._log('looking for binding for {}...'.format(vnode))
             self.__configureServer(server, pnode)
@@ -182,11 +182,11 @@ class Service(Layer):
 
         @param targets new targets.
         """
-        self._pending_targets = targets
+        self.__pending_targets = targets
 
     def getPendingTargets(self) -> Dict[str, Server]:
         """!
         @brief Get a set of pending vnode to install the service on.
         """
-        return self._pending_targets
+        return self.__pending_targets
 
