@@ -227,8 +227,7 @@ class Scion(Layer):
         a_port = a_router.getNextPort()
         b_port = b_router.getNextPort()
 
-        # Directly create interfaces in BRs
-        a_router.addScionInterface(a_ifid, {
+        a_iface = {
             "underlay": {
                 "public": f"{a_addr}:{a_port}",
                 "remote": f"{b_addr}:{b_port}",
@@ -236,9 +235,9 @@ class Scion(Layer):
             "isd_as": str(b_ia),
             "link_to": rel.to_json(a_to_b=True),
             "mtu": net.getMtu(),
-        })
+        }
 
-        b_router.addScionInterface(b_ifid, {
+        b_iface = {
             "underlay": {
                 "public": f"{b_addr}:{b_port}",
                 "remote": f"{a_addr}:{a_port}",
@@ -246,4 +245,20 @@ class Scion(Layer):
             "isd_as": str(a_ia),
             "link_to": rel.to_json(a_to_b=False),
             "mtu": net.getMtu(),
-        })
+        }
+
+        # XXX(benthor): Remote interface id could probably be added
+        # regardless of LinkType but might then undermine SCION's
+        # discovery mechanism of remote interface ids. This way is
+        # more conservative: Only add 'remote_interface_id' field to
+        # dicts if LinkType is Peer.
+        #
+        # WARNING: As of February 2023, this feature is not yet
+        # supported in upstream SCION.
+        if rel == LinkType.Peer:
+            a_iface["remote_interface_id"] = b_ifid
+            b_iface["remote_interface_id"] = a_ifid
+        
+        # Create interfaces in BRs
+        a_router.addScionInterface(a_ifid, a_iface)
+        b_router.addScionInterface(b_ifid, b_iface)
