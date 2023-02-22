@@ -516,12 +516,12 @@ class EthereumService(Service):
         
         @returns EthereumServer.
         """
-        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
+        if vnode in self.__pending_targets.keys(): return self.__pending_targets[vnode]
 
         s = self._createServer(blockchain)
-        self._pending_targets[vnode] = s
+        self.__pending_targets[vnode] = s
 
-        return self._pending_targets[vnode]
+        return self.__pending_targets[vnode]
 
     def createBlockchain(self, chainName:str, consensus: ConsensusMechanism, chainId: int = -1):
         """!
