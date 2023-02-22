@@ -11,7 +11,7 @@ from shutil import copyfile
 import json
 
 SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-map'
-SEEDEMU_ETHER_VIEW_IMAGE='rafaelawon/seedemu-etherview:1.0'
+SEEDEMU_ETHER_VIEW_IMAGE='rafaelawon/seedemu-etherview:latest'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
