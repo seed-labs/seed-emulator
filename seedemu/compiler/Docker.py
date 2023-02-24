@@ -745,7 +745,7 @@ class Docker(Compiler):
         """
 
         staged_path = md5(path.encode('utf-8')).hexdigest()
-        print(content, end='', file=open(staged_path, 'w'))
+        print(content, file=open(staged_path, 'w'))
         return 'COPY {} {}\n'.format(staged_path, path)
     
     def _importFile(self, path: str, hostpath: str) -> str:
