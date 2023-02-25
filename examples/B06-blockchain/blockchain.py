@@ -150,4 +150,4 @@ for host in hosts:
 
 # If output directory exists and override is set to false, we call exit(1)
 # updateOutputdirectory will not be called
-emu.compile(Docker(), './output')
+emu.compile(docker, './output')
