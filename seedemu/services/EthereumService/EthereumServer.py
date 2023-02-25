@@ -146,15 +146,15 @@ class EthereumServer(Server):
         # install required software
         node.addSoftware('software-properties-common')
         # tap the eth repo
-        node.addBuildCommand('add-apt-repository ppa:ethereum/ethereum')
+        # node.addBuildCommand('add-apt-repository ppa:ethereum/ethereum')
 
         # install geth and bootnode
         if self._custom_geth_binary_path : 
             node.addBuildCommand('apt-get update && apt-get install --yes bootnode')
             node.importFile("../../"+self._custom_geth_binary_path, '/usr/bin/geth')
             node.appendStartCommand("chmod +x /usr/bin/geth")
-        else:
-            node.addBuildCommand('apt-get update && apt-get install --yes geth bootnode')
+        # else:
+        #     node.addBuildCommand('apt-get update && apt-get install --yes geth bootnode')
 
         # genesis
         node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth --datadir {} init /tmp/eth-genesis.json'.format(self._data_dir))
