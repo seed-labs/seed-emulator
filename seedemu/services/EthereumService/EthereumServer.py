@@ -150,7 +150,7 @@ class EthereumServer(Server):
 
         # install geth and bootnode
         if self._custom_geth_binary_path : 
-            node.addBuildCommand('apt-get update && apt-get install --yes bootnode')
+            #node.addBuildCommand('apt-get update && apt-get install --yes bootnode')
             node.importFile("../../"+self._custom_geth_binary_path, '/usr/bin/geth')
             node.appendStartCommand("chmod +x /usr/bin/geth")
         # else:
