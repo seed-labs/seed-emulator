@@ -1,5 +1,5 @@
 from __future__ import annotations
-from seedemu.core import Node, Server
+from seedemu.core import Node, Server, BaseSystem
 from .EthEnum import *
 from .EthUtil import *
 from typing import List
@@ -122,6 +122,8 @@ class EthereumServer(Server):
         node.setLabel(ETH_LABEL_META.format(key='chain_name'), self._blockchain.getChainName())
         node.setLabel(ETH_LABEL_META.format(key='chain_id'), self._blockchain.getChainId())
         
+        self.setBaseSystem(BaseSystem.GETH_1_10)
+
         if self.isBootNode(): self._role.append("bootnode")
         if self.isStartMiner(): self._role.append("miner")
         node.setLabel(ETH_LABEL_META.format(key='role'), json.dumps(self._role).replace("\"", "\\\""))
@@ -600,6 +602,7 @@ class PoSServer(PoAServer):
 
     def install(self, node: Node, eth: EthereumService):
         if self.__is_beacon_setup_node:
+            self.setBaseSystem(BaseSystem.LCLI_3_2_1)
             beacon_setup_node = BeaconSetupServer(ttd=self.__terminal_total_difficulty)
             beacon_setup_node.install(node, self._blockchain)
             return 
@@ -610,6 +613,7 @@ class PoSServer(PoAServer):
             self._role.append("validator_at_running")
         
         super().install(node,eth)
+        self.setBaseSystem(BaseSystem.LIGHTHOUSE_3_2_1)
         self.__install_beacon(node, eth)
 
     def enablePOSValidatorAtGenesis(self):

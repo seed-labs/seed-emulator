@@ -11,6 +11,7 @@ from ipaddress import IPv4Address, IPv4Interface
 from typing import List, Dict, Set, Tuple
 from string import ascii_letters
 from random import choice
+from .BaseSystem import BaseSystem
 
 DEFAULT_SOFTWARE: List[str] = ['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat']
 
@@ -204,6 +205,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     """
 
     __name: str
+    __base_system: BaseSystem
     __asn: int
     __scope: str
     __role: NodeRole
@@ -252,6 +254,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__start_commands = []
         self.__ports = []
         self.__privileged = False
+        self.__base_system = BaseSystem.DEFAULT
 
         self.__pending_nets = []
         self.__xcs = {}
@@ -401,6 +404,24 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns True if privileged, False otherwise.
         """
         return self.__privileged
+
+    def setBaseSystem(self, base_system: BaseSystem) -> Node:
+        """!
+        @brief Set a base_system of a node.
+
+        @param base_system base_system to use.
+
+        @returns self, for chaining API calls.
+        """
+        self.__base_system = base_system
+    
+    def getBaseSystem(self) -> BaseSystem:
+        """!
+        @brief Get configured base system on this node.
+
+        @returns base system.
+        """
+        return self.__base_system
 
     def __joinNetwork(self, net: Network, address: str = "auto"):
         """!
@@ -812,6 +833,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         if node.getDisplayName() != None: self.setDisplayName(node.getDisplayName())
         if node.getDescription() != None: self.setDescription(node.getDescription())
         if node.getClasses() != None: self.setClasses(node.getClasses())
+
+        self.setBaseSystem(node.getBaseSystem)
         
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for p in node.getPersistentStorages(): self.addPersistentStorage(p)

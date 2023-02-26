@@ -6,6 +6,7 @@ from .Emulator import Emulator
 from .enums import NodeRole
 from .Binding import Binding
 from typing import Dict, List, Set, Tuple
+from .BaseSystem import BaseSystem
 
 class Server(Printable):
     """!
@@ -14,10 +15,11 @@ class Server(Printable):
     The Server class is the handler for installed services.
     """
     __class_names: list
-
+    __base_system: BaseSystem
     def __init__(self):
         super().__init__()
         self.__class_names = []
+        self.__base_system = BaseSystem.DEFAULT
 
     def install(self, node: Node):
         """!
@@ -26,6 +28,24 @@ class Server(Printable):
         @param node node.
         """
         raise NotImplementedError('install not implemented')
+    
+    def setBaseSystem(self, base_system: BaseSystem) -> Server:
+        """!
+        @brief Set a base_system of a server.
+
+        @param base_system base_system to use.
+
+        @returns self, for chaining API calls.
+        """
+        self.__base_system = base_system
+    
+    def getBaseSystem(self) -> BaseSystem:
+        """!
+        @brief Get configured base system on this server.
+
+        @returns base system.
+        """
+        return self.__base_system
 
     def getClassNames(self):
         return self.__class_names
@@ -108,6 +128,8 @@ class Service(Layer):
         """
         assert node.getRole() == NodeRole.Host, 'node as{}/{} is not a host node'.format(node.getAsn(), node.getName())
         servicesdb: Dict = node.getAttribute('services', {})
+
+        node.setBaseSystem(server.getBaseSystem())
 
         for (name, service_info) in servicesdb.items():
             service: Service = service_info['__self']

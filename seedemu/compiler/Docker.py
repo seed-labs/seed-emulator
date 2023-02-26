@@ -1,6 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler
+from seedemu.core import Node, Network, Compiler, BaseSystem
 from seedemu.core.enums import NodeRole, NetworkType
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
@@ -278,6 +278,13 @@ DefaultImages: List[DockerImage] = []
 
 DefaultImages.append(DockerImage('ubuntu:20.04', []))
 
+BaseSystemImageMapping: Dict = {}
+# ImageDatabase['virtual-name'] = (DockerImage('image name'), [software...])
+BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
+BaseSystemImageMapping[BaseSystem.GETH_1_10] = (DockerImage('rafaelawon/seedemu-geth-base:1.10.26', []))
+BaseSystemImageMapping[BaseSystem.LIGHTHOUSE_3_2_1] = (DockerImage('rafaelawon/seedemu-lighthouse-base:1.1', []))
+BaseSystemImageMapping[BaseSystem.LCLI_3_2_1] = (DockerImage('rafaelawon/seedemu-lcli-base', []))
+
 class Docker(Compiler):
     """!
     @brief The Docker compiler class.
@@ -370,8 +377,14 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        for image in DefaultImages:
-            self.addImage(image, priority=0)
+        for name, image in BaseSystemImageMapping.items():
+            priority = 0
+            if name == BaseSystem.DEFAULT:
+                priority = 10
+            self.addImage(image, priority=priority)
+
+        # for image in DefaultImages:
+        #     self.addImage(image, priority=0)
 
     def getName(self) -> str:
         return "Docker"
@@ -425,7 +438,7 @@ class Docker(Compiler):
         @brief forces the docker compiler to not use any images and build
         everything for starch. Set to False to disable the behavior.
 
-        @paarm disabled (option) disabled image if True. Default to True.
+        @pararm disabled (option) disabled image if True. Default to True.
 
         @returns self, for chaining api calls.
         """
@@ -522,6 +535,7 @@ class Docker(Compiler):
         nodeSoft = node.getSoftware()
         nodeKey = (node.getAsn(), node.getName())
 
+        # #1 Highest Priority (User Customed Image)
         if nodeKey in self.__image_per_node_list:
             image_name = self.__image_per_node_list[nodeKey]
 
@@ -532,11 +546,13 @@ class Docker(Compiler):
             self._log('image-per-node configured, using {}'.format(image.getName()))
             return (image, nodeSoft - image.getSoftware())
 
+        # Should we keep this feature? 
         if self.__disable_images:
             self._log('disable-imaged configured, using base image.')
             (image, _) = self.__images['ubuntu:20.04']
             return (image, nodeSoft - image.getSoftware())
 
+        # Set Default Image for All Nodes 
         if self.__forced_image != None:
             assert self.__forced_image in self.__images, 'forced-image configured, but image {} does not exist.'.format(self.__forced_image)
 
@@ -545,6 +561,12 @@ class Docker(Compiler):
             self._log('force-image configured, using image: {}'.format(image.getName()))
 
             return (image, nodeSoft - image.getSoftware())
+        
+        #############################################################
+        if node.getBaseSystem() != BaseSystem.DEFAULT:
+            #Maintain a table : Virtual Image Name - Actual Image Name 
+            image, nodeSoft = BaseSystemImageMapping[node.getBaseSystem()]
+            return (image, nodeSoft)
         
         candidates: List[Tuple[DockerImage, int]] = []
         minMissing = len(nodeSoft)

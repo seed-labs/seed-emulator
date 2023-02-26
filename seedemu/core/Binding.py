@@ -1,7 +1,9 @@
 from __future__ import annotations
 from .Printable import Printable
 from .Emulator import Emulator
-from .Node import Node
+from .Node import Node, NodeRole
+from .BaseSystem import BaseSystem
+from .Service import Server
 from enum import Enum
 from typing import List, Callable
 from ipaddress import IPv4Network, IPv4Address
@@ -116,6 +118,17 @@ class Binding(Printable):
         ## physical node filter.
         self.filter = filter
 
+    def filterBaseSystemConflict(vnode:str, node:Node, emulator:Emulator) -> bool:
+        nodeBaseSystem = node.getBaseSystem()
+        server = emulator.getServerByVirtualNodeName(vnode)
+        vnodeBaseSystem = server.getBaseSystem()
+        if nodeBaseSystem == vnodeBaseSystem:
+            return True
+        if BaseSystem.isSubset(vnodeBaseSystem, nodeBaseSystem):
+            return True
+        if BaseSystem.isSubset(nodeBaseSystem, vnodeBaseSystem):
+            server.setBaseSystem(nodeBaseSystem)
+            
     def __create(self, emulator: Emulator) -> Node:
         """!
         @brief create a node matching given condition.
@@ -304,6 +317,10 @@ class Binding(Printable):
             if node.hasAttribute('bound') and not filter.allowBound and not peek:
                 self.__log('node as{}/{} is already bound and re-bind is not allowed, trying next node.'.format(scope, name))
                 continue
+            
+            if not self.filterBaseSystemConflict(vnode, node, emulator):
+                continue
+            
 
             self.__log('node as{}/{} added as candidate. looking for more candidates.'.format(scope, name))
 
