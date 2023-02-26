@@ -135,7 +135,7 @@ docker = Docker(etherViewEnabled=True)
 
 # Add the 'rafaelawon/seedemu-lighthouse-base' custom image from dockerhub.
 # This image contains custom lighthouse software.
-docker.addImage(DockerImage('rafaelawon/seed-geth-base:v1.10.18', [], local=False), priority=-1)
+docker.addImage(DockerImage('rafaelawon/seed-geth-base:v1.10.26', [], local=False), priority=-1)
 
 base = emu.getLayer('Base')
 
@@ -146,7 +146,7 @@ hosts = base.getNodesByName('host')
 
 # Set all host nodes to use the custom 'seedemu-lighthouse-base' image.
 for host in hosts:
-   docker.setImageOverride(host, 'rafaelawon/seed-geth-base:v1.10.18')
+   docker.setImageOverride(host, 'rafaelawon/seed-geth-base:v1.10.26')
 
 # If output directory exists and override is set to false, we call exit(1)
 # updateOutputdirectory will not be called
