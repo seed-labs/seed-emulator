@@ -136,12 +136,12 @@ if __name__ == "__main__":
         test_suite = ut.TestSuite()
         test_suite.addTest(MultipleChainsTestCase('test_pow_chain_connection'))
         test_suite.addTest(MultipleChainsTestCase('test_pow_chain_id'))
-        test_suite.addTest(MultipleChainsTestCase('test_pow_send_transaction'))
         test_suite.addTest(MultipleChainsTestCase('test_pow_chain_consensus'))
-        test_suite.addTest(MultipleChainsTestCase('test_pow_peer_counts'))
         test_suite.addTest(MultipleChainsTestCase('test_import_account'))
         test_suite.addTest(MultipleChainsTestCase('test_pow_emulator_account'))
         test_suite.addTest(MultipleChainsTestCase('test_pow_create_account'))
+        test_suite.addTest(MultipleChainsTestCase('test_pow_send_transaction'))
+        test_suite.addTest(MultipleChainsTestCase('test_pow_peer_counts'))
 
         res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
