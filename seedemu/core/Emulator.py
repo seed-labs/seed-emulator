@@ -260,9 +260,12 @@ class Emulator:
     
     def getServerByVirtualNodeName(self, vnodeName: str) -> core.Server:
         """!
-        @brief
+        @brief Get server by virtual node name. 
 
-        @returns
+        Note that vnodeName is created and mapped with server in service layer.
+
+        @param vnodeName name of vnode.
+        @returns server.
         """
         for (layer, _) in self.__layers.db.values():
             if not isinstance(layer, core.Service): continue
