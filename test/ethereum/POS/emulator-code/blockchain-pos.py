@@ -102,7 +102,7 @@ hosts = base.getNodesByName('host')
 
 # Set all host nodes to use the custom 'seedemu-lighthouse-base' image.
 for host in hosts:
-   docker.setImageOverride(host, 'rafaelawon/seedemu-lighthouse-base')
+   docker.setImageOverride(host, 'rafaelawon/seedemu-lighthouse-base:v1.1')
 
 # Get the physical node of beacon setup node. 
 # The host in asn 150 with id 0 (ip : 10.150.0.71) is set as BeaconSetupNode.
