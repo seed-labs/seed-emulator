@@ -3,7 +3,7 @@ from seedemu.core.enums import NetworkType, NodeRole
 from .Merger import Mergeable, Merger
 from .Registry import Registry, Registrable, Printable
 from .Network import Network
-from seedemu.core import Node, Binding, Layer, Hook, Service, Compiler
+from seedemu import core
 from typing import Dict, Set, Tuple, List
 from sys import prefix, stderr
 from ipaddress import IPv4Network
@@ -18,8 +18,8 @@ class BindingDatabase(Registrable, Printable):
     dumps.
     """
 
-    db: List[Binding]
-    vpnodes: Dict[str, Node]
+    db: List[core.Binding]
+    vpnodes: Dict[str, core.Node]
 
     def __init__(self):
         """!
@@ -51,7 +51,7 @@ class LayerDatabase(Registrable, Printable):
     layers database with Registrable allows the layers to be preserved in dumps.
     """
 
-    db: Dict[str, Tuple[Layer, bool]]
+    db: Dict[str, Tuple[core.Layer, bool]]
 
     def __init__(self):
         """!
@@ -84,7 +84,7 @@ class Emulator:
     __dependencies_db: Dict[str, Set[Tuple[str, bool]]]
     __rendered: bool
     __bindings: BindingDatabase
-    __resolved_bindings: Dict[str, Node]
+    __resolved_bindings: Dict[str, core.Node]
 
     __service_net: Network
     __service_net_prefix: str
@@ -141,7 +141,7 @@ class Emulator:
 
         self.__log('entering {}...'.format(layerName))
 
-        hooks: List[Hook] = []
+        hooks: List[core.Hook] = []
         for hook in self.__registry.getByType('seedemu', 'hook'):
             if hook.getTargetLayer() == layerName: hooks.append(hook)
         
@@ -192,7 +192,7 @@ class Emulator:
         """
         return self.__rendered
 
-    def addHook(self, hook: Hook) -> Emulator:
+    def addHook(self, hook: core.Hook) -> Emulator:
         """!
         @brief Add a hook.
 
@@ -204,7 +204,7 @@ class Emulator:
 
         return self
 
-    def addBinding(self, binding: Binding) -> Emulator:
+    def addBinding(self, binding: core.Binding) -> Emulator:
         """!
         @brief Add a binding.
 
@@ -216,7 +216,7 @@ class Emulator:
 
         return self
 
-    def getBindings(self) -> List[Binding]:
+    def getBindings(self) -> List[core.Binding]:
         """!
         @brief Get all bindings.
 
@@ -224,7 +224,7 @@ class Emulator:
         """
         return self.__bindings.db
 
-    def addLayer(self, layer: Layer) -> Emulator:
+    def addLayer(self, layer: core.Layer) -> Emulator:
         """!
         @brief Add a layer.
 
@@ -241,7 +241,7 @@ class Emulator:
 
         return self
 
-    def getLayer(self, layerName: str) -> Layer:
+    def getLayer(self, layerName: str) -> core.Layer:
         """!
         @brief Get a layer.
 
@@ -250,7 +250,7 @@ class Emulator:
         """
         return self.__registry.get('seedemu', 'layer', layerName)
 
-    def getLayers(self) -> List[Layer]:
+    def getLayers(self) -> List[core.Layer]:
         """!
         @brief Get all layers.
 
@@ -258,20 +258,20 @@ class Emulator:
         """
         return self.__registry.getByType('seedemu', 'layer')
     
-    def getServerByVirtualNodeName(self, vnodeName: str):
+    def getServerByVirtualNodeName(self, vnodeName: str) -> core.Server:
         """!
         @brief
 
         @returns
         """
         for (layer, _) in self.__layers.db.values():
-            if not isinstance(layer, Service): continue
+            if not isinstance(layer, core.Service): continue
             for (vnode, server) in layer.getPendingTargets().items():
                 if vnode == vnodeName:
                     return server
         return None
-
-    def resolvVnode(self, vnode: str) -> Node:
+    
+    def resolvVnode(self, vnode: str) -> core.Node:
         """!
         @brief resolve physical node for the given virtual node.
 
@@ -286,7 +286,7 @@ class Emulator:
             return pnode
         assert False, 'cannot resolve vnode {}'.format(vnode)
 
-    def getBindingFor(self, vnode: str) -> Node:
+    def getBindingFor(self, vnode: str) -> core.Node:
         """!
         @brief get physical node for the given virtual node from the
         pre-populated vnode-pnode mappings.
@@ -347,7 +347,7 @@ class Emulator:
         self.__log('collecting virtual node names in the emulation...')
         vnodes: List[str] = []
         for (layer, _) in self.__layers.db.values():
-            if not isinstance(layer, Service): continue
+            if not isinstance(layer, core.Service): continue
             for (vnode, _) in layer.getPendingTargets().items():
                 assert vnode not in vnodes, 'duplicated vnode: {}'.format(vnode)
                 vnodes.append(vnode)
@@ -386,7 +386,7 @@ class Emulator:
 
         return self
 
-    def compile(self, compiler: Compiler, output: str, override: bool = False) -> Emulator:
+    def compile(self, compiler: core.Compiler, output: str, override: bool = False) -> Emulator:
         """!
         @brief Compile the simulation.
 
@@ -401,7 +401,7 @@ class Emulator:
 
         return self
     
-    def updateOutputDirectory(self, compiler: Compiler, callbacks: list) -> Emulator:
+    def updateOutputDirectory(self, compiler: core.Compiler, callbacks: list) -> Emulator:
         """!
         @brief update the output directory in a flexible way. Each service might need to update it in a different way
         @param compiler to use
@@ -419,7 +419,7 @@ class Emulator:
         """
         return self.__registry
 
-    def getVirtualNode(self, vnode_name: str) -> Node:
+    def getVirtualNode(self, vnode_name: str) -> core.Node:
         """!
         @brief get a virtual "physical" node.
 
@@ -437,11 +437,11 @@ class Emulator:
         @returns node
         """
         if vnode_name not in self.__bindings.vpnodes:
-            self.__bindings.vpnodes[vnode_name] = Node(vnode_name, NodeRole.Host, 0)
+            self.__bindings.vpnodes[vnode_name] = core.Node(vnode_name, NodeRole.Host, 0)
 
         return self.__bindings.vpnodes[vnode_name]
 
-    def setVirtualNode(self, vnode_name: str, node: Node) -> Emulator:
+    def setVirtualNode(self, vnode_name: str, node: core.Node) -> Emulator:
         """!
         @brief set a virtual node.
 
@@ -461,7 +461,7 @@ class Emulator:
 
         return self
 
-    def getVirtualNodes(self) -> Dict[str, Node]:
+    def getVirtualNodes(self) -> Dict[str, core.Node]:
         """!
         @brief get dict of virtual "physical" nodes.
 
@@ -489,7 +489,7 @@ class Emulator:
         for l in other_layers.values():
             typename = l.getTypeName()
 
-            if isinstance(l, Service):
+            if isinstance(l, core.Service):
                 l.addPrefix(vnodePrefix)
 
             if typename not in new_layers.keys():
