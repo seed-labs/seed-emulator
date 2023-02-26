@@ -118,7 +118,7 @@ class Binding(Printable):
         ## physical node filter.
         self.filter = filter
 
-    def filterBaseSystemConflict(vnode:str, node:Node, emulator:Emulator) -> bool:
+    def filterBaseSystemConflict(self, vnode:str, node:Node, emulator:Emulator) -> bool:
         nodeBaseSystem = node.getBaseSystem()
         server = emulator.getServerByVirtualNodeName(vnode)
         vnodeBaseSystem = server.getBaseSystem()
