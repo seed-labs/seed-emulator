@@ -87,7 +87,7 @@ docker = Docker(internetMapEnabled=True)
 
 # Add the 'rafaelawon/seedemu-lighthouse-base' custom image from dockerhub.
 # This image contains custom lighthouse software.
-docker.addImage(DockerImage('rafaelawon/seedemu-lighthouse-base', [], local=False), priority=-1)
+docker.addImage(DockerImage('rafaelawon/seedemu-lighthouse-base:v1.1', [], local=False), priority=-1)
 
 # Add the 'rafaelawon/seedemu-lighthouse-base' custom image from dockerhub.
 # This image contains custom lcli software.
