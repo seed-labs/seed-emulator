@@ -220,3 +220,90 @@ def makeEmulatorBaseWith10StubASAndHosts(hosts_per_stub_as: int) -> Emulator:
     emu.addLayer(ospf)
 
     return emu
+
+def makeEmulatorBaseWith5StubASAndHosts(hosts_per_stub_as: int) -> Emulator:
+    ###############################################################################
+    emu     = Emulator()
+    base    = Base()
+    routing = Routing()
+    ebgp    = Ebgp()
+    ibgp    = Ibgp()
+    ospf    = Ospf()
+
+
+    ###############################################################################
+
+    ix100 = base.createInternetExchange(100)
+    ix101 = base.createInternetExchange(101)
+    ix102 = base.createInternetExchange(102)
+    ix103 = base.createInternetExchange(103)
+    ix104 = base.createInternetExchange(104)
+
+    # Customize names (for visualization purpose)
+    ix100.getPeeringLan().setDisplayName('NYC-100')
+    ix101.getPeeringLan().setDisplayName('San Jose-101')
+    ix102.getPeeringLan().setDisplayName('Chicago-102')
+    ix103.getPeeringLan().setDisplayName('Miami-103')
+    ix104.getPeeringLan().setDisplayName('Boston-104')
+
+
+    ###############################################################################
+    # Create Transit Autonomous Systems 
+
+    ## Tier 1 ASes
+    makeTransitAs(base, 2, [100, 101, 102], 
+        [(100, 101), (101, 102)] 
+    )
+
+    makeTransitAs(base, 3, [100, 103, 104], 
+        [(100, 103), (103, 104)]
+    )
+
+    makeTransitAs(base, 4, [100, 102, 104], 
+        [(100, 104), (102, 104)]
+    )
+
+    ## Tier 2 ASes
+    makeTransitAs(base, 12, [101, 104], [(101, 104)])
+
+
+    ###############################################################################
+    # Create single-homed stub ASes. "None" means create a host only 
+
+    makeStubAsWithHosts(emu, base, 150, 100, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 151, 100, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 152, 101, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 153, 101, hosts_per_stub_as)
+    makeStubAsWithHosts(emu, base, 154, 102, hosts_per_stub_as)
+    
+
+    ###############################################################################
+    # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
+    # which means each AS will only export its customers and their own prefixes. 
+    # We will use this peering relationship to peer all the ASes in an IX.
+    # None of them will provide transit service for others. 
+
+    ebgp.addRsPeers(100, [2, 3, 4])
+    ebgp.addRsPeers(102, [2, 4])
+    ebgp.addRsPeers(104, [3, 4])
+
+    # To buy transit services from another autonomous system, 
+    # we will use private peering  
+
+    ebgp.addPrivatePeerings(100, [2],  [150, 151], PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(100, [3],  [150], PeerRelationship.Provider)
+
+    ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)
+
+    ebgp.addPrivatePeerings(102, [2, 4],  [154], PeerRelationship.Provider)
+
+
+    # Add layers to the emulator
+    emu.addLayer(base)
+    emu.addLayer(routing)
+    emu.addLayer(ebgp)
+    emu.addLayer(ibgp)
+    emu.addLayer(ospf)
+
+    return emu
