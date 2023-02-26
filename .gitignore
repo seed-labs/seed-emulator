@@ -2,6 +2,7 @@
 **/eth-states*/*
 **/test_log/*
 **/__pycache__/*
+*.bak
 *.out
 *.o
 *.so
