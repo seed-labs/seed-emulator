@@ -55,9 +55,9 @@ class MultipleChainsTestCase(ut.TestCase):
     
     def test_pow_send_transaction(self):
         remain_time = 600
+        printLog("\n========================================")
+        printLog("Waiting 600 secs for pow to mine new block".format(remain_time))
         while True:
-            printLog("\n========================================")
-            printLog("Waiting 600 secs for pow to mine new block".format(remain_time))
             printLog("Remaining Time : {}".format(remain_time))
             time.sleep(10)
             remain_time -= 10
