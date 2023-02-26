@@ -404,7 +404,7 @@ class Docker(Compiler):
 
         @returns self, for chaining api calls.
         """
-        assert image.getName() not in self.__images, 'image with name {} already exists.'.format(image.getName())
+        #assert image.getName() not in self.__images, 'image with name {} already exists.'.format(image.getName())
         self.__images[image.getName()] = (image, priority)
 
         return self
