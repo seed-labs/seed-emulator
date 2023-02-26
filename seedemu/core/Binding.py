@@ -128,7 +128,10 @@ class Binding(Printable):
             return True
         if BaseSystem.isSubset(nodeBaseSystem, vnodeBaseSystem):
             server.setBaseSystem(nodeBaseSystem)
-            
+            return True
+        
+        return False
+    
     def __create(self, emulator: Emulator) -> Node:
         """!
         @brief create a node matching given condition.
