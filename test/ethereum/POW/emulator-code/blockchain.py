@@ -27,7 +27,7 @@ e5 = blockchain1.createNode("pow-eth5")
 # Start mining on e1,e2 and e5,e6
 # To start mine(seal) in POA consensus, the account should be unlocked first. 
 e1.setBootNode(True).setBootNodeHttpPort(8090).startMiner()
-e2.importAccount(keyfilePath='./resources/keyfile_to_import', password="admin", balance=10)
+e2.importAccount(keyfilePath='./resources/keyfile_to_import', password="admin", balance=10, unit=EthUnit.ETHER)
 e2.startMiner()
 # Set custom geth binary file instead of installing an original file.
 e3.setCustomGeth("./resources/custom_geth")

@@ -57,7 +57,8 @@ class MultipleChainsTestCase(ut.TestCase):
         remain_time = 600
         while True:
             printLog("\n========================================")
-            printLog("Waiting {} secs for pow to mine new block...".format(remain_time))
+            printLog("Waiting 600 secs for pow to mine new block".format(remain_time))
+            printLog("Remaining Time : {}".format(remain_time))
             time.sleep(10)
             remain_time -= 10
             if remain_time <= 0: break
@@ -131,12 +132,12 @@ if __name__ == "__main__":
         test_suite = ut.TestSuite()
         test_suite.addTest(MultipleChainsTestCase('test_pow_chain_connection'))
         test_suite.addTest(MultipleChainsTestCase('test_pow_chain_id'))
-        test_suite.addTest(MultipleChainsTestCase('test_pow_send_transaction'))
         test_suite.addTest(MultipleChainsTestCase('test_pow_chain_consensus'))
         test_suite.addTest(MultipleChainsTestCase('test_pow_peer_counts'))
         test_suite.addTest(MultipleChainsTestCase('test_import_account'))
         test_suite.addTest(MultipleChainsTestCase('test_pow_emulator_account'))
         test_suite.addTest(MultipleChainsTestCase('test_pow_create_account'))
+        test_suite.addTest(MultipleChainsTestCase('test_pow_send_transaction'))
 
         res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
