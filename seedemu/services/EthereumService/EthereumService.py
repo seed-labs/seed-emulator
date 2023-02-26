@@ -120,11 +120,7 @@ class Blockchain:
                 assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
                 addr = str(ifaces[0].getAddress())
                 miner_ip = self.__miner_node_address[0]
-                print("#######################################")
-                print(addr)
-                print(miner_ip)
                 if addr == miner_ip:
-                    print("#######################################")
                     validator_count = len(self.getValidatorIds())
                     index = self.__joined_accounts.index(server._getAccounts()[0])
                     self.__joined_accounts[index].balance = 32*pow(10,18)*(validator_count+2)
