@@ -63,7 +63,7 @@ class MultipleChainsTestCase(ut.TestCase):
             if remain_time <= 0: break
         
         recipient = self.wallet1.getAccountAddressByName('Bob')
-        txhash = self.wallet1.sendTransaction(recipient, 0.1, sender_name='Alice', wait=False, verbose=False)
+        txhash = self.wallet1.sendTransaction(recipient, 0.1, sender_name='Alice', wait=True, verbose=False)
         self.assertTrue(self.wallet1.getTransactionReceipt(txhash)["status"], 1)
     
     def test_pow_chain_consensus(self):
