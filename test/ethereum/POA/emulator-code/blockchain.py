@@ -59,6 +59,7 @@ e1.setBootNode(True).unlockAccounts().startMiner()
 e1.enableGethWs().setGethWsPort(8541)
 e1.enableGethHttp()
 
+e2.importAccount(keyfilePath='./resources/keyfile_to_import', password="admin", balance=10)
 e2.unlockAccounts().startMiner()
 e3.createAccounts(total=3, balance=30, unit=EthUnit.ETHER, password="admin")
 

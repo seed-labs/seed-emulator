@@ -54,7 +54,6 @@ class MultipleChainsTestCase(ut.TestCase):
         self.assertEqual(self.wallet1._web3.eth.chain_id, 1337)
     
     def test_poa_send_transaction(self):
-        time.sleep(10)
         recipient = self.wallet1.getAccountAddressByName('Alice')
         txhash = self.wallet1.sendTransaction(recipient, 0.1, sender_name='Eve', wait=True, verbose=False)
         self.assertTrue(self.wallet1.getTransactionReceipt(txhash)["status"], 1)
@@ -65,14 +64,14 @@ class MultipleChainsTestCase(ut.TestCase):
 
     def test_poa_peer_counts(self):
         peer_counts = len(self.wallet1._web3.geth.admin.peers())
-        self.assertEqual(peer_counts, 2)
+        self.assertEqual(peer_counts, 3)
 
     def test_import_account(self):
         self.assertEqual(self.wallet1._web3.eth.getBalance(Web3.toChecksumAddress("9f189536def35811e1a759860672fe49a4f89e94")), 10)
     
     def test_poa_emulator_account(self):
         accounts = []
-        for i in range(5,9):
+        for i in range(1,6):
             accounts.extend(EthAccount.createEmulatorAccountsFromMnemonic(i, mnemonic="great awesome fun seed security lab protect system network prevent attack future", balance=32*EthUnit.ETHER.value, total=1, password="admin"))
         for account in accounts:
             self.assertTrue(self.wallet1._web3.eth.getBalance(account.address) >= 32*EthUnit.ETHER.value)
@@ -80,7 +79,7 @@ class MultipleChainsTestCase(ut.TestCase):
     def test_poa_create_accounts(self):
         accounts = []
         for index in range(1, 4):
-            accounts.append(EthAccount.createEmulatorAccountFromMnemonic(7, mnemonic="great awesome fun seed security lab protect system network prevent attack future", balance=30*EthUnit.ETHER.value, index=index, password="admin"))
+            accounts.append(EthAccount.createEmulatorAccountFromMnemonic(3, mnemonic="great awesome fun seed security lab protect system network prevent attack future", balance=30*EthUnit.ETHER.value, index=index, password="admin"))
         
         for account in accounts:
             self.assertTrue(self.wallet1._web3.eth.getBalance(account.address) >= 30*EthUnit.ETHER.value)
