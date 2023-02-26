@@ -290,8 +290,8 @@ DefaultImages.append(DockerImage('ubuntu:20.04', []))
 BaseSystemImageMapping: Dict = {}
 # ImageDatabase['virtual-name'] = (DockerImage('image name'), [software...])
 BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
-BaseSystemImageMapping[BaseSystem.GETH_1_10] = (DockerImage('rafaelawon/seedemu-geth-base:1.10.26', []))
-BaseSystemImageMapping[BaseSystem.LIGHTHOUSE_3_2_1] = (DockerImage('rafaelawon/seedemu-lighthouse-base:1.1', []))
+BaseSystemImageMapping[BaseSystem.GETH_1_10] = (DockerImage('rafaelawon/seedemu-geth-base:v1.10.26', []))
+BaseSystemImageMapping[BaseSystem.LIGHTHOUSE_3_2_1] = (DockerImage('rafaelawon/seedemu-lighthouse-base:v1.1', []))
 BaseSystemImageMapping[BaseSystem.LCLI_3_2_1] = (DockerImage('rafaelawon/seedemu-lcli-base', []))
 
 class Docker(Compiler):
