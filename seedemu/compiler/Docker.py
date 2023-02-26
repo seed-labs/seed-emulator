@@ -283,12 +283,8 @@ class DockerImage(object):
         for soft in software:
             self.__software.add(soft)
 
-DefaultImages: List[DockerImage] = []
-
-DefaultImages.append(DockerImage('ubuntu:20.04', []))
-
 BaseSystemImageMapping: Dict = {}
-# ImageDatabase['virtual-name'] = (DockerImage('image name'), [software...])
+# BaseSystemImageMapping['virtual-name'] = (DockerImage('image name'), [software...])
 BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
 BaseSystemImageMapping[BaseSystem.GETH_1_10] = (DockerImage('rafaelawon/seed-geth-base:v1.10.26', []))
 BaseSystemImageMapping[BaseSystem.LIGHTHOUSE_3_2_1] = (DockerImage('rafaelawon/seedemu-lighthouse-base:v1.1', []))
@@ -391,9 +387,6 @@ class Docker(Compiler):
             if name == BaseSystem.DEFAULT:
                 priority = 10
             self.addImage(image, priority=priority)
-
-        # for image in DefaultImages:
-        #     self.addImage(image, priority=0)
 
     def getName(self) -> str:
         return "Docker"
