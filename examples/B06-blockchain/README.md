@@ -12,6 +12,14 @@
 
 # Build a Blockchain Component
 
+## A.0 Pre-reqs
+
+The component requires the following modules:
+'''
+sudo pip3 install web3
+sudo pip3 install eth_account
+'''
+
 ## A.1 Creating Virtual Blockchain Node
 
 We will create the Blockchain nodes at the Ethereum layer,
