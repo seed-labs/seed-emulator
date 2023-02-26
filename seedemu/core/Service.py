@@ -15,11 +15,11 @@ class Server(Printable):
     The Server class is the handler for installed services.
     """
     __class_names: list
-    __base_system: BaseSystem
+    _base_system: BaseSystem
     def __init__(self):
         super().__init__()
         self.__class_names = []
-        self.__base_system = BaseSystem.DEFAULT
+        self._base_system = BaseSystem.DEFAULT
 
     def install(self, node: Node):
         """!
@@ -37,7 +37,7 @@ class Server(Printable):
 
         @returns self, for chaining API calls.
         """
-        self.__base_system = base_system
+        self._base_system = base_system
     
     def getBaseSystem(self) -> BaseSystem:
         """!
@@ -45,7 +45,7 @@ class Server(Printable):
 
         @returns base system.
         """
-        return self.__base_system
+        return self._base_system
 
     def getClassNames(self):
         return self.__class_names

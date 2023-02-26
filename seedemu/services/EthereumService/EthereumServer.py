@@ -80,6 +80,8 @@ class EthereumServer(Server):
         self._coinbase = None
         self._geth_start_command = ""
 
+        self._base_system = BaseSystem.GETH_1_10
+
         self._role = []
         
 
@@ -122,8 +124,6 @@ class EthereumServer(Server):
         node.setLabel(ETH_LABEL_META.format(key='chain_name'), self._blockchain.getChainName())
         node.setLabel(ETH_LABEL_META.format(key='chain_id'), self._blockchain.getChainId())
         
-        self.setBaseSystem(BaseSystem.GETH_1_10)
-
         if self.isBootNode(): self._role.append("bootnode")
         if self.isStartMiner(): self._role.append("miner")
         node.setLabel(ETH_LABEL_META.format(key='role'), json.dumps(self._role).replace("\"", "\\\""))
@@ -550,6 +550,7 @@ class PoSServer(PoAServer):
         self.__is_beacon_validator_at_running = False
         self.__is_manual_deposit_for_validator = False
         self.__beacon_peer_counts = 5
+        self._base_system = BaseSystem.LIGHTHOUSE_3_2_1
 
     def _generateGethStartCommand(self):
         self._geth_options['pos'] = GethCommandTemplates['pos'].format(difficulty=self.__terminal_total_difficulty)
@@ -602,7 +603,6 @@ class PoSServer(PoAServer):
 
     def install(self, node: Node, eth: EthereumService):
         if self.__is_beacon_setup_node:
-            self.setBaseSystem(BaseSystem.LCLI_3_2_1)
             beacon_setup_node = BeaconSetupServer(ttd=self.__terminal_total_difficulty)
             beacon_setup_node.install(node, self._blockchain)
             return 
@@ -613,7 +613,6 @@ class PoSServer(PoAServer):
             self._role.append("validator_at_running")
         
         super().install(node,eth)
-        self.setBaseSystem(BaseSystem.LIGHTHOUSE_3_2_1)
         self.__install_beacon(node, eth)
 
     def enablePOSValidatorAtGenesis(self):
@@ -637,6 +636,7 @@ class PoSServer(PoAServer):
     def setBeaconSetupNode(self, port=8090):
         self.__is_beacon_setup_node = True
         self.__beacon_setup_http_port = port
+        self._base_system = BaseSystem.LCLI_3_2_1
         return self
 
     def getBeaconSetupNodeIp(self):
