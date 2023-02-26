@@ -565,8 +565,8 @@ class Docker(Compiler):
         #############################################################
         if node.getBaseSystem() != BaseSystem.DEFAULT:
             #Maintain a table : Virtual Image Name - Actual Image Name 
-            image, nodeSoft = BaseSystemImageMapping[node.getBaseSystem()]
-            return (image, nodeSoft)
+            image = BaseSystemImageMapping[node.getBaseSystem()]
+            return (image, nodeSoft - image.getSoftware())
         
         candidates: List[Tuple[DockerImage, int]] = []
         minMissing = len(nodeSoft)
