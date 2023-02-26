@@ -6,9 +6,7 @@ from seedemu import *
 emu = Makers.makeEmulatorBaseWith10StubASAndHosts(1)
 
 # Create the Ethereum layer
-# saveState=True: will set the blockchain folder using `volumes`, 
-# so the blockchain data will be preserved when containers are deleted.
-eth = EthereumService(saveState = True, override=True)
+eth = EthereumService()
 
 # Create the 2 Blockchain layers, which is a sub-layer of Ethereum layer
 # Need to specify chainName and consensus when create Blockchain layer.
