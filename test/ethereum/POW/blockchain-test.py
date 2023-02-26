@@ -54,10 +54,16 @@ class MultipleChainsTestCase(ut.TestCase):
         self.assertEqual(self.wallet1._web3.eth.chain_id, 1337)
     
     def test_pow_send_transaction(self):
-        time.sleep(10)
+        remain_time = 600
+        while True:
+            printLog("\n========================================")
+            printLog("Waiting {} secs for pow to mine new block...".format(remain_time))
+            time.sleep(10)
+            remain_time -= 10
+            if remain_time <= 0: break
+        
         recipient = self.wallet1.getAccountAddressByName('Bob')
-        txhash = self.wallet1.sendTransaction(recipient, 0.1, sender_name='Alice', wait=False, verbose=False, nonce=10)
-        time.sleep(60)
+        txhash = self.wallet1.sendTransaction(recipient, 0.1, sender_name='Alice', wait=False, verbose=False)
         self.assertTrue(self.wallet1.getTransactionReceipt(txhash)["status"], 1)
     
     def test_pow_chain_consensus(self):
