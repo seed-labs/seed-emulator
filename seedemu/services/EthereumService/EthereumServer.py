@@ -499,7 +499,7 @@ class PoAServer(EthereumServer):
             if self._coinbase:
                 coinbase = self._coinbase
             else:
-                coinbase = self._accounts[0]
+                coinbase = self._accounts[0].address
             self._geth_options['mine'] = GethCommandTemplates['mine'].format(coinbase=coinbase, num_of_threads=self._miner_thread)
         super()._generateGethStartCommand()
         
@@ -522,7 +522,7 @@ class PoWServer(EthereumServer):
             if self._coinbase:
                 coinbase = self._coinbase
             else:
-                coinbase = self._accounts[0]
+                coinbase = self._accounts[0].address
             assert len(self._accounts) > 0, 'EthereumServer::__generateGethStartCommand: To start mine, ethereum server need at least one account.'
             self._geth_start_command += GethCommandTemplates['mine'].format(coinbase=coinbase, num_of_threads=self._miner_thread)
         
