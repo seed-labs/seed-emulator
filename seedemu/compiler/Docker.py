@@ -273,6 +273,15 @@ class DockerImage(object):
         @return True if this image is local.
         """
         return self.__local
+    
+    def addSoftwares(self, software) -> DockerImage:
+        """!
+        @brief add softwares to this image.
+
+        @return self, for chaining api calls.
+        """
+        for soft in software:
+            self.__software.add(soft)
 
 DefaultImages: List[DockerImage] = []
 
@@ -405,6 +414,9 @@ class Docker(Compiler):
         @returns self, for chaining api calls.
         """
         #assert image.getName() not in self.__images, 'image with name {} already exists.'.format(image.getName())
+        if image.getName() in self.__images and image.getSoftware():
+            self.__images[image.getName()][0].addSoftwares(image.getSoftware())
+            
         self.__images[image.getName()] = (image, priority)
 
         return self
