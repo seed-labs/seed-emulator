@@ -54,13 +54,17 @@ class MultipleChainsTestCase(ut.TestCase):
         self.assertEqual(self.wallet1._web3.eth.chain_id, 1337)
     
     def test_pow_send_transaction(self):
-        remain_time = 600
+        remain_time = 1200
         printLog("\n========================================")
-        printLog("Waiting 600 secs for pow to mine new block".format(remain_time))
+        printLog("Waiting for pow to mine new block (max waiting time : 1200sec)".format(remain_time))
         while True:
+            blockNumber = self.wallet1._web3.eth.getBlock('latest').number
+            printLog("\n========================================")
+            printLog("Current Block Number : {}".format(blockNumber))
             printLog("Remaining Time : {}".format(remain_time))
             time.sleep(10)
             remain_time -= 10
+            if blockNumber > 0: break
             if remain_time <= 0: break
         
         recipient = self.wallet1.getAccountAddressByName('Bob')
