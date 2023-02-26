@@ -25,8 +25,8 @@ class BaseSystem(Enum):
             }
     
     @staticmethod 
-    def isSubset(self, A: BaseSystem, B: BaseSystem):  
-        if B.value in self.SUBSET[A.value]:
+    def isSubset(A: BaseSystem, B: BaseSystem):  
+        if B.value in BaseSystem.SUBSET.value[A.value]:
             return True
         else:
             return False
