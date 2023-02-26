@@ -56,12 +56,12 @@ class MultipleChainsTestCase(ut.TestCase):
     def test_pow_send_transaction(self):
         remain_time = 1200
         printLog("\n========================================")
-        printLog("Waiting for pow to mine new block (max waiting time : 1200sec)".format(remain_time))
+        printLog("Waiting for pow to mine new block (max waiting time : 1200 sec)".format(remain_time))
         while True:
             blockNumber = self.wallet1._web3.eth.getBlock('latest').number
             printLog("\n========================================")
             printLog("Current Block Number : {}".format(blockNumber))
-            printLog("Remaining Time : {}".format(remain_time))
+            printLog("Remaining Time : {} sec".format(remain_time))
             time.sleep(10)
             remain_time -= 10
             if blockNumber > 0: break
