@@ -18,7 +18,6 @@ class MultipleChainsTestCase(ut.TestCase):
         cls.wallet1 = Wallet(chain_id=1337)
         for name in ['Alice', 'Bob', 'Charlie', 'David', 'Eve']:
             cls.wallet1.createAccount(name)
-            cls.wallet2.createAccount(name)
 
         return super().setUpClass()
         
