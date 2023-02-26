@@ -54,6 +54,7 @@ class MultipleChainsTestCase(ut.TestCase):
         self.assertEqual(self.wallet1._web3.eth.chain_id, 1337)
     
     def test_poa_send_transaction(self):
+        time.sleep(10)
         recipient = self.wallet1.getAccountAddressByName('Alice')
         txhash = self.wallet1.sendTransaction(recipient, 0.1, sender_name='Eve', wait=True, verbose=False)
         self.assertTrue(self.wallet1.getTransactionReceipt(txhash)["status"], 1)
