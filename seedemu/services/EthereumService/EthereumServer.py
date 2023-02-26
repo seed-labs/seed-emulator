@@ -77,7 +77,7 @@ class EthereumServer(Server):
         self._unlock_accounts = True
         self._start_mine = False
         self._miner_thread = 1
-        self._coinbase = ""
+        self._coinbase = None
         self._geth_start_command = ""
 
         self._role = []
@@ -496,7 +496,11 @@ class PoAServer(EthereumServer):
         if self._start_mine:
             assert len(self._accounts) > 0, 'EthereumServer::__generateGethStartCommand: To start mine, ethereum server need at least one account.'
             assert self._unlock_accounts, 'EthereumServer::__generateGethStartCommand: To start mine in POA(clique), accounts should be unlocked first.'
-            self._geth_options['mine'] = GethCommandTemplates['mine'].format(coinbase=self._coinbase, num_of_threads=self._miner_thread)
+            if self._coinbase:
+                coinbase = self._coinbase
+            else:
+                coinbase = self._accounts[0]
+            self._geth_options['mine'] = GethCommandTemplates['mine'].format(coinbase=coinbase, num_of_threads=self._miner_thread)
         super()._generateGethStartCommand()
         
 
@@ -515,8 +519,12 @@ class PoWServer(EthereumServer):
 
         self._geth_start_command = "nice -n 19 " + self._geth_start_command
         if self._start_mine:
+            if self._coinbase:
+                coinbase = self._coinbase
+            else:
+                coinbase = self._accounts[0]
             assert len(self._accounts) > 0, 'EthereumServer::__generateGethStartCommand: To start mine, ethereum server need at least one account.'
-            self._geth_start_command += GethCommandTemplates['mine'].format(coinbase=self._coinbase, num_of_threads=self._miner_thread)
+            self._geth_start_command += GethCommandTemplates['mine'].format(coinbase=coinbase, num_of_threads=self._miner_thread)
         
 class PoSServer(PoAServer):
     __terminal_total_difficulty: int
