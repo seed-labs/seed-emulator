@@ -80,7 +80,7 @@ class EthereumServer(Server):
         self._coinbase = None
         self._geth_start_command = ""
 
-        self._base_system = BaseSystem.GETH_1_10
+        self._base_system = BaseSystem.SEEDEMU_ETHEREUM
 
         self._role = []
         
@@ -550,7 +550,6 @@ class PoSServer(PoAServer):
         self.__is_beacon_validator_at_running = False
         self.__is_manual_deposit_for_validator = False
         self.__beacon_peer_counts = 5
-        self._base_system = BaseSystem.LIGHTHOUSE_3_2_1
 
     def _generateGethStartCommand(self):
         self._geth_options['pos'] = GethCommandTemplates['pos'].format(difficulty=self.__terminal_total_difficulty)
@@ -636,7 +635,6 @@ class PoSServer(PoAServer):
     def setBeaconSetupNode(self, port=8090):
         self.__is_beacon_setup_node = True
         self.__beacon_setup_http_port = port
-        self._base_system = BaseSystem.LCLI_3_2_1
         return self
 
     def getBeaconSetupNodeIp(self):
