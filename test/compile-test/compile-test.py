@@ -44,7 +44,7 @@ class CompileTest(ut.TestCase):
 
         cls.path = "../../examples"
         for dir, (scripts, outputs) in cls.test_list.items():
-            path = os.path.join(self.path, dir)
+            path = os.path.join(cls.path, dir)
             os.chdir(path)
             file_list = os.listdir(os.curdir)
             for output in outputs:
