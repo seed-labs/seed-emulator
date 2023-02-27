@@ -43,14 +43,15 @@ class CompileTest(ut.TestCase):
         cls.init_cwd = os.getcwd()
 
         cls.path = "../../examples"
+        os.chdir(cls.path)
         for dir, (scripts, outputs) in cls.test_list.items():
-            path = os.path.join(cls.path, dir)
-            os.chdir(path)
+            os.chdir(dir)
             file_list = os.listdir(os.curdir)
             for output in outputs:
                 if output in file_list: 
                     if os.path.isdir(os.path.join(path, output)):   shutil.rmtree(output)
                     else:   os.remove(output)
+            os.chdir("../")
         os.chdir(cls.init_cwd)
         return super().setUpClass()
         
