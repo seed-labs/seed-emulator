@@ -140,6 +140,8 @@ class Service(Layer):
                 '__self': self
             }
 
+        node.setBaseSystem(server.getBaseSystem())
+        
         self._doConfigure(node, server)
         self.__targets.add((server, node))
 
