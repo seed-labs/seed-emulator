@@ -118,7 +118,16 @@ class Binding(Printable):
         ## physical node filter.
         self.filter = filter
 
-    def filterBaseSystemConflict(self, vnode:str, node:Node, emulator:Emulator) -> bool:
+    def __filterBaseSystemConflict(self, vnode:str, node:Node, emulator:Emulator) -> bool:
+        """!
+        @brief filter a base_system conflict between vnode and node when binding. 
+
+        @param vnode virtual node name.
+        @param node candidate physical name to bind with vnode.
+        @param emulator emulator instance to get server object by vnode name.
+
+        @returns True if it does not have any conflict.
+        """
         nodeBaseSystem = node.getBaseSystem()
         server = emulator.getServerByVirtualNodeName(vnode)
         vnodeBaseSystem = server.getBaseSystem()
@@ -321,7 +330,8 @@ class Binding(Printable):
                 self.__log('node as{}/{} is already bound and re-bind is not allowed, trying next node.'.format(scope, name))
                 continue
             
-            if not self.filterBaseSystemConflict(vnode, node, emulator):
+            if not self.__filterBaseSystemConflict(vnode, node, emulator):
+                self.__log('node as{}/{} basesystem is not compatible'.format(scope, name))
                 continue
             
 
