@@ -132,6 +132,21 @@ class ScionIsd(Layer):
                     assert len(isds) == 1, f"AS {asn} must be a member of exactly one ISD"
                     self.__provision_crypto(as_, *isds[0], node, tempdir)
 
+    def print(self, indent: int = 0) -> str:
+        out = ' ' * indent
+        out += 'ScionIsdLayer:\n'
+
+        indent += 4
+        for isd, core in self.__isd_core.items():
+            out += ' ' * indent
+            out += f'Core ASes of ISD{isd}: {core}\n'
+
+        for isd, core in self.__isd_members.items():
+            out += ' ' * indent
+            out += f'Non-Core ASes of ISD{isd}: {core}\n'
+
+        return out
+
     def __gen_scion_crypto(self, base_layer: ScionBase, tempdir: str):
         """Generate cryptographic material in a temporary directory on the host."""
         topofile = self.__gen_topofile(base_layer, tempdir)

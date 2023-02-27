@@ -69,5 +69,12 @@ class ScionBase(Base):
         return list(self.__isds.keys())
 
     def print(self, indent: int) -> str:
-        # TODO
-        return "TODO"
+        out = super().print(indent)
+
+        indent += 4
+        out += ' ' * indent
+        out += 'IsolationDomains:\n'
+        for isd in self.__isds.values():
+            out += isd.print(indent + 4)
+
+        return out

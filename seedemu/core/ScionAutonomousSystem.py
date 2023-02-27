@@ -179,7 +179,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         """!
         @copydoc AutonomousSystem.print()
         """
-        out = super.print(indent)
+        out = super().print(indent)
 
         out += ' ' * indent
         out += 'SCION Control Services:\n'
