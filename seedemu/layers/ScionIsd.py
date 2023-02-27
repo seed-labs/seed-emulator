@@ -196,6 +196,12 @@ class ScionIsd(Layer):
             # Tempdir will be gone when imports are resolved, therefore we must use setFile
             with open(src, 'rt', encoding='utf8') as file:
                 content = file.read()
+                # FIXME: The Docker compiler adds an extra newline in generated files
+                # (https://github.com/seed-labs/seed-emulator/issues/125).
+                # SCION does not accept PEM files with an extra newline, so we strip a newline here
+                # that is later added again.
+                if content.endswith('\n'):
+                    content = content[:-1]
             node.setFile(dst, content)
 
         def myImport(name):
