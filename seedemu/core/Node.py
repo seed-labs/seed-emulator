@@ -832,9 +832,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         if node.getDisplayName() != None: self.setDisplayName(node.getDisplayName())
         if node.getDescription() != None: self.setDescription(node.getDescription())
-        if node.getClasses() != None: self.setClasses(node.getClasses())
-
-        self.setBaseSystem(node.getBaseSystem)
+        if node.getClasses()     != None: self.setClasses(node.getClasses())
+        if node.getBaseSystem()  != None: self.setBaseSystem(node.getBaseSystem)
         
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for p in node.getPersistentStorages(): self.addPersistentStorage(p)
