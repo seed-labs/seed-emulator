@@ -88,7 +88,7 @@ class Service(Layer):
 
     def _doInstall(self, node: Node, server: Server):
         """!
-        @brief install the server on node. This can be overrided by service
+        @brief install the server on node. This can be overridden by service
         implementations.
 
         @param node node.
@@ -111,7 +111,7 @@ class Service(Layer):
         rendered.
 
         This is currently used by the DNS layer to configure NS and gules
-        records before the actuall installation.
+        records before the actual installation.
         
         @param node node
         @param server server
@@ -173,7 +173,7 @@ class Service(Layer):
             pnode = emulator.getBindingFor(vnode)
             self._log('looking for binding for {}...'.format(vnode))
             self.__configureServer(server, pnode)
-            self._log('configure: binded {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
+            self._log('configure: bound {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
     
     def render(self, emulator: Emulator):
         for (server, node) in self.__targets:

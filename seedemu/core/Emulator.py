@@ -127,7 +127,7 @@ class Emulator:
             self.__log('{}: not found but is optional, skipping'.format(layerName))
             return
 
-        assert layerName in self.__layers.db, 'Layer {} requried but missing'.format(layerName)
+        assert layerName in self.__layers.db, 'Layer {} required but missing'.format(layerName)
 
         (layer, done) = self.__layers.db[layerName]
         if done:
@@ -148,7 +148,7 @@ class Emulator:
         if configure:
             self.__log('invoking pre-configure hooks for {}...'.format(layerName))
             for hook in hooks: hook.preconfigure(self)
-            self.__log('configureing {}...'.format(layerName))
+            self.__log('configuring {}...'.format(layerName))
             layer.configure(self)
             self.__log('invoking post-configure hooks for {}...'.format(layerName))
             for hook in hooks: hook.postconfigure(self)
@@ -396,7 +396,7 @@ class Emulator:
         @param compiler to use.
         @param output output directory path.
         @param override (optional) override the output folder if it already
-        exist. False by defualt.
+        exist. False by default.
 
         @returns self, for chaining API calls.
         """
@@ -459,7 +459,7 @@ class Emulator:
 
         @returns self, for chaining API calls.
         """
-        assert node.getAsn() == 0, 'vponde asn must be 0.'
+        assert node.getAsn() == 0, 'vpnode asn must be 0.'
         self.__bindings.vpnodes[vnode_name] = node
 
         return self
@@ -468,7 +468,7 @@ class Emulator:
         """!
         @brief get dict of virtual "physical" nodes.
 
-        @return dict of nodes where key is virual node name.
+        @return dict of nodes where key is virtual node name.
         """
         return self.__bindings.vpnodes
 

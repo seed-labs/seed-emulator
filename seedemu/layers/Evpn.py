@@ -82,7 +82,7 @@ class Evpn(Layer):
     """!
     @brief The Evpn (Ethernet VPN) layer.
 
-    Work in progress. This layer add supports for BGP-signeled EVPN. 
+    Work in progress. This layer add supports for BGP-singled EVPN. 
     """
 
     __customers: Set[Tuple[int, int, str, str, int]]

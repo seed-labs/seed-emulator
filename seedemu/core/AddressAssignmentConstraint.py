@@ -168,7 +168,7 @@ class AddressAssignmentConstraint(Printable):
         if type == NodeRole.Host: return Assigner(self.__hostStart, self.__hostEnd, self.__hostStep)
         if type == NodeRole.Router: return Assigner(self.__routerStart, self.__routerEnd, self.__routerStep)
 
-        raise ValueError("IX IP assigment must done with mapIxAddress().")
+        raise ValueError("IX IP assignment must done with mapIxAddress().")
 
     def mapIxAddress(self, asn: int) -> int:
         """!

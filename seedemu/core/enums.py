@@ -8,11 +8,11 @@ class NetworkType(Enum):
     ## Public internet exchange network
     InternetExchange = "Internet Exchange Network"
 
-    ## Private links netwroks. OSPF routers and IBGP runs on this type of
+    ## Private links networks. OSPF routers and IBGP runs on this type of
     #  networks.
     Local = "Local Network"
 
-    ## Bridge networks. This type of network eanble access to the real world.
+    ## Bridge networks. This type of network enable access to the real world.
     Bridge = "Bridge Network"
 
     ## XC network. This type of network connects two nodes directly.

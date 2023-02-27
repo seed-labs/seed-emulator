@@ -170,11 +170,11 @@ class OpenVpnRemoteAccessProvider(RemoteAccessProvider):
         """!
         @brief OpenVPN remote access provider constructor.
 
-        if you do not set ca/cert/key, bulitin ones will be used. to connect, 
+        if you do not set ca/cert/key, builtin ones will be used. to connect, 
         use the client configuration under misc/ folder. 
 
         @param startPort (optional) port number to start assigning from for
-        port fowarding to the open server. 
+        port forwarding to the open server. 
         @param naddrs number of IP addresses to assign to client pool.
         @param ovpnCa (optional) CA to use for openvpn.
         @param ovpnCert (optional) server certificate to use for openvpn.

@@ -28,7 +28,7 @@ class Ris(DataProvider):
         @brief invoke RIPE API.
 
         @param verb API action.
-        @param params requst params.
+        @param params request params.
 
         @returns API respond.
         """
@@ -46,7 +46,7 @@ class Ris(DataProvider):
         @brief invoke PeeringDB API.
 
         @param path API path.
-        @param params requst params.
+        @param params request params.
 
         @returns API respond.
         """

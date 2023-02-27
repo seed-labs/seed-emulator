@@ -1,4 +1,4 @@
-# DistrubutedDocker Compiler is not maintained 
+# Distributed Docker Compiler is not maintained 
 
 from .Docker import Docker, DockerCompilerFileTemplates
 from seedemu.core import Emulator, ScopedRegistry, Node, Network
@@ -44,7 +44,7 @@ class DistributedDocker(Docker):
         """!
         @brief DistributedDocker compiler constructor.
 
-        @param namingScheme (optional) node naming scheme. Avaliable variables
+        @param namingScheme (optional) node naming scheme. Available variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
         {primaryIp}
         """

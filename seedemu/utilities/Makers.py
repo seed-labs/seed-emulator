@@ -49,7 +49,7 @@ def createHostsOnNetwork(emu: Emulator, the_as: AutonomousSystem, network: str,
     @param services list of instances of Service to install on hosts. One will
     be installed on each.
     @param counter_start (optional) counter to start when assigning names to
-    hosts. Defualt to 0.
+    hosts. Default to 0.
     """
 
     # For each service, create a host for it. 

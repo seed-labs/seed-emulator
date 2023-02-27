@@ -211,7 +211,7 @@ class DockerImage(object):
     """!
     @brief The DockerImage class.
 
-    This class repersents a candidate image for docker compiler.
+    This class represents a candidate image for docker compiler.
     """
 
     __software: Set[str]
@@ -228,7 +228,7 @@ class DockerImage(object):
         @param software set of software pre-installed in the image, so the
         docker compiler can skip them when compiling.
         @param local (optional) set this image as a local image. A local image
-        is built ocally instead of pulled from the docker hub. Default to False.
+        is built locally instead of pulled from the docker hub. Default to False.
         @param dirName (optional) directory name of the local image (when local
         is True). Default to None. None means use the name of the image.
         """
@@ -331,9 +331,9 @@ class Docker(Compiler):
         """!
         @brief Docker compiler constructor.
 
-        @param namingScheme (optional) node naming scheme. Avaliable variables
+        @param namingScheme (optional) node naming scheme. Available variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
-        {primaryIp} and {displayName}. {displayName} will automaically fall
+        {primaryIp} and {displayName}. {displayName} will automatically fall
         back to {name} if 
         Default to as{asn}{role}-{displayName}-{primaryIp}.
         @param selfManagedNetwork (optional) use self-managed network. Enable
@@ -441,7 +441,7 @@ class Docker(Compiler):
         @brief forces the docker compiler to not use any images and build
         everything for starch. Set to False to disable the behavior.
 
-        @pararm disabled (option) disabled image if True. Default to True.
+        @param disabled (option) disabled image if True. Default to True.
 
         @returns self, for chaining api calls.
         """
@@ -533,12 +533,12 @@ class Docker(Compiler):
 
         @param node node.
 
-        @returns tuple of selected image and set of missinge software.
+        @returns tuple of selected image and set of missing software.
         """
         nodeSoft = node.getSoftware()
         nodeKey = (node.getAsn(), node.getName())
 
-        # #1 Highest Priority (User Customed Image)
+        # #1 Highest Priority (User Custom Image)
         if nodeKey in self.__image_per_node_list:
             image_name = self.__image_per_node_list[nodeKey]
 
@@ -586,10 +586,10 @@ class Docker(Compiler):
 
         assert len(candidates) > 0, '_electImageFor ended w/ no images?'
 
-        (selected, maxPiro) = candidates[0]
+        (selected, maxPrio) = candidates[0]
 
         for (candidate, prio) in candidates:
-            if prio >= maxPiro:
+            if prio >= maxPrio:
                 selected = candidate
 
         return (selected, nodeSoft - selected.getSoftware())
@@ -597,11 +597,11 @@ class Docker(Compiler):
 
     def _getNetMeta(self, net: Network) -> str: 
         """!
-        @brief get net metadata lables.
+        @brief get net metadata labels.
 
         @param net net object.
 
-        @returns metadata lables string.
+        @returns metadata labels string.
         """
 
         (scope, type, name) = net.getRegistryInfo()
@@ -650,11 +650,11 @@ class Docker(Compiler):
 
     def _getNodeMeta(self, node: Node) -> str:
         """!
-        @brief get node metadata lables.
+        @brief get node metadata labels.
 
         @param node node object.
 
-        @returns metadata lables string.
+        @returns metadata labels string.
         """
         (scope, type, name) = node.getRegistryInfo()
 
@@ -746,7 +746,7 @@ class Docker(Compiler):
         if role == NodeRole.Host: return 'h'
         if role == NodeRole.Router: return 'r'
         if role == NodeRole.RouteServer: return 'rs'
-        assert False, 'unknow node role {}'.format(role)
+        assert False, 'unknown node role {}'.format(role)
 
     def _contextToPrefix(self, scope: str, type: str) -> str:
         """!

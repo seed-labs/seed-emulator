@@ -6,7 +6,7 @@ LIGHTHOUSE_VC_CMD = """lighthouse --debug-level info vc --datadir /tmp/local-tes
 
 LIGHTHOUSE_WALLET_CREATE_CMD = """lighthouse account_manager wallet create --testnet-dir /tmp/local-testnet/testnet --datadir /tmp/local-testnet/eth-{eth_id} --name "seed" --password-file /tmp/seed.pass"""
 
-LIGHTHOUSE_VALIDATER_CREATE_CMD = """lighthouse --testnet-dir /tmp/local-testnet/testnet --datadir /tmp/local-testnet/eth-{eth_id} account validator create --wallet-name seed --wallet-password /tmp/seed.pass --count 1"""
+LIGHTHOUSE_VALIDATOR_CREATE_CMD = """lighthouse --testnet-dir /tmp/local-testnet/testnet --datadir /tmp/local-testnet/eth-{eth_id} account validator create --wallet-name seed --wallet-password /tmp/seed.pass --count 1"""
 
 VALIDATOR_DEPOSIT_SH = """\
 #!/bin/bash

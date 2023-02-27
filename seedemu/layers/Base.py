@@ -147,7 +147,7 @@ class Base(Layer, Graphable):
 
         @param asn ASN of the new IX.
         @param prefix (optional) prefix of the IX peering LAN.
-        @param aac (optional) Address assigment constraint.
+        @param aac (optional) Address assignment constraint.
         @returns created IX.
         @throws AssertionError if IX exists.
         """

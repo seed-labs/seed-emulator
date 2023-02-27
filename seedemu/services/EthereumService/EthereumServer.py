@@ -198,7 +198,7 @@ class EthereumServer(Server):
         """
         @brief set custom geth binary file
 
-        @param customGethBinaryPath set abosolute path of geth binary to move to the service.
+        @param customGethBinaryPath set absolute path of geth binary to move to the service.
 
         @returns self, for chaining API calls.
         """
@@ -245,11 +245,11 @@ class EthereumServer(Server):
 
     def setSnapshot(self, snapshot:bool = True) -> EthereumServer:
         """!
-        @breif set geth snapshot 
+        @brief set geth snapshot 
         
         @param snapshot bool
 
-        @returns self, for chainging API calls.
+        @returns self, for chaining API calls.
         """
         self._snapshot = snapshot
         return self
@@ -575,7 +575,7 @@ class PoSServer(PoAServer):
         if self.__is_beacon_validator_at_running:
             node.setFile('/tmp/seed.pass', 'seedseedseed')
             wallet_create_command = LIGHTHOUSE_WALLET_CREATE_CMD.format(eth_id=self.getId())
-            validator_create_command = LIGHTHOUSE_VALIDATER_CREATE_CMD.format(eth_id=self.getId()) 
+            validator_create_command = LIGHTHOUSE_VALIDATOR_CREATE_CMD.format(eth_id=self.getId()) 
             node.setFile('/tmp/deposit.sh', VALIDATOR_DEPOSIT_SH.format(eth_id=self.getId()))
             node.appendStartCommand('chmod +x /tmp/deposit.sh')
             if not self.__is_manual_deposit_for_validator:

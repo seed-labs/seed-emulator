@@ -101,14 +101,14 @@ class Binding(Printable):
         """!
         @brief create new binding.
 
-        @param source virtual node name. can be regexp to match mutiple virtual
+        @param source virtual node name. can be regexp to match multiple virtual
         nodes.
         @param action (optional) candidate selection. Default to random.
         @param filter (optional) filter. Default to empty filter (all physical
         nodes).
         """
 
-        ## regexp of virtual node name that should be handlded by this binding.
+        ## regexp of virtual node name that should be handled by this binding.
         self.source = source
 
         ## candidate selection after the filter completes.
@@ -330,7 +330,7 @@ class Binding(Printable):
                 continue
             
             if not self.__filterBaseSystemConflict(vnode, node, emulator):
-                self.__log('node as{}/{} basesystem is not compatible'.format(scope, name))
+                self.__log('node as{}/{} base_system is not compatible'.format(scope, name))
                 continue
             
 

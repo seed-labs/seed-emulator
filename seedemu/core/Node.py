@@ -272,7 +272,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """!
         @brief configure the node. This is called when rendering.
 
-        NICs will be setup during the configuring procress. No new interfaces
+        NICs will be setup during the configuring process. No new interfaces
         can be added after configuration.
 
         @param emulator Emulator object to use to configure.
@@ -339,7 +339,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns self, for chaining API calls.
         """
-        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+        assert not self.__asn == 0, 'This API is only available on a real physical node.'
 
         self.__name_servers = servers
 
@@ -351,7 +351,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns list of IP addresses of recursive name servers
         """
-        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+        assert not self.__asn == 0, 'This API is only available on a real physical node.'
 
         return self.__name_servers
 
@@ -427,7 +427,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """!
         @brief Connect the node to a network.
         @param net network to connect.
-        @param address (optional) override address assigment.
+        @param address (optional) override address assignment.
 
         @throws AssertionError if network does not exist.
         """
@@ -466,13 +466,13 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """!
         @brief Connect the node to a network.
         @param netname name of the network.
-        @param address (optional) override address assigment.
+        @param address (optional) override address assignment.
 
         @returns assigned IP address
 
         @returns self, for chaining API calls.
         """
-        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+        assert not self.__asn == 0, 'This API is only available on a real physical node.'
         assert not self.__configured, 'Node already configured.'
 
         self.__pending_nets.append((netname, address))
@@ -483,13 +483,13 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """!
         @brief Update connection of the node to a network.
         @param netname name of the network.
-        @param address (optional) override address assigment.
+        @param address (optional) override address assignment.
 
         @returns assigned IP address
 
         @returns self, for chaining API calls.
         """
-        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+        assert not self.__asn == 0, 'This API is only available on a real physical node.'
         
         for pending_netname, pending_address in self.__pending_nets:
             if pending_netname == netname:
@@ -504,12 +504,12 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @brief create new p2p cross-connect connection to a remote node.
         @param peername node name of the peer node.
         @param peerasn asn of the peer node.
-        @param address address to use on the interface in CIDR notiation. Must
+        @param address address to use on the interface in CIDR notation. Must
         be within the same subnet.
 
         @returns self, for chaining API calls.
         """
-        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+        assert not self.__asn == 0, 'This API is only available on a real physical node.'
         assert peername != self.getName() or peerasn != self.getName(), 'cannot XC to self.'
         self.__xcs[(peername, peerasn)] = (IPv4Interface(address), None)
 
@@ -522,7 +522,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns tuple of IP address and XC network name. XC network name will
         be None if the network has not yet been created.
         """
-        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+        assert not self.__asn == 0, 'This API is only available on a real physical node.'
         assert (peername, peerasn) in self.__xcs, 'as{}/{} is not in the XC list.'.format(peerasn, peername)
         return self.__xcs[(peername, peerasn)]
 
@@ -532,7 +532,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns dict, where key is (peer node name, peer node asn) and value is (address on interface, netname)
         """
-        assert not self.__asn == 0, 'This API is only avaliable on a real physical node.'
+        assert not self.__asn == 0, 'This API is only available on a real physical node.'
         return self.__xcs
 
     def getName(self) -> str:
@@ -806,7 +806,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @brief Add persistent storage to node. 
 
         Nodes usually start fresh when you re-start them. This allow setting a
-        directory where data will be persistented.
+        directory where data will be persistent.
 
         @param path path to put the persistent storage folder in the container.
 
@@ -1008,7 +1008,7 @@ class RealWorldRouter(Router):
     This class extends the router node to supporting routing prefix to real
     world.
 
-    @todo realworld access.
+    @todo real world access.
     """
 
     __realworld_routes: List[str]
