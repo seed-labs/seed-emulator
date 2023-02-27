@@ -133,9 +133,9 @@ class Binding(Printable):
         vnodeBaseSystem = server.getBaseSystem()
         if nodeBaseSystem == vnodeBaseSystem:
             return True
-        if BaseSystem.doesAContainB(vnodeBaseSystem, nodeBaseSystem):
+        if BaseSystem.doesAContainB(A=vnodeBaseSystem, B=nodeBaseSystem):
             return True
-        if BaseSystem.doesAContainB(nodeBaseSystem, vnodeBaseSystem):
+        if BaseSystem.doesAContainB(A=nodeBaseSystem, B=vnodeBaseSystem):
             server.setBaseSystem(nodeBaseSystem)
             return True
         
