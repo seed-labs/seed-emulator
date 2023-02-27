@@ -1,9 +1,8 @@
 from __future__ import annotations
 from .Printable import Printable
 from .Emulator import Emulator
-from .Node import Node, NodeRole
+from .Node import Node
 from .BaseSystem import BaseSystem
-from seedemu import core
 from enum import Enum
 from typing import List, Callable
 from ipaddress import IPv4Network, IPv4Address
