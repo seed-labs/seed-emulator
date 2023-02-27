@@ -1,7 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Network, Compiler, BaseSystem
-from seedemu import core
+from seedemu.core import Node, Network, Compiler, BaseSystem
 from seedemu.core.enums import NodeRole, NetworkType
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
@@ -450,7 +449,7 @@ class Docker(Compiler):
 
         return self
     
-    def setImageOverride(self, node:core.Node, imageName:str) -> Docker:
+    def setImageOverride(self, node:Node, imageName:str) -> Docker:
         """!
         @brief set the docker compiler to use a image on the specified Node.
 
@@ -473,7 +472,7 @@ class Docker(Compiler):
         registry = emulator.getRegistry()
         
         # { [imageName]: { [softName]: [nodeRef] } }
-        softGroups: Dict[str, Dict[str, List[core.Node]]] = {}
+        softGroups: Dict[str, Dict[str, List[Node]]] = {}
 
         # { [imageName]: useCount }
         groupIter: Dict[str, int] = {}
@@ -482,7 +481,7 @@ class Docker(Compiler):
             if type != 'rnode' and type != 'hnode' and type != 'snode' and type != 'rs' and type != 'snode': 
                 continue
 
-            node: core.Node = obj
+            node: Node = obj
 
             (img, _) = self._selectImageFor(node)
             imgName = img.getName()
@@ -509,7 +508,7 @@ class Docker(Compiler):
 
             for commRequired in range(maxIter, 0, -1):
                 currentTier: Set[str] = set()
-                currentTierNodes: Set[core.Node] = set()
+                currentTierNodes: Set[Node] = set()
 
                 for (soft, nodes) in val.items():
                     if len(nodes) == commRequired:
@@ -528,7 +527,7 @@ class Docker(Compiler):
                     step += 1
                 
     
-    def _selectImageFor(self, node: core.Node) -> Tuple[DockerImage, Set[str]]:
+    def _selectImageFor(self, node: Node) -> Tuple[DockerImage, Set[str]]:
         """!
         @brief select image for the given node.
 
@@ -567,7 +566,7 @@ class Docker(Compiler):
             return (image, nodeSoft - image.getSoftware())
         
         #############################################################
-        if node.getBaseSystem() != BaseSystem.DEFAULT:
+        if node.getBaseSystem().value != BaseSystem.DEFAULT.value:
             #Maintain a table : Virtual Image Name - Actual Image Name 
             image = BaseSystemImageMapping[node.getBaseSystem()]
             return (image, nodeSoft - image.getSoftware())
@@ -649,7 +648,7 @@ class Docker(Compiler):
 
         return labels
 
-    def _getNodeMeta(self, node: core.Node) -> str:
+    def _getNodeMeta(self, node: Node) -> str:
         """!
         @brief get node metadata lables.
 
@@ -788,7 +787,7 @@ class Docker(Compiler):
         copyfile(hostpath, staged_path)
         return 'COPY {} {}\n'.format(staged_path, path)
 
-    def _compileNode(self, node: core.Node) -> str:
+    def _compileNode(self, node: Node) -> str:
         """!
         @brief Compile a single node. Will create folder for node and the
         dockerfile.
