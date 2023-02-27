@@ -56,7 +56,7 @@ asn_ix = {
 for asn, ix in asn_ix.items():
     asys = base.createAutonomousSystem(asn)
     scion_isd.addIsdAs(1, asn, is_core=False)
-    scion_isd.setCertIssuer(1, asn, issuer=150)
+    scion_isd.setCertIssuer((1, asn), issuer=150)
     asys.createNetwork('net0')
     asys.createControlService('cs1').joinNetwork('net0')
     asys.createRouter('br0').joinNetwork('net0').joinNetwork(f'ix{ix}')

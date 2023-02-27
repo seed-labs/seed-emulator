@@ -1,12 +1,24 @@
 from __future__ import annotations
 import base64
 import os
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from collections import defaultdict
+from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
 
 from .AutonomousSystem import AutonomousSystem
 from .Emulator import Emulator
 from .enums import NodeRole
 from .Node import Node, ScionRouter
+
+
+class IA(NamedTuple):
+    """!
+    @brief ISD-ASN identifier for a SCION AS.
+    """
+    isd: int
+    asn: int
+
+    def __str__(self):
+        return f"{self.isd}-{self.asn}"
 
 
 class ScionAutonomousSystem(AutonomousSystem):
@@ -17,12 +29,10 @@ class ScionAutonomousSystem(AutonomousSystem):
     """
 
     __keys: Optional[Tuple[str, str]]
-    __attributes: Dict[str, Any]
-    __mtu: Optional[int]
+    __attributes: Dict[int, Set]         # Set of AS attributes per ISD
+    __mtu: Optional[int]                 # Minimum MTU in the AS's internal networks
     __control_services: Dict[str, Node]
-
-    # Next IFID assigned to a link
-    __next_ifid: int
+    __next_ifid: int                     # Next IFID assigned to a link
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
@@ -31,7 +41,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         super().__init__(asn, subnetTemplate)
         self.__control_services = {}
         self.__keys = None
-        self.__attributes = {}
+        self.__attributes = defaultdict(set)
         self.__mtu = None
         self.__next_ifid = 1
 
@@ -79,32 +89,25 @@ class ScionAutonomousSystem(AutonomousSystem):
         assert self.__keys is not None, "AS is not configured yet"
         return self.__keys
 
-    # TODO(lschulz): Rework how these attributes work
-    def setAsAttribute(self, attribute: str, value: Any) -> ScionAutonomousSystem:
+    def setAsAttributes(self, isd: int, attributes: Iterable[str]) -> ScionAutonomousSystem:
         """!
-        @brief Set an AS attribute. Called during configuration.
+        @brief Set an AS's attributes. Called during configuration.
 
-        @param attribute Name of the attribute to set/change
-        @param value New value. Must be serializable to JSON.
+        @param isd To which ISD the attributes apply.
+        @param attributes List of attributes. Replaces any attributes previously configured.
         @returns self
         """
-        self.__attributes[attribute] = value
+        self.__attributes[isd] = set(attributes)
         return self
 
-    def setAsAttributes(self, attributes: Mapping[str, Any]) -> ScionAutonomousSystem:
+    def getAsAttributes(self, isd: int) -> List[str]:
         """!
-        @brief Set an AS attributes. Called during configuration.
+        @brief Get all AS attributes.
 
-        @param attributes
-        @returns self
+        @param isd To which ISD the attributes apply.
+        @returns List of attributes.
         """
-        self.__attributes.update(attributes)
-
-    def getAsAttributes(self) -> Dict[str, Any]:
-        """!
-        @brief Return a dictionary of all attributes.
-        """
-        return self.__attributes
+        return list(self.__attributes[isd])
 
     def getTopology(self, isd: int) -> Dict:
         """!
@@ -112,7 +115,7 @@ class ScionAutonomousSystem(AutonomousSystem):
 
         Called during rendering.
 
-        @param isd is the AS's ISD
+        @param isd ISD for which to generate the AS topology.
         @return Topology dictionary (can be serialized to "topology.json")
         """
         # Control service
@@ -134,7 +137,7 @@ class ScionAutonomousSystem(AutonomousSystem):
             }
 
         return {
-            'attributes': [attr for attr, is_set in self.__attributes.items() if is_set],
+            'attributes': self.getAsAttributes(isd),
             'isd_as': f'{isd}-{self.getAsn()}',
             'mtu': self.__mtu,
             'control_service': control_services,

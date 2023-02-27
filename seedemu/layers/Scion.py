@@ -1,14 +1,12 @@
 from __future__ import annotations
 import io
-from dataclasses import dataclass
 from enum import Enum
-from os.path import isfile
-from os.path import join as pjoin
-from typing import Dict, NamedTuple, Tuple
+from typing import Dict, Tuple
 
 from seedemu.core import (Emulator, Interface, Layer, Network, Registry,
                           Router, ScionAutonomousSystem, ScionRouter,
                           ScopedRegistry)
+from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import ScionBase
 
 
@@ -51,17 +49,12 @@ class LinkType(Enum):
                 return "PARENT"
 
 
-class IA(NamedTuple):
-    isd: int
-    asn: int
-
-    def __str__(self):
-        return f"{self.isd}-{self.asn}"
-
-
 class Scion(Layer):
     """!
     @brief This layer manages SCION inter-AS links.
+
+    This layer requires specifying link end points as ISD-ASN pairs as ASNs
+    alone do not uniquely identify a SCION AS (see ScionISD layer).
     """
 
     __links: Dict[Tuple[IA, IA], LinkType]
@@ -258,7 +251,7 @@ class Scion(Layer):
         if rel == LinkType.Peer:
             a_iface["remote_interface_id"] = b_ifid
             b_iface["remote_interface_id"] = a_ifid
-        
+
         # Create interfaces in BRs
         a_router.addScionInterface(a_ifid, a_iface)
         b_router.addScionInterface(b_ifid, b_iface)

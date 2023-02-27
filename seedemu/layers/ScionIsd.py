@@ -1,23 +1,34 @@
 from __future__ import annotations
 import subprocess
 from collections import defaultdict
-from os.path import isfile
 from os.path import join as pjoin
 from tempfile import TemporaryDirectory
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from seedemu.core import Emulator, Layer, Node, ScionAutonomousSystem
+from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import ScionBase
 
 
 class ScionIsd(Layer):
     """!
     @brief SCION AS to ISD relationship layer.
+
+    This layer configures the membership and status as core AS of SCION ASes in
+    SCION Isolation Domains (ISDs). In principle a SCION AS can be a member of
+    multiple ISDs simultaneously with different roles as core or non-core AS in
+    each ISD. This layers interface reflects this fact by allowing flexible
+    assignment if ASNs to ISDs. In practice however, the current implementation
+    of SCION treats the same ASN in different ISDs as entirely unrelated ASes
+    [1]. Therefore, we restrict ASes to s single ISD for the moment. Assigning
+    an AS to multiple ISDs is detected as an error during rendering.
+
+    [1] [Issue #4293: Overlapping ISDs](https://github.com/scionproto/scion/issues/4293)
     """
 
     __isd_core: Dict[int, Set[int]]     # Core members (ASNs)
     __isd_members: Dict[int, Set[int]]  # Non-core members (ASNs)
-    __cert_issuer: Dict[int, Tuple[int, int]]
+    __cert_issuer: Dict[IA, int]
 
     def __init__(self):
         super().__init__()
@@ -69,26 +80,25 @@ class ScionIsd(Layer):
         isds += [(isd, False) for isd, ases in self.__isd_members.items() if asn in ases]
         return isds
 
-    def setCertIssuer(self, isd: int, asn: int, issuer: int) -> 'ScionIsd':
+    def setCertIssuer(self, as_: IA|Tuple[int, int], issuer: int) -> 'ScionIsd':
         """!
         @brief Set certificate issuer for a non-core AS. Ignored for core ASes.
 
-        @param isd ISD both ASes belong to.
-        @param asn AS for which to set the cert issuer.
+        @param as_ AS for which to set the cert issuer.
         @param issuer ASN of a SCION core as in the same ISD.
         @return self
         """
-        self.__cert_issuer[asn] = (isd, issuer)
+        self.__cert_issuer[IA(*as_)] = issuer
         return self
 
-    def getCertIssuer(self, asn: int) -> Optional[Tuple[int, int]]:
+    def getCertIssuer(self, as_: IA|Tuple[int, int]) -> Optional[Tuple[int, int]]:
         """!
-        @brief Get the cert issuer.
+        @brief Get the cert issuer for a SCION AS in a certain ISD.
 
-        @param asn AS for which to set the cert issuer.
-        @return ISD and ASN of the cert issuer or None if not set.
+        @param as_ for which to get the cert issuer.
+        @return ASN of the cert issuer or None if not set.
         """
-        return self.__cert_issuer.get(asn)
+        return self.__cert_issuer.get(IA(*as_))
 
     def configure(self, emulator: Emulator) -> None:
         """!
@@ -101,14 +111,7 @@ class ScionIsd(Layer):
         for isd, core in self.__isd_core.items():
             for asn in core:
                 as_: ScionAutonomousSystem = base_layer.getAutonomousSystem(asn)
-                as_.setAsAttributes({'core': True, 'voting': True, 'authoritative': True, 'issuing': True})
-
-            for asn in self.__isd_members.get(isd, []):
-                as_: ScionAutonomousSystem = base_layer.getAutonomousSystem(asn)
-                assert asn in self.__cert_issuer, f"non-core AS {asn} does not have a cert issuer"
-                isd, issuer = self.__cert_issuer[asn]
-                assert issuer in self.__isd_core[isd] and asn in self.__isd_members[isd]
-                # as_.setAsAttribute('cert_issuer', f'{isd}-{issuer}')
+                as_.setAsAttributes(isd, ['core', 'voting', 'authoritative', 'issuing'])
 
     def render(self, emulator: Emulator) -> None:
         """!
@@ -156,12 +159,16 @@ class ScionIsd(Layer):
                 isds = self.getAsIsds(asn)
                 isd, is_core = isds[0]
                 assert len(isds) == 1, f"AS {asn} must be a member of exactly one ISD"
+
                 f.write(f'  "{isd}-{asn}": ')
-                if is_core:
-                    f.write(f'{as_.getAsAttributes()}\n')
-                else:
-                    isd, issuer = self.__cert_issuer[asn]
-                    f.write(f"{{'cert_issuer': {isd}-{issuer}}}\n")
+                attributes = [f"'{attrib}': true" for attrib in as_.getAsAttributes(isd)]
+                if not is_core:
+                    assert (isd, asn) in self.__cert_issuer, f"non-core AS{asn} does not have a cert issuer in ISD{isd}"
+                    issuer = self.__cert_issuer[(isd, asn)]
+                    assert issuer in self.__isd_core[isd] and asn in self.__isd_members[isd]
+                    attributes.append(f"'cert_issuer': {isd}-{issuer}")
+
+                f.write("{{{}}}\n".format(", ".join(attributes)))
 
         return path
 

@@ -56,6 +56,10 @@ class ScionRouting(Routing):
     """!
     @brief Extends the routing layer with SCION inter-AS routing.
 
+    Installs the open-source SCION stack on all hosts and routers. Additionally
+    installs standard SCION test applications (e.g., scion-bwtestclient - a
+    replacement for iperf) on all hosts.
+
     During layer configuration Router nodes are replaced with ScionRouters which
     add methods for configuring SCION border router interfaces.
     """
@@ -106,7 +110,8 @@ class ScionRouting(Routing):
 
     def render(self, emulator: Emulator):
         """!
-        @brief Configure SCION routing on router, control service and host nodes.
+        @brief Configure SCION routing on router, control service and host
+        nodes.
         """
         super().render(emulator)
         reg = emulator.getRegistry()

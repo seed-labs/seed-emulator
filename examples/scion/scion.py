@@ -50,7 +50,7 @@ as152.createRouter('br0').joinNetwork('net0').joinNetwork('ix100')
 # AS-153
 as153 = base.createAutonomousSystem(153)
 scion_isd.addIsdAs(1, 153, is_core=False)
-scion_isd.setCertIssuer(1, 153, issuer=150)
+scion_isd.setCertIssuer((1, 153), issuer=150)
 as153.createNetwork('net0')
 as153.createControlService('cs1').joinNetwork('net0')
 as153_router = as153.createRouter('br0')
