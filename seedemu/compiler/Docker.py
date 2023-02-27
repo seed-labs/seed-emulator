@@ -566,7 +566,7 @@ class Docker(Compiler):
             return (image, nodeSoft - image.getSoftware())
         
         #############################################################
-        if node.getBaseSystem().value != BaseSystem.DEFAULT.value:
+        if (node.getBaseSystem()).value != BaseSystem.DEFAULT.value:
             #Maintain a table : Virtual Image Name - Actual Image Name 
             image = BaseSystemImageMapping[node.getBaseSystem()]
             return (image, nodeSoft - image.getSoftware())
