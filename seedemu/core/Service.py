@@ -129,8 +129,6 @@ class Service(Layer):
         assert node.getRole() == NodeRole.Host, 'node as{}/{} is not a host node'.format(node.getAsn(), node.getName())
         servicesdb: Dict = node.getAttribute('services', {})
 
-        node.setBaseSystem(server.getBaseSystem())
-
         for (name, service_info) in servicesdb.items():
             service: Service = service_info['__self']
             assert name not in self.getConflicts(), '{} conflict with {} on as{}/{}.'.format(self.getName(), service.getName(), node.getAsn(), node.getName())
