@@ -1,5 +1,5 @@
-from .internet import *
-from .ethereum import *
+from .internet import IPAnyCastTestCase, MiniInternetTestCase
+from .ethereum import EthereumPOATestCase, EthereumPOSTestCase, EthereumPOWTestCase
 import unittest
 
 test_case_list = [
