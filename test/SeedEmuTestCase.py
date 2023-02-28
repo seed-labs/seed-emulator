@@ -21,6 +21,7 @@ class SeedEmuTestCase(ut.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.init_dir = os.path.dirname(os.path.abspath(sys.modules[cls.__module__].__file__))
+        cls.cur_dir = os.getcwd()
         cls.emulator_code_dir = os.path.join(cls.init_dir, "emulator-code")
         cls.output_dir = os.path.join(cls.emulator_code_dir, "output")
         cls.emulator_script_name = "test-emulator.py"
@@ -154,5 +155,5 @@ class SeedEmuTestCase(ut.TestCase):
         print(*args, **kwargs)
         with open(os.path.join(cls.init_dir, cls.test_log, 'test_result.txt'),'a') as file:
             print(*args, **kwargs, file=file)
-        with open(os.path.join(os.path.join(os.getcwd(), 'test_result.txt')),'a') as file:
+        with open(os.path.join(os.path.join(cls.cur_dir, 'test_result.txt')),'a') as file:
             print(*args, **kwargs, file=file)
