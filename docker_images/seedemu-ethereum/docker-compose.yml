@@ -4,6 +4,6 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        image: handsonsecurity/seedemu-ethereum:1.0
+        image: handsonsecurity/seedemu-ethereum
 
 

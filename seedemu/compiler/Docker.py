@@ -286,7 +286,7 @@ class DockerImage(object):
 BaseSystemImageMapping: Dict = {}
 # BaseSystemImageMapping['virtual-name'] = (DockerImage('image name'), [software...])
 BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
-BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (DockerImage('handsonsecurity/seedemu-ethereum:1.0', []))
+BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (DockerImage('handsonsecurity/seedemu-ethereum', []))
 
 class Docker(Compiler):
     """!
