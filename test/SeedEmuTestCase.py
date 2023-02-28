@@ -20,7 +20,6 @@ class SeedEmuTestCase(ut.TestCase):
     
     @classmethod
     def setUpClass(cls) -> None:
-        cls.printLog("========== {} ==========".format(sys.modules[cls.__module__].__name__))
         cls.init_dir = os.path.dirname(os.path.abspath(sys.modules[cls.__module__].__file__))
         cls.cur_dir = os.path.dirname(__file__)
         cls.emulator_code_dir = os.path.join(cls.init_dir, "emulator-code")
@@ -30,6 +29,8 @@ class SeedEmuTestCase(ut.TestCase):
 
         cls.client = docker.from_env()
         cls.container_count_before_up_container = len(cls.client.containers.list())
+
+        cls.printLog("========== {} ==========".format(sys.modules[cls.__module__].__name__))
 
         os.chdir(cls.init_dir)
         cls.createDirectory(cls.test_log)
