@@ -152,5 +152,7 @@ class SeedEmuTestCase(ut.TestCase):
     @classmethod
     def printLog(cls, *args, **kwargs):
         print(*args, **kwargs)
-        with open(os.path.join(cls.init_dir, cls.test_log, 'log.txt'),'a') as file:
+        with open(os.path.join(cls.init_dir, cls.test_log, 'test_result.txt'),'a') as file:
+            print(*args, **kwargs, file=file)
+        with open(os.path.join('test_result.txt'),'a') as file:
             print(*args, **kwargs, file=file)
