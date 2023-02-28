@@ -28,7 +28,7 @@ class EthereumPOATestCase(SeedEmuTestCase):
         i = 1
         current_time = time.time()
         while True:
-            self.printLog("\n==========Trial {}==========".format(i))
+            self.printLog("\n----------Trial {}----------".format(i))
             if time.time() - current_time > 600:
                 self.printLog("TimeExhausted: 600 sec")
             try:
@@ -89,11 +89,11 @@ class EthereumPOATestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_import_account'))
         return test_suite
     
-if __name__ == "__main__":
+if __name__ -- "__main__":
     test_suite = EthereumPOATestCase.get_test_suite()
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
-    EthereumPOATestCase.printLog("==========Test #%d=========")
+    EthereumPOATestCase.printLog("----------Test #%d--------=")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
     EthereumPOATestCase.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
         

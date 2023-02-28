@@ -35,13 +35,13 @@ class IPAnyCastTestCase(SeedEmuTestCase):
         return super().tearDownClass()
     
     def test_ip_anycast(self):
-        self.printLog("\n######### Test ip anycast #########")
+        self.printLog("\n-------- Test ip anycast --------")
         ip = "10.180.0.100"
         self.assertTrue(self.ping_test(self.source_host, ip, 0))
         
 
     def test_ip_anycast_router0(self):
-        self.printLog("\n######### Test router0 #########")
+        self.printLog("\n-------- Test router0 --------")
 
         # Disable all bgp peers
         self.router0_180.exec_run("birdc dis u_as3")
@@ -51,20 +51,20 @@ class IPAnyCastTestCase(SeedEmuTestCase):
         self.router1_180.exec_run("birdc dis u_as3")
         time.sleep(10)
 
-        self.printLog("######### ping test expected result : failed #########")
+        self.printLog("ping test expected result : failed")
         ip = "10.180.0.100"
         self.printLog("ip : {}".format(ip))
         self.assertTrue(self.ping_test(self.source_host, ip, 1))
 
         # Enable only router1
-        self.printLog("######### enable router0 bgp peer #########")
+        self.printLog("-------- enable router0 bgp peer --------")
         self.router1_180.exec_run("birdc en u_as3")
         time.sleep(10)
-        self.printLog("######### ping test expected result : success #########")
+        self.printLog("ping test expected result : success ")
         self.assertTrue(self.ping_test(self.source_host, ip, 0))
 
     def test_ip_anycast_router1(self):
-        self.printLog("\n######### Test router1 #########")
+        self.printLog("\n-------- Test router1 --------")
 
         # Disable all bgp peers
         self.router0_180.exec_run("birdc dis u_as3")
@@ -75,16 +75,16 @@ class IPAnyCastTestCase(SeedEmuTestCase):
         time.sleep(10)
 
 
-        self.printLog("######### ping test expected result : failed #########")
+        self.printLog("ping test expected result : failed ")
         ip = "10.180.0.100"
         self.printLog("ip : {}".format(ip))
         self.assertTrue(self.ping_test(self.source_host, ip, 1))
 
         # Enable only router1
-        self.printLog("######### enable router1 bgp peer #########")
+        self.printLog("-------- enable router1 bgp peer --------")
         self.router1_180.exec_run("birdc en u_as3")
         time.sleep(10)
-        self.printLog("######### ping test expected result : success #########")
+        self.printLog("ping test expected result : success")
         self.assertTrue(self.ping_test(self.source_host, ip, 0))
 
     

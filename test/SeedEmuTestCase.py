@@ -32,8 +32,10 @@ class SeedEmuTestCase(ut.TestCase):
 
         os.chdir(cls.init_dir)
         cls.createDirectory(cls.test_log)
+        cls.printLog("==============================")
+        cls.printLog("{} Start".format(sys.modules[cls.__module__].__name__))
+        cls.printLog("==============================")
 
-        cls.printLog("========== {} ==========".format(sys.modules[cls.__module__].__name__))
 
         cls.gen_emulation_files()
         cls.build_emulator()
@@ -118,8 +120,8 @@ class SeedEmuTestCase(ut.TestCase):
     def wait_until_all_containers_up(cls, total_containers:int) -> None:
         current_time = time.time()
         while True:
-            cls.printLog("##################################################")
-            cls.printLog("###### Waiting until all containers up : {} ######".format(total_containers))
+            cls.printLog("--------------------------------------------------")
+            cls.printLog("------ Waiting until all containers up : {} ------".format(total_containers))
             
             cls.containers = cls.client.containers.list()
 

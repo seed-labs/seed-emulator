@@ -29,7 +29,7 @@ class EthereumPOWTestCase(SeedEmuTestCase):
         i = 1
         current_time = time.time()
         while True:
-            self.printLog("\n==========Trial {}==========".format(i))
+            self.printLog("\n----------Trial {}----------".format(i))
             if time.time() - current_time > 600:
                 self.printLog("TimeExhausted: 600 sec")
             try:
@@ -47,11 +47,11 @@ class EthereumPOWTestCase(SeedEmuTestCase):
     
     def test_pow_send_transaction(self):
         remain_time = 1200
-        self.printLog("\n========================================")
+        self.printLog("\n----------------------------------------")
         self.printLog("Waiting for pow to mine new block (max waiting time : 1200 sec)".format(remain_time))
         while True:
             blockNumber = self.wallet1._web3.eth.getBlock('latest').number
-            self.printLog("\n========================================")
+            self.printLog("\n----------------------------------------")
             self.printLog("Current Block Number : {}".format(blockNumber))
             self.printLog("Remaining Time : {} sec".format(remain_time))
             time.sleep(10)
@@ -98,12 +98,12 @@ class EthereumPOWTestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_pow_peer_counts'))
         return test_suite
 
-if __name__ == "__main__":
+if __name__ -- "__main__":
     test_suite = EthereumPOWTestCase.get_test_suite()
 
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
-    EthereumPOWTestCase.printLog("==========Test #%d=========")
+    EthereumPOWTestCase.printLog("----------Test #%d--------=")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
     EthereumPOWTestCase.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
     
