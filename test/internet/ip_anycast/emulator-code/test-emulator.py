@@ -8,7 +8,7 @@ from seedemu.layers import Base, Ebgp, PeerRelationship
 emu = Emulator()
 
 # Load the pre-built component
-emu.load('./base-component.bin')
+emu.load('../../mini-internet/emulator-code/base-component.bin')
 base: Base = emu.getLayer('Base')
 ebgp: Ebgp = emu.getLayer('Ebgp')
 
