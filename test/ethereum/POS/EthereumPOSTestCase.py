@@ -3,7 +3,7 @@
 
 import time
 import unittest as ut
-from SEEDBlockchain import Wallet
+from .SEEDBlockchain import Wallet
 from web3 import Web3
 from seedemu import *
 import requests
