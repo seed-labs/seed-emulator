@@ -25,3 +25,4 @@ client/backend/node_modules
 client/backend/bin
 *.bin
 output
+project-words.txt
