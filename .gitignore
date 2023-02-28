@@ -1,6 +1,6 @@
 **/output/*
 **/eth-states*/*
-**/test_log/*
+**/test_log*/*
 **/__pycache__/*
 *.bak
 *.out
