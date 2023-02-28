@@ -20,8 +20,9 @@ class SeedEmuTestCase(ut.TestCase):
     
     @classmethod
     def setUpClass(cls) -> None:
+        cls.printLog("========== {} ==========".format(sys.modules[cls.__module__].__name__))
         cls.init_dir = os.path.dirname(os.path.abspath(sys.modules[cls.__module__].__file__))
-        cls.cur_dir = os.getcwd()
+        cls.cur_dir = os.path.dirname(__file__)
         cls.emulator_code_dir = os.path.join(cls.init_dir, "emulator-code")
         cls.output_dir = os.path.join(cls.emulator_code_dir, "output")
         cls.emulator_script_name = "test-emulator.py"
