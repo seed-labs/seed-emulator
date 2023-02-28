@@ -154,5 +154,5 @@ class SeedEmuTestCase(ut.TestCase):
         print(*args, **kwargs)
         with open(os.path.join(cls.init_dir, cls.test_log, 'test_result.txt'),'a') as file:
             print(*args, **kwargs, file=file)
-        with open(os.path.join('test_result.txt'),'a') as file:
+        with open(os.path.join(os.path.join(os.getcwd(), 'test_result.txt')),'a') as file:
             print(*args, **kwargs, file=file)
