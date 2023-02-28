@@ -833,6 +833,14 @@ class Node(Printable, Registrable, Configurable, Vertex):
         if node.getDisplayName() != None: self.setDisplayName(node.getDisplayName())
         if node.getDescription() != None: self.setDescription(node.getDescription())
         if node.getClasses()     != None: self.setClasses(node.getClasses())
+
+        # TODO: 
+        # It is called in Emulator::render
+        # Render steps are (1) Render Base, (2) Get pending targets(vnode name) from Service layers,
+        # (3) Resolve bindings for all vnodes, (4) Applying changes made to virtual physical nodes to real physical nodes,
+        # (5) Render Services.
+        # copySettings is called in the step (4) and the base system is replaced when in the step (5)
+        # if node.getBaseSystem() != None : self.setBaseSystem(node.getClasses())
         
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for p in node.getPersistentStorages(): self.addPersistentStorage(p)
