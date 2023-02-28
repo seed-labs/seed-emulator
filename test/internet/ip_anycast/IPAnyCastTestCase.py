@@ -92,17 +92,17 @@ class IPAnyCastTestCase(SeedEmuTestCase):
     @classmethod
     def get_test_suite(cls):
         test_suite = ut.TestSuite()
-        test_suite.addTest(IPAnyCastTest('test_ip_anycast'))
-        test_suite.addTest(IPAnyCastTest('test_ip_anycast_router0'))
-        test_suite.addTest(IPAnyCastTest('test_ip_anycast_router1'))
+        test_suite.addTest(IPAnyCastTestCase('test_ip_anycast'))
+        test_suite.addTest(IPAnyCastTestCase('test_ip_anycast_router0'))
+        test_suite.addTest(IPAnyCastTestCase('test_ip_anycast_router1'))
         return test_suite
 
 
 if __name__ == "__main__":
-    test_suite = IPAnyCastTest.get_test_suite()
+    test_suite = IPAnyCastTestCase.get_test_suite()
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
-    IPAnyCastTest.printLog("==========Test=========")
+    IPAnyCastTestCase.printLog("==========Test=========")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
-    IPAnyCastTest.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
+    IPAnyCastTestCase.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
         

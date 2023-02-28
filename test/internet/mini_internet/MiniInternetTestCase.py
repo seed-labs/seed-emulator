@@ -85,10 +85,10 @@ def printLog(*args, **kwargs):
 
 
 if __name__ == "__main__":
-    test_suite = MiniInternetTest.get_test_suite()
+    test_suite = MiniInternetTestCase.get_test_suite()
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
-    MiniInternetTest.printLog("==========Test=========")
+    MiniInternetTestCase.printLog("==========Test=========")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
-    MiniInternetTest.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
+    MiniInternetTestCase.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
     
