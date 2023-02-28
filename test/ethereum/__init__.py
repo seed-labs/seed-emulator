@@ -1,3 +1,3 @@
-from .POA import *
-from .POW import *
-from .POS import *
+from .POA import EthereumPOATestCase
+from .POW import EthereumPOWTestCase
+from .POS import EthereumPOSTestCase

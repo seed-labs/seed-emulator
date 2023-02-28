@@ -1,2 +1,2 @@
-from .ip_anycast import *
-from .mini_internet import *
+from .ip_anycast import IPAnyCastTestCase
+from .mini_internet import MiniInternetTestCase
