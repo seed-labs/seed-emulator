@@ -187,8 +187,7 @@ class ScionIsd(Layer):
 
         return path
 
-    @staticmethod
-    def __provision_crypto(as_: ScionAutonomousSystem, isd: int, is_core: bool, node: Node, tempdir: str):
+    def __provision_crypto(self, as_: ScionAutonomousSystem, isd: int, is_core: bool, node: Node, tempdir: str):
         basedir = "/etc/scion"
         asn = as_.getAsn()
 
@@ -220,9 +219,10 @@ class ScionIsd(Layer):
         myImport(pjoin("as", "cp-as.key"))
         myImport(pjoin("as", "cp-as.tmpl"))
 
-        #XXX(benthor): respect certificate issuer here?
-        trcname = f"ISD{isd}-B1-S1.trc"
-        copyFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(basedir, "certs", trcname))
+        #XXX(benthor): trcs need to be known for other isds as well
+        for isd in self.__isd_core.keys():
+            trcname = f"ISD{isd}-B1-S1.trc"
+            copyFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(basedir, "certs", trcname))
 
         # Master keys are generated only once per AS
         key0, key1 = as_.getSecretKeys()
