@@ -82,7 +82,7 @@ class EthereumPOSTestCase(SeedEmuTestCase):
                 break
             result = str(beacon_setup_container.exec_run("cat contract_address.txt").output, 'utf-8')
             if 'Deposit contract address:' in result:
-                self.printLog("++++Deposit Succeed++++")
+                self.printLog("Deposit Succeed")
                 self.printLog(result)
                 contract_deployed = True
                 break
