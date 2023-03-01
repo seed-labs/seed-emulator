@@ -24,20 +24,20 @@ class MiniInternetTestCase(SeedEmuTestCase):
     def test_internet_connection(self):
         asns = [151, 152, 153, 154, 160, 161, 162, 163, 164, 170, 171]
         for asn in asns:
-            printLog("\n-------- ping test --------")
+            self.printLog("\n-------- ping test --------")
             ip = "10.{}.0.254".format(asn)
-            printLog("ip : {}".format(ip))
+            self.printLog("ip : {}".format(ip))
             self.assertTrue(self.ping_test(self.source_host, ip))
 
     def test_customized_ip_address(self):
-        printLog("\n-------- customized ip test --------")
-        printLog("ip : 10.154.0.129")
+        self.printLog("\n-------- customized ip test --------")
+        self.printLog("ip : 10.154.0.129")
         self.assertTrue(self.ping_test(self.source_host, "10.154.0.129"))
 
     def test_real_world_as(self):
-        printLog("\n-------- real world as test --------")
-        printLog("real world as 11872")
-        printLog("check real world ip : 128.230.64.1")
+        self.printLog("\n-------- real world as test --------")
+        self.printLog("real world as 11872")
+        self.printLog("check real world ip : 128.230.64.1")
         self.assertTrue(self.ping_test(self.source_host, "128.230.64.1"))
 
     def test_vpn(self):
@@ -77,11 +77,6 @@ def get_arguments(argv, mapping):
     except getopt.error as err:
         print (str(err))
 
-
-def printLog(*args, **kwargs):
-    print(*args, **kwargs)
-    with open('./test_log/log.txt','a') as file:
-        print(*args, **kwargs, file=file)
 
 
 if __name__ == "__main__":
