@@ -121,7 +121,7 @@ class EthereumPOSTestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_pos_chain_merged'))
         test_suite.addTest(cls('test_pos_send_transaction'))
         return test_suite
-if __name__ -- "__main__":
+if __name__ == "__main__":
         test_suite = EthereumPOSTestCase.get_test_suite()
         res = ut.TextTestRunner(verbosity=2).run(test_suite)
     

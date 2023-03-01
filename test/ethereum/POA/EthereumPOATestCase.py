@@ -89,7 +89,7 @@ class EthereumPOATestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_import_account'))
         return test_suite
     
-if __name__ -- "__main__":
+if __name__ == "__main__":
     test_suite = EthereumPOATestCase.get_test_suite()
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 

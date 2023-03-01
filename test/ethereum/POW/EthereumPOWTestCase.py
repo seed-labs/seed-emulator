@@ -98,7 +98,7 @@ class EthereumPOWTestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_pow_peer_counts'))
         return test_suite
 
-if __name__ -- "__main__":
+if __name__ == "__main__":
     test_suite = EthereumPOWTestCase.get_test_suite()
 
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
