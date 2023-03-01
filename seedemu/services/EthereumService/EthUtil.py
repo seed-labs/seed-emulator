@@ -82,12 +82,12 @@ class Genesis():
         @brief set initial signers by setting extraData field of genesis file. 
         
         extraData property in genesis block consists of 
-        32bytes of vanity data, a list of iinitial signer addresses, 
+        32bytes of vanity data, a list of initial signer addresses, 
         and 65bytes of vanity data.
 
         @param accounts account lists to set as signers.
 
-        @returns self, for chaning API calls. 
+        @returns self, for chaining API calls. 
         """
 
         assert self.__consensusMechanism == ConsensusMechanism.POA, 'setSigner method supported only in POA consensus.'

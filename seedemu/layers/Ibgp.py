@@ -38,7 +38,7 @@ class Ibgp(Layer, Graphable):
         @brief do a DFS and find all local routers to setup IBGP.
 
         @param start node to start from.
-        @paarm visited list to store nodes.
+        @param visited list to store nodes.
         @param netname name of the net - for log only.
         """
         if start in visited:

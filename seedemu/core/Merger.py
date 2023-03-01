@@ -36,7 +36,7 @@ class Merger(object):
 
     def getName(self) -> str:
         """!
-        @brief get name of the mergable object.
+        @brief get name of the mergeable object.
 
         @returns name.
         """

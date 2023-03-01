@@ -5,7 +5,7 @@ class DefaultWebServiceMerger(ServiceMerger):
     """!
     @brief default web service merger implementation.
 
-    This is the defualt implementation which invokes the default service merger
+    This is the default implementation which invokes the default service merger
     to handler merging installation targets.
     """
 

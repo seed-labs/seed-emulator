@@ -48,7 +48,7 @@ class DataProvider:
         @param id internet exchange ID provided by getInternetExchanges.
 
         @returns dict where key is ASN and value is IP address in the exchange.
-        Note that if an AS has mutiple addresses in the IX, only one should be
+        Note that if an AS has multiple addresses in the IX, only one should be
         returned.
         """
         raise NotImplementedError('getInternetExchangeMembers not implemented.')

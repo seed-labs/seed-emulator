@@ -35,7 +35,7 @@ class DefaultGenerator:
 
     def __generate(self, asn: int, emulator: Emulator, depth: int):
         """!
-        @brief recursively (depth-first) generate tology.
+        @brief recursively (depth-first) generate topology.
 
         @param asn asn to start on.
         @param emulator emulator to commit changes on.

@@ -33,7 +33,7 @@ class BgpLookingGlassServer(Server):
         @param node node.
         """
 
-        # note: need golang 1.12+; ubuntu defaults to 1.13. need attention if using debain
+        # note: need golang 1.12+; ubuntu defaults to 1.13. need attention if using debian
         node.addSoftware('golang')
         node.addSoftware('git')
         node.addSoftware('make')

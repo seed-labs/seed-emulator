@@ -57,9 +57,9 @@ class Edge:
 
         @param a source node.
         @param b destination node.
-        @param label middle lable.
-        @param alabel lable on the source side.
-        @param blabel lable on the destination side.
+        @param label middle label.
+        @param alabel label on the source side.
+        @param blabel label on the destination side.
         @param style style.
         """
 
@@ -126,7 +126,7 @@ class Graph(Printable):
         @brief add a new node.
         
         @param name name of the node.
-        @param group (optional) name of the culster.
+        @param group (optional) name of the cluster.
         @param shape (optional) shape of the vertex.
 
         @throws AssertionError if vertex already exist.
@@ -307,7 +307,7 @@ class Graphable(Registrable):
 
     def getGraphs(self) -> Dict[str, Graph]:
         """!
-        @brief Get all avaliable graphs.
+        @brief Get all available graphs.
 
         @returns all graphs.
         """
@@ -330,7 +330,7 @@ class Graphable(Registrable):
 
         Call this method to ask the class to create graphs.
         """
-        assert emulator.rendered(), 'Simulation needs to be redered before graphs can be created.'
+        assert emulator.rendered(), 'Simulation needs to be rendered before graphs can be created.'
         reg = emulator.getRegistry()
         reg.register('seedemu', 'graph', str(len(reg.getByType('seedemu', 'graph'))), self)
         if self.__graphs_created: return

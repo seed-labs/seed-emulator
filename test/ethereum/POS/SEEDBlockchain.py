@@ -3,7 +3,6 @@ from web3.middleware import geth_poa_middleware
 from eth_account import Account
 import os, sys, random, subprocess
 import json
-#import requests
 import docker
 
 

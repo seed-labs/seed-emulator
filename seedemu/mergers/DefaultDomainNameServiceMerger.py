@@ -6,7 +6,7 @@ class DefaultDomainNameServiceMerger(ServiceMerger):
     """!
     @brief default domain name service merger implementation.
 
-    This is the defualt implementation which invokes the default service merger
+    This is the default implementation which invokes the default service merger
     to handler merging installation targets, merge the zone tree, and combine
     masters.
     """

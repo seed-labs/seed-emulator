@@ -5,7 +5,7 @@ from sys import stderr
 
 class Hook(Registrable, Printable):
     """!
-    @brief Hook into the rendering procress.
+    @brief Hook into the rendering process.
     """
 
     def _log(self, message: str) -> None:

@@ -19,7 +19,7 @@ class Vertex(object):
     def setDisplayName(self, name: str) -> Vertex:
         """!
         @brief set display name of this vertex on the map. This will be shown as
-        the lable under the vertex on the map.
+        the label under the vertex on the map.
 
         @param name name text, or None to clear display name
 

@@ -120,11 +120,7 @@ class Blockchain:
                 assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
                 addr = str(ifaces[0].getAddress())
                 miner_ip = self.__miner_node_address[0]
-                print("#######################################")
-                print(addr)
-                print(miner_ip)
                 if addr == miner_ip:
-                    print("#######################################")
                     validator_count = len(self.getValidatorIds())
                     index = self.__joined_accounts.index(server._getAccounts()[0])
                     self.__joined_accounts[index].balance = 32*pow(10,18)*(validator_count+2)
@@ -146,7 +142,7 @@ class Blockchain:
         """!
         @brief Get miner node IPs.
 
-        @retuns List of miner nodes IP addresseds.
+        @returns List of miner nodes IP addresses.
         """
         return self.__miner_node_address
 
@@ -217,15 +213,15 @@ class Blockchain:
 
     def getConsensusMechanism(self) -> ConsensusMechanism:
         """!
-        @brief Get the consensusm mechanism of this blockchain.
+        @brief Get the consensus mechanism of this blockchain.
 
-        @returns ConensusMecanism
+        @returns ConsensusMechanism
         """
         return self.__consensus
     
     def setTerminalTotalDifficulty(self, ttd:int):
         """!
-        @brief Set the terminal total difficuly, which is the value to designate
+        @brief Set the terminal total difficulty, which is the value to designate
                 when the Merge is happen. In POA, difficulty is tend to increase by 2
                 for every one block. For example, if the terminal_total_difficulty is 
                 set to 20, the Ethereum blockchain will keep POA consensus for approximately
@@ -440,7 +436,7 @@ class EthereumService(Service):
         @param savePath (optional) The path to save containers' datadirs on the
         host. Default to "./eth-states". 
         @param override (optional) If true, override the output folder if it already
-        exist. False by defualt.
+        exist. False by default.
 
         @returns An instance of the EthereumService class.
         """

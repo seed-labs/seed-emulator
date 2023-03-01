@@ -51,27 +51,27 @@ class DefaultBaseMerger(Merger):
         ix_objects: Dict[int, InternetExchange] = {}
 
         for asn in objectA.getAsns():
-            self._log('found AS{} in the first eumlator.'.format(asn))
+            self._log('found AS{} in the first emulator.'.format(asn))
             as_objects[asn] = objectA.getAutonomousSystem(asn)
 
         for ix in objectA.getInternetExchangeIds():
-            self._log('found IX{} in the first eumlator.'.format(ix))
+            self._log('found IX{} in the first emulator.'.format(ix))
             ix_objects[ix] = objectA.getInternetExchange(ix)
 
         for asn in objectB.getAsns():
-            self._log('found AS{} in the second eumlator.'.format(asn))
+            self._log('found AS{} in the second emulator.'.format(asn))
             obj = objectB.getAutonomousSystem(asn)
             if asn in as_objects.keys():
-                self._log('AS{} is also in the first eumlator, calling conflict handler.'.format(asn))
+                self._log('AS{} is also in the first emulator, calling conflict handler.'.format(asn))
                 obj = self.__asConflictHandler(as_objects[asn], obj)
                 if obj != as_objects[asn]: as_objects[asn] = obj
             else: as_objects[asn] = obj
         
         for ix in objectB.getInternetExchangeIds():
-            self._log('found IX{} in the second eumlator.'.format(ix))
+            self._log('found IX{} in the second emulator.'.format(ix))
             obj = objectB.getInternetExchange(ix)
             if ix in ix_objects.keys():
-                self._log('IX{} is also in the first eumlator, calling conflict handler.'.format(ix))
+                self._log('IX{} is also in the first emulator, calling conflict handler.'.format(ix))
                 obj = self.__ixConflictHandler(ix_objects[ix], obj)
                 if obj != ix_objects[ix]: ix_objects[ix] = obj
             else: ix_objects[ix] = obj

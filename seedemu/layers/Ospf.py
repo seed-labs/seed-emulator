@@ -42,7 +42,7 @@ class Ospf(Layer):
 
     def __init__(self):
         """!
-        @brief Ospf (OSPF) layer conscrutor.
+        @brief Ospf (OSPF) layer constructor.
         """
         super().__init__()
         self.__stubs = set()

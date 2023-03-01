@@ -110,7 +110,7 @@ class Registry(Printable):
 
     def get(self, scope: str, type: str, name: str) -> Registrable:
         """!
-        @brief Retrive an object with name.
+        @brief Retrieve an object with name.
 
         @param scope scope of the object (e.g., asn).
         @param type type of the object (e.g., net/node)
@@ -134,7 +134,7 @@ class Registry(Printable):
 
     def getByType(self, scope: str, type: str) -> List[Registrable]:
         """!
-        @brief Retrive objects with type.
+        @brief Retrieve objects with type.
 
         @param scope scope of the object (e.g., asn).
         @param type type of the object (e.g., net/node)
@@ -159,7 +159,7 @@ class Registry(Printable):
 
     def getByScope(self, scope: str) -> List[Registrable]:
         """!
-        @brief Retrive objects with scope.
+        @brief Retrieve objects with scope.
 
         @param scope scope of the object (e.g., asn).
         @returns objects.
@@ -216,7 +216,7 @@ class ScopedRegistry(Registry):
 
     def get(self, type: str, name: str) -> object:
         """!
-        @brief Retrive an object with name.
+        @brief Retrieve an object with name.
 
         @param type type of the object (e.g., net/node)
         @param name name of the object.
@@ -237,7 +237,7 @@ class ScopedRegistry(Registry):
 
     def getByType(self, type: str) -> List[Registrable]:
         """!
-        @brief Retrive objects with type.
+        @brief Retrieve objects with type.
 
         @param type type of the object (e.g., net/node)
         @returns objects.
