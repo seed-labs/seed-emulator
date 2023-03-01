@@ -86,31 +86,4 @@ emu.render()
 # Enable etherView
 docker = Docker(internetMapEnabled=True, etherViewEnabled=True)
 
-# Add the 'rafaelawon/seedemu-lighthouse-base' custom image from dockerhub.
-# This image contains custom lighthouse software.
-docker.addImage(DockerImage('rafaelawon/seedemu-lighthouse-base', [], local=False), priority=-1)
-
-# Add the 'rafaelawon/seedemu-lighthouse-base' custom image from dockerhub.
-# This image contains custom lcli software.
-docker.addImage(DockerImage('rafaelawon/seedemu-lcli-base', [], local=False), priority=-2)
-
-base = emu.getLayer('Base')
-
-# Get the physical nodes of all hosts from Base layer.
-# The name of physical nodes generated from Makers.makeEmulatorBaseWith10StubASAndHosts() is 'host_{}'
-# Base::getNodesByName('host') returns the physical nodes whose name starts with 'host'.
-hosts = base.getNodesByName('host')
-
-# Set all host nodes to use the custom 'seedemu-lighthouse-base' image.
-for host in hosts:
-   docker.setImageOverride(host, 'rafaelawon/seedemu-lighthouse-base')
-
-# Get the physical node of beacon setup node. 
-# The host in asn 150 with id 0 (ip : 10.150.0.71) is set as BeaconSetupNode.
-# Base::getNodeByAsnAndName(150, 'host_0') returns the physical node whose name is 'host_0' in AS 150.
-beacon_setup = base.getNodeByAsnAndName(150, 'host_0')
-
-# Set the node to use the custom 'seedemu-lcli-base' image.
-docker.setImageOverride(beacon_setup, 'rafaelawon/seedemu-lcli-base')
-
 emu.compile(docker, './output', override = True)

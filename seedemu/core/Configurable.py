@@ -4,7 +4,7 @@ class Configurable(object):
     """!
     @brief Configurable class.
 
-    Configurable classs are classes that need to be configure before rendering.
+    Configurable classes are classes that need to be configure before rendering.
     """
 
     def __init__(self):

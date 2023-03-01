@@ -49,7 +49,7 @@ class InternetExchange(Printable, Configurable):
 
     def getId(self) -> int:
         """!
-        @brief Get intetnet exchang ID.
+        @brief Get internet exchange ID.
 
         @returns ID.
         """

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler
+from seedemu.core import Node, Network, Compiler, BaseSystem
 from seedemu.core.enums import NodeRole, NetworkType
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
@@ -11,7 +11,7 @@ from shutil import copyfile
 import json
 
 SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-map'
-SEEDEMU_ETHER_VIEW_IMAGE='rafaelawon/seedemu-etherview:latest'
+SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-etherview'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -211,7 +211,7 @@ class DockerImage(object):
     """!
     @brief The DockerImage class.
 
-    This class repersents a candidate image for docker compiler.
+    This class represents a candidate image for docker compiler.
     """
 
     __software: Set[str]
@@ -228,7 +228,7 @@ class DockerImage(object):
         @param software set of software pre-installed in the image, so the
         docker compiler can skip them when compiling.
         @param local (optional) set this image as a local image. A local image
-        is built ocally instead of pulled from the docker hub. Default to False.
+        is built locally instead of pulled from the docker hub. Default to False.
         @param dirName (optional) directory name of the local image (when local
         is True). Default to None. None means use the name of the image.
         """
@@ -273,10 +273,20 @@ class DockerImage(object):
         @return True if this image is local.
         """
         return self.__local
+    
+    def addSoftwares(self, software) -> DockerImage:
+        """!
+        @brief add softwares to this image.
 
-DefaultImages: List[DockerImage] = []
+        @return self, for chaining api calls.
+        """
+        for soft in software:
+            self.__software.add(soft)
 
-DefaultImages.append(DockerImage('ubuntu:20.04', []))
+BaseSystemImageMapping: Dict = {}
+# BaseSystemImageMapping['virtual-name'] = (DockerImage('image name'), [software...])
+BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
+BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (DockerImage('handsonsecurity/seedemu-ethereum', []))
 
 class Docker(Compiler):
     """!
@@ -321,9 +331,9 @@ class Docker(Compiler):
         """!
         @brief Docker compiler constructor.
 
-        @param namingScheme (optional) node naming scheme. Avaliable variables
+        @param namingScheme (optional) node naming scheme. Available variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
-        {primaryIp} and {displayName}. {displayName} will automaically fall
+        {primaryIp} and {displayName}. {displayName} will automatically fall
         back to {name} if 
         Default to as{asn}{role}-{displayName}-{primaryIp}.
         @param selfManagedNetwork (optional) use self-managed network. Enable
@@ -370,8 +380,11 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        for image in DefaultImages:
-            self.addImage(image, priority=0)
+        for name, image in BaseSystemImageMapping.items():
+            priority = 0
+            if name == BaseSystem.DEFAULT:
+                priority = 10
+            self.addImage(image, priority=priority)
 
     def getName(self) -> str:
         return "Docker"
@@ -392,6 +405,7 @@ class Docker(Compiler):
         @returns self, for chaining api calls.
         """
         assert image.getName() not in self.__images, 'image with name {} already exists.'.format(image.getName())
+            
         self.__images[image.getName()] = (image, priority)
 
         return self
@@ -425,7 +439,7 @@ class Docker(Compiler):
         @brief forces the docker compiler to not use any images and build
         everything for starch. Set to False to disable the behavior.
 
-        @paarm disabled (option) disabled image if True. Default to True.
+        @param disabled (option) disabled image if True. Default to True.
 
         @returns self, for chaining api calls.
         """
@@ -517,11 +531,12 @@ class Docker(Compiler):
 
         @param node node.
 
-        @returns tuple of selected image and set of missinge software.
+        @returns tuple of selected image and set of missing software.
         """
         nodeSoft = node.getSoftware()
         nodeKey = (node.getAsn(), node.getName())
 
+        # #1 Highest Priority (User Custom Image)
         if nodeKey in self.__image_per_node_list:
             image_name = self.__image_per_node_list[nodeKey]
 
@@ -532,11 +547,13 @@ class Docker(Compiler):
             self._log('image-per-node configured, using {}'.format(image.getName()))
             return (image, nodeSoft - image.getSoftware())
 
+        # Should we keep this feature? 
         if self.__disable_images:
             self._log('disable-imaged configured, using base image.')
             (image, _) = self.__images['ubuntu:20.04']
             return (image, nodeSoft - image.getSoftware())
 
+        # Set Default Image for All Nodes 
         if self.__forced_image != None:
             assert self.__forced_image in self.__images, 'forced-image configured, but image {} does not exist.'.format(self.__forced_image)
 
@@ -544,6 +561,12 @@ class Docker(Compiler):
 
             self._log('force-image configured, using image: {}'.format(image.getName()))
 
+            return (image, nodeSoft - image.getSoftware())
+        
+        #############################################################
+        if node.getBaseSystem().value != BaseSystem.DEFAULT.value:
+            #Maintain a table : Virtual Image Name - Actual Image Name 
+            image = BaseSystemImageMapping[node.getBaseSystem()]
             return (image, nodeSoft - image.getSoftware())
         
         candidates: List[Tuple[DockerImage, int]] = []
@@ -561,10 +584,10 @@ class Docker(Compiler):
 
         assert len(candidates) > 0, '_electImageFor ended w/ no images?'
 
-        (selected, maxPiro) = candidates[0]
+        (selected, maxPrio) = candidates[0]
 
         for (candidate, prio) in candidates:
-            if prio >= maxPiro:
+            if prio >= maxPrio:
                 selected = candidate
 
         return (selected, nodeSoft - selected.getSoftware())
@@ -572,11 +595,11 @@ class Docker(Compiler):
 
     def _getNetMeta(self, net: Network) -> str: 
         """!
-        @brief get net metadata lables.
+        @brief get net metadata labels.
 
         @param net net object.
 
-        @returns metadata lables string.
+        @returns metadata labels string.
         """
 
         (scope, type, name) = net.getRegistryInfo()
@@ -625,11 +648,11 @@ class Docker(Compiler):
 
     def _getNodeMeta(self, node: Node) -> str:
         """!
-        @brief get node metadata lables.
+        @brief get node metadata labels.
 
         @param node node object.
 
-        @returns metadata lables string.
+        @returns metadata labels string.
         """
         (scope, type, name) = node.getRegistryInfo()
 
@@ -721,7 +744,7 @@ class Docker(Compiler):
         if role == NodeRole.Host: return 'h'
         if role == NodeRole.Router: return 'r'
         if role == NodeRole.RouteServer: return 'rs'
-        assert False, 'unknow node role {}'.format(role)
+        assert False, 'unknown node role {}'.format(role)
 
     def _contextToPrefix(self, scope: str, type: str) -> str:
         """!

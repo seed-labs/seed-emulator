@@ -169,7 +169,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
     def getNetwork(self, name: str) -> Network:
         """!
-        @brief Retrive a network.
+        @brief Retrieve a network.
 
         @param name name of the network.
         @returns Network.
@@ -178,7 +178,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
     def getNetworks(self) -> List[str]:
         """!
-        @brief Get llist of name of networks.
+        @brief Get list of name of networks.
 
         @returns list of networks.
         """
@@ -204,10 +204,10 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         and can route traffic from the emulation to the real world.
 
         @param name name of the new node.
-        @param hideHops (optional) hide realworld hops from traceroute (by
-        setting TTL = 64 to all real world dsts on POSTROUTING). Default to
+        @param hideHops (optional) hide real world hops from traceroute (by
+        setting TTL = 64 to all real world dists on POSTROUTING). Default to
         True.
-        @param prefixes (optional) prefixes to annoucne. If unset, will try to
+        @param prefixes (optional) prefixes to announce. If unset, will try to
         get prefixes from real-world DFZ via RIPE RIS. Default to None (get from
         RIS)
         @returns new node.
@@ -230,7 +230,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
     def getRouters(self) -> List[str]:
         """!
-        @brief Get llist of name of routers.
+        @brief Get list of name of routers.
 
         @returns list of routers.
         """
@@ -238,7 +238,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
     def getRouter(self, name: str) -> Node:
         """!
-        @brief Retrive a router node.
+        @brief Retrieve a router node.
 
         @param name name of the node.
         @returns Node.
@@ -259,7 +259,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
     def getHost(self, name: str) -> Node:
         """!
-        @brief Retrive a host node.
+        @brief Retrieve a host node.
 
         @param name name of the node.
         @returns Node.

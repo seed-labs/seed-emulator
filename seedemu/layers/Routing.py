@@ -43,7 +43,7 @@ class Routing(Layer):
 
     This layer provides routing support for routers and hosts. i.e., (1) install
     BIRD on router nodes and allow BGP/OSPF to work, (2) setup kernel and device
-    protocols, and (3) setup defult routes for host nodes.
+    protocols, and (3) setup default routes for host nodes.
 
     When this layer is rendered, two new methods will be added to the router
     node and can be used by other layers: (1) addProtocol: add new protocol
@@ -58,9 +58,9 @@ class Routing(Layer):
     
     def __init__(self, loopback_range: str = '10.0.0.0/16'):
         """!
-        @brief Routing layre constructor.
+        @brief Routing layer constructor.
 
-        @param loopback_range (optional) network range for assiging loopback
+        @param loopback_range (optional) network range for assigning loopback
         IP addresses.
         """
         super().__init__()
@@ -87,7 +87,7 @@ class Routing(Layer):
                 self.__installBird(rs_node)
                 rs_node.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
                 rs_node.appendStartCommand('bird -d', True)
-                self._log("Bootstraping bird.conf for RS {}...".format(name))
+                self._log("Bootstrapping bird.conf for RS {}...".format(name))
 
                 rs_ifaces = rs_node.getInterfaces()
                 assert len(rs_ifaces) == 1, "rs node {} has != 1 interfaces".format(rs_node.getName())
@@ -113,7 +113,7 @@ class Routing(Layer):
                 rnode.setLoopbackAddress(lbaddr)
                 self.__loopback_pos += 1
 
-                self._log("Bootstraping bird.conf for AS{} Router {}...".format(scope, name))
+                self._log("Bootstrapping bird.conf for AS{} Router {}...".format(scope, name))
 
                 self.__installBird(rnode)
 

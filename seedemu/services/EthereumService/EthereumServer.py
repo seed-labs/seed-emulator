@@ -1,5 +1,5 @@
 from __future__ import annotations
-from seedemu.core import Node, Server
+from seedemu.core import Node, Server, BaseSystem
 from .EthEnum import *
 from .EthUtil import *
 from typing import List
@@ -77,8 +77,10 @@ class EthereumServer(Server):
         self._unlock_accounts = True
         self._start_mine = False
         self._miner_thread = 1
-        self._coinbase = ""
+        self._coinbase = None
         self._geth_start_command = ""
+
+        self._base_system = BaseSystem.SEEDEMU_ETHEREUM
 
         self._role = []
         
@@ -146,15 +148,15 @@ class EthereumServer(Server):
         # install required software
         node.addSoftware('software-properties-common')
         # tap the eth repo
-        node.addBuildCommand('add-apt-repository ppa:ethereum/ethereum')
+        # node.addBuildCommand('add-apt-repository ppa:ethereum/ethereum')
 
         # install geth and bootnode
         if self._custom_geth_binary_path : 
-            node.addBuildCommand('apt-get update && apt-get install --yes bootnode')
+            #node.addBuildCommand('apt-get update && apt-get install --yes bootnode')
             node.importFile("../../"+self._custom_geth_binary_path, '/usr/bin/geth')
             node.appendStartCommand("chmod +x /usr/bin/geth")
-        else:
-            node.addBuildCommand('apt-get update && apt-get install --yes geth bootnode')
+        # else:
+        #     node.addBuildCommand('apt-get update && apt-get install --yes geth bootnode')
 
         # genesis
         node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth --datadir {} init /tmp/eth-genesis.json'.format(self._data_dir))
@@ -196,7 +198,7 @@ class EthereumServer(Server):
         """
         @brief set custom geth binary file
 
-        @param customGethBinaryPath set abosolute path of geth binary to move to the service.
+        @param customGethBinaryPath set absolute path of geth binary to move to the service.
 
         @returns self, for chaining API calls.
         """
@@ -243,11 +245,11 @@ class EthereumServer(Server):
 
     def setSnapshot(self, snapshot:bool = True) -> EthereumServer:
         """!
-        @breif set geth snapshot 
+        @brief set geth snapshot 
         
         @param snapshot bool
 
-        @returns self, for chainging API calls.
+        @returns self, for chaining API calls.
         """
         self._snapshot = snapshot
         return self
@@ -496,7 +498,11 @@ class PoAServer(EthereumServer):
         if self._start_mine:
             assert len(self._accounts) > 0, 'EthereumServer::__generateGethStartCommand: To start mine, ethereum server need at least one account.'
             assert self._unlock_accounts, 'EthereumServer::__generateGethStartCommand: To start mine in POA(clique), accounts should be unlocked first.'
-            self._geth_options['mine'] = GethCommandTemplates['mine'].format(coinbase=self._coinbase, num_of_threads=self._miner_thread)
+            if self._coinbase:
+                coinbase = self._coinbase
+            else:
+                coinbase = self._accounts[0].address
+            self._geth_options['mine'] = GethCommandTemplates['mine'].format(coinbase=coinbase, num_of_threads=self._miner_thread)
         super()._generateGethStartCommand()
         
 
@@ -515,8 +521,12 @@ class PoWServer(EthereumServer):
 
         self._geth_start_command = "nice -n 19 " + self._geth_start_command
         if self._start_mine:
+            if self._coinbase:
+                coinbase = self._coinbase
+            else:
+                coinbase = self._accounts[0].address
             assert len(self._accounts) > 0, 'EthereumServer::__generateGethStartCommand: To start mine, ethereum server need at least one account.'
-            self._geth_start_command += GethCommandTemplates['mine'].format(coinbase=self._coinbase, num_of_threads=self._miner_thread)
+            self._geth_start_command += GethCommandTemplates['mine'].format(coinbase=coinbase, num_of_threads=self._miner_thread)
         
 class PoSServer(PoAServer):
     __terminal_total_difficulty: int
@@ -565,7 +575,7 @@ class PoSServer(PoAServer):
         if self.__is_beacon_validator_at_running:
             node.setFile('/tmp/seed.pass', 'seedseedseed')
             wallet_create_command = LIGHTHOUSE_WALLET_CREATE_CMD.format(eth_id=self.getId())
-            validator_create_command = LIGHTHOUSE_VALIDATER_CREATE_CMD.format(eth_id=self.getId()) 
+            validator_create_command = LIGHTHOUSE_VALIDATOR_CREATE_CMD.format(eth_id=self.getId()) 
             node.setFile('/tmp/deposit.sh', VALIDATOR_DEPOSIT_SH.format(eth_id=self.getId()))
             node.appendStartCommand('chmod +x /tmp/deposit.sh')
             if not self.__is_manual_deposit_for_validator:

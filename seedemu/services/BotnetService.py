@@ -63,7 +63,7 @@ index eca72d4..96160c6 100644
          from urllib.request import urlopen
 @@ -143,6 +144,7 @@ def geolocation():
      """
-     Return latitute/longitude of host machine (tuple)
+     Return latitude/longitude of host machine (tuple)
      """
 +    return ("0", "0")
      import sys
@@ -83,7 +83,7 @@ index 5c5958a..ea1c9d4 100644
          from urllib.request import urlopen
 @@ -143,6 +144,7 @@ def geolocation():
      """
-     Return latitute/longitude of host machine (tuple)
+     Return latitude/longitude of host machine (tuple)
      """
 +    return ("0", "0")
      import sys
@@ -205,7 +205,7 @@ class BotnetClientServer(Server):
         """!
         @brief set the emulator for the client to look for server from.
 
-        note: to be called by the render procress. 
+        note: to be called by the render process. 
 
         @param emulator emulator.
         """

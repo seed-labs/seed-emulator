@@ -6,6 +6,7 @@ from .Emulator import Emulator
 from .enums import NodeRole
 from .Binding import Binding
 from typing import Dict, List, Set, Tuple
+from .BaseSystem import BaseSystem
 
 class Server(Printable):
     """!
@@ -14,10 +15,11 @@ class Server(Printable):
     The Server class is the handler for installed services.
     """
     __class_names: list
-
+    _base_system: BaseSystem
     def __init__(self):
         super().__init__()
         self.__class_names = []
+        self._base_system = BaseSystem.DEFAULT
 
     def install(self, node: Node):
         """!
@@ -26,6 +28,24 @@ class Server(Printable):
         @param node node.
         """
         raise NotImplementedError('install not implemented')
+    
+    def setBaseSystem(self, base_system: BaseSystem) -> Server:
+        """!
+        @brief Set a base_system of a server.
+
+        @param base_system base_system to use.
+
+        @returns self, for chaining API calls.
+        """
+        self._base_system = base_system
+    
+    def getBaseSystem(self) -> BaseSystem:
+        """!
+        @brief Get configured base system on this server.
+
+        @returns base system.
+        """
+        return self._base_system
 
     def getClassNames(self):
         return self.__class_names
@@ -68,7 +88,7 @@ class Service(Layer):
 
     def _doInstall(self, node: Node, server: Server):
         """!
-        @brief install the server on node. This can be overrided by service
+        @brief install the server on node. This can be overridden by service
         implementations.
 
         @param node node.
@@ -91,7 +111,7 @@ class Service(Layer):
         rendered.
 
         This is currently used by the DNS layer to configure NS and gules
-        records before the actuall installation.
+        records before the actual installation.
         
         @param node node
         @param server server
@@ -120,6 +140,8 @@ class Service(Layer):
                 '__self': self
             }
 
+        node.setBaseSystem(server.getBaseSystem())
+        
         self._doConfigure(node, server)
         self.__targets.add((server, node))
 
@@ -151,7 +173,7 @@ class Service(Layer):
             pnode = emulator.getBindingFor(vnode)
             self._log('looking for binding for {}...'.format(vnode))
             self.__configureServer(server, pnode)
-            self._log('configure: binded {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
+            self._log('configure: bound {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
     
     def render(self, emulator: Emulator):
         for (server, node) in self.__targets:

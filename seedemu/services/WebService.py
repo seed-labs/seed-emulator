@@ -50,7 +50,7 @@ class WebServer(Server):
         """!
         @brief Set content of index.html.
 
-        @param content content. {nodeName} and {asn} are avalaible and will be
+        @param content content. {nodeName} and {asn} are available and will be
         filled in.
 
         @returns self, for chaining API calls.
