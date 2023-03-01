@@ -78,7 +78,7 @@ class EthereumPOSTestCase(SeedEmuTestCase):
             self.printLog("current blockNumber : ", latestBlockNumber)
             for ip, web3 in web3_list:
                 self.printLog("Total in txpool: {} ({})".format(len(web3.geth.txpool.content().pending), ip))
-            if latestBlockNumber -- 20:
+            if latestBlockNumber == 20:
                 break
             result = str(beacon_setup_container.exec_run("cat contract_address.txt").output, 'utf-8')
             if 'Deposit contract address:' in result:
