@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 from seedemu.compiler import Docker, Graphviz
-from seedemu.core import Emulator
+from seedemu.core import Emulator, Binding, Filter
 from seedemu.layers import ScionBase, ScionRouting, Ospf, ScionIsd, Scion
 from seedemu.layers.Scion import LinkType as ScLinkType
+from seedemu.services import ScionBandwidthService
 
 # Initialize
 emu = Emulator()
@@ -12,6 +13,8 @@ routing = ScionRouting()
 ospf = Ospf()
 scion_isd = ScionIsd()
 scion = Scion()
+bwtest_server = ScionBandwidthService.ScionBwtestServerService()
+bwtest_client = ScionBandwidthService.ScionBwtestClientService()
 
 # SCION ISDs
 base.createIsolationDomain(1)
@@ -25,13 +28,17 @@ as150_router = as150.createRouter('br1')
 as151_router = as151.createRouter('br1')
 as152_router = as152.createRouter('br1')
 
-as150.createNetwork('net150')
-as151.createNetwork('net151')
-as152.createNetwork('net152')
+as150.createNetwork('net0')
+as151.createNetwork('net0')
+as152.createNetwork('net0')
 
-as150_router.joinNetwork('net150')
-as151_router.joinNetwork('net151')
-as152_router.joinNetwork('net152')
+as150.createControlService('cs1').joinNetwork('net0')
+as151.createControlService('cs1').joinNetwork('net0')
+as152.createControlService('cs1').joinNetwork('net0')
+
+as150_router.joinNetwork('net0')
+as151_router.joinNetwork('net0')
+as152_router.joinNetwork('net0')
 
 
 scion_isd.addIsdAs(1, 150, is_core=True)
@@ -46,24 +53,21 @@ as150_router.crossConnect(152, 'br1', '10.150.253.2/29')
 as151_router.crossConnect(150, 'br1', '10.150.254.3/29')
 as152_router.crossConnect(150, 'br1', '10.150.253.3/29')
 
+# Bandwidth Test Service
+as150.createHost('bwtest_server').joinNetwork('net0', address='10.150.0.30')
+# Setting the port only has to be done if the default value should not be used
+bwtest_server.install('bwtest_server').setPort(40000)
+emu.addBinding(Binding('bwtest_server', filter = Filter(nodeName='bwtest_server', asn=150)))
+
+# Bandwidth Test Service
+as151.createHost('bwtest_client').joinNetwork('net0')
+# Setting the port, bandwidth, duration and packet size only has to be done if the default values should not be used
+bwtest_client.install('bwtest_client', (1, 150), '10.150.0.30').setPort(40000).setBandwidth('100kbps').setDuration(5).setPacketSize(100)
+emu.addBinding(Binding('bwtest_client', filter = Filter(nodeName='bwtest_client', asn=151)))
+
 # BGP Peering
-#ebgp.addPrivatePeering(100, 150, 151)
-#ebgp.addPrivatePeering(100, 151, 152)
-#ebgp.addPrivatePeering(100, 152, 150)
-#ebgp.addCrossConnectPeering(150, 153, PeerRelationship.Provider)
-
-# scion.setInternalNet(150, 'net150')
-# scion.setInternalNet(151, 'net151')
-# scion.setInternalNet(152, 'net152')
-
 scion.addXcLink((1, 150), (1, 151), ScLinkType.Transit)
 scion.addXcLink((1, 150), (1, 152), ScLinkType.Transit)
-
-# SCION Peering
-#scion.addIxLink(100, 150, 151, ScLinkType.Core)
-#scion.addIxLink(100, 151, 152, ScLinkType.Core)
-#scion.addIxLink(100, 152, 150, ScLinkType.Core)
-#scion.addXcLink(150, 153, ScLinkType.Transit)
 
 # Rendering
 emu.addLayer(base)
@@ -71,6 +75,8 @@ emu.addLayer(routing)
 emu.addLayer(ospf)
 emu.addLayer(scion_isd)
 emu.addLayer(scion)
+emu.addLayer(bwtest_server)
+emu.addLayer(bwtest_client)
 
 emu.render()
 

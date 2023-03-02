@@ -99,7 +99,7 @@ class ScionRouting(Routing):
         node.addBuildCommand(
             'echo "deb [trusted=yes] https://packages.netsec.inf.ethz.ch/debian all main"'
             ' > /etc/apt/sources.list.d/scionlab.list')
-        node.addBuildCommand("apt-get update && apt-get install -y scionlab")
+        node.addBuildCommand("apt-get update && apt-get install -y scionlab scion-apps-bwtester")
         node.addSoftware("apt-transport-https")
         node.addSoftware("ca-certificates")
 
