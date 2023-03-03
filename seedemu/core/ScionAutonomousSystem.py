@@ -175,6 +175,22 @@ class ScionAutonomousSystem(AutonomousSystem):
         """
         return self.__control_services[name]
 
+    def _doCreateGraphs(self, emulator: Emulator):
+        """!
+        @copydoc AutonomousSystem._doCreateGraphs()
+        """
+        super()._doCreateGraphs(emulator)
+        asn = self.getAsn()
+        l2graph = self.getGraph('AS{}: Layer 2 Connections'.format(asn))
+        for obj in self.__control_services.values():
+            router: Node = obj
+            rtrname = 'CS: {}'.format(router.getName(), group = 'AS{}'.format(asn))
+            l2graph.addVertex(rtrname, group = 'AS{}'.format(asn))
+            for iface in router.getInterfaces():
+                net = iface.getNet()
+                netname = 'Network: {}'.format(net.getName())
+                l2graph.addEdge(rtrname, netname)
+            
     def print(self, indent: int) -> str:
         """!
         @copydoc AutonomousSystem.print()

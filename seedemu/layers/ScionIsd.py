@@ -79,6 +79,17 @@ class ScionIsd(Layer):
         isds = [(isd, True) for isd, ases in self.__isd_core.items() if asn in ases]
         isds += [(isd, False) for isd, ases in self.__isd_members.items() if asn in ases]
         return isds
+    
+    def isCoreAs(self, isd: int, asn: int) -> bool:
+        """!
+        @brief Check if an AS is a core AS in an ISD.
+
+        @param isd ID of the ISD.
+        @param asn ASN of the AS.
+
+        @returns True if the AS is a core AS in the ISD.
+        """
+        return asn in self.__isd_core[isd]
 
     def setCertIssuer(self, as_: IA|Tuple[int, int], issuer: int) -> 'ScionIsd':
         """!

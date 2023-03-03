@@ -67,6 +67,9 @@ class ScionBase(Base):
         @returns List of ISD IDs.
         """
         return list(self.__isds.keys())
+    
+    def _doCreateGraphs(self, emulator: Emulator):
+        super()._doCreateGraphs(emulator)
 
     def print(self, indent: int) -> str:
         out = super().print(indent)

@@ -5,9 +5,9 @@ from typing import Dict, Tuple
 
 from seedemu.core import (Emulator, Interface, Layer, Network, Registry,
                           Router, ScionAutonomousSystem, ScionRouter,
-                          ScopedRegistry)
+                          ScopedRegistry, Graphable)
 from seedemu.core.ScionAutonomousSystem import IA
-from seedemu.layers import ScionBase
+from seedemu.layers import ScionBase, ScionIsd
 
 
 class LinkType(Enum):
@@ -49,7 +49,7 @@ class LinkType(Enum):
                 return "PARENT"
 
 
-class Scion(Layer):
+class Scion(Layer, Graphable):
     """!
     @brief This layer manages SCION inter-AS links.
 
@@ -126,8 +126,61 @@ class Scion(Layer):
         pass
 
     def _doCreateGraphs(self, emulator: Emulator) -> None:
-        # TODO: Draw a SCION topology graph
-        pass
+        # core AS: double circle
+        # non-core AS: circle
+        # core link: bold line
+        # transit link: normal line
+        # peering link: dashed line
+
+        self._log('Creating SCION graphs...')
+        graph = self._addGraph('Scion Connections', False)    
+
+        reg = emulator.getRegistry()
+        scionIsd_layer: ScionIsd = reg.get('seedemu', 'layer', 'ScionIsd')
+
+        for (a, b), rel in self.__links.items():
+            a_shape = 'doublecircle' if scionIsd_layer.isCoreAs(a.isd, a.asn) else 'circle'
+            b_shape = 'doublecircle' if scionIsd_layer.isCoreAs(b.isd, b.asn) else 'circle'
+
+            if not graph.hasVertex('AS{}'.format(a.asn), 'ISD{}'.format(a.isd)):
+                graph.addVertex('AS{}'.format(a.asn), 'ISD{}'.format(a.isd), a_shape)
+            if not graph.hasVertex('AS{}'.format(b.asn), 'ISD{}'.format(b.isd)):
+                graph.addVertex('AS{}'.format(b.asn), 'ISD{}'.format(b.isd), b_shape)
+        
+            if rel == LinkType.Core:
+                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
+                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                              style= 'bold')
+            if rel == LinkType.Transit:
+                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
+                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                              alabel='P', blabel='C')
+            if rel == LinkType.Peer:
+                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
+                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                              style= 'dashed')
+
+        for (ix, a, b), rel in self.__ix_links.items():
+            a_shape = 'doublecircle' if scionIsd_layer.isCoreAs(a.isd, a.asn) else 'circle'
+            b_shape = 'doublecircle' if scionIsd_layer.isCoreAs(b.isd, b.asn) else 'circle'
+
+            if not graph.hasVertex('AS{}'.format(a.asn), 'ISD{}'.format(a.isd)):
+                graph.addVertex('AS{}'.format(a.asn), 'ISD{}'.format(a.isd), a_shape)
+            if not graph.hasVertex('AS{}'.format(b.asn), 'ISD{}'.format(b.isd)):
+                graph.addVertex('AS{}'.format(b.asn), 'ISD{}'.format(b.isd), b_shape)
+        
+            if rel == LinkType.Core:
+                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
+                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                              label='IX{}'.format(ix), style= 'bold')                
+            if rel == LinkType.Transit:
+                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
+                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                              label='IX{}'.format(ix), alabel='P', blabel='C')
+            if rel == LinkType.Peer:
+                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
+                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                              'IX{}'.format(ix), style= 'dashed')
 
     def print(self, indent: int = 0) -> str:
         out = ' ' * indent
