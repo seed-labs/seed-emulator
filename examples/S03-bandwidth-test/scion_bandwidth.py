@@ -4,7 +4,7 @@ from seedemu.compiler import Docker, Graphviz
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.layers import ScionBase, ScionRouting, Ospf, ScionIsd, Scion
 from seedemu.layers.Scion import LinkType as ScLinkType
-from seedemu.services import ScionBandwidthService
+from seedemu.services import ScionBwtestServerService
 
 # Initialize
 emu = Emulator()
@@ -13,8 +13,7 @@ routing = ScionRouting()
 ospf = Ospf()
 scion_isd = ScionIsd()
 scion = Scion()
-bwtest_server = ScionBandwidthService.ScionBwtestServerService()
-bwtest_client = ScionBandwidthService.ScionBwtestClientService()
+bwtest_server = ScionBwtestServerService()
 
 # SCION ISDs
 base.createIsolationDomain(1)
@@ -55,15 +54,9 @@ as152_router.crossConnect(150, 'br1', '10.150.253.3/29')
 
 # Bandwidth Test Service
 as150.createHost('bwtest_server').joinNetwork('net0', address='10.150.0.30')
-# Setting the port only has to be done if the default value should not be used
+# Setting the port only has to be done if the default value of 40002 should not be used
 bwtest_server.install('bwtest_server').setPort(40000)
 emu.addBinding(Binding('bwtest_server', filter = Filter(nodeName='bwtest_server', asn=150)))
-
-# Bandwidth Test Service
-as151.createHost('bwtest_client').joinNetwork('net0')
-# Setting the port, bandwidth, duration and packet size only has to be done if the default values should not be used
-bwtest_client.install('bwtest_client', (1, 150), '10.150.0.30').setPort(40000).setBandwidth('100kbps').setDuration(5).setPacketSize(100)
-emu.addBinding(Binding('bwtest_client', filter = Filter(nodeName='bwtest_client', asn=151)))
 
 # BGP Peering
 scion.addXcLink((1, 150), (1, 151), ScLinkType.Transit)
@@ -76,11 +69,9 @@ emu.addLayer(ospf)
 emu.addLayer(scion_isd)
 emu.addLayer(scion)
 emu.addLayer(bwtest_server)
-emu.addLayer(bwtest_client)
 
 emu.render()
 
 # Compilation
 emu.compile(Docker(), './output')
-# FIXME: Graphing currently doesn't work when cross-connects are involved
-# emu.compile(Graphviz(), "./output/graphs")
+emu.compile(Graphviz(), "./output/graphs")
