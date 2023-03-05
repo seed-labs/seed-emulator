@@ -7,7 +7,7 @@ from .Emulator import Emulator
 from .Configurable import Configurable
 from .enums import NetworkType
 from .Visualization import Vertex
-from ipaddress import IPv4Address, IPv4I`nterface
+from ipaddress import IPv4Address, IPv4Interface
 from typing import List, Dict, Set, Tuple
 from string import ascii_letters
 from random import choice
