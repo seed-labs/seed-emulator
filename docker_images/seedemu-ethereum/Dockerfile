@@ -15,7 +15,11 @@ RUN make install
 RUN make install-lcli
 WORKDIR /
 
-FROM ubuntu:20.04
+FROM handsonsecurity/seedemu-base
+
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common python3 python3-pip
+RUN pip install web3
+
 COPY --from=builder1 /go-ethereum/build/bin/geth	/usr/bin
 COPY --from=builder1 /go-ethereum/build/bin/bootnode /usr/bin
 COPY --from=builder2 /usr/local/cargo/bin/lcli /usr/bin
