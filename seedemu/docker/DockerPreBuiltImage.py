@@ -1,9 +1,10 @@
 from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from typing import Set, List
-from seedemu.compiler import DockerImage
 
-class DockerPreBuiltImage(DockerImage, metaclass=ABCMeta):
+from seedemu import compiler
+
+class DockerPreBuiltImage(compiler.DockerImage, metaclass=ABCMeta):
     """!
     @brief The DockerImage class.
 
@@ -44,7 +45,7 @@ class DockerPreBuiltImage(DockerImage, metaclass=ABCMeta):
         else:
             return self._installedSoftware.union(self._subset.getAllInstalledSoftware())
 
-    def addSoftwares(self, software) -> DockerImage:
+    def addSoftwares(self, software) -> compiler.DockerImage:
         for soft in software:
             if soft not in self._allInstalledSoftware:
                 self.__software.add(soft)
