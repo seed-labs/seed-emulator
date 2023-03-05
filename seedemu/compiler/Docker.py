@@ -2,6 +2,7 @@ from __future__ import annotations
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Node, Network, Compiler, BaseSystem
 from seedemu.core.enums import NodeRole, NetworkType
+from seedemu.docker import UbuntuImage, BaseImage, RouterImage, EthereumImage
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
 from os import mkdir, chdir
@@ -17,8 +18,8 @@ DockerCompilerFileTemplates: Dict[str, str] = {}
 
 DockerCompilerFileTemplates['dockerfile'] = """\
 ARG DEBIAN_FRONTEND=noninteractive
-RUN echo 'exec zsh' > /root/.bashrc
 """
+#RUN echo 'exec zsh' > /root/.bashrc
 
 DockerCompilerFileTemplates['start_script'] = """\
 #!/bin/bash
@@ -284,9 +285,11 @@ class DockerImage(object):
             self.__software.add(soft)
 
 BaseSystemImageMapping: Dict = {}
-# BaseSystemImageMapping['virtual-name'] = (DockerImage('image name'), [software...])
-BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
-BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (DockerImage('handsonsecurity/seedemu-ethereum', []))
+# BaseSystemImageMapping['virtual-name'] = (DockerPrebuiltImage())
+BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (UbuntuImage())
+BaseSystemImageMapping[BaseSystem.SEEDEMU_BASE] = (BaseImage())
+BaseSystemImageMapping[BaseSystem.SEEDEMU_ROUTER] = (RouterImage())
+BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (EthereumImage())
 
 class Docker(Compiler):
     """!

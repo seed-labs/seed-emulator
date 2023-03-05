@@ -7,7 +7,7 @@ from .Emulator import Emulator
 from .Configurable import Configurable
 from .enums import NetworkType
 from .Visualization import Vertex
-from ipaddress import IPv4Address, IPv4Interface
+from ipaddress import IPv4Address, IPv4I`nterface
 from typing import List, Dict, Set, Tuple
 from string import ascii_letters
 from random import choice
@@ -263,8 +263,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__shared_folders = {}
         self.__persistent_storages = []
 
-        for soft in DEFAULT_SOFTWARE:
-            self.__softwares.add(soft)
+        # for soft in DEFAULT_SOFTWARE:
+        #     self.__softwares.add(soft)
 
         self.__name_servers = []
 
