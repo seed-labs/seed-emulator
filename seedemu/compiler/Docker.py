@@ -2,7 +2,7 @@ from __future__ import annotations
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Node, Network, Compiler, BaseSystem
 from seedemu.core.enums import NodeRole, NetworkType
-from seedemu.docker import UbuntuImage, BaseImage, RouterImage, EthereumImage
+from seedemu import docker
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
 from os import mkdir, chdir
@@ -286,10 +286,10 @@ class DockerImage(object):
 
 BaseSystemImageMapping: Dict = {}
 # BaseSystemImageMapping['virtual-name'] = (DockerPrebuiltImage())
-BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (UbuntuImage())
-BaseSystemImageMapping[BaseSystem.SEEDEMU_BASE] = (BaseImage())
-BaseSystemImageMapping[BaseSystem.SEEDEMU_ROUTER] = (RouterImage())
-BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (EthereumImage())
+BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (docker.UbuntuImage())
+BaseSystemImageMapping[BaseSystem.SEEDEMU_BASE] = (docker.BaseImage())
+BaseSystemImageMapping[BaseSystem.SEEDEMU_ROUTER] = (docker.RouterImage())
+BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (docker.EthereumImage())
 
 class Docker(Compiler):
     """!
