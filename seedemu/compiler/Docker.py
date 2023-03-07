@@ -889,6 +889,7 @@ class Docker(Compiler):
         if node.hasAttribute('__soft_install_tiers'):
             softLists: List[List[str]] = node.getAttribute('__soft_install_tiers')
             for softList in softLists:
+                softList = set(softList) & soft
                 dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(softList)))
 
         dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
