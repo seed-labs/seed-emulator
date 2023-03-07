@@ -386,7 +386,7 @@ class Docker(Compiler):
         for name, image in BaseSystemImageMapping.items():
             priority = 0
             if name == BaseSystem.DEFAULT:
-                priority = 10
+                priority = 1
             self.addImage(image, priority=priority)
 
     def getName(self) -> str:
