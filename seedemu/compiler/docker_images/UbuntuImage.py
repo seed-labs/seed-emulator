@@ -7,7 +7,7 @@ class UbuntuImage(DockerPreBuiltImage):
         return "ubuntu:20.04"
 
     @property
-    def _installedSoftware(self) -> set:
+    def _software(self) -> set:
         """!
         brief get the installed software if using a pre-built image.
         """

@@ -12,13 +12,7 @@ class DockerPreBuiltImage(DockerImage, metaclass=ABCMeta):
     """
 
     def __init__(self, software: List[str]=[]) -> None:
-        name = self._base_image
-        not_installed_software = []
-        self._allInstalledSoftware = self.getAllInstalledSoftware()
-        for soft in software:
-            if soft not in self._allInstalledSoftware:
-                not_installed_software.append(soft)
-        super().__init__(name, not_installed_software, local=False)
+        super().__init__(name=self._base_image, software=self._software, local=False, subset=self._subset)
 
     @property
     @abstractmethod
@@ -27,7 +21,7 @@ class DockerPreBuiltImage(DockerImage, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def _installedSoftware(self) -> set:
+    def _software(self) -> set:
         """!
         brief get the installed software if using a pre-built image.
         """
@@ -38,15 +32,3 @@ class DockerPreBuiltImage(DockerImage, metaclass=ABCMeta):
         """!
         brief
         """
-    
-    def getAllInstalledSoftware(self)->set:
-        if self._subset == None:
-            return self._installedSoftware
-        else:
-            return self._installedSoftware.union(self._subset.getAllInstalledSoftware())
-
-    def addSoftwares(self, software) -> DockerImage:
-        for soft in software:
-            if soft not in self._allInstalledSoftware:
-                self.__software.add(soft)
-        return self

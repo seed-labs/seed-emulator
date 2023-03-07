@@ -7,7 +7,7 @@ class RouterImage(DockerPreBuiltImage):
         return "handsonsecurity/seedemu-router"
 
     @property
-    def _installedSoftware(self) -> set:
+    def _software(self) -> set:
         """!
         brief get the installed software if using a pre-built image.
         """

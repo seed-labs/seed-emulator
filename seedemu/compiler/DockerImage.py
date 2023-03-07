@@ -12,8 +12,9 @@ class DockerImage(object):
     __name: str
     __local: bool
     __dirName: str
+    __subset:DockerImage
 
-    def __init__(self, name: str, software: List[str], local: bool = False, dirName: str = None) -> None:
+    def __init__(self, name: str, software: List[str], local: bool = False, dirName: str = None, subset: DockerImage = None) -> None:
         """!
         @brief create a new docker image.
 
@@ -32,9 +33,18 @@ class DockerImage(object):
         self.__software = set()
         self.__local = local
         self.__dirName = dirName if dirName != None else name
+        self.__subset = subset
 
         for soft in software:
             self.__software.add(soft)
+
+        self.__software = self._getAllInstalledSoftware()
+
+    def _getAllInstalledSoftware(self)->set:
+        if self.__subset == None:
+            return self.__software
+        else:
+            return self.__software.union(self.__subset._getAllInstalledSoftware())
 
     def getName(self) -> str:
         """!
