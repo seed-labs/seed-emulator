@@ -2,7 +2,8 @@ from __future__ import annotations
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Node, Network, Compiler, BaseSystem
 from seedemu.core.enums import NodeRole, NetworkType
-from .DockerImage import DockerImage, DockerPreBuiltImage
+from .DockerImage import DockerImage
+from .DockerImageConstant import *
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
 from os import mkdir, chdir
@@ -377,7 +378,7 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        for name, image in DockerPreBuiltImage.list():
+        for name, image in BASESYSTEM_DOCKERIMAGE_MAPPING.items():
             priority = 0
             if name == BaseSystem.DEFAULT:
                 priority = 1
@@ -562,7 +563,8 @@ class Docker(Compiler):
         
         
         #Maintain a table : Virtual Image Name - Actual Image Name 
-        image = DockerPreBuiltImage.getDockerImageByBaseSystem(node.getBaseSystem())
+        image = BASESYSTEM_DOCKERIMAGE_MAPPING[node.getBaseSystem()]
+
         return (image, nodeSoft - image.getSoftware())
         
         # candidates: List[Tuple[DockerImage, int]] = []

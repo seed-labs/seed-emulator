@@ -1,5 +1,5 @@
-from .DockerImage import DockerImage, DockerPreBuiltImage
-#from .docker_images import *
+from .DockerImage import DockerImage
+from .DockerImageConstant import *
 from .Docker import Docker
 # Disable the compilers options
 from .DistributedDocker import DistributedDocker

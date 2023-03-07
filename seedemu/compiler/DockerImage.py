@@ -88,34 +88,3 @@ class DockerImage(object):
         """
         for soft in software:
             self.__software.add(soft)
-
-class DockerPreBuiltImage(Enum):
-    UBUNTU_IMAGE   = DockerImage(name='ubuntu:20.04',
-                                 software=[],
-                                 subset=None)
-    
-    BASE_IMAGE     = DockerImage(name='handsonsecurity/seedemu-base',
-                                 software=['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2',
-                                            'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat'],
-                                 subset=UBUNTU_IMAGE)
-    
-    ROUTER_IMAGE   = DockerImage(name='handsonsecurity/seedemu-router',
-                                 software=['bird2'],
-                                 subset=BASE_IMAGE)
-    
-    ETHEREUM_IMAGE = DockerImage(name='handsonsecurity/seedemu-ethereum',
-                                 software=['software-properties-common', 'python3', 'python3-pip'],
-                                 subset=BASE_IMAGE)
-    @staticmethod
-    def list():
-        return list(map(lambda image: (image.name, image.value), DockerPreBuiltImage))
-    
-    @staticmethod
-    def getDockerImageByBaseSystem(baseSystem:BaseSystem):
-        mapping = {
-            BaseSystem.UBUNTU_20_04:     DockerPreBuiltImage.UBUNTU_IMAGE.value,
-            BaseSystem.SEEDEMU_BASE:     DockerPreBuiltImage.BASE_IMAGE.value,
-            BaseSystem.SEEDEMU_ROUTER:   DockerPreBuiltImage.ROUTER_IMAGE.value,
-            BaseSystem.SEEDEMU_ETHEREUM: DockerPreBuiltImage.ETHEREUM_IMAGE.value
-        }
-        return mapping[baseSystem]
