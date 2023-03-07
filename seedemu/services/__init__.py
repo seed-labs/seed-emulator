@@ -9,4 +9,4 @@ from .CymruIpOrigin import CymruIpOriginService, CymruIpOriginServer
 from .ReverseDomainNameService import ReverseDomainNameService, ReverseDomainNameServer
 from .BgpLookingGlassService import BgpLookingGlassServer, BgpLookingGlassService
 from .DHCPService import DHCPServer, DHCPService
-from .ScionBwtestServerService import ScionBwtestServerService
+from .ScionBwtestService import ScionBwtestService

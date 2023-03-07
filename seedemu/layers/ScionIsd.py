@@ -17,10 +17,10 @@ class ScionIsd(Layer):
     This layer configures the membership and status as core AS of SCION ASes in
     SCION Isolation Domains (ISDs). In principle a SCION AS can be a member of
     multiple ISDs simultaneously with different roles as core or non-core AS in
-    each ISD. This layers interface reflects this fact by allowing flexible
+    each ISD. This layer's interface reflects that fact by allowing flexible
     assignment if ASNs to ISDs. In practice however, the current implementation
     of SCION treats the same ASN in different ISDs as entirely unrelated ASes
-    [1]. Therefore, we restrict ASes to s single ISD for the moment. Assigning
+    [1]. Therefore, we restrict ASes to a single ISD for the moment. Assigning
     an AS to multiple ISDs is detected as an error during rendering.
 
     [1] [Issue #4293: Overlapping ISDs](https://github.com/scionproto/scion/issues/4293)
@@ -79,7 +79,7 @@ class ScionIsd(Layer):
         isds = [(isd, True) for isd, ases in self.__isd_core.items() if asn in ases]
         isds += [(isd, False) for isd, ases in self.__isd_members.items() if asn in ases]
         return isds
-    
+
     def isCoreAs(self, isd: int, asn: int) -> bool:
         """!
         @brief Check if an AS is a core AS in an ISD.
