@@ -2,7 +2,7 @@ from __future__ import annotations
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Node, Network, Compiler, BaseSystem
 from seedemu.core.enums import NodeRole, NetworkType
-from .docker_images import UbuntuImage, BaseImage, EthereumImage, RouterImage
+from .DockerImage import DockerImage, DockerPreBuiltImage
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
 from os import mkdir, chdir
@@ -284,12 +284,6 @@ DockerCompilerFileTemplates['local_image'] = """\
 #         for soft in software:
 #             self.__software.add(soft)
 
-BaseSystemImageMapping: Dict = {}
-# BaseSystemImageMapping['virtual-name'] = (DockerPrebuiltImage())
-BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (UbuntuImage())
-BaseSystemImageMapping[BaseSystem.SEEDEMU_BASE] = (BaseImage())
-BaseSystemImageMapping[BaseSystem.SEEDEMU_ROUTER] = (RouterImage())
-BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (EthereumImage())
 
 class Docker(Compiler):
     """!
@@ -383,7 +377,7 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        for name, image in BaseSystemImageMapping.items():
+        for name, image in DockerPreBuiltImage.list():
             priority = 0
             if name == BaseSystem.DEFAULT:
                 priority = 1
@@ -566,35 +560,34 @@ class Docker(Compiler):
 
             return (image, nodeSoft - image.getSoftware())
         
-        #############################################################
-        if node.getBaseSystem().value != BaseSystem.DEFAULT.value:
-            #Maintain a table : Virtual Image Name - Actual Image Name 
-            image = BaseSystemImageMapping[node.getBaseSystem()]
-            return (image, nodeSoft - image.getSoftware())
         
-        candidates: List[Tuple[DockerImage, int]] = []
-        minMissing = len(nodeSoft)
+        #Maintain a table : Virtual Image Name - Actual Image Name 
+        image = DockerPreBuiltImage.getDockerImageByBaseSystem(node.getBaseSystem())
+        return (image, nodeSoft - image.getSoftware())
+        
+        # candidates: List[Tuple[DockerImage, int]] = []
+        # minMissing = len(nodeSoft)
 
-        for (image, prio) in self.__images.values():
-            missing = len(nodeSoft - image.getSoftware())
+        # for (image, prio) in self.__images.values():
+        #     missing = len(nodeSoft - image.getSoftware())
 
-            if missing < minMissing:
-                candidates = []
-                minMissing = missing
+        #     if missing < minMissing:
+        #         candidates = []
+        #         minMissing = missing
 
-            if missing <= minMissing: 
-                candidates.append((image, prio))
+        #     if missing <= minMissing: 
+        #         candidates.append((image, prio))
 
-        assert len(candidates) > 0, '_electImageFor ended w/ no images?'
+        # assert len(candidates) > 0, '_electImageFor ended w/ no images?'
 
-        (selected, maxPrio) = candidates[0]
+        # (selected, maxPrio) = candidates[0]
 
-        for (candidate, prio) in candidates:
-            if prio >= maxPrio:
-                maxPrio = prio
-                selected = candidate
+        # for (candidate, prio) in candidates:
+        #     if prio >= maxPrio:
+        #         maxPrio = prio
+        #         selected = candidate
 
-        return (selected, nodeSoft - selected.getSoftware())
+        # return (selected, nodeSoft - selected.getSoftware())
 
 
     def _getNetMeta(self, net: Network) -> str: 
@@ -893,7 +886,7 @@ class Docker(Compiler):
                 softList = set(softList) & soft
                 if len(softList) == 0: continue
                 dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(softList)))
-                
+
         #included in the seedemu-base dockerImage.
         #dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
