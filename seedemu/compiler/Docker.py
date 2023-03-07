@@ -591,6 +591,7 @@ class Docker(Compiler):
 
         for (candidate, prio) in candidates:
             if prio >= maxPrio:
+                maxPrio = prio
                 selected = candidate
 
         return (selected, nodeSoft - selected.getSoftware())
