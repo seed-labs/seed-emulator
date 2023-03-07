@@ -1,4 +1,5 @@
-from DockerPreBuiltImage import DockerPreBuiltImage
+from .DockerPreBuiltImage import DockerPreBuiltImage
+
 
 class UbuntuImage(DockerPreBuiltImage):
     @property

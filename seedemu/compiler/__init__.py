@@ -1,5 +1,6 @@
-from .Docker import Docker, DockerImage
-
+from .DockerImage import DockerImage
+from .docker_images import *
+from .Docker import Docker
 # Disable the compilers options
 from .DistributedDocker import DistributedDocker
 from .Graphviz import Graphviz

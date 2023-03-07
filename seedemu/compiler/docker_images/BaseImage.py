@@ -1,5 +1,5 @@
-from DockerPreBuiltImage import DockerPreBuiltImage
-from seedemu.docker.UbuntuImage import UbuntuImage
+from .DockerPreBuiltImage import DockerPreBuiltImage
+from .UbuntuImage import UbuntuImage
 
 class BaseImage(DockerPreBuiltImage):
     @property
