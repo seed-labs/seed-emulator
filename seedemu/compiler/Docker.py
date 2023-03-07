@@ -891,6 +891,7 @@ class Docker(Compiler):
             softLists: List[List[str]] = node.getAttribute('__soft_install_tiers')
             for softList in softLists:
                 softList = set(softList) & soft
+                if len(softList) == 0: continue
                 dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(softList)))
                 
         #included in the seedemu-base dockerImage.
