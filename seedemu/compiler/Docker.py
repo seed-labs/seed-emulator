@@ -1,6 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler
+from seedemu.core import Node, Network, Compiler, BaseSystem
 from seedemu.core.enums import NodeRole, NetworkType
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
@@ -10,7 +10,8 @@ from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
 
-SEEDEMU_CLIENT_IMAGE='handsonsecurity/seedemu-map'
+SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-map'
+SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-etherview'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -174,14 +175,24 @@ DockerCompilerFileTemplates['compose_network'] = """\
 {labelList}
 """
 
-DockerCompilerFileTemplates['seedemu_client'] = """\
-    seedemu-client:
+DockerCompilerFileTemplates['seedemu_internet_map'] = """\
+    seedemu-internet-client:
         image: {clientImage}
-        container_name: seedemu_client
+        container_name: seedemu_internet_map
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:
             - {clientPort}:8080/tcp
+"""
+
+DockerCompilerFileTemplates['seedemu_ether_view'] = """\
+    seedemu-ether-client:
+        image: {clientImage}
+        container_name: seedemu_ether_view
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+            - {clientPort}:5000/tcp
 """
 
 DockerCompilerFileTemplates['zshrc_pre'] = """\
@@ -200,7 +211,7 @@ class DockerImage(object):
     """!
     @brief The DockerImage class.
 
-    This class repersents a candidate image for docker compiler.
+    This class represents a candidate image for docker compiler.
     """
 
     __software: Set[str]
@@ -217,7 +228,7 @@ class DockerImage(object):
         @param software set of software pre-installed in the image, so the
         docker compiler can skip them when compiling.
         @param local (optional) set this image as a local image. A local image
-        is built ocally instead of pulled from the docker hub. Default to False.
+        is built locally instead of pulled from the docker hub. Default to False.
         @param dirName (optional) directory name of the local image (when local
         is True). Default to None. None means use the name of the image.
         """
@@ -263,9 +274,19 @@ class DockerImage(object):
         """
         return self.__local
 
-DefaultImages: List[DockerImage] = []
+    def addSoftwares(self, software) -> DockerImage:
+        """!
+        @brief add softwares to this image.
 
-DefaultImages.append(DockerImage('ubuntu:20.04', []))
+        @return self, for chaining api calls.
+        """
+        for soft in software:
+            self.__software.add(soft)
+
+BaseSystemImageMapping: Dict = {}
+# BaseSystemImageMapping['virtual-name'] = (DockerImage('image name'), [software...])
+BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
+BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (DockerImage('handsonsecurity/seedemu-ethereum', []))
 
 class Docker(Compiler):
     """!
@@ -281,8 +302,11 @@ class Docker(Compiler):
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
 
-    __client_enabled: bool
-    __client_port: int
+    __internet_map_enabled: bool
+    __internet_map_port: int
+
+    __ether_view_enabled: bool
+    __ether_view_port: int
 
     __client_hide_svcnet: bool
 
@@ -298,16 +322,18 @@ class Docker(Compiler):
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
-        clientEnabled: bool = False,
-        clientPort: int = 8080,
+        internetMapEnabled: bool = False,
+        internetMapPort: int = 8080,
+        etherViewEnabled: bool = False,
+        etherViewPort: int = 5000,
         clientHideServiceNet: bool = True
     ):
         """!
         @brief Docker compiler constructor.
 
-        @param namingScheme (optional) node naming scheme. Avaliable variables
+        @param namingScheme (optional) node naming scheme. Available variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
-        {primaryIp} and {displayName}. {displayName} will automaically fall
+        {primaryIp} and {displayName}. {displayName} will automatically fall
         back to {name} if
         Default to as{asn}{role}-{displayName}-{primaryIp}.
         @param selfManagedNetwork (optional) use self-managed network. Enable
@@ -323,11 +349,14 @@ class Docker(Compiler):
         loopback IP addresses. Default to 10.128.0.0/9.
         @param dummyNetworksMask (optional) mask of dummy networks. Default to
         24.
-        @param clientEnabled (optional) set if seedemu client should be enabled.
-        Default to False. Note that the seedemu client allows unauthenticated
+        @param internetMapEnabled (optional) set if seedemu internetMap should be enabled.
+        Default to False. Note that the seedemu internetMap allows unauthenticated
         access to all nodes, which can potentially allow root access to the
         emulator host. Only enable seedemu in a trusted network.
-        @param clientPort (optional) set seedemu client port. Default to 8080.
+        @param internetMapPort (optional) set seedemu internetMap port. Default to 8080.
+        @param etherViewEnabled (optional) set if seedemu EtherView should be enabled.
+        Default to False.
+        @param etherViewPort (optional) set seedemu EtherView port. Default to 5000.
         @param clientHideServiceNet (optional) hide service network for the
         client map by not adding metadata on the net. Default to True.
         """
@@ -337,8 +366,11 @@ class Docker(Compiler):
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
-        self.__client_enabled = clientEnabled
-        self.__client_port = clientPort
+        self.__internet_map_enabled = internetMapEnabled
+        self.__internet_map_port = internetMapPort
+
+        self.__ether_view_enabled = etherViewEnabled
+        self.__ether_view_port = etherViewPort
 
         self.__client_hide_svcnet = clientHideServiceNet
 
@@ -348,13 +380,16 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        for image in DefaultImages:
-            self.addImage(image)
+        for name, image in BaseSystemImageMapping.items():
+            priority = 0
+            if name == BaseSystem.DEFAULT:
+                priority = 10
+            self.addImage(image, priority=priority)
 
     def getName(self) -> str:
         return "Docker"
 
-    def addImage(self, image: DockerImage, priority: int = 0) -> Docker:
+    def addImage(self, image: DockerImage, priority: int = -1) -> Docker:
         """!
         @brief add an candidate image to the compiler.
 
@@ -363,11 +398,14 @@ class Docker(Compiler):
         images with same number of missing software exist. The one with highest
         priority wins. If two or more images with same priority and same number
         of missing software exist, the one added the last will be used. All
-        built-in images has priority of 0. Default to 0.
+        built-in images has priority of 0. Default to -1. All built-in images are
+        prior to the added candidate image. To set a candidate image to a node,
+        use setImageOverride() method.
 
         @returns self, for chaining api calls.
         """
         assert image.getName() not in self.__images, 'image with name {} already exists.'.format(image.getName())
+
         self.__images[image.getName()] = (image, priority)
 
         return self
@@ -401,7 +439,7 @@ class Docker(Compiler):
         @brief forces the docker compiler to not use any images and build
         everything for starch. Set to False to disable the behavior.
 
-        @paarm disabled (option) disabled image if True. Default to True.
+        @param disabled (option) disabled image if True. Default to True.
 
         @returns self, for chaining api calls.
         """
@@ -493,11 +531,12 @@ class Docker(Compiler):
 
         @param node node.
 
-        @returns tuple of selected image and set of missinge software.
+        @returns tuple of selected image and set of missing software.
         """
         nodeSoft = node.getSoftware()
         nodeKey = (node.getAsn(), node.getName())
 
+        # #1 Highest Priority (User Custom Image)
         if nodeKey in self.__image_per_node_list:
             image_name = self.__image_per_node_list[nodeKey]
 
@@ -508,11 +547,13 @@ class Docker(Compiler):
             self._log('image-per-node configured, using {}'.format(image.getName()))
             return (image, nodeSoft - image.getSoftware())
 
+        # Should we keep this feature?
         if self.__disable_images:
             self._log('disable-imaged configured, using base image.')
             (image, _) = self.__images['ubuntu:20.04']
             return (image, nodeSoft - image.getSoftware())
 
+        # Set Default Image for All Nodes
         if self.__forced_image != None:
             assert self.__forced_image in self.__images, 'forced-image configured, but image {} does not exist.'.format(self.__forced_image)
 
@@ -520,6 +561,12 @@ class Docker(Compiler):
 
             self._log('force-image configured, using image: {}'.format(image.getName()))
 
+            return (image, nodeSoft - image.getSoftware())
+
+        #############################################################
+        if node.getBaseSystem().value != BaseSystem.DEFAULT.value:
+            #Maintain a table : Virtual Image Name - Actual Image Name
+            image = BaseSystemImageMapping[node.getBaseSystem()]
             return (image, nodeSoft - image.getSoftware())
 
         candidates: List[Tuple[DockerImage, int]] = []
@@ -537,10 +584,10 @@ class Docker(Compiler):
 
         assert len(candidates) > 0, '_electImageFor ended w/ no images?'
 
-        (selected, maxPiro) = candidates[0]
+        (selected, maxPrio) = candidates[0]
 
         for (candidate, prio) in candidates:
-            if prio >= maxPiro:
+            if prio >= maxPrio:
                 selected = candidate
 
         return (selected, nodeSoft - selected.getSoftware())
@@ -548,11 +595,11 @@ class Docker(Compiler):
 
     def _getNetMeta(self, net: Network) -> str:
         """!
-        @brief get net metadata lables.
+        @brief get net metadata labels.
 
         @param net net object.
 
-        @returns metadata lables string.
+        @returns metadata labels string.
         """
 
         (scope, type, name) = net.getRegistryInfo()
@@ -601,11 +648,11 @@ class Docker(Compiler):
 
     def _getNodeMeta(self, node: Node) -> str:
         """!
-        @brief get node metadata lables.
+        @brief get node metadata labels.
 
         @param node node object.
 
-        @returns metadata lables string.
+        @returns metadata labels string.
         """
         (scope, type, name) = node.getRegistryInfo()
 
@@ -703,7 +750,7 @@ class Docker(Compiler):
         if role == NodeRole.Host: return 'h'
         if role == NodeRole.Router: return 'r'
         if role == NodeRole.RouteServer: return 'rs'
-        assert False, 'unknow node role {}'.format(role)
+        assert False, 'unknown node role {}'.format(role)
 
     def _contextToPrefix(self, scope: str, type: str) -> str:
         """!
@@ -992,12 +1039,20 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
-        if self.__client_enabled:
-            self._log('enabling seedemu-client...')
+        if self.__internet_map_enabled:
+            self._log('enabling seedemu-internet-map...')
 
-            self.__services += DockerCompilerFileTemplates['seedemu_client'].format(
-                clientImage = SEEDEMU_CLIENT_IMAGE,
-                clientPort = self.__client_port
+            self.__services += DockerCompilerFileTemplates['seedemu_internet_map'].format(
+                clientImage = SEEDEMU_INTERNET_MAP_IMAGE,
+                clientPort = self.__internet_map_port
+            )
+
+        if self.__ether_view_enabled:
+            self._log('enabling seedemu-ether-view...')
+
+            self.__services += DockerCompilerFileTemplates['seedemu_ether_view'].format(
+                clientImage = SEEDEMU_ETHER_VIEW_IMAGE,
+                clientPort = self.__ether_view_port
             )
 
         local_images = ''

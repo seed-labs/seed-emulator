@@ -54,6 +54,7 @@ class DHCPServer(Server):
         """!
         @brief DHCPServer Constructor.
         """
+        super().__init__()
         self.__name_servers = "#option domain-name-servers none;"
         self.__is_range_changed = False
 

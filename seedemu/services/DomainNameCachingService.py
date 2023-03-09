@@ -32,6 +32,7 @@ class DomainNameCachingServer(Server, Configurable):
         """!
         @brief DomainNameCachingServer constructor.
         """
+        super().__init__()
         self.__root_servers = []
         self.__configure_resolvconf = False
         self.__pending_forward_zones = {}
@@ -51,10 +52,10 @@ class DomainNameCachingServer(Server, Configurable):
         """!
         @brief Change root server hint.
 
-        By defualt, the caching server uses the root hint file shipped with
+        By default, the caching server uses the root hint file shipped with
         bind9. Use this method to override root hint. Note that if autoRoot is
         set to true in DomainNameCachingService, manual changes will be
-        overrided.
+        overridden.
 
         @param servers list of IP addresses of the root servers.
 
@@ -68,7 +69,7 @@ class DomainNameCachingServer(Server, Configurable):
         """!
         @brief Get root server list.
 
-        By defualt, the caching server uses the root hint file shipped with
+        By default, the caching server uses the root hint file shipped with
         bind9. Use setRootServers to override root hint.
 
         This method will return list of servers set by setRootServers, or an
@@ -78,7 +79,7 @@ class DomainNameCachingServer(Server, Configurable):
 
     def addForwardZone(self, zone: str, vnode: str) -> DomainNameCachingServer:
         """!
-        @brief Add a new forward zone, foward to the given virtual node name.
+        @brief Add a new forward zone, forward to the given virtual node name.
 
         @param name zone name.
         @param vnode  virtual node name.
@@ -143,8 +144,8 @@ class DomainNameCachingService(Service):
         """!
         @brief DomainNameCachingService constructor.
 
-        @param autoRoot (optional) find root zone name servers automaically.
-        True by defualt, if true, DomainNameCachingService will find root NS in
+        @param autoRoot (optional) find root zone name servers automatically.
+        True by default, if true, DomainNameCachingService will find root NS in
         DomainNameService and use them as root.
         """
         super().__init__()

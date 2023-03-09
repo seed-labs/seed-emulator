@@ -91,7 +91,7 @@ class Ebgp(Layer, Graphable):
             elif routerB == None: routerB = node
 
             if not node.getAttribute('__bgp_bootstrapped', False):
-                self._log('Bootstraping as{}/{} for BGP...'.format(node.getAsn(), node.getName()))
+                self._log('Bootstrapping as{}/{} for BGP...'.format(node.getAsn(), node.getName()))
                 
                 node.setAttribute('__bgp_bootstrapped', True)
                 node.appendFile('/etc/bird/bird.conf', EbgpFileTemplates['bgp_commons'].format(localAsn = node.getAsn()))
@@ -214,7 +214,7 @@ class Ebgp(Layer, Graphable):
         """
         assert (ix, a, b) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(a, b, ix)
         assert (ix, b, a) not in self.__peerings, '{} <-> {} already peered at IX{}'.format(b, a, ix)
-        assert abRelationship == PeerRelationship.Peer or abRelationship == PeerRelationship.Provider or abRelationship == PeerRelationship.Unfiltered, 'unknow peering relationship {}'.format(abRelationship)
+        assert abRelationship == PeerRelationship.Peer or abRelationship == PeerRelationship.Provider or abRelationship == PeerRelationship.Unfiltered, 'unknown peering relationship {}'.format(abRelationship)
 
         self.__peerings[(ix, a, b)] = abRelationship
 
@@ -267,7 +267,7 @@ class Ebgp(Layer, Graphable):
         """
         assert (a, b) not in self.__xc_peerings, '{} <-> {} already configured as XC peer'.format(a, b)
         assert (b, a) not in self.__xc_peerings, '{} <-> {} already configured as XC peer'.format(b, a)
-        assert abRelationship == PeerRelationship.Peer or abRelationship == PeerRelationship.Provider or abRelationship == PeerRelationship.Unfiltered, 'unknow peering relationship {}'.format(abRelationship)
+        assert abRelationship == PeerRelationship.Peer or abRelationship == PeerRelationship.Provider or abRelationship == PeerRelationship.Unfiltered, 'unknown peering relationship {}'.format(abRelationship)
 
         self.__xc_peerings[(a, b)] = abRelationship
 
@@ -275,7 +275,7 @@ class Ebgp(Layer, Graphable):
 
     def getCrossConnectPeerings(self) -> Dict[Tuple[int, int], PeerRelationship]:
         """!
-        @brief get corss-connect peerings.
+        @brief get cross-connect peerings.
 
         @returns dict,  where key is tuple of (asnA, asnB) and value is peering relationship.
         """

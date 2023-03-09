@@ -7,7 +7,7 @@ from seedemu import *
 emu = Emulator()
 
 # Load the pre-built component
-emu.load('../02-hybrid-internet-with-dns/hybrid_base_with_dns.bin')
+emu.load('../C02-hybrid-internet-with-dns/hybrid_base_with_dns.bin')
 
 base:Base = emu.getLayer('Base')
 
@@ -51,4 +51,4 @@ emu.addLayer(dhcp)
 emu.render()
 
 # Compile the emulation
-emu.compile(Docker(clientEnabled = True), './output', override=True)
+emu.compile(Docker(internetMapEnabled = True), './output', override=True)

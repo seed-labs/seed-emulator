@@ -37,7 +37,7 @@ while read -r zonename; do {
     dig +short NS "$pzonename" | while read -r ns; do dig +short "$ns"; done | while read -r nsaddr; do {
         dss="`dig @127.0.0.1 dnskey "$zonename" | dnssec-dsfromkey -f- "$zonename" | sed 's/IN/300/; s/^/update add /;'`"
         echo "$dss"
-        echo "submiting DS record to parent zone $nsaddr..."
+        echo "submitting DS record to parent zone $nsaddr..."
         while true; do {
             cat << UPDATE | nsupdate && echo "parent accepted the update." && break
 server $nsaddr
@@ -79,7 +79,7 @@ class Dnssec(Layer):
             dns_s: DomainNameServer = server
             zones = dns_s.getZones()
             for zone in zones:
-                # TODO: what if mutiple nodes host the same zone?
+                # TODO: what if multiple nodes host the same zone?
                 if zone == zonename: return node
 
         return None

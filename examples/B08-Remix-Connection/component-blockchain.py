@@ -10,14 +10,15 @@ emu = Emulator()
 # so the blockchain data will be preserved when containers are deleted.
 # Note: right now we need to manually create the folder for each node (see README.md). 
 eth = EthereumService(saveState = True)
+blockchain = eth.createBlockchain("eth", consensus=ConsensusMechanism.POA)
 
 # Create Ethereum nodes (nodes in this layer are virtual)
-e1 = eth.install("eth1")
-e2 = eth.install("eth2")
-e3 = eth.install("eth3")
-e4 = eth.install("eth4")
-e5 = eth.install("eth5")
-e6 = eth.install("eth6")
+e1 = blockchain.createNode("eth1")
+e2 = blockchain.createNode("eth2")
+e3 = blockchain.createNode("eth3")
+e4 = blockchain.createNode("eth4")
+e5 = blockchain.createNode("eth5")
+e6 = blockchain.createNode("eth6")
 
 # Set bootnodes on e1 and e2. The other nodes can use these bootnodes to find peers.
 # Start mining on e1 - e4
@@ -28,7 +29,7 @@ e4.startMiner()
 
 # Create more accounts on e5 and e6
 e5.startMiner()
-e6.startMiner().createAccounts(2).unlockAccounts()
+e6.startMiner().createAccounts(total=2, balance=20).unlockAccounts()
 
 # Create a smart contract and deploy it from node e3 
 # We need to put the compiled smart contracts inside the Contracts/ folder

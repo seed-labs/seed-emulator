@@ -1,6 +1,8 @@
 **/output/*
 **/eth-states*/*
+**/test_log*/*
 **/__pycache__/*
+*.bak
 *.out
 *.o
 *.so
@@ -23,3 +25,4 @@ client/backend/node_modules
 client/backend/bin
 *.bin
 output
+project-words.txt

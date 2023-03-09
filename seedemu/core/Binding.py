@@ -2,6 +2,7 @@ from __future__ import annotations
 from .Printable import Printable
 from .Emulator import Emulator
 from .Node import Node
+from .BaseSystem import BaseSystem
 from enum import Enum
 from typing import List, Callable
 from ipaddress import IPv4Network, IPv4Address
@@ -100,14 +101,14 @@ class Binding(Printable):
         """!
         @brief create new binding.
 
-        @param source virtual node name. can be regexp to match mutiple virtual
+        @param source virtual node name. can be regexp to match multiple virtual
         nodes.
         @param action (optional) candidate selection. Default to random.
         @param filter (optional) filter. Default to empty filter (all physical
         nodes).
         """
 
-        ## regexp of virtual node name that should be handlded by this binding.
+        ## regexp of virtual node name that should be handled by this binding.
         self.source = source
 
         ## candidate selection after the filter completes.
@@ -116,6 +117,29 @@ class Binding(Printable):
         ## physical node filter.
         self.filter = filter
 
+    def __filterBaseSystemConflict(self, vnode:str, node:Node, emulator:Emulator) -> bool:
+        """!
+        @brief filter a base_system conflict between vnode and node when binding. 
+
+        @param vnode virtual node name.
+        @param node candidate physical name to bind with vnode.
+        @param emulator emulator instance to get server object by vnode name.
+
+        @returns True if it does not have any conflict.
+        """
+        nodeBaseSystem = node.getBaseSystem()
+        server = emulator.getServerByVirtualNodeName(vnode)
+        vnodeBaseSystem = server.getBaseSystem()
+        if nodeBaseSystem == vnodeBaseSystem:
+            return True
+        if BaseSystem.doesAContainB(A=vnodeBaseSystem, B=nodeBaseSystem):
+            return True
+        if BaseSystem.doesAContainB(A=nodeBaseSystem, B=vnodeBaseSystem):
+            server.setBaseSystem(nodeBaseSystem)
+            return True
+        
+        return False
+    
     def __create(self, emulator: Emulator) -> Node:
         """!
         @brief create a node matching given condition.
@@ -304,6 +328,11 @@ class Binding(Printable):
             if node.hasAttribute('bound') and not filter.allowBound and not peek:
                 self.__log('node as{}/{} is already bound and re-bind is not allowed, trying next node.'.format(scope, name))
                 continue
+            
+            if not self.__filterBaseSystemConflict(vnode, node, emulator):
+                self.__log('node as{}/{} base_system is not compatible'.format(scope, name))
+                continue
+            
 
             self.__log('node as{}/{} added as candidate. looking for more candidates.'.format(scope, name))
 

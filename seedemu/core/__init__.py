@@ -18,3 +18,4 @@ from .Binding import Binding, Filter, Action
 from .Component import Component
 from .RemoteAccessProvider import RemoteAccessProvider
 from .Compiler import Compiler
+from .BaseSystem import BaseSystem

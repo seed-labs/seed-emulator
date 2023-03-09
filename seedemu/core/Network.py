@@ -137,9 +137,9 @@ class Network(Printable, Registrable, Vertex):
     def setType(self, newType: NetworkType) -> Network:
         """!
         @brief overrides network type of this network. Do not use this unless
-        you know what you are doring.
+        you know what you are doing.
 
-        @param newType new nettype.
+        @param newType new net type.
 
         @returns self, for chaining API calls.
         """
@@ -228,11 +228,11 @@ class Network(Printable, Registrable, Vertex):
         """!
         @brief Assign IP for interface.
 
-        @param nodeRole role of the node getting this assigment.
+        @param nodeRole role of the node getting this assignment.
         @param asn optional. If interface type is InternetExchange, the asn for
         IP address mapping.
         """
-        assert not (nodeRole == nodeRole.Host and self.__type == NetworkType.InternetExchange), 'trying to assign IX netwotk to non-router node'
+        assert not (nodeRole == nodeRole.Host and self.__type == NetworkType.InternetExchange), 'trying to assign IX network to non-router node'
 
         if self.__type == NetworkType.InternetExchange: return self.__prefix[self.__aac.mapIxAddress(asn)]
         return self.__prefix[self.__assigners[nodeRole].next()]
@@ -247,7 +247,7 @@ class Network(Printable, Registrable, Vertex):
 
     def getAssociations(self) -> List['Node']:
         """!
-        @brief Get list of assoicated nodes.
+        @brief Get list of associated nodes.
 
         @returns list of nodes.
         """
@@ -255,7 +255,7 @@ class Network(Printable, Registrable, Vertex):
 
     def enableRemoteAccess(self, provider: RemoteAccessProvider) -> Network:
         """!
-        @brief enable remote access on this netowrk.
+        @brief enable remote access on this network.
 
         @param provider remote access provider to use.
 

@@ -89,7 +89,7 @@ V3AuthDistDelay 5
 # We could be more precise here, but it's easiest just to vote everything
 # Clients are sensible enough to filter out Exits without any exit ports,
 # and Guards and HSDirs without ORPorts
-# If your tor doesn't recognise TestingDirAuthVoteExit/HSDir,
+# If your tor doesn't recognize TestingDirAuthVoteExit/HSDir,
 # either update your chutney to a 2015 version,
 # or update your tor to a later version, most likely 0.2.6.2-final
 
@@ -305,6 +305,8 @@ class TorServer(Server):
         """!
         @brief TorServer constructor.
         """
+        super().__init__()
+
         self.__role = TorNodeType.RELAY.value
         self.__hs_link = ()
 
@@ -418,7 +420,7 @@ class TorServer(Server):
         node.appendStartCommand("chmod +x /usr/local/bin/tor-entrypoint /usr/local/bin/da_fingerprint")
         node.appendStartCommand("mkdir /tor")
        
-        # If node role is DA, launch a python webserver for other node to download fingerprints.
+        # If node role is DA, launch a python web server for other node to download fingerprints.
         if self.getRole() == "DA":
             node.appendStartCommand("python3 -m http.server 8888 -d /tor", True)
         

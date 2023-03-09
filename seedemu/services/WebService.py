@@ -28,6 +28,8 @@ class WebServer(Server):
         """!
         @brief WebServer constructor.
         """
+        super().__init__()
+
         self.__port = 80
         self.__index = '<h1>{nodeName} at {asn}</h1>'
         
@@ -48,7 +50,7 @@ class WebServer(Server):
         """!
         @brief Set content of index.html.
 
-        @param content content. {nodeName} and {asn} are avalaible and will be
+        @param content content. {nodeName} and {asn} are available and will be
         filled in.
 
         @returns self, for chaining API calls.

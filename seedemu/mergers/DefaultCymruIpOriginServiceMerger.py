@@ -5,7 +5,7 @@ class DefaultCymruIpOriginServiceMerger(ServiceMerger):
     """!
     @brief default IP origin service merger implementation.
 
-    This is the defualt implementation which invokes the default service merger
+    This is the default implementation which invokes the default service merger
     to handler merging installation targets, and merge manually created records.
     """
 

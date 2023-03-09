@@ -28,7 +28,7 @@ class Zone(Printable):
     __subzones: Dict[str, Zone]
     __records: List[str]
     __gules: List[str]
-    # TODO: maybe make it a Dict[str, List[str]], so a name can point to mutiple vnodes?
+    # TODO: maybe make it a Dict[str, List[str]], so a name can point to multiple vnodes?
     __pending_records: Dict[str, str]
 
     def __init__(self, name: str):
@@ -245,6 +245,8 @@ class DomainNameServer(Server):
         """!
         @brief DomainNameServer constructor.
         """
+        super().__init__()
+        
         self.__zones = set()
         self.__is_master = False
         self.__is_real_root = False
@@ -428,7 +430,7 @@ class DomainNameService(Service):
         """!
         @brief DomainNameService constructor.
         
-        @param autoNameServer add gule records to parents automaically.
+        @param autoNameServer add gule records to parents automatically.
         """
         super().__init__()
         self.__autoNs = autoNameServer

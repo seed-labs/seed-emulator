@@ -6,6 +6,7 @@ from .Emulator import Emulator
 from .enums import NodeRole
 from .Binding import Binding
 from typing import Dict, List, Set, Tuple
+from .BaseSystem import BaseSystem
 
 class Server(Printable):
     """!
@@ -13,6 +14,12 @@ class Server(Printable):
 
     The Server class is the handler for installed services.
     """
+    __class_names: list
+    _base_system: BaseSystem
+    def __init__(self):
+        super().__init__()
+        self.__class_names = []
+        self._base_system = BaseSystem.DEFAULT
 
     def install(self, node: Node):
         """!
@@ -21,7 +28,42 @@ class Server(Printable):
         @param node node.
         """
         raise NotImplementedError('install not implemented')
+    
+    def setBaseSystem(self, base_system: BaseSystem) -> Server:
+        """!
+        @brief Set a base_system of a server.
 
+        @param base_system base_system to use.
+
+        @returns self, for chaining API calls.
+        """
+        self._base_system = base_system
+    
+    def getBaseSystem(self) -> BaseSystem:
+        """!
+        @brief Get configured base system on this server.
+
+        @returns base system.
+        """
+        return self._base_system
+
+    def getClassNames(self):
+        return self.__class_names
+    
+    def appendClassName(self, class_name:str):
+        """!
+        @brief Append Class Name
+        The method called by User. 
+
+        @param class_name class name.
+
+        @return self.
+        """
+
+        self.__class_names.append(class_name)
+
+        return self
+        
 class Service(Layer):
     """!
     @brief Service base class.
@@ -29,13 +71,13 @@ class Service(Layer):
     The base class for all Services.
     """
 
-    __pending_targets: Dict[str, Server]
+    _pending_targets: Dict[str, Server]
     
     __targets: Set[Tuple[Server, Node]]
 
     def __init__(self):
         super().__init__()
-        self.__pending_targets = {}
+        self._pending_targets = {}
         self.__targets = set()
 
     def _createServer(self) -> Server:
@@ -46,7 +88,7 @@ class Service(Layer):
 
     def _doInstall(self, node: Node, server: Server):
         """!
-        @brief install the server on node. This can be overrided by service
+        @brief install the server on node. This can be overridden by service
         implementations.
 
         @param node node.
@@ -54,13 +96,22 @@ class Service(Layer):
         """
         server.install(node)
 
+    def _doSetClassNames(self, node:Node, server:Server) -> Node:
+        """!
+        @brief set the class names on node. 
+
+        @param node node.
+        @param server server.
+        """
+        server.setClassNames(node)
+
     def _doConfigure(self, node: Node, server: Server):
         """!
         @brief configure the node. Some services may need to by configure before
         rendered.
 
         This is currently used by the DNS layer to configure NS and gules
-        records before the actuall installation.
+        records before the actual installation.
         
         @param node node
         @param server server
@@ -89,6 +140,8 @@ class Service(Layer):
                 '__self': self
             }
 
+        node.setBaseSystem(server.getBaseSystem())
+        
         self._doConfigure(node, server)
         self.__targets.add((server, node))
 
@@ -99,32 +152,34 @@ class Service(Layer):
         This method sets a prepend a prefix to all virtual node names.
         """
         new_dict = {}
-        for k, v in self.__pending_targets.items():
+        for k, v in self._pending_targets.items():
             new_dict[prefix + k] = v
         
-        self.__pending_targets = new_dict
+        self._pending_targets = new_dict
 
     def install(self, vnode: str) -> Server:
         """!
         @brief install the service on a node identified by given name.
         """
-        if vnode in self.__pending_targets.keys(): return self.__pending_targets[vnode]
+        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
 
         s = self._createServer()
-        self.__pending_targets[vnode] = s
+        self._pending_targets[vnode] = s
 
-        return self.__pending_targets[vnode]
+        return self._pending_targets[vnode]
 
     def configure(self, emulator: Emulator):
-        for (vnode, server) in self.__pending_targets.items():
+        for (vnode, server) in self._pending_targets.items():
             pnode = emulator.getBindingFor(vnode)
             self._log('looking for binding for {}...'.format(vnode))
             self.__configureServer(server, pnode)
-            self._log('configure: binded {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
+            self._log('configure: bound {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
     
     def render(self, emulator: Emulator):
         for (server, node) in self.__targets:
             self._doInstall(node, server)
+            for className in server.getClassNames():
+                node.appendClassName(className)
         
     def getConflicts(self) -> List[str]:
         """!
@@ -149,11 +204,11 @@ class Service(Layer):
 
         @param targets new targets.
         """
-        self.__pending_targets = targets
+        self._pending_targets = targets
 
     def getPendingTargets(self) -> Dict[str, Server]:
         """!
         @brief Get a set of pending vnode to install the service on.
         """
-        return self.__pending_targets
+        return self._pending_targets
 
