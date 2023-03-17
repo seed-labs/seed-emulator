@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `EthereumPOWTestCase.py` performs a unit test for Ethereum PoS blockchain using [unittest](https://docs.python.org/3/library/unittest.html) library. In this script, it consists of 4 testcases: (1) `test_pow_chain_connection`, (2) `test_pow_chain_id`, (3) `test_pow_chain_consensus`, (4) `test_import_account`, (5) `test_pow_emulator_account`, (6) `test_pow_create_account`, (7) `test_pow_send_transaction`, and (8) `test_pow_peer_counts`.
+The `EthereumPOWTestCase.py` performs a unit test for Ethereum PoW blockchain using [unittest](https://docs.python.org/3/library/unittest.html) library. In this script, it consists of 4 testcases: (1) `test_pow_chain_connection`, (2) `test_pow_chain_id`, (3) `test_pow_chain_consensus`, (4) `test_import_account`, (5) `test_pow_emulator_account`, (6) `test_pow_create_account`, (7) `test_pow_send_transaction`, and (8) `test_pow_peer_counts`.
 
 ## How to run
 
