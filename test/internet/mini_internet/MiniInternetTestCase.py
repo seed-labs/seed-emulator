@@ -2,11 +2,6 @@
 # encoding: utf-8
 
 import unittest as ut
-import os
-import getopt
-import sys
-import docker
-import time
 from test import SeedEmuTestCase
 
 class MiniInternetTestCase(SeedEmuTestCase):
@@ -51,33 +46,6 @@ class MiniInternetTestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_customized_ip_address'))
         test_suite.addTest(cls('test_real_world_as'))
         return test_suite
-    
-
-def get_arguments(argv, mapping):
-    # Remove 1st argument from the list of command line arguments
-    argumentList = argv[1:]
-
-    # Options and long options
-    options = "ht:"
-    long_options = ["help", "times="]
-
-    try:
-        # Parsing argument
-        arguments, values = getopt.getopt(argumentList, options, long_options)
-
-        # checking each argument
-        for arg, value in arguments:
-            if arg in ("-h", "--help"):
-                print ("Usage: test_script.py -t <times>")
-                exit()
-
-            elif arg in ("-t", "--times"):
-                mapping['times'] = int(value)
-
-    except getopt.error as err:
-        print (str(err))
-
-
 
 if __name__ == "__main__":
     test_suite = MiniInternetTestCase.get_test_suite()
