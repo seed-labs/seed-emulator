@@ -253,7 +253,7 @@ class DockerImage(object):
     def getSoftware(self) -> Set[str]:
         """!
         @brief get set of software installed on this image.
-        
+
         @return set.
         """
         return self.__software
@@ -265,7 +265,7 @@ class DockerImage(object):
         @return directory name.
         """
         return self.__dirName
-    
+
     def isLocal(self) -> bool:
         """!
         @brief returns True if this image is local.
@@ -273,7 +273,7 @@ class DockerImage(object):
         @return True if this image is local.
         """
         return self.__local
-    
+
     def addSoftwares(self, software) -> DockerImage:
         """!
         @brief add softwares to this image.
@@ -334,7 +334,7 @@ class Docker(Compiler):
         @param namingScheme (optional) node naming scheme. Available variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
         {primaryIp} and {displayName}. {displayName} will automatically fall
-        back to {name} if 
+        back to {name} if
         Default to as{asn}{role}-{displayName}-{primaryIp}.
         @param selfManagedNetwork (optional) use self-managed network. Enable
         this to manage the network inside containers instead of using docker's
@@ -355,7 +355,7 @@ class Docker(Compiler):
         emulator host. Only enable seedemu in a trusted network.
         @param internetMapPort (optional) set seedemu internetMap port. Default to 8080.
         @param etherViewEnabled (optional) set if seedemu EtherView should be enabled.
-        Default to False. 
+        Default to False.
         @param etherViewPort (optional) set seedemu EtherView port. Default to 5000.
         @param clientHideServiceNet (optional) hide service network for the
         client map by not adding metadata on the net. Default to True.
@@ -399,13 +399,13 @@ class Docker(Compiler):
         priority wins. If two or more images with same priority and same number
         of missing software exist, the one added the last will be used. All
         built-in images has priority of 0. Default to -1. All built-in images are
-        prior to the added candidate image. To set a candidate image to a node, 
-        use setImageOverride() method. 
+        prior to the added candidate image. To set a candidate image to a node,
+        use setImageOverride() method.
 
         @returns self, for chaining api calls.
         """
         assert image.getName() not in self.__images, 'image with name {} already exists.'.format(image.getName())
-            
+
         self.__images[image.getName()] = (image, priority)
 
         return self
@@ -446,7 +446,7 @@ class Docker(Compiler):
         self.__disable_images = disabled
 
         return self
-    
+
     def setImageOverride(self, node:Node, imageName:str) -> Docker:
         """!
         @brief set the docker compiler to use a image on the specified Node.
@@ -454,7 +454,7 @@ class Docker(Compiler):
         @param node target node to override image.
         @param imageName name of the image to use.
 
-        @returns self, for chaining api calls.      
+        @returns self, for chaining api calls.
         """
         asn = node.getAsn()
         name = node.getName()
@@ -462,13 +462,13 @@ class Docker(Compiler):
 
     def _groupSoftware(self, emulator: Emulator):
         """!
-        @brief Group apt-get install calls to maximize docker cache. 
+        @brief Group apt-get install calls to maximize docker cache.
 
         @param emulator emulator to load nodes from.
         """
 
         registry = emulator.getRegistry()
-        
+
         # { [imageName]: { [softName]: [nodeRef] } }
         softGroups: Dict[str, Dict[str, List[Node]]] = {}
 
@@ -476,7 +476,7 @@ class Docker(Compiler):
         groupIter: Dict[str, int] = {}
 
         for ((scope, type, name), obj) in registry.getAll().items():
-            if type != 'rnode' and type != 'hnode' and type != 'snode' and type != 'rs' and type != 'snode': 
+            if type not in ['rnode', 'csnode', 'hnode', 'snode', 'rs', 'snode']:
                 continue
 
             node: Node = obj
@@ -512,19 +512,19 @@ class Docker(Compiler):
                     if len(nodes) == commRequired:
                         currentTier.add(soft)
                         for node in nodes: currentTierNodes.add(node)
-                
+
                 for node in currentTierNodes:
                     if not node.hasAttribute('__soft_install_tiers'):
                         node.setAttribute('__soft_install_tiers', [])
 
                     node.getAttribute('__soft_install_tiers').append(currentTier)
-                
+
 
                 if len(currentTier) > 0:
                     self._log('the following software has been grouped together in step {}: {} since they are referenced by {} nodes.'.format(step, currentTier, len(currentTierNodes)))
                     step += 1
-                
-    
+
+
     def _selectImageFor(self, node: Node) -> Tuple[DockerImage, Set[str]]:
         """!
         @brief select image for the given node.
@@ -547,13 +547,13 @@ class Docker(Compiler):
             self._log('image-per-node configured, using {}'.format(image.getName()))
             return (image, nodeSoft - image.getSoftware())
 
-        # Should we keep this feature? 
+        # Should we keep this feature?
         if self.__disable_images:
             self._log('disable-imaged configured, using base image.')
             (image, _) = self.__images['ubuntu:20.04']
             return (image, nodeSoft - image.getSoftware())
 
-        # Set Default Image for All Nodes 
+        # Set Default Image for All Nodes
         if self.__forced_image != None:
             assert self.__forced_image in self.__images, 'forced-image configured, but image {} does not exist.'.format(self.__forced_image)
 
@@ -562,13 +562,13 @@ class Docker(Compiler):
             self._log('force-image configured, using image: {}'.format(image.getName()))
 
             return (image, nodeSoft - image.getSoftware())
-        
+
         #############################################################
         if node.getBaseSystem().value != BaseSystem.DEFAULT.value:
-            #Maintain a table : Virtual Image Name - Actual Image Name 
+            #Maintain a table : Virtual Image Name - Actual Image Name
             image = BaseSystemImageMapping[node.getBaseSystem()]
             return (image, nodeSoft - image.getSoftware())
-        
+
         candidates: List[Tuple[DockerImage, int]] = []
         minMissing = len(nodeSoft)
 
@@ -579,7 +579,7 @@ class Docker(Compiler):
                 candidates = []
                 minMissing = missing
 
-            if missing <= minMissing: 
+            if missing <= minMissing:
                 candidates.append((image, prio))
 
         assert len(candidates) > 0, '_electImageFor ended w/ no images?'
@@ -593,7 +593,7 @@ class Docker(Compiler):
         return (selected, nodeSoft - selected.getSoftware())
 
 
-    def _getNetMeta(self, net: Network) -> str: 
+    def _getNetMeta(self, net: Network) -> str:
         """!
         @brief get net metadata labels.
 
@@ -637,7 +637,7 @@ class Docker(Compiler):
                 key = 'displayname',
                 value = net.getDisplayName()
             )
-        
+
         if net.getDescription() != None:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key = 'description',
@@ -680,6 +680,12 @@ class Docker(Compiler):
                 value = 'Router'
             )
 
+        if type == 'csnode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'SCION Control Service'
+            )
+
         if type == 'snode':
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key = 'role',
@@ -697,13 +703,13 @@ class Docker(Compiler):
                 key = 'displayname',
                 value = node.getDisplayName()
             )
-        
+
         if node.getDescription() != None:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key = 'description',
                 value = node.getDescription()
             )
-        
+
         if len(node.getClasses()) > 0:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key = 'class',
@@ -770,7 +776,7 @@ class Docker(Compiler):
         staged_path = md5(path.encode('utf-8')).hexdigest()
         print(content, file=open(staged_path, 'w'))
         return 'COPY {} {}\n'.format(staged_path, path)
-    
+
     def _importFile(self, path: str, hostpath: str) -> str:
         """!
         @brief Stage file to local folder and return Dockerfile command.
@@ -803,7 +809,7 @@ class Docker(Compiler):
         for iface in node.getInterfaces():
             net = iface.getNet()
             (netscope, _, _) = net.getRegistryInfo()
-            net_prefix = self._contextToPrefix(netscope, 'net') 
+            net_prefix = self._contextToPrefix(netscope, 'net')
             if net.getType() == NetworkType.Bridge: net_prefix = ''
             real_netname = '{}{}'.format(net_prefix, net.getName())
             address = iface.getAddress()
@@ -821,7 +827,7 @@ class Docker(Compiler):
                 )
 
                 address = d_address
-                
+
                 self._log('using self-managed network: using dummy address {}/{} for {}/{} on as{}/{}'.format(
                     d_address, d_prefix.prefixlen, iface.getAddress(), iface.getNet().getPrefix().prefixlen,
                     node.getAsn(), node.getName()
@@ -836,7 +842,7 @@ class Docker(Compiler):
                 netId = real_netname,
                 address = address
             )
-        
+
         _ports = node.getPorts()
         ports = ''
         if len(_ports) > 0:
@@ -850,10 +856,10 @@ class Docker(Compiler):
             ports = DockerCompilerFileTemplates['compose_ports'].format(
                 portList = lst
             )
-        
+
         _volumes = node.getSharedFolders()
         storages = node.getPersistentStorages()
-        
+
         volumes = ''
 
         if len(_volumes) > 0 or len(storages) > 0:
@@ -864,7 +870,7 @@ class Docker(Compiler):
                     hostPath = hostPath,
                     nodePath = nodePath
                 )
-            
+
             for path in storages:
                 lst += DockerCompilerFileTemplates['compose_storage'].format(
                     nodePath = path
@@ -977,7 +983,7 @@ class Docker(Compiler):
     def _makeDummies(self) -> str:
         """!
         @brief create dummy services to get around docker pull limits.
-        
+
         @returns docker-compose service string.
         """
         mkdir('dummies')
@@ -989,7 +995,7 @@ class Docker(Compiler):
             self._log('adding dummy service for image {}...'.format(image))
 
             imageDigest = md5(image.encode('utf-8')).hexdigest()
-            
+
             dummies += DockerCompilerFileTemplates['compose_dummy'].format(
                 imageDigest = imageDigest
             )
@@ -1017,6 +1023,10 @@ class Docker(Compiler):
                 self._log('compiling router node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
 
+            if type == 'csnode':
+                self._log('compiling control service node {} for as{}...'.format(name, scope))
+                self.__services += self._compileNode(obj)
+
             if type == 'hnode':
                 self._log('compiling host node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
@@ -1036,7 +1046,7 @@ class Docker(Compiler):
                 clientImage = SEEDEMU_INTERNET_MAP_IMAGE,
                 clientPort = self.__internet_map_port
             )
-        
+
         if self.__ether_view_enabled:
             self._log('enabling seedemu-ether-view...')
 

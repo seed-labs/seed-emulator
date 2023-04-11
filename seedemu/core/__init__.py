@@ -1,8 +1,10 @@
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
 from .AutonomousSystem import AutonomousSystem
+from .ScionAutonomousSystem import ScionAutonomousSystem
+from .IsolationDomain import IsolationDomain
 from .InternetExchange import InternetExchange
 from .Network import Network
-from .Node import Node, File, Interface, Router, RealWorldRouter
+from .Node import Node, File, Interface, Router, RealWorldRouter, ScionRouter
 from .Printable import Printable
 from .Registry import Registry, ScopedRegistry, Registrable
 from .Graphable import Graphable, Graph, Vertex, Edge
