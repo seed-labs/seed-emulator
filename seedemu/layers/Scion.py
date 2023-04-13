@@ -1,5 +1,4 @@
 from __future__ import annotations
-import io
 from enum import Enum
 from typing import Dict, Tuple
 
@@ -57,8 +56,8 @@ class Scion(Layer, Graphable):
     alone do not uniquely identify a SCION AS (see ScionISD layer).
     """
 
-    __links: Dict[Tuple[IA, IA], LinkType]
-    __ix_links: Dict[Tuple[int, IA, IA], LinkType]
+    __links: Dict[Tuple[IA, IA, LinkType], int]
+    __ix_links: Dict[Tuple[int, IA, IA, LinkType], int]
 
     def __init__(self):
         """!
@@ -72,28 +71,31 @@ class Scion(Layer, Graphable):
     def getName(self) -> str:
         return "Scion"
 
-    def addXcLink(self, a: IA|Tuple[int, int], b: IA|Tuple[int, int], linkType: LinkType) -> 'Scion':
+    def addXcLink(self, a: IA|Tuple[int, int], b: IA|Tuple[int, int],
+                  linkType: LinkType, count: int=1) -> 'Scion':
         """!
         @brief Create a direct cross-connect link between to ASes.
 
         @param a First AS (ISD and ASN).
         @param b Second AS (ISD and ASN).
         @param linkType Link type from a to b.
+        @param count Number of parallel links.
 
         @throws AssertionError if link already exists or is link to self.
 
         @returns self
         """
         a, b = IA(*a), IA(*b)
-        assert a.asn != b.asn, "Cannot link AS{} to itself.".format(a.asn)
-        assert (a, b) not in self.__links, (
-            "Link between AS{} and AS{} exists already.".format(a, b))
+        assert a.asn != b.asn, "Cannot link as{} to itself.".format(a.asn)
+        assert (a, b, linkType) not in self.__links, (
+            "Link between as{} and as{} of type {} exists already.".format(a, b, linkType))
 
-        self.__links[(a, b)] = linkType
+        self.__links[(a, b, linkType)] = count
 
         return self
 
-    def addIxLink(self, ix: int, a: IA|Tuple[int, int], b: IA|Tuple[int, int], linkType: LinkType) -> 'Scion':
+    def addIxLink(self, ix: int, a: IA|Tuple[int, int], b: IA|Tuple[int, int],
+                  linkType: LinkType, count: int=1) -> 'Scion':
         """!
         @brief Create a private link between two ASes at an IX.
 
@@ -101,17 +103,18 @@ class Scion(Layer, Graphable):
         @param a First AS (ISD and ASN).
         @param b Second AS (ISD and ASN).
         @param linkType Link type from a to b.
+        @param count Number of parallel links.
 
         @throws AssertionError if link already exists or is link to self.
 
         @returns self
         """
         a, b = IA(*a), IA(*b)
-        assert a.asn != b.asn, "Cannot link AS{} to itself.".format(a)
-        assert (a, b) not in self.__links, (
-            "Link between AS{} and AS{} at IX{} exists already.".format(a, b, ix))
+        assert a.asn != b.asn, "Cannot link as{} to itself.".format(a)
+        assert (a, b, linkType) not in self.__links, (
+            "Link between as{} and as{} of type {} at ix{} exists already.".format(a, b, linkType, ix))
 
-        self.__ix_links[(ix, a, b)] = linkType
+        self.__ix_links[(ix, a, b, linkType)] = count
 
         return self
 
@@ -133,12 +136,12 @@ class Scion(Layer, Graphable):
         # peering link: dashed line
 
         self._log('Creating SCION graphs...')
-        graph = self._addGraph('Scion Connections', False)    
+        graph = self._addGraph('Scion Connections', False)
 
         reg = emulator.getRegistry()
         scionIsd_layer: ScionIsd = reg.get('seedemu', 'layer', 'ScionIsd')
 
-        for (a, b), rel in self.__links.items():
+        for (a, b, rel), count in self.__links.items():
             a_shape = 'doublecircle' if scionIsd_layer.isCoreAs(a.isd, a.asn) else 'circle'
             b_shape = 'doublecircle' if scionIsd_layer.isCoreAs(b.isd, b.asn) else 'circle'
 
@@ -146,21 +149,24 @@ class Scion(Layer, Graphable):
                 graph.addVertex('AS{}'.format(a.asn), 'ISD{}'.format(a.isd), a_shape)
             if not graph.hasVertex('AS{}'.format(b.asn), 'ISD{}'.format(b.isd)):
                 graph.addVertex('AS{}'.format(b.asn), 'ISD{}'.format(b.isd), b_shape)
-        
-            if rel == LinkType.Core:
-                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
-                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
-                              style= 'bold')
-            if rel == LinkType.Transit:
-                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
-                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
-                              alabel='P', blabel='C')
-            if rel == LinkType.Peer:
-                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
-                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
-                              style= 'dashed')
 
-        for (ix, a, b), rel in self.__ix_links.items():
+            if rel == LinkType.Core:
+                for _ in range(count):
+                    graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn),
+                                'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                                style= 'bold')
+            if rel == LinkType.Transit:
+                for _ in range(count):
+                    graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn),
+                                'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                                alabel='P', blabel='C')
+            if rel == LinkType.Peer:
+                for _ in range(count):
+                    graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn),
+                                'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                                style= 'dashed')
+
+        for (ix, a, b, rel), count in self.__ix_links.items():
             a_shape = 'doublecircle' if scionIsd_layer.isCoreAs(a.isd, a.asn) else 'circle'
             b_shape = 'doublecircle' if scionIsd_layer.isCoreAs(b.isd, b.asn) else 'circle'
 
@@ -168,39 +174,48 @@ class Scion(Layer, Graphable):
                 graph.addVertex('AS{}'.format(a.asn), 'ISD{}'.format(a.isd), a_shape)
             if not graph.hasVertex('AS{}'.format(b.asn), 'ISD{}'.format(b.isd)):
                 graph.addVertex('AS{}'.format(b.asn), 'ISD{}'.format(b.isd), b_shape)
-        
+
             if rel == LinkType.Core:
-                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
-                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
-                              label='IX{}'.format(ix), style= 'bold')                
+                for _ in range(count):
+                    graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn),
+                                'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                                label='IX{}'.format(ix), style= 'bold')
             if rel == LinkType.Transit:
-                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
-                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
-                              label='IX{}'.format(ix), alabel='P', blabel='C')
+                for _ in range(count):
+                    graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn),
+                                'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                                label='IX{}'.format(ix), alabel='P', blabel='C')
             if rel == LinkType.Peer:
-                graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn), 
-                              'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
-                              'IX{}'.format(ix), style= 'dashed')
+                for _ in range(count):
+                    graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn),
+                                'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
+                                'IX{}'.format(ix), style= 'dashed')
 
     def print(self, indent: int = 0) -> str:
         out = ' ' * indent
         out += 'ScionLayer:\n'
 
         indent += 4
-        for (ix, a, b), rel in self.__ix_links.items():
+        for (ix, a, b, rel), count in self.__ix_links.items():
             out += ' ' * indent
-            out += f'IX{ix}: AS{a} -({rel})-> AS{b}\n'
+            out += f'IX{ix}: AS{a} -({rel})-> AS{b}'
+            if count > 1:
+                out += f' ({count} times)'
+            out += '\n'
 
-        for (a, b), rel in self.__links.items():
+        for (a, b, rel), count in self.__links.items():
             out += ' ' * indent
-            out += f'XC: AS{a} -({rel})-> AS{b}\n'
+            out += f'XC: AS{a} -({rel})-> AS{b}'
+            if count > 1:
+                out += f' ({count} times)'
+            out += '\n'
 
         return out
 
     def _configure_links(self, reg: Registry, base_layer: ScionBase) -> None:
         """Configure SCION links with IFIDs, IPs, ports, etc."""
         # cross-connect links
-        for (a, b), rel in self.__links.items():
+        for (a, b, rel), count in self.__links.items():
             a_reg = ScopedRegistry(str(a.asn), reg)
             b_reg = ScopedRegistry(str(b.asn), reg)
             a_as = base_layer.getAutonomousSystem(a.asn)
@@ -209,7 +224,7 @@ class Scion(Layer, Graphable):
             try:
                 a_router, b_router = self.__get_xc_routers(a.asn, a_reg, b.asn, b_reg)
             except AssertionError:
-                assert False, f"cannot find XC to configure link AS{a} --> AS{b}"
+                assert False, f"cannot find XC to configure link as{a} --> as{b}"
 
             a_ifaddr, a_net = a_router.getCrossConnect(b.asn, b_router.getName())
             b_ifaddr, b_net = b_router.getCrossConnect(a.asn, a_router.getName())
@@ -218,12 +233,13 @@ class Scion(Layer, Graphable):
             a_addr = str(a_ifaddr.ip)
             b_addr = str(b_ifaddr.ip)
 
-            self._log(f"add scion XC link: {a_addr} AS {a} -({rel})-> {b_addr} AS {b}")
-            self.__create_link(a_router, b_router, a, b, a_as, b_as,
-                              a_addr, b_addr, net, rel)
+            for _ in range(count):
+                self._log(f"add scion XC link: {a_addr} as{a} -({rel})-> {b_addr} as{b}")
+                self.__create_link(a_router, b_router, a, b, a_as, b_as,
+                                a_addr, b_addr, net, rel)
 
         # IX links
-        for (ix, a, b), rel in self.__ix_links.items():
+        for (ix, a, b, rel), count in self.__ix_links.items():
             ix_reg = ScopedRegistry('ix', reg)
             a_reg = ScopedRegistry(str(a.asn), reg)
             b_reg = ScopedRegistry(str(b.asn), reg)
@@ -237,17 +253,18 @@ class Scion(Layer, Graphable):
             try:
                 a_ixrouter, a_ixif = self.__get_ix_port(a_routers, ix_net)
             except AssertionError:
-                assert False, f"cannot resolve scion peering: AS{a} not in IX{ix}"
+                assert False, f"cannot resolve scion peering: as{a} not in ix{ix}"
             try:
                 b_ixrouter, b_ixif = self.__get_ix_port(b_routers, ix_net)
             except AssertionError:
-                assert False, f"cannot resolve scion peering: AS{a} not in IX{ix}"
+                assert False, f"cannot resolve scion peering: as{a} not in ix{ix}"
 
-            self._log(f"add scion IX link: {a_ixif.getAddress()} AS{a} -({rel})->"
-                      f"{b_ixif.getAddress()} AS{b}")
-            self.__create_link(a_ixrouter, b_ixrouter, a, b, a_as, b_as,
-                              str(a_ixif.getAddress()), str(b_ixif.getAddress()),
-                              ix_net, rel)
+            for _ in range(count):
+                self._log(f"add scion IX link: {a_ixif.getAddress()} AS{a} -({rel})->"
+                        f"{b_ixif.getAddress()} AS{b}")
+                self.__create_link(a_ixrouter, b_ixrouter, a, b, a_as, b_as,
+                                str(a_ixif.getAddress()), str(b_ixif.getAddress()),
+                                ix_net, rel)
 
     @staticmethod
     def __get_xc_routers(a: int, a_reg: ScopedRegistry, b: int, b_reg: ScopedRegistry) -> Tuple[Router, Router]:

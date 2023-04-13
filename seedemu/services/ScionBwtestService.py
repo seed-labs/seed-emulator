@@ -27,6 +27,7 @@ class ScionBwtestServer(Server):
         """!
         @brief ScionBwtestServer constructor.
         """
+        super().__init__()
         self.__port = 40002
 
     def setPort(self, port: int) -> ScionBwtestServer:
