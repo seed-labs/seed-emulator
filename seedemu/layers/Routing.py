@@ -1,4 +1,4 @@
-from seedemu.core import ScopedRegistry, Node, Interface, Network, Emulator, Layer, Router, RealWorldRouter
+from seedemu.core import ScopedRegistry, Node, Interface, Network, Emulator, Layer, Router, RealWorldRouter, BaseSystem
 from typing import List, Dict
 from ipaddress import IPv4Network
 
@@ -75,9 +75,10 @@ class Routing(Layer):
         """!
         @brief Install bird on node, and handle the bug.
         """
-        node.addBuildCommand('mkdir -p /usr/share/doc/bird2/examples/')
-        node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
-        node.addBuildCommand('apt-get update && apt-get install -y --no-install-recommends bird2')
+        # node.addBuildCommand('mkdir -p /usr/share/doc/bird2/examples/')
+        # node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
+        # node.addBuildCommand('apt-get update && apt-get install -y --no-install-recommends bird2')
+        node.setBaseSystem(BaseSystem.SEEDEMU_ROUTER)
 
     def configure(self, emulator: Emulator):
         reg = emulator.getRegistry()

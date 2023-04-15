@@ -11,14 +11,18 @@ class BaseSystem(Enum):
     # the base for the node. During the Docker compilation time, these
     # names will be used to find the corresponding docker images. 
     UBUNTU_20_04        = 'ubuntu20.04'
+    SEEDEMU_BASE        = 'seedemu-base'
+    SEEDEMU_ROUTER      = 'seedemu-router'
     SEEDEMU_ETHEREUM    = 'seedemu-ethereum'
-    DEFAULT             = UBUNTU_20_04
+    DEFAULT             = SEEDEMU_BASE
 
     # The relationship of the images: B is a subset of A means that 
     # A is built on top of A and has 
     SUBSET: Dict[str, list(str)] = {
                 UBUNTU_20_04: [],
-                SEEDEMU_ETHEREUM: [UBUNTU_20_04],
+                SEEDEMU_BASE: [UBUNTU_20_04],
+                SEEDEMU_ROUTER: [UBUNTU_20_04, SEEDEMU_BASE],
+                SEEDEMU_ETHEREUM: [UBUNTU_20_04, SEEDEMU_BASE],
             }
     
     @staticmethod 

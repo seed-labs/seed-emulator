@@ -146,7 +146,7 @@ class EthereumServer(Server):
         node.setFile('/tmp/eth-password', '\n'.join(account_passwords))
 
         # install required software
-        node.addSoftware('software-properties-common')
+        # node.addSoftware('software-properties-common')
         # tap the eth repo
         # node.addBuildCommand('add-apt-repository ppa:ethereum/ethereum')
 
@@ -777,8 +777,8 @@ while true; do {{
         bootnode_ip = blockchain.getBootNodes()[0].split(":")[0]
         miner_ip = blockchain.getMinerNodes()[0]
         
-        node.addBuildCommand('apt-get update && apt-get install -y --no-install-recommends software-properties-common python3 python3-pip')
-        node.addBuildCommand('pip install web3')
+        #node.addBuildCommand('apt-get update && apt-get install -y --no-install-recommends software-properties-common python3 python3-pip')
+        #node.addBuildCommand('pip install web3')
         node.appendStartCommand('lcli generate-bootnode-enr --ip {} --udp-port 30305 --tcp-port 30305 --genesis-fork-version 0x42424242 --output-dir /local-testnet/bootnode'.format(bootnode_ip))
         node.setFile("/tmp/config.yaml", self.BEACON_GENESIS.format(terminal_total_difficulty=self.__terminal_total_difficulty, chain_id=blockchain.getChainId(), 
                                                                     target_committee_size=blockchain.getTargetCommitteeSize(), 
