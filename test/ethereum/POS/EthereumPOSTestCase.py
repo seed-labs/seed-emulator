@@ -4,14 +4,9 @@
 import time
 import unittest as ut
 from .SEEDBlockchain import Wallet
-from web3 import Web3
 from seedemu import *
-import requests
-import os, time
+import time
 import docker
-import getopt
-import sys
-from web3.middleware import geth_poa_middleware
 from test import SeedEmuTestCase
 
 class EthereumPOSTestCase(SeedEmuTestCase):
