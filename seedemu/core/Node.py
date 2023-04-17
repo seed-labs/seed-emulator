@@ -1113,3 +1113,58 @@ class RealWorldRouter(Router):
         
 
         return out
+
+
+class ScionRouter(Router):
+    """!
+    @brief Extends Router nodes for SCION routing.
+
+    SCION border router nodes will be replaced with this class during ScionRouting
+    layer configuration.
+    """
+
+    __interfaces: Dict[int, Dict]  # IFID to interface
+    __next_port: int               # Next free UDP port
+
+    def __init__(self):
+        super().__init__()
+        self.initScionRouter()
+
+    def initScionRouter(self):
+        self.__interfaces = {}
+        self.__next_port = 50000
+
+    def addScionInterface(self, ifid: int, iface: Dict) -> None:
+        """!
+        @brief Add a SCION interface to the border router.
+
+        @param ifid Interface ID of the new interface.
+        @param iface Interface definition.
+        """
+        assert ifid not in self.__interfaces, f"interface {ifid} already exists"
+        self.__interfaces[ifid] = iface
+
+    def getScionInterface(self, ifid: int) -> Dict:
+        """!
+        @brief Retrieve an existing interface.
+
+        @param ifid Interface ID to look up.
+        @throws AssertionError if the interface does not exist.
+        """
+        assert ifid in self.__interfaces, f"interface {ifid} does not exist"
+        return self.__interfaces[ifid]
+
+    def getScionInterfaces(self) -> Dict[int, Dict]:
+        """!
+        @brief Get all border router interfaces.
+        @returns IFIDs and interface declarations for border router.
+        """
+        return self.__interfaces
+
+    def getNextPort(self) -> int:
+        """!
+        @brief Get the next free UDP port. Called during configuration.
+        """
+        port = self.__next_port
+        self.__next_port += 1
+        return port
