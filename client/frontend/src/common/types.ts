@@ -19,7 +19,9 @@ export interface EmulatorNode {
             name: string,
             role: string,
             description?: string,
-            displayname?: string
+            displayname?: string,
+            position_x?: string,
+            position_y?: string
         };
     };
 };

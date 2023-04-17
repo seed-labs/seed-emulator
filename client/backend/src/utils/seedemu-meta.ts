@@ -3,6 +3,14 @@ import Dockerode from 'dockerode';
 
 const META_PREFIX = 'org.seedsecuritylabs.seedemu.meta.';
 
+export interface NodeInfo {
+    node_count: number;
+    node_info: {
+        ipaddress: string;
+        x: number;
+        y: number;
+    }[];
+}
 export interface VertexMeta {
     displayname?: string;
     description?: string;
@@ -16,6 +24,8 @@ export interface SeedEmulatorNode extends VertexMeta {
         name?: string;
         address?: string;
     }[];
+    position_x?: string;
+    position_y?: string;
 }
 
 export interface SeedEmulatorNet extends VertexMeta {
@@ -73,6 +83,8 @@ export class Emulator {
                 if (item != 'name' && item != 'address') return;
                 node.nets[ifindex][item] = value;
             }
+            if (key === 'position_x') node.position_x = value;
+            if (key === 'position_y') node.position_y = value;
             if (key === 'displayname') node.displayname = value;
             if (key === 'description') node.description = value;
         });

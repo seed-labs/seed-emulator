@@ -261,6 +261,23 @@ export class Controller implements LogProducer {
         await this._run(node, `bird_peer_${state ? 'up' : 'down'} ${peer}`);
     }
 
+    /**
+     * set tc delay loss.
+     * 
+     * @param node node id.  this node must be a router node with bird running.
+     * @param dst_ip peer protocol name.
+     * @param distance new state. true to enable, false to disable.
+     */
+    async setTrafficControl(node: string, dst_ip: string, distance: string) {
+        let latency = Number(distance)%500;
+        let loss = Math.floor(Number(distance)/500)*10;
+        let id = dst_ip.split('.').pop()
+
+        this._logger.debug(`setting tc on ${node} dst ip: ${dst_ip} loss: ${loss}% latency: ${latency}...`);
+        console.log(`tc qdisc change dev eth1 parent 1:1${id} handle 1${id} netem loss ${loss}% latency ${latency}ms`)
+        await this._run(node, `tc qdisc change dev eth1 parent 1:1${id} handle 1${id} netem loss ${loss}% latency ${latency}ms`);
+    }
+
     getLoggers(): Logger[] {
         return [this._logger, this._sessionManager.getLoggers()[0]];
     }

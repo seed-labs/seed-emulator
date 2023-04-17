@@ -4,7 +4,8 @@ let config = {
     entry: {
         index: './src/index/index.ts',
         console: './src/console/console.ts',
-        map: './src/map/map.ts'
+        map: './src/map/map.ts',
+        simulator: './src/simulator/simulator.ts'
     },
     module: {
         rules: [

@@ -1,11 +1,12 @@
 import express from 'express';
 import { SocketHandler } from '../../utils/socket-handler';
 import dockerode from 'dockerode';
-import { SeedContainerInfo, Emulator, SeedNetInfo } from '../../utils/seedemu-meta';
+import { SeedContainerInfo, Emulator, SeedNetInfo, NodeInfo } from '../../utils/seedemu-meta';
 import { Sniffer } from '../../utils/sniffer';
 import WebSocket from 'ws';
 import { Controller } from '../../utils/controller';
-
+import fs from 'fs';
+import { execSync } from 'child_process';
 const router = express.Router();
 const docker = new dockerode();
 const socketHandler = new SocketHandler(docker);
@@ -29,6 +30,13 @@ const getContainers: () => Promise<SeedContainerInfo[]> = async function() {
     // filter out undefine (not our nodes)
     return _containers.filter(c => c.meta.emulatorInfo.name);;
 } 
+
+const getNodePosition: () => Promise<NodeInfo> = async function() {
+    const _node_info = fs.readFileSync('/home/won/seed-emulator/examples/A00-simple-peering/command/node_pos.json', 'utf-8');
+    const node_info = JSON.parse(_node_info) as NodeInfo;
+    console.log(node_info);
+    return node_info;;
+}
 
 socketHandler.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'warn'
@@ -66,6 +74,7 @@ router.get('/network', async function(req, res, next) {
 });
 
 router.get('/container', async function(req, res, next) {
+    console.log("hihi container");
     try {
         let containers = await getContainers();
 
@@ -268,6 +277,118 @@ router.post('/container/:id/bgp/:peer', express.json(), async function (req, res
     let node = candidates[0];
 
     await controller.setBgpPeerState(node.Id, peer, req.body.status);
+
+    res.json({
+        ok: true
+    });
+
+    next();
+});
+
+router.get('/position', async function(req, res, next) {
+    console.log("hi");
+    try {
+        let containers = await getNodePosition();
+
+        res.json({
+            ok: true,
+            result: containers
+        });
+    } catch (e) {
+        res.json({
+            ok: false,
+            result: e.toString()
+        });
+    }
+
+    next();
+});
+
+router.get('/container/:id/connect/:ip', express.json(), async function (req, res, next) {
+    let id = req.params.id;
+    let peer_ip = req.params.ip;
+    let peer1_ofport = execSync(`sudo ovs-vsctl find interface external_ids"{>}"container_id=${id}`,{ 'encoding': 'utf8' }).replaceAll(' ', '').split('ofport:')[1].split('\n')[0];
+    let peer2_ofport = execSync(`sudo ovs-vsctl find interface external_ids"{>}"container_id=${peer_ip}`,{ 'encoding': 'utf8' }).replaceAll(' ', '').split('ofport:')[1].split('\n')[0];
+    
+    let current_flow_rules = execSync('sudo ovs-ofctl dump-flows sdn0', { 'encoding': 'utf8' }).split('\n')
+    let peer1_current_flows: string[]= [];
+    let peer2_current_flows: string[]= [];
+
+    current_flow_rules.forEach(rule => {
+        if (rule.includes(`in_port=${peer1_ofport}`)){
+            let output = rule.split(' ').pop().replace('actions=', '').replaceAll('output:', '')
+            if (output.includes(',')){
+                peer1_current_flows = output.split(',')
+            }else{
+                peer1_current_flows = [output]
+            }
+        }
+        if (rule.includes(`in_port=${peer2_ofport}`)){
+            let output = rule.split(' ').pop().replace('actions=', '').replaceAll('output:', '')
+            if (output.includes(',')){
+                peer2_current_flows = output.split(',')
+            }else{
+                peer2_current_flows = [output]
+            }
+        }
+    })
+    if (peer1_current_flows.includes(peer2_ofport)==false){
+        peer1_current_flows.push(peer2_ofport)
+    } 
+    if (peer2_current_flows.includes(peer1_ofport)==false){
+        peer2_current_flows.push(peer1_ofport)
+    }
+
+    execSync(`sudo ovs-ofctl add-flow sdn0 in_port=${peer1_ofport},actions=output:${peer1_current_flows.join(',')}`, { 'encoding': 'utf8' })
+    execSync(`sudo ovs-ofctl add-flow sdn0 in_port=${peer2_ofport},actions=output:${peer2_current_flows.join(',')}`, { 'encoding': 'utf8' })
+    
+
+    console.log(peer1_current_flows)
+    console.log(peer2_current_flows)
+    
+    // var candidates = (await docker.listContainers())
+    //     .filter(c => c.Id.startsWith(id));
+
+    // if (candidates.length != 1) {
+    //     res.json({
+    //         ok: false,
+    //         result: `no match or multiple match for container ID ${id}.`
+    //     });
+    //     next();
+    //     return;
+    // }
+
+    // let node = candidates[0];
+
+    // await controller.setBgpPeerState(node.Id, peer, req.body.status);
+
+    res.json({
+        ok: true
+    });
+
+    next();
+});
+
+router.get('/container/:id/tc/:ip/:distance', express.json(), async function (req, res, next) {
+    let id = req.params.id;
+    let peer_ip = req.params.ip;
+    let distance = req.params.distance;
+    
+    var candidates = (await docker.listContainers())
+        .filter(c => c.Id.startsWith(id));
+
+    if (candidates.length != 1) {
+        res.json({
+            ok: false,
+            result: `no match or multiple match for container ID ${id}.`
+        });
+        next();
+        return;
+    }
+
+    let node = candidates[0];
+
+    await controller.setTrafficControl(node.Id, peer_ip, distance);
 
     res.json({
         ok: true
