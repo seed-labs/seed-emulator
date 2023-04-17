@@ -295,6 +295,9 @@ class AutonomousSystem(Printable, Graphable, Configurable):
                 if net.getType() == NetworkType.InternetExchange:
                     netname = 'Exchange: {}...'.format(net.getName())
                     l2graph.addVertex(netname, shape = 'rectangle')
+                if net.getType() == NetworkType.CrossConnect:
+                    netname = 'CrossConnect: {}...'.format(net.getName())
+                    l2graph.addVertex(netname, shape = 'rectangle')
                 l2graph.addEdge(rtrname, netname)
 
         for obj in self.__hosts.values():

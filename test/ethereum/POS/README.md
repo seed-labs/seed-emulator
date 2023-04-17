@@ -2,51 +2,27 @@
 
 ## Overview
 
-The `blockchain-pos-test.py` performs a unit test for Ethereum PoS blockchain using [unittest](https://docs.python.org/3/library/unittest.html) library. In this script, it consists of 4 testcases: (1) `test_pos_geth_connection`, (2) `test_pos_contract_deployment`, (3) `test_pos_chain_merged`, and (4) `test_pos_send_transaction`.
+The `EthereumPOSTestCase.py` performs a unit test for Ethereum PoS blockchain using [unittest](https://docs.python.org/3/library/unittest.html) library. In this script, it consists of 4 testcases: (1) `test_pos_geth_connection`, (2) `test_pos_contract_deployment`, (3) `test_pos_chain_merged`, and (4) `test_pos_send_transaction`.
 
 ## How to run
 
-### 1. Generate the Emulation Files and Build the containers
-
-Before running the testing, you should generate the emulation files using a `blockchain-pos.py` python file located in `emualtor-code` folder. Once you run the python script, it will create the `output` folder and locate the emulations files under this folder. After generating files, you need to build the containers with the generated files.
-
-```sh
-# Generate the Emulation Files
-cd emulator-code
-./blockchain-pos.py
-
-# Build the containers
-cd output
-docker-compose build
-
-cd ../..
-```
-
-### 2. Run the Test Script `blockchain-pos-test.py`
-
 This unit testing have a loader to load all the ethereum service unit testing cases.
-When you run the script, you can specify how many times to run the test with option `-t`.
-Default value is 1.
-
-"Usage: test_script.py -t <times>"
 
 ```sh
 # Run the Test Script
-./blockchain-pos-test.py -t 1
+./EthereumPOSTestCase.py
 ```
 
 Once the test is done, `test_log` folder including the test result is created.
-A test result is not only printed out to the terminal also saved as a file named `log.txt`.
-Also the logs generated while the containers run is saved in the `test_N/log_{succeed|failed}` file.
-The logs can be used when investigating the failure cases.
+A test result is not only printed out to the terminal also saved as a file named `log.txt`. The logs can be used when investigating the failure cases.
 
 ```
-$ tree ./test_log
-.
-├── log.txt
-└── test_0
-    └── log_succeed
-
+$ tree test_log
+test_log
+├── build_log
+├── compile_log
+├── containers_log
+└── log.txt
 ```
 
 #### Expected Result

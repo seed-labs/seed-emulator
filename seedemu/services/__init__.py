@@ -9,3 +9,4 @@ from .ReverseDomainNameService import ReverseDomainNameService, ReverseDomainNam
 from .BgpLookingGlassService import BgpLookingGlassServer, BgpLookingGlassService
 from .DHCPService import DHCPServer, DHCPService
 from .EthereumService import *
+from .ScionBwtestService import ScionBwtestService

@@ -72,9 +72,9 @@ class Base(Layer, Graphable):
     def render(self, emulator: Emulator) -> None:
         for ((scope, type, name), obj) in emulator.getRegistry().getAll().items():
 
-            if not (type == 'rs' or type == 'rnode' or type == 'hnode'):
+            if type not in ['rs', 'rnode', 'hnode', 'csnode']:
                 continue
-            
+
             node: Node = obj
 
             ifinfo = ''
@@ -93,7 +93,7 @@ class Base(Layer, Graphable):
         @brief set recursive name servers to use on all nodes. Can be override
         by calling setNameServers at AS level or node level.
 
-        @param servers list of IP addresses of recursive name servers. 
+        @param servers list of IP addresses of recursive name servers.
 
         @returns self, for chaining API calls.
         """
@@ -131,7 +131,7 @@ class Base(Layer, Graphable):
         """
         assert asn in self.__ases, "as{} does not exist.".format(asn)
         return self.__ases[asn]
-    
+
     def setAutonomousSystem(self, asObject: AutonomousSystem):
         """!
         @brief Set AS to an existing AS object.
@@ -203,12 +203,12 @@ class Base(Layer, Graphable):
                 if host_name.startswith(name):
                     nodes.append(_as.getHost(host_name))
         return nodes
-    
+
     def getNodeByAsnAndName(self, asn:id, name:str) -> Node:
         _as = self.__ases[asn]
         node = _as.getHost(name)
         return node
-        
+
     def _doCreateGraphs(self, emulator: Emulator):
         graph = self._addGraph('Layer 2 Connections', False)
         for asobj in self.__ases.values():

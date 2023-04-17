@@ -3,9 +3,6 @@
 
 import unittest as ut
 import os
-import getopt
-import sys
-import docker
 import time
 from test import SeedEmuTestCase
 
