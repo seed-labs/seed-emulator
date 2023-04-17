@@ -222,6 +222,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     __configured: bool
     __pending_nets: List[Tuple[str, str]]
+    __pending_sdns: List[Tuple[str, str]]
     __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str]]
 
     __shared_folders: Dict[str, str]
@@ -257,14 +258,15 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__base_system = BaseSystem.DEFAULT
 
         self.__pending_nets = []
+        self.__pending_sdns = []
         self.__xcs = {}
         self.__configured = False
 
         self.__shared_folders = {}
         self.__persistent_storages = []
 
-        # for soft in DEFAULT_SOFTWARE:
-        #     self.__softwares.add(soft)
+        for soft in DEFAULT_SOFTWARE:
+            self.__softwares.add(soft)
 
         self.__name_servers = []
 
@@ -300,6 +302,14 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
             assert hit, 'no network matched for name {}'.format(netname)
 
+        for (netname, address) in self.__pending_sdns:
+            hit = False
+            print(netname, address)
+            if reg.has(self.__scope, "sdn", netname):
+                hit = True
+                self.__joinNetwork(reg.get(self.__scope, "sdn", netname), address)
+            if hit: print('sdn matched for name {}'.format(netname))
+
         for (peername, peerasn) in list(self.__xcs.keys()):
             peer: Node = None
 
@@ -327,7 +337,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.insertStartCommand(0,': > /etc/resolv.conf')
         for idx, s in enumerate(self.__name_servers, start=1):
             self.insertStartCommand(idx, 'echo "nameserver {}" >> /etc/resolv.conf'.format(s))
-
+ 
     def setNameServers(self, servers: List[str]) -> Node:
         """!
         @brief set recursive name servers to use on this node. Overwrites
@@ -369,7 +379,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     def addPortForwarding(self, host: int, node: int, proto:str = 'tcp') -> Node:
         """!
-        @brief Achieves the same as the addPort function.
+        @brief Achieves the same as the addPort function. 
         @brief Keeping addPort to avoid breaking other examples.
         @brief Just a more descriptive name.
         """
@@ -380,7 +390,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @brief Get port forwardings.
 
         @returns list of tuple of ports (host, node).
-
+        
         """
         return self.__ports
 
@@ -414,7 +424,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns self, for chaining API calls.
         """
         self.__base_system = base_system
-
+    
     def getBaseSystem(self) -> BaseSystem:
         """!
         @brief Get configured base system on this node.
@@ -431,9 +441,9 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @throws AssertionError if network does not exist.
         """
-
+        
         if address == "auto": _addr = net.assign(self.__role, self.__asn)
-        elif address == "dhcp":
+        elif address == "dhcp": 
             _addr = None
             self.__name_servers = []
             self.addSoftware('isc-dhcp-client')
@@ -478,7 +488,11 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__pending_nets.append((netname, address))
 
         return self
-
+    
+    def joinSwitch(self, netname: str, address: str = "auto") -> Node:
+        self.__pending_sdns.append((netname, address))
+        return self
+    
     def updateNetwork(self, netname:str, address: str= "auto") -> Node:
         """!
         @brief Update connection of the node to a network.

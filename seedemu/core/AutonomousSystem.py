@@ -26,6 +26,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
     __routers: Dict[str, Node]
     __hosts: Dict[str, Node]
     __nets: Dict[str, Network]
+    __sdns: Dict[str, Network]
 
     __name_servers: List[str]
 
@@ -43,6 +44,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         self.__asn = asn
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
         self.__name_servers = []
+        self.__sdns = {}
 
     def setNameServers(self, servers: List[str]) -> AutonomousSystem:
         """!
@@ -112,6 +114,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
                 router.joinNetwork(emulator.getServiceNetwork().getName())
 
         for (key, val) in self.__nets.items(): reg.register(str(self.__asn), 'net', key, val)
+        for (key, val) in self.__sdns.items(): reg.register(str(self.__asn), 'sdn', key, val)
         for (key, val) in self.__hosts.items(): reg.register(str(self.__asn), 'hnode', key, val)
         for (key, val) in self.__routers.items(): reg.register(str(self.__asn), 'rnode', key, val)
 
@@ -166,7 +169,16 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         self.__nets[name] = Network(name, NetworkType.Local, network, aac, direct)
 
         return self.__nets[name]
-
+    
+    def createSwitch(self, name: str) -> Network:
+        network = IPv4Network("10.0.0.0/24")
+        self.__sdns[name] = Network(name, NetworkType.Local, network, None, direct=True)
+        return self.__sdns[name]
+    
+    def getSDN(self, name: str) -> Network:
+        return self.__sdns[name]
+    
+    
     def getNetwork(self, name: str) -> Network:
         """!
         @brief Retrieve a network.
@@ -294,9 +306,6 @@ class AutonomousSystem(Printable, Graphable, Configurable):
                 netname = 'Network: {}'.format(net.getName())
                 if net.getType() == NetworkType.InternetExchange:
                     netname = 'Exchange: {}...'.format(net.getName())
-                    l2graph.addVertex(netname, shape = 'rectangle')
-                if net.getType() == NetworkType.CrossConnect:
-                    netname = 'CrossConnect: {}...'.format(net.getName())
                     l2graph.addVertex(netname, shape = 'rectangle')
                 l2graph.addEdge(rtrname, netname)
 
