@@ -77,7 +77,7 @@ class File(Printable):
         """!
         @brief Get file path and content.
 
-        @returns a tuple where the first element is path and second element is
+        @returns a tuple where the first element is path and second element is 
         content
         """
         return (self.__path, self.__content)
@@ -226,7 +226,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str]]
 
     __shared_folders: Dict[str, str]
-    __persistent_storages: List[str]
+    __persistent_storages: List[str] 
 
     __name_servers: List[str]
 
@@ -448,7 +448,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
             self.__name_servers = []
             self.addSoftware('isc-dhcp-client')
             self.setFile('dhclient.sh', '''\
-            #!/bin/bash
+            #!/bin/bash  
             ip addr flush {iface}
             err=$(dhclient {iface} 2>&1)
 
@@ -459,17 +459,17 @@ class Node(Printable, Registrable, Configurable, Vertex):
                     filename=$(echo $err | cut -d "'" -f 2)
                     cp $filename /etc/resolv.conf
                     rm $filename
-            fi
+            fi                
             '''.format(iface=net.getName()))
             self.appendStartCommand('chmod +x dhclient.sh; ./dhclient.sh')
-
+            
         else: _addr = IPv4Address(address)
 
         _iface = Interface(net)
         _iface.setAddress(_addr)
 
         self.__interfaces.append(_iface)
-
+        
         net.associate(self)
 
     def joinNetwork(self, netname: str, address: str = "auto") -> Node:
@@ -504,11 +504,11 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns self, for chaining API calls.
         """
         assert not self.__asn == 0, 'This API is only available on a real physical node.'
-
+        
         for pending_netname, pending_address in self.__pending_nets:
             if pending_netname == netname:
                 self.__pending_nets.remove((pending_netname, pending_address))
-
+            
         self.__pending_nets.append((netname, address))
 
         return self
@@ -569,7 +569,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """!
         @brief Get role of current node.
 
-        Get role type of current node.
+        Get role type of current node. 
 
         @returns role.
         """
@@ -588,17 +588,17 @@ class Node(Printable, Registrable, Configurable, Vertex):
     def getClasses(self) -> list:
         """!
         @brief Get service of current node
-
-        @returns service
+        
+        @returns service 
         """
 
         return self.__classes
-
+    
     def setClasses(self, classes:list) -> list:
         """!
         @brief Set service of current node
-
-        @returns self for chaining API calls.
+        
+        @returns self for chaining API calls. 
         """
         self.__classes = classes
         return self
@@ -615,7 +615,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     def getLabel(self) -> dict:
         return self.__label
-
+        
     def getFile(self, path: str) -> File:
         """!
         @brief Get a file object, and create if not exist.
@@ -670,7 +670,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         container, value = path of the file on the host.
         """
         return self.__imported_files
-
+    
     def importFile(self, hostpath: str, containerpath: str) -> Node:
         """!
         @brief Import a file from the host to the container.
@@ -699,7 +699,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         if ' ' in name:
             for soft in name.split(' '):
                 self.__softwares.add(soft)
-        else:
+        else: 
             self.__softwares.add(name)
 
         return self
@@ -726,7 +726,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__build_commands.append(cmd)
 
         return self
-
+    
     def getBuildCommands(self) -> List[str]:
         """!
         @brief Get build commands.
@@ -817,7 +817,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     def addPersistentStorage(self, path: str) -> Node:
         """!
-        @brief Add persistent storage to node.
+        @brief Add persistent storage to node. 
 
         Nodes usually start fresh when you re-start them. This allow setting a
         directory where data will be persistent.
@@ -848,14 +848,14 @@ class Node(Printable, Registrable, Configurable, Vertex):
         if node.getDescription() != None: self.setDescription(node.getDescription())
         if node.getClasses()     != None: self.setClasses(node.getClasses())
 
-        # TODO:
+        # TODO: 
         # It is called in Emulator::render
         # Render steps are (1) Render Base, (2) Get pending targets(vnode name) from Service layers,
         # (3) Resolve bindings for all vnodes, (4) Applying changes made to virtual physical nodes to real physical nodes,
         # (5) Render Services.
         # copySettings is called in the step (4) and the base system is replaced when in the step (5)
         # if node.getBaseSystem() != None : self.setBaseSystem(node.getClasses())
-
+        
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for p in node.getPersistentStorages(): self.addPersistentStorage(p)
         for (c, f) in node.getStartCommands(): self.appendStartCommand(c, f)
@@ -865,7 +865,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         for file in node.getFiles():
             (path, content) = file.get()
             self.setFile(path, content)
-
+        
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -979,7 +979,7 @@ class Router(Node):
     def addTablePipe(self, src: str, dst: str = 'master4', importFilter: str = 'none', exportFilter: str = 'all', ignoreExist: bool = True) -> Router:
         """!
         @brief add a new routing table pipe.
-
+        
         @param src src table.
         @param dst (optional) dst table (default: master4)
         @param importFilter (optional) filter for importing from dst table to src table (default: none)
@@ -1052,7 +1052,7 @@ class RealWorldRouter(Router):
         @brief Add real world route.
 
         @param prefix prefix.
-
+        
         @throws AssertionError if sealed.
 
         @returns self, for chaining API calls.
@@ -1089,7 +1089,7 @@ class RealWorldRouter(Router):
         for prefix in self.__realworld_routes:
             # nat matched only
             self.appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -j MASQUERADE\n'.format(prefix))
-
+            
             if self.__hide_hops:
                 # remove realworld hops
                 self.appendFile('/rw_configure_script', 'iptables -t mangle -A POSTROUTING -d {} -j TTL --ttl-set 64\n'.format(prefix))
@@ -1110,61 +1110,6 @@ class RealWorldRouter(Router):
         for prefix in self.__realworld_routes:
             out += ' ' * indent
             out += '{}\n'.format(prefix)
-
+        
 
         return out
-
-
-class ScionRouter(Router):
-    """!
-    @brief Extends Router nodes for SCION routing.
-
-    SCION border router nodes will be replaced with this class during ScionRouting
-    layer configuration.
-    """
-
-    __interfaces: Dict[int, Dict]  # IFID to interface
-    __next_port: int               # Next free UDP port
-
-    def __init__(self):
-        super().__init__()
-        self.initScionRouter()
-
-    def initScionRouter(self):
-        self.__interfaces = {}
-        self.__next_port = 50000
-
-    def addScionInterface(self, ifid: int, iface: Dict) -> None:
-        """!
-        @brief Add a SCION interface to the border router.
-
-        @param ifid Interface ID of the new interface.
-        @param iface Interface definition.
-        """
-        assert ifid not in self.__interfaces, f"interface {ifid} already exists"
-        self.__interfaces[ifid] = iface
-
-    def getScionInterface(self, ifid: int) -> Dict:
-        """!
-        @brief Retrieve an existing interface.
-
-        @param ifid Interface ID to look up.
-        @throws AssertionError if the interface does not exist.
-        """
-        assert ifid in self.__interfaces, f"interface {ifid} does not exist"
-        return self.__interfaces[ifid]
-
-    def getScionInterfaces(self) -> Dict[int, Dict]:
-        """!
-        @brief Get all border router interfaces.
-        @returns IFIDs and interface declarations for border router.
-        """
-        return self.__interfaces
-
-    def getNextPort(self) -> int:
-        """!
-        @brief Get the next free UDP port. Called during configuration.
-        """
-        port = self.__next_port
-        self.__next_port += 1
-        return port
