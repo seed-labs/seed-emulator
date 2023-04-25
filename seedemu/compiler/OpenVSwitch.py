@@ -13,7 +13,7 @@ OVS_CMD = '''\
 
 {add_port}
 
-sudo ovs-ofctl del-flows sdn0
+#sudo ovs-ofctl del-flows sdn0
 
 {if_setup}
 '''
@@ -107,6 +107,7 @@ class OpenVSwitch(Compiler):
                             node_name=name
                         )
                         nodes.append({"id": int(str(address).split(".")[-1]),
+                                      "container_id": name,
                             "ipaddress": str(address),
                                         "x":0,
                                         "y":0,

@@ -1,0 +1,23 @@
+{
+    "node_count": 2,
+    "node_info": [
+        {
+            "id": 1,
+            "container_id": "as10h-host0-10.0.0.1",
+            "ipaddress": "10.0.0.1",
+            "x": 100,
+            "y": 100,
+            "dist": {
+                "2": 100.0
+            }
+        },
+        {
+            "id": 2,
+            "container_id": "as10h-host1-10.0.0.2",
+            "ipaddress": "10.0.0.2",
+            "x": 200,
+            "y": 100,
+            "dist": {}
+        }
+    ]
+}

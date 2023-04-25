@@ -1,0 +1,16 @@
+#!/bin/bash
+
+sudo ovs-vsctl add-br sdn0
+sudo ifconfig sdn0 10.0.0.254 netmask 255.255.255.0 up
+
+
+sudo ovs-docker add-port sdn0 eth1 as10h-host0-10.0.0.1 --ipaddress=10.0.0.1/24
+sudo ovs-docker add-port sdn0 eth1 as10h-host1-10.0.0.2 --ipaddress=10.0.0.2/24
+
+
+#sudo ovs-ofctl del-flows sdn0
+
+docker exec as10h-host0-10.0.0.1 /tc_init
+docker exec as10h-host1-10.0.0.2 /tc_init
+
+
