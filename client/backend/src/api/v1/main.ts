@@ -32,7 +32,7 @@ const getContainers: () => Promise<SeedContainerInfo[]> = async function() {
 } 
 
 const getNodePosition: () => Promise<NodeInfo> = async function() {
-    const _node_info = fs.readFileSync('/home/won/seed-emulator/examples/A00-simple-peering/command/node_pos.json', 'utf-8');
+    const _node_info = fs.readFileSync('/home/won/master/seed-emulator/examples/C05-manet/command/node_pos.json', 'utf-8');
     const node_info = JSON.parse(_node_info) as NodeInfo;
     console.log(node_info);
     return node_info;;
