@@ -285,11 +285,29 @@ class DockerImage(object):
         for soft in software:
             self.__software.add(soft)
 
-BaseSystemImageMapping: Dict = {}
-# BaseSystemImageMapping['virtual-name'] = (DockerImage('image name'), [software...])
-BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
-BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (DockerImage('handsonsecurity/seedemu-ethereum', []))
+# BaseSystemImageMapping: Dict = {}
+# # BaseSystemImageMapping['virtual-name'] = (DockerImage('image name'), [software...])
+# BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
+# BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (DockerImage('handsonsecurity/seedemu-ethereum', []))
+UBUNTU_IMAGE   = DockerImage(name='ubuntu:20.04',
+                                software=[])
 
+BASE_IMAGE     = DockerImage(name='handsonsecurity/seedemu-base',
+                                software=['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2',
+                                        'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat'])
+
+ROUTER_IMAGE   = DockerImage(name='handsonsecurity/seedemu-router',
+                                software=['bird2'])
+
+ETHEREUM_IMAGE = DockerImage(name='handsonsecurity/seedemu-ethereum',
+                                software=['software-properties-common', 'python3', 'python3-pip'])
+
+BaseSystemImageMapping = {
+        BaseSystem.UBUNTU_20_04:     UBUNTU_IMAGE,
+        BaseSystem.SEEDEMU_BASE:     BASE_IMAGE,
+        BaseSystem.SEEDEMU_ROUTER:   ROUTER_IMAGE,
+        BaseSystem.SEEDEMU_ETHEREUM: ETHEREUM_IMAGE
+    }
 class Docker(Compiler):
     """!
     @brief The Docker compiler class.
