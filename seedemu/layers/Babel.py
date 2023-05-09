@@ -2,6 +2,8 @@ from __future__ import annotations
 from seedemu.core import Node, Emulator, Layer
 from seedemu.core.enums import NetworkType
 from typing import Set, Dict, List, Tuple
+from ipaddress import IPv4Network
+
 
 BabelFileTemplates: Dict[str, str] = {}
 
@@ -12,6 +14,14 @@ BabelFileTemplates['babel_body'] = """
         export all;
     }};
 {interfaces}
+"""
+
+BabelFileTemplates['dummy_direct'] = """
+    ipv4 {
+        table t_direct;
+        import all;
+    };
+    interface "wireless_id";
 """
 
 BabelFileTemplates['babel_interface'] = """\
@@ -39,6 +49,8 @@ class Babel(Layer):
     __stubs: Set[Tuple[int, str]]
     __masked: Set[Tuple[int, str]]
     __masked_asn: Set[int]
+    __id_assigner: IPv4Network
+    __id_pos: int
 
     def __init__(self, network_type: str = 'wired'):
         """!
@@ -49,6 +61,8 @@ class Babel(Layer):
         self.__masked = set()
         self.__masked_asn = set()
         self.__network_type = network_type
+        self.__id_assigner = IPv4Network('10.10.0.0/16')
+        self.__id_pos = 1
 
 
         self.addDependency('Routing', False, False)
@@ -152,6 +166,16 @@ class Babel(Layer):
             router: Node = obj
             if router.getAsn() in self.__masked_asn: continue
 
+            self._log("Setting up wireless id interface for AS{} Wireless Router {}...".format(scope, name))
+
+            lbaddr = self.__id_assigner[self.__id_pos]
+
+            router.appendStartCommand('ip li add wireless_id type dummy')
+            router.appendStartCommand('ip li set wireless_id up')
+            router.appendStartCommand('ip addr add {}/32 dev wireless_id'.format(lbaddr))
+            self.__id_pos += 1
+
+
             stubs: List[str] = ['dummy0']
             active: List[str] = []
 
@@ -187,6 +211,9 @@ class Babel(Layer):
                 # generate the routes directly from the interfaces). 
                 router.addTablePipe(src='t_direct', dst='t_babel', ignoreExist=False,
                                     importFilter='none', exportFilter = 'all')
+                
+                # Add dummy interface to its direct. 
+                router.addProtocol('direct', 'dummy', BabelFileTemplates['dummy_direct'])
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
