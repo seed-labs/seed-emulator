@@ -10,7 +10,10 @@ BabelFileTemplates: Dict[str, str] = {}
 BabelFileTemplates['babel_body'] = """
     ipv4 {{
         table t_babel;
-        import all;
+        import filter {{
+            krt_prefsrc={src_ip};
+            accept;
+        }};
         export all;
     }};
 {interfaces}
@@ -168,11 +171,11 @@ class Babel(Layer):
 
             self._log("Setting up wireless id interface for AS{} Wireless Router {}...".format(scope, name))
 
-            lbaddr = self.__id_assigner[self.__id_pos]
+            router_default_addr = self.__id_assigner[self.__id_pos]
 
             router.appendStartCommand('ip li add wireless_id type dummy')
             router.appendStartCommand('ip li set wireless_id up')
-            router.appendStartCommand('ip addr add {}/32 dev wireless_id'.format(lbaddr))
+            router.appendStartCommand('ip addr add {}/32 dev wireless_id'.format(router_default_addr))
             self.__id_pos += 1
 
 
@@ -202,10 +205,11 @@ class Babel(Layer):
             if babel_interfaces != '':
                 router.addTable('t_babel')
                 router.addProtocol('babel', 'babel1', BabelFileTemplates['babel_body'].format(
+                    src_ip = router_default_addr,
                     interfaces = babel_interfaces
                 ))
                 router.addTablePipe('t_babel')
-
+                
                 # Import all the routes from the local table to the babel table.
                 # This is needed for RIP and Babel, but not for OSPF (OSPF will
                 # generate the routes directly from the interfaces). 
