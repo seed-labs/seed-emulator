@@ -64,8 +64,8 @@ class Babel(Layer):
         self.__masked = set()
         self.__masked_asn = set()
         self.__network_type = network_type
-        self.__id_assigner = IPv4Network('10.10.0.0/16')
-        self.__id_pos = 1
+        self.__id_assigner = IPv4Network('10.0.0.0/16')
+        self.__id_pos = 100
 
 
         self.addDependency('Routing', False, False)
