@@ -34,9 +34,16 @@ export interface FilterRespond {
 export interface NodeInfo {
     node_count: number;
     node_info: {
+        id: number;
+        container_id: string;
         ipaddress: string;
         x: number;
         y: number;
+        connectivity: {
+            id: number;
+            container_id: string;
+            loss: number;
+        }[]; 
     }[];
 }
 
@@ -289,6 +296,59 @@ export class DataSource {
         return edges;
     }
 
+    get mEdges(): Edge[] {
+        var edges: Edge[] = [];
+
+        this._node_info.node_info.forEach(node=>{
+            node.connectivity.forEach(connection=>{
+                var connectivity=0;
+                if (connection.loss==0){
+                    connectivity = 5
+                }else if (connection.loss==20){
+                    connectivity = 4
+                }else if (connection.loss==40) {
+                    connectivity = 3
+                } else if (connection.loss==60) {
+                    connectivity = 2
+                } else if (connection.loss==80) {
+                    connectivity = 1
+                } else {
+                    return
+                }
+                edges.push({
+                    from: node.container_id,
+                    to: connection.container_id,
+                    width: connectivity,
+                    label: connection.loss + "% loss"
+                })
+            })
+            
+        })
+
+        this._nodes.forEach(node => {
+            let nets = node.NetworkSettings.Networks;
+            Object.keys(nets).forEach(key => {
+                let net = nets[key];
+                var label = '';
+
+                node.meta.emulatorInfo.nets.forEach(emunet => {
+                    // fixme
+                    if (key.includes(emunet.name)) {
+                        label = emunet.address;
+                    }
+                });
+                console.log(node.Id)
+                edges.push({
+                    from: node.Id,
+                    to: net.NetworkID,
+                    label
+                });
+            })
+        })
+
+        return edges;
+    }
+
     get vertices(): Vertex[] {
         var vertices: Vertex[] = [];
 
@@ -323,15 +383,15 @@ export class DataSource {
             this._node_info.node_info.find(node=>{
                 console.log(nodeInfo.nets[0].address.split('/')[0]);
                 if(node.ipaddress == nodeInfo.nets[0].address.split('/')[0]){
-                    vertex.x = node.x;
-                    vertex.y = node.y;
+                    vertex.x = node.x * 2;
+                    vertex.y = node.y * 2;
                 }
             })
             // if (nodeInfo.position_x !== undefined) {
             //     vertex.x = Number(nodeInfo.position_x);
             //     vertex.y = Number(nodeInfo.position_y);
             // }
-            if (nodeInfo.role == 'Host') {
+            if (nodeInfo.role == 'Router') {
                 vertices.push(vertex);
             }
 

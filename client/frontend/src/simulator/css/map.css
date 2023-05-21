@@ -140,7 +140,14 @@ html, body, .map-area {
     min-width: 300px;
 }
 
-.info-plate, .replay-plate {
+.connectivity-plate-panel {
+    font-family: 'Courier New', Courier, monospace;
+    top: 85px;
+    left: 10px;
+    min-width: 300px;
+}
+
+.info-plate, .replay-plate, .connectivity-plate {
     padding: .25em;
     font-size: .85em;
 }
@@ -178,7 +185,7 @@ html, body, .map-area {
     padding-left: 0;
 }
 
-.info-plate .label {
+.info-plate .label , .connectivity-plate .label{
     font-weight: bold;
 }
 

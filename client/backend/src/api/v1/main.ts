@@ -32,7 +32,7 @@ const getContainers: () => Promise<SeedContainerInfo[]> = async function() {
 } 
 
 const getNodePosition: () => Promise<NodeInfo> = async function() {
-    const _node_info = fs.readFileSync('/home/won/master/seed-emulator/examples/C05-manet/command/node_pos.json', 'utf-8');
+    const _node_info = fs.readFileSync('/home/won/seedblock/experiments/moving/info/node_pos.json', 'utf-8');
     const node_info = JSON.parse(_node_info) as NodeInfo;
     console.log(node_info);
     return node_info;;
@@ -74,7 +74,6 @@ router.get('/network', async function(req, res, next) {
 });
 
 router.get('/container', async function(req, res, next) {
-    console.log("hihi container");
     try {
         let containers = await getContainers();
 
@@ -286,10 +285,8 @@ router.post('/container/:id/bgp/:peer', express.json(), async function (req, res
 });
 
 router.get('/position', async function(req, res, next) {
-    console.log("hi");
     try {
         let containers = await getNodePosition();
-
         res.json({
             ok: true,
             result: containers

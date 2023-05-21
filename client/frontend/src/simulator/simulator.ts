@@ -11,6 +11,7 @@ const mapUi = new MapUi({
     datasource,
     mapElementId: 'map',
     infoPlateElementId: 'info-plate',
+    connPlateElementId: 'connectivity-plate',
     filterInputElementId: 'filter',
     filterWrapElementId: 'filter-wrap',
     logPanelElementId: 'log-panel',

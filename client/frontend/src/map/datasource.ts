@@ -239,7 +239,6 @@ export class DataSource {
                         label = emunet.address;
                     }
                 });
-
                 edges.push({
                     from: node.Id,
                     to: net.NetworkID,
