@@ -28,7 +28,8 @@ BabelFileTemplates['dummy_direct'] = """
 """
 
 BabelFileTemplates['babel_interface'] = """\
-    interface "{interfaceName}" {{ type {networkType}; }};
+    interface "{interfaceName}" {{ type {networkType}; 
+                                   hello interval 1s; }};
 """
 
 BabelFileTemplates['babel_stub_interface'] = """\
