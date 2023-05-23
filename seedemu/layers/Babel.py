@@ -174,6 +174,8 @@ class Babel(Layer):
 
             router_default_addr = self.__id_assigner[self.__id_pos]
 
+            router.setLabel('routerid', router_default_addr)
+
             router.appendStartCommand('ip li add wireless_id type dummy')
             router.appendStartCommand('ip li set wireless_id up')
             router.appendStartCommand('ip addr add {}/32 dev wireless_id'.format(router_default_addr))
