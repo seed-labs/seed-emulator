@@ -73,6 +73,8 @@ while read -sr line; do {
     [[ "$cmd" == "bird_peer_"* ]] && output="`bgp $cmd 2>&1`"
     [[ "$cmd" == "tc qdisc"* ]] && output="`$cmd 2>&1`"
 
+    [[ "$cmd" == "ping -R"* ]] && output="`$cmd 2>&1`"
+
     printf '_BEGIN_RESULT_'
     jq -Mcr --arg id "$id" --arg return_value "$?" --arg output "$output" -n '{id: $id | tonumber, return_value: $return_value | tonumber, output: $output }'
     printf '_END_RESULT_'
@@ -951,7 +953,6 @@ class Docker(Compiler):
         print(dockerfile, file=open('Dockerfile', 'w'))
 
         chdir('..')
-        print(node.getInterfaces())
 
         name = self.__naming_scheme.format(
             asn = node.getAsn(),
