@@ -122,11 +122,40 @@ DockerCompilerFileTemplates['compose_service'] = """\
             - net.ipv4.ip_forward=1
             - net.ipv4.conf.default.rp_filter=0
             - net.ipv4.conf.all.rp_filter=0
+{gpuDevices}
         privileged: true
         networks:
 {networks}{ports}{volumes}
         labels:
 {labelList}
+"""
+
+# DockerCompilerFileTemplates['compose_service_resources_limits'] = """\
+#         deploy:
+#             resources:
+#                 limits:
+#                     cpus: {cpuLimit}
+#                     memory: {memLimit}
+#                     pids: {pidLimit}
+# """ # TODO: try writing with yaml lib?
+
+# DockerCompilerFileTemplates['compose_service_resources_reservations'] = """\
+#         deploy:
+#             resources:
+#                 reservations:
+#                     cpus: {cpuLimit}
+#                     memory: {memLimit}
+#                     pids: {pidLimit}
+# """ # TODO: try writing with yaml lib?
+
+DockerCompilerFileTemplates['compose_service_resources_gpus'] = """\
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                      - driver: nvidia
+                        capabilities: [gpu]
+                        device_ids: [{deviceIDList}]
 """
 
 DockerCompilerFileTemplates['compose_label_meta'] = """\
@@ -835,6 +864,14 @@ class Docker(Compiler):
                 netId = real_netname,
                 address = address
             )
+        
+        _gpuDevices = node.getGPUDevices()
+        gpuDevices = ""
+        if len(_gpuDevices) > 0:
+            gpuDevices = DockerCompilerFileTemplates['compose_service_resources_gpus'].format(
+                deviceIDList = ', '.join(f'"{device}"' for device in _gpuDevices)
+            )
+
 
         _ports = node.getPorts()
         ports = ''
@@ -948,7 +985,8 @@ class Docker(Compiler):
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
             labelList = self._getNodeMeta(node),
-            volumes = volumes
+            volumes = volumes,
+            gpuDevices = gpuDevices
         )
 
     def _compileNet(self, net: Network) -> str:

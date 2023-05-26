@@ -229,6 +229,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     __name_servers: List[str]
 
+    __gpus: List[str]
+
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
         @brief Node constructor.
@@ -778,6 +780,26 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns list of interfaces.
         """
         return self.__interfaces
+
+    def setGPUDevices(self, devices: List[str]):
+        """!
+        @brief Set the GPU device for the node.
+        
+        @param devices the new list of GPU ID.
+        
+        @returns self, for chaining API calls.
+        """
+        self.__gpu = devices
+
+        return self
+
+    def getGPUDevices(self) -> List[str]:
+        """!
+        @brief Get the GPU device for the node.
+
+        @returns list of GPU ID.
+        """
+        return self.__gpu
 
     def addSharedFolder(self, nodePath: str, hostPath: str) -> Node:
         """!
