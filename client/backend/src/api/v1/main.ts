@@ -7,6 +7,7 @@ import WebSocket from 'ws';
 import { Controller } from '../../utils/controller';
 import fs from 'fs';
 import { execSync } from 'child_process';
+import { stringify } from 'querystring';
 const router = express.Router();
 const docker = new dockerode();
 const socketHandler = new SocketHandler(docker);
@@ -32,9 +33,9 @@ const getContainers: () => Promise<SeedContainerInfo[]> = async function() {
 } 
 
 const getNodePosition: () => Promise<NodeInfo> = async function() {
-    const _node_info = fs.readFileSync('/home/won/seedblock/experiments/moving/info/node_pos.json', 'utf-8');
+    //const _node_info = fs.readFileSync(filepath, 'utf-8');
+    const _node_info = fs.readFileSync('/tmp/node_info/node_pos.json', 'utf-8');
     const node_info = JSON.parse(_node_info) as NodeInfo;
-    console.log(node_info);
     return node_info;;
 }
 
@@ -301,6 +302,24 @@ router.get('/position', async function(req, res, next) {
     next();
 });
 
+// router.post('/position', express.json(), async function(req, res, next) {
+//     let filepath = req.body.path;
+//     try {
+//         let containers = await getNodePosition(filepath);
+//         res.json({
+//             ok: true,
+//             result: containers
+//         });
+//     } catch (e) {
+//         res.json({
+//             ok: false,
+//             result: e.toString()
+//         });
+//     }
+
+//     next();
+// });
+
 router.get('/container/:id/connect/:ip', express.json(), async function (req, res, next) {
     let id = req.params.id;
     let peer_ip = req.params.ip;
@@ -338,10 +357,6 @@ router.get('/container/:id/connect/:ip', express.json(), async function (req, re
 
     execSync(`sudo ovs-ofctl add-flow sdn0 in_port=${peer1_ofport},actions=output:${peer1_current_flows.join(',')}`, { 'encoding': 'utf8' })
     execSync(`sudo ovs-ofctl add-flow sdn0 in_port=${peer2_ofport},actions=output:${peer2_current_flows.join(',')}`, { 'encoding': 'utf8' })
-    
-
-    console.log(peer1_current_flows)
-    console.log(peer2_current_flows)
     
     // var candidates = (await docker.listContainers())
     //     .filter(c => c.Id.startsWith(id));
@@ -389,6 +404,59 @@ router.get('/container/:id/tc/:ip/:distance', express.json(), async function (re
 
     res.json({
         ok: true
+    });
+
+    next();
+});
+
+
+router.get('/container/:id/connectivity/:ip', express.json(), async function (req, res, next) {
+    let id = req.params.id;
+    let dst_ip = req.params.ip;
+    
+    var candidates = (await docker.listContainers())
+        .filter(c => c.Id.startsWith(id));
+
+    if (candidates.length != 1) {
+        res.json({
+            ok: false,
+            result: `no match or multiple match for container ID ${id}.`
+        });
+        next();
+        return;
+    }
+
+    let node = candidates[0];
+
+    let result = await controller.startConnTest(node.Id, dst_ip);
+
+    let splitted_result = result.output.split('\n')
+    let result_summary = splitted_result[splitted_result.length-2]
+    if (result_summary.startsWith('---')){
+        result_summary = splitted_result[splitted_result.length-1]
+    }
+    let splitted_result_summary = result_summary.split(",")
+    console.log(result_summary)
+    let loss = splitted_result_summary[splitted_result_summary.length-2]
+    let routes = 'no routes';
+    console.log(loss);
+
+    if (loss.split("%")[0].trim() != "100"){
+        let routes_list: string[] = [];
+        result.output.split("\n\n")[0].split("RR:")[1].split('\n').forEach(route=>{
+            console.log(route)
+            routes_list.push(route.replace('\t','').trim());
+        });
+
+        routes = routes_list.join('\n')
+    }
+    console.log(routes);
+    res.json({
+        ok: true,
+        result: {
+            loss: loss,
+            routes: routes
+        }
     });
 
     next();

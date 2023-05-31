@@ -42,6 +42,10 @@ export interface MapUiConfiguration {
         intervalElementId: string, // element id of interval input
         statusElementId: string // element id of status 
     },
+    // filePathControls: {
+    //     submitButtonElementId: string, // element id of file path submit button
+    //     filePathInputElementId: string // element id of file path input 
+    // }
     windowManager: { // console window manager
         desktopElementId: string, // elementid for desktop
         taskbarElementId: string // elementid for taskbar
@@ -96,6 +100,10 @@ export class MapUi {
     private _interval: HTMLInputElement;
     private _replayStatusText: HTMLElement;
 
+    // private _filepathSubmitButton: HTMLButtonElement;
+    // private _filepathInput: HTMLInputElement;
+    // private _node_info_filepath: string;
+
     private _datasource: DataSource;
 
     private _nodes: DataSet<Vertex, 'id'>;
@@ -131,6 +139,12 @@ export class MapUi {
 
     /** current (or last selected, if none is selected now) vertex. */
     private _curretNode: Vertex;
+
+    /** from vertex for conn test */
+    private _connFromNode: Vertex;
+
+    /** to vertex for conn test */
+    private _connToNode: Vertex;
 
     /** current suggestion item selection. */
     private _suggestionsSelection: number;
@@ -188,6 +202,10 @@ export class MapUi {
         this._interval = document.getElementById(config.replayControls.intervalElementId) as HTMLInputElement;
         this._replayStatusText = document.getElementById(config.replayControls.statusElementId);
 
+        // this._filepathSubmitButton = document.getElementById(config.filePathControls.submitButtonElementId) as HTMLButtonElement;
+        // this._filepathInput = document.getElementById(config.filePathControls.filePathInputElementId) as HTMLInputElement;
+        // this._node_info_filepath = '';
+        
         this._logMinimized = true;
 
         this._replayStatus = 'stopped';
@@ -246,6 +264,11 @@ export class MapUi {
             this._seeking = false;
         };
 
+        // this._filepathSubmitButton.onclick = () => {
+        //     this._node_info_filepath = this._filepathInput.value;
+        //     console.log(this._node_info_filepath);
+        //     this.start();
+        // }
         this._logToggle.onclick = () => {
             if (this._logMinimized) {
                 this._logWrap.classList.remove('minimized');
@@ -1026,45 +1049,43 @@ export class MapUi {
                 this._updateInfoPlateWith(node.Id);
             };
 
-            let connect = document.createElement('a');
-            let connect_input = document.createElement('input');
-            let connect_button = document.createElement('button');
-            let peer_node_id;
-            connect_button.innerText = 'Connect'
-            connect_button.onclick = async () => {
-                console.log(node.Id);
-                let meta = node.meta.emulatorInfo;
-                let node_name = `as${meta.asn}h-${meta.name}-${node.meta.emulatorInfo.nets[0].address.split("/")[0]}`;
-                let peer_node_name = 'no';
-                let distance = 0;
-                console.log(connect_input.value);
-                this._nodes.forEach(node => {        
-                    if (node.type == 'node') {
-                        let nodeObj = (node.object as EmulatorNode);
-                        let nodeInfo = nodeObj.meta.emulatorInfo;
-                        if (nodeInfo.nets[0].address.split("/")[0] == connect_input.value){
-                            peer_node_id = nodeObj.Id
-                            peer_node_name = `as${nodeInfo.asn}h-${nodeInfo.name}-${nodeInfo.nets[0].address.split("/")[0]}`
-                            distance = Math.abs(Number(nodeInfo.position_x) - Number(meta.position_x)) + Math.abs(Number(nodeInfo.position_y)-Number(meta.position_y))
-                        }                        
-                    }
-                })
-                this._tmp_edges.push({
-                    from: node.Id,
-                    to: peer_node_id,
-                    label: `${node.meta.emulatorInfo.nets[0].address.split("/")[0]}-${connect_input.value}`
-                });
-                await this._datasource.setMobileConnect(node_name, peer_node_name);
-                await this._datasource.setTrafficControl(node.Id, connect_input.value, String(distance))
-                this.redraw();
-            }
-            connect.append(connect_input);
-            connect.append(connect_button);
+            // let connect = document.createElement('a');
+            // let connect_input = document.createElement('input');
+            // let connect_button = document.createElement('button');
+            // let peer_node_id;
+            // connect_button.innerText = 'Connect'
+            // connect_button.onclick = async () => {
+            //     let meta = node.meta.emulatorInfo;
+            //     let node_name = `as${meta.asn}h-${meta.name}-${node.meta.emulatorInfo.nets[0].address.split("/")[0]}`;
+            //     let peer_node_name = 'no';
+            //     let distance = 0;
+            //     this._nodes.forEach(node => {        
+            //         if (node.type == 'node') {
+            //             let nodeObj = (node.object as EmulatorNode);
+            //             let nodeInfo = nodeObj.meta.emulatorInfo;
+            //             if (nodeInfo.nets[0].address.split("/")[0] == connect_input.value){
+            //                 peer_node_id = nodeObj.Id
+            //                 peer_node_name = `as${nodeInfo.asn}h-${nodeInfo.name}-${nodeInfo.nets[0].address.split("/")[0]}`
+            //                 distance = Math.abs(Number(nodeInfo.position_x) - Number(meta.position_x)) + Math.abs(Number(nodeInfo.position_y)-Number(meta.position_y))
+            //             }                        
+            //         }
+            //     })
+            //     this._tmp_edges.push({
+            //         from: node.Id,
+            //         to: peer_node_id,
+            //         label: `${node.meta.emulatorInfo.nets[0].address.split("/")[0]}-${connect_input.value}`
+            //     });
+            //     await this._datasource.setMobileConnect(node_name, peer_node_name);
+            //     await this._datasource.setTrafficControl(node.Id, connect_input.value, String(distance))
+            //     this.redraw();
+            //}
+            // connect.append(connect_input);
+            // connect.append(connect_button);
 
             actions.append(consoleLink);
             actions.append(netToggle);
             actions.append(reloadLink);
-            actions.append(connect);
+            // actions.append(connect);
 
             infoPlate.appendChild(actions);
         }
@@ -1084,205 +1105,51 @@ export class MapUi {
 
         this._curretNode = vertex;
 
+        if (this._connFromNode && this._connToNode){
+            this._connFromNode = vertex;
+            this._connToNode = null;
+        }else if (this._connFromNode){
+            this._connToNode = vertex;
+        }else{
+            this._connFromNode = vertex;
+        }
+
         let connPlate = document.createElement('div');
-        let node = vertex.object as EmulatorNode;
-        connPlate.innerText = node.Id.substr(0, 12);
+        let connFromNode = this._connFromNode.object as EmulatorNode;
+        connPlate.appendChild(this._createInfoPlateValuePair('From', connFromNode.meta.emulatorInfo.name));
+        if (this._connToNode){
+            let connToNode = this._connToNode.object as EmulatorNode;
+            connPlate.appendChild(this._createInfoPlateValuePair('To', connToNode.meta.emulatorInfo.name));
+            let test_button = document.createElement('button');
+            test_button.innerText = 'Start Test';
+            connPlate.appendChild(test_button);
+            test_button.onclick = async () => {
+                if (document.getElementById("conn_result")){
+                    document.getElementById("conn_result").remove();
+                }
+                let connResult = document.createElement('div');
+                connResult.id = "conn_result"
+                connResult.classList.add('section');
 
-        // if (vertex.type == 'network') {
-        //     let net = vertex.object as EmulatorNetwork;
-        //     title.innerText = `${net.meta.emulatorInfo.type == 'global' ? 'Exchange' : 'Network'}: ${vertex.label}`;
+                let connResultTitle = document.createElement('div');
+                connResultTitle.className = 'title';
+                connResultTitle.innerText = 'Connectivity Test Result';
 
-        //     if (net.meta.emulatorInfo.description) {
-        //         let div = document.createElement('div');
-        //         div.innerText = net.meta.emulatorInfo.description;
-        //         div.classList.add('description');
+                connResult.appendChild(connResultTitle);
+                connPlate.appendChild(connResult);
+                console.log(connToNode.meta.emulatorInfo)
+                if (connToNode.meta.emulatorInfo.routerid){
+                    let result = await this._datasource.startConnTest(connFromNode.Id, connToNode.meta.emulatorInfo.routerid)
+                    // let loss = result
+                    console.log(result.loss);
+                    console.log(result.routes);
+                    connResult.appendChild(this._createInfoPlateValuePair('loss', result.loss))
+                    connResult.appendChild(this._createInfoPlateValuePair('routes', '\n'+result.routes))
+                }
+            }
+        }
 
-        //         infoPlate.appendChild(div);
-        //     }
-
-        //     infoPlate.appendChild(this._createInfoPlateValuePair('ID', net.Id.substr(0, 12)));
-        //     infoPlate.appendChild(this._createInfoPlateValuePair('Name', net.meta.emulatorInfo.name));
-        //     infoPlate.appendChild(this._createInfoPlateValuePair('Scope', net.meta.emulatorInfo.scope));
-        //     infoPlate.appendChild(this._createInfoPlateValuePair('Type', net.meta.emulatorInfo.type));
-        //     infoPlate.appendChild(this._createInfoPlateValuePair('Prefix', net.meta.emulatorInfo.prefix));
-        // }
-
-        // if (vertex.type == 'node') {
-        //     let node = vertex.object as EmulatorNode;
-        //     title.innerText = `${node.meta.emulatorInfo.role == 'Router' ? 'Router' : 'Host'}: ${vertex.label}`;
-
-        //     if (node.meta.emulatorInfo.description) {
-        //         let div = document.createElement('div');
-        //         div.innerText = node.meta.emulatorInfo.description;
-        //         div.classList.add('description');
-
-        //         infoPlate.appendChild(div);
-        //     }
-
-        //     infoPlate.appendChild(this._createInfoPlateValuePair('ID', node.Id.substr(0, 12)));
-        //     infoPlate.appendChild(this._createInfoPlateValuePair('ASN', node.meta.emulatorInfo.asn.toString()));
-        //     infoPlate.appendChild(this._createInfoPlateValuePair('Name', node.meta.emulatorInfo.name));
-        //     infoPlate.appendChild(this._createInfoPlateValuePair('Role', node.meta.emulatorInfo.role));
-
-        //     let ipAddresses = document.createElement('div');
-        //     ipAddresses.classList.add('section');
-
-        //     let ipTitle = document.createElement('div');
-        //     ipTitle.className = ' title';
-        //     ipTitle.innerText = 'IP addresses';
-
-        //     ipAddresses.appendChild(ipTitle);
-
-        //     node.meta.emulatorInfo.nets.forEach(net => {
-        //         ipAddresses.appendChild(this._createInfoPlateValuePair(net.name, net.address));
-        //     });
-
-        //     infoPlate.appendChild(ipAddresses);
-
-        //     if (node.meta.emulatorInfo.role == 'Router' || node.meta.emulatorInfo.role == 'Route Server') {
-        //         let bgpDetails = document.createElement('div');
-        //         bgpDetails.classList.add('section');
-
-        //         let peers = await this._datasource.getBgpPeers(node.Id);
-
-        //         let bgpTitle = document.createElement('div');
-        //         bgpTitle.className = 'title';
-        //         bgpTitle.innerText = 'BGP sessions';
-
-        //         bgpDetails.appendChild(bgpTitle);
-
-        //         if (peers.length == 0) {
-        //             let noPeers = document.createElement('div');
-        //             noPeers.innerText = 'No BGP peers.';
-        //             noPeers.classList.add('caption');
-
-        //             bgpDetails.appendChild(noPeers);
-        //         }
-
-        //         peers.forEach(peer => {
-        //             let container = document.createElement('div');
-
-        //             let peerName = document.createElement('span');
-        //             peerName.classList.add('label');
-        //             peerName.innerText = peer.name;
-
-        //             let peerStatus = document.createElement('span');
-        //             peerStatus.innerText = peer.protocolState != 'down' ? peer.bgpState : 'Disabled';
-
-        //             let peerAction = document.createElement('a');
-            
-        //             peerAction.href = '#';
-        //             peerAction.classList.add('inline-action-link');
-        //             peerAction.innerText = peer.protocolState != 'down' ? 'Disable' : 'Enable';
-        //             peerAction.onclick = async () => {
-        //                 await this._datasource.setBgpPeers(node.Id, peer.name, peer.protocolState == 'down');
-        //                 this._infoPlateElement.classList.add('loading');
-        //                 window.setTimeout(() => {
-        //                     this._updateInfoPlateWith(node.Id);
-        //                 }, 100);
-        //             };
-
-        //             container.appendChild(peerName);
-        //             container.appendChild(peerStatus);
-        //             container.appendChild(peerAction);
-
-        //             bgpDetails.appendChild(container);
-        //         });
-
-        //         infoPlate.appendChild(bgpDetails);
-        //     }
-
-        //     let actions = document.createElement('div');
-        //     actions.classList.add('section');
-
-        //     let actionTitle = document.createElement('div');
-        //     actionTitle.className = 'title';
-        //     actionTitle.innerText = 'Actions';
-
-        //     actions.appendChild(actionTitle);
-
-        //     let consoleLink = document.createElement('a');
-            
-        //     consoleLink.href = '#';
-        //     consoleLink.innerText = 'Launch console';
-        //     consoleLink.classList.add('action-link');
-
-        //     consoleLink.onclick = () => {
-        //         this._windowManager.createWindow(node.Id.substr(0, 12), vertex.label);
-        //     };
-
-        //     let netToggle = document.createElement('a');
-        //     let netState = await this._datasource.getNetworkStatus(node.Id);
-            
-        //     netToggle.href = '#';
-        //     netToggle.innerText = netState ? 'Disconnect' : 'Re-connect';
-        //     netToggle.onclick = async () => {
-        //         if (netState && node.meta.emulatorInfo.role == 'Host') {
-        //             let ok = window.confirm('You are about to disconnect a host node. Note that disconnecting nodes flush their routing table - for host nodes, this includes the default route. You will need to manually re-add the default route if you want to re-connect the host.\n\nProceed anyway?');
-        //             if (!ok) {
-        //                 return;
-        //             }
-        //         }
-        //         await this._datasource.setNetworkStatus(node.Id, !netState);
-        //         this._infoPlateElement.classList.add('loading');
-        //         window.setTimeout(() => {
-        //             this._updateInfoPlateWith(node.Id);
-        //         }, 100);
-        //     };
-        //     netToggle.classList.add('action-link');
-
-        //     let reloadLink = document.createElement('a');
-            
-        //     reloadLink.href = '#';
-        //     reloadLink.innerText = 'Refresh';
-        //     reloadLink.classList.add('action-link');
-        //     reloadLink.onclick = () => {
-        //         this._updateInfoPlateWith(node.Id);
-        //     };
-
-        //     let connect = document.createElement('a');
-        //     let connect_input = document.createElement('input');
-        //     let connect_button = document.createElement('button');
-        //     let peer_node_id;
-        //     connect_button.innerText = 'Connect'
-        //     connect_button.onclick = async () => {
-        //         console.log(node.Id);
-        //         let meta = node.meta.emulatorInfo;
-        //         let node_name = `as${meta.asn}h-${meta.name}-${node.meta.emulatorInfo.nets[0].address.split("/")[0]}`;
-        //         let peer_node_name = 'no';
-        //         let distance = 0;
-        //         console.log(connect_input.value);
-        //         this._nodes.forEach(node => {        
-        //             if (node.type == 'node') {
-        //                 let nodeObj = (node.object as EmulatorNode);
-        //                 let nodeInfo = nodeObj.meta.emulatorInfo;
-        //                 if (nodeInfo.nets[0].address.split("/")[0] == connect_input.value){
-        //                     peer_node_id = nodeObj.Id
-        //                     peer_node_name = `as${nodeInfo.asn}h-${nodeInfo.name}-${nodeInfo.nets[0].address.split("/")[0]}`
-        //                     distance = Math.abs(Number(nodeInfo.position_x) - Number(meta.position_x)) + Math.abs(Number(nodeInfo.position_y)-Number(meta.position_y))
-        //                 }                        
-        //             }
-        //         })
-        //         this._tmp_edges.push({
-        //             from: node.Id,
-        //             to: peer_node_id,
-        //             label: `${node.meta.emulatorInfo.nets[0].address.split("/")[0]}-${connect_input.value}`
-        //         });
-        //         await this._datasource.setMobileConnect(node_name, peer_node_name);
-        //         await this._datasource.setTrafficControl(node.Id, connect_input.value, String(distance))
-        //         this.redraw();
-        //     }
-        //     connect.append(connect_input);
-        //     connect.append(connect_button);
-
-        //     actions.append(consoleLink);
-        //     actions.append(netToggle);
-        //     actions.append(reloadLink);
-        //     actions.append(connect);
-
-        //     infoPlate.appendChild(actions);
-        // }
-
+        
         this._connPlateElement.innerText = '';
         this._connPlateElement.appendChild(connPlate);
         // this._connPlateElement.classList.remove('loading');
@@ -1524,8 +1391,10 @@ export class MapUi {
      */
     async start() {
         await this._datasource.connect();
+        // if(this._node_info_filepath != ''){
         await this._datasource.get_position();
         this.redraw();
+       
         this._mapMacAddresses();
 
         if (this._filterMode == 'filter') {
@@ -1563,6 +1432,9 @@ export class MapUi {
     }
 
     async movement() {
+        // if(this._node_info_filepath == ''){
+        //     return
+        // }
         await this._datasource.get_position();
         var updated_edges = this._datasource.mEdges;
         var updated_nodes = this._datasource.vertices;

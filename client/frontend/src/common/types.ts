@@ -21,7 +21,8 @@ export interface EmulatorNode {
             description?: string,
             displayname?: string,
             position_x?: string,
-            position_y?: string
+            position_y?: string,
+            routerid?: string
         };
     };
 };

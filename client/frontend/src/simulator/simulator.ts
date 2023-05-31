@@ -40,6 +40,10 @@ const mapUi = new MapUi({
         intervalElementId: 'replay-interval',
         statusElementId: 'replay-status'
     },
+    // filePathControls: {
+    //     filePathInputElementId: 'filepath_input',
+    //     submitButtonElementId: 'filepath-submit'
+    // },
     windowManager: {
         desktopElementId: 'console-area',
         taskbarElementId: 'taskbar'

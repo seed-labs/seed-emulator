@@ -1,10 +1,11 @@
 version: "3"
 
 services:
-    seedemu-client:
+    seedemu-simulator:
         build: .
-        container_name: seedemu_client
+        container_name: seedemu_simulator
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
+            - /tmp/node_info:/tmp/node_info
         ports:
             - 8080:8080

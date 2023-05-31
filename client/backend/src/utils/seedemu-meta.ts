@@ -26,6 +26,7 @@ export interface SeedEmulatorNode extends VertexMeta {
     }[];
     position_x?: string;
     position_y?: string;
+    routerid?: string;
 }
 
 export interface SeedEmulatorNet extends VertexMeta {
@@ -85,6 +86,7 @@ export class Emulator {
             }
             if (key === 'position_x') node.position_x = value;
             if (key === 'position_y') node.position_y = value;
+            if (key === 'routerid') node.routerid = value;
             if (key === 'displayname') node.displayname = value;
             if (key === 'description') node.description = value;
         });

@@ -27,6 +27,10 @@ export interface ApiRespond<ResultType> {
     result: ResultType;
 }
 
+export interface ConnResult {
+    loss: string;
+    routes?: string;
+}
 export interface FilterRespond {
     currentFilter: string;
 }
@@ -131,6 +135,11 @@ export class DataSource {
     async get_position() {
         this._node_info = (await this._load<NodeInfo>('GET', `${this._apiBase}/position`)).result;
     }
+    // async get_position(path: string) {
+    //     this._node_info = (await this._load<NodeInfo>('POST', `${this._apiBase}/position`,
+    //                                                         JSON.stringify({path: path}))).result;
+    // }
+
 
     async connect() {
         this._nodes = (await this._load<EmulatorNode[]>('GET', `${this._apiBase}/container`)).result;
@@ -254,6 +263,16 @@ export class DataSource {
     }
 
     /**
+     * start network connectivity test from the given node to the given dst ip.
+     * 
+     * @param node node id.
+     * @param dst_ip true if up, false if down.
+     */
+    async startConnTest(node: string, dst_ip: string) {
+        return (await this._load<ConnResult>('GET', `${this._apiBase}/container/${node}/connectivity/${dst_ip}`)).result;
+    }
+
+    /**
      * event handler register.
      * 
      * @param eventName event to listen.
@@ -337,7 +356,6 @@ export class DataSource {
                         label = emunet.address;
                     }
                 });
-                console.log(node.Id)
                 edges.push({
                     from: node.Id,
                     to: net.NetworkID,
@@ -352,24 +370,6 @@ export class DataSource {
     get vertices(): Vertex[] {
         var vertices: Vertex[] = [];
 
-        // this._nets.forEach(net => {
-        //     var netInfo = net.meta.emulatorInfo;
-        //     var vertex: Vertex = {
-        //         id: net.Id,
-        //         fixed: true,
-        //         label: netInfo.displayname ?? `${netInfo.scope}/${netInfo.name}`,
-        //         type: 'network',
-        //         shape: netInfo.type == 'global' ? 'star' : 'diamond',
-        //         object: net
-        //     };
-
-        //     if (netInfo.type == 'local') {
-        //         vertex.group = netInfo.scope;
-        //     }
-
-        //     vertices.push(vertex);
-        // });
-
         this._nodes.forEach(node => {
             var nodeInfo = node.meta.emulatorInfo;
             var vertex: Vertex = {
@@ -381,16 +381,12 @@ export class DataSource {
                 object: node
             };
             this._node_info.node_info.find(node=>{
-                console.log(nodeInfo.nets[0].address.split('/')[0]);
                 if(node.ipaddress == nodeInfo.nets[0].address.split('/')[0]){
                     vertex.x = node.x * 2;
                     vertex.y = node.y * 2;
                 }
             })
-            // if (nodeInfo.position_x !== undefined) {
-            //     vertex.x = Number(nodeInfo.position_x);
-            //     vertex.y = Number(nodeInfo.position_y);
-            // }
+            
             if (nodeInfo.role == 'Router') {
                 vertices.push(vertex);
             }

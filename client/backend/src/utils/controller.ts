@@ -170,7 +170,6 @@ export class Controller implements LogProducer {
         let result = await promise;
 
         this._logger.debug(`[task ${task}] task end:`, result);
-
         return result;
     }
 
@@ -274,8 +273,20 @@ export class Controller implements LogProducer {
         let id = dst_ip.split('.').pop()
 
         this._logger.debug(`setting tc on ${node} dst ip: ${dst_ip} loss: ${loss}% latency: ${latency}...`);
-        console.log(`tc qdisc change dev eth1 parent 1:1${id} handle 1${id} netem loss ${loss}% latency ${latency}ms`)
         await this._run(node, `tc qdisc change dev eth1 parent 1:1${id} handle 1${id} netem loss ${loss}% latency ${latency}ms`);
+    }
+    
+    /**
+     * test connectivity via ping.
+     * 
+     * @param node node id.  this node must be a router node with bird running.
+     * @param dst_ip desitination node ip.
+     */
+    async startConnTest(node: string, dst_ip: string) {
+        this._logger.debug(`ping -R -i 0.01 -c 100 ${dst_ip}`);
+        console.log(`ping -R -i 0.01 -c 100 ${dst_ip}`)
+        let result = await this._run(node, `ping -R -i 0.01 -c 100 ${dst_ip}`);
+        return result
     }
 
     getLoggers(): Logger[] {
