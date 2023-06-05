@@ -1104,16 +1104,33 @@ export class MapUi {
         let vertex = this._nodes.get(nodeId);
 
         this._curretNode = vertex;
-
         if (this._connFromNode && this._connToNode){
+            var prevFromNode = this._nodes.get(this._connFromNode.id)
+            var prevToNode = this._nodes.get(this._connToNode.id)
+            
+            prevFromNode.color = null;
+            prevToNode.color = null;
+
+            this._nodes.update(prevFromNode);
+            this._nodes.update(prevToNode);
+
             this._connFromNode = vertex;
+            vertex.color = "red";
+
             this._connToNode = null;
         }else if (this._connFromNode){
             this._connToNode = vertex;
+            vertex.color = "blue";
+
         }else{
             this._connFromNode = vertex;
+            vertex.color = "red";
         }
 
+        this._nodes.update(vertex);
+        if (this._edges){
+            this._edges.clear();
+        }
         let connPlate = document.createElement('div');
         let connFromNode = this._connFromNode.object as EmulatorNode;
         connPlate.appendChild(this._createInfoPlateValuePair('From', connFromNode.meta.emulatorInfo.name));
@@ -1143,6 +1160,23 @@ export class MapUi {
                     // let loss = result
                     console.log(result.loss);
                     console.log(result.routes);
+                    let routes = [];
+                    result.routes.split('\n').forEach(ip=>{
+                        routes.push(this._datasource.nodeIdByIp(ip));
+                    })
+                    if (this._edges){
+                        this._edges.clear();
+                    }
+                    let edges = [];
+                    for (var i = 0; i < routes.length-1; i++) {
+                        edges.push({
+                            from: routes[i],
+                            to: routes[i+1],
+                            arrows: "to"
+                        });
+                    }
+                    this._edges.update(edges);
+                      
                     connResult.appendChild(this._createInfoPlateValuePair('loss', result.loss))
                     connResult.appendChild(this._createInfoPlateValuePair('routes', '\n'+result.routes))
                 }
@@ -1436,7 +1470,9 @@ export class MapUi {
         //     return
         // }
         await this._datasource.get_position();
-        var updated_edges = this._datasource.mEdges;
+
+        // remove edges
+        //var updated_edges = this._datasource.mEdges;
         var updated_nodes = this._datasource.vertices;
         var is_moved = false;
         new DataSet(updated_nodes).forEach(node=>{
@@ -1446,10 +1482,20 @@ export class MapUi {
             }
         })
         if (is_moved){
-            this._edges.clear()
+            //this._edges.clear()
             this._nodes.clear()
-            this._edges.update(updated_edges);
+            // remove
+            //this._edges.update(updated_edges);
+            updated_nodes.forEach(node=>{
+                if (this._connFromNode && node.id==this._connFromNode.id){
+                    node.color = 'red';
+                }
+                if (this._connToNode && node.id==this._connToNode.id){
+                    node.color = 'blue';
+                }
+            })
             this._nodes.update(updated_nodes);
+
         }
         
     }
@@ -1457,7 +1503,8 @@ export class MapUi {
      * redraw map.
      */
     redraw() {
-        this._edges = new DataSet(this._datasource.mEdges);
+        //remove edges
+        this._edges = new DataSet();
         this._nodes = new DataSet(this._datasource.vertices);
 
         var groups = {};

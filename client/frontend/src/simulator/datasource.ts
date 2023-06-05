@@ -1,6 +1,7 @@
 import { EdgeOptions, NodeOptions } from 'vis-network';
 import { BgpPeer, EmulatorNetwork, EmulatorNode } from '../common/types';
 
+
 export type DataEvent = 'packet' | 'dead';
 
 export interface Vertex extends NodeOptions {
@@ -126,6 +127,15 @@ export class DataSource {
 
             xhr.send(body);
         })
+    }
+
+    /**
+     * get a random color.
+     * 
+     * @returns hsl color string.
+     */
+    private _randomColor(): string {
+        return `hsl(${Math.random() * 360}, 100%, 75%)`;
     }
 
     /**
@@ -303,7 +313,6 @@ export class DataSource {
                         label = emunet.address;
                     }
                 });
-
                 edges.push({
                     from: node.Id,
                     to: net.NetworkID,
@@ -314,7 +323,18 @@ export class DataSource {
 
         return edges;
     }
-
+    
+    nodeIdByIp(ip:string): string {
+        console.log("search keyword", ip);
+        var found = "";
+        this._node_info.node_info.forEach(node=>{
+            console.log("searching", node.ipaddress);
+            if(node.ipaddress.split(".")[3] == ip.split(".")[3]){
+                found = node.container_id;
+            }
+        })
+        return found;
+    }
     get mEdges(): Edge[] {
         var edges: Edge[] = [];
 
