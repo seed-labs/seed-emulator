@@ -270,6 +270,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         self.__name_servers = []
 
+        self.__gpus = []
+
     def configure(self, emulator: Emulator):
         """!
         @brief configure the node. This is called when rendering.
@@ -789,7 +791,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         
         @returns self, for chaining API calls.
         """
-        self.__gpu = devices
+        self.__gpus = devices
 
         return self
 
@@ -799,7 +801,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns list of GPU ID.
         """
-        return self.__gpu
+        return self.__gpus
 
     def addSharedFolder(self, nodePath: str, hostPath: str) -> Node:
         """!
