@@ -1,9 +1,21 @@
 # DEMO for wireless network emulation.
 ## Setting
-Use SDN-MANET branch of SEED-Emulator repo.
+Use wireless branch of SEED-Emulator repo.
 ```sh
 $ git checkout wireless
 ```
+
+## Add alias to `~/.bashrc`
+
+```sh
+# Commands for for docker 
+alias dcbuild='docker-compose build'
+alias dcup='docker-compose up'
+alias dcdown='docker-compose down'
+alias dockps='docker ps --format "{{.ID}}  {{.Names}}"'
+docksh() { docker exec -it $1 /bin/bash; }
+```
+
 
 ## Step 1. Generate emulation files and run containers
 
@@ -16,8 +28,8 @@ The emulator runs `Babel` protocol inside and it is enabled to update loss, late
 ```sh
 $ ./emulator.py
 $ cd output
-$ docker-compose build
-$ docker-compose up
+$ docker-compose build # (=dcbuild)
+$ docker-compose up # (=dcup)
 ```
 
 ## Step 2. Run simulation.py script
@@ -78,7 +90,8 @@ The image below shows the map after running `./simulations.py move -c 3`.
 
 ```sh
 $ cd seedemu-client-simulator
-$ dcbuild && dcup
+$ docker-compose build # (=dcbuild)
+$ docker-compose up # (=dcup)
 ```
 
 You can access to the page with "http://localhost:8080/simulator.html".
