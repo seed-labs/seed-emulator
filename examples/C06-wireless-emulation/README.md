@@ -2,7 +2,7 @@
 ## Setting
 Use SDN-MANET branch of SEED-Emulator repo.
 ```sh
-$ git checkout SDN-MANET
+$ git checkout wireless
 ```
 
 ## Step 1. Generate emulation files and run containers
