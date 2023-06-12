@@ -1,4 +1,4 @@
-# DEMO for mobile network simulator.
+# DEMO for wireless network emulation.
 ## Setting
 Use SDN-MANET branch of SEED-Emulator repo.
 ```sh
