@@ -20,17 +20,7 @@ $ docker-compose build
 $ docker-compose up
 ```
 
-## Step 2. Run map client (for visualization)
-
-```sh
-$ cd seedemu-client-simulator
-$ dcbuild && dcup
-```
-
-You can access to the page with "http://localhost:8080/simulator.html".
-The nodes will appear after going through Step 3.
-
-## Step 3. Run simulation.py script
+## Step 2. Run simulation.py script
 
 ```sh
 ./simulation.py --help
@@ -71,13 +61,35 @@ $ ./simulation.py init
 ```
 The simulation.py with `init` option will initialize the nodes' positions.
 There is no loss between connections at init status.
+The image below shows the map after running `./simulations.py init`.
+<img width="1607" alt="image" src="https://github.com/seed-labs/seed-emulator/assets/19922651/71ab034a-9d5d-4275-a039-b1295a1d96fc">
+
 
 ### (2) ./simulation.py move -c (or --count) COUNT
 ```sh
 $ ./simulation.py move -c 3
 ```
 The `move` option is used with `--count or -c`. This will move nodes for the given number of counts.
+The image below shows the map after running `./simulations.py move -c 3`.
+<img width="1610" alt="image" src="https://github.com/seed-labs/seed-emulator/assets/19922651/547bd67a-b54f-470d-9ba1-bc9658d04152">
 
+
+## Step 3. Run map client (for visualization)
+
+```sh
+$ cd seedemu-client-simulator
+$ dcbuild && dcup
+```
+
+You can access to the page with "http://localhost:8080/simulator.html".
+The nodes will appear after going through Step 3.
+
+## connectivity test
+1) click a node to send ping in the map. (change to red color)
+2) click a node of destination. (change to blue color)
+3) click `Start Test` button in the Connectivity Test (ping) panel at the left-top side.
+
+<img width="1607" alt="image" src="https://github.com/seed-labs/seed-emulator/assets/19922651/b69d360b-05f7-42bb-857d-50c513ba9fd5">
 
 ## (Optional) manualmoving.py
 
