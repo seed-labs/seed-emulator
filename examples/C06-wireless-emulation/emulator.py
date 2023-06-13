@@ -103,4 +103,5 @@ emu.render()
 
 emu.compile(Docker(internetMapEnabled=False), './output', override = True)
 
-os.mkdir("/tmp/node_info")
+if not os.path.exists("/tmp/node_info"):
+    os.mkdir("/tmp/node_info")
