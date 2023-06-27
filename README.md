@@ -26,6 +26,50 @@ including Blockchain, Botnet, and many other useful elements of the Internet.
 
 ## Getting Started
 
+### Preparation in Mainland China
+
+**Notice: This part is only useful for computers in Mainland China. If your computer is not in this area or you use some special network configuration, please skip this part.**
+
+1. Add the pip proxy:
+  
+  ```bash
+    pip install --upgrade pip
+    pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+  ```
+
+2. Add the dockerhub proxy:
+
+vim the docker config file.
+
+```bash
+sudo vim /etc/docker/deamon.json
+```
+
+add the following config.
+```python
+{
+    "registry-mirrors": [
+        "https://docker.mirrors.ustc.edu.cn",
+        "https://dockerproxy.com",
+        "https://hub-mirror.c.163.com",
+        "https://mirror.baidubce.com",
+        "https://ccr.ccs.tencentyun.com"
+    ]
+}
+```
+
+restart docker 
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
+
+
+
+### Examples
+
 To get started with the emulator, install docker, docker-compose, and python3. Then, take a look at the [examples/](./examples/) folder for examples. Detailed explanation is provided in the README file, as well as in the comments of the code. To run an example:
 
 1. Pick an example, say `A00-simple-peering`. 
