@@ -148,6 +148,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         types = ["propagation", "core_registration", "up_registration", "down_registration"]
         assert type in types, "Unknown policy type"
         self.__beaconing_policy[type] = policy
+        return self
 
     def getBeaconingPolicy(self, type: set) -> Optional[Dict]:
         """!
