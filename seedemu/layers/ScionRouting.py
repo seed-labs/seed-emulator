@@ -3,6 +3,8 @@ import json
 import os.path
 from typing import Dict
 
+import yaml
+
 from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter
 from seedemu.layers import Routing, ScionBase, ScionIsd
 
@@ -18,24 +20,28 @@ config_dir = "/etc/scion"
 level = "debug"
 """
 
-_Templates["trust"] = """\
+_Templates["trust_db"] = """\
 [trust_db]
 connection = "/cache/{name}.trust.db"
+
 """
 
-_Templates["path"]  = """\
+_Templates["path_db"]  = """\
 [path_db]
 connection = "/cache/{name}.path.db"
+
 """
 
-_Templates["beacon"] = """\
+_Templates["beacon_db"] = """\
 [beacon_db]
 connection = "/cache/{name}.beacon.db"
+
 """
 
 _Templates["dispatcher"] = """\
 [dispatcher]
 id = "dispatcher"
+
 """
 
 _CommandTemplates: Dict[str, str] = {}
@@ -142,7 +148,7 @@ class ScionRouting(Routing):
                 self.__provision_router_config(rnode)
             elif type == 'csnode':
                 csnode: Node = obj
-                self._provision_cs_config(csnode)
+                self._provision_cs_config(csnode, as_)
 
     @staticmethod
     def __provision_base_config(node: Node):
@@ -152,8 +158,8 @@ class ScionRouting(Routing):
 
         node.setFile("/etc/scion/sciond.toml",
             _Templates["general"].format(name="sd1") +
-            _Templates["trust"].format(name="sd1") +
-            _Templates["path"].format(name="sd1"))
+            _Templates["trust_db"].format(name="sd1") +
+            _Templates["path_db"].format(name="sd1"))
 
         node.setFile("/etc/scion/dispatcher.toml", _Templates["dispatcher"])
 
@@ -166,12 +172,30 @@ class ScionRouting(Routing):
             _Templates["general"].format(name=name))
 
     @staticmethod
-    def _provision_cs_config(node: Node):
+    def _provision_cs_config(node: Node, as_: ScionAutonomousSystem):
         """Set control service configuration."""
 
+        # Start building the beaconing section
+        beaconing = ["[beaconing]"]
+        interval_keys = ["origination_interval", "propagation_interval", "registration_interval"]
+        for key, value in zip(interval_keys, as_.getBeaconingIntervals()):
+            if value is not None:
+                beaconing.append(f'{key} = "{value}"')
+
+        # Create policy files
+        beaconing.append("\n[beaconing.policies]")
+        for type in ["propagation", "core_registration", "up_registration", "down_registration"]:
+            policy = as_.getBeaconingPolicy(type)
+            if policy is not None:
+                file_name = f"/etc/scion/{type}_policy.yaml"
+                node.setFile(file_name, yaml.dump(policy, indent=2))
+                beaconing.append(f'{type} = "{file_name}"')
+
+        # Concatenate configuration sections
         name = node.getName()
         node.setFile(os.path.join("/etc/scion/", name + ".toml"),
             _Templates["general"].format(name=name) +
-            _Templates["trust"].format(name=name) +
-            _Templates["beacon"].format(name=name) +
-            _Templates["path"].format(name=name))
+            _Templates["trust_db"].format(name=name) +
+            _Templates["beacon_db"].format(name=name) +
+            _Templates["path_db"].format(name=name) +
+            "\n".join(beaconing))
