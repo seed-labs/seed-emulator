@@ -42,7 +42,7 @@ including Blockchain, Botnet, and many other useful elements of the Internet.
 vim the docker config file.
 
 ```bash
-sudo vim /etc/docker/deamon.json
+sudo vim /etc/docker/daemon.json
 ```
 
 add the following config.
