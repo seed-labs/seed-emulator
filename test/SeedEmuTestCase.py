@@ -46,9 +46,9 @@ class SeedEmuTestCase(ut.TestCase):
         # if system is using a docker-compose version 2, test is done with version2.
         result = subprocess.run(["docker", "compose"])
         if result.returncode == 0:
-            docker_compose_version = 2
+            cls.docker_compose_version = 2
         else:
-            docker_compose_version = 1
+            cls.docker_compose_version = 1
 
         cls.gen_emulation_files()
         cls.build_emulator()
