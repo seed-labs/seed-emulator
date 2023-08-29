@@ -157,7 +157,8 @@ class SeedEmuTestCase(ut.TestCase):
             cur_container_count = len(cls.containers) - cls.container_count_before_up_container
             cls.printLog("current containers counts : ", cur_container_count)
             if cur_container_count == total_containers:
-                time.sleep(10)
+                # wait until the initial setting in containers such as bird configuration.
+                time.sleep(30)
                 return True
             if time.time() - current_time > 300:
                 cls.printLog("TimeExhausted: 5 min")

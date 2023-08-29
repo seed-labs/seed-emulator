@@ -116,6 +116,8 @@ DockerCompilerFileTemplates['compose_service'] = """\
     {nodeId}:
         build: ./{nodeId}
         container_name: {nodeName}
+        depends_on:
+            - {dependsOn}
         cap_add:
             - ALL
         sysctls:
@@ -944,6 +946,7 @@ class Docker(Compiler):
         return DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
             nodeName = name,
+            dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
             networks = node_nets,
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
