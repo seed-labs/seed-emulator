@@ -17,6 +17,7 @@ class SeedEmuTestCase(ut.TestCase):
     test_log: str
     container_count_before_up_container: int
     container_count_after_up_container: int
+    docker_compose_version:int
     
     @classmethod
     def setUpClass(cls) -> None:
@@ -42,6 +43,12 @@ class SeedEmuTestCase(ut.TestCase):
         cls.printLog("{} Start".format(sys.modules[cls.__module__].__name__))
         cls.printLog("==============================")
 
+        # if system is using a docker-compose version 2, test is done with version2.
+        result = subprocess.run(["docker", "compose"])
+        if result.returncode == 0:
+            docker_compose_version = 2
+        else:
+            docker_compose_version = 1
 
         cls.gen_emulation_files()
         cls.build_emulator()
@@ -90,7 +97,11 @@ class SeedEmuTestCase(ut.TestCase):
         
         log_file = os.path.join(cls.init_dir, cls.test_log, "build_log")
         f = open(log_file, 'w')
-        result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f)
+        if(cls.docker_compose_version == 1):
+            result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f)
+        else:
+            result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f)
+
         f.close()
         os.system("echo 'y' | docker system prune > /dev/null")
         os.chdir(cls.init_dir)
@@ -103,7 +114,10 @@ class SeedEmuTestCase(ut.TestCase):
         @brief up all containers.
         """
         os.chdir(os.path.join(cls.emulator_code_dir, cls.output_dir))
-        os.system("docker compose up > ../../test_log/containers_log &")
+        if(cls.docker_compose_version == 1):
+            os.system("docker-compose up > ../../test_log/containers_log &")
+        else:
+            os.system("docker compose up > ../../test_log/containers_log &")
         os.chdir(cls.init_dir)
 
     @classmethod
@@ -112,7 +126,11 @@ class SeedEmuTestCase(ut.TestCase):
         @brief down all containers.
         """
         os.chdir(os.path.join(cls.emulator_code_dir, cls.output_dir))
-        os.system("docker compose down > /dev/null")
+        if(cls.docker_compose_version == 1):
+            os.system("docker-compose down > /dev/null")
+        else:
+            os.system("docker compose down > /dev/null")
+
         os.system("echo 'y' | docker system prune > /dev/null")
         os.chdir(cls.init_dir)
 
