@@ -90,7 +90,7 @@ class SeedEmuTestCase(ut.TestCase):
         
         log_file = os.path.join(cls.init_dir, cls.test_log, "build_log")
         f = open(log_file, 'w')
-        result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f)
+        result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f)
         f.close()
         os.system("echo 'y' | docker system prune > /dev/null")
         os.chdir(cls.init_dir)
@@ -103,7 +103,7 @@ class SeedEmuTestCase(ut.TestCase):
         @brief up all containers.
         """
         os.chdir(os.path.join(cls.emulator_code_dir, cls.output_dir))
-        os.system("docker-compose up > ../../test_log/containers_log &")
+        os.system("docker compose up > ../../test_log/containers_log &")
         os.chdir(cls.init_dir)
 
     @classmethod
@@ -112,7 +112,7 @@ class SeedEmuTestCase(ut.TestCase):
         @brief down all containers.
         """
         os.chdir(os.path.join(cls.emulator_code_dir, cls.output_dir))
-        os.system("docker-compose down > /dev/null")
+        os.system("docker compose down > /dev/null")
         os.system("echo 'y' | docker system prune > /dev/null")
         os.chdir(cls.init_dir)
 
