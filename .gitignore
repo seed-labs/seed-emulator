@@ -26,3 +26,4 @@ client/backend/bin
 *.bin
 output
 project-words.txt
+.venv

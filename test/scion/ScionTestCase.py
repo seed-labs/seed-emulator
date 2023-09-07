@@ -1,5 +1,5 @@
 import json
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from test.SeedEmuTestCase import SeedEmuTestCase
 
@@ -34,7 +34,7 @@ class ScionTestCase(SeedEmuTestCase):
             return False
 
     def scion_path_test(self, container, dst: str, pred: str = "0*", ret_paths: bool = False
-                        ) -> bool | Tuple[bool, List]:
+                        ) -> Union[bool, Tuple[bool, List]]:
         """!
         @brief Test whether a path matching the given path predicate exists and is alive.
 
