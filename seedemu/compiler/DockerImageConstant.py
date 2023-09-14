@@ -25,15 +25,15 @@ UBUNTU_IMAGE_ARM64   = DockerImage(name='arm64v8/ubuntu:20.04',
 BASE_IMAGE_ARM64     = DockerImage(name='rafaelawon/seedemu-base-arm64',
                                 software=['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2',
                                         'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat'],
-                                subset=UBUNTU_IMAGE)
+                                subset=UBUNTU_IMAGE_ARM64)
 
 ROUTER_IMAGE_ARM64   = DockerImage(name='rafaelawon/seedemu-router-arm64',
                                 software=['bird2'],
-                                subset=BASE_IMAGE)
+                                subset=BASE_IMAGE_ARM64)
 
 ETHEREUM_IMAGE_ARM64 = DockerImage(name='rafaelawon/seedemu-ethereum-arm64',
                                 software=['software-properties-common', 'python3', 'python3-pip'],
-                                subset=BASE_IMAGE)
+                                subset=BASE_IMAGE_ARM64)
 
 BASESYSTEM_DOCKERIMAGE_MAPPING = {
         BaseSystem.UBUNTU_20_04:           UBUNTU_IMAGE,
