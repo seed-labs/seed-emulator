@@ -1,0 +1,10 @@
+version: "3.4"
+services:
+    test:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        # image: handsonsecurity/seedemu-base-arm64
+        image: rafaelawon/seedemu-base-arm64
+
+
