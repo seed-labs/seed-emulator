@@ -6,7 +6,7 @@ from .DockerImage import DockerImage
 from .DockerImageConstant import *
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
-from os import mkdir, chdir
+from os import mkdir, chdir, environ
 from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
@@ -320,7 +320,6 @@ class Docker(Compiler):
 
     def __init__(
         self,
-        arm64: bool = False,
         namingScheme: str = "as{asn}{role}-{displayName}-{primaryIp}",
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
@@ -383,7 +382,7 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        self.__is_arm64 = arm64
+        self.__is_arm64 = environ['DOCKER_DEFAULT_PLATFORM'] == 'linux/arm64'
 
         if self.__is_arm64:
             self.__basesystem_dockerimage_mapping = BASESYSTEM_ARM64_DOCKERIMAGE_MAPPING
