@@ -11,6 +11,8 @@ from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
+from enum import Enum
+
 
 SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-map'
 SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-etherview'
@@ -312,9 +314,11 @@ class Docker(Compiler):
     __disable_images: bool
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
+    __is_arm64:bool
 
     def __init__(
         self,
+        arm64: bool = False,
         namingScheme: str = "as{asn}{role}-{displayName}-{primaryIp}",
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
@@ -377,11 +381,19 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        for name, image in BASESYSTEM_DOCKERIMAGE_MAPPING.items():
-            priority = 0
-            if name == BaseSystem.DEFAULT:
-                priority = 1
-            self.addImage(image, priority=priority)
+        self.__is_arm64 = arm64
+        if self.__is_arm64:
+            for name, image in BASESYSTEM_ARM64_DOCKERIMAGE_MAPPING.items():
+                priority = 0
+                if name == BaseSystem.DEFAULT:
+                    priority = 1
+                self.addImage(image, priority=priority)
+        else:
+            for name, image in BASESYSTEM_DOCKERIMAGE_MAPPING.items():
+                priority = 0
+                if name == BaseSystem.DEFAULT:
+                    priority = 1
+                self.addImage(image, priority=priority)
 
     def getName(self) -> str:
         return "Docker"
