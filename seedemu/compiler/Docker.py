@@ -314,7 +314,9 @@ class Docker(Compiler):
     __disable_images: bool
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
-    __is_arm64:bool
+    __is_arm64: bool
+
+    __basesystem_dockerimage_mapping: dict
 
     def __init__(
         self,
@@ -382,18 +384,18 @@ class Docker(Compiler):
         self.__image_per_node_list = {}
 
         self.__is_arm64 = arm64
+
         if self.__is_arm64:
-            for name, image in BASESYSTEM_ARM64_DOCKERIMAGE_MAPPING.items():
-                priority = 0
-                if name == BaseSystem.DEFAULT:
-                    priority = 1
-                self.addImage(image, priority=priority)
+            self.__basesystem_dockerimage_mapping = BASESYSTEM_ARM64_DOCKERIMAGE_MAPPING
         else:
-            for name, image in BASESYSTEM_DOCKERIMAGE_MAPPING.items():
-                priority = 0
-                if name == BaseSystem.DEFAULT:
-                    priority = 1
-                self.addImage(image, priority=priority)
+            self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING
+        
+        for name, image in self.__basesystem_dockerimage_mapping.items():
+            priority = 0
+            if name == BaseSystem.DEFAULT:
+                priority = 1
+            self.addImage(image, priority=priority)
+        
 
     def getName(self) -> str:
         return "Docker"
@@ -573,7 +575,7 @@ class Docker(Compiler):
             return (image, nodeSoft - image.getSoftware())
             
         #Maintain a table : Virtual Image Name - Actual Image Name 
-        image = BASESYSTEM_DOCKERIMAGE_MAPPING[node.getBaseSystem()]
+        image = self.__basesystem_dockerimage_mapping[node.getBaseSystem()]
 
         return (image, nodeSoft - image.getSoftware())
         
