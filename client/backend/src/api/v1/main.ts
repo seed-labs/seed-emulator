@@ -8,6 +8,7 @@ import { Controller } from '../../utils/controller';
 import fs from 'fs';
 import { execSync } from 'child_process';
 import { stringify } from 'querystring';
+
 const router = express.Router();
 const docker = new dockerode();
 const socketHandler = new SocketHandler(docker);
@@ -38,6 +39,12 @@ const getNodePosition: () => Promise<NodeInfo> = async function() {
     const node_info = JSON.parse(_node_info) as NodeInfo;
     return node_info;;
 }
+
+// const getSimulationInfo: () => Promise<NodeInfo> = aync function() {
+//     const _simulation_info = fs.readFileSync('/tmp/node_info/simulation_info.json', 'utf-8')
+//     const simulation_info = JSON.parse(_simulation_info) as SimulationInfo;
+//     return simulation_info;;
+// }
 
 socketHandler.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'warn'

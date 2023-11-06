@@ -107,6 +107,7 @@ export class MapUi {
     private _datasource: DataSource;
 
     private _nodes: DataSet<Vertex, 'id'>;
+    private _buildings: DataSet<Vertex, 'id'>;
     private _edges: DataSet<Edge, 'id'>;
     private _tmp_edges: Edge[] = [];
     private _graph: Network;
@@ -1436,7 +1437,7 @@ export class MapUi {
         }
         window.setInterval(async () => {
             await this.movement();
-        }, 1000);
+        }, 500);
 
         this._logPrinter = window.setInterval(() => {
             var scroll = false;
@@ -1480,6 +1481,10 @@ export class MapUi {
                 is_moved = true;
                 return
             }
+            if (node.y != this._nodes.get(node.id).y){
+                is_moved = true;
+                return
+            }
         })
         if (is_moved){
             //this._edges.clear()
@@ -1506,6 +1511,7 @@ export class MapUi {
         //remove edges
         this._edges = new DataSet();
         this._nodes = new DataSet(this._datasource.vertices);
+        this._buildings = new DataSet(this._datasource.buildings);
 
         var groups = {};
 
@@ -1522,9 +1528,57 @@ export class MapUi {
             nodes: this._nodes,
             edges: this._edges
         }, {
-            groups
+            groups,
+            physics:{
+                stabilization: true
+            }
         });
 
+        this._graph.moveTo({
+            position: {x: 0, y: 0},
+            offset: {x: -1000/2, y: -1000/2},
+            scale: 0.5,
+        });
+
+        // draw grid
+        this._graph.on("beforeDrawing", (ctx) => {
+
+            var width = 1000;
+            var height = 1000;
+            var spacing = 50;
+            var gridExtentFactor = 10;
+            ctx.strokeStyle = "lightblue";
+            
+            // draw grid
+            ctx.beginPath();
+            for (var x = -width * gridExtentFactor; x <= width * gridExtentFactor; x += spacing) {
+              ctx.moveTo(x, height * gridExtentFactor);
+              ctx.lineTo(x, -height * gridExtentFactor);
+            }
+            for (var y = -height * gridExtentFactor; y <= height * gridExtentFactor; y += spacing) {
+              ctx.moveTo(width * gridExtentFactor, y);
+              ctx.lineTo(-width * gridExtentFactor, y);
+            }
+            ctx.stroke();
+
+            // Draw buildings
+            this._buildings.forEach(function (building) {
+                if (building.type === 'building') {
+            
+                  // Define the rectangle properties
+                  var width = building.width; // Width of the rectangle
+                  var height = building.height; // Height of the rectangle
+                  var x = building.x; // X-coordinate of the top-left corner
+                  var y = building.y; // Y-coordinate of the top-left corner
+            
+                  // Set the rectangle style
+                  ctx.fillStyle = 'lightgrey'; // Fill color
+                  ctx.fillRect(x, y, width, height); // Draw the rectangle
+                }
+              });
+        });
+
+        
         this._graph.on('click', (ev) => {
             this._suggestions.innerText = '';
             this._moveSuggestionSelection('clear');
@@ -1532,9 +1586,17 @@ export class MapUi {
             if (ev.nodes.length <= 0) {
                 return;
             }
-
+            let vertex = this._nodes.get(ev.nodes[0]);
+            console.log(vertex)
             this._updateInfoPlateWith(ev.nodes[0]);
             this._updateConnectivityPlateWith(ev.nodes[0]);            
         });
+
+        // this._graph.on("afterDrawing", (ctx) => {
+
+        //     // this._nodes = new DataSet(this._datasource.vertices);
+            
+        // });
+
     }
 }

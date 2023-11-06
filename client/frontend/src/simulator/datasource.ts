@@ -7,13 +7,17 @@ export type DataEvent = 'packet' | 'dead';
 export interface Vertex extends NodeOptions {
     id: string;
     fixed: boolean;
+    physics: boolean;
     label: string;
     group?: string;
     shape?: string;
     x?: number;
     y?: number;
-    type: 'node' | 'network';
-    object: EmulatorNode | EmulatorNetwork;
+    width?: number;
+    height?: number;
+    ctxRenderer?,
+    type: 'node' | 'network' | 'building';
+    object?: EmulatorNode | EmulatorNetwork;
 }
 
 export interface Edge extends EdgeOptions {
@@ -49,6 +53,13 @@ export interface NodeInfo {
             container_id: string;
             loss: number;
         }[]; 
+    }[];
+    building_info: {
+        id: string;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
     }[];
 }
 
@@ -389,12 +400,16 @@ export class DataSource {
 
     get vertices(): Vertex[] {
         var vertices: Vertex[] = [];
-
+        
+        // Add container nodes
         this._nodes.forEach(node => {
             var nodeInfo = node.meta.emulatorInfo;
             var vertex: Vertex = {
                 id: node.Id,
-                fixed: true,
+                // fixed: false,
+                size: 10,
+                physics: false,
+                fixed:true,
                 label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
                 type: 'node',
                 shape: nodeInfo.role == 'Router' ? 'dot' : 'hexagon',
@@ -402,8 +417,8 @@ export class DataSource {
             };
             this._node_info.node_info.find(node=>{
                 if(node.ipaddress == nodeInfo.nets[0].address.split('/')[0]){
-                    vertex.x = node.x * 2;
-                    vertex.y = node.y * 2;
+                    vertex.x = node.x * 10;
+                    vertex.y = node.y * 10;
                 }
             })
             
@@ -415,6 +430,30 @@ export class DataSource {
         });
 
         return vertices;
+    }
+
+    get buildings(): Vertex[] {
+        var buildings: Vertex[] = [];
+
+        // Add buildings
+        this._node_info.building_info.forEach(building => {
+            var vertex: Vertex = {
+                id: building.id,
+                // fixed: false,
+                x: building.x * 10,
+                y: building.y * 10,
+                width: building.width * 10,
+                height: building.height * 10,
+                physics: false,
+                fixed:true,
+                label: building.id,
+                type: 'building',
+                shape: 'box'
+            };
+
+            buildings.push(vertex);
+        })
+        return buildings;
     }
 
     get groups(): Set<string> {
