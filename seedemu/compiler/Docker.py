@@ -112,6 +112,12 @@ DockerCompilerFileTemplates['compose_dummy'] = """\
             context: .
             dockerfile: dummies/{imageDigest}
         image: {imageDigest}
+{dependsOn}
+"""
+
+DockerCompilerFileTemplates['depends_on'] = """\
+        depends_on:
+            - {dependsOn}
 """
 
 DockerCompilerFileTemplates['compose_service'] = """\
@@ -382,7 +388,10 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        self.__is_arm64 = environ['DOCKER_DEFAULT_PLATFORM'] == 'linux/arm64'
+        if 'DOCKER_DEFAULT_PLATFORM' not in environ.keys():
+            self.__is_arm64 = False
+        else:
+            self.__is_arm64 = environ['DOCKER_DEFAULT_PLATFORM'] == 'linux/arm64'
 
         if self.__is_arm64:
             self.__basesystem_dockerimage_mapping = BASESYSTEM_ARM64_DOCKERIMAGE_MAPPING
@@ -1007,10 +1016,19 @@ class Docker(Compiler):
             self._log('adding dummy service for image {}...'.format(image))
 
             imageDigest = md5(image.encode('utf-8')).hexdigest()
-
-            dummies += DockerCompilerFileTemplates['compose_dummy'].format(
-                imageDigest = imageDigest
-            )
+            dockerImage, _ = self.__images[image]
+            if dockerImage.isLocal():
+                dummies += DockerCompilerFileTemplates['compose_dummy'].format(
+                    imageDigest = imageDigest,
+                    dependsOn= DockerCompilerFileTemplates['depends_on'].format(
+                        dependsOn = image
+                    )
+                )
+            else:
+                dummies += DockerCompilerFileTemplates['compose_dummy'].format(
+                    imageDigest = imageDigest,
+                    dependsOn= ""
+                )
 
             dockerfile = 'FROM {}\n'.format(image)
             print(dockerfile, file=open(imageDigest, 'w'))
