@@ -5,12 +5,12 @@ UBUNTU_IMAGE   = DockerImage(name='ubuntu:20.04',
                                 software=[],
                                 subset=None)
 
-BASE_IMAGE     = DockerImage(name='handsonsecurity/seedemu-base',
+BASE_IMAGE     = DockerImage(name='handsonsecurity/seedemu-multiarch-base:buildx-latest',
                                 software=['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2',
                                         'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat'],
                                 subset=UBUNTU_IMAGE)
 
-ROUTER_IMAGE   = DockerImage(name='handsonsecurity/seedemu-router',
+ROUTER_IMAGE   = DockerImage(name='handsonsecurity/seedemu-multiarch-router:buildx-latest',
                                 software=['bird2'],
                                 subset=BASE_IMAGE)
 
@@ -22,12 +22,12 @@ UBUNTU_IMAGE_ARM64   = DockerImage(name='arm64v8/ubuntu:20.04',
                                 software=[],
                                 subset=None)
 
-BASE_IMAGE_ARM64     = DockerImage(name='rafaelawon/seedemu-base-arm64',
+BASE_IMAGE_ARM64     = DockerImage(name='handsonsecurity/seedemu-multiarch-base:buildx-latest',
                                 software=['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2',
                                         'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat'],
                                 subset=UBUNTU_IMAGE_ARM64)
 
-ROUTER_IMAGE_ARM64   = DockerImage(name='rafaelawon/seedemu-router-arm64',
+ROUTER_IMAGE_ARM64   = DockerImage(name='handsonsecurity/seedemu-multiarch-router:buildx-latest',
                                 software=['bird2'],
                                 subset=BASE_IMAGE_ARM64)
 

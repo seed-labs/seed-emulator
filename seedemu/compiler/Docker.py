@@ -14,8 +14,8 @@ import json
 from enum import Enum
 
 
-SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-map'
-SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-etherview'
+SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-multiarch-map:buildx-latest'
+SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:buildx-latest'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
