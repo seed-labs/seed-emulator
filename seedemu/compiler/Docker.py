@@ -6,12 +6,11 @@ from .DockerImage import DockerImage
 from .DockerImageConstant import *
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
-from os import mkdir, chdir, environ
+from os import mkdir, chdir
 from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
-from enum import Enum
 
 
 SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-multiarch-map:buildx-latest'
@@ -320,12 +319,12 @@ class Docker(Compiler):
     __disable_images: bool
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
-    __is_arm64: bool
 
     __basesystem_dockerimage_mapping: dict
 
     def __init__(
         self,
+        platform:Platform = Platform.AMD64,
         namingScheme: str = "as{asn}{role}-{displayName}-{primaryIp}",
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
@@ -339,6 +338,7 @@ class Docker(Compiler):
         """!
         @brief Docker compiler constructor.
 
+        @param platform (optional) node cpu architecture Default to Platform.AMD64
         @param namingScheme (optional) node naming scheme. Available variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
         {primaryIp} and {displayName}. {displayName} will automatically fall
@@ -388,15 +388,9 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        if 'DOCKER_DEFAULT_PLATFORM' not in environ.keys():
-            self.__is_arm64 = False
-        else:
-            self.__is_arm64 = environ['DOCKER_DEFAULT_PLATFORM'] == 'linux/arm64'
+        self.__platform = platform
 
-        if self.__is_arm64:
-            self.__basesystem_dockerimage_mapping = BASESYSTEM_ARM64_DOCKERIMAGE_MAPPING
-        else:
-            self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING
+        self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
         
         for name, image in self.__basesystem_dockerimage_mapping.items():
             priority = 0
