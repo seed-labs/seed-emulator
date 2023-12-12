@@ -3,6 +3,15 @@
 from internet import IPAnyCastTestCase, MiniInternetTestCase
 from ethereum import EthereumPOATestCase, EthereumPOSTestCase, EthereumPOWTestCase
 import unittest
+import os, sys
+
+if len(sys.argv) == 1:
+    platform = "amd"
+else:
+    platform = sys.argv[1]
+
+# Set an environment variable
+os.environ['platform'] = platform
 
 test_case_list = [
     MiniInternetTestCase,

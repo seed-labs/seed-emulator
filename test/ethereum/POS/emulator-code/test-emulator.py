@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 from seedemu import *
+import os
 
 # Create Emulator Base with 10 Stub AS (150-154, 160-164) using Makers utility method.
 # hosts_per_stub_as=3 : create 3 hosts per one stub AS.
@@ -82,6 +83,13 @@ emu.addLayer(eth)
 
 emu.render()
 
-docker = Docker()
+# Access an environment variable
+platform = os.environ.get('platform')
+
+platform_mapping = {
+    "amd": Platform.AMD64,
+    "arm": Platform.ARM64
+}
+docker = Docker(platform=platform_mapping[platform])
 
 emu.compile(docker, './output', override = True)
