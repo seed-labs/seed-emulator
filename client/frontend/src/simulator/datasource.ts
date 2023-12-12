@@ -36,6 +36,11 @@ export interface ConnResult {
     loss: string;
     routes?: string;
 }
+
+export interface NextHopResult {
+    nextHop: string;
+}
+
 export interface FilterRespond {
     currentFilter: string;
 }
@@ -154,7 +159,24 @@ export class DataSource {
      * call again when connected to reload nodes/nets.
      */
     async get_position() {
-        this._node_info = (await this._load<NodeInfo>('GET', `${this._apiBase}/position`)).result;
+        // const node_info = (await this._load<NodeInfo>('GET', `${this._apiBase}/position`)).result;
+        
+        // if (node_info !== null){
+        //     this._node_info = node_info;
+        // }
+        try {
+            const response = await this._load<NodeInfo>('GET', `${this._apiBase}/position`);
+            
+            if (response.result !== null) {
+                this._node_info = response.result;
+            } else {
+                this._node_info = null;
+                console.error('API response is null.');
+            }
+        } catch (error) {
+            this._node_info = null;
+            console.error('Error during API request:', error.message);
+        }
     }
     // async get_position(path: string) {
     //     this._node_info = (await this._load<NodeInfo>('POST', `${this._apiBase}/position`,
@@ -293,6 +315,16 @@ export class DataSource {
         return (await this._load<ConnResult>('GET', `${this._apiBase}/container/${node}/connectivity/${dst_ip}`)).result;
     }
 
+     /**
+     * start network connectivity test from the given node to the given dst ip.
+     * 
+     * @param node node id.
+     * @param dst_ip true if up, false if down.
+     */
+     async showNextHop(node: string, dst_ip: string) {
+        return (await this._load<NextHopResult>('GET', `${this._apiBase}/container/${node}/nexthop/${dst_ip}`)).result;
+    }
+
     /**
      * event handler register.
      * 
@@ -308,6 +340,8 @@ export class DataSource {
                 this._errorHandler = callback;
         }
     }
+
+    
 
     get edges(): Edge[] {
         var edges: Edge[] = [];
@@ -348,32 +382,33 @@ export class DataSource {
     }
     get mEdges(): Edge[] {
         var edges: Edge[] = [];
-
-        this._node_info.node_info.forEach(node=>{
-            node.connectivity.forEach(connection=>{
-                var connectivity=0;
-                if (connection.loss==0){
-                    connectivity = 5
-                }else if (connection.loss==20){
-                    connectivity = 4
-                }else if (connection.loss==40) {
-                    connectivity = 3
-                } else if (connection.loss==60) {
-                    connectivity = 2
-                } else if (connection.loss==80) {
-                    connectivity = 1
-                } else {
-                    return
-                }
-                edges.push({
-                    from: node.container_id,
-                    to: connection.container_id,
-                    width: connectivity,
-                    label: connection.loss + "% loss"
+        if (this._node_info !== null){
+            this._node_info.node_info.forEach(node=>{
+                node.connectivity.forEach(connection=>{
+                    var connectivity=0;
+                    if (connection.loss==0){
+                        connectivity = 5
+                    }else if (connection.loss==20){
+                        connectivity = 4
+                    }else if (connection.loss==40) {
+                        connectivity = 3
+                    } else if (connection.loss==60) {
+                        connectivity = 2
+                    } else if (connection.loss==80) {
+                        connectivity = 1
+                    } else {
+                        return
+                    }
+                    edges.push({
+                        from: node.container_id,
+                        to: connection.container_id,
+                        width: connectivity,
+                        label: connection.loss + "% loss"
+                    })
                 })
+                
             })
-            
-        })
+        }
 
         this._nodes.forEach(node => {
             let nets = node.NetworkSettings.Networks;
@@ -415,12 +450,14 @@ export class DataSource {
                 shape: nodeInfo.role == 'Router' ? 'dot' : 'hexagon',
                 object: node
             };
-            this._node_info.node_info.find(node=>{
-                if(node.ipaddress == nodeInfo.nets[0].address.split('/')[0]){
-                    vertex.x = node.x * 10;
-                    vertex.y = node.y * 10;
-                }
-            })
+            if (this._node_info !== null){
+                this._node_info.node_info.find(node=>{
+                    if(node.ipaddress == nodeInfo.nets[0].address.split('/')[0]){
+                        vertex.x = node.x * 10;
+                        vertex.y = node.y * 10;
+                    }
+                })
+            }
             
             if (nodeInfo.role == 'Router') {
                 vertices.push(vertex);
@@ -434,25 +471,26 @@ export class DataSource {
 
     get buildings(): Vertex[] {
         var buildings: Vertex[] = [];
+        if (this._node_info !== null){
+            // Add buildings
+            this._node_info.building_info.forEach(building => {
+                var vertex: Vertex = {
+                    id: building.id,
+                    // fixed: false,
+                    x: building.x * 10,
+                    y: building.y * 10,
+                    width: building.width * 10,
+                    height: building.height * 10,
+                    physics: false,
+                    fixed:true,
+                    label: building.id,
+                    type: 'building',
+                    shape: 'box'
+                };
 
-        // Add buildings
-        this._node_info.building_info.forEach(building => {
-            var vertex: Vertex = {
-                id: building.id,
-                // fixed: false,
-                x: building.x * 10,
-                y: building.y * 10,
-                width: building.width * 10,
-                height: building.height * 10,
-                physics: false,
-                fixed:true,
-                label: building.id,
-                type: 'building',
-                shape: 'box'
-            };
-
-            buildings.push(vertex);
-        })
+                buildings.push(vertex);
+            })
+        }
         return buildings;
     }
 

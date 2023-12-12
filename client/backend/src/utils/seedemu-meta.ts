@@ -18,32 +18,7 @@ export interface NodeInfo {
         height: number;
     }[]
 }
-//TODO
-// export interface SimulationInfo {
-//     node_count: number;
-//     total_iter: number;
-//     simulation_info:{
-//         iter: number
-//         node_info: {
-//             ipaddress: string;
-//             id: number;
-//             x: number;
-//             y: number;
-//             connectivity: {
-//                 id: number;
-//                 loss: number;
-//                 delay: number;
-//             }[];
-//         }[];
-//     };
-//     // building_info: {
-//     //     id: string;
-//     //     x: number;
-//     //     y: number;
-//     //     width: number;
-//     //     height: number;
-//     // }[]
-// }
+
 export interface VertexMeta {
     displayname?: string;
     description?: string;

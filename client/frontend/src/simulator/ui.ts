@@ -1105,7 +1105,7 @@ export class MapUi {
         let vertex = this._nodes.get(nodeId);
 
         this._curretNode = vertex;
-        if (this._connFromNode && this._connToNode){
+        if (this._connToNode && this._connFromNode){
             var prevFromNode = this._nodes.get(this._connFromNode.id)
             var prevToNode = this._nodes.get(this._connToNode.id)
             
@@ -1115,16 +1115,16 @@ export class MapUi {
             this._nodes.update(prevFromNode);
             this._nodes.update(prevToNode);
 
-            this._connFromNode = vertex;
+            this._connToNode = vertex;
             vertex.color = "red";
 
-            this._connToNode = null;
-        }else if (this._connFromNode){
-            this._connToNode = vertex;
+            this._connFromNode = null;
+        }else if (this._connToNode){
+            this._connFromNode = vertex;
             vertex.color = "blue";
 
         }else{
-            this._connFromNode = vertex;
+            this._connToNode = vertex;
             vertex.color = "red";
         }
 
@@ -1133,13 +1133,13 @@ export class MapUi {
             this._edges.clear();
         }
         let connPlate = document.createElement('div');
-        let connFromNode = this._connFromNode.object as EmulatorNode;
-        connPlate.appendChild(this._createInfoPlateValuePair('From', connFromNode.meta.emulatorInfo.name));
-        if (this._connToNode){
-            let connToNode = this._connToNode.object as EmulatorNode;
-            connPlate.appendChild(this._createInfoPlateValuePair('To', connToNode.meta.emulatorInfo.name));
+        let connToNode = this._connToNode.object as EmulatorNode;
+        connPlate.appendChild(this._createInfoPlateValuePair('To', connToNode.meta.emulatorInfo.name));
+        if (this._connToNode && this._connFromNode){
+            let connFromNode = this._connFromNode.object as EmulatorNode;
+            connPlate.appendChild(this._createInfoPlateValuePair('From', connFromNode.meta.emulatorInfo.name));
             let test_button = document.createElement('button');
-            test_button.innerText = 'Start Test';
+            test_button.innerText = 'Start Ping Test';
             connPlate.appendChild(test_button);
             test_button.onclick = async () => {
                 if (document.getElementById("conn_result")){
@@ -1170,6 +1170,7 @@ export class MapUi {
                     }
                     let edges = [];
                     for (var i = 0; i < routes.length-1; i++) {
+                        console.log(routes[i])
                         edges.push({
                             from: routes[i],
                             to: routes[i+1],
@@ -1181,6 +1182,47 @@ export class MapUi {
                     connResult.appendChild(this._createInfoPlateValuePair('loss', result.loss))
                     connResult.appendChild(this._createInfoPlateValuePair('routes', '\n'+result.routes))
                 }
+            }
+        }
+
+        if (this._connToNode && !this._connFromNode){
+            console.log("only to node selected")
+            let test_button = document.createElement('button');
+            test_button.innerText = 'Show Next Hop';
+            connPlate.appendChild(test_button);
+            test_button.onclick = async () => {
+                if (document.getElementById("conn_result")){
+                    document.getElementById("conn_result").remove();
+                }
+                this._edges.clear();
+                let connResult = document.createElement('div');
+                connResult.id = "conn_result"
+                connResult.classList.add('section');
+
+                let connResultTitle = document.createElement('div');
+                connResultTitle.className = 'title';
+                connResultTitle.innerText = 'Connectivity Test Result';
+
+                connResult.appendChild(connResultTitle);
+                connPlate.appendChild(connResult);
+                console.log(connToNode.meta.emulatorInfo)
+                let edges = [];
+                this._nodes.forEach(async node=>{
+                    let fromNode = node.object as EmulatorNode;
+                    console.log(fromNode.meta.emulatorInfo.nets[0].address)
+                    if (connToNode.meta.emulatorInfo.nets[0].address != fromNode.meta.emulatorInfo.nets[0].address){
+                        let result = await this._datasource.showNextHop(fromNode.Id, connToNode.meta.emulatorInfo.routerid)
+                        console.log(node.id);
+                        console.log(this._datasource.nodeIdByIp(result.nextHop));
+                        edges.push({
+                            from: node.id,
+                            to: this._datasource.nodeIdByIp(result.nextHop),
+                            arrows: "to"
+                        });
+                    }
+                    this._edges.update(edges);
+                })
+                
             }
         }
 
@@ -1471,7 +1513,6 @@ export class MapUi {
         //     return
         // }
         await this._datasource.get_position();
-
         // remove edges
         //var updated_edges = this._datasource.mEdges;
         var updated_nodes = this._datasource.vertices;
@@ -1487,7 +1528,8 @@ export class MapUi {
             }
         })
         if (is_moved){
-            //this._edges.clear()
+            this._edges.clear()
+            console.log("moved")
             this._nodes.clear()
             // remove
             //this._edges.update(updated_edges);

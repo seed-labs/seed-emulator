@@ -289,6 +289,19 @@ export class Controller implements LogProducer {
         return result
     }
 
+    /**
+     * get next hop via ping.
+     * 
+     * @param node node id.  this node must be a router node with bird running.
+     * @param dst_ip desitination node ip.
+     */
+    async getNextHop(node: string, dst_ip: string) {
+        this._logger.debug(`ip route get ${dst_ip}`);
+        console.log(`ip route get ${dst_ip}`)
+        let result = await this._run(node, `ip route get ${dst_ip}`);
+        return result
+    }
+
     getLoggers(): Logger[] {
         return [this._logger, this._sessionManager.getLoggers()[0]];
     }

@@ -35,9 +35,20 @@ const getContainers: () => Promise<SeedContainerInfo[]> = async function() {
 
 const getNodePosition: () => Promise<NodeInfo> = async function() {
     //const _node_info = fs.readFileSync(filepath, 'utf-8');
-    const _node_info = fs.readFileSync('/tmp/node_info/node_pos.json', 'utf-8');
-    const node_info = JSON.parse(_node_info) as NodeInfo;
-    return node_info;;
+    try {
+        const _node_info = fs.readFileSync('/tmp/node_info/node_pos.json', 'utf-8');
+        const node_info = JSON.parse(_node_info) as NodeInfo;
+        return node_info;;
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          // Handle the case where the file does not exist
+          console.error('File does not exist.');
+          return null
+        } else {
+          // Handle other potential errors
+          console.error('Error reading the file:', error.message);
+        }
+      }
 }
 
 // const getSimulationInfo: () => Promise<NodeInfo> = aync function() {
@@ -295,10 +306,18 @@ router.post('/container/:id/bgp/:peer', express.json(), async function (req, res
 router.get('/position', async function(req, res, next) {
     try {
         let containers = await getNodePosition();
-        res.json({
-            ok: true,
-            result: containers
-        });
+        if (containers!==null){
+            res.json({
+                ok: true,
+                result: containers
+            });
+        }
+        else{
+            res.json({
+                ok:false,
+                result: "no position file found."
+            });
+        }
     } catch (e) {
         res.json({
             ok: false,
@@ -438,31 +457,71 @@ router.get('/container/:id/connectivity/:ip', express.json(), async function (re
     let result = await controller.startConnTest(node.Id, dst_ip);
 
     let splitted_result = result.output.split('\n')
-    let result_summary = splitted_result[splitted_result.length-2]
-    if (result_summary.startsWith('---')){
-        result_summary = splitted_result[splitted_result.length-1]
-    }
-    let splitted_result_summary = result_summary.split(",")
-    console.log(result_summary)
-    let loss = splitted_result_summary[splitted_result_summary.length-2]
-    let routes = 'no routes';
-    console.log(loss);
+    console.log(splitted_result)
+    let loss = "100"
+    let routes = 'no routes'
+    
+    if (splitted_result.length>2){
 
-    if (loss.split("%")[0].trim() != "100"){
-        let routes_list: string[] = [];
-        result.output.split("\n\n")[0].split("RR:")[1].split('\n').forEach(route=>{
-            console.log(route)
-            routes_list.push(route.replace('\t','').trim());
-        });
+        let result_summary = splitted_result[splitted_result.length-2]
+        if (result_summary.startsWith('---')){
+            result_summary = splitted_result[splitted_result.length-1]
+        }
+        let splitted_result_summary = result_summary.split(",")
+        console.log(result_summary)
+        loss = splitted_result_summary[splitted_result_summary.length-2]
+        routes = 'no routes';
+        console.log(loss);
 
-        routes = routes_list.join('\n')
+        if (loss.split("%")[0].trim() != "100"){
+            let routes_list: string[] = [];
+            result.output.split("\n\n")[0].split("RR:")[1].split('\n').forEach(route=>{
+                console.log(route)
+                routes_list.push(route.replace('\t','').trim());
+            });
+
+            routes = routes_list.join('\n')
+        }
+        console.log(routes);
     }
-    console.log(routes);
+    
     res.json({
         ok: true,
         result: {
             loss: loss,
             routes: routes
+        }
+    });
+
+    next();
+});
+
+// ${this._apiBase}/container/${node}/nexthop/${dst_ip}
+router.get('/container/:id/nexthop/:ip', express.json(), async function (req, res, next) {
+    let id = req.params.id;
+    let dst_ip = req.params.ip;
+    
+    var candidates = (await docker.listContainers())
+        .filter(c => c.Id.startsWith(id));
+
+    if (candidates.length != 1) {
+        res.json({
+            ok: false,
+            result: `no match or multiple match for container ID ${id}.`
+        });
+        next();
+        return;
+    }
+
+    let node = candidates[0];
+
+    let result = await controller.getNextHop(node.Id, dst_ip);
+    let next_hop = result.output.split(' ')[2].trim()
+    console.log(`container output result : ${next_hop}`);
+    res.json({
+        ok: true,
+        result: {
+            nextHop: `${next_hop}`
         }
     });
 

@@ -74,6 +74,7 @@ while read -sr line; do {
     [[ "$cmd" == "tc qdisc"* ]] && output="`$cmd 2>&1`"
 
     [[ "$cmd" == "ping -R"* ]] && output="`$cmd 2>&1`"
+    [[ "$cmd" == "ip route get"* ]] && output="`$cmd 2>&1`"
 
     printf '_BEGIN_RESULT_'
     jq -Mcr --arg id "$id" --arg return_value "$?" --arg output "$output" -n '{id: $id | tonumber, return_value: $return_value | tonumber, output: $output }'
