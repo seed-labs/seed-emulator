@@ -4,7 +4,6 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        # image: handsonsecurity/seedemu-ethereum-arm64
-        image: rafaelawon/seedemu-ethereum-arm64
+        image: handsonsecurity/seedemu-ethereum-arm64
 
 

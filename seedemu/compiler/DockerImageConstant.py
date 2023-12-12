@@ -32,7 +32,7 @@ ROUTER_IMAGE_ARM64   = DockerImage(name='handsonsecurity/seedemu-multiarch-route
                                 software=['bird2'],
                                 subset=BASE_IMAGE_ARM64)
 
-ETHEREUM_IMAGE_ARM64 = DockerImage(name='rafaelawon/seedemu-ethereum-arm64',
+ETHEREUM_IMAGE_ARM64 = DockerImage(name='handsonsecurity/seedemu-ethereum-arm64',
                                 software=['software-properties-common', 'python3', 'python3-pip'],
                                 subset=BASE_IMAGE_ARM64)
 
