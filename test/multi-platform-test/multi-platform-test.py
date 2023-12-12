@@ -19,7 +19,7 @@ class MultiPlatformTest(ut.TestCase):
             "arm" : {
                         "39e016aa9e819f203ebc1809245a5818": "FROM handsonsecurity/seedemu-multiarch-router:buildx-latest",
                         "98a2693c996c2294358552f48373498d": "FROM handsonsecurity/seedemu-multiarch-base:buildx-latest",
-                        "6aa6090a0b640f105845984c991134a9": "FROM rafaelawon/seedemu-ethereum-arm64"
+                        "6aa6090a0b640f105845984c991134a9": "FROM handsonsecurity/seedemu-ethereum-arm64"
                     },
             "amd" : {
                         "39e016aa9e819f203ebc1809245a5818": "FROM handsonsecurity/seedemu-multiarch-router:buildx-latest",
