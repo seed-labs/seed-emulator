@@ -2,14 +2,26 @@
 
 from internet import IPAnyCastTestCase, MiniInternetTestCase
 from ethereum import EthereumPOATestCase, EthereumPOSTestCase, EthereumPOWTestCase
+from scion import ScionBgpMixedTestCase, ScionBwtesterTestCase
 import unittest
+import os, sys
+
+if len(sys.argv) == 1:
+    platform = "amd"
+else:
+    platform = sys.argv[1]
+
+# Set an environment variable
+os.environ['platform'] = platform
 
 test_case_list = [
     MiniInternetTestCase,
     IPAnyCastTestCase,
-    EthereumPOATestCase, 
+    EthereumPOATestCase,
     EthereumPOSTestCase,
-    EthereumPOWTestCase ]
+    EthereumPOWTestCase,
+    ScionBgpMixedTestCase,
+    ScionBwtesterTestCase ]
 
 for test_case in test_case_list:
     test_suite = test_case.get_test_suite()
@@ -17,6 +29,6 @@ for test_case in test_case_list:
     test_case.printLog("==============================")
     test_case.printLog("{} Test Ends".format(test_case.__name__))
     test_case.printLog("==============================")
-    
+
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
     test_case.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))

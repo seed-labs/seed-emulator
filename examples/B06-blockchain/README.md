@@ -8,6 +8,17 @@
 
 ---
 
+## Platform Support Information
+As of 12/12/2023, SEED Emulation Ethereum layer supports AMD platforms and partially supports ARM platforms.
+Please see details below.
+
+| Ethereum Consensus | AMD | ARM |
+| ------------------ | --- | --- |
+| PoW                |  O  |  X  |
+| PoA                |  O  |  O  |
+| PoS                |  O  |  O  |
+
+
 <a name="blockchain-component"></a>
 
 # Build a Blockchain Component

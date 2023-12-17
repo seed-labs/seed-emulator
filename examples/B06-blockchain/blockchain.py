@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 from seedemu import *
+import sys
 
 CustomGenesisFileContent = '''\
 {
@@ -131,8 +132,17 @@ emu.dump('component-blockchain.bin')
 
 emu.render()
 
-docker = Docker(etherViewEnabled=True)
+if len(sys.argv) == 1:
+    platform = "amd"
+else:
+    platform = sys.argv[1]
+
+platform_mapping = {
+    "amd": Platform.AMD64,
+    "arm": Platform.ARM64
+}
+docker = Docker(etherViewEnabled=True, platform=platform_mapping[platform])
 
 # If output directory exists and override is set to false, we call exit(1)
 # updateOutputdirectory will not be called
-emu.compile(docker, './output')
+emu.compile(docker, './output', override=True)

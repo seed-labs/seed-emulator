@@ -12,8 +12,9 @@ from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
 
-SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-map'
-SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-etherview'
+
+SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-multiarch-map:buildx-latest'
+SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:buildx-latest'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -110,6 +111,12 @@ DockerCompilerFileTemplates['compose_dummy'] = """\
             context: .
             dockerfile: dummies/{imageDigest}
         image: {imageDigest}
+{dependsOn}
+"""
+
+DockerCompilerFileTemplates['depends_on'] = """\
+        depends_on:
+            - {dependsOn}
 """
 
 DockerCompilerFileTemplates['compose_service'] = """\
@@ -313,8 +320,11 @@ class Docker(Compiler):
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
 
+    __basesystem_dockerimage_mapping: dict
+
     def __init__(
         self,
+        platform:Platform = Platform.AMD64,
         namingScheme: str = "as{asn}{role}-{displayName}-{primaryIp}",
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
@@ -328,6 +338,7 @@ class Docker(Compiler):
         """!
         @brief Docker compiler constructor.
 
+        @param platform (optional) node cpu architecture Default to Platform.AMD64
         @param namingScheme (optional) node naming scheme. Available variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
         {primaryIp} and {displayName}. {displayName} will automatically fall
@@ -377,11 +388,16 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        for name, image in BASESYSTEM_DOCKERIMAGE_MAPPING.items():
+        self.__platform = platform
+
+        self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
+        
+        for name, image in self.__basesystem_dockerimage_mapping.items():
             priority = 0
             if name == BaseSystem.DEFAULT:
                 priority = 1
             self.addImage(image, priority=priority)
+        
 
     def getName(self) -> str:
         return "Docker"
@@ -561,7 +577,7 @@ class Docker(Compiler):
             return (image, nodeSoft - image.getSoftware())
             
         #Maintain a table : Virtual Image Name - Actual Image Name 
-        image = BASESYSTEM_DOCKERIMAGE_MAPPING[node.getBaseSystem()]
+        image = self.__basesystem_dockerimage_mapping[node.getBaseSystem()]
 
         return (image, nodeSoft - image.getSoftware())
         
@@ -994,10 +1010,19 @@ class Docker(Compiler):
             self._log('adding dummy service for image {}...'.format(image))
 
             imageDigest = md5(image.encode('utf-8')).hexdigest()
-
-            dummies += DockerCompilerFileTemplates['compose_dummy'].format(
-                imageDigest = imageDigest
-            )
+            dockerImage, _ = self.__images[image]
+            if dockerImage.isLocal():
+                dummies += DockerCompilerFileTemplates['compose_dummy'].format(
+                    imageDigest = imageDigest,
+                    dependsOn= DockerCompilerFileTemplates['depends_on'].format(
+                        dependsOn = image
+                    )
+                )
+            else:
+                dummies += DockerCompilerFileTemplates['compose_dummy'].format(
+                    imageDigest = imageDigest,
+                    dependsOn= ""
+                )
 
             dockerfile = 'FROM {}\n'.format(image)
             print(dockerfile, file=open(imageDigest, 'w'))

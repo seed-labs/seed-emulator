@@ -32,6 +32,9 @@ class ScionAutonomousSystem(AutonomousSystem):
     __attributes: Dict[int, Set]         # Set of AS attributes per ISD
     __mtu: Optional[int]                 # Minimum MTU in the AS's internal networks
     __control_services: Dict[str, Node]
+    # Origination, propagation, and registration intervals
+    __beaconing_intervals: Tuple[Optional[str], Optional[str], Optional[str]]
+    __beaconing_policy: Dict[str, Dict]
     __next_ifid: int                     # Next IFID assigned to a link
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
@@ -43,6 +46,8 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__keys = None
         self.__attributes = defaultdict(set)
         self.__mtu = None
+        self.__beaconing_intervals = (None, None, None)
+        self.__beaconing_policy = {}
         self.__next_ifid = 1
 
     def registerNodes(self, emulator: Emulator):
@@ -108,6 +113,53 @@ class ScionAutonomousSystem(AutonomousSystem):
         @returns List of attributes.
         """
         return list(self.__attributes[isd])
+
+    def setBeaconingIntervals(self,
+        origination: Optional[str] = None,
+        propagation: Optional[str] = None,
+        registration: Optional[str] = None
+        ) -> ScionAutonomousSystem:
+        """!
+        @brief Set the beaconing intervals. Intervals are specified as string of a positive decimal
+        integer followed by one of the units y, w, d, h, m, s, us, or ns. Setting an interval to
+        None uses the beacon server's default setting.
+
+        @returns self
+        """
+        self.__beaconing_intervals = (origination, propagation, registration)
+        return self
+
+    def getBeaconingIntervals(self) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        """!
+        @brief Get the beaconing intervals.
+
+        @returns Tuple of origination, propagation, and registration interval.
+        """
+        return self.__beaconing_intervals
+
+    def setBeaconPolicy(self, type: str, policy: Optional[Dict]) -> ScionAutonomousSystem:
+        """!
+        @brief Set the beaconing policy of the AS.
+
+        @param type One of "propagation", "core_registration", "up_registration", "down_registration".
+        @param policy Policy. Setting a policy to None clears it.
+        @returns self
+        """
+        types = ["propagation", "core_registration", "up_registration", "down_registration"]
+        assert type in types, "Unknown policy type"
+        self.__beaconing_policy[type] = policy
+        return self
+
+    def getBeaconingPolicy(self, type: set) -> Optional[Dict]:
+        """!
+        @brief Get the beaconing policy of the AS.
+
+        @param type One of "propagation", "core_registration", "up_registration", "down_registration".
+        @returns Policy or None if no policy of the requested type is set.
+        """
+        types = ["propagation", "core_registration", "up_registration", "down_registration"]
+        assert type in types, "Unknown policy type"
+        return self.__beaconing_policy.get(type)
 
     def getTopology(self, isd: int) -> Dict:
         """!
@@ -190,7 +242,7 @@ class ScionAutonomousSystem(AutonomousSystem):
                 net = iface.getNet()
                 netname = 'Network: {}'.format(net.getName())
                 l2graph.addEdge(rtrname, netname)
-            
+
     def print(self, indent: int) -> str:
         """!
         @copydoc AutonomousSystem.print()

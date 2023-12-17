@@ -32,6 +32,7 @@ class EthereumPOWTestCase(SeedEmuTestCase):
             self.printLog("\n----------Trial {}----------".format(i))
             if time.time() - current_time > 600:
                 self.printLog("TimeExhausted: 600 sec")
+                break
             try:
                 self.wallet1.connectToBlockchain(url)
                 self.printLog("Connection Succeed: ", url)
