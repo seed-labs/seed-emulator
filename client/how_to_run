@@ -1,6 +1,6 @@
 backend:
-/node_modules/.bin/tsc
+cd backend && ./node_modules/.bin/tsc
 node ./bin/main.js
 
 frontend:
-./node_modules/.bin/webpack --mode production
+cd frontent && ./node_modules/.bin/webpack --mode production

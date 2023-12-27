@@ -46,6 +46,7 @@ export interface FilterRespond {
 }
 
 export interface NodeInfo {
+    current_iter: number;
     node_count: number;
     node_info: {
         id: number;
@@ -321,8 +322,27 @@ export class DataSource {
      * @param node node id.
      * @param dst_ip true if up, false if down.
      */
-     async showNextHop(node: string, dst_ip: string) {
+    async showNextHop(node: string, dst_ip: string) {
         return (await this._load<NextHopResult>('GET', `${this._apiBase}/container/${node}/nexthop/${dst_ip}`)).result;
+    }
+
+     /**
+     * start network connectivity test from the given node to the given dst ip.
+     * 
+     * @param node node id.
+     * @param iter set node position at iter.
+     */
+     async moveNodeContainer(node: string, iter: string) {
+        return (await this._load('GET', `${this._apiBase}/container/${node}/iter/${iter}`)).result;
+    }
+
+    /**
+     * start network connectivity test from the given node to the given dst ip.
+     * 
+     * @param iter set node position at iter.
+     */
+    async moveNodePosition(iter: string) {
+        return (await this._load('GET', `${this._apiBase}/position/iter/${iter}`)).result;
     }
 
     /**
@@ -380,6 +400,45 @@ export class DataSource {
         })
         return found;
     }
+
+    /**
+     * get loss between given 2 nodes.
+     */
+    getLoss(fromNodeId:string, toNodeId:string): number {
+        let fromId = parseInt(fromNodeId);
+        let toId = parseInt(toNodeId);
+        let loss = -1
+        if (fromId>toId){
+            let tmp = fromId;
+            fromId = toId;
+            toId = tmp;
+        }
+
+        outerLoop: for (const node of this._node_info.node_info) {
+            console.log("outer loop");
+            console.log(node.id);
+            console.log(fromId);
+
+            if (node.id == fromId) {
+                for (const conn of node.connectivity) {
+                console.log("inner loop");
+                console.log(conn.id);
+                console.log(toId);
+
+                if (conn.id == toId) {
+                    console.log(conn.id);
+                    console.log(toId);
+                    loss = conn.loss;
+                    console.log("loss1: " + loss.toString());
+                    break outerLoop; // Break out of both loops when the condition is met
+                }
+                }
+            }
+        }
+
+        console.log("loss2: "+loss.toString());
+        return loss;
+    }
     get mEdges(): Edge[] {
         var edges: Edge[] = [];
         if (this._node_info !== null){
@@ -431,6 +490,10 @@ export class DataSource {
         })
 
         return edges;
+    }
+
+    get iter(): Number {
+        return this._node_info.current_iter
     }
 
     get vertices(): Vertex[] {

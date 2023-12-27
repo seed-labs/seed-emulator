@@ -59,6 +59,11 @@ bgp() {
     [ "$cmd" = "bird_peer_up" ] && birdc en "$2"
 }
 
+move() {
+    iter="$2"
+    /tc_command/tc_command_$iter
+}
+
 while read -sr line; do {
     id="`cut -d ';' -f1 <<< "$line"`"
     cmd="`cut -d ';' -f2 <<< "$line"`"
@@ -75,6 +80,8 @@ while read -sr line; do {
 
     [[ "$cmd" == "ping -R"* ]] && output="`$cmd 2>&1`"
     [[ "$cmd" == "ip route get"* ]] && output="`$cmd 2>&1`"
+
+    [[ "$cmd" == "move"* ]] && output="`move $cmd 2>&1`"
 
     printf '_BEGIN_RESULT_'
     jq -Mcr --arg id "$id" --arg return_value "$?" --arg output "$output" -n '{id: $id | tonumber, return_value: $return_value | tonumber, output: $output }'

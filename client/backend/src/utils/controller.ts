@@ -302,6 +302,16 @@ export class Controller implements LogProducer {
         return result
     }
 
+    /**
+     * set movement to the given iter.
+     * 
+     * @param node node id.  this node must be a router node with bird running.
+     * @param iter iteration.
+     */
+    async moveNodePositionAtIter(node: string, iter: string) {
+        await this._run(node, `move ${iter}`);
+    }
+
     getLoggers(): Logger[] {
         return [this._logger, this._sessionManager.getLoggers()[0]];
     }

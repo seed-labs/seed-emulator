@@ -528,4 +528,45 @@ router.get('/container/:id/nexthop/:ip', express.json(), async function (req, re
     next();
 });
 
+// ${this._apiBase}/container/${node}/iter/${iter}
+router.get('/container/:id/iter/:iter', express.json(), async function (req, res, next) {
+    let id = req.params.id;
+    let iter = req.params.iter;
+    
+    var candidates = (await docker.listContainers())
+        .filter(c => c.Id.startsWith(id));
+
+    if (candidates.length != 1) {
+        res.json({
+            ok: false,
+            result: `no match or multiple match for container ID ${id}.`
+        });
+        next();
+        return;
+    }
+
+    let node = candidates[0];
+
+    await controller.moveNodePositionAtIter(node.Id, iter);
+    
+    res.json({
+        ok: true
+    });
+
+    next();
+});
+
+router.get('/position/iter/:iter', express.json(), async function (req, res, next) {
+    let iter = req.params.iter;
+    let sourceFilePath = `/tmp/node_info/node_pos_${iter}.json`;
+    let dstFilePath = "/tmp/node_info/node_pos.json";
+    fs.copyFileSync(sourceFilePath, dstFilePath);
+    
+    res.json({
+        ok: true
+    });
+
+    next();
+});
+
 export = router;

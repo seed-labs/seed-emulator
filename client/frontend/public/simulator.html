@@ -65,22 +65,58 @@
         </div>
         </div>
         </div> -->
+        <div class="panel movement-control-plate-panel">
+            <div class="panel-title">Movement Control</div>
+            <div class="movement-control-plate-wrap wrap">
+                <div class="movement-control-plate" id="movement-control-plate">
+                    <span><div class="label">Current Iter</div></span>
+                    <span><div class="text" id="cur-iter"></div></span>
+                    <div>
+                        <button id="movement-reset" title="reset"><i class="bi bi-arrow-counterclockwise"></i></button>
+                        <button id="movement-backward" title="step backward"><i class="bi bi-arrow-left-short"></i></button>
+                        <button id="movement-forward" title="step forward"><i class="bi bi-arrow-right-short"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="panel connectivity-plate-panel">
             <div class="panel-title">Connectivity Test (Ping)</div>
             <div class="connectivity-plate-wrap wrap">
                 <div class="connectivity-plate" id="connectivity-plate">
-                            <div class="label" id="conn-from">From:         </div>
-                            <div class="label" id="conn-to">To:         </div>
+                            <div> 
+                                <span class="label" >From</span>
+                                <span class="text" id="conn-from"></span>
+                            </div> 
+                            <div> 
+                                <span class="label" >To</span>
+                                <span class="text" id="conn-to"></span>
+                            </div> 
+                            <div> 
+                                <span class="label" >Distance</span>
+                                <span class="text" id="conn-dist"> - m</span>
+                            </div>
+                            <div class="toggle-switch-container">
+                                <span class="label">Show Loss</span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="toggle-loss" />
+                                    <label for="toggle-loss"></label>
+                                </div>
+                            </div>           
+                            <div class="toggle-switch-container">
+                                <span class="label">Show Distance</span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="toggle-distance" />
+                                    <label for="toggle-distance"></label>
+                                </div>
+                            </div> 
                             <div>
                                 <button id="conn-test-start" title="start test">start test</button>
-                            </div>
+                            </div>              
                             <div class="label" id="conn-result">
                                 --------------Result-------------
                             </div>
-                <div>
+                        </div>
             </div>
-        </div>
-        </div>
         </div>
 
         <div class="panel log-panel" id="log-panel">

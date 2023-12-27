@@ -14,6 +14,7 @@ export interface MapUiConfiguration {
     mapElementId: string, // element id of the map 
     infoPlateElementId: string, // element id of the info plate
     connPlateElementId: string, // element id of the connectivity plate
+
     filterInputElementId: string, // element id of the filter/search text input 
     filterWrapElementId: string, // element id of the filter/search text input wrapper
     logBodyElementId: string, // element id of the log body (the tbody)
@@ -42,6 +43,21 @@ export interface MapUiConfiguration {
         intervalElementId: string, // element id of interval input
         statusElementId: string // element id of status 
     },
+    movementControls: {
+        resetButtonElementId: string,
+        backwardButtonElementId: string, 
+        forwardButtonElementId: string,
+        statusElementId: string
+    }
+    connControls: {
+        connFromElementId: string, // element id of from_node
+        connToElementId: string, // element id of to_node
+        connDistElementId: string, // element id of dist
+        connTestButtonElementId: string, //element id of test button
+        showLossCheckBoxElementId: string,
+        showDistanceCheckBoxElementId: string
+        connResultElementId: string, //element id of conn result
+    }
     // filePathControls: {
     //     submitButtonElementId: string, // element id of file path submit button
     //     filePathInputElementId: string // element id of file path input 
@@ -100,6 +116,19 @@ export class MapUi {
     private _interval: HTMLInputElement;
     private _replayStatusText: HTMLElement;
 
+    private _resetMoveButton: HTMLButtonElement;
+    private _moveForwardButton: HTMLButtonElement;
+    private _moveBackwardButton: HTMLButtonElement;
+    private _movementStatusText: HTMLElement;
+
+    private _connFromText: HTMLElement;
+    private _connToText: HTMLElement;
+    private _connDistanceText: HTMLElement;
+    private _connResultText: HTMLElement;
+    private _connTestButton: HTMLButtonElement;
+    private _showLossCheckBox: HTMLInputElement;
+    private _showDistanceCheckBox: HTMLInputElement;
+
     // private _filepathSubmitButton: HTMLButtonElement;
     // private _filepathInput: HTMLInputElement;
     // private _node_info_filepath: string;
@@ -110,6 +139,9 @@ export class MapUi {
     private _buildings: DataSet<Vertex, 'id'>;
     private _edges: DataSet<Edge, 'id'>;
     private _tmp_edges: Edge[] = [];
+    private _tmp_edges_with_loss: Edge[] = []
+    private _tmp_edges_with_distance: Edge[] = []
+    private _tmp_edges_with_loss_and_distance: Edge[] = []
     private _graph: Network;
 
     /** list of log elements to be rendered to log body */
@@ -144,8 +176,16 @@ export class MapUi {
     /** from vertex for conn test */
     private _connFromNode: Vertex;
 
+    /** from vertex id for conn test */
+    // private _connFromNodeId: string;
+
     /** to vertex for conn test */
     private _connToNode: Vertex;
+
+    /** to vertex id for conn test */
+    // private _connToNodeId: string;
+
+    
 
     /** current suggestion item selection. */
     private _suggestionsSelection: number;
@@ -176,6 +216,7 @@ export class MapUi {
         this._mapElement = document.getElementById(config.mapElementId);
         this._infoPlateElement = document.getElementById(config.infoPlateElementId);
         this._connPlateElement = document.getElementById(config.connPlateElementId);
+        
         this._filterInput = document.getElementById(config.filterInputElementId) as HTMLInputElement;
         this._filterWrap = document.getElementById(config.filterWrapElementId);
 
@@ -202,6 +243,19 @@ export class MapUi {
         this._replaySeekBar = document.getElementById(config.replayControls.seekBarElementId) as HTMLInputElement;
         this._interval = document.getElementById(config.replayControls.intervalElementId) as HTMLInputElement;
         this._replayStatusText = document.getElementById(config.replayControls.statusElementId);
+
+        this._resetMoveButton = document.getElementById(config.movementControls.resetButtonElementId) as HTMLButtonElement;
+        this._moveForwardButton = document.getElementById(config.movementControls.forwardButtonElementId) as HTMLButtonElement;
+        this._moveBackwardButton = document.getElementById(config.movementControls.backwardButtonElementId) as HTMLButtonElement;
+        this._movementStatusText = document.getElementById(config.movementControls.statusElementId);
+
+        this._connFromText = document.getElementById(config.connControls.connFromElementId);
+        this._connToText = document.getElementById(config.connControls.connToElementId);
+        this._connDistanceText = document.getElementById(config.connControls.connDistElementId);
+        this._connResultText = document.getElementById(config.connControls.connResultElementId);
+        this._connTestButton = document.getElementById(config.connControls.connTestButtonElementId) as HTMLButtonElement;
+        this._showLossCheckBox = document.getElementById(config.connControls.showLossCheckBoxElementId) as HTMLInputElement;
+        this._showDistanceCheckBox = document.getElementById(config.connControls.showDistanceCheckBoxElementId) as HTMLInputElement;
 
         // this._filepathSubmitButton = document.getElementById(config.filePathControls.submitButtonElementId) as HTMLButtonElement;
         // this._filepathInput = document.getElementById(config.filePathControls.filePathInputElementId) as HTMLInputElement;
@@ -233,6 +287,81 @@ export class MapUi {
 
         this._bpfCompletion = new Completion(bpfCompletionTree);
 
+        this._resetMoveButton.onclick = () => {
+            this._movementStatusText.innerText = "0";
+            this._updateMovement();
+        };
+
+        this._moveBackwardButton.onclick = () => {
+            let current_iter = parseFloat(this._movementStatusText.innerText) - 1;
+            if(current_iter >= 0){
+                this._movementStatusText.innerText = current_iter.toString();
+                this._updateMovement();
+            }
+        }
+
+        this._moveForwardButton.onclick = () => {
+            let current_iter = parseFloat(this._movementStatusText.innerText) + 1;
+            if(current_iter < 30){
+                this._movementStatusText.innerText = current_iter.toString();
+                this._updateMovement();
+            }
+        }
+
+        this._showLossCheckBox.onclick = () => {
+            this._updateEdges();
+        }
+
+        this._showDistanceCheckBox.onclick = () => {
+            this._updateEdges();
+        }
+
+        
+        // this._connTestButton.onclick = () => {
+        //     this._connResultText.innerText = ''
+        //     let connToNode = this._connToNode.object as EmulatorNode;
+
+        //     let connResultTitle = document.createElement('div');
+        //     connResultTitle.className = 'title';
+        //     connResultTitle.innerText = 'Connectivity Test Result';
+
+        //     this._connResultText.appendChild(connResultTitle);
+        //     console.log(connToNode.meta.emulatorInfo)
+        //     if (connToNode.meta.emulatorInfo.routerid){
+        //         let result = await this._datasource.startConnTest(connFromNode.Id, connToNode.meta.emulatorInfo.routerid)
+        //         // let loss = result
+        //         console.log(result.loss);
+        //         console.log(result.routes);
+        //         let routes = [];
+        //         result.routes.split('\n').forEach(ip=>{
+        //             routes.push(this._datasource.nodeIdByIp(ip));
+        //         })
+        //         if (this._edges){
+        //             this._edges.clear();
+        //         }
+        //         this._tmp_edges = [];
+        //         this._tmp_edges_with_distance = [];
+        //         for (var i = 0; i < routes.length-1; i++) {
+        //             console.log(routes[i])
+        //             this._tmp_edges.push({
+        //                 from: routes[i],
+        //                 to: routes[i+1],
+        //                 arrows: "to"
+        //             });
+        //             this._tmp_edges_with_distance.push({
+        //                 from: routes[i],
+        //                 to: routes[i+1],
+        //                 arrows: "to",
+        //                 label: "distance: "+this._getDistance(routes[i], routes[i+1]).toString()
+        //             })
+        //         }
+        //         this._edges.update(this._tmp_edges_with_distance);
+                  
+        //         this._connResultText.appendChild(this._createInfoPlateValuePair('loss', result.loss))
+        //         this._connResultText.appendChild(this._createInfoPlateValuePair('routes', '\n'+result.routes))
+        //     }
+        // }
+        
         this._replayButton.onclick = () => {
             this._replayPlayPause();
         };
@@ -874,6 +1003,7 @@ export class MapUi {
         let span1 = document.createElement('span');
         span1.className = 'text';
         span1.innerText = text;
+        span1.id = 'info_'+label;
 
         div.appendChild(span0);
         div.appendChild(span1);
@@ -1095,6 +1225,58 @@ export class MapUi {
         this._infoPlateElement.appendChild(infoPlate);
         this._infoPlateElement.classList.remove('loading');
     }
+    /**
+     * update dist between given 2 nodes.
+     */
+    private async _updateDistance(){
+        if(this._connFromNode && this._connToNode){
+            const distance = this._getDistance(this._connFromNode.id, this._connToNode.id);            
+            document.getElementById('info_Distance').innerText = distance.toString()+" m";
+            console.log(distance.toString());
+        }
+    }
+    /**
+     * get dist between given 2 nodes.
+     */
+    private _getDistance(fromNodeId:string, toNodeId:string):number{
+        let fromNode = this._nodes.get(fromNodeId)
+        let toNode = this._nodes.get(toNodeId)
+        const deltaX = fromNode.x - toNode.x;
+        const deltaY = fromNode.y - toNode.y;
+        const distance = parseFloat((Math.sqrt(deltaX ** 2 + deltaY ** 2)/10).toFixed(2));
+        console.log(distance.toString());
+        return distance
+    }
+    /**
+     * get dist between given 2 nodes.
+     */
+    private _getLoss(fromNodeId:string, toNodeId:string):number{
+        let vertex = this._nodes.get(fromNodeId).object as EmulatorNode;
+        let fromId = parseInt(vertex.meta.emulatorInfo.routerid.split('.')[3])-100;
+
+        vertex = this._nodes.get(toNodeId).object as EmulatorNode;
+        let toId = parseInt(vertex.meta.emulatorInfo.routerid.split('.')[3])-100;
+        console.log("fromId: "+fromId.toString() + "| toId: "+toId.toString());
+        return this._datasource.getLoss(fromId.toString(), toId.toString());
+    }
+
+    /**
+     * update edges with information to show
+     */
+    private _updateEdges(){
+        this._edges.clear()
+        if (this._showLossCheckBox.checked) {
+            if (this._showDistanceCheckBox.checked){
+                this._edges.update(this._tmp_edges_with_loss_and_distance);
+            }else{
+                this._edges.update(this._tmp_edges_with_loss);
+            }
+        }else if (this._showDistanceCheckBox.checked){
+            this._edges.update(this._tmp_edges_with_distance);
+        }else{
+            this._edges.update(this._tmp_edges);
+        }
+    }
 
     /**
      * update infoplate with node.
@@ -1132,33 +1314,27 @@ export class MapUi {
         if (this._edges){
             this._edges.clear();
         }
-        let connPlate = document.createElement('div');
         let connToNode = this._connToNode.object as EmulatorNode;
-        connPlate.appendChild(this._createInfoPlateValuePair('To', connToNode.meta.emulatorInfo.name));
+        this._connToText.innerText = connToNode.meta.emulatorInfo.name;
+        this._connFromText.innerText = "";
         if (this._connToNode && this._connFromNode){
             let connFromNode = this._connFromNode.object as EmulatorNode;
-            connPlate.appendChild(this._createInfoPlateValuePair('From', connFromNode.meta.emulatorInfo.name));
-            let test_button = document.createElement('button');
-            test_button.innerText = 'Start Ping Test';
-            connPlate.appendChild(test_button);
-            test_button.onclick = async () => {
-                if (document.getElementById("conn_result")){
-                    document.getElementById("conn_result").remove();
-                }
-                let connResult = document.createElement('div');
-                connResult.id = "conn_result"
-                connResult.classList.add('section');
+            this._connFromText.innerText = connFromNode.meta.emulatorInfo.name;
+            const distance = this._getDistance(this._connFromNode.id, this._connToNode.id);
+            this._connDistanceText.innerText = distance.toString()+"m"
+            this._connTestButton.innerText = 'Start Ping Test';
+            this._connTestButton.onclick = async () => {
+                this._connResultText.innerText = "";
+                this._connResultText.classList.add('section');
 
                 let connResultTitle = document.createElement('div');
                 connResultTitle.className = 'title';
                 connResultTitle.innerText = 'Connectivity Test Result';
 
-                connResult.appendChild(connResultTitle);
-                connPlate.appendChild(connResult);
+                this._connResultText.appendChild(connResultTitle);
                 console.log(connToNode.meta.emulatorInfo)
                 if (connToNode.meta.emulatorInfo.routerid){
                     let result = await this._datasource.startConnTest(connFromNode.Id, connToNode.meta.emulatorInfo.routerid)
-                    // let loss = result
                     console.log(result.loss);
                     console.log(result.routes);
                     let routes = [];
@@ -1168,68 +1344,118 @@ export class MapUi {
                     if (this._edges){
                         this._edges.clear();
                     }
-                    let edges = [];
+                    this._tmp_edges = [];
+                    this._tmp_edges_with_distance = [];
+                    this._tmp_edges_with_loss = [];
+                    this._tmp_edges_with_loss_and_distance = [];
                     for (var i = 0; i < routes.length-1; i++) {
-                        console.log(routes[i])
-                        edges.push({
+                        let loss_label = ""
+                        let dist_label = ""
+                        this._tmp_edges.push({
                             from: routes[i],
                             to: routes[i+1],
                             arrows: "to"
                         });
+                        
+                        if (routes[i]!=routes[i+1]){
+                            dist_label = "distance: "+this._getDistance(routes[i], routes[i+1]).toString()
+                            loss_label =  "loss: " + this._getLoss(routes[i], routes[i+1]).toString()
+                        }
+                        this._tmp_edges_with_distance.push({
+                            from: routes[i],
+                            to: routes[i+1],
+                            arrows: "to",
+                            label: dist_label
+                        })
+                        
+                        this._tmp_edges_with_loss.push({
+                            from: routes[i],
+                            to: routes[i+1],
+                            arrows: "to",
+                            label: loss_label
+                        })
+                        this._tmp_edges_with_loss_and_distance.push({
+                            from: routes[i],
+                            to: routes[i+1],
+                            arrows: "to",
+                            label: dist_label + "\n" + loss_label
+                        })
                     }
-                    this._edges.update(edges);
+                    this._updateEdges();
                       
-                    connResult.appendChild(this._createInfoPlateValuePair('loss', result.loss))
-                    connResult.appendChild(this._createInfoPlateValuePair('routes', '\n'+result.routes))
+                    this._connResultText.appendChild(this._createInfoPlateValuePair('loss', result.loss))
+                    this._connResultText.appendChild(this._createInfoPlateValuePair('routes', '\n'+result.routes))
                 }
             }
         }
 
         if (this._connToNode && !this._connFromNode){
-            console.log("only to node selected")
-            let test_button = document.createElement('button');
-            test_button.innerText = 'Show Next Hop';
-            connPlate.appendChild(test_button);
-            test_button.onclick = async () => {
-                if (document.getElementById("conn_result")){
-                    document.getElementById("conn_result").remove();
-                }
+            this._connTestButton.innerText = 'Show Next Hop';
+            this._connTestButton.onclick = async () => {
+                this._connResultText.innerText = "";
                 this._edges.clear();
-                let connResult = document.createElement('div');
-                connResult.id = "conn_result"
-                connResult.classList.add('section');
+                this._tmp_edges = [];
+                this._tmp_edges_with_distance = [];
+                this._tmp_edges_with_loss = [];
+                this._tmp_edges_with_loss_and_distance = [];
+
+                this._connResultText.classList.add('section');
 
                 let connResultTitle = document.createElement('div');
                 connResultTitle.className = 'title';
                 connResultTitle.innerText = 'Connectivity Test Result';
 
-                connResult.appendChild(connResultTitle);
-                connPlate.appendChild(connResult);
-                console.log(connToNode.meta.emulatorInfo)
-                let edges = [];
+                this._connResultText.appendChild(connResultTitle);
+                
                 this._nodes.forEach(async node=>{
                     let fromNode = node.object as EmulatorNode;
                     console.log(fromNode.meta.emulatorInfo.nets[0].address)
                     if (connToNode.meta.emulatorInfo.nets[0].address != fromNode.meta.emulatorInfo.nets[0].address){
                         let result = await this._datasource.showNextHop(fromNode.Id, connToNode.meta.emulatorInfo.routerid)
-                        console.log(node.id);
-                        console.log(this._datasource.nodeIdByIp(result.nextHop));
-                        edges.push({
-                            from: node.id,
-                            to: this._datasource.nodeIdByIp(result.nextHop),
+                        let dist_label = "";
+                        let loss_label = "";
+                        let from = node.id;
+                        let to = this._datasource.nodeIdByIp(result.nextHop);
+
+                        this._tmp_edges.push({
+                            from: from,
+                            to: to,
                             arrows: "to"
                         });
+
+                        dist_label = "distance: "+this._getDistance(from, to).toString()
+                        loss_label =  "loss: " + this._getLoss(from, to).toString()
+                        
+                        this._tmp_edges_with_distance.push({
+                            from: from,
+                            to: to,
+                            arrows: "to",
+                            label: dist_label
+
+                        });
+
+                        this._tmp_edges_with_loss.push({
+                            from: from,
+                            to: to,
+                            arrows: "to",
+                            label: loss_label
+
+                        });
+
+                        this._tmp_edges_with_loss_and_distance.push({
+                            from: from,
+                            to: to,
+                            arrows: "to",
+                            label: dist_label + "\n" + loss_label
+                        });
+
                     }
-                    this._edges.update(edges);
+                    this._updateEdges();
                 })
                 
             }
         }
 
-        
-        this._connPlateElement.innerText = '';
-        this._connPlateElement.appendChild(connPlate);
-        // this._connPlateElement.classList.remove('loading');
     }
 
 
@@ -1249,6 +1475,14 @@ export class MapUi {
                 this._macMapping[net.MacAddress] = net.NetworkID;
             });
         });
+    }
+
+    private async _updateMovement() {
+        let current_iter =  this._movementStatusText.innerText;
+        await this._datasource.moveNodePosition(current_iter);
+        this._nodes.forEach(async node=>{
+            await this._datasource.moveNodeContainer(node.id, current_iter)
+        })
     }
 
     private _updateReplayControls() {
@@ -1513,10 +1747,11 @@ export class MapUi {
         //     return
         // }
         await this._datasource.get_position();
-        // remove edges
-        //var updated_edges = this._datasource.mEdges;
+
         var updated_nodes = this._datasource.vertices;
         var is_moved = false;
+        this._movementStatusText.innerText = this._datasource.iter.toString();
+
         new DataSet(updated_nodes).forEach(node=>{
             if (node.x != this._nodes.get(node.id).x){
                 is_moved = true;
@@ -1527,9 +1762,11 @@ export class MapUi {
                 return
             }
         })
+        
         if (is_moved){
             this._edges.clear()
             console.log("moved")
+            this._updateDistance()
             this._nodes.clear()
             // remove
             //this._edges.update(updated_edges);
@@ -1619,7 +1856,6 @@ export class MapUi {
                 }
               });
         });
-
         
         this._graph.on('click', (ev) => {
             this._suggestions.innerText = '';

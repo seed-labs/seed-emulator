@@ -44,6 +44,21 @@ const mapUi = new MapUi({
     //     filePathInputElementId: 'filepath_input',
     //     submitButtonElementId: 'filepath-submit'
     // },
+    movementControls: {
+        resetButtonElementId: 'movement-reset',
+        forwardButtonElementId: 'movement-forward',
+        backwardButtonElementId: 'movement-backward',
+        statusElementId: 'cur-iter'
+    },
+    connControls: {
+        connFromElementId: 'conn-from',
+        connToElementId: 'conn-to',
+        connDistElementId: 'conn-dist',
+        showLossCheckBoxElementId: 'toggle-loss',
+        showDistanceCheckBoxElementId: 'toggle-distance',
+        connTestButtonElementId: 'conn-test-start',
+        connResultElementId: 'conn-result'
+    },
     windowManager: {
         desktopElementId: 'console-area',
         taskbarElementId: 'taskbar'
