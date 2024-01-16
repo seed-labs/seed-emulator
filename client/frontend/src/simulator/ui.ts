@@ -53,6 +53,7 @@ export interface MapUiConfiguration {
         connFromElementId: string, // element id of from_node
         connToElementId: string, // element id of to_node
         connDistElementId: string, // element id of dist
+        connLossElementId: string, // element id of loss
         connTestButtonElementId: string, //element id of test button
         showLossCheckBoxElementId: string,
         showDistanceCheckBoxElementId: string
@@ -124,6 +125,7 @@ export class MapUi {
     private _connFromText: HTMLElement;
     private _connToText: HTMLElement;
     private _connDistanceText: HTMLElement;
+    private _connLossText: HTMLElement;
     private _connResultText: HTMLElement;
     private _connTestButton: HTMLButtonElement;
     private _showLossCheckBox: HTMLInputElement;
@@ -252,6 +254,7 @@ export class MapUi {
         this._connFromText = document.getElementById(config.connControls.connFromElementId);
         this._connToText = document.getElementById(config.connControls.connToElementId);
         this._connDistanceText = document.getElementById(config.connControls.connDistElementId);
+        this._connLossText = document.getElementById(config.connControls.connLossElementId);
         this._connResultText = document.getElementById(config.connControls.connResultElementId);
         this._connTestButton = document.getElementById(config.connControls.connTestButtonElementId) as HTMLButtonElement;
         this._showLossCheckBox = document.getElementById(config.connControls.showLossCheckBoxElementId) as HTMLInputElement;
@@ -287,12 +290,12 @@ export class MapUi {
 
         this._bpfCompletion = new Completion(bpfCompletionTree);
 
-        this._resetMoveButton.onclick = () => {
+        this._resetMoveButton.onclick = async () => {
             this._movementStatusText.innerText = "0";
             this._updateMovement();
         };
 
-        this._moveBackwardButton.onclick = () => {
+        this._moveBackwardButton.onclick = async () => {
             let current_iter = parseFloat(this._movementStatusText.innerText) - 1;
             if(current_iter >= 0){
                 this._movementStatusText.innerText = current_iter.toString();
@@ -300,7 +303,7 @@ export class MapUi {
             }
         }
 
-        this._moveForwardButton.onclick = () => {
+        this._moveForwardButton.onclick = async () => {
             let current_iter = parseFloat(this._movementStatusText.innerText) + 1;
             if(current_iter < 30){
                 this._movementStatusText.innerText = current_iter.toString();
@@ -1314,14 +1317,17 @@ export class MapUi {
         if (this._edges){
             this._edges.clear();
         }
+
         let connToNode = this._connToNode.object as EmulatorNode;
         this._connToText.innerText = connToNode.meta.emulatorInfo.name;
         this._connFromText.innerText = "";
+
         if (this._connToNode && this._connFromNode){
             let connFromNode = this._connFromNode.object as EmulatorNode;
             this._connFromText.innerText = connFromNode.meta.emulatorInfo.name;
-            const distance = this._getDistance(this._connFromNode.id, this._connToNode.id);
-            this._connDistanceText.innerText = distance.toString()+"m"
+            
+            this._updateDistanceAndLossBetweenSelectedNodes();
+
             this._connTestButton.innerText = 'Start Ping Test';
             this._connTestButton.onclick = async () => {
                 this._connResultText.innerText = "";
@@ -1390,6 +1396,7 @@ export class MapUi {
         }
 
         if (this._connToNode && !this._connFromNode){
+            this._updateDistanceAndLossBetweenSelectedNodes();
             this._connTestButton.innerText = 'Show Next Hop';
             this._connTestButton.onclick = async () => {
                 this._connResultText.innerText = "";
@@ -1483,6 +1490,21 @@ export class MapUi {
         this._nodes.forEach(async node=>{
             await this._datasource.moveNodeContainer(node.id, current_iter)
         })
+    }
+
+    private _updateDistanceAndLossBetweenSelectedNodes(){
+        if (this._connToNode && this._connFromNode){
+            this._connToNode = this._nodes.get(this._connToNode.id);
+            this._connFromNode = this._nodes.get(this._connFromNode.id);
+
+            let distance = this._getDistance(this._connFromNode.id, this._connToNode.id);
+            this._connDistanceText.innerText = distance.toString()+"m"
+            let loss = this._getLoss(this._connFromNode.id, this._connToNode.id);
+            this._connLossText.innerText = loss.toString()+"%"
+        } else {
+            this._connDistanceText.innerText = "- m";
+            this._connLossText.innerText = "- %"
+        }
     }
 
     private _updateReplayControls() {
@@ -1772,13 +1794,14 @@ export class MapUi {
             //this._edges.update(updated_edges);
             updated_nodes.forEach(node=>{
                 if (this._connFromNode && node.id==this._connFromNode.id){
-                    node.color = 'red';
+                    node.color = 'blue';
                 }
                 if (this._connToNode && node.id==this._connToNode.id){
-                    node.color = 'blue';
+                    node.color = 'red';
                 }
             })
             this._nodes.update(updated_nodes);
+            this._updateDistanceAndLossBetweenSelectedNodes()
 
         }
         

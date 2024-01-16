@@ -54,6 +54,7 @@ const mapUi = new MapUi({
         connFromElementId: 'conn-from',
         connToElementId: 'conn-to',
         connDistElementId: 'conn-dist',
+        connLossElementId: 'conn-loss',
         showLossCheckBoxElementId: 'toggle-loss',
         showDistanceCheckBoxElementId: 'toggle-distance',
         connTestButtonElementId: 'conn-test-start',
