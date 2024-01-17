@@ -263,8 +263,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__shared_folders = {}
         self.__persistent_storages = []
 
-        # for soft in DEFAULT_SOFTWARE:
-        #     self.__softwares.add(soft)
+        for soft in DEFAULT_SOFTWARE:
+            self.__softwares.add(soft)
 
         self.__name_servers = []
 
