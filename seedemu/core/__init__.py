@@ -3,7 +3,7 @@ from .AutonomousSystem import AutonomousSystem
 from .ScionAutonomousSystem import ScionAutonomousSystem
 from .IsolationDomain import IsolationDomain
 from .InternetExchange import InternetExchange
-from .Network import Network
+from .Network import Network, DockerBridge
 from .Node import Node, File, Interface, Router, RealWorldRouter, ScionRouter
 from .Printable import Printable
 from .Registry import Registry, ScopedRegistry, Registrable

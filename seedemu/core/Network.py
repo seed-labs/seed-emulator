@@ -8,6 +8,42 @@ from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
 from .Visualization import Vertex
 from typing import Dict, Tuple, List
 
+
+class DockerBridge(Registrable):
+
+    # TODO: maybe add an ASn scope to bridges to simplify retrieval from registry
+    __base:IPv4Network=  IPv4Network('172.29.0.0/16')
+    # the last one will be 172.29.255.248/29
+    # i doubt that anyone needs this many containers
+
+    """
+    @brief currently only used as a means to connect simulation-node router containers 
+    (and through it any nodes on its 'local network') to the docker hosts internet connection
+
+    the subnetmask for this 'micro' network is deliberately kept as big as possible, 
+    to allow as least nodes as possible on it (ideally /30 for only: the router-node, docker-host , broadcast and network address )
+    This is to inhibit 'short-circuiting' the simulated network topology (i.e. crosstalk past the intended network topo among nodes)
+    """
+    def __init__(self,n: str,id: int ):
+        
+        super().__init__()
+        self.__base =   IPv4Network('172.29.0.0/16')
+        super().doRegister('undefined', 'undefined', n)
+        super().setAttribute('name', n)
+        super().setAttribute('id',id)
+    
+    def getSubnet(self):
+        i =0
+        bid = super().getAttribute('id')
+        gen = self.__base.subnets(new_prefix=29) 
+        # docker complains, when /30 is used here, but why ?! 4x addresses in the net are enough
+        p: IPv4Network = IPv4Network('172.29.0.0/29')
+        while i <= bid:
+            p = next(gen)
+            i+=1
+        return p
+            
+
 class Network(Printable, Registrable, Vertex):
     """!
     @brief The network class.

@@ -1,4 +1,4 @@
-from seedemu.core import ScopedRegistry, Node, Interface, Network, Emulator, Layer, Router, RealWorldRouter, BaseSystem
+from seedemu.core import ScopedRegistry, Node, Interface, Network, DockerBridge,Emulator, Layer, Router, RealWorldRouter, BaseSystem
 from typing import List, Dict
 from ipaddress import IPv4Network
 
@@ -142,6 +142,10 @@ class Routing(Layer):
                 if has_localnet: rnode.addProtocol('direct', 'local_nets', RoutingFileTemplates['rnode_bird_direct'].format(interfaces = ifaces))
 
     def render(self, emulator: Emulator):
+
+        seen_bridge_ids = set()
+        bridges = []
+
         reg = emulator.getRegistry()
         for ((scope, type, name), obj) in reg.getAll().items():
             if type == 'rs' or type == 'rnode':
@@ -152,6 +156,17 @@ class Routing(Layer):
                 if issubclass(rnode.__class__, RealWorldRouter):
                     self._log("Sealing real-world router as{}/{}...".format(rnode.getAsn(), rnode.getName()))
                     rnode.seal()
+              
+                if rnode.isConnectedExternal() != -1:
+                    bid = rnode.isConnectedExternal()
+                    seen_bridge_ids.add(bid)
+                    bname = "default{}".format(bid) 
+                    router.setCustomNet( "            {}:\n".format(bname) )
+                    db = DockerBridge(bname,bid)
+                    bridges.append(db)              
+                    router.addSoftware("iptables") # think this already defaulted ?!
+                    router.appendStartCommand('iptables -t nat -A POSTROUTING -j MASQUERADE')
+
 
             if type in ['hnode', 'csnode']:
                 hnode: Node = obj
@@ -167,12 +182,24 @@ class Routing(Layer):
                     for riface in router.getInterfaces():
                         if riface.getNet() == hnet:
                             rif = riface
+
+                            if hnode.reachesOutside():
+                                assert router.isConnectedExternal() != -1
                             break
 
                 assert rif != None, 'Host {} in as{} in network {}: no router'.format(name, scope, hnet.getName())
                 self._log("Setting default route for host {} ({}) to router {}".format(name, hif.getAddress(), rif.getAddress()))
                 hnode.appendStartCommand('ip rou del default 2> /dev/null')
                 hnode.appendStartCommand('ip route add default via {} dev {}'.format(rif.getAddress(), rif.getNet().getName()))
+        
+        for b in bridges:
+            id = b.getAttribute('id')
+            name = b.getAttribute('name')
+            reg.register('global','dockerbridge',name, b).setAttribute("id",id)
+            b.setAttribute('name',name)
+
+        assert len(seen_bridge_ids) == Router.bridge_cnt
+        assert Router.bridge_cnt == len(bridges)
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

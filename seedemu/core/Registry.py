@@ -25,6 +25,7 @@ class Registrable(object):
         """!
         @brief Handle registration.
 
+        Attention: attributes are deleted on registration !! unintuitive ?!
         @param scope scope.
         @param type type.
         @param name name.
@@ -32,7 +33,7 @@ class Registrable(object):
         self._rscope = scope
         self._rtype = type
         self._rname = name
-        self._attrs = {}
+        self._attrs = {} # better move to init() ?!
     
     def getRegistryInfo(self) -> Tuple[str, str, str]:
         """!

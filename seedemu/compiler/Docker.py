@@ -96,6 +96,14 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
 }; done
 '''
 
+DockerCompilerFileTemplates['dockerbridge'] ="""\
+    {name}:
+        ipam:
+          config:
+            - subnet:  {snet}
+"""
+
+
 DockerCompilerFileTemplates['compose'] = """\
 version: "3.4"
 services:
@@ -136,6 +144,8 @@ DockerCompilerFileTemplates['compose_service'] = """\
 {networks}{ports}{volumes}
         labels:
 {labelList}
+        environment:
+        {environment}
 """
 
 DockerCompilerFileTemplates['compose_label_meta'] = """\
@@ -853,6 +863,7 @@ class Docker(Compiler):
                 netId = real_netname,
                 address = address
             )
+        node_nets += '\n'.join(node.getCustomNets())
 
         _ports = node.getPorts()
         ports = ''
@@ -891,7 +902,20 @@ class Docker(Compiler):
                 volumeList = lst
             )
 
+        name = self.__naming_scheme.format(
+            asn = node.getAsn(),
+            role = self._nodeRoleToString(node.getRole()),
+            name = node.getName(),
+            displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
+            primaryIp = node.getInterfaces()[0].getAddress()
+        )
+
+        name = sub(r'[^a-zA-Z0-9_.-]', '_', name)
+
         dockerfile = DockerCompilerFileTemplates['dockerfile']
+
+        dockerfile += 'ENV CONTAINER_NAME {}\n'.format(name)
+
         mkdir(real_nodename)
         chdir(real_nodename)
 
@@ -912,6 +936,7 @@ class Docker(Compiler):
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
 
+        for cmd in node.getDockerCommands(): dockerfile += '{}\n'.format(cmd)
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
         start_commands = ''
@@ -945,19 +970,9 @@ class Docker(Compiler):
             dockerfile += self._importFile(cpath, hpath)
 
         dockerfile += 'CMD ["/start.sh"]\n'
+
         print(dockerfile, file=open('Dockerfile', 'w'))
-
         chdir('..')
-
-        name = self.__naming_scheme.format(
-            asn = node.getAsn(),
-            role = self._nodeRoleToString(node.getRole()),
-            name = node.getName(),
-            displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
-            primaryIp = node.getInterfaces()[0].getAddress()
-        )
-
-        name = sub(r'[^a-zA-Z0-9_.-]', '_', name)
 
         return DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
@@ -967,7 +982,8 @@ class Docker(Compiler):
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
             labelList = self._getNodeMeta(node),
-            volumes = volumes
+            volumes = volumes,
+            environment= "    - CONTAINER_NAME={}\n            ".format(name) + '\n            '.join(node.getCustomEnv())
         )
 
     def _compileNet(self, net: Network) -> str:
@@ -1087,6 +1103,11 @@ class Docker(Compiler):
                 imageName = image.getName(),
                 dirName = image.getDirName()
             )
+
+        bridges = registry.getByType('global','dockerbridge')
+        for b in bridges:
+            id = b.getAttribute('id')
+            self.__networks += DockerCompilerFileTemplates['dockerbridge'].format(name = b.getAttribute('name'), snet= str( b.getSubnet() ) )
 
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(

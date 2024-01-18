@@ -216,6 +216,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __imported_files: Dict[str, str]
     __softwares: Set[str]
     __build_commands: List[str]
+    __docker_cmds: List[str]
     __start_commands: List[Tuple[str, bool]]
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
@@ -223,11 +224,14 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __configured: bool
     __pending_nets: List[Tuple[str, str]]
     __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str]]
-
+    __custom_nets: List[str]
+    __custom_env: List[str]
     __shared_folders: Dict[str, str]
     __persistent_storages: List[str]
 
     __name_servers: List[str]
+    # wether this node requires to have 'real' internet access via its gateway
+    __reach_outside: bool
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -251,6 +255,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
         self.__build_commands = []
+        self.__docker_cmds = []
         self.__start_commands = []
         self.__ports = []
         self.__privileged = False
@@ -262,11 +267,21 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         self.__shared_folders = {}
         self.__persistent_storages = []
+        self.__custom_nets = []
+        self.__custom_env = []
 
         # for soft in DEFAULT_SOFTWARE:
         #     self.__softwares.add(soft)
 
         self.__name_servers = []
+        self.__reach_outside =False
+
+    def requestReachOutside(self):
+        self.__reach_outside = True
+        return self
+    
+    def reachesOutside(self):
+        return self.__reach_outside
 
     def configure(self, emulator: Emulator):
         """!
@@ -344,6 +359,35 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__name_servers = servers
 
         return self
+    
+    def setCustomNet(self, net: str):
+        """
+        @param net  a network that the node shall join (in docker-compose syntax )
+                    i.e. : 
+                            net_153_net0:
+                                ipv4_address: 10.153.0.254
+                it will be inserted under the nodes 'networks:' section in the .yml file
+        """
+        self.__custom_nets.append(net)
+        return self
+    
+    def getCustomNets(self):
+        return self.__custom_nets
+    
+    def setCustomEnv(self, env: str ):
+        """
+        @param env  an environment variable that docker-compose shall pass to the Dockerfile
+
+            it gets inserted into the 'environment:'  section of the node
+            i.e.:
+                environment:
+                    - DEBUG=${DEBUG}
+        """
+        self.__custom_env.append(env)
+        return self
+
+    def getCustomEnv(self):
+        return self.__custom_env
 
     def getNameServers(self) -> List[str]:
         """!
@@ -478,6 +522,12 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__pending_nets.append((netname, address))
 
         return self
+    
+    def getNetNames(self):
+        """
+        @brief list of names of networks this node has joined
+        """
+        return [tuple[0] for tuple in  self.__pending_nets]
 
     def updateNetwork(self, netname:str, address: str= "auto") -> Node:
         """!
@@ -712,6 +762,18 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__build_commands.append(cmd)
 
         return self
+    
+    def addDockerCommand(self, cmd: str) -> Node:
+        """! 
+        @brief Add new docker command to build step (possibly of kind other than RUN).
+                Unlike the ones added with addBuildCommands these commands wont be prefixed with RUN,
+                but are assumed to be valid Docker Commands by themselfes
+        """
+        self.__docker_cmds.append(cmd)
+        return self
+    
+    def getDockerCommands(self)-> List[str]:
+        return self.__docker_cmds
 
     def getBuildCommands(self) -> List[str]:
         """!
@@ -927,6 +989,26 @@ class Router(Node):
     """
 
     __loopback_address: str
+    __external_bridge_id: int = -1 # -1 means not externally connected
+
+    bridge_cnt: int = 0
+
+    def isConnectedExternal(self):
+        """
+        @brief externally connected routers can reach the internet outside the simulation via the docker host
+
+        a 'Local Network' with at least one host that requires to 'reach_outside' 
+        needs to have an externally-connected router to do so
+        """
+        return self.__external_bridge_id
+    
+    def setConnectedExternal(self):
+       
+        if self.__external_bridge_id != -1: return self
+
+        self.__external_bridge_id = Router.bridge_cnt 
+        Router.bridge_cnt += 1
+        return self
 
     def setLoopbackAddress(self, address: str):
         """!
