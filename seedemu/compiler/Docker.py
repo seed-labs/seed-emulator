@@ -111,6 +111,8 @@ services:
 {services}
 networks:
 {networks}
+volumes:
+{named_volumes}
 """
 
 DockerCompilerFileTemplates['compose_dummy'] = """\
@@ -173,7 +175,7 @@ DockerCompilerFileTemplates['compose_volume'] = """\
 """
 
 DockerCompilerFileTemplates['compose_storage'] = """\
-            - {nodePath}
+            - {volume_name}:{nodePath}
 """
 
 DockerCompilerFileTemplates['compose_service_network'] = """\
@@ -332,6 +334,8 @@ class Docker(Compiler):
 
     __basesystem_dockerimage_mapping: dict
 
+    __named_volumes: List[str]
+
     def __init__(
         self,
         platform:Platform = Platform.AMD64,
@@ -399,9 +403,10 @@ class Docker(Compiler):
         self.__image_per_node_list = {}
 
         self.__platform = platform
+        self.__named_volumes = []
 
         self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
-        
+                
         for name, image in self.__basesystem_dockerimage_mapping.items():
             priority = 0
             if name == BaseSystem.DEFAULT:
@@ -893,9 +898,11 @@ class Docker(Compiler):
                     nodePath = nodePath
                 )
 
-            for path in storages:
+            for path,vname in storages:
+                self.__named_volumes.append(vname)
                 lst += DockerCompilerFileTemplates['compose_storage'].format(
-                    nodePath = path
+                    nodePath = path,
+                    volume_name= "{}".format(vname)
                 )
 
             volumes = DockerCompilerFileTemplates['compose_volumes'].format(
@@ -1113,5 +1120,6 @@ class Docker(Compiler):
         print(DockerCompilerFileTemplates['compose'].format(
             services = self.__services,
             networks = self.__networks,
+            named_volumes= '\n'.join(   map(lambda name:  "    {}:".format(name) ,self.__named_volumes )),
             dummies = local_images + self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))

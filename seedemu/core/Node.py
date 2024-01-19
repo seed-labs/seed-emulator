@@ -227,7 +227,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __custom_nets: List[str]
     __custom_env: List[str]
     __shared_folders: Dict[str, str]
-    __persistent_storages: List[str]
+    __persistent_storages: List[Tuple[str,str]]
 
     __name_servers: List[str]
     # wether this node requires to have 'real' internet access via its gateway
@@ -863,7 +863,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__shared_folders
 
-    def addPersistentStorage(self, path: str) -> Node:
+    def addPersistentStorage(self, path: str, volume_name: str ='') -> Node:
         """!
         @brief Add persistent storage to node.
 
@@ -874,11 +874,15 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @returns self, for chaining API calls.
         """
-        self.__persistent_storages.append(path)
+        if volume_name=='':
+            volume_name = volume_name.replace('/','-').lstrip('-')
+
+        tpl: Tuple[str,str] = (path,volume_name)
+        self.__persistent_storages.append(tpl)
 
         return self
 
-    def getPersistentStorages(self) -> List[str]:
+    def getPersistentStorages(self) -> List[Tuple[str,str]]:
         """!
         @brief Get persistent storage folders on the node.
 

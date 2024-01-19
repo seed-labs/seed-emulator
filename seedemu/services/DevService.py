@@ -1,7 +1,9 @@
 from __future__ import annotations
 from typing import Dict
 import re
-
+from  urllib.parse import urlparse,unquote
+from pathlib import PurePosixPath
+import os.path
 from  seedemu.core.enums import NodeRole, NetworkType
 from seedemu.core import Node, Server, Service, Emulator, Network
 from typing import List, Tuple, Dict
@@ -19,7 +21,6 @@ echo "development container started on: $HOSTNAME $CONTAINER_NAME"
 
 ServerTemplates['repo'] = """
 RUN git clone {repourl} -b {branch} {dir}
-VOLUME {dir}
 """
 
 ServerTemplates['build'] = """
@@ -109,6 +110,10 @@ class DevServer(Server):
 
         for (u,p,b) in self.__repos:
             node.addDockerCommand(ServerTemplates['repo'].format(repourl = u, branch=b, dir=p       ) )
+            path = urlparse(u).path
+            parts = PurePosixPath(    unquote(path)).parts
+            repo = node.getName() + "-"+ parts[-2] + '-' + parts[-1] # gituser-repo
+            node.addPersistentStorage(p,repo)
 
        
         node.setCustomEnv("- TESTVAR={}".format(node.getName() ) )
