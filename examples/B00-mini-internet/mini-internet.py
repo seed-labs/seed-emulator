@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
-from seedemu.services import WebService, DomainNameService, DomainNameCachingService
+from seedemu.services import WebService, TrafficGeneratorService,TrafficService, DomainNameService, DomainNameCachingService
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedemu.compiler import Docker, Graphviz
 from seedemu.hooks import ResolvConfHook
@@ -22,6 +22,8 @@ ebgp    = Ebgp()
 ibgp    = Ibgp()
 ospf    = Ospf()
 web     = WebService()
+traffic_generator = TrafficGeneratorService()
+traffc_service = TrafficService()
 ovpn    = OpenVpnRemoteAccessProvider()
 
 
@@ -68,7 +70,7 @@ Makers.makeTransitAs(base, 12, [101, 104], [(101, 104)])
 # Create single-homed stub ASes. "None" means create a host only 
 
 Makers.makeStubAs(emu, base, 150, 100, [web, None])
-Makers.makeStubAs(emu, base, 151, 100, [web, None])
+Makers.makeStubAs(emu, base, 151, 100, [web, traffic_generator])
 
 Makers.makeStubAs(emu, base, 152, 101, [None, None])
 Makers.makeStubAs(emu, base, 153, 101, [web, None, None])
@@ -83,7 +85,7 @@ Makers.makeStubAs(emu, base, 163, 104, [web, None])
 Makers.makeStubAs(emu, base, 164, 104, [None, None])
 
 Makers.makeStubAs(emu, base, 170, 105, [web, None])
-Makers.makeStubAs(emu, base, 171, 105, [None])
+Makers.makeStubAs(emu, base, 171, 105, [traffc_service])
 
 
 # Add a host with customized IP address to AS-154 
@@ -144,11 +146,13 @@ emu.addLayer(ebgp)
 emu.addLayer(ibgp)
 emu.addLayer(ospf)
 emu.addLayer(web)
+emu.addLayer(traffic_generator)
+emu.addLayer(traffc_service)
 
 # Save it to a component file, so it can be used by other emulators
 emu.dump('base-component.bin')
 
 # Uncomment the following if you want to generate the final emulation files
 emu.render()
-emu.compile(Docker(), './output')
+emu.compile(Docker(), './output', override=True)
 
