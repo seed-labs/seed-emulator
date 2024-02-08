@@ -81,7 +81,7 @@ def scan_hosts(networks):
 def generate_traffic(host_a, host_b):
     while True:
         print(f"Sending traffic from {host_a} to {host_b}")
-        sr(IP(src=host_a, dst=host_b)/ICMP(), timeout=10)
+        send(IP(src=host_a, dst=host_b)/ICMP(), timeout=10)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Traffic generator")
