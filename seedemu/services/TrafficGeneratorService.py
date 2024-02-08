@@ -57,12 +57,11 @@ class TrafficGeneratorServer(Server):
     """!
     @brief The TrafficGeneratorServer class.
     """
-    def __init__(self, networks=None):
+    def __init__(self, networks=[]):
         """!
         @brief TrafficGeneratorServer constructor.
         """
-        self.__networks = networks
-        self.__traffic_generator = """#!/usr/bin/env python3
+        self.__traffic_generator = f"""#!/usr/bin/env python3
 import threading
 import argparse
 from scapy.all import send, IP, ICMP, sniff, sr
@@ -80,17 +79,11 @@ def scan_hosts(networks):
 
 def generate_traffic(host_a, host_b):
     while True:
-        print(f"Sending traffic from {host_a} to {host_b}")
-        send(IP(src=host_a, dst=host_b)/ICMP(), timeout=10)
+        print(f"Sending traffic from {{host_a}} to {{host_b}}")
+        send(IP(src=host_a, dst=host_b)/ICMP())
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Traffic generator")
-    parser.add_argument("--networks", nargs="+", help="Networks to scan")
-    args = parser.parse_args()
-    # ["10.162.0.0/24", "10.150.0.0/24"]
-    # scan_hosts(args.networks)
-
-    scan_hosts(["10.162.0.0/24", "10.150.0.0/24"])
+    scan_hosts({str(networks)})
     active_hosts = list(active_hosts)
     for i in range(len(active_hosts)):
         for j in range(i+1, len(active_hosts)):
@@ -134,21 +127,21 @@ class TrafficGeneratorService(Service):
     @brief The TrafficGeneratorService class.
     """
 
-    def __init__(self, networks=None):
+    def __init__(self, networks=[]):
         """!
         @brief TrafficGeneratorService constructor.
         networks: comma separated list of networks to scan.
         """
-        self.networks = networks
+        self.__networks = networks
         super().__init__()
         self.addDependency('Base', False, False)
 
     def _createServer(self) -> Server:
-        return TrafficGeneratorServer(self.networks)
+        return TrafficGeneratorServer(self.__networks)
 
     def getName(self) -> str:
         return 'TrafficGeneratorService'
-
+  
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'TrafficGeneratorServiceLayer\n'

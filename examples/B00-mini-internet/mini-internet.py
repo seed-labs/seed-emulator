@@ -70,7 +70,7 @@ Makers.makeTransitAs(base, 12, [101, 104], [(101, 104)])
 # Create single-homed stub ASes. "None" means create a host only 
 
 Makers.makeStubAs(emu, base, 150, 100, [web, None])
-Makers.makeStubAs(emu, base, 151, 100, [web, traffic_generator])
+Makers.makeStubAs(emu, base, 151, 100, [web, None])
 
 Makers.makeStubAs(emu, base, 152, 101, [None, None])
 Makers.makeStubAs(emu, base, 153, 101, [web, None, None])
@@ -92,6 +92,9 @@ Makers.makeStubAs(emu, base, 171, 105, [traffc_service])
 as154 = base.getAutonomousSystem(154)
 as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129')
 
+# Add traffic generator to AS-154
+traffic_generator = TrafficGeneratorService(base.getNetworks())
+Makers.createHostsOnNetwork(emu, as154, 'net0', [traffic_generator])
 
 # Create real-world AS.
 # AS11872 is the Syracuse University's autonomous system
