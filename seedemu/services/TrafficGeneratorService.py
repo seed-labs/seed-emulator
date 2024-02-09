@@ -19,7 +19,9 @@ class TrafficServer(Server):
         @brief Install the service.
         """
         node.addSoftware('iperf3')
+        node.addSoftware('d-itg')
         node.appendStartCommand('iperf3 -s -D')
+        node.appendStartCommand('ITGRecv')
         node.appendClassName("TrafficService")
         
     def print(self, indent: int) -> str:
@@ -107,6 +109,7 @@ if __name__ == "__main__":
         node.addSoftware('python3')
         node.addSoftware('python3-pip')
         node.addSoftware('arp-scan')
+        node.addSoftware('d-itg')
         node.addSoftware('nmap')
         node.addBuildCommand('pip3 install scapy==2.5.0')
 
