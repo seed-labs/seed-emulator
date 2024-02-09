@@ -2,10 +2,10 @@ from __future__ import annotations
 import base64
 import os
 from collections import defaultdict
-from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
-
+from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Emulator import Emulator
 from .AutonomousSystem import AutonomousSystem
-from .Emulator import Emulator
 from .enums import NodeRole
 from .Node import Node, ScionRouter
 

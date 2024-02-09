@@ -1,4 +1,7 @@
-from seedemu.core.Emulator import Emulator
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Emulator import Emulator
 from seedemu.core import Registry
 from os import mkdir, chdir, getcwd, path
 from shutil import rmtree

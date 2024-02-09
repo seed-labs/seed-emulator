@@ -1,11 +1,12 @@
 from __future__ import annotations
+from typing import Dict, List, Set, Tuple, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Emulator import Emulator
 from .Layer import Layer
 from .Node import Node
 from .Printable import Printable
-from .Emulator import Emulator
 from .enums import NodeRole
 from .Binding import Binding
-from typing import Dict, List, Set, Tuple
 from .BaseSystem import BaseSystem
 
 class Server(Printable):

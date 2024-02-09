@@ -1,5 +1,7 @@
-from seedemu.core import Emulator
-from typing import List
+from __future__ import annotations
+from typing import List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Emulator import Emulator
 
 class Component(object):
     """!

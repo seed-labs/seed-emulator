@@ -1,9 +1,12 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Emulator import Emulator
 from .Printable import Printable
 from .enums import NetworkType, NodeRole
 from .Node import Node
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
-from .Emulator import Emulator
 from .Configurable import Configurable
 from ipaddress import IPv4Network
 

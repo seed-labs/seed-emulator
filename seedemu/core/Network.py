@@ -1,4 +1,7 @@
 from __future__ import annotations
+from typing import Dict, Tuple, List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Node import Node
 from ipaddress import IPv4Network, IPv4Address
 from .RemoteAccessProvider import RemoteAccessProvider
 from .Printable import Printable
@@ -6,7 +9,6 @@ from .enums import NetworkType, NodeRole
 from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
 from .Visualization import Vertex
-from typing import Dict, Tuple, List
 
 class Network(Printable, Registrable, Vertex):
     """!
@@ -21,7 +23,7 @@ class Network(Printable, Registrable, Vertex):
     __aac: AddressAssignmentConstraint
     __assigners: Dict[NodeRole, Assigner]
 
-    __connected_nodes: List['Node']
+    __connected_nodes: List[Node]
 
     __d_latency: int       # in ms
     __d_bandwidth: int     # in bps
@@ -237,7 +239,7 @@ class Network(Printable, Registrable, Vertex):
         if self.__type == NetworkType.InternetExchange: return self.__prefix[self.__aac.mapIxAddress(asn)]
         return self.__prefix[self.__assigners[nodeRole].next()]
 
-    def associate(self, node: 'Node'):
+    def associate(self, node: Node):
         """!
         @brief Associate the node with network.
 
@@ -245,7 +247,7 @@ class Network(Printable, Registrable, Vertex):
         """
         self.__connected_nodes.append(node)
 
-    def getAssociations(self) -> List['Node']:
+    def getAssociations(self) -> List[Node]:
         """!
         @brief Get list of associated nodes.
 

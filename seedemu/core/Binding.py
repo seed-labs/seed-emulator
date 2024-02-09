@@ -1,10 +1,11 @@
 from __future__ import annotations
+from typing import List, Callable, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Emulator import Emulator
 from .Printable import Printable
-from .Emulator import Emulator
 from .Node import Node
 from .BaseSystem import BaseSystem
 from enum import Enum
-from typing import List, Callable
 from ipaddress import IPv4Network, IPv4Address
 from sys import stderr
 import re, random, string

@@ -1,8 +1,9 @@
 from __future__ import annotations
-from typing import List, Dict
+from typing import List, Dict, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Emulator import Emulator
 from .Printable import Printable
 from .Registry import Registry, Registrable
-from .Emulator import Emulator
 from copy import deepcopy
 
 class Vertex:

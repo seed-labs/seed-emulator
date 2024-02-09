@@ -1,15 +1,16 @@
 from __future__ import annotations
+from typing import Dict, List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Emulator import Emulator
 from .Graphable import Graphable
 from .Printable import Printable
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from .enums import NetworkType, NodeRole
 from .Node import Node
-from .Emulator import Emulator
 from .Configurable import Configurable
 from .Node import RealWorldRouter
 from ipaddress import IPv4Network
-from typing import Dict, List
 import requests
 
 RIS_PREFIXLIST_URL = 'https://stat.ripe.net/data/announced-prefixes/data.json'

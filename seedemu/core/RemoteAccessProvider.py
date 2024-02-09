@@ -1,4 +1,9 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Emulator import Emulator
+    from .Network import Network
+    from .Node import Node
 from sys import stderr
 
 class RemoteAccessProvider(object):

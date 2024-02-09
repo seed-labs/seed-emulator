@@ -1,13 +1,13 @@
 from __future__ import annotations
-
+from typing import Set, Dict, Tuple, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .Emulator import Emulator
 from .Printable import Printable
 from .Registry import Registrable
-from .Emulator import Emulator
 from .Configurable import Configurable
 from .Merger import Mergeable
 
 from sys import stderr
-from typing import Set, Dict, Tuple
 
 
 class Layer(Printable, Registrable, Configurable, Mergeable):
