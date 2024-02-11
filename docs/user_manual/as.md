@@ -1,40 +1,49 @@
 # User Manual: Autonomous System
 
-Examples for creating and configuring autonomous systems
-are given in the following examples:
+- [Create Simple Stub Autonomous Systems (example)](../../examples/A00-simple-as) 
+- [Create Transit Autonomous System (example)](../../examples/A01-transit-as) 
+- [The Default Network Prefix](#default-network-prefix)
+- [Overwrite the Default Network Prefix](#overwrite-default-prefix)
 
- - [Simple Stub Autonomous System](../../examples/A00-simple-as) 
- - [Transit Autonomous System](../../examples/A01-transit-as) 
 
+<a id="default-network-prefix"></a>
+## The Default Network Prefix
 
-## Overwrite the default setting 
-
-When we create networks within an autonomous system, 
-the default IP prefixes for these networks are `10.ASN.0.0/24`,
-`10.ASN.1.0/24` etc, where `ASN` is the autonomous system
-number. In the following example, the IP prefix for the `net0`
-network in AS-150 is `10.150.0.0/24`. 
+When we create a network inside an autonomous system or an Internet exchange, 
+the default network prefix is assigned using the following scheme:
 
 ```
-as150 = base.createAutonomousSystem(150)
-as150.createNetwork('net0')
-as150.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
+10.{asn}.{id}.0/24
 ```
 
-This default setting requires the autonomous system number to be 
-less than 255. If our ASN is larger than 255, we need to overwrite
-this default setting by providing the IP prefix parameter when creating
-a network. See the following example. 
+The `asn` is the autonomous system number, and `{id}` is the nth network created. 
+For example, for `AS150`, the first network is `10.150.0.0/24`, and the second one 
+is `10.150.1.0/24`. For Internet exchanges, the `{id}` part is always `0`.
+For example, the default prefix of `IX100` is `10.100.0.0/24`.
 
-```
+
+<a id="overwrite-default-prefix"></a>
+## Change the Default Network Prefix 
+
+If the autonomous system number is greater than 255, 
+the default network prefix assignment will not work. 
+We can explicitly set the network prefix when creating a network. 
+
+
+```python
+# For the network in Internet exchanges
+base.createInternetExchange(asn = 33108, prefix = '206.81.80.0/23')
+
+# For the network in autonomous system
 as350 = base.createAutonomousSystem(350)
-as350.createNetwork(name='net0', prefix='128.230.0.0/16')
+as350.createNetwork(name='net0', prefix = '128.230.0.0/16')
 as350.createRouter('router0').joinNetwork('net0').joinNetwork('ix100', '10.100.0.35')
 ```
 
-Moreover, when a BGP router from AS-150 
+Moreover, in the example above, when a BGP router from AS350 
 connects to an Internet Exchange network (e.g., `10.100.0.0/24`), 
-the default IP address assigned to the BGP router is `10.100.0.150`. If the 
-ASN is larger than 255, we can specify our own IP address (see the example above). 
+the default IP address assigned to the BGP router is `10.100.0.350`, 
+which is not a valid IP address (350 > 255). We can
+assign a valid IP address to the router explicitly. 
 
 
