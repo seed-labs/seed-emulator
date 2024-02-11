@@ -14,7 +14,7 @@ is a set of docker container folders/files. When these containers are built and
 started, they form a small-size Internet. New building blocks are being added,
 including Blockchain, Botnet, and many other useful elements of the Internet. 
 
-![The Web UI](docs/assets/web-ui.png)
+![The Web UI](./docs/assets/web-ui.png)
 
 ## Table of Contents
 
@@ -44,7 +44,7 @@ inside the project's root directory.
 The emulator needs to fetch docker images from the Docker Hub. 
 If you are in Mainland China, you may not be able to directly get the 
 docker images. However, there are many docker hub proxies that 
-you can use. Please follow [these instructions](docks/user_manual/dockerhub_proxy.md)
+you can use. Please follow [these instructions](./docs/user_manual/dockerhub_proxy.md)
 to set up the docker hub proxies. If you do not have such an issue,
 please skip this step. 
 
