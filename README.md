@@ -19,68 +19,66 @@ including Blockchain, Botnet, and many other useful elements of the Internet.
 ## Table of Contents
 
 -  [Getting Started](#getting-started)
--  [Documentation](#documentation)
+-  [User Manuals](#user-manuals)
 -  [Contributing](#contributing)
 -  [License](#license)
 
 
 ## Getting Started
 
-### Preparation in Mainland China
+### Install the necessary software
 
-**Notice: This part is only useful for computers in Mainland China. If your computer is not in this area or you use some special network configuration, please skip this part.**
-
-1. Add the pip proxy:
-  
-  ```bash
-    pip install --upgrade pip
-    pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-  ```
-
-2. Add the dockerhub proxy:
-
-vim the docker config file.
-
-```bash
-sudo vim /etc/docker/daemon.json
-```
-
-add the following config.
-```python
-{
-    "registry-mirrors": [
-        "https://docker.mirrors.ustc.edu.cn",
-        "https://dockerproxy.com",
-        "https://hub-mirror.c.163.com",
-        "https://mirror.baidubce.com",
-        "https://ccr.ccs.tencentyun.com"
-    ]
-}
-```
-
-restart docker 
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart docker
-```
+To run the emulator, you need to install `docker`, `docker-compose`, 
+and `python3`.
 
 
+### Set up the environment variable 
+
+To run the emulator code, you need to add this folder to the `PYTHONPATH` 
+environment variable. This can be done by running `source development.env` 
+inside the project's root directory.
 
 
-### Examples
+### Set up the proxy (not needed if you don't have an issue)
 
-To get started with the emulator, install docker, docker-compose, and python3. Then, take a look at the [examples/](./examples/) folder for examples. Detailed explanation is provided in the README file, as well as in the comments of the code. To run an example:
+The emulator needs to fetch docker images from the Docker Hub. 
+If you are in Mainland China, you may not be able to directly get the 
+docker images. However, there are many docker hub proxies that 
+you can use. Please follow [these instructions](docks/user_manual/dockerhub_proxy.md)
+to set up the docker hub proxies. If you do not have such an issue,
+please skip this step. 
 
-1. Pick an example, say `A00-simple-peering`. 
-2. Add `seedemu` to `PYTHONPATH`. This can be done by running `source development.env` under the project root directory.
-3. Build the emulation. For this example, cd to `examples/A00-simple-peering/`, and run `python3 ./simple-peering.py`. The container files will be created inside the `output/` folder. For some examples, such as `B02-mini-internet-with-dns`, they depend on other examples, so you need to run those examples first. This is part of our component design.
-4. Build and run the containers. First `cd output/`, then do `docker-compose build && docker-compose up`. The emulator will start running. Give it a minute or two (or longer if your emulator is large) to let the routers do their jobs.
-5. Optionally, start the seedemu web client. Open a new terminal window, navigate to the project root directory, cd to `client/`, and run `docker-compose build && docker-compose up`. Then point your browser to http://127.0.0.1:8080/map.html, and you will see the entire emulator. Use the filter box if you want to see the packet flow.
 
-## Documentation
+### Run Examples
 
-Documentation is in progress inside the [docs/](./docs/) folder.
+We have provided many examples in the [examples/](./examples/) folder. 
+Detailed explanations are provided the README file in each example folder.
+To run an example, do the following:
+
+1. Pick an example, for example, `A00-simple-as`. 
+
+2. Build the emulation. For this example, go to `examples/A00-simple-as/`, and
+   run `python3 ./simple-as.py`. The container files will be created inside the
+  `output/` folder. For some examples, such as `B02-mini-internet-with-dns`,
+   they depend on other examples, so you need to run those examples first. 
+
+3. Build and run the generated containers. First `cd output/`, then do `docker-compose
+   build && docker-compose up`. The emulator will start running. Give it a
+   minute or two (or longer if your emulator is large) to let the routers do
+   their jobs.
+
+4. Some examples already include the visualization container (called Internet
+   Map).  Point your browser to `http://127.0.0.1:8080/map.html`, and you will
+   see the visualization. More instructions on how to use the visualization app
+   is given in [this manual](./docs/user_manual/internet_map.md).  If the map
+   is not included, you can open a new terminal window, navigate to the project
+   root directory, cd to `client/`, and run `docker-compose build &&
+   docker-compose up`. This will bring up the Internet Map container. 
+
+
+## User Manuals
+
+User manuals are provided inside the [docs/user_manual/](./docs/user_manual) folder.
 
 ## Contributing
 
