@@ -3,8 +3,8 @@
 Examples for creating and configuring autonomous systems
 are given in the following examples:
 
- - [Simple Stub Autonomous System](./examples/A00-simple-as) 
- - [Transit Autonomous System](./examples/A01-transit-as) 
+ - [Simple Stub Autonomous System](../../examples/A00-simple-as) 
+ - [Transit Autonomous System](../../examples/A01-transit-as) 
 
 
 ## Overwrite the default setting 

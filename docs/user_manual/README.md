@@ -16,9 +16,9 @@ This document provides a portal to those examples.
 
 ## Internet Emulator: Additional Features
 
-  - [Connect to the real world](./examples/A03-real-world/)
-  - [IP anycast](./examples/B03-ip-anycast/)
-  - [DHCP](./examples/B10-dhcp/)
+  - [Connect to the real world](../../examples/A03-real-world/)
+  - [IP anycast](../../examples/B03-ip-anycast/)
+  - [DHCP](../../examples/B10-dhcp/)
 
 
 ## Blockchain Emulator
