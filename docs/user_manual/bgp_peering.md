@@ -1,4 +1,4 @@
-# Manual: BGP Peering
+# User Manual: BGP Peering
 
 <a name="bgp-rs-peering"></a>
 ## BGP: Peering Using Route Server
