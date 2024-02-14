@@ -2,13 +2,13 @@
 
 - [Create Simple Stub Autonomous Systems (example)](../../examples/A00-simple-as) 
 - [Create Transit Autonomous System (example)](../../examples/A01-transit-as) 
-- [The Default IP Prefix/Address Assignment for Networks and Hosts](#default-assignment-network-host)
+- [The Default IP Prefix/Address Assignment for Networks/Hosts](#default-assignment-network-host)
 - [Overwrite the Default Network Prefix Assignment](#overwrite-default-prefix)
-- [Overwrite the Default IP addresses Assignment](#change-default-host-ip)
+- [Overwrite the Default IP addresses Assignment](#overwrite-default-host-ip)
 
 
 <a id="default-assignment-network-host"></a>
-## The Default IP Prefix/Address Assignment for Networks and Hosts
+## The Default IP Prefix/Address Assignment for Networks/Hosts
 
 Inside the emulator, when we create a network or node (host or router),
 default network prefix and IP address will be assigned to them. 
@@ -41,7 +41,7 @@ IX100), it will be `10.100.0.150`.
 
 
 <a id="overwrite-default-prefix"></a>
-## Change the Default Network Prefix Assignment
+## Overwrite the Default Network Prefix Assignment
 
 If the autonomous system number is greater than 255, 
 the default network prefix assignment will not work. 
@@ -57,8 +57,8 @@ as350 = base.createAutonomousSystem(350)
 as350.createNetwork(name='net0', prefix = '128.230.0.0/16')
 ```
 
-<a name="change-default-host-ip"></a>
-## Change the Default IP addresses Assignment
+<a name="overwrite-default-host-ip"></a>
+## Overwrite the Default IP addresses Assignment
 
 Sometimes the default IP address assignment does now work or we prefer to assign
 some specific IP address to a host. For example, 

@@ -1,9 +1,30 @@
 # User Manual: Emulator Component
 
 Put the manual regarding component here. 
+Each component is a separate layer. Nodes in each 
+component are called virtual nodes, and they are 
+simply just a name. Eventually, we need to 
+bind each of the virtual nodes to a physical node.
 
 
-<a name="virtual-node-binding"></a>
+## A Simple Component
+
+We use a simple example to show how to add a 
+web component 
+
+
+
+<a id="binding"></a>
+## A More Complex Component  
+
+
+
+<a id="binding"></a>
+## Binding 
+
+
+
+<a id="virtual-node-binding"></a>
 ## Virtual node binding & filtering
 
 The constructor of a binding looks like this:

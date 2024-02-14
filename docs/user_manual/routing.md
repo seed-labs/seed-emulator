@@ -1,7 +1,8 @@
 # Manual: Routing
 
-<a name="routing-protocol"></a>
-## Routing Protocols
+
+<a name="ibgp-ospf-protocol"></a>
+## Configure the OSPF and IBGP Routing Protocols
 
 We can use OSPF and IBGP for internal routing. IBGP and OSPF layer do not need
 to be configured explicitly; they are by default enabled on all autonomous
