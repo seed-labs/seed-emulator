@@ -1,26 +1,45 @@
 # User Manual: Emulator Component
 
-Put the manual regarding component here. 
+- [Introduction]()
+- []()
+- []()
+- []()
+- []()
+
+<a id="introduction"></a>
+## Introduction  
+
 Each component is a separate layer. Nodes in each 
 component are called virtual nodes, and they are 
 simply just a name. Eventually, we need to 
 bind each of the virtual nodes to a physical node.
 
 
+<a id="simple-component"></a>
 ## A Simple Component
 
-We use a simple example to show how to add a 
+We use a simple example (web) to show how to add a 
 web component 
 
+```python
+# Create a web layer, and add a node to this layer
+web     = WebService()
+web.install('webnode')
+
+# Bind the virtual node to a physical node 
+emu.addBinding(Binding('web150', filter = Filter(nodeName = 'webnode', asn = 150)))
+```
 
 
-<a id="binding"></a>
+<a id="complex-component"></a>
 ## A More Complex Component  
 
+DNS example 
+
 
 
 <a id="binding"></a>
-## Binding 
+## More on Binding 
 
 
 

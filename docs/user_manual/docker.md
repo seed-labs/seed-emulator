@@ -17,7 +17,7 @@ Users still have to specify the platform using the `platform`
 argument when creating the `Docker` object. See the following 
 example
 
-```
+```python
 # For AMD64 machines (default)
 docker = Docker(platform=Platform.AMD64)
 
@@ -40,7 +40,7 @@ The following example shows how to do this.
    to the output folder. 
 
 
-```
+```python
 # Create a new node (we will use the pre-built docker image for this node)
 newhost = emu.getLayer('Base').getAutonomousSystem(150).createHost('new_host')
 newhost.joinNetwork('net0')

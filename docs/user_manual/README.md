@@ -8,20 +8,23 @@ This document provides a portal to those examples.
 
   - [Create an emulator: the overall flow](./overall_flow.md)
   - [Autonomous system](./as.md)
-  - [Internet exchange](./ix.md)
-  - [BGP Peering](./bgp_peering.md) 
+  - [Internet exchange](./internet_exchange.md)
+  - [BGP routers and Peering](./bgp.md) 
   - [Routing](./routing.md) 
+  - [Node and its customization](./node.md)
   - [Component and Binding](./component.md) 
   - [Compilation](./compiler.md) 
   - [Visualization](./visualization.md)
   - [Docker image](./docker.md)
 
+
 ## Internet Emulator: Additional Features
 
-  - [Connect to the real world](../../examples/A03-real-world/)
-  - [IP anycast](../../examples/B03-ip-anycast/)
-  - [DHCP](../../examples/B10-dhcp/)
+  - [Connect to the real world](./bgp.md#connect-to-realworld)
+  - [IP anycast (example)](../../examples/B03-ip-anycast/)
+  - [DHCP (example)](../../examples/B10-dhcp/)
   - [Support Apple Silicon machines (arm64)](./docker.md#platform)
+  - [Hybrid emulation: Integrating physical devices in emulation (example)](../examples/C03-bring-your-own-internet/)
 
 
 ## Blockchain Emulator
