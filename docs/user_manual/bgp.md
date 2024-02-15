@@ -97,7 +97,7 @@ router to connect the emulated world with the real world.
 
 ```python
 autosys = base.createAutonomousSystem(11872)
-router = autosys.createRealWorldRouter('real-world')
+router = autosys.createRealWorldRouter(name='real-world')
 router.joinNetwork('ix101', address = '10.101.0.118')
 ```
 
@@ -122,6 +122,6 @@ i.e., this BGP router will announce to the emulator that it can reach
 the entire Internet.
 
 ```python
-autosys.createRealWorldRouter('real-world', prefixes=['0.0.0.0/1', '128.0.0.0/1'])
+autosys.createRealWorldRouter(name='real-world', prefixes=['0.0.0.0/1', '128.0.0.0/1'])
 ```
 
