@@ -1246,6 +1246,7 @@ export class MapUi {
         let toNode = this._nodes.get(toNodeId)
         const deltaX = fromNode.x - toNode.x;
         const deltaY = fromNode.y - toNode.y;
+        // const distance = parseFloat((Math.sqrt(deltaX ** 2 + deltaY ** 2)).toFixed(2));
         const distance = parseFloat((Math.sqrt(deltaX ** 2 + deltaY ** 2)/10).toFixed(2));
         console.log(distance.toString());
         return distance

@@ -505,7 +505,7 @@ export class DataSource {
             var vertex: Vertex = {
                 id: node.Id,
                 // fixed: false,
-                size: 10,
+                size: 5,
                 physics: false,
                 fixed:true,
                 label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
@@ -518,6 +518,8 @@ export class DataSource {
                     if(node.ipaddress == nodeInfo.nets[0].address.split('/')[0]){
                         vertex.x = node.x * 10;
                         vertex.y = node.y * 10;
+                        // vertex.x = node.x;
+                        // vertex.y = node.y;
                     }
                 })
             }
@@ -544,6 +546,10 @@ export class DataSource {
                     y: building.y * 10,
                     width: building.width * 10,
                     height: building.height * 10,
+                    // x: building.x,
+                    // y: building.y,
+                    // width: building.width,
+                    // height: building.height,
                     physics: false,
                     fixed:true,
                     label: building.id,
