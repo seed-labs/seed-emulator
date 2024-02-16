@@ -47,8 +47,6 @@ class TrafficReceiver(Service):
         self.node = node
     
     def getNodeName(self) -> str:
-        print(type(self.node))
-        print(self.node)
         return f"{self.node.getScope()}-{self.node.getName()}" if self.node else ""
 
     def getName(self) -> str:

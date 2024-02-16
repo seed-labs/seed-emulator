@@ -110,8 +110,8 @@ as11872.createRealWorldRouter('rw').joinNetwork('ix102', '10.102.0.118')
 as152 = base.getAutonomousSystem(152)
 as152.getNetwork('net0').enableRemoteAccess(ovpn)
 
-# hybrid_traffic_generator.addTargets([as154, base.getAutonomousSystem(171)])
-hybrid_traffic_generator.addTargets(base.getNetworks())
+# hybrid_traffic_generator.addTargets(["10.65.0.234", as154, base.getAutonomousSystem(171)])
+iperf_traffic_generator.addTargets(base.getNetworks())
 
 ###############################################################################
 # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 

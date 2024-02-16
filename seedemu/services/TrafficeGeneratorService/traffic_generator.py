@@ -1,6 +1,7 @@
 from __future__ import annotations
 from seedemu.core import AutonomousSystem, Network, Node, Service, Server
-from typing import List
+from .traffic_receiver import TrafficReceiver
+from typing import List, Union
 
 
 class TrafficGeneratorServer(Server):
@@ -19,7 +20,7 @@ class TrafficGeneratorServer(Server):
         return out
 
 class TrafficGenerator(Service):
-    def __init__(self, name=None, targets: List[Service] | List[Network] | List[AutonomousSystem] = []):
+    def __init__(self, name=None, targets: List[ Union[TrafficReceiver | Network | AutonomousSystem]] = []):
         self.node = None
         self.name = name or self.__class__.__name__
         self.targets = targets
@@ -30,10 +31,11 @@ class TrafficGenerator(Service):
         return TrafficGeneratorServer(self)
 
     def install_softwares(self, node: Node):
-        self.node = node
         target_nodes = []
         for target in self.targets:
-            if isinstance(target, Service):
+            if isinstance(target, str):
+                target_nodes.append(target)
+            elif isinstance(target, TrafficReceiver):
                 target_nodes.append(target.getNodeName())
             elif isinstance(target, Network):
                 target_nodes.append(str(target.getPrefix()))
@@ -43,13 +45,8 @@ class TrafficGenerator(Service):
                     target_nodes.append(str(target.getNetwork(as_net).getPrefix()))
         node.setFile('/root/traffic-targets', "\n".join(target_nodes))
 
-    def addTargets(self, targets: List[Service] | List[Network] | List[AutonomousSystem]):
+    def addTargets(self, targets: List[ Union[TrafficReceiver | Network | AutonomousSystem]]):
         self.targets.extend(targets)
-
-    def getNodeName(self) -> str:
-        print(type(self.node))
-        print(self.node)
-        return f"{self.node.getScope()}-{self.node.getName()}" if self.node else ""
 
     def getName(self) -> str:
         return self.name
