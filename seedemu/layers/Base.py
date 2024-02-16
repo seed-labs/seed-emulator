@@ -1,5 +1,5 @@
 from __future__ import annotations
-from seedemu.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Emulator, Layer
+from seedemu.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Network, Node, Graphable, Emulator, Layer
 from typing import Dict, List
 
 BaseFileTemplates: Dict[str, str] = {}
@@ -132,7 +132,7 @@ class Base(Layer, Graphable):
         assert asn in self.__ases, "as{} does not exist.".format(asn)
         return self.__ases[asn]
 
-    def getNetworks(self) -> List[str]:
+    def getNetworks(self) -> List[Network]:
         """!
         @brief Get list of networks.
 
@@ -141,7 +141,7 @@ class Base(Layer, Graphable):
         networks = []
         for _as in self.__ases.values():
             for net in _as.getNetworks():
-                networks.append(str(_as.getNetwork(net).getPrefix()))
+                networks.append(_as.getNetwork(net))
         return networks
 
     def setAutonomousSystem(self, asObject: AutonomousSystem):

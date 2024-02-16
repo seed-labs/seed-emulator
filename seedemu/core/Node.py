@@ -562,6 +562,14 @@ class Node(Printable, Registrable, Configurable, Vertex):
         assert not self.__asn == 0, 'This API is only available on a real physical node.'
         return self.__xcs
 
+    def getScope(self) -> str:
+        """!
+        @brief Get scope of this node.
+
+        @returns scope.
+        """
+        return self.__scope
+
     def getName(self) -> str:
         """!
         @brief Get node name.

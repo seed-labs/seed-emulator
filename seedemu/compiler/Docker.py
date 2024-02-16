@@ -132,6 +132,8 @@ DockerCompilerFileTemplates['compose_service'] = """\
             - net.ipv4.conf.default.rp_filter=0
             - net.ipv4.conf.all.rp_filter=0
         privileged: true
+        extra_hosts:
+{extraHosts}
         networks:
 {networks}{ports}{volumes}
         labels:
@@ -397,7 +399,6 @@ class Docker(Compiler):
             if name == BaseSystem.DEFAULT:
                 priority = 1
             self.addImage(image, priority=priority)
-        
 
     def getName(self) -> str:
         return "Docker"
@@ -656,6 +657,16 @@ class Docker(Compiler):
             )
 
         return labels
+
+    def _getNodeName(self, node: Node) -> str:
+        _, _, name = node.getRegistryInfo()
+        return name
+
+    def _getNodeIP(self, node: Node) -> str:
+        for iface in node.getInterfaces():
+            if iface.getNet().getType() == NetworkType.Local:
+                return iface.getAddress()
+        return ''
 
     def _getNodeMeta(self, node: Node) -> str:
         """!
@@ -964,6 +975,7 @@ class Docker(Compiler):
             nodeName = name,
             dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
             networks = node_nets,
+            extraHosts = self.extra_hosts,
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
             labelList = self._getNodeMeta(node),
@@ -1035,6 +1047,16 @@ class Docker(Compiler):
         registry = emulator.getRegistry()
 
         self._groupSoftware(emulator)
+
+        self.extra_hosts = ""
+        extra_hosts = set()
+        for ((scope, type, name), node) in registry.getAll().items():
+            if type in ['hnode', 'snode']:
+                nodeName = self._getNodeName(node)
+                nodeIP = self._getNodeIP(node)
+                extra_hosts.add( f"            {scope}-{nodeName}: {nodeIP}")
+        for extra_host in extra_hosts:
+            self.extra_hosts += f"{extra_host}\n"
 
         for ((scope, type, name), obj) in registry.getAll().items():
 
