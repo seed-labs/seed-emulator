@@ -9,7 +9,6 @@ class IperfReceiver(TrafficReceiver):
         super().install_softwares(node)
         node.addSoftware('iperf3')
         node.appendStartCommand('iperf3 -s -D')
-        node.appendStartCommand('sleep 1')
 
 class IperfGenerator(TrafficGenerator):
     def install_softwares(self, node: Node):

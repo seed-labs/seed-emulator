@@ -9,7 +9,6 @@ class DITGReceiver(TrafficReceiver):
         super().install_softwares(node)
         node.addSoftware('d-itg')
         node.appendStartCommand('ITGRecv')
-        node.appendStartCommand('sleep 1')
 
 class DITGGenerator(TrafficGenerator):
     def install_softwares(self, node: Node):
