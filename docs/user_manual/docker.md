@@ -26,11 +26,11 @@ docker = Docker(platform=Platform.ARM64)
 ```
 
 
-<a id="prebuilt-image"></a>
-## Use pre-built image on selected nodes
+<a id="custom-image"></a>
+## Use custom image on selected nodes
 
-Sometimes, we would like some of the nodes in the emulator to use  
-pre-built docker images, instead of using the default ones from the emulator. 
+Sometimes, we would like some of the nodes in the emulator to use
+a custom docker image, instead of using the default ones from the emulator. 
 The following example shows how to do this. 
 
  - First, we create a `DockerImage` object, where the container files 
@@ -60,3 +60,14 @@ emu.compile(docker, 'ouput/', override = True)
 # Copy the image folder to the output folder
 os.system('cp -r my_image/ ' + 'output/')
 ```
+
+The example shown above uses a local image. We can also use a image from 
+an image from the Docker Hub. Here is an example. 
+
+```python
+imageName = 'handsonsecurity/seedemu-ethereum'
+image  = DockerImage(name=imageName, local=False, software=[])
+docker.addImage(image)
+docker.setImageOverride(newhost, imageName)
+```
+
