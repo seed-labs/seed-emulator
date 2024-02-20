@@ -582,13 +582,13 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__name
 
-    def getCustomeDomain(self) -> str:
+    def getNodeDomain(self) -> str:
         """!
-        @brief Get custom domain name of this node.
+        @brief Get node domain name of this node.
 
-        @returns custom domain name.
+        @returns node domain name.
         """
-        return self.__custom_domain
+        return self.__custom_domain or f"{self.__scope}-{self.__name}"
 
     def getAsn(self) -> int:
         """!

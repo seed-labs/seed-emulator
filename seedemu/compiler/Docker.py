@@ -656,10 +656,6 @@ class Docker(Compiler):
 
         return labels
 
-    def _getNodeName(self, node: Node) -> str:
-        _, _, name = node.getRegistryInfo()
-        return name
-
     def _getNodeIP(self, node: Node) -> str:
         for iface in node.getInterfaces():
             if iface.getNet().getType() == NetworkType.Local:
@@ -1049,7 +1045,7 @@ class Docker(Compiler):
         self.extra_hosts = ""
         for ((scope, type, name), node) in registry.getAll().items():
             if type in ['hnode', 'snode']:
-                nodeDomain = node.getCustomeDomain() or f"{scope}-{self._getNodeName(node)}"
+                nodeDomain = node.getNodeDomain()
                 nodeIP = self._getNodeIP(node)
                 self.extra_hosts += f"{nodeIP} {nodeDomain}\n"
 
