@@ -132,8 +132,6 @@ DockerCompilerFileTemplates['compose_service'] = """\
             - net.ipv4.conf.default.rp_filter=0
             - net.ipv4.conf.all.rp_filter=0
         privileged: true
-        extra_hosts:
-{extraHosts}
         networks:
 {networks}{ports}{volumes}
         labels:
@@ -926,6 +924,7 @@ class Docker(Compiler):
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
         start_commands = ''
+        start_commands += 'echo "'+self.extra_hosts+'" >> /etc/hosts\n'
 
         if self.__self_managed_network:
             start_commands += 'chmod +x /replace_address.sh\n'
@@ -975,7 +974,6 @@ class Docker(Compiler):
             nodeName = name,
             dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
             networks = node_nets,
-            extraHosts = self.extra_hosts,
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
             labelList = self._getNodeMeta(node),
@@ -1054,9 +1052,7 @@ class Docker(Compiler):
             if type in ['hnode', 'snode']:
                 nodeName = self._getNodeName(node)
                 nodeIP = self._getNodeIP(node)
-                extra_hosts.add( f"            {scope}-{nodeName}: {nodeIP}")
-        for extra_host in extra_hosts:
-            self.extra_hosts += f"{extra_host}\n"
+                self.extra_hosts += f"{nodeIP} {scope}-{nodeName}\n"
 
         for ((scope, type, name), obj) in registry.getAll().items():
 
