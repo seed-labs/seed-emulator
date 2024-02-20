@@ -582,13 +582,22 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__name
 
-    def getNodeDomain(self) -> str:
+    def getDomainName(self) -> str:
         """!
         @brief Get node domain name of this node.
 
         @returns node domain name.
         """
         return self.__custom_domain or f"{self.__scope}-{self.__name}"
+
+    def getIP(self) -> str:
+        """!
+        @brief Get IP address of the local interface.
+        """
+        for iface in self.getInterfaces():
+            if iface.getNet().getType() == NetworkType.Local:
+                return iface.getAddress()
+        return ''
 
     def getAsn(self) -> int:
         """!

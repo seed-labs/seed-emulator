@@ -656,12 +656,6 @@ class Docker(Compiler):
 
         return labels
 
-    def _getNodeIP(self, node: Node) -> str:
-        for iface in node.getInterfaces():
-            if iface.getNet().getType() == NetworkType.Local:
-                return iface.getAddress()
-        return ''
-
     def _getNodeMeta(self, node: Node) -> str:
         """!
         @brief get node metadata labels.
@@ -1045,9 +1039,7 @@ class Docker(Compiler):
         self.extra_hosts = ""
         for ((scope, type, name), node) in registry.getAll().items():
             if type in ['hnode', 'snode']:
-                nodeDomain = node.getNodeDomain()
-                nodeIP = self._getNodeIP(node)
-                self.extra_hosts += f"{nodeIP} {nodeDomain}\n"
+                self.extra_hosts += f"{node.getIP()} {node.getDomainName()}\n"
 
         for ((scope, type, name), obj) in registry.getAll().items():
 
