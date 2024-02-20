@@ -98,7 +98,7 @@ Makers.makeStubAs(emu, base, 171, 105, [iperf_traffic_receiver_1])
 
 # Add a host with customized IP address to AS-154 
 as154 = base.getAutonomousSystem(154)
-as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129')
+as154.createHost('host_2', custom_domain="host2.example.com").joinNetwork('net0', address = '10.154.0.129')
 
 # Create real-world AS.
 # AS11872 is the Syracuse University's autonomous system

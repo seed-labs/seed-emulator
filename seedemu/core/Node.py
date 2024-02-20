@@ -227,9 +227,11 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __shared_folders: Dict[str, str]
     __persistent_storages: List[str]
 
+    __custom_domain: str
+
     __name_servers: List[str]
 
-    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
+    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None, custom_domain: str = None):
         """!
         @brief Node constructor.
 
@@ -237,6 +239,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @param role role of this node.
         @param asn network that this node belongs to.
         @param scope scope of the node, if not asn.
+        @param custom_domain (optional) custom domain name for this node.
         """
         super().__init__()
 
@@ -263,8 +266,9 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__shared_folders = {}
         self.__persistent_storages = []
 
-        for soft in DEFAULT_SOFTWARE:
-            self.__softwares.add(soft)
+        self.__custom_domain = custom_domain
+        # for soft in DEFAULT_SOFTWARE:
+        #     self.__softwares.add(soft)
 
         self.__name_servers = []
         self.__host_names = [f"{self.__scope}-{self.__name}"]
@@ -577,6 +581,14 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns name.
         """
         return self.__name
+
+    def getCustomeDomain(self) -> str:
+        """!
+        @brief Get custom domain name of this node.
+
+        @returns custom domain name.
+        """
+        return self.__custom_domain
 
     def getAsn(self) -> int:
         """!

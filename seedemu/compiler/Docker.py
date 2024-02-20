@@ -1047,12 +1047,11 @@ class Docker(Compiler):
         self._groupSoftware(emulator)
 
         self.extra_hosts = ""
-        extra_hosts = set()
         for ((scope, type, name), node) in registry.getAll().items():
             if type in ['hnode', 'snode']:
-                nodeName = self._getNodeName(node)
+                nodeDomain = node.getCustomeDomain() or f"{scope}-{self._getNodeName(node)}"
                 nodeIP = self._getNodeIP(node)
-                self.extra_hosts += f"{nodeIP} {scope}-{nodeName}\n"
+                self.extra_hosts += f"{nodeIP} {nodeDomain}\n"
 
         for ((scope, type, name), obj) in registry.getAll().items():
 
