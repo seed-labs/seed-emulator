@@ -5,7 +5,7 @@ from typing import List, Dict
 
 ChainlinkFileTemplate: Dict[str, str] = {}
 
-ChainlinkFileTemplate['config'] = """
+ChainlinkFileTemplate['config'] = """\
 [Log]
 Level = 'warn'
 
@@ -25,14 +25,14 @@ WSURL = 'ws://{ip_address}:8546'
 HTTPURL = 'http://{ip_address}:8545'
 """
 
-ChainlinkFileTemplate['secrets'] = """
+ChainlinkFileTemplate['secrets'] = """\
 [Password]
 Keystore = 'mysecretpassword'
 [Database]
 URL = 'postgresql://postgres:mysecretpassword@localhost:5432/postgres?sslmode=disable'
 """
 
-ChainlinkFileTemplate['api'] = """
+ChainlinkFileTemplate['api'] = """\
 test@test.com
 Seed@emulator123
 """
@@ -58,7 +58,7 @@ class ChainlinkService:
         self.__base = self.__emu.getLayer('Base')
 
     def create_chainlink_nodes(self):
-        for i in range(self.number_of_nodes):
+        for i in range(1, self.number_of_nodes+1):
             try:
                 self.__setup_chainlink_node(i)
             except Exception as e:
@@ -74,7 +74,7 @@ class ChainlinkService:
         self.__used_asns.append(asn)
 
         autonomous_system = self.__base.getAutonomousSystem(asn)
-        chainlink_node_name = f"chainlink_node_{node_number + 1}"
+        chainlink_node_name = f"chainlink_node_{node_number}"
         cl_node_address = f"10.{asn}.0.171"
         node = autonomous_system.createHost(chainlink_node_name).joinNetwork('net0', address=cl_node_address)
 
@@ -98,6 +98,8 @@ class ChainlinkService:
             node.addSoftware(software)
 
     def __add_commands(self, node: Node):
-        node.appendStartCommand("service postgresql restart")
-        node.appendStartCommand("su - postgres -c \"psql -c \\\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\\"\"")
-        node.appendStartCommand("chainlink node start --config /config.toml --password /secrets.toml --api /api.txt")
+        node.appendStartCommand("""
+service postgresql restart
+su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\""
+""")
+        node.appendStartCommand('chainlink node -config /config.toml -secrets /secrets.toml start -api /api.txt')
