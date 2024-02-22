@@ -41,7 +41,12 @@ class ChainlinkService:
     """Utility class for setting up Chainlink nodes within SEED Emulator environments."""
 
     def __init__(self, autonomous_systems: List[int], emulator: Emulator, number_of_nodes: int = 1):
-        """Initialize the ChainlinkService with a list of autonomous systems, an emulator instance, and the desired number of nodes."""
+        """
+        @brief ChainlinkService constructor.
+        @param autonomous_systems: List of autonomous system numbers where Chainlink nodes can be deployed.
+        @param emulator: Instance of the Emulator in which the nodes are to be deployed.
+        @param number_of_nodes: Number of Chainlink nodes to deploy in each autonomous system.
+        """
         if not autonomous_systems:
             raise ValueError("Autonomous systems list cannot be empty.")
         if not emulator:
@@ -57,7 +62,11 @@ class ChainlinkService:
         self.__base = self.__emu.getLayer('Base')
 
     def create_chainlink_nodes(self) -> List[Node]:
-        """Create and configure Chainlink nodes within the specified autonomous systems."""
+        """
+        @brief Create and configure Chainlink nodes within the specified autonomous systems.
+        @return List of created Node objects.
+        """
+
         for i in range(self.number_of_nodes):
             try:
                 node = self.__setup_chainlink_node(i + 1)
@@ -67,7 +76,11 @@ class ChainlinkService:
         return self.created_chainlink_nodes
 
     def __setup_chainlink_node(self, node_number: int) -> Node:
-        """Set up a single Chainlink node within an available autonomous system."""
+        """
+        @brief Set up a single Chainlink node within an available autonomous system.
+        @param node_number: Identifier for the Chainlink node being set up.
+        @return Node object representing the setup Chainlink node.
+        """
         asn = self.__get_unused_asn()
         autonomous_system = self.__base.getAutonomousSystem(asn)
         chainlink_node_name = f"chainlink_{node_number}"
@@ -80,7 +93,10 @@ class ChainlinkService:
         return node
 
     def __get_unused_asn(self) -> int:
-        """Retrieve an unused autonomous system number from the list provided."""
+        """
+        @brief Retrieve an unused autonomous system number from the provided list.
+        @return An unused autonomous system number.
+        """
         unused_asns = [asn for asn in self.__asns if asn not in self.__used_asns]
         if not unused_asns:
             raise Exception("No more autonomous systems available.")
@@ -89,7 +105,11 @@ class ChainlinkService:
         return asn
 
     def __set_files(self, node: Node, asn: int):
-        """Configure the necessary files on the Chainlink node."""
+        """
+        @brief Configure the necessary files on the Chainlink node.
+        @param node: The Chainlink node to configure.
+        @param asn: Autonomous system number associated with the node.
+        """
         eth_node_ip_address = f"10.{asn}.0.71"
         config_template = ChainlinkFileTemplate['config'].format(ip_address=eth_node_ip_address)
         node.setFile('/config.toml', config_template)
@@ -97,13 +117,19 @@ class ChainlinkService:
         node.setFile('/api.txt', ChainlinkFileTemplate['api'])
 
     def __install_software(self, node: Node):
-        """Install required software on the Chainlink node."""
+        """
+        @brief Install required software on the Chainlink node.
+        @param node: The Chainlink node on which the software is to be installed.
+        """
         software_list = ['ipcalc', 'jq', 'iproute2', 'sed', 'postgresql', 'postgresql-contrib']
         for software in software_list:
             node.addSoftware(software)
 
     def __add_commands(self, node: Node):
-        """Add startup commands for the Chainlink node."""
+        """
+        @brief Add startup commands for the Chainlink node.
+        @param node: The Chainlink node to which startup commands are added.
+        """
         node.appendStartCommand("""
 service postgresql restart
 su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\""
