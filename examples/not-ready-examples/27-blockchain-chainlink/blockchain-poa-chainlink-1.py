@@ -78,33 +78,26 @@ for asn in asns:
         emu.addBinding(Binding(vnode, filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         i = i+1
 
-
-
+# Create the Chainlink layer
 chainlink = ChainlinkService()
 chainlink_nodes = list()
+chainlink_asns = [150, 154, 161, 164]
 j = 0
-for asn in asns:
-    a = base.getAutonomousSystem(asn)
+for asn in chainlink_asns:
     cnode = 'chainlink{}'.format(j)
+    # Cretae chainlink virtual node
+    chainlink.install(cnode)
+    service_name = 'Chainlink-{}'.format(j)
+    emu.getVirtualNode(cnode).setDisplayName(service_name)
     host_name = "chainlink_service_{}".format(j)
+    a = base.getAutonomousSystem(asn)
+    # Create a host and join it to the network
     host = a.createHost(host_name).joinNetwork('net0', '10.{}.0.171'.format(asn))
     chainlink_nodes.append(host)
-    service_name = 'Chainlink-{}'.format(j)
-    chainlink.install(cnode)
-    emu.getVirtualNode(cnode).setDisplayName(service_name)
+    # Add the binding for virtual node and host
     emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName=host_name)))
     j = j+1
 
-
-
-
-# chainlink.install('chainlink_service')
-
-# emu.getVirtualNode('chainlink_service').setDisplayName('Chainlink Server 1')
-
-# as151 = base.getAutonomousSystem(151)
-
-# emu.addBinding(Binding('chainlink_service', filter = Filter(asn=151, nodeName='chainlink_service_1')))
 
 # Add the Ethereum layer
 emu.addLayer(eth)

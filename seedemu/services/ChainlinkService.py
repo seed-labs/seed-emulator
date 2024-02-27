@@ -42,7 +42,6 @@ class ChainlinkServer(Server):
     """
     __node: Node
     __emulator: Emulator
-    __ip_address: str
 
     def __init__(self):
         """
@@ -50,13 +49,12 @@ class ChainlinkServer(Server):
         """
         super().__init__()
 
-    def configure(self, node: Node, emulator: Emulator, ip_address: str):
+    def configure(self, node: Node, emulator: Emulator):
         """
         @brief Configure the node.
         """
         self.__node = node
         self.__emulator = emulator
-        self.__ip_address = ip_address
 
     def install(self, node: Node):
         """
@@ -105,8 +103,7 @@ class ChainlinkService(Service):
         super().configure(emulator)
         targets = self.getTargets()
         for (server, node) in targets:
-            ip_address = ''
-            server.configure(node, emulator, ip_address)
+            server.configure(node, emulator)
 
     def getName(self) -> str:
         return 'ChainlinkService'
