@@ -4,6 +4,7 @@
 from seedemu import *
 import os, sys
 import platform
+from typing import List
 
 from seedemu.services import ChainlinkService
 
@@ -77,29 +78,45 @@ for asn in asns:
         emu.addBinding(Binding(vnode, filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         i = i+1
 
-chain = ChainlinkService()
-chainlink = chain.createChainlink()
 
 
+chainlink = ChainlinkService()
+chainlink_nodes = list()
+j = 0
 for asn in asns:
-    cnode = 'chainlink{}'.format(asn)
-    c = chainlink.createChainlinkNode(cnode)
-    displayName = 'Chainlink-%.2d'
-    emu.getVirtualNode(cnode).setDisplayName(displayName%(asn))
-    emu.addBinding(Binding(cnode, filter=Filter(asn=asn, nodeName='host_0')))
+    a = base.getAutonomousSystem(asn)
+    cnode = 'chainlink{}'.format(j)
+    host_name = "chainlink_service_{}".format(j)
+    host = a.createHost(host_name).joinNetwork('net0', '10.{}.0.171'.format(asn))
+    chainlink_nodes.append(host)
+    service_name = 'Chainlink-{}'.format(j)
+    chainlink.install(cnode)
+    emu.getVirtualNode(cnode).setDisplayName(service_name)
+    emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName=host_name)))
+    j = j+1
 
 
-chainlink = ChainlinkService(asns, emu, 10)
-chainlink_nodes = chainlink.create_chainlink_nodes()
+
+
+# chainlink.install('chainlink_service')
+
+# emu.getVirtualNode('chainlink_service').setDisplayName('Chainlink Server 1')
+
+# as151 = base.getAutonomousSystem(151)
+
+# emu.addBinding(Binding('chainlink_service', filter = Filter(asn=151, nodeName='chainlink_service_1')))
 
 # Add the Ethereum layer
 emu.addLayer(eth)
+
+# Add the Chainlink layer
+emu.addLayer(chainlink)
 
 # Render and compile
 OUTPUTDIR = './emulator_20'
 emu.render()
 
-docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=Platform.AMD64)
+docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=Platform.ARM64)
 
 # Use the addImage API to add the custom chainlink image host
 docker.addImage(DockerImage(CHAINLINK_IMAGE, [], local=False))
