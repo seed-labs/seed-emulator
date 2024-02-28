@@ -4,8 +4,6 @@
 from seedemu import *
 import sys
 
-web = WebService()
-
 CustomGenesisFileContent = """\
 {
     "config": {
@@ -122,14 +120,14 @@ for asn in range(150, 154):
     hosts.append(base.getAutonomousSystem(asn).getHost(host_name[0]))
     ns_hosts.append(base.getAutonomousSystem(asn).getHost(host_name[1]))
 
-# base_image_path = "us-docker.pkg.dev/oplabs-tools-artifacts/images/"
 base_image_path = ""
-# images = ["op-geth:v1.101308.0", "op-node:v1.4.3", "op-batcher:v1.4.3", "op-proposer:v1.4.3"]
 images = ["op-geth", "op-node", "op-batcher", "op-proposer"]
 
 for i, image_name in enumerate(images):
     image = DockerImage(name=base_image_path + image_name + ":local", software=[])
     docker.addImage(image)
+
+    # Configure the ns node
     docker.setImageOverride(hosts[i], base_image_path + image_name + ":local")
     hosts[i].importFile(
         "/home/hua/codes/seed-emulator/examples/C05-l2-blockchain/l2/.env", "/.env"
@@ -147,11 +145,12 @@ for i, image_name in enumerate(images):
     hosts[i].addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
     hosts[i].appendStartCommand(f"/start_{image_name}.sh &> out.log", fork=True)
 
-    # Config of ns nodes
+    # Configure ns nodes
     if i < 2:
         for step in [0, 2]:
-            # print(i+step, ns_hosts[i + step].getAsn(), ns_hosts[i + step].getName())
-            docker.setImageOverride(ns_hosts[i + step], base_image_path + image_name + ":local")
+            docker.setImageOverride(
+                ns_hosts[i + step], base_image_path + image_name + ":local"
+            )
 
             ns_hosts[i + step].importFile(
                 f"/home/hua/codes/seed-emulator/examples/C05-l2-blockchain/l2/start_{image_name}_ns.sh",
@@ -159,67 +158,23 @@ for i, image_name in enumerate(images):
             )
             ns_hosts[i + step].addBuildCommand(f"chmod +x /start_{image_name}_ns.sh")
             if i == 1:
-                ns_hosts[i + step].appendStartCommand(f"/start_{image_name}_ns.sh {i} &> out.log", fork=True)
+                ns_hosts[i + step].appendStartCommand(
+                    f"/start_{image_name}_ns.sh {i} &> out.log", fork=True
+                )
             else:
-                ns_hosts[i + step].appendStartCommand(f"/start_{image_name}_ns.sh &> out.log", fork=True)
+                ns_hosts[i + step].appendStartCommand(
+                    f"/start_{image_name}_ns.sh &> out.log", fork=True
+                )
 
     ns_hosts[i].addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
     ns_hosts[i].importFile(
         "/home/hua/codes/seed-emulator/examples/C05-l2-blockchain/l2/.env", "/.env"
     )
 
-
+# Add external port
 hosts[0].addPortForwarding(8545, 8545)
 ns_hosts[0].addPortForwarding(9545, 8545)
 
-
-
-# Install required software on host0
-# host0.addSoftware("jq")
-# host0.addSoftware("openssl")
-# host0.addSoftware("tar")
-# host0.addSoftware("git")
-# host0.addSoftware("gcc")
-# host0.addSoftware("make")
-# host0.addSoftware("wget")
-# host0.addSoftware("libc6")
-# host0.addSoftware("libc6-dev")
-# # host0.addSoftware("python3")
-# # host0.addSoftware("python3-pip")
-# # host0.addSoftware("g++")
-
-# # Install L2 dependencies
-# host0.addBuildCommand("curl -L https://foundry.paradigm.xyz | bash")
-# host0.addBuildCommand("~/.foundry/bin/foundryup")
-# host0.addBuildCommand("git clone https://github.com/ethereum-optimism/op-geth.git")
-# host0.addBuildCommand("wget https://go.dev/dl/go1.21.7.linux-amd64.tar.gz")
-# # host0.addBuildCommand(
-# #     "wget https://nodejs.org/dist/v20.11.0/node-v20.11.0.tar.gz"
-# # )
-# host0.addBuildCommand("tar -C / -xzf go1.21.7.linux-amd64.tar.gz")
-# # host0.addBuildCommand("mkdir -p /usr/local/lib/nodejs")
-# # host0.addBuildCommand("tar -xvf node-v20.11.0.tar.gz")
-# # host0.addBuildCommand("cd node-v20.11.0 && ./configure && make -j4 && make install")
-# # host0.addBuildCommand(
-# #     "npm install -g solc@0.8.15 && npm install -g solc@0.8.19 && npm install -g solc@0.4.22"
-# # )
-# host0.addBuildCommand("export PATH=$PATH:/go/bin && cd op-geth && make geth")
-
-# # Import L2 files
-# host0.importFile(
-#     "/home/hua/codes/seed-emulator/examples/C05-l2-blockchain/l2.tar.gz", "/l2.tar.gz"
-# )
-
-# # Build L2
-# host0.appendStartCommand("tar -xvf /l2.tar.gz")
-# host0.appendStartCommand("cd /l2")
-# host0.appendStartCommand("cp /op-geth/build/bin/geth /l2/bin/")
-# host0.appendStartCommand("./build.sh &")
-
-# Add start command to host0
-# host0.appendStartCommand("./start.sh &")
-
-# host0.addPortForwarding(8545, 8545)
 
 # Binding virtual nodes to physical nodes
 emu.addBinding(Binding("poa-eth5", filter=Filter(asn=160, nodeName="host_0")))
@@ -237,4 +192,3 @@ emu.render()
 # If output directory exists and override is set to false, we call exit(1)
 # updateOutputdirectory will not be called
 emu.compile(docker, "./output", override=True)
-
