@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 from seedemu import *
+from modify_df import change_line
 import sys
 
 CustomGenesisFileContent = """\
@@ -130,15 +131,15 @@ for i, image_name in enumerate(images):
     # Configure the ns node
     docker.setImageOverride(hosts[i], base_image_path + image_name + ":local")
     hosts[i].importFile(
-        "/home/hua/codes/seed-emulator/examples/C05-l2-blockchain/l2/.env", "/.env"
+        "/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/.env", "/.env"
     )
     hosts[i].importFile(
-        f"/home/hua/codes/seed-emulator/examples/C05-l2-blockchain/l2/start_{image_name}.sh",
+        f"/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/start_{image_name}.sh",
         f"/start_{image_name}.sh",
     )
     if image_name == "op-proposer":
         hosts[i].importFile(
-            "/home/hua/codes/seed-emulator/examples/C05-l2-blockchain/l2/deployments/getting-started/L2OutputOracleProxy.json",
+            "/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/deployments/getting-started/L2OutputOracleProxy.json",
             "/L2OutputOracleProxy.json",
         )
     hosts[i].addBuildCommand(f"chmod +x /start_{image_name}.sh")
@@ -153,13 +154,13 @@ for i, image_name in enumerate(images):
             )
 
             ns_hosts[i + step].importFile(
-                f"/home/hua/codes/seed-emulator/examples/C05-l2-blockchain/l2/start_{image_name}_ns.sh",
+                f"/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/start_{image_name}_ns.sh",
                 f"/start_{image_name}_ns.sh",
             )
             ns_hosts[i + step].addBuildCommand(f"chmod +x /start_{image_name}_ns.sh")
             if i == 1:
                 ns_hosts[i + step].appendStartCommand(
-                    f"/start_{image_name}_ns.sh {i} &> out.log", fork=True
+                    f"/start_{image_name}_ns.sh {int(step / 2)} &> out.log", fork=True
                 )
             else:
                 ns_hosts[i + step].appendStartCommand(
@@ -168,7 +169,7 @@ for i, image_name in enumerate(images):
 
     ns_hosts[i].addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
     ns_hosts[i].importFile(
-        "/home/hua/codes/seed-emulator/examples/C05-l2-blockchain/l2/.env", "/.env"
+        "/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/.env", "/.env"
     )
 
 # Add external port
@@ -183,7 +184,6 @@ emu.addBinding(Binding("poa-eth7", filter=Filter(asn=162, nodeName="host_0")))
 emu.addBinding(Binding("poa-eth8", filter=Filter(asn=163, nodeName="host_0")))
 
 # Add the layer and save the component to a file
-emu.addLayer(web)
 emu.addLayer(eth)
 emu.dump("component-blockchain.bin")
 
@@ -192,3 +192,11 @@ emu.render()
 # If output directory exists and override is set to false, we call exit(1)
 # updateOutputdirectory will not be called
 emu.compile(docker, "./output", override=True)
+
+
+# Post processing
+hosts = range(150, 154)
+ids = range(2)
+
+[change_line(host, i, "sed -i", -2) for host in hosts for i in ids]
+[change_line(host, i, "chmod +x /start_op-", -2) for host in hosts for i in ids]
