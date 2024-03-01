@@ -60,7 +60,7 @@ CustomGenesisFileContent = """\
 }
 """
 
-emu = Makers.makeEmulatorBaseWith10StubASAndHosts(2)
+emu = Makers.makeEmulatorBaseWith10StubASAndHosts(1)
 
 
 if len(sys.argv) == 1:
@@ -119,62 +119,44 @@ ns_hosts: List[Node] = []
 for asn in range(150, 154):
     host_name = base.getAutonomousSystem(asn).getHosts()
     hosts.append(base.getAutonomousSystem(asn).getHost(host_name[0]))
-    ns_hosts.append(base.getAutonomousSystem(asn).getHost(host_name[1]))
 
-base_image_path = ""
-images = ["op-geth", "op-node", "op-batcher", "op-proposer"]
+image_name = "op-stack:local"
+image = DockerImage(image_name, software=[])
+docker.addImage(image)
 
-for i, image_name in enumerate(images):
-    image = DockerImage(name=base_image_path + image_name + ":local", software=[])
-    docker.addImage(image)
-
+for i, host in enumerate(hosts):
     # Configure the ns node
-    docker.setImageOverride(hosts[i], base_image_path + image_name + ":local")
-    hosts[i].importFile(
+    docker.setImageOverride(host, image_name)
+    host.importFile(
         "/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/.env", "/.env"
     )
-    hosts[i].importFile(
-        f"/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/start_{image_name}.sh",
-        f"/start_{image_name}.sh",
+    if i == 0:
+        for script in ["_op-batcher", "_op-geth", "_op-node", "_op-proposer", "_seq"]:
+            host.importFile(
+                f"/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/start{script}.sh",
+                f"/start{script}.sh",
+            )
+            host.addBuildCommand(f"chmod +x /start{script}.sh")
+    else:
+        for script in ["_op-geth_ns", "_op-node_ns", "_ns"]:
+            host.importFile(
+                f"/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/start{script}.sh",
+                f"/start{script}.sh",
+            )
+            host.addBuildCommand(f"chmod +x /start{script}.sh")
+
+    host.importFile(
+        "/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/deployments/getting-started/L2OutputOracleProxy.json",
+        "/L2OutputOracleProxy.json",
     )
-    if image_name == "op-proposer":
-        hosts[i].importFile(
-            "/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/deployments/getting-started/L2OutputOracleProxy.json",
-            "/L2OutputOracleProxy.json",
-        )
-    hosts[i].addBuildCommand(f"chmod +x /start_{image_name}.sh")
-    hosts[i].addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
-    hosts[i].appendStartCommand(f"/start_{image_name}.sh &> out.log", fork=True)
-
-    # Configure ns nodes
-    if i < 2:
-        for step in [0, 2]:
-            docker.setImageOverride(
-                ns_hosts[i + step], base_image_path + image_name + ":local"
-            )
-
-            ns_hosts[i + step].importFile(
-                f"/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/start_{image_name}_ns.sh",
-                f"/start_{image_name}_ns.sh",
-            )
-            ns_hosts[i + step].addBuildCommand(f"chmod +x /start_{image_name}_ns.sh")
-            if i == 1:
-                ns_hosts[i + step].appendStartCommand(
-                    f"/start_{image_name}_ns.sh {int(step / 2)} &> out.log", fork=True
-                )
-            else:
-                ns_hosts[i + step].appendStartCommand(
-                    f"/start_{image_name}_ns.sh &> out.log", fork=True
-                )
-
-    ns_hosts[i].addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
-    ns_hosts[i].importFile(
-        "/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/.env", "/.env"
+    host.addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
+    host.appendStartCommand(
+        f"/start{'_seq' if i == 0 else '_ns'}.sh &> out.log", fork=True
     )
 
 # Add external port
 hosts[0].addPortForwarding(8545, 8545)
-ns_hosts[0].addPortForwarding(9545, 8545)
+hosts[1].addPortForwarding(9545, 8545)
 
 
 # Binding virtual nodes to physical nodes
@@ -196,7 +178,7 @@ emu.compile(docker, "./output", override=True)
 
 # Post processing
 hosts = range(150, 154)
-ids = range(2)
+ids = range(1)
 
 [change_line(host, i, "sed -i", -2) for host in hosts for i in ids]
-[change_line(host, i, "chmod +x /start_op-", -2) for host in hosts for i in ids]
+[change_line(host, i, "chmod +x /start_", -2) for host in hosts for i in ids]

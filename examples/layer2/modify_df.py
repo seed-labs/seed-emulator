@@ -16,17 +16,20 @@ def insert_to_df(lines: Iterable[str], host: str, i: int):
 def change_line(host: str, i: int, keyword: str, dst: int):
     with open(f"./output/hnode_{host}_host_{i}/Dockerfile", "r+") as df:
         lines = df.readlines()
-        curr = None
+        indices = []
         for index, line in enumerate(lines):
             if keyword in line:
-                curr = index
-                break
+                indices.append(index)
         
-        if curr is None:
+        if len(indices) == 0:
             print("Not found")
             return
-        target = lines.pop(curr)
-        lines.insert(dst, target)
+        
+        offset = 0
+        for curr in indices:
+            target = lines.pop(curr - offset)
+            lines.insert(dst, target)
+            offset += 1
 
         df.seek(0,0)
         df.writelines(lines)
