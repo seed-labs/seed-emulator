@@ -76,7 +76,7 @@ class ChainlinkServer(Server):
         start_commands = """
 service postgresql restart
 su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\""
-chainlink node start -d -p /chainlink/password.txt -a /chainlink/apicredentials.txt
+chainlink node -config /config.toml -secrets /secrets.toml start -api /api.txt
 """
         node.appendStartCommand(start_commands)
 

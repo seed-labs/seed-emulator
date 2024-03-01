@@ -78,33 +78,26 @@ for asn in asns:
         emu.addBinding(Binding(vnode, filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         i = i+1
 
-smartContract = SmartContract("./contracts/link_token.bin", "./contracts/link_token.abi")
-a164 = base.getAutonomousSystem(164)
-contractDeployHost = a164.createHost('contract_deploy_host').joinNetwork('net0')
-
-contractDeployEth = blockchain.createNode('contract_deploy_eth')
-contractDeployEth.enableGethHttp()
-contractDeployEth.enableGethWs()
-contractDeployEth.unlockAccounts()
-contractDeployEth.deploySmartContract(smartContract)
-emu.getVirtualNode(contractDeployEth).setDisplayName('Contract-Deploy-Eth')
-emu.addBinding(Binding('contract_deploy_eth', filter=Filter(asn=asn, nodeName='contract_deploy_host')))
-
-
 # Create the Chainlink layer
 chainlink = ChainlinkService()
+chainlink_nodes = list()
 chainlink_asns = [150, 154, 161, 164]
 j = 0
-chainlink_vnodes = list()
 for asn in chainlink_asns:
     cnode = 'chainlink{}'.format(j)
-    chainlink_vnodes.append(cnode)
     # Cretae chainlink virtual node
     chainlink.install(cnode)
     service_name = 'Chainlink-{}'.format(j)
     emu.getVirtualNode(cnode).setDisplayName(service_name)
-    emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
+    host_name = "chainlink_service_{}".format(j)
+    a = base.getAutonomousSystem(asn)
+    # Create a host and join it to the network
+    host = a.createHost(host_name).joinNetwork('net0', '10.{}.0.171'.format(asn))
+    chainlink_nodes.append(host)
+    # Add the binding for virtual node and host
+    emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName=host_name)))
     j = j+1
+
 
 # Add the Ethereum layer
 emu.addLayer(eth)
@@ -120,15 +113,8 @@ docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=Platfor
 
 # Use the addImage API to add the custom chainlink image host
 docker.addImage(DockerImage(CHAINLINK_IMAGE, [], local=False))
-
-# Get binded nodes with chainlink
-chainlink_nodes = list()
-for node in chainlink_vnodes:
-    chainlink_nodes.append(emu.resolvVnode(node))
-
 for node in chainlink_nodes:
     docker.setImageOverride(node, CHAINLINK_IMAGE)
 #docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=Platform.ARM64)
 
 emu.compile(docker, OUTPUTDIR, override = True)
-# os.system('cp -r contracts ./emulator_20/contracts')
