@@ -25,12 +25,13 @@ ospf    = Ospf()
 web     = WebService()
 iperf_traffic_receiver_1 = IperfReceiver(name='iperf_traffic_receiver_1')
 iperf_traffic_receiver_2 = IperfReceiver(name='iperf_traffic_receiver_2')
-iperf_traffic_generator = IperfGenerator(targets=[iperf_traffic_receiver_1, iperf_traffic_receiver_2])
-iperf_traffic_generator.addDependency(iperf_traffic_receiver_1.getName(), False, False)
-iperf_traffic_generator.addDependency(iperf_traffic_receiver_2.getName(), False, False)
-hybrid_traffic_receiver = HybridTrafficReceiver()
-hybrid_traffic_generator = HybridTrafficGenerator(targets=[hybrid_traffic_receiver])
-hybrid_traffic_generator.addDependency(hybrid_traffic_receiver.getName(), False, False)
+iperf_traffic_generator = IperfGenerator()
+iperf_traffic_generator.addTargets(hosts=["iperf_traffic_receiver_1", "iperf_traffic_receiver_2"])
+# iperf_traffic_generator.addDependency('iperf_traffic_receiver_1', False, False)
+# iperf_traffic_generator.addDependency('iperf_traffic_receiver_2', False, False)
+hybrid_traffic_receiver = HybridTrafficReceiver(name='hybrid_traffic_receiver')
+hybrid_traffic_generator = HybridTrafficGenerator()
+# hybrid_traffic_generator.addDependency('hybrid_traffic_receiver', False, False)
 
 ovpn    = OpenVpnRemoteAccessProvider()
 
@@ -99,6 +100,7 @@ Makers.makeStubAs(emu, base, 171, 105, [iperf_traffic_receiver_1])
 # Add a host with customized IP address to AS-154 
 as154 = base.getAutonomousSystem(154)
 as154.createHost('host_2', custom_domain="host2.example.com").joinNetwork('net0', address = '10.154.0.129')
+as154.createHost('host_3').joinNetwork('net0', address = '10.154.0.130')
 
 # Create real-world AS.
 # AS11872 is the Syracuse University's autonomous system
@@ -111,8 +113,8 @@ as152 = base.getAutonomousSystem(152)
 as152.getNetwork('net0').enableRemoteAccess(ovpn)
 
 # hybrid_traffic_generator.addTargets(["10.65.0.234", as154, base.getAutonomousSystem(171)])
-iperf_traffic_generator.addTargets(base.getNetworks())
 
+hybrid_traffic_generator.addTargets(asns=[154, 171], hosts=["host2.example.com", "10.154.0.130"])
 ###############################################################################
 # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
 # which means each AS will only export its customers and their own prefixes. 

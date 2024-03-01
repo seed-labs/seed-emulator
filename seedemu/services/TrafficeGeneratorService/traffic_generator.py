@@ -1,5 +1,5 @@
 from __future__ import annotations
-from seedemu.core import AutonomousSystem, Network, Node, Service, Server
+from seedemu.core import AutonomousSystem, Emulator, Network, Node, Service, Server
 from .traffic_receiver import TrafficReceiver
 from typing import List, Union
 
@@ -12,6 +12,7 @@ class TrafficGeneratorServer(Server):
     def install(self, node: Node):
         self.generator.install_softwares(node)
         node.appendClassName("TrafficGenerator")
+        node.setDomainName(self.generator.getName())
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -20,33 +21,40 @@ class TrafficGeneratorServer(Server):
         return out
 
 class TrafficGenerator(Service):
-    def __init__(self, name=None, targets: List[ Union[TrafficReceiver | Network | AutonomousSystem]] = []):
-        self.node = None
-        self.name = name or self.__class__.__name__
-        self.targets = targets
+    def __init__(self, name=None):
         super().__init__()
+
+        self.name = name or self.__class__.__name__
+        self.targets = {
+            "asns": [],
+            "hosts": []
+        }
+        self.node = None
         self.addDependency('Base', False, False)
 
     def _createServer(self) -> Server:
         return TrafficGeneratorServer(self)
 
-    def install_softwares(self, node: Node):
+    def render(self, emulator: Emulator):
+        super().render(emulator)
+        base_layer = emulator.getLayer('Base')
         target_nodes = []
-        for target in self.targets:
-            if isinstance(target, str):
-                target_nodes.append(target)
-            elif isinstance(target, TrafficReceiver):
-                target_nodes.append(target.getNodeName())
-            elif isinstance(target, Network):
-                target_nodes.append(str(target.getPrefix()))
-            elif isinstance(target, AutonomousSystem):
-                as_nets = target.getNetworks()
-                for as_net in as_nets:
-                    target_nodes.append(str(target.getNetwork(as_net).getPrefix()))
-        node.setFile('/root/traffic-targets', "\n".join(target_nodes))
+        for asn in self.targets['asns']:
+            target = base_layer.getAutonomousSystem(asn)
+            as_nets = target.getNetworks()
+            for as_net in as_nets:
+                target_nodes.append(str(target.getNetwork(as_net).getPrefix()))
+        for host in self.targets['hosts']:
+            target_nodes.append(host)
+        print()
+        self.node.setFile('/root/traffic-targets', "\n".join(target_nodes))
 
-    def addTargets(self, targets: List[ Union[TrafficReceiver | Network | AutonomousSystem]]):
-        self.targets.extend(targets)
+    def install_softwares(self, node: Node):
+        self.node = node
+
+    def addTargets(self, asns: List[AutonomousSystem] = [], hosts: List[str] = []):
+        self.targets["asns"].extend(asns)
+        self.targets["hosts"].extend(hosts)
 
     def getName(self) -> str:
         return self.name

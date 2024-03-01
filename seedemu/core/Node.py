@@ -590,6 +590,16 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__custom_domain or f"{self.__scope}-{self.__name}"
 
+    def setDomainName(self, domain: str) -> Node:
+        """!
+        @brief Set domain name of this node.
+
+        @returns self, for chaining API calls.
+        """
+        self.__custom_domain = domain
+
+        return self
+
     def getIP(self) -> str:
         """!
         @brief Get IP address of the local interface.
