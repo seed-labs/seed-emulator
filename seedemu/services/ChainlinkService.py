@@ -38,7 +38,7 @@ Seed@emulator123
 
 class ChainlinkServer(Server):
     """
-    @brief The Chainlink protocol server.
+    @brief The Chainlink virtual node server.
     """
     __node: Node
     __emulator: Emulator
@@ -97,6 +97,7 @@ class ChainlinkService(Service):
         self.addDependency('Base', False, False)
 
     def _createServer(self) -> ChainlinkServer:
+        self._log('Creating Chainlink server.')
         return ChainlinkServer()
 
     def configure(self, emulator: Emulator):
