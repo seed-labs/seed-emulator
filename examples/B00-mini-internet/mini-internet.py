@@ -25,13 +25,14 @@ ospf    = Ospf()
 web     = WebService()
 iperf_traffic_receiver_1 = IperfReceiver(name='iperf_traffic_receiver_1')
 iperf_traffic_receiver_2 = IperfReceiver(name='iperf_traffic_receiver_2')
+
 iperf_traffic_generator = IperfGenerator()
 iperf_traffic_generator.addTargets(hosts=["iperf_traffic_receiver_1", "iperf_traffic_receiver_2"])
-# iperf_traffic_generator.addDependency('iperf_traffic_receiver_1', False, False)
-# iperf_traffic_generator.addDependency('iperf_traffic_receiver_2', False, False)
+
 hybrid_traffic_receiver = HybridTrafficReceiver(name='hybrid_traffic_receiver')
+
 hybrid_traffic_generator = HybridTrafficGenerator()
-# hybrid_traffic_generator.addDependency('hybrid_traffic_receiver', False, False)
+hybrid_traffic_generator.addTargets(hosts=["hybrid_traffic_receiver"])
 
 ovpn    = OpenVpnRemoteAccessProvider()
 
@@ -111,8 +112,6 @@ as11872.createRealWorldRouter('rw').joinNetwork('ix102', '10.102.0.118')
 # Allow outside computer to VPN into AS-152's network
 as152 = base.getAutonomousSystem(152)
 as152.getNetwork('net0').enableRemoteAccess(ovpn)
-
-# hybrid_traffic_generator.addTargets(["10.65.0.234", as154, base.getAutonomousSystem(171)])
 
 hybrid_traffic_generator.addTargets(asns=[154, 171], hosts=["host2.example.com", "10.154.0.130"])
 ###############################################################################
