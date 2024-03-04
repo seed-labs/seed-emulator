@@ -853,6 +853,27 @@ export class MapUi {
         return div;
     }
 
+    private _createInfoPlateValuePairArray(label: string, values: string[]): HTMLDivElement {
+        let div = document.createElement('div');
+
+        let span0 = document.createElement('span');
+        span0.className = 'label';
+        span0.innerText = label;
+
+        let span1 = document.createElement('span');
+        span1.className = 'text';
+
+        // Create a comma-separated string from the array of strings
+        const text = values.join(', ');
+
+        span1.innerText = text;
+
+        div.appendChild(span0);
+        div.appendChild(span1);
+
+        return div;
+    }
+
     /**
      * update infoplate with node.
      * 
@@ -905,6 +926,7 @@ export class MapUi {
             infoPlate.appendChild(this._createInfoPlateValuePair('ASN', node.meta.emulatorInfo.asn.toString()));
             infoPlate.appendChild(this._createInfoPlateValuePair('Name', node.meta.emulatorInfo.name));
             infoPlate.appendChild(this._createInfoPlateValuePair('Role', node.meta.emulatorInfo.role));
+            infoPlate.appendChild(this._createInfoPlateValuePairArray('Class', node.meta.emulatorInfo.classes));
 
             let ipAddresses = document.createElement('div');
             ipAddresses.classList.add('section');

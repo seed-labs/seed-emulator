@@ -1,5 +1,6 @@
 export interface EmulatorNode {
     Id: string;
+    Names: string[];
     NetworkSettings: {
         Networks: {
             [name: string]: {
@@ -18,6 +19,7 @@ export interface EmulatorNode {
             asn: number,
             name: string,
             role: string,
+            classes: string[],
             description?: string,
             displayname?: string
         };
