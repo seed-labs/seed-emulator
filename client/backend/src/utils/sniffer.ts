@@ -1,10 +1,10 @@
 import dockerode from 'dockerode';
-import { LogProducer } from '../interfaces/log-producer';
+import { LogProducer,ILogObj } from '../interfaces/log-producer';
 import { Logger } from 'tslog';
 import { SessionManager, Session } from './session-manager';
 
 export class Sniffer implements LogProducer {
-    private _logger: Logger;
+    private _logger: Logger<ILogObj>;
     private _listener: (nodeId: string, stdout: any) => void;
     private _sessionManager: SessionManager;
 
@@ -46,7 +46,7 @@ export class Sniffer implements LogProducer {
         this._listener = undefined;
     }
 
-    getLoggers(): Logger[] {
+    getLoggers(): Logger<ILogObj>[] {
         return [this._logger, this._sessionManager.getLoggers()[0]];
     }
 }

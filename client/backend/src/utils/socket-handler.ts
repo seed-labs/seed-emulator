@@ -2,10 +2,10 @@ import { Logger } from 'tslog';
 import dockerode from 'dockerode';
 import { SessionManager } from './session-manager';
 import WebSocket from 'ws';
-import { LogProducer } from '../interfaces/log-producer';
+import { LogProducer, ILogObj } from '../interfaces/log-producer';
 
 export class SocketHandler implements LogProducer {
-    private _logger: Logger;
+    private _logger: Logger<ILogObj>;
     private _sessionManager: SessionManager;
 
     constructor(docker: dockerode) {
@@ -65,7 +65,7 @@ export class SocketHandler implements LogProducer {
         return this._sessionManager;
     }
 
-    getLoggers(): Logger[] {
+    getLoggers(): Logger<ILogObj>[] {
         return [this._logger, this._sessionManager.getLoggers()[0]];
     }
 };

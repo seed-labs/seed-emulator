@@ -1,5 +1,5 @@
 import dockerode from 'dockerode';
-import { LogProducer } from '../interfaces/log-producer';
+import { LogProducer , ILogObj } from '../interfaces/log-producer';
 import { Logger } from 'tslog';
 import { Session, SessionManager } from './session-manager';
 
@@ -31,7 +31,7 @@ export interface BgpPeer {
  * installed to every node by the docker compiler. 
  */
 export class Controller implements LogProducer {
-    private _logger: Logger;
+    private _logger: Logger<ILogObj>;
     private _sessionManager: SessionManager;
 
     /** current task id. */
@@ -261,7 +261,7 @@ export class Controller implements LogProducer {
         await this._run(node, `bird_peer_${state ? 'up' : 'down'} ${peer}`);
     }
 
-    getLoggers(): Logger[] {
+    getLoggers(): Logger<ILogObj>[] {
         return [this._logger, this._sessionManager.getLoggers()[0]];
     }
 }
