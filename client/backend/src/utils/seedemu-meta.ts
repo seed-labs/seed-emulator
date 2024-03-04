@@ -1,6 +1,27 @@
 import 'dockerode';
 import Dockerode from 'dockerode';
 
+function parseJsonArrayString(jsonArrayString: string): string[] {
+    try {
+        const jsonArray = JSON.parse(jsonArrayString);
+        
+        // Check if the parsed JSON is an array
+        if (Array.isArray(jsonArray)) {
+            // Check if each element in the array is a string
+            if (jsonArray.every((element) => typeof element === 'string')) {
+                return jsonArray;
+            } else {
+                throw new Error('Array elements must be strings.');
+            }
+        } else {
+            throw new Error('Input is not a valid JSON array.');
+        }
+    } catch (error) {
+        console.error(`Error parsing JSON array string: ${error.message}`);
+        return [];
+    }
+}
+
 const META_PREFIX = 'org.seedsecuritylabs.seedemu.meta.';
 
 export interface VertexMeta {
@@ -16,6 +37,7 @@ export interface SeedEmulatorNode extends VertexMeta {
         name?: string;
         address?: string;
     }[];
+    classes: string[];
 }
 
 export interface SeedEmulatorNet extends VertexMeta {
@@ -55,7 +77,8 @@ export class Emulator {
         [key: string]: string
     }): SeedEmulatorNode {
         var node: SeedEmulatorNode = {
-            nets: []
+            nets: [],
+            classes: [],
         };
 
         Object.keys(labels).forEach(label => {
@@ -75,6 +98,7 @@ export class Emulator {
             }
             if (key === 'displayname') node.displayname = value;
             if (key === 'description') node.description = value;
+            if (key === 'class') node.classes = parseJsonArrayString(value);
         });
 
         return node;
