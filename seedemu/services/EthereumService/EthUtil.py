@@ -299,7 +299,7 @@ class SmartContract():
             echo "Waiting for contract to be mined..."
             GETH_COMMAND="eth.getTransactionReceipt('$transactionHash')"
             while true; do
-                RECEIPT=$(geth --exec "$GETH_COMMAND" attach | grep "contractAddress" | sed 's/.*contractAddress: "\\("0x[a-fA-F0-9]\\{{40\\}}\\)".*/\\1/')
+                RECEIPT=$(geth --exec "$GETH_COMMAND" attach | grep "contractAddress" | sed 's/.*contractAddress: "\\([^"]*\\)",.*/\\1/')
                 if echo "$RECEIPT" | grep "0x" > /dev/null; then
                     CONTRACT_ADDRESS=$RECEIPT
                     echo "Contract Address: $CONTRACT_ADDRESS"
