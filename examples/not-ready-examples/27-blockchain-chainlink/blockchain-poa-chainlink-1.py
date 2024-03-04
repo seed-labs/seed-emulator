@@ -94,7 +94,7 @@ emu.addBinding(Binding('contract_deploy_eth', filter=Filter(asn=asn, nodeName='c
 
 # Create the Chainlink layer
 chainlink = ChainlinkService()
-chainlink_asns = [150, 154, 161, 164]
+chainlink_asns = [150]
 j = 0
 for asn in chainlink_asns:
     cnode = 'chainlink{}'.format(j)
@@ -115,6 +115,6 @@ emu.addLayer(chainlink)
 OUTPUTDIR = './emulator_20'
 emu.render()
 
-docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=Platform.AMD64)
+docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=Platform.AMD64)
 
 emu.compile(docker, OUTPUTDIR, override = True)
