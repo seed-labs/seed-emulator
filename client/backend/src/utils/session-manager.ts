@@ -1,7 +1,7 @@
 import dockerode from 'dockerode';
 import { Duplex } from 'stream';
 import { Logger } from 'tslog';
-import { LogProducer } from '../interfaces/log-producer';
+import { LogProducer, ILogObj } from '../interfaces/log-producer';
 
 export interface Session {
     stream: Duplex,
@@ -18,7 +18,7 @@ export type SessionEvent = 'new_session';
  * existing sessions if possible.
  */
 export class SessionManager implements LogProducer {
-    private _logger: Logger;
+    private _logger: Logger<ILogObj>;
 
     private _sessions: {
         [id: string]: Session
@@ -146,7 +146,7 @@ export class SessionManager implements LogProducer {
         return this._sessions[fullId];
     }
 
-    getLoggers(): Logger[] {
+    getLoggers(): Logger<ILogObj>[] {
         return [this._logger];
     }
 };

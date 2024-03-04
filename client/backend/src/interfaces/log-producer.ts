@@ -1,5 +1,11 @@
 import { Logger } from 'tslog';
 
+export interface ILogObj
+{
+    name: string;
+}
+
+
 /**
  * common interface for object producing logs.
  */
@@ -10,5 +16,5 @@ export interface LogProducer {
      * 
      * @returns loggers.
      */
-    getLoggers(): Logger[];
+    getLoggers(): Logger<ILogObj>[];
 }
