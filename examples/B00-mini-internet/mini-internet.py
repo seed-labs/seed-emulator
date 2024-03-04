@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec, Host
 from seedemu.services import WebService, DomainNameService, DomainNameCachingService
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedemu.compiler import Docker, Graphviz
@@ -17,6 +17,7 @@ from typing import List, Tuple, Dict
 ###############################################################################
 emu     = Emulator()
 base    = Base()
+host = Host()
 routing = Routing()
 ebgp    = Ebgp()
 ibgp    = Ibgp()
@@ -88,7 +89,7 @@ Makers.makeStubAs(emu, base, 171, 105, [None])
 
 # Add a host with customized IP address to AS-154 
 as154 = base.getAutonomousSystem(154)
-as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129')
+as154.createHost('host_2', custom_host_names=["host2.custom"]).joinNetwork('net0', address = '10.154.0.129')
 
 
 # Create real-world AS.
@@ -139,6 +140,7 @@ ebgp.addPrivatePeerings(105, [11], [171], PeerRelationship.Provider)
 
 # Add layers to the emulator
 emu.addLayer(base)
+emu.addLayer(host)
 emu.addLayer(routing)
 emu.addLayer(ebgp)
 emu.addLayer(ibgp)

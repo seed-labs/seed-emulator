@@ -245,7 +245,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
         return self.__routers[name]
 
-    def createHost(self, name: str) -> Node:
+    def createHost(self, name: str, custom_host_names: List[str] = []) -> Node:
         """!
         @brief Create a host node.
 
@@ -253,7 +253,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns Node.
         """
         assert name not in self.__hosts, 'Host with name {} already exists.'.format(name)
-        self.__hosts[name] = Node(name, NodeRole.Host, self.__asn)
+        self.__hosts[name] = Node(name, NodeRole.Host, self.__asn, custom_host_names=custom_host_names)
 
         return self.__hosts[name]
 

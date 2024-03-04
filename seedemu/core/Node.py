@@ -229,7 +229,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     __name_servers: List[str]
 
-    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
+    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None, custom_host_names: List[str] = []):
         """!
         @brief Node constructor.
 
@@ -237,6 +237,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @param role role of this node.
         @param asn network that this node belongs to.
         @param scope scope of the node, if not asn.
+        @param custom_host_names (optional) list of custom host names to use.
         """
         super().__init__()
 
@@ -267,6 +268,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         #     self.__softwares.add(soft)
 
         self.__name_servers = []
+        self.__custom_host_names = custom_host_names
 
     def configure(self, emulator: Emulator):
         """!
@@ -344,6 +346,31 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__name_servers = servers
 
         return self
+
+    def getHostNames(self) -> str:
+        """!
+        @brief Get all host names for this node.
+        @returns node host names.
+        """
+        return self.__custom_host_names + [f"{self.__scope}-{self.__name}"]
+
+    def addHostName(self, name: str) -> Node:
+        """!
+        @brief Add a new host name to this node.
+        @param name new host name.
+        @returns self, for chaining API calls.
+        """
+        self.__custom_host_names.append(name)
+        return self
+
+    def getIPAddress(self) -> str:
+        """!
+        @brief Get the IP address of the local interface for this node.
+        """
+        for iface in self.getInterfaces():
+            if iface.getNet().getType() == NetworkType.Local:
+                return iface.getAddress()
+        return ''
 
     def getNameServers(self) -> List[str]:
         """!
