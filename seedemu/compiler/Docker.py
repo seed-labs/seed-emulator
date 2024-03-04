@@ -43,8 +43,46 @@ while read -sr expr; do {
 [ "$last_pid" != 0 ] && kill $last_pid
 """
 
-DockerCompilerFileTemplates['seedemu_worker'] = """\
-#!/bin/bash
+DockerCompilerFileTemplates['seedemu_worker'] = r"""#!/bin/bash
+
+mysciontraceroute() {
+# a list of json 'points'
+local input_string="$1"
+local tokens=($input_string)  # Split input_string by space into an array
+command="scion traceroute ${tokens[@]}"
+input="`eval $command | grep -Eo '([0-9]+)-([0-9:A-Fa-f]+),(\[[^-. \]]+\]|[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3})(:([0-9]+))?' | sed -E 's/([0-9]+)-([0-9:A-Fa-f]+),(\[[^-. \]]+\]|[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3})(:([0-9]+))?/{ "isd": \1, "asn": \2, "ip": "\3" }/g' `"
+
+# Initialize an empty array
+declare -a entries
+
+# Read the input into the array
+readarray -t entries <<< "$input"
+
+# Calculate the length of the array
+length=${#entries[@]}
+
+# Initialize an empty array to store json 'segments'
+pairs=()
+
+# Loop over the array to create json 'segments' from every pair of adjacent points
+for ((i = 0; i < length - 1; i++)); do
+    pair="{ \"from\": ${entries[i]}, \"to\": ${entries[i+1]} }"
+    pairs+=("$pair")
+done
+
+# Print the resulting json segment array
+
+IFS=','; echo "[ ${pairs[*]} ]"
+return
+}
+
+#  interface (-i) and or source (-s) parameters are included in '$1' if present
+mytraceroute() {
+data="`traceroute --icmp "$1" | sed -nE 's/^ ([[:digit:]]{1,2})[^\(\)]*\(([[:digit:]]{1,3}.[[:digit:]]{1,3}.[[:digit:]]{1,3}.[[:digit:]]{1,3})\) [0123456789.ms ]*$/{ "ttl": \1, "hop": "\2" }/p' | tr '' ',$' | sed 's/,$//'`"
+out="[ ${data} ]" #  a JSON array of Hop objects
+echo "${out}"
+return
+}
 
 net() {
     [ "$1" = "status" ] && {
@@ -65,9 +103,11 @@ bgp() {
 while read -sr line; do {
     id="`cut -d ';' -f1 <<< "$line"`"
     cmd="`cut -d ';' -f2 <<< "$line"`"
+    args="`cut -d ';' -f3 <<< "$line"`"
 
     output="no such command."
-
+    [ "$cmd" = "sciontraceroute" ] && output="`mysciontraceroute "$args" 2>&1`"
+    [ "$cmd" = "traceroute" ] && output="`mytraceroute "$args" 2>&1`"
     [ "$cmd" = "net_down" ] && output="`net down 2>&1`"
     [ "$cmd" = "net_up" ] && output="`net up 2>&1`"
     [ "$cmd" = "net_status" ] && output="`net status 2>&1`"

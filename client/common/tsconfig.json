@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+      "module": "commonjs",
+      "target": "ES6",
+      "noImplicitAny": true,
+      "removeComments": true,
+      "preserveConstEnums": true,
+      "esModuleInterop": true,
+      "sourceMap": true,
+      "types": ["node"],
+      "outDir": "bin/"
+    },
+    "include": ["./**/*"],
+    "exclude": ["node_modules"]
+  }

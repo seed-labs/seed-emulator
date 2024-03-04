@@ -2,6 +2,7 @@ import dockerode from 'dockerode';
 import { LogProducer , ILogObj } from '../interfaces/log-producer';
 import { Logger } from 'tslog';
 import { Session, SessionManager } from './session-manager';
+import * as types from '../../../common/types';
 
 interface ExecutionResult {
     id: number,
@@ -21,6 +22,12 @@ export interface BgpPeer {
 
     /** state of bgp (established/active/idle, etc.) */
     bgpState: string;
+}
+
+// only used to parse the output of seedemu_worker::mytraceroute function
+interface TraceRouteResult {
+    ttl: number,
+    hop: string // an ip address
 }
 
 /**
@@ -141,6 +148,8 @@ export class Controller implements LogProducer {
      * 
      * @param node id of node to run on.
      * @param command command.
+     * TODO: maybe make arguments for the command explicit here. 
+     *      currently they are a ';' separated field in 'command'
      * @returns execution result.
      */
     private async _run(node: string, command: string): Promise<ExecutionResult> {
@@ -199,6 +208,94 @@ export class Controller implements LogProducer {
     async setNetworkConnected(node: string, connected: boolean) {
         this._logger.debug(`setting network to ${connected ? 'connected' : 'disconnected'} on ${node}`);
         await this._run(node, connected ? 'net_up' : 'net_down');
+    }
+
+    /** 
+     * resolve a coarse SCION interdomain path from 'node' to 'remote'
+     * 
+     * @param source is the --local IP address to listen on
+     * @param sequence SCION hop predicate , what path to use i.e. '1-150#2 1-151#1,2 1-152#1'
+     * @param remote SCION address, who to SCMP-ping i.e. 1-152,10.152.0.30 
+     *
+     */
+    async getSCIONTraceroute(node: string, remote: string, sequence: string, source?: string): Promise<types.Path> {
+        let path: types.Path;
+
+        let command: string = `sciontraceroute; --sequence "${sequence}" ${remote} `;
+
+        /*if (typeof source !== 'undefined') {
+          // check that it is actually a valid ip address here
+           command.concat(` --local ${source}`);               
+            }       */
+
+        let result = await this._run(node, command);
+
+        if (result.return_value == 0) {
+            let hops: types.Segment[] = JSON.parse(result.output);
+
+
+            path = { segments: hops };
+
+            // TODO: now the frontent datasource can loop over each segment and refine it with the intra-domain hops from getTraceroute()
+            // with its address2nodeId() it can translate the addresses of Points to nodeIds which it can then use as a parameter to getTraceroute()
+            // The getTraceroute() requests for each segment can run in parallel
+
+            return path;
+        } else {
+            throw result.output;
+        }
+    }
+
+    /**
+     * @brief do Intra domain IP traceroute from source A to remote B 
+     * (for SCION only within the same AS)
+     * @param node node id
+     * @param remote IP address that the node shall invoke traceroute with
+     * @param interf  interface or net-name on which the ICMP echo requests shall be send
+     * @param source   source-address that shall be used by the node
+     * @returns a list of individual hops from the node to the remote 
+     * TODO: maybe add optional ISD, AS parameters, if they are known
+     */
+    async getTraceroute(node: string, remote: string, source?: string, interf?: string ) : Promise<types.Point[]> {
+        this._logger.debug(`to traceroute to remote ${remote} on node ${node}`);
+
+        let points: types.Point[] = [];
+
+        let command: string  =  `traceroute;${remote} `;
+        if (typeof source !== 'undefined') {         
+            command.concat(` --source ${source}`);
+            // add the node itself with TTL of 0
+            points.push({ip: source, id: node });
+        } else {
+            // TODO: find out the ip address through the node-id
+            // add the node itself with TTL of 0
+            points.push({ id: node });
+        }
+
+        if (typeof interf !== 'undefined') {
+            command.concat(` --interface ${interf}`);
+        }
+
+        let result = await this._run(node,command);        
+        let hops: TraceRouteResult[] = JSON.parse(result.output);
+        
+        // check that  ttl's are continous ( no omissions due to timeout i.e.)       
+
+        // sort ascending by ttl (should be Noop but just to be sure)
+        hops.sort((a, b) => { return a.ttl - b.ttl ; });
+
+        let hop2point = function( hop: TraceRouteResult ){ return {ip: hop.hop };};
+
+        points.concat( hops.map(hop2point) );
+        
+        // check if last hop is the remote, as expected. If not add it.        
+        if( points[points.length -1 ].ip !== remote )
+        {
+            this._logger.debug(`traceroute of node ${node} to remote ${remote} didnt succeed`);
+            points.push({ip: remote})
+        }
+
+        return points;
     }
 
     /**
