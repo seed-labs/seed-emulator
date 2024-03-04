@@ -20,7 +20,7 @@ ETHEREUM_IMAGE = DockerImage(name='handsonsecurity/seedemu-ethereum',
                                 subset=BASE_IMAGE)
 
 CHAINLINK_IMAGE = DockerImage(name='amanvelani/chainlink-develop:amd64',
-                                software=['ipcalc', 'jq', 'iproute2', 'sed', 'postgresql', 'postgresql-contrib'],
+                                software=[],
                                 subset=None)
 
 UBUNTU_IMAGE_ARM64   = DockerImage(name='ubuntu:20.04',
@@ -41,7 +41,7 @@ ETHEREUM_IMAGE_ARM64 = DockerImage(name='handsonsecurity/seedemu-ethereum-arm64'
                                 subset=BASE_IMAGE_ARM64)
 
 CHAINLINK_IMAGE_ARM64 = DockerImage(name='amanvelani/chainlink-develop:arm64',
-                                software=['ipcalc', 'jq', 'iproute2', 'sed', 'postgresql', 'postgresql-contrib'],
+                                software=[],
                                 subset=None)
 
 BASESYSTEM_DOCKERIMAGE_MAPPING = {
