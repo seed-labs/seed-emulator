@@ -48,6 +48,7 @@ class ChainlinkServer(Server):
         @brief ChainlinkServer Constructor.
         """
         super().__init__()
+        self._base_system = BaseSystem.SEEDEMU_CHAINLINK
 
     def configure(self, node: Node, emulator: Emulator):
         """
