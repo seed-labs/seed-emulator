@@ -314,3 +314,63 @@ class SmartContract():
         """
 
         return SmartContractCommand
+    
+    def generateOracleContract(self, owner : str):
+        link_token = "0x5da948596f44d64449b8e88c3e805e4eebe740ca"
+        abi = "abi = {}".format(self.__getContent(self.__abi_file_name))
+        byte_code = "byteCode = \"0x{}\"".format(self.__getContent(self.__bin_file_name))
+        link_token_address = link_token
+        owner_address = owner
+        # link_token_command = f"link_token_address={link_token_address}"
+        # owner_address_command = f"owner_address={owner_address}"
+        unlock_account = "personal.unlockAccount(eth.accounts[0], \"{}\")".format("admin")
+        contract_command = "oracleContract = eth.contract(abi).new('{}', '{}', {{from: eth.accounts[0], data: byteCode, gas: 2000000}})".format(link_token_address, owner_address)
+
+        # contract_command = f"oracleContract = eth.contract(abi).new(link_token_address, owner_address, {{ from: eth.accounts[0], data: byteCode, gas: 2000000}})"
+        display_contract_Info = "oracleContract"
+        finalCommand = "{},{},{},{},{}".format(abi, byte_code, unlock_account, contract_command, display_contract_Info)
+        SmartContractCommand=f"""while true; do 
+        blockCommand='geth --exec "eth.blockNumber" attach'; 
+        blockNumber=$(eval "$blockCommand" || echo '0'); 
+        if [ "$blockNumber" -gt 1 ]; then 
+            echo "Current block number is $blockNumber, which is greater than 1. Exiting loop."; 
+            break; 
+        else 
+            echo "Waiting for the block to be mined"; 
+            sleep 30; 
+        fi; 
+        done 
+        gethCommand='{finalCommand}'
+        finalCommand='geth --exec "$gethCommand" attach'
+        result=$(eval "$finalCommand")
+        touch transaction.txt
+        echo "Transaction result: $result" 
+        echo "$result" >> transaction.txt
+        transactionHash=$(grep -o -E '0x[a-fA-F0-9]{{64}}' transaction.txt)
+        if [ -z "$transactionHash" ]; then
+        \t echo "Transaction Hash not found."
+        \t exit 1
+        fi
+        echo "Transaction Hash: $transactionHash"
+        GETH_COMMAND="eth.getTransactionReceipt('$transactionHash')"
+        # Loop until the contract address is found
+        CONTRACT_ADDRESS=""
+        while [ -z "$CONTRACT_ADDRESS" ]; do
+            echo "Waiting for contract to be mined..."
+            GETH_COMMAND="eth.getTransactionReceipt('$transactionHash')"
+            while true; do
+                RECEIPT=$(geth --exec "$GETH_COMMAND" attach | grep "contractAddress" | sed 's/.*contractAddress: "\\([^"]*\\)",.*/\\1/')
+                if echo "$RECEIPT" | grep "0x" > /dev/null; then
+                    CONTRACT_ADDRESS=$RECEIPT
+                    echo "Contract Address: $CONTRACT_ADDRESS"
+                    echo "Contract Address: $CONTRACT_ADDRESS" >> transaction.txt
+                    break
+                else
+                    echo "Contract address not found yet, retrying in 30 seconds..."
+                    sleep 30
+                fi
+            done
+        done
+        """
+        
+        return SmartContractCommand
