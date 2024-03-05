@@ -802,6 +802,40 @@ class Docker(Compiler):
         copyfile(hostpath, staged_path)
         return 'COPY {} {}\n'.format(staged_path, path)
 
+
+    def computeNodeName(self, node ):
+        """
+        @brief given a node, compute its final container name, as it will be known in the docker-compose file
+        """
+        name = self.__naming_scheme.format(
+            asn = node.getAsn(),
+            role = self._nodeRoleToString(node.getRole()),
+            name = node.getName(),
+            displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
+            primaryIp = node.getInterfaces()[0].getAddress()
+        )
+
+        return sub(r'[^a-zA-Z0-9_.-]', '_', name)
+
+    def realNodeName(self, node):
+        """
+        @brief computes the sub directory names inside the output folder
+         
+        why is it distinct from computeNodeName() ?!
+        """
+        (scope, type, _) = node.getRegistryInfo()
+        prefix = self._contextToPrefix(scope, type)
+        return '{}{}'.format(prefix, node.getName())
+    
+    def realNetName(self,net):
+          """
+          @brief computes name  of a network as it will be known in the docker-compose file
+          """
+          (netscope, _, _) = net.getRegistryInfo()
+          net_prefix = self._contextToPrefix(netscope, 'net')
+          if net.getType() == NetworkType.Bridge: net_prefix = ''
+          return '{}{}'.format(net_prefix, net.getName())
+
     def _compileNode(self, node: Node) -> str:
         """!
         @brief Compile a single node. Will create folder for node and the
@@ -811,18 +845,14 @@ class Docker(Compiler):
 
         @returns docker-compose service string.
         """
-        (scope, type, _) = node.getRegistryInfo()
-        prefix = self._contextToPrefix(scope, type)
-        real_nodename = '{}{}'.format(prefix, node.getName())
+        real_nodename = self.realNodeName(node)
         node_nets = ''
         dummy_addr_map = ''
 
         for iface in node.getInterfaces():
             net = iface.getNet()
-            (netscope, _, _) = net.getRegistryInfo()
-            net_prefix = self._contextToPrefix(netscope, 'net')
-            if net.getType() == NetworkType.Bridge: net_prefix = ''
-            real_netname = '{}{}'.format(net_prefix, net.getName())
+      
+            real_netname = self.realNetName(net)
             address = iface.getAddress()
 
             if self.__self_managed_network and net.getType() != NetworkType.Bridge:
@@ -891,6 +921,8 @@ class Docker(Compiler):
                 volumeList = lst
             )
 
+        name = self.computeNodeName(node)
+
         dockerfile = DockerCompilerFileTemplates['dockerfile']
         mkdir(real_nodename)
         chdir(real_nodename)
@@ -949,15 +981,6 @@ class Docker(Compiler):
 
         chdir('..')
 
-        name = self.__naming_scheme.format(
-            asn = node.getAsn(),
-            role = self._nodeRoleToString(node.getRole()),
-            name = node.getName(),
-            displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
-            primaryIp = node.getInterfaces()[0].getAddress()
-        )
-
-        name = sub(r'[^a-zA-Z0-9_.-]', '_', name)
 
         return DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
@@ -978,18 +1001,15 @@ class Docker(Compiler):
 
         @returns docker-compose network string.
         """
-        (scope, _, _) = net.getRegistryInfo()
         if self.__self_managed_network and net.getType() != NetworkType.Bridge:
             pfx = next(self.__dummy_network_pool)
             net.setAttribute('dummy_prefix', pfx)
             net.setAttribute('dummy_prefix_index', 2)
             self._log('self-managed network: using dummy prefix {}'.format(pfx))
 
-        net_prefix = self._contextToPrefix(scope, 'net')
-        if net.getType() == NetworkType.Bridge: net_prefix = ''
-
+        
         return DockerCompilerFileTemplates['compose_network'].format(
-            netId = '{}{}'.format(net_prefix, net.getName()),
+            netId = self.realNetName(net),
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
             mtu = net.getMtu(),
             labelList = self._getNetMeta(net)
