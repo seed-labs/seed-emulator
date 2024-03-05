@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec, Host
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec, HostConfiguration
 from seedemu.services import WebService, DomainNameService, DomainNameCachingService
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedemu.compiler import Docker, Graphviz
@@ -17,7 +17,7 @@ from typing import List, Tuple, Dict
 ###############################################################################
 emu     = Emulator()
 base    = Base()
-host = Host()
+host_config = HostConfiguration()
 routing = Routing()
 ebgp    = Ebgp()
 ibgp    = Ibgp()
@@ -140,7 +140,7 @@ ebgp.addPrivatePeerings(105, [11], [171], PeerRelationship.Provider)
 
 # Add layers to the emulator
 emu.addLayer(base)
-emu.addLayer(host)
+emu.addLayer(host_config)
 emu.addLayer(routing)
 emu.addLayer(ebgp)
 emu.addLayer(ibgp)
