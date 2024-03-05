@@ -30,17 +30,11 @@ const getContainers: () => Promise<SeedContainerInfo[]> = async function() {
     return _containers.filter(c => c.meta.emulatorInfo.name);;
 } 
 
-socketHandler.getLoggers().forEach(logger => logger.setSettings({
-    minLevel: 'warn'
-}));
+socketHandler.getLoggers().forEach(logger => logger.settings.minLevel=4 );
 
-sniffer.getLoggers().forEach(logger => logger.setSettings({
-    minLevel: 'warn'
-}));
+sniffer.getLoggers().forEach(logger => logger.settings.minLevel=4);
 
-controller.getLoggers().forEach(logger => logger.setSettings({
-    minLevel: 'warn'
-}));
+controller.getLoggers().forEach(logger => logger.settings.minLevel=4);
 
 router.get('/network', async function(req, res, next) {
     var networks = await docker.listNetworks();
