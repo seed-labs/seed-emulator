@@ -1,15 +1,15 @@
 from seedemu.core import Emulator, Layer
 
 
-class HostConfiguration(Layer):
+class EtcHosts(Layer):
     """!
-    @brief The HostConfiguration layer.
+    @brief The EtcHosts layer.
 
     This layer setups host names for all nodes.
     """
 
     def getName(self) -> str:
-        return "HostConfiguration"
+        return "EtcHosts"
 
     def render(self, emulator: Emulator):
         hosts_file_content = ""
