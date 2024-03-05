@@ -280,6 +280,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         assert not self.__configured, 'Node already configured.'
         assert not self.__asn == 0, 'Virtual physical node must not be used in render/configure'
 
+        self.__configured = True
         reg = emulator.getRegistry()
 
         for (netname, address) in self.__pending_nets:
