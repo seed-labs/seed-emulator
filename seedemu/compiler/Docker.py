@@ -119,12 +119,16 @@ DockerCompilerFileTemplates['depends_on'] = """\
             - {dependsOn}
 """
 
+DockerCompilerFileTemplates['dependency'] = """\
+            {dep_name}:
+                condition:  {dep_condi}
+"""
+
 DockerCompilerFileTemplates['compose_service'] = """\
     {nodeId}:
         build: ./{nodeId}
         container_name: {nodeName}
-        depends_on:
-            - {dependsOn}
+{dependencies}
         cap_add:
             - ALL
         sysctls:
@@ -835,8 +839,26 @@ class Docker(Compiler):
           net_prefix = self._contextToPrefix(netscope, 'net')
           if net.getType() == NetworkType.Bridge: net_prefix = ''
           return '{}{}'.format(net_prefix, net.getName())
+    
+    def startUpDependencies(self, node, registry):
+        """
+        @brief returns a list of container names , that need to start before 'node'
+        i.e. a scion host(node) depends on border-routers and control-services in its AS
+        """
+        
+        dependency_container: List[Tuple[str,str]] = [] # (container-name,condition)
+        (scope,type,name) = node.getRegistryInfo()
+        if type == 'hnode':
+          for router in  registry.getByType(scope,'rnode'):
+            dependency_container.append( (self.realNodeName(router),'service_started') )
 
-    def _compileNode(self, node: Node) -> str:
+          for service in registry.getByType(scope,'csnode'):
+            dependency_container.append( (self.realNodeName(service),'service_started') )
+
+        return dependency_container
+
+
+    def _compileNode(self, node: Node, registry ) -> str: # add registry here as param, in order for a node to find its dependencies
         """!
         @brief Compile a single node. Will create folder for node and the
         dockerfile.
@@ -980,12 +1002,18 @@ class Docker(Compiler):
         print(dockerfile, file=open('Dockerfile', 'w'))
 
         chdir('..')
+        deps = self.startUpDependencies(node,registry)
+
+        # this is required to support ARM and docker-compose v2 
+        (image, _) = self._selectImageFor(node)        
+        deps.append((md5(image.getName().encode('utf-8')).hexdigest(), 'service_started'))
 
 
         return DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
-            nodeName = name,
-            dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
+            nodeName = name,            
+            dependencies = ( "        depends_on:\n" if len(deps) >0 else '' )+ '\n'.join( map( lambda x: DockerCompilerFileTemplates['dependency'].format(dep_name=x[0], dep_condi=x[1]),
+                                           deps ) ),
             networks = node_nets,
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
@@ -1065,23 +1093,23 @@ class Docker(Compiler):
         for ((scope, type, name), obj) in registry.getAll().items():
             if type == 'rnode':
                 self._log('compiling router node {} for as{}...'.format(name, scope))
-                self.__services += self._compileNode(obj)
+                self.__services += self._compileNode(obj,registry)
 
             if type == 'csnode':
                 self._log('compiling control service node {} for as{}...'.format(name, scope))
-                self.__services += self._compileNode(obj)
+                self.__services += self._compileNode(obj,registry)
 
             if type == 'hnode':
                 self._log('compiling host node {} for as{}...'.format(name, scope))
-                self.__services += self._compileNode(obj)
+                self.__services += self._compileNode(obj,registry)
 
             if type == 'rs':
                 self._log('compiling rs node for {}...'.format(name))
-                self.__services += self._compileNode(obj)
+                self.__services += self._compileNode(obj,registry)
 
             if type == 'snode':
                 self._log('compiling service node {}...'.format(name))
-                self.__services += self._compileNode(obj)
+                self.__services += self._compileNode(obj,registry)
 
         if self.__internet_map_enabled:
             self._log('enabling seedemu-internet-map...')
