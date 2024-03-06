@@ -252,6 +252,7 @@ class SmartContract():
         data = file.read()
         file.close()
         return data.replace("\n","")
+        
 
     def generateSmartContractCommand(self):
         """!
@@ -264,7 +265,7 @@ class SmartContract():
         abi = "abi = {}".format(self.__getContent(self.__abi_file_name))
         byte_code = "byteCode = \"0x{}\"".format(self.__getContent(self.__bin_file_name))
         unlock_account = "personal.unlockAccount(eth.accounts[0], \"{}\")".format("admin")
-        contract_command = "testContract = eth.contract(abi).new({ from: eth.accounts[0], data: byteCode, gas: 2000000})"
+        contract_command = "testContract = eth.contract(abi).new({ from: eth.accounts[0], data: byteCode, gas: 1000000})"
         display_contract_Info = "testContract"
         finalCommand = "{},{},{},{},{}".format(abi, byte_code, unlock_account, contract_command, display_contract_Info)
 

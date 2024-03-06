@@ -190,9 +190,9 @@ class EthereumServer(Server):
         
 
         # Rarely used and tentatively not supported. 
-        if self._smart_contract != None :
-            smartContractCommand = self._smart_contract.generateSmartContractCommand()
-            node.appendStartCommand('(\n {})&'.format(smartContractCommand))
+        # if self.__smart_contract != None :
+        #     smartContractCommand = self.__smart_contract.generateSmartContractCommand()
+        #     node.appendStartCommand('(\n {})&'.format(smartContractCommand))
 
     def setCustomGeth(self, customGethBinaryPath:str) -> EthereumServer:
         """
