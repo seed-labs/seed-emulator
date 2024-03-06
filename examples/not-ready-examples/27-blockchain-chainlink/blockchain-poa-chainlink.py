@@ -4,6 +4,7 @@
 from seedemu import *
 import os, sys
 import platform
+from typing import List
 
 from seedemu.services import ChainlinkService
 
@@ -77,34 +78,44 @@ for asn in asns:
         emu.addBinding(Binding(vnode, filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         i = i+1
 
-chain = ChainlinkService()
-chainlink = chain.createChainlink()
+# Smart contract deployment host
+smartContract = SmartContract("./contracts/operator.bin", "./contracts/operator.abi")
+a164 = base.getAutonomousSystem(164)
+contractDeployHost = a164.createHost('contract_deploy_host').joinNetwork('net0')
+
+contractDeployEth = blockchain.createNode('contract_deploy_eth')
+contractDeployEth.enableGethHttp()
+contractDeployEth.enableGethWs()
+contractDeployEth.unlockAccounts()
+# contractDeployEth.deploySmartContract(smartContract)
+contractDeployEth.deployOracleContract(smartContract, "0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9")
+emu.getVirtualNode(contractDeployEth).setDisplayName('Contract-Deploy-Eth')
+emu.addBinding(Binding('contract_deploy_eth', filter=Filter(asn=asn, nodeName='contract_deploy_host')))
 
 
-for asn in asns:
-    cnode = 'chainlink{}'.format(asn)
-    c = chainlink.createChainlinkNode(cnode)
-    displayName = 'Chainlink-%.2d'
-    emu.getVirtualNode(cnode).setDisplayName(displayName%(asn))
-    emu.addBinding(Binding(cnode, filter=Filter(asn=asn, nodeName='host_0')))
-
-
-chainlink = ChainlinkService(asns, emu, 10)
-chainlink_nodes = chainlink.create_chainlink_nodes()
+# Create the Chainlink layer
+chainlink = ChainlinkService()
+chainlink_asns = [150]
+j = 0
+for asn in chainlink_asns:
+    cnode = 'chainlink{}'.format(j)
+    # Cretae chainlink virtual node
+    chainlink.install(cnode)
+    service_name = 'Chainlink-{}'.format(j)
+    emu.getVirtualNode(cnode).setDisplayName(service_name)
+    emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
+    j = j+1
 
 # Add the Ethereum layer
 emu.addLayer(eth)
+
+# Add the Chainlink layer
+emu.addLayer(chainlink)
 
 # Render and compile
 OUTPUTDIR = './emulator_20'
 emu.render()
 
-docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=Platform.AMD64)
-
-# Use the addImage API to add the custom chainlink image host
-docker.addImage(DockerImage(CHAINLINK_IMAGE, [], local=False))
-for node in chainlink_nodes:
-    docker.setImageOverride(node, CHAINLINK_IMAGE)
-#docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=Platform.ARM64)
+docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=Platform.AMD64)
 
 emu.compile(docker, OUTPUTDIR, override = True)

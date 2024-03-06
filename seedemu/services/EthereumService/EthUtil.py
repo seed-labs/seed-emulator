@@ -319,8 +319,8 @@ class SmartContract():
         link_token = "0x5da948596f44d64449b8e88c3e805e4eebe740ca"
         abi = "abi = {}".format(self.__getContent(self.__abi_file_name))
         byte_code = "byteCode = \"0x{}\"".format(self.__getContent(self.__bin_file_name))
-        link_token_address = link_token
-        owner_address = owner
+        link_token_address = Web3.toChecksumAddress(link_token)
+        owner_address = Web3.toChecksumAddress(owner)
         # link_token_command = f"link_token_address={link_token_address}"
         # owner_address_command = f"owner_address={owner_address}"
         unlock_account = "personal.unlockAccount(eth.accounts[0], \"{}\")".format("admin")
