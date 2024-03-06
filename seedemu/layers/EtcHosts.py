@@ -8,6 +8,13 @@ class EtcHosts(Layer):
     This layer setups host names for all nodes.
     """
 
+    def __init__(self):
+        """!
+        @brief EtcHosts Layer constructor
+        """
+        super().__init__()
+        self.addDependency('Base', False, False)
+
     def getName(self) -> str:
         return "EtcHosts"
 
