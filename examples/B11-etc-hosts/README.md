@@ -17,11 +17,7 @@ node = Node('node_name', NodeRole.Host, 154, custom_host_names=['custom_hostname
 2. Add a new custom hostname using the `addHostName` method:
 ```
 node.addHostName('custom_hostname3')
-```
-
-3. Pass the custom hostnames as a list to the `createHost` method of the `AutonomousSystem` class:
-```
-as152.createHost('database', custom_host_names=["database.com"]).joinNetwork('net0', address = '10.152.0.4')
+as152.createHost('database').joinNetwork('net0', address = '10.152.0.4').addHostName('database.com')
 ```
 
 In this example, we will create a new host with custom host name on top of the mini-internet component and then enable `EtcHosts` layer.
@@ -37,7 +33,7 @@ emu.load('../B00-mini-internet/base-component.bin')
 ```
 base: Base = emu.getLayer('Base')
 as152 = base.getAutonomousSystem(152)
-as152.createHost('database', custom_host_names=["database.com"]).joinNetwork('net0', address = '10.152.0.4')
+as152.createHost('database').joinNetwork('net0', address = '10.152.0.4').addHostName('database.com')
 ```
 
 ## Add EtcHosts Layer
