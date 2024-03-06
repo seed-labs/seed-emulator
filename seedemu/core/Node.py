@@ -237,7 +237,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @param role role of this node.
         @param asn network that this node belongs to.
         @param scope scope of the node, if not asn.
-        @param custom_host_names (optional) list of custom host names to use.
         """
         super().__init__()
 
