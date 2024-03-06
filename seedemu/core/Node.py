@@ -229,7 +229,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     __name_servers: List[str]
 
-    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None, custom_host_names: List[str] = []):
+    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
         @brief Node constructor.
 
@@ -268,7 +268,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         #     self.__softwares.add(soft)
 
         self.__name_servers = []
-        self.__host_names = [f"{self.__scope}-{self.__name}"] + custom_host_names
+        self.__host_names = [f"{self.__scope}-{self.__name}"]
 
     def configure(self, emulator: Emulator):
         """!
