@@ -19,7 +19,6 @@ class EthereumServer(Server):
     _is_bootnode: bool
     _bootnode_http_port: int
     _smart_contract: SmartContract
-    _oracle_contract: SmartContract
     _accounts: List[AccountStructure]
     _mnemonic_accounts: List[AccountStructure]
     _consensus_mechanism: ConsensusMechanism
@@ -58,8 +57,6 @@ class EthereumServer(Server):
         self._is_bootnode = False
         self._bootnode_http_port = 8088
         self._smart_contract = None
-        self._oracle_contract = None
-        self._oracle_contract_owner = None
         self._accounts = []
         self._mnemonic, self._account_base_balance, self._account_total = self._blockchain.getEmuAccountParameters()
         self._mnemonic_accounts = EthAccount.createEmulatorAccountsFromMnemonic(self._id, mnemonic=self._mnemonic, balance=self._account_base_balance, total=self._account_total, password="admin")
@@ -193,13 +190,9 @@ class EthereumServer(Server):
 
 
         # Rarely used and tentatively not supported.
-        if self._smart_contract != None :
-            smartContractCommand = self._smart_contract.generateSmartContractCommand()
-            node.appendStartCommand('(\n {})&'.format(smartContractCommand))
-            
-        if self._oracle_contract != None :
-            oracleContractCommand = self._oracle_contract.generateOracleContract(self._oracle_contract_owner)
-            node.appendStartCommand('(\n {})&'.format(oracleContractCommand))
+        # if self._smart_contract != None :
+        #     smartContractCommand = self._smart_contract.generateSmartContractCommand()
+        #     node.appendStartCommand('(\n {})&'.format(smartContractCommand))
 
     def setCustomGeth(self, customGethBinaryPath:str) -> EthereumServer:
         """
@@ -484,16 +477,6 @@ class EthereumServer(Server):
         @returns self, for chaining API calls.
         """
         self._smart_contract = smart_contract
-
-        return self
-    
-    def deployOracleContract(self, oracle_contract: SmartContract, owner) -> EthereumServer:
-        """!
-        @brief Call this api to deploy oracleContract on the node.
-        @returns self, for chaining API calls.
-        """
-        self._oracle_contract = oracle_contract
-        self._oracle_contract_owner = owner
 
         return self
 

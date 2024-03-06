@@ -78,21 +78,6 @@ for asn in asns:
         emu.addBinding(Binding(vnode, filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         i = i+1
 
-# Smart contract deployment host
-smartContract = SmartContract("./contracts/operator.bin", "./contracts/operator.abi")
-a164 = base.getAutonomousSystem(164)
-contractDeployHost = a164.createHost('contract_deploy_host').joinNetwork('net0')
-
-contractDeployEth = blockchain.createNode('contract_deploy_eth')
-contractDeployEth.enableGethHttp()
-contractDeployEth.enableGethWs()
-contractDeployEth.unlockAccounts()
-# contractDeployEth.deploySmartContract(smartContract)
-contractDeployEth.deployOracleContract(smartContract, "0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9")
-emu.getVirtualNode(contractDeployEth).setDisplayName('Contract-Deploy-Eth')
-emu.addBinding(Binding('contract_deploy_eth', filter=Filter(asn=asn, nodeName='contract_deploy_host')))
-
-
 # Create the Chainlink layer
 chainlink = ChainlinkService()
 chainlink_asns = [150]

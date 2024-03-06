@@ -95,7 +95,7 @@ class ChainlinkService(Service):
         @brief ChainlinkService constructor.
         """
         super().__init__()
-        self.addDependency('Base', False, False)
+        self.addDependency('EthereumService', False, False)
 
     def _createServer(self) -> ChainlinkServer:
         self._log('Creating Chainlink server.')
