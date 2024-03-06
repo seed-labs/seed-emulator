@@ -268,7 +268,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         #     self.__softwares.add(soft)
 
         self.__name_servers = []
-        self.__custom_host_names = custom_host_names
+        self.__host_names = [f"{self.__scope}-{self.__name}"] + custom_host_names
 
     def configure(self, emulator: Emulator):
         """!
@@ -352,7 +352,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @brief Get all host names for this node.
         @returns node host names.
         """
-        return self.__custom_host_names + [f"{self.__scope}-{self.__name}"]
+        return self.__host_names
 
     def addHostName(self, name: str) -> Node:
         """!
@@ -360,7 +360,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @param name new host name.
         @returns self, for chaining API calls.
         """
-        self.__custom_host_names.append(name)
+        self.__host_names.append(name)
         return self
 
     def getIPAddress(self) -> str:
