@@ -1,0 +1,18 @@
+{
+    "name": "common",
+    "version": "0.0.1",
+    "description": "stuff shared by front and backend",
+    "main": "scion.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "nat <nat@nat.moe>",
+    "license": "MIT",
+    "dependencies": {        
+        "ip-num": "^1.5.1"
+    },
+    "devDependencies": {
+        "@types/jsbn": "^1.2.33",
+        "@types/node": "^20.11.24"
+    }
+}
