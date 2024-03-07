@@ -180,7 +180,7 @@ class ScionAutonomousSystem(AutonomousSystem):
 
         # Border routers
         border_routers = {}
-        for router in self.getRouters():
+        for router in self.getBorderRouters():
             rnode: ScionRouter = self.getRouter(router)
 
             border_routers[rnode.getName()] = {
