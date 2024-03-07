@@ -85,6 +85,7 @@ j = 0
 for asn in chainlink_asns:
     cnode = 'chainlink{}'.format(j)
     # Cretae chainlink virtual node
+    # chainlink.installInitializer(cnode)
     chainlink.install(cnode)
     service_name = 'Chainlink-{}'.format(j)
     emu.getVirtualNode(cnode).setDisplayName(service_name)

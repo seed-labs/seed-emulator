@@ -29,6 +29,14 @@ class Server(Printable):
         """
         raise NotImplementedError('install not implemented')
     
+    def installInitializer(self, node: Node):
+        """!
+        @brief Install the server on node.
+
+        @param node node.
+        """
+        raise NotImplementedError('installInitializer not implemented')
+    
     def setBaseSystem(self, base_system: BaseSystem) -> Server:
         """!
         @brief Set a base_system of a server.
@@ -85,6 +93,12 @@ class Service(Layer):
         @brief Create a new server.
         """
         raise NotImplementedError('_createServer not implemented')
+    
+    def _createInitializerServer(self) -> Server:
+        """!
+        @brief Create a new server.
+        """
+        raise NotImplementedError('_createInitializerServer not implemented')
 
     def _doInstall(self, node: Node, server: Server):
         """!
@@ -94,7 +108,20 @@ class Service(Layer):
         @param node node.
         @param server server.
         """
-        server.install(node)
+        install_implemented = 'install' in server.__class__.__dict__
+        installInitializer_implemented = 'installInitializer' in server.__class__.__dict__
+
+        if install_implemented and installInitializer_implemented:
+            raise TypeError("Server class must override either 'install' or 'installInitializer', not both.")
+        elif not install_implemented and not installInitializer_implemented:
+            raise TypeError("Server class must override one of 'install' or 'installInitializer'.")
+
+        if install_implemented:
+            server.install(node)
+        elif installInitializer_implemented:
+            server.installInitializer(node)
+
+
 
     def _doSetClassNames(self, node:Node, server:Server) -> Node:
         """!
@@ -164,6 +191,15 @@ class Service(Layer):
         if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
 
         s = self._createServer()
+        self._pending_targets[vnode] = s
+
+        return self._pending_targets[vnode]
+    
+    def installInitializer(self, vnode:str) -> Server:
+        if vnode in self._pending_targets.keys(): 
+            return self._pending_targets[vnode]
+
+        s = self._createInitializerServer()
         self._pending_targets[vnode] = s
 
         return self._pending_targets[vnode]
