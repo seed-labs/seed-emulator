@@ -13,7 +13,7 @@
 
 # Contributing to SEED Emulator
 
-Thank you for considering contributing to SEED Emualtor! We appreciate your interest in making our open-source project better.
+Thank you for considering contributing to SEED Emulator! We appreciate your interest in making our open-source project better.
 
 ## How Can You Contribute?
 
