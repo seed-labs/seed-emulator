@@ -9,8 +9,6 @@
     - [How to get ip address](./99-FAQs.md#Q01-how-to-get-ip-address)
     - [How to make a change on all nodes](./99-FAQs.md#Q02-how-to-make-a-change-on-all-nodes)
 
-Understood! Here's the revised draft with instructions for contributors to provide test code and test results before opening a pull request:
-
 ---
 
 # Contributing to SEED Emulator
