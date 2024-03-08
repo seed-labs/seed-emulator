@@ -29,7 +29,7 @@ There are several ways you can contribute to SEED emulator:
 
 ## Getting Started
 
-1. **Fork the Repository**: Fork the [Your Package Name] repository on GitHub by clicking the "Fork" button.
+1. **Fork the Repository**: Fork the `seed-emulator` repository on GitHub by clicking the "Fork" button.
 2. **Clone the Repository**: Clone your fork of the repository to your local machine using `git clone`.
 3. **Switch to the Development Branch**: Checkout the development branch of the repository using `git checkout development`.
 4. **Create a Branch**: Create a new branch for your contribution using `git checkout -b branch-name`.
@@ -46,13 +46,12 @@ There are several ways you can contribute to SEED emulator:
 
 ## Code Style and Guidelines
 
-Please follow these guidelines when contributing code to [Your Package Name]:
+Please follow these guidelines when contributing code to `seed-emulator`:
 
 - **Docstrings**: Document your code using clear and concise docstrings following the numpydoc format.
 - **Testing**: Write comprehensive unit tests for your code using the `unittest` framework.
 - **Modularity**: Keep your changes modular and avoid unnecessary dependencies.
 - **Compatibility**: Ensure your code is compatible with the supported Python versions.
-- **Pylint**: Code Quality --> still working on it.
 
 
 ## Licensing
