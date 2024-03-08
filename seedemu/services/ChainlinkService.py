@@ -6,7 +6,7 @@ ChainlinkFileTemplate: Dict[str, str] = {}
 
 ChainlinkFileTemplate['config'] = """\
 [Log]
-Level = 'warn'
+Level = 'info'
 
 [WebServer]
 AllowOrigins = '*'
@@ -42,6 +42,7 @@ class ChainlinkServer(Server):
     """
     __node: Node
     __emulator: Emulator
+    __eth_node_ip_address: str
 
     def __init__(self):
         """
@@ -65,10 +66,11 @@ class ChainlinkServer(Server):
         for software in software_list:
             node.addSoftware(software)
 
+        if self.__eth_node_ip_address is None:
+            raise Exception('RPC address not set')
+        
         # Set configuration files
-        eth_node_asn = node.getAsn()
-        eth_node_ip_address = f"10.{eth_node_asn}.0.71"
-        config_content = ChainlinkFileTemplate['config'].format(ip_address=eth_node_ip_address)
+        config_content = ChainlinkFileTemplate['config'].format(ip_address=self.__eth_node_ip_address)
         node.setFile('/config.toml', config_content)
         node.setFile('/secrets.toml', ChainlinkFileTemplate['secrets'])
         node.setFile('/api.txt', ChainlinkFileTemplate['api'])
@@ -80,6 +82,14 @@ su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword
 chainlink node -config /config.toml -secrets /secrets.toml start -api /api.txt
 """
         node.appendStartCommand(start_commands)
+        
+    def setRPCAddress(self, address: str):
+        """
+        @brief Set the ethereum RPC address.
+
+        @param address The RPC address for the chainlink node
+        """
+        self.__eth_node_ip_address = address
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

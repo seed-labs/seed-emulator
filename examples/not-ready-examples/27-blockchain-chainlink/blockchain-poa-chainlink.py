@@ -80,16 +80,11 @@ for asn in asns:
 
 # Create the Chainlink layer
 chainlink = ChainlinkService()
-chainlink_asns = [150]
-j = 0
-for asn in chainlink_asns:
-    cnode = 'chainlink{}'.format(j)
-    # Cretae chainlink virtual node
-    chainlink.install(cnode)
-    service_name = 'Chainlink-{}'.format(j)
-    emu.getVirtualNode(cnode).setDisplayName(service_name)
-    emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
-    j = j+1
+cnode = 'chainlink_node'
+chainlink.install(cnode).setRPCAddress(f"10.164.0.71")
+service_name = 'Chainlink-0'
+emu.getVirtualNode(cnode).setDisplayName(service_name)
+emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
 
 # Add the Ethereum layer
 emu.addLayer(eth)
