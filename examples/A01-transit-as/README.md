@@ -1,15 +1,15 @@
 # Transit AS
 
 In this example, we introduce a transit autonomous system, which provides
-transit service to other ASes. `AS150` serves as the transit AS for `AS151` and
-`AS152`. Most part of this example is the same as that in the 
-`00-simple-peering` example, so we will not repeat all the explanation. 
+transit service to other ASes. `AS-2` serves as the transit AS for `AS151`,
+`AS152`, and `AS153`. Most part of this example is the same as that in the 
+`A00-simple-as` example, so we will not repeat all the explanation. 
 
 
 ## Create layers
 
-In this setup, in addition to the layers created in the `00-simple-peering` example, 
-we add two new layers: 
+In this setup, in addition to the layers created in the `A00-simple-as`
+example, we add two new layers: 
 
 - The `Ibgp` layer: automatically sets up full-mesh iBGP peering between all routers within an autonomous system.
 - The `Ospf` layer: automatically sets up OSPF routing on all routers within an autonomous system.
@@ -23,15 +23,15 @@ pull traffic from one place to another. To connect the BGP routers at these
 different locations, a transit AS typically has multiple internal networks. 
 
 
-### 1. Create AS150 and its internal networks
+### 1. Create AS-2 and its internal networks
 
-In our emulator, we create three internal networks for `AS150`. 
+In our emulator, we create three internal networks for `AS-2`. 
 
 ```python
-as150 = base.createAutonomousSystem(150)
-as150.createNetwork('net0')
-as150.createNetwork('net1')
-as150.createNetwork('net2')
+as2 = base.createAutonomousSystem(2)
+as2.createNetwork('net0')
+as2.createNetwork('net1')
+as2.createNetwork('net2')
 ```
 
 ### 2. Create routers 
@@ -45,18 +45,18 @@ via the internal networks.
 
 
 ```python
-as150.createRouter('r1').joinNetwork('net0').joinNetwork('ix100')
-as150.createRouter('r2').joinNetwork('net0').joinNetwork('net1')
-as150.createRouter('r3').joinNetwork('net1').joinNetwork('net2')
-as150.createRouter('r4').joinNetwork('net2').joinNetwork('ix101')
+as2.createRouter('r1').joinNetwork('net0').joinNetwork('ix100')
+as2.createRouter('r2').joinNetwork('net0').joinNetwork('net1')
+as2.createRouter('r3').joinNetwork('net1').joinNetwork('net2')
+as2.createRouter('r4').joinNetwork('net2').joinNetwork('ix101')
 ```
 
 ### Note:
 
 In this particular example, we used OSPF and IBGP for internal routing. IBGP
 and OSPF layers do not need to be configured explicitly; they are by default
-enabled on all autonomous systems.  The default behaviors are as follow (see
-[this manual](/docs/user_manual/manual.md#transit-as-network) if you want to customize
+enabled on all autonomous systems. The default behaviors are as follow (see
+[this manual](/docs/user_manual/routing.md) if you want to customize
 the behaviors):
 
 - IBGP is configured between all routers within an autonomous system,
@@ -66,17 +66,17 @@ the behaviors):
 
 ## Set up BGP peering
 
-We use private peering to peer the transit `AS150` with the two stub 
-`AS151` and `AS152`. The peering relationship is `Provider`, i.e.,
-`AS150` is the stub ASes' internet service provider. 
+We use private peering to peer the transit `AS2` with the three stub 
+ASes. The peering relationship is `Provider`, i.e.,
+`AS2` is the Internet service provider. 
 See [this manual](/docs/user_manual/bgp_peering.md) for the 
 detailed explanation of BGP peering.
 
 ```python
-ebgp.addPrivatePeering(100, 150, 151, abRelationship = PeerRelationship.Provider)
-ebgp.addPrivatePeering(101, 150, 152, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(100, 2, 151, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 2, 152, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 2, 153, abRelationship = PeerRelationship.Provider)
 ```
-
 
 ## Save the Emulation as a Component 
 
