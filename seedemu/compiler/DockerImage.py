@@ -1,7 +1,5 @@
 from __future__ import annotations
 from typing import List, Set
-from seedemu.core import BaseSystem
-from enum import Enum
 
 class DockerImage(object):
     """!

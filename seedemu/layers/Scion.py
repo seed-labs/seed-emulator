@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
 from seedemu.core import (Emulator, Interface, Layer, Network, Registry,
                           Router, ScionAutonomousSystem, ScionRouter,
@@ -71,7 +71,7 @@ class Scion(Layer, Graphable):
     def getName(self) -> str:
         return "Scion"
 
-    def addXcLink(self, a: IA|Tuple[int, int], b: IA|Tuple[int, int],
+    def addXcLink(self, a: Union[IA, Tuple[int, int]], b: Union[IA, Tuple[int, int]],
                   linkType: LinkType, count: int=1) -> 'Scion':
         """!
         @brief Create a direct cross-connect link between to ASes.
@@ -94,7 +94,7 @@ class Scion(Layer, Graphable):
 
         return self
 
-    def addIxLink(self, ix: int, a: IA|Tuple[int, int], b: IA|Tuple[int, int],
+    def addIxLink(self, ix: int, a: Union[IA, Tuple[int, int]], b: Union[IA, Tuple[int, int]],
                   linkType: LinkType, count: int=1) -> 'Scion':
         """!
         @brief Create a private link between two ASes at an IX.

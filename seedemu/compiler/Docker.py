@@ -10,8 +10,9 @@ from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
 
-SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-map'
-SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-etherview'
+
+SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-multiarch-map:buildx-latest'
+SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:buildx-latest'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -119,12 +120,20 @@ DockerCompilerFileTemplates['compose_dummy'] = """\
             context: .
             dockerfile: dummies/{imageDigest}
         image: {imageDigest}
+{dependsOn}
+"""
+
+DockerCompilerFileTemplates['depends_on'] = """\
+        depends_on:
+            - {dependsOn}
 """
 
 DockerCompilerFileTemplates['compose_service'] = """\
     {nodeId}:
         build: ./{nodeId}
         container_name: {nodeName}
+        depends_on:
+            - {dependsOn}
         cap_add:
             - ALL
         sysctls:
@@ -346,8 +355,11 @@ class Docker(Compiler):
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
 
+    __basesystem_dockerimage_mapping: dict
+
     def __init__(
         self,
+        platform:Platform = Platform.AMD64,
         namingScheme: str = "as{asn}{role}-{displayName}-{primaryIp}",
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
@@ -361,6 +373,7 @@ class Docker(Compiler):
         """!
         @brief Docker compiler constructor.
 
+        @param platform (optional) node cpu architecture Default to Platform.AMD64
         @param namingScheme (optional) node naming scheme. Available variables
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
         {primaryIp} and {displayName}. {displayName} will automatically fall
@@ -410,11 +423,16 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
 
-        for name, image in BaseSystemImageMapping.items():
+        self.__platform = platform
+
+        self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
+        
+        for name, image in self.__basesystem_dockerimage_mapping.items():
             priority = 0
             if name == BaseSystem.DEFAULT:
                 priority = 10
             self.addImage(image, priority=priority)
+        
 
     def getName(self) -> str:
         return "Docker"
@@ -592,35 +610,40 @@ class Docker(Compiler):
             self._log('force-image configured, using image: {}'.format(image.getName()))
 
             return (image, nodeSoft - image.getSoftware())
+            
+        #Maintain a table : Virtual Image Name - Actual Image Name 
+        image = self.__basesystem_dockerimage_mapping[node.getBaseSystem()]
+
+        return (image, nodeSoft - image.getSoftware())
         
         #############################################################
-        if node.getBaseSystem().value != BaseSystem.DEFAULT.value:
-            #Maintain a table : Virtual Image Name - Actual Image Name 
-            image = BaseSystemImageMapping[node.getBaseSystem()]
-            return (image, nodeSoft - image.getSoftware())
+        # if node.getBaseSystem().value != BaseSystem.DEFAULT.value:
+        #     #Maintain a table : Virtual Image Name - Actual Image Name 
+        #     image = BaseSystemImageMapping[node.getBaseSystem()]
+        #     return (image, nodeSoft - image.getSoftware())
         
-        candidates: List[Tuple[DockerImage, int]] = []
-        minMissing = len(nodeSoft)
+        # candidates: List[Tuple[DockerImage, int]] = []
+        # minMissing = len(nodeSoft)
 
-        for (image, prio) in self.__images.values():
-            missing = len(nodeSoft - image.getSoftware())
+        # for (image, prio) in self.__images.values():
+        #     missing = len(nodeSoft - image.getSoftware())
 
-            if missing < minMissing:
-                candidates = []
-                minMissing = missing
+        #     if missing < minMissing:
+        #         candidates = []
+        #         minMissing = missing
 
-            if missing <= minMissing: 
-                candidates.append((image, prio))
+        #     if missing <= minMissing: 
+        #         candidates.append((image, prio))
 
-        assert len(candidates) > 0, '_electImageFor ended w/ no images?'
+        # assert len(candidates) > 0, '_electImageFor ended w/ no images?'
 
-        (selected, maxPrio) = candidates[0]
+        # (selected, maxPrio) = candidates[0]
 
-        for (candidate, prio) in candidates:
-            if prio >= maxPrio:
-                selected = candidate
+        # for (candidate, prio) in candidates:
+        #     if prio >= maxPrio:
+        #         selected = candidate
 
-        return (selected, nodeSoft - selected.getSoftware())
+        # return (selected, nodeSoft - selected.getSoftware())
 
 
     def _getNetMeta(self, net: Network) -> str: 
@@ -976,7 +999,7 @@ class Docker(Compiler):
         return DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
             nodeName = name,
-            is_networks = is_networks,
+            dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
             networks = node_nets,
             sdn = sdn,
             # privileged = 'true' if node.isPrivileged() else 'false',
@@ -1025,10 +1048,19 @@ class Docker(Compiler):
             self._log('adding dummy service for image {}...'.format(image))
 
             imageDigest = md5(image.encode('utf-8')).hexdigest()
-            
-            dummies += DockerCompilerFileTemplates['compose_dummy'].format(
-                imageDigest = imageDigest
-            )
+            dockerImage, _ = self.__images[image]
+            if dockerImage.isLocal():
+                dummies += DockerCompilerFileTemplates['compose_dummy'].format(
+                    imageDigest = imageDigest,
+                    dependsOn= DockerCompilerFileTemplates['depends_on'].format(
+                        dependsOn = image
+                    )
+                )
+            else:
+                dummies += DockerCompilerFileTemplates['compose_dummy'].format(
+                    imageDigest = imageDigest,
+                    dependsOn= ""
+                )
 
             dockerfile = 'FROM {}\n'.format(image)
             print(dockerfile, file=open(imageDigest, 'w'))
