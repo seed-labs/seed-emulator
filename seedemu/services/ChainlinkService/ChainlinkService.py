@@ -3,7 +3,6 @@ from typing import Dict
 from seedemu.core.Node import Node
 
 from seedemu.core.Service import Server
-import pdb
 from enum import Enum
 from seedemu.services.ChainlinkService.ContractTemplates import *
 
@@ -117,7 +116,6 @@ class ChainlinkInitializerServer(Server):
         """
         @brief Configure the node.
         """
-        pdb.set_trace()
         self.__node = node
         self.__emulator = emulator
 
@@ -131,6 +129,7 @@ class ChainlinkInitializerServer(Server):
         # Add software dependency
         ChainlinkServerCommands().installSoftware(node)
         ChainlinkServerCommands().installInitSoftware(node)
+        # Set configuration files
         ChainlinkServerCommands().setConfigurationFiles(node, self.__rpcURL)
                 
         # if self.__deploymentType == DeploymentType.CURL:
@@ -139,7 +138,8 @@ class ChainlinkInitializerServer(Server):
         if self.__deploymentType == "web3":
             # Deploy the contracts using web3
             self.deployThroughWeb3()
-            
+        
+        # After the contracts are deployed start the chainlink node
         ChainlinkServerCommands().chainlinkStartCommands(node)
             
     def setContractOwner(self, owner: str):

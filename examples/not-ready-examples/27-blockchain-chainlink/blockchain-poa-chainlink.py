@@ -80,8 +80,8 @@ for asn in asns:
 chainlink = ChainlinkService()
 cnode = 'chainlink_node'
 # Curl deployment using initializer server
-# chainlink.installInitializer(cnode).setContractOwner(<Owner Address>).deploymentType(CURL).setRPCURL(<RPC URL>)
-# Web3 deployment  using initializer server
+# chainlink.installInitializer(cnode).setContractOwner(<Owner Address>).deploymentType("curl").setRPCURL("10.164.0.71")
+# Web3 deployment using initializer server
 c = chainlink.installInitializer(cnode)
 c.setContractOwner('0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9')
 c.setOwnerPrivateKey('20aec3a7207fcda31bdef03001d9caf89179954879e595d9a190d6ac8204e498')

@@ -59,6 +59,7 @@ if connected:
 account = web3.eth.account.from_key(private_key)
 nonce = web3.eth.get_transaction_count(account.address)
 
+# Modify the gas price for successful deployment
 modified_gas_price = web3.toWei('50', 'gwei')
 
 # Prepare the deployment transaction with constructor arguments

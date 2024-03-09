@@ -10,9 +10,9 @@ from web3 import Web3
 import requests
 import json
 
-web3 = Web3(Web3.HTTPProvider("http://{rpc_url}:8545"))  # Connect to the Ethereum node via RPC
+web3 = Web3(Web3.HTTPProvider("http://{rpc_url}:8545"))
 
-private_key = "{private_key}"  # Private key of the account that will use the LinkToken for transactions
+private_key = "{private_key}" 
 
 with open('./contracts/link_token.abi', 'r') as abi_file:
 	contract_abi = abi_file.read()
@@ -36,14 +36,14 @@ while not connected:
 # Only proceed if connected is True
 if connected:
 	# Continue with the rest of your script
-	MyContract = web3.eth.contract(abi=contract_abi, bytecode=contract_bytecode)
+	LinkTokenContract = web3.eth.contract(abi=contract_abi, bytecode=contract_bytecode)
 
 # Account info for deploying the contract
 account = web3.eth.account.from_key(private_key)
 nonce = web3.eth.get_transaction_count(account.address)
 
 # Prepare the deployment transaction
-transaction = MyContract.constructor().buildTransaction({{
+transaction = LinkTokenContract.constructor().buildTransaction({{
 	'from': account.address,
 	'nonce': nonce,
 	'gas': 2000000,
