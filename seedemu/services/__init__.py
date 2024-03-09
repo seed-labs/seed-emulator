@@ -10,4 +10,4 @@ from .BgpLookingGlassService import BgpLookingGlassServer, BgpLookingGlassServic
 from .DHCPService import DHCPServer, DHCPService
 from .EthereumService import *
 from .ScionBwtestService import ScionBwtestService
-from .ChainlinkService import ChainlinkService
+from .ChainlinkService.ChainlinkService import ChainlinkService

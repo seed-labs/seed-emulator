@@ -6,8 +6,6 @@ import os, sys
 import platform
 from typing import List
 
-from seedemu.services import ChainlinkService
-
 ###############################################################################
 emu = Emulator()
 base = Base()
@@ -80,17 +78,18 @@ for asn in asns:
 
 # Create the Chainlink layer
 chainlink = ChainlinkService()
-chainlink_asns = [150]
-j = 0
-for asn in chainlink_asns:
-    cnode = 'chainlink{}'.format(j)
-    # Cretae chainlink virtual node
-    # chainlink.installInitializer(cnode)
-    chainlink.install(cnode)
-    service_name = 'Chainlink-{}'.format(j)
-    emu.getVirtualNode(cnode).setDisplayName(service_name)
-    emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
-    j = j+1
+cnode = 'chainlink_node'
+# Curl deployment using initializer server
+# chainlink.installInitializer(cnode).setContractOwner(<Owner Address>).deploymentType(CURL).setRPCURL(<RPC URL>)
+# Web3 deployment  using initializer server
+c = chainlink.installInitializer(cnode)
+c.setContractOwner('0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9')
+c.setOwnerPrivateKey('20aec3a7207fcda31bdef03001d9caf89179954879e595d9a190d6ac8204e498')
+c.setDeploymentType("web3")
+c.setRPCURL("10.164.0.71")
+service_name = 'Chainlink-0'
+emu.getVirtualNode(cnode).setDisplayName(service_name)
+emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
 
 # Add the Ethereum layer
 emu.addLayer(eth)
