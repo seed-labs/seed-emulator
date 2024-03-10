@@ -88,16 +88,15 @@ c = chainlink.installInitializer(cnode)
 c.setContractOwner('0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9')
 c.setOwnerPrivateKey('20aec3a7207fcda31bdef03001d9caf89179954879e595d9a190d6ac8204e498')
 c.setDeploymentType("web3")
-c.setRPCURL("10.164.0.71")
+c.setRPCbyUrl("10.154.0.71")
 service_name = 'Chainlink-0'
 emu.getVirtualNode(cnode).setDisplayName(service_name)
 emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
 
-
 # Chainlink normal server
 cnode1 = 'chainlink_server'
-c = chainlink.install(cnode1)
-c.setRPCbyEthNodeName('eth1')
+c1 = chainlink.install(cnode1)
+c1.setRPCbyEthNodeName('eth3')
 service_name = 'Chainlink-1'
 emu.getVirtualNode(cnode1).setDisplayName(service_name)
 emu.addBinding(Binding(cnode1, filter = Filter(asn=151, nodeName='host_2')))

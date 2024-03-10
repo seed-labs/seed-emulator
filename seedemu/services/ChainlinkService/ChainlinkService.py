@@ -50,7 +50,7 @@ class ChainlinkServer(Server):
     __node: Node
     __emulator: Emulator
     __eth_node_ip_address: str
-    __vnode_name: str
+    __vnode_name: str = None
 
     def __init__(self):
         """
@@ -70,8 +70,10 @@ class ChainlinkServer(Server):
         """
         @brief Install the service.
         """
-        self.getIPbyEthNodeName(self.__vnode_name)
         ChainlinkServerCommands().installSoftware(node)
+        
+        if self.__vnode_name is not None:
+            self.getIPbyEthNodeName(self.__vnode_name)
         
         if self.__eth_node_ip_address is None:
             raise Exception('RPC address not set')
@@ -121,17 +123,13 @@ class ChainlinkInitializerServer(Server):
     """
     @brief The Chainlink initializer class.
     """
-    
-    class DeploymentType(Enum):
-        CURL = 1
-        WEB3 = 2
-
     __node: Node
     __emulator: Emulator
     __deploymentType: str
     __owner: str
     __rpcURL: str
     __privateKey: str
+    __vnode_name: str = None
     
     def __init__(self):
         """
@@ -151,6 +149,10 @@ class ChainlinkInitializerServer(Server):
         """
         @brief Install the service.
         """
+        # print(self.__vnode_name)
+        if self.__vnode_name is not None:
+            self.getIPbyEthNodeName(self.__vnode_name)
+        
         if self.__rpcURL is None:
             raise Exception('RPC address not set')
         
@@ -194,13 +196,38 @@ class ChainlinkInitializerServer(Server):
         """
         self.__privateKey = privateKey
         
-    def setRPCURL(self, rpcURL: str):
+    def setRPCbyUrl(self, address: str):
         """
-        @brief Set the RPC URL.
+        @brief Set the ethereum RPC address.
+
+        @param address The RPC address or hostname for the chainlink node
+        """
+        self.__rpcURL = address
         
-        @param rpcURL The RPC URL.
+    def setRPCbyEthNodeName(self, vnode:str):
         """
-        self.__rpcURL = rpcURL
+        @brief Set the ethereum RPC address.
+
+        @param vnode The name of the ethereum node
+        """
+        self.__vnode_name=vnode
+        
+    def getIPbyEthNodeName(self, vnode:str):
+        """
+        @brief Get the IP address of the ethereum node.
+        
+        @param vnode The name of the ethereum node
+        """
+        node = self.__emulator.getBindingFor(vnode)
+        address: str = None
+        ifaces = node.getInterfaces()
+        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(node.getName())
+        for iface in ifaces:
+            net = iface.getNet()
+            if net.getType() == NetworkType.Local:
+                address = iface.getAddress()
+                break
+        self.__rpcURL=address
         
     def deployThroughWeb3(self):
         """
