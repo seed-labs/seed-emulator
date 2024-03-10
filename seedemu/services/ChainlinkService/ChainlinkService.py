@@ -4,6 +4,7 @@ from seedemu.core.Node import Node
 
 from seedemu.core.Service import Server
 from enum import Enum
+from seedemu.core.enums import NetworkType
 from seedemu.services.ChainlinkService.ContractTemplates import *
 
 
@@ -49,6 +50,7 @@ class ChainlinkServer(Server):
     __node: Node
     __emulator: Emulator
     __eth_node_ip_address: str
+    __vnode_name: str
 
     def __init__(self):
         """
@@ -68,6 +70,7 @@ class ChainlinkServer(Server):
         """
         @brief Install the service.
         """
+        self.getIPbyEthNodeName(self.__vnode_name)
         ChainlinkServerCommands().installSoftware(node)
         
         if self.__eth_node_ip_address is None:
@@ -76,14 +79,39 @@ class ChainlinkServer(Server):
         ChainlinkServerCommands().setConfigurationFiles(node, self.__eth_node_ip_address)
         ChainlinkServerCommands().chainlinkStartCommands(node)
         
-    def setRPCAddress(self, address: str):
+    def setRPCbyUrl(self, address: str):
         """
         @brief Set the ethereum RPC address.
 
-        @param address The RPC address for the chainlink node
+        @param address The RPC address or hostname for the chainlink node
         """
         self.__eth_node_ip_address = address
+        
+    def setRPCbyEthNodeName(self, vnode:str):
+        """
+        @brief Set the ethereum RPC address.
 
+        @param vnode The name of the ethereum node
+        """
+        self.__vnode_name=vnode
+        
+    def getIPbyEthNodeName(self, vnode:str):
+        """
+        @brief Get the IP address of the ethereum node.
+        
+        @param vnode The name of the ethereum node
+        """
+        node = self.__emulator.getBindingFor(vnode)
+        address: str = None
+        ifaces = node.getInterfaces()
+        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(node.getName())
+        for iface in ifaces:
+            net = iface.getNet()
+            if net.getType() == NetworkType.Local:
+                address = iface.getAddress()
+                break
+        self.__eth_node_ip_address=address
+          
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'Chainlink server object.\n'
@@ -217,7 +245,31 @@ class ChainlinkService(Service):
 
     def _createInitializerServer(self) -> ChainlinkInitializerServer:
         return ChainlinkInitializerServer()
+    
+    def installInitializer(self, vnode:str) -> Server:
+        if vnode in self._pending_targets.keys(): 
+            return self._pending_targets[vnode]
 
+        s = self._createInitializerServer()
+        self._pending_targets[vnode] = s
+
+        return self._pending_targets[vnode]
+    
+    def _doInstall(self, node: Node, server: Server):
+        # super()._doInstall(node, server)
+        install_implemented = 'install' in server.__class__.__dict__
+        installInitializer_implemented = 'installInitializer' in server.__class__.__dict__
+
+        if install_implemented and installInitializer_implemented:
+            raise TypeError("Server class must override either 'install' or 'installInitializer', not both.")
+        elif not install_implemented and not installInitializer_implemented:
+            raise TypeError("Server class must override one of 'install' or 'installInitializer'.")
+
+        if install_implemented:
+            server.install(node)
+        elif installInitializer_implemented:
+            server.installInitializer(node)
+            
     def configure(self, emulator: Emulator):
         super().configure(emulator)
         targets = self.getTargets()

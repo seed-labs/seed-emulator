@@ -78,7 +78,9 @@ for asn in asns:
 
 # Create the Chainlink layer
 chainlink = ChainlinkService()
-cnode = 'chainlink_node'
+
+# Chainlink Init server
+cnode = 'chainlink_init_server'
 # Curl deployment using initializer server
 # chainlink.installInitializer(cnode).setContractOwner(<Owner Address>).deploymentType("curl").setRPCURL("10.164.0.71")
 # Web3 deployment using initializer server
@@ -90,6 +92,15 @@ c.setRPCURL("10.164.0.71")
 service_name = 'Chainlink-0'
 emu.getVirtualNode(cnode).setDisplayName(service_name)
 emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
+
+
+# Chainlink normal server
+cnode1 = 'chainlink_server'
+c = chainlink.install(cnode1)
+c.setRPCbyEthNodeName('eth1')
+service_name = 'Chainlink-1'
+emu.getVirtualNode(cnode1).setDisplayName(service_name)
+emu.addBinding(Binding(cnode1, filter = Filter(asn=151, nodeName='host_2')))
 
 # Add the Ethereum layer
 emu.addLayer(eth)
