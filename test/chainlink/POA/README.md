@@ -28,9 +28,9 @@ test_log
 
 ## Test Case Explain
 
-In this test script, it comprises 8 test cases: (1) `test_poa_chain_connection`, (2) `test_poa_chain_id`, (3) `test_poa_send_transaction`, (4) `test_poa_chain_consensus`, (5) `test_poa_peer_counts`, (6) `test_poa_emulator_account`, (7) `test_poa_create_accounts`, and (8) `test_import_account`.
+In this test script, it comprises 8 test cases: (1) `test_chainlink_node_health`, (2) `test_chainlink_init_node_health`, (3) `test_link_token_deployment`, (4) `test_oracle_contract_deployment`.
 
-Testcase (1) `test_chainlink_node_health` test the health of a normal chainlink node
-Testcase (2) `test_chainlink_init_node_health` test the health of a initalizer chainlink node
-Testcase (3) `test_link_token_deployment` test if link token is deployed. And also checks of the balance of the link token is assigned to the owner.
-Testcase (4) `test_oracle_contract_deployment` test if oracle contract is deployed. And also checks if the oracle contract is assigned to the owner and the link token is assigned to the oracle contract.
+- Testcase (1) `test_chainlink_node_health` test the health of a normal chainlink node
+- Testcase (2) `test_chainlink_init_node_health` test the health of a initalizer chainlink node
+- Testcase (3) `test_link_token_deployment` test if link token is deployed. And also checks of the balance of the link token is assigned to the owner.
+- Testcase (4) `test_oracle_contract_deployment` test if oracle contract is deployed. And also checks if the oracle contract is assigned to the owner and the link token is assigned to the oracle contract.
