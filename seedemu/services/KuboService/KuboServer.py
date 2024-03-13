@@ -1,6 +1,6 @@
 from seedemu.core import Node, Server, Service, BaseSystem
 from seedemu.core.enums import NetworkType
-from KuboEnums import Architecture, Distribution
+from seedemu.services.KuboService.KuboEnum import Architecture, Distribution
 from KuboUtils import DottedDict
 import json
 

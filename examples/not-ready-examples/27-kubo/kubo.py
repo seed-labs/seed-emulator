@@ -2,8 +2,6 @@
 # encoding: utf-8
 
 from seedemu import *
-from KuboService import KuboService
-from KuboServer import KuboServer
 
 ###############################################################################
 emu = Emulator()
