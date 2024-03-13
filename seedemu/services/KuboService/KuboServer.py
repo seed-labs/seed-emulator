@@ -1,14 +1,18 @@
 from seedemu.core import Node, Server, Service, BaseSystem
-from seedemu.core.enums import NetworkType
-from seedemu.services.KuboService.KuboEnum import Architecture, Distribution
-from KuboUtils import DottedDict
-import json
+from seedemu.services.KuboService.KuboEnums import Architecture, Distribution
+from KuboUtils import DottedDict, getIP
+from typing import Self, Any
+import json, re
 
 DEFAULT_KUBO_VERSION = 'v0.27.0'
 
 class KuboServer(Server):
-    """!
-    @brief The Kubo Server (IPFS)
+    """
+    The Kubo Server (IPFS)
+    
+    Attributes
+    ----------
+    config : a DottedDict representation of the Kubo config JSON file, by default None
     """
 
     _version:str
@@ -18,41 +22,61 @@ class KuboServer(Server):
     config:DottedDict
     _profile:str
 
-    def __init__(self, **kwargs):
+    def __init__(self, distro:Distribution=Distribution.LINUX, arch:Architecture=Architecture.X64,
+                 version:str=DEFAULT_KUBO_VERSION, isBootNode:bool=False, config:dict=None, profile:str=None):
+        """Create a new Kubo server.
+
+        Parameters
+        ----------
+        distro : Distribution, optional
+            OS distribution of Kubo to use, by default Distribution.LINUX
+        arch : Architecture, optional
+            CPU architecture of Kubo to use, by default Architecture.X64
+        version : str, optional
+            Version of Kubo to use, by default DEFAULT_KUBO_VERSION
+        isBootNode : bool, optional
+            Other nodes will bootstrap to this node, by default False
+        config : dict, optional
+            JSON configuration file for Kubo to use on initialization, by default None
+        profile : str, optional
+            Profile (presets) for Kubo to use on initialization, by default None
+        """
+        
         # Emulator-specific data:
         self._base_system = BaseSystem.DEFAULT
         
         super().__init__()
         
         # Kubo-specific data:
-        self._distro = kwargs.get('distro', Distribution.LINUX)
-        self._version = kwargs.get('version', DEFAULT_KUBO_VERSION).strip().lower()
-        self._arch = kwargs.get('arch', Architecture.X64)
-        self._is_bootnode = kwargs.get('is_bootnode', False)
-        self.config = DottedDict(kwargs.get('config', {}))
-        self._profile = kwargs.get('profile', 'default').strip().lower()  # Empty string or 'default' for default?
+        assert isinstance(distro, Distribution), '"distro" must be an instance of KuboEnums.Distribution'
+        self._distro = distro
+        
+        assert re.match('v(\d{1,3}\.){2}\d{1,3}(-rc)?', str(version).strip().lower()) is not None, f'{version} is not a valid version of Kubo'
+        self._version = str(version).strip().lower()
+        
+        assert isinstance(arch, Architecture), '"arch" must be an instance of KuboEnums.Architecture'
+        self._arch = arch
+        
+        self._is_bootnode = isBootNode
+        self.config = DottedDict(config)
+        self._profile = str(profile).strip().lower() if profile is not None else None
 
     def install(self, node:Node, service:Service):
-        """!
-        @brief Installs Kubo implementation of IPFS on node.
+        """Installs Kubo on a physical node.
 
-        @param node Node object.
-        """ 
+        Parameters
+        ----------
+        node : Node
+            Physical emulator node for Kubo to be installed on.
+        service : Service
+            Instance of the Kubo Service being installed.
+        """
+        
         node.appendClassName('KuboService')
         
-        # 1. Download and install Kubo
-        node.addBuildCommand('mkdir /tmp/kubo/')
-        # assert self._version in service._version_list, f'Specified version, {self._version}, is not a valid version of Kubo'
-        # kuboFilename = f'kubo_$(cat /tmp/kubo/version)_{str(self._distro.value)}-{self._arch.value}'
+        # Download and install Kubo
+        node.addBuildCommand(f'mkdir {service._tmp_dir}/')
         kuboFilename = f'kubo_{self._version}_{str(self._distro.value)}-{self._arch.value}'
-        # Export version as temporary file to make things easier:
-        # if self._version != 'latest':
-            # node.addBuildCommand(f'echo {self._version} > tmp/kubo/version')
-        # else:
-            # node.addBuildCommand('curl -s https://dist.ipfs.tech/kubo/versions | grep -so v[0-9]*\.[0-9]*\.[0-9]* | tail -n 1 > /tmp/kubo/version')
-       
-        # Install:
-        # node.addBuildCommand(f'curl -so {kuboFilename}.tar.gz https://dist.ipfs.tech/kubo/$(cat /tmp/kubo/version)/{kuboFilename}.tar.gz')
         node.addBuildCommand(f'curl -so {kuboFilename}.tar.gz https://dist.ipfs.tech/kubo/{self._version}/{kuboFilename}.tar.gz')
         node.addBuildCommand(f'tar -xf {kuboFilename}.tar.gz && rm {kuboFilename}.tar.gz')
         node.addBuildCommand('cd kubo && bash install.sh')
@@ -61,79 +85,92 @@ class KuboServer(Server):
         if not self.config.empty():
             node.appendFile('/root/.ipfs/config', json.dumps(self.config, indent=2))
         
-        # 3. Initialize IFPS
-        if self._profile in ['', 'default', 'none']:
+        # Initialize IFPS
+        if self._profile is None or self._profile in ['', 'default', 'none']:
             node.appendStartCommand('ipfs init')
         else:
             node.appendStartCommand(f'ipfs init --profile={self._profile}')
-        # 5. Bind RPC API to public IP
-        node.appendStartCommand(f'ipfs config Addresses.API /ip4/{self._getIP(node)}/tcp/5001')
-        # 6. Launch daemon/bootstrap script
-        node.appendStartCommand('bash /tmp/kubo/bootstrap.sh', fork=True)
-        node.appendStartCommand('ipfs daemon >/dev/null', fork=True)
+        # Bind RPC API to public IP
+        node.appendStartCommand(f'ipfs config Addresses.API /ip4/{getIP(node)}/tcp/5001')
+        # Launch daemon/bootstrap script
+        node.appendStartCommand(f'bash {service._tmp_dir}/bootstrap.sh', fork=True)
+        # node.appendStartCommand('ipfs daemon >/dev/null', fork=True)
         
     def isBootNode(self) -> bool:
-        """
-        @brief Returns true if node is a bootstrap node, and false if not.
+        """Indicates whether or not the current node is a bootstrap node.
+
+        Returns
+        -------
+        bool
+            True if this node is a bootstrap node, False otherwise.
         """
         return self._is_bootnode
     
-    def setBootNode(self, isBoot:bool=True):
-        """Sets whether or not this node is considered a bootstrap node for Kubo.
+    def setBootNode(self, isBoot:bool=True) -> Self:
+        """Sets whether or not this node is considered a bootstrap node.
 
-        Args:
-            isBoot (bool): True if this is a bootstrap node, False otherwise.
-
-        Returns:
-            KuboServer: this KuboServer instance for chaining API calls.
+        Parameters
+        ----------
+        isBoot : bool, optional
+            True if this is a bootstrap node, False otherwise, by default True
+            
+        Returns
+        -------
+        Self
+            This KuboServer instance for chaining API calls.
         """
         self._is_bootnode = isBoot
         return self
     
-    def importConfig(self, config:dict):
-        """Import an entire config file in dictionary form to override the default.
+    def importConfig(self, config:dict) -> Self:
+        """Import an entire config file in dictionary representation. This overrides the default config file.
 
-        Args:
-            config (dict): representation of the Kubo config JSON file (located at $IPFS_PATH/config).
+        Parameters
+        ----------
+        config : dict
+            representation of the Kubo config JSON file (located at $IPFS_PATH/config).
 
-        Returns:
-            KuboServer: this KuboServer instance for chaining API calls.
+        Returns
+        -------
+        Self
+            This KuboServer instance for chaining API calls.
         """
         self.config = DottedDict(config)
         return self
     
-    def setConfig(self, key:str, value):
-        """Add/modify a single line of the config file to override the default.
+    def setConfig(self, key:str, value:Any) -> Self:
+        """Add/modify a single line of the config file. This config file overrides the default config file.
 
-        Args:
-            key (str): key in JSON dot-notation.
-            value (str): desired config value.
+        Parameters
+        ----------
+        key : str
+            key in JSON dot-notation.
+        value : Any
+            desired config value.
 
-        Returns:
-            KuboServer: this KuboServer instance for chaining API calls.
+        Returns
+        -------
+        Self
+            This KuboServer instance for chaining API calls.
         """
         self.config[key] = value
         return self
-    
-    def setProfile(self, profile:str):
-        """Set the profile with which Kubo will run on the node.
+         
+    def setProfile(self, profile:str) -> Self:
+        """Set the profile to be used upon initialization.
 
-        Args:
-            profile (str): any valid profile name; use "" or "default" or None for defaults.
+        Parameters
+        ----------
+        profile : str
+            any valid profile name; use None to reset to default.
 
-        Returns:
-            KuboServer: this KuboServer instance for chaining API calls.
+        Returns
+        -------
+        Self
+            This KuboServer instance for chaining API calls.
         """
         self._profile = profile
         return self
-        
-    def _getIP(self, node) -> str:
-        ifaces = node.getInterfaces()
-        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(node.getName())
-        for iface in ifaces:
-            net = iface.getNet()
-            if net.getType() == NetworkType.Local:
-                return iface.getAddress()
             
     def print(self, indent: int) -> str:
         out = ' ' * indent

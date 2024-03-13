@@ -1,16 +1,19 @@
 from seedemu.core import Node, Service
 from seedemu.core.enums import NetworkType
-from seedemu.services.KuboService.KuboEnum import Distribution, Architecture
+from seedemu.services.KuboService.KuboEnums import Distribution, Architecture
+from seedemu.services.KuboService.KuboUtils import isIPv4
 from KuboServer import KuboServer
-import http.client
 import re
 
+TEMPORARY_DIR = '/tmp/kubo'
+
 class KuboService(Service):
-    """!
-    @brief The Kubo Service (IPFS)
+    """
+    The Kubo Service (IPFS)
     """
     _bootstrap_ips:list[str]
     _bootstrap_script:str
+    _tmp_dir:str
     
     def __init__(self, **kwargs):
         """Create instance of the Kubo Service
@@ -22,7 +25,11 @@ class KuboService(Service):
         
         self.addDependency('Base', False, False)  # Depends on base layer (need networking info)
         
-        self._bootstrap_ips = kwargs.get('bootstrap_ips', [])
+        self._tmp_dir = TEMPORARY_DIR.rstrip('/')  # Directory without trailing slash.
+        
+        # Only accept valid IPv4 addresses for bootstrap IPs:
+        self._bootstrap_ips = [str(ip) for ip in kwargs.get('bootstrap_ips', []) if isIPv4(str(ip))]
+        
         self._bootstrap_script = None
         
     def getName(self) -> str:
@@ -55,8 +62,8 @@ class KuboService(Service):
         # All nodes will have bootstrap script installed, and then will proceed with individual installation.
         if len(self._bootstrap_ips) == 0: self._getBootstrapIps()
         if self._bootstrap_script is None: self._bootstrap_script = self._generateBootstrapScript()
-        node.appendFile('/tmp/kubo/bootstrap.sh', self._bootstrap_script)
-        node.appendStartCommand('chmod +x /tmp/kubo/bootstrap.sh')
+        node.appendFile(f'{self._tmp_dir}/bootstrap.sh', self._bootstrap_script)
+        node.appendStartCommand(f'chmod +x {self._tmp_dir}/bootstrap.sh')
         server.install(node, self)
         
     # def addBootstrap(self, *args) -> None:
@@ -174,6 +181,6 @@ else
 fi
 
 # Start IPFS:
-# ipfs daemon &
+ipfs daemon &
 """
         return script

@@ -1,12 +1,21 @@
-import json
+import json, socket
 from operator import setitem
-from typing import Any, Mapping, Iterable
+from typing import Any, Self, Mapping, Iterable
+from seedemu import *
+from seedemu.core.enums import NetworkType
 
 class DottedDict(dict):
     """A specific case of dictionary. Nested dictionaries referenced using JSON dot notation.
-        NOTE: the '.' character is not allowed in keys.
+        NOTE: the '.' character is not allowed in keys, but may be used to separate keys in JSON dot notation.
     """
     def __init__(self, src=None, **kwargs):
+        """Create an instance of a DottedDict.
+
+        Parameters
+        ----------
+        src : Any, optional
+            This should be a Mapping or Iterable from which a DottedDict is created, by default None
+        """
         if isinstance(src, Mapping):
             for key, value in src.items():
                 if type(value) == dict:
@@ -24,7 +33,24 @@ class DottedDict(dict):
             super().__init__(**kwargs)
             
     
-    def __getitem__(self, key: Any) -> Any:
+    def __getitem__(self, key: str) -> Any:
+        """Overrides the default implementation to allow retrieval in JSON dot notation.
+
+        Parameters
+        ----------
+        key : str
+            A string representing a key in JSON dot notation.
+
+        Returns
+        -------
+        Any
+            The corresponding value.
+
+        Raises
+        ------
+        TypeError
+            The key in a DottedDict must be of type string.
+        """
         if not isinstance(key, str):
             raise TypeError('DottedDict expects keys of type string.')
         
@@ -33,13 +59,25 @@ class DottedDict(dict):
         if len(keys) == 1:
             return super().__getitem__(keys[0])
         else:
-            # return getDictByDot(dict.get(keys[0]), ".".join(keys[1:]))
-            # return self.__getitem__(self[super().__getitem__(keys[0])], ".".join(keys[1:]))
             outerDict = self.__getitem__(keys[0])
             # print(f'{type(outerDict)}: {outerDict}')
             return outerDict.__getitem__(".".join(keys[1:]))
     
-    def __setitem__(self, key: Any, value: Any) -> None:
+    def __setitem__(self, key: str, value: Any) -> None:
+        """Overrides the default implementation to allow setting a value using a key in JSON dot notation.
+
+        Parameters
+        ----------
+        key : str
+            The key represented as a string in JSON dot notation.
+        value : Any
+            The corresponding value.
+
+        Raises
+        ------
+        TypeError
+            Raised if the key is not a string, and so is not in JSON dot notation.
+        """
         if not isinstance(key, str):
             raise TypeError('DottedDict expects keys of type string.')
         
@@ -55,7 +93,21 @@ class DottedDict(dict):
             self[keys[0]].__setitem__(".".join(keys[1:]), value)
                     
                 
-    def __delitem__(self, key: Any) -> None:
+    def __delitem__(self, key: str) -> None:
+        """Overrides default implementation to allow deleting a value based on a key in JSON dot notation.
+
+        Parameters
+        ----------
+        key : str
+            The key represented as a string in JSON dot notation.
+
+        Raises
+        ------
+        TypeError
+            Raised if the key is not a string, and therefore not valid JSON dot notation.
+        KeyError
+            Raised if the key does not exist in this DottedDict instance.
+        """
         if not isinstance(key, str):
             raise TypeError('DottedDict expects keys of type string.')
         if key not in self:
@@ -68,6 +120,23 @@ class DottedDict(dict):
             self[keys[0]].__delitem__(".".join(keys[1:]))
                 
     def __contains__(self, key: object) -> bool:
+        """Overrides the default implementation to allow checking if a key exists as specified in JSON dot notation.
+
+        Parameters
+        ----------
+        key : str
+            The key represented as a string in JSON dot notation.
+
+        Returns
+        -------
+        bool
+            True if the key exists, False otherwise.
+
+        Raises
+        ------
+        TypeError
+            Raised if the key is not a string, and therefore not valid JSON dot notation.
+        """
         if not isinstance(key, str):
             raise TypeError('DottedDict expects keys of type string.')
         
@@ -84,14 +153,23 @@ class DottedDict(dict):
             else:
                 return False
             
-    def copy(self) -> Mapping:
+    def copy(self) -> Self:
+        """Overrides the superclass shallow copy to return a shallow copy of type DottedDict.
+
+        Returns
+        -------
+        Self
+            Returns an instance of the DottedDict class with the same contents as this instance.
+        """
         return DottedDict(super().copy())
-            
+ 
     def merge(self, other:Mapping) -> None:
         """Merges another dict-like object into the current DottedDict (in-place).
-        
-        Args:
-            other (Mapping): another dict-like object to be merged into this.
+
+        Parameters
+        ----------
+        other : Mapping
+            Another dict-like object to be merged into this DottedDict instance.
         """
         for key, value in other.items():
             # Conflict and values of both are dict-like, so merge those:
@@ -110,14 +188,19 @@ class DottedDict(dict):
                     self[key] = value
                     
     def empty(self) -> bool:
-        """Returns Boolean value indicating if the object is empty or not.
+        """Check whether the DottedDict instance is empty or not.
+
+        Returns
+        -------
+        bool
+            True if the DottedDict instance is empty, False otherwise.
         """
         return len(self) == 0
 
 
 
 def setDictByDot(dict:dict, dotted_key:str, value:Any) -> None:
-    """Sets a dictionary value based on JSON dot notation (sued for nested dicts).
+    """Sets a dictionary value based on JSON dot notation (used for nested dicts).
 
     Args:
         dict (dict): dictionary (outermost)
@@ -140,36 +223,77 @@ def getDictByDot(dict:dict, dotted_key:str) -> Any:
         return getDictByDot(dict.get(keys[0]), ".".join(keys[1:]))
     
 
-def _dictFromDot(dotted_key:str, value:Any) -> dict:
-    nestedDict = {}
-    keys = dotted_key.strip().split('.')
-    if len(keys) == 1:
-        nestedDict[dotted_key] = value
-    else:
-        nestedDict[keys[0]] = _dictFromDot(".".join(keys[1:]), value)
-    return nestedDict
+# def _dictFromDot(dotted_key:str, value:Any) -> dict:
+#     nestedDict = {}
+#     keys = dotted_key.strip().split('.')
+#     if len(keys) == 1:
+#         nestedDict[dotted_key] = value
+#     else:
+#         nestedDict[keys[0]] = _dictFromDot(".".join(keys[1:]), value)
+#     return nestedDict
 
 
-def mergeNestedDicts(dict1:dict, dict2:dict) -> dict:
-    merged = dict1.copy()
+# def mergeNestedDicts(dict1:dict, dict2:dict) -> dict:
+#     merged = dict1.copy()
     
-    for cur in [dict1, dict2]:
-        # Define other dict at current run:
-        if cur == dict1: other = dict2
-        else: other = dict1
+#     for cur in [dict1, dict2]:
+#         # Define other dict at current run:
+#         if cur == dict1: other = dict2
+#         else: other = dict1
         
-        for key, value in cur.items():
-            # If this is a nested dict in both dicts, merge those:
-            if type(value) == dict and type(other.get(key)) == dict:
-                merged[key] = mergeNestedDicts(cur[key], other[key])
-            # If this is just a nested dict in the second dict, replace the first dict's value:
-            elif type(other.get(key)) == dict:
-                merged[key] = other.get(key)
-            # Otherwise, just keep the value from the first dict:
-            else:
-                merged[key] = cur.get(key)
+#         for key, value in cur.items():
+#             # If this is a nested dict in both dicts, merge those:
+#             if type(value) == dict and type(other.get(key)) == dict:
+#                 merged[key] = mergeNestedDicts(cur[key], other[key])
+#             # If this is just a nested dict in the second dict, replace the first dict's value:
+#             elif type(other.get(key)) == dict:
+#                 merged[key] = other.get(key)
+#             # Otherwise, just keep the value from the first dict:
+#             else:
+#                 merged[key] = cur.get(key)
         
-    return merged
+#     return merged
+
+def getIP(node:Node) -> str:
+    """Find the first local IPv4 address for a given node.
+
+    Parameters
+    ----------
+    node : Node
+        A physical node in the emulator.
+
+    Returns
+    -------
+    str
+        A string representing an IPv4 address.
+    """
+    ifaces = node.getInterfaces()
+    assert len(ifaces) > 0, f'Node {node.getName()} has no IP address.'
+    for iface in ifaces:
+        net = iface.getNet()
+        if net.getType() == NetworkType.Local:
+            return iface.getAddress()
+    return None
+
+def isIPv4(ip:str) -> bool:
+    """Evaluates whether a string is a valid IPv4 address.
+
+    Parameters
+    ----------
+    ip : str
+        The string to be tested.
+
+    Returns
+    -------
+    bool
+        True if the given string represents a valid IPv4 address.
+    """
+    try:
+        socket.inet_aton(ip)
+        return True
+    # OSError is returned if ip is not valid (reason depends on C implementation):
+    except OSError:
+        return False
            
     
 if __name__ == "__main__":
