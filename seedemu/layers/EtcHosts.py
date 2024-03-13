@@ -23,7 +23,7 @@ class EtcHosts(Layer):
         nodes = []
         reg = emulator.getRegistry()
         for ((scope, type, name), node) in reg.getAll().items():
-            if type in ['hnode', 'snode']:
+            if type in ['hnode', 'snode', 'rnode', 'rs']:
                 hosts_file_content += f"{node.getIPAddress()} {' '.join(node.getHostNames())}\n"
                 nodes.append(node)
         
