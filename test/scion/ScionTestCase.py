@@ -49,7 +49,7 @@ class ScionTestCase(SeedEmuTestCase):
         """
 
         exit_code, output = container.exec_run(
-            f"scion showpaths {dst} --json --sequence='{pred}'")
+            f"scion showpaths {dst} --format json --sequence='{pred}'")
         assert 0 <= exit_code < 2, "got unexpected exit code from 'scion showpaths'"
 
         paths = json.loads(output).get('paths', [])
