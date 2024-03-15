@@ -5,7 +5,7 @@ from typing import Dict
 
 import yaml
 
-from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter
+from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, NodeRole
 from seedemu.layers import Routing, ScionBase, ScionIsd
 
 
@@ -80,6 +80,7 @@ class ScionRouting(Routing):
         for ((scope, type, name), obj) in reg.getAll().items():
             # SCION inter-domain routing affects only border-routers
             if type == 'brdnode':
+                assert NodeRole.BorderRouter == obj.getRole()
                 rnode: ScionRouter = obj
                 if not issubclass(rnode.__class__, ScionRouter):
                     rnode.__class__ = ScionRouter
@@ -90,6 +91,7 @@ class ScionRouting(Routing):
                 rnode.appendStartCommand(_CommandTemplates['br'].format(name=name), fork=True)
 
             elif type == 'csnode':
+                assert NodeRole.ControlService == obj.getRole()
                 csnode: Node = obj
                 self.__install_scion(csnode)
                 self.__append_scion_command(csnode)
@@ -97,6 +99,7 @@ class ScionRouting(Routing):
                 csnode.appendStartCommand(_CommandTemplates['cs'].format(name=name), fork=True)
 
             elif type == 'hnode':
+                assert NodeRole.Host == obj.getRole()
                 hnode: Node = obj
                 self.__install_scion(hnode)
                 self.__append_scion_command(hnode)
@@ -106,10 +109,26 @@ class ScionRouting(Routing):
         node.addBuildCommand(
             'echo "deb [trusted=yes] https://packages.netsec.inf.ethz.ch/debian all main"'
             ' > /etc/apt/sources.list.d/scionlab.list')
+        
+        software = ''
+
+        # SCION doesn't affect IntraDomain Routers     
+        if NodeRole.Router != node.getRole():
+            software += ' scion-daemon scion-dispatcher scion-tools '
+            # daemon & tools really needed by all ?!
+               
+
+        if node.getRole() == NodeRole.Host:
+            software += " scion-apps-bwtester"
+
+        if NodeRole.BorderRouter == node.getRole():
+            software += ' scion-border-router '
+
+        if NodeRole.ControlService == node.getRole():
+            software += 'scion-control-service'
+
         node.addBuildCommand(
-            "apt-get update && apt-get install -y"
-            " scion-border-router scion-control-service scion-daemon scion-dispatcher scion-tools"
-            " scion-apps-bwtester")
+            "apt-get update && apt-get install -y {soft}".format(soft=software)   )
         node.addSoftware("apt-transport-https")
         node.addSoftware("ca-certificates")
 
@@ -145,9 +164,11 @@ class ScionRouting(Routing):
                 self.__provision_base_config(node)
 
             if type == 'brdnode':
+                assert NodeRole.BorderRouter == obj.getRole()
                 rnode: ScionRouter = obj
                 self.__provision_router_config(rnode)
             elif type == 'csnode':
+                assert NodeRole.ControlService == obj.getRole()
                 csnode: Node = obj
                 self._provision_cs_config(csnode, as_)
 
