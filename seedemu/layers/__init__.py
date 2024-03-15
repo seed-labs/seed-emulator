@@ -10,3 +10,4 @@ from .ScionRouting import ScionRouting
 from .ScionIsd import ScionIsd
 from .Scion import Scion
 from .Babel import Babel
+from .EtcHosts import EtcHosts

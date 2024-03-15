@@ -269,6 +269,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
             self.__softwares.add(soft)
 
         self.__name_servers = []
+        self.__host_names = [f"{self.__scope}-{self.__name}"]
 
     def configure(self, emulator: Emulator):
         """!
@@ -282,6 +283,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         assert not self.__configured, 'Node already configured.'
         assert not self.__asn == 0, 'Virtual physical node must not be used in render/configure'
 
+        self.__configured = True
         reg = emulator.getRegistry()
 
         for (netname, address) in self.__pending_nets:
@@ -354,6 +356,31 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__name_servers = servers
 
         return self
+
+    def getHostNames(self) -> str:
+        """!
+        @brief Get all host names for this node.
+        @returns node host names.
+        """
+        return self.__host_names
+
+    def addHostName(self, name: str) -> Node:
+        """!
+        @brief Add a new host name to this node.
+        @param name new host name.
+        @returns self, for chaining API calls.
+        """
+        self.__host_names.append(name)
+        return self
+
+    def getIPAddress(self) -> str:
+        """!
+        @brief Get the IP address of the local interface for this node.
+        """
+        for iface in self.getInterfaces():
+            if iface.getNet().getType() == NetworkType.Local:
+                return iface.getAddress()
+        return ''
 
     def getNameServers(self) -> List[str]:
         """!
