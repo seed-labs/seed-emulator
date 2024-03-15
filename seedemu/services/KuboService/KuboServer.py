@@ -1,7 +1,8 @@
 from seedemu.core import Node, Server, Service, BaseSystem
 from seedemu.services.KuboService.KuboEnums import Architecture, Distribution
-from KuboUtils import DottedDict, getIP
-from typing import Self, Any
+from seedemu.services.KuboService.KuboUtils import DottedDict, getIP
+from typing import Any
+from typing_extensions import Self
 import json, re
 
 DEFAULT_KUBO_VERSION = 'v0.27.0'
@@ -90,11 +91,8 @@ class KuboServer(Server):
             node.appendStartCommand('ipfs init')
         else:
             node.appendStartCommand(f'ipfs init --profile={self._profile}')
-        # Bind RPC API to public IP
-        node.appendStartCommand(f'ipfs config Addresses.API /ip4/{getIP(node)}/tcp/5001')
-        # Launch daemon/bootstrap script
-        node.appendStartCommand(f'bash {service._tmp_dir}/bootstrap.sh', fork=True)
-        # node.appendStartCommand('ipfs daemon >/dev/null', fork=True)
+        
+        # Remainder of configuration is done at the service level (see KuboService).
         
     def isBootNode(self) -> bool:
         """Indicates whether or not the current node is a bootstrap node.

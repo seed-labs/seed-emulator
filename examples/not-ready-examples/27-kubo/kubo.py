@@ -46,7 +46,7 @@ for asNum in range(150, 172):
         
 emu.addLayer(ipfs)
 
-docker = Docker(internetMapEnabled=True)
+docker = Docker(internetMapEnabled=True, internetMapPort=8081)
 
 # Render and compile 
 OUTPUTDIR = '../emulator'

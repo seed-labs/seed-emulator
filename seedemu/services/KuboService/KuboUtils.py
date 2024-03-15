@@ -1,6 +1,7 @@
 import json, socket
 from operator import setitem
-from typing import Any, Self, Mapping, Iterable
+from typing import Any, Mapping, Iterable
+from typing_extensions import Self
 from seedemu import *
 from seedemu.core.enums import NetworkType
 
