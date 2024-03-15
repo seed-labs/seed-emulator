@@ -49,7 +49,7 @@ emu.addLayer(ipfs)
 docker = Docker(internetMapEnabled=True, internetMapPort=8081)
 
 # Render and compile 
-OUTPUTDIR = '../emulator'
+OUTPUTDIR = './output'
 emu.render()
 emu.compile(docker, OUTPUTDIR, override = True)
 
