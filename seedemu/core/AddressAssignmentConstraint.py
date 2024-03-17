@@ -165,8 +165,10 @@ class AddressAssignmentConstraint(Printable):
         @throws ValueError if try to get assigner of IX interface.
         """
 
-        if type == NodeRole.Host: return Assigner(self.__hostStart, self.__hostEnd, self.__hostStep)
-        if type == NodeRole.Router: return Assigner(self.__routerStart, self.__routerEnd, self.__routerStep)
+        if NodeRole.Host == type or NodeRole.ControlService == type:
+            return Assigner(self.__hostStart, self.__hostEnd, self.__hostStep)
+        if NodeRole.Router == type or type == NodeRole.BorderRouter:
+            return Assigner(self.__routerStart, self.__routerEnd, self.__routerStep)
 
         raise ValueError("IX IP assignment must done with mapIxAddress().")
 
