@@ -242,7 +242,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
         @brief return the subset of all routers that participate in inter-domain routing
         """
-        return [router for router in self.__routers if router.isBorderRouter() ]
+        return [router for name, router in self.__routers.items() if router.isBorderRouter() ]
 
     def getRouter(self, name: str) -> Node:
         """!

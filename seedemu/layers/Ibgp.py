@@ -56,8 +56,8 @@ class Ibgp(Layer, Graphable):
             neighs: List[Node] = net.getAssociations()
 
             for neigh in neighs:
-
-                if neigh.getRole() != NodeRole.Router or neigh.getRole() != NodeRole.BorderRouter: 
+                role = neigh.getRole()
+                if role != NodeRole.Router and role != NodeRole.BorderRouter: 
                     continue
                 
                 self.__dfs(neigh, visited, net.getName())

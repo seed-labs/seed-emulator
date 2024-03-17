@@ -128,13 +128,15 @@ class IntraASTopoReader(object):
 
         # connect routers
         for i,r in enumerate(routers):
-            for e in topo.edges(r):
-               # todo check if e[1] is in endhosts -> continue
+
+            j=0
+            for e in topo.edges(r):               
                 assert e[0] == r
                 r2 =e[1]
                 if r2 in endhosts: continue
 
                 if frozenset([r, r2]) not in link_nets:
+                    j+=8 # incr to not set host bits
                # 
                #     net = link_nets[frozenset([r, r2])]
                #     if r not in net.getAssociations():
@@ -143,11 +145,11 @@ class IntraASTopoReader(object):
                #         router_nodes[r2].joinNetwork(net.getName())
 
                # else:
-                    nname = 'net{:0>3d}_{:0>3d}'.format(r,r2)
-                    net = system.createNetwork(nname , direct = False )
+                    nname = 'net{:0>3d}_{:0>3d}'.format(r,r2)                    
+                    net = system.createNetwork(nname ,prefix='{}.{}.{}.{}/29'.format( int(i/254 +1), i % 254 , int(j/254),j % 254), direct = False )
                     assert net.getName() == nname
-                    router_nodes[r].joinNetwork(net.getName())
-                    router_nodes[r2].joinNetwork(net.getName())
+                    router_nodes[r].joinNetwork(net.getName(),'{}.{}.{}.{}'.format( int(i/254 +1), i % 254 , int(j/254),j % 254 +2 ) )
+                    router_nodes[r2].joinNetwork(net.getName(),'{}.{}.{}.{}'.format( int(i/254 +1), i % 254 , int(j/254),j % 254 +3  ) )
 
                     link_nets[frozenset([r,r2])] = net
 
