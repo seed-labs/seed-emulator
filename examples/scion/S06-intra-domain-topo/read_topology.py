@@ -31,6 +31,7 @@ scion_isd.addIsdAs(1, 150, is_core=True)
 # load the IntraDomainTopology for AS-150 from file
 topo = ASTopology()
 #topo.from_file("1221_r0.cch",TopoFormat.ROCKETFUEL)
+#topo.from_file("tiers.generic",TopoFormat.TIERS)
 topo.from_file("orbis_hot_simplified_3.txt",TopoFormat.ORBIS)
 reader = IntraASTopoReader()
 reader.generateAS(topo,as150)

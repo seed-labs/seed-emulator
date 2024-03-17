@@ -1,6 +1,7 @@
 import networkx as nnx
 from .FromTopo import *
 from .TopoAlgo import *
+from .FromTopoTiers import graphFromTiersTopoFile
 from seedemu.core import AutonomousSystem
 from enum import Enum
 
@@ -18,6 +19,7 @@ class TopoFormat(Enum):
     ORBIS = "orbis"
     BRITE = "brite"
     ROCKETFUEL = "rocketfuel"
+    TIERS = "tiers"
     # GRAPHML
     # todo: add a custom new one, that also specifies the net for routers
 
@@ -31,6 +33,8 @@ class ASTopology:
             return ResolutionLevel.HostLevel
         elif fmt == TopoFormat.BRITE:
             return ResolutionLevel.HostLevel
+        elif fmt == TopoFormat.TIERS:
+            return ResolutionLevel.RouterLevel
         elif fmt == TopoFormat.ROCKETFUEL:
             # RocketFuel files contain ISP ASes at a router level
             return ResolutionLevel.RouterLevel
@@ -54,6 +58,8 @@ class ASTopology:
             graphFromOrbisTopoFile2( fname, self._graph)
         elif fmt== TopoFormat.BRITE:
             graphFromBRITETopoFile(self._graph,fname)
+        elif fmt==TopoFormat.TIERS:
+            self._graph = graphFromTiersTopoFile(fname)
         elif fmt==TopoFormat.ROCKETFUEL:
             self._graph = graphFromRocketfuelTopoFile(fname)
         else:
