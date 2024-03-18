@@ -5,6 +5,7 @@ from .Ospf import Ospf
 from .Ibgp import Ibgp
 from .Dnssec import Dnssec
 from .Mpls import Mpls
+from .Pim import Pim
 from .ScionBase import ScionBase
 from .ScionRouting import ScionRouting
 from .ScionIsd import ScionIsd
