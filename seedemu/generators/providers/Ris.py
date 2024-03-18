@@ -12,6 +12,9 @@ class Ris(DataProvider):
 
     __cache: Dict[str, Dict[str, Any]]
 
+    def getASes(self) -> List[int]:
+        return NotImplementedError('') # Help, I dont know how to use RIPE.. 
+
     def __init__(self):
         """!
         @brief Create a new RIS data provider.

@@ -29,5 +29,9 @@ class NodeRole(Enum):
     ## Router node.
     Router = "Router"
 
+    BorderRouter = "BorderRouter"
+
+    ControlService = "ControlService"
+
     ## Route served node.
     RouteServer = "Route Server"
