@@ -156,7 +156,9 @@ for i, host in enumerate(hosts):
 
 # Add external port
 hosts[0].addPortForwarding(8545, 8545)
+hosts[0].addPortForwarding(8546, 8546)
 hosts[1].addPortForwarding(9545, 8545)
+hosts[1].addPortForwarding(9546, 8546)
 
 
 # Binding virtual nodes to physical nodes
