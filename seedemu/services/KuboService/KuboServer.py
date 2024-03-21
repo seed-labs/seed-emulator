@@ -17,30 +17,12 @@ class KuboServer(Server):
     """
 
     _version:str
-    _distro:Distribution
-    _arch:Architecture
     _is_bootnode:bool
     config:DottedDict
     _profile:str
 
-    def __init__(self, distro:Distribution=Distribution.LINUX, arch:Architecture=Architecture.X64,
-                 version:str=DEFAULT_KUBO_VERSION, isBootNode:bool=False, config:dict=None, profile:str=None):
+    def __init__(self):
         """Create a new Kubo server.
-
-        Parameters
-        ----------
-        distro : Distribution, optional
-            OS distribution of Kubo to use, by default Distribution.LINUX
-        arch : Architecture, optional
-            CPU architecture of Kubo to use, by default Architecture.X64
-        version : str, optional
-            Version of Kubo to use, by default DEFAULT_KUBO_VERSION
-        isBootNode : bool, optional
-            Other nodes will bootstrap to this node, by default False
-        config : dict, optional
-            JSON configuration file for Kubo to use on initialization, by default None
-        profile : str, optional
-            Profile (presets) for Kubo to use on initialization, by default None
         """
         
         # Emulator-specific data:
@@ -48,20 +30,11 @@ class KuboServer(Server):
         
         super().__init__()
         
-        # Kubo-specific data:
-        assert isinstance(distro, Distribution), '"distro" must be an instance of KuboEnums.Distribution'
-        self._distro = distro
-        
-        assert re.match('v(\d{1,3}\.){2}\d{1,3}(-rc)?', str(version).strip().lower()) is not None, f'{version} is not a valid version of Kubo'
-        self._version = str(version).strip().lower()
-        
-        assert isinstance(arch, Architecture), '"arch" must be an instance of KuboEnums.Architecture'
-        self._arch = arch
-        
-        self._is_bootnode = isBootNode
-        self.config = DottedDict(config)
-        self._profile = str(profile).strip().lower() if profile is not None else None
-
+        self._version = DEFAULT_KUBO_VERSION
+        self._is_bootnode = False
+        self.config = DottedDict()
+        self._profile = None
+    
     def install(self, node:Node, service:Service):
         """Installs Kubo on a physical node.
 
@@ -77,7 +50,7 @@ class KuboServer(Server):
         
         # Download and install Kubo
         node.addBuildCommand(f'mkdir {service._tmp_dir}/')
-        kuboFilename = f'kubo_{self._version}_{str(self._distro.value)}-{self._arch.value}'
+        kuboFilename = f'kubo_{self._version}_{str(service._distro.value)}-{service._arch.value}'
         node.addBuildCommand(f'curl -so {kuboFilename}.tar.gz https://dist.ipfs.tech/kubo/{self._version}/{kuboFilename}.tar.gz')
         node.addBuildCommand(f'tar -xf {kuboFilename}.tar.gz && rm {kuboFilename}.tar.gz')
         node.addBuildCommand('cd kubo && bash install.sh')
@@ -119,6 +92,33 @@ class KuboServer(Server):
         """
         self._is_bootnode = isBoot
         return self
+    
+    def setVersion(self, version:str) -> Self:
+        """Sets the version of Kubo to use on this node.
+
+        Parameters
+        ----------
+        version : str
+            String representation of Kubo version, like 'v0.27.0'
+            
+        Returns
+        -------
+        Self
+            This KuboServer instance for chaining API calls.
+        """
+        assert re.match('v(\d{1,3}\.){2}\d{1,3}(-rc)?', str(version).strip().lower()) is not None, f'{version} is not a valid version of Kubo'
+        self._version = version
+        return self
+        
+    def getVersion(self) -> str:
+        """Get the version of Kubo that will be installed on this node.
+
+        Returns
+        -------
+        str
+            String representation of Kubo version, like 'v0.27.0'
+        """
+        return self._version
     
     def importConfig(self, config:dict) -> Self:
         """Import an entire config file in dictionary representation. This overrides the default config file.

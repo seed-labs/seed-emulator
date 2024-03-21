@@ -46,6 +46,15 @@ for asNum in range(150, 172):
         
 emu.addLayer(ipfs)
 
+# Proxy node?
+# proxyAS = emu.getLayer('Base').getAutonomousSystem(150)
+# proxyHost = proxyAS.createHost('kubo-proxy')
+# proxyHost.joinNetwork(proxyAS.getNetworks()[0])
+# proxyHost.addSoftware('haproxy')
+# proxyHost.importFile('/home/jovanni/InternetEmulator/IPFS/seed-emulator/examples/not-ready-examples/27-kubo/haproxy.cfg', '/etc/haproxy/haproxy.cfg')
+# proxyHost.addPortForwarding(8080, 8080)
+# proxyHost.addPortForwarding(5001, 5001)
+
 docker = Docker(internetMapEnabled=True, internetMapPort=8081)
 
 # Render and compile 

@@ -11,6 +11,8 @@ class KuboService(Service):
     """
     The Kubo Service (IPFS)
     """
+    _distro:Distribution
+    _arch:Architecture
     _bootstrap_ips:list[str]
     _bootstrap_script:str
     _tmp_dir:str
@@ -18,7 +20,8 @@ class KuboService(Service):
     _rpc_api_port:int
     _http_gateway_port:int
     
-    def __init__(self, apiPort:int=5001, gatewayPort:int=8080, bootstrapIps:list[str]=[]):
+    def __init__(self, apiPort:int=5001, gatewayPort:int=8080, bootstrapIps:list[str]=[],
+                 distro:Distribution=Distribution.LINUX, arch:Architecture=Architecture.X64):
         """Create an instance of the IPFS Kubo Service.
 
         Parameters
@@ -29,6 +32,10 @@ class KuboService(Service):
             Set the port that the IPFS HTTP Gateway is bound to on all nodes, by default 8080
         bootstrapIps : list[str], optional
             Set a list of bootstrap nodes at the service level, by default []
+        distro : Distribution, optional
+            OS distribution of Kubo to use, by default Distribution.LINUX
+        arch : Architecture, optional
+            CPU architecture of Kubo to use, by default Architecture.X64
         """
         super().__init__()
         
@@ -39,6 +46,10 @@ class KuboService(Service):
         # Only accept valid IPv4 addresses for bootstrap IPs:
         self._bootstrap_ips = [str(ip) for ip in bootstrapIps if isIPv4(str(ip))]
 
+        assert isinstance(distro, Distribution), '"distro" must be an instance of KuboEnums.Distribution'
+        self._distro = distro
+        assert isinstance(arch, Architecture), '"arch" must be an instance of KuboEnums.Architecture'
+        self._arch = arch
         self._rpc_api_port = apiPort
         self._http_gateway_port = gatewayPort
         self._bootstrap_script = None
@@ -92,10 +103,12 @@ class KuboService(Service):
         node.appendStartCommand(f'bash {self._tmp_dir}/bootstrap.sh', fork=True)
         
         # Forward port for Web UI to host for the first node created:
-        if not self._first_installed:
-            node.addPortForwarding(self._rpc_api_port, self._rpc_api_port)  # For WebUI access
-            node.addPortForwarding(self._http_gateway_port, self._http_gateway_port)  # For HTTP Gateway
-            self._first_installed = True
+        # if not self._first_installed:
+        #     node.addPortForwarding(self._rpc_api_port, self._rpc_api_port)  # For WebUI access
+        #     node.addPortForwarding(self._http_gateway_port, self._http_gateway_port)  # For HTTP Gateway
+        #     self._first_installed = True
+        # else:
+        #     node.addPortForwarding(0, self._rpc_api_port) 
 
     def getBootstrapList(self) -> list:
         """Get current bootstrap node IP addresses.
