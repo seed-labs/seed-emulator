@@ -16,7 +16,7 @@ private_key = "{private_key}"
 web3 = Web3(Web3.HTTPProvider(f"http://{rpc_url}:8545"))  # Connect to the Ethereum node via RPC
 
 # Load the Link Token address from file
-link_address_file_path = './contracts/link_token_address.txt'
+link_address_file_path = './deployed_contracts/link_token_address.txt'
 if os.path.exists(link_address_file_path):
     with open(link_address_file_path, 'r') as file:
         link_address = file.read().strip()
@@ -83,7 +83,7 @@ tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 print(f"OracleContract deployed at address: {{tx_receipt.contractAddress}}")
 
 # Save the contract address to a file
-with open('./contracts/oracle_contract_address.txt', 'w') as address_file:
+with open('./deployed_contracts/oracle_contract_address.txt', 'w') as address_file:
     address_file.write(tx_receipt.contractAddress)
 """
 

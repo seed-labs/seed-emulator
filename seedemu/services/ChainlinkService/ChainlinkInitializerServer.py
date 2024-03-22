@@ -5,9 +5,9 @@ from seedemu.core.Node import Node
 from seedemu.core.Service import Server
 from enum import Enum
 from seedemu.core.enums import NetworkType
-from seedemu.services.ChainlinkService import ChainlinkServerCommands
 from seedemu.services.ChainlinkService.ChainlinkTemplates import *
 import re
+from seedemu.services.WebService import WebServerFileTemplates
 
 class ChainlinkInitializerServer(Server):
     """
@@ -28,7 +28,7 @@ class ChainlinkInitializerServer(Server):
         @brief ChainlinkServer Constructor.
         """
         super().__init__()
-        self._base_system = BaseSystem.SEEDEMU_CHAINLINK
+        # self._base_system = BaseSystem.SEEDEMU_CHAINLINK
 
     def configure(self, node: Node, emulator: Emulator):
         """
@@ -42,28 +42,39 @@ class ChainlinkInitializerServer(Server):
         @brief Install the service.
         """
         # print(self.__vnode_name)
-        if self.__vnode_name is not None:
-            self.getIPbyEthNodeName(self.__vnode_name)
+        # if self.__vnode_name is not None:
+        #     self.getIPbyEthNodeName(self.__vnode_name)
         
-        if self.__rpcURL is None:
-            raise Exception('RPC address not set')
+        # if self.__rpcURL is None:
+        #     raise Exception('RPC address not set')
         
         # Add software dependency
-        ChainlinkServerCommands().installSoftware(node)
-        ChainlinkServerCommands().installInitSoftware(node)
+        # ChainlinkServerCommands().installSoftware(node)
+        self.__installInitSoftware()
         # Set configuration files
-        ChainlinkServerCommands().setConfigurationFiles(node, self.__rpcURL, self.__username, self.__password)
+        # ChainlinkServerCommands().setConfigurationFiles(node, self.__rpcURL, self.__username, self.__password)
                 
         # if self.__deploymentType == DeploymentType.CURL:
         #     # Deploy the contracts using curl
         #     deployThroughCURL(self.owner)
         if self.__deploymentType == "web3":
             # Deploy the contracts using web3
-            self.deployThroughWeb3()
+            self.__deployThroughWeb3()
+            
+        self.__webServer()
         
         # After the contracts are deployed start the chainlink node
-        ChainlinkServerCommands().chainlinkStartCommands(node)
-            
+        # ChainlinkServerCommands().chainlinkStartCommands(node)
+    
+    def __installInitSoftware(self):
+        """
+        @brief Install the software.
+        """
+        software_list = ['ipcalc', 'jq', 'iproute2', 'sed', 'curl', 'python3', 'python3-pip']
+        for software in software_list:
+            self.__node.addSoftware(software)
+        self.__node.addBuildCommand('pip3 install web3==5.31.1')
+    
     def setContractOwner(self, owner: str):
         """
         @brief Set the owner of the contracts
@@ -149,13 +160,9 @@ class ChainlinkInitializerServer(Server):
                 break
         self.__rpcURL=address
         
-    def deployThroughWeb3(self):
+    def __deployThroughWeb3(self):
         """
         @brief Deploy the contracts using web3.
-        
-        @param owner The owner of the contracts
-        @param rpcURL The RPC URL
-        @param privateKey The private key of the owner
         """
         # Deploy the contracts using web3
         self.__node.setFile('/contracts/deploy_linktoken_contract.py', LinkTokenDeploymentTemplate['link_token_contract'].format(rpc_url = self.__rpcURL, private_key = self.__privateKey))
@@ -169,6 +176,14 @@ class ChainlinkInitializerServer(Server):
         self.__node.appendStartCommand(f'python3 ./contracts/deploy_oracle_contract.py')
         self.__node.appendStartCommand('echo "Oracle contract deployed"')
         
+    def __webServer(self):
+        self.__node.appendStartCommand('oracle_contract_address=$(cat /deployed_contracts/oracle_contract_address.txt)')
+        self.__node.appendStartCommand('link_token_address=$(cat /deployed_contracts/link_token_address.txt)')
+        self.__node.addSoftware('nginx-light')
+        self.__node.setFile('/var/www/html/index_template.html', '<h1>Oracle Contract: {{oracleContractAddress}}</h1><h1>Link Token Contract: {{linkTokenAddress}}</h1>')
+        self.__node.appendStartCommand('sed -e "s/{{oracleContractAddress}}/${oracle_contract_address}/g" -e "s/{{linkTokenAddress}}/${link_token_address}/g" /var/www/html/index_template.html > /var/www/html/index.html')
+        self.__node.setFile('/etc/nginx/sites-available/default', WebServerFileTemplates['nginx_site'].format(port=80))
+        self.__node.appendStartCommand('service nginx start')
         
     def print(self, indent: int) -> str:
         out = ' ' * indent

@@ -63,7 +63,7 @@ tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 print(f"Link Token Contract deployed at address: {{tx_receipt.contractAddress}}")
 
 # Save the contract address to a file
-with open('./contracts/link_token_address.txt', 'w') as address_file:
+with open('./deployed_contracts/link_token_address.txt', 'w') as address_file:
 	address_file.write(tx_receipt.contractAddress)
 '''
     

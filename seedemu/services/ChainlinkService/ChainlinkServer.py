@@ -5,7 +5,6 @@ from seedemu.core.Node import Node
 from seedemu.core.Service import Server
 from enum import Enum
 from seedemu.core.enums import NetworkType
-from seedemu.services.ChainlinkService import ChainlinkServerCommands
 from seedemu.services.ChainlinkService.ChainlinkTemplates import *
 import re
 
@@ -21,7 +20,11 @@ class ChainlinkServer(Server):
     __vnode_name: str = None
     __username: str = "seed@seed.com"
     __password: str = "Seed@emulator123"
-
+    __database_node_ip: str
+    __database_username: str
+    __database_password: str
+    __init_node_url: str
+    
     def __init__(self):
         """
         @brief ChainlinkServer Constructor.
@@ -40,17 +43,54 @@ class ChainlinkServer(Server):
         """
         @brief Install the service.
         """
-        ChainlinkServerCommands().installSoftware(node)
+        self.__installSoftware()
         
         if self.__vnode_name is not None:
-            self.getIPbyEthNodeName(self.__vnode_name)
+            self.__getIPbyEthNodeName(self.__vnode_name)
         
         if self.__eth_node_ip_address is None:
             raise Exception('RPC address not set')
         
-        ChainlinkServerCommands().setConfigurationFiles(node, self.__eth_node_ip_address, self.__username, self.__password)
-        ChainlinkServerCommands().chainlinkStartCommands(node)
+        self.__node.appendStartCommand(ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
         
+        self.__setConfigurationFiles()
+        self.__chainlinkStartCommands()
+        
+    def __installSoftware(self):
+        """
+        @brief Install the software.
+        """
+        software_list = ['ipcalc', 'jq', 'iproute2', 'sed', 'postgresql', 'postgresql-contrib']
+        for software in software_list:
+            self.__node.addSoftware(software)
+            
+    def __setConfigurationFiles(self):
+        """
+        @brief Set configuration files.
+        """
+        config_content = ChainlinkFileTemplate['config'].format(ip_address=self.__eth_node_ip_address)
+        self.__node.setFile('/config.toml', config_content)
+        self.__node.setFile('/secrets.toml', ChainlinkFileTemplate['secrets'])
+        self.__node.setFile('/api.txt', ChainlinkFileTemplate['api'].format(username=self.__username, password=self.__password))
+        # node.setFile('/jobs/getUint256.toml', ChainlinkJobsTemplate['getUint256'])
+        
+    def __chainlinkStartCommands(self):
+        """
+        @brief Add start commands.
+        """        
+        start_commands = """
+service postgresql restart
+su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\""
+chainlink node -config /config.toml -secrets /secrets.toml start -api /api.txt
+"""
+        self.__node.appendStartCommand(start_commands)
+        
+    def setInitNodeUrl(self, url: str):
+        """
+        @brief Set the chainlink init node
+        """
+        self.__init_node_url = url
+                
     def setRPCbyUrl(self, address: str):
         """
         @brief Set the ethereum RPC address.
@@ -94,8 +134,24 @@ class ChainlinkServer(Server):
         Check if the password length is between 16 and 50 characters.
         """
         return 16 <= len(password) <= 50
+    
+    def setDatabaseNode(self, ip: str, username: str, password: str):
+        """
+        @brief Set the database node.
+        """
+        # Set the database node ip, username and password
+        self.__database_node_ip = ip
+        self.__database_username = username
+        self.__database_password = password
+    
+    def __getFaucet(self):
+        # Get Faucet address from the Database Node using database query
+        self.__node.appendStartCommand()
+        self.__node.appendStartCommand("chainlink admin login -f /api.txt")
+        self.__node.appendStartCommand("chainlink keys eth create > /tmp/eth_key")
         
-    def getIPbyEthNodeName(self, vnode:str):
+        
+    def __getIPbyEthNodeName(self, vnode:str):
         """
         @brief Get the IP address of the ethereum node.
         
