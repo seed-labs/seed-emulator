@@ -166,7 +166,7 @@ class DefaultScionGenerator:
                     # only create ix if it didnt already exist !!
                     #if ix not in base.getInternetExchangeIds():
                     self.__log('creating new IX, IX{}; getting prefix...'.format(ix_alias))
-                    base.createInternetExchange( ix_alias, prefix = self.__provider.getInternetExchangePrefix(ix))
+                    base.createInternetExchange( ix_alias, prefix = self.__provider.getInternetExchangePrefix(ix) , create_rs= False)
 
                 self.__log('getting members of IX{}...'.format(ix_alias))
                 members = self.__provider.getInternetExchangeMembers(ix)

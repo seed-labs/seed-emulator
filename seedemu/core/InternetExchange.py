@@ -19,7 +19,7 @@ class InternetExchange(Printable, Configurable):
     __rs: Node
     __name: str
 
-    def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None):
+    def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None,create_rs = True):
         """!
         @brief InternetExchange constructor.
 
@@ -29,23 +29,26 @@ class InternetExchange(Printable, Configurable):
         """
 
         self.__id = id
-
+        
         assert prefix != "auto" or self.__id <= 255, "can't use auto: id > 255"
         network = IPv4Network(prefix) if prefix != "auto" else IPv4Network("10.{}.0.0/24".format(self.__id))
 
         self.__name = 'ix{}'.format(str(self.__id))
-        self.__rs = Node(self.__name, NodeRole.RouteServer, self.__id)
         self.__net = Network(self.__name, NetworkType.InternetExchange, network, aac, False)
 
-        self.__rs.joinNetwork(self.__name)
+        if create_rs:
+            self.__rs = Node(self.__name, NodeRole.RouteServer, self.__id)      
+            self.__rs.joinNetwork(self.__name)
+        else:
+            self.__rs = None
 
     def configure(self, emulator: Emulator):
         reg = emulator.getRegistry()
 
         reg.register('ix', 'net', self.__name, self.__net)
-        reg.register('ix', 'rs', self.__name, self.__rs)
-
-        self.__rs.configure(emulator)
+        if self.__rs != None:
+            reg.register('ix', 'rs', self.__name, self.__rs)
+            self.__rs.configure(emulator)
 
     def getId(self) -> int:
         """!
