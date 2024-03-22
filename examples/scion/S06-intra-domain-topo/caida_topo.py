@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 from seedemu.compiler import Docker,Graphviz
-from seedemu.generators import DefaultScionGenerator
+from seedemu.generators import DefaultScionGenerator, CommonRouterForAllIF
 from seedemu.generators.providers import CaidaDataProvider
 from seedemu.core import Emulator, Binding, Filter
+from seedemu.core.enums import NetworkType
 from seedemu.generators.intra import IntraASTopoReader,ASTopology, TopoFormat
 from seedemu.layers import ScionBase, ScionRouting, ScionIsd, Scion,Ospf,Ibgp
 from seedemu.layers.Scion import LinkType as ScLinkType
@@ -18,9 +19,24 @@ from seedemu.layers.Scion import LinkType as ScLinkType
 
 provider = CaidaDataProvider("5_geo_rel.xml")
 
-generator = DefaultScionGenerator(provider)
+generator = DefaultScionGenerator(provider,CommonRouterForAllIF)
 
 emu = generator.generate(2,5)
+
+
+base = emu.getLayer('Base')
+reg = emu.getRegistry()
+for asn in provider.getASes():
+    
+    _as = base.getAutonomousSystem(asn)   
+    host = _as.createHost('host00')
+    for netname in _as.getNetworks():
+        net = _as.getNetwork(netname)
+        if net.getType() == NetworkType.Local:
+           host.joinNetwork(net.getName()) 
+           break
+            
+
 
 emu.render()
 

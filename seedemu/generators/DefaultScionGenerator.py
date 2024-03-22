@@ -4,6 +4,49 @@ from .providers import DataProvider
 from . .core import Emulator, AutonomousSystem, InternetExchange, ScionAutonomousSystem
 from . .layers import Base, Routing,  Ospf, Scion, ScionBase,ScionRouting, ScionIsd
 from seedemu.layers.Scion import LinkType 
+from typing import Type
+
+class BorderRouterAllocation:
+    """
+    @brief a strategy object that decides how border routers map to AS interfaces
+    """
+    def getRouterForIX(self, ix_alias: int):
+        pass
+    def getRouterForXC(self, if_ids, peer_asn: int ):
+        pass
+
+
+class SeparateForEachIFAlone(BorderRouterAllocation):
+
+    def __init__(self, _as: AutonomousSystem ):
+        self._my_as = _as        
+
+    def getRouterForIX(self, ix_alias : int ):
+        br_name = 'router{}'.format(ix_alias)                
+        return self._my_as.createRouter(br_name)
+
+    def getRouterForXC(self, ifids, peer_asn: int ):
+        # each IFID will get its own dedicated border router
+        br_name = 'brd{}'.format(ifids[0])
+        peer_br_name = 'brd{}'.format(ifids[1])                    
+
+        if br_name not in self._my_as.getRouters():
+            return self._my_as.createRouter(br_name ),peer_br_name
+            
+        else:
+            return self._my_as.getRouter(br_name), peer_br_name
+        
+
+
+class CommonRouterForAllIF(BorderRouterAllocation):
+    def __init__(self, _as: AutonomousSystem):
+        self._my_as = _as
+        self._my_as.createRouter('brd00')
+    def getRouterForIX(self, ix_alias: int ):
+        return self._my_as.getRouter('brd00')
+    
+    def getRouterForXC(self, if_ids, peer_asn: int ):
+        return self._my_as.getRouter('br00'), 'brd00'
 
 class DefaultScionGenerator:
     """!
@@ -18,14 +61,16 @@ class DefaultScionGenerator:
     """
 
     __provider: DataProvider
+    
 
-    def __init__(self, provider: DataProvider):
+    def __init__(self, provider: DataProvider , alloc: Type[BorderRouterAllocation] = SeparateForEachIFAlone ):
         """!
         @brief create a new topology generator.
 
         @param provider data provider.
         """
         self.__provider = provider
+        self._alloc_type = alloc
         pass
 
     def __log(self, message: str) -> None:
@@ -111,7 +156,8 @@ class DefaultScionGenerator:
             if 'mtu' in attr:
                 net.setMtu( attr['mtu'] )
             
-            current_as.createControlService('cs1').joinNetwork(netname)            
+            current_as.createControlService('cs1').joinNetwork(netname)      
+            router_alloc = self._alloc_type(current_as)      
 
             for ix in ixes_joined_by_asn:
                 ix_alias = self._ASNforIXp(ix)
@@ -127,9 +173,10 @@ class DefaultScionGenerator:
 
                 self.__log('joining IX{} with AS{}...'.format(ix_alias, asn))
                 ip_of_asn_in_ix = members[asn]
-                br_name = 'router{}'.format(ix_alias)                
-                router = current_as.createRouter(br_name).joinNetwork(netname)
-                current_as.makeBorderRouter(br_name)
+                       
+                router = router_alloc.getRouterForIX(ix_alias)
+                #router.joinNetwork(netname) 
+                router.updateNetwork(netname)
                 router.joinNetwork('ix{}'.format(ix_alias), ip_of_asn_in_ix)
             
                 self.__log('creating {} other ASes in IX{}...'.format(len(members.keys()), ix_alias))
@@ -146,20 +193,12 @@ class DefaultScionGenerator:
                 for vv in v:
                     addr =vv[0]
                     linktype = vv[1]
-                    ifids = vv[2]                    
+                    ifids = vv[2]                                        
 
-                    # each IFID will get its own dedicated border router
-                    br_name = 'br{}'.format(ifids[0])
+                    router,peer_br_name = router_alloc.getRouterForXC(vv[2],peerasn)
+                    router.updatesNetwork(netname)
+                    router.crossConnect(peerasn, peer_br_name, addr )
 
-                    peer_br_name = 'br{}'.format(ifids[1])
-
-                    if br_name not in current_as.getRouters():
-                        router = current_as.createRouter(br_name ).joinNetwork(netname)
-                        current_as.makeBorderRouter(br_name)
-                        router.crossConnect(peerasn, peer_br_name, addr )
-                    else:
-                        router = current_as.getRouter(br_name)
-                        router.crossConnect(peerasn, peer_br_name, addr )                    
                         
                     # do not add transit links in both directions
                     if linktype == LinkType.Transit:

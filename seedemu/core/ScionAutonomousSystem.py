@@ -182,7 +182,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         # Border routers
         border_routers = {}
         for router in self.getBorderRouters():
-            rnode: ScionRouter = self.getRouter(router)
+            rnode: ScionRouter = self.getRouter( router.getName() )
 
             border_routers[rnode.getName()] = {
                 "internal_addr": f"{rnode.getLoopbackAddress()}:30042",

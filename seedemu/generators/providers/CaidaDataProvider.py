@@ -156,4 +156,4 @@ class CaidaDataProvider(DataProvider):
         """!
         @brief Log to stderr.
         """
-        print("==== {}DataProvider: {}".format(self.getName(), message), file=stderr)
+        print("==== {}CaidaDataProvider: {}".format(self.getName(), message), file=stderr)
