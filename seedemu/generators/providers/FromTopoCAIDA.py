@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 import networkx as nx
 from collections import defaultdict
+from seedemu.layers.Scion import LinkType
 
 """
 CAIDA format
@@ -187,8 +188,14 @@ def graphFromXmlTopoFileAliased(topofile: str):
     ixp_count =0 # number of ixps
     for link in root.findall('link'):
       link_count += 1
-      lat:float =0.0
+      lat: float =0.0
       long:float = 0.0
+
+      fromAS = int(link.find('from').text) 
+      toAS = int( link.find('to').text )
+      fromAlias = ASenum[fromAS]
+      toAlias = ASenum[toAS]
+
       link_attr = {}
       for child in link:
          if child.tag == "property":
@@ -196,12 +203,21 @@ def graphFromXmlTopoFileAliased(topofile: str):
                    lat = float(child.text)
                if child.attrib['name'] == "longitude":
                    long = float(child.text)
+               if child.attrib['name'] == "rel":
+                   link_attr['link_type'] = { } 
+                   if child.text == 'core':                  
+                     link_attr['link_type'][fromAS] = LinkType.Core
+                     link_attr['link_type'][toAS] = LinkType.Core
+                   elif child.text == 'peer':
+                     link_attr['link_type'][fromAS] = LinkType.Peer
+                     link_attr['link_type'][toAS] = LinkType.Peer
+                   elif child.text == 'customer':
+                     link_attr['link_type'][fromAS] = LinkType.Transit
+                     link_attr['link_type'][toAS] = LinkType.Transit
+                      
                    
                link_attr[ child.attrib['name'] ] = child.text
-      fromAS = int(link.find('from').text) 
-      toAS = int( link.find('to').text )
-      fromAlias = ASenum[fromAS]
-      toAlias = ASenum[toAS]
+
       if fromAlias not in ASif:
          ASif[ fromAlias] = 0         
          
@@ -227,6 +243,10 @@ def graphFromXmlTopoFileAliased(topofile: str):
       AStoIxps[ fromAlias].add(locs_of_ixps[(lat,long)])
       AStoIxps[toAlias].add(locs_of_ixps[(lat,long)])
       link_attr['ixp_id'] = locs_of_ixps[(lat,long)]
+      link_attr['if_ids'] = {}
+      link_attr['if_ids'][fromAlias] =ASif[fromAlias]
+      link_attr['if_ids'][toAlias] =ASif[toAlias]
+
       link_attr['from_as_if_id'] = ASif[ fromAlias ]
       link_attr['to_as_if_id'] = ASif[ toAlias ]
    

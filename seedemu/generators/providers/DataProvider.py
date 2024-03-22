@@ -10,6 +10,13 @@ class DataProvider:
         """
         return {}
     
+    def getLinkAttributes(self, asn: int , if_id: int):
+        """
+        @brief return attributes such as Geo-Location, Bandwidth, LinkType,Latency for staticInfoConfig.json
+        that included in PCB static metadata extension
+        """
+        return {}
+    
     """!
     @brief data source for the topology generator.
     """
@@ -49,6 +56,12 @@ class DataProvider:
         @brief return a list of all the AutonomousSystems there are
         """
         return NotImplementedError('getASes not implemented')
+    
+    def getASInterfaces(self, asn: int) ->List[int]:
+        """
+        @brief each connection to a neighboring AS corresponds to one Interface (IF-)ID
+        """
+        raise NotImplementedError()
 
     def getName(self) -> str:
         """!

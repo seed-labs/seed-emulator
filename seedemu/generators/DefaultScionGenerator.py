@@ -6,6 +6,15 @@ from . .layers import Base, Routing,  Ospf, Scion, ScionBase,ScionRouting, Scion
 from seedemu.layers.Scion import LinkType 
 from typing import Type
 
+
+
+info_conf = """{{
+    "Geo": {{
+           {idgeo}
+           }}
+}}
+"""
+
 class BorderRouterAllocation:
     """
     @brief a strategy object that decides how border routers map to AS interfaces
@@ -156,7 +165,15 @@ class DefaultScionGenerator:
             if 'mtu' in attr:
                 net.setMtu( attr['mtu'] )
             
-            current_as.createControlService('cs1').joinNetwork(netname)      
+            cs = current_as.createControlService('cs1').joinNetwork(netname)
+
+            static_info = {'geo': []}
+            for _if in self.__provider.getASInterfaces(asn):
+                attr = self.__provider.getLinkAttributes(asn,_if )
+                static_info['geo'] .append( '        "{id}": {{\n            "Latitude": {lat},\n            "Longitude": {long}\n        }}'.format(id =_if, lat=attr['latitude'], long= attr['longitude'] )    )
+
+            cs.setFile('/etc/scion/staticInfoConfig.json', info_conf.format( idgeo=',\n'.join(static_info['geo'] ) ) )
+
             router_alloc = self._alloc_type(current_as)      
 
             for ix in ixes_joined_by_asn:
@@ -174,8 +191,7 @@ class DefaultScionGenerator:
                 self.__log('joining IX{} with AS{}...'.format(ix_alias, asn))
                 ip_of_asn_in_ix = members[asn]
                        
-                router = router_alloc.getRouterForIX(ix_alias)
-                #router.joinNetwork(netname) 
+                router = router_alloc.getRouterForIX(ix_alias)                
                 router.updateNetwork(netname)
                 router.joinNetwork('ix{}'.format(ix_alias), ip_of_asn_in_ix)
             

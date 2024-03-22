@@ -16,6 +16,12 @@ class CaidaDataProvider(DataProvider):
 
     def getASes(self) -> List[int]:
         return list( self._graph.nodes)
+    
+    def getASInterfaces(self, asn: int) ->List[int]:
+        
+        edges =  [ ee for ee in self._graph.edges if ee[0]==asn or ee[1]==asn ] 
+        attrs = map( lambda e: nx.get_edge_attributes(self._graph,'if_ids')[e] ,edges)
+        return map( lambda a: a[asn] , attrs )
 
     def __init__(self, topofile: str):
         """
@@ -44,7 +50,27 @@ class CaidaDataProvider(DataProvider):
         else:
             return False
     
-    
+    def getLinkAttributes(self, asn: int , if_id: int):
+        """
+        @brief return attributes such as Geo-Location, Bandwidth, LinkType,
+        Latency for staticInfoConfig.json that gets included
+        in PCB static metadata extension
+        """
+        _as = self._graph.nodes[asn]
+        #for n in self._graph.neighbors(asn):
+         
+        from_id = nx.get_edge_attributes(self._graph, 'if_ids')
+        lat = nx.get_edge_attributes(self._graph, 'latitude')
+        long = nx.get_edge_attributes(self._graph, 'longitude')
+
+
+        attrib = {}
+        for e in [ee for ee in self._graph.edges if ee[0]==asn or ee[1]==asn ]:
+            if from_id[e][asn] == if_id:
+                attrib['latitude'] = lat[e]
+                attrib['longitude'] = long[e]
+                break
+        return attrib
 
     def getName(self) -> str:
         """!
