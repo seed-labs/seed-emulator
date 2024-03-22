@@ -20,7 +20,7 @@ class SeedEmuTestCase(ut.TestCase):
     docker_compose_version:int
     
     @classmethod
-    def setUpClass(cls) -> None:
+    def setUpClass(cls, testLogOverwrite:bool=False) -> None:
         '''!
         @brief A classmethod to construce the some thing before 
         this test case is started. For this test case, it will create 
@@ -33,18 +33,20 @@ class SeedEmuTestCase(ut.TestCase):
         cls.output_dir = os.path.join(cls.emulator_code_dir, "output")
         cls.emulator_script_name = "test-emulator.py"
         cls.test_log = "test_log"
+        cls.test_log_overwrite = testLogOverwrite
 
         cls.client = docker.from_env()
         cls.container_count_before_up_container = len(cls.client.containers.list())
 
         os.chdir(cls.init_dir)
-        cls.createDirectory(cls.test_log)
+        cls.createDirectory(cls.test_log, cls.test_log_overwrite)
         cls.printLog("==============================")
         cls.printLog("{} Start".format(sys.modules[cls.__module__].__name__))
         cls.printLog("==============================")
 
         # if system is using a docker-compose version 2, test is done with version2.
-        result = subprocess.run(["docker", "compose"])
+        with open(os.devnull, 'w') as f:
+            result = subprocess.run(["docker", "compose"], stdout=f)
         if result.returncode == 0:
             cls.docker_compose_version = 2
         else:

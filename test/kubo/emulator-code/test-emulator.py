@@ -11,13 +11,9 @@ emu = emu = Makers.makeEmulatorBaseWith5StubASAndHosts(2)
 
 #############################
 ipfs:KuboService = KuboService()
-# ipfs.install('kubonode0')
-# emu.addBinding(Binding('kubonode0', filter = Filter(asn = 151)))
-# emu.getBindingFor('kubonode0').setDisplayName('Kubo Peer 0')
 
 numHosts:int = 2
 i:int = 0
-bootnodes = []
 
 for asNum in range(150, 155):
     try:
@@ -31,9 +27,7 @@ for asNum in range(150, 155):
             cur = ipfs.install(vnode)
             if i % 5 == 0:
                 cur.setBootNode(True)
-                # cur.setConfig('API.HTTPHeaders', {"x-test-header": ["Test"]})
                 displayName += 'Boot'
-                bootnodes.append(vnode)
             else:
                 displayName += 'Peer'
             
@@ -43,13 +37,7 @@ for asNum in range(150, 155):
         
 emu.addLayer(ipfs)
 
-docker = Docker(internetMapEnabled=True, internetMapPort=8081)
-
 # Render and compile 
 OUTPUTDIR = './output'
 emu.render()
-emu.compile(docker, OUTPUTDIR, override = True)
-
-print(f'Created {i} nodes in total.')
-print(f'{len(bootnodes)} boot nodes created: {", ".join(bootnodes)}')
-print(ipfs.getBootstrapList())
+emu.compile(Docker(), OUTPUTDIR, override = True)
