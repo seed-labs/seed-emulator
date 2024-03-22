@@ -51,10 +51,15 @@ class ChainlinkServer(Server):
         if self.__eth_node_ip_address is None:
             raise Exception('RPC address not set')
         
-        self.__node.appendStartCommand(ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
-        
         self.__setConfigurationFiles()
         self.__chainlinkStartCommands()
+        self.__configureJobs()
+        self.__node.appendStartCommand('tail -f chainlink_logs.txt')
+        
+    def __configureJobs(self):
+        self.__node.appendStartCommand(ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
+        self.__node.appendStartCommand(ChainlinkFileTemplate['get_oracle_contract_address'].format(init_node_url=self.__init_node_url))
+        self.__node.appendStartCommand(ChainlinkFileTemplate['create_jobs'])
         
     def __installSoftware(self):
         """
@@ -72,7 +77,8 @@ class ChainlinkServer(Server):
         self.__node.setFile('/config.toml', config_content)
         self.__node.setFile('/secrets.toml', ChainlinkFileTemplate['secrets'])
         self.__node.setFile('/api.txt', ChainlinkFileTemplate['api'].format(username=self.__username, password=self.__password))
-        # node.setFile('/jobs/getUint256.toml', ChainlinkJobsTemplate['getUint256'])
+        self.__node.setFile('/jobs/getUint256.toml', ChainlinkJobsTemplate['getUint256'])
+        self.__node.setFile('/jobs/getBool.toml', ChainlinkJobsTemplate['getBool'])
         
     def __chainlinkStartCommands(self):
         """
@@ -81,7 +87,7 @@ class ChainlinkServer(Server):
         start_commands = """
 service postgresql restart
 su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\""
-chainlink node -config /config.toml -secrets /secrets.toml start -api /api.txt
+nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api.txt > chainlink_logs.txt 2>&1 &
 """
         self.__node.appendStartCommand(start_commands)
         

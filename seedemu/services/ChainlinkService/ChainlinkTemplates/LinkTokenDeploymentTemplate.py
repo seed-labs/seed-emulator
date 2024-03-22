@@ -9,6 +9,7 @@ import time
 from web3 import Web3
 import requests
 import json
+import os
 
 web3 = Web3(Web3.HTTPProvider("http://{rpc_url}:8545"))
 
@@ -61,6 +62,13 @@ tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
 # The contract is now deployed on the blockchain!
 print(f"Link Token Contract deployed at address: {{tx_receipt.contractAddress}}")
+
+directory = './deployed_contracts'
+
+# Check if the directory exists
+if not os.path.exists(directory):
+    # If it does not exist, create it
+    os.makedirs(directory)
 
 # Save the contract address to a file
 with open('./deployed_contracts/link_token_address.txt', 'w') as address_file:

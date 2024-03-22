@@ -36,8 +36,6 @@ ChainlinkFileTemplate['api'] = """\
 """
 
 ChainlinkFileTemplate['check_init_node'] = """\
-#!/bin/bash
-
 URL="http://{init_node_url}"
 EXPECTED_STATUS="200"
 while true; do
@@ -51,6 +49,49 @@ while true; do
         sleep 10
     fi
 done
+"""
+
+ChainlinkFileTemplate['get_oracle_contract_address'] = """\
+URL="http://{init_node_url}"
+
+ORACLE_CONTRACT=$(curl -s "$URL" | grep -oP 'Oracle Contract: \K[0-9a-zA-Z]+' | head -n 1)
+DIRECTORY="/jobs/"
+
+if [ ! -d "$DIRECTORY" ]; then
+    echo "Error: Directory does not exist."
+    exit 1
+fi
+
+find "$DIRECTORY" -type f -name '*.toml' -print0 | while IFS= read -r -d $'\0' file; do
+    sed -i "s/oracle_contract_address/$ORACLE_CONTRACT/g" "$file"
+    echo "Updated oracle contract address in $file"
+done
+
+echo "All TOML files have been updated."
+"""
+
+ChainlinkFileTemplate['create_jobs'] = """\
+chainlink admin login -f /api.txt
+DIRECTORY="/jobs/"
+
+if [ ! -d "$DIRECTORY" ]; then
+    echo "Error: Directory does not exist."
+    exit 1
+fi
+
+for toml_file in "$DIRECTORY"*.toml; do
+    if [ ! -f "$toml_file" ]; then
+        echo "No TOML files found in the directory."
+        continue
+    fi
+
+    echo "Creating Chainlink job from $toml_file..."
+    chainlink jobs create "$toml_file"
+
+    echo "Job created from $toml_file"
+done
+
+echo "All jobs have been created."
 """
 
 ChainlinkFileTemplate['get_keystore_content'] = """\
