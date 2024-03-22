@@ -231,8 +231,8 @@ do
 done
 
 # Make changes to bootstrap list:
+ipfs bootstrap rm --all &>/dev/null
 if [[ $pidcount -gt 0 ]]; then
-   ipfs bootstrap rm --all &>/dev/null
    for i in "${{!peerids[@]}}";
    do
       ip=${{bootips[$i]}}
@@ -245,8 +245,8 @@ if [[ $pidcount -gt 0 ]]; then
 #    echo "Kubo bootstrapping completed successfully!" >&2
    log "Kubo bootstrapping completed successfully!" 0
 else
-#    echo "No peer IDs found, no changes made." >&2
-   log "No peer IDs found, no changes made." 3
+#    echo "No peer IDs found, no new nodes added." >&2
+   log "No peer IDs found, no new nodes added." 3
 fi
 
 # Restart IPFS:

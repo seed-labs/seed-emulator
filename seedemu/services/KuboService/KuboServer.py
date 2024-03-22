@@ -6,6 +6,7 @@ from typing_extensions import Self
 import json, re
 
 DEFAULT_KUBO_VERSION = 'v0.27.0'
+KUBO_LABEL_META = 'kubo.{key}'
 
 class KuboServer(Server):
     """
@@ -47,6 +48,8 @@ class KuboServer(Server):
         """
         
         node.appendClassName('KuboService')
+        node.setLabel(KUBO_LABEL_META.format(key='boot_node'), self._is_bootnode)
+        node.setLabel(KUBO_LABEL_META.format(key='version'), self._version)
         
         # Download and install Kubo
         node.addBuildCommand(f'mkdir {service._tmp_dir}/')
