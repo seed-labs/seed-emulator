@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 from seedemu.core import Emulator, Binding, Filter, Action
+from seedemu.layers import Global
 from seedemu.services import BotnetService, BotnetClientService, DomainNameService, DomainNameCachingService
 from seedemu.compiler import Docker
 
@@ -46,7 +47,8 @@ ldns.install('global-dns')
 emu.addBinding(Binding('global-dns', filter = Filter(nodeName = 'gdns', ip = '10.153.0.53'), action = Action.NEW))
 
 # mini dns infra: step 4: make everyone use the said recursive server
-emu.getLayer('Base').setNameServers(['10.153.0.53'])
+world = Global()
+world.apply(lambda node: ldns.setNameServers(node, ['10.153.0.53']))
 
 # create and bind bot controller
 bot.install('bot_controller')
@@ -61,6 +63,7 @@ for asn in [151, 152, 153, 154, 160]:
 emu.addLayer(bot)
 emu.addLayer(botClient)
 emu.addLayer(dns)
+emu.addLayer(world)
 emu.addLayer(ldns)
 emu.render()
 

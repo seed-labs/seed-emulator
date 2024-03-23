@@ -7,12 +7,14 @@ for i in range(0, 4):
     ###############################################################################
     emu     = Emulator()
     base    = Base()
+    world   = Global()
     routing = Routing()
     ebgp    = Ebgp()
     ibgp    = Ibgp()
     ospf    = Ospf()
     web     = WebService()
     dhcp    = DHCPService()
+    ldns    = DomainNameCachingService()
     ovpn    = OpenVpnRemoteAccessProvider()
 
     A=3*i
@@ -99,7 +101,7 @@ for i in range(0, 4):
     ebgp.addPrivatePeerings(104+A, [52+C], [174+D], PeerRelationship.Provider)
 
     ###############################################################################
-    base.setNameServers(['10.153.0.53'])
+    world.apply(lambda node: ldns.setNameServers(node, ['10.153.0.53']))
 
     # Add layers to the emulator
     emu.addLayer(base)
@@ -108,6 +110,8 @@ for i in range(0, 4):
     emu.addLayer(ibgp)
     emu.addLayer(ospf)
     emu.addLayer(web)
+    emu.addLayer(world)
+    emu.addLayer(ldns)
     emu.addLayer(dhcp)
 
     # Save it to a component file, so it can be used by other emulators

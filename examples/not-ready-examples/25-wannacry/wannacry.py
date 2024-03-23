@@ -7,8 +7,10 @@ from Lib.TorService import *
 from seedemu.core.Emulator import *
 from seedemu.services.DomainNameService import *
 from seedemu.services.DomainNameCachingService import *
-from seedemu.core.Binding import Action, Filter, Binding
+from seedemu.core.Binding import Action, Binding
+from seedemu.core.Filter import Filter
 from seedemu.layers.Base import Base
+from seedemu.layers.Global import Global
 from seedemu.core.Node import *
 from seedemu.compiler.Docker import *
 import random
@@ -129,9 +131,10 @@ as153.createHost('local-dns').joinNetwork('net0', address = '10.153.0.53')
 emu.addBinding(Binding('global-dns', filter=Filter(asn=153, nodeName='local-dns')))
 
 # Add 10.153.0.53 as the local DNS server for all the other nodes
-base.setNameServers(['10.153.0.53'])
+world = Global()
+world.apply(lambda node: ldns.setNameServers(node, ['10.153.0.53']))
 
-
+emu.addLayer(world)
 emu.addLayer(ldns)
 emu.addLayer(dns)
 emu.addLayer(tor)

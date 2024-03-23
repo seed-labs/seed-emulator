@@ -1,4 +1,5 @@
 from .Base import Base
+from .Global import Global
 from .Routing import Routing, Router, RealWorldRouter
 from .Ebgp import Ebgp, PeerRelationship
 from .Ospf import Ospf

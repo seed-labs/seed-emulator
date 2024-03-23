@@ -14,7 +14,8 @@ from .Configurable import Configurable
 from .Hook import Hook
 from .Layer import Layer
 from .Service import Server, Service
-from .Binding import Binding, Filter, Action
+from .Binding import Binding, Action
+from .Filter import Filter
 from .Component import Component
 from .RemoteAccessProvider import RemoteAccessProvider
 from .Compiler import Compiler

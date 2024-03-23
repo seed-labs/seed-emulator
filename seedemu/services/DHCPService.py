@@ -115,10 +115,16 @@ class DHCPServer(Server):
         ip_start += "." + ip_address_start
         ip_end += "." + ip_address_end
 
-        nameServers:list = self.__node.getNameServers()
+        # TODO: clean it up after removing getNameServers from Node, Base, ASN.
+        nameServers:list = self.__node.getNameServers()        
 
         if len(nameServers) > 0:
             self.__name_servers =  DHCPServiceFileTemplates['dhcpd_conf_dns'].format(name_servers = ", ".join(nameServers))       
+
+        nameServers2: list = self.__node.getAttribute('name_servers')
+
+        if nameServers2 and len(nameServers2) > 0:
+            self.__name_servers =  DHCPServiceFileTemplates['dhcpd_conf_dns'].format(name_servers = ", ".join(nameServers2))
 
         node.setFile('/etc/default/isc-dhcp-server', DHCPServiceFileTemplates['isc_dhcp_server_conf'].format(iface=iface_name))
         node.setFile('/etc/dhcp/dhcpd.conf', DHCPServiceFileTemplates['dhcpd_conf'].format(

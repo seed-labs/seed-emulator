@@ -46,6 +46,9 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
     def setNameServers(self, servers: List[str]) -> AutonomousSystem:
         """!
+        @deprecated to be removed in future version. use
+        world.apply(lambda node: dns.setNameServers(node, ["1.14.5.14"]), Filter(asn=1)) instead.
+
         @brief set recursive name servers to use on nodes in this AS. Overwrites
         emulator-level settings.
 
@@ -61,6 +64,8 @@ class AutonomousSystem(Printable, Graphable, Configurable):
 
     def getNameServers(self) -> List[str]:
         """!
+        @deprecated to be removed in future version.
+
         @brief get configured recursive name servers for nodes in this AS.
 
         @returns list of IP addresses of recursive name servers
