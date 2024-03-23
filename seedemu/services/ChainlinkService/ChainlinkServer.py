@@ -16,14 +16,20 @@ class ChainlinkServer(Server):
     """
     __node: Node
     __emulator: Emulator
-    __eth_node_ip_address: str
-    __vnode_name: str = None
+    __rpc_url: str
+    __rpc_vnode_name: str = None
     __username: str = "seed@seed.com"
     __password: str = "Seed@emulator123"
-    __database_node_ip: str
-    __database_username: str
-    __database_password: str
+    __init_node_name: str = None
     __init_node_url: str
+    __flask_server_port: int = 5000
+    __faucet_node_url: str
+    __faucet_node_name: str = None
+    __faucet_node_port: int
+    __chain_id: int = 1337
+    __rpc_ws_port: int = 8546
+    __rpc_port: int = 8545
+    
     
     def __init__(self):
         """
@@ -45,21 +51,30 @@ class ChainlinkServer(Server):
         """
         self.__installSoftware()
         
-        if self.__vnode_name is not None:
-            self.__getIPbyEthNodeName(self.__vnode_name)
+        if self.__rpc_vnode_name is not None:
+            self.__rpc_url = self.__getIPbyEthNodeName(self.__rpc_vnode_name)
         
-        if self.__eth_node_ip_address is None:
+        if self.__rpc_url is None:
             raise Exception('RPC address not set')
+        
+        if self.__init_node_name is not None:
+            self.__init_node_url = self.__getIPbyEthNodeName(self.__init_node_name)
+            
+        if self.__init_node_url is None:
+            raise Exception('Init node url address not set')
+        
+        if self.__faucet_node_name is not None:
+            self.__faucet_node_url = self.__getIPbyEthNodeName(self.__faucet_node_name)
+        
+        if self.__faucet_node_url is None:
+            raise Exception('Faucet node url address not set')
         
         self.__setConfigurationFiles()
         self.__chainlinkStartCommands()
-        self.__configureJobs()
-        self.__node.appendStartCommand('tail -f chainlink_logs.txt')
-        
-    def __configureJobs(self):
-        self.__node.appendStartCommand(ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
-        self.__node.appendStartCommand(ChainlinkFileTemplate['get_oracle_contract_address'].format(init_node_url=self.__init_node_url))
+        self.__node.appendStartCommand(ChainlinkFileTemplate['send_flask_request'].format(init_node_url=self.__init_node_url, flask_server_port=self.__flask_server_port))
         self.__node.appendStartCommand(ChainlinkFileTemplate['create_jobs'])
+        self.__node.appendStartCommand(ChainlinkFileTemplate['send_get_eth_request'].format(faucet_server_url=self.__faucet_node_url, faucet_server_port=self.__faucet_node_port))
+        self.__node.appendStartCommand('tail -f chainlink_logs.txt')
         
     def __installSoftware(self):
         """
@@ -73,7 +88,7 @@ class ChainlinkServer(Server):
         """
         @brief Set configuration files.
         """
-        config_content = ChainlinkFileTemplate['config'].format(ip_address=self.__eth_node_ip_address)
+        config_content = ChainlinkFileTemplate['config'].format(rpc_url=self.__rpc_url, chain_id=self.__chain_id, rpc_ws_port=self.__rpc_ws_port, rpc_port=self.__rpc_port)
         self.__node.setFile('/config.toml', config_content)
         self.__node.setFile('/secrets.toml', ChainlinkFileTemplate['secrets'])
         self.__node.setFile('/api.txt', ChainlinkFileTemplate['api'].format(username=self.__username, password=self.__password))
@@ -91,11 +106,11 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
 """
         self.__node.appendStartCommand(start_commands)
         
-    def setInitNodeUrl(self, url: str):
+    def setInitNodeIP(self, init_node_name: str):
         """
         @brief Set the chainlink init node
         """
-        self.__init_node_url = url
+        self.__init_node_name = init_node_name
                 
     def setRPCbyUrl(self, address: str):
         """
@@ -103,7 +118,7 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
 
         @param address The RPC address or hostname for the chainlink node
         """
-        self.__eth_node_ip_address = address
+        self.__rpc_url = address
         
     def setRPCbyEthNodeName(self, vnode:str):
         """
@@ -111,7 +126,7 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
 
         @param vnode The name of the ethereum node
         """
-        self.__vnode_name=vnode
+        self.__rpc_vnode_name=vnode
     
     def setUsernameAndPassword(self, username: str, password: str):
         """
@@ -141,21 +156,31 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         """
         return 16 <= len(password) <= 50
     
-    def setDatabaseNode(self, ip: str, username: str, password: str):
+    def setFaucetUrl(self, faucet_node_url: str):
         """
-        @brief Set the database node.
+        Set the faucet node for the Chainlink node API.
+
+        @param faucet_node_url: The url of the faucet node.
+        @param faucet_node_port: The port number of the faucet node.
         """
-        # Set the database node ip, username and password
-        self.__database_node_ip = ip
-        self.__database_username = username
-        self.__database_password = password
+        self.__faucet_node_url = faucet_node_url
     
-    def __getFaucet(self):
-        # Get Faucet address from the Database Node using database query
-        self.__node.appendStartCommand()
-        self.__node.appendStartCommand("chainlink admin login -f /api.txt")
-        self.__node.appendStartCommand("chainlink keys eth create > /tmp/eth_key")
+    def setFaucetPort(self, faucet_node_port: int):
+        """
+        Set the faucet port for the Chainlink node API.
+
+        @param faucet_node_port: The port number of the faucet node.
+        """
+        self.__faucet_node_port = faucet_node_port
         
+    def setFaucetNodeName(self, faucet_node_name: str):
+        """
+        Set the faucet node for the Chainlink node API.
+
+        @param faucet_node_name: The name of the faucet node.
+        """
+        self.__faucet_node_name = faucet_node_name
+    
         
     def __getIPbyEthNodeName(self, vnode:str):
         """
@@ -172,7 +197,7 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
             if net.getType() == NetworkType.Local:
                 address = iface.getAddress()
                 break
-        self.__eth_node_ip_address=address
+        return address
           
     def print(self, indent: int) -> str:
         out = ' ' * indent

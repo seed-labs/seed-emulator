@@ -19,16 +19,15 @@ class ChainlinkInitializerServer(Server):
     __owner: str
     __rpcURL: str
     __privateKey: str
-    __vnode_name: str = None
-    __username: str = "seed@seed.com"
-    __password: str = "Seed@emulator123"
+    __chain_id: int = 1337
+    __rpc_port: int = 8545
+    __number_of_oracle_contracts: int = 1
     
     def __init__(self):
         """
         @brief ChainlinkServer Constructor.
         """
         super().__init__()
-        # self._base_system = BaseSystem.SEEDEMU_CHAINLINK
 
     def configure(self, node: Node, emulator: Emulator):
         """
@@ -41,30 +40,12 @@ class ChainlinkInitializerServer(Server):
         """
         @brief Install the service.
         """
-        # print(self.__vnode_name)
-        # if self.__vnode_name is not None:
-        #     self.getIPbyEthNodeName(self.__vnode_name)
-        
-        # if self.__rpcURL is None:
-        #     raise Exception('RPC address not set')
-        
-        # Add software dependency
-        # ChainlinkServerCommands().installSoftware(node)
         self.__installInitSoftware()
-        # Set configuration files
-        # ChainlinkServerCommands().setConfigurationFiles(node, self.__rpcURL, self.__username, self.__password)
-                
-        # if self.__deploymentType == DeploymentType.CURL:
-        #     # Deploy the contracts using curl
-        #     deployThroughCURL(self.owner)
         if self.__deploymentType == "web3":
             # Deploy the contracts using web3
             self.__deployThroughWeb3()
             
         self.__webServer()
-        
-        # After the contracts are deployed start the chainlink node
-        # ChainlinkServerCommands().chainlinkStartCommands(node)
     
     def __installInitSoftware(self):
         """
@@ -114,34 +95,14 @@ class ChainlinkInitializerServer(Server):
         @param vnode The name of the ethereum node
         """
         self.__vnode_name=vnode
-    
-    def setUsernameAndPassword(self, username: str, password: str):
-        """
-        Set the username and password for the Chainlink node API after validating them.
-
-        @param username: The username for the Chainlink node API.
-        @param password: The password for the Chainlink node API.
-        """
-        if not self.__validate_username(username):
-            raise ValueError("The username must be a valid email address.")
-        if not self.__validate_password(password):
-            raise ValueError("The password must be between 16 and 50 characters in length.")
-
-        self.__username = username
-        self.__password = password
         
-    def __validate_username(self, username: str) -> bool:
+    def setNumberOfOracleContracts(self, number_of_contracts: int):
         """
-        Check if the username is a valid email address.
+        @brief Set the number of oracle contracts.
+        
+        @param number_of_contracts The number of oracle contracts
         """
-        pattern = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
-        return re.fullmatch(pattern, username) is not None
-    
-    def __validate_password(self, password: str) -> bool:
-        """
-        Check if the password length is between 16 and 50 characters.
-        """
-        return 16 <= len(password) <= 50
+        self.__number_of_oracle_contracts = number_of_contracts
         
     def getIPbyEthNodeName(self, vnode:str):
         """
@@ -165,27 +126,64 @@ class ChainlinkInitializerServer(Server):
         @brief Deploy the contracts using web3.
         """
         # Deploy the contracts using web3
-        self.__node.setFile('/contracts/deploy_linktoken_contract.py', LinkTokenDeploymentTemplate['link_token_contract'].format(rpc_url = self.__rpcURL, private_key = self.__privateKey))
+        self.__node.setFile('/contracts/deploy_linktoken_contract.py', LinkTokenDeploymentTemplate['link_token_contract'].format(rpc_url = self.__rpcURL, private_key = self.__privateKey, rpc_port = self.__rpc_port))
         self.__node.setFile('/contracts/link_token.abi', LinkTokenDeploymentTemplate['link_token_abi'])
         self.__node.setFile('/contracts/link_token.bin', LinkTokenDeploymentTemplate['link_token_bin'])
         self.__node.appendStartCommand(f'python3 ./contracts/deploy_linktoken_contract.py')
         self.__node.appendStartCommand('echo "LinkToken contract deployed"')
-        self.__node.setFile('/contracts/deploy_oracle_contract.py', OracleContractDeploymentTemplate['oracle_contract_deploy'].format(rpc_url = self.__rpcURL, private_key = self.__privateKey, owner_address = self.__owner))
+        self.__node.setFile('/contracts/deploy_oracle_contract.py', OracleContractDeploymentTemplate['oracle_contract_deploy'].format(rpc_url = self.__rpcURL, private_key = self.__privateKey, owner_address = self.__owner, rpc_port = self.__rpc_port, number_of_contracts=self.__number_of_oracle_contracts))
         self.__node.setFile('/contracts/oracle_contract.abi', OracleContractDeploymentTemplate['oracle_contract_abi'])
         self.__node.setFile('/contracts/oracle_contract.bin', OracleContractDeploymentTemplate['oracle_contract_bin'])
         self.__node.appendStartCommand(f'python3 ./contracts/deploy_oracle_contract.py')
         self.__node.appendStartCommand('echo "Oracle contract deployed"')
         
     def __webServer(self):
-        self.__node.appendStartCommand('oracle_contract_address=$(cat /deployed_contracts/oracle_contract_address.txt)')
-        self.__node.appendStartCommand('link_token_address=$(cat /deployed_contracts/link_token_address.txt)')
+        # self.__node.appendStartCommand('oracle_contract_address=$(cat /deployed_contracts/oracle_contract_address.txt)')
+        # self.__node.appendStartCommand('link_token_address=$(cat /deployed_contracts/link_token_address.txt)')
+        # self.__node.addSoftware('nginx-light')
+        # self.__node.addBuildCommand('pip3 install Flask')
+        # self.__node.setFile("/flask_app.py", ChainlinkFileTemplate['flask_app'].format(rpc_url=self.__rpcURL, private_key=self.__privateKey, chain_id=self.__chain_id, rpc_port=self.__rpc_port))
+        # self.__node.appendStartCommand('python3 /flask_app.py &')
+        # self.__node.appendStartCommand("oracle_addresses=$(cat /deployed_contracts/oracle_contract_address.txt)")
+        # self.__node.appendStartCommand("formatted_addresses=''; IFS=$'\\n'; for address in $oracle_addresses; do formatted_addresses+=\"<h1>Oracle Contracts: $address</h1><br>\"; done")
+        # self.__node.setFile('/var/www/html/index_template.html', '<h1>Oracle Contract: {{oracleContractAddress}}</h1><h1>Link Token Contract: {{linkTokenAddress}}</h1>')
+        # self.__node.appendStartCommand("cp /var/www/html/index_template.html /var/www/html/index.html")  # Copy template to the actual file
+        # self.__node.appendStartCommand("sed -i 's|{{formatted_addresses}}|'$formatted_addresses'|g' /var/www/html/index.html")
+        # self.__node.appendStartCommand("sed -i 's|{{link_token_address}}|'$link_token_address'|g' /var/www/html/index.html")
+        # self.__node.appendStartCommand('sed -e "s/{{oracleContractAddress}}/${oracle_contract_address}/g" -e "s/{{linkTokenAddress}}/${link_token_address}/g" /var/www/html/index_template.html > /var/www/html/index.html')
+        # self.__node.setFile('/etc/nginx/sites-available/default', ChainlinkFileTemplate['nginx_site'].format(port=80))
+        # self.__node.appendStartCommand('service nginx start')
+        self.__node.appendStartCommand('export link_token_address=$(cat /deployed_contracts/link_token_address.txt)')
+
         self.__node.addSoftware('nginx-light')
-        self.__node.setFile('/var/www/html/index_template.html', '<h1>Oracle Contract: {{oracleContractAddress}}</h1><h1>Link Token Contract: {{linkTokenAddress}}</h1>')
-        self.__node.appendStartCommand('sed -e "s/{{oracleContractAddress}}/${oracle_contract_address}/g" -e "s/{{linkTokenAddress}}/${link_token_address}/g" /var/www/html/index_template.html > /var/www/html/index.html')
-        self.__node.setFile('/etc/nginx/sites-available/default', WebServerFileTemplates['nginx_site'].format(port=80))
-        self.__node.appendStartCommand('service nginx start')
+        self.__node.addBuildCommand('pip3 install Flask')
+
+        self.__node.setFile("/flask_app.py", ChainlinkFileTemplate['flask_app'].format(
+            rpc_url=self.__rpcURL, 
+            private_key=self.__privateKey, 
+            chain_id=self.__chain_id, 
+            rpc_port=self.__rpc_port))
+        self.__node.appendStartCommand('python3 /flask_app.py &')
+
+        self.__node.appendStartCommand('''export oracle_addresses=$(cat /deployed_contracts/oracle_contract_address.txt)
+        formatted_addresses="";
+        IFS=$'\\n'; 
+        for address in $oracle_addresses; do 
+            formatted_addresses+="<h1>Oracle Contract: $address</h1><br>"; 
+        done''')
+
+        self.__node.setFile('/var/www/html/index_template.html', 
+                            '<div>{{formatted_addresses}}</div><h1>Link Token Contract: {{linkTokenAddress}}</h1>')
+
+        self.__node.appendStartCommand('''cp /var/www/html/index_template.html /var/www/html/index.html
+        sed -i 's|{{formatted_addresses}}|'"$formatted_addresses"'|g' /var/www/html/index.html
+        sed -i 's|{{linkTokenAddress}}|'"$link_token_address"'|g' /var/www/html/index.html''')
+
+        self.__node.setFile('/etc/nginx/sites-available/default', ChainlinkFileTemplate['nginx_site'].format(port=80))
+        self.__node.appendStartCommand('service nginx restart')
+
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'Chainlink server object.\n'
+        out += 'Chainlink Initilizer server object.\n'
         return out

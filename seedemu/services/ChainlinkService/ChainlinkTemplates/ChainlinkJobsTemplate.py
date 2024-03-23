@@ -33,6 +33,38 @@ observationSource = """
 '''
 
 
+ChainlinkJobsTemplate['getUint256Uint256'] = '''\
+type = "directrequest"
+schemaVersion = 1
+name = "Get > Uint256,Uint256"
+maxTaskDuration = "0s"
+externalJobID = "437d298d-210c-4fff-935d-cedb97ea8011"
+contractAddress = "oracle_contract_address"
+minIncomingConfirmations = 0
+minContractPaymentLinkJuels = 1360000000000000000
+observationSource = """
+    decode_log   [type="ethabidecodelog"
+                  abi="OracleRequest(bytes32 indexed specId, address requester, bytes32 requestId, uint256 payment, address callbackAddr, bytes4 callbackFunctionId, uint256 cancelExpiration, uint256 dataVersion, bytes data)"
+                  data="$(jobRun.logData)"
+                  topics="$(jobRun.logTopics)"]
+
+    decode_cbor     [type="cborparse" data="$(decode_log.data)"]
+    fetch           [type="http" method=GET url="$(decode_cbor.get)"]
+    parseVal1       [type="jsonparse" path="$(decode_cbor.path1)" data="$(fetch)"]
+    parseVal2       [type="jsonparse" path="$(decode_cbor.path2)" data="$(fetch)"]
+    multiplyVal1   [type="multiply" input="$(parseVal1)" times="$(decode_cbor.multiply)"]
+    multiplyVal2   [type="multiply" input="$(parseVal2)" times="$(decode_cbor.multiply)"]
+    encode_data     [type="ethabiencode" abi="(bytes32 requestId, uint256 val1, uint256 val2)" data="{ \\\\"requestId\\\\": $(decode_log.requestId), \\\\"val1\\\\": $(multiplyVal1), \\\\"val2\\\\": $(multiplyVal2)}"]
+    encode_tx       [type="ethabiencode"
+                      abi="fulfillOracleRequest2(bytes32 requestId, uint256 payment, address callbackAddress, bytes4 callbackFunctionId, uint256 expiration, bytes calldata data)"
+                      data="{\\\\"requestId\\\\": $(decode_log.requestId), \\\\"payment\\\\": $(decode_log.payment), \\\\"callbackAddress\\\\": $(decode_log.callbackAddr), \\\\"callbackFunctionId\\\\": $(decode_log.callbackFunctionId), \\\\"expiration\\\\": $(decode_log.cancelExpiration), \\\\"data\\\\": $(encode_data)}"
+                    ]
+    submit_tx    [type="ethtx" to="oracle_contract_address" data="$(encode_tx)"]
+
+    decode_log -> decode_cbor -> fetch -> parseVal1 -> multiplyVal1 -> parseVal2 -> multiplyVal2 -> encode_data -> encode_tx -> submit_tx
+"""
+'''
+
 ChainlinkJobsTemplate['getUint256'] = '''\
 type = "directrequest"
 schemaVersion = 1

@@ -6,16 +6,16 @@ OracleContractDeploymentTemplate['oracle_contract_deploy']="""\
 #!/bin/env python3
 
 import time
-from web3 import Web3
-import requests
-import json
+import logging
 import os
+from web3 import Web3, HTTPProvider
 
+# Configuration
+owner_address = "{owner_address}"
+number_of_contracts = {number_of_contracts}
+rpc_url = "http://{rpc_url}:{rpc_port}"
 private_key = "{private_key}"
-
-web3 = Web3(Web3.HTTPProvider(f"http://{rpc_url}:8545"))  # Connect to the Ethereum node via RPC
-
-# Load the Link Token address from file
+contract_folder = './contracts/'
 link_address_file_path = './deployed_contracts/link_token_address.txt'
 if os.path.exists(link_address_file_path):
     with open(link_address_file_path, 'r') as file:
@@ -26,65 +26,55 @@ if os.path.exists(link_address_file_path):
 else:
     print("Link Token address file does not exist.")
     exit()
-
+    
 link_address = Web3.toChecksumAddress(link_address)
-owner_address = Web3.toChecksumAddress({owner_address})
+    
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Load the contract's ABI and bytecode
-with open('./contracts/oracle_contract.abi', 'r') as abi_file:
+# Initialize web3
+web3 = Web3(HTTPProvider(rpc_url))
+if not web3.isConnected():
+    logging.error("Failed to connect to Ethereum node.")
+    exit()
+
+# Convert addresses to checksum format
+owner_address = web3.toChecksumAddress(owner_address)
+
+# Load contract ABI and bytecode
+with open(os.path.join(contract_folder, 'oracle_contract.abi'), 'r') as abi_file:
     contract_abi = abi_file.read()
-with open('./contracts/oracle_contract.bin', 'r') as bin_file:
+with open(os.path.join(contract_folder, 'oracle_contract.bin'), 'r') as bin_file:
     contract_bytecode = bin_file.read().strip()
 
-connected = False
-while not connected:
-    try:
-        # Check if the node is connected
-        if web3.isConnected():
-            print("Connected to Ethereum node.")
-            connected = True
-        else:
-            raise Exception("Unable to connect to the Ethereum node.")
-    except Exception as e:
-        print(f"Connection failed: {{e}}")
-        print("Retrying in 20 seconds...")
-        time.sleep(20)  # Wait for 20 seconds before retrying
-
-# proceed if connected
-if connected:
-    # Instantiate the contract with ABI and bytecode
-    OracleContract = web3.eth.contract(abi=contract_abi, bytecode=contract_bytecode)
-
-# Account info for deploying the contract
+# Start deployment
 account = web3.eth.account.from_key(private_key)
-nonce = web3.eth.get_transaction_count(account.address)
+start_nonce = web3.eth.getTransactionCount(account.address)
+gas_price = web3.eth.gasPrice
 
-# Modify the gas price for successful deployment
-modified_gas_price = web3.toWei('50', 'gwei')
+for i in range(number_of_contracts):
+    try:
+        nonce = start_nonce + i
+        OracleContract = web3.eth.contract(abi=contract_abi, bytecode=contract_bytecode)
+        transaction = OracleContract.constructor(link_address, owner_address).buildTransaction({{
+            'from': account.address,
+            'nonce': nonce,
+            'gas': 4000000,
+            'gasPrice': gas_price
+        }})
+        signed_txn = web3.eth.account.sign_transaction(transaction, private_key)
+        tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+        logging.info(f"Sent contract {{i+1}}, TX Hash: {{tx_hash.hex()}}")
 
-# Prepare the deployment transaction with constructor arguments
-transaction = OracleContract.constructor(link_address, owner_address).buildTransaction({{
-    'from': account.address,
-    'nonce': nonce,
-    'gas': 4000000,
-    'gasPrice': modified_gas_price
-}})
+        tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=240)
+        logging.info(f"Contract {{i+1}} deployed at: {{tx_receipt.contractAddress}}")
 
-# Sign the transaction
-signed_txn = web3.eth.account.sign_transaction(transaction, private_key)
+        with open('./deployed_contracts/oracle_contract_address.txt', 'a') as address_file:
+            address_file.write(f"{{tx_receipt.contractAddress}}\\n")
 
-# Send the transaction
-tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+    except Exception as e:
+        logging.error(f"An error occurred during contract deployment: {{e}}")
 
-# Wait for the transaction to be mined
-tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-
-# The contract is now deployed on the blockchain!
-print(f"OracleContract deployed at address: {{tx_receipt.contractAddress}}")
-
-# Save the contract address to a file
-with open('./deployed_contracts/oracle_contract_address.txt', 'w') as address_file:
-    address_file.write(tx_receipt.contractAddress)
+logging.info("Deployment script completed.")
 """
 
 OracleContractDeploymentTemplate['oracle_contract_abi']="""\

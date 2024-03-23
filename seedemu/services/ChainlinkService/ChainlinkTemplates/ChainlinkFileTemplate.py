@@ -15,12 +15,12 @@ SecureCookies = false
 HTTPSPort = 0
 
 [[EVM]]
-ChainID = '1337'
+ChainID = '{chain_id}'
 
 [[EVM.Nodes]]
 Name = 'SEED Emulator'
-WSURL = 'ws://{ip_address}:8546'
-HTTPURL = 'http://{ip_address}:8545'
+WSURL = 'ws://{rpc_url}:{rpc_ws_port}'
+HTTPURL = 'http://{rpc_url}:{rpc_port}'
 """
 
 ChainlinkFileTemplate['secrets'] = """\
@@ -33,41 +33,6 @@ URL = 'postgresql://postgres:mysecretpassword@localhost:5432/postgres?sslmode=di
 ChainlinkFileTemplate['api'] = """\
 {username}
 {password}
-"""
-
-ChainlinkFileTemplate['check_init_node'] = """\
-URL="http://{init_node_url}"
-EXPECTED_STATUS="200"
-while true; do
-    STATUS=$(curl -Is "$URL" | head -n 1 | awk '{{print $2}}')
-    
-    if [ "$STATUS" == "$EXPECTED_STATUS" ]; then
-        echo "Contracts deployed successfully!"
-        break
-    else
-        echo "Waiting for the contracts to be deployed..."
-        sleep 10
-    fi
-done
-"""
-
-ChainlinkFileTemplate['get_oracle_contract_address'] = """\
-URL="http://{init_node_url}"
-
-ORACLE_CONTRACT=$(curl -s "$URL" | grep -oP 'Oracle Contract: \K[0-9a-zA-Z]+' | head -n 1)
-DIRECTORY="/jobs/"
-
-if [ ! -d "$DIRECTORY" ]; then
-    echo "Error: Directory does not exist."
-    exit 1
-fi
-
-find "$DIRECTORY" -type f -name '*.toml' -print0 | while IFS= read -r -d $'\0' file; do
-    sed -i "s/oracle_contract_address/$ORACLE_CONTRACT/g" "$file"
-    echo "Updated oracle contract address in $file"
-done
-
-echo "All TOML files have been updated."
 """
 
 ChainlinkFileTemplate['create_jobs'] = """\
@@ -94,79 +59,197 @@ done
 echo "All jobs have been created."
 """
 
-ChainlinkFileTemplate['get_keystore_content'] = """\
-import subprocess
-import os
+ChainlinkFileTemplate['nginx_site'] = """\
+server {{
+    listen {port};
+    root /var/www/html;
+    index index.html;
+    server_name _;
 
-file_path = '/tmp/eth_key'
-output_file_name = 'eth_keystore.json'
-output_dir = '/tmp'
-output_path = os.path.join(output_dir, output_file_name)
+    location / {{
+        try_files $uri $uri/ @proxy_to_app;
+    }}
 
-os.makedirs(output_dir, exist_ok=True)
-
-with open(file_path, 'r') as file:
-    lines = file.readlines()
-
-address = ''
-
-for line in lines:
-    if 'Address:' in line:
-        # If found, split the line by ':' and strip any whitespace or newlines
-        address = line.split(':')[1].strip()
-        break
-
-if address:
-    command = f'chainlink keys eth export {{address}} -p /tmp/pass --output {{output_path}}'
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    
-    if result.returncode == 0:
-        print(f'Keystore content saved successfully in {output_path}')
-    else:
-        print('Error executing command:', result.stderr)
-else:
-    print('Address not found in the file.')
+    location @proxy_to_app {{
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }}
+}}
 """
 
-ChainlinkFileTemplate['get_native_token_faucet'] = """\
-from web3 import Web3
-from eth_account import Account
-import json
+ChainlinkFileTemplate['flask_app'] = """\
+import queue
+import threading
+from flask import Flask, request, jsonify
+from web3 import Web3, HTTPProvider
+import time
+import logging
 
-provider_url = '{rpc_url}'  # Replace with your Ethereum node provider URL
-keystore_path = '/tmp/eth_keystore.json'
-passcode_path = '/tmp/pass'
-abi_path = '/tmp/faucet_contract_abi'  # Path to the file containing the ABI
-contract_path = '/tmp/faucet_contract'  # Path to the file containing the contract address
+app = Flask(__name__)
+authorization_queue = queue.Queue()
+used_oracle_addresses = set()
+sender_to_oracle = {{}}
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-w3 = Web3(Web3.HTTPProvider(provider_url))
 
-with open(passcode_path, 'r') as file:
-    passphrase = file.read().strip()
-with open(keystore_path) as keyfile:
-    encrypted_key = keyfile.read()
-    private_key = Account.decrypt(json.loads(encrypted_key), passphrase)
-    account = Account.from_key(private_key)
+def load_unused_oracle_contract_address():
+    with open('./deployed_contracts/oracle_contract_address.txt', 'r') as file:
+        for line in file:
+            address = line.strip()
+            if address not in used_oracle_addresses:
+                used_oracle_addresses.add(address)
+                return address
+    return None
 
-with open(contract_path, 'r') as file:
-    contract_address = file.read().strip()
+def authorize_address(queue_item, nonce):
+    web3 = queue_item['web3']
+    account = queue_item['account']
+    sender = queue_item['sender']
+    oracle_contract_address = queue_item['oracle_contract_address']
 
-with open(abi_path) as abi_file:
-    contract_abi = json.load(abi_file)
+    if not oracle_contract_address:
+        logging.error({{'status': 'error', 'message': 'No Oracle contract address provided.'}})
+        return
 
-contract = w3.eth.contract(address=contract_address, abi=contract_abi)
+    try:
+        with open('./contracts/oracle_contract.abi', 'r') as abi_file:
+            contract_abi = abi_file.read()
+        oracle_contract = web3.eth.contract(address=oracle_contract_address, abi=contract_abi)
 
-nonce = w3.eth.getTransactionCount(account.address)
-txn = contract.functions.getEth().buildTransaction({
-    'chainId': w3.eth.chain_id,
-    'gas': 2000000,
-    'gasPrice': w3.toWei('50', 'gwei'),
-    'nonce': nonce,
-})
+        txn_dict = oracle_contract.functions.setAuthorizedSenders([sender]).buildTransaction({{
+            'chainId': {chain_id},
+            'gas': 4000000,
+            'gasPrice': web3.toWei('50', 'gwei'),
+            'nonce': nonce,
+        }})
+        signed_txn = web3.eth.account.sign_transaction(txn_dict, account.privateKey)
+        txn_receipt = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+        txn_receipt = web3.eth.wait_for_transaction_receipt(txn_receipt)
+        logging.info({{'status': 'success', 'txn_receipt': str(txn_receipt), 'oracle_contract_address': oracle_contract_address, 'sender': sender}})
+    except Exception as e:
+        error_message = str(e)
+        logging.error({{'status': 'error', 'message': error_message, 'oracle_contract_address': oracle_contract_address, 'sender': sender}})        
+        if "replacement transaction underpriced" in error_message:
+            logging.info({{'status': 'retry', 'message': 'Requeuing due to underpriced transaction', 'sender': sender}})
+            authorization_queue.put(queue_item)
 
-signed_txn = w3.eth.account.sign_transaction(txn, private_key=private_key)
+def process_authorization_requests():
+    time.sleep(20)
+    while True:
+        queue_item = authorization_queue.get()
+        web3 = queue_item['web3']
+        account_address = queue_item['account'].address
+        nonce = web3.eth.getTransactionCount(account_address, 'pending')
+        authorize_address(queue_item, nonce)
+        authorization_queue.task_done()        
 
-txn_hash = w3.eth.sendRawTransaction(signed_txn.rawTransaction)
+threading.Thread(target=process_authorization_requests, daemon=True).start()
 
-print(f'Transaction hash: {txn_hash.hex()}')
+@app.route('/setAuthorizedSender', methods=['POST'])
+def set_authorized_sender():
+    data = request.json
+    sender = data.get('sender')
+    
+    if not sender:
+        return jsonify({{'status': 'error', 'message': 'Must provide sender address.'}}), 400
+    
+    try:
+        web3 = Web3(Web3.HTTPProvider(f"http://{rpc_url}:{rpc_port}"))
+        private_key = "{private_key}"
+        account = web3.eth.account.from_key(private_key)
+        oracle_contract_address = load_unused_oracle_contract_address()
+        if not oracle_contract_address:
+            return jsonify({{'status': 'error', 'message': 'No unused Oracle contract addresses available.'}}), 400
+
+        sender_to_oracle[sender] = oracle_contract_address
+
+        authorization_queue.put({{
+            'web3': web3,
+            'account': account,
+            'sender': sender,
+            'oracle_contract_address': oracle_contract_address
+        }})
+
+        return jsonify({{
+            'status': 'success',
+            'message': 'Address authorization queued.',
+            'sender': sender,
+            'oracle_contract_address': oracle_contract_address
+        }})
+    except Exception as e:
+        return jsonify({{'status': 'error', 'message': str(e)}}), 500
+
+@app.route('/getSenderOracleRelation', methods=['GET'])
+def get_sender_oracle_relation():
+    sender = request.args.get('sender')
+    if not sender:
+        return jsonify({{'status': 'error', 'message': 'Must provide sender address.'}}), 400
+
+    oracle_contract_address = sender_to_oracle.get(sender)
+    if oracle_contract_address:
+        return jsonify({{'status': 'success', 'sender': sender, 'oracle_contract_address': oracle_contract_address}})
+    else:
+        return jsonify({{'status': 'error', 'message': 'Sender address not found.'}}), 404
+
+if __name__ == '__main__':
+    authorization_thread = threading.Thread(target=process_authorization_requests)
+    authorization_thread.daemon = True
+    authorization_thread.start()
+    app.run(debug=True, host='0.0.0.0', threaded=True)
+"""
+
+
+
+ChainlinkFileTemplate['send_flask_request'] = """\
+URL="http://{init_node_url}"
+EXPECTED_STATUS="200"
+while true; do
+    STATUS=$(curl -Is "$URL" | head -n 1 | awk '{{print $2}}')
+    
+    if [ "$STATUS" == "$EXPECTED_STATUS" ]; then
+        echo "Contracts deployed successfully!"
+        break
+    else
+        echo "Waiting for the contracts to be deployed..."
+        sleep 10
+    fi
+done
+
+chainlink admin login -f /api.txt
+ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
+AUTHORIZATION_RESPONSE=$(curl -s -X POST "http://{init_node_url}:{flask_server_port}/setAuthorizedSender" \\
+     -H "Content-Type: application/json" \\
+     -d "{{\\"sender\\": \\"$ETH_ADDRESS\\"}}" | jq -r '.status')
+
+if [ "$AUTHORIZATION_RESPONSE" = "success" ]; then
+    echo "Node address successfully authorized."
+    ORACLE_RELATION_RESPONSE=$(curl -s "http://{init_node_url}:{flask_server_port}/getSenderOracleRelation?sender=$ETH_ADDRESS" | jq -r '.oracle_contract_address')
+    DIRECTORY="/jobs/"
+
+    if [ ! -d "$DIRECTORY" ]; then
+        echo "Error: Directory does not exist."
+        exit 1
+    fi
+
+    find "$DIRECTORY" -type f -name '*.toml' -print0 | while IFS= read -r -d $'\0' file; do
+        sed -i "s/oracle_contract_address/$ORACLE_RELATION_RESPONSE/g" "$file"
+        echo "Updated oracle contract address in $file"
+    done
+
+    echo "All TOML files have been updated."
+else
+    echo "Failed to authorize node address."
+fi
+"""
+
+ChainlinkFileTemplate['send_get_eth_request'] = """\
+chainlink admin login -f /api.txt
+ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
+curl -s -X POST http://{faucet_server_url}:{faucet_server_port}/getEth \\
+     -H "Content-Type: application/json" \\
+     -d "{{\\"chainlinkNodeAddress\\": \\"$ETH_ADDRESS\\"}}" > /dev/null 2>&1 &
+echo "Get Ethereum request sent to faucet server."
 """

@@ -11,7 +11,7 @@ import requests
 import json
 import os
 
-web3 = Web3(Web3.HTTPProvider("http://{rpc_url}:8545"))
+web3 = Web3(Web3.HTTPProvider("http://{rpc_url}:{rpc_port}"))
 
 private_key = "{private_key}" 
 
@@ -51,26 +51,20 @@ transaction = LinkTokenContract.constructor().buildTransaction({{
 	'gasPrice': web3.eth.gas_price
 }})
 
-# Sign the transaction
 signed_txn = web3.eth.account.sign_transaction(transaction, private_key)
 
-# Send the transaction
 tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
-# Wait for the transaction to be mined
 tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-# The contract is now deployed on the blockchain!
 print(f"Link Token Contract deployed at address: {{tx_receipt.contractAddress}}")
 
 directory = './deployed_contracts'
 
-# Check if the directory exists
 if not os.path.exists(directory):
     # If it does not exist, create it
     os.makedirs(directory)
 
-# Save the contract address to a file
 with open('./deployed_contracts/link_token_address.txt', 'w') as address_file:
 	address_file.write(tx_receipt.contractAddress)
 '''
