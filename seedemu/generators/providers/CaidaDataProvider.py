@@ -56,6 +56,7 @@ class CaidaDataProvider(DataProvider):
         Latency for staticInfoConfig.json that gets included
         in PCB static metadata extension
         """
+        assert if_id != 0
         _as = self._graph.nodes[asn]
         #for n in self._graph.neighbors(asn):
          
@@ -138,7 +139,7 @@ class CaidaDataProvider(DataProvider):
         return ixps_by_asn[asn]
 
 
-    def getInternetExchangeMembers(self, ix_id: int) -> Dict[int, str]:
+    def getInternetExchangeMembers(self, ix_id: int) -> Dict[int, str]: # add from IFID here ?! or Tuple[from_ifdi, to_if_id ]
         """!
         @brief Get internet exchange members for given IX ID.
         @param id internet exchange ID provided by getInternetExchanges.

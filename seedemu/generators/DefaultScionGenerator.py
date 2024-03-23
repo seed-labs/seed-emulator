@@ -7,12 +7,19 @@ from seedemu.layers.Scion import LinkType
 from typing import Type
 
 
-
-info_conf = """{{
+info_conf = {}
+info_conf['file'] = """{{
+{values}
+}}"""
+info_conf['link_type'] = """
+"LinkType": {{
+            {linktypes}
+}}
+"""
+info_conf['geo'] = """
     "Geo": {{
            {idgeo}
            }}
-}}
 """
 
 class BorderRouterAllocation:
@@ -167,12 +174,28 @@ class DefaultScionGenerator:
             
             cs = current_as.createControlService('cs1').joinNetwork(netname)
 
-            static_info = {'geo': []}
+            # cross connect interfaces
+            direct_if = sum( [ list( map( lambda x: x[2][0] ,l)  ) for l in self.__provider.getSCIONCrossConnects(asn).values() ] ,[] )
+            static_info = {'geo': [], 'linktype': [] }
             for _if in self.__provider.getASInterfaces(asn):
-                attr = self.__provider.getLinkAttributes(asn,_if )
-                static_info['geo'] .append( '        "{id}": {{\n            "Latitude": {lat},\n            "Longitude": {long}\n        }}'.format(id =_if, lat=attr['latitude'], long= attr['longitude'] )    )
+                attr = self.__provider.getLinkAttributes(asn,_if )            
+                if 'latitude' in attr and 'longitude' in attr:
+                    static_info['geo'] .append( '        "{id}": {{\n            "Latitude": {lat},\n            "Longitude": {long}\n        }}'.format(id =_if, lat=attr['latitude'], long= attr['longitude'] )    )
+                if _if in direct_if:
+                    # cross connected routers interface directly
+                    static_info['linktype'].append( f'"{_if}": "direct"') 
+                else:
+                    # if its no a XC cross connect this link is realized at an IXP with local routing/switching
+                    static_info['linktype'].append( f'"{_if}": "multihop"') 
 
-            cs.setFile('/etc/scion/staticInfoConfig.json', info_conf.format( idgeo=',\n'.join(static_info['geo'] ) ) )
+            values = [ ]
+            values.append( info_conf['link_type'].format( linktypes= ',\n'.join( static_info['linktype'] ) ) )
+                
+            if len( static_info['geo'] ) > 0:
+                values.append( info_conf['geo'].format( idgeo=',\n'.join(static_info['geo'] ) ) )
+            
+            
+            cs.setFile('/etc/scion/staticInfoConfig.json', info_conf['file'].format( values= ',\n'.join( values ) ) )
 
             router_alloc = self._alloc_type(current_as)      
 
