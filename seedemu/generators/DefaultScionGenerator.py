@@ -55,7 +55,7 @@ class CommonRouterForAllIF(BorderRouterAllocation):
         return self._my_as.getRouter('brd00')
     
     def getRouterForXC(self, if_ids, peer_asn: int ):
-        return self._my_as.getRouter('br00'), 'brd00'
+        return self._my_as.getRouter('brd00'), 'brd00'
 
 class DefaultScionGenerator:
     """!
@@ -212,7 +212,7 @@ class DefaultScionGenerator:
                     ifids = vv[2]                                        
 
                     router,peer_br_name = router_alloc.getRouterForXC(vv[2],peerasn)
-                    router.updatesNetwork(netname)
+                    router.updateNetwork(netname)
                     router.crossConnect(peerasn, peer_br_name, addr )
 
                         

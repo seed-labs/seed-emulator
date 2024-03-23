@@ -326,7 +326,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
                 self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
                 self.__xcs[(peername, peerasn)] = (localaddr, netname)
                 
-            if issubclass(self, Router):
+            if issubclass(self.__class__, Router):
                     self.setBorderRouter(True)
 
         if len(self.__name_servers) == 0:

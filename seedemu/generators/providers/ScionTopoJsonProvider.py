@@ -146,7 +146,7 @@ class ScionTopoJsonProvider(DataProvider):
             return value
         
     def getASInterfaces(self, asn: int) ->List[int]:
-        return map(lambda x: x[2][0],  self.getSCIONCrossConnects(asn).values() )
+        return sum( map(lambda x: [  v[2][0] for v in x ],  self.getSCIONCrossConnects(asn).values() ) , [])
 
     def getLinkAttributes(self, asn: int , if_id: int):
         assert if_id != 0
