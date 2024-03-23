@@ -219,15 +219,16 @@ def graphFromXmlTopoFileAliased(topofile: str):
                link_attr[ child.attrib['name'] ] = child.text
 
       if fromAlias not in ASif:
-         ASif[ fromAlias] = 0         
+         ASif[ fromAlias] = 1
          
       else:
-        ASif[ fromAlias ]+=1
+        ASif[ fromAlias ]+= 1
 
-      if toAlias  not in   ASif:
-         ASif[ toAlias ] = 0                  
+      if toAlias  not in ASif:
+         # '0' means 'just any' interface in SCION
+         ASif[ toAlias ] = 1                  
       else:
-         ASif[ toAlias ] +=1
+         ASif[ toAlias ] += 1
 
       if (lat,long) in locs_of_ixps:
          ixp_presences[locs_of_ixps[(lat,long)]].add( fromAlias   )
