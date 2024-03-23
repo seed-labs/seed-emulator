@@ -138,47 +138,26 @@ class ChainlinkInitializerServer(Server):
         self.__node.appendStartCommand('echo "Oracle contract deployed"')
         
     def __webServer(self):
-        # self.__node.appendStartCommand('oracle_contract_address=$(cat /deployed_contracts/oracle_contract_address.txt)')
-        # self.__node.appendStartCommand('link_token_address=$(cat /deployed_contracts/link_token_address.txt)')
-        # self.__node.addSoftware('nginx-light')
-        # self.__node.addBuildCommand('pip3 install Flask')
-        # self.__node.setFile("/flask_app.py", ChainlinkFileTemplate['flask_app'].format(rpc_url=self.__rpcURL, private_key=self.__privateKey, chain_id=self.__chain_id, rpc_port=self.__rpc_port))
-        # self.__node.appendStartCommand('python3 /flask_app.py &')
-        # self.__node.appendStartCommand("oracle_addresses=$(cat /deployed_contracts/oracle_contract_address.txt)")
-        # self.__node.appendStartCommand("formatted_addresses=''; IFS=$'\\n'; for address in $oracle_addresses; do formatted_addresses+=\"<h1>Oracle Contracts: $address</h1><br>\"; done")
-        # self.__node.setFile('/var/www/html/index_template.html', '<h1>Oracle Contract: {{oracleContractAddress}}</h1><h1>Link Token Contract: {{linkTokenAddress}}</h1>')
-        # self.__node.appendStartCommand("cp /var/www/html/index_template.html /var/www/html/index.html")  # Copy template to the actual file
-        # self.__node.appendStartCommand("sed -i 's|{{formatted_addresses}}|'$formatted_addresses'|g' /var/www/html/index.html")
-        # self.__node.appendStartCommand("sed -i 's|{{link_token_address}}|'$link_token_address'|g' /var/www/html/index.html")
-        # self.__node.appendStartCommand('sed -e "s/{{oracleContractAddress}}/${oracle_contract_address}/g" -e "s/{{linkTokenAddress}}/${link_token_address}/g" /var/www/html/index_template.html > /var/www/html/index.html')
-        # self.__node.setFile('/etc/nginx/sites-available/default', ChainlinkFileTemplate['nginx_site'].format(port=80))
-        # self.__node.appendStartCommand('service nginx start')
         self.__node.appendStartCommand('export link_token_address=$(cat /deployed_contracts/link_token_address.txt)')
-
         self.__node.addSoftware('nginx-light')
         self.__node.addBuildCommand('pip3 install Flask')
-
         self.__node.setFile("/flask_app.py", ChainlinkFileTemplate['flask_app'].format(
             rpc_url=self.__rpcURL, 
             private_key=self.__privateKey, 
             chain_id=self.__chain_id, 
             rpc_port=self.__rpc_port))
         self.__node.appendStartCommand('python3 /flask_app.py &')
-
         self.__node.appendStartCommand('''export oracle_addresses=$(cat /deployed_contracts/oracle_contract_address.txt)
         formatted_addresses="";
         IFS=$'\\n'; 
         for address in $oracle_addresses; do 
             formatted_addresses+="<h1>Oracle Contract: $address</h1><br>"; 
         done''')
-
         self.__node.setFile('/var/www/html/index_template.html', 
                             '<div>{{formatted_addresses}}</div><h1>Link Token Contract: {{linkTokenAddress}}</h1>')
-
         self.__node.appendStartCommand('''cp /var/www/html/index_template.html /var/www/html/index.html
         sed -i 's|{{formatted_addresses}}|'"$formatted_addresses"'|g' /var/www/html/index.html
         sed -i 's|{{linkTokenAddress}}|'"$link_token_address"'|g' /var/www/html/index.html''')
-
         self.__node.setFile('/etc/nginx/sites-available/default', ChainlinkFileTemplate['nginx_site'].format(port=80))
         self.__node.appendStartCommand('service nginx restart')
 
