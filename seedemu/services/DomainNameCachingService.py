@@ -139,6 +139,7 @@ class DomainNameCachingService(Service):
     """
 
     __auto_root: bool
+    __pending_set_name_servers_nodes: List[Node] = []
 
     def __init__(self, autoRoot: bool = True):
         """!
@@ -151,6 +152,7 @@ class DomainNameCachingService(Service):
         super().__init__()
         self.__auto_root = autoRoot
         self.addDependency('Base', False, False)
+        self.addDependency('Global', False, True)
         if autoRoot:
             self.addDependency('DomainNameService', False, False)
 
@@ -162,6 +164,24 @@ class DomainNameCachingService(Service):
 
     def getConflicts(self) -> List[str]:
         return ['DomainNameService']
+
+    def setNameServers(self, node: Node, servers: List[str], override: bool = False):
+        """!
+        @brief set recursive name servers to the given node.
+
+        @param node node.
+
+        @param servers list of IP addresses of recursive name servers.
+
+        @param override override the existing name servers that are set before.
+        """
+        if len(servers) == 0:
+            return
+        if node.getAttribute('name_servers') and not override:
+            return
+        node.setAttribute('name_servers', servers)
+        if node not in self.__pending_set_name_servers_nodes:
+            self.__pending_set_name_servers_nodes.append(node)
 
     def configure(self, emulator: Emulator):
         super().configure(emulator)
@@ -176,6 +196,12 @@ class DomainNameCachingService(Service):
             root_servers = root_zone.getGuleRecords()
             for (server, node) in targets:
                 server.setRootServers(root_servers)
+        
+        for node in self.__pending_set_name_servers_nodes:
+            node.insertStartCommand(0,': > /etc/resolv.conf')
+            for idx, s in enumerate(node.getAttribute('name_servers'), start=1):
+                node.insertStartCommand(idx, 'echo "nameserver {}" >> /etc/resolv.conf'.format(s))
+
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

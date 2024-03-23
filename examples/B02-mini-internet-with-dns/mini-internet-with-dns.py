@@ -6,7 +6,7 @@ from seedemu.mergers import DEFAULT_MERGERS
 from seedemu.hooks import ResolvConfHook
 from seedemu.compiler import Docker
 from seedemu.services import DomainNameService, DomainNameCachingService
-from seedemu.layers import Base
+from seedemu.layers import Base, Global
 
 emuA = Emulator()
 emuB = Emulator()
@@ -61,9 +61,13 @@ emu.addBinding(Binding('global-dns-2', filter = Filter(asn=153, nodeName="local-
 # Add 10.152.0.53 as the local DNS server for AS-160 and AS-170
 # Add 10.153.0.53 as the local DNS server for all the other nodes
 # We can also set this for individual nodes
-base.getAutonomousSystem(160).setNameServers(['10.152.0.53'])
-base.getAutonomousSystem(170).setNameServers(['10.152.0.53'])
-base.setNameServers(['10.153.0.53'])
+world = Global()
+world.apply(lambda node: ldns.setNameServers(node, ['10.152.0.53']), Filter(asn=160))
+world.apply(lambda node: ldns.setNameServers(node, ['10.152.0.53']), Filter(asn=170))
+world.apply(lambda node: ldns.setNameServers(node, ['10.153.0.53']))
+
+# Add the global layer
+emu.addLayer(world)
 
 # Add the ldns layer
 emu.addLayer(ldns)

@@ -98,16 +98,19 @@ can be done after the container starts. We have created the following
 APIs to allow users to set the local DNS server at the emulator, AS,
 and node levels. 
 
-```
+```python
+world = Global()
 # At the AS level
-base.getAutonomousSystem(160).setNameServers(['10.152.0.53'])
-base.getAutonomousSystem(170).setNameServers(['10.152.0.53'])
+world.apply(lambda node: ldns.setNameServers(node, ['10.152.0.53']), Filter(asn=160))
+world.apply(lambda node: ldns.setNameServers(node, ['10.152.0.53']), Filter(asn=170))
 
 # At the emulator level
-base.setNameServers(['10.153.0.53'])
+world.apply(lambda node: ldns.setNameServers(node, ['10.153.0.53']))
 
 # At the node level (not included in the example)
-node.setNameServers(['10.152.0.53'])
+ldns.setNameServers(node, ['10.152.0.53'], override=True)
+
+emu.addLayer(world)
 ```
 
 

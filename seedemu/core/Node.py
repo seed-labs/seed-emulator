@@ -330,6 +330,9 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     def setNameServers(self, servers: List[str]) -> Node:
         """!
+        @deprecated to be removed in future version. use
+        dns.setNameServers(node, ["1.14.5.14"]) instead.
+
         @brief set recursive name servers to use on this node. Overwrites
         AS-level and emulator-level settings.
 
@@ -347,6 +350,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     def getNameServers(self) -> List[str]:
         """!
+        @deprecated to be removed in future version.
+   
         @brief get configured recursive name servers on this node.
 
         @returns list of IP addresses of recursive name servers
@@ -484,8 +489,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @brief Update connection of the node to a network.
         @param netname name of the network.
         @param address (optional) override address assignment.
-
-        @returns assigned IP address
 
         @returns self, for chaining API calls.
         """
