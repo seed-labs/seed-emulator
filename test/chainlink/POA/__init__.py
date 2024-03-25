@@ -1,1 +1,2 @@
-from .EthereumPOATestCase import EthereumPOATestCase
+from .ChainlinkPOATestCase import ChainlinkPOATestCase
+from .SEEDBlockchain import *

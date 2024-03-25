@@ -77,6 +77,7 @@ for asn in asns:
 
 # Create the Chainlink layer
 chainlink = ChainlinkService()
+c_asns  = [150, 151, 152, 153, 154, 160, 161, 162]
 
 # Chainlink Init server
 cnode = 'chainlink_init_server'
@@ -86,14 +87,13 @@ c.setContractOwner('0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9')
 c.setOwnerPrivateKey('20aec3a7207fcda31bdef03001d9caf89179954879e595d9a190d6ac8204e498')
 c.setDeploymentType("web3")
 c.setRPCbyUrl("10.154.0.71")
-c.setNumberOfOracleContracts(8)
+c.setNumberOfOracleContracts(len(c_asns))
 service_name = 'Chainlink-Init'
 emu.getVirtualNode(cnode).setDisplayName(service_name)
 emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
 
 
 i = 0
-c_asns  = [150, 151, 152, 153, 154, 160, 161, 162]
 # Chainlink normal servers
 for asn in c_asns:
     cnode = 'chainlink_server_{}'.format(i)
