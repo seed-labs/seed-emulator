@@ -19,7 +19,7 @@ class TrafficReceiverServer(Server):
         """
         self.receiver.install_softwares(node)
         node.appendClassName("TrafficReceiver")
-        node.setDomainName(self.receiver.getName())
+        node.addHostName(self.receiver.getName())
         
     def print(self, indent: int) -> str:
         out = ' ' * indent

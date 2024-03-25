@@ -12,7 +12,7 @@ class TrafficGeneratorServer(Server):
     def install(self, node: Node):
         self.generator.install_softwares(node)
         node.appendClassName("TrafficGenerator")
-        node.setDomainName(self.generator.getName())
+        node.addHostName(self.generator.getName())
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

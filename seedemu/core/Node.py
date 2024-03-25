@@ -227,8 +227,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __shared_folders: Dict[str, str]
     __persistent_storages: List[str]
 
-    __custom_domain: str
-
     __name_servers: List[str]
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
