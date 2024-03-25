@@ -231,7 +231,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     __name_servers: List[str]
 
-    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None, custom_domain: str = None):
+    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
         @brief Node constructor.
 
@@ -239,7 +239,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @param role role of this node.
         @param asn network that this node belongs to.
         @param scope scope of the node, if not asn.
-        @param custom_domain (optional) custom domain name for this node.
         """
         super().__init__()
 
@@ -266,9 +265,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__shared_folders = {}
         self.__persistent_storages = []
 
-        self.__custom_domain = custom_domain
-        # for soft in DEFAULT_SOFTWARE:
-        #     self.__softwares.add(soft)
+        for soft in DEFAULT_SOFTWARE:
+            self.__softwares.add(soft)
 
         self.__name_servers = []
         self.__host_names = [f"{self.__scope}-{self.__name}"]
@@ -566,14 +564,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
         assert not self.__asn == 0, 'This API is only available on a real physical node.'
         return self.__xcs
 
-    def getScope(self) -> str:
-        """!
-        @brief Get scope of this node.
-
-        @returns scope.
-        """
-        return self.__scope
-
     def getName(self) -> str:
         """!
         @brief Get node name.
@@ -581,33 +571,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns name.
         """
         return self.__name
-
-    def getDomainName(self) -> str:
-        """!
-        @brief Get node domain name of this node.
-
-        @returns node domain name.
-        """
-        return self.__custom_domain or f"{self.__scope}-{self.__name}"
-
-    def setDomainName(self, domain: str) -> Node:
-        """!
-        @brief Set domain name of this node.
-
-        @returns self, for chaining API calls.
-        """
-        self.__custom_domain = domain
-
-        return self
-
-    def getIP(self) -> str:
-        """!
-        @brief Get IP address of the local interface.
-        """
-        for iface in self.getInterfaces():
-            if iface.getNet().getType() == NetworkType.Local:
-                return iface.getAddress()
-        return ''
 
     def getAsn(self) -> int:
         """!

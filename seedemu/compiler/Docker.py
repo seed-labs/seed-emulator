@@ -398,6 +398,7 @@ class Docker(Compiler):
                 priority = 1
             self.addImage(image, priority=priority)
 
+
     def getName(self) -> str:
         return "Docker"
 
@@ -914,7 +915,6 @@ class Docker(Compiler):
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
         start_commands = ''
-        start_commands += 'echo "'+self.extra_hosts+'" >> /etc/hosts\n'
 
         if self.__self_managed_network:
             start_commands += 'chmod +x /replace_address.sh\n'
@@ -1035,11 +1035,6 @@ class Docker(Compiler):
         registry = emulator.getRegistry()
 
         self._groupSoftware(emulator)
-
-        self.extra_hosts = ""
-        for ((scope, type, name), node) in registry.getAll().items():
-            if type in ['hnode', 'snode']:
-                self.extra_hosts += f"{node.getIP()} {node.getDomainName()}\n"
 
         for ((scope, type, name), obj) in registry.getAll().items():
 
