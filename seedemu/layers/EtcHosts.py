@@ -46,5 +46,5 @@ class EtcHosts(Layer):
                 nodes.append(node)
         
         for node in nodes:
-           node.setFile("/tmp/etc-hosts", hosts_file_content)
-           node.appendStartCommand("cat /tmp/etc-hosts >> /etc/hosts")
+            node.setFile("/tmp/etc-hosts", hosts_file_content)
+            node.appendStartCommand("cat /tmp/etc-hosts >> /etc/hosts")
