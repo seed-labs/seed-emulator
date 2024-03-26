@@ -211,8 +211,8 @@ class EthAccount():
         EthAccount._log('creating local account {} from mnemonic...'.format(index))
         acct = Account.from_mnemonic(mnemonic, account_path=LOCAL_ACCOUNT_KEY_DERIVATION_PATH.format(index=index))
         address = Web3.toChecksumAddress(acct.address)
-        print(acct.privateKey.hex())
-        return AccountStructure(address, balance, "", acct.privateKey.hex(), "")
+
+        return AccountStructure(address, balance, "", "", "")
 
     @staticmethod
     def createLocalAccountsFromMnemonic(mnemonic:str, balance:int, total:int):

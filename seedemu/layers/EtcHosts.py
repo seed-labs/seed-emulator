@@ -18,14 +18,16 @@ class EtcHosts(Layer):
     def getName(self) -> str:
         return "EtcHosts"
     
-    def __getAllIpAddress(self, node: Node) -> list:
+    def __getAllIpAddress(self, node: Node) -> str:
         """!
         @brief Get the IP address of the local interface for this node.
         """
         addresses = []
         for iface in node.getInterfaces():
             address = iface.getAddress()
-            if iface.getNet().getType() == NetworkType.Bridge:
+            if iface.getNet().getType() == NetworkType.Local:
+                addresses.insert(0, address)
+            elif iface.getNet().getType() == NetworkType.Bridge:
                 pass
             else:
                 addresses.append(address)
@@ -33,18 +35,16 @@ class EtcHosts(Layer):
         return addresses
 
     def render(self, emulator: Emulator):
-        hosts_file_content = []
+        hosts_file_content = ""
         nodes = []
         reg = emulator.getRegistry()
         for ((scope, type, name), node) in reg.getAll().items():
             if type in ['hnode', 'snode', 'rnode', 'rs']:
                 addresses = self.__getAllIpAddress(node)
                 for address in addresses:
-                    hosts_file_content.append(f"{address} {' '.join(node.getHostNames())}")
+                    hosts_file_content += f"{address} {' '.join(node.getHostNames())}\n"
                 nodes.append(node)
-
-        sorted_hosts_file_content = sorted(hosts_file_content, key=lambda x: tuple(map(int, x.split()[0].split('.'))))
         
         for node in nodes:
-            node.setFile("/tmp/etc-hosts", '\n'.join(sorted_hosts_file_content))
+            node.setFile("/tmp/etc-hosts", hosts_file_content)
             node.appendStartCommand("cat /tmp/etc-hosts >> /etc/hosts")
