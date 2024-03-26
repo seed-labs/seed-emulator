@@ -397,7 +397,7 @@ class Docker(Compiler):
             if name == BaseSystem.DEFAULT:
                 priority = 1
             self.addImage(image, priority=priority)
-        
+
 
     def getName(self) -> str:
         return "Docker"

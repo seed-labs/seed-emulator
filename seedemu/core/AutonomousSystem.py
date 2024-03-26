@@ -250,6 +250,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @brief Create a host node.
 
         @param name name of the new node.
+
         @returns Node.
         """
         assert name not in self.__hosts, 'Host with name {} already exists.'.format(name)

@@ -1,0 +1,5 @@
+ITGRecv
+ITGSend -T TCP -a 10.171.0.71 -c 100 -N 2 1 -t 15000 -l sender.log -x receiver.log
+ITGDec sender.log
+iperf3 -s -D
+iperf3 -c 10.171.0.71 -t100
