@@ -443,7 +443,21 @@ class EthereumServer(Server):
         self._accounts.append(account)
         return self
     
+    def getChainId(self)->int:
+        """
+        @breif Call this api to get the chainId of the chain the server belongs to.
 
+        @returns chain id.
+        """
+        return self._blockchain.getChainId()
+    
+    def getConsensusMechanism(self)->ConsensusMechanism:
+        """
+        @brief Call this api to get the consensus mechanism of the chain the server belongs to.
+
+        @returns consensus mechanism
+        """
+        return self._consensus_mechanism
 
     def _getAccounts(self) -> List[AccountStructure]:
         """
