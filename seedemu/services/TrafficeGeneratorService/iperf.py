@@ -5,12 +5,12 @@ from .traffic_generator import TrafficGenerator
 
 
 class IperfReceiver(TrafficReceiver):
-    def install_softwares(self, node: Node):
-        super().install_softwares(node)
+    def install(self, node: Node):
+        super().install(node)
         node.addSoftware('iperf3')
         node.appendStartCommand('iperf3 -s -D')
 
 class IperfGenerator(TrafficGenerator):
-    def install_softwares(self, node: Node):
-        super().install_softwares(node)
+    def install(self, node: Node):
+        super().install(node)
         node.addSoftware('iperf3')

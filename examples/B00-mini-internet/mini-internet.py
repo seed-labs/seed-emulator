@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 from seedemu.layers import Base, EtcHosts, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
-from seedemu.services import WebService, IperfReceiver, IperfGenerator,  DomainNameService, DomainNameCachingService
+from seedemu.services import WebService, DomainNameService, DomainNameCachingService
 from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedemu.compiler import Docker, Graphviz
 from seedemu.hooks import ResolvConfHook
@@ -24,16 +24,6 @@ ebgp    = Ebgp()
 ibgp    = Ibgp()
 ospf    = Ospf()
 web     = WebService()
-iperf_traffic_receiver_1 = IperfReceiver(name='iperf_traffic_receiver_1')
-iperf_traffic_receiver_2 = IperfReceiver(name='iperf_traffic_receiver_2')
-
-iperf_traffic_generator = IperfGenerator()
-iperf_traffic_generator.addTargets(hosts=["iperf_traffic_receiver_1", "iperf_traffic_receiver_2"])
-
-hybrid_traffic_receiver = HybridTrafficReceiver(name='hybrid_traffic_receiver')
-
-hybrid_traffic_generator = HybridTrafficGenerator()
-hybrid_traffic_generator.addTargets(hosts=["hybrid_traffic_receiver"])
 
 ovpn    = OpenVpnRemoteAccessProvider()
 
@@ -80,29 +70,24 @@ Makers.makeTransitAs(base, 12, [101, 104], [(101, 104)])
 ###############################################################################
 # Create single-homed stub ASes. "None" means create a host only 
 
-Makers.makeStubAs(emu, base, 150, 100, [web, iperf_traffic_generator])
+Makers.makeStubAs(emu, base, 150, 100, [web, None])
 Makers.makeStubAs(emu, base, 151, 100, [web, None])
 
-Makers.makeStubAs(emu, base, 152, 101, [None, hybrid_traffic_generator])
+Makers.makeStubAs(emu, base, 152, 101, [None])
 Makers.makeStubAs(emu, base, 153, 101, [web, None])
 
 Makers.makeStubAs(emu, base, 154, 102, [None, web])
 
-Makers.makeStubAs(emu, base, 160, 103, [web, iperf_traffic_receiver_2])
+Makers.makeStubAs(emu, base, 160, 103, [web, None])
 Makers.makeStubAs(emu, base, 161, 103, [web, None])
 Makers.makeStubAs(emu, base, 162, 103, [web, None])
 
 Makers.makeStubAs(emu, base, 163, 104, [web, None])
-Makers.makeStubAs(emu, base, 164, 104, [None, hybrid_traffic_receiver])
+Makers.makeStubAs(emu, base, 164, 104, [None])
 
 Makers.makeStubAs(emu, base, 170, 105, [web, None])
-Makers.makeStubAs(emu, base, 171, 105, [iperf_traffic_receiver_1])
+Makers.makeStubAs(emu, base, 171, 105, [None])
 
-
-# Add a host with customized IP address to AS-154 
-as154 = base.getAutonomousSystem(154)
-as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129').addHostName('host2.example.com')
-as154.createHost('host_3').joinNetwork('net0', address = '10.154.0.130')
 
 # Create real-world AS.
 # AS11872 is the Syracuse University's autonomous system
@@ -114,7 +99,7 @@ as11872.createRealWorldRouter('rw').joinNetwork('ix102', '10.102.0.118')
 as152 = base.getAutonomousSystem(152)
 as152.getNetwork('net0').enableRemoteAccess(ovpn)
 
-hybrid_traffic_generator.addTargets(asns=[154, 171], hosts=["host2.example.com", "10.154.0.130"])
+
 ###############################################################################
 # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
 # which means each AS will only export its customers and their own prefixes. 
@@ -158,11 +143,7 @@ emu.addLayer(ebgp)
 emu.addLayer(ibgp)
 emu.addLayer(ospf)
 emu.addLayer(web)
-emu.addLayer(iperf_traffic_generator)
-emu.addLayer(iperf_traffic_receiver_1)
-emu.addLayer(iperf_traffic_receiver_2)
-emu.addLayer(hybrid_traffic_generator)
-emu.addLayer(hybrid_traffic_receiver)
+
 
 # Save it to a component file, so it can be used by other emulators
 emu.dump('base-component.bin')

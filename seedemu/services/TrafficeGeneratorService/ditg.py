@@ -5,14 +5,14 @@ from .traffic_generator import TrafficGenerator
 
 
 class DITGReceiver(TrafficReceiver):
-    def install_softwares(self, node: Node):
-        super().install_softwares(node)
+    def install(self, node: Node):
+        super().install(node)
         node.addSoftware('d-itg')
         node.appendStartCommand('ITGRecv')
 
 class DITGGenerator(TrafficGenerator):
-    def install_softwares(self, node: Node):
-        super().install_softwares(node)
+    def install(self, node: Node):
+        super().install(node)
         node.addSoftware('d-itg')
 
 

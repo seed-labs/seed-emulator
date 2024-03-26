@@ -8,8 +8,8 @@ class ScapyGenerator(TrafficGenerator):
         with open(filename, 'r') as file:
             return file.read()
 
-    def install_softwares(self, node: Node):
-        super().install_softwares(node)
+    def install(self, node: Node):
+        super().install(node)
         node.addSoftware('python3')
         node.addSoftware('python3-pip')
         node.addBuildCommand('pip3 install scapy==2.5.0')
