@@ -85,9 +85,11 @@ Makers.makeStubAs(emu, base, 164, 104, [None, None])
 Makers.makeStubAs(emu, base, 170, 105, [web, None])
 Makers.makeStubAs(emu, base, 171, 105, [None])
 
+
 # Add a host with customized IP address to AS-154 
 as154 = base.getAutonomousSystem(154)
 as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129')
+
 
 # Create real-world AS.
 # AS11872 is the Syracuse University's autonomous system
