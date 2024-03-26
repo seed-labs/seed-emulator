@@ -7,14 +7,9 @@ It is used to resolve hostnames to IP addresses.
 
 The default hostname of a node is of the form `<scope>-<name>`. For example, the default hostname of a node named `node1` in the autonomous system `154` is `154-node1`. However, we can add additional hostnames to a node using the `custom_host_names` parameter of the `Node` constructor or the `addHostName` method of the `Node` class. The `EtcHosts` layer will add these custom hostnames to the `/etc/hosts` file.
 
-Following are some examples of how to add a custom hostname to a node:
+Following is an example of how to add a custom hostname to a node:
 
-1. Pass the custom hostnames as a list to the `Node` constructor:
-```
-node = Node('node_name', NodeRole.Host, 154, custom_host_names=['custom_hostname1', 'custom_hostname2'])
-```
-
-2. Add a new custom hostname using the `addHostName` method:
+- Add a new custom hostname using the `addHostName` method:
 ```
 node.addHostName('custom_hostname3')
 as152.createHost('database').joinNetwork('net0', address = '10.152.0.4').addHostName('database.com')
