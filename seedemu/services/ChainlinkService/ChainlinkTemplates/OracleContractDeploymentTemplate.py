@@ -4,56 +4,52 @@ OracleContractDeploymentTemplate: Dict[str, str] = {}
 
 OracleContractDeploymentTemplate['oracle_contract_deploy']="""\
 #!/bin/env python3
-
 import time
 import logging
 import os
+from queue import Queue
 from web3 import Web3, HTTPProvider
+import re
+import requests
 
-# Configuration
 owner_address = "{owner_address}"
-number_of_contracts = {number_of_contracts}
 rpc_url = "http://{rpc_url}:{rpc_port}"
 private_key = "{private_key}"
 contract_folder = './contracts/'
-link_address_file_path = './deployed_contracts/link_token_address.txt'
-if os.path.exists(link_address_file_path):
-    with open(link_address_file_path, 'r') as file:
-        link_address = file.read().strip()
-        if not link_address:
-            print("Link Token address is not available.")
-            exit()
+retry_delay = 60
+
+deployment_queue = Queue()
+deployment_queue.put({{}})
+
+url = "http://{init_node_url}"
+response = requests.get(url)
+html_content = response.text
+match = re.search(r'<h1>Link Token Contract: (.+?)</h1>', html_content)
+
+if match and match.group(1):
+	link_address = Web3.toChecksumAddress(match.group(1))
 else:
-    print("Link Token address file does not exist.")
-    exit()
-    
-link_address = Web3.toChecksumAddress(link_address)
-    
+	logging.error("Failed to extract Link Token contract address from HTML content.")
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Initialize web3
 web3 = Web3(HTTPProvider(rpc_url))
 if not web3.isConnected():
     logging.error("Failed to connect to Ethereum node.")
     exit()
 
-# Convert addresses to checksum format
 owner_address = web3.toChecksumAddress(owner_address)
-
-# Load contract ABI and bytecode
 with open(os.path.join(contract_folder, 'oracle_contract.abi'), 'r') as abi_file:
     contract_abi = abi_file.read()
 with open(os.path.join(contract_folder, 'oracle_contract.bin'), 'r') as bin_file:
     contract_bytecode = bin_file.read().strip()
-
-# Start deployment
 account = web3.eth.account.from_key(private_key)
-start_nonce = web3.eth.getTransactionCount(account.address)
 gas_price = web3.eth.gasPrice
 
-for i in range(number_of_contracts):
+while not deployment_queue.empty():
     try:
-        nonce = start_nonce + i
+        deployment_queue.get()
+        nonce = web3.eth.getTransactionCount(account.address)
         OracleContract = web3.eth.contract(abi=contract_abi, bytecode=contract_bytecode)
         transaction = OracleContract.constructor(link_address, owner_address).buildTransaction({{
             'from': account.address,
@@ -63,18 +59,24 @@ for i in range(number_of_contracts):
         }})
         signed_txn = web3.eth.account.sign_transaction(transaction, private_key)
         tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
-        logging.info(f"Sent contract {{i+1}}, TX Hash: {{tx_hash.hex()}}")
+        logging.info(f"Attempting to deploy contract, TX Hash: {{tx_hash.hex()}}")
 
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=240)
-        logging.info(f"Contract {{i+1}} deployed at: {{tx_receipt.contractAddress}}")
-
-        with open('./deployed_contracts/oracle_contract_address.txt', 'a') as address_file:
-            address_file.write(f"{{tx_receipt.contractAddress}}\\n")
+        if tx_receipt.status == 1:
+            logging.info(f"Contract deployed at: {{tx_receipt.contractAddress}}")
+            directory = './deployed_contracts'
+            if not os.path.exists(directory): os.makedirs(directory)
+            with open('./deployed_contracts/oracle_contract_address.txt', 'w') as address_file:
+                address_file.write(f"{{tx_receipt.contractAddress}}")
+        else:
+            logging.error("Transaction failed. Retrying...")
+            deployment_queue.put({{}})
+            time.sleep(retry_delay)
 
     except Exception as e:
-        logging.error(f"An error occurred during contract deployment: {{e}}")
-
-logging.info("Deployment script completed.")
+        logging.error(f"An error occurred during contract deployment: {{e}}. Retrying...")
+        deployment_queue.put({{}})
+        time.sleep(retry_delay)
 """
 
 OracleContractDeploymentTemplate['oracle_contract_abi']="""\

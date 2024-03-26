@@ -22,13 +22,15 @@ class ChainlinkServer(Server):
     __password: str = "Seed@emulator123"
     __init_node_name: str = None
     __init_node_url: str
-    __flask_server_port: int = 5000
+    # __flask_server_port: int = 5000
     __faucet_node_url: str
     __faucet_node_name: str = None
     __faucet_node_port: int
     __chain_id: int = 1337
     __rpc_ws_port: int = 8546
     __rpc_port: int = 8545
+    __owner: str = None
+    __owner_private_key: str = None
     
     
     def __init__(self):
@@ -71,7 +73,10 @@ class ChainlinkServer(Server):
         
         self.__setConfigurationFiles()
         self.__chainlinkStartCommands()
-        self.__node.appendStartCommand(ChainlinkFileTemplate['send_flask_request'].format(init_node_url=self.__init_node_url, flask_server_port=self.__flask_server_port))
+        # self.__node.appendStartCommand(ChainlinkFileTemplate['send_flask_request'].format(init_node_url=self.__init_node_url, flask_server_port=self.__flask_server_port))
+        self.__node.appendStartCommand(ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
+        self.__deploy_oracle_contract()
+        self.__set_authorized_sender()
         self.__node.appendStartCommand(ChainlinkFileTemplate['create_jobs'])
         self.__node.appendStartCommand(ChainlinkFileTemplate['send_get_eth_request'].format(faucet_server_url=self.__faucet_node_url, faucet_server_port=self.__faucet_node_port))
         self.__node.appendStartCommand('tail -f chainlink_logs.txt')
@@ -80,9 +85,10 @@ class ChainlinkServer(Server):
         """
         @brief Install the software.
         """
-        software_list = ['ipcalc', 'jq', 'iproute2', 'sed', 'postgresql', 'postgresql-contrib']
+        software_list = ['ipcalc', 'jq', 'iproute2', 'sed', 'postgresql', 'postgresql-contrib', 'curl', 'python3', 'python3-pip']
         for software in software_list:
             self.__node.addSoftware(software)
+        self.__node.addBuildCommand('pip3 install web3==5.31.1')
             
     def __setConfigurationFiles(self):
         """
@@ -105,7 +111,25 @@ su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword
 nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api.txt > chainlink_logs.txt 2>&1 &
 """
         self.__node.appendStartCommand(start_commands)
-        
+    
+    def __deploy_oracle_contract(self):
+        """
+        @brief Deploy the oracle contract.
+        """
+        self.__node.setFile('/contracts/deploy_oracle_contract.py', OracleContractDeploymentTemplate['oracle_contract_deploy'].format(rpc_url = self.__rpc_url, private_key = self.__owner_private_key, owner_address = self.__owner, rpc_port = self.__rpc_port, init_node_url=self.__init_node_url))
+        self.__node.setFile('/contracts/oracle_contract.abi', OracleContractDeploymentTemplate['oracle_contract_abi'])
+        self.__node.setFile('/contracts/oracle_contract.bin', OracleContractDeploymentTemplate['oracle_contract_bin'])
+        self.__node.appendStartCommand(f'python3 ./contracts/deploy_oracle_contract.py')
+        self.__node.appendStartCommand('echo "Oracle contract deployed"')
+    
+    def __set_authorized_sender(self):
+        """
+        @brief Set the authorized sender.
+        """
+        self.__node.appendStartCommand(ChainlinkFileTemplate['save_chainlink_address'])
+        self.__node.setFile('/contracts/setAuthorizedSender.py', ChainlinkFileTemplate['set_authorized_sender'].format(rpc_url = self.__rpc_url, private_key = self.__owner_private_key, chain_id = self.__chain_id, rpc_port = self.__rpc_port))
+        self.__node.appendStartCommand('python3 ./contracts/setAuthorizedSender.py')
+    
     def setInitNodeIP(self, init_node_name: str):
         """
         @brief Set the chainlink init node
@@ -180,6 +204,16 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         @param faucet_node_name: The name of the faucet node.
         """
         self.__faucet_node_name = faucet_node_name
+        
+    def setOwner(self, owner: str, owner_private_key: str):
+        """
+        @brief Set the owner of the contracts
+        
+        @param owner The owner of the contracts
+        @param owner_private_key The private key of the owner.
+        """
+        self.__owner = owner
+        self.__owner_private_key = owner_private_key
     
         
     def __getIPbyEthNodeName(self, vnode:str):
