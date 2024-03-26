@@ -150,5 +150,5 @@ emu.dump('base-component.bin')
 
 # Uncomment the following if you want to generate the final emulation files
 emu.render()
-emu.compile(Docker(), './output')
+emu.compile(Docker(), './output', override=True)
 

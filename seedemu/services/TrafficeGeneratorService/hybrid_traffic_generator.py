@@ -1,4 +1,4 @@
-from seedemu.services import IperfReceiver, IperfGenerator, DITGGenerator, DITGReceiver, ScapyGenerator
+from . import IperfReceiver, IperfGenerator, DITGGenerator, DITGReceiver, ScapyGenerator
 from seedemu.core import Node
 
 class HybridTrafficReceiver(IperfReceiver, DITGReceiver):

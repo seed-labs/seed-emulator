@@ -49,13 +49,10 @@ class TrafficService(Service):
     def addServer(self, name, server: Server):
         self.servers[name] = server
         return self
-
+    
     def install(self):
-        """!
-        @brief install the service on a node identified by given name.
-        """
-        for vnode in self.servers:
-            self._pending_targets[vnode] = self.servers[vnode]
+        for vnode, server in self.servers.items():
+            self._pending_targets[vnode] = server
 
     def getName(self) -> str:
         return self.__class__.__name__
