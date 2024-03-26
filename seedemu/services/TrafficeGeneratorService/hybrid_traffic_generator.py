@@ -8,4 +8,3 @@ class HybridTrafficReceiver(IperfReceiver, DITGReceiver):
 class HybridTrafficGenerator(IperfGenerator, DITGGenerator, ScapyGenerator):
     def install_softwares(self, node: Node):
         super().install_softwares(node)
-      
