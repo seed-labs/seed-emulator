@@ -320,6 +320,44 @@ class Wallet:
         txhash = self.sendTransaction(None, amount, sender_name, gas=gas, 
                                       data=data, wait=wait, verbose=verbose)
         return txhash 
+    
+    def getContractAddress(self, tx_hash, wait=True, verbose=True, timeout=600):
+        """!
+        @brief Get the address of a deployed smart contract.
+
+        @param tx_hash The transaction hash of the contract creation.
+        @param wait Whether to wait for the transaction to be mined.
+        @param verbose Whether to print out detailed transaction information.
+        @param timeout The maximum time to wait for the transaction to be mined, in seconds.
+
+        @returns Return the address of the deployed contract.
+        """
+        import time
+        if wait:
+            start_time = time.time()
+            receipt = None
+            while time.time() - start_time < timeout:
+                receipt = self.getTransactionReceipt(tx_hash)
+                if receipt:
+                    break
+                else:
+                    if verbose:
+                        print('Transaction not yet mined, waiting...')
+                    time.sleep(10)
+            if receipt and 'contractAddress' in receipt:
+                contract_address = receipt['contractAddress']
+                if verbose:
+                    print('Deployed contract address: {contract_address}')
+                return contract_address
+            else:
+                if verbose:
+                    print('Contract deployment transaction receipt does not contain a contract address.')
+                return None
+        else:
+            if verbose:
+                print('Transaction not yet mined, please wait for the receipt.')
+            return None
+
 
 
     def createContract(self, address, abi:str):

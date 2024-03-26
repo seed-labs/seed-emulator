@@ -77,8 +77,7 @@ for asn in asns:
 
 # Create the Chainlink layer
 chainlink = ChainlinkService()
-c_asns  = [150, 151, 152, 153, 154, 160, 161, 162]
-
+c_asns  = [150, 151, 152, 153, 154, 160, 161, 162, 163]
 # Chainlink Init server
 cnode = 'chainlink_init_server'
 # Web3 deployment using initializer server
