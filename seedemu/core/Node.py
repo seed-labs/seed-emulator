@@ -363,15 +363,6 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__host_names.append(name)
         return self
 
-    def getIPAddress(self) -> str:
-        """!
-        @brief Get the IP address of the local interface for this node.
-        """
-        for iface in self.getInterfaces():
-            if iface.getNet().getType() == NetworkType.Local:
-                return iface.getAddress()
-        return ''
-
     def getNameServers(self) -> List[str]:
         """!
         @brief get configured recursive name servers on this node.
