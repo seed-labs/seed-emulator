@@ -430,6 +430,34 @@ class EthereumServer(Server):
         self._accounts.append(account)
         return self
     
+    def importAccountFromKey(self, key:str, balance: int = 0, unit:EthUnit=EthUnit.ETHER) -> EthereumServer:
+        """
+        @brief Call this api to import an account from key.
+
+        @param key key string of an account to import.
+        @param balance The balance to allocate to the account.
+
+        @returns self, for chaining API calls.
+        """
+        account = EthAccount.importAccountFromKey(key=key, balance=balance*EthUnit.ETHER.value)
+        self._accounts.append(account)
+        return self
+    
+    def getChainId(self)->int:
+        """
+        @breif Call this api to get the chainId of the chain the server belongs to.
+
+        @returns chain id.
+        """
+        return self._blockchain.getChainId()
+    
+    def getConsensusMechanism(self)->ConsensusMechanism:
+        """
+        @brief Call this api to get the consensus mechanism of the chain the server belongs to.
+
+        @returns consensus mechanism
+        """
+        return self._consensus_mechanism
 
     def _getAccounts(self) -> List[AccountStructure]:
         """
