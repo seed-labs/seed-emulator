@@ -130,13 +130,9 @@ class ChainlinkInitializerServer(Server):
     def __webServer(self):
         self.__node.appendStartCommand('export link_token_address=$(cat /deployed_contracts/link_token_address.txt)')
         self.__node.addSoftware('nginx-light')
-        # self.__node.addBuildCommand('pip3 install Flask')
-        # self.__node.setFile("/flask_app.py", ChainlinkFileTemplate['flask_app'].format(
-        #     rpc_url=self.__rpcURL, 
-        #     private_key=self.__privateKey, 
-        #     chain_id=self.__chain_id, 
-        #     rpc_port=self.__rpc_port))
-        # self.__node.appendStartCommand('python3 /flask_app.py &')
+        self.__node.addBuildCommand('pip3 install Flask')
+        self.__node.setFile("/flask_app.py", ChainlinkFileTemplate['flask_app'])
+        self.__node.appendStartCommand('python3 /flask_app.py &')
         # self.__node.appendStartCommand('''export oracle_addresses=$(cat /deployed_contracts/oracle_contract_address.txt)
         # formatted_addresses="";
         # IFS=$'\\n'; 

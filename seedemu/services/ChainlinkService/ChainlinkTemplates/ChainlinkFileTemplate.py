@@ -323,22 +323,58 @@ server {{
 #     app.run(debug=True, host='0.0.0.0', threaded=True)
 # """
 
+ChainlinkFileTemplate['flask_app'] = """\
+from flask import Flask, request, jsonify
+import os
 
+app = Flask(__name__)
 
-# ChainlinkFileTemplate['send_flask_request'] = """\
-# URL="http://{init_node_url}"
-# EXPECTED_STATUS="200"
-# while true; do
-#     STATUS=$(curl -Is "$URL" | head -n 1 | awk '{{print $2}}')
+ADDRESS_FILE_PATH = '/deployed_contracts/oracle_contract_address.txt'
+HTML_FILE_PATH = '/var/www/html/index.html'
+
+@app.route('/display_contract_address', methods=['POST'])
+def submit_address():
+    address = request.json.get('contract_address')
+    if not address:
+        return jsonify({'error': 'No address provided'}), 400
     
-#     if [ "$STATUS" == "$EXPECTED_STATUS" ]; then
-#         echo "Contracts deployed successfully!"
-#         break
-#     else
-#         echo "Waiting for the contracts to be deployed..."
-#         sleep 10
-#     fi
-# done
+    os.makedirs(os.path.dirname(ADDRESS_FILE_PATH), exist_ok=True)
+
+    with open(ADDRESS_FILE_PATH, 'a') as file:
+        file.write(address + '\\n')
+
+    with open(HTML_FILE_PATH, 'a') as file:
+        file.write(f'<h1>Oracle Contract Address: {address}</h1>\\n')
+
+    return jsonify({'message': 'Address saved and HTML updated successfully'}), 200
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0')
+"""
+
+
+ChainlinkFileTemplate['send_flask_request'] = """\
+URL="http://{init_node_url}"
+EXPECTED_STATUS="200"
+
+while true; do
+    STATUS=$(curl -Is "$URL" | head -n 1 | awk '{{print $2}}')
+    
+    if [ "$STATUS" == "$EXPECTED_STATUS" ]; then
+        echo "Server is up!"
+        break 
+    else
+        echo "Retrying in 10 seconds.."
+        sleep 10 
+    fi
+done
+
+RESPONSE=$(curl -X POST http://{init_node_url}:{flask_server_port}/display_contract_address \\
+     -H "Content-Type: application/json" \\
+     -d "{{\\"contract_address\\":\\"$(tail -n 1 /deployed_contracts/oracle_contract_address.txt)\\"}}")
+
+echo "$RESPONSE"
+"""
 
 # chainlink admin login -f /api.txt
 # ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
