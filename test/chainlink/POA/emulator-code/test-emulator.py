@@ -14,17 +14,6 @@ base = Base()
 emu.load('./hybrid-internet.bin')
 base = emu.getLayer('Base')
 
-###############################################################################
-# Custom chainlink image
-CHAINLINK_IMAGE_AMD64 = 'amanvelani/chainlink-develop:amd64'
-CHAINLINK_IMAGE_ARM64 = 'amanvelani/chainlink-develop:arm64'
-
-if platform.machine().endswith('64'):
-    if 'aarch' in platform.machine().lower() or 'arm' in platform.machine().lower():
-        CHAINLINK_IMAGE = CHAINLINK_IMAGE_ARM64
-    else:
-        CHAINLINK_IMAGE = CHAINLINK_IMAGE_AMD64
-
 
 ###############################################################################
 # Create the Ethereum layer
@@ -78,15 +67,15 @@ for asn in asns:
 # Create the Chainlink layer
 chainlink = ChainlinkService()
 c_asns  = [150, 151, 152, 153, 154, 160, 161, 162, 163]
+owner = '0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9'
+owner_private_key = '20aec3a7207fcda31bdef03001d9caf89179954879e595d9a190d6ac8204e498'
 # Chainlink Init server
 cnode = 'chainlink_init_server'
 # Web3 deployment using initializer server
-c = chainlink.installInitializer(cnode)
-c.setContractOwner('0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9')
-c.setOwnerPrivateKey('20aec3a7207fcda31bdef03001d9caf89179954879e595d9a190d6ac8204e498')
-c.setDeploymentType("web3")
-c.setRPCbyUrl("10.154.0.71")
-c.setNumberOfOracleContracts(len(c_asns))
+c_init = chainlink.installInitializer(cnode)
+c_init.setOwner(owner, owner_private_key)
+c_init.setDeploymentType("web3")
+c_init.setRPCbyEthNodeName('eth2')
 service_name = 'Chainlink-Init'
 emu.getVirtualNode(cnode).setDisplayName(service_name)
 emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
@@ -96,11 +85,12 @@ i = 0
 # Chainlink normal servers
 for asn in c_asns:
     cnode = 'chainlink_server_{}'.format(i)
-    c = chainlink.install(cnode)
-    c.setRPCbyEthNodeName('eth{}'.format(i))
-    c.setInitNodeIP("chainlink_init_server")
-    c.setFaucetUrl("128.230.212.249")
-    c.setFaucetPort(3000)
+    c_normal = chainlink.install(cnode)
+    c_normal.setRPCbyEthNodeName('eth{}'.format(i))
+    c_normal.setInitNodeIP("chainlink_init_server")
+    c_normal.setFaucetUrl("128.230.212.249")
+    c_normal.setFaucetPort(3000)
+    c_normal.setOwner(owner, owner_private_key)
     service_name = 'Chainlink-{}'.format(i)
     emu.getVirtualNode(cnode).setDisplayName(service_name)
     emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
@@ -116,6 +106,6 @@ emu.addLayer(chainlink)
 OUTPUTDIR = './output'
 emu.render()
 
-docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=Platform.AMD64)
+docker = Docker(etherViewEnabled=True, platform=Platform.AMD64)
 
 emu.compile(docker, OUTPUTDIR, override = True)

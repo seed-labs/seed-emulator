@@ -69,6 +69,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
             i += 1
         
         self.assertTrue(all_passing)
+        return all_passing
 
         
     def get_oracle_chainlink_relationships(self, urls):
@@ -147,7 +148,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
 
         self.printLog("\n-----------Testing Chainlink - Oracle Relationships-----------")
         self.printLog("Waiting 30 seconds before starting relationship tests...")
-        time.sleep(30)  # Wait for 30 seconds as part of test protocol.
+        time.sleep(30)
         self.printLog("Now retrieving Chainlink-Oracle relationships from nodes.")
         self.get_oracle_chainlink_relationships(urls)
         self.printLog("Completed Chainlink-Oracle relationship retrieval.")
@@ -181,40 +182,41 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         url = 'http://10.164.0.73'
         self.printLog(f"Waiting for the server at {url} to be up...")
         response = self.__wait_for_server_to_be_up(url, 1000, 10)  # Wait for up to 1000 seconds, checking every 10 seconds.
-        
         if response and response.status_code == 200:
             self.printLog(f"Server at {url} is now up. Proceeding with health checks.")
-            html_content = response.text
-
-            # Extract oracle contracts
-            oracle_contracts = re.findall(r'<h1>Oracle Contract: (.+?)</h1>', html_content)
-            if oracle_contracts:
-                self.printLog(f"Found oracle contracts: {oracle_contracts}")
-            else:
-                self.printLog("No oracle contracts found in the HTML content.")
-
+            start_time = time.time()
+            elapsed_time = 0
+            oracle_contracts = []
             expected_number_of_oracles = len(self.asns)
-            self.assertEqual(len(oracle_contracts), expected_number_of_oracles,
-                            f"Expected {expected_number_of_oracles} oracle addresses, but found {len(oracle_contracts)}.")
+            link_token_address = ""
 
-            # Extract link token address
-            match = re.search(r'<h1>Link Token Contract: (.+?)</h1>', html_content)
-            if match and match.group(1):
-                link_token_address = match.group(1)
-                self.printLog(f"Found Link Token address: {link_token_address}")
+            while elapsed_time < 1000 and len(oracle_contracts) != expected_number_of_oracles:
+                response = requests.get(url)
+                if response.status_code == 200:
+                    html_content = response.text
+                    oracle_contracts = re.findall(r'<h1>Oracle Contract Address: (.+?)</h1>', html_content)
+                    self.printLog(f"Checking for oracle contracts, found: {len(oracle_contracts)}")
+
+                    if not link_token_address:
+                        match = re.search(r'<h1>Link Token Contract: (.+?)</h1>', html_content)
+                        if match and match.group(1):
+                            link_token_address = match.group(1)
+                            self.printLog(f"Found Link Token address: {link_token_address}")
+                time.sleep(10)
+                elapsed_time = time.time() - start_time
+
+            if len(oracle_contracts) == expected_number_of_oracles and link_token_address:
+                data = {
+                    'oracle_contracts': oracle_contracts,
+                    'link_token_address': link_token_address
+                }
+                with open('chainlink_data.json', 'w') as f:
+                    json.dump(data, f)
+                self.printLog("Chainlink node data has been successfully saved to chainlink_data.json.")
             else:
-                error_message = "Link Token address not found in HTML content."
+                error_message = f"Failed to find the expected number of oracle contracts within the timeout. Expected {expected_number_of_oracles}, found {len(oracle_contracts)}."
                 self.printLog(error_message)
                 self.fail(error_message)
-
-            # Save data
-            data = {
-                'oracle_contracts': oracle_contracts,
-                'link_token_address': link_token_address
-            }
-            with open('chainlink_data.json', 'w') as f:
-                json.dump(data, f)
-            self.printLog("Chainlink node data has been successfully saved to chainlink_data.json.")
         else:
             self.printLog(f"Failed to receive a healthy response from {url}. Server may not be up or is not responding correctly.")
 
@@ -266,25 +268,24 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
 
         with open('all_addresses.json', 'r') as json_file:
             all_addresses_info = json.load(json_file)
+            
+        abi_file_path = './emulator-code/resources/oracle_contract.json'
+        with open(abi_file_path, 'r') as abi_file:
+            oracle_contract_abi = json.load(abi_file)
+        self.printLog("Loaded ABI for Oracle Contract.")
 
         contract_to_eth_address = {info['contract_address'].lower(): info['chainlink_node_address'].lower() for info in all_addresses_info}
 
+        w3 = Web3(Web3.HTTPProvider(self.rpc_url))
+        self.assertTrue(w3.isConnected(), "Failed to connect to Ethereum node.")
+        self.printLog("Connected successfully to Ethereum node.")
         for oracle_contract_address in oracle_contracts:
             self.printLog(f"Testing Oracle Contract at address: {oracle_contract_address}")
-            w3 = Web3(Web3.HTTPProvider(self.rpc_url))
-            self.assertTrue(w3.isConnected(), "Failed to connect to Ethereum node.")
-            self.printLog("Connected successfully to Ethereum node.")
-
-            abi_file_path = './emulator-code/resources/oracle_contract.json'
-            with open(abi_file_path, 'r') as abi_file:
-                oracle_contract_abi = json.load(abi_file)
-            self.printLog("Loaded ABI for Oracle Contract.")
-
             oracle_contract_address = Web3.toChecksumAddress(oracle_contract_address)
             oracle_contract = w3.eth.contract(address=oracle_contract_address, abi=oracle_contract_abi)
 
             # 1. Check if the owner matches the expected address
-            expected_owner_address = '0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9'
+            expected_owner_address = self.owner
             actual_owner_address = oracle_contract.functions.owner().call()
             self.assertEqual(actual_owner_address.lower(), expected_owner_address.lower(), "Owner address mismatch.")
             self.printLog("Owner address matches expected value.")
@@ -382,7 +383,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
     def test_user_contract(self):
         self.printLog("\n-----------Testing User Contract-----------")
         tx_hash = self.wallet1.deployContract('./emulator-code/resources/user_contract.bin')
-        self.printLog(f"User contract deployed with transaction hash: {tx_hash}")
+        # self.printLog(f"User contract deployed with transaction hash: {web3.toHex(tx_hash)}")
         contract_address = self.wallet1.getContractAddress(tx_hash)
         self.printLog(f"User contract address: {contract_address}")
         
@@ -453,7 +454,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         job_id = "7599d3c8f31e4ce78ad2b790cbcfc673"
         add_oracles_function = user_contract.functions.addOracles(oracle_addresses, job_id)
         add_oracles_tx = self.wallet1.invokeContract(add_oracles_function)
-        self.printLog(f"Add oracles transaction hash: {add_oracles_tx}")
+        self.printLog(f"Add oracles transaction hash: {web3.toHex(add_oracles_tx)}")
         add_oracles_receipt = None
         while not add_oracles_receipt:
             add_oracles_receipt = self.wallet1.getTransactionReceipt(add_oracles_tx)
@@ -477,15 +478,15 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         self.assertTrue(receipt)
         self.printLog("Request for ETH price data successful")
         
-        self.printLog("Waiting 120 seconds for responses...")
-        time.sleep(120)      
+        self.printLog("Waiting 60 seconds for responses...")
+        time.sleep(60)      
         responses_count = user_contract.functions.responsesCount().call()
         average_price = user_contract.functions.averagePrice().call()
 
         self.printLog(f"Responses count: {responses_count}")
         self.printLog(f"Average price: {average_price}")
 
-        self.assertEqual(responses_count, len(self.asns), "Responses count is not equal to 2")
+        self.assertEqual(responses_count, len(self.asns), "Responses count is not equal")
         self.assertNotEqual(average_price, 0, "Average price is zero")
 
         

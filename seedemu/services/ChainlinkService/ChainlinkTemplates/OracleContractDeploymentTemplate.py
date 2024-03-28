@@ -11,12 +11,13 @@ from queue import Queue
 from web3 import Web3, HTTPProvider
 import re
 import requests
+import random
 
 owner_address = "{owner_address}"
 rpc_url = "http://{rpc_url}:{rpc_port}"
 private_key = "{private_key}"
 contract_folder = './contracts/'
-retry_delay = 60
+retry_delay = random.randint(20, 100)
 
 deployment_queue = Queue()
 deployment_queue.put({{}})
@@ -48,8 +49,9 @@ gas_price = web3.eth.gasPrice
 
 while not deployment_queue.empty():
     try:
+        time.sleep(retry_delay)
         deployment_queue.get()
-        nonce = web3.eth.getTransactionCount(account.address)
+        nonce = web3.eth.getTransactionCount(account.address, 'pending')
         OracleContract = web3.eth.contract(abi=contract_abi, bytecode=contract_bytecode)
         transaction = OracleContract.constructor(link_address, owner_address).buildTransaction({{
             'from': account.address,

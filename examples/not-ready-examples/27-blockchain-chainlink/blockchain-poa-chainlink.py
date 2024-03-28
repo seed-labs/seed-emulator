@@ -72,10 +72,10 @@ owner_private_key = '20aec3a7207fcda31bdef03001d9caf89179954879e595d9a190d6ac820
 # Chainlink Init server
 cnode = 'chainlink_init_server'
 # Web3 deployment using initializer server
-c = chainlink.installInitializer(cnode)
-c.setOwner(owner, owner_private_key)
-c.setDeploymentType("web3")
-c.setRPCbyEthNodeName('eth2')
+c_init = chainlink.installInitializer(cnode)
+c_init.setOwner(owner, owner_private_key)
+c_init.setDeploymentType("web3")
+c_init.setRPCbyEthNodeName('eth2')
 service_name = 'Chainlink-Init'
 emu.getVirtualNode(cnode).setDisplayName(service_name)
 emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
