@@ -211,4 +211,3 @@ class Service(Layer):
         @brief Get a set of pending vnode to install the service on.
         """
         return self._pending_targets
-
