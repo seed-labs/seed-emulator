@@ -1,0 +1,11 @@
+version: "3.4"
+services:
+    seedemu-internet-simulator:
+        image: rafaelawon/seedemu-simulator:1.0.4
+        container_name: seedemu_internet_simulator
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /tmp/node_info:/tmp/node_info
+        ports:
+            - 8080:8080/tcp
+
