@@ -2,6 +2,8 @@ from __future__ import annotations
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Node, Network, Compiler, BaseSystem
 from seedemu.core.enums import NodeRole, NetworkType
+from .DockerImage import DockerImage
+from .DockerImageConstant import *
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
 from os import mkdir, chdir
@@ -228,98 +230,98 @@ DockerCompilerFileTemplates['local_image'] = """\
         image: {imageName}
 """
 
-class DockerImage(object):
-    """!
-    @brief The DockerImage class.
+# class DockerImage(object):
+#     """!
+#     @brief The DockerImage class.
 
-    This class represents a candidate image for docker compiler.
-    """
+#     This class represents a candidate image for docker compiler.
+#     """
 
-    __software: Set[str]
-    __name: str
-    __local: bool
-    __dirName: str
+#     __software: Set[str]
+#     __name: str
+#     __local: bool
+#     __dirName: str
 
-    def __init__(self, name: str, software: List[str], local: bool = False, dirName: str = None) -> None:
-        """!
-        @brief create a new docker image.
+#     def __init__(self, name: str, software: List[str], local: bool = False, dirName: str = None) -> None:
+#         """!
+#         @brief create a new docker image.
 
-        @param name name of the image. Can be name of a local image, image on
-        dockerhub, or image in private repo.
-        @param software set of software pre-installed in the image, so the
-        docker compiler can skip them when compiling.
-        @param local (optional) set this image as a local image. A local image
-        is built locally instead of pulled from the docker hub. Default to False.
-        @param dirName (optional) directory name of the local image (when local
-        is True). Default to None. None means use the name of the image.
-        """
-        super().__init__()
+#         @param name name of the image. Can be name of a local image, image on
+#         dockerhub, or image in private repo.
+#         @param software set of software pre-installed in the image, so the
+#         docker compiler can skip them when compiling.
+#         @param local (optional) set this image as a local image. A local image
+#         is built locally instead of pulled from the docker hub. Default to False.
+#         @param dirName (optional) directory name of the local image (when local
+#         is True). Default to None. None means use the name of the image.
+#         """
+#         super().__init__()
 
-        self.__name = name
-        self.__software = set()
-        self.__local = local
-        self.__dirName = dirName if dirName != None else name
+#         self.__name = name
+#         self.__software = set()
+#         self.__local = local
+#         self.__dirName = dirName if dirName != None else name
 
-        for soft in software:
-            self.__software.add(soft)
+#         for soft in software:
+#             self.__software.add(soft)
 
-    def getName(self) -> str:
-        """!
-        @brief get the name of this image.
+#     def getName(self) -> str:
+#         """!
+#         @brief get the name of this image.
 
-        @returns name.
-        """
-        return self.__name
+#         @returns name.
+#         """
+#         return self.__name
 
-    def getSoftware(self) -> Set[str]:
-        """!
-        @brief get set of software installed on this image.
+#     def getSoftware(self) -> Set[str]:
+#         """!
+#         @brief get set of software installed on this image.
         
-        @return set.
-        """
-        return self.__software
+#         @return set.
+#         """
+#         return self.__software
 
-    def getDirName(self) -> str:
-        """!
-        @brief returns the directory name of this image.
+#     def getDirName(self) -> str:
+#         """!
+#         @brief returns the directory name of this image.
 
-        @return directory name.
-        """
-        return self.__dirName
+#         @return directory name.
+#         """
+#         return self.__dirName
     
-    def isLocal(self) -> bool:
-        """!
-        @brief returns True if this image is local.
+#     def isLocal(self) -> bool:
+#         """!
+#         @brief returns True if this image is local.
 
-        @return True if this image is local.
-        """
-        return self.__local
+#         @return True if this image is local.
+#         """
+#         return self.__local
     
-    def addSoftwares(self, software) -> DockerImage:
-        """!
-        @brief add softwares to this image.
+#     def addSoftwares(self, software) -> DockerImage:
+#         """!
+#         @brief add softwares to this image.
 
-        @return self, for chaining api calls.
-        """
-        for soft in software:
-            self.__software.add(soft)
+#         @return self, for chaining api calls.
+#         """
+#         for soft in software:
+#             self.__software.add(soft)
 
-# BaseSystemImageMapping: Dict = {}
-# # BaseSystemImageMapping['virtual-name'] = (DockerImage('image name'), [software...])
-# BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
-# BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (DockerImage('handsonsecurity/seedemu-ethereum', []))
-UBUNTU_IMAGE   = DockerImage(name='ubuntu:20.04',
-                                software=[])
+# # BaseSystemImageMapping: Dict = {}
+# # # BaseSystemImageMapping['virtual-name'] = (DockerImage('image name'), [software...])
+# # BaseSystemImageMapping[BaseSystem.UBUNTU_20_04] = (DockerImage('ubuntu:20.04', []))
+# # BaseSystemImageMapping[BaseSystem.SEEDEMU_ETHEREUM] = (DockerImage('handsonsecurity/seedemu-ethereum', []))
+# UBUNTU_IMAGE   = DockerImage(name='ubuntu:20.04',
+#                                 software=[])
 
-BASE_IMAGE     = DockerImage(name='handsonsecurity/seedemu-base',
-                                software=['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2',
-                                        'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat'])
+# BASE_IMAGE     = DockerImage(name='handsonsecurity/seedemu-base',
+#                                 software=['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2',
+#                                         'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat'])
 
-ROUTER_IMAGE   = DockerImage(name='handsonsecurity/seedemu-router',
-                                software=['bird2'])
+# ROUTER_IMAGE   = DockerImage(name='handsonsecurity/seedemu-router',
+#                                 software=['bird2'])
 
-ETHEREUM_IMAGE = DockerImage(name='handsonsecurity/seedemu-ethereum',
-                                software=['software-properties-common', 'python3', 'python3-pip'])
+# ETHEREUM_IMAGE = DockerImage(name='handsonsecurity/seedemu-ethereum',
+#                                 software=['software-properties-common', 'python3', 'python3-pip'])
 
 BaseSystemImageMapping = {
         BaseSystem.UBUNTU_20_04:     UBUNTU_IMAGE,
@@ -524,7 +526,7 @@ class Docker(Compiler):
         groupIter: Dict[str, int] = {}
 
         for ((scope, type, name), obj) in registry.getAll().items():
-            if type != 'rnode' and type != 'hnode' and type != 'snode' and type != 'rs' and type != 'snode': 
+            if type not in ['rnode', 'csnode', 'hnode', 'snode', 'rs', 'snode']:
                 continue
 
             node: Node = obj
@@ -731,6 +733,12 @@ class Docker(Compiler):
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key = 'role',
                 value = 'Router'
+            )
+
+        if type == 'csnode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'SCION Control Service'
             )
 
         if type == 'snode':
@@ -944,7 +952,8 @@ class Docker(Compiler):
             for softList in softLists:
                 dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(softList)))
 
-        dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
+        #included in the seedemu-base dockerImage.
+        #dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
 
@@ -1085,6 +1094,10 @@ class Docker(Compiler):
                 self._log('compiling router node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
 
+            if type == 'csnode':
+                self._log('compiling control service node {} for as{}...'.format(name, scope))
+                self.__services += self._compileNode(obj)
+                
             if type == 'hnode':
                 self._log('compiling host node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
