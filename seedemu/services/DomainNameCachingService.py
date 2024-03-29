@@ -3,7 +3,6 @@ from seedemu.core import Configurable, Service, Server
 from seedemu.core import Node, ScopedRegistry, Emulator
 from .DomainNameService import DomainNameService
 from typing import List, Dict
-from seedemu.core.enums import NetworkType
 
 DomainNameCachingServiceFileTemplates: Dict[str, str] = {}
 
@@ -28,8 +27,6 @@ class DomainNameCachingServer(Server, Configurable):
     __configure_resolvconf: bool
     __emulator: Emulator
     __pending_forward_zones: Dict[str, str]
-    __asn_range: List[int]
-    __is_range_all: bool
 
     def __init__(self):
         """!
@@ -39,8 +36,6 @@ class DomainNameCachingServer(Server, Configurable):
         self.__root_servers = []
         self.__configure_resolvconf = False
         self.__pending_forward_zones = {}
-        self.__asn_range = []
-        self.__is_range_all = False
 
     def setConfigureResolvconf(self, configure: bool) -> DomainNameCachingServer:
         """!
@@ -94,35 +89,10 @@ class DomainNameCachingServer(Server, Configurable):
         self.__pending_forward_zones[zone] = vnode
 
         return self
-    
-    def setNameServerOnNodesByAsns(self, asns: List[int]):
-        self.__asn_range.extend(asns)
 
-    def setNameServerOnAllNodes(self):
-        self.__is_range_all = True
-
-    def configure(self, emulator: Emulator, node:Node):
+    def configure(self, emulator: Emulator):
         self.__emulator = emulator
 
-        reg = emulator.getRegistry()
-        address: str = None
-        ifaces = node.getInterfaces()
-        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(node.getName())
-        for iface in ifaces:
-            net = iface.getNet()
-            if net.getType() == NetworkType.Local:
-                address = iface.getAddress()
-                break
-        
-        assert address != "", 'address is not configured.'
-
-        for ((scope, type, name), node) in reg.getAll().items():
-            if type in ['hnode', 'rnode']:
-                if self.__is_range_all or node.getAsn() in self.__asn_range:
-                    if not any(command[0] == ': > /etc/resolv.conf' for command in node.getStartCommands()):
-                        node.insertStartCommand(0,': > /etc/resolv.conf')
-                    node.insertStartCommand(1, 'echo "nameserver {}" >> /etc/resolv.conf'.format(address))
-    
     def install(self, node: Node):
         node.addSoftware('bind9')
         node.setFile('/etc/bind/named.conf.options', DomainNameCachingServiceFileTemplates['named_options'])
@@ -193,37 +163,12 @@ class DomainNameCachingService(Service):
     def getConflicts(self) -> List[str]:
         return ['DomainNameService']
 
-    def __getIpAddr(self, node:Node) -> str:
-        ifaces = node.getInterfaces()
-        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(node.getName())
-        for iface in ifaces:
-            net = iface.getNet()
-            if net.getType() == NetworkType.Local:
-                address = iface.getAddress()
-                return address
-            
-        return ""
-    
     def configure(self, emulator: Emulator):
         super().configure(emulator)
 
         targets = self.getTargets()
-        ipaddrs = []
         for (server, node) in targets:
-            server.configure(emulator, node)
-
-            address = self.__getIpAddr(node)
-            assert address != "", 'address is not configured.'
-            ipaddrs.append(address)
-
-        # For the nodes that are not covered, all the local DNS servers will be added to them (the default behavior).
-        reg = emulator.getRegistry()
-        for ((scope, type, name), node) in reg.getAll().items():
-            if type in ['hnode', 'rnode']:
-                if not any(command[0] == ': > /etc/resolv.conf' for command in node.getStartCommands()):
-                    node.insertStartCommand(0,': > /etc/resolv.conf')
-                    for s in (ipaddrs):
-                        node.insertStartCommand(1, 'echo "nameserver {}" >> /etc/resolv.conf'.format(s))
+            server.configure(emulator)
 
         if self.__auto_root:
             dns_layer: DomainNameService = emulator.getRegistry().get('seedemu', 'layer', 'DomainNameService')
@@ -232,7 +177,6 @@ class DomainNameCachingService(Service):
             for (server, node) in targets:
                 server.setRootServers(root_servers)
 
- 
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'DomainNameCachingService:\n'

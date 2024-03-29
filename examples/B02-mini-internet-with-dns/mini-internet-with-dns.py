@@ -5,7 +5,7 @@ from seedemu.core import Emulator, Binding, Filter, Action
 from seedemu.mergers import DEFAULT_MERGERS
 from seedemu.hooks import ResolvConfHook
 from seedemu.compiler import Docker
-from seedemu.services.DomainNameCachingService import *
+from seedemu.services import DomainNameService, DomainNameCachingService
 from seedemu.layers import Base
 
 emuA = Emulator()
@@ -39,8 +39,8 @@ emu.addBinding(Binding('ns-weibo-cn', filter=Filter(asn=170), action=Action.FIRS
 #####################################################################################
 # Create two local DNS servers (virtual nodes).
 ldns = DomainNameCachingService()
-global_dns_1:DomainNameCachingServer = ldns.install('global-dns-1')
-global_dns_2:DomainNameCachingServer = ldns.install('global-dns-2')
+ldns.install('global-dns-1')
+ldns.install('global-dns-2')
 
 # Customize the display name (for visualization purpose)
 emu.getVirtualNode('global-dns-1').setDisplayName('Global DNS-1')
@@ -61,13 +61,9 @@ emu.addBinding(Binding('global-dns-2', filter = Filter(asn=153, nodeName="local-
 # Add 10.152.0.53 as the local DNS server for AS-160 and AS-170
 # Add 10.153.0.53 as the local DNS server for all the other nodes
 # We can also set this for individual nodes
-
-# base.getAutonomousSystem(160).setNameServers(['10.152.0.53'])
-# base.getAutonomousSystem(170).setNameServers(['10.152.0.53'])
-# base.setNameServers(['10.153.0.53'])
-
-global_dns_1.setNameServerOnNodesByAsns(asns=[160, 170])
-# global_dns_2.setNameServerOnAllNodes()
+base.getAutonomousSystem(160).setNameServers(['10.152.0.53'])
+base.getAutonomousSystem(170).setNameServers(['10.152.0.53'])
+base.setNameServers(['10.153.0.53'])
 
 # Add the ldns layer
 emu.addLayer(ldns)
