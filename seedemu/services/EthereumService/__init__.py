@@ -9,3 +9,5 @@ from .EthUtil import Genesis, AccountStructure, SmartContract, EthAccount
 from .EthereumServer import *
 from .EthereumService import *
 from .FaucetService import *
+from .FaucetUtil import *
+from .FaucetUserService import *
