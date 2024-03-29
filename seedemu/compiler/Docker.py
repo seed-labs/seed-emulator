@@ -911,8 +911,7 @@ class Docker(Compiler):
         #dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
-
-        for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
+        print("[LOG] Using image: {}".format(image.getName()))
 
         start_commands = ''
 
@@ -943,6 +942,8 @@ class Docker(Compiler):
 
         for (cpath, hpath) in node.getImportedFiles().items():
             dockerfile += self._importFile(cpath, hpath)
+
+        for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
         dockerfile += 'CMD ["/start.sh"]\n'
         print(dockerfile, file=open('Dockerfile', 'w'))
