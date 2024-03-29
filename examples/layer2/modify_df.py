@@ -13,7 +13,7 @@ def insert_to_df(lines: Iterable[str], host: str, i: int):
         df.writelines(o_lines)
 
         
-def change_line(host: str, i: int, keyword: str, dst: int):
+def change_line(host: str | int, i: int, keyword: str, dst: int):
     with open(f"./output/hnode_{host}_host_{i}/Dockerfile", "r+") as df:
         lines = df.readlines()
         indices = []
