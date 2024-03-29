@@ -11,3 +11,4 @@ from .DHCPService import DHCPServer, DHCPService
 from .EthereumService import *
 from .ScionBwtestService import ScionBwtestService
 from .KuboService import *
+from .Layer2Service import Layer2Service, Layer2Server, Layer2Blockchain

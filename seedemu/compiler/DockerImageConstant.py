@@ -19,6 +19,8 @@ ETHEREUM_IMAGE = DockerImage(name='handsonsecurity/seedemu-ethereum',
                                 software=['software-properties-common', 'python3', 'python3-pip'],
                                 subset=BASE_IMAGE)
 
+LAYER2_IMAGE = DockerImage(name='op-stack:local', software=[], subset=BASE_IMAGE)
+
 UBUNTU_IMAGE_ARM64   = DockerImage(name='ubuntu:20.04',
                                 software=[],
                                 subset=None)
@@ -36,18 +38,23 @@ ETHEREUM_IMAGE_ARM64 = DockerImage(name='handsonsecurity/seedemu-ethereum-arm64'
                                 software=['software-properties-common', 'python3', 'python3-pip'],
                                 subset=BASE_IMAGE_ARM64)
 
+LAYER2_IMAGE_ARM64 = DockerImage(name='op-stack:local', software=[], subset=BASE_IMAGE_ARM64)
+
+
 BASESYSTEM_DOCKERIMAGE_MAPPING = {
         BaseSystem.UBUNTU_20_04:           UBUNTU_IMAGE,
         BaseSystem.SEEDEMU_BASE:           BASE_IMAGE,
         BaseSystem.SEEDEMU_ROUTER:         ROUTER_IMAGE,
-        BaseSystem.SEEDEMU_ETHEREUM:       ETHEREUM_IMAGE
+        BaseSystem.SEEDEMU_ETHEREUM:       ETHEREUM_IMAGE,
+        BaseSystem.LAYER2:                 LAYER2_IMAGE
 }
 
 BASESYSTEM_ARM64_DOCKERIMAGE_MAPPING = {
         BaseSystem.UBUNTU_20_04:     UBUNTU_IMAGE_ARM64,
         BaseSystem.SEEDEMU_BASE:     BASE_IMAGE_ARM64,
         BaseSystem.SEEDEMU_ROUTER:   ROUTER_IMAGE_ARM64,
-        BaseSystem.SEEDEMU_ETHEREUM: ETHEREUM_IMAGE_ARM64
+        BaseSystem.SEEDEMU_ETHEREUM: ETHEREUM_IMAGE_ARM64,
+        BaseSystem.LAYER2:           LAYER2_IMAGE_ARM64
 }
 
 class Platform(Enum):
