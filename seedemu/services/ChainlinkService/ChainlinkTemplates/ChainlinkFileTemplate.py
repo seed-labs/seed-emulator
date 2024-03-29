@@ -117,69 +117,70 @@ if [ -z "$ETH_ADDRESS" ]; then
     echo "Error: Ethereum address not found."
     exit 1
 fi
+mkdir -p /deployed_contracts
 echo $ETH_ADDRESS > /deployed_contracts/sender.txt
 """
 
-ChainlinkFileTemplate['set_authorized_sender'] = """\
-#!/bin/env python3
-import logging
-import os
-import json
-import time
-from web3 import Web3, HTTPProvider
+# ChainlinkFileTemplate['set_authorized_sender'] = """\
+# #!/bin/env python3
+# import logging
+# import os
+# import json
+# import time
+# from web3 import Web3, HTTPProvider
 
-rpc_url = "http://{rpc_url}:{rpc_port}"
-private_key = "{private_key}"
-contract_folder = './contracts/'
-retry_delay = 60
+# rpc_url = "http://{rpc_url}:{rpc_port}"
+# private_key = "{private_key}"
+# contract_folder = './contracts/'
+# retry_delay = 60
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-web3 = Web3(HTTPProvider(rpc_url))
-if not web3.isConnected():
-    logging.error("Failed to connect to Ethereum node.")
-    exit()
+# web3 = Web3(HTTPProvider(rpc_url))
+# if not web3.isConnected():
+#     logging.error("Failed to connect to Ethereum node.")
+#     exit()
 
-account = web3.eth.account.from_key(private_key)
-gas_price = web3.eth.gasPrice
+# account = web3.eth.account.from_key(private_key)
+# gas_price = web3.eth.gasPrice
 
-with open(os.path.join(contract_folder, 'oracle_contract.abi'), 'r') as abi_file:
-    contract_abi = json.load(abi_file)
+# with open(os.path.join(contract_folder, 'oracle_contract.abi'), 'r') as abi_file:
+#     contract_abi = json.load(abi_file)
 
-with open('./deployed_contracts/oracle_contract_address.txt', 'r') as file:
-    oracle_contract_address = file.read().strip()
-with open('./deployed_contracts/sender.txt', 'r') as file:
-    sender = file.read().strip()
+# with open('./deployed_contracts/oracle_contract_address.txt', 'r') as file:
+#     oracle_contract_address = file.read().strip()
+# with open('./deployed_contracts/sender.txt', 'r') as file:
+#     sender = file.read().strip()
 
-def authorize_address(sender, oracle_contract_address, nonce):
-    try:
-        oracle_contract = web3.eth.contract(address=oracle_contract_address, abi=contract_abi)
-        txn_dict = oracle_contract.functions.setAuthorizedSenders([sender]).buildTransaction({{
-            'chainId': {chain_id},
-            'gas': 4000000,
-            'gasPrice': web3.toWei('50', 'gwei'),
-            'nonce': nonce,
-        }})
-        signed_txn = web3.eth.account.sign_transaction(txn_dict, account.privateKey)
-        txn_receipt = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
-        txn_receipt = web3.eth.wait_for_transaction_receipt(txn_receipt)
-        logging.info(f'Success: {{txn_receipt}}')
-        return True
-    except Exception as e:
-        logging.error(f'Error: {{e}}')
-        if "replacement transaction underpriced" in str(e):
-            logging.warning('Requeuing due to underpriced transaction')
-            return False
-        else:
-            return True
+# def authorize_address(sender, oracle_contract_address, nonce):
+#     try:
+#         oracle_contract = web3.eth.contract(address=oracle_contract_address, abi=contract_abi)
+#         txn_dict = oracle_contract.functions.setAuthorizedSenders([sender]).buildTransaction({{
+#             'chainId': {chain_id},
+#             'gas': 4000000,
+#             'gasPrice': web3.toWei('50', 'gwei'),
+#             'nonce': nonce,
+#         }})
+#         signed_txn = web3.eth.account.sign_transaction(txn_dict, account.privateKey)
+#         txn_receipt = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+#         txn_receipt = web3.eth.wait_for_transaction_receipt(txn_receipt)
+#         logging.info(f'Success: {{txn_receipt}}')
+#         return True
+#     except Exception as e:
+#         logging.error(f'Error: {{e}}')
+#         if "replacement transaction underpriced" in str(e):
+#             logging.warning('Requeuing due to underpriced transaction')
+#             return False
+#         else:
+#             return True
 
-authorization_success = False
-while not authorization_success:
-    nonce = web3.eth.getTransactionCount(account.address, 'pending')
-    authorization_success = authorize_address(sender, oracle_contract_address, nonce)
-    if not authorization_success:
-        time.sleep(retry_delay)
-"""
+# authorization_success = False
+# while not authorization_success:
+#     nonce = web3.eth.getTransactionCount(account.address, 'pending')
+#     authorization_success = authorize_address(sender, oracle_contract_address, nonce)
+#     if not authorization_success:
+#         time.sleep(retry_delay)
+# """
 
 ChainlinkFileTemplate['nginx_site'] = """\
 server {{
@@ -326,17 +327,29 @@ server {{
 ChainlinkFileTemplate['flask_app'] = """\
 from flask import Flask, request, jsonify
 import os
+from web3 import Web3, HTTPProvider
+import json
+
 
 app = Flask(__name__)
 
 ADDRESS_FILE_PATH = '/deployed_contracts/oracle_contract_address.txt'
 HTML_FILE_PATH = '/var/www/html/index.html'
 
+def get_sender_account_details():
+    with open('./deployed_contracts/sender_account.txt', 'r') as account_file:
+        lines = account_file.readlines()
+        account_details = {{
+        'address': lines[0].strip().split('Address: ')[1],
+        'private_key': lines[1].strip().split('Private Key: ')[1]
+        }}
+    return account_details
+
 @app.route('/display_contract_address', methods=['POST'])
 def submit_address():
     address = request.json.get('contract_address')
     if not address:
-        return jsonify({'error': 'No address provided'}), 400
+        return jsonify({{'error': 'No address provided'}}), 400
     
     os.makedirs(os.path.dirname(ADDRESS_FILE_PATH), exist_ok=True)
 
@@ -344,10 +357,10 @@ def submit_address():
         file.write(address + '\\n')
 
     with open(HTML_FILE_PATH, 'a') as file:
-        file.write(f'<h1>Oracle Contract Address: {address}</h1>\\n')
+        file.write(f'<h1>Oracle Contract Address: {{address}}</h1>\\n')
 
-    return jsonify({'message': 'Address saved and HTML updated successfully'}), 200
-
+    return jsonify({{'message': 'Address saved and HTML updated successfully'}}), 200
+    
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
 """

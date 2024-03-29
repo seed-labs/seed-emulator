@@ -76,7 +76,7 @@ class ChainlinkServer(Server):
         # self.__node.appendStartCommand(ChainlinkFileTemplate['send_flask_request'].format(init_node_url=self.__init_node_url, flask_server_port=self.__flask_server_port))
         self.__node.appendStartCommand(ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
         self.__deploy_oracle_contract()
-        self.__set_authorized_sender()
+        # self.__set_authorized_sender()
         self.__node.appendStartCommand(ChainlinkFileTemplate['send_flask_request'].format(init_node_url=self.__init_node_url, flask_server_port=self.__flask_server_port))
         self.__node.appendStartCommand(ChainlinkFileTemplate['create_jobs'])
         self.__node.appendStartCommand(ChainlinkFileTemplate['send_get_eth_request'].format(faucet_server_url=self.__faucet_node_url, faucet_server_port=self.__faucet_node_port))
@@ -117,11 +117,13 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         """
         @brief Deploy the oracle contract.
         """
-        self.__node.setFile('/contracts/deploy_oracle_contract.py', OracleContractDeploymentTemplate['oracle_contract_deploy'].format(rpc_url = self.__rpc_url, private_key = self.__owner_private_key, owner_address = self.__owner, rpc_port = self.__rpc_port, init_node_url=self.__init_node_url))
+        self.__node.appendStartCommand(ChainlinkFileTemplate['save_chainlink_address'])
+        self.__node.setFile('/contracts/deploy_oracle_contract.py', OracleContractDeploymentTemplate['oracle_contract_deploy'].format(rpc_url = self.__rpc_url, rpc_port = self.__rpc_port, init_node_url=self.__init_node_url, chain_id=self.__chain_id, faucet_url=self.__faucet_node_url, faucet_port=self.__faucet_node_port))
         self.__node.setFile('/contracts/oracle_contract.abi', OracleContractDeploymentTemplate['oracle_contract_abi'])
         self.__node.setFile('/contracts/oracle_contract.bin', OracleContractDeploymentTemplate['oracle_contract_bin'])
         self.__node.appendStartCommand(f'python3 ./contracts/deploy_oracle_contract.py')
-        self.__node.appendStartCommand('echo "Oracle contract deployed"')
+        self.__node.appendStartCommand('echo "Oracle contract deployed and setAuthorizedSender set."')
+
     
     def __set_authorized_sender(self):
         """
