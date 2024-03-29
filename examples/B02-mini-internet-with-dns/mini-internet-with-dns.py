@@ -67,7 +67,7 @@ emu.addBinding(Binding('global-dns-2', filter = Filter(asn=153, nodeName="local-
 # base.setNameServers(['10.153.0.53'])
 
 global_dns_1.setNameServerOnNodesByAsns(asns=[160, 170])
-global_dns_2.setNameServerOnAllNodes()
+# global_dns_2.setNameServerOnAllNodes()
 
 # Add the ldns layer
 emu.addLayer(ldns)

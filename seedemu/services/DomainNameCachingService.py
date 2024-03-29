@@ -193,12 +193,37 @@ class DomainNameCachingService(Service):
     def getConflicts(self) -> List[str]:
         return ['DomainNameService']
 
+    def __getIpAddr(self, node:Node) -> str:
+        ifaces = node.getInterfaces()
+        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(node.getName())
+        for iface in ifaces:
+            net = iface.getNet()
+            if net.getType() == NetworkType.Local:
+                address = iface.getAddress()
+                return address
+            
+        return ""
+    
     def configure(self, emulator: Emulator):
         super().configure(emulator)
 
         targets = self.getTargets()
+        ipaddrs = []
         for (server, node) in targets:
             server.configure(emulator, node)
+
+            address = self.__getIpAddr(node)
+            assert address != "", 'address is not configured.'
+            ipaddrs.append(address)
+
+        # For the nodes that are not covered, all the local DNS servers will be added to them (the default behavior).
+        reg = emulator.getRegistry()
+        for ((scope, type, name), node) in reg.getAll().items():
+            if type in ['hnode', 'rnode']:
+                if not any(command[0] == ': > /etc/resolv.conf' for command in node.getStartCommands()):
+                    node.insertStartCommand(0,': > /etc/resolv.conf')
+                    for s in (ipaddrs):
+                        node.insertStartCommand(1, 'echo "nameserver {}" >> /etc/resolv.conf'.format(s))
 
         if self.__auto_root:
             dns_layer: DomainNameService = emulator.getRegistry().get('seedemu', 'layer', 'DomainNameService')
