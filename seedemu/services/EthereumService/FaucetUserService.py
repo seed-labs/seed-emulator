@@ -51,6 +51,7 @@ class FaucetUserServer(Server):
         """!
         @brief Install the service.
         """
+        print("HIHIHIHIHIHIHIHIHIHIHIHIHIHIHIjasdflkdjfl;asdjfo;awjfo;iwjeh;oijw cwjciowu niofvo;iuj")
         node.appendClassName("FaucetUserService")
         self.__faucet_util.addFund("0x4899DA58039396E9eC4F171aa3cB20762c1f8C6c", 2)
         self.__faucet_util.addFund("0xF5c8747aD31c8726bA4bf8C6492c07625b55eE04", 3)
