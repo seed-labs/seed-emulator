@@ -911,7 +911,6 @@ class Docker(Compiler):
         #dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
-        print("[LOG] Using image: {}".format(image.getName()))
 
         start_commands = ''
 

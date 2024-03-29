@@ -113,20 +113,14 @@ emu.getVirtualNode("poa-eth8").setDisplayName("Ethereum-POA-8")
 
 # Create Layer2 nodes
 l2 = Layer2Service()
-# l2Bkc = l2.createL2Blockchain("test")
+l2Bkc = l2.createL2Blockchain("test")
 
-l2_1 = l2.install("l2-1")
-l2_2 = l2.install("l2-2")
-l2_3 = l2.install("l2-3")
-l2_4 = l2.install("l2-4")
+l2_1 = l2Bkc.createNode("l2-1")
+l2_2 = l2Bkc.createNode("l2-2")
+l2_3 = l2Bkc.createNode("l2-3")
+l2_4 = l2Bkc.createNode("l2-4")
 
 l2_1.setSequencer(True)
-
-# emu.getVirtualNode("l2-1").setDisplayName("Layer2-1")
-# emu.getVirtualNode("l2-2").setDisplayName("Layer2-2")
-# emu.getVirtualNode("l2-3").setDisplayName("Layer2-3")
-# emu.getVirtualNode("l2-4").setDisplayName("Layer2-4")
-
 
 # SC deployer node
 # deployerHostname = base.getAutonomousSystem(154).getHosts()
@@ -139,7 +133,7 @@ l2_1.setSequencer(True)
 # deployerHost.appendStartCommand("/l2/build.sh &> deployer.log", fork=True)
 
 # Add external port
-
+emu.getVirtualNode("l2-4").addPortForwarding(8545, l2_4.getRPCPort())
 
 
 # Binding virtual nodes to physical nodes
@@ -165,12 +159,3 @@ emu.render()
 # If output directory exists and override is set to false, we call exit(1)
 # updateOutputdirectory will not be called
 emu.compile(docker, "./output", override=True)
-
-
-# # Post processing
-# hosts = range(150, 154)
-# ids = range(1)
-
-# [change_line(host, i, "sed -i", -2) for host in hosts for i in ids]
-# [change_line(host, i, "chmod +x /start_", -2) for host in hosts for i in ids]
-# change_line(154, 0, "sed -i", -2)
