@@ -4,3 +4,4 @@
 from __future__ import annotations
 
 from .Layer2Service import *
+from .Layer2Template import *

@@ -4,7 +4,6 @@ from sys import stderr
 
 from seedemu.core import Node, Service, Server, Emulator, BaseSystem
 from seedemu.core.enums import NetworkType
-from seedemu.compiler import DockerImage, Docker
 
 L2_LABEL = "layer2.{key}"
 
