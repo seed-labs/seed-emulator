@@ -16,12 +16,11 @@ class Genesis():
 
     __genesis:dict
     __consensusMechanism:ConsensusMechanism
-    
+
     def __init__(self, consensus:ConsensusMechanism):
         self.__consensusMechanism = consensus
         self.__genesis = json.loads(GenesisFileTemplates[self.__consensusMechanism.value])
         self.__genesis["timestamp"] = hex(int((time())))
-
 
     def setGenesis(self, customGenesis:str):
         """!
@@ -42,6 +41,22 @@ class Genesis():
         returns genesis.
         """
         return json.dumps(self.__genesis)
+
+    def addCode(self, address: str, code: str) -> Genesis:
+        """!
+        @brief add code to genesis file.
+
+        @param address address to add code.
+        @param code code to add.
+
+        @returns self, for chaining calls.
+        """
+        if self.__genesis["alloc"][address[2:]] is not None:
+            self.__genesis["alloc"][address[2:]]["code"] = code
+        else:
+            self.__genesis["alloc"][address[2:]] = {"code": code}
+
+        return self
 
     def addAccounts(self, accounts:List[AccountStructure]) -> Genesis:
         """!
@@ -96,7 +111,7 @@ class Genesis():
 
         for account in accounts:
             signerAddresses = signerAddresses + account.address[2:]
-        
+
         self.__genesis["extraData"] = GenesisFileTemplates['POA_extra_data'].format(signer_addresses=signerAddresses)
 
         return self
@@ -230,7 +245,7 @@ class EthAccount():
         @brief Log to stderr.
         """
         print("==== EthAccount: {}".format(message), file=stderr)
-        
+
 
 class SmartContract():
 

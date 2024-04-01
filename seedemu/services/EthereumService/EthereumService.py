@@ -280,6 +280,18 @@ class Blockchain:
         self.__pending_targets.append(vnode)
         return eth.installByBlockchain(vnode, self)
     
+    def addCode(self, address: str, code: str) -> Blockchain:
+        """!
+        @brief Add code to an account by setting code field of genesis file.
+
+        @param address The account's address.
+        @param code The code to set.
+
+        @returns Self, for chaining calls.
+        """
+        self.__genesis.addCode(address, code)
+        return self
+    
     def addLocalAccount(self, address: str, balance: int, unit:EthUnit=EthUnit.ETHER) -> Blockchain:
         """!
         @brief Allocate balance to an external account by setting alloc field of genesis file.
