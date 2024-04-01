@@ -15,6 +15,7 @@ class BaseSystem(Enum):
     SEEDEMU_ROUTER      = 'seedemu-router'
     SEEDEMU_ETHEREUM    = 'seedemu-ethereum'
     LAYER2              = 'op-stack:local'
+    SC_DEPLOYER         = 'sc-deployer:latest'
     DEFAULT             = SEEDEMU_BASE
 
     # The relationship of the images: B is a subset of A means that 
@@ -25,6 +26,7 @@ class BaseSystem(Enum):
                 SEEDEMU_ROUTER: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_ETHEREUM: [UBUNTU_20_04, SEEDEMU_BASE],
                 LAYER2: [UBUNTU_20_04, SEEDEMU_BASE],
+                SC_DEPLOYER: [UBUNTU_20_04, SEEDEMU_BASE],
             }
     
     @staticmethod 
