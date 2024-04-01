@@ -154,6 +154,16 @@ for i, host in enumerate(hosts):
         f"/start{'_seq' if i == 0 else '_ns'}.sh &> out.log", fork=True
     )
 
+# SC deployer node
+deployerHostname = base.getAutonomousSystem(154).getHosts()
+deployerHost = base.getAutonomousSystem(154).getHost(deployerHostname[0])
+deployerImageName = "sc-deployer:latest"
+deployerImage = DockerImage(deployerImageName, software=[])
+docker.addImage(deployerImage)
+docker.setImageOverride(deployerHost, deployerImageName)
+deployerHost.addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
+deployerHost.appendStartCommand("/l2/build.sh &> deployer.log", fork=True)
+
 # Add external port
 hosts[0].addPortForwarding(8545, 8545)
 hosts[0].addPortForwarding(8546, 8546)
@@ -184,3 +194,4 @@ ids = range(1)
 
 [change_line(host, i, "sed -i", -2) for host in hosts for i in ids]
 [change_line(host, i, "chmod +x /start_", -2) for host in hosts for i in ids]
+change_line(154, 0, "sed -i", -2)
