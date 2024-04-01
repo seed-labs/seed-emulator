@@ -10,7 +10,7 @@
 Accounts:
 - A : For chainlink initializer node to deploy link token contract
 - B : Created by chainlink statup command to send transactions to oracle contract
- - C : For chainlink normal node to deploy oracle contract
+- C : For chainlink normal node to deploy oracle contract
 
 Contracts:
 - X :   LINK token contract
