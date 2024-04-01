@@ -28,6 +28,7 @@ blockchain = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.
 
 # Set custom genesis
 # blockchain.setGenesis(CustomGenesisFileContent)
+blockchain.setGasLimitPerBlock(30_000_000)
 blockchain.addLocalAccount("0x4e59b44847b379578588920cA78FbF26c0B4956C", 0)
 blockchain.addCode(
     "0x4e59b44847b379578588920cA78FbF26c0B4956C",
