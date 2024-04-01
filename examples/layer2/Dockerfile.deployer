@@ -2,7 +2,7 @@ FROM ghcr.io/foundry-rs/foundry:latest as builder
 
 ARG SOLC_VERSIONS
 
-RUN apk add --no-cache bash jq iproute2 curl build-base openssl
+RUN apk add --no-cache bash jq iproute2 curl build-base openssl python3
 
 # Install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
