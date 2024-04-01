@@ -1,0 +1,27 @@
+FROM ghcr.io/foundry-rs/foundry:latest as builder
+
+ARG SOLC_VERSIONS
+
+RUN apk add --no-cache bash jq iproute2 curl build-base openssl
+
+# Install rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+# Add rust bins to PATH
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+
+# Install solcs
+RUN cargo install svm-rs
+RUN svm install $SOLC_VERSIONS
+
+
+# FROM ubuntu:20.04
+
+# RUN apt-get update && apt-get install -y curl jq iproute2
+
+# COPY --from=builder /usr/local/bin/* /usr/local/bin/
+
+COPY l2 /l2
+
+# Compile the smart contracts
+RUN cd /l2 && forge build
