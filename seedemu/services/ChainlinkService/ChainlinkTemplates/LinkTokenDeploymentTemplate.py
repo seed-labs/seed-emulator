@@ -62,7 +62,8 @@ transaction = link_token_contract.constructor().buildTransaction({{
 	'from': account.address,
 	'nonce': nonce,
 	'gas': 2000000,
-	'gasPrice': web3.eth.gas_price
+	'gasPrice': web3.eth.gas_price,
+	'chainId': {chain_id}
 }})
 
 signed_txn = web3.eth.account.sign_transaction(transaction, private_key)

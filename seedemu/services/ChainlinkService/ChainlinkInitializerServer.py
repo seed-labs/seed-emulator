@@ -15,22 +15,32 @@ class ChainlinkInitializerServer(Server):
     """
     __node: Node
     __emulator: Emulator
-    __deploymentType: str
+    __deploymentType: str = "web3"
     __owner: str
     __rpc_url: str
     __owner_private_key: str
     __chain_id: int = 1337
     __rpc_port: int = 8545
-    __number_of_oracle_contracts: int = 1
     __rpc_vnode_name: str = None
+    __faucet_vnode_name: str = None
     __faucet_url: str
     __faucet_port: int
+    __server_port: int = 5000
     
     def __init__(self):
         """
         @brief ChainlinkServer Constructor.
         """
         super().__init__()
+        # self.__faucet_util = FaucetUtil()
+        
+    # def setFaucetServerInfo(self, vnode: str, port = 80):
+    #      """
+    #         @brief Set the faucet server information.
+    #      """
+
+    #      self.__faucet_vnode_name = vnode
+    #      self.__faucet_port = port
 
     def configure(self, node: Node, emulator: Emulator):
         """
@@ -38,6 +48,8 @@ class ChainlinkInitializerServer(Server):
         """
         self.__node = node
         self.__emulator = emulator
+        # self.__faucet_util.setFaucetServerInfo(vnode=self.__faucet_vnode_name, port=self.__faucet_port)
+        # self.__faucet_util.configure(emulator)
 
     def installInitializer(self, node: Node):
         """
@@ -64,14 +76,6 @@ class ChainlinkInitializerServer(Server):
         for software in software_list:
             self.__node.addSoftware(software)
         self.__node.addBuildCommand('pip3 install web3==5.31.1')
-    
-    # def setContractOwner(self, owner: str):
-    #     """
-    #     @brief Set the owner of the contracts
-        
-    #     @param owner The owner of the contracts
-    #     """
-    #     self.__owner = owner
 
     def setDeploymentType(self, deploymentType: str = "web3"):
         """
@@ -80,14 +84,6 @@ class ChainlinkInitializerServer(Server):
         @param deploymentType The deployment type.
         """
         self.__deploymentType = deploymentType
-            
-    # def setOwnerPrivateKey(self, privateKey: str):
-    #     """
-    #     @brief Set the owner private key.
-        
-    #     @param privateKey The private key of the owner.
-    #     """
-    #     self.__privateKey = privateKey
         
     def setRPCbyUrl(self, address: str):
         """
@@ -121,7 +117,7 @@ class ChainlinkInitializerServer(Server):
         @brief Deploy the contracts using web3.
         """
         # Deploy the contracts using web3
-        self.__node.setFile('/contracts/deploy_linktoken_contract.py', LinkTokenDeploymentTemplate['link_token_contract'].format(rpc_url = self.__rpc_url, rpc_port = self.__rpc_port, faucet_url=self.__faucet_url, faucet_port=self.__faucet_port))
+        self.__node.setFile('/contracts/deploy_linktoken_contract.py', LinkTokenDeploymentTemplate['link_token_contract'].format(rpc_url = self.__rpc_url, rpc_port = self.__rpc_port, faucet_url=self.__faucet_url, faucet_port=self.__faucet_port, chain_id=self.__chain_id))
         self.__node.setFile('/contracts/link_token.abi', LinkTokenDeploymentTemplate['link_token_abi'])
         self.__node.setFile('/contracts/link_token.bin', LinkTokenDeploymentTemplate['link_token_bin'])
         self.__node.appendStartCommand(f'python3 ./contracts/deploy_linktoken_contract.py')
@@ -131,7 +127,7 @@ class ChainlinkInitializerServer(Server):
         self.__node.appendStartCommand('export link_token_address=$(cat /deployed_contracts/link_token_address.txt)')
         self.__node.addSoftware('nginx-light')
         self.__node.addBuildCommand('pip3 install Flask')
-        self.__node.setFile("/flask_app.py", ChainlinkFileTemplate['flask_app'].format(rpc_url=self.__rpc_url, rpc_port=self.__rpc_port))
+        self.__node.setFile("/flask_app.py", ChainlinkFileTemplate['flask_app'].format(rpc_url=self.__rpc_url, rpc_port=self.__rpc_port, port=self.__server_port))
         self.__node.appendStartCommand('python3 /flask_app.py &')
         self.__node.setFile('/var/www/html/index_template.html', 
                             '<h1>Link Token Contract: {{linkTokenAddress}}</h1>')

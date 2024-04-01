@@ -64,27 +64,36 @@ for asn in asns:
         emu.addBinding(Binding(vnode, filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         i = i+1
 
-# Create the Chainlink layer
+
+# Faucet Configuration
+# f_node = 'faucet'
+# f = blockchain.createFaucet(vnode='faucet', port=5050, eth_node='poa-eth5', balance=10000)
+# f.enableGethHttp()
+# f.enableGethWs()
+# emu.getVirtualNode(f_node).setDisplayName('Faucet')
+# emu.addBinding(Binding(f_node, filter=Filter(asn=164, nodeName='host_2')))
+
+
+# Create the Chainlink Init server
 chainlink = ChainlinkService()
-c_asns  = [150, 151, 152, 153, 154, 160, 161]
-# Chainlink Init server
+c_asns  = [150, 151]
 cnode = 'chainlink_init_server'
-# Web3 deployment using initializer server
 c_init = chainlink.installInitializer(cnode)
+# c_init.setFaucetServerInfo(vnode = 'faucet', port = 5050)
 c_init.setFaucetUrl(address="128.230.212.249", port=3000)
-c_init.setDeploymentType("web3")
 c_init.setRPCbyEthNodeName('eth2')
 service_name = 'Chainlink-Init'
 emu.getVirtualNode(cnode).setDisplayName(service_name)
 emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
 
 i = 0
-# Chainlink normal servers
+# Create Chainlink normal servers
 for asn in c_asns:
     cnode = 'chainlink_server_{}'.format(i)
     c_normal = chainlink.install(cnode)
     c_normal.setRPCbyEthNodeName('eth{}'.format(i))
     c_normal.setInitNodeIP("chainlink_init_server")
+    # c_normal.setFaucetServerInfo(vnode = 'faucet', port = 5050)
     c_normal.setFaucetUrl("128.230.212.249")
     c_normal.setFaucetPort(3000)
     service_name = 'Chainlink-{}'.format(i)
@@ -94,6 +103,9 @@ for asn in c_asns:
     
 # Add the Ethereum layer
 emu.addLayer(eth)
+
+# Add the faucet layer
+# emu.addLayer(faucetService)
 
 # Add the Chainlink layer
 emu.addLayer(chainlink)
