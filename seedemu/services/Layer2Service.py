@@ -63,6 +63,14 @@ class Layer2Server(Server):
 
         @param node node.
         """
+
+        l1Node: Node
+        l1Port: int
+
+        l1Node, l1Port = self.__l2Blockchain.getL1Node()
+        assert(l1Node is not None and l1Port is not None), "Layer2Server::install(): L1 node is not set"
+        l1Addr: str = f"http://{l1Node.getInterfaces()[0].getAddress()}:{l1Port}"
+        
         node.importFile(
             "/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/.env",
             "/.env",
@@ -93,8 +101,9 @@ class Layer2Server(Server):
             "/L2OutputOracleProxy.json",
         )
         node.addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
+        assert(self.__l2Blockchain.getSequencerAddress() is not None), "Layer2Server::install(): sequencer address is not set"
         node.appendStartCommand(
-            f"/start{'_seq' if self.__isSequencer else '_ns'}.sh {self.__l2Blockchain.getSequencerAddress()} &> out.log",
+            f"/start{'_seq' if self.__isSequencer else '_ns'}.sh {self.__l2Blockchain.getSequencerAddress()} {l1Addr} &> out.log",
             fork=True,
         )
 
@@ -106,6 +115,8 @@ class Layer2Blockchain:
     __chainName: str
     __sequencerAddress: str
     __nonSequencerAddresses: List[str]
+    __l1Node: Node
+    __l1Port: int
 
     def __init__(self, service: Layer2Service, chainName: str, chainID: int):
         self.__layer2Service = service
@@ -114,6 +125,8 @@ class Layer2Blockchain:
         self.__pendingTargets = []
         self.__sequencerAddress = None
         self.__nonSequencerAddresses = []
+        self.__l1Node = None
+        self.__l1Port = None
 
     def _log(self, msg: str):
         print("==== Layer2Blockchain: {}".format(msg), file=stderr)
@@ -141,9 +154,16 @@ class Layer2Blockchain:
             assert (
                 len(ifaces) > 0
             ), "Layer2Service::_doConfigure(): node as{}/{} has not interfaces".format()
-            self.__sequencerAddress = "{}:{}".format(
+            self.__sequencerAddress = "http://{}:{}".format(
                 str(ifaces[0].getAddress()), server.getRPCPort()
             )
+    
+    def setL1Node(self, node: Node, port: int):
+        self.__l1Node = node
+        self.__l1Port = port
+
+    def getL1Node(self) -> Node:
+        return self.__l1Node, self.__l1Port
 
 
 class Layer2Service(Service):
@@ -151,7 +171,6 @@ class Layer2Service(Service):
     @brief Layer2Service class.
     """
 
-    __emulator: Emulator
     __blockchains: Dict[str, Layer2Blockchain]
     __blockchain_id: int
     __serial: int
