@@ -3,6 +3,7 @@ from typing import Dict, List
 from sys import stderr
 
 from seedemu.core import Node, Service, Server, Emulator, BaseSystem
+from seedemu.core.enums import NetworkType
 from seedemu.compiler import DockerImage, Docker
 
 L2_LABEL = "layer2.{key}"
@@ -13,9 +14,8 @@ class Layer2Server(Server):
     __id: int
     __l2Blockchain: Layer2Blockchain
     __rpcPort: int
-    __wsPOrt: int
+    __wsPort: int
     __isSequencer: bool
-    __l1Node: Node
 
     def __init__(self, id: int, l2Blockchain: Layer2Blockchain):
         """!
@@ -64,13 +64,18 @@ class Layer2Server(Server):
         @param node node.
         """
 
-        l1Node: Node
+        l1VNode: str
         l1Port: int
+        l1VNode, l1Port = self.__l2Blockchain.getL1VNode()
+        assert (
+            l1VNode is not None and l1Port is not None
+        ), "Layer2Server::install(): L1 node is not set"
 
-        l1Node, l1Port = self.__l2Blockchain.getL1Node()
-        assert(l1Node is not None and l1Port is not None), "Layer2Server::install(): L1 node is not set"
-        l1Addr: str = f"http://{l1Node.getInterfaces()[0].getAddress()}:{l1Port}"
-        
+        l1NodeIP = self.__getIPByVNode(l1VNode)
+        assert l1NodeIP is not None, "Layer2Server::install(): L1 node IP is None"
+
+        l1RPC: str = f"http://{l1NodeIP}:{l1Port}"
+
         node.importFile(
             "/home/hua/courses/CIS700-AIS/seed-emulator/examples/layer2/l2/.env",
             "/.env",
@@ -101,11 +106,30 @@ class Layer2Server(Server):
             "/L2OutputOracleProxy.json",
         )
         node.addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
-        assert(self.__l2Blockchain.getSequencerAddress() is not None), "Layer2Server::install(): sequencer address is not set"
+        assert (
+            self.__l2Blockchain.getSequencerAddress() is not None
+        ), "Layer2Server::install(): sequencer address is not set"
         node.appendStartCommand(
-            f"/start{'_seq' if self.__isSequencer else '_ns'}.sh {self.__l2Blockchain.getSequencerAddress()} {l1Addr} &> out.log",
+            f"/start{'_seq' if self.__isSequencer else '_ns'}.sh {self.__l2Blockchain.getSequencerAddress()} {l1RPC} &> out.log",
             fork=True,
         )
+
+    def __getIPByVNode(self, vnode: str):
+        """
+        @brief Get the IP address of the ethereum node.
+
+        @param vnode The name of the ethereum node
+        """
+        node = self.__l2Blockchain.getLayer2Service().getEmulator().getBindingFor(vnode)
+        address: str = None
+        ifaces = node.getInterfaces()
+        assert len(ifaces) > 0, "Node {} has no IP address.".format(node.getName())
+        for iface in ifaces:
+            net = iface.getNet()
+            if net.getType() == NetworkType.Local:
+                address = iface.getAddress()
+                break
+        return address
 
 
 class Layer2Blockchain:
@@ -115,7 +139,7 @@ class Layer2Blockchain:
     __chainName: str
     __sequencerAddress: str
     __nonSequencerAddresses: List[str]
-    __l1Node: Node
+    __l1VNode: Node
     __l1Port: int
 
     def __init__(self, service: Layer2Service, chainName: str, chainID: int):
@@ -125,7 +149,7 @@ class Layer2Blockchain:
         self.__pendingTargets = []
         self.__sequencerAddress = None
         self.__nonSequencerAddresses = []
-        self.__l1Node = None
+        self.__l1VNode = None
         self.__l1Port = None
 
     def _log(self, msg: str):
@@ -144,6 +168,9 @@ class Layer2Blockchain:
     def getSequencerAddress(self) -> str:
         return self.__sequencerAddress
 
+    def getLayer2Service(self) -> Layer2Service:
+        return self.__layer2Service
+
     def _doConfigure(self, node: Node, server: Layer2Server):
         self._log(
             "configuring as{}/{} as an l2 node...".format(node.getAsn(), node.getName())
@@ -157,13 +184,13 @@ class Layer2Blockchain:
             self.__sequencerAddress = "http://{}:{}".format(
                 str(ifaces[0].getAddress()), server.getRPCPort()
             )
-    
-    def setL1Node(self, node: Node, port: int):
-        self.__l1Node = node
+
+    def setL1Node(self, vnode: str, port: int):
+        self.__l1VNode = vnode
         self.__l1Port = port
 
-    def getL1Node(self) -> Node:
-        return self.__l1Node, self.__l1Port
+    def getL1VNode(self) -> Node:
+        return self.__l1VNode, self.__l1Port
 
 
 class Layer2Service(Service):
@@ -174,6 +201,7 @@ class Layer2Service(Service):
     __blockchains: Dict[str, Layer2Blockchain]
     __blockchain_id: int
     __serial: int
+    __emulator: Emulator
 
     def __init__(self):
         """!
@@ -184,10 +212,14 @@ class Layer2Service(Service):
         self.__serial = 0
         self.__blockchains = {}
         self.__blockchain_id = 42069
+        self.__emulator = None
         self.addDependency("Base", False, False)
 
     def getName(self) -> str:
         return "Layer2Service"
+
+    def getEmulator(self) -> Emulator:
+        return self.__emulator
 
     def installByL2Blockchain(
         self, vnode: str, l2Blockchain: Layer2Blockchain
@@ -215,6 +247,7 @@ class Layer2Service(Service):
         server.getL2Blockchain()._doConfigure(node, server)
 
     def configure(self, emulator: Emulator):
+        self.__emulator = emulator
         super().configure(emulator)
 
     def _doInstall(self, node: Node, server: Layer2Server):

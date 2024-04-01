@@ -7,7 +7,6 @@ import sys
 
 emu = Makers.makeEmulatorBaseWith10StubASAndHosts(1)
 
-
 if len(sys.argv) == 1:
     platform = "amd"
 else:
@@ -71,20 +70,20 @@ emu.getVirtualNode("poa-eth8").setDisplayName("Ethereum-POA-8")
 l2 = Layer2Service()
 l2Bkc = l2.createL2Blockchain("test")
 
-base: Base = emu.getLayer("Base")
-asn = 162
-host_name = base.getAutonomousSystem(asn).getHosts()
-host = base.getAutonomousSystem(asn).getHost(host_name[0])
-l2Bkc.setL1Node(host, e5.getGethHttpPort())
+# base: Base = emu.getLayer("Base")
+# asn = 162
+# host_name = base.getAutonomousSystem(asn).getHosts()
+# host = base.getAutonomousSystem(asn).getHost(host_name[0])
+# l2Bkc.setL1Node(host, e5.getGethHttpPort())
+l2Bkc.setL1Node("poa-eth5", e5.getGethHttpPort())
 
 l2_1 = l2Bkc.createNode("l2-1").setSequencer(True)
 l2_2 = l2Bkc.createNode("l2-2")
 l2_3 = l2Bkc.createNode("l2-3")
 l2_4 = l2Bkc.createNode("l2-4")
 
-# l2_1.setSequencer(True)
-
 # SC deployer node
+base: Base = emu.getLayer("Base")
 deployerHostname = base.getAutonomousSystem(154).getHosts()
 deployerHost = base.getAutonomousSystem(154).getHost(deployerHostname[0])
 deployerImageName = "sc-deployer:latest"
