@@ -238,10 +238,20 @@ class Scion(Layer, Graphable):
             a_as = base_layer.getAutonomousSystem(a.asn)
             b_as = base_layer.getAutonomousSystem(b.asn)
 
-            try:
-                a_router, b_router = self.__get_xc_routers(a.asn, a_reg, b.asn, b_reg)
-            except AssertionError:
-                assert False, f"cannot find XC to configure link as{a} --> as{b}"
+            if a_router == "" or b_router == "": # if routers are not explicitly specified try to get them
+                try:
+                    a_router, b_router = self.__get_xc_routers(a.asn, a_reg, b.asn, b_reg)
+                except AssertionError:
+                    assert False, f"cannot find XC to configure link as{a} --> as{b}"
+            else: # if routers are explicitly specified, try to get them
+                try:
+                    a_router = a_reg.get('rnode', a_router)
+                except AssertionError:
+                    assert False, f"cannot find router {a_router} in as{a}"
+                try:
+                    b_router = b_reg.get('rnode', b_router)
+                except AssertionError:
+                    assert False, f"cannot find router {b_router} in as{b}"
 
             a_ifaddr, a_net, _ = a_router.getCrossConnect(b.asn, b_router.getName())
             b_ifaddr, b_net, _ = b_router.getCrossConnect(a.asn, a_router.getName())
@@ -264,9 +274,14 @@ class Scion(Layer, Graphable):
             b_as = base_layer.getAutonomousSystem(b.asn)
 
             ix_net = ix_reg.get('net', f'ix{ix}')
-            a_routers = a_reg.getByType('rnode')
-            b_routers = b_reg.getByType('rnode')
+            if a_router == "" or b_router == "": # if routers are not explicitly specified get all routers in AS
+                a_routers = a_reg.getByType('rnode')
+                b_routers = b_reg.getByType('rnode')
+            else: # else get the specified routers
+                a_routers = [a_reg.get('rnode', a_router)]
+                b_routers = [b_reg.get('rnode', b_router)]
 
+            # get the routers connected to the IX
             try:
                 a_ixrouter, a_ixif = self.__get_ix_port(a_routers, ix_net)
             except AssertionError:
