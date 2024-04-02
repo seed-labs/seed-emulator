@@ -2,6 +2,8 @@ from __future__ import annotations
 from typing import Dict, List
 from enum import Enum
 
+WEB_SERVER_PORT = 8888
+
 class L2Component(Enum):
     """!
     @brief Enum for L2Component.
@@ -11,6 +13,33 @@ class L2Component(Enum):
     OP_BATCHER = 'op-batcher'
     OP_PROPOSER = 'op-proposer'
 
+class L2Account(Enum):
+    """!
+    @brief Enum for L2Account.
+    """
+    GS_ADMIN = 'GS_ADMIN'
+    GS_BATCHER = 'GS_BATCHER'
+    GS_PROPOSER = 'GS_PROPOSER'
+    GS_SEQUENCER = 'GS_SEQUENCER'
+
+class L2Config(Enum):
+    """!
+    @brief Enum for L2Config.
+    """
+    L1_RPC_URL = 'L1_RPC_URL'
+    L1_RPC_KIND = 'L1_RPC_KIND'
+    SEQ_RPC = 'SEQ_RPC'
+    DEPLOYER_URL = 'DEPLOYER_URL'
+    DEPLOYMENT_CONTEXT = 'DEPLOYMENT_CONTEXT'
+
+class L2Node(Enum):
+    """!
+    @brief Enum for L2Node.
+    """
+    NON_SEQUENCER = 'l2-ns'
+    SEQUENCER = 'l2-seq'
+    DEPLOYER = 'l2-deployer'
+
 class Layer2Template:
     __isSequencer: bool
     __components: List[L2Component]
@@ -19,8 +48,8 @@ class Layer2Template:
     __NODE_LAUNCHER: str
     __START_COMMAND: str
     __SUB_LAUNCHERS: Dict[L2Component, str]
-    __NS_GETH_CONFIG: str
-    __NS_NODE_CONFIG: str
+    __GETH_CONFIG: str
+    __NODE_CONFIG: str
 
     def __init__(self, isSequencer: bool):
         self.__isSequencer = isSequencer
@@ -28,7 +57,7 @@ class Layer2Template:
         if isSequencer:
             self.__components.extend([L2Component.OP_BATCHER, L2Component.OP_PROPOSER])
         self.__ENV = {}
-        self.SC_DEPLOYER = '''
+        self.SC_DEPLOYER = f'''
 #!/bin/bash
 
 set -exu
@@ -54,6 +83,8 @@ forge script scripts/Deploy.s.sol:Deploy --offline --sig 'sync()' --rpc-url $L1_
 
 mkdir chain_configs
 
+cp deployments/getting-started/L2OutputOracleProxy.json chain_configs/
+
 ./bin/op-node genesis l2 \
   --deploy-config deploy-config/getting-started.json \
   --deployment-dir deployments/getting-started/ \
@@ -61,11 +92,13 @@ mkdir chain_configs
   --outfile.rollup chain_configs/rollup.json \
   --l1-rpc $L1_RPC_URL
 
-python3 -m http.server 8888 -d chain_configs
+python3 -m http.server {WEB_SERVER_PORT} -d chain_configs
 '''
         self.__NODE_LAUNCHER = '''
 #!/bin/bash
 set -exu
+
+source .env
 
 # Try to retrieve genesis.json & rollup.json file from the server until it is available
 while ! curl -s $DEPLOYER_URL/genesis.json > /dev/null
@@ -95,7 +128,7 @@ mkdir logs
 
 {}
 '''
-        self.__START_COMMAND = '/.start_{component}.sh &> logs/{component}.log &'
+        self.__START_COMMAND = '/start_{component}.sh &> logs/{component}.log &'
         self.__SUB_LAUNCHERS = {
             L2Component.OP_GETH: '''
 #!/bin/bash
@@ -142,7 +175,7 @@ op-node \
   --rpc.port=8547 \
   --p2p.disable \
   --rpc.enable-admin \
-  --l1=$l1_addr \
+  --l1=$L1_RPC_URL \
   --l1.rpckind=$L1_RPC_KIND \
   {}
 ''',
@@ -173,6 +206,8 @@ set -eu
 
 source .env
 
+curl -s $DEPLOYER_URL/L2OutputOracleProxy.json -o /L2OutputOracleProxy.json
+
 op-proposer \
   --poll-interval=12s \
   --rpc.addr=0.0.0.0 \
@@ -185,8 +220,8 @@ op-proposer \
   --log.level=debug
 '''
         }
-        self.__NS_GETH_CONFIG = '--rollup.sequencerhttp=$SEQ_ADDR'
-        self.__NS_NODE_CONFIG = '--sequencer.enabled --sequencer.l1-confs=5 --verifier.l1-confs=4 --p2p.sequencer.key=$GS_SEQUENCER_PRIVATE_KEY'
+        self.__GETH_CONFIG = '--rollup.sequencerhttp=$SEQ_RPC'
+        self.__NODE_CONFIG = '--sequencer.enabled --sequencer.l1-confs=5 --verifier.l1-confs=4 --p2p.sequencer.key=$GS_SEQUENCER_PRIVATE_KEY'
     
     def getNodeLauncher(self) -> str:
         """!
@@ -210,10 +245,10 @@ op-proposer \
         @param subLauncher The sub launcher
         """
         if component == L2Component.OP_GETH:
-            content = self.__NS_GETH_CONFIG if not self.__isSequencer else ''
+            content = self.__GETH_CONFIG if not self.__isSequencer else ''
             return self.__SUB_LAUNCHERS[component].format(content)
         elif component == L2Component.OP_NODE:
-            content = self.__NS_NODE_CONFIG if self.__isSequencer else ''
+            content = self.__NODE_CONFIG if self.__isSequencer else ''
             return self.__SUB_LAUNCHERS[component].format(content)
         
         return self.__SUB_LAUNCHERS[component]
@@ -242,3 +277,17 @@ op-proposer \
         """
         
         return '\n'.join([f"{key}={value}" for key, value in self.__ENV.items()])
+
+    def setAccountEnv(self, accType: L2Account, acc: str, sk: str) -> Layer2Template:
+        """!
+        @brief Set the account environment.
+
+        @param account The account
+        @param privateKey The private key
+        """
+
+        # TODO: Add basic account checking
+        self.__ENV[f'{accType.value}_ADDRESS'] = acc
+        self.__ENV[f'{accType.value}_PRIVATE_KEY'] = sk
+
+        return self
