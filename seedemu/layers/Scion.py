@@ -226,8 +226,8 @@ class Scion(Layer, Graphable):
             except AssertionError:
                 assert False, f"cannot find XC to configure link as{a} --> as{b}"
 
-            a_ifaddr, a_net = a_router.getCrossConnect(b.asn, b_router.getName())
-            b_ifaddr, b_net = b_router.getCrossConnect(a.asn, a_router.getName())
+            a_ifaddr, a_net, _ = a_router.getCrossConnect(b.asn, b_router.getName())
+            b_ifaddr, b_net, _ = b_router.getCrossConnect(a.asn, a_router.getName())
             assert a_net == b_net
             net = reg.get('xc', 'net', a_net)
             a_addr = str(a_ifaddr.ip)

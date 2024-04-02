@@ -222,7 +222,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     __configured: bool
     __pending_nets: List[Tuple[str, str]]
-    __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str]]
+    # Dict of (peername, peerasn) -> (localaddr, netname, netProperties)
+    __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str, Tuple[int,int,float,int]]]
 
     __shared_folders: Dict[str, str]
     __persistent_storages: List[str]
@@ -307,19 +308,21 @@ class Node(Printable, Registrable, Configurable, Vertex):
             elif reg.has(str(peerasn), 'hnode', peername): peer = reg.get(str(peerasn), 'hnode', peername)
             else: assert False, 'as{}/{}: cannot xc to node as{}/{}: no such node'.format(self.getAsn(), self.getName(), peerasn, peername)
 
-            (peeraddr, netname) = peer.getCrossConnect(self.getAsn(), self.getName())
-            (localaddr, _) = self.__xcs[(peername, peerasn)]
+            (peeraddr, netname, (peerLatency, peerBandwidth, peerPacketDrop, peerMTU)) = peer.getCrossConnect(self.getAsn(), self.getName())
+            (localaddr, _, (latency, bandwidth, packetDrop, mtu)) = self.__xcs[(peername, peerasn)]
             assert localaddr.network == peeraddr.network, 'as{}/{}: cannot xc to node as{}/{}: {}.net != {}.net'.format(self.getAsn(), self.getName(), peerasn, peername, localaddr, peeraddr)
-
+            assert (peerLatency == latency and peerBandwidth == bandwidth and peerPacketDrop == packetDrop and peerMTU == mtu), 'as{}/{}: cannot xc to node as{}/{}: because link properties (({},{},{},{}) -- ({},{},{},{})) dont match'.format(self.getAsn(), self.getName(), peerasn, peername, latency, bandwidth, packetDrop, mtu, peerLatency, peerBandwidth, peerPacketDrop, peerMTU)
+            
             if netname != None:
                 self.__joinNetwork(reg.get('xc', 'net', netname), str(localaddr.ip))
-                self.__xcs[(peername, peerasn)] = (localaddr, netname)
+                self.__xcs[(peername, peerasn)] = (localaddr, netname, (latency, bandwidth, packetDrop,mtu))
             else:
                 # netname = 'as{}.{}_as{}.{}'.format(self.getAsn(), self.getName(), peerasn, peername)
                 netname = ''.join(choice(ascii_letters) for i in range(10))
                 net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False) # TODO: XC nets w/ direct flag?
+                net.setDefaultLinkProperties(latency, bandwidth, packetDrop).setMtu(mtu) # Set link properties
                 self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
-                self.__xcs[(peername, peerasn)] = (localaddr, netname)
+                self.__xcs[(peername, peerasn)] = (localaddr, netname, (latency, bandwidth, packetDrop, mtu))
 
         if len(self.__name_servers) == 0:
             return
@@ -499,34 +502,37 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         return self
 
-    def crossConnect(self, peerasn: int, peername: str, address: str) -> Node:
+    def crossConnect(self, peerasn: int, peername: str, address: str, latency: int=0, bandwidth: int=0, packetDrop: float=0, MTU: int=1500) -> Node:
         """!
         @brief create new p2p cross-connect connection to a remote node.
         @param peername node name of the peer node.
         @param peerasn asn of the peer node.
         @param address address to use on the interface in CIDR notation. Must
         be within the same subnet.
+        @param latency latency the cross connect network will have
+        @param bandwidth bandwidth the cross connect network will have
+        @param packetDrop packet drop the cross connect network will have
 
         @returns self, for chaining API calls.
         """
         assert not self.__asn == 0, 'This API is only available on a real physical node.'
         assert peername != self.getName() or peerasn != self.getName(), 'cannot XC to self.'
-        self.__xcs[(peername, peerasn)] = (IPv4Interface(address), None)
+        self.__xcs[(peername, peerasn)] = (IPv4Interface(address), None, (latency,bandwidth,packetDrop,MTU))
 
-    def getCrossConnect(self, peerasn: int, peername: str) -> Tuple[IPv4Interface, str]:
+    def getCrossConnect(self, peerasn: int, peername: str) -> Tuple[IPv4Interface, str, Tuple[int, int, float, int]]:
         """!
         @brief retrieve IP address for the given peer.
         @param peername node name of the peer node.
         @param peerasn asn of the peer node.
 
         @returns tuple of IP address and XC network name. XC network name will
-        be None if the network has not yet been created.
+        be None if the network has not yet been created. And Tuple with network link properties.
         """
         assert not self.__asn == 0, 'This API is only available on a real physical node.'
         assert (peername, peerasn) in self.__xcs, 'as{}/{} is not in the XC list.'.format(peerasn, peername)
         return self.__xcs[(peername, peerasn)]
 
-    def getCrossConnects(self) -> Dict[Tuple[str, int], Tuple[IPv4Interface, str]]:
+    def getCrossConnects(self) -> Dict[Tuple[str, int], Tuple[IPv4Interface, str, Tuple[int, int, float]]]:
         """!
         @brief get all cross connects on this node.
 
