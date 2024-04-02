@@ -144,7 +144,8 @@ class KuboService(Service):
         """        
         script = f"""#!/bin/bash
 
-logfile=/var/log/kubo_bootstrap_$(date +%s).log
+# logfile=/var/log/kubo_bootstrap_$(date +%s).log
+logfile=/var/log/kubo_bootstrap.log
 timeout=60
 bootips=({' '.join(self._bootstrap_ips)})
 peerids=()
@@ -200,8 +201,14 @@ getid () {{
    # Some debug output:
    if [[ $up -eq 0 && $waited -lt $timeout ]]; then
       # Get info from node and add to bootstrap nodes:
-      # curl -sX POST "http://${{ip}}:{self._rpc_api_port}/api/v0/config?arg=Identity.PeerID"
-      peerid=$(curl -sX POST "http://${{ip}}:{self._rpc_api_port}/api/v0/config?arg=Identity.PeerID" | jq --raw-output '.Value')
+      attempts=0
+      peerid=""
+      while [[ -z $peerid && $attempts -lt 3 ]]
+      do
+         peerid=$(curl -sX POST "http://${{ip}}:{self._rpc_api_port}/api/v0/config?arg=Identity.PeerID" | jq --raw-output '.Value')
+         ((attempts++))
+         sleep 1
+      done
       
       if [[ -n $peerid ]]; then
          peerids+=($peerid)
