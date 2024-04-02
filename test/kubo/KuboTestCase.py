@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-import random, json, time, os
+import random, json, os
 import unittest as ut
 from seedemu import *
 from test import SeedEmuTestCase
 from faker import Faker
+from time import sleep
 
 LOG_DIR = '/var/log/'
 TMP_DIR = '/tmp/kubo/'
@@ -45,6 +46,30 @@ class KuboTestCase(SeedEmuTestCase):
             The name of the container.
         """
         return container.attrs.get("Name").strip('/')
+    
+    @classmethod
+    def getCtKuboLabel(cls, container, key:str) -> str:
+        """Get the value of a given label for the Kubo service.
+
+        Parameters
+        ----------
+        container : Docker Container
+            An instnace representing a Docker container.
+        key : str
+            A string representing the path of the label (e.g. 'version', 'test.groups')
+
+        Returns
+        -------
+        str
+            Value of that label.
+        """
+        label = container.attrs["Config"]["Labels"].get(f'org.seedsecuritylabs.seedemu.meta.kubo.{key}', '')
+        try:
+            label = json.loads(label)
+        except:
+            pass
+        
+        return label
     
     @classmethod
     def isKubo(cls, container) -> bool:
@@ -135,7 +160,7 @@ class KuboTestCase(SeedEmuTestCase):
             List of Docker container objects in the requested test group.
         """
         # Iterate through all Kubo containers and gather by group:
-        return cls.kubo_containers.get(group)
+        return cls.kubo_containers.get(group, [])
     
     @classmethod
     def pullKuboLogs(cls, container) -> None:
@@ -228,7 +253,7 @@ class KuboTestCase(SeedEmuTestCase):
         
         self.printLog(f'{" Test Case: test_kubo_install ":=^100}')
         for ct in self.getTestContainers():
-            exit_code, output = self.ctCmd(ct, "ipfs version")
+            exit_code, _ = self.ctCmd(ct, "ipfs")
             self.printLog(f'{self.getCtName(ct)}: ', end='')
             try:
                 self.assertEqual(exit_code, 0)
@@ -236,8 +261,34 @@ class KuboTestCase(SeedEmuTestCase):
                 errors.append(e)
                 self.printLog('[FAILURE]')
             else:
-                self.printLog(output.decode().strip())
+                self.printLog('[SUCCESS]')
             
+        # Ensure no errors have been raised:
+        self.assertEqual(errors, [])
+        
+    
+    def test_kubo_version(self):
+        errors = []  # Track errors to make assertions non-fatal
+        
+        self.printLog(f'{" Test Case: test_kubo_version ":=^100}')
+        
+        for ct in self.getTestContainers():
+            self.printLog(f'{self.getCtName(ct)}: ', end='')
+            exit_code, output = self.ctCmd(ct, 'ipfs version')
+            kuboVersion = re.search('(?:\d{1,3}\.){2}(?:\d{1,3})', output.decode())
+            intendedVersion = re.search('(?:\d{1,3}\.){2}(?:\d{1,3})', self.getCtKuboLabel(ct, 'version'))
+            try:
+                self.assertIsNotNone(kuboVersion)
+                self.assertIsNotNone(intendedVersion)
+                kuboVersion = kuboVersion.group(0)
+                intendedVersion = intendedVersion.group(0)
+                self.assertEqual(kuboVersion, intendedVersion)
+            except Exception as e:
+                errors.append(e)
+                self.printLog(f'[FAILURE] {type(e)}: {e}')
+            else:
+                self.printLog(f'[SUCCESS] {kuboVersion}')
+        
         # Ensure no errors have been raised:
         self.assertEqual(errors, [])
             
@@ -334,20 +385,36 @@ class KuboTestCase(SeedEmuTestCase):
     
     def test_peering(self):
         self.printLog(f'{" Test Case: test_peering ":=^100}')
+        errors = []  # Store failed assertions to be nonfatal
+        
         for ct in self.getTestContainers(group='basic'):
-            exit_code, output = self.ctCmd(ct, "ipfs swarm peers")
-            peers = output.decode().splitlines()
-            # Second try if peering is not yet complete:
-            if len(peers) < len(self.getTestContainers(group='basic')):
-                time.sleep(15)
+            # Attempt to fetch peers multiple times to allow peering relationships to form:
+            peers = []
+            attempts = 5
+            while (attempts > 0) and (len(peers) < len(self.getTestContainers(group='basic'))):
                 exit_code, output = self.ctCmd(ct, "ipfs swarm peers")
-                peers = output.decode().splitlines()
+                if exit_code == 0:
+                    peers = output.decode().splitlines()
+                attempts -= 1
+                sleep(5)
+            
+            # Print results to logs:
+            self.printLog(f'{self.getCtName(ct)} ({len(peers)}): ', end='')
+            try:
+                self.assertGreaterEqual(len(peers), len(self.getTestContainers(group='basic')))
+            except Exception as e:
+                errors.append(e)
+                self.printLog('[FAILURE]')
+            else:
+                self.printLog('[SUCCESS]')
+            
             # Print peers to logs:
-            self.printLog(f'{self.getCtName(ct)} ({len(peers)}):')
             for p in peers:
                 self.printLog(f'\t{p}')
+        
+        # Ensure no failed assertions have ocurred:
+        self.assertEqual(errors, [])
                 
-            self.assertGreaterEqual(len(peers), len(self.getTestContainers(group='basic')))
     
     def test_kubo_add(self):
         self.printLog(f'{" Test Case: test_kubo_add ":=^100}')
@@ -482,12 +549,13 @@ class KuboTestCase(SeedEmuTestCase):
     def get_test_suite(cls):
         test_suite = ut.TestSuite()
         test_suite.addTest(cls('test_kubo_install'))
+        test_suite.addTest(cls('test_kubo_version'))
         test_suite.addTest(cls('test_bootstrap_script'))
         test_suite.addTest(cls('test_bootstrap_list'))
         test_suite.addTest(cls('test_service_config'))
         test_suite.addTest(cls('test_peering'))
         test_suite.addTest(cls('test_kubo_add'))
-        # test_suite.addTest(cls('test_kubo_cat'))
+        test_suite.addTest(cls('test_kubo_cat'))
         test_suite.addTest(cls('test_specify_profile'))
         test_suite.addTest(cls('test_custom_config'))
         return test_suite
