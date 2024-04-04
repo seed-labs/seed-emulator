@@ -7,12 +7,15 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from os import path
 from .FaucetUtil import FaucetServerFileTemplates
+from seedemu.services.EthereumService import *
+
 
 class FaucetServer(Server):
     """!
     @brief The FaucetServer class.
     """
     
+    __blockchain:Blockchain
     __port: int
     __account: LocalAccount
     __balance: int
@@ -21,19 +24,21 @@ class FaucetServer(Server):
     __chain_id: int
     __consensus: ConsensusMechanism
 
-    def __init__(self):
+    def __init__(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int):
         """!
         @brief FaucetServer constructor.
         """
         super().__init__()
-        self.__port = 80
+        self.__blockchain = blockchain
+        self.__port = port
         self.__account = Account.from_key('0xa9aec7f51b6b872d86676d4e5facf4ddf6850745af133b647781d008894fa3aa')
-        self.__balance = 1000
+        self.__balance = balance
         self.__balance_unit = EthUnit.ETHER
         self.__rpc_url = ''
-        self.__linked_eth_node = ''
-        self.__chain_id = -1
+        self.__linked_eth_node = linked_eth_node
+        self.__chain_id = blockchain.getChainId()
         self.__fundlist = []
+        self.__consensus = blockchain.getConsensusMechanism()
 
     
     def setOwnerPrivateKey(self, keyString: str, isEncrypted = False, password = ""):
@@ -101,26 +106,26 @@ class FaucetServer(Server):
     
     def getRpcUrl(self):
         return self.__rpc_url
-    
-    def setRpcUrlByVirtualNodeName(self, vnodeName:str):
-        self.__linked_eth_node = vnodeName
-        return self
         
     def getLinkedEthNodeName(self) -> str:
         return self.__linked_eth_node
-
-    def setChainId(self, chain_id):
-        self.__chain_id = chain_id
-        return
     
-    def setConsensusMechanism(self, consensus):
-        self.__consensus = consensus
+    def getBlockchain(self) -> str:
+        return self.__blockchain
+    
+    def getFaucetAddress(self) -> str:
+        return self.__account.address
+    
+    def getFaucetBalance(self) -> int:
+        return self.__balance
     
     def install(self, node: Node):
         """!
         @brief Install the service.
         """
         node.appendClassName("FaucetService")
+
+        # self.__blockchain.addLocalAccount(self.__account.address, balance=self.__balance)
         node.addSoftware('python3 python3-pip')
         
         node.addBuildCommand('pip3 install flask web3==5.31.1')
@@ -151,66 +156,3 @@ class FaucetServer(Server):
         out += 'Web server object.\n'
 
         return out
-
-class FaucetService(Service):
-    """!
-    @brief The FaucetService class.
-    """
-    __emulator:Emulator
-
-    def __init__(self):
-        """!
-        @brief FaucetService constructor.
-        """
-        super().__init__()
-        self.addDependency('Base', False, False)
-
-    def _createServer(self) -> Server:
-        return FaucetServer()
-    
-    def configure(self, emulator: Emulator):
-        self.__emulator = emulator
-        
-        return super().configure(emulator)
-        
-    
-    def _doConfigure(self, node: Node, server: Server):
-        """!
-        @brief configure the node. Some services may need to by configure before
-        rendered.
-
-        This is currently used by the DNS layer to configure NS and gules
-        records before the actual installation.
-        
-        @param node node
-        @param server server
-        """
-
-        server.__class__ = FaucetServer
-
-        linked_eth_node_name = server.getLinkedEthNodeName()
-
-        assert linked_eth_node_name != ''  or server.getRpcUrl() !='' , 'both rpc url and eth node are not set'
-        server.setRpcUrl(f'http://{self.__getIpByVnodeName(linked_eth_node_name)}:8545')
-        
-        return
-    
-    def getName(self) -> str:
-        return 'FaucetService'
-
-    def print(self, indent: int) -> str:
-        out = ' ' * indent
-        out += 'FaucetServiceLayer\n'
-
-        return out
-    
-    def __getIpByVnodeName(self, nodename:str) -> str:
-        node = self.__emulator.getBindingFor(nodename)
-        address: str = None
-        ifaces = node.getInterfaces()
-        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(node.getName())
-        for iface in ifaces:
-            net = iface.getNet()
-            if net.getType() == NetworkType.Local:
-                address = iface.getAddress()
-                return address

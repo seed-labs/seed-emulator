@@ -97,7 +97,7 @@ def construct_raw_transaction(sender, recipient, nonce, amount, data):
 # Send raw transaction
 def send_raw_transaction(web3, sender, sender_key, recipient, amount, data):
    print("---------Sending Raw Transaction ---------------")
-   nonce  = web3.eth.getTransactionCount(sender)
+   nonce  = app.config['NONCE']
    tx = construct_raw_transaction(sender, recipient, nonce, amount, data)
    signed_tx  = web3.eth.account.signTransaction(tx, sender_key)
    tx_hash    = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
@@ -111,21 +111,7 @@ def create_account(web3:Web3):
     # Generate a new Ethereum account
     account = web3.eth.account.create()
     return account
-    
-trial = 5
-while trial > 0:
-    trial -= 1
-    web3 = connect_to_geth('{rpc_url}', '{consensus}')
-    if web3 == "":
-        time.sleep(10)
-    else:
-        app.config['WEB3'] = web3
-        break
-    if trial == 0:
-        sys.exit("Connection failed!")
 
-app.config['SENDER_ADDRESS'] = "{account_address}"
-app.config['SENDER_KEY'] = "{account_key}"
 
 @app.route('/')
 def index():
@@ -136,12 +122,31 @@ def index():
 def submit_form():
     recipient = request.form.get('address')
     amount = request.form.get('amount')
+    app.config['NONCE'] = max(app.config['NONCE']+1, app.config['WEB3'].eth.getTransactionCount(app.config['SENDER_ADDRESS']))
     tx_receipt = send_raw_transaction(app.config['WEB3'], app.config['SENDER_ADDRESS'], app.config['SENDER_KEY'], recipient, amount, '')
     api_response = {{'message': f'Funds successfully sent to {{recipient}} for amount {{amount}}.\\n{{tx_receipt}}'}}
 
     return api_response
 
 if __name__ == '__main__':
+    trial = 5
+    while trial > 0:
+        trial -= 1
+        web3 = connect_to_geth('{rpc_url}', '{consensus}')
+        if web3 == "":
+            time.sleep(10)
+        else:
+            app.config['WEB3'] = web3
+            break
+        if trial == 0:
+            sys.exit("Connection failed!")
+
+    while web3.eth.blockNumber < 2:
+        time.sleep(10)
+    
+    app.config['SENDER_ADDRESS'] = "{account_address}"
+    app.config['SENDER_KEY'] = "{account_key}"
+    app.config['NONCE'] = app.config['WEB3'].eth.getTransactionCount(app.config['SENDER_ADDRESS']) - 1
     app.run(host='0.0.0.0', port={port}, debug=True)
 
 '''

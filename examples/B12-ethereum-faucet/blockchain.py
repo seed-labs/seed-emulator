@@ -11,7 +11,7 @@ emu = Makers.makeEmulatorBaseWith10StubASAndHosts(1)
 # Create the Ethereum layer
 # saveState=True: will set the blockchain folder using `volumes`, 
 # so the blockchain data will be preserved when containers are deleted.
-eth = EthereumService(saveState = True, override=True)
+eth = EthereumService(saveState = False, override=True)
 
 # Create a POA Blockchain layer, which is a sub-layer of Ethereum layer
 # Need to specify chainName and consensus when create Blockchain layer.
@@ -55,22 +55,17 @@ emu.addBinding(Binding('poa-eth6', filter = Filter(asn = 161, nodeName='host_0')
 emu.addBinding(Binding('poa-eth7', filter = Filter(asn = 162, nodeName='host_0')))
 emu.addBinding(Binding('poa-eth8', filter = Filter(asn = 163, nodeName='host_0')))
 
+# Enable http connection on e5 geth
+e5.enableGethHttp()
+
 # Faucet Service
+# 0x8E974a8B3Af8c93FB89f8Af907b279e914081694
 
-
-
-# Generate a new Ethereum account for the Owner of faucet account
-faucet_owner_account = Account.create()
-
-# Add the ethereum using the EthereumService
-blockchain1.addLocalAccount(address=faucet_owner_account.address, balance=1000, unit=EthUnit.ETHER)
-
-faucetService = FaucetService()
-faucet:FaucetServer = faucetService.install('faucet')
-faucet.setOwnerPrivateKey(keyString=faucet_owner_account.privateKey.hex(), isEncrypted=False)
-faucet.setPort(80)
-faucet.setChainId(blockchain1.getChainId())
-faucet.setConsensusMechanism(ConsensusMechanism.POA)
+blockchain1:Blockchain
+faucet:FaucetServer = blockchain1.createFaucetServer(vnode='faucet', 
+                                                     port=80, 
+                                                     linked_eth_node='poa-eth5',
+                                                     balance=1000)
 
 # if user know the url of the eth node,
 # user can use faucet::setRpcUrl method instead.
@@ -78,9 +73,6 @@ faucet.setConsensusMechanism(ConsensusMechanism.POA)
 # So, we are using FaucetService::setRpcUrlByVirtualNodeName method to link the faucet service to the ethnode specified.
 # Make sure that eth5 node has enabled geth.
 
-faucet.setRpcUrlByVirtualNodeName('poa-eth5')
-# Enable http connection on e5 geth
-e5.enableGethHttp()
 
 faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
 faucet.fund('0x5449ba5c5f185e9694146d60cfe72681e2158499', 5)
@@ -97,7 +89,6 @@ emu.addBinding(Binding('faucet_user', filter=Filter(asn=164, nodeName='host_0'))
 
 # Add the layer and save the component to a file
 emu.addLayer(eth)
-emu.addLayer(faucetService)
 emu.addLayer(faucetUser)
 emu.dump('component-blockchain.bin')
 
