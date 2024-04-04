@@ -226,11 +226,6 @@ class KuboTestCase(SeedEmuTestCase):
                     if g not in cls.kubo_containers: cls.kubo_containers[g] = []
                     cls.kubo_containers[g].append(ct)
         
-        # Display test container groups:
-        containersGroups = {cls.getCtName(ct) : cls.getTestGroups(ct) for ct in cls.getTestContainers()}
-        cls.printLog(f'{" Test Containers: ":-^100}')
-        for ctName, ctGroups in containersGroups.items():
-            cls.printLog(f'{ctName}: {", ".join(ctGroups)}')
         # Just create a test file on few random nodes:
         numFiles:int = 3
         # cls.kubo_file_host_containers = {}  # {container: {'cid': cid, 'contents': file_contents}}
@@ -247,6 +242,11 @@ class KuboTestCase(SeedEmuTestCase):
                 cls.kubo_test_files[ct.short_id] = {'contents': file_contents}
         cls.printLog(json.dumps(cls.kubo_test_files, indent=2))
             
+        # Display test container groups:
+        containersGroups = {cls.getCtName(ct) : cls.getTestGroups(ct) for ct in cls.getTestContainers()}
+        cls.printLog(f'{" Test Containers: ":-^100}')
+        for ctName, ctGroups in containersGroups.items():
+            cls.printLog(f'{ctName}: {", ".join(ctGroups)}')
         return
     
     @classmethod
