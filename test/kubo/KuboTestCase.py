@@ -125,8 +125,9 @@ class KuboTestCase(SeedEmuTestCase):
         -------
         list[str]
             Label representing group; empty list if none.
-        """
-        labels = json.loads(container.attrs["Config"]["Labels"].get("org.seedsecuritylabs.seedemu.meta.kubo.test.group", ""))
+        """                
+        labels = json.loads(container.attrs["Config"]["Labels"].get("org.seedsecuritylabs.seedemu.meta.kubo.test.group", "\"\""))
+        
         return labels
     
     
@@ -141,6 +142,9 @@ class KuboTestCase(SeedEmuTestCase):
         group : str
             String representing a group (default groups are 'all' and 'boot').
         """
+        # Add to the default group if container isn't there:
+        if container not in cls.kubo_containers['all']: cls.kubo_containers['all'].append(container)
+        # Add to the specified group, creating the group if it doesn't exist:
         if group not in cls.kubo_containers: cls.kubo_containers[group] = []
         cls.kubo_containers[group].append(container)
     
@@ -221,17 +225,27 @@ class KuboTestCase(SeedEmuTestCase):
                 for g in cls.getTestGroups(ct):
                     if g not in cls.kubo_containers: cls.kubo_containers[g] = []
                     cls.kubo_containers[g].append(ct)
-        cls.printLog(f'Test Containers: {json.dumps({group : len(cts) for group, cts in cls.kubo_containers.items()})}')
         
+        # Display test container groups:
+        containersGroups = {cls.getCtName(ct) : cls.getTestGroups(ct) for ct in cls.getTestContainers()}
+        cls.printLog(f'{" Test Containers: ":-^100}')
+        for ctName, ctGroups in containersGroups.items():
+            cls.printLog(f'{ctName}: {", ".join(ctGroups)}')
         # Just create a test file on few random nodes:
         numFiles:int = 3
-        cls.kubo_file_host_containers = {}  # {container: {'cid': cid, 'contents': file_contents}}
+        # cls.kubo_file_host_containers = {}  # {container: {'cid': cid, 'contents': file_contents}}
+        cls.kubo_test_files = {}  # {container_short_id : {'cid': cid, 'contents': file_contents}}
+        cts = random.sample(cls.getTestContainers(group='basic'), numFiles)
         for i in range(numFiles):
-            ct = random.choice(cls.getTestContainers())
+            ct = cts[i]
             file_contents = f'Test File {i}\n{cls.fake.sentence()}'
             exit_code, output = cls.ctCmd(ct, f"""bash -c 'echo "{file_contents}" > test.txt'""", workdir=cls.kubo_tmp_dir)
-            if exit_code != 0: cls.printLog(f'Failed to add test file ({exit_code}): {output.decode()}')
-            cls.kubo_file_host_containers[ct] = {'contents': file_contents}
+            if exit_code != 0:
+                cls.printLog(f'Failed to add test file ({exit_code}): {output.decode()}')
+            else:
+                cls.addTestGroup(ct, 'file_host')
+                cls.kubo_test_files[ct.short_id] = {'contents': file_contents}
+        cls.printLog(json.dumps(cls.kubo_test_files, indent=2))
             
         return
     
@@ -311,9 +325,10 @@ class KuboTestCase(SeedEmuTestCase):
             
             # Make sure bootstrap script has run:
             self.printLog('\t\tScript Run ', end='')
-            exit_code, _ = self.ctCmd(ct, f'cat {self.kubo_log_dir}kubo_bootstrap.log')
+            exit_code, output = self.ctCmd(ct, f'cat {self.kubo_log_dir}kubo_bootstrap.log')
             try:
                 self.assertEqual(exit_code, 0)
+                self.assertGreater(len(output.decode()), 0)
             except Exception as e:
                 errors.append(e)
                 self.printLog('[FAILURE]', end='')
@@ -390,13 +405,15 @@ class KuboTestCase(SeedEmuTestCase):
         for ct in self.getTestContainers(group='basic'):
             # Attempt to fetch peers multiple times to allow peering relationships to form:
             peers = []
-            attempts = 5
+            attempts = 6  # Wait max of 30s per node.
             while (attempts > 0) and (len(peers) < len(self.getTestContainers(group='basic'))):
                 exit_code, output = self.ctCmd(ct, "ipfs swarm peers")
                 if exit_code == 0:
                     peers = output.decode().splitlines()
                 attempts -= 1
-                sleep(5)
+                # Only wait if we would still fail the test:
+                if len(peers) < len(self.getTestContainers(group='basic')):
+                    sleep(5)
             
             # Print results to logs:
             self.printLog(f'{self.getCtName(ct)} ({len(peers)}): ', end='')
@@ -421,31 +438,30 @@ class KuboTestCase(SeedEmuTestCase):
         errors = []  # Store failed assertions to be nonfatal
         
         # Each of these containers has a file test.txt in the Kubo temp directory (KuboTestCase::SetUpClass):
-        for ct in self.kubo_file_host_containers.keys():
-            if 'basic' in self.getTestGroups(ct):
-                self.printLog(f'{self.getCtName(ct)}: ', end='')
-                
-                exit_code, output = self.ctCmd(ct, 'ipfs add test.txt', workdir=self.kubo_tmp_dir)
-                # exit_code, output = self.ctCmd(ct, f"bash -c 'ls ; cat test.txt'", workdir=self.kubo_tmp_dir)
+        for ct in self.getTestContainers(group='file_host'):
+            self.printLog(f'{self.getCtName(ct)}: ', end='')
+            
+            exit_code, output = self.ctCmd(ct, 'ipfs add test.txt', workdir=self.kubo_tmp_dir)
+            # exit_code, output = self.ctCmd(ct, f"bash -c 'ls ; cat test.txt'", workdir=self.kubo_tmp_dir)
+            try:
+                self.assertEqual(exit_code, 0)
+            except Exception as e:
+                errors.append(e)
+                self.printLog(f'[FAILURE] {type(e)}: {e}\n\t{output.decode()}')
+            else:
+                # Get CID from output of the ips add <file> command:
+                cid = re.search('added ([a-zA-Z0-9]+) \S+', output.decode().strip())
+            
+                # Process CID further if it was found in the IPFS output:
                 try:
-                    self.assertEqual(exit_code, 0)
+                    self.assertIsNotNone(cid)
                 except Exception as e:
                     errors.append(e)
                     self.printLog(f'[FAILURE] {type(e)}: {e}\n\t{output.decode()}')
                 else:
-                    # Get CID from output of the ips add <file> command:
-                    cid = re.search('added ([a-zA-Z0-9]+) \S+', output.decode().strip())
-                
-                    # Process CID further if it was found in the IPFS output:
-                    try:
-                        self.assertIsNotNone(cid)
-                    except Exception as e:
-                        errors.append(e)
-                        self.printLog(f'[FAILURE] {type(e)}: {e}\n\t{output.decode()}')
-                    else:
-                        cid = cid.group(1)
-                        self.kubo_file_host_containers[ct]['cid'] = cid
-                        self.printLog(f'[SUCCESS] Added file with CID of {cid}')
+                    cid = cid.group(1)
+                    self.kubo_test_files[ct.short_id]['cid'] = cid
+                    self.printLog(f'[SUCCESS] Added file with CID of {cid}')
             
         # Ensure no failed assertions have ocurred:
         self.assertEqual(errors, [])
@@ -459,9 +475,9 @@ class KuboTestCase(SeedEmuTestCase):
             self.printLog(f'{self.getCtName(ct)}:')
             
             # Check that node can access file through IPFS (skip if this node originates the data):
-            for host_ct, file_info in self.kubo_file_host_containers.items():
+            for ct_id, file_info in self.kubo_test_files.items():
                 self.printLog(f'\tipfs cat {file_info["cid"]} ', end='')
-                if host_ct != ct:
+                if ct_id != ct.short_id:
                     exit_code, output = self.ctCmd(ct, f'ipfs cat {file_info["cid"]}', demux=True)
                     
                     try:

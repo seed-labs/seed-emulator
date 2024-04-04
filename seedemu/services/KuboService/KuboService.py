@@ -201,13 +201,13 @@ getid () {{
    # Some debug output:
    if [[ $up -eq 0 && $waited -lt $timeout ]]; then
       # Get info from node and add to bootstrap nodes:
-      attempts=0
+      attempts=3
       peerid=""
-      while [[ -z $peerid && $attempts -lt 3 ]]
+      while [[ -z $peerid && $attempts -gt 0 ]]
       do
          peerid=$(curl -sX POST "http://${{ip}}:{self._rpc_api_port}/api/v0/config?arg=Identity.PeerID" | jq --raw-output '.Value')
-         ((attempts++))
-         sleep 1
+         ((attempts--))
+         sleep 5
       done
       
       if [[ -n $peerid ]]; then
