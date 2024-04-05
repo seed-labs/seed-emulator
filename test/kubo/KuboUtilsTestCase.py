@@ -118,7 +118,7 @@ class DottedDictTestCase(SeedEmuTestCase):
                     try:
                         d = dict(test)
                     except Exception as dErr:
-                        self.assertEqual(type(ddErr), type(dErr))
+                        self.assertEqual(type(ddErr), type(dErr), 'DottedDict should raise same exception type as dict.')
                     else:
                         self.printLog(f'Case: {test} {type(test)}\n{dd}')
                         self.fail('dict init was successful but DottedDict was not')
@@ -146,7 +146,7 @@ class DottedDictTestCase(SeedEmuTestCase):
         dd = DottedDict(self.nestedDictDeep.copy())
         for testKey, expectedVal in cases:
             with self.subTest(case=testKey):
-                self.assertEqual(dd[testKey], expectedVal)
+                self.assertEqual(dd[testKey], expectedVal, 'DottedDict::getitem did not get expected value.')
                 self.printLog(f'{f"DottedDict[{testKey}] = {dd[testKey]}":<90}[PASS]')
 
                 
@@ -161,9 +161,9 @@ class DottedDictTestCase(SeedEmuTestCase):
         dd = DottedDict(self.nestedDictDeep.copy())
         for testKey in cases:
             with self.subTest(case=testKey):
-                with self.assertRaises(KeyError):
+                with self.assertRaises(KeyError, msg='Invalid key on getitem did not raise KeyError.'):
                     dd[testKey]
-                self.assertDictEqual(dd, self.nestedDictDeep)
+                self.assertDictEqual(dd, self.nestedDictDeep, 'DottedDict changed on getitem operation.')
                 self.printLog(f'{f"DottedDict[{testKey}] -> KeyError":<70}[PASS]')
                 
                 
@@ -185,7 +185,7 @@ class DottedDictTestCase(SeedEmuTestCase):
             with self.subTest(case=testKey):
                 dd = DottedDict(self.nestedDictDeep.copy())
                 dd[testKey] = expectedVal
-                self.assertEqual(dd[testKey], expectedVal)
+                self.assertEqual(dd[testKey], expectedVal, 'Getting set item should match expected value.')
                 self.printLog(f'{f"DottedDict[{testKey}] = {dd[testKey]}":<120}[PASS]')
                 
         # Extra test case:
@@ -205,7 +205,7 @@ class DottedDictTestCase(SeedEmuTestCase):
         dd = DottedDict(self.nestedDictDeep)
         for testKey in cases:
             with self.subTest(case=testKey):
-                with self.assertRaises(KeyError):
+                with self.assertRaises(KeyError, msg='Should raise KeyError for invalid key on set item.'):
                     dd[testKey] = 'test 1 2 3'
                 self.printLog(f'{f"DottedDict[{testKey}] -> KeyError":<70}[PASS]')
                 
@@ -235,7 +235,43 @@ class DottedDictTestCase(SeedEmuTestCase):
         
         
     def test_empty(self):
-        ...
+        self.printLog(f'{" Test Case: test_empty ":=^100}')
+        # Create test cases for multiple different values to get:
+        validCases = [
+            None, (), {}, set(), dict(), []
+        ]
+        # Test cases on valid empty constructor:
+        for test in validCases:
+            with self.subTest(case=test, group='valid'):
+                dd = DottedDict(test)
+                self.assertTrue(dd.empty())
+                self.printLog(f'{f"DottedDict({test})":<50}[PASS]')
+        
+        # Test cases on invalid constructor, leaving instance empty:
+        invalidCases = [
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            range(10),
+            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+            (0, 1, 2, 3, 4, 5)
+        ]
+        for test in invalidCases:
+            with self.subTest(case=test, group='invalid'):
+                with self.assertRaises(Exception, msg='Invalid init source did not raise an exception.'):
+                    dd = DottedDict(test)
+                    self.assertTrue(dd.empty())
+                self.printLog(f'{f"DottedDict({test})":<50}[PASS]')
+                
+        # Test case on DottedDict that becomes empty:
+        dd = DottedDict({'a': 1, 'b': 2, 'c': {'d': 4}})
+        while len(dd) > 0: dd.popitem()
+        self.assertTrue(dd.empty(), 'DottedDict should be empty.')
+        self.printLog(f'{"DottedDict::popitem":<50}[PASS]')
+        
+        dd = DottedDict(self.simpleDict)
+        dd.clear()
+        self.assertTrue(dd.empty(), 'DottedDict::clear should empty the data structure.')
+        self.printLog(f'{f"DottedDict::clear":<50}[PASS]')
+        
                 
     
     @classmethod
@@ -248,6 +284,7 @@ class DottedDictTestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_get_item_unexpected'))
         test_suite.addTest(cls('test_set_item_expected'))
         test_suite.addTest(cls('test_set_item_unexpected'))
+        test_suite.addTest(cls('test_empty'))
         return test_suite
     
 class UtilsTestCase(ut.TestCase):
