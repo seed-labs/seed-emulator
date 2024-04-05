@@ -2,10 +2,12 @@ from __future__ import annotations
 import json
 import os.path
 from typing import Dict, Tuple
+from ipaddress import IPv4Address
 
 import yaml
 
 from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, Network
+from seedemu.core.enums import NetworkType
 from seedemu.layers import Routing, ScionBase, ScionIsd
 
 
@@ -273,6 +275,25 @@ class ScionRouting(Routing):
             if if_addr == str(xc_if.ip):
                 return linkprops
                     
+    @staticmethod
+    def _get_ix_link_properties(interface : int, as_ : ScionAutonomousSystem) -> Tuple[int, int, float, int]:
+        """
+        get internet exchange link properties from the given interface
+        """
+        this_br_name = ScionRouting._get_BR_from_interface(interface, as_)
+        this_br = as_.getRouter(this_br_name)
+
+        if_addr = IPv4Address(this_br.getScionInterface(interface)['underlay']["public"].split(':')[0])
+        
+        # get a list of all ix networks this Border Router is attached to
+        ixs = [ifa.getNet() for ifa in this_br.getInterfaces() if ifa.getNet().getType() == NetworkType.InternetExchange]
+
+        for ix in ixs:  
+            ix.getPrefix()
+            if if_addr in ix.getPrefix():
+                lat,bw,pd = ix.getDefaultLinkProperties()
+                mtu = ix.getMtu()
+                return lat,bw,pd,mtu
 
     @staticmethod
     def _provision_staticInfo_config(node: Node, as_: ScionAutonomousSystem):
@@ -295,20 +316,23 @@ class ScionRouting(Routing):
         for interface in range(1,as_._ScionAutonomousSystem__next_ifid):
 
             ifs = ScionRouting._get_internal_link_properties(interface, as_)
-            xc_lat,xc_bw,xc_pd,xc_mtu = ScionRouting._get_xc_link_properties(interface, as_)
-            
+            xc_linkprops = ScionRouting._get_xc_link_properties(interface, as_)
+            if xc_linkprops:
+                lat,bw,pd,mtu = xc_linkprops
+            else: # interface is not part of a cross connect thus it must be in an internet exchange
+                lat,bw,pd,mtu = ScionRouting._get_ix_link_properties(interface, as_)
             
 
             # Add Latency
             staticInfo["Latency"][str(interface)] = {
-                "Inter": str(xc_lat)+"ms",
+                "Inter": str(lat)+"ms",
                 "Intra": ifs["Latency"],
             }
             
             # Add Bandwidth
             staticInfo["Bandwidth"][str(interface)] = {}
-            if xc_bw != 0: # if bandwidth is not 0, add it
-                staticInfo["Bandwidth"][str(interface)]["Inter"] = xc_bw/1000 # convert bps to kbps
+            if bw != 0: # if bandwidth is not 0, add it
+                staticInfo["Bandwidth"][str(interface)]["Inter"] = bw/1000 # convert bps to kbps
             staticInfo["Bandwidth"][str(interface)]["Intra"] = ifs["Bandwidth"]
 
             # Add LinkType
