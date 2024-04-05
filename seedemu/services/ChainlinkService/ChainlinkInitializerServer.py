@@ -34,13 +34,13 @@ class ChainlinkInitializerServer(Server):
         super().__init__()
         # self.__faucet_util = FaucetUtil()
         
-    # def setFaucetServerInfo(self, vnode: str, port = 80):
-    #      """
-    #         @brief Set the faucet server information.
-    #      """
+    def setFaucetServerInfo(self, vnode: str, port = 80):
+         """
+            @brief Set the faucet server information.
+         """
 
-    #      self.__faucet_vnode_name = vnode
-    #      self.__faucet_port = port
+         self.__faucet_vnode_name = vnode
+         self.__faucet_port = port
 
     def configure(self, node: Node, emulator: Emulator):
         """
@@ -58,9 +58,15 @@ class ChainlinkInitializerServer(Server):
         self.__installInitSoftware()
         if self.__rpc_vnode_name is not None:
             self.__rpc_url = self.__getIPbyEthNodeName(self.__rpc_vnode_name)
-        
+            
         if self.__rpc_url is None:
             raise Exception('RPC address not set')
+        
+        if self.__faucet_vnode_name is not None:
+            self.__faucet_url = self.__getIPbyEthNodeName(self.__faucet_vnode_name)
+            
+        if self.__faucet_url is None:
+            raise Exception('Faucet URL not set')
         
         if self.__deploymentType == "web3":
             # Deploy the link contract using web3
@@ -101,15 +107,15 @@ class ChainlinkInitializerServer(Server):
         """
         self.__rpc_vnode_name=vnode
         
-    def setFaucetUrl(self, address: str, port: int):
-        """
-        @brief Set the faucet URL
+    # def setFaucetUrl(self, address: str, port: int):
+    #     """
+    #     @brief Set the faucet URL
         
-        @param address The faucet URL
-        @param port The faucet port
-        """
-        self.__faucet_url = address
-        self.__faucet_port = port
+    #     @param address The faucet URL
+    #     @param port The faucet port
+    #     """
+    #     self.__faucet_url = address
+    #     self.__faucet_port = port
         
         
     def __deployThroughWeb3(self):

@@ -65,22 +65,23 @@ for asn in asns:
         i = i+1
 
 
-# Faucet Configuration
-# f_node = 'faucet'
-# f = blockchain.createFaucet(vnode='faucet', port=5050, eth_node='poa-eth5', balance=10000)
-# f.enableGethHttp()
-# f.enableGethWs()
-# emu.getVirtualNode(f_node).setDisplayName('Faucet')
-# emu.addBinding(Binding(f_node, filter=Filter(asn=164, nodeName='host_2')))
+# Create the Faucet server
+faucet:FaucetServer = blockchain.createFaucetServer(vnode='faucet', 
+                                                     port=80, 
+                                                     linked_eth_node='eth5',
+                                                     balance=1000)
+# For testing purposes, we will fund some accounts
+faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
+faucet.fund('0x5449ba5c5f185e9694146d60cfe72681e2158499', 5)
 
+emu.addBinding(Binding('faucet', filter=Filter(asn=154, nodeName='host_2')))
 
 # Create the Chainlink Init server
 chainlink = ChainlinkService()
 c_asns  = [150, 151]
 cnode = 'chainlink_init_server'
 c_init = chainlink.installInitializer(cnode)
-# c_init.setFaucetServerInfo(vnode = 'faucet', port = 5050)
-c_init.setFaucetUrl(address="128.230.212.249", port=3000)
+c_init.setFaucetServerInfo(vnode = 'faucet', port = 80)
 c_init.setRPCbyEthNodeName('eth2')
 service_name = 'Chainlink-Init'
 emu.getVirtualNode(cnode).setDisplayName(service_name)
@@ -93,9 +94,7 @@ for asn in c_asns:
     c_normal = chainlink.install(cnode)
     c_normal.setRPCbyEthNodeName('eth{}'.format(i))
     c_normal.setInitNodeIP("chainlink_init_server")
-    # c_normal.setFaucetServerInfo(vnode = 'faucet', port = 5050)
-    c_normal.setFaucetUrl("128.230.212.249")
-    c_normal.setFaucetPort(3000)
+    c_normal.setFaucetServerInfo(vnode = 'faucet', port = 80)
     service_name = 'Chainlink-{}'.format(i)
     emu.getVirtualNode(cnode).setDisplayName(service_name)
     emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))

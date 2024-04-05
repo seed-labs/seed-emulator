@@ -2,7 +2,7 @@ from typing import Dict
 
 LinkTokenDeploymentTemplate: Dict[str, str] = {}
 
-LinkTokenDeploymentTemplate['link_token_contract'] = '''\
+LinkTokenDeploymentTemplate['link_token_contract']= '''
 #!/bin/env python3
 
 import time
@@ -15,7 +15,7 @@ import os
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 rpc_url = "http://{rpc_url}:{rpc_port}"
-faucet_url = "http://{faucet_url}:{faucet_port}/getEth"
+faucet_url = "http://{faucet_url}:{faucet_port}"
 
 web3 = Web3(HTTPProvider(rpc_url))
 while not web3.isConnected():
@@ -28,12 +28,37 @@ new_account = web3.eth.account.create()
 account_address = new_account.address
 private_key = new_account.privateKey.hex()
 
-data = {{"new_account": account_address}}
-response = requests.post(faucet_url, headers={{"Content-Type": "application/json"}}, data=json.dumps(data))
-if response.status_code != 200:
-	logging.error(f"Failed to request funds from faucet: {{response.text}}")
-	exit()
+# Check if the faucet server is running for 600 seconds
+timeout = 600
+start_time = time.time()
+while True:
+    try:
+        response = requests.get(faucet_url)
+        if response.status_code == 200:
+            break
+    except Exception as e:
+        pass
 
+# Send /fundme request to faucet server
+data = {{'address': account_address, 'amount': 10}}
+logging.info(data)
+request_url = "http://{faucet_url}:{faucet_port}/fundme"
+try:
+    response = requests.post(request_url, headers={{"Content-Type": "application/json"}}, data=json.dumps(data))
+    logging.info(response)
+    if response.status_code == 200:
+        api_response = response.json()
+        message = api_response['message']
+        if message:
+            print(f"Success: {{message}}")
+        else:
+            logging.error("Funds request was successful but the response format is unexpected.")
+    else:
+        logging.error(f"Failed to request funds from faucet server. Status code: {{response.status_code}}")
+except Exception as e:
+    logging.error(f"An error occurred: {{str(e)}}")
+    exit()
+      
 check_interval = 10
 
 def is_address_funded(address):

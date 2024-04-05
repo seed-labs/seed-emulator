@@ -45,7 +45,7 @@ while true; do
         echo "Contracts deployed successfully!"
         break
     else
-        echo "Waiting for the contracts to be deployed..."
+        echo "Waiting for the link token contract to be deployed..."
         sleep 10
     fi
 done
@@ -207,17 +207,36 @@ echo "$RESPONSE"
 """
 
 ChainlinkFileTemplate['send_get_eth_request'] = """\
-sleep 30
+# Wait for the Chainlink node to be up
+sleep 20
 chainlink admin login -f /api.txt
 ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
 FAUCET_SERVER_URL={faucet_server_url}
 FAUCET_SERVER_PORT={faucet_server_port}
+AMOUNT=5
 
-echo "Sending fund request..."
+SERVER_STATUS=0
 
-curl -s -X POST http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/getEth \\
-     -H "Content-Type: application/json" \\
-     -d "{{\\"chainlinkNodeAddress\\": \\"$ETH_ADDRESS\\"}}" > /dev/null 2>&1 &
-     
-echo "Get Ethereum request sent to faucet server."
+echo "Waiting for the faucet server to be up..."
+
+while [ "$SERVER_STATUS" -ne 200 ]; do
+    SERVER_STATUS=$(curl -s -o /dev/null -w "%{{http_code}}" http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/)
+    if [ "$SERVER_STATUS" -ne 200 ]; then
+        echo "Faucet server not up yet. Retrying..."
+        sleep 5
+    fi
+done
+
+echo "Faucet server is up. Proceeding to send fund request."
+
+# Displaying the Ethereum address for debugging purposes
+echo "Ethereum address: $ETH_ADDRESS"
+
+# Displaying curl command for debugging purposes
+echo "curl -X POST -d 'address=$ETH_ADDRESS&amount=$AMOUNT' http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme"
+
+# Send the request to the faucet server
+curl -X POST -d 'address=$ETH_ADDRESS&amount=$AMOUNT' http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme > /dev/null 2>&1 &
+
+echo "Fund request sent to the faucet server."
 """
