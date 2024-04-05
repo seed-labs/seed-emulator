@@ -8,7 +8,7 @@ from .Configurable import Configurable
 from .enums import NetworkType
 from .Visualization import Vertex
 from ipaddress import IPv4Address, IPv4Interface
-from typing import List, Dict, Set, Tuple
+from typing import List, Dict, Set, Tuple, Optional
 from string import ascii_letters
 from random import choice
 from .BaseSystem import BaseSystem
@@ -222,13 +222,16 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
     __configured: bool
     __pending_nets: List[Tuple[str, str]]
-    # Dict of (peername, peerasn) -> (localaddr, netname, netProperties)
+
+    # Dict of (peername, peerasn) -> (localaddr, netname, netProperties) -- netProperties = (latency, bandwidth, packetDrop, MTU)
     __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str, Tuple[int,int,float,int]]]
 
     __shared_folders: Dict[str, str]
     __persistent_storages: List[str]
 
     __name_servers: List[str]
+
+    __geo: Tuple[float,float,str] # (Latitude,Longitude,Address) -- optional parameter that contains the geographical location of the Node
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -268,6 +271,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         #     self.__softwares.add(soft)
 
         self.__name_servers = []
+
+        self.__geo = None
 
     def configure(self, emulator: Emulator):
         """!
@@ -829,6 +834,27 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns list of persistent storage folder.
         """
         return self.__persistent_storages
+    
+    def setGeo(self, Lat: float, Long: float, Address: str) -> Node:
+        """!
+        @brief Set geographical location of the Node
+
+        @param Lat Latitude
+        @param Long Longitude
+        @param Address Address
+
+        @returns self, for chaining API calls.
+        """
+        self.__geo = (Lat, Long, Address)
+        return self
+    
+    def getGeo(self) -> Optional[Tuple[float,float,str]]:
+        """!
+        @brief Get geographical location of the Node
+
+        @returns Tuple (Latitude, Longitude, Address)
+        """
+        return self.__geo
 
     def copySettings(self, node: Node):
         """!
