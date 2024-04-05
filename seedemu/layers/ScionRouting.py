@@ -1,11 +1,11 @@
 from __future__ import annotations
 import json
 import os.path
-from typing import Dict
+from typing import Dict, Tuple
 
 import yaml
 
-from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter
+from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, Network
 from seedemu.layers import Routing, ScionBase, ScionIsd
 
 
@@ -149,7 +149,7 @@ class ScionRouting(Routing):
             elif type == 'csnode':
                 csnode: Node = obj
                 self._provision_cs_config(csnode, as_)
-                self._provision_staticInfo_config(csnode, as_)
+                self._provision_staticInfo_config(csnode, as_) # provision staticInfoConfig.json
 
     @staticmethod
     def __provision_base_config(node: Node):
@@ -173,7 +173,12 @@ class ScionRouting(Routing):
             _Templates["general"].format(name=name))
     
     @staticmethod
-    def _get_networks_from_router(router1 : str, router2 : str, as_ : ScionAutonomousSystem):
+    def _get_networks_from_router(router1 : str, router2 : str, as_ : ScionAutonomousSystem) -> list[Network]:
+        """
+        gets all networks that both router1 and router2 are part of
+
+        NOTE: assume that any two routers in an AS are connected through a network
+        """
         br1 = as_.getRouter(router1)
         br2 = as_.getRouter(router2)
         # create list of all networks router is in
@@ -188,14 +193,17 @@ class ScionRouting(Routing):
             raise Exception(f"No common network between {router1} and {router2} but they are in the same AS")
     
     @staticmethod
-    def _get_BR_from_interface(interface : int, as_ : ScionAutonomousSystem):
+    def _get_BR_from_interface(interface : int, as_ : ScionAutonomousSystem) -> str:
+        """
+        gets the name of the border router that the ScionInterface is connected to
+        """
         # find name of this br
         for br in as_.getRouters():
             if interface in as_.getRouter(br).getScionInterfaces():
                 return br
 
     @staticmethod
-    def _get_internal_link_properties(interface : int, as_ : ScionAutonomousSystem):
+    def _get_internal_link_properties(interface : int, as_ : ScionAutonomousSystem) -> Dict[str, Dict]:
         """
         Gets the internal Link Properties to all other Scion interfaces from the given interface
         """
@@ -206,8 +214,20 @@ class ScionRouting(Routing):
             "Latency": {},
             "Bandwidth": {},
             "packetDrop": {},
+            "MTU": {},
+            "Hops": {},
+            "Geo": {},
         }
-        # TODO: add Bandwidth and PacketDrop infromation to dict
+
+        # get Geo information for this interface if it exists
+        if as_.getRouter(this_br_name).getGeo():
+            (lat,long,address) = as_.getRouter(this_br_name).getGeo()
+            ifs["Geo"] = {
+                "Latitude": lat,
+                "Longitude": long,
+                "Address": address
+            }
+
         # iterate through all border routers to find latency to all interfaces
         for br_str in as_.getRouters():
             br = as_.getRouter(br_str)
@@ -218,15 +238,26 @@ class ScionRouting(Routing):
                     # if interfaces are on same router latency is 0ms
                     if br_str == this_br_name:
                         ifs["Latency"][str(other_if)] =  "0ms"
+                        # NOTE: omit bandwidth as it is limited by cpu if the interfaces are on the same router
+                        ifs["packetDrop"][str(other_if)] =  "0.0"
+                        # NOTE: omit MTU if interfaces are on same router as this depends on the router
+                        ifs["Hops"][str(other_if)] =  0 # if interface is on same router, hops is 0
                     else:
-                        net = ScionRouting._get_networks_from_router(this_br_name, br_str, as_)
-                        (latency, _, _) = net.getDefaultLinkProperties()
+                        net = ScionRouting._get_networks_from_router(this_br_name, br_str, as_) # get network between the two routers (Assume any two routers in AS are connected through a network)
+                        (latency, bandwidth, packetDrop) = net.getDefaultLinkProperties()
+                        mtu = net.getMtu()
                         ifs["Latency"][str(other_if)] =  f"{latency}ms"
+                        if bandwidth != 0: # if bandwidth is not 0, add it
+                            ifs["Bandwidth"][str(other_if)] =  bandwidth/1000 # convert bps to kbps
+                        ifs["packetDrop"][str(other_if)] =  f"{packetDrop}"
+                        ifs["MTU"][str(other_if)] =  f"{mtu}"
+                        ifs["Hops"][str(other_if)] =  1 # NOTE: if interface is on different router, hops is 1 since we assume all routers are connected through a network
+        
         
         return ifs
 
     @staticmethod
-    def _get_xc_link_properties(interface : int, as_ : ScionAutonomousSystem):
+    def _get_xc_link_properties(interface : int, as_ : ScionAutonomousSystem) -> Tuple[int, int, float, int]:
         """
         get cross connect link properties from the given interface
         """
@@ -260,30 +291,40 @@ class ScionRouting(Routing):
             "Note": ""
         }
 
-        #Build Latency
-        
+        # iterate through all ScionInterfaces in AS
         for interface in range(1,as_._ScionAutonomousSystem__next_ifid):
 
             ifs = ScionRouting._get_internal_link_properties(interface, as_)
-            xc_lat,xc_bw,_,_ = ScionRouting._get_xc_link_properties(interface, as_)
+            xc_lat,xc_bw,xc_pd,xc_mtu = ScionRouting._get_xc_link_properties(interface, as_)
+            
             
 
-
+            # Add Latency
             staticInfo["Latency"][str(interface)] = {
                 "Inter": str(xc_lat)+"ms",
                 "Intra": ifs["Latency"],
             }
             
+            # Add Bandwidth
+            staticInfo["Bandwidth"][str(interface)] = {}
+            if xc_bw != 0: # if bandwidth is not 0, add it
+                staticInfo["Bandwidth"][str(interface)]["Inter"] = xc_bw/1000 # convert bps to kbps
+            staticInfo["Bandwidth"][str(interface)]["Intra"] = ifs["Bandwidth"]
 
-        # Build Bandwidth
+            # Add LinkType
+            staticInfo["LinkType"][str(interface)] = "direct" # NOTE: for now all ASes are connected through CrossConnects which are docker Nets under the hood and thus direct
+             
+            # Add Geo
+            staticInfo["Geo"][str(interface)] = ifs["Geo"]
 
-        # Build LinkType -- TODO: Add LinkType(direct|multihop|opennet) to Border Router
-        
-        # Build Geo -- TODO: Add Geo Infromation to Border Router
+            # Add Hops 
+            staticInfo["Hops"][str(interface)] = {
+                "Intra": ifs["Hops"],
+            }
 
-        # Build Hops -- TODO: Add Hops to Border Router
-
-        # Build Note
+        # Add Note if exists
+        if as_.getNote():
+            staticInfo["Note"] = as_.getNote()
         
         # Set file
         node.setFile("/etc/scion/staticInfoConfig.json", json.dumps(staticInfo, indent=2))
