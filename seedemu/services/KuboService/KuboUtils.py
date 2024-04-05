@@ -7,7 +7,9 @@ from seedemu.core.enums import NetworkType
 
 class DottedDict(dict):
     """A specific case of dictionary. Nested dictionaries referenced using JSON dot notation.
-        NOTE: the '.' character is not allowed in keys, but may be used to separate keys in JSON dot notation.
+       This introduces additional key requirements: 
+          - The '.' character is not allowed in keys, but may be used to separate keys in JSON dot notation.
+          - The empty string is not a valid key.
     """
     def __init__(self, src=None, **kwargs):
         """Create an instance of a DottedDict.
@@ -17,12 +19,20 @@ class DottedDict(dict):
         src : Any, optional
             This should be a Mapping or Iterable from which a DottedDict is created, by default None
         """
-        if isinstance(src, Mapping):
+        # Check if we should initialize empty DottedDict:
+        if src is None:
+            super().__init__(**kwargs)
+        # If this is already a dict-like structure, ensure nested dicts become DottedDicts:
+        elif isinstance(src, Mapping):
+            newMapping = {}
             for key, value in src.items():
                 if type(value) == dict:
-                    src[key] = DottedDict(value)
-            super().__init__(src, **kwargs)
-        elif isinstance(src, Iterable):
+                    newMapping[key] = DottedDict(value)
+                else:
+                    newMapping[key] = value
+            super().__init__(newMapping, **kwargs)
+        # Otherwise this must be an iterable (superset of Mapping), or superclass TypeError is raised:
+        else:
             newIterable = []
             for key, value in src:
                 if type(value) == dict:
@@ -30,8 +40,6 @@ class DottedDict(dict):
                 else:
                     newIterable.append((key, value))
             super().__init__(newIterable, **kwargs)
-        else:
-            super().__init__(**kwargs)
             
     
     def __getitem__(self, key: str) -> Any:
@@ -54,15 +62,20 @@ class DottedDict(dict):
         """
         if not isinstance(key, str):
             raise TypeError('DottedDict expects keys of type string.')
+        if key not in self:
+            raise KeyError(key)
         
-        keys = key.strip().split('.')
-        # print(f'{key}: {keys}')
+        keys = key.split('.')
+        
+        # If one key, just use super's:
         if len(keys) == 1:
             return super().__getitem__(keys[0])
+        # Otherwise, return the value of the child given the remaining keys:
         else:
-            outerDict = self.__getitem__(keys[0])
-            # print(f'{type(outerDict)}: {outerDict}')
-            return outerDict.__getitem__(".".join(keys[1:]))
+            childItem = self.__getitem__(keys[0])
+            # Ensure child is dict-like before getting item recursively:
+            if not isinstance(childItem, Mapping): raise KeyError(key)
+            return childItem.__getitem__(".".join(keys[1:]))
     
     def __setitem__(self, key: str, value: Any) -> None:
         """Overrides the default implementation to allow setting a value using a key in JSON dot notation.
@@ -82,7 +95,10 @@ class DottedDict(dict):
         if not isinstance(key, str):
             raise TypeError('DottedDict expects keys of type string.')
         
-        keys = key.strip().split('.')
+        keys = key.split('.')
+        # Catch key errors from multiple dots in a row or leading/trailing dots:
+        if '' in keys: raise KeyError(key)
+        
         if len(keys) == 1:
             super().__setitem__(key, value)
         # If first key refers to a dict-like object, continue to that object:
@@ -114,7 +130,7 @@ class DottedDict(dict):
         if key not in self:
             raise KeyError(key)
         
-        keys = key.strip().split('.')
+        keys = key.split('.')
         if len(keys) == 1:
             super().__delitem__(key)
         else:
@@ -141,7 +157,10 @@ class DottedDict(dict):
         if not isinstance(key, str):
             raise TypeError('DottedDict expects keys of type string.')
         
-        keys = key.strip().split('.')
+        keys = key.split('.')
+        # Catch key errors from multiple dots in a row or leading/trailing dots:
+        if '' in keys: raise KeyError(key)
+        
         # Standard dict, just use default implementation:
         if len(keys) == 1:
             return super().__contains__(key)
@@ -222,38 +241,7 @@ def getDictByDot(dict:dict, dotted_key:str) -> Any:
         return dict.get(keys[0])
     else:
         return getDictByDot(dict.get(keys[0]), ".".join(keys[1:]))
-    
 
-# def _dictFromDot(dotted_key:str, value:Any) -> dict:
-#     nestedDict = {}
-#     keys = dotted_key.strip().split('.')
-#     if len(keys) == 1:
-#         nestedDict[dotted_key] = value
-#     else:
-#         nestedDict[keys[0]] = _dictFromDot(".".join(keys[1:]), value)
-#     return nestedDict
-
-
-# def mergeNestedDicts(dict1:dict, dict2:dict) -> dict:
-#     merged = dict1.copy()
-    
-#     for cur in [dict1, dict2]:
-#         # Define other dict at current run:
-#         if cur == dict1: other = dict2
-#         else: other = dict1
-        
-#         for key, value in cur.items():
-#             # If this is a nested dict in both dicts, merge those:
-#             if type(value) == dict and type(other.get(key)) == dict:
-#                 merged[key] = mergeNestedDicts(cur[key], other[key])
-#             # If this is just a nested dict in the second dict, replace the first dict's value:
-#             elif type(other.get(key)) == dict:
-#                 merged[key] = other.get(key)
-#             # Otherwise, just keep the value from the first dict:
-#             else:
-#                 merged[key] = cur.get(key)
-        
-#     return merged
 
 def getIP(node:Node) -> str:
     """Find the first local IPv4 address for a given node.
