@@ -329,7 +329,7 @@ class Docker(Compiler):
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
-        internetMapEnabled: bool = False,
+        internetMapEnabled: bool = True,
         internetMapPort: int = 8080,
         etherViewEnabled: bool = False,
         etherViewPort: int = 5000,

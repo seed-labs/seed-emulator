@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from internet import IPAnyCastTestCase, MiniInternetTestCase
+from internet import IPAnyCastTestCase, MiniInternetTestCase, HostMgmtTestCase
 from ethereum import EthereumPOATestCase, EthereumPOSTestCase, EthereumPOWTestCase
 from scion import ScionBgpMixedTestCase, ScionBwtesterTestCase
 import unittest
@@ -17,6 +17,7 @@ os.environ['platform'] = platform
 test_case_list = [
     MiniInternetTestCase,
     IPAnyCastTestCase,
+    HostMgmtTestCase,
     EthereumPOATestCase,
     EthereumPOSTestCase,
     EthereumPOWTestCase,

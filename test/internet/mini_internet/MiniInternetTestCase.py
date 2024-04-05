@@ -32,8 +32,9 @@ class MiniInternetTestCase(SeedEmuTestCase):
     def test_real_world_as(self):
         self.printLog("\n-------- real world as test --------")
         self.printLog("real world as 11872")
-        self.printLog("check real world ip : 128.230.64.1")
-        self.assertTrue(self.ping_test(self.source_host, "128.230.64.1"))
+        self.printLog("check real world ip : 128.230.18.63")
+        # 128.230.18.63 - ip of syr.edu
+        self.assertTrue(self.ping_test(self.source_host, "128.230.18.63"))
 
     def test_vpn(self):
         return
