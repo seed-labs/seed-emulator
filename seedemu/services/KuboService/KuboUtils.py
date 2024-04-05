@@ -59,6 +59,8 @@ class DottedDict(dict):
         ------
         TypeError
             The key in a DottedDict must be of type string.
+        KeyError
+            The key does not exist in this DottedDict instance.
         """
         if not isinstance(key, str):
             raise TypeError('DottedDict expects keys of type string.')
@@ -91,6 +93,8 @@ class DottedDict(dict):
         ------
         TypeError
             Raised if the key is not a string, and so is not in JSON dot notation.
+        KeyError
+            Rasied if key is invalid (leading/trailing dots and empty string keys).
         """
         if not isinstance(key, str):
             raise TypeError('DottedDict expects keys of type string.')
@@ -153,6 +157,8 @@ class DottedDict(dict):
         ------
         TypeError
             Raised if the key is not a string, and therefore not valid JSON dot notation.
+        KeyError
+            Rasied if key is invalid (leading/trailing dots and empty string keys).
         """
         if not isinstance(key, str):
             raise TypeError('DottedDict expects keys of type string.')
@@ -166,10 +172,9 @@ class DottedDict(dict):
             return super().__contains__(key)
         # Should be a nested dict inside the current key, let's check:
         else:
-            # If there is another mapping at the first level, check the next:
-            if isinstance(self[keys[0]], Mapping):
+            if super().__contains__(keys[0]) and isinstance(self[keys[0]], Mapping):
                 return self[keys[0]].__contains__(".".join(keys[1:]))
-            # Otherwise, this is is not a mapping, so stop checking:
+            # Otherwise, this key does not exist or its value isn't a mapping, so the next won't exist:
             else:
                 return False
             
@@ -283,37 +288,3 @@ def isIPv4(ip:str) -> bool:
     # OSError is returned if ip is not valid (reason depends on C implementation):
     except OSError:
         return False
-           
-    
-if __name__ == "__main__":
-    newDict = {}
-    d1 = _dictFromDot("Identity.PeerID", "sdjklfhuoqwjksdask'das;da0wkjklfhdsaj;sjdfasdjlhf")
-    d1["test"] = 1
-    d2 = _dictFromDot("Identity.PrivKey", "1231927432714718237428137421397348718394789137849712894723984071238947")
-    d2['newNode'] = True
-    # newDict.update(_dictFromDot("Addresses.API.Test", "[1.1.1.1, 2.2.2.2]"))
-    # newDict.update(_dictFromDot("Addresses.API", "0.0.0.0"))
-    # newDict.update(_dictFromDot("Identity.PeerID", "sdjklfhuoqwjksdask'das;da0wkjklfhdsaj;sjdfasdjlhf"))
-    # newDict = _mergeNestedDicts(newDict, _dictFromDot("Identity.PeerID", "sdjklfhuoqwjksdask'das;da0wkjklfhdsaj;sjdfasdjlhf"))
-    # newDict.update(_dictFromDot("Identity.PrivKey", "1231927432714718237428137421397348718394789137849712894723984071238947"))
-    # newDict = _mergeNestedDicts(newDict, _dictFromDot("Identity.PrivKey", "1231927432714718237428137421397348718394789137849712894723984071238947"))
-    newDict = mergeNestedDicts(d1, d2)
-    print(json.dumps(newDict, indent=2))
-    setDictByDot(newDict, "test", 5)
-    print(json.dumps(newDict, indent=2))
-    setDictByDot(newDict, "Identity.PrivKey", 'hehehehehhehe')
-    print(json.dumps(newDict, indent=2))
-    print(getDictByDot(newDict, "newNode"))
-    print(getDictByDot(newDict, "Identity.PeerID"))
-    print(getDictByDot(newDict, "Identity"))
-    
-    print(f'{"Testing DottedDict":=^100}')
-    ddict = DottedDict()
-    ddict['test'] = 1
-    print(ddict)
-    ddict['a.b.c'] = [1, 2, 3]
-    print(ddict)
-    print('a' in ddict)
-    print('a.b' in ddict)
-    ddict.pop('a.b')
-    print(ddict)

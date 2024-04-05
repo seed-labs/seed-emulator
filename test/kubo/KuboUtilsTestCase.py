@@ -6,6 +6,8 @@ from seedemu.services.KuboService.KuboUtils import *
 from test import SeedEmuTestCase
 
 class DottedDictTestCase(SeedEmuTestCase):
+    """Test cases that evaluate KuboUtils::DottedDict.
+    """
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass(testLogOverwrite=True, online=False)
@@ -211,28 +213,132 @@ class DottedDictTestCase(SeedEmuTestCase):
                 
     
     def test_del_item_expected(self):
-        ...
+        self.printLog(f'{" Test Case: test_del_item_expected ":=^100}')
+        # Create test cases for multiple different values to get:
+        cases = [
+            'simple', 'a.b', 'a.c', 'a.c.red', 'a.c.orange', 'a.c.blue',
+            'a.deepest', 'a.deepest.level1.level2.level3.level4.level5',
+            'simple', ' ', ',', ',.!'
+        ]
+        # Test cases:
+        for testKey in cases:
+            with self.subTest(case=testKey):
+                dd = DottedDict(self.nestedDictDeep.copy())
+                # Trigger __delitem__:
+                del dd[testKey]
+                # Should no longer be in DottedDict:
+                self.assertNotIn(testKey, dd, 'Deleted item should no longer be in DottedDict.')
+                # Should now raise KeyError on get:
+                with self.assertRaises(KeyError, msg='Getting deleted item from DottedDict should raise KeyError.'):
+                    dd[testKey]
+                self.printLog(f'{f"del DottedDict[{testKey}]":<75}[PASS]')
         
     
     def test_del_item_unexpected(self):
-        ...
+        self.printLog(f'{" Test Case: test_del_item_unexpected ":=^100}')
+        # Create test cases for multiple different values to get:
+        cases = [
+            'simpl', '.a.b', 'a..c', 'a..c..red', '..a.c.orange', 'a.c.blue.',
+            'a.deepest...', 'a.deepest.level2.level2.level3.level4.level5',
+            'simple.', '', ',.', ',.!.'
+        ]
+        # Test cases:
+        for testKey in cases:
+            with self.subTest(case=testKey):
+                dd = DottedDict(self.nestedDictDeep.copy())
+                # Trigger __delitem__:
+                with self.assertRaises(KeyError, msg='Invalid key should raise key error.'):
+                    del dd[testKey]
+                # Should now raise KeyError on get:
+                with self.assertRaises(KeyError, msg='Accessing a deleted value should now raise KeyError.'):
+                    dd[testKey]
+                self.printLog(f'{f"del DottedDict[{testKey}]":<75}[PASS]')
         
         
     def test_contains_expected(self):
-        ...
+        self.printLog(f'{" Test Case: test_contains_expected ":=^100}')
+        # Create test cases for valid keys:
+        cases = [
+            'simple', 'a.b', 'a.c', 'a.c.red', 'a.c.orange', 'a.c.blue',
+            'a.deepest', 'a.deepest.level1.level2.level3.level4.level5',
+            'simple', ' ', ',', ',.!'
+        ]
+        # Test cases:
+        for testKey in cases:
+            with self.subTest(case=testKey):
+                dd = DottedDict(self.nestedDictDeep.copy())
+                # Should no longer be in DottedDict:
+                self.assertIn(testKey, dd, 'Key exists but contains returns False.')
+                self.printLog(f'{f"del DottedDict[{testKey}]":<75}[PASS]')
     
     
     def test_contains_unexpected(self):
-        ...
+        self.printLog(f'{" Test Case: test_contains_unexpected ":=^100}')
+        # Create test cases for nonexistent keys:
+        cases = [
+            'simplest', 'a.b.c', 'b.a.c', 'a.cat.red', 'a.c.cyan', 'simple.c.blue',
+            'deepest', 'a.deepest.level1.level2.level5.level4.level5',
+            'simple.1', 'a. ', 'b.,', ',.!.%'
+        ]
+        # Test cases:
+        for testKey in cases:
+            with self.subTest(case=testKey, group='nonexistent'):
+                dd = DottedDict(self.nestedDictDeep.copy())
+                self.assertNotIn(testKey, dd, 'Key does not exist but "in" returned True.')
+                self.printLog(f'{f"{testKey} in DottedDict -> False":<75}[PASS]')
+        
+        # Create test cases for invalid keys:
+        cases = [
+            '', '.', '.a', 'a.', 'a.b.', 'a.c.orange.', 'a..deepest',
+            '..a.deepest.level1.level2.level3.level4.level5..', 'simple..'
+        ]
+        # Test cases:
+        for testKey in cases:
+            with self.subTest(case=testKey, group='invalid'):
+                dd = DottedDict(self.nestedDictDeep.copy())
+                with self.assertRaises(KeyError, msg='Key is invalid but did not raise an error.'):
+                    testKey in dd
+                self.printLog(f'{f"{testKey} in DottedDict -> KeyError":<75}[PASS]')
         
         
     def test_copy(self):
-        ...
+        self.printLog(f'{" Test Case: test_copy ":=^100}')
+        # Create original and copy:
+        dOg = DottedDict(self.simpleDict)
+        dCp = dOg.copy()
+        self.printLog('Testing copy operation... ', end='')
+        self.assertIsInstance(dCp, DottedDict, 'Copy should also be a DottedDict, but is not.')
+        self.assertDictEqual(dOg, dCp, 'Copied DottedDict is not equal to original.')
+        self.assertNotEqual(id(dOg), id(dCp), 'Copy should be new instance in memory but is not.')
+        self.printLog('[PASS]')
+        # Changing copy should not affect original
+        self.printLog('Testing modification of copy... ', end='')
+        dCp['test'] = [1, 2, 3]
+        self.assertNotEqual(dOg, dCp, 'Original should not equal modified DottedDict.')
+        self.assertNotIn('test', dOg, 'New key should not exist in original DottedDict.')
+        self.printLog('[PASS]')
         
     
     def test_merge(self):
-        ...
-        
+        self.printLog(f'{" Test Case: test_merge ":=^100}')
+        # Create test cases; dictionaries to transform and try merging:
+        cases = [
+            ({chr(n) : n for n in range(97,123)}, {'test': True, 'deep': {'level1': {'level2': 'done'}, 'end': False}}),
+            ({'test': True, 'deep': {'level1': {'level2': 'done'}, 'end': False}}, {'deep': {'level1': {'leaf': True}}}),
+            ({chr(n) : n for n in range(97,123)}, {chr(n) : n for n in range(97,123)}),
+            ({chr(n) : n for n in range(97,123)}, {'new': True}),
+            ({'test': True, 'deep': {'level1': {'level2': 'done'}, 'end': False}}, {'deep': {'level1': {'level2': 'merged'}, 'end': 'merged'}})
+        ]
+        # Test cases:
+        for dictDest, dictSrc in cases:
+            with self.subTest(src=dictSrc, dst=dictDest):
+                dd = DottedDict(dictDest)
+                dd.merge(dictSrc)
+                d = dict(dictDest)
+                mergeNestedDicts(d, dictSrc)
+                self.assertDictEqual(dd, d, 'Merged dictionary is not equal to merged DottedDicts.')
+                self.printLog(f'[PASS] {f"{dd} = {d}":>90}')
+    
         
     def test_empty(self):
         self.printLog(f'{" Test Case: test_empty ":=^100}')
@@ -284,12 +390,49 @@ class DottedDictTestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_get_item_unexpected'))
         test_suite.addTest(cls('test_set_item_expected'))
         test_suite.addTest(cls('test_set_item_unexpected'))
+        test_suite.addTest(cls('test_del_item_expected'))
+        test_suite.addTest(cls('test_del_item_unexpected'))
+        test_suite.addTest(cls('test_contains_expected'))
+        test_suite.addTest(cls('test_contains_unexpected'))
+        test_suite.addTest(cls('test_copy'))
+        test_suite.addTest(cls('test_merge'))
         test_suite.addTest(cls('test_empty'))
         return test_suite
     
-class UtilsTestCase(ut.TestCase):
-    ...
+class UtilsTestCase(SeedEmuTestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass(testLogOverwrite=True, online=False)
+        
     
+    @classmethod
+    def tearDownClass(cls) -> None:
+        return super().tearDownClass()
+    
+    
+    @classmethod
+    def get_test_suite(cls):
+        test_suite = ut.TestSuite()
+        return test_suite
+    
+    
+def mergeNestedDicts(dest:Mapping, src:Mapping):
+    """Merge nested dictionaries.
+
+    Parameters
+    ----------
+    dest : Mapping
+        The dict-like object into which data will be merged.
+    src : Mapping
+        The dict-like object from which data will be merged (will not be altered).
+    """
+    for key, value in src.items():
+        # If item being copied already exists and both values are dict-like, merge those:
+        if key in dest and isinstance(value, Mapping) and isinstance(dest[key], Mapping):
+                mergeNestedDicts(dest[key], value)
+        # In any other case, just take the value from the source dict:
+        else:
+            dest[key] = value
     
 if __name__ == '__main__':
     test_suite = ut.TestSuite()
