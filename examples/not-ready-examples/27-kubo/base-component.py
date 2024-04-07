@@ -149,8 +149,3 @@ emu.addLayer(web)
 
 # Save it to a component file, so it can be used by other emulators
 emu.dump('base-component.bin')
-
-# emu.render()
-# docker = Docker(internetMapEnabled=True)
-# emu.compile(docker, './output', override = True)
-

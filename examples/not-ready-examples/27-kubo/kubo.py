@@ -3,6 +3,8 @@
 
 from seedemu import *
 
+OUTPUTDIR = './output'   # Directory to output compiled emulation
+
 ###############################################################################
 emu = Emulator()
 
@@ -13,55 +15,38 @@ emu.load('./base-component.bin')
 
 
 #############################
-ipfs:KuboService = KuboService()
-# ipfs.install('kubonode0')
-# emu.addBinding(Binding('kubonode0', filter = Filter(asn = 151)))
-# emu.getBindingFor('kubonode0').setDisplayName('Kubo Peer 0')
+# Initialize the KuboService (you may specify additional parameters here):
+ipfs = KuboService()
 
-numHosts:int = 1
-i:int = 0
-bootnodes = []
-
+# Iterate through hosts from base component and install Kubo on them:
+numHosts = 3   # Number of hosts in the stub AS to install Kubo on
+i = 0
 for asNum in range(150, 172):
     try:
         curAS = emu.getLayer('Base').getAutonomousSystem(asNum)
     except:
         print(f'AS {asNum} does\'t appear to exist.')
     else:
+        # This AS exists, so install Kubo on each host:
         for h in range(numHosts):
             vnode = f'kubo-{i}'
             displayName = f'Kubo-{i}_'
             cur = ipfs.install(vnode)
             if i % 5 == 0:
-                cur.setBootNode(True)
-                # cur.setConfig('API.HTTPHeaders', {"x-test-header": ["Test"]})
+                cur.setBootNode()
                 displayName += 'Boot'
-                bootnodes.append(vnode)
             else:
                 displayName += 'Peer'
             
+            # Modify display name and bind virtual node to a physical node in the Emulator:
             emu.getVirtualNode(vnode).setDisplayName(displayName)
             emu.addBinding(Binding(vnode, filter=Filter(asn=asNum, nodeName=f'host_{h}')))
             i += 1
-        
+
+# Add the KuboService layer (ipfs) to the Emulator so that it is rendered and compiled:
 emu.addLayer(ipfs)
 
-# Proxy node?
-# proxyAS = emu.getLayer('Base').getAutonomousSystem(150)
-# proxyHost = proxyAS.createHost('kubo-proxy')
-# proxyHost.joinNetwork(proxyAS.getNetworks()[0])
-# proxyHost.addSoftware('haproxy')
-# proxyHost.importFile('/home/jovanni/InternetEmulator/IPFS/seed-emulator/examples/not-ready-examples/27-kubo/haproxy.cfg', '/etc/haproxy/haproxy.cfg')
-# proxyHost.addPortForwarding(8080, 8080)
-# proxyHost.addPortForwarding(5001, 5001)
-
-docker = Docker(internetMapEnabled=True, internetMapPort=8081)
-
 # Render and compile 
-OUTPUTDIR = './output'
+docker = Docker(internetMapEnabled=True)  # Initialize the desired compiler
 emu.render()
 emu.compile(docker, OUTPUTDIR, override = True)
-
-print(f'Created {i} nodes in total.')
-print(f'{len(bootnodes)} boot nodes created: {", ".join(bootnodes)}')
-print(ipfs.getBootstrapList())
