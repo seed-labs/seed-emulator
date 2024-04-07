@@ -1,6 +1,6 @@
-import json, socket
-from operator import setitem
-from typing import Any, Mapping, Iterable
+import socket, re
+from ipaddress import IPv4Address
+from typing import Any, Mapping
 from typing_extensions import Self
 from seedemu import *
 from seedemu.core.enums import NetworkType
@@ -223,32 +223,7 @@ class DottedDict(dict):
         return len(self) == 0
 
 
-
-def setDictByDot(dict:dict, dotted_key:str, value:Any) -> None:
-    """Sets a dictionary value based on JSON dot notation (used for nested dicts).
-
-    Args:
-        dict (dict): dictionary (outermost)
-        dotted_key (str): dictionary key described in JSON dot notations
-        value (Any): value for the given key
-    """
-    keys = dotted_key.strip().split('.')
-    if len(keys) == 1:
-        # dict[dotted_key] = value
-        setitem(dict, dotted_key, value)
-    else:
-        setDictByDot(dict[keys[0]], ".".join(keys[1:]), value)
-        
-
-def getDictByDot(dict:dict, dotted_key:str) -> Any:
-    keys = dotted_key.strip().split('.')
-    if len(keys) == 1:
-        return dict.get(keys[0])
-    else:
-        return getDictByDot(dict.get(keys[0]), ".".join(keys[1:]))
-
-
-def getIP(node:Node) -> str:
+def getIP(node:Node) -> IPv4Address:
     """Find the first local IPv4 address for a given node.
 
     Parameters
@@ -282,9 +257,17 @@ def isIPv4(ip:str) -> bool:
     bool
         True if the given string represents a valid IPv4 address.
     """
-    try:
-        socket.inet_aton(ip)
-        return True
-    # OSError is returned if ip is not valid (reason depends on C implementation):
-    except OSError:
+    # Preliminary check with RegEx:
+    ipv4_regex = '^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$'
+    re_match = re.match(ipv4_regex, ip)
+    
+    # On RegEx match, check with internal library:
+    if re_match:
+        try:
+            s = socket.inet_aton(ip)
+            return True
+        # OSError is returned if ip is not valid (exact reason depends on C implementation):
+        except OSError:
+            return False
+    else:
         return False

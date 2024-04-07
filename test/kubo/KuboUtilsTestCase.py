@@ -3,7 +3,11 @@
 
 import unittest as ut
 from seedemu.services.KuboService.KuboUtils import *
+from seedemu import *
 from test import SeedEmuTestCase
+from faker import Faker
+from faker.providers import internet
+from time import time
 
 class DottedDictTestCase(SeedEmuTestCase):
     """Test cases that evaluate KuboUtils::DottedDict.
@@ -166,7 +170,7 @@ class DottedDictTestCase(SeedEmuTestCase):
                 with self.assertRaises(KeyError, msg='Invalid key on getitem did not raise KeyError.'):
                     dd[testKey]
                 self.assertDictEqual(dd, self.nestedDictDeep, 'DottedDict changed on getitem operation.')
-                self.printLog(f'{f"DottedDict[{testKey}] -> KeyError":<70}[PASS]')
+                self.printLog(f'{f"DottedDict[{testKey}] -> KeyError":<75}[PASS]')
                 
                 
     def test_set_item_expected(self):
@@ -198,7 +202,7 @@ class DottedDictTestCase(SeedEmuTestCase):
         
         
     def test_set_item_unexpected(self):
-        self.printLog(f'{" Test Case: test_get_item_unexpected ":=^100}')
+        self.printLog(f'{" Test Case: test_set_item_unexpected ":=^100}')
         # Create test cases for multiple different values to get:
         cases = ['', '.', '.a', 'a.', 'a.b.', 'a..b..c', 'a.c.orange.',
                  'a..deepest', '..a.deepest.level1.level2.level3.level4.level5..', 'simple..'
@@ -209,7 +213,7 @@ class DottedDictTestCase(SeedEmuTestCase):
             with self.subTest(case=testKey):
                 with self.assertRaises(KeyError, msg='Should raise KeyError for invalid key on set item.'):
                     dd[testKey] = 'test 1 2 3'
-                self.printLog(f'{f"DottedDict[{testKey}] -> KeyError":<70}[PASS]')
+                self.printLog(f'{f"DottedDict[{testKey}] -> KeyError":<75}[PASS]')
                 
     
     def test_del_item_expected(self):
@@ -399,10 +403,15 @@ class DottedDictTestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_empty'))
         return test_suite
     
-class UtilsTestCase(SeedEmuTestCase):
+class KuboUtilFuncsTestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass(testLogOverwrite=True, online=False)
+        
+        # Set up some class variables to use later:
+        Faker.seed(time())
+        cls.fake = Faker()
+        cls.fake.add_provider(internet)
         
     
     @classmethod
@@ -410,9 +419,62 @@ class UtilsTestCase(SeedEmuTestCase):
         return super().tearDownClass()
     
     
+    def test_getIP(self):
+        self.printLog(f'{" Test Case: test_getIP ":=^100}')
+        
+        # Create an environment in the emulator:
+        numHosts = 2
+        emu = Makers.makeEmulatorBaseWith5StubASAndHosts(numHosts)
+        emu.render()
+        # Get IPs for nodes in each AS:
+        for asn in range(150, 155):
+            self.printLog(f'Testing nodes in AS {asn}:')
+            curAS = emu.getLayer('Base').getAutonomousSystem(asn)
+            # Get IP for each host in the current AS:
+            for host in curAS.getHosts():
+                node = curAS.getHost(host)
+                ip = getIP(node)
+                with self.subTest(device=host, ip=str(ip), type='host'):
+                    self.assertIsNotNone(ip, 'No IP found.')
+                    self.printLog(f'\t{host} -> {ip} [PASS]')
+            # Get an IP for each router in the current AS:
+            #   Note: this function is meant to be used on hosts with a single NIC;
+            #         performing on a router will only get one NIC's IP.
+            for router in curAS.getRouters():
+                node = curAS.getRouter(router)
+                ip = getIP(node)
+                with self.subTest(device=router, ip=str(ip), type='router'):
+                    self.assertIsNotNone(ip, 'No IP found.')
+                    self.printLog(f'\t{router} -> {ip} [PASS]')
+                
+                
+    def test_isIPv4(self):
+        self.printLog(f'{" Test Case: test_isIPv4 ":=^100}')
+        
+        # Test with randomly-generated valid IPs:
+        numTests = 10
+        for i in range(numTests):
+            ip = self.fake.ipv4()
+            with self.subTest(ip=ip, group='valid'):
+                self.assertTrue(isIPv4(ip))
+                self.printLog(f'[PASS] isIPv4({ip}) -> True')
+        
+        # Test with invalid IPs:
+        invalidIPs = [
+            '255.255.255.256', '300.1.1.1', '55.288.155.0', '0.0.888.1',
+            '55.55.55', '55.55', '55', '1.1.1.1.1'
+        ]
+        for ip in invalidIPs:
+            with self.subTest(ip=ip, group='invalid'):
+                self.assertFalse(isIPv4(ip))
+                self.printLog(f'[PASS] isIPv4({ip}) -> False')
+            
+    
     @classmethod
     def get_test_suite(cls):
         test_suite = ut.TestSuite()
+        test_suite.addTest(cls('test_getIP'))
+        test_suite.addTest(cls('test_isIPv4'))
         return test_suite
     
     
@@ -437,9 +499,11 @@ def mergeNestedDicts(dest:Mapping, src:Mapping):
 if __name__ == '__main__':
     test_suite = ut.TestSuite()
     test_suite.addTests(DottedDictTestCase.get_test_suite())
-    # test_suite.addTests(UtilsTestCase.get_test_suite())
+    test_suite.addTests(KuboUtilFuncsTestCase.get_test_suite())
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
     
-    DottedDictTestCase.printLog(f'{" Test Results ":=^100}')
-    num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
-    DottedDictTestCase.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
+    # Insert summary line in output for each:
+    for testCase in [DottedDictTestCase, KuboUtilFuncsTestCase]:
+        testCase.printLog(f'{" Test Results ":=^100}')
+        num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
+        testCase.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))

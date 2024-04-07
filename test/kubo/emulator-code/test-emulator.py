@@ -2,16 +2,20 @@
 # encoding: utf-8
 
 from seedemu import *
-import random, json
+import random, json, os
 
 ###############################################################################
-emu = emu = Makers.makeEmulatorBaseWith5StubASAndHosts(2)
+emu = Makers.makeEmulatorBaseWith5StubASAndHosts(2)
 
 ###############################################################################
 
 
 #############################
-ipfs:KuboService = KuboService()
+# Ensure that this can be tested on multiple platforms:
+if os.environ.get('platform', 'amd') == 'arm':
+    ipfs:KuboService = KuboService(arch=Architecture.ARM)
+else:
+    ipfs:KuboService = KuboService()
 
 numHosts:int = 2
 i:int = 0

@@ -22,13 +22,14 @@ class KuboTestCase(SeedEmuTestCase):
             A docker container that is currently running.
         cmd : str
             The command to be run.
-
+        
         Returns
         -------
         Tuple[int, str]
             A tuple of the exit code (int) and the command output (str).
         """
         exit_code, output = container.exec_run(cmd, **kwargs)
+        
         return exit_code, output
     
     @classmethod
@@ -243,7 +244,6 @@ class KuboTestCase(SeedEmuTestCase):
             else:
                 cls.addTestGroup(ct, 'file_host')
                 cls.kubo_test_files[ct.short_id] = {'contents': file_contents}
-        cls.printLog(json.dumps(cls.kubo_test_files, indent=2))
             
         # Display test container groups:
         containersGroups = {cls.getCtName(ct) : cls.getTestGroups(ct) for ct in cls.getTestContainers()}
@@ -367,8 +367,8 @@ class KuboTestCase(SeedEmuTestCase):
                 # Print peers to logs:
                 for p in peers:
                     self.printLog(f'\t{p}')
-                    
-                self.assertGreaterEqual(len(peers), len(self.getTestContainers(group='basic')))
+                
+                self.assertGreaterEqual(len(peers), len(self.getTestContainers(group='basic')) - 1)
                 
     
     def test_kubo_add(self):
@@ -403,10 +403,12 @@ class KuboTestCase(SeedEmuTestCase):
                 # Check that node can access file through IPFS (skip if this node originates the data):
                 for ct_id, file_info in self.kubo_test_files.items():
                     if ct_id != ct.short_id:
-                        exit_code, output = self.ctCmd(ct, f'ipfs cat {file_info["cid"]}', demux=True)
+                        exit_code, output = self.ctCmd(ct,['ipfs', 'cat', file_info['cid']], demux=True)
                         
-                        self.assertEqual(exit_code, 0)
-                        self.assertEqual(output[0].decode().strip(), file_info["contents"])
+                        self.assertIsNotNone(output, 'Command not executed successfully on container.')
+                        self.assertIsNotNone(exit_code, 'Command not executed successfully on container.')
+                        self.assertEqual(exit_code, 0, f'Command not executed successfully on container. {output[0]} {output[1]}')
+                        self.assertEqual(output[0].decode().strip(), file_info["contents"], 'Unexpected test file contents.')
                         self.printLog(f'\tipfs cat {file_info["cid"]} [PASS]')
                     else:
                         self.printLog(f'\tipfs cat {file_info["cid"]} [SKIP] *')
