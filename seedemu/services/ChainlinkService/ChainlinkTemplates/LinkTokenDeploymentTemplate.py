@@ -54,7 +54,9 @@ try:
         else:
             logging.error("Funds request was successful but the response format is unexpected.")
     else:
-        logging.error(f"Failed to request funds from faucet server. Status code: {{response.status_code}}")
+        api_response = response.json()
+        message = api_response['message']
+        logging.error(f"Failed to request funds from faucet server. Status code: {{response.status_code}} Message: {{message}}")
 except Exception as e:
     logging.error(f"An error occurred: {{str(e)}}")
     exit()
