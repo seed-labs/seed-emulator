@@ -236,7 +236,7 @@ echo "Ethereum address: $ETH_ADDRESS"
 echo "curl -X POST -d 'address=$ETH_ADDRESS&amount=$AMOUNT' http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme"
 
 # Send the request to the faucet server
-curl -X POST -d 'address=$ETH_ADDRESS&amount=$AMOUNT' http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme > /dev/null 2>&1 &
+curl -X POST -d "address=$ETH_ADDRESS&amount=$AMOUNT" "http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme" > /dev/null 2>&1 &
 
 echo "Fund request sent to the faucet server."
 """
