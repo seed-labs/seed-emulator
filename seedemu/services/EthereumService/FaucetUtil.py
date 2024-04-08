@@ -41,12 +41,13 @@ echo "Connection failed after $ATTEMPTS attempts."
 exit 1  # Exit with error status
 '''
 FaucetServerFileTemplates['faucet_server'] = '''\
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 import sys, time
 from hexbytes import HexBytes
 import logging
+import re
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -130,13 +131,30 @@ def submit_form():
     else:
         recipient = request.form.get('address')
         amount = request.form.get('amount')
+
+    # Check if 'recipient' is not None and follows the format of an Ethereum account
+    if recipient is None:
+        return jsonify({{'status': 'error', 'message': 'address cannot be empty'}}), 400
+    elif not re.match(r'^0x[a-fA-F0-9]{{40}}$', recipient):
+        return jsonify({{'status': 'error', 'message': 'Invalid Ethereum address'}}), 400
+
+    if amount is None:
+        return jsonify({{'status': 'error', 'message': 'amount cannot be empty'}}), 400
+    # Check if 'amount' is a number and less than 10
+    try:
+        amount = int(amount)
+        if amount < 0:
+            return jsonify({{'status': 'error', 'message': 'Amount should be a number larger than 0'}}), 400
+    except ValueError:
+        return jsonify({{'status': 'error', 'message': 'Amount should be a number'}}), 400
+
     ip_address = request.remote_addr
     logging.info(f"recipient: {{recipient}} amount: {{amount}} sender ip: {{ip_address}}")
     app.config['NONCE'] = max(app.config['NONCE']+1, app.config['WEB3'].eth.getTransactionCount(app.config['SENDER_ADDRESS']))
     tx_receipt = send_raw_transaction(app.config['WEB3'], app.config['SENDER_ADDRESS'], app.config['SENDER_KEY'], recipient, amount, '')
-    api_response = {{'message': f'Funds successfully sent to {{recipient}} for amount {{amount}}.\\n{{tx_receipt}}'}}
+    
+    return jsonify({{'status': 'success', 'message':f'Funds successfully sent to {{recipient}} for amount {{amount}}.\\n{{tx_receipt}}'}}) , 200
 
-    return api_response
 
 if __name__ == '__main__':
     trial = 5
