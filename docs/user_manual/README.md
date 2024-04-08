@@ -27,6 +27,10 @@ This document provides a portal to those examples.
   - [Hybrid emulation: Integrating physical devices in emulation (example)](../../examples/C03-bring-your-own-internet/)
 
 
+## Internet Emulator: Additional Services
+  - [IPFS Kubo](./kubo.md)
+
+
 ## Blockchain Emulator
   
   - [Build a Blockchain emulator](../../examples/B06-blockchain/)
