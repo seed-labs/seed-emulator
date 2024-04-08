@@ -2,6 +2,7 @@ from seedemu.core import Node, Service
 from seedemu.core.enums import NetworkType
 from seedemu.services.KuboService.KuboEnums import Distribution, Architecture
 from seedemu.services.KuboService.KuboServer import KuboServer
+from typing import List
 
 TEMPORARY_DIR = '/tmp/kubo'
 
@@ -11,7 +12,7 @@ class KuboService(Service):
     """
     _distro:Distribution
     _arch:Architecture
-    _bootstrap_ips:list[str]
+    _bootstrap_ips:List[str]
     _bootstrap_script:str
     _tmp_dir:str
     _first_installed:bool
