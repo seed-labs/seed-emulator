@@ -105,8 +105,8 @@ def send_raw_transaction(web3, sender, sender_key, recipient, amount, data):
    tx_hash    = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
    logging.info("Transaction Hash: {{}}".format(tx_hash.hex()))
 
-   tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-   print("Transaction Receipt: {{}}".format(tx_receipt))
+   tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
+   logging.info("Transaction Receipt: {{}}".format(tx_receipt))
    return tx_receipt
 
 def create_account(web3:Web3):
