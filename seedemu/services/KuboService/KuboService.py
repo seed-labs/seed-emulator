@@ -1,9 +1,7 @@
 from seedemu.core import Node, Service
 from seedemu.core.enums import NetworkType
 from seedemu.services.KuboService.KuboEnums import Distribution, Architecture
-from seedemu.services.KuboService.KuboUtils import isIPv4
 from seedemu.services.KuboService.KuboServer import KuboServer
-from typing_extensions import Self
 
 TEMPORARY_DIR = '/tmp/kubo'
 
@@ -20,7 +18,7 @@ class KuboService(Service):
     _rpc_api_port:int
     _http_gateway_port:int
     
-    def __init__(self, apiPort:int=5001, gatewayPort:int=8080, bootstrapIps:list[str]=[],
+    def __init__(self, apiPort:int=5001, gatewayPort:int=8080,
                  distro:Distribution=Distribution.LINUX, arch:Architecture=Architecture.X64):
         """Create an instance of the IPFS Kubo Service.
 
@@ -30,8 +28,6 @@ class KuboService(Service):
             Set the port that the IPFS RPC API is bound to on all nodes, by default 5001
         gatewayPort : int, optional
             Set the port that the IPFS HTTP Gateway is bound to on all nodes, by default 8080
-        bootstrapIps : list[str], optional
-            Set a list of bootstrap nodes at the service level, by default []
         distro : Distribution, optional
             OS distribution of Kubo to use, by default Distribution.LINUX
         arch : Architecture, optional
@@ -43,13 +39,11 @@ class KuboService(Service):
         
         self._tmp_dir = TEMPORARY_DIR.rstrip('/')  # Directory without trailing slash.
         
-        # Only accept valid IPv4 addresses for bootstrap IPs:
-        self._bootstrap_ips = [str(ip) for ip in bootstrapIps if isIPv4(str(ip))]
-
         assert isinstance(distro, Distribution), '"distro" must be an instance of KuboEnums.Distribution'
         self._distro = distro
         assert isinstance(arch, Architecture), '"arch" must be an instance of KuboEnums.Architecture'
         self._arch = arch
+        self._bootstrap_ips = []
         self._rpc_api_port = apiPort
         self._http_gateway_port = gatewayPort
         self._bootstrap_script = None

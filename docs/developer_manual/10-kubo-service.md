@@ -6,6 +6,7 @@ Additionally, this includes notes on possibilities for future work.
 - [ ] Visualization
 - [ ] Architecture Propogation
 - [ ] Educational Lab Development
+- [ ] Custom Per-Node Bootstrap IPs
 
 ### Visualization
 Each IPFS Kubo node is bundled with its own instance of the [IPFS Kubo Web UI](https://github.com/ipfs/ipfs-webui)
@@ -36,7 +37,43 @@ and should be derived from there instead of set manually.
   and should be derived from here if possible.
 
 ### Educational Lab
-...
+This would be based on the [Kubo dApp](/examples/not-ready-examples/28-kubo-dapp/README.md) example. It should combine IPFS Kubo with Ethereum smart contracts to show how to deploy a simple dApp and illustrate the basic functionality of both IPFS, and smart contracts.
+
+Below, you will find a possible outline for the structure of this lab:
+1. Intro to IPFS
+   - What is IPFS?
+   - How to interact with IPFS using the Kubo CLI. Have student:
+      - View bootstrap nodes
+      - View peers
+      - Add file
+      - Access the data from another node
+2. Intro to Ethereum & Smart Contracts
+   - What is Ethereum (brief)?
+   - What is a smart contract?
+   - How to create a basic smart contract, have student:
+     - Fill in code skeleton for simple hello world contract.
+     - Compile using Remix
+     - Deploy in Emulator
+     - Test
+3. IPFS For dApp Data Storage
+   - What is a dApp?
+   - Student fill in smart contract code skeleton.
+   - Student will compile & deploy contract unguided.
+   - Student must demonstrate that the dApp works.
+
+### Custom Per-Node Boot IPs
+In the current implementation, when you set a node as a bootstrap node, all other nodes
+will bootstrap to that node during initialization (it is implemented at the service
+level).
+
+As a minor addition for a future version, it would be nice to implement functionality
+at the server level to allow users to specify additional bootstrap nodes for a
+particular server, or to override the bootstrap nodes from the service level.
+
+This would involve adding a parameter or setter method in the `KuboServer` class, and
+likely relocating the bootstrap script generation process from the `KuboService` class
+to the `KuboServer` class. A helper method `KuboUtils.isIPv4()` would be helpful here
+to validate user-provided IPv4 addresses.
 
 ## Technical Implementation
 The following includes some technical notes on the implementation, including aspects which might be improved or expanded on in the future.
