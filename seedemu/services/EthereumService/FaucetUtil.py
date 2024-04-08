@@ -120,8 +120,14 @@ def index():
 # Route for handling form submission
 @app.route('/fundme', methods=['POST'])
 def submit_form():
-    recipient = request.form.get('address')
-    amount = request.form.get('amount')
+    if request.is_json:
+        # If the request is JSON
+        data = request.get_json()
+        recipient = data.get('address')
+        amount = data.get('amount')
+    else:
+        recipient = request.form.get('address')
+        amount = request.form.get('amount')
     app.config['NONCE'] = max(app.config['NONCE']+1, app.config['WEB3'].eth.getTransactionCount(app.config['SENDER_ADDRESS']))
     tx_receipt = send_raw_transaction(app.config['WEB3'], app.config['SENDER_ADDRESS'], app.config['SENDER_KEY'], recipient, amount, '')
     api_response = {{'message': f'Funds successfully sent to {{recipient}} for amount {{amount}}.\\n{{tx_receipt}}'}}
