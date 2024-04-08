@@ -46,8 +46,10 @@ from web3 import Web3
 from web3.middleware import geth_poa_middleware
 import sys, time
 from hexbytes import HexBytes
+import logging
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Connect to a geth node
 def connect_to_geth(url, consensus):
@@ -96,12 +98,12 @@ def construct_raw_transaction(sender, recipient, nonce, amount, data):
 
 # Send raw transaction
 def send_raw_transaction(web3, sender, sender_key, recipient, amount, data):
-   print("---------Sending Raw Transaction ---------------")
+   logging.info("---------Sending Raw Transaction ---------------")
    nonce  = app.config['NONCE']
    tx = construct_raw_transaction(sender, recipient, nonce, amount, data)
    signed_tx  = web3.eth.account.signTransaction(tx, sender_key)
    tx_hash    = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
-   print("Transaction Hash: {{}}".format(tx_hash.hex()))
+   logging.info("Transaction Hash: {{}}".format(tx_hash.hex()))
 
    tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
    print("Transaction Receipt: {{}}".format(tx_receipt))
@@ -128,6 +130,8 @@ def submit_form():
     else:
         recipient = request.form.get('address')
         amount = request.form.get('amount')
+    ip_address = request.remote_addr
+    logging.info(f"recipient: {{recipient}} amount: {{amount}} sender ip: {{ip_address}}")
     app.config['NONCE'] = max(app.config['NONCE']+1, app.config['WEB3'].eth.getTransactionCount(app.config['SENDER_ADDRESS']))
     tx_receipt = send_raw_transaction(app.config['WEB3'], app.config['SENDER_ADDRESS'], app.config['SENDER_KEY'], recipient, amount, '')
     api_response = {{'message': f'Funds successfully sent to {{recipient}} for amount {{amount}}.\\n{{tx_receipt}}'}}
