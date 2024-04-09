@@ -69,7 +69,8 @@ for asn in asns:
 faucet:FaucetServer = blockchain.createFaucetServer(vnode='faucet', 
                                                      port=80, 
                                                      linked_eth_node='eth5',
-                                                     balance=10000)
+                                                     balance=10000,
+                                                     max_fund_amount=20)
 
 emu.addBinding(Binding('faucet', filter=Filter(asn=150, nodeName='host_2')))
 

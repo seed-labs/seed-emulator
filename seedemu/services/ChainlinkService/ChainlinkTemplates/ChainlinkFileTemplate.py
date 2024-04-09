@@ -220,10 +220,11 @@ TIME_LIMIT=100
 check_balance() {{
     response=$(curl -s -X POST $RPC_URL -H "Content-Type: application/json" --data '{{"jsonrpc":"2.0","method":"eth_getBalance","params":["'$1'", "latest"],"id":1}}')
     balance_hex=$(echo $response | jq -r '.result')
-    if [ "$balance_hex" == "nulll" ]; then
+    if [ $balance_hex == "null" ]; then
         echo 0
     else
         echo $((16#${{balance_hex#0x}}))
+    fi
 }}
 
 SERVER_STATUS=0
