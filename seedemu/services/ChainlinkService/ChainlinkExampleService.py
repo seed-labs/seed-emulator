@@ -5,9 +5,6 @@ from seedemu.core.Node import Node
 from seedemu.core.Service import Server
 from enum import Enum
 from seedemu.core.enums import NetworkType
-from seedemu.services.ChainlinkService import ChainlinkUserServer
-
- 
  
 class ChainlinkUserServer(Server):
     """
@@ -46,7 +43,7 @@ class ChainlinkUserServer(Server):
         return out
  
     
-class ChainlinkUserService(Service):
+class ChainlinkExampleService(Service):
     """
     @brief The Chainlink service class.
     """

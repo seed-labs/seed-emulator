@@ -69,7 +69,7 @@ for asn in asns:
 faucet:FaucetServer = blockchain.createFaucetServer(vnode='faucet', 
                                                      port=80, 
                                                      linked_eth_node='eth5',
-                                                     balance=1000)
+                                                     balance=10000)
 # For testing purposes, we will fund some accounts
 faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
 faucet.fund('0x5449ba5c5f185e9694146d60cfe72681e2158499', 5)
@@ -105,12 +105,33 @@ for asn in c_asns:
     
     
 # Chainlink User Service
-# This will work with the default jobs configured in the chainlink servers
-# chainlink_user = ChainlinkUserService()
-# cnode = 'chainlink_user'
-# c_user = chainlink_user.install(cnode)
-# c_user.setRPCbyEthNodeName('eth2')
-# c_user.setFaucetServerInfo(vnode = 'faucet', port = 80)
+# This will work with the default jobs configured on the chainlink servers
+'''
+Flow of ChainlinkExampleService:
+1. Create an instance of ChainlinkUserService
+2. Install the service
+3. Set the RPC server to connect to the Ethereum node
+4. Set the Faucet server to connect to the Faucet server
+'''
+'''
+Behind the scenes:
+1. Wait for the chainlink init server to be up. Get LINK token contract address and oracle contract addresses
+2. Fund the user account
+3. Deploy the user contract
+4. Set the LINK token contract address and oracle contract addresses in the user contract
+5. Send 1ETH to the LINK token contract to fund the user account with LINK tokens
+6. Transfer LINK token to the user contract
+7. Call the main function in the user contract
+'''
+chainlink_user = ChainlinkExampleService()
+cnode = 'chainlink_user'
+c_user = chainlink_user.install(cnode)
+c_user.setRPCbyEthNodeName('eth2')
+c_user.setFaucetServerInfo(vnode = 'faucet', port = 80)
+emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
+emu.addBinding(Binding(cnode, filter = Filter(asn=153, nodeName='host_2')))
+
+
 # c_user.loadUserContract('<Path to user_contract abi>', '<Path to user_contract bytecode>')
 # # Provide user the option to have dynamic contracts
 # c_user.setLinkTokenFunction('setLinkToken')
@@ -122,9 +143,7 @@ for asn in c_asns:
 # # We also need the main function to be called after setting up the contract
 # c_user.setMainFunction('requestEthPrice')
 # # Set virtual node display name
-# emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
 # # Bind the virtual node to a host
-# emu.addBinding(Binding(cnode, filter = Filter(asn=153, nodeName='host_2')))
 
 # Add the Ethereum layer
 emu.addLayer(eth)
@@ -133,7 +152,7 @@ emu.addLayer(eth)
 emu.addLayer(chainlink)
 
 # Add the Chainlink User layer
-# emu.addLayer(chainlink_user)
+emu.addLayer(chainlink_user)
 
 # Render and compile
 OUTPUTDIR = './emulator_20'
