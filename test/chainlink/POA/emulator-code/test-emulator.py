@@ -69,13 +69,12 @@ for asn in asns:
 faucet:FaucetServer = blockchain.createFaucetServer(vnode='faucet', 
                                                      port=80, 
                                                      linked_eth_node='eth5',
-                                                     balance=1000)
+                                                     balance=10000)
 
 emu.addBinding(Binding('faucet', filter=Filter(asn=150, nodeName='host_2')))
 
 # Create the Chainlink Init server
 chainlink = ChainlinkService()
-
 cnode = 'chainlink_init_server'
 c_init = chainlink.installInitializer(cnode)
 c_init.setFaucetServerInfo(vnode = 'faucet', port = 80)

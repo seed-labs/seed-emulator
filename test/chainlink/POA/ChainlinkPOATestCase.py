@@ -59,40 +59,6 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
                 time.sleep(20)
                 i += 1
         self.assertTrue(self.wallet1._web3.isConnected())
-
-    def test_node_health(self, url: str):
-        self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Testing Chainlink normal node health at: {url}")
-        i = 1
-        current_time = time.time()
-        all_passing = False
-        while True:
-            self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Trial {i}")
-            if time.time() - current_time > 1200:
-                self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Timeout reached after 20 minutes.")
-                break
-            try:
-                response = requests.get(url, timeout=10)
-                response.raise_for_status()
-                data = response.json()
-                all_passing = True
-                for check in data['data']:
-                    if check['attributes']['status'] != 'passing':
-                        all_passing = False
-                        self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Health check failed: {check['attributes']['name']} - {check['attributes']['output']}")
-                        break 
-                if all_passing:
-                    self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - All health checks passed.")
-                    break
-                else:
-                    self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Detected failing checks, retrying...")
-            except Exception as e:
-                self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Exception occurred during health check: {e}")
-            
-            time.sleep(20)
-            i += 1
-        
-        self.assertTrue(all_passing)
-        return all_passing
     
     def test_chainlink_init_node_health(self):
         self.printLog("\n-----------Testing chainlink init node health-----------")
@@ -170,7 +136,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         failed_nodes = []
         for url in urls:
             self.printLog(f"Testing node health for URL: {url}/health")
-            if not self.test_node_health(url + '/health'):
+            if not self.__test_node_health(url + '/health'):
                 failed_nodes.append(url)
         
         if failed_nodes:
@@ -179,13 +145,45 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
             self.printLog("All Chainlink normal nodes passed the health check successfully.")
 
         self.printLog("\n-----------Testing Chainlink - Oracle Relationships-----------")
-        # self.printLog("Waiting 30 seconds before starting relationship tests...")
-        # time.sleep(30)
         self.printLog("Now retrieving Chainlink-Oracle relationships from nodes.")
         self.__get_oracle_chainlink_relationships(urls)
         self.printLog("Completed Chainlink-Oracle relationship retrieval.")
         
     # Helper function for test_chainlink_node_health 
+    def __test_node_health(self, url: str):
+        self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Testing Chainlink normal node health at: {url}")
+        i = 1
+        current_time = time.time()
+        all_passing = False
+        while True:
+            self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Trial {i}")
+            if time.time() - current_time > 1200:
+                self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Timeout reached after 20 minutes.")
+                break
+            try:
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                all_passing = True
+                for check in data['data']:
+                    if check['attributes']['status'] != 'passing':
+                        all_passing = False
+                        self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Health check failed: {check['attributes']['name']} - {check['attributes']['output']}")
+                        break 
+                if all_passing:
+                    self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - All health checks passed.")
+                    break
+                else:
+                    self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Detected failing checks, retrying...")
+            except Exception as e:
+                self.printLog(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Exception occurred during health check: {e}")
+            
+            time.sleep(20)
+            i += 1
+        
+        self.assertTrue(all_passing)
+        return all_passing
+    
     def __get_oracle_chainlink_relationships(self, urls):
         credentials = {'email': 'seed@seed.com', 'password': 'Seed@emulator123'}
         headers = {'Content-Type': 'application/json'}
@@ -387,15 +385,6 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         self.assertEqual(user_contract_tx_receipt['status'], 1)
         user_contract_address = self.wallet1.getContractAddress(user_contract_tx_hash)
         self.printLog(f"User contract address: {user_contract_address}")
-        
-        # tx_hash = self.wallet1.deployContract('./resources/user_contract.bin')
-        # tx_receipt = self.wallet1._web3.eth.waitForTransactionReceipt(tx_hash)
-        # self.printLog(f"User contract deployment transaction receipt: {tx_receipt}")
-        # user_contract_address = self.wallet1.getContractAddress(tx_hash)
-        # self.printLog(f"User contract address: {user_contract_address}")
-        
-        # with open(user_contract_abi_path, 'r') as abi_file:
-        #     user_contract_abi = json.load(abi_file)
        
         
         # 2. Set the LINK token address in the user contract using setLinkToken function
@@ -407,6 +396,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         while not set_link_token_receipt:
             set_link_token_receipt = self.wallet1.getTransactionReceipt(set_link_token_tx)
             time.sleep(5)
+        self.assertEqual(set_link_token_receipt['status'], 1)
         self.printLog(f"Set Link Token receipt: {set_link_token_receipt}")
 
         # 3. Transfer LINK token to user account
@@ -445,6 +435,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
             add_oracles_receipt = self.wallet1.getTransactionReceipt(add_oracles_tx)
             time.sleep(5)
         self.printLog(f"Add oracles receipt: {add_oracles_receipt}")
+        self.assertEqual(add_oracles_receipt['status'], 1)
         self.assertTrue(add_oracles_receipt, "Failed to add oracles")
         
         # 7. Use the requestETHPriceData function to request ETH price data
@@ -456,9 +447,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         receipt = None
         while not receipt:
             receipt = self.wallet1.getTransactionReceipt(invoke_tx)
-            time.sleep(5)
-        self.printLog(f"Request ETH receipt: {receipt}")
-        
+            time.sleep(5)        
         self.assertTrue(receipt)
         
         # 8. Wait for responses to be received
