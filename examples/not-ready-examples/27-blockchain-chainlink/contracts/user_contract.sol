@@ -2,9 +2,9 @@
 pragma solidity ^0.8.7;
 
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
-import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ETHPriceAverageFeed is ChainlinkClient, ConfirmedOwner {
+contract ETHPriceAverageFeed is ChainlinkClient, Ownable {
     using Chainlink for Chainlink.Request;
 
     uint256 private constant ORACLE_PAYMENT = 1360000000000000000;
@@ -21,10 +21,12 @@ contract ETHPriceAverageFeed is ChainlinkClient, ConfirmedOwner {
 
     OracleData[] public oracles;
     mapping(bytes32 => bool) private pendingRequests;
+    
+    constructor() Ownable(msg.sender){}
 
-    constructor(address _link_token) ConfirmedOwner(msg.sender) {
-        setChainlinkToken(_link_token);
-        linkToken = _link_token;
+    function setLinkToken(address _link_token) public onlyOwner{
+        setChainlinkToken(_link_token);  
+        linkToken = _link_token;  
     }
 
     function addOracle(address _oracle, string memory _jobId) public onlyOwner {

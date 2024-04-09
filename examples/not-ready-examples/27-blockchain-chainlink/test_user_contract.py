@@ -25,7 +25,7 @@ class user_test:
     
     def __init__(self):
         self.url = "http://10.164.0.71:8545"
-        self.faucet_url = "http://128.230.212.249:3000/getEth"
+        self.faucet_url = "http://10.154.0.73:80/fundme"
         self.init_server_url = "http://10.164.0.73"
         self.web3 = Web3(Web3.HTTPProvider(self.url))
         self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
@@ -36,7 +36,6 @@ class user_test:
         self.user_contract_abi_path = './contracts/user_contract_abi.json'
         self.user_contract_bin_path = './contracts/user_contract.bin'
         self.user_contract_abi, self.user_contract_bin = self.load_user_contract()
-
         
     def fetch_init_data(self):
         response = requests.get(self.init_server_url)
@@ -60,8 +59,11 @@ class user_test:
             return False
         
     def fund_account(self):
-        data = {"new_account": self.owner_address}
+        data = {'address': self.owner_address, 'amount': 10}
         response = requests.post(self.faucet_url, headers={"Content-Type": "application/json"}, data=json.dumps(data))
+        print(response.text)
+        if response.status_code == 200:
+            logging.info(f"Successfully requested funds from faucet: {response.text}")
         if response.status_code != 200:
             logging.error(f"Failed to request funds from faucet: {response.text}")
             return False
@@ -92,7 +94,6 @@ class user_test:
         contract_address = self.web3.eth.wait_for_transaction_receipt(txhash, timeout=300).contractAddress
         logging.info(f"User contract deployed at address: {contract_address}")
         return contract_address
-
 
     def sendRawTransaction(self, key, transaction:dict, wait=True, verbose=True):
         signed_tx = self.web3.eth.account.sign_transaction(transaction, key)

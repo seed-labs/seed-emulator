@@ -104,9 +104,6 @@ for asn in c_asns:
 # Add the Ethereum layer
 emu.addLayer(eth)
 
-# Add the faucet layer
-# emu.addLayer(faucetService)
-
 # Add the Chainlink layer
 emu.addLayer(chainlink)
 
