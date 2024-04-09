@@ -69,7 +69,8 @@ for asn in asns:
 faucet:FaucetServer = blockchain.createFaucetServer(vnode='faucet', 
                                                      port=80, 
                                                      linked_eth_node='eth5',
-                                                     balance=10000)
+                                                     balance=10000,
+                                                     max_fund_amount=10)
 # For testing purposes, we will fund some accounts
 faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
 faucet.fund('0x5449ba5c5f185e9694146d60cfe72681e2158499', 5)
