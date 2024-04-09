@@ -197,7 +197,7 @@ class SeedEmuTestCase(ut.TestCase):
         """
 
         exit_code, output = container.exec_run("ping -c 3 {}".format(ip))
-        if expected_exit_code == 0: cls.printLog("ping test {} Succeed".format(ip))
+        if exit_code == 0: cls.printLog("ping test {} Succeed".format(ip))
         else: cls.printLog("ping test {} Failed".format(ip))
         return exit_code == expected_exit_code
     
