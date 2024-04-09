@@ -23,8 +23,9 @@ class FaucetServer(Server):
     __linked_eth_node:str
     __chain_id: int
     __consensus: ConsensusMechanism
+    __max_fund_amount: int
 
-    def __init__(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int):
+    def __init__(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int, max_fund_amount:int):
         """!
         @brief FaucetServer constructor.
         """
@@ -39,7 +40,7 @@ class FaucetServer(Server):
         self.__chain_id = blockchain.getChainId()
         self.__fundlist = []
         self.__consensus = blockchain.getConsensusMechanism()
-
+        self.__max_fund_amount = max_fund_amount
     
     def setOwnerPrivateKey(self, keyString: str, isEncrypted = False, password = ""):
         """
@@ -130,7 +131,8 @@ class FaucetServer(Server):
         
         node.addBuildCommand('pip3 install flask web3==5.31.1')
         # node.setFile('/var/www/html/index.html', self.__index.format(asn = node.getAsn(), nodeName = node.getName()))
-        node.setFile('/app.py', FaucetServerFileTemplates['faucet_server'].format(chain_id=self.__chain_id,
+        node.setFile('/app.py', FaucetServerFileTemplates['faucet_server'].format(max_fund_amount=self.__max_fund_amount,
+                                                                                  chain_id=self.__chain_id,
                                                                                   rpc_url = self.__rpc_url, 
                                                                                   consensus= self.__consensus.value,
                                                                                   account_address = self.__account.address, 

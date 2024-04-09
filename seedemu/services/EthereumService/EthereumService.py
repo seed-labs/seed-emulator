@@ -428,7 +428,7 @@ class Blockchain:
         """
         return self.__target_committee_size
     
-    def createFaucetServer(self, vnode:str, port:int, linked_eth_node:str, balance=1000):
+    def createFaucetServer(self, vnode:str, port:int, linked_eth_node:str, balance=1000, max_fund_amount=10):
         """!
         @brief Create a Faucet Server that can fund ethereum accounts using http api.
         
@@ -441,7 +441,7 @@ class Blockchain:
         """
         eth = self.__eth_service
         self.__pending_targets.append(vnode)
-        return eth.installFaucet(vnode, self, linked_eth_node, port, balance)
+        return eth.installFaucet(vnode, self, linked_eth_node, port, balance, max_fund_amount)
     
     def _log(self, message: str) -> None:
         """!
@@ -544,8 +544,8 @@ class EthereumService(Service):
         if consensus == ConsensusMechanism.POS:
             return PoSServer(self.__serial, blockchain)
         
-    def _createFaucetServer(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int) -> FaucetServer:
-        return FaucetServer(blockchain, linked_eth_node, port, balance)
+    def _createFaucetServer(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int, max_fund_amount:int) -> FaucetServer:
+        return FaucetServer(blockchain, linked_eth_node, port, balance, max_fund_amount)
 
     def installByBlockchain(self, vnode: str, blockchain: Blockchain) -> EthereumServer:
         """!
@@ -566,13 +566,13 @@ class EthereumService(Service):
 
         
 
-    def installFaucet(self, vnode:str, blockchain:Blockchain, linked_eth_node:str, port:int=80, balance:int=1000) -> FaucetServer:
+    def installFaucet(self, vnode:str, blockchain:Blockchain, linked_eth_node:str, port:int=80, balance:int=1000, max_fund_amount:int=10) -> FaucetServer:
         """!
         @brief Install the server on a node identified by given name.
         """
         if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
 
-        s = self._createFaucetServer(blockchain, linked_eth_node, port, balance)
+        s = self._createFaucetServer(blockchain, linked_eth_node, port, balance, max_fund_amount)
         self._pending_targets[vnode] = s
 
         return self._pending_targets[vnode]
