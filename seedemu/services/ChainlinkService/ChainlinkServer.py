@@ -73,7 +73,7 @@ class ChainlinkServer(Server):
         
         self.__setConfigurationFiles()
         self.__chainlinkStartCommands()
-        self.__node.appendStartCommand(ChainlinkFileTemplate['send_get_eth_request'].format(faucet_server_url=self.__faucet_node_url, faucet_server_port=self.__faucet_port))
+        self.__node.appendStartCommand(ChainlinkFileTemplate['send_get_eth_request'].format(faucet_server_url=self.__faucet_node_url, faucet_server_port=self.__faucet_port, rpc_url=self.__rpc_url, rpc_port=self.__rpc_port))
         self.__node.appendStartCommand(ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
         self.__deploy_oracle_contract()
         self.__node.appendStartCommand(ChainlinkFileTemplate['send_flask_request'].format(init_node_url=self.__init_node_url, flask_server_port=self.__flask_server_port))

@@ -39,41 +39,61 @@ while True:
     except Exception as e:
         pass
 
+def send_fundme_request(account_address):
+	data = {{'address': account_address, 'amount': 10}}
+	logging.info(data)
+	request_url = "http://{faucet_url}:{faucet_port}/fundme"
+	try:
+		response = requests.post(request_url, headers={{"Content-Type": "application/json"}}, data=json.dumps(data))
+		logging.info(response)
+		if response.status_code == 200:
+			api_response = response.json()
+			message = api_response['message']
+			if message:
+				print(f"Success: {{message}}")
+			else:
+				logging.error("Funds request was successful but the response format is unexpected.")
+		else:
+			api_response = response.json()
+			message = api_response['message']
+			logging.error(f"Failed to request funds from faucet server. Status code: {{response.status_code}} Message: {{message}}")
+			# Send another request
+			logging.info("Sending another request to faucet server.")
+			send_fundme_request(account_address)
+	except Exception as e:
+		logging.error(f"An error occurred: {{str(e)}}")
+		exit()
+
 # Send /fundme request to faucet server
-data = {{'address': account_address, 'amount': 10}}
-logging.info(data)
-request_url = "http://{faucet_url}:{faucet_port}/fundme"
-try:
-    response = requests.post(request_url, headers={{"Content-Type": "application/json"}}, data=json.dumps(data))
-    logging.info(response)
-    if response.status_code == 200:
-        api_response = response.json()
-        message = api_response['message']
-        if message:
-            print(f"Success: {{message}}")
-        else:
-            logging.error("Funds request was successful but the response format is unexpected.")
-    else:
-        api_response = response.json()
-        message = api_response['message']
-        logging.error(f"Failed to request funds from faucet server. Status code: {{response.status_code}} Message: {{message}}")
-except Exception as e:
-    logging.error(f"An error occurred: {{str(e)}}")
-    exit()
-      
-check_interval = 10
-
-def is_address_funded(address):
-    balance = web3.eth.get_balance(address)
-    return balance > 0
-
-while True:
-	if is_address_funded(account_address):
-		logging.info(f"Address funded: {{account_address}}")
+send_fundme_request(account_address)
+timeout = 100
+isAccountFunded = False
+start = time.time()
+while time.time() - start < timeout:
+	balance = web3.eth.get_balance(account_address)
+	if balance > 0:
+		isAccountFunded = True
 		break
-	else:
-		logging.info(f"Waiting for address to be funded: {{account_address}}")
-		time.sleep(check_interval)
+	time.sleep(5)
+ 
+
+if isAccountFunded:
+	logging.info(f"Account funded: {{account_address}}")
+else:
+	logging.error(f"Failed to fund account: {{account_address}}")
+	exit()
+
+# def is_address_funded(address):
+#     balance = web3.eth.get_balance(address)
+#     return balance > 0
+
+# while True:
+# 	if is_address_funded(account_address):
+# 		logging.info(f"Address funded: {{account_address}}")
+# 		break
+# 	else:
+# 		logging.info(f"Waiting for address to be funded: {{account_address}}")
+# 		time.sleep(check_interval)
 
 with open('./contracts/link_token.abi', 'r') as abi_file:
 	contract_abi = abi_file.read()
