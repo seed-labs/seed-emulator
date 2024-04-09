@@ -83,18 +83,6 @@ else:
 	logging.error(f"Failed to fund account: {{account_address}}")
 	exit()
 
-# def is_address_funded(address):
-#     balance = web3.eth.get_balance(address)
-#     return balance > 0
-
-# while True:
-# 	if is_address_funded(account_address):
-# 		logging.info(f"Address funded: {{account_address}}")
-# 		break
-# 	else:
-# 		logging.info(f"Waiting for address to be funded: {{account_address}}")
-# 		time.sleep(check_interval)
-
 with open('./contracts/link_token.abi', 'r') as abi_file:
 	contract_abi = abi_file.read()
 with open('./contracts/link_token.bin', 'r') as bin_file:

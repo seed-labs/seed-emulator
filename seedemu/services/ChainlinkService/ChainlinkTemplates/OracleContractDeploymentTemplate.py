@@ -101,20 +101,6 @@ else:
 	logging.error(f"Failed to fund account: {{owner_address}}")
 	exit()
 
-# check_interval = 10
-
-# def is_address_funded(address):
-#     balance = web3.eth.get_balance(address)
-#     return balance > 0
-
-# while True:
-# 	if is_address_funded(owner_address):
-# 		logging.info(f"Address funded: {{owner_address}}")
-# 		break
-# 	else:
-# 		logging.info(f"Waiting for address to be funded: {{owner_address}}")
-# 		time.sleep(check_interval)
-
 with open(os.path.join(contract_folder, 'oracle_contract.abi'), 'r') as abi_file:
     contract_abi = abi_file.read()
 with open(os.path.join(contract_folder, 'oracle_contract.bin'), 'r') as bin_file:

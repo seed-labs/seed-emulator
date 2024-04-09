@@ -268,14 +268,4 @@ while true; do
     fi
     sleep 30
 done
-
-# # Displaying the Ethereum address for debugging purposes
-# echo "Ethereum address: $ETH_ADDRESS"
-
-# # Displaying curl command for debugging purposes
-# echo "curl -X POST -d 'address=$ETH_ADDRESS&amount=$AMOUNT' http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme"
-
-# # Send the request to the faucet server
-
-# echo "Fund request sent to the faucet server."
 """
