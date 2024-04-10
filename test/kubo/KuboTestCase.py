@@ -7,6 +7,7 @@ from seedemu import *
 from test import SeedEmuTestCase
 from faker import Faker
 from time import sleep
+from typing import Set
 
 LOG_DIR = '/var/log/'
 TMP_DIR = '/tmp/kubo/'
