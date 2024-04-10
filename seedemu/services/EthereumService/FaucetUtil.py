@@ -53,6 +53,7 @@ import threading
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 nonce_lock = threading.Lock()
+MAX_FUND_AMOUNT = {max_fund_amount}
 
 # Connect to a geth node
 def connect_to_geth(url, consensus):
@@ -111,15 +112,19 @@ def get_balance(web3, account):
     return balance_eth
 
 # Send raw transaction
-def send_raw_transaction(web3, sender, sender_key, recipient, amount, data):
+def send_raw_transaction_no_wait(web3, sender, sender_key, recipient, amount, nonce, data):
     try:
         logging.info("---------Sending Raw Transaction ---------------")
-        nonce  = app.config['NONCE']
         tx = construct_raw_transaction(sender, recipient, nonce, amount, data)
         signed_tx  = web3.eth.account.signTransaction(tx, sender_key)
         tx_hash    = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
         logging.info("Transaction Hash: {{}}".format(tx_hash.hex()))
+        return tx_hash
+    except ValueError as e:
+        raise RuntimeError(f'Error sending transaction: {{e}}')
 
+def wait_for_transaction_receipt(web3, tx_hash):
+    try:
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
         logging.info("Transaction Receipt: {{}}".format(tx_receipt))
         return tx_receipt
@@ -162,6 +167,8 @@ def submit_form():
         amount = int(amount)
         if amount < 0:
             return jsonify({{'status': 'error', 'message': 'Amount should be a number larger than 0'}}), 500
+        if amount > MAX_FUND_AMOUNT:
+            return jsonify({{'status': 'error', 'message': f'Amount should not be larger max_fund_amount: {{MAX_FUND_AMOUNT}}'}}), 500
         if amount > get_balance(app.config['WEB3'], app.config['SENDER_ADDRESS']):
             return jsonify({{'status': 'error', 'message': 'Request fund amount is larger than the Faucet account balance.'}}), 500
     except ValueError:
@@ -169,11 +176,17 @@ def submit_form():
 
     ip_address = request.remote_addr
     logging.info(f"recipient: {{recipient}} amount: {{amount}} sender ip: {{ip_address}}")
+    
+    # nonce = 1
     with nonce_lock:
         app.config['NONCE'] = max(app.config['NONCE']+1, app.config['WEB3'].eth.getTransactionCount(app.config['SENDER_ADDRESS']))
+        nonce = app.config['NONCE']
+        try:
+            tx_hash = send_raw_transaction_no_wait(app.config['WEB3'], app.config['SENDER_ADDRESS'], app.config['SENDER_KEY'], recipient, amount, nonce, '')
+        except Exception as e:
+            return jsonify({{'status': 'error', 'message': f'Error sending transaction: {{e}}'}}), 500
     try:
-        tx_receipt = send_raw_transaction(app.config['WEB3'], app.config['SENDER_ADDRESS'], app.config['SENDER_KEY'], recipient, amount, '')
-        
+        tx_receipt = wait_for_transaction_receipt(app.config['WEB3'], tx_hash)
         return jsonify({{'status': 'success', 'message':f'Funds successfully sent to {{recipient}} for amount {{amount}}.\\n{{tx_receipt}}'}}) , 200
     except Exception as e:
         return jsonify({{'status': 'error', 'message': f'Error sending transaction: {{e}}'}}), 500

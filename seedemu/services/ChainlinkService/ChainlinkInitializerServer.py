@@ -32,7 +32,6 @@ class ChainlinkInitializerServer(Server):
         @brief ChainlinkServer Constructor.
         """
         super().__init__()
-        # self.__faucet_util = FaucetUtil()
         
     def setFaucetServerInfo(self, vnode: str, port = 80):
          """
@@ -48,8 +47,6 @@ class ChainlinkInitializerServer(Server):
         """
         self.__node = node
         self.__emulator = emulator
-        # self.__faucet_util.setFaucetServerInfo(vnode=self.__faucet_vnode_name, port=self.__faucet_port)
-        # self.__faucet_util.configure(emulator)
 
     def installInitializer(self, node: Node):
         """
@@ -106,17 +103,6 @@ class ChainlinkInitializerServer(Server):
         @param vnode The name of the ethereum node
         """
         self.__rpc_vnode_name=vnode
-        
-    # def setFaucetUrl(self, address: str, port: int):
-    #     """
-    #     @brief Set the faucet URL
-        
-    #     @param address The faucet URL
-    #     @param port The faucet port
-    #     """
-    #     self.__faucet_url = address
-    #     self.__faucet_port = port
-        
         
     def __deployThroughWeb3(self):
         """
