@@ -129,22 +129,9 @@ cnode = 'chainlink_user'
 c_user = chainlink_user.install(cnode)
 c_user.setRPCbyEthNodeName('eth2')
 c_user.setFaucetServerInfo(vnode = 'faucet', port = 80)
+c_user.setChainlinkServiceInfo(init_node_name='chainlink_init_server', numeber_of_normal_servers=2)
 emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
 emu.addBinding(Binding(cnode, filter = Filter(asn=153, nodeName='host_2')))
-
-
-# c_user.loadUserContract('<Path to user_contract abi>', '<Path to user_contract bytecode>')
-# # Provide user the option to have dynamic contracts
-# c_user.setLinkTokenFunction('setLinkToken')
-# c_user.setAddOracleFunction('addOracles')
-# c_user.setJobIdFunction('setJobId', '<Job Id>')
-# # Also provide user to provide dynamic api endpoints and json path to get data
-# c_user.setApiEndpointFunction('setApiEndpoint', 'path', 'multiply')
-# c_user.setApiEndpointValues('<url>', '<path>', '100')
-# # We also need the main function to be called after setting up the contract
-# c_user.setMainFunction('requestEthPrice')
-# # Set virtual node display name
-# # Bind the virtual node to a host
 
 # Add the Ethereum layer
 emu.addLayer(eth)
