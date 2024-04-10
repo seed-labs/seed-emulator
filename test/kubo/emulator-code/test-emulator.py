@@ -13,9 +13,12 @@ emu = Makers.makeEmulatorBaseWith5StubASAndHosts(2)
 #############################
 # Ensure that this can be tested on multiple platforms:
 if os.environ.get('platform', 'amd') == 'arm':
-    ipfs:KuboService = KuboService(arch=Architecture.ARM)
+    # ipfs:KuboService = KuboService(arch=Architecture.ARM64)
+    ipfs:KuboService = KuboService()
+    docker = Docker(platform=Platform.ARM64)
 else:
     ipfs:KuboService = KuboService()
+    docker = Docker()
 
 numHosts:int = 2
 i:int = 0
@@ -75,4 +78,4 @@ emu.resolvVnode(vnode_profile).setLabel('kubo.test.group', '[\\"profile\\"]')
 emu.resolvVnode(vnode_config).setLabel('kubo.test.group', '[\\"config\\"]')
 emu.resolvVnode(vnode_version).setLabel('kubo.test.group', '[\\"basic\\", \\"version\\"]')
 
-emu.compile(Docker(), OUTPUTDIR, override = True)
+emu.compile(docker, OUTPUTDIR, override = True)
