@@ -24,14 +24,17 @@ This document provides a portal to those examples.
     [Add DNS to Emulator](../../examples/B02-mini-internet-with-dns)  
   - [Connect to the real world](./bgp.md#connect-to-realworld): set up the BGP routing
     so the nodes inside the emulator can communicate with the real Internet. 
+  - [Allow outside machines to join the emulation](../../examples/A03-real-world/)
   - [IP anycast](../../examples/B03-ip-anycast/)
-  - [Add DHCP server](../../examples/B10-dhcp/)
+  - [DHCP server](../../examples/B10-dhcp/)
+  - [Darknet (Tor)](../../examples/B07-darknet-tor/)
+  - [Botnet](../../examples/B05-botnet/)
   - [Support Apple Silicon machines (arm64)](./docker.md#platform): generate emulator
     files for Apple Silicon machines. 
   - [Hybrid Emulation: integrating physical devices in emulation](../../examples/C03-bring-your-own-internet/)
   - [The Hosts file (add IP-hostname mappings)](../../examples/B11-etc-hosts/): inside the
     emulator, we add ip-hostname mappings to the `/etc/hosts` file. 
-  - [Add Public Key Infrastructure (PKI)](../../examples/)
+  - [Public Key Infrastructure (PKI)](../../examples/)
   - [IPFS (InterPlanetary File System)](../../examples/)
 
 
@@ -40,6 +43,7 @@ This document provides a portal to those examples.
   - [Build a Blockchain Emulator](../../examples/B06-blockchain/)
   - [Connect MetaMask to SEED Emulator](https://github.com/seed-labs/seed-labs/blob/master/manuals/emulator/metamask.md)
   - [Connect Remix to SEED Emulator](https://github.com/seed-labs/seed-labs/blob/master/manuals/emulator/remix.md)
+  - [Create prefunded Ethereum accounts]() 
   - [Use Faucet to Fund Accounts](../../examples/)
   - [Use Chainlink to Get Information From Outside](../../examples/)
 

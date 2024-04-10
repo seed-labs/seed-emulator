@@ -1,4 +1,4 @@
-Notes
+# Notes
 
 - The EtcHosts layer should be automatically added. During the rendering,
   if this layer is not there, create a new one and add it. If such a layer
@@ -14,16 +14,21 @@ Notes
   on each node. The changes have not been merged yet (pending more testing).
   With this change, we need to update the documents and examples.
 
-- Example reorganization: after merging everything to the `development` branch, 
-  we should reorganize the example folders, moving all the blockchain examples to
-  the D category:
+
+## After merging everything to the `development` branch 
+
+- Example reorganization: we should reorganize the example folders, 
+  moving all the blockchain examples to `DDD-Blockchain-Examples` folder:
   - `D00-blockchain-poa`: this will be used as the base for other examples,
-    so make sure it covers the basics well. 
+       so make sure it covers the basics well. 
+  - `D01-blockchain-customization`: Show how to customize blockchains
+  - `D02-blockchain-pos`: POS (move `C04-ethereum-pos` here)
+  - `D03-two-chains`: Two chains
+  - `D04-faucet`: faucet example  
+  - `D05-chainlink`: chainlink (oracle) 
+  - `D06-level
   - Remove `B08-Remix-Connection`
   - Remove `B09-Smart-Contract-Attacks`: it is already in a lab. 
-  - Move `C04-ethereum-pos` to `D04-blockchain-pos` 
-  - Faucet: `D05-faucet`.  
-  - Chainlink: `D06-chainlink`. 
 
 - Separate blockchain-related services from the Internet-related services. 
   This way, users who do not need blockchain do not need to add `import blockchain`
