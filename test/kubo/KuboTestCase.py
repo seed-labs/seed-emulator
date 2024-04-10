@@ -112,7 +112,7 @@ class KuboTestCase(SeedEmuTestCase):
         
     
     @classmethod
-    def getTestGroups(cls, container) -> set[str]:
+    def getTestGroups(cls, container) -> Set[str]:
         """Get test group as specified in container label.
            Label located at org.seedsecuritylabs.seedemu.meta.kubo.test.group
            Formatted as a list '["group1", "group2"]'
