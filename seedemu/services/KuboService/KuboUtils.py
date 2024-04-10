@@ -1,7 +1,7 @@
+from __future__ import annotations
 import socket, re
 from ipaddress import IPv4Address
 from typing import Any, Mapping
-from typing_extensions import Self
 from seedemu import *
 from seedemu.core.enums import NetworkType
 
