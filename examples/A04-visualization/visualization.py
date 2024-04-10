@@ -22,6 +22,7 @@ base: Base = emu.getLayer('Base')
 
 as151 = base.getAutonomousSystem(151)
 as151.getRouter('router0').setDisplayName('AS151 Core Router')
+
 as151.getHost('host0').setDisplayName('example.com')
 
 ix100_lan = base.getInternetExchange(100).getPeeringLan()

@@ -35,6 +35,10 @@ This document provides a portal to those examples.
   - [IPFS (InterPlanetary File System)](../../examples/)
 
 
+## Internet Emulator: Additional Services
+  - [IPFS Kubo](./kubo.md)
+
+
 ## Blockchain Emulator
   
   - [Build a Blockchain Emulator](../../examples/B06-blockchain/)
