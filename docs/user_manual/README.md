@@ -29,10 +29,10 @@ This document provides a portal to those examples.
 
 ## Blockchain Emulator
   
-  - [Build a Blockchain emulator](../../examples/B06-blockchain/)
+  - [Build a Blockchain Emulator](../../examples/B06-blockchain/)
   - [Connect MetaMask to SEED Emulator](https://github.com/seed-labs/seed-labs/blob/master/manuals/emulator/metamask.md)
   - [Connect Remix to SEED Emulator](https://github.com/seed-labs/seed-labs/blob/master/manuals/emulator/remix.md)
-
+  - [Use Faucet to Fund Accounts](../../examples/)
 
 ## Frequently Asked Questions (FAQ)
 
