@@ -100,10 +100,6 @@ for asn in c_asns:
     emu.getVirtualNode(cnode).setDisplayName(service_name)
     emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
     i = i + 1
-
-# Additional API's to add to Chainlink Normal servers
-# c_normal.addJob('<Path to custom job by the user>')
-    
     
 # Chainlink User Service
 # This will work with the default jobs configured on the chainlink servers
@@ -124,7 +120,7 @@ Behind the scenes:
 6. Transfer LINK token to the user contract
 7. Call the main function in the user contract
 '''
-chainlink_user = ChainlinkExampleService()
+chainlink_user = ChainlinkUserService()
 cnode = 'chainlink_user'
 c_user = chainlink_user.install(cnode)
 c_user.setRPCbyEthNodeName('eth2')

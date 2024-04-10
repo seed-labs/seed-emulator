@@ -2,4 +2,4 @@ from .LinkTokenDeploymentTemplate import LinkTokenDeploymentTemplate
 from .OracleContractDeploymentTemplate import OracleContractDeploymentTemplate
 from .ChainlinkFileTemplate import ChainlinkFileTemplate
 from .ChainlinkJobsTemplate import ChainlinkJobsTemplate
-from .ChainlinkExampleTemplate import ChainlinkExampleTemplate
+from .ChainlinkUserTemplate import ChainlinkUserTemplate

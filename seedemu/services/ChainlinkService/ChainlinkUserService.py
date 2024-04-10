@@ -5,9 +5,9 @@ from seedemu.core.Node import Node
 from seedemu.core.Service import Server
 from enum import Enum
 from seedemu.core.enums import NetworkType
-from seedemu.services.ChainlinkService.ChainlinkTemplates import ChainlinkExampleTemplate, ChainlinkFileTemplate, LinkTokenDeploymentTemplate
+from seedemu.services.ChainlinkService.ChainlinkTemplates import ChainlinkUserTemplate, ChainlinkFileTemplate, LinkTokenDeploymentTemplate
  
-class ChainlinkExampleServer(Server):
+class ChainlinkUserServer(Server):
     """
     @brief The Chainlink virtual user server.
     """
@@ -65,7 +65,7 @@ class ChainlinkExampleServer(Server):
         # Check if the chainlink init node is up and running
         self.__node.appendStartCommand(ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
         # Get the link token and oracle contract addresses
-        self.__node.setFile('./requests/get_contract_addresses.py', ChainlinkExampleTemplate['get_contract_addresses'].format(init_node_url=self.__init_node_url, number_of_normal_servers=self.__number_of_normal_servers))
+        self.__node.setFile('./requests/get_contract_addresses.py', ChainlinkUserTemplate['get_contract_addresses'].format(init_node_url=self.__init_node_url, number_of_normal_servers=self.__number_of_normal_servers))
         self.__node.appendStartCommand(f'python3 ./requests/get_contract_addresses.py')
         # Import and deploy the user contract
         self.__deployUserContract()
@@ -86,9 +86,9 @@ class ChainlinkExampleServer(Server):
         """
         @brief Deploy the user contract.
         """
-        self.__node.setFile('./contracts/user_contract.abi', ChainlinkExampleTemplate['user_contract_abi'])
-        self.__node.setFile('./contracts/user_contract.bin', ChainlinkExampleTemplate['user_contract_bin'])
-        self.__node.setFile('./contracts/deploy_user_contract.py', ChainlinkExampleTemplate['deploy_user_contract'].format(rpc_url=self.__rpc_url, faucet_url=self.__faucet_node_url, rpc_port=self.__rpc_port, faucet_port=self.__faucet_port, chain_id=self.__chain_id))
+        self.__node.setFile('./contracts/user_contract.abi', ChainlinkUserTemplate['user_contract_abi'])
+        self.__node.setFile('./contracts/user_contract.bin', ChainlinkUserTemplate['user_contract_bin'])
+        self.__node.setFile('./contracts/deploy_user_contract.py', ChainlinkUserTemplate['deploy_user_contract'].format(rpc_url=self.__rpc_url, faucet_url=self.__faucet_node_url, rpc_port=self.__rpc_port, faucet_port=self.__faucet_port, chain_id=self.__chain_id))
         self.__node.appendStartCommand(f'python3 ./contracts/deploy_user_contract.py')
         self.__node.appendStartCommand('echo "User contract deployed."')
         
@@ -96,7 +96,7 @@ class ChainlinkExampleServer(Server):
         """
         @brief Set the contract addresses in the user contract.
         """
-        self.__node.setFile('./contracts/set_contract_addresses.py', ChainlinkExampleTemplate['set_contract_addresses'].format(rpc_url=self.__rpc_url, faucet_url=self.__faucet_node_url, rpc_port=self.__rpc_port, faucet_port=self.__faucet_port, chain_id=self.__chain_id))
+        self.__node.setFile('./contracts/set_contract_addresses.py', ChainlinkUserTemplate['set_contract_addresses'].format(rpc_url=self.__rpc_url, faucet_url=self.__faucet_node_url, rpc_port=self.__rpc_port, faucet_port=self.__faucet_port, chain_id=self.__chain_id))
         self.__node.appendStartCommand(f'python3 ./contracts/set_contract_addresses.py')
         self.__node.appendStartCommand('echo "Contract addresses set."')
         
@@ -105,14 +105,14 @@ class ChainlinkExampleServer(Server):
         @brief Fund the user contract.
         """
         self.__node.setFile('./contracts/link_token.abi', LinkTokenDeploymentTemplate['link_token_abi'])
-        self.__node.setFile('./contracts/fund_user_contract.py', ChainlinkExampleTemplate['fund_user_contract'].format(rpc_url=self.__rpc_url, chain_id=self.__chain_id, rpc_port=self.__rpc_port, faucet_url=self.__faucet_node_url, faucet_port=self.__faucet_port))
+        self.__node.setFile('./contracts/fund_user_contract.py', ChainlinkUserTemplate['fund_user_contract'].format(rpc_url=self.__rpc_url, chain_id=self.__chain_id, rpc_port=self.__rpc_port, faucet_url=self.__faucet_node_url, faucet_port=self.__faucet_port))
         self.__node.appendStartCommand(f'python3 ./contracts/fund_user_contract.py')     
         
     def __requestETHPrice(self):
         """
         @brief Request the ETH price.
         """
-        self.__node.setFile('./contracts/request_eth_price.py', ChainlinkExampleTemplate['request_eth_price'].format(rpc_url=self.__rpc_url, chain_id=self.__chain_id, rpc_port=self.__rpc_port, faucet_url=self.__faucet_node_url, faucet_port=self.__faucet_port, url=self.__url, path=self.__path, number_of_normal_servers=self.__number_of_normal_servers))
+        self.__node.setFile('./contracts/request_eth_price.py', ChainlinkUserTemplate['request_eth_price'].format(rpc_url=self.__rpc_url, chain_id=self.__chain_id, rpc_port=self.__rpc_port, faucet_url=self.__faucet_node_url, faucet_port=self.__faucet_port, url=self.__url, path=self.__path, number_of_normal_servers=self.__number_of_normal_servers))
         self.__node.appendStartCommand(f'python3 ./contracts/request_eth_price.py')
         
     def setChainlinkServiceInfo(self, init_node_name: str, numeber_of_normal_servers: int):
@@ -170,7 +170,7 @@ class ChainlinkExampleServer(Server):
         return out
  
     
-class ChainlinkExampleService(Service):
+class ChainlinkUserService(Service):
     """
     @brief The Chainlink service class.
     """
@@ -181,9 +181,9 @@ class ChainlinkExampleService(Service):
         super().__init__()
         self.addDependency('Base', False, False)
 
-    def _createServer(self) -> ChainlinkExampleServer:
+    def _createServer(self) -> ChainlinkUserServer:
         self._log('Creating Chainlink User server.')
-        return ChainlinkExampleServer()
+        return ChainlinkUserServer()
     
     def installInitializer(self, vnode:str) -> Server:
         if vnode in self._pending_targets.keys(): 
