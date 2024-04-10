@@ -359,8 +359,8 @@ D → Z.function() means D invokes Z.function().
 ### Emulator Setup
 First setup the chainlink init server and chainlink normal servers.
 ```python
-# Create an instance of the ChainlinkExampleService
-chainlink_user = ChainlinkExampleService()
+# Create an instance of the ChainlinkUserService
+chainlink_user = ChainlinkUserService()
 # Install the chainlink user service
 c_user = chainlink_user.install(cnode)
 # Set the RPC to connect to the blockchain
