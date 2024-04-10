@@ -13,7 +13,7 @@ class CompileTest(ut.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.test_list = {
-            "A00-simple-peering": (["simple-peering.py"] , ["output"]),
+            "A00-simple-as": (["simple-as.py"] , ["output"]),
             "A01-transit-as" : (["transit-as.py"], ["output", "base-component.bin"]),
             "A02-transit-as-mpls" : (["transit-as-mpls.py"], ["output"]), 
             "A03-real-world" : (["real-world.py"], ["output"]),
