@@ -37,7 +37,8 @@ class CompileTest(ut.TestCase):
             "C01-hybrid-dns-component" : (["hybrid-dns-component.py"], ["hybrid-dns-component.bin"]),
             "C02-hybrid-internet-with-dns" : (["hybrid-internet-with-dns.py"], ["output", "hybrid_base_with_dns.bin"]),
             "C03-bring-your-own-internet" : (["bring-your-own-internet.py"], ["output"]),
-            "C04-ethereum-pos" : (["blockchain-pos.py"], ["output"])
+            "C04-ethereum-pos" : (["blockchain-pos.py"], ["output"]),
+            "layer2" : (["layer2WithService.py"], ["output"])
         }
         # This is my path
         cls.init_cwd = os.getcwd()
