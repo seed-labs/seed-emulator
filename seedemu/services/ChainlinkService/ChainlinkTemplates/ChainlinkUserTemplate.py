@@ -87,8 +87,6 @@ while not web3.isConnected():
     time.sleep(5)
 
 web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-    
 logging.info("Successfully connected to the Ethereum node.")
 
 user_account = web3.eth.account.create()
@@ -237,7 +235,6 @@ while not web3.isConnected():
     time.sleep(5)
 
 web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-logging.info("Successfully connected to the Ethereum node.")
 
 # Load the oracle contracts and link token contract address
 with open('./info/contract_addresses.json', 'r') as f:

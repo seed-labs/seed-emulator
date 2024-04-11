@@ -16,9 +16,7 @@ class ChainlinkInitializerServer(Server):
     __node: Node
     __emulator: Emulator
     __deploymentType: str = "web3"
-    __owner: str
     __rpc_url: str
-    __owner_private_key: str
     __chain_id: int = 1337
     __rpc_port: int = 8545
     __rpc_vnode_name: str = None

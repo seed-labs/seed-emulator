@@ -29,8 +29,6 @@ class ChainlinkServer(Server):
     __chain_id: int = 1337
     __rpc_ws_port: int = 8546
     __rpc_port: int = 8545
-    __owner: str = None
-    __owner_private_key: str = None
     
     
     def __init__(self):
