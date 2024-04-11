@@ -65,6 +65,10 @@ class Layer2Server(Server):
         ), "Layer2Server::setDeployer(): cannot be both sequencer and deployer"
         self.__isDeployer = isDeployer
         return self
+    
+    # TODO: Add setL1Node
+    def setL1Node(self, vnode: str, port: int) -> Layer2Server:
+        pass
 
     def setRPCPort(self, port: int) -> Layer2Server:
         self.__rpcPort = port
