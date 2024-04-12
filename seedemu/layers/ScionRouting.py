@@ -3,7 +3,6 @@ import json
 import os.path
 from typing import Dict
 
-import yaml
 
 from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter
 from seedemu.layers import Routing, ScionBase, ScionIsd
@@ -174,6 +173,8 @@ class ScionRouting(Routing):
     @staticmethod
     def _provision_cs_config(node: Node, as_: ScionAutonomousSystem):
         """Set control service configuration."""
+
+        import yaml
 
         # Start building the beaconing section
         beaconing = ["[beaconing]"]

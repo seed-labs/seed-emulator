@@ -5,7 +5,6 @@ import json
 from datetime import datetime, timezone
 from os import path
 from .EthTemplates import GenesisFileTemplates
-from web3 import Web3
 from sys import stderr
 from time import time
 
@@ -13,7 +12,6 @@ class Genesis():
     """!
     @brief Genesis manage class
     """
-
     __genesis:dict
     __consensusMechanism:ConsensusMechanism
     
@@ -70,6 +68,7 @@ class Genesis():
 
         @returns self, for chaining calls.
         """
+        from web3 import Web3
 
         assert balance >= 0, "Genesis::allocateBalance: balance cannot have a negative value. Requested Balance Value : {}".format(balance)
         checksum_address = Web3.toChecksumAddress(address)
@@ -148,7 +147,6 @@ class EthAccount():
     """
     @brief Ethereum Local Account.
     """
-    
     @staticmethod 
     def importAccount(keyfilePath: str, balance:int, password = "admin"):
         """
@@ -181,6 +179,8 @@ class EthAccount():
     @staticmethod
     def createEmulatorAccountFromMnemonic(id:int, mnemonic:str, balance:int, index:int, password:str):
         from eth_account import Account
+        from web3 import Web3
+
         Account.enable_unaudited_hdwallet_features()
 
         EthAccount._log('creating node_{} emulator account {} from mnemonic...'.format(id, index))
