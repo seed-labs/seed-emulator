@@ -125,7 +125,7 @@ while not deployment_queue.empty():
 
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=240)
         if tx_receipt.status == 1:
-            logging.info(f"Contract deployed at: {{tx_receipt.contractAddress}}")
+            logging.info(f"Oracle Contract deployed at: {{tx_receipt.contractAddress}}")
             directory = './deployed_contracts'
             if not os.path.exists(directory): os.makedirs(directory)
             with open('./deployed_contracts/oracle_contract_address.txt', 'w') as address_file:

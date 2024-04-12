@@ -42,7 +42,7 @@ while true; do
     STATUS=$(curl -Is "$URL" | head -n 1 | awk '{{print $2}}')
     
     if [ "$STATUS" == "$EXPECTED_STATUS" ]; then
-        echo "Contracts deployed successfully!"
+        echo "Link Token contract deployed successfully on the init node!"
         break
     else
         echo "Waiting for the link token contract to be deployed..."

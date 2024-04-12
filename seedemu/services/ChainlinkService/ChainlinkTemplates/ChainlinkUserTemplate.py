@@ -449,12 +449,12 @@ response_count = 0
 while response_count < {number_of_normal_servers}:
 	response_count = user_contract.functions.responsesCount().call()
 	logging.info(f"Awaiting responses... Current responses count: {{response_count}}")
-	time.sleep(30)
+	time.sleep(10)
 
 average_price = user_contract.functions.averagePrice().call()
 logging.info(f"Response count: {{response_count}}")
 logging.info(f"Average ETH price: {{average_price}}")
-logging.info("Chainlink example service completed.")
+logging.info("Chainlink user example service completed.")
 '''
 
 ChainlinkUserTemplate['user_contract_abi']="""\
