@@ -125,7 +125,7 @@ cnode = 'chainlink_user'
 c_user = chainlink_user.install(cnode)
 c_user.setRPCbyEthNodeName('eth2')
 c_user.setFaucetServerInfo(vnode = 'faucet', port = 80)
-c_user.setChainlinkServiceInfo(init_node_name='chainlink_init_server', numeber_of_normal_servers=2)
+c_user.setChainlinkServiceInfo(init_node_name='chainlink_init_server', number_of_normal_servers=2)
 emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
 emu.addBinding(Binding(cnode, filter = Filter(asn=153, nodeName='host_2')))
 

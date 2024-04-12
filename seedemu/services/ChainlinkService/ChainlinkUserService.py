@@ -115,12 +115,12 @@ class ChainlinkUserServer(Server):
         self.__node.setFile('./contracts/request_eth_price.py', ChainlinkUserTemplate['request_eth_price'].format(rpc_url=self.__rpc_url, chain_id=self.__chain_id, rpc_port=self.__rpc_port, faucet_url=self.__faucet_node_url, faucet_port=self.__faucet_port, url=self.__url, path=self.__path, number_of_normal_servers=self.__number_of_normal_servers))
         self.__node.appendStartCommand(f'python3 ./contracts/request_eth_price.py')
         
-    def setChainlinkServiceInfo(self, init_node_name: str, numeber_of_normal_servers: int):
+    def setChainlinkServiceInfo(self, init_node_name: str, number_of_normal_servers: int):
         """
         @brief Set the chainlink init node
         """
         self.__init_node_name = init_node_name
-        self.__number_of_normal_servers = numeber_of_normal_servers
+        self.__number_of_normal_servers = number_of_normal_servers
     
     def setRPCbyUrl(self, address: str):
         """
