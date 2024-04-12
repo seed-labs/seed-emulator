@@ -104,7 +104,7 @@ for asn in c_asns:
 # Chainlink User Service
 # This will work with the default jobs configured on the chainlink servers
 '''
-Flow of ChainlinkExampleService:
+Flow of ChainlinkUserService:
 1. Create an instance of ChainlinkUserService
 2. Install the service
 3. Set the RPC server to connect to the Ethereum node

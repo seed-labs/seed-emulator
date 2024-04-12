@@ -90,130 +90,28 @@ emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
 
 ### User Contract:
 
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+You can find the user contract solidity code in the [here](./contracts/user_contract.sol)
 
-import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-contract ETHPriceAverageFeed is ChainlinkClient, Ownable {
-    using Chainlink for Chainlink.Request;
-
-    uint256 private constant ORACLE_PAYMENT = 1360000000000000000;
-    uint256 public averagePrice;
-    uint256 public responsesCount;
-    address public linkToken;
-
-    struct OracleData {
-        address oracle;
-        bytes32 jobId;
-        bool isActive;
-        uint256 price;
-    }
-
-    OracleData[] public oracles;
-    mapping(bytes32 => bool) private pendingRequests;
-    
-    constructor() Ownable(msg.sender){}
-
-    function setLinkToken(address _link_token) public onlyOwner{
-        setChainlinkToken(_link_token);  
-        linkToken = _link_token;  
-    }
-
-    function addOracle(address _oracle, string memory _jobId) public onlyOwner {
-        bytes32 jobIdBytes = stringToBytes32(_jobId);
-        oracles.push(OracleData({
-            oracle: _oracle,
-            jobId: jobIdBytes,
-            isActive: true,
-            price: 0
-        }));
-    }
-
-    function addOracles(address[] memory _oracles, string memory _jobId) public onlyOwner {
-        bytes32 jobIdBytes = stringToBytes32(_jobId);
-        for (uint256 i = 0; i < _oracles.length; i++) {
-            oracles.push(OracleData({
-                oracle: _oracles[i],
-                jobId: jobIdBytes,
-                isActive: true,
-                price: 0
-            }));
-        }
-    }
-
-    function deactivateOracle(uint256 _index) public onlyOwner {
-        require(_index < oracles.length, "Invalid oracle index");
-        oracles[_index].isActive = false;
-    }
-
-    function requestETHPriceData(string memory url, string memory path) public onlyOwner {
-        for (uint256 i = 0; i < oracles.length; i++) {
-            if (oracles[i].isActive) {
-                Chainlink.Request memory request = buildChainlinkRequest(
-                    oracles[i].jobId,
-                    address(this),
-                    this.fulfill.selector
-                );
-
-                request.add("get", url);
-                request.add("path", path);
-                request.addInt("multiply", 100);
-
-                bytes32 requestId = sendChainlinkRequestTo(oracles[i].oracle, request, ORACLE_PAYMENT);
-                pendingRequests[requestId] = true;
-            }
-        }
-    }
-
-    function fulfill(bytes32 _requestId, uint256 _price) public recordChainlinkFulfillment(_requestId) {
-        require(pendingRequests[_requestId], "Request is not valid");
-        pendingRequests[_requestId] = false;
-
-        uint256 sumPrices = 0;
-        uint256 activeOracles = 0;
-
-        for (uint256 i = 0; i < oracles.length; i++) {
-            if (oracles[i].oracle == msg.sender && oracles[i].isActive) {
-                oracles[i].price = _price;
-                break;
-            }
-        }
-
-        for (uint256 i = 0; i < oracles.length; i++) {
-            if (oracles[i].isActive && oracles[i].price > 0) {
-                sumPrices += oracles[i].price;
-                activeOracles++;
-            }
-        }
-
-        if (activeOracles > 0) {
-            averagePrice = sumPrices / activeOracles;
-            responsesCount = activeOracles;
-        }
-    }
-
-    function getResponsesCount() public view returns (uint256) {
-        return responsesCount;
-    }
-
-    function stringToBytes32(string memory source) private pure returns (bytes32 result) {
-        bytes memory tempEmptyStringTest = bytes(source);
-        if (tempEmptyStringTest.length == 0) {
-            return 0x0;
-        }
-        assembly {
-            result := mload(add(source, 32))
-        }
-    }
-
-    receive() external payable {}
-}
+### Emulator Setup
+First setup the chainlink init server and chainlink normal servers.
+```python
+# Create an instance of the ChainlinkUserService
+chainlink_user = ChainlinkUserService()
+# Install the chainlink user service
+c_user = chainlink_user.install(cnode)
+# Set the RPC to connect to the blockchain
+c_user.setRPCbyEthNodeName('eth2')
+# Set the faucet by node name and port
+c_user.setFaucetServerInfo(vnode = 'faucet', port = 80)
+# Give information about the chainlink initializer server and the number of normal servers
+c_user.setChainlinkServiceInfo(init_node_name='chainlink_init_server', numeber_of_normal_servers=2)
+# Set Display Name
+emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
+# Bind the Chainlink user service to an asn
+emu.addBinding(Binding(cnode, filter = Filter(asn=153, nodeName='host_2')))
 ```
 
-Functions:
+Functions in the User Contract:
 
 1. setChainlinkToken(X): This will set the below variable in `ChainlinkClient.sol` 
     
@@ -224,6 +122,19 @@ Functions:
     ```
     
 2. addOracles(address oracle, jobId): This function is used to add the oracle contract/contracts(Y) in the user contract so that they can make request for the data
+   ```python
+   function addOracles(address[] memory _oracles, string memory _jobId) public onlyOwner {
+        bytes32 jobIdBytes = stringToBytes32(_jobId);
+        for (uint256 i = 0; i < _oracles.length; i++) {
+            oracles.push(OracleData({
+                oracle: _oracles[i],
+                jobId: jobIdBytes,
+                isActive: true,
+                price: 0
+            }));
+        }
+    }
+    ```
 3. requestETHPriceData(url, path): This function accepts two parameters url and path. Here, url is the api that we want to get the data from, and the path is the json path of the data we want to extract/decode. For example:
     
     ```jsx
@@ -232,6 +143,12 @@ Functions:
     ```
     
 4. fulfill(): This is the callback function that is used by the Chainlink nodes to send the data back to the blockchain.
+   ```python
+   function fulfill(bytes32 _requestId, uint256 _price) public recordChainlinkFulfillment(_requestId) {
+        require(pendingRequests[_requestId], "Request is not valid");
+        pendingRequests[_requestId] = false;
+    }
+    ```
 
 ## Why does the user contract require LINK Token?
 
@@ -284,7 +201,7 @@ When D.requestETHPriceData(url, path) is invoked, it initiates a process to retr
 
 ### Step 1: Initiating a request:
 
-- Function call:  When `D.requestETHPriceData(url, path)` is called, it iterates through a predefined list of active Chainlink oracles (`oracles` array). For each active oracle, the function prepares a new Chainlink request.
+- Function call:  When D invokes `Z.requestETHPriceData(url, path)`, it iterates through a predefined list of active Chainlink oracles (`oracles` array). For each active oracle, the function prepares a new Chainlink request.
 
 ### Step 2: Preparing Chainlink Request:
 
@@ -356,26 +273,4 @@ D → Z.function() means D invokes Z.function().
 
 ![Chainlink User Flow.png](./fig/Chainlink_User_Flow.png)
 
-### Emulator Setup
-First setup the chainlink init server and chainlink normal servers.
-```python
-# Create an instance of the ChainlinkUserService
-chainlink_user = ChainlinkUserService()
-# Install the chainlink user service
-c_user = chainlink_user.install(cnode)
-# Set the RPC to connect to the blockchain
-c_user.setRPCbyEthNodeName('eth2')
-# Set the faucet by node name and port
-c_user.setFaucetServerInfo(vnode = 'faucet', port = 80)
-# Give information about the chainlink initializer server and the number of normal servers
-c_user.setChainlinkServiceInfo(init_node_name='chainlink_init_server', numeber_of_normal_servers=2)
-# Set Display Name
-emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
-# Bind the Chainlink user service to an asn
-emu.addBinding(Binding(cnode, filter = Filter(asn=153, nodeName='host_2')))
-```
-
 This service will work as described in the user flow above. After the setup, the user account(D) will call the requestETHPriceData function in the user contract(Z) to get the data from this external source [url](https://min-api.cryptocompare.com/data/pricemultifull?fsyms=ETH&tsyms=USD). Then the service will wait for responses from the oracles and calculate the average price of the Ethereum. Atlast, the response count and the average price will be displayed on the console. After that the service will exit. 
-
-
-
