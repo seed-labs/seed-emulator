@@ -43,7 +43,7 @@ Chainlink initializer server is used to deploy the LINK token contract, and ther
 4. After receiving the ether, the initializer node will deploy the LINK token contract (X).
 5. Once the LINK token contract is deployed, the initializer node will start a web server and a flask server. The LINK token address will be displayed on the web server for the users to use. The flask server will be used by Chainlink normal nodes to send a post request with the oracle contract address. This will be also displayed on the web server so the users can use it.
 
-### Code for Chainlink Initializer Node
+### Emulator code for Chainlink Initializer Node
 ```python
 chainlink = ChainlinkService()
 cnode = 'chainlink_init_server'
@@ -73,7 +73,7 @@ Chainlink normal server is used to deploy the oracle contracts. The oracle contr
 7. After this is done, the normal node will send a post request to the flask server running on the initializer node with the oracle contract address (Y).
 8. Then using the oracle contract address (Y) the initializer node will configure generic jobs for the chainlink service.
 
-### Code for Chainlink Normal Node
+### Emulator code for Chainlink Normal Node
 ```python
 # Install the Chainlink normal service
 c_normal = chainlink.install(cnode)
@@ -92,7 +92,7 @@ emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
 
 You can find the user contract solidity code in the [here](./contracts/user_contract.sol)
 
-### Emulator Setup
+### Emulator code for Chainlink User Service:
 First setup the chainlink init server and chainlink normal servers.
 ```python
 # Create an instance of the ChainlinkUserService
