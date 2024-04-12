@@ -29,8 +29,6 @@ class ChainlinkServer(Server):
     __chain_id: int = 1337
     __rpc_ws_port: int = 8546
     __rpc_port: int = 8545
-    __owner: str = None
-    __owner_private_key: str = None
     
     
     def __init__(self):
@@ -73,7 +71,7 @@ class ChainlinkServer(Server):
         
         self.__setConfigurationFiles()
         self.__chainlinkStartCommands()
-        self.__node.appendStartCommand(ChainlinkFileTemplate['send_get_eth_request'].format(faucet_server_url=self.__faucet_node_url, faucet_server_port=self.__faucet_port))
+        self.__node.appendStartCommand(ChainlinkFileTemplate['send_get_eth_request'].format(faucet_server_url=self.__faucet_node_url, faucet_server_port=self.__faucet_port, rpc_url=self.__rpc_url, rpc_port=self.__rpc_port))
         self.__node.appendStartCommand(ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
         self.__deploy_oracle_contract()
         self.__node.appendStartCommand(ChainlinkFileTemplate['send_flask_request'].format(init_node_url=self.__init_node_url, flask_server_port=self.__flask_server_port))
@@ -122,15 +120,6 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         self.__node.appendStartCommand(f'python3 ./contracts/deploy_oracle_contract.py')
         self.__node.appendStartCommand('echo "Oracle contract deployed and setAuthorizedSender set."')
 
-    
-    # def __set_authorized_sender(self):
-    #     """
-    #     @brief Set the authorized sender.
-    #     """
-    #     self.__node.appendStartCommand(ChainlinkFileTemplate['save_sender_address'])
-    #     self.__node.setFile('/contracts/setAuthorizedSender.py', ChainlinkFileTemplate['set_authorized_sender'].format(rpc_url = self.__rpc_url, private_key = self.__owner_private_key, chain_id = self.__chain_id, rpc_port = self.__rpc_port))
-    #     self.__node.appendStartCommand('python3 ./contracts/setAuthorizedSender.py')
-    
     def setInitNodeIP(self, init_node_name: str):
         """
         @brief Set the chainlink init node
@@ -180,31 +169,6 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         Check if the password length is between 16 and 50 characters.
         """
         return 16 <= len(password) <= 50
-    
-    # def setFaucetUrl(self, faucet_node_url: str):
-    #     """
-    #     Set the faucet node for the Chainlink node API.
-
-    #     @param faucet_node_url: The url of the faucet node.
-    #     @param faucet_node_port: The port number of the faucet node.
-    #     """
-    #     self.__faucet_node_url = faucet_node_url
-    
-    # # def setFaucetPort(self, faucet_node_port: int):
-    # #     """
-    # #     Set the faucet port for the Chainlink node API.
-
-    # #     @param faucet_node_port: The port number of the faucet node.
-    # #     """
-    # #     self.__faucet_node_port = faucet_node_port
-        
-    # # def setFaucetNodeName(self, faucet_node_name: str):
-    # #     """
-    # #     Set the faucet node for the Chainlink node API.
-
-    # #     @param faucet_node_name: The name of the faucet node.
-    # #     """
-    # #     self.__faucet_node_name = faucet_node_name
     
     def setFaucetServerInfo(self, vnode: str, port = 80):
          """

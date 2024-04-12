@@ -11,3 +11,4 @@ from .DHCPService import DHCPServer, DHCPService
 from .EthereumService import *
 from .ScionBwtestService import ScionBwtestService
 from .ChainlinkService.ChainlinkService import ChainlinkService
+from .ChainlinkService.ChainlinkUserService import ChainlinkUserService
