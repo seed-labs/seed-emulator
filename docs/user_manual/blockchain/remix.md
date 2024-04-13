@@ -45,3 +45,16 @@ MetaMask, which sends the transactions for us using
 the accounts (their private keys) in the wallet. 
 When sending a transaction from Remix, MetaMask window will show 
 up, asking for confirmation. 
+
+
+## Potential Problems
+
+- Some users found that when they deploy smart contract from Remix,
+  it takes a long time for the MetaMask to come up. This is not a 
+  problem of the emulator, because the problem is the same whey they
+  connect to a test net. After changing the VM's network setting 
+  from NAT to the bridge mode, the problem is gone. Most users 
+  do not have this issue using the NAT mode, so this might be isolated
+  issue caused by the user's network environment. 
+
+
