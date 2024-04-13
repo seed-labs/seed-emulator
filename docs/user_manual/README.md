@@ -17,7 +17,7 @@ This document provides a portal to those examples.
   - [Visualization](./visualization.md)
   - [Docker image](./docker.md)
 
-## [Internet Emulator: Components](./internet/README.md)
+## [Internet Emulator: Components and Advanced Features](./internet/README.md)
 
 ## [Blockchain Emulator](./blockchain/README.md)
   
