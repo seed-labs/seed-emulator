@@ -31,22 +31,16 @@ This document provides a portal to those examples.
   - [Botnet](../../examples/B05-botnet/)
   - [Support Apple Silicon machines (arm64)](./docker.md#platform): generate emulator
     files for Apple Silicon machines. 
-  - [Hybrid Emulation: integrating physical devices in emulation](../../examples/C03-bring-your-own-internet/)
+  - [Hybrid Emulation 1: including physical devices](../../examples/C03-bring-your-own-internet/)
+  - [Hybrid Emulation 2: including virtual devices running on QEMU](../../examples/)
   - [The Hosts file (add IP-hostname mappings)](../../examples/B11-etc-hosts/): inside the
     emulator, we add ip-hostname mappings to the `/etc/hosts` file. 
   - [Public Key Infrastructure (PKI)](../../examples/)
   - [IPFS (InterPlanetary File System)](../../examples/)
 
 
-## Blockchain Emulator
+## [Blockchain Emulator](./blockchain/README.md)
   
-  - [Build a Blockchain Emulator](../../examples/B06-blockchain/)
-  - [Connect MetaMask to SEED Emulator](https://github.com/seed-labs/seed-labs/blob/master/manuals/emulator/metamask.md)
-  - [Connect Remix to SEED Emulator](https://github.com/seed-labs/seed-labs/blob/master/manuals/emulator/remix.md)
-  - [Create prefunded Ethereum accounts]() 
-  - [Use Faucet to Fund Accounts](../../examples/)
-  - [Use Chainlink to Get Information From Outside](../../examples/)
-
 
 ## Frequently Asked Questions (FAQ)
 
