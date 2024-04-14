@@ -1,4 +1,4 @@
-# SEED Internet Emulator: Components and Advanced Features
+# Internet Emulator: Components and Advanced Features
 
 ## Advanced Features 
 
@@ -22,5 +22,6 @@
   - [The Hosts file (add IP-hostname mappings)](../../../examples/B11-etc-hosts/): 
     inside the emulator, we add ip-hostname mappings to the `/etc/hosts` file. 
   - [Public Key Infrastructure (PKI)](../../../examples/)
-  - [IPFS (InterPlanetary File System)](../../../examples/)
+  - [IPFS (InterPlanetary File System)](../../../examples/C05-kubo)
+  - [IPFS Kubo](./kubo.md)
 
