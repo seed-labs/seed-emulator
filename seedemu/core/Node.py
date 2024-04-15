@@ -837,7 +837,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__persistent_storages
     
-    def setGeo(self, Lat: float, Long: float, Address: str) -> Node:
+    def setGeo(self, Lat: float, Long: float, Address: str="") -> Node:
         """!
         @brief Set geographical location of the Node
 

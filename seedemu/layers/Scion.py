@@ -81,8 +81,8 @@ class Scion(Layer, Graphable):
         @param b Second AS (ISD and ASN).
         @param linkType Link type from a to b.
         @param count Number of parallel links.
-        @param router of AS a default is ""
-        @param router of AS b default is ""
+        @param a_router router of AS a default is ""
+        @param b_router router of AS b default is ""
 
         @throws AssertionError if link already exists or is link to self.
 
@@ -107,6 +107,8 @@ class Scion(Layer, Graphable):
         @param b Second AS (ISD and ASN).
         @param linkType Link type from a to b.
         @param count Number of parallel links.
+        @param a_router router of AS a default is ""
+        @param b_router router of AS b default is ""
 
         @throws AssertionError if link already exists or is link to self.
 
