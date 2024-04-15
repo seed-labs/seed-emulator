@@ -84,7 +84,6 @@ Enter the IP address of the Chainlink node followed by the port number 6688 in t
 
 ### ChainlinkInitializerServer
 1. **Configuration**:
-   - `configure`: Stores references to the node and emulator that this server will interact with.
    - [installInitializer](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L41): Handles the software installation, RPC configuration, deployment of contracts using web3, and the setup of a web server. It raises exceptions if necessary configurations like RPC URL or Faucet URL are not set.
 2. **Server Configuration Methods**:
     - [setFaucetServerInfo](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L81): Configures information about the faucet server including the virtual node name and port number.
