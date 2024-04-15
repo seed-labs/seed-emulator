@@ -232,6 +232,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __name_servers: List[str]
 
     __geo: Tuple[float,float,str] # (Latitude,Longitude,Address) -- optional parameter that contains the geographical location of the Node
+    __note: str # optional parameter that contains a note about the Node
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -273,6 +274,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__name_servers = []
 
         self.__geo = None
+        self.__note = None
 
     def configure(self, emulator: Emulator):
         """!
@@ -855,6 +857,25 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns Tuple (Latitude, Longitude, Address)
         """
         return self.__geo
+    
+    def setNote(self, note: str) -> Node:
+        """!
+        @brief Set a note about the Node
+
+        @param note Note
+
+        @returns self, for chaining API calls.
+        """
+        self.__note = note
+        return self
+    
+    def getNote(self) -> Optional[str]:
+        """!
+        @brief Get a note about the Node
+
+        @returns Note
+        """
+        return self.__note
 
     def copySettings(self, node: Node):
         """!
