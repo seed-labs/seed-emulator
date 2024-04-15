@@ -27,6 +27,8 @@ class EtcHosts(Layer):
             address = iface.getAddress()
             if iface.getNet().getType() == NetworkType.Bridge:
                 pass
+            if iface.getNet().getType() == NetworkType.InternetExchange:
+                pass
             else:
                 addresses.append(address)
             

@@ -18,14 +18,22 @@ class SeedEmuTestCase(ut.TestCase):
     container_count_before_up_container: int
     container_count_after_up_container: int
     docker_compose_version:int
+    online_testing:bool
     
     @classmethod
-    def setUpClass(cls) -> None:
+    def setUpClass(cls, testLogOverwrite:bool=False, online:bool=True) -> None:
         '''!
-        @brief A classmethod to construce the some thing before 
+        @brief A classmethod to construct the some thing before 
         this test case is started. For this test case, it will create 
         a test_log directory, create emulation files, build containers 
         and up containers.
+        
+        Parameters
+        ----------
+        testLogOverwrite : bool, optional
+            Set True if you want to overwrite testing logs each time, by default False
+        online : bool, optional
+            Set False if you don't want to compile and run the emulation, by default True
         '''
         cls.init_dir = os.path.dirname(os.path.abspath(sys.modules[cls.__module__].__file__))
         cls.cur_dir = os.path.dirname(__file__)
@@ -33,26 +41,33 @@ class SeedEmuTestCase(ut.TestCase):
         cls.output_dir = os.path.join(cls.emulator_code_dir, "output")
         cls.emulator_script_name = "test-emulator.py"
         cls.test_log = "test_log"
+        cls.test_log_overwrite = testLogOverwrite
+        cls.online_testing = online
 
-        cls.client = docker.from_env()
-        cls.container_count_before_up_container = len(cls.client.containers.list())
+        # Get information from local Docker:
+        if cls.online_testing:
+            cls.client = docker.from_env()
+            cls.container_count_before_up_container = len(cls.client.containers.list())
 
         os.chdir(cls.init_dir)
-        cls.createDirectory(cls.test_log)
+        cls.createDirectory(cls.test_log, cls.test_log_overwrite)
         cls.printLog("==============================")
         cls.printLog("{} Start".format(sys.modules[cls.__module__].__name__))
         cls.printLog("==============================")
 
         # if system is using a docker-compose version 2, test is done with version2.
-        result = subprocess.run(["docker", "compose"])
-        if result.returncode == 0:
-            cls.docker_compose_version = 2
-        else:
-            cls.docker_compose_version = 1
+        if cls.online_testing:
+            with open(os.devnull, 'w') as f:
+                result = subprocess.run(["docker", "compose"], stdout=f)
+            if result.returncode == 0:
+                cls.docker_compose_version = 2
+            else:
+                cls.docker_compose_version = 1
 
-        cls.gen_emulation_files()
-        cls.build_emulator()
-        cls.up_emulator()
+        if cls.online_testing:
+            cls.gen_emulation_files()
+            cls.build_emulator()
+            cls.up_emulator()
 
         return
         
@@ -62,8 +77,8 @@ class SeedEmuTestCase(ut.TestCase):
         @brief A classmethod to destruct the some thing after this test case is finished.
         For this test case, it will down the containers and remove the networks of this test case
         '''
-        
-        cls.down_emulator()
+        if cls.online_testing:
+            cls.down_emulator()
 
         return super().tearDownClass()
     
@@ -197,7 +212,7 @@ class SeedEmuTestCase(ut.TestCase):
         """
 
         exit_code, output = container.exec_run("ping -c 3 {}".format(ip))
-        if expected_exit_code == 0: cls.printLog("ping test {} Succeed".format(ip))
+        if exit_code == 0: cls.printLog("ping test {} Succeed".format(ip))
         else: cls.printLog("ping test {} Failed".format(ip))
         return exit_code == expected_exit_code
     

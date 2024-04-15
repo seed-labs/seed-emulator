@@ -12,3 +12,5 @@ from .EthereumService import *
 from .ScionBwtestService import ScionBwtestService
 from .ChainlinkService.ChainlinkService import ChainlinkService
 from .ChainlinkService.ChainlinkUserService import ChainlinkUserService
+
+from .KuboService import *
