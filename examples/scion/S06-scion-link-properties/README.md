@@ -13,6 +13,8 @@ Setting cross connect link properties works as shown in this exampls:
 
 `as110.createNetwork('net0').setDefaultLinkProperties(latency=10, bandwidth=1000, packetDrop=0.1).setMtu(1400)`
 
+Latency, and Bandwidth will be included in the Scion beacons if specified here. If no properties are specified, they will be omitted in the beacons
+
 ## Specify border routers for scion routing
 
 If there is more than one link between a pair of ASes one can specify how to set the routes as follows:
