@@ -30,14 +30,6 @@ class ChainlinkInitializerServer(Server):
         @brief ChainlinkServer Constructor.
         """
         super().__init__()
-        
-    def setFaucetServerInfo(self, vnode: str, port = 80):
-         """
-            @brief Set the faucet server information.
-         """
-
-         self.__faucet_vnode_name = vnode
-         self.__faucet_port = port
 
     def configure(self, node: Node, emulator: Emulator):
         """
@@ -85,6 +77,14 @@ class ChainlinkInitializerServer(Server):
         @param deploymentType The deployment type.
         """
         self.__deploymentType = deploymentType
+    
+    def setFaucetServerInfo(self, vnode: str, port = 80):
+         """
+            @brief Set the faucet server information.
+         """
+
+         self.__faucet_vnode_name = vnode
+         self.__faucet_port = port
         
     def setRPCbyUrl(self, address: str):
         """

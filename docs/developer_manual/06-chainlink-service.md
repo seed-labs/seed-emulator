@@ -75,44 +75,44 @@ Enter the IP address of the Chainlink node followed by the port number 6688 in t
 1. **Dependencies**:
    - Requires `EthereumService` for operation. This dependency is marked as optional during initialization, allowing the emulator to proceed even if EthereumService is not installed.
 2. **Server Creation**:
-   - `ChainlinkServer`: The `_createServer` is responsible for creating the Chainlink server. It is the server that runs the Chainlink service.
-   - `ChainlinkInitializerServer`: The `_createInitializerServer` function is used to create the Chainlink initializer server. This server is responsible for deploying the LINK token contract and displaying the contract address to users
+   - [ChainlinkServer](../../seedemu/services/ChainlinkService/ChainlinkServer.py): The [_createServer](../../seedemu/services/ChainlinkService/ChainlinkService.py#L22) function is responsible for creating the Chainlink server. It is the server that runs the Chainlink service.
+   - [ChainlinkInitializerServer](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py): The [_createInitializerServer](../../seedemu/services/ChainlinkService/ChainlinkService.py#L26) function is used to create the Chainlink initializer server. This server is responsible for deploying the LINK token contract and displaying the contract address to users
 3. **Service Installation**:
-   - `installInitializer`: This method is responsible for managing the initializer server.
+   - [installInitializer](../../seedemu/services/ChainlinkService/ChainlinkService.py#L29): This method is responsible for managing the initializer server.
    - `install`: This method is responsible for managing the normal server.
-   - `_doInstall`: Overrides the installation method to ensure that server classes implement either install or installInitializer, but not both. This check prevents configuration conflicts and ensures clarity in server roles.
+   - [_doInstall](../../seedemu/services/ChainlinkService/ChainlinkService.py#L38): Overrides the installation method to ensure that server classes implement either install or installInitializer, but not both. This check prevents configuration conflicts and ensures clarity in server roles.
 
 ### ChainlinkInitializerServer
 1. **Configuration**:
    - `configure`: Stores references to the node and emulator that this server will interact with.
-   - `installInitializer`: Handles the software installation, RPC configuration, deployment of contracts using web3, and the setup of a web server. It raises exceptions if necessary configurations like RPC URL or Faucet URL are not set.
+   - [installInitializer](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L41): Handles the software installation, RPC configuration, deployment of contracts using web3, and the setup of a web server. It raises exceptions if necessary configurations like RPC URL or Faucet URL are not set.
 2. **Server Configuration Methods**:
-    - `setFaucetServerInfo`: Configures information about the faucet server including the virtual node name and port number.
-    - `setDeploymentType`: Allows specification of the deployment strategy (default is 'web3').
-    - `setRPCbyUrl`: Sets the Ethereum RPC address directly by URL.
-    - `setRPCbyEthNodeName`: Configures the Ethereum RPC address by referencing another node's name within the emulator.
+    - [setFaucetServerInfo](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L81): Configures information about the faucet server including the virtual node name and port number.
+    - [setDeploymentType](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L73): Allows specification of the deployment strategy (default is 'web3').
+    - [setRPCbyUrl](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L89): Sets the Ethereum RPC address directly by URL.
+    - [setRPCbyEthNodeName](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L97): Configures the Ethereum RPC address by referencing another node's name within the emulator.
 3. **Private Helper Methods**:
-    - `__installInitSoftware`: Installs essential software on the node such as networking tools and Python packages required for running Chainlink.
-    - `__deployThroughWeb3`: Deploys the LinkToken contract using web3 by setting up necessary files and commands on the node.
-    - `__webServer`: Sets up a web server using nginx and Flask to expose Chainlink functionalities.
-    - `__getIPbyEthNodeName`: Retrieves the IP address of a given node.
+    - [__installInitSoftware](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L64): Installs essential software on the node such as networking tools and Python packages required for running Chainlink.
+    - [__deployThroughWeb3](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L105): Deploys the LinkToken contract using web3 by setting up necessary files and commands on the node.
+    - [__webServer](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L116): Sets up a web server using nginx and Flask to expose Chainlink functionalities.
+    - [__getIPbyEthNodeName](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L129): Retrieves the IP address of a given node.
 
 ### ChainlinkServer
 1. **Configuration**:
-   - `configure`: Coordinates the full installation process for the Chainlink node. It handles software installation, RPC configurations, initializes network connections, deploys contracts, and prepares operational scripts. Exception handling is integrated to ensure all necessary configurations are correctly set before proceeding.
+   - [install](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L48): Coordinates the full installation process for the Chainlink node. It handles software installation, RPC configurations, initializes network connections, deploys contracts, and prepares operational scripts. Exception handling is integrated to ensure all necessary configurations are correctly set before proceeding.
 2. **Server Configuration Methods**:
-   - `setFaucetServerInfo`: Configures information about the faucet server including the virtual node name and port number.
-   - `setUsernameAndPassword`: Sets the username and password for the Chainlink web interface.
-   - `setRPCbyUrl`: Sets the Ethereum RPC address directly by URL.
-   - `setRPCbyEthNodeName`: Configures the Ethereum RPC address by referencing another node's name within the emulator.
+   - [setFaucetServerInfo](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L173): Configures information about the faucet server including the virtual node name and port number.
+   - [setUsernameAndPassword](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L145): Sets the username and password for the Chainlink web interface.
+   - [setRPCbyUrl](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L129): Sets the Ethereum RPC address directly by URL.
+   - [setRPCbyEthNodeName](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L137): Configures the Ethereum RPC address by referencing another node's name within the emulator.
 3. **Private Helper Methods**:
-   - `__installSoftware`: Installs essential software on the node such as networking tools and Python packages required for running Chainlink.
-   - `__setConfigurationFiles`: Configures the Chainlink node by setting up necessary files and commands on the node.
-   - `__chainlinkStartCommands`: Prepares the commands to start the Chainlink node.
-   - `__deploy_oracle_contract`: Deploys the Oracle contract using web3 by setting up necessary files and commands on the node.
-   - `__validate_username`: Validates the username for the Chainlink web interface.
-   - `__validate_password`: Validates the password for the Chainlink web interface.
-   - `__getIPbyEthNodeName`: Retrieves the IP address of a given node.
+   - [__installSoftware](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L81): Installs essential software on the node such as networking tools and Python packages required for running Chainlink.
+   - [__setConfigurationFiles](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L90): Configures the Chainlink node by setting up necessary files and commands on the node.
+   - [__chainlinkStartCommands](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L101): Prepares the commands to start the Chainlink node.
+   - [__deploy_oracle_contract](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L112): Deploys the Oracle contract using web3 by setting up necessary files and commands on the node.
+   - [__validate_username](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L160): Validates the username for the Chainlink web interface.
+   - [__validate_password](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L167): Validates the password for the Chainlink web interface.
+   - [__getIPbyEthNodeName](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L181): Retrieves the IP address of a given node.
 
 
 ## Chainlink Service Architecture
