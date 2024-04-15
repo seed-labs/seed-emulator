@@ -1,0 +1,30 @@
+name: release
+
+on:
+  push:
+    branches: main
+    tags: 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: false
+        virtualenvs-in-project: false
+        version: 1.4.2
+    - name: poetry install
+      run: |
+       poetry build && poetry install
+    - name: Build package
+      id: build_and_publish_packages
+      run: |
+        poetry publish -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_TOKEN }}
+      if: github.repository == 'iqtlabs/dovesnap' && github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')

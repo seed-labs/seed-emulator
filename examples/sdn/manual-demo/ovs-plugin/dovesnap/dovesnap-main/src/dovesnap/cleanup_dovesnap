@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# clean up running Dovesnap containers/networks and remove veth resources.
+
+# stop any containers connected to Dovesnap networks, and then rm the networks.
+dsnets=$(docker network ls -q -f driver=dovesnap)
+if [[ "$dsnets" != "" ]] ; then
+	for dsnet in $dsnets ; do
+		echo Dovesnap network "${dsnet}" found, cleaning up containers connected to it.
+		dscons=$(docker ps -q -f network="${dsnet}")
+		for dscon in $dscons ; do
+			docker kill "${dscon}"
+		done
+		echo Cleaning up Dovesnap network "${dsnet}"
+		docker network rm "${dsnet}"
+	done
+else
+	echo No Dovesnap networks found.
+fi
+
+# find Dovesnap control network/FAUCET config directory, if any.
+dsnet=""
+faucetconf=""
+dscons=$(docker ps -q --filter "label=dovesnap.namespace")
+for dscon in $dscons ; do
+	if [[ "${dsnet}" == "" ]] ; then
+		dsnet=$(docker inspect "${dscon}" -f '{{range $k, $v := .NetworkSettings.Networks}}{{ if ne $k "host" }}{{.NetworkID}}{{end}}{{end}}')
+	fi
+	if [[ "${faucetconf}" == "" ]] ; then
+		faucetconf=$(docker inspect "${dscon}" -f '{{range .Mounts}}{{ if eq .Destination "/etc/faucet" }}{{ .Source }}{{end}}{{end}}')
+	fi
+done
+
+# remove any Dovesnap component containers.
+alldscons=0
+if [[ "${dscons}" != "" ]] ; then
+	echo Found Dovesnap component "${dscons}", removing.
+	for dscon in $dscons ; do
+		docker stop "${dscon}"
+		docker rm -f "${dscon}"
+		alldscons=$((alldscons+1))
+	done
+fi
+if [[ "${alldscons}" -eq 0 ]] ; then
+	echo No Dovesnap component containers found.
+fi
+
+if [[ "${dsnet}" != "" ]] ; then
+	echo Deleting Dovesnap control network
+	docker network rm "${dsnet}"
+fi
+
+if [[ "${faucetconf}" != "" ]] ; then
+	faucetconf=$(realpath "${faucetconf}")
+	if [[ "${faucetconf}" =~ ^/tmp.+ ]] ; then
+		echo removing FAUCET conf: "${faucetconf}"
+		sudo rm -rf "${faucetconf}"
+	else
+		echo not removing "${faucetconf}" - not in tmp
+	fi
+fi
+
+# delete any orphaned veths.
+veths=$(ip link | grep -Eo '\b(ods)([^\@:]+)\b' | uniq)
+if [[ "$veths" != "" ]] ; then
+	echo Cleaning up orphaned veths/bridges: "${veths}"
+	for veth in $veths ; do
+		sudo ip link set dev "${veth}" down
+		sudo ip link delete "${veth}"
+	done
+else
+	echo No orphaned veths found.
+fi
+
+# delete anything else
+sudo rm -rf /run/docker/plugins/dovesnap.sock /tmp/odsfaucet*

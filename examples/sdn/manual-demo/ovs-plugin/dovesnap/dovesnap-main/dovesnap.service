@@ -1,0 +1,22 @@
+# TODO: copy default service.env, install dovesnap.service and enable/start.
+[Unit]
+Description=dovesnap
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=always
+# TODO: create dovesnap user, add to docker group.
+User=dovesnap
+Group=docker
+WorkingDirectory=/home/dovesnap/dovesnap
+EnvironmentFile=/home/dovesnap/service.env
+ExecStartPre=/usr/bin/docker compose build
+ExecStartPre=-mkdir -p ${FAUCET_PREFIX}
+# DOCKERFILES without {} as contains spaces.
+ExecStartPre=-/usr/bin/docker compose $DOCKERFILES down
+ExecStart=/usr/bin/docker compose $DOCKERFILES up
+ExecStop=/usr/bin/docker compose $DOCKERFILES down
+
+[Install]
+WantedBy=multi-user.target

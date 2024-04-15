@@ -1,0 +1,71 @@
+---
+version: '3.7'
+services:
+  faucet:
+    restart: always
+    image: 'c65sdn/faucet:1.0.68'
+    networks:
+      - dovesnap
+    volumes:
+      - /var/log/faucet:/var/log/faucet
+      - '${FAUCET_PREFIX}/etc/faucet:/etc/faucet'
+    ports:
+      - '6653:6653'
+    environment:
+      FAUCET_CONFIG_STAT_RELOAD: '1'
+      FAUCET_CONFIG_AUTO_REVERT: '1'
+    labels:
+      - "dovesnap.namespace=standalone"
+  gauge:
+    restart: always
+    image: 'c65sdn/gauge:1.0.68'
+    networks:
+      - dovesnap
+    volumes:
+      - /var/log/gauge:/var/log/gauge
+      - ./configs/gauge.yaml:/etc/faucet/gauge.yaml
+      - '${FAUCET_PREFIX}/etc/faucet:/etc/faucet'
+    ports:
+      - '6654:6653'
+    environment:
+      GAUGE_CONFIG: '/etc/faucet/gauge.yaml'
+      GAUGE_CONFIG_STAT_RELOAD: '1'
+      GAUGE_CONFIG_AUTO_REVERT: '1'
+    labels:
+      - "dovesnap.namespace=standalone"
+  faucet_certstrap:
+    restart: on-failure
+    image: 'iqtlabs/faucet-certstrap:v0.55.67'
+    network_mode: none
+    volumes:
+      - /opt/faucetconfrpc:/opt/faucetconfrpc
+    command:
+      - /opt/faucetconfrpc
+      - faucetconfrpc
+    labels:
+      - "dovesnap.namespace=standalone"
+  faucetconfrpc:
+    restart: always
+    image: 'iqtlabs/faucetconfrpc:v0.55.67'
+    environment:
+      PYTHONUNBUFFERED: '1'
+    networks:
+      - dovesnap
+    volumes:
+      - /opt/faucetconfrpc:/faucetconfrpc
+      - '${FAUCET_PREFIX}/etc/faucet:/etc/faucet'
+    ports:
+      - 59999:59999
+    command:
+      - --key=/faucetconfrpc/faucetconfrpc.key
+      - --cert=/faucetconfrpc/faucetconfrpc.crt
+      - --cacert=/faucetconfrpc/faucetconfrpc-ca.crt
+      - --host=faucetconfrpc
+      - --config_dir=/etc/faucet
+    depends_on:
+      - faucet
+      - gauge
+    labels:
+      - "dovesnap.namespace=standalone"
+networks:
+  dovesnap:

@@ -1,0 +1,16 @@
+plugin:
+  image: gophernet/ovs-plugin
+  volumes:
+    - /run/docker/plugins:/run/docker/plugins
+    - /var/run/docker.sock:/var/run/docker.sock
+  net: host
+  stdin_open: true
+  tty: true
+  privileged: true
+  command: -d
+
+ovs:
+  image: socketplane/openvswitch:2.3.2
+  cap_add:
+    - NET_ADMIN
+  net: host

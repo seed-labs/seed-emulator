@@ -1,0 +1,55 @@
+version: '3.7'
+services:
+  plugin:
+    restart: always
+    image: iqtlabs/dovesnap:latest
+    volumes:
+      - /run/docker/plugins:/run/docker/plugins
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/local/var/run/openvswitch:/var/run/openvswitch
+      - /opt/faucetconfrpc:/faucetconfrpc
+    network_mode: host
+    pid: host
+    extra_hosts:
+      - 'faucetconfrpc:${FAUCETCONFRPC_IP}'
+    depends_on:
+      ovs:
+        condition: service_healthy
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_CHROOT
+    # TODO: needed for ip netns inside container, provide min apparmor profile.
+    security_opt: ['apparmor:unconfined']
+    command:
+      - --debug
+      - --faucetconfrpc_addr=faucetconfrpc
+      - --faucetconfrpc_port=59999
+      - --faucetconfrpc_keydir=/faucetconfrpc
+      - '--mirror_bridge_in=${MIRROR_BRIDGE_IN}'
+      - '--mirror_bridge_out=${MIRROR_BRIDGE_OUT}'
+      - '--stack_priority1=${STACK_PRIORITY1}'
+      - '--stacking_interfaces=${STACKING_INTERFACES}'
+      - '--stack_mirror_interface=${STACK_MIRROR_INTERFACE}'
+      - '--default_ofcontrollers=${STACK_OFCONTROLLERS}'
+    labels:
+      - "dovesnap.namespace=primary"
+    build:
+      context: .
+  ovs:
+    restart: always
+    image: iqtlabs/openvswitch:v3.2.2
+    healthcheck:
+      test: 'ovs-vsctl show'
+    volumes:
+      - /usr/local/var/run/openvswitch:/usr/local/var/run/openvswitch
+      - ovs-data:/etc/openvswitch
+    network_mode: host
+    devices:
+      - "/dev/net/tun:/dev/net/tun"
+    cap_add:
+      - NET_ADMIN
+    labels:
+      - "dovesnap.namespace=primary"
+volumes:
+  ovs-data:
