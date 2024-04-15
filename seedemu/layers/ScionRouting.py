@@ -325,9 +325,13 @@ class ScionRouting(Routing):
 
             # Add Latency
             staticInfo["Latency"][str(interface)] = {
-                "Inter": str(lat)+"ms",
-                "Intra": ifs["Latency"],
+                "Intra": {}
             }
+            if lat != 0: # if latency is not 0, add it
+                staticInfo["Latency"][str(interface)]["Inter"] = str(lat)+"ms"
+            for _if in ifs["Latency"]: # add intra latency
+                if ifs["Latency"][_if] != "0ms": # omit 0ms latency
+                    staticInfo["Latency"][str(interface)]["Intra"][str(_if)] = ifs["Latency"][_if]
             
             # Add Bandwidth
             staticInfo["Bandwidth"][str(interface)] = {}
