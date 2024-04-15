@@ -8,6 +8,9 @@ This example demonstrates how to use Chainlink with a blockchain. The developer 
   - [Building the Emulation](#building-the-emulation)
   - [Interacting with the Chainlink Normal Server](#interacting-with-the-chainlink-normal-server)
   - [Interacting with the Chainlink Initializer Server](#interacting-with-the-chainlink-initializer-server)
+  - [Chainlink User Service](#chainlink-user-service)
+    - [Flow of the Chainlink User Service](#flow-of-the-chainlink-user-service)
+    - [Interating with the User contract deployed by the Chainlink User Service](#interating-with-the-user-contract-deployed-by-the-chainlink-user-service)
   - [To Do](#to-do)
 
 ## Requirements
@@ -109,6 +112,62 @@ There are two ways to interact with the Chainlink service:
 ## Interacting with the Chainlink Initializer Server
 The Chainlink Initializer server is used to deploy the LINK token contract and display the deployed oracle contract address. You can access the Chainlink Initializer server by navigating to `http://<host_ip>:80` in your web browser. The Chainlink Initializer server displays the deployed oracle contract address and the LINK token contract address. This information is useful for building and deploying solidity contracts and deploying jobs.
 
+## Chainlink User Service
+The Chainlink User Service is an automated example that demonstrates how to interact with the Chainlink service. First let's take a look how to build the emulation for the Chainlink User Service:
+1. Create an instance of the Chainlink User Service:
+    ```python
+    chainlink_user = ChainlinkUserService()
+    ```
+2. Setup the User Service
+   ```python
+    cnode = 'chainlink_user'
+    c_user = chainlink_user.install(cnode)
+    c_user.setRPCbyEthNodeName('eth2')
+    c_user.setFaucetServerInfo(vnode = 'faucet', port = 80)
+    c_user.setChainlinkServiceInfo(init_node_name='chainlink_init_server', number_of_normal_servers=2)
+    emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
+    emu.addBinding(Binding(cnode, filter = Filter(asn=153, nodeName='host_2')))
+    ```
+    In the above code, we are assigning the server instance chainlink_user.install(cnode) to c_user, specifying the virtual node cnode named 'chainlink_user'. The script then sets up the faucet server information for the Chainlink user by assigning the virtual node 'faucet' and the port '80' through c_user.setFaucetServerInfo(). It configures the Ethereum RPC address using the node name 'eth2' with c_user.setRPCbyEthNodeName(). Additionally, the script establishes the Chainlink service information using c_user.setChainlinkServiceInfo(). This function requires the Chainlink initializer node name and the number of normal servers. The display name of the virtual node is set to 'Chainlink-User', which helps in identifying the node within the emulated network. Finally, the script establishes a network binding for this user server to a host node identified by ASN 153 and the node name 'host_2', ensuring that the Chainlink server is correctly linked within the specified autonomous system.
+3. Add the Chainlink User Service layer to the emulation:
+    ```python
+    emu.addLayer(chainlink_user)
+    ```
+
+### Flow of the Chainlink User Service
+This example demonstrates how to interact with the Chainlink service using a [user contract](./contracts/user_contract.sol). The user contract is deployed on the Chainlink user server. The user contract interacts with the Chainlink service to get the latest price of an asset. The user contract uses the LINK token contract address and the oracle contract addresses to interact with the Chainlink service. The user contract is funded with LINK tokens using the faucet server. The user contract sends a request to the Chainlink service to get the latest price of an asset. The Chainlink service sends the response to the user contract. The user contract then processes the response and displays the latest price of the asset.
+
+1. Wait for the chainlink init server to be up. Get LINK token contract address and oracle contract addresses from the Chainlink init server
+2. Create a web3 account and deploy the user contract
+3. Fund the user account using the faucet server
+4. Deploy the user contract
+5. Set the LINK token contract address and oracle contract addresses in the user contract
+6. Send 1ETH to the LINK token contract to fund the user account with LINK tokens
+7. Transfer LINK token to the user contract
+8. Call the main function in the user contract
+
+### Interating with the User contract deployed by the Chainlink User Service
+After the Chainlink User Service is done running, you can interact with the user contract deployed by the Chainlink User Service. To get the User contract address, you can check the logs of the Chainlink User Service. And another way is to do the following steps:
+1. Execute the following command to get the container ID of the Chainlink User Service:
+    ```bash
+    docker ps | grep Chainlink-User
+    ```
+2. Execute the following command to get the bash shell of the Chainlink User Service:
+    ```bash
+    docker exec -it <CONTAINER ID> /bin/bash
+    ```
+3. After the Chainlink User Service deployes the user contract, you can find the contract address inside the container. You can use the following command to get the contract address:
+    ```bash
+    cat ./info/user_contract.json
+    ```
+4. Now you can interact with the user contract using Remix or any other Ethereum development tool.
+   - Compile the user contract
+   - Go to the Deploy and Run Transactions tab
+   - In the Environment dropdown, select MetaMask
+   - Select the user contract in the contract dropdown
+   - In the At Address field, enter the contract address
+   - Click the At Address button
+   - You can now interact with the user contract
+
 ## To Do
-- [ ] Add more details on how to interact with the Chainlink service
-- [ ] Explain Chainlink User Service
+- [ ] Make a video tutorial for the Chainlink example and how to interact with the Chainlink service
