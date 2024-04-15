@@ -2,7 +2,6 @@
 # encoding: utf-8
 
 from seedemu import *
-from modify_df import change_line
 import sys
 
 # Admin accounts
