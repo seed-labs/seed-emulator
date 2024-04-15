@@ -28,6 +28,8 @@ class L2Config(Enum):
     """
     L1_RPC_URL = 'L1_RPC_URL'
     L1_RPC_KIND = 'L1_RPC_KIND'
+    GETH_HTTP_PORT = 'GETH_HTTP_PORT'
+    GETH_WS_PORT = 'GETH_WS_PORT'
     SEQ_RPC = 'SEQ_RPC'
     DEPLOYER_URL = 'DEPLOYER_URL'
     DEPLOYMENT_CONTEXT = 'DEPLOYMENT_CONTEXT'
@@ -146,10 +148,11 @@ geth \
   --http.corsdomain="*" \
   --http.vhosts="*" \
   --http.addr=0.0.0.0 \
+  --http.port=$GETH_HTTP_PORT \
   --http.api=web3,debug,eth,txpool,net,engine \
   --ws \
   --ws.addr=0.0.0.0 \
-  --ws.port=8546 \
+  --ws.port=$GETH_WS_PORT \
   --ws.origins="*" \
   --ws.api=debug,eth,txpool,net,engine \
   --syncmode=full \
@@ -190,7 +193,7 @@ set -eu
 source .env
 
 op-batcher \
-  --l2-eth-rpc=http://127.0.0.1:8545 \
+  --l2-eth-rpc=http://127.0.0.1:$GETH_HTTP_PORT \
   --rollup-rpc=http://127.0.0.1:8547 \
   --poll-interval=1s \
   --sub-safety-margin=6 \
@@ -287,10 +290,9 @@ op-proposer \
         @brief Set the account environment.
 
         @param account The account
-        @param privateKey The private key
+        @param sk The private key
         """
 
-        # TODO: Add basic account checking
         self.__ENV[f'{accType.value}_ADDRESS'] = acc
         self.__ENV[f'{accType.value}_PRIVATE_KEY'] = sk
 

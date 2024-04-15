@@ -21,10 +21,12 @@ SEQUENCER_ACC = (
     "0x0e259e03bABD47f8bab8Ec93a2C5fB39DB443a3d",
     "0x9a031a3aee8b73427b86d195b387a10dd471f5707709923a16882141b37a1c17",
 )
+# Test account
 TEST_ACC = (
     "0x2DDAaA366dc75119A256C41b9bd483D13A64389d",
     "0x4ba1ada11a1d234c3a03c08395c82e65320b5ae4aecca4a70143f4c157230528",
 )
+# Factory contract
 FACTORY_ACC = ("0x4e59b44847b379578588920cA78FbF26c0B4956C", "")
 
 FACTORY_CODE = "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3"
@@ -51,7 +53,7 @@ eth = EthereumService(override=True)
 blockchain = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.POA)
 
 # Set custom genesis
-initBal = 100000
+initBal = 10**8
 blockchain.setGasLimitPerBlock(30_000_000)
 blockchain.addLocalAccount(FACTORY_ACC[0], 0)
 blockchain.addCode(FACTORY_ACC[0], FACTORY_CODE)
@@ -60,7 +62,6 @@ blockchain.addLocalAccount(BATCHER_ACC[0], initBal)
 blockchain.addLocalAccount(PROPOSER_ACC[0], initBal)
 blockchain.addLocalAccount(TEST_ACC[0], initBal)
 
-# print(blockchain.getGenesis().getGenesis())
 
 # Create blockchain nodes (POA Ethereum)
 e5 = blockchain.createNode("poa-eth5")
@@ -78,6 +79,7 @@ e6.unlockAccounts().startMiner()
 # Set geth ws port to 8541 (Default : 8546)
 e5.enableGethWs().setGethWsPort(8541)
 e5.enableGethHttp()
+e6.enableGethHttp()
 e7.enableGethHttp()
 
 # Customizing the display names (for visualization purpose)
@@ -92,20 +94,20 @@ emu.getVirtualNode("poa-eth8").setDisplayName("Ethereum-POA-8")
 l2 = Layer2Service()
 l2Bkc = l2.createL2Blockchain("test")
 
-l2Bkc.setL1Node("poa-eth5", e5.getGethHttpPort())
+l2Bkc.setL1VNode("poa-eth5", e5.getGethHttpPort())
 l2Bkc.setAdminAccount(L2Account.GS_ADMIN, ADMIN_ACC)
 l2Bkc.setAdminAccount(L2Account.GS_BATCHER, BATCHER_ACC)
 l2Bkc.setAdminAccount(L2Account.GS_PROPOSER, PROPOSER_ACC)
 l2Bkc.setAdminAccount(L2Account.GS_SEQUENCER, SEQUENCER_ACC)
 
 l2_1 = l2Bkc.createNode("l2-1", L2Node.SEQUENCER)
-l2_2 = l2Bkc.createNode("l2-2")
+l2_2 = l2Bkc.createNode("l2-2").setL1VNode("poa-eth6", e6.getGethHttpPort())
 l2_3 = l2Bkc.createNode("l2-3")
 l2_4 = l2Bkc.createNode("l2-4")
 deployer = l2Bkc.createNode("l2-deployer", L2Node.DEPLOYER)
 
 # Set external port
-emu.getVirtualNode("l2-3").addPortForwarding(8545, l2_3.getRPCPort())
+emu.getVirtualNode("l2-3").addPortForwarding(8545, l2_3.getHttpPort())
 
 
 # Binding virtual nodes to physical nodes

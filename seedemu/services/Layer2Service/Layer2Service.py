@@ -20,12 +20,13 @@ def getIPByNode(node: Node) -> str:
     return address
 
 
-# TODO: Add child classes for sequencer and deployer
 class Layer2Server(Server):
 
     __id: int
     __l2Blockchain: Layer2Blockchain
-    __rpcPort: int
+    __l1VNode: str
+    __l1Port: int
+    __httpPort: int
     __wsPort: int
     __isSequencer: bool
     __isDeployer: bool
@@ -37,11 +38,13 @@ class Layer2Server(Server):
         super().__init__()
 
         self._id = id
+        self.__l1VNode = None
+        self.__l1Port = None
         self.__isSequencer = False
         self.__isDeployer = False
         self.__l2Blockchain = l2Blockchain
         self._base_system = BaseSystem.SC_DEPLOYER if type == L2Node.DEPLOYER else BaseSystem.LAYER2
-        self.__rpcPort = 8545
+        self.__httpPort = 8545
         self.__wsPort = 8546
 
         if type == L2Node.SEQUENCER:
@@ -66,23 +69,28 @@ class Layer2Server(Server):
         self.__isDeployer = isDeployer
         return self
     
-    # TODO: Add setL1Node
-    def setL1Node(self, vnode: str, port: int) -> Layer2Server:
-        pass
+    def setL1VNode(self, vnode: str, port: int) -> Layer2Server:
+        self.__l1VNode = vnode
+        self.__l1Port = port
 
-    def setRPCPort(self, port: int) -> Layer2Server:
-        self.__rpcPort = port
+    def setHttpPort(self, port: int) -> Layer2Server:
+        self.__httpPort = port
         return self
 
     def setWSPort(self, port: int) -> Layer2Server:
         self.__wsPort = port
         return self
 
-    def getRPCPort(self) -> int:
-        return self.__rpcPort
+    def getHttpPort(self) -> int:
+        return self.__httpPort
 
     def getWSPort(self) -> int:
         return self.__wsPort
+    
+    def getL1VNode(self) -> tuple[str, int] | None:
+        if self.__l1VNode is None or self.__l1Port is None:
+            return None
+        return self.__l1VNode, self.__l1Port
 
     def getL2Blockchain(self) -> Layer2Blockchain:
         return self.__l2Blockchain
@@ -150,7 +158,10 @@ class Layer2Server(Server):
     def __getL1RPC(self):
         l1VNode: str
         l1Port: int
-        l1VNode, l1Port = self.__l2Blockchain.getL1VNode()
+        if self.getL1VNode() is not None:
+            l1VNode, l1Port = self.getL1VNode()
+        else:
+            l1VNode, l1Port = self.__l2Blockchain.getL1VNode()
         assert (
             l1VNode is not None and l1Port is not None
         ), "Layer2Server::install(): L1 node is not set"
@@ -160,7 +171,6 @@ class Layer2Server(Server):
 
         return f"http://{l1NodeIP}:{l1Port}"
 
-    # TODO: Move this to Layer2Blockchain
     def __getEnvs(self, template: Layer2Template):
 
         l1RPC = self.__getL1RPC()
@@ -173,6 +183,8 @@ class Layer2Server(Server):
             {
                 L2Config.L1_RPC_URL.value: l1RPC,
                 L2Config.L1_RPC_KIND.value: "basic",
+                L2Config.GETH_HTTP_PORT.value: self.getHttpPort(),
+                L2Config.GETH_WS_PORT.value: self.getWSPort(),
                 L2Config.SEQ_RPC.value: self.__l2Blockchain.getSequencerAddress(),
                 L2Config.DEPLOYMENT_CONTEXT.value: "getting-started",
                 L2Config.DEPLOYER_URL.value: self.__l2Blockchain.getDeployerAddress(),
@@ -195,9 +207,8 @@ class Layer2Blockchain:
     __chainName: str
     __sequencerAddress: str
     __deployerAddress: str
-    __nonSequencerAddresses: List[str]
     __adminAccounts: Dict[L2Account, Dict[str, str]]
-    __l1VNode: Node
+    __l1VNode: str
     __l1Port: int
 
     def __init__(self, service: Layer2Service, chainName: str, chainID: int):
@@ -207,7 +218,6 @@ class Layer2Blockchain:
         self.__pendingTargets = []
         self.__sequencerAddress = None
         self.__deployerAddress = None
-        self.__nonSequencerAddresses = []
         self.__adminAccounts = {}
         self.__l1VNode = None
         self.__l1Port = None
@@ -215,7 +225,6 @@ class Layer2Blockchain:
     def _log(self, msg: str):
         print("==== Layer2Blockchain: {}".format(msg), file=stderr)
 
-    # TODO: Select node type at creation
     def createNode(self, vnode: str, type: L2Node = L2Node.NON_SEQUENCER) -> Layer2Server:
         self.__pendingTargets.append(vnode)
         return self.__layer2Service.installByL2Blockchain(vnode, self, type)
@@ -224,7 +233,6 @@ class Layer2Blockchain:
         self, type: L2Account, acc: tuple[str, str]
     ) -> Layer2Blockchain:
 
-        # TODO: check if the account is valid
         self.__adminAccounts[type] = {acc[0]: acc[1]}
         return self
 
@@ -253,18 +261,18 @@ class Layer2Blockchain:
 
         if server.isSequencer() and self.__sequencerAddress is None:
             self.__sequencerAddress = "http://{}:{}".format(
-                getIPByNode(node), server.getRPCPort()
+                getIPByNode(node), server.getHttpPort()
             )
         elif server.isDeployer() and self.__deployerAddress is None:
             self.__deployerAddress = "http://{}:{}".format(
                 getIPByNode(node), WEB_SERVER_PORT
             )
 
-    def setL1Node(self, vnode: str, port: int):
+    def setL1VNode(self, vnode: str, port: int):
         self.__l1VNode = vnode
         self.__l1Port = port
 
-    def getL1VNode(self) -> Node:
+    def getL1VNode(self) -> tuple[str, int]:
         return self.__l1VNode, self.__l1Port
 
 
