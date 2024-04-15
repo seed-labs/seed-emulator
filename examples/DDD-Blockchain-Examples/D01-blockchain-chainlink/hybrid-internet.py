@@ -163,8 +163,3 @@ emu.addLayer(web)
 
 # Save it to a component file, so it can be used by other emulators
 emu.dump('hybrid-internet.bin')
-
-# Uncomment the following if you want to generate the final emulation files
-emu.render()
-#print(dns.getZone('.').getRecords())
-emu.compile(Docker(), './output', override=True)
