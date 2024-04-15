@@ -125,16 +125,6 @@ class ChainlinkInitializerServer(Server):
         sed -i 's|{{linkTokenAddress}}|'"$link_token_address"'|g' /var/www/html/index.html''')
         self.__node.setFile('/etc/nginx/sites-available/default', ChainlinkFileTemplate['nginx_site'].format(port=80))
         self.__node.appendStartCommand('service nginx restart')
-
-    def setOwner(self, owner: str, owner_private_key: str):
-        """
-        @brief Set the owner of the contracts
-        
-        @param owner The owner of the contracts
-        @param owner_private_key The private key of the owner.
-        """
-        self.__owner = owner
-        self.__owner_private_key = owner_private_key
     
     def __getIPbyEthNodeName(self, vnode:str):
         """

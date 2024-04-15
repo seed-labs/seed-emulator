@@ -54,7 +54,16 @@ Use the template from the ethereum-faucet example:
       emu.getVirtualNode(cnode).setDisplayName(service_name)
       emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
     ```
-    In the above code, we are assigning the server instance chainlink.installInitializer(cnode) to c_init, specifying the virtual node cnode named 'chainlink_init_server'. The script then sets up the faucet server information for the Chainlink initializer by assigning the virtual node 'faucet' and the port '80' through c_init.setFaucetServerInfo(). It configures the Ethereum RPC address using the node name 'eth2' with c_init.setRPCbyEthNodeName(). Additionally, the display name of the virtual node is set to 'Chainlink-Init', which helps in identifying the node within the emulated network. Finally, the script establishes a network binding for this initializer server to a host node identified by ASN 164 and the node name 'host_2', ensuring that the Chainlink server is correctly linked within the specified autonomous system.
+    In the above code, we are assigning the server instance chainlink.installInitializer(cnode) to c_init, specifying the virtual node cnode named 'chainlink_init_server'. 
+    
+    The following essential functions are used to set up the Chainlink initializer server:
+    - `setFaucetServerInfo(vnode = 'faucet', port = 80)`: This function sets up the faucet server information for the Chainlink initializer server. The faucet server is used to fund the Chainlink server with ETH tokens. The function requires the virtual node name of the faucet server and the port number.
+    - `setRPCbyEthNodeName('eth2')`: This function configures the Ethereum RPC address for the Chainlink initializer server. The function requires the node name of the Ethereum node to which the Chainlink initializer server  will use to interact with the blockchain.
+    
+    Additionaly, these are the API functions that are avilable for configuration:
+    - `setRPCbyUrl("<RPC_URL>")`: This function should only be used if the user is sure about the RPC URL. The function requires the RPC URL of the Ethereum node to which will be used by the Chainlink initializer server to connect to the Ethereum node.
+
+    Finally, a network binding is established for the Chainlink initializer server to a host node identified by ASN and node name 'host_2'.
 
 7. Initialize the Chainlink Node:
    ```python
@@ -72,7 +81,17 @@ Use the template from the ethereum-faucet example:
         emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
         i = i + 1
     ```
-    In the above code, it creates multiple chainlink server nodes each associated with different autonomous system numbers (ASNs). For each server, we set up the Ethereum RPC connection using `setRPCbyEthNodeName('eth{i}')`, which links each Chainlink server to a specific Ethereum node. We have to make sure the websocket for that Ethereum node is enabled. `setInitNodeIP()` is used to set the IP address of the Chainlink initializer server. This is necessary for the Chainlink server to get the LINK token address and send the deployed oracle contract address to be displayed on the Chainlink Init server. `setFaucetServerInfo()` is used to set the faucet server information for the Chainlink server. `setUsernameAndPassword()` is used to set the username and password for the Chainlink server default is `seed@seed.com` and `Seed@emulator123`. The display name of the virtual node is set to 'Chainlink-{i}' to help identify the node within the emulated network. Finally, a network binding is established for each Chainlink server to a host node identified by ASN and node name 'host_2'.
+    In the above code, we are creating multiple chainlink server nodes each associated with different autonoumous system (ASNs). For each server we are assigning the server instance chainlink.install(cnode) to c_normal, specifying the virtual node cnode named 'chainlink_server_{}'.format(i). 
+    
+    The following essential functions are used to set up the Chainlink server:
+    - `setRPCbyEthNodeName('eth{}'.format(i))`: This function configures the Ethereum RPC address for the Chainlink server. The function requires the node name of the Ethereum node to which the Chainlink server will be listening through the websocket and interacting with the blockchain.
+    - `setInitNodeIP("chainlink_init_server")`: This function sets the IP address of the Chainlink initializer server. This is necessary for the Chainlink server to get the LINK token address and send the deployed oracle contract address to be displayed on the Chainlink Init server.
+    - `setFaucetServerInfo(vnode = 'faucet', port = 80)`: This function sets up the faucet server information for the Chainlink server. The faucet server is used to fund the Chainlink server with ETH tokens. The function requires the virtual node name of the faucet server and the port number.
+
+    Additionaly, these are the API functions that are avilable for configuration:
+    - `setUsernameAndPassword(username = '<username>', password = '<password>')`: This function sets the username and password for the Chainlink server. The default username is 'seed@seed.com' and the default password is 'Seed@emulator123'. The username must be a valid email address and password must be between 16 to 50 characters.
+
+    Finally, a network binding is established for each Chainlink server to a host node identified by ASN and node name 'host_2'.
 
 8. Once you have completed the installation and configuration the Chainlink initializer and Chainlink node, you can add the Chainlink Service layer to the emulation. Additionaly we have to add the blockchain and faucet layers to the emulation.:
     ```python
@@ -128,7 +147,15 @@ The Chainlink User Service is an automated example that demonstrates how to inte
     emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
     emu.addBinding(Binding(cnode, filter = Filter(asn=153, nodeName='host_2')))
     ```
-    In the above code, we are assigning the server instance chainlink_user.install(cnode) to c_user, specifying the virtual node cnode named 'chainlink_user'. The script then sets up the faucet server information for the Chainlink user by assigning the virtual node 'faucet' and the port '80' through c_user.setFaucetServerInfo(). It configures the Ethereum RPC address using the node name 'eth2' with c_user.setRPCbyEthNodeName(). Additionally, the script establishes the Chainlink service information using c_user.setChainlinkServiceInfo(). This function requires the Chainlink initializer node name and the number of normal servers. The display name of the virtual node is set to 'Chainlink-User', which helps in identifying the node within the emulated network. Finally, the script establishes a network binding for this user server to a host node identified by ASN 153 and the node name 'host_2', ensuring that the Chainlink server is correctly linked within the specified autonomous system.
+    In the above code, we are assigning the server instance chainlink_user.install(cnode) to c_user, specifying the virtual node cnode named 'chainlink_user'.
+
+    The following essential functions are used to set up the Chainlink user server:
+    - `setRPCbyEthNodeName('eth2')`: This function configures the Ethereum RPC address for the Chainlink user server. The function requires the node name of the Ethereum node to which the Chainlink user server will use to interact with the blockchain.
+    - `setFaucetServerInfo(vnode = 'faucet', port = 80)`: This function sets up the faucet server information for the Chainlink user server. The faucet server is used to fund the Chainlink user server with ETH tokens. The function requires the virtual node name of the faucet server and the port number.
+    - `setChainlinkServiceInfo(init_node_name='chainlink_init_server', number_of_normal_servers=2)`: This function sets the Chainlink service information for the Chainlink user server. The function requires the node name of the Chainlink initializer server and the number of Chainlink normal servers. This information is necessary for the Chainlink user server to get the LINK token contract address and the oracle contract addresses.
+
+    Finally, a network binding is established for the Chainlink user server to a host node identified by ASN and node name 'host_2'.
+
 3. Add the Chainlink User Service layer to the emulation:
     ```python
     emu.addLayer(chainlink_user)
