@@ -81,6 +81,10 @@ forge script scripts/Deploy.s.sol:Deploy --offline --private-key $GS_ADMIN_PRIVA
 
 forge script scripts/Deploy.s.sol:Deploy --offline --sig 'sync()' --rpc-url $L1_RPC_URL
 
+if [ -d chain_configs ]; then
+  rm -rf chain_configs
+fi
+
 mkdir chain_configs
 
 cp deployments/getting-started/L2OutputOracleProxy.json chain_configs/
