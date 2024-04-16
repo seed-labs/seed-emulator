@@ -5,7 +5,7 @@ from sys import stderr
 from seedemu.core import Node, Service, Server, Emulator, BaseSystem
 from seedemu.core.enums import NetworkType
 
-from .Layer2Template import Layer2Template, L2Account, L2Config, L2Node, WEB_SERVER_PORT
+from .EthereumLayer2Template import EthereumLayer2Template, EthereumLayer2Account, EthereumLayer2Config, EthereumLayer2Node, WEB_SERVER_PORT
 
 
 def getIPByNode(node: Node) -> str:
@@ -25,13 +25,13 @@ def getIPByNode(node: Node) -> str:
     return address
 
 
-class Layer2Server(Server):
+class EthereumLayer2Server(Server):
     """!
     @brief Layer2Server class.
     """
 
     __id: int
-    __l2Blockchain: Layer2Blockchain
+    __l2Blockchain: EthereumLayer2Blockchain
     __l1VNode: str
     __l1Port: int
     __httpPort: int
@@ -39,7 +39,7 @@ class Layer2Server(Server):
     __isSequencer: bool
     __isDeployer: bool
 
-    def __init__(self, id: int, l2Blockchain: Layer2Blockchain, type: L2Node):
+    def __init__(self, id: int, l2Blockchain: EthereumLayer2Blockchain, type: EthereumLayer2Node):
         """!
         @brief create a new Layer2Server instance.
         @param id The id of the server.
@@ -55,14 +55,14 @@ class Layer2Server(Server):
         self.__isDeployer = False
         self.__l2Blockchain = l2Blockchain
         self._base_system = (
-            BaseSystem.SC_DEPLOYER if type == L2Node.DEPLOYER else BaseSystem.LAYER2
+            BaseSystem.SC_DEPLOYER if type == EthereumLayer2Node.DEPLOYER else BaseSystem.LAYER2
         )
         self.__httpPort = 8545
         self.__wsPort = 8546
 
-        if type == L2Node.SEQUENCER:
+        if type == EthereumLayer2Node.SEQUENCER:
             self.setSequencer(True)
-        elif type == L2Node.DEPLOYER:
+        elif type == EthereumLayer2Node.DEPLOYER:
             self.setDeployer(True)
 
     def getID(self) -> int:
@@ -73,7 +73,7 @@ class Layer2Server(Server):
         """
         return self._id
 
-    def setSequencer(self, isSequencer: bool) -> Layer2Server:
+    def setSequencer(self, isSequencer: bool) -> EthereumLayer2Server:
         """!
         @brief Set the server as a sequencer.
 
@@ -87,7 +87,7 @@ class Layer2Server(Server):
         self.__isSequencer = isSequencer
         return self
 
-    def setDeployer(self, isDeployer: bool) -> Layer2Server:
+    def setDeployer(self, isDeployer: bool) -> EthereumLayer2Server:
         """!
         @brief Set the server as a deployer.
 
@@ -101,7 +101,7 @@ class Layer2Server(Server):
         self.__isDeployer = isDeployer
         return self
 
-    def setL1VNode(self, vnode: str, port: int) -> Layer2Server:
+    def setL1VNode(self, vnode: str, port: int) -> EthereumLayer2Server:
         """!
         @brief Set the Ethereum vnode and the geth http port the server should connect to.
 
@@ -113,7 +113,7 @@ class Layer2Server(Server):
         self.__l1VNode = vnode
         self.__l1Port = port
 
-    def setHttpPort(self, port: int) -> Layer2Server:
+    def setHttpPort(self, port: int) -> EthereumLayer2Server:
         """!
         @brief Set the Layer2 geth http port of the server.
 
@@ -124,7 +124,7 @@ class Layer2Server(Server):
         self.__httpPort = port
         return self
 
-    def setWSPort(self, port: int) -> Layer2Server:
+    def setWSPort(self, port: int) -> EthereumLayer2Server:
         """!
         @brief Set the Layer2 geth ws port of the server.
 
@@ -161,7 +161,7 @@ class Layer2Server(Server):
             return None
         return self.__l1VNode, self.__l1Port
 
-    def getL2Blockchain(self) -> Layer2Blockchain:
+    def getL2Blockchain(self) -> EthereumLayer2Blockchain:
         """!
         @brief Get the layer2 blockchain the server is connected to.
 
@@ -220,7 +220,7 @@ class Layer2Server(Server):
 
         @param node The physical node.
         """
-        template = Layer2Template(self.isSequencer())
+        template = EthereumLayer2Template(self.isSequencer())
 
         node.setFile("/l2/.env", self.__getEnvs(template))
         self.__addScript(node, "/l2/luancher.sh", template.SC_DEPLOYER)
@@ -232,7 +232,7 @@ class Layer2Server(Server):
 
         @param node The physical node.
         """
-        template = Layer2Template(self.isSequencer())
+        template = EthereumLayer2Template(self.isSequencer())
 
         # Set the environment variables
         node.setFile("/.env", self.__getEnvs(template))
@@ -279,7 +279,7 @@ class Layer2Server(Server):
 
         return f"http://{l1NodeIP}:{l1Port}"
 
-    def __getEnvs(self, template: Layer2Template) -> str:
+    def __getEnvs(self, template: EthereumLayer2Template) -> str:
         """!
         @brief Synthesize the environment variables.
 
@@ -296,26 +296,26 @@ class Layer2Server(Server):
 
         template.setEnv(
             {
-                L2Config.L1_RPC_URL.value: l1RPC,
-                L2Config.L1_RPC_KIND.value: "basic",
-                L2Config.GETH_HTTP_PORT.value: self.getHttpPort(),
-                L2Config.GETH_WS_PORT.value: self.getWSPort(),
-                L2Config.SEQ_RPC.value: self.__l2Blockchain.getSequencerAddress(),
-                L2Config.DEPLOYMENT_CONTEXT.value: "getting-started",
-                L2Config.DEPLOYER_URL.value: self.__l2Blockchain.getDeployerAddress(),
+                EthereumLayer2Config.L1_RPC_URL.value: l1RPC,
+                EthereumLayer2Config.L1_RPC_KIND.value: "basic",
+                EthereumLayer2Config.GETH_HTTP_PORT.value: self.getHttpPort(),
+                EthereumLayer2Config.GETH_WS_PORT.value: self.getWSPort(),
+                EthereumLayer2Config.SEQ_RPC.value: self.__l2Blockchain.getSequencerAddress(),
+                EthereumLayer2Config.DEPLOYMENT_CONTEXT.value: "getting-started",
+                EthereumLayer2Config.DEPLOYER_URL.value: self.__l2Blockchain.getDeployerAddress(),
             }
         )
 
         [
             template.setAccountEnv(accType, acc, sk)
-            for accType in L2Account
+            for accType in EthereumLayer2Account
             for acc, sk in self.__l2Blockchain.getAdminAccount(accType).items()
         ]
 
         return template.exportEnvFile()
 
 
-class Layer2Blockchain:
+class EthereumLayer2Blockchain:
     """!
     @brief Layer2Blockchain class.
     Multiple Layer2Blockchain instances with different config can exist in
@@ -327,11 +327,11 @@ class Layer2Blockchain:
     __chainName: str
     __sequencerAddress: str
     __deployerAddress: str
-    __adminAccounts: Dict[L2Account, Dict[str, str]]
+    __adminAccounts: Dict[EthereumLayer2Account, Dict[str, str]]
     __l1VNode: str
     __l1Port: int
 
-    def __init__(self, service: Layer2Service, chainName: str, chainID: int):
+    def __init__(self, service: EthereumLayer2Service, chainName: str, chainID: int):
         self.__layer2Service = service
         self.__chainName = chainName
         self.__chainID = chainID
@@ -351,8 +351,8 @@ class Layer2Blockchain:
         print("==== Layer2Blockchain: {}".format(msg), file=stderr)
 
     def createNode(
-        self, vnode: str, type: L2Node = L2Node.NON_SEQUENCER
-    ) -> Layer2Server:
+        self, vnode: str, type: EthereumLayer2Node = EthereumLayer2Node.NON_SEQUENCER
+    ) -> EthereumLayer2Server:
         """!
         @brief Create a new layer2 node.
 
@@ -365,8 +365,8 @@ class Layer2Blockchain:
         return self.__layer2Service.installByL2Blockchain(vnode, self, type)
 
     def setAdminAccount(
-        self, type: L2Account, acc: tuple[str, str]
-    ) -> Layer2Blockchain:
+        self, type: EthereumLayer2Account, acc: tuple[str, str]
+    ) -> EthereumLayer2Blockchain:
         """!
         @brief Set an admin account for the layer2 blockchain.
 
@@ -379,7 +379,7 @@ class Layer2Blockchain:
         self.__adminAccounts[type] = {acc[0]: acc[1]}
         return self
 
-    def getAdminAccount(self, type: L2Account) -> Dict[str, str]:
+    def getAdminAccount(self, type: EthereumLayer2Account) -> Dict[str, str]:
         """!
         @brief Get the admin account by account type.
 
@@ -422,7 +422,7 @@ class Layer2Blockchain:
         """
         return self.__deployerAddress
 
-    def getLayer2Service(self) -> Layer2Service:
+    def getLayer2Service(self) -> EthereumLayer2Service:
         """!
         @brief Get the layer2 service instance the blockchain belongs to.
 
@@ -430,7 +430,7 @@ class Layer2Blockchain:
         """
         return self.__layer2Service
 
-    def _doConfigure(self, node: Node, server: Layer2Server):
+    def _doConfigure(self, node: Node, server: EthereumLayer2Server):
         """!
         @brief Retrieve the sequencer and deployer address from server.
 
@@ -450,7 +450,7 @@ class Layer2Blockchain:
                 getIPByNode(node), WEB_SERVER_PORT
             )
 
-    def setL1VNode(self, vnode: str, port: int) -> Layer2Blockchain:
+    def setL1VNode(self, vnode: str, port: int) -> EthereumLayer2Blockchain:
         """!
         @brief Set the Ethereum vnode and the geth http port for all the nodes
         in the layer2 blockchain.
@@ -472,14 +472,14 @@ class Layer2Blockchain:
         return self.__l1VNode, self.__l1Port
 
 
-class Layer2Service(Service):
+class EthereumLayer2Service(Service):
     """
     @brief Layer2Service class.
     The Class enables user to create and manage layer2 blockchains in
     the emulator.
     """
 
-    __blockchains: Dict[str, Layer2Blockchain]
+    __blockchains: Dict[str, EthereumLayer2Blockchain]
     __blockchain_id: int
     __serial: int
     __emulator: Emulator
@@ -513,8 +513,8 @@ class Layer2Service(Service):
         return self.__emulator
 
     def installByL2Blockchain(
-        self, vnode: str, l2Blockchain: Layer2Blockchain, type: L2Node
-    ) -> Layer2Server:
+        self, vnode: str, l2Blockchain: EthereumLayer2Blockchain, type: EthereumLayer2Node
+    ) -> EthereumLayer2Server:
         """!
         @brief Install the service on a layer 2 server identified by given name.
         Used by the Layer2Blockchain class.
@@ -530,7 +530,7 @@ class Layer2Service(Service):
 
         return self._pending_targets[vnode]
 
-    def createL2Blockchain(self, chainName: str, chainID: int = -1) -> Layer2Blockchain:
+    def createL2Blockchain(self, chainName: str, chainID: int = -1) -> EthereumLayer2Blockchain:
         """!
         @brief create a layer2 blockchain.
 
@@ -541,10 +541,10 @@ class Layer2Service(Service):
             chainID = self.__blockchain_id
             self.__blockchain_id += 1
 
-        self.__blockchains[chainName] = Layer2Blockchain(self, chainName, chainID)
+        self.__blockchains[chainName] = EthereumLayer2Blockchain(self, chainName, chainID)
         return self.__blockchains[chainName]
 
-    def _doConfigure(self, node: Node, server: Layer2Server):
+    def _doConfigure(self, node: Node, server: EthereumLayer2Server):
         """!
         @brief Callback method to configure a layer2 server.
 
@@ -562,7 +562,7 @@ class Layer2Service(Service):
         self.__emulator = emulator
         super().configure(emulator)
 
-    def _doInstall(self, node: Node, server: Layer2Server):
+    def _doInstall(self, node: Node, server: EthereumLayer2Server):
         """!
         @brief Callback method to install a layer2 server on a node.
 
@@ -572,7 +572,7 @@ class Layer2Service(Service):
         self._log("installing l2 on as{}/{}...".format(node.getAsn(), node.getName()))
         server.install(node)
 
-    def _createServer(self, l2Blockchain: Layer2Blockchain, type: L2Node) -> Server:
+    def _createServer(self, l2Blockchain: EthereumLayer2Blockchain, type: EthereumLayer2Node) -> Server:
         """!
         @brief Create a new layer2 server with the given blockchain.
 
@@ -582,4 +582,4 @@ class Layer2Service(Service):
         @return The created layer2 server.
         """
         self.__serial += 1
-        return Layer2Server(self.__serial, l2Blockchain, type)
+        return EthereumLayer2Server(self.__serial, l2Blockchain, type)

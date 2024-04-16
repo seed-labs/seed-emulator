@@ -16,7 +16,7 @@ class L2Component(Enum):
     OP_PROPOSER = "op-proposer"
 
 
-class L2Account(Enum):
+class EthereumLayer2Account(Enum):
     """!
     @brief Enum for layer2 admin account.
     """
@@ -27,7 +27,7 @@ class L2Account(Enum):
     GS_SEQUENCER = "GS_SEQUENCER"
 
 
-class L2Config(Enum):
+class EthereumLayer2Config(Enum):
     """!
     @brief Enum for layer2 configuration.
     """
@@ -41,7 +41,7 @@ class L2Config(Enum):
     DEPLOYMENT_CONTEXT = "DEPLOYMENT_CONTEXT"
 
 
-class L2Node(Enum):
+class EthereumLayer2Node(Enum):
     """!
     @brief Enum for layer2 server types.
     """
@@ -51,7 +51,7 @@ class L2Node(Enum):
     DEPLOYER = "l2-deployer"
 
 
-class Layer2Template:
+class EthereumLayer2Template:
     """!
     @brief template class for building scripts and configurations for layer2.
     """
@@ -59,25 +59,7 @@ class Layer2Template:
     __isSequencer: bool
     __components: List[L2Component]
     __ENV: Dict[str, str]
-    SC_DEPLOYER: str
-    __NODE_LAUNCHER: str
-    __START_COMMAND: str
-    __SUB_LAUNCHERS: Dict[L2Component, str]
-    __GETH_CONFIG: str
-    __NODE_CONFIG: str
-
-    def __init__(self, isSequencer: bool):
-        """!
-        @brief Constructor for Layer2Template class.
-
-        @param isSequencer True if the node is a sequencer.
-        """
-        self.__isSequencer = isSequencer
-        self.__components = [L2Component.OP_GETH, L2Component.OP_NODE]
-        if isSequencer:
-            self.__components.extend([L2Component.OP_BATCHER, L2Component.OP_PROPOSER])
-        self.__ENV = {}
-        self.SC_DEPLOYER = f"""
+    SC_DEPLOYER: str = f"""
 #!/bin/bash
 
 set -exu
@@ -118,7 +100,7 @@ cp deployments/getting-started/L2OutputOracleProxy.json chain_configs/
 
 python3 -m http.server {WEB_SERVER_PORT} -d chain_configs
 """
-        self.__NODE_LAUNCHER = """
+    __NODE_LAUNCHER: str = """
 #!/bin/bash
 set -exu
 
@@ -152,9 +134,9 @@ mkdir logs
 
 {}
 """
-        self.__START_COMMAND = "/start_{component}.sh &> logs/{component}.log &"
-        self.__SUB_LAUNCHERS = {
-            L2Component.OP_GETH: """
+    __START_COMMAND: str = "/start_{component}.sh &> logs/{component}.log &"
+    __SUB_LAUNCHERS: Dict[L2Component, str] = {
+        L2Component.OP_GETH: """
 #!/bin/bash
 set -eu
 
@@ -186,7 +168,7 @@ geth \
   --port=30304 \
   {}
 """,
-            L2Component.OP_NODE: """
+        L2Component.OP_NODE: """
 #!/bin/bash
 set -eu
 
@@ -204,7 +186,7 @@ op-node \
   --l1.rpckind=$L1_RPC_KIND \
   {}
 """,
-            L2Component.OP_BATCHER: """
+        L2Component.OP_BATCHER: """
 #!/bin/bash
 set -eu
 
@@ -225,7 +207,7 @@ op-batcher \
   --l1-eth-rpc=$L1_RPC_URL \
   --private-key=$GS_BATCHER_PRIVATE_KEY
 """,
-            L2Component.OP_PROPOSER: """
+        L2Component.OP_PROPOSER: """
 #!/bin/bash
 set -eu
 
@@ -244,9 +226,23 @@ op-proposer \
   --allow-non-finalized=true \
   --log.level=debug
 """,
-        }
-        self.__GETH_CONFIG = "--rollup.sequencerhttp=$SEQ_RPC"
-        self.__NODE_CONFIG = "--sequencer.enabled --sequencer.l1-confs=5 --verifier.l1-confs=4 --p2p.sequencer.key=$GS_SEQUENCER_PRIVATE_KEY"
+    }
+    __GETH_CONFIG: str = "--rollup.sequencerhttp=$SEQ_RPC"
+    __NODE_CONFIG: str = (
+        "--sequencer.enabled --sequencer.l1-confs=5 --verifier.l1-confs=4 --p2p.sequencer.key=$GS_SEQUENCER_PRIVATE_KEY"
+    )
+
+    def __init__(self, isSequencer: bool):
+        """!
+        @brief Constructor for Layer2Template class.
+
+        @param isSequencer True if the node is a sequencer.
+        """
+        self.__isSequencer = isSequencer
+        self.__components = [L2Component.OP_GETH, L2Component.OP_NODE]
+        if isSequencer:
+            self.__components.extend([L2Component.OP_BATCHER, L2Component.OP_PROPOSER])
+        self.__ENV = {}
 
     def getNodeLauncher(self) -> str:
         """!
@@ -285,7 +281,7 @@ op-proposer \
 
         return self.__SUB_LAUNCHERS[component]
 
-    def setEnv(self, env: Dict[str, str]) -> Layer2Template:
+    def setEnv(self, env: Dict[str, str]) -> EthereumLayer2Template:
         """!
         @brief Add the environment variable.
 
@@ -314,7 +310,7 @@ op-proposer \
 
         return "\n".join([f"{key}={value}" for key, value in self.__ENV.items()])
 
-    def setAccountEnv(self, accType: L2Account, acc: str, sk: str) -> Layer2Template:
+    def setAccountEnv(self, accType: EthereumLayer2Account, acc: str, sk: str) -> EthereumLayer2Template:
         """!
         @brief Set the account environment variables.
 

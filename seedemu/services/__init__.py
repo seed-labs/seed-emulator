@@ -11,4 +11,4 @@ from .DHCPService import DHCPServer, DHCPService
 from .EthereumService import *
 from .ScionBwtestService import ScionBwtestService
 from .KuboService import *
-from .Layer2Service import *
+from .EthereumLayer2Service import *

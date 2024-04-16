@@ -89,20 +89,20 @@ emu.getVirtualNode("poa-eth7").setDisplayName("Ethereum-POA-7").addPortForwardin
 emu.getVirtualNode("poa-eth8").setDisplayName("Ethereum-POA-8")
 
 # Create Layer2 nodes
-l2 = Layer2Service()
+l2 = EthereumLayer2Service()
 l2Bkc = l2.createL2Blockchain("test")
 
 l2Bkc.setL1Node("poa-eth5", e5.getGethHttpPort())
-l2Bkc.setAdminAccount(L2Account.GS_ADMIN, ADMIN_ACC)
-l2Bkc.setAdminAccount(L2Account.GS_BATCHER, BATCHER_ACC)
-l2Bkc.setAdminAccount(L2Account.GS_PROPOSER, PROPOSER_ACC)
-l2Bkc.setAdminAccount(L2Account.GS_SEQUENCER, SEQUENCER_ACC)
+l2Bkc.setAdminAccount(EthereumLayer2Account.GS_ADMIN, ADMIN_ACC)
+l2Bkc.setAdminAccount(EthereumLayer2Account.GS_BATCHER, BATCHER_ACC)
+l2Bkc.setAdminAccount(EthereumLayer2Account.GS_PROPOSER, PROPOSER_ACC)
+l2Bkc.setAdminAccount(EthereumLayer2Account.GS_SEQUENCER, SEQUENCER_ACC)
 
-l2_1 = l2Bkc.createNode("l2-1", L2Node.SEQUENCER)
+l2_1 = l2Bkc.createNode("l2-1", EthereumLayer2Node.SEQUENCER)
 l2_2 = l2Bkc.createNode("l2-2")
 l2_3 = l2Bkc.createNode("l2-3")
 l2_4 = l2Bkc.createNode("l2-4")
-deployer = l2Bkc.createNode("l2-deployer", L2Node.DEPLOYER)
+deployer = l2Bkc.createNode("l2-deployer", EthereumLayer2Node.DEPLOYER)
 
 # Set external port
 emu.getVirtualNode("l2-3").addPortForwarding(8545, l2_3.getRPCPort())
