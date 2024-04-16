@@ -2,7 +2,7 @@ version: "3"
 
 services:
     sdn-br:
-        image: handsonsecurity/seed-ubuntu:large
+        image: handsonsecurity/seed-ubuntu:large-arm
         container_name: sdn-br
         tty: true
         cap_add:
@@ -17,7 +17,7 @@ services:
                  "
         
     sdn-controller:
-        image: handsonsecurity/seed-ubuntu:large
+        image: handsonsecurity/seed-ubuntu:large-arm
         container_name: sdn-controller
         tty: true
         cap_add:
@@ -29,7 +29,7 @@ services:
                  "
 
     host-a1:
-        image: handsonsecurity/seed-ubuntu:large
+        image: handsonsecurity/seed-ubuntu:large-arm
         container_name: host-a1
         tty: true
         cap_add:
@@ -40,7 +40,7 @@ services:
                       tail -f /dev/null
                  "
     host-a2:
-        image: handsonsecurity/seed-ubuntu:large
+        image: handsonsecurity/seed-ubuntu:large-arm
         container_name: host-a2
         tty: true
         cap_add:
@@ -52,7 +52,7 @@ services:
                  "
                   
     host-b1:
-        image: handsonsecurity/seed-ubuntu:large
+        image: handsonsecurity/seed-ubuntu:large-arm
         container_name: host-b1
         tty: true
         cap_add:
@@ -64,7 +64,7 @@ services:
                  "
 
     host-b2:
-        image: handsonsecurity/seed-ubuntu:large
+        image: handsonsecurity/seed-ubuntu:large-arm
         container_name: host-b2
         tty: true
         cap_add:
@@ -75,7 +75,7 @@ services:
                       tail -f /dev/null
                  "
     host-c1:
-        image: handsonsecurity/seed-ubuntu:large
+        image: handsonsecurity/seed-ubuntu:large-arm
         container_name: host-c1
         tty: true
         cap_add:
@@ -87,7 +87,7 @@ services:
                  "
 
     host-c2:
-        image: handsonsecurity/seed-ubuntu:large
+        image: handsonsecurity/seed-ubuntu:large-arm
         container_name: host-c2
         tty: true
         cap_add:
