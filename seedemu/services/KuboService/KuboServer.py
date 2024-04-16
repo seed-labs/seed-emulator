@@ -33,6 +33,7 @@ class KuboServer(Server):
         
         self._version = DEFAULT_KUBO_VERSION
         self._is_bootnode = False
+        self._config_cmds = []
         self.config = DottedDict()
         self._profile = None
     
@@ -67,6 +68,10 @@ class KuboServer(Server):
             node.appendStartCommand('ipfs init')
         else:
             node.appendStartCommand(f'ipfs init --profile={self._profile}')
+            
+        # Add startup configuration changes if they exist:
+        for cmd in self._config_cmds:
+            node.appendStartCommand(cmd)
         
         # Remainder of configuration is done at the service level (see KuboService).
         
@@ -156,7 +161,32 @@ class KuboServer(Server):
         """
         self.config[key] = value
         return self
-         
+    
+    def appendStartConfig(self, key:str, val:Any, isJSON:bool=False) -> Self:
+        """Append changes to the configuration on startup.
+
+        Parameters
+        ----------
+        key : str
+            The key that you would like to change, in JSON dot notation.
+        val : Any
+            The value that you would like to set.
+        isJSON : bool, optional
+            Whether the value should be interpreted as JSON, by default False
+
+        Returns
+        -------
+        Self
+            This KuboServer instance for chaining API calls.
+        """
+        if isJSON:
+            cmd = f"ipfs config --json {key} '{json.dumps(val)}'"
+        else:
+            cmd = f'ipfs config {key} {val}'
+        
+        self._config_cmds.append(cmd)
+        
+        
     def setProfile(self, profile:str) -> Self:
         """Set the profile to be used upon initialization.
 

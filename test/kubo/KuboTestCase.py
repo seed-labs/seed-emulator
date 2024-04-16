@@ -405,8 +405,8 @@ class KuboTestCase(SeedEmuTestCase):
                     if ct_id != ct.short_id:
                         exit_code, output = self.ctCmd(ct,['ipfs', 'cat', file_info['cid']], demux=True)
                         
-                        self.assertIsNotNone(output, 'Command not executed successfully on container.')
-                        self.assertIsNotNone(exit_code, 'Command not executed successfully on container.')
+                        self.assertIsNotNone(output, f'Command not executed successfully on container. {output}')
+                        self.assertIsNotNone(exit_code, f'Command not executed successfully on container. {output}')
                         self.assertEqual(exit_code, 0, f'Command not executed successfully on container. {output[0]} {output[1]}')
                         self.assertEqual(output[0].decode().strip(), file_info["contents"], 'Unexpected test file contents.')
                         self.printLog(f'\tipfs cat {file_info["cid"]} [PASS]')

@@ -1,0 +1,1987 @@
+==============================
+kubo.KuboTestCase Start
+==============================
+Generating Emulation Files...
+gen_emulation_files: succeed
+Building Docker Containers...
+build_emulator: succeed
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  0
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  31
+----------------------------------------- Test Containers: -----------------------------------------
+as152h-Kubo-5_Boot-10.152.0.72: all, boot, basic
+as151h-Kubo-3_Peer-10.151.0.72: all, config
+as152h-Kubo-4_Peer-10.152.0.71: all, file_host, basic
+as153h-Kubo-6_Peer-10.153.0.71: all, file_host, basic
+as154h-Kubo-8_Peer-10.154.0.71: all, basic
+as150h-Kubo-1_Peer-10.150.0.72: all, basic
+as154h-Kubo-9_Peer-10.154.0.72: all, file_host, basic
+as151h-Kubo-2_Peer-10.151.0.71: all, version, basic
+as150h-Kubo-0_Boot-10.150.0.71: all, boot, basic
+as153h-Kubo-7_Peer-10.153.0.72: all, profile
+=================================== Test Case: test_kubo_install ===================================
+as152h-Kubo-5_Boot-10.152.0.72 [PASS]
+as151h-Kubo-3_Peer-10.151.0.72 [PASS]
+as152h-Kubo-4_Peer-10.152.0.71 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71 [PASS]
+as154h-Kubo-8_Peer-10.154.0.71 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72 [PASS]
+as151h-Kubo-2_Peer-10.151.0.71 [PASS]
+as150h-Kubo-0_Boot-10.150.0.71 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72 [PASS]
+=================================== Test Case: test_kubo_version ===================================
+as152h-Kubo-5_Boot-10.152.0.72: 0.27.0 [PASS]
+as151h-Kubo-3_Peer-10.151.0.72: 0.27.0 [PASS]
+as152h-Kubo-4_Peer-10.152.0.71: 0.27.0 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71: 0.27.0 [PASS]
+as154h-Kubo-8_Peer-10.154.0.71: 0.27.0 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72: 0.27.0 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72: 0.27.0 [PASS]
+as151h-Kubo-2_Peer-10.151.0.71: 0.26.0 [PASS]
+as150h-Kubo-0_Boot-10.150.0.71: 0.27.0 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72: 0.27.0 [PASS]
+================================= Test Case: test_bootstrap_script =================================
+as152h-Kubo-5_Boot-10.152.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-3_Peer-10.151.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-4_Peer-10.152.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-6_Peer-10.153.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-8_Peer-10.154.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-1_Peer-10.150.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-9_Peer-10.154.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-2_Peer-10.151.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-0_Boot-10.150.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-7_Peer-10.153.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+================================== Test Case: test_bootstrap_list ==================================
+as152h-Kubo-5_Boot-10.152.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+as152h-Kubo-4_Peer-10.152.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+as153h-Kubo-6_Peer-10.153.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+as154h-Kubo-8_Peer-10.154.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+as150h-Kubo-1_Peer-10.150.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+as154h-Kubo-9_Peer-10.154.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+as151h-Kubo-2_Peer-10.151.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+as150h-Kubo-0_Boot-10.150.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+================================== Test Case: test_service_config ==================================
+as152h-Kubo-5_Boot-10.152.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as152h-Kubo-4_Peer-10.152.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as153h-Kubo-6_Peer-10.153.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as154h-Kubo-8_Peer-10.154.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as150h-Kubo-1_Peer-10.150.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as154h-Kubo-9_Peer-10.154.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as151h-Kubo-2_Peer-10.151.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as150h-Kubo-0_Boot-10.150.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+===================================== Test Case: test_peering ======================================
+as152h-Kubo-5_Boot-10.152.0.72 (10):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.151.0.71/tcp/4001/p2p/12D3KooWEaXGvSnHoVY4Ace2PFfEPNRM5gQf8YoBZ6ydgw45JVWG
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWEV1tLWxGXnr4XvVpdpnG8SM5R5YrvBwGugKc1XJTyov5
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWEV1tLWxGXnr4XvVpdpnG8SM5R5YrvBwGugKc1XJTyov5
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWNPjvopsBX9WNCNdPsYqUpnPFKJws3YbMHZSsrPAacoQF
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWLm627En83BoeMFFPFmRtQSpRjssjU9APUCA1ku2XnP7J
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPLy36fD6AXR7ysDdjXCVpY8mvQWKaXt1poxXafJ4DAzS
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWKKVcv1VtsjL76GjuiJpkoCchYJCrtcPd8uiHctXvfg3F
+as152h-Kubo-4_Peer-10.152.0.71 (10):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWEaXGvSnHoVY4Ace2PFfEPNRM5gQf8YoBZ6ydgw45JVWG
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWNPjvopsBX9WNCNdPsYqUpnPFKJws3YbMHZSsrPAacoQF
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWLm627En83BoeMFFPFmRtQSpRjssjU9APUCA1ku2XnP7J
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPLy36fD6AXR7ysDdjXCVpY8mvQWKaXt1poxXafJ4DAzS
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWKKVcv1VtsjL76GjuiJpkoCchYJCrtcPd8uiHctXvfg3F
+as153h-Kubo-6_Peer-10.153.0.71 (10):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWEaXGvSnHoVY4Ace2PFfEPNRM5gQf8YoBZ6ydgw45JVWG
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWEV1tLWxGXnr4XvVpdpnG8SM5R5YrvBwGugKc1XJTyov5
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWLm627En83BoeMFFPFmRtQSpRjssjU9APUCA1ku2XnP7J
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWLm627En83BoeMFFPFmRtQSpRjssjU9APUCA1ku2XnP7J
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPLy36fD6AXR7ysDdjXCVpY8mvQWKaXt1poxXafJ4DAzS
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWKKVcv1VtsjL76GjuiJpkoCchYJCrtcPd8uiHctXvfg3F
+as154h-Kubo-8_Peer-10.154.0.71 (10):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWEaXGvSnHoVY4Ace2PFfEPNRM5gQf8YoBZ6ydgw45JVWG
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWEV1tLWxGXnr4XvVpdpnG8SM5R5YrvBwGugKc1XJTyov5
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWNPjvopsBX9WNCNdPsYqUpnPFKJws3YbMHZSsrPAacoQF
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWLm627En83BoeMFFPFmRtQSpRjssjU9APUCA1ku2XnP7J
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWKKVcv1VtsjL76GjuiJpkoCchYJCrtcPd8uiHctXvfg3F
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWKKVcv1VtsjL76GjuiJpkoCchYJCrtcPd8uiHctXvfg3F
+as150h-Kubo-1_Peer-10.150.0.72 (14):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.151.0.71/tcp/4001/p2p/12D3KooWEaXGvSnHoVY4Ace2PFfEPNRM5gQf8YoBZ6ydgw45JVWG
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWEaXGvSnHoVY4Ace2PFfEPNRM5gQf8YoBZ6ydgw45JVWG
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWEV1tLWxGXnr4XvVpdpnG8SM5R5YrvBwGugKc1XJTyov5
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWEV1tLWxGXnr4XvVpdpnG8SM5R5YrvBwGugKc1XJTyov5
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+	/ip4/10.152.0.72/tcp/50178/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+	/ip4/10.153.0.71/tcp/4001/p2p/12D3KooWNPjvopsBX9WNCNdPsYqUpnPFKJws3YbMHZSsrPAacoQF
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWNPjvopsBX9WNCNdPsYqUpnPFKJws3YbMHZSsrPAacoQF
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWLm627En83BoeMFFPFmRtQSpRjssjU9APUCA1ku2XnP7J
+	/ip4/10.154.0.71/tcp/4001/p2p/12D3KooWPLy36fD6AXR7ysDdjXCVpY8mvQWKaXt1poxXafJ4DAzS
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPLy36fD6AXR7ysDdjXCVpY8mvQWKaXt1poxXafJ4DAzS
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWKKVcv1VtsjL76GjuiJpkoCchYJCrtcPd8uiHctXvfg3F
+as154h-Kubo-9_Peer-10.154.0.72 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWEaXGvSnHoVY4Ace2PFfEPNRM5gQf8YoBZ6ydgw45JVWG
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWEV1tLWxGXnr4XvVpdpnG8SM5R5YrvBwGugKc1XJTyov5
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWNPjvopsBX9WNCNdPsYqUpnPFKJws3YbMHZSsrPAacoQF
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWLm627En83BoeMFFPFmRtQSpRjssjU9APUCA1ku2XnP7J
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPLy36fD6AXR7ysDdjXCVpY8mvQWKaXt1poxXafJ4DAzS
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPLy36fD6AXR7ysDdjXCVpY8mvQWKaXt1poxXafJ4DAzS
+as151h-Kubo-2_Peer-10.151.0.71 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWBbUWJPBVNSNs8XaRUHQ4WuaNWeCQBfNxriY874b4K32J
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWEV1tLWxGXnr4XvVpdpnG8SM5R5YrvBwGugKc1XJTyov5
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWNPjvopsBX9WNCNdPsYqUpnPFKJws3YbMHZSsrPAacoQF
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWLm627En83BoeMFFPFmRtQSpRjssjU9APUCA1ku2XnP7J
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPLy36fD6AXR7ysDdjXCVpY8mvQWKaXt1poxXafJ4DAzS
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWKKVcv1VtsjL76GjuiJpkoCchYJCrtcPd8uiHctXvfg3F
+as150h-Kubo-0_Boot-10.150.0.71 (8):
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWBQMvWTGqBSbGdqRYQZpLDW7D257A7tzPtXuqw5JvAKd6
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWEaXGvSnHoVY4Ace2PFfEPNRM5gQf8YoBZ6ydgw45JVWG
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWEV1tLWxGXnr4XvVpdpnG8SM5R5YrvBwGugKc1XJTyov5
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWA3MGhNaguJsuu66dJXxTz4sCfi76vJMwgZBC7TrRxg7q
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWNPjvopsBX9WNCNdPsYqUpnPFKJws3YbMHZSsrPAacoQF
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPLy36fD6AXR7ysDdjXCVpY8mvQWKaXt1poxXafJ4DAzS
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWKKVcv1VtsjL76GjuiJpkoCchYJCrtcPd8uiHctXvfg3F
+===================================== Test Case: test_kubo_add =====================================
+as153h-Kubo-6_Peer-10.153.0.71: [PASS] Added file with CID of QmU5SDfkGvFwwX6qUhaoTHed9XtqYA4GcQJHbH2imF72EA
+as154h-Kubo-9_Peer-10.154.0.72: [PASS] Added file with CID of QmNyZMxhyii6hQczhy3sf4GNJN36Crb45xRHvriV1QF9C8
+as152h-Kubo-4_Peer-10.152.0.71: [PASS] Added file with CID of QmX6E1Q2Bfbg7sXGuvNMVr45UfTLATwxi56mms53nYSSkf
+===================================== Test Case: test_kubo_cat =====================================
+as152h-Kubo-5_Boot-10.152.0.72:
+	ipfs cat QmNyZMxhyii6hQczhy3sf4GNJN36Crb45xRHvriV1QF9C8 [PASS]
+	ipfs cat QmX6E1Q2Bfbg7sXGuvNMVr45UfTLATwxi56mms53nYSSkf [PASS]
+	ipfs cat QmU5SDfkGvFwwX6qUhaoTHed9XtqYA4GcQJHbH2imF72EA [PASS]
+as152h-Kubo-4_Peer-10.152.0.71:
+	ipfs cat QmNyZMxhyii6hQczhy3sf4GNJN36Crb45xRHvriV1QF9C8 [PASS]
+	ipfs cat QmX6E1Q2Bfbg7sXGuvNMVr45UfTLATwxi56mms53nYSSkf [SKIP] *
+	ipfs cat QmU5SDfkGvFwwX6qUhaoTHed9XtqYA4GcQJHbH2imF72EA [PASS]
+as153h-Kubo-6_Peer-10.153.0.71:
+	ipfs cat QmNyZMxhyii6hQczhy3sf4GNJN36Crb45xRHvriV1QF9C8 [PASS]
+	ipfs cat QmX6E1Q2Bfbg7sXGuvNMVr45UfTLATwxi56mms53nYSSkf [PASS]
+	ipfs cat QmU5SDfkGvFwwX6qUhaoTHed9XtqYA4GcQJHbH2imF72EA [SKIP] *
+as154h-Kubo-8_Peer-10.154.0.71:
+	ipfs cat QmNyZMxhyii6hQczhy3sf4GNJN36Crb45xRHvriV1QF9C8 [PASS]
+	ipfs cat QmX6E1Q2Bfbg7sXGuvNMVr45UfTLATwxi56mms53nYSSkf [PASS]
+	ipfs cat QmU5SDfkGvFwwX6qUhaoTHed9XtqYA4GcQJHbH2imF72EA [PASS]
+as150h-Kubo-1_Peer-10.150.0.72:
+	ipfs cat QmNyZMxhyii6hQczhy3sf4GNJN36Crb45xRHvriV1QF9C8 [PASS]
+	ipfs cat QmX6E1Q2Bfbg7sXGuvNMVr45UfTLATwxi56mms53nYSSkf [PASS]
+	ipfs cat QmU5SDfkGvFwwX6qUhaoTHed9XtqYA4GcQJHbH2imF72EA [PASS]
+as154h-Kubo-9_Peer-10.154.0.72:
+	ipfs cat QmNyZMxhyii6hQczhy3sf4GNJN36Crb45xRHvriV1QF9C8 [SKIP] *
+	ipfs cat QmX6E1Q2Bfbg7sXGuvNMVr45UfTLATwxi56mms53nYSSkf [PASS]
+	ipfs cat QmU5SDfkGvFwwX6qUhaoTHed9XtqYA4GcQJHbH2imF72EA [PASS]
+as151h-Kubo-2_Peer-10.151.0.71:
+	ipfs cat QmNyZMxhyii6hQczhy3sf4GNJN36Crb45xRHvriV1QF9C8 [PASS]
+	ipfs cat QmX6E1Q2Bfbg7sXGuvNMVr45UfTLATwxi56mms53nYSSkf [PASS]
+	ipfs cat QmU5SDfkGvFwwX6qUhaoTHed9XtqYA4GcQJHbH2imF72EA [PASS]
+as150h-Kubo-0_Boot-10.150.0.71:
+	ipfs cat QmNyZMxhyii6hQczhy3sf4GNJN36Crb45xRHvriV1QF9C8 [PASS]
+	ipfs cat QmX6E1Q2Bfbg7sXGuvNMVr45UfTLATwxi56mms53nYSSkf [PASS]
+	ipfs cat QmU5SDfkGvFwwX6qUhaoTHed9XtqYA4GcQJHbH2imF72EA [PASS]
+================================= Test Case: test_specify_profile ==================================
+as153h-Kubo-7_Peer-10.153.0.72: [PASS]
+================================== Test Case: test_custom_config ===================================
+as151h-Kubo-3_Peer-10.151.0.72: [PASS]
+==============================
+KuboTestCase Test Ends
+==============================
+score: 10 of 10 (0 errors, 0 failures)
+==============================
+kubo.KuboUtilsTestCase Start
+==============================
+====================================== Test Case: test_getIP =======================================
+Testing nodes in AS 150:
+	host_0 -> 10.150.0.71 [PASS]
+	host_1 -> 10.150.0.72 [PASS]
+	router0 -> 10.150.0.254 [PASS]
+Testing nodes in AS 151:
+	host_0 -> 10.151.0.71 [PASS]
+	host_1 -> 10.151.0.72 [PASS]
+	router0 -> 10.151.0.254 [PASS]
+Testing nodes in AS 152:
+	host_0 -> 10.152.0.71 [PASS]
+	host_1 -> 10.152.0.72 [PASS]
+	router0 -> 10.152.0.254 [PASS]
+Testing nodes in AS 153:
+	host_0 -> 10.153.0.71 [PASS]
+	host_1 -> 10.153.0.72 [PASS]
+	router0 -> 10.153.0.254 [PASS]
+Testing nodes in AS 154:
+	host_0 -> 10.154.0.71 [PASS]
+	host_1 -> 10.154.0.72 [PASS]
+	router0 -> 10.154.0.254 [PASS]
+====================================== Test Case: test_isIPv4 ======================================
+[PASS] isIPv4(81.208.118.74) -> True
+[PASS] isIPv4(88.133.25.109) -> True
+[PASS] isIPv4(202.252.183.104) -> True
+[PASS] isIPv4(152.46.239.252) -> True
+[PASS] isIPv4(45.139.114.217) -> True
+[PASS] isIPv4(171.255.106.127) -> True
+[PASS] isIPv4(24.66.109.63) -> True
+[PASS] isIPv4(18.3.136.2) -> True
+[PASS] isIPv4(49.51.13.141) -> True
+[PASS] isIPv4(217.136.180.73) -> True
+[PASS] isIPv4(255.255.255.256) -> False
+[PASS] isIPv4(300.1.1.1) -> False
+[PASS] isIPv4(55.288.155.0) -> False
+[PASS] isIPv4(0.0.888.1) -> False
+[PASS] isIPv4(55.55.55) -> False
+[PASS] isIPv4(55.55) -> False
+[PASS] isIPv4(55) -> False
+[PASS] isIPv4(1.1.1.1.1) -> False
+==============================
+KuboUtilFuncsTestCase Test Ends
+==============================
+score: 2 of 2 (0 errors, 0 failures)
+==============================
+kubo.KuboUtilsTestCase Start
+==============================
+==================================== Test Case: test_init_empty ====================================
+DottedDict()                  [PASS]
+DottedDict([])                [PASS]
+DottedDict({})                [PASS]
+DottedDict(set())             [PASS]
+DottedDict(())                [PASS]
+==================================== Test Case: test_init_good =====================================
+DottedDict([('a', 1), ('b', 2), (5, 'ff'), (55.7, True)])                  [PASS]
+DottedDict([('a', 1), ('b', [('c', [('d', 4), ('e', 5)])]), ('f', 6)])     [PASS]
+DottedDict((('a', 1), ('b', 2), (5, 'ff'), (55.7, True)))                  [PASS]
+DottedDict((('a', 1), ('b', ('c', (('d', 4), ('e', 5)))), ('f', 6)))       [PASS]
+DottedDict({(5, 'ff'), ('b', 2), (55.7, True), ('a', 1)})                  [PASS]
+DottedDict({'a': 1, 'b': 2, 5: 'ff', 55.7: True})                          [PASS]
+DottedDict({'a': 1, 'b': {'c': {'d': 4, 'e': 5}}, 'f': 6})                 [PASS]
+===================================== Test Case: test_init_bad =====================================
+DottedDict(True)                                  [PASS]
+DottedDict(False)                                 [PASS]
+DottedDict(1)                                     [PASS]
+DottedDict(346.72)                                [PASS]
+DottedDict(55555)                                 [PASS]
+DottedDict([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])        [PASS]
+DottedDict(range(0, 10))                          [PASS]
+DottedDict({0, 1, 2, 3, 4, 5, 6, 7, 8, 9})        [PASS]
+DottedDict((0, 1, 2, 3, 4, 5, 6, 7, 8, 9))        [PASS]
+DottedDict([(1, 'a'), 2, 3])                      [PASS]
+DottedDict((1, (2, 'b'), 3, 4, 5))                [PASS]
+DottedDict([{'a': 1}, True])                      [PASS]
+================================ Test Case: test_get_item_expected =================================
+DottedDict[simple] = True                                                                 [PASS]
+DottedDict[a.b] = 2                                                                       [PASS]
+DottedDict[a.c] = {'red': False, 'orange': True, 'yellow': False, 'green': True, 'blue': True, 'purple': True, 'pink': True}[PASS]
+DottedDict[a.c.red] = False                                                               [PASS]
+DottedDict[a.c.orange] = True                                                             [PASS]
+DottedDict[a.c.blue] = True                                                               [PASS]
+DottedDict[a.deepest] = {'level1': {'level2': {'level3': {'level4': {'level5': 'done'}}}}}[PASS]
+DottedDict[a.deepest.level1.level2.level3.level4.level5] = done                           [PASS]
+DottedDict[simple] = True                                                                 [PASS]
+DottedDict[ ] = False                                                                     [PASS]
+DottedDict[,] = {'!': '#'}                                                                [PASS]
+DottedDict[,.!] = #                                                                       [PASS]
+=============================== Test Case: test_get_item_unexpected ================================
+DottedDict[] -> KeyError                                                   [PASS]
+DottedDict[.] -> KeyError                                                  [PASS]
+DottedDict[	] -> KeyError                                                  [PASS]
+DottedDict[.a] -> KeyError                                                 [PASS]
+DottedDict[a.] -> KeyError                                                 [PASS]
+DottedDict[a.b.] -> KeyError                                               [PASS]
+DottedDict[a.b.c] -> KeyError                                              [PASS]
+DottedDict[a.c.c] -> KeyError                                              [PASS]
+DottedDict[a.c.red.orange] -> KeyError                                     [PASS]
+DottedDict[a.c.orange.] -> KeyError                                        [PASS]
+DottedDict[a.c.blue.deepest] -> KeyError                                   [PASS]
+DottedDict[a..deepest] -> KeyError                                         [PASS]
+DottedDict[..a.deepest.level1.level2.level3.level4.level5..] -> KeyError   [PASS]
+DottedDict[simple..] -> KeyError                                           [PASS]
+================================ Test Case: test_set_item_expected =================================
+DottedDict[simple] = False                                                                                              [PASS]
+DottedDict[a.b] = 4                                                                                                     [PASS]
+DottedDict[a.c] = {'level1': 1, 'level2': {'diff': 4, 'bbb': False}}                                                    [PASS]
+DottedDict[a.c.red] = 6                                                                                                 [PASS]
+DottedDict[a.c.orange] = apple                                                                                          [PASS]
+DottedDict[a.c.blue] = 36.788                                                                                           [PASS]
+DottedDict[a.deepest.level1.level2.level3.level4.level5] = ready                                                        [PASS]
+DottedDict[a.deepest] = {'apple': {'bicycle': {'car': {'dream': {'engine': 'huh', 'fog': 'yes', 'golf': 'ball'}}}}}     [PASS]
+DottedDict[simple] = False                                                                                              [PASS]
+DottedDict[ ] = True                                                                                                    [PASS]
+DottedDict[,.!] = #                                                                                                     [PASS]
+DottedDict[,] = ['!', '#']                                                                                              [PASS]
+=============================== Test Case: test_set_item_unexpected ================================
+DottedDict[] -> KeyError                                                   [PASS]
+DottedDict[.] -> KeyError                                                  [PASS]
+DottedDict[.a] -> KeyError                                                 [PASS]
+DottedDict[a.] -> KeyError                                                 [PASS]
+DottedDict[a.b.] -> KeyError                                               [PASS]
+DottedDict[a..b..c] -> KeyError                                            [PASS]
+DottedDict[a.c.orange.] -> KeyError                                        [PASS]
+DottedDict[a..deepest] -> KeyError                                         [PASS]
+DottedDict[..a.deepest.level1.level2.level3.level4.level5..] -> KeyError   [PASS]
+DottedDict[simple..] -> KeyError                                           [PASS]
+================================ Test Case: test_del_item_expected =================================
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[a.b]                                                        [PASS]
+del DottedDict[a.c]                                                        [PASS]
+del DottedDict[a.c.red]                                                    [PASS]
+del DottedDict[a.c.orange]                                                 [PASS]
+del DottedDict[a.c.blue]                                                   [PASS]
+del DottedDict[a.deepest]                                                  [PASS]
+del DottedDict[a.deepest.level1.level2.level3.level4.level5]               [PASS]
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[ ]                                                          [PASS]
+del DottedDict[,]                                                          [PASS]
+del DottedDict[,.!]                                                        [PASS]
+=============================== Test Case: test_del_item_unexpected ================================
+del DottedDict[simpl]                                                      [PASS]
+del DottedDict[.a.b]                                                       [PASS]
+del DottedDict[a..c]                                                       [PASS]
+del DottedDict[a..c..red]                                                  [PASS]
+del DottedDict[..a.c.orange]                                               [PASS]
+del DottedDict[a.c.blue.]                                                  [PASS]
+del DottedDict[a.deepest...]                                               [PASS]
+del DottedDict[a.deepest.level2.level2.level3.level4.level5]               [PASS]
+del DottedDict[simple.]                                                    [PASS]
+del DottedDict[]                                                           [PASS]
+del DottedDict[,.]                                                         [PASS]
+del DottedDict[,.!.]                                                       [PASS]
+================================ Test Case: test_contains_expected =================================
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[a.b]                                                        [PASS]
+del DottedDict[a.c]                                                        [PASS]
+del DottedDict[a.c.red]                                                    [PASS]
+del DottedDict[a.c.orange]                                                 [PASS]
+del DottedDict[a.c.blue]                                                   [PASS]
+del DottedDict[a.deepest]                                                  [PASS]
+del DottedDict[a.deepest.level1.level2.level3.level4.level5]               [PASS]
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[ ]                                                          [PASS]
+del DottedDict[,]                                                          [PASS]
+del DottedDict[,.!]                                                        [PASS]
+=============================== Test Case: test_contains_unexpected ================================
+simplest in DottedDict -> False                                            [PASS]
+a.b.c in DottedDict -> False                                               [PASS]
+b.a.c in DottedDict -> False                                               [PASS]
+a.cat.red in DottedDict -> False                                           [PASS]
+a.c.cyan in DottedDict -> False                                            [PASS]
+simple.c.blue in DottedDict -> False                                       [PASS]
+deepest in DottedDict -> False                                             [PASS]
+a.deepest.level1.level2.level5.level4.level5 in DottedDict -> False        [PASS]
+simple.1 in DottedDict -> False                                            [PASS]
+a.  in DottedDict -> False                                                 [PASS]
+b., in DottedDict -> False                                                 [PASS]
+,.!.% in DottedDict -> False                                               [PASS]
+ in DottedDict -> KeyError                                                 [PASS]
+. in DottedDict -> KeyError                                                [PASS]
+.a in DottedDict -> KeyError                                               [PASS]
+a. in DottedDict -> KeyError                                               [PASS]
+a.b. in DottedDict -> KeyError                                             [PASS]
+a.c.orange. in DottedDict -> KeyError                                      [PASS]
+a..deepest in DottedDict -> KeyError                                       [PASS]
+..a.deepest.level1.level2.level3.level4.level5.. in DottedDict -> KeyError [PASS]
+simple.. in DottedDict -> KeyError                                         [PASS]
+======================================= Test Case: test_copy =======================================
+Testing copy operation... [PASS]
+Testing modification of copy... [PASS]
+====================================== Test Case: test_merge =======================================
+[PASS] {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'test': True, 'deep': {'level1': {'level2': 'done'}, 'end': False}} = {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'test': True, 'deep': {'level1': {'level2': 'done'}, 'end': False}}
+[PASS] {'test': True, 'deep': {'level1': {'level2': 'done', 'leaf': True}, 'end': False}} = {'test': True, 'deep': {'level1': {'level2': 'done', 'leaf': True}, 'end': False}}
+[PASS] {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122} = {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122}
+[PASS] {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'new': True} = {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'new': True}
+[PASS] {'test': True, 'deep': {'level1': {'level2': 'merged'}, 'end': 'merged'}} = {'test': True, 'deep': {'level1': {'level2': 'merged'}, 'end': 'merged'}}
+====================================== Test Case: test_empty =======================================
+DottedDict(None)                                  [PASS]
+DottedDict(())                                    [PASS]
+DottedDict({})                                    [PASS]
+DottedDict(set())                                 [PASS]
+DottedDict({})                                    [PASS]
+DottedDict([])                                    [PASS]
+DottedDict([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])        [PASS]
+DottedDict(range(0, 10))                          [PASS]
+DottedDict({0, 1, 2, 3, 4, 5, 6, 7, 8, 9})        [PASS]
+DottedDict((0, 1, 2, 3, 4, 5))                    [PASS]
+DottedDict::popitem                               [PASS]
+DottedDict::clear                                 [PASS]
+==============================
+DottedDictTestCase Test Ends
+==============================
+score: 14 of 14 (0 errors, 0 failures)
+==============================
+__main__ Start
+==============================
+Generating Emulation Files...
+gen_emulation_files: succeed
+Building Docker Containers...
+build_emulator: succeed
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  0
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  31
+----------------------------------------- Test Containers: -----------------------------------------
+as152h-Kubo-4_Peer-10.152.0.71: basic, file_host, all
+as154h-Kubo-9_Peer-10.154.0.72: config, all
+as153h-Kubo-6_Peer-10.153.0.71: basic, all
+as152h-Kubo-5_Boot-10.152.0.72: basic, boot, all
+as151h-Kubo-3_Peer-10.151.0.72: basic, file_host, version, all
+as154h-Kubo-8_Peer-10.154.0.71: basic, all
+as150h-Kubo-0_Boot-10.150.0.71: basic, boot, file_host, all
+as150h-Kubo-1_Peer-10.150.0.72: basic, all
+as151h-Kubo-2_Peer-10.151.0.71: profile, all
+as153h-Kubo-7_Peer-10.153.0.72: basic, all
+=================================== Test Case: test_kubo_install ===================================
+as152h-Kubo-4_Peer-10.152.0.71 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71 [PASS]
+as152h-Kubo-5_Boot-10.152.0.72 [PASS]
+as151h-Kubo-3_Peer-10.151.0.72 [PASS]
+as154h-Kubo-8_Peer-10.154.0.71 [PASS]
+as150h-Kubo-0_Boot-10.150.0.71 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72 [PASS]
+as151h-Kubo-2_Peer-10.151.0.71 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72 [PASS]
+=================================== Test Case: test_kubo_version ===================================
+as152h-Kubo-4_Peer-10.152.0.71: 0.27.0 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72: 0.27.0 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71: 0.27.0 [PASS]
+as152h-Kubo-5_Boot-10.152.0.72: 0.27.0 [PASS]
+as151h-Kubo-3_Peer-10.151.0.72: 0.26.0 [PASS]
+as154h-Kubo-8_Peer-10.154.0.71: 0.27.0 [PASS]
+as150h-Kubo-0_Boot-10.150.0.71: 0.27.0 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72: 0.27.0 [PASS]
+as151h-Kubo-2_Peer-10.151.0.71: 0.27.0 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72: 0.27.0 [PASS]
+================================= Test Case: test_bootstrap_script =================================
+as152h-Kubo-4_Peer-10.152.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-9_Peer-10.154.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-6_Peer-10.153.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-5_Boot-10.152.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-3_Peer-10.151.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-8_Peer-10.154.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-0_Boot-10.150.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-1_Peer-10.150.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-2_Peer-10.151.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-7_Peer-10.153.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+================================== Test Case: test_bootstrap_list ==================================
+as152h-Kubo-4_Peer-10.152.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+as153h-Kubo-6_Peer-10.153.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+as152h-Kubo-5_Boot-10.152.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+as151h-Kubo-3_Peer-10.151.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+as154h-Kubo-8_Peer-10.154.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+as150h-Kubo-0_Boot-10.150.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+as150h-Kubo-1_Peer-10.150.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+as153h-Kubo-7_Peer-10.153.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+================================== Test Case: test_service_config ==================================
+as152h-Kubo-4_Peer-10.152.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as153h-Kubo-6_Peer-10.153.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as152h-Kubo-5_Boot-10.152.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as151h-Kubo-3_Peer-10.151.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as154h-Kubo-8_Peer-10.154.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as150h-Kubo-0_Boot-10.150.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as150h-Kubo-1_Peer-10.150.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as153h-Kubo-7_Peer-10.153.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+===================================== Test Case: test_peering ======================================
+as152h-Kubo-4_Peer-10.152.0.71 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWRcfuy4mf7WzSy1yps5QkF7nArYmSyuVzeMNUwAmLAiwP
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWD4GcohPK8AtzrnMegRKpgsivyjKAsnxfziDvAPj9K9Gx
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWHrdhB8xtJkUggCQh4iH81kcNzcMmZgPF5bzE6xduUEWT
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWRNbRAF2fkykoeo9y3tTFpnW6Ds4gu5AM13LkBiYqJDiH
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWSv924W3BaqkpMJeCtGX49jw6KmCB5CPHf3re3HhPqhMx
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWSmupfbdrcQSkaSJ71jJfZKNP9kP1JzzKD9eXXVUE3BdE
+as153h-Kubo-6_Peer-10.153.0.71 (10):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWRcfuy4mf7WzSy1yps5QkF7nArYmSyuVzeMNUwAmLAiwP
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWD4GcohPK8AtzrnMegRKpgsivyjKAsnxfziDvAPj9K9Gx
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWHrdhB8xtJkUggCQh4iH81kcNzcMmZgPF5bzE6xduUEWT
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGAFFxGc6vN8arehhLBGM9GazKBL2EqrQq9aVEmqszTPs
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWSv924W3BaqkpMJeCtGX49jw6KmCB5CPHf3re3HhPqhMx
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWSv924W3BaqkpMJeCtGX49jw6KmCB5CPHf3re3HhPqhMx
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWSmupfbdrcQSkaSJ71jJfZKNP9kP1JzzKD9eXXVUE3BdE
+as152h-Kubo-5_Boot-10.152.0.72 (10):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWRcfuy4mf7WzSy1yps5QkF7nArYmSyuVzeMNUwAmLAiwP
+	/ip4/10.151.0.71/tcp/4001/p2p/12D3KooWD4GcohPK8AtzrnMegRKpgsivyjKAsnxfziDvAPj9K9Gx
+	/ip4/10.151.0.72/tcp/4001/p2p/12D3KooWHrdhB8xtJkUggCQh4iH81kcNzcMmZgPF5bzE6xduUEWT
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGAFFxGc6vN8arehhLBGM9GazKBL2EqrQq9aVEmqszTPs
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGAFFxGc6vN8arehhLBGM9GazKBL2EqrQq9aVEmqszTPs
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWRNbRAF2fkykoeo9y3tTFpnW6Ds4gu5AM13LkBiYqJDiH
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWRNbRAF2fkykoeo9y3tTFpnW6Ds4gu5AM13LkBiYqJDiH
+	/ip4/10.153.0.72/tcp/4001/p2p/12D3KooWSv924W3BaqkpMJeCtGX49jw6KmCB5CPHf3re3HhPqhMx
+	/ip4/10.154.0.71/tcp/4001/p2p/12D3KooWSmupfbdrcQSkaSJ71jJfZKNP9kP1JzzKD9eXXVUE3BdE
+as151h-Kubo-3_Peer-10.151.0.72 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWRcfuy4mf7WzSy1yps5QkF7nArYmSyuVzeMNUwAmLAiwP
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWD4GcohPK8AtzrnMegRKpgsivyjKAsnxfziDvAPj9K9Gx
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWD4GcohPK8AtzrnMegRKpgsivyjKAsnxfziDvAPj9K9Gx
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGAFFxGc6vN8arehhLBGM9GazKBL2EqrQq9aVEmqszTPs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWRNbRAF2fkykoeo9y3tTFpnW6Ds4gu5AM13LkBiYqJDiH
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWSv924W3BaqkpMJeCtGX49jw6KmCB5CPHf3re3HhPqhMx
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWSmupfbdrcQSkaSJ71jJfZKNP9kP1JzzKD9eXXVUE3BdE
+as154h-Kubo-8_Peer-10.154.0.71 (8):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWRcfuy4mf7WzSy1yps5QkF7nArYmSyuVzeMNUwAmLAiwP
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWD4GcohPK8AtzrnMegRKpgsivyjKAsnxfziDvAPj9K9Gx
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWHrdhB8xtJkUggCQh4iH81kcNzcMmZgPF5bzE6xduUEWT
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGAFFxGc6vN8arehhLBGM9GazKBL2EqrQq9aVEmqszTPs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWRNbRAF2fkykoeo9y3tTFpnW6Ds4gu5AM13LkBiYqJDiH
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWSv924W3BaqkpMJeCtGX49jw6KmCB5CPHf3re3HhPqhMx
+as150h-Kubo-0_Boot-10.150.0.71 (8):
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWRcfuy4mf7WzSy1yps5QkF7nArYmSyuVzeMNUwAmLAiwP
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWRcfuy4mf7WzSy1yps5QkF7nArYmSyuVzeMNUwAmLAiwP
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWHrdhB8xtJkUggCQh4iH81kcNzcMmZgPF5bzE6xduUEWT
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGAFFxGc6vN8arehhLBGM9GazKBL2EqrQq9aVEmqszTPs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWRNbRAF2fkykoeo9y3tTFpnW6Ds4gu5AM13LkBiYqJDiH
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWSv924W3BaqkpMJeCtGX49jw6KmCB5CPHf3re3HhPqhMx
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWSmupfbdrcQSkaSJ71jJfZKNP9kP1JzzKD9eXXVUE3BdE
+as150h-Kubo-1_Peer-10.150.0.72 (8):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWHrdhB8xtJkUggCQh4iH81kcNzcMmZgPF5bzE6xduUEWT
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGAFFxGc6vN8arehhLBGM9GazKBL2EqrQq9aVEmqszTPs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWRNbRAF2fkykoeo9y3tTFpnW6Ds4gu5AM13LkBiYqJDiH
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWSv924W3BaqkpMJeCtGX49jw6KmCB5CPHf3re3HhPqhMx
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWSmupfbdrcQSkaSJ71jJfZKNP9kP1JzzKD9eXXVUE3BdE
+as153h-Kubo-7_Peer-10.153.0.72 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWEaRQ5SmvEYxjS7tv32ezjgjz4n2mXE1Kyqhbz1FEHAvm
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWRcfuy4mf7WzSy1yps5QkF7nArYmSyuVzeMNUwAmLAiwP
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWD4GcohPK8AtzrnMegRKpgsivyjKAsnxfziDvAPj9K9Gx
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWHrdhB8xtJkUggCQh4iH81kcNzcMmZgPF5bzE6xduUEWT
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGAFFxGc6vN8arehhLBGM9GazKBL2EqrQq9aVEmqszTPs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWEwsL1fgWKDafpPn5EQDNsSykJZxByYgVwd5n3NCgjave
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWRNbRAF2fkykoeo9y3tTFpnW6Ds4gu5AM13LkBiYqJDiH
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWRNbRAF2fkykoeo9y3tTFpnW6Ds4gu5AM13LkBiYqJDiH
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWSmupfbdrcQSkaSJ71jJfZKNP9kP1JzzKD9eXXVUE3BdE
+===================================== Test Case: test_kubo_add =====================================
+as151h-Kubo-3_Peer-10.151.0.72: [PASS] Added file with CID of QmUDtqnn3jWfQgcVkoNYuRKEpDSDU14Yiy9vpGRzVsvsRU
+as152h-Kubo-4_Peer-10.152.0.71: [PASS] Added file with CID of QmXNtggNBMmoGuGzj6KtA6AczF5urhfqnh3CjLoPwtyj4V
+as150h-Kubo-0_Boot-10.150.0.71: [PASS] Added file with CID of QmZ5jjqd26uNahwRQihAmSN2c3kFD7aKzd1jwkX31e3Eo8
+===================================== Test Case: test_kubo_cat =====================================
+as152h-Kubo-4_Peer-10.152.0.71:
+	ipfs cat QmXNtggNBMmoGuGzj6KtA6AczF5urhfqnh3CjLoPwtyj4V [SKIP] *
+	ipfs cat QmZ5jjqd26uNahwRQihAmSN2c3kFD7aKzd1jwkX31e3Eo8 [PASS]
+	ipfs cat QmUDtqnn3jWfQgcVkoNYuRKEpDSDU14Yiy9vpGRzVsvsRU [PASS]
+as153h-Kubo-6_Peer-10.153.0.71:
+	ipfs cat QmXNtggNBMmoGuGzj6KtA6AczF5urhfqnh3CjLoPwtyj4V [PASS]
+	ipfs cat QmZ5jjqd26uNahwRQihAmSN2c3kFD7aKzd1jwkX31e3Eo8 [PASS]
+	ipfs cat QmUDtqnn3jWfQgcVkoNYuRKEpDSDU14Yiy9vpGRzVsvsRU [PASS]
+as152h-Kubo-5_Boot-10.152.0.72:
+	ipfs cat QmXNtggNBMmoGuGzj6KtA6AczF5urhfqnh3CjLoPwtyj4V [PASS]
+	ipfs cat QmZ5jjqd26uNahwRQihAmSN2c3kFD7aKzd1jwkX31e3Eo8 [PASS]
+	ipfs cat QmUDtqnn3jWfQgcVkoNYuRKEpDSDU14Yiy9vpGRzVsvsRU [PASS]
+as151h-Kubo-3_Peer-10.151.0.72:
+	ipfs cat QmXNtggNBMmoGuGzj6KtA6AczF5urhfqnh3CjLoPwtyj4V [PASS]
+	ipfs cat QmZ5jjqd26uNahwRQihAmSN2c3kFD7aKzd1jwkX31e3Eo8 [PASS]
+	ipfs cat QmUDtqnn3jWfQgcVkoNYuRKEpDSDU14Yiy9vpGRzVsvsRU [SKIP] *
+as154h-Kubo-8_Peer-10.154.0.71:
+	ipfs cat QmXNtggNBMmoGuGzj6KtA6AczF5urhfqnh3CjLoPwtyj4V [PASS]
+	ipfs cat QmZ5jjqd26uNahwRQihAmSN2c3kFD7aKzd1jwkX31e3Eo8 [PASS]
+	ipfs cat QmUDtqnn3jWfQgcVkoNYuRKEpDSDU14Yiy9vpGRzVsvsRU [PASS]
+as150h-Kubo-0_Boot-10.150.0.71:
+	ipfs cat QmXNtggNBMmoGuGzj6KtA6AczF5urhfqnh3CjLoPwtyj4V [PASS]
+	ipfs cat QmZ5jjqd26uNahwRQihAmSN2c3kFD7aKzd1jwkX31e3Eo8 [SKIP] *
+	ipfs cat QmUDtqnn3jWfQgcVkoNYuRKEpDSDU14Yiy9vpGRzVsvsRU [PASS]
+as150h-Kubo-1_Peer-10.150.0.72:
+	ipfs cat QmXNtggNBMmoGuGzj6KtA6AczF5urhfqnh3CjLoPwtyj4V [PASS]
+	ipfs cat QmZ5jjqd26uNahwRQihAmSN2c3kFD7aKzd1jwkX31e3Eo8 [PASS]
+	ipfs cat QmUDtqnn3jWfQgcVkoNYuRKEpDSDU14Yiy9vpGRzVsvsRU [PASS]
+as153h-Kubo-7_Peer-10.153.0.72:
+	ipfs cat QmXNtggNBMmoGuGzj6KtA6AczF5urhfqnh3CjLoPwtyj4V [PASS]
+	ipfs cat QmZ5jjqd26uNahwRQihAmSN2c3kFD7aKzd1jwkX31e3Eo8 [PASS]
+	ipfs cat QmUDtqnn3jWfQgcVkoNYuRKEpDSDU14Yiy9vpGRzVsvsRU [PASS]
+================================= Test Case: test_specify_profile ==================================
+as151h-Kubo-2_Peer-10.151.0.71: [PASS]
+================================== Test Case: test_custom_config ===================================
+as154h-Kubo-9_Peer-10.154.0.72: [PASS]
+=========================================== Test Results ===========================================
+score: 10 of 10 (0 errors, 0 failures)
+==============================
+__main__ Start
+==============================
+Generating Emulation Files...
+gen_emulation_files: succeed
+Building Docker Containers...
+build_emulator: succeed
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  0
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  31
+----------------------------------------- Test Containers: -----------------------------------------
+as152h-Kubo-4_Peer-10.152.0.71: all, basic
+as151h-Kubo-2_Peer-10.151.0.71: all, basic
+as154h-Kubo-8_Peer-10.154.0.71: file_host, all, basic
+as152h-Kubo-5_Boot-10.152.0.72: all, boot, basic
+as150h-Kubo-0_Boot-10.150.0.71: all, boot, basic
+as153h-Kubo-7_Peer-10.153.0.72: all, config
+as153h-Kubo-6_Peer-10.153.0.71: all, basic
+as154h-Kubo-9_Peer-10.154.0.72: all, basic
+as151h-Kubo-3_Peer-10.151.0.72: file_host, all, version, basic
+as150h-Kubo-1_Peer-10.150.0.72: file_host, all, basic
+=================================== Test Case: test_kubo_install ===================================
+=================================== Test Case: test_kubo_version ===================================
+================================= Test Case: test_bootstrap_script =================================
+as152h-Kubo-4_Peer-10.152.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-2_Peer-10.151.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-8_Peer-10.154.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-5_Boot-10.152.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-0_Boot-10.150.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-7_Peer-10.153.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-6_Peer-10.153.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-9_Peer-10.154.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-3_Peer-10.151.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-1_Peer-10.150.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+================================== Test Case: test_bootstrap_list ==================================
+as152h-Kubo-4_Peer-10.152.0.71:
+as151h-Kubo-2_Peer-10.151.0.71:
+as154h-Kubo-8_Peer-10.154.0.71:
+as152h-Kubo-5_Boot-10.152.0.72:
+as150h-Kubo-0_Boot-10.150.0.71:
+as153h-Kubo-6_Peer-10.153.0.71:
+as154h-Kubo-9_Peer-10.154.0.72:
+as151h-Kubo-3_Peer-10.151.0.72:
+as150h-Kubo-1_Peer-10.150.0.72:
+================================== Test Case: test_service_config ==================================
+as152h-Kubo-4_Peer-10.152.0.71:
+as151h-Kubo-2_Peer-10.151.0.71:
+as154h-Kubo-8_Peer-10.154.0.71:
+as152h-Kubo-5_Boot-10.152.0.72:
+as150h-Kubo-0_Boot-10.150.0.71:
+as153h-Kubo-6_Peer-10.153.0.71:
+as154h-Kubo-9_Peer-10.154.0.72:
+as151h-Kubo-3_Peer-10.151.0.72:
+as150h-Kubo-1_Peer-10.150.0.72:
+===================================== Test Case: test_peering ======================================
+as152h-Kubo-4_Peer-10.152.0.71 (0):
+as151h-Kubo-2_Peer-10.151.0.71 (0):
+as154h-Kubo-8_Peer-10.154.0.71 (0):
+as152h-Kubo-5_Boot-10.152.0.72 (0):
+as150h-Kubo-0_Boot-10.150.0.71 (0):
+as153h-Kubo-6_Peer-10.153.0.71 (0):
+as154h-Kubo-9_Peer-10.154.0.72 (0):
+as151h-Kubo-3_Peer-10.151.0.72 (0):
+as150h-Kubo-1_Peer-10.150.0.72 (0):
+===================================== Test Case: test_kubo_add =====================================
+as154h-Kubo-8_Peer-10.154.0.71: as151h-Kubo-3_Peer-10.151.0.72: as150h-Kubo-1_Peer-10.150.0.72: ===================================== Test Case: test_kubo_cat =====================================
+as152h-Kubo-4_Peer-10.152.0.71:
+as151h-Kubo-2_Peer-10.151.0.71:
+as154h-Kubo-8_Peer-10.154.0.71:
+as152h-Kubo-5_Boot-10.152.0.72:
+as150h-Kubo-0_Boot-10.150.0.71:
+as153h-Kubo-6_Peer-10.153.0.71:
+as154h-Kubo-9_Peer-10.154.0.72:
+as151h-Kubo-3_Peer-10.151.0.72:
+as150h-Kubo-1_Peer-10.150.0.72:
+================================= Test Case: test_specify_profile ==================================
+================================== Test Case: test_custom_config ===================================
+as153h-Kubo-7_Peer-10.153.0.72: [PASS]
+=========================================== Test Results ===========================================
+score: -49 of 10 (9 errors, 50 failures)
+==============================
+__main__ Start
+==============================
+Generating Emulation Files...
+gen_emulation_files: succeed
+Building Docker Containers...
+build_emulator: succeed
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  0
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  31
+----------------------------------------- Test Containers: -----------------------------------------
+as150h-Kubo-0_Boot-10.150.0.71: basic, all, boot
+as150h-Kubo-1_Peer-10.150.0.72: file_host, basic, all
+as152h-Kubo-4_Peer-10.152.0.71: all, config
+as152h-Kubo-5_Boot-10.152.0.72: basic, all, boot
+as154h-Kubo-9_Peer-10.154.0.72: basic, all
+as151h-Kubo-3_Peer-10.151.0.72: basic, all
+as151h-Kubo-2_Peer-10.151.0.71: file_host, basic, all
+as154h-Kubo-8_Peer-10.154.0.71: version, basic, all
+as153h-Kubo-7_Peer-10.153.0.72: basic, all
+as153h-Kubo-6_Peer-10.153.0.71: file_host, basic, all
+=================================== Test Case: test_kubo_install ===================================
+as150h-Kubo-0_Boot-10.150.0.71 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72 [PASS]
+as152h-Kubo-4_Peer-10.152.0.71 [PASS]
+as152h-Kubo-5_Boot-10.152.0.72 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72 [PASS]
+as151h-Kubo-3_Peer-10.151.0.72 [PASS]
+as151h-Kubo-2_Peer-10.151.0.71 [PASS]
+as154h-Kubo-8_Peer-10.154.0.71 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71 [PASS]
+=================================== Test Case: test_kubo_version ===================================
+as150h-Kubo-0_Boot-10.150.0.71: 0.27.0 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72: 0.27.0 [PASS]
+as152h-Kubo-4_Peer-10.152.0.71: 0.27.0 [PASS]
+as152h-Kubo-5_Boot-10.152.0.72: 0.27.0 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72: 0.27.0 [PASS]
+as151h-Kubo-3_Peer-10.151.0.72: 0.27.0 [PASS]
+as151h-Kubo-2_Peer-10.151.0.71: 0.27.0 [PASS]
+as154h-Kubo-8_Peer-10.154.0.71: 0.26.0 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72: 0.27.0 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71: 0.27.0 [PASS]
+================================= Test Case: test_bootstrap_script =================================
+as150h-Kubo-0_Boot-10.150.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-1_Peer-10.150.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-4_Peer-10.152.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-5_Boot-10.152.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-9_Peer-10.154.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-3_Peer-10.151.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-2_Peer-10.151.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-8_Peer-10.154.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-7_Peer-10.153.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-6_Peer-10.153.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+================================== Test Case: test_bootstrap_list ==================================
+as150h-Kubo-0_Boot-10.150.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+as150h-Kubo-1_Peer-10.150.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+as152h-Kubo-5_Boot-10.152.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+as154h-Kubo-9_Peer-10.154.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+as151h-Kubo-3_Peer-10.151.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+as151h-Kubo-2_Peer-10.151.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+as154h-Kubo-8_Peer-10.154.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+as153h-Kubo-7_Peer-10.153.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+as153h-Kubo-6_Peer-10.153.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+================================== Test Case: test_service_config ==================================
+as150h-Kubo-0_Boot-10.150.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as150h-Kubo-1_Peer-10.150.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as152h-Kubo-5_Boot-10.152.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as154h-Kubo-9_Peer-10.154.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as151h-Kubo-3_Peer-10.151.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as151h-Kubo-2_Peer-10.151.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as154h-Kubo-8_Peer-10.154.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as153h-Kubo-7_Peer-10.153.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as153h-Kubo-6_Peer-10.153.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+===================================== Test Case: test_peering ======================================
+as150h-Kubo-0_Boot-10.150.0.71 (9):
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWCuHUqEvT7Udkff5Aq3kJXq25RtV4Wj4JcJTriftyVSCA
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWCuHUqEvT7Udkff5Aq3kJXq25RtV4Wj4JcJTriftyVSCA
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWJju6MpPqxHFKtH5Jf2nUbGvyCuJczebU5qiSPhv2oev8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWSwUVYXAkjtdxxetoSBFZZjvyWU5225oiiU3bPEebEJrQ
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWSwUVYXAkjtdxxetoSBFZZjvyWU5225oiiU3bPEebEJrQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+	/ip4/10.153.0.71/tcp/4001/p2p/12D3KooWQUaTNx3afuctVc5arpqjL74wUAzcRDE6ELntmP6nASNL
+	/ip4/10.153.0.72/tcp/4001/p2p/12D3KooWBUUaZAiQ6QTsrc5jT2hzzBS4UY6CUrTxVs45cGoVTRKD
+	/ip4/10.154.0.72/tcp/4001/p2p/12D3KooWAyFirQcDf7cnspvhLbpBiUw8yD2bbY7ymfJvNgipCbpz
+as150h-Kubo-1_Peer-10.150.0.72 (8):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWJju6MpPqxHFKtH5Jf2nUbGvyCuJczebU5qiSPhv2oev8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWSwUVYXAkjtdxxetoSBFZZjvyWU5225oiiU3bPEebEJrQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWQUaTNx3afuctVc5arpqjL74wUAzcRDE6ELntmP6nASNL
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWBUUaZAiQ6QTsrc5jT2hzzBS4UY6CUrTxVs45cGoVTRKD
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWAyFirQcDf7cnspvhLbpBiUw8yD2bbY7ymfJvNgipCbpz
+as152h-Kubo-5_Boot-10.152.0.72 (8):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWCuHUqEvT7Udkff5Aq3kJXq25RtV4Wj4JcJTriftyVSCA
+	/ip4/10.151.0.71/tcp/4001/p2p/12D3KooWJju6MpPqxHFKtH5Jf2nUbGvyCuJczebU5qiSPhv2oev8
+	/ip4/10.151.0.72/tcp/4001/p2p/12D3KooWSwUVYXAkjtdxxetoSBFZZjvyWU5225oiiU3bPEebEJrQ
+	/ip4/10.153.0.71/tcp/4001/p2p/12D3KooWQUaTNx3afuctVc5arpqjL74wUAzcRDE6ELntmP6nASNL
+	/ip4/10.153.0.72/tcp/4001/p2p/12D3KooWBUUaZAiQ6QTsrc5jT2hzzBS4UY6CUrTxVs45cGoVTRKD
+	/ip4/10.154.0.71/tcp/4001/p2p/12D3KooWRJqq2YWsebWQSVQNiHAP2AVGZmrqnzCoJ5Ww7qC1WAMS
+	/ip4/10.154.0.72/tcp/4001/p2p/12D3KooWAyFirQcDf7cnspvhLbpBiUw8yD2bbY7ymfJvNgipCbpz
+as154h-Kubo-9_Peer-10.154.0.72 (10):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWCuHUqEvT7Udkff5Aq3kJXq25RtV4Wj4JcJTriftyVSCA
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWJju6MpPqxHFKtH5Jf2nUbGvyCuJczebU5qiSPhv2oev8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWSwUVYXAkjtdxxetoSBFZZjvyWU5225oiiU3bPEebEJrQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWQUaTNx3afuctVc5arpqjL74wUAzcRDE6ELntmP6nASNL
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWBUUaZAiQ6QTsrc5jT2hzzBS4UY6CUrTxVs45cGoVTRKD
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWBUUaZAiQ6QTsrc5jT2hzzBS4UY6CUrTxVs45cGoVTRKD
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWRJqq2YWsebWQSVQNiHAP2AVGZmrqnzCoJ5Ww7qC1WAMS
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWRJqq2YWsebWQSVQNiHAP2AVGZmrqnzCoJ5Ww7qC1WAMS
+as151h-Kubo-3_Peer-10.151.0.72 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWCuHUqEvT7Udkff5Aq3kJXq25RtV4Wj4JcJTriftyVSCA
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWJju6MpPqxHFKtH5Jf2nUbGvyCuJczebU5qiSPhv2oev8
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWJju6MpPqxHFKtH5Jf2nUbGvyCuJczebU5qiSPhv2oev8
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWQUaTNx3afuctVc5arpqjL74wUAzcRDE6ELntmP6nASNL
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWBUUaZAiQ6QTsrc5jT2hzzBS4UY6CUrTxVs45cGoVTRKD
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWAyFirQcDf7cnspvhLbpBiUw8yD2bbY7ymfJvNgipCbpz
+as151h-Kubo-2_Peer-10.151.0.71 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWCuHUqEvT7Udkff5Aq3kJXq25RtV4Wj4JcJTriftyVSCA
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWSwUVYXAkjtdxxetoSBFZZjvyWU5225oiiU3bPEebEJrQ
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWSwUVYXAkjtdxxetoSBFZZjvyWU5225oiiU3bPEebEJrQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWQUaTNx3afuctVc5arpqjL74wUAzcRDE6ELntmP6nASNL
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWBUUaZAiQ6QTsrc5jT2hzzBS4UY6CUrTxVs45cGoVTRKD
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWRJqq2YWsebWQSVQNiHAP2AVGZmrqnzCoJ5Ww7qC1WAMS
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWAyFirQcDf7cnspvhLbpBiUw8yD2bbY7ymfJvNgipCbpz
+as154h-Kubo-8_Peer-10.154.0.71 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWCuHUqEvT7Udkff5Aq3kJXq25RtV4Wj4JcJTriftyVSCA
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWJju6MpPqxHFKtH5Jf2nUbGvyCuJczebU5qiSPhv2oev8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWSwUVYXAkjtdxxetoSBFZZjvyWU5225oiiU3bPEebEJrQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWQUaTNx3afuctVc5arpqjL74wUAzcRDE6ELntmP6nASNL
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWBUUaZAiQ6QTsrc5jT2hzzBS4UY6CUrTxVs45cGoVTRKD
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWAyFirQcDf7cnspvhLbpBiUw8yD2bbY7ymfJvNgipCbpz
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWAyFirQcDf7cnspvhLbpBiUw8yD2bbY7ymfJvNgipCbpz
+as153h-Kubo-7_Peer-10.153.0.72 (10):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWCuHUqEvT7Udkff5Aq3kJXq25RtV4Wj4JcJTriftyVSCA
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWJju6MpPqxHFKtH5Jf2nUbGvyCuJczebU5qiSPhv2oev8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWSwUVYXAkjtdxxetoSBFZZjvyWU5225oiiU3bPEebEJrQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWQUaTNx3afuctVc5arpqjL74wUAzcRDE6ELntmP6nASNL
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWQUaTNx3afuctVc5arpqjL74wUAzcRDE6ELntmP6nASNL
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWRJqq2YWsebWQSVQNiHAP2AVGZmrqnzCoJ5Ww7qC1WAMS
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWAyFirQcDf7cnspvhLbpBiUw8yD2bbY7ymfJvNgipCbpz
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWAyFirQcDf7cnspvhLbpBiUw8yD2bbY7ymfJvNgipCbpz
+as153h-Kubo-6_Peer-10.153.0.71 (9):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWKf9Q2XJ5C9amzfje1UVTWkEt2FyTjfoyy8a4qHehU9aA
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWCuHUqEvT7Udkff5Aq3kJXq25RtV4Wj4JcJTriftyVSCA
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWJju6MpPqxHFKtH5Jf2nUbGvyCuJczebU5qiSPhv2oev8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWSwUVYXAkjtdxxetoSBFZZjvyWU5225oiiU3bPEebEJrQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWErsCWfZNUcE3ebeYaYP6Y4zMmTA9RzcyNGXDWVKzPcGD
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWBUUaZAiQ6QTsrc5jT2hzzBS4UY6CUrTxVs45cGoVTRKD
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWBUUaZAiQ6QTsrc5jT2hzzBS4UY6CUrTxVs45cGoVTRKD
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWRJqq2YWsebWQSVQNiHAP2AVGZmrqnzCoJ5Ww7qC1WAMS
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWAyFirQcDf7cnspvhLbpBiUw8yD2bbY7ymfJvNgipCbpz
+===================================== Test Case: test_kubo_add =====================================
+as151h-Kubo-2_Peer-10.151.0.71: [PASS] Added file with CID of QmRdxEBRyDLLpkKqPNz1uiKqFPeLnDvc5mwLrGLUwwHEiJ
+as153h-Kubo-6_Peer-10.153.0.71: [PASS] Added file with CID of QmTg7f9PponkEoWeSDnmQ7gZYB3Mu5pjRy6M1zQWxojmAa
+as150h-Kubo-1_Peer-10.150.0.72: [PASS] Added file with CID of QmYGEi1kcMhMpT1M5YHaJgsSGMrZYg5VhT5eXwAF4QAtfW
+===================================== Test Case: test_kubo_cat =====================================
+as150h-Kubo-0_Boot-10.150.0.71:
+	ipfs cat QmYGEi1kcMhMpT1M5YHaJgsSGMrZYg5VhT5eXwAF4QAtfW [PASS]
+	ipfs cat QmRdxEBRyDLLpkKqPNz1uiKqFPeLnDvc5mwLrGLUwwHEiJ [PASS]
+	ipfs cat QmTg7f9PponkEoWeSDnmQ7gZYB3Mu5pjRy6M1zQWxojmAa [PASS]
+as150h-Kubo-1_Peer-10.150.0.72:
+	ipfs cat QmYGEi1kcMhMpT1M5YHaJgsSGMrZYg5VhT5eXwAF4QAtfW [SKIP] *
+	ipfs cat QmRdxEBRyDLLpkKqPNz1uiKqFPeLnDvc5mwLrGLUwwHEiJ [PASS]
+	ipfs cat QmTg7f9PponkEoWeSDnmQ7gZYB3Mu5pjRy6M1zQWxojmAa [PASS]
+as152h-Kubo-5_Boot-10.152.0.72:
+	ipfs cat QmYGEi1kcMhMpT1M5YHaJgsSGMrZYg5VhT5eXwAF4QAtfW [PASS]
+	ipfs cat QmRdxEBRyDLLpkKqPNz1uiKqFPeLnDvc5mwLrGLUwwHEiJ [PASS]
+	ipfs cat QmTg7f9PponkEoWeSDnmQ7gZYB3Mu5pjRy6M1zQWxojmAa [PASS]
+as154h-Kubo-9_Peer-10.154.0.72:
+	ipfs cat QmYGEi1kcMhMpT1M5YHaJgsSGMrZYg5VhT5eXwAF4QAtfW [PASS]
+	ipfs cat QmRdxEBRyDLLpkKqPNz1uiKqFPeLnDvc5mwLrGLUwwHEiJ [PASS]
+	ipfs cat QmTg7f9PponkEoWeSDnmQ7gZYB3Mu5pjRy6M1zQWxojmAa [PASS]
+as151h-Kubo-3_Peer-10.151.0.72:
+	ipfs cat QmYGEi1kcMhMpT1M5YHaJgsSGMrZYg5VhT5eXwAF4QAtfW [PASS]
+	ipfs cat QmRdxEBRyDLLpkKqPNz1uiKqFPeLnDvc5mwLrGLUwwHEiJ [PASS]
+	ipfs cat QmTg7f9PponkEoWeSDnmQ7gZYB3Mu5pjRy6M1zQWxojmAa [PASS]
+as151h-Kubo-2_Peer-10.151.0.71:
+	ipfs cat QmYGEi1kcMhMpT1M5YHaJgsSGMrZYg5VhT5eXwAF4QAtfW [PASS]
+	ipfs cat QmRdxEBRyDLLpkKqPNz1uiKqFPeLnDvc5mwLrGLUwwHEiJ [SKIP] *
+	ipfs cat QmTg7f9PponkEoWeSDnmQ7gZYB3Mu5pjRy6M1zQWxojmAa [PASS]
+as154h-Kubo-8_Peer-10.154.0.71:
+	ipfs cat QmYGEi1kcMhMpT1M5YHaJgsSGMrZYg5VhT5eXwAF4QAtfW [PASS]
+	ipfs cat QmRdxEBRyDLLpkKqPNz1uiKqFPeLnDvc5mwLrGLUwwHEiJ [PASS]
+	ipfs cat QmTg7f9PponkEoWeSDnmQ7gZYB3Mu5pjRy6M1zQWxojmAa [PASS]
+as153h-Kubo-7_Peer-10.153.0.72:
+	ipfs cat QmYGEi1kcMhMpT1M5YHaJgsSGMrZYg5VhT5eXwAF4QAtfW [PASS]
+	ipfs cat QmRdxEBRyDLLpkKqPNz1uiKqFPeLnDvc5mwLrGLUwwHEiJ [PASS]
+	ipfs cat QmTg7f9PponkEoWeSDnmQ7gZYB3Mu5pjRy6M1zQWxojmAa [PASS]
+as153h-Kubo-6_Peer-10.153.0.71:
+	ipfs cat QmYGEi1kcMhMpT1M5YHaJgsSGMrZYg5VhT5eXwAF4QAtfW [PASS]
+	ipfs cat QmRdxEBRyDLLpkKqPNz1uiKqFPeLnDvc5mwLrGLUwwHEiJ [PASS]
+	ipfs cat QmTg7f9PponkEoWeSDnmQ7gZYB3Mu5pjRy6M1zQWxojmAa [SKIP] *
+================================= Test Case: test_specify_profile ==================================
+================================== Test Case: test_custom_config ===================================
+as152h-Kubo-4_Peer-10.152.0.71: [PASS]
+=========================================== Test Results ===========================================
+score: 10 of 10 (0 errors, 0 failures)
+==============================
+__main__ Start
+==============================
+Generating Emulation Files...
+gen_emulation_files: succeed
+Building Docker Containers...
+build_emulator: succeed
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  0
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  31
+----------------------------------------- Test Containers: -----------------------------------------
+as151h-Kubo-3_Peer-10.151.0.72: basic, all
+as150h-Kubo-0_Boot-10.150.0.71: basic, file_host, all, boot
+as154h-Kubo-8_Peer-10.154.0.71: basic, all
+as150h-Kubo-1_Peer-10.150.0.72: basic, all
+as152h-Kubo-4_Peer-10.152.0.71: profile, all
+as153h-Kubo-6_Peer-10.153.0.71: basic, version, all
+as152h-Kubo-5_Boot-10.152.0.72: basic, file_host, all, boot
+as151h-Kubo-2_Peer-10.151.0.71: basic, all
+as153h-Kubo-7_Peer-10.153.0.72: basic, all
+as154h-Kubo-9_Peer-10.154.0.72: basic, file_host, all
+=================================== Test Case: test_kubo_install ===================================
+as151h-Kubo-3_Peer-10.151.0.72 [PASS]
+as150h-Kubo-0_Boot-10.150.0.71 [PASS]
+as154h-Kubo-8_Peer-10.154.0.71 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72 [PASS]
+as152h-Kubo-4_Peer-10.152.0.71 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71 [PASS]
+as152h-Kubo-5_Boot-10.152.0.72 [PASS]
+as151h-Kubo-2_Peer-10.151.0.71 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72 [PASS]
+=================================== Test Case: test_kubo_version ===================================
+as151h-Kubo-3_Peer-10.151.0.72: 0.27.0 [PASS]
+as150h-Kubo-0_Boot-10.150.0.71: 0.27.0 [PASS]
+as154h-Kubo-8_Peer-10.154.0.71: 0.27.0 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72: 0.27.0 [PASS]
+as152h-Kubo-4_Peer-10.152.0.71: 0.27.0 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71: 0.26.0 [PASS]
+as152h-Kubo-5_Boot-10.152.0.72: 0.27.0 [PASS]
+as151h-Kubo-2_Peer-10.151.0.71: 0.27.0 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72: 0.27.0 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72: 0.27.0 [PASS]
+================================= Test Case: test_bootstrap_script =================================
+as151h-Kubo-3_Peer-10.151.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-0_Boot-10.150.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-8_Peer-10.154.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-1_Peer-10.150.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-4_Peer-10.152.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-6_Peer-10.153.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-5_Boot-10.152.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-2_Peer-10.151.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-7_Peer-10.153.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-9_Peer-10.154.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+================================== Test Case: test_bootstrap_list ==================================
+as151h-Kubo-3_Peer-10.151.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+as150h-Kubo-0_Boot-10.150.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+as154h-Kubo-8_Peer-10.154.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+as150h-Kubo-1_Peer-10.150.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+as153h-Kubo-6_Peer-10.153.0.71:
+as152h-Kubo-5_Boot-10.152.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+as151h-Kubo-2_Peer-10.151.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+as153h-Kubo-7_Peer-10.153.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+as154h-Kubo-9_Peer-10.154.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+================================== Test Case: test_service_config ==================================
+as151h-Kubo-3_Peer-10.151.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as150h-Kubo-0_Boot-10.150.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as154h-Kubo-8_Peer-10.154.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as150h-Kubo-1_Peer-10.150.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as153h-Kubo-6_Peer-10.153.0.71:
+as152h-Kubo-5_Boot-10.152.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as151h-Kubo-2_Peer-10.151.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as153h-Kubo-7_Peer-10.153.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as154h-Kubo-9_Peer-10.154.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+===================================== Test Case: test_peering ======================================
+as151h-Kubo-3_Peer-10.151.0.72 (9):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWP5K4VYhyo8qt6kQj3Hvc94j1qCu5mcPWbLDA5DUib2dS
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWP5K4VYhyo8qt6kQj3Hvc94j1qCu5mcPWbLDA5DUib2dS
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRWGRamqgQCrTBaJjFcYZaJFZZB8qbB8WjSzVbpDRx15
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPPaAVxsjht3LRAu2XBvYhK9kHAbFyAs4fdPAJ42FYeDp
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWNVibSkj4ptjXtJTTfScgGCfyoNKBBCxV1bZZpsEVccF3
+as150h-Kubo-0_Boot-10.150.0.71 (9):
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.151.0.71/tcp/4001/p2p/12D3KooWP5K4VYhyo8qt6kQj3Hvc94j1qCu5mcPWbLDA5DUib2dS
+	/ip4/10.151.0.72/tcp/4001/p2p/12D3KooWGASpnfDwH4ro3S3w7uFgcKG2Jbj65owyoMjrJcsrr3pK
+	/ip4/10.152.0.71/tcp/4001/p2p/12D3KooWGYj9iTwtZLpxiNfGWJ3NaEGT77gimDM8YhGsrK3vYYRP
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+	/ip4/10.153.0.72/tcp/4001/p2p/12D3KooWHRWGRamqgQCrTBaJjFcYZaJFZZB8qbB8WjSzVbpDRx15
+	/ip4/10.154.0.71/tcp/4001/p2p/12D3KooWPPaAVxsjht3LRAu2XBvYhK9kHAbFyAs4fdPAJ42FYeDp
+	/ip4/10.154.0.72/tcp/4001/p2p/12D3KooWNVibSkj4ptjXtJTTfScgGCfyoNKBBCxV1bZZpsEVccF3
+as154h-Kubo-8_Peer-10.154.0.71 (8):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWP5K4VYhyo8qt6kQj3Hvc94j1qCu5mcPWbLDA5DUib2dS
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWGASpnfDwH4ro3S3w7uFgcKG2Jbj65owyoMjrJcsrr3pK
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRWGRamqgQCrTBaJjFcYZaJFZZB8qbB8WjSzVbpDRx15
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWNVibSkj4ptjXtJTTfScgGCfyoNKBBCxV1bZZpsEVccF3
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWNVibSkj4ptjXtJTTfScgGCfyoNKBBCxV1bZZpsEVccF3
+as150h-Kubo-1_Peer-10.150.0.72 (12):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.151.0.71/tcp/4001/p2p/12D3KooWP5K4VYhyo8qt6kQj3Hvc94j1qCu5mcPWbLDA5DUib2dS
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWGASpnfDwH4ro3S3w7uFgcKG2Jbj65owyoMjrJcsrr3pK
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWGASpnfDwH4ro3S3w7uFgcKG2Jbj65owyoMjrJcsrr3pK
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGYj9iTwtZLpxiNfGWJ3NaEGT77gimDM8YhGsrK3vYYRP
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+	/ip4/10.152.0.72/tcp/43300/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+	/ip4/10.153.0.72/tcp/4001/p2p/12D3KooWHRWGRamqgQCrTBaJjFcYZaJFZZB8qbB8WjSzVbpDRx15
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRWGRamqgQCrTBaJjFcYZaJFZZB8qbB8WjSzVbpDRx15
+	/ip4/10.154.0.71/tcp/4001/p2p/12D3KooWPPaAVxsjht3LRAu2XBvYhK9kHAbFyAs4fdPAJ42FYeDp
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWNVibSkj4ptjXtJTTfScgGCfyoNKBBCxV1bZZpsEVccF3
+as153h-Kubo-6_Peer-10.153.0.71 (0):
+as152h-Kubo-5_Boot-10.152.0.72 (9):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.151.0.71/tcp/4001/p2p/12D3KooWP5K4VYhyo8qt6kQj3Hvc94j1qCu5mcPWbLDA5DUib2dS
+	/ip4/10.151.0.72/tcp/4001/p2p/12D3KooWGASpnfDwH4ro3S3w7uFgcKG2Jbj65owyoMjrJcsrr3pK
+	/ip4/10.152.0.71/tcp/4001/p2p/12D3KooWGYj9iTwtZLpxiNfGWJ3NaEGT77gimDM8YhGsrK3vYYRP
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRWGRamqgQCrTBaJjFcYZaJFZZB8qbB8WjSzVbpDRx15
+	/ip4/10.154.0.71/tcp/4001/p2p/12D3KooWPPaAVxsjht3LRAu2XBvYhK9kHAbFyAs4fdPAJ42FYeDp
+	/ip4/10.154.0.72/tcp/4001/p2p/12D3KooWNVibSkj4ptjXtJTTfScgGCfyoNKBBCxV1bZZpsEVccF3
+as151h-Kubo-2_Peer-10.151.0.71 (9):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWGASpnfDwH4ro3S3w7uFgcKG2Jbj65owyoMjrJcsrr3pK
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWGASpnfDwH4ro3S3w7uFgcKG2Jbj65owyoMjrJcsrr3pK
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGYj9iTwtZLpxiNfGWJ3NaEGT77gimDM8YhGsrK3vYYRP
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRWGRamqgQCrTBaJjFcYZaJFZZB8qbB8WjSzVbpDRx15
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPPaAVxsjht3LRAu2XBvYhK9kHAbFyAs4fdPAJ42FYeDp
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWNVibSkj4ptjXtJTTfScgGCfyoNKBBCxV1bZZpsEVccF3
+as153h-Kubo-7_Peer-10.153.0.72 (9):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.150.0.72/tcp/4001/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWP5K4VYhyo8qt6kQj3Hvc94j1qCu5mcPWbLDA5DUib2dS
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWGASpnfDwH4ro3S3w7uFgcKG2Jbj65owyoMjrJcsrr3pK
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGYj9iTwtZLpxiNfGWJ3NaEGT77gimDM8YhGsrK3vYYRP
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPPaAVxsjht3LRAu2XBvYhK9kHAbFyAs4fdPAJ42FYeDp
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWNVibSkj4ptjXtJTTfScgGCfyoNKBBCxV1bZZpsEVccF3
+as154h-Kubo-9_Peer-10.154.0.72 (9):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWN9wGRqw9qR9u5HJNdT5cWS7ZhjExdPvWn8JMMi7vksLA
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWPoqnAh6ehQGJEFz7jHS2w49BzW5eQydwTB4SKvLTAYhn
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWP5K4VYhyo8qt6kQj3Hvc94j1qCu5mcPWbLDA5DUib2dS
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWGASpnfDwH4ro3S3w7uFgcKG2Jbj65owyoMjrJcsrr3pK
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWGYj9iTwtZLpxiNfGWJ3NaEGT77gimDM8YhGsrK3vYYRP
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWDSeoXSbvKKq5vQjp2ndxkg11eVnb3N6n6YgufGmQwQQE
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRWGRamqgQCrTBaJjFcYZaJFZZB8qbB8WjSzVbpDRx15
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPPaAVxsjht3LRAu2XBvYhK9kHAbFyAs4fdPAJ42FYeDp
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWPPaAVxsjht3LRAu2XBvYhK9kHAbFyAs4fdPAJ42FYeDp
+===================================== Test Case: test_kubo_add =====================================
+as152h-Kubo-5_Boot-10.152.0.72: [PASS] Added file with CID of QmZsaJFiYHLNVjMKSVSTXy7rrgRuiXntLHCh9G1pGRJAP7
+as150h-Kubo-0_Boot-10.150.0.71: [PASS] Added file with CID of QmPHvutDSNaMwcvG1ZgyrXZj5eDXoo7NbZ3RA2kVFExB7w
+as154h-Kubo-9_Peer-10.154.0.72: [PASS] Added file with CID of QmRuT3d6w6ysPFN2EgkKX2SknqLh7bHZryi84PFbTSaqgZ
+===================================== Test Case: test_kubo_cat =====================================
+as151h-Kubo-3_Peer-10.151.0.72:
+	ipfs cat QmZsaJFiYHLNVjMKSVSTXy7rrgRuiXntLHCh9G1pGRJAP7 [PASS]
+	ipfs cat QmRuT3d6w6ysPFN2EgkKX2SknqLh7bHZryi84PFbTSaqgZ [PASS]
+==============================
+__main__ Start
+==============================
+Generating Emulation Files...
+gen_emulation_files: succeed
+Building Docker Containers...
+build_emulator: succeed
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  0
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  31
+----------------------------------------- Test Containers: -----------------------------------------
+as154h-Kubo-8_Peer-10.154.0.71: all, file_host, basic
+as153h-Kubo-6_Peer-10.153.0.71: config, all
+as152h-Kubo-5_Boot-10.152.0.72: all, file_host, basic, boot
+as150h-Kubo-0_Boot-10.150.0.71: all, basic, boot
+as154h-Kubo-9_Peer-10.154.0.72: all, basic
+as150h-Kubo-1_Peer-10.150.0.72: all, profile
+as151h-Kubo-2_Peer-10.151.0.71: all, basic
+as151h-Kubo-3_Peer-10.151.0.72: version, all, basic
+as152h-Kubo-4_Peer-10.152.0.71: all, basic
+as153h-Kubo-7_Peer-10.153.0.72: all, file_host, basic
+=================================== Test Case: test_kubo_install ===================================
+as154h-Kubo-8_Peer-10.154.0.71 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71 [PASS]
+as152h-Kubo-5_Boot-10.152.0.72 [PASS]
+as150h-Kubo-0_Boot-10.150.0.71 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72 [PASS]
+as151h-Kubo-2_Peer-10.151.0.71 [PASS]
+as151h-Kubo-3_Peer-10.151.0.72 [PASS]
+as152h-Kubo-4_Peer-10.152.0.71 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72 [PASS]
+=================================== Test Case: test_kubo_version ===================================
+as154h-Kubo-8_Peer-10.154.0.71: 0.27.0 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71: 0.27.0 [PASS]
+as152h-Kubo-5_Boot-10.152.0.72: 0.27.0 [PASS]
+as150h-Kubo-0_Boot-10.150.0.71: 0.27.0 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72: 0.27.0 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72: 0.27.0 [PASS]
+as151h-Kubo-2_Peer-10.151.0.71: 0.27.0 [PASS]
+as151h-Kubo-3_Peer-10.151.0.72: 0.26.0 [PASS]
+as152h-Kubo-4_Peer-10.152.0.71: 0.27.0 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72: 0.27.0 [PASS]
+================================= Test Case: test_bootstrap_script =================================
+as154h-Kubo-8_Peer-10.154.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-6_Peer-10.153.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-5_Boot-10.152.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-0_Boot-10.150.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-9_Peer-10.154.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-1_Peer-10.150.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-2_Peer-10.151.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-3_Peer-10.151.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-4_Peer-10.152.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-7_Peer-10.153.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+================================== Test Case: test_bootstrap_list ==================================
+as154h-Kubo-8_Peer-10.154.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+as152h-Kubo-5_Boot-10.152.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+as150h-Kubo-0_Boot-10.150.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+as154h-Kubo-9_Peer-10.154.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+as151h-Kubo-2_Peer-10.151.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+as151h-Kubo-3_Peer-10.151.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+as152h-Kubo-4_Peer-10.152.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+as153h-Kubo-7_Peer-10.153.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+================================== Test Case: test_service_config ==================================
+as154h-Kubo-8_Peer-10.154.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as152h-Kubo-5_Boot-10.152.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as150h-Kubo-0_Boot-10.150.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as154h-Kubo-9_Peer-10.154.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as151h-Kubo-2_Peer-10.151.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as151h-Kubo-3_Peer-10.151.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as152h-Kubo-4_Peer-10.152.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as153h-Kubo-7_Peer-10.153.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+===================================== Test Case: test_peering ======================================
+as154h-Kubo-8_Peer-10.154.0.71 (7):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWFkrzo2j42pxJJsqeczSqGTzsLbAhxfSi6s9qStXcsMj8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWP4HR9RM7BV1WZJFsTPreKTUXa2STjByC11Uoqe21ffzL
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWCJem3fRJftM2c9gxSV88Tszmfu1tSbwhEbjqmB6PjpWs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWNLwGYmQrw1F1yqpp3UnVJrqY2wGVvBFK2wRcf4RuPET1
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWQTrbWwAhk2tg8q16VKyLj8VeK5DCokbEGFrY6rDUY91Z
+as152h-Kubo-5_Boot-10.152.0.72 (8):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWGuQmUCVZ6EUV1Wqn7JAT3txgy3aShs88HTgXHnhX7NnL
+	/ip4/10.151.0.71/tcp/4001/p2p/12D3KooWFkrzo2j42pxJJsqeczSqGTzsLbAhxfSi6s9qStXcsMj8
+	/ip4/10.151.0.72/tcp/4001/p2p/12D3KooWP4HR9RM7BV1WZJFsTPreKTUXa2STjByC11Uoqe21ffzL
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWCJem3fRJftM2c9gxSV88Tszmfu1tSbwhEbjqmB6PjpWs
+	/ip4/10.153.0.72/tcp/4001/p2p/12D3KooWNLwGYmQrw1F1yqpp3UnVJrqY2wGVvBFK2wRcf4RuPET1
+	/ip4/10.154.0.71/tcp/4001/p2p/12D3KooWBMK5UatbXbyUhLsfDk9uytqdPsKywqK8HhJhm6AiTYdc
+	/ip4/10.154.0.72/tcp/4001/p2p/12D3KooWQTrbWwAhk2tg8q16VKyLj8VeK5DCokbEGFrY6rDUY91Z
+as150h-Kubo-0_Boot-10.150.0.71 (10):
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWGuQmUCVZ6EUV1Wqn7JAT3txgy3aShs88HTgXHnhX7NnL
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWGuQmUCVZ6EUV1Wqn7JAT3txgy3aShs88HTgXHnhX7NnL
+	/ip4/10.151.0.71/tcp/4001/p2p/12D3KooWFkrzo2j42pxJJsqeczSqGTzsLbAhxfSi6s9qStXcsMj8
+	/ip4/10.151.0.71/tcp/4001/p2p/12D3KooWFkrzo2j42pxJJsqeczSqGTzsLbAhxfSi6s9qStXcsMj8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWP4HR9RM7BV1WZJFsTPreKTUXa2STjByC11Uoqe21ffzL
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWCJem3fRJftM2c9gxSV88Tszmfu1tSbwhEbjqmB6PjpWs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+	/ip4/10.153.0.72/tcp/4001/p2p/12D3KooWNLwGYmQrw1F1yqpp3UnVJrqY2wGVvBFK2wRcf4RuPET1
+	/ip4/10.154.0.71/tcp/4001/p2p/12D3KooWBMK5UatbXbyUhLsfDk9uytqdPsKywqK8HhJhm6AiTYdc
+	/ip4/10.154.0.72/tcp/4001/p2p/12D3KooWQTrbWwAhk2tg8q16VKyLj8VeK5DCokbEGFrY6rDUY91Z
+as154h-Kubo-9_Peer-10.154.0.72 (7):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWFkrzo2j42pxJJsqeczSqGTzsLbAhxfSi6s9qStXcsMj8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWP4HR9RM7BV1WZJFsTPreKTUXa2STjByC11Uoqe21ffzL
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWCJem3fRJftM2c9gxSV88Tszmfu1tSbwhEbjqmB6PjpWs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWNLwGYmQrw1F1yqpp3UnVJrqY2wGVvBFK2wRcf4RuPET1
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWBMK5UatbXbyUhLsfDk9uytqdPsKywqK8HhJhm6AiTYdc
+as151h-Kubo-2_Peer-10.151.0.71 (9):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.150.0.71/tcp/40034/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWP4HR9RM7BV1WZJFsTPreKTUXa2STjByC11Uoqe21ffzL
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWP4HR9RM7BV1WZJFsTPreKTUXa2STjByC11Uoqe21ffzL
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWCJem3fRJftM2c9gxSV88Tszmfu1tSbwhEbjqmB6PjpWs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWNLwGYmQrw1F1yqpp3UnVJrqY2wGVvBFK2wRcf4RuPET1
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWBMK5UatbXbyUhLsfDk9uytqdPsKywqK8HhJhm6AiTYdc
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWQTrbWwAhk2tg8q16VKyLj8VeK5DCokbEGFrY6rDUY91Z
+as151h-Kubo-3_Peer-10.151.0.72 (8):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWFkrzo2j42pxJJsqeczSqGTzsLbAhxfSi6s9qStXcsMj8
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWFkrzo2j42pxJJsqeczSqGTzsLbAhxfSi6s9qStXcsMj8
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWCJem3fRJftM2c9gxSV88Tszmfu1tSbwhEbjqmB6PjpWs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWNLwGYmQrw1F1yqpp3UnVJrqY2wGVvBFK2wRcf4RuPET1
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWBMK5UatbXbyUhLsfDk9uytqdPsKywqK8HhJhm6AiTYdc
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWQTrbWwAhk2tg8q16VKyLj8VeK5DCokbEGFrY6rDUY91Z
+as152h-Kubo-4_Peer-10.152.0.71 (8):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWGuQmUCVZ6EUV1Wqn7JAT3txgy3aShs88HTgXHnhX7NnL
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWFkrzo2j42pxJJsqeczSqGTzsLbAhxfSi6s9qStXcsMj8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWP4HR9RM7BV1WZJFsTPreKTUXa2STjByC11Uoqe21ffzL
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWNLwGYmQrw1F1yqpp3UnVJrqY2wGVvBFK2wRcf4RuPET1
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWBMK5UatbXbyUhLsfDk9uytqdPsKywqK8HhJhm6AiTYdc
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWQTrbWwAhk2tg8q16VKyLj8VeK5DCokbEGFrY6rDUY91Z
+as153h-Kubo-7_Peer-10.153.0.72 (8):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWPDRwXTfvq2HQwgKNoQ8PXN4d2sW5dosu5zoBSdjRbV27
+	/ip4/10.150.0.72/udp/4001/quic-v1/p2p/12D3KooWGuQmUCVZ6EUV1Wqn7JAT3txgy3aShs88HTgXHnhX7NnL
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWFkrzo2j42pxJJsqeczSqGTzsLbAhxfSi6s9qStXcsMj8
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWP4HR9RM7BV1WZJFsTPreKTUXa2STjByC11Uoqe21ffzL
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWCJem3fRJftM2c9gxSV88Tszmfu1tSbwhEbjqmB6PjpWs
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMvJsRwV9RgVM9DDpisHBShXd9m2NgeFkNUydVPaeQUcj
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWBMK5UatbXbyUhLsfDk9uytqdPsKywqK8HhJhm6AiTYdc
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWQTrbWwAhk2tg8q16VKyLj8VeK5DCokbEGFrY6rDUY91Z
+===================================== Test Case: test_kubo_add =====================================
+as154h-Kubo-8_Peer-10.154.0.71: [PASS] Added file with CID of QmVzcp9xu5ViXJzTG9wYSMud5RLv7DHVsHqrovb1nMzjmV
+as152h-Kubo-5_Boot-10.152.0.72: [PASS] Added file with CID of QmV3YGxEVjx1fF2mxNEQYR5aYc93AVrc7FF2xNoSTXPpJT
+as153h-Kubo-7_Peer-10.153.0.72: [PASS] Added file with CID of QmejTx3GsQpYYRezggxvD1o5Gn3GUgM2zdAeeFU64jKTn5
+===================================== Test Case: test_kubo_cat =====================================
+as154h-Kubo-8_Peer-10.154.0.71:
+	ipfs cat QmejTx3GsQpYYRezggxvD1o5Gn3GUgM2zdAeeFU64jKTn5 [PASS]
+==============================
+__main__ Start
+==============================
+Generating Emulation Files...
+gen_emulation_files: succeed
+Building Docker Containers...
+build_emulator: succeed
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  0
+--------------------------------------------------
+------ Waiting until all containers up : 31 ------
+current containers counts :  31
+----------------------------------------- Test Containers: -----------------------------------------
+as151h-Kubo-2_Peer-10.151.0.71: profile, all
+as153h-Kubo-6_Peer-10.153.0.71: basic, version, file_host, all
+as154h-Kubo-8_Peer-10.154.0.71: basic, all
+as154h-Kubo-9_Peer-10.154.0.72: basic, all
+as152h-Kubo-4_Peer-10.152.0.71: basic, all
+as150h-Kubo-1_Peer-10.150.0.72: config, all
+as151h-Kubo-3_Peer-10.151.0.72: basic, all
+as153h-Kubo-7_Peer-10.153.0.72: basic, file_host, all
+as152h-Kubo-5_Boot-10.152.0.72: basic, boot, all
+as150h-Kubo-0_Boot-10.150.0.71: basic, boot, file_host, all
+=================================== Test Case: test_kubo_install ===================================
+as151h-Kubo-2_Peer-10.151.0.71 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71 [PASS]
+as154h-Kubo-8_Peer-10.154.0.71 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72 [PASS]
+as152h-Kubo-4_Peer-10.152.0.71 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72 [PASS]
+as151h-Kubo-3_Peer-10.151.0.72 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72 [PASS]
+as152h-Kubo-5_Boot-10.152.0.72 [PASS]
+as150h-Kubo-0_Boot-10.150.0.71 [PASS]
+=================================== Test Case: test_kubo_version ===================================
+as151h-Kubo-2_Peer-10.151.0.71: 0.27.0 [PASS]
+as153h-Kubo-6_Peer-10.153.0.71: 0.26.0 [PASS]
+as154h-Kubo-8_Peer-10.154.0.71: 0.27.0 [PASS]
+as154h-Kubo-9_Peer-10.154.0.72: 0.27.0 [PASS]
+as152h-Kubo-4_Peer-10.152.0.71: 0.27.0 [PASS]
+as150h-Kubo-1_Peer-10.150.0.72: 0.27.0 [PASS]
+as151h-Kubo-3_Peer-10.151.0.72: 0.27.0 [PASS]
+as153h-Kubo-7_Peer-10.153.0.72: 0.27.0 [PASS]
+as152h-Kubo-5_Boot-10.152.0.72: 0.27.0 [PASS]
+as150h-Kubo-0_Boot-10.150.0.71: 0.27.0 [PASS]
+================================= Test Case: test_bootstrap_script =================================
+as151h-Kubo-2_Peer-10.151.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-6_Peer-10.153.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-8_Peer-10.154.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as154h-Kubo-9_Peer-10.154.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-4_Peer-10.152.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-1_Peer-10.150.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as151h-Kubo-3_Peer-10.151.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as153h-Kubo-7_Peer-10.153.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as152h-Kubo-5_Boot-10.152.0.72:
+	Script Present [PASS]
+	Script Run [PASS]
+as150h-Kubo-0_Boot-10.150.0.71:
+	Script Present [PASS]
+	Script Run [PASS]
+================================== Test Case: test_bootstrap_list ==================================
+as153h-Kubo-6_Peer-10.153.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+as154h-Kubo-8_Peer-10.154.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+as154h-Kubo-9_Peer-10.154.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+as152h-Kubo-4_Peer-10.152.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+as151h-Kubo-3_Peer-10.151.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+as153h-Kubo-7_Peer-10.153.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+as152h-Kubo-5_Boot-10.152.0.72:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+as150h-Kubo-0_Boot-10.150.0.71:
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+================================== Test Case: test_service_config ==================================
+as153h-Kubo-6_Peer-10.153.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as154h-Kubo-8_Peer-10.154.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as154h-Kubo-9_Peer-10.154.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as152h-Kubo-4_Peer-10.152.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as151h-Kubo-3_Peer-10.151.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as153h-Kubo-7_Peer-10.153.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as152h-Kubo-5_Boot-10.152.0.72:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+as150h-Kubo-0_Boot-10.150.0.71:
+	[PASS] RPC API
+	[PASS] HTTP Gateway
+===================================== Test Case: test_peering ======================================
+as153h-Kubo-6_Peer-10.153.0.71 (8):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWN8jV7HZ4tYm8gRzA1FWs9QDCRUSUu5J9qN3kBJvfrizq
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWLrPrZsKX2JKEa5yj7WpLm725gCrzXPTN2NibF9MrU8H8
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+	/ip4/10.153.0.72/tcp/4001/p2p/12D3KooWHRsvxCMVrmFxWqKdMt3CtyZGtA24bN4XhVmgjwgiKNiv
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRsvxCMVrmFxWqKdMt3CtyZGtA24bN4XhVmgjwgiKNiv
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWHDmL8FfWEchSLVDogiw4wyw6MnGB3vnRAWtCYqsZt9q6
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWFa7yERochMzAd7Y5wSkUgCEqZBZdcVPm94iysTqUe9qH
+as154h-Kubo-8_Peer-10.154.0.71 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWSdmcHnKzt5wpMMoBCdCyrNo4grDUVeZPvmNaictgiyMR
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWN8jV7HZ4tYm8gRzA1FWs9QDCRUSUu5J9qN3kBJvfrizq
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWLrPrZsKX2JKEa5yj7WpLm725gCrzXPTN2NibF9MrU8H8
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWEaV5oAbrqGLqrWeUGTE64ac2rqpVNoBhqfhkDAumftmj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRsvxCMVrmFxWqKdMt3CtyZGtA24bN4XhVmgjwgiKNiv
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWFa7yERochMzAd7Y5wSkUgCEqZBZdcVPm94iysTqUe9qH
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWFa7yERochMzAd7Y5wSkUgCEqZBZdcVPm94iysTqUe9qH
+as154h-Kubo-9_Peer-10.154.0.72 (8):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWN8jV7HZ4tYm8gRzA1FWs9QDCRUSUu5J9qN3kBJvfrizq
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWLrPrZsKX2JKEa5yj7WpLm725gCrzXPTN2NibF9MrU8H8
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWEaV5oAbrqGLqrWeUGTE64ac2rqpVNoBhqfhkDAumftmj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRsvxCMVrmFxWqKdMt3CtyZGtA24bN4XhVmgjwgiKNiv
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWHDmL8FfWEchSLVDogiw4wyw6MnGB3vnRAWtCYqsZt9q6
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWHDmL8FfWEchSLVDogiw4wyw6MnGB3vnRAWtCYqsZt9q6
+as152h-Kubo-4_Peer-10.152.0.71 (8):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWN8jV7HZ4tYm8gRzA1FWs9QDCRUSUu5J9qN3kBJvfrizq
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWEaV5oAbrqGLqrWeUGTE64ac2rqpVNoBhqfhkDAumftmj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRsvxCMVrmFxWqKdMt3CtyZGtA24bN4XhVmgjwgiKNiv
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWHDmL8FfWEchSLVDogiw4wyw6MnGB3vnRAWtCYqsZt9q6
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWFa7yERochMzAd7Y5wSkUgCEqZBZdcVPm94iysTqUe9qH
+as151h-Kubo-3_Peer-10.151.0.72 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWSdmcHnKzt5wpMMoBCdCyrNo4grDUVeZPvmNaictgiyMR
+	/ip4/10.151.0.71/udp/4001/quic-v1/p2p/12D3KooWSdmcHnKzt5wpMMoBCdCyrNo4grDUVeZPvmNaictgiyMR
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWLrPrZsKX2JKEa5yj7WpLm725gCrzXPTN2NibF9MrU8H8
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWEaV5oAbrqGLqrWeUGTE64ac2rqpVNoBhqfhkDAumftmj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRsvxCMVrmFxWqKdMt3CtyZGtA24bN4XhVmgjwgiKNiv
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWHDmL8FfWEchSLVDogiw4wyw6MnGB3vnRAWtCYqsZt9q6
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWFa7yERochMzAd7Y5wSkUgCEqZBZdcVPm94iysTqUe9qH
+as153h-Kubo-7_Peer-10.153.0.72 (9):
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.150.0.71/udp/4001/quic-v1/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWN8jV7HZ4tYm8gRzA1FWs9QDCRUSUu5J9qN3kBJvfrizq
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWLrPrZsKX2JKEa5yj7WpLm725gCrzXPTN2NibF9MrU8H8
+	/ip4/10.152.0.72/udp/4001/quic-v1/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+	/ip4/10.153.0.71/tcp/4001/p2p/12D3KooWEaV5oAbrqGLqrWeUGTE64ac2rqpVNoBhqfhkDAumftmj
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWEaV5oAbrqGLqrWeUGTE64ac2rqpVNoBhqfhkDAumftmj
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWHDmL8FfWEchSLVDogiw4wyw6MnGB3vnRAWtCYqsZt9q6
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWFa7yERochMzAd7Y5wSkUgCEqZBZdcVPm94iysTqUe9qH
+as152h-Kubo-5_Boot-10.152.0.72 (8):
+	/ip4/10.150.0.71/tcp/4001/p2p/12D3KooWDmm6moZKp582G8xb12bBP6ZzRsCpNvbi7HPW3mSS5XmQ
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWN8jV7HZ4tYm8gRzA1FWs9QDCRUSUu5J9qN3kBJvfrizq
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWLrPrZsKX2JKEa5yj7WpLm725gCrzXPTN2NibF9MrU8H8
+	/ip4/10.152.0.71/udp/4001/quic-v1/p2p/12D3KooWLrPrZsKX2JKEa5yj7WpLm725gCrzXPTN2NibF9MrU8H8
+	/ip4/10.153.0.71/udp/4001/quic-v1/p2p/12D3KooWEaV5oAbrqGLqrWeUGTE64ac2rqpVNoBhqfhkDAumftmj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRsvxCMVrmFxWqKdMt3CtyZGtA24bN4XhVmgjwgiKNiv
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWHDmL8FfWEchSLVDogiw4wyw6MnGB3vnRAWtCYqsZt9q6
+	/ip4/10.154.0.72/udp/4001/quic-v1/p2p/12D3KooWFa7yERochMzAd7Y5wSkUgCEqZBZdcVPm94iysTqUe9qH
+as150h-Kubo-0_Boot-10.150.0.71 (8):
+	/ip4/10.151.0.72/udp/4001/quic-v1/p2p/12D3KooWN8jV7HZ4tYm8gRzA1FWs9QDCRUSUu5J9qN3kBJvfrizq
+	/ip4/10.152.0.71/tcp/4001/p2p/12D3KooWLrPrZsKX2JKEa5yj7WpLm725gCrzXPTN2NibF9MrU8H8
+	/ip4/10.152.0.72/tcp/4001/p2p/12D3KooWMPKj771Jk5eSJcyUmPWGx6vLTSVTAB9mDEFVHDxVJufT
+	/ip4/10.153.0.71/tcp/4001/p2p/12D3KooWEaV5oAbrqGLqrWeUGTE64ac2rqpVNoBhqfhkDAumftmj
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRsvxCMVrmFxWqKdMt3CtyZGtA24bN4XhVmgjwgiKNiv
+	/ip4/10.153.0.72/udp/4001/quic-v1/p2p/12D3KooWHRsvxCMVrmFxWqKdMt3CtyZGtA24bN4XhVmgjwgiKNiv
+	/ip4/10.154.0.71/udp/4001/quic-v1/p2p/12D3KooWHDmL8FfWEchSLVDogiw4wyw6MnGB3vnRAWtCYqsZt9q6
+	/ip4/10.154.0.72/tcp/4001/p2p/12D3KooWFa7yERochMzAd7Y5wSkUgCEqZBZdcVPm94iysTqUe9qH
+===================================== Test Case: test_kubo_add =====================================
+as153h-Kubo-7_Peer-10.153.0.72: [PASS] Added file with CID of QmSgnaZ3pY4zeM8FdeF2gVCBup3iqxabQqQYyxJg5QhfDA
+as153h-Kubo-6_Peer-10.153.0.71: [PASS] Added file with CID of QmQmLhftfH2mpXM6DsKsogXA7aMpYMGdwuggord4X3mhNF
+as150h-Kubo-0_Boot-10.150.0.71: [PASS] Added file with CID of QmRik55gDvihfayiHDDMvGctoPTy2CkJ4B4TGKJ9g3bFGm
+===================================== Test Case: test_kubo_cat =====================================
+as153h-Kubo-6_Peer-10.153.0.71:
+	ipfs cat QmSgnaZ3pY4zeM8FdeF2gVCBup3iqxabQqQYyxJg5QhfDA [PASS]
+	ipfs cat QmRik55gDvihfayiHDDMvGctoPTy2CkJ4B4TGKJ9g3bFGm [PASS]
+	ipfs cat QmQmLhftfH2mpXM6DsKsogXA7aMpYMGdwuggord4X3mhNF [SKIP] *
+as154h-Kubo-8_Peer-10.154.0.71:
+	ipfs cat QmSgnaZ3pY4zeM8FdeF2gVCBup3iqxabQqQYyxJg5QhfDA [PASS]
+	ipfs cat QmRik55gDvihfayiHDDMvGctoPTy2CkJ4B4TGKJ9g3bFGm [PASS]
+	ipfs cat QmQmLhftfH2mpXM6DsKsogXA7aMpYMGdwuggord4X3mhNF [PASS]
+as154h-Kubo-9_Peer-10.154.0.72:
+	ipfs cat QmSgnaZ3pY4zeM8FdeF2gVCBup3iqxabQqQYyxJg5QhfDA [PASS]
+	ipfs cat QmRik55gDvihfayiHDDMvGctoPTy2CkJ4B4TGKJ9g3bFGm [PASS]
+	ipfs cat QmQmLhftfH2mpXM6DsKsogXA7aMpYMGdwuggord4X3mhNF [PASS]
+as152h-Kubo-4_Peer-10.152.0.71:
+	ipfs cat QmSgnaZ3pY4zeM8FdeF2gVCBup3iqxabQqQYyxJg5QhfDA [PASS]
+	ipfs cat QmRik55gDvihfayiHDDMvGctoPTy2CkJ4B4TGKJ9g3bFGm [PASS]
+	ipfs cat QmQmLhftfH2mpXM6DsKsogXA7aMpYMGdwuggord4X3mhNF [PASS]
+as151h-Kubo-3_Peer-10.151.0.72:
+	ipfs cat QmSgnaZ3pY4zeM8FdeF2gVCBup3iqxabQqQYyxJg5QhfDA [PASS]
+	ipfs cat QmRik55gDvihfayiHDDMvGctoPTy2CkJ4B4TGKJ9g3bFGm [PASS]
+	ipfs cat QmQmLhftfH2mpXM6DsKsogXA7aMpYMGdwuggord4X3mhNF [PASS]
+as153h-Kubo-7_Peer-10.153.0.72:
+	ipfs cat QmSgnaZ3pY4zeM8FdeF2gVCBup3iqxabQqQYyxJg5QhfDA [SKIP] *
+	ipfs cat QmRik55gDvihfayiHDDMvGctoPTy2CkJ4B4TGKJ9g3bFGm [PASS]
+	ipfs cat QmQmLhftfH2mpXM6DsKsogXA7aMpYMGdwuggord4X3mhNF [PASS]
+as152h-Kubo-5_Boot-10.152.0.72:
+	ipfs cat QmSgnaZ3pY4zeM8FdeF2gVCBup3iqxabQqQYyxJg5QhfDA [PASS]
+	ipfs cat QmRik55gDvihfayiHDDMvGctoPTy2CkJ4B4TGKJ9g3bFGm [PASS]
+	ipfs cat QmQmLhftfH2mpXM6DsKsogXA7aMpYMGdwuggord4X3mhNF [PASS]
+as150h-Kubo-0_Boot-10.150.0.71:
+	ipfs cat QmSgnaZ3pY4zeM8FdeF2gVCBup3iqxabQqQYyxJg5QhfDA [PASS]
+	ipfs cat QmRik55gDvihfayiHDDMvGctoPTy2CkJ4B4TGKJ9g3bFGm [SKIP] *
+	ipfs cat QmQmLhftfH2mpXM6DsKsogXA7aMpYMGdwuggord4X3mhNF [PASS]
+================================= Test Case: test_specify_profile ==================================
+as151h-Kubo-2_Peer-10.151.0.71: [PASS]
+================================== Test Case: test_custom_config ===================================
+as150h-Kubo-1_Peer-10.150.0.72: [PASS]
+=========================================== Test Results ===========================================
+score: 10 of 10 (0 errors, 0 failures)
+==============================
+__main__ Start
+==============================
+==================================== Test Case: test_init_empty ====================================
+DottedDict()                  [PASS]
+DottedDict([])                [PASS]
+DottedDict({})                [PASS]
+DottedDict(set())             [PASS]
+DottedDict(())                [PASS]
+==================================== Test Case: test_init_good =====================================
+DottedDict([('a', 1), ('b', 2), (5, 'ff'), (55.7, True)])                  [PASS]
+DottedDict([('a', 1), ('b', [('c', [('d', 4), ('e', 5)])]), ('f', 6)])     [PASS]
+DottedDict((('a', 1), ('b', 2), (5, 'ff'), (55.7, True)))                  [PASS]
+DottedDict((('a', 1), ('b', ('c', (('d', 4), ('e', 5)))), ('f', 6)))       [PASS]
+DottedDict({('b', 2), (5, 'ff'), (55.7, True), ('a', 1)})                  [PASS]
+DottedDict({'a': 1, 'b': 2, 5: 'ff', 55.7: True})                          [PASS]
+DottedDict({'a': 1, 'b': {'c': {'d': 4, 'e': 5}}, 'f': 6})                 [PASS]
+===================================== Test Case: test_init_bad =====================================
+DottedDict(True)                                  [PASS]
+DottedDict(False)                                 [PASS]
+DottedDict(1)                                     [PASS]
+DottedDict(346.72)                                [PASS]
+DottedDict(55555)                                 [PASS]
+DottedDict([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])        [PASS]
+DottedDict(range(0, 10))                          [PASS]
+DottedDict({0, 1, 2, 3, 4, 5, 6, 7, 8, 9})        [PASS]
+DottedDict((0, 1, 2, 3, 4, 5, 6, 7, 8, 9))        [PASS]
+DottedDict([(1, 'a'), 2, 3])                      [PASS]
+DottedDict((1, (2, 'b'), 3, 4, 5))                [PASS]
+DottedDict([{'a': 1}, True])                      [PASS]
+================================ Test Case: test_get_item_expected =================================
+DottedDict[simple] = True                                                                 [PASS]
+DottedDict[a.b] = 2                                                                       [PASS]
+DottedDict[a.c] = {'red': False, 'orange': True, 'yellow': False, 'green': True, 'blue': True, 'purple': True, 'pink': True}[PASS]
+DottedDict[a.c.red] = False                                                               [PASS]
+DottedDict[a.c.orange] = True                                                             [PASS]
+DottedDict[a.c.blue] = True                                                               [PASS]
+DottedDict[a.deepest] = {'level1': {'level2': {'level3': {'level4': {'level5': 'done'}}}}}[PASS]
+DottedDict[a.deepest.level1.level2.level3.level4.level5] = done                           [PASS]
+DottedDict[simple] = True                                                                 [PASS]
+DottedDict[ ] = False                                                                     [PASS]
+DottedDict[,] = {'!': '#'}                                                                [PASS]
+DottedDict[,.!] = #                                                                       [PASS]
+=============================== Test Case: test_get_item_unexpected ================================
+DottedDict[] -> KeyError                                                   [PASS]
+DottedDict[.] -> KeyError                                                  [PASS]
+DottedDict[	] -> KeyError                                                  [PASS]
+DottedDict[.a] -> KeyError                                                 [PASS]
+DottedDict[a.] -> KeyError                                                 [PASS]
+DottedDict[a.b.] -> KeyError                                               [PASS]
+DottedDict[a.b.c] -> KeyError                                              [PASS]
+DottedDict[a.c.c] -> KeyError                                              [PASS]
+DottedDict[a.c.red.orange] -> KeyError                                     [PASS]
+DottedDict[a.c.orange.] -> KeyError                                        [PASS]
+DottedDict[a.c.blue.deepest] -> KeyError                                   [PASS]
+DottedDict[a..deepest] -> KeyError                                         [PASS]
+DottedDict[..a.deepest.level1.level2.level3.level4.level5..] -> KeyError   [PASS]
+DottedDict[simple..] -> KeyError                                           [PASS]
+================================ Test Case: test_set_item_expected =================================
+DottedDict[simple] = False                                                                                              [PASS]
+DottedDict[a.b] = 4                                                                                                     [PASS]
+DottedDict[a.c] = {'level1': 1, 'level2': {'diff': 4, 'bbb': False}}                                                    [PASS]
+DottedDict[a.c.red] = 6                                                                                                 [PASS]
+DottedDict[a.c.orange] = apple                                                                                          [PASS]
+DottedDict[a.c.blue] = 36.788                                                                                           [PASS]
+DottedDict[a.deepest.level1.level2.level3.level4.level5] = ready                                                        [PASS]
+DottedDict[a.deepest] = {'apple': {'bicycle': {'car': {'dream': {'engine': 'huh', 'fog': 'yes', 'golf': 'ball'}}}}}     [PASS]
+DottedDict[simple] = False                                                                                              [PASS]
+DottedDict[ ] = True                                                                                                    [PASS]
+DottedDict[,.!] = #                                                                                                     [PASS]
+DottedDict[,] = ['!', '#']                                                                                              [PASS]
+=============================== Test Case: test_set_item_unexpected ================================
+DottedDict[] -> KeyError                                                   [PASS]
+DottedDict[.] -> KeyError                                                  [PASS]
+DottedDict[.a] -> KeyError                                                 [PASS]
+DottedDict[a.] -> KeyError                                                 [PASS]
+DottedDict[a.b.] -> KeyError                                               [PASS]
+DottedDict[a..b..c] -> KeyError                                            [PASS]
+DottedDict[a.c.orange.] -> KeyError                                        [PASS]
+DottedDict[a..deepest] -> KeyError                                         [PASS]
+DottedDict[..a.deepest.level1.level2.level3.level4.level5..] -> KeyError   [PASS]
+DottedDict[simple..] -> KeyError                                           [PASS]
+================================ Test Case: test_del_item_expected =================================
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[a.b]                                                        [PASS]
+del DottedDict[a.c]                                                        [PASS]
+del DottedDict[a.c.red]                                                    [PASS]
+del DottedDict[a.c.orange]                                                 [PASS]
+del DottedDict[a.c.blue]                                                   [PASS]
+del DottedDict[a.deepest]                                                  [PASS]
+del DottedDict[a.deepest.level1.level2.level3.level4.level5]               [PASS]
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[ ]                                                          [PASS]
+del DottedDict[,]                                                          [PASS]
+del DottedDict[,.!]                                                        [PASS]
+=============================== Test Case: test_del_item_unexpected ================================
+del DottedDict[simpl]                                                      [PASS]
+del DottedDict[.a.b]                                                       [PASS]
+del DottedDict[a..c]                                                       [PASS]
+del DottedDict[a..c..red]                                                  [PASS]
+del DottedDict[..a.c.orange]                                               [PASS]
+del DottedDict[a.c.blue.]                                                  [PASS]
+del DottedDict[a.deepest...]                                               [PASS]
+del DottedDict[a.deepest.level2.level2.level3.level4.level5]               [PASS]
+del DottedDict[simple.]                                                    [PASS]
+del DottedDict[]                                                           [PASS]
+del DottedDict[,.]                                                         [PASS]
+del DottedDict[,.!.]                                                       [PASS]
+================================ Test Case: test_contains_expected =================================
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[a.b]                                                        [PASS]
+del DottedDict[a.c]                                                        [PASS]
+del DottedDict[a.c.red]                                                    [PASS]
+del DottedDict[a.c.orange]                                                 [PASS]
+del DottedDict[a.c.blue]                                                   [PASS]
+del DottedDict[a.deepest]                                                  [PASS]
+del DottedDict[a.deepest.level1.level2.level3.level4.level5]               [PASS]
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[ ]                                                          [PASS]
+del DottedDict[,]                                                          [PASS]
+del DottedDict[,.!]                                                        [PASS]
+=============================== Test Case: test_contains_unexpected ================================
+simplest in DottedDict -> False                                            [PASS]
+a.b.c in DottedDict -> False                                               [PASS]
+b.a.c in DottedDict -> False                                               [PASS]
+a.cat.red in DottedDict -> False                                           [PASS]
+a.c.cyan in DottedDict -> False                                            [PASS]
+simple.c.blue in DottedDict -> False                                       [PASS]
+deepest in DottedDict -> False                                             [PASS]
+a.deepest.level1.level2.level5.level4.level5 in DottedDict -> False        [PASS]
+simple.1 in DottedDict -> False                                            [PASS]
+a.  in DottedDict -> False                                                 [PASS]
+b., in DottedDict -> False                                                 [PASS]
+,.!.% in DottedDict -> False                                               [PASS]
+ in DottedDict -> KeyError                                                 [PASS]
+. in DottedDict -> KeyError                                                [PASS]
+.a in DottedDict -> KeyError                                               [PASS]
+a. in DottedDict -> KeyError                                               [PASS]
+a.b. in DottedDict -> KeyError                                             [PASS]
+a.c.orange. in DottedDict -> KeyError                                      [PASS]
+a..deepest in DottedDict -> KeyError                                       [PASS]
+..a.deepest.level1.level2.level3.level4.level5.. in DottedDict -> KeyError [PASS]
+simple.. in DottedDict -> KeyError                                         [PASS]
+======================================= Test Case: test_copy =======================================
+Testing copy operation... [PASS]
+Testing modification of copy... [PASS]
+====================================== Test Case: test_merge =======================================
+[PASS] {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'test': True, 'deep': {'level1': {'level2': 'done'}, 'end': False}} = {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'test': True, 'deep': {'level1': {'level2': 'done'}, 'end': False}}
+[PASS] {'test': True, 'deep': {'level1': {'level2': 'done', 'leaf': True}, 'end': False}} = {'test': True, 'deep': {'level1': {'level2': 'done', 'leaf': True}, 'end': False}}
+[PASS] {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122} = {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122}
+[PASS] {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'new': True} = {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'new': True}
+[PASS] {'test': True, 'deep': {'level1': {'level2': 'merged'}, 'end': 'merged'}} = {'test': True, 'deep': {'level1': {'level2': 'merged'}, 'end': 'merged'}}
+====================================== Test Case: test_empty =======================================
+DottedDict(None)                                  [PASS]
+DottedDict(())                                    [PASS]
+DottedDict({})                                    [PASS]
+DottedDict(set())                                 [PASS]
+DottedDict({})                                    [PASS]
+DottedDict([])                                    [PASS]
+DottedDict([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])        [PASS]
+DottedDict(range(0, 10))                          [PASS]
+DottedDict({0, 1, 2, 3, 4, 5, 6, 7, 8, 9})        [PASS]
+DottedDict((0, 1, 2, 3, 4, 5))                    [PASS]
+DottedDict::popitem                               [PASS]
+DottedDict::clear                                 [PASS]
+==============================
+__main__ Start
+==============================
+====================================== Test Case: test_getIP =======================================
+Testing nodes in AS 150:
+	host_0 -> 10.150.0.71 [PASS]
+	host_1 -> 10.150.0.72 [PASS]
+	router0 -> 10.150.0.254 [PASS]
+Testing nodes in AS 151:
+	host_0 -> 10.151.0.71 [PASS]
+	host_1 -> 10.151.0.72 [PASS]
+	router0 -> 10.151.0.254 [PASS]
+Testing nodes in AS 152:
+	host_0 -> 10.152.0.71 [PASS]
+	host_1 -> 10.152.0.72 [PASS]
+	router0 -> 10.152.0.254 [PASS]
+Testing nodes in AS 153:
+	host_0 -> 10.153.0.71 [PASS]
+	host_1 -> 10.153.0.72 [PASS]
+	router0 -> 10.153.0.254 [PASS]
+Testing nodes in AS 154:
+	host_0 -> 10.154.0.71 [PASS]
+	host_1 -> 10.154.0.72 [PASS]
+	router0 -> 10.154.0.254 [PASS]
+====================================== Test Case: test_isIPv4 ======================================
+[PASS] isIPv4(151.38.45.226) -> True
+[PASS] isIPv4(139.21.106.44) -> True
+[PASS] isIPv4(153.7.217.139) -> True
+[PASS] isIPv4(174.7.116.128) -> True
+[PASS] isIPv4(115.254.67.225) -> True
+[PASS] isIPv4(121.216.179.34) -> True
+[PASS] isIPv4(115.193.13.88) -> True
+[PASS] isIPv4(121.39.124.95) -> True
+[PASS] isIPv4(22.147.190.112) -> True
+[PASS] isIPv4(149.61.83.217) -> True
+[PASS] isIPv4(255.255.255.256) -> False
+[PASS] isIPv4(300.1.1.1) -> False
+[PASS] isIPv4(55.288.155.0) -> False
+[PASS] isIPv4(0.0.888.1) -> False
+[PASS] isIPv4(55.55.55) -> False
+[PASS] isIPv4(55.55) -> False
+[PASS] isIPv4(55) -> False
+[PASS] isIPv4(1.1.1.1.1) -> False
+=========================================== Test Results ===========================================
+score: 16 of 16 (0 errors, 0 failures)
+=========================================== Test Results ===========================================
+score: 16 of 16 (0 errors, 0 failures)

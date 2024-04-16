@@ -1,0 +1,2 @@
+time="2024-04-12T15:07:24-04:00" level=warning msg="/home/jovanni/InternetEmulator/IPFS/seed-emulator/examples/not-ready-examples/28-kubo-dapp/output/docker-compose.yml: `version` is obsolete"
+no such service: 2
