@@ -250,7 +250,7 @@ class ScionRouting(Routing):
                         mtu = net.getMtu()
                         ifs["Latency"][str(other_if)] =  f"{latency}ms"
                         if bandwidth != 0: # if bandwidth is not 0, add it
-                            ifs["Bandwidth"][str(other_if)] =  bandwidth/1000 # convert bps to kbps
+                            ifs["Bandwidth"][str(other_if)] =  int(bandwidth/1000) # convert bps to kbps
                         ifs["packetDrop"][str(other_if)] =  f"{packetDrop}"
                         ifs["MTU"][str(other_if)] =  f"{mtu}"
                         ifs["Hops"][str(other_if)] =  1 # NOTE: if interface is on different router, hops is 1 since we assume all routers are connected through a network
@@ -324,26 +324,32 @@ class ScionRouting(Routing):
             
 
             # Add Latency
-            staticInfo["Latency"][str(interface)] = {
-                "Intra": {}
-            }
             if lat != 0: # if latency is not 0, add it
+                if not staticInfo["Latency"]: # if no latencies have been added yet empty dict
+                    staticInfo["Latency"][str(interface)] = {}
                 staticInfo["Latency"][str(interface)]["Inter"] = str(lat)+"ms"
             for _if in ifs["Latency"]: # add intra latency
                 if ifs["Latency"][_if] != "0ms": # omit 0ms latency
+                    if not staticInfo["Latency"][str(interface)]["Intra"]: # if no intra latencies have been added yet empty dict
+                        staticInfo["Latency"][str(interface)]["Intra"] = {}
                     staticInfo["Latency"][str(interface)]["Intra"][str(_if)] = ifs["Latency"][_if]
             
+            
+            
             # Add Bandwidth
-            staticInfo["Bandwidth"][str(interface)] = {}
             if bw != 0: # if bandwidth is not 0, add it
-                staticInfo["Bandwidth"][str(interface)]["Inter"] = bw/1000 # convert bps to kbps
-            staticInfo["Bandwidth"][str(interface)]["Intra"] = ifs["Bandwidth"]
+                if not staticInfo["Bandwidth"]: # if no bandwidths have been added yet empty dict
+                    staticInfo["Bandwidth"][str(interface)] = {}
+                staticInfo["Bandwidth"][str(interface)]["Inter"] = int(bw/1000) # convert bps to kbps
+            if ifs["Bandwidth"]: # add intra bandwidth
+                staticInfo["Bandwidth"][str(interface)]["Intra"] = ifs["Bandwidth"]
 
             # Add LinkType
             staticInfo["LinkType"][str(interface)] = "direct" # NOTE: for now all ASes are connected through CrossConnects which are docker Nets under the hood and thus direct
              
             # Add Geo
-            staticInfo["Geo"][str(interface)] = ifs["Geo"]
+            if ifs["Geo"]:
+                staticInfo["Geo"][str(interface)] = ifs["Geo"]
 
             # Add Hops 
             staticInfo["Hops"][str(interface)] = {
