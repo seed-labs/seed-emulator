@@ -25,10 +25,13 @@ This example demonstrates how to use Chainlink with a blockchain. The developer 
     ```
 2. Load the base layer:
 We are using a slighly modified version of the hybrid-internet. So to generate the hybrid-internet.bin file, run the following command:
+
     ```python
     python3 hybrid-internet.py
     ```
-Then load the base layer:
+    
+    Then load the base layer:
+
     ```python
     emu.load('./hybrid-internet.bin')
     ```
