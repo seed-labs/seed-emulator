@@ -155,6 +155,6 @@ class FaucetServer(Server):
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'Web server object.\n'
+        out += 'Faucet server object.\n'
 
         return out
