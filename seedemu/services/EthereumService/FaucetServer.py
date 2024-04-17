@@ -15,7 +15,6 @@ class FaucetServer(Server):
     
     __blockchain:Blockchain
     __port: int
-    __account
     __balance: int
     __rpc_url: str
     __linked_eth_node:str
