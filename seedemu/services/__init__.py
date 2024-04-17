@@ -13,3 +13,5 @@ from .ScionBwtestService import ScionBwtestService
 from .KuboService import *
 from .ChainlinkService.ChainlinkService import ChainlinkService
 from .ChainlinkService.ChainlinkUserService import ChainlinkUserService
+
+from .KuboService import *

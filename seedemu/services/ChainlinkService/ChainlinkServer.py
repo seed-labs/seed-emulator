@@ -178,17 +178,6 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
          self.__faucet_vnode_name = vnode
          self.__faucet_port = port
         
-    def setOwner(self, owner: str, owner_private_key: str):
-        """
-        @brief Set the owner of the contracts
-        
-        @param owner The owner of the contracts
-        @param owner_private_key The private key of the owner.
-        """
-        self.__owner = owner
-        self.__owner_private_key = owner_private_key
-    
-        
     def __getIPbyEthNodeName(self, vnode:str):
         """
         @brief Get the IP address of the ethereum node.
