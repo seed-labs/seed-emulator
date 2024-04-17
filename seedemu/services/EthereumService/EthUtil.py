@@ -204,11 +204,12 @@ class EthAccount():
     @staticmethod
     def createEmulatorAccountFromMnemonic(id:int, mnemonic:str, balance:int, index:int, password:str):
         from eth_account import Account
+        from web3 import Web3
         Account.enable_unaudited_hdwallet_features()
 
         EthAccount._log('creating node_{} emulator account {} from mnemonic...'.format(id, index))
         acct = Account.from_mnemonic(mnemonic, account_path=ETH_ACCOUNT_KEY_DERIVATION_PATH.format(id=id, index=index))
-        address = self.__Web3.toChecksumAddress(acct.address)
+        address = Web3.toChecksumAddress(acct.address)
         
         keystore_content = json.dumps(EthAccount.__encryptAccount(account=acct, password=password))
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
@@ -229,11 +230,12 @@ class EthAccount():
     @staticmethod
     def createLocalAccountFromMnemonic(mnemonic:str, balance:int, index:int):
         from eth_account import Account
+        from web3 import Web3
         Account.enable_unaudited_hdwallet_features()
 
         EthAccount._log('creating local account {} from mnemonic...'.format(index))
         acct = Account.from_mnemonic(mnemonic, account_path=LOCAL_ACCOUNT_KEY_DERIVATION_PATH.format(index=index))
-        address = self.__Web3.toChecksumAddress(acct.address)
+        address = Web3.toChecksumAddress(acct.address)
 
         return AccountStructure(address, balance, "", "", "")
 
