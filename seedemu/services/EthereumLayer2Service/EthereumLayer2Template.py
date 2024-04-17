@@ -4,8 +4,15 @@ from enum import Enum
 
 WEB_SERVER_PORT = 8888
 
+class EthereumLayer2SCFactory(Enum):
+    """!
+    @brief Enum for the layer2 smart contract factory.
+    """
 
-class L2Component(Enum):
+    ADDRESS = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
+    BYTECODE = "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3"
+
+class EthereumLayer2Component(Enum):
     """!
     @brief Enums represent layer2 server softwares.
     """
@@ -57,7 +64,7 @@ class EthereumLayer2Template:
     """
 
     __isSequencer: bool
-    __components: List[L2Component]
+    __components: List[EthereumLayer2Component]
     __ENV: Dict[str, str]
     SC_DEPLOYER: str = f"""
 #!/bin/bash
@@ -135,8 +142,8 @@ mkdir logs
 {}
 """
     __START_COMMAND: str = "/start_{component}.sh &> logs/{component}.log &"
-    __SUB_LAUNCHERS: Dict[L2Component, str] = {
-        L2Component.OP_GETH: """
+    __SUB_LAUNCHERS: Dict[EthereumLayer2Component, str] = {
+        EthereumLayer2Component.OP_GETH: """
 #!/bin/bash
 set -eu
 
@@ -168,7 +175,7 @@ geth \
   --port=30304 \
   {}
 """,
-        L2Component.OP_NODE: """
+        EthereumLayer2Component.OP_NODE: """
 #!/bin/bash
 set -eu
 
@@ -186,7 +193,7 @@ op-node \
   --l1.rpckind=$L1_RPC_KIND \
   {}
 """,
-        L2Component.OP_BATCHER: """
+        EthereumLayer2Component.OP_BATCHER: """
 #!/bin/bash
 set -eu
 
@@ -207,7 +214,7 @@ op-batcher \
   --l1-eth-rpc=$L1_RPC_URL \
   --private-key=$GS_BATCHER_PRIVATE_KEY
 """,
-        L2Component.OP_PROPOSER: """
+        EthereumLayer2Component.OP_PROPOSER: """
 #!/bin/bash
 set -eu
 
@@ -239,9 +246,9 @@ op-proposer \
         @param isSequencer True if the node is a sequencer.
         """
         self.__isSequencer = isSequencer
-        self.__components = [L2Component.OP_GETH, L2Component.OP_NODE]
+        self.__components = [EthereumLayer2Component.OP_GETH, EthereumLayer2Component.OP_NODE]
         if isSequencer:
-            self.__components.extend([L2Component.OP_BATCHER, L2Component.OP_PROPOSER])
+            self.__components.extend([EthereumLayer2Component.OP_BATCHER, EthereumLayer2Component.OP_PROPOSER])
         self.__ENV = {}
 
     def getNodeLauncher(self) -> str:
@@ -256,7 +263,7 @@ op-proposer \
         ]
         return self.__NODE_LAUNCHER.format("\n".join(startCommands))
 
-    def getComponents(self) -> List[L2Component]:
+    def getComponents(self) -> List[EthereumLayer2Component]:
         """!
         @brief Get the softwares which this instance is building for their scripts.
 
@@ -264,7 +271,7 @@ op-proposer \
         """
         return self.__components
 
-    def getSubLauncher(self, component: L2Component) -> str:
+    def getSubLauncher(self, component: EthereumLayer2Component) -> str:
         """!
         @brief Get the start script of the software.
 
@@ -272,10 +279,10 @@ op-proposer \
 
         @return The start script of the software.
         """
-        if component == L2Component.OP_GETH:
+        if component == EthereumLayer2Component.OP_GETH:
             content = self.__GETH_CONFIG if not self.__isSequencer else ""
             return self.__SUB_LAUNCHERS[component].format(content)
-        elif component == L2Component.OP_NODE:
+        elif component == EthereumLayer2Component.OP_NODE:
             content = self.__NODE_CONFIG if self.__isSequencer else ""
             return self.__SUB_LAUNCHERS[component].format(content)
 

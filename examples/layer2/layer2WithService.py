@@ -26,10 +26,6 @@ TEST_ACC = (
     "0x2DDAaA366dc75119A256C41b9bd483D13A64389d",
     "0x4ba1ada11a1d234c3a03c08395c82e65320b5ae4aecca4a70143f4c157230528",
 )
-# Factory contract
-FACTORY_ACC = ("0x4e59b44847b379578588920cA78FbF26c0B4956C", "")
-
-FACTORY_CODE = "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3"
 
 emu = Makers.makeEmulatorBaseWith10StubASAndHosts(1)
 
@@ -51,9 +47,9 @@ blockchain = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.
 initBal = 10**8
 # Set the gas limit per block to 30,000,000 for layer2 smart contract deployment
 blockchain.setGasLimitPerBlock(30_000_000)
-# Pre-deployed the smart contract factory for layer2 smart contract deployment
-blockchain.addLocalAccount(FACTORY_ACC[0], 0)
-blockchain.addCode(FACTORY_ACC[0], FACTORY_CODE)
+# Pre-deploy the smart contract factory for layer2 smart contract deployment
+blockchain.addLocalAccount(EthereumLayer2SCFactory.ADDRESS.value, 0)
+blockchain.addCode(EthereumLayer2SCFactory.ADDRESS.value, EthereumLayer2SCFactory.BYTECODE.value)
 # Funding accounts
 blockchain.addLocalAccount(ADMIN_ACC[0], initBal)
 blockchain.addLocalAccount(BATCHER_ACC[0], initBal)
