@@ -7,7 +7,6 @@ from web3.exceptions import TransactionNotFound
 
 import sys
 import time
-import json
 
 L1_CHAIN_ID = 1337
 L2_CHAIN_ID = 42069
@@ -134,10 +133,23 @@ if __name__ == "__main__":
     method = sys.argv[1]
 
     if method == "monitor":
+        if len(sys.argv) < 3:
+            print(f"Usage: {sys.argv[0]} monitor <l2RPC>")
+            sys.exit(1)
         monitor_block(sys.argv[2])
     elif method == "deposit":
-        deposit(sys.argv[2], sys.argv[3])
+        if len(sys.argv) < 4:
+            print(f"Usage: {sys.argv[0]} deposit <l1RPC> <l2RPC> [amount in ether (default=1)]")
+            sys.exit(1)
+        if len(sys.argv) == 4:
+            deposit(sys.argv[2], sys.argv[3])
+        else:
+            deposit(sys.argv[2], sys.argv[3], float(sys.argv[4]))
+
     elif method == "sendTx":
+        if len(sys.argv) < 4:
+            print(f"Usage: {sys.argv[0]} sendTx <l2RPC> <to> [value in ether (default=0)] [data (default=0x)]")
+            sys.exit(1)
         sendL2Tx(
             sys.argv[2],
             sys.argv[3],
