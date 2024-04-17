@@ -55,7 +55,7 @@ class EthereumLayer2Server(Server):
         self.__isDeployer = False
         self.__l2Blockchain = l2Blockchain
         self._base_system = (
-            BaseSystem.SC_DEPLOYER if type == EthereumLayer2Node.DEPLOYER else BaseSystem.LAYER2
+            BaseSystem.SEEDEMU_SC_DEPLOYER if type == EthereumLayer2Node.DEPLOYER else BaseSystem.SEEDEMU_OP_STACK
         )
         self.__httpPort = 8545
         self.__wsPort = 8546
