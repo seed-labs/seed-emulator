@@ -5,6 +5,9 @@ from .EthUtil import Genesis, EthAccount, AccountStructure
 from .EthereumServer import EthereumServer, PoAServer, PoWServer, PoSServer
 from os import mkdir, path, makedirs, rename
 from seedemu.core import Node, Service, Server, Emulator
+from eth_account import Account
+from seedemu.core.enums import NetworkType
+from .FaucetServer import FaucetServer
 from typing import Dict, List
 from sys import stderr
 
@@ -66,8 +69,13 @@ class Blockchain:
         self.__terminal_total_difficulty = 20
         self.__target_aggregater_per_committee = 2
         self.__target_committee_size = 3
+        
 
-    def _doConfigure(self, node:Node, server:EthereumServer):
+    def _doConfigure(self, node:Node, server:Server):
+        if isinstance(server, FaucetServer):
+            self._log('configuring as{}/{} as an faucet node...'.format(node.getAsn(), node.getName()))
+            self.addLocalAccount(server.getFaucetAddress(), balance=server.getFaucetBalance())
+            return       
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
 
         ifaces = node.getInterfaces()
@@ -115,7 +123,13 @@ class Blockchain:
         for vnode in self.__pending_targets:
             node = emulator.getBindingFor(vnode)
             server = pending_targets[vnode]
-            if self.__consensus == ConsensusMechanism.POS and server.isStartMiner():
+            if isinstance(server, FaucetServer):
+                server.__class__ = FaucetServer
+                linked_eth_node_name = server.getLinkedEthNodeName()
+                assert linked_eth_node_name != ''  or server.getRpcUrl() !='' , 'both rpc url and eth node are not set'
+                server.setRpcUrl(f'http://{self.__getIpByVnodeName(emulator, linked_eth_node_name)}:8545')
+                
+            elif self.__consensus == ConsensusMechanism.POS and server.isStartMiner():
                 ifaces = node.getInterfaces()
                 assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
                 addr = str(ifaces[0].getAddress())
@@ -130,6 +144,17 @@ class Blockchain:
         if self.__consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] :
             self.__genesis.setSigner(self.getAllSignerAccounts())
     
+    def __getIpByVnodeName(self, emulator, nodename:str) -> str:
+        node = emulator.getBindingFor(nodename)
+        address: str = None
+        ifaces = node.getInterfaces()
+        assert len(ifaces) > 0, 'Node {} has no IP address.'.format(node.getName())
+        for iface in ifaces:
+            net = iface.getNet()
+            if net.getType() == NetworkType.Local:
+                address = iface.getAddress()
+                return address
+            
     def getBootNodes(self) -> List[str]:
         """!
         @brief Get bootnode IPs.
@@ -402,7 +427,22 @@ class Blockchain:
         @returns The value of target_committee_size.
         """
         return self.__target_committee_size
+    
+    def createFaucetServer(self, vnode:str, port:int, linked_eth_node:str, balance=1000, max_fund_amount=10):
+        """!
+        @brief Create a Faucet Server that can fund ethereum accounts using http api.
+        
+        @param vnode: name of faucet server vnode.
+        @param port: port number of Faucet http server.
+        @param linked_eth_node: vnode name of eth node to link.
+        @param balance: balance of the faucet account. (unit: ETH)
 
+        @returns self, for chaining calls.
+        """
+        eth = self.__eth_service
+        self.__pending_targets.append(vnode)
+        return eth.installFaucet(vnode, self, linked_eth_node, port, balance, max_fund_amount)
+    
     def _log(self, message: str) -> None:
         """!
         @brief Log to stderr.
@@ -486,10 +526,12 @@ class EthereumService(Service):
                 exit(1)
         mkdir(self.__save_path)
         
-    def _doInstall(self, node: Node, server: EthereumServer):
+    def _doInstall(self, node: Node, server: Server):
         self._log('installing eth on as{}/{}...'.format(node.getAsn(), node.getName()))
-
-        server.install(node, self)
+        if isinstance(server, EthereumServer):
+            server.install(node, self)
+        elif isinstance(server, FaucetServer):
+            server.install(node)
 
     def _createServer(self, blockchain: Blockchain = None) -> Server:
         self.__serial += 1
@@ -501,6 +543,9 @@ class EthereumService(Service):
             return PoWServer(self.__serial, blockchain)
         if consensus == ConsensusMechanism.POS:
             return PoSServer(self.__serial, blockchain)
+        
+    def _createFaucetServer(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int, max_fund_amount:int) -> FaucetServer:
+        return FaucetServer(blockchain, linked_eth_node, port, balance, max_fund_amount)
 
     def installByBlockchain(self, vnode: str, blockchain: Blockchain) -> EthereumServer:
         """!
@@ -515,6 +560,19 @@ class EthereumService(Service):
         if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
 
         s = self._createServer(blockchain)
+        self._pending_targets[vnode] = s
+
+        return self._pending_targets[vnode]
+
+        
+
+    def installFaucet(self, vnode:str, blockchain:Blockchain, linked_eth_node:str, port:int=80, balance:int=1000, max_fund_amount:int=10) -> FaucetServer:
+        """!
+        @brief Install the server on a node identified by given name.
+        """
+        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
+
+        s = self._createFaucetServer(blockchain, linked_eth_node, port, balance, max_fund_amount)
         self._pending_targets[vnode] = s
 
         return self._pending_targets[vnode]
