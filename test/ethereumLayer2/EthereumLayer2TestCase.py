@@ -7,6 +7,7 @@ import time
 from web3 import Web3
 from web3.middleware import signing
 from web3.middleware import geth_poa_middleware
+from web3.exceptions import TransactionNotFound
 
 from test import SeedEmuTestCase
 
@@ -21,6 +22,7 @@ class EthereumLayer2TestCase(SeedEmuTestCase):
         cls.l1_url = "http://10.162.0.71:8545"
         cls.seq_url = "http://10.150.0.71:8545"
         cls.ns_urls = [f"http://10.{i}.0.71:8545" for i in range(151, 154)]
+        cls.ns_urls[1] = "http://10.152.0.71:9545"
         cls.test_key_pair = (
             "0x2DDAaA366dc75119A256C41b9bd483D13A64389d",
             "0x4ba1ada11a1d234c3a03c08395c82e65320b5ae4aecca4a70143f4c157230528",
@@ -42,7 +44,6 @@ class EthereumLayer2TestCase(SeedEmuTestCase):
             current = time.time()
 
         return provider.isConnected()
-
 
     def test_l1_node_connection(self):
         self.assertTrue(self.wait_until_connected(self.l1_url, 300))
@@ -87,7 +88,7 @@ class EthereumLayer2TestCase(SeedEmuTestCase):
 
             seq_bn = seq_provider.eth.get_block_number()
             ns_bn = provider.eth.get_block_number()
-            self.assertTrue(seq_bn - ns_bn < GAP)
+            self.assertLess(seq_bn - ns_bn, GAP)
 
     def test_chain_id(self):
         provider = Web3(Web3.HTTPProvider(self.seq_url))
@@ -98,7 +99,7 @@ class EthereumLayer2TestCase(SeedEmuTestCase):
     def test_tx_execution(self):
         provider = Web3(Web3.HTTPProvider(self.seq_url))
         self.assertTrue(provider.isConnected())
-        
+
         tx = self.test_acc.sign_transaction(
             {
                 "chainId": self.l2_chain_id,
@@ -113,6 +114,7 @@ class EthereumLayer2TestCase(SeedEmuTestCase):
         self.assertEqual(provider.eth.get_transaction_receipt(txhash)["status"], 1)
 
     def test_deposit(self):
+        TIMEOUT = 180
         DEPOSIT_AMOUNT = Web3.toWei(1000, "ether")
         l1Provider = Web3(Web3.HTTPProvider(self.l1_url))
         self.assertTrue(l1Provider.isConnected())
@@ -132,7 +134,18 @@ class EthereumLayer2TestCase(SeedEmuTestCase):
             }
         )
         txhash = l1Provider.eth.send_raw_transaction(tx.rawTransaction)
-        time.sleep(180)
+
+        start = time.time()
+        current = time.time()
+        while current - start < TIMEOUT:
+            if (
+                l2Provider.eth.get_balance(self.test_acc.address) - l2BalanceBefore
+                == DEPOSIT_AMOUNT
+            ):
+                break
+            time.sleep(16)
+            current = time.time()
+
         self.assertEqual(l1Provider.eth.get_transaction_receipt(txhash)["status"], 1)
 
         l2BalanceAfter = l2Provider.eth.get_balance(self.test_acc.address)
@@ -151,41 +164,37 @@ class EthereumLayer2TestCase(SeedEmuTestCase):
         l1Provider = Web3(Web3.HTTPProvider(self.l1_url))
         l1Provider.middleware_onion.inject(geth_poa_middleware, layer=0)
         self.assertTrue(l1Provider.isConnected())
-        
 
         while current - start < TIMEOUT:
             block = l1Provider.eth.get_block("latest", True)
             if len(block["transactions"]) > 0:
                 for tx in block["transactions"]:
-                    if tx["from"].lower() == BATCHER_ADDR and tx["to"].lower() == INBOX_ADDR:
+                    if (
+                        tx["from"].lower() == BATCHER_ADDR
+                        and tx["to"].lower() == INBOX_ADDR
+                    ):
                         batchCount += 1
                         break
             if batchCount == TARGET_BATCH_COUNT:
                 break
             time.sleep(16)
             current = time.time()
-            
+
         self.assertEqual(batchCount, TARGET_BATCH_COUNT)
 
     def test_state_submission(self):
         OUTPUT_ORACLE_ADDR = "0x5Ab6Bc8FF05928FFd4c4D741d796A317Ab91E2B6"
         ABI = [
-                {
-                    "type": "function",
-                    "name": "latestBlockNumber",
-                    "inputs": [],
-                    "outputs": [
-                        {
-                            "name": "",
-                            "type": "uint256",
-                            "internalType": "uint256"
-                        }
-                    ],
-                    "stateMutability": "view"
-                },
-            ]
+            {
+                "type": "function",
+                "name": "latestBlockNumber",
+                "inputs": [],
+                "outputs": [{"name": "", "type": "uint256", "internalType": "uint256"}],
+                "stateMutability": "view",
+            },
+        ]
         TIMEOUT = 3600
-        
+
         start = time.time()
         current = time.time()
 
@@ -198,7 +207,7 @@ class EthereumLayer2TestCase(SeedEmuTestCase):
             currBlock = contract.functions.latestBlockNumber().call()
             if currBlock > startBlock:
                 break
-            time.sleep(60)
+            time.sleep(16)
 
         self.assertGreater(currBlock, startBlock)
 
