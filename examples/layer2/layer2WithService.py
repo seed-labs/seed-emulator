@@ -114,7 +114,7 @@ l2_2 = l2Bkc.createNode("l2-2").setL1VNode("poa-eth6", e6.getGethHttpPort())
 # Set the http port for l2-3 (default: 8545)
 l2_3 = l2Bkc.createNode("l2-3").setHttpPort(9545)
 # Set the ws port for l2-4  (default: 8546)
-l2_4 = l2Bkc.createNode("l2-4").setWSPort(8547)
+l2_4 = l2Bkc.createNode("l2-4").setWSPort(9547)
 
 # Set the deployer node, which is used to deploy the smart contract
 # Only one deployer node is allowed in a layer2 blockchain
