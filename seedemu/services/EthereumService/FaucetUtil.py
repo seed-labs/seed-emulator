@@ -14,7 +14,7 @@ FaucetServerFileTemplates['fund_script'] = '''\
 SERVER_URL="http://{address}:{port}"
 
 # Number of attempts
-ATTEMPTS=10
+ATTEMPTS=30
 
 # Initialize a counter
 count=0
@@ -154,28 +154,35 @@ def submit_form():
         recipient = request.form.get('address')
         amount = request.form.get('amount')
 
+    ip_address = request.remote_addr
+    logging.info(f"recipient: {{recipient}} amount: {{amount}} sender ip: {{ip_address}}")
+    
     # Check if 'recipient' is not None and follows the format of an Ethereum account
     if recipient is None:
+        logging.info("address cannot be empty")
         return jsonify({{'status': 'error', 'message': 'address cannot be empty'}}), 500
     elif not re.match(r'^0x[a-fA-F0-9]{{40}}$', recipient):
+        logging.info("Invalid Ethereum Address")
         return jsonify({{'status': 'error', 'message': 'Invalid Ethereum address'}}), 500
 
     if amount is None:
+        logging.info("amount cannot be empty")
         return jsonify({{'status': 'error', 'message': 'amount cannot be empty'}}), 500
     # Check if 'amount' is a number and less than 10
     try:
         amount = int(amount)
         if amount < 0:
+            logging.info("amount should be a number larger than 0")
             return jsonify({{'status': 'error', 'message': 'Amount should be a number larger than 0'}}), 500
         if amount > MAX_FUND_AMOUNT:
+            logging.info("Amount should not be larger than max_fund_amount")
             return jsonify({{'status': 'error', 'message': f'Amount should not be larger max_fund_amount: {{MAX_FUND_AMOUNT}}'}}), 500
         if amount > get_balance(app.config['WEB3'], app.config['SENDER_ADDRESS']):
+            logging.info("Request fund amount is larger than the Faucet account balance")
             return jsonify({{'status': 'error', 'message': 'Request fund amount is larger than the Faucet account balance.'}}), 500
     except ValueError:
+        logging.info("amount should be a number")
         return jsonify({{'status': 'error', 'message': 'Amount should be a number'}}), 500
-
-    ip_address = request.remote_addr
-    logging.info(f"recipient: {{recipient}} amount: {{amount}} sender ip: {{ip_address}}")
     
     # nonce = 1
     with nonce_lock:
@@ -192,7 +199,7 @@ def submit_form():
         return jsonify({{'status': 'error', 'message': f'Error sending transaction: {{e}}'}}), 500
 
 if __name__ == '__main__':
-    trial = 5
+    trial = 20
     while trial > 0:
         trial -= 1
         web3 = connect_to_geth('{rpc_url}', '{consensus}')
