@@ -37,7 +37,7 @@ emu.addBinding(Binding(cnode, filter = Filter(asn=160, nodeName='host_2')))
 # Add the Chainlink User Service Layer
 emu.addLayer(chainlink_user)
 
-OUTPUTDIR = './emulator_20'
+OUTPUTDIR = './output'
 emu.render()
 
 docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=Platform.AMD64)
