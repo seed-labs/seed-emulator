@@ -10,7 +10,7 @@ This is the top-level object in the configuration.
 
 |field|type|optional?|default|description|
 |--|--|--|--|--|
-|`bindings`|dictionary of `Binding` objects, where the key is `string`|yes|`{}`|binding list. `key` of the item indicates the name of pre-bulit nodes in the component. the `key` can be regex.|
+|`bindings`|dictionary of `Binding` objects, where the key is `string`|yes|`{}`|binding list. `key` of the item indicates the name of pre-built nodes in the component. the `key` can be regex.|
 |`options`|free-form object|yes|`{}`|options for the component; this will be converted to a python dictionary object and passed to the component.|
 
 ### Object: `Binding`
