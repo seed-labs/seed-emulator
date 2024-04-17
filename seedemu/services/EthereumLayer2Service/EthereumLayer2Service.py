@@ -61,9 +61,9 @@ class EthereumLayer2Server(Server):
         self.__wsPort = 8546
 
         if type == EthereumLayer2Node.SEQUENCER:
-            self.setSequencer(True)
+            self.__setSequencer(True)
         elif type == EthereumLayer2Node.DEPLOYER:
-            self.setDeployer(True)
+            self.__setDeployer(True)
 
     def getID(self) -> int:
         """!
@@ -73,7 +73,7 @@ class EthereumLayer2Server(Server):
         """
         return self._id
 
-    def setSequencer(self, isSequencer: bool) -> EthereumLayer2Server:
+    def __setSequencer(self, isSequencer: bool) -> EthereumLayer2Server:
         """!
         @brief Set the server as a sequencer.
 
@@ -87,7 +87,7 @@ class EthereumLayer2Server(Server):
         self.__isSequencer = isSequencer
         return self
 
-    def setDeployer(self, isDeployer: bool) -> EthereumLayer2Server:
+    def __setDeployer(self, isDeployer: bool) -> EthereumLayer2Server:
         """!
         @brief Set the server as a deployer.
 
@@ -223,6 +223,7 @@ class EthereumLayer2Server(Server):
         template = EthereumLayer2Template(self.isSequencer())
 
         node.setFile("/l2/.env", self.__getEnvs(template))
+        self.__addScript(node, "/l2/scripts/getting-started/config.sh", template.CHAIN_CONFIG)
         self.__addScript(node, "/l2/luancher.sh", template.SC_DEPLOYER)
         node.appendStartCommand("cd /l2")
 
@@ -298,6 +299,7 @@ class EthereumLayer2Server(Server):
             {
                 EthereumLayer2Config.L1_RPC_URL.value: l1RPC,
                 EthereumLayer2Config.L1_RPC_KIND.value: "basic",
+                EthereumLayer2Config.L2_CHAIN_ID.value: self.__l2Blockchain.getChainID(),
                 EthereumLayer2Config.GETH_HTTP_PORT.value: self.getHttpPort(),
                 EthereumLayer2Config.GETH_WS_PORT.value: self.getWSPort(),
                 EthereumLayer2Config.SEQ_RPC.value: self.__l2Blockchain.getSequencerAddress(),
@@ -326,7 +328,9 @@ class EthereumLayer2Blockchain:
     __pendingTargets: List[str]
     __chainName: str
     __sequencerAddress: str
+    __sequencerCount: int
     __deployerAddress: str
+    __deployerCount: int
     __adminAccounts: Dict[EthereumLayer2Account, Dict[str, str]]
     __l1VNode: str
     __l1Port: int
@@ -337,7 +341,9 @@ class EthereumLayer2Blockchain:
         self.__chainID = chainID
         self.__pendingTargets = []
         self.__sequencerAddress = None
+        self.__sequencerCount = 0
         self.__deployerAddress = None
+        self.__deployerCount = 0
         self.__adminAccounts = {}
         self.__l1VNode = None
         self.__l1Port = None
@@ -350,7 +356,6 @@ class EthereumLayer2Blockchain:
         """
         print("==== Layer2Blockchain: {}".format(msg), file=stderr)
 
-    # TODO: limit sequencer node and deployer node to one
     def createNode(
         self, vnode: str, type: EthereumLayer2Node = EthereumLayer2Node.NON_SEQUENCER
     ) -> EthereumLayer2Server:
@@ -362,6 +367,16 @@ class EthereumLayer2Blockchain:
 
         @return The created layer2 server.
         """
+        if type == EthereumLayer2Node.SEQUENCER:
+            assert (
+                self.__sequencerCount == 0
+            ), "Layer2Blockchain::createNode(): sequencer node already exists"
+            self.__sequencerCount += 1
+        elif type == EthereumLayer2Node.DEPLOYER:
+            assert (
+                self.__deployerCount == 0
+            ), "Layer2Blockchain::createNode(): deployer node already exists"
+            self.__deployerCount += 1
         self.__pendingTargets.append(vnode)
         return self.__layer2Service.installByL2Blockchain(vnode, self, type)
 
@@ -390,7 +405,6 @@ class EthereumLayer2Blockchain:
         """
         return self.__adminAccounts[type]
 
-    # TODO: implement the setChainID method or set it at init
     def getChainID(self) -> int:
         """!
         @brief Get the chain ID.
