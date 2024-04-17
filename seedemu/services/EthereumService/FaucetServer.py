@@ -3,8 +3,6 @@ from seedemu.core import Node, Service, Server
 from seedemu.core.Emulator import Emulator
 from seedemu.core.enums import NetworkType
 from seedemu.services.EthereumService import *
-from eth_account import Account
-from eth_account.signers.local import LocalAccount
 from os import path
 from .FaucetUtil import FaucetServerFileTemplates
 from seedemu.services.EthereumService import *
@@ -17,7 +15,7 @@ class FaucetServer(Server):
     
     __blockchain:Blockchain
     __port: int
-    __account: LocalAccount
+    __account
     __balance: int
     __rpc_url: str
     __linked_eth_node:str
@@ -30,9 +28,11 @@ class FaucetServer(Server):
         @brief FaucetServer constructor.
         """
         super().__init__()
+        from eth_account import Account
+        self.__Account = Account
         self.__blockchain = blockchain
         self.__port = port
-        self.__account = Account.from_key('0xa9aec7f51b6b872d86676d4e5facf4ddf6850745af133b647781d008894fa3aa')
+        self.__account = self.__Account.from_key('0xa9aec7f51b6b872d86676d4e5facf4ddf6850745af133b647781d008894fa3aa')
         self.__balance = balance
         self.__balance_unit = EthUnit.ETHER
         self.__rpc_url = ''
@@ -56,9 +56,9 @@ class FaucetServer(Server):
         """
         
         if isEncrypted:
-            self.__account = Account.from_key(Account.decrypt(keyfile_json=keyString,password=password))
+            self.__account =self.__Account.from_key(self.__Account.decrypt(keyfile_json=keyString,password=password))
         else:
-            self.__account = Account.from_key(keyString)
+            self.__account =self.__Account.from_key(keyString)
         return self
     
     
@@ -80,9 +80,9 @@ class FaucetServer(Server):
         keyfileContent = f.read()
         f.close()
         if isEncrypted:
-            self.__account = Account.from_key(Account.decrypt(keyfile_json=keyfileContent,password=password))
+            self.__account =self.__Account.from_key(self.__Account.decrypt(keyfile_json=keyfileContent,password=password))
         else: 
-            self.__account = Account.from_key(keyfileContent)
+            self.__account =self.__Account.from_key(keyfileContent)
         return self
 
     def fund(self, recipient, amount):
