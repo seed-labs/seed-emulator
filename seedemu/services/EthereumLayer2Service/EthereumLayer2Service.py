@@ -350,6 +350,7 @@ class EthereumLayer2Blockchain:
         """
         print("==== Layer2Blockchain: {}".format(msg), file=stderr)
 
+    # TODO: limit sequencer node and deployer node to one
     def createNode(
         self, vnode: str, type: EthereumLayer2Node = EthereumLayer2Node.NON_SEQUENCER
     ) -> EthereumLayer2Server:
