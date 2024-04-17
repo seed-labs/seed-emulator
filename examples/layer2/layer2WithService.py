@@ -4,7 +4,7 @@
 from seedemu import *
 import sys
 
-# Admin accounts
+# Setting Admin accounts for layer2
 ADMIN_ACC = (
     "0xdFC7d61047DAc7735d42Fd517e39e89C57083b45",
     "0xd1e9509fa96d231fe323bda01cd954d4a74796a859ebe9dd638d5f0824d1ebd4",
@@ -42,21 +42,19 @@ platform_mapping = {"amd": Platform.AMD64, "arm": Platform.ARM64}
 docker = Docker(etherViewEnabled=True, platform=platform_mapping[platform])
 
 # Create the Ethereum layer
-# saveState=True: will set the blockchain folder using `volumes`,
-# so the blockchain data will be preserved when containers are deleted.
 eth = EthereumService(override=True)
 
 # Create the 1 Blockchain layers, which is a sub-layer of Ethereum layer
-# Need to specify chainName and consensus when create Blockchain layer.
-
-# blockchain is a POA based blockchain
 blockchain = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.POA)
 
-# Set custom genesis
+# Customize blockchain genesis file
 initBal = 10**8
+# Set the gas limit per block to 30,000,000 for layer2 smart contract deployment
 blockchain.setGasLimitPerBlock(30_000_000)
+# Pre-deployed the smart contract factory for layer2 smart contract deployment
 blockchain.addLocalAccount(FACTORY_ACC[0], 0)
 blockchain.addCode(FACTORY_ACC[0], FACTORY_CODE)
+# Funding accounts
 blockchain.addLocalAccount(ADMIN_ACC[0], initBal)
 blockchain.addLocalAccount(BATCHER_ACC[0], initBal)
 blockchain.addLocalAccount(PROPOSER_ACC[0], initBal)
@@ -71,11 +69,10 @@ e8 = blockchain.createNode("poa-eth8")
 
 # Set bootnodes on e5. The other nodes can use these bootnodes to find peers.
 # Start mining on e5,e6
-# To start mine(seal) in POA consensus, the account should be unlocked first.
 e5.setBootNode(True).unlockAccounts().startMiner()
 e6.unlockAccounts().startMiner()
 
-# Enable ws connection on e5 geth
+# Enable ws and http connections
 # Set geth ws port to 8541 (Default : 8546)
 e5.enableGethWs().setGethWsPort(8541)
 e5.enableGethHttp()
@@ -90,34 +87,52 @@ emu.getVirtualNode("poa-eth7").setDisplayName("Ethereum-POA-7").addPortForwardin
 )
 emu.getVirtualNode("poa-eth8").setDisplayName("Ethereum-POA-8")
 
-# Create Layer2 nodes
+### Start setting up Layer2 ###
+
+# Create Layer2 service
 l2 = EthereumLayer2Service()
+
+# Create a Layer2 blockchain, name is required
 l2Bkc = l2.createL2Blockchain("test")
 
+# Set the layer1 node to be connected for all the nodes in this layer2 blockchain
+# All the layer2 nodes are required to connect to a layer1 node
 l2Bkc.setL1VNode("poa-eth5", e5.getGethHttpPort())
+
+# Configure the admin accounts for layer2 blockchain
+# Theses accounts must be funded in the layer1 blockchain
 l2Bkc.setAdminAccount(EthereumLayer2Account.GS_ADMIN, ADMIN_ACC)
 l2Bkc.setAdminAccount(EthereumLayer2Account.GS_BATCHER, BATCHER_ACC)
 l2Bkc.setAdminAccount(EthereumLayer2Account.GS_PROPOSER, PROPOSER_ACC)
 l2Bkc.setAdminAccount(EthereumLayer2Account.GS_SEQUENCER, SEQUENCER_ACC)
 
+# Create layer2 nodes
+# Set l2-1 to be a sequencer node, only one sequencer node is allowed in a layer2 blockchain
 l2_1 = l2Bkc.createNode("l2-1", EthereumLayer2Node.SEQUENCER)
+
+# Each node can have a individual layer1 node to connect to,
+# this setting will override the blockchain setting
 l2_2 = l2Bkc.createNode("l2-2").setL1VNode("poa-eth6", e6.getGethHttpPort())
+
+# Default type of the node is the non-sequencer node
 l2_3 = l2Bkc.createNode("l2-3")
 l2_4 = l2Bkc.createNode("l2-4")
+
+# Set the deployer node, which is used to deploy the smart contract
+# Only one deployer node is allowed in a layer2 blockchain
 deployer = l2Bkc.createNode("l2-deployer", EthereumLayer2Node.DEPLOYER)
 
-# Set external port
+# Set an external port for user interaction
 emu.getVirtualNode("l2-3").addPortForwarding(8545, l2_3.getHttpPort())
 
 
 # Binding virtual nodes to physical nodes
-
 emu.addBinding(Binding("poa-eth5", filter=Filter(asn=160, nodeName="host_0")))
 emu.addBinding(Binding("poa-eth6", filter=Filter(asn=161, nodeName="host_0")))
 emu.addBinding(Binding("poa-eth7", filter=Filter(asn=162, nodeName="host_0")))
 emu.addBinding(Binding("poa-eth8", filter=Filter(asn=163, nodeName="host_0")))
 
-# Add the layer and save the component to a file
+# Add the ethereum layer
 emu.addLayer(eth)
 
 emu.addBinding(Binding("l2-1", filter=Filter(asn=150, nodeName="host_0")))
@@ -127,7 +142,7 @@ emu.addBinding(Binding("l2-4", filter=Filter(asn=153, nodeName="host_0")))
 emu.addBinding(Binding("l2-deployer", filter=Filter(asn=154, nodeName="host_0")))
 
 emu.addLayer(l2)
-
+# Save the component to a file
 emu.dump("component-blockchain.bin")
 
 emu.render()
