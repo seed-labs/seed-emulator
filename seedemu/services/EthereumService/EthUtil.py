@@ -1,11 +1,10 @@
 from __future__ import annotations
 from .EthEnum import ConsensusMechanism
-from typing import Dict, List
+from typing import List
 import json
 from datetime import datetime, timezone
 from os import path
 from .EthTemplates import GenesisFileTemplates
-from web3 import Web3
 from sys import stderr
 from time import time
 
@@ -18,9 +17,12 @@ class Genesis():
     __consensusMechanism:ConsensusMechanism
     
     def __init__(self, consensus:ConsensusMechanism):
+        from web3 import Web3
+        self.__Web3 = Web3
         self.__consensusMechanism = consensus
         self.__genesis = json.loads(GenesisFileTemplates[self.__consensusMechanism.value])
         self.__genesis["timestamp"] = hex(int((time())))
+        
 
 
     def setGenesis(self, customGenesis:str):
@@ -72,7 +74,7 @@ class Genesis():
         """
 
         assert balance >= 0, "Genesis::allocateBalance: balance cannot have a negative value. Requested Balance Value : {}".format(balance)
-        checksum_address = Web3.toChecksumAddress(address)
+        checksum_address = self.__Web3.toChecksumAddress(address)
         self.__genesis["alloc"][checksum_address[2:]] = {"balance":"{}".format(balance)}
 
         return self
@@ -206,7 +208,7 @@ class EthAccount():
 
         EthAccount._log('creating node_{} emulator account {} from mnemonic...'.format(id, index))
         acct = Account.from_mnemonic(mnemonic, account_path=ETH_ACCOUNT_KEY_DERIVATION_PATH.format(id=id, index=index))
-        address = Web3.toChecksumAddress(acct.address)
+        address = self.__Web3.toChecksumAddress(acct.address)
         
         keystore_content = json.dumps(EthAccount.__encryptAccount(account=acct, password=password))
         datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
@@ -231,7 +233,7 @@ class EthAccount():
 
         EthAccount._log('creating local account {} from mnemonic...'.format(index))
         acct = Account.from_mnemonic(mnemonic, account_path=LOCAL_ACCOUNT_KEY_DERIVATION_PATH.format(index=index))
-        address = Web3.toChecksumAddress(acct.address)
+        address = self.__Web3.toChecksumAddress(acct.address)
 
         return AccountStructure(address, balance, "", "", "")
 
