@@ -208,9 +208,21 @@ echo "$RESPONSE"
 
 ChainlinkFileTemplate['send_get_eth_request'] = """\
 # Wait for the Chainlink node to be up
-sleep 20
-chainlink admin login -f /api.txt
-ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
+while true; do
+    sleep 20
+    # Get Ethereum address
+    chainlink admin login -f /api.txt
+    ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
+
+    # Check if the address is empty
+    if [ -z "$ETH_ADDRESS" ]; then
+        echo "Error: Ethereum address cannot be empty."
+    else
+        # Address is not empty, break the loop
+        echo "Ethereum address: $ETH_ADDRESS"
+        break
+    fi
+done
 FAUCET_SERVER_URL={faucet_server_url}
 FAUCET_SERVER_PORT={faucet_server_port}
 RPC_URL="http://{rpc_url}:{rpc_port}"
