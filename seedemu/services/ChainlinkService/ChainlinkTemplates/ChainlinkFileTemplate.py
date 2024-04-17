@@ -240,6 +240,7 @@ while [ "$SERVER_STATUS" -ne 200 ]; do
 done
 
 echo "Faucet server is up. Proceeding to send fund request."
+echo "curl -X POST -d address=$ETH_ADDRESS&amount=$AMOUNT http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme > /dev/null 2>&1 &"
 curl -X POST -d "address=$ETH_ADDRESS&amount=$AMOUNT" "http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme" > /dev/null 2>&1 &
 echo "Fund request sent to the faucet server."
 
@@ -261,6 +262,7 @@ while true; do
         break
     elif [ $elapsed_time -gt $TIME_LIMIT ]; then
         echo "Account not funded after $TIME_LIMIT seconds. Sending another request..."
+        echo "curl -X POST -d address=$ETH_ADDRESS&amount=$AMOUNT http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme > /dev/null 2>&1 &"
         curl -X POST -d "address=$ETH_ADDRESS&amount=$AMOUNT" "http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme" > /dev/null 2>&1 &
         start_time=$(date +%s)
     else
