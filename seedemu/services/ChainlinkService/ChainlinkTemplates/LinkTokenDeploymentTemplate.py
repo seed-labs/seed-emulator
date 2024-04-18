@@ -35,7 +35,7 @@ while True:
     try:
         response = requests.get("{faucet_url}")
         if response.status_code == 200:
-        	logging.info("faucet server connection succeed.")
+            logging.info("faucet server connection succeed.")
             break
         logging.info("faucet server connection failed: try again 10 seconds after.")
         
