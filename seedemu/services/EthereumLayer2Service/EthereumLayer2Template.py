@@ -185,6 +185,9 @@ set -exu
 
 source .env
 
+asn=$(cat /ifinfo.txt | awk -F'[.:]' '{{print $3}}')
+ip route add default via 10.$asn.0.254 dev eth0
+
 # ping $L1_RPC_URL until connected
 while ! curl -s $L1_RPC_URL > /dev/null
 do
@@ -224,6 +227,9 @@ python3 -m http.server {WEB_SERVER_PORT} -d chain_configs
 set -exu
 
 source .env
+
+asn=$(cat /ifinfo.txt | awk -F'[.:]' '{{print $3}}')
+ip route add default via 10.$asn.0.254 dev eth0
 
 # Try to retrieve genesis.json & rollup.json file from the server until it is available
 while ! curl -s $DEPLOYER_URL/genesis.json > /dev/null

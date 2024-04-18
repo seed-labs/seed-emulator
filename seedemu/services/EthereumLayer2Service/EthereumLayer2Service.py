@@ -197,7 +197,9 @@ class EthereumLayer2Server(Server):
             self.__install(node)
 
         # Add universal commands
-        node.addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
+        # node.addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
+        # node.insertStartCommand(0, "sed -i 's/net0/eth0/g' /ifinfo.txt")
+        
         node.appendStartCommand(
             f"bash ./luancher.sh &> out.log",
             fork=True,
