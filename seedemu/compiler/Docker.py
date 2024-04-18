@@ -912,6 +912,8 @@ class Docker(Compiler):
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
 
+        for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
+
         start_commands = ''
 
         if self.__self_managed_network:
@@ -941,8 +943,6 @@ class Docker(Compiler):
 
         for (cpath, hpath) in node.getImportedFiles().items():
             dockerfile += self._importFile(cpath, hpath)
-
-        for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
         dockerfile += 'CMD ["/start.sh"]\n'
         print(dockerfile, file=open('Dockerfile', 'w'))
