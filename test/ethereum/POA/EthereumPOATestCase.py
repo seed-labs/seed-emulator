@@ -7,6 +7,7 @@ from web3 import Web3
 from seedemu import *
 import time
 from test import SeedEmuTestCase
+import requests
 
 class EthereumPOATestCase(SeedEmuTestCase):
     @classmethod
@@ -73,6 +74,65 @@ class EthereumPOATestCase(SeedEmuTestCase):
         for account in accounts:
             self.assertTrue(self.wallet1._web3.eth.getBalance(account.address) >= 30*EthUnit.ETHER.value)
 
+    def test_static_fund(self):
+        fund_address = "0x40e38EF94ab2bC9506167D478821ffd55ff2d88d"
+        # Set maximum number of attempts
+        max_attempts = 10
+        attempts = 0
+
+        while attempts < max_attempts:
+            if self.wallet1._web3.eth.getBalance(fund_address) >= 2*EthUnit.ETHER.value:
+                break
+            else:
+                # Increment the attempts counter
+                attempts += 1
+                # Wait for a short duration before trying again (e.g., 5 seconds)
+                time.sleep(10)
+        self.assertTrue(self.wallet1._web3.eth.getBalance(fund_address) >= 2*EthUnit.ETHER.value)
+
+    def test_dynamic_fund(self):
+        max_attempts = 20
+        attempts = 0
+
+        while attempts < max_attempts:
+            try:
+                # Send the POST request
+                response = requests.get('http://10.160.0.71:80/')
+                # Check if the request was successful (status code 200)
+                if response.status_code == 200:
+                    print("POST request successful")
+                    break  # Exit the loop if successful
+                else:
+                    print(f"POST request failed with status code {response.status_code}")
+            except requests.exceptions.RequestException as e:
+                print(f"Error: {e}")
+            
+            # Increment the attempts counter
+            attempts += 1
+            # Wait for a short duration before trying again (e.g., 5 seconds)
+            time.sleep(10)
+        fund_address = "0x9e4f73dE97FEB05FE4e3c0d42B92585C9A0c0E91"
+
+        # Define the URL of faucet API endpoint
+        url = 'http://10.160.0.71:80/fundme'
+        # Define the parameters to send in the POST request
+        params = {'address': fund_address, 'amount': 5}
+        # Send the POST request
+        response = requests.post(url, data=params)
+        print(response)
+        while attempts < max_attempts:
+            if self.wallet1._web3.eth.getBalance(fund_address) >= 5*EthUnit.ETHER.value:
+                break
+            else:
+                # Increment the attempts counter
+                attempts += 1
+                # Wait for a short duration before trying again (e.g., 5 seconds)
+                time.sleep(10)
+
+        self.assertTrue(self.wallet1._web3.eth.getBalance(fund_address) >= 5*EthUnit.ETHER.value)
+
+
+
     @classmethod
     def get_test_suite(cls):
         test_suite = ut.TestSuite()
@@ -84,6 +144,8 @@ class EthereumPOATestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_poa_emulator_account'))
         test_suite.addTest(cls('test_poa_create_accounts'))
         test_suite.addTest(cls('test_import_account'))
+        test_suite.addTest(cls('test_static_fund'))
+        test_suite.addTest(cls('test_dynamic_fund'))
         return test_suite
     
 if __name__ == "__main__":
