@@ -49,9 +49,13 @@ timeout = 600
 start_time = time.time()
 while True:
     try:
-        response = requests.get(faucet_url)
+        response = requests.get("{faucet_url}")
         if response.status_code == 200:
             break
+        time.sleep(10)
+        if time.time() - start_time > timeout:
+            logging.info("faucet server connection failed: 600 seconds exhausted.")
+            exit()
     except Exception as e:
         pass
 
