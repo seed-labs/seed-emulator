@@ -29,3 +29,11 @@ One can also specify additional information for the Scion-ASes and the border ro
 `as110.setNote('This is a core AS')`
 
 `as_110_br1 = as110.createRouter('br1').joinNetwork('net0').setGeo(Lat=37.7749, Long=-122.4194,Address="San Francisco, CA, USA").setNote("This is a border router")`
+
+## Including link properties in beacons
+
+By default, available link properties, Geolocation, Hops and AS-Notes will be included in the `staticInfoConfig.json` file on the control Service nodes. To turn this of one can set the `generateStaticInfoConfig` flag to false as follows:
+
+```python
+as110.setGenerateStaticInfoConfig(False)
+```

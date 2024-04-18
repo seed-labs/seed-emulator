@@ -20,6 +20,7 @@ base.createIsolationDomain(1)
 # AS-110
 as110 = base.createAutonomousSystem(110)
 as110.setNote('This is a core AS')
+as110.setGenerateStaticInfoConfig(True) # Generate static info config (This is not neccessary as the default behaviour is to generate static info config)
 scion_isd.addIsdAs(1,110,is_core=True)
 as110.createNetwork('net0').setDefaultLinkProperties(latency=10, bandwidth=1000, packetDrop=0.1).setMtu(1400)
 as110.createControlService('cs_1').joinNetwork('net0')
