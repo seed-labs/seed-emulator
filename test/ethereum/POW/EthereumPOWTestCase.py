@@ -5,11 +5,9 @@ import unittest as ut
 from .SEEDBlockchain import Wallet
 from web3 import Web3
 from seedemu import *
-import os
-import getopt
-import sys
 import time
 from test import SeedEmuTestCase
+import requests
 
 
 class EthereumPOWTestCase(SeedEmuTestCase):
