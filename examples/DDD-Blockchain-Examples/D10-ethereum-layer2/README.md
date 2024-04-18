@@ -9,12 +9,17 @@ This an example showing how to install, configure, and interact with layer2 bloc
 
 ## Building the Layer2 Blockchain
 
-### A.0 Set the layer2 admin & test accounts
+### A.0 Set the layer2 privileged & test accounts
 
-Define four accounts for latter use.
+Some accounts must be set to use layer2 service:
+
+- ADMIN_ACC has the ability to upgrade layer2 system contracts and settings (e.g. layer2 gasprice, other privileged accounts) on layer1.
+- BATCHER_ACC publishes Sequencer transaction data to layer1.
+- PROPOSER_ACC publishes L2 transaction results (state roots) to L1.
+- SEQUENCER_ACC signs blocks on the layer2 p2p network (for a more rapid blockchain state synchronization).
 
 ```python
-# Setting Admin accounts for layer2
+# Setting privileged accounts for layer2
 ADMIN_ACC = (
     "0xdFC7d61047DAc7735d42Fd517e39e89C57083b45",
     "0xd1e9509fa96d231fe323bda01cd954d4a74796a859ebe9dd638d5f0824d1ebd4",

@@ -4,7 +4,7 @@
 from seedemu import *
 import sys
 
-# Setting Admin accounts for layer2
+# Setting privileged accounts for layer2
 ADMIN_ACC = (
     "0xdFC7d61047DAc7735d42Fd517e39e89C57083b45",
     "0xd1e9509fa96d231fe323bda01cd954d4a74796a859ebe9dd638d5f0824d1ebd4",
