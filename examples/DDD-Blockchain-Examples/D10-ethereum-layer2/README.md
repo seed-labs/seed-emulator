@@ -11,7 +11,7 @@ This an example showing how to install, configure, and interact with layer2 bloc
 
 ### A.0 Set the layer2 privileged & test accounts
 
-Some accounts must be set to use layer2 service:
+Some accounts must be set to use the layer2 service:
 
 - `ADMIN_ACC` has the ability to upgrade layer2 system contracts and settings (e.g. layer2 gasprice, other privileged accounts) on layer1.
 - `BATCHER_ACC` publishes Sequencer transaction data to layer1.
