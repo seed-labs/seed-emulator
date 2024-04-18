@@ -19,9 +19,9 @@ ETHEREUM_IMAGE = DockerImage(name='handsonsecurity/seedemu-ethereum',
                                 software=['software-properties-common', 'python3', 'python3-pip'],
                                 subset=BASE_IMAGE)
 
-OP_STACK_IMAGE = DockerImage(name='op-stack:local', software=[], subset=BASE_IMAGE)
+OP_STACK_IMAGE = DockerImage(name='huagluck/seedemu-op-stack', software=[], subset=BASE_IMAGE)
 
-SC_DEPLOYER_IMAGE = DockerImage(name='sc-deployer:latest', software=[], subset=BASE_IMAGE)
+SC_DEPLOYER_IMAGE = DockerImage(name='huagluck/seedemu-sc-deployer', software=[], subset=BASE_IMAGE)
 
 UBUNTU_IMAGE_ARM64   = DockerImage(name='ubuntu:20.04',
                                 software=[],
@@ -40,9 +40,9 @@ ETHEREUM_IMAGE_ARM64 = DockerImage(name='handsonsecurity/seedemu-ethereum-arm64'
                                 software=['software-properties-common', 'python3', 'python3-pip'],
                                 subset=BASE_IMAGE_ARM64)
 
-OP_STACK_IMAGE_ARM64 = DockerImage(name='op-stack:local', software=[], subset=BASE_IMAGE_ARM64)
+OP_STACK_IMAGE_ARM64 = DockerImage(name='huagluck/seedemu-op-stack', software=[], subset=BASE_IMAGE_ARM64)
 
-SC_DEPLOYER_IMAGE_ARM64 = DockerImage(name='sc-deployer:latest', software=[], subset=BASE_IMAGE_ARM64)
+SC_DEPLOYER_IMAGE_ARM64 = DockerImage(name='huagluck/seedemu-sc-deployer', software=[], subset=BASE_IMAGE_ARM64)
 
 BASESYSTEM_DOCKERIMAGE_MAPPING = {
         BaseSystem.UBUNTU_20_04:           UBUNTU_IMAGE,
