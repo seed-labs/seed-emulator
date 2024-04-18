@@ -4,19 +4,26 @@ This is an example that demonstrates how to use the public key infrastructure (P
 
 In this example we create a PKI infrastructure on node `ca` with ACME support. All the nodes in the emulator will have this private CA root certificate installed. We will also create a web server on node `web` and request a certificate from the CA. The CA will sign the certificate and send it to the web server. The web server will then use this certificate to serve HTTPS requests.
 
+## What is ACME
+
+TODO: give a brief introduction of ACME.
+
+
 ## Key Components
 
 ### DNS Infrastructure
 
-Same as examples/B02-mini-internet-with-dns.
-
 DNS infrastructure is required for the PKI infrastructure to work. The PKI infrastructure will consult the DNS infrastructure to resolve the domain names and verify the target node's control of domain in ACME challenges.
 
-ETC hosts file can also be served as DNS infrastructure alternative.
+The DNS component used in this example is the same as examples/B02-mini-internet-with-dns. Instead of using the DNS component, we can also use the `EtcHosts` layer to add mappings to the `/etc/hosts` file. 
 
-### PKI Infrastructure
+TODO: separate the example code to two programs, one for the base (internet + DNS),
+and the other just for the `ca` component.
 
-To create a PKI infrastructure, we need to prepare the Root CA store. The Root CA store is abstracted as a class but it is essentially a folder living in the host machine's `/tmp` directory. The Root CA store is used to generate the corresponding Root CA certificate and private key in the build time. It is also possible to supply your own Root CA certificate and private key.
+
+## PKI Infrastructure
+
+To create a PKI infrastructure, we need to prepare the Root CA store. The Root CA store is abstracted as a class but it is essentially a folder living in the host machine's `/tmp` directory. The Root CA store is used to generate the corresponding Root CA certificate and private key at the build time. It is also possible to supply your own Root CA certificate and private key.
 
 ```python
 from seedemu.services import RootCAStore
@@ -34,24 +41,27 @@ ca.installCACert()
 emu.addLayer(ca)
 ```
 
-The CA service here uses a private certificate authority program `smallstep` to serve the PKI infrastructure.
-For now, the CA service only supports ACME protocol, but it can be easily extended to support X.509 & SSH certificates if needed.
+The CA service here uses a private certificate authority program `smallstep` to provide the PKI infrastructure.
+For now, the CA service only supports the ACME protocol, but it can be easily extended to support X.509 & SSH certificates. 
 
 `ca.installCACert()` will by default install the Root CA certificate to all the nodes in the emulator.
 It accepts a `Filter` as parameter to install the certificate to specific nodes.
-Since the filter logic is implemented inside
-the `CAService` rather than the `Filter` object, the `Filter` object might perform
-differently in the `CAService` than in other parts.
 
-For example, the allowBound filter is not supported in the `CAService`.
-
+It should be noted that since the actual filter logic is implemented inside the class that uses the filter,
+not inside the `Filter` class itself, the `Filter` object might perform differently
+in the `CAService` than in other places.
+For example, the `allowBound` filter is not supported in the `CAService`.
 Moreover, inside the `CAService`, the prefix filter is implemented in a portable way that
-supports both IPv4 and IPv6 via IPv4-mapped IPv6 addresses. This might not be the case in other
-parts.
+supports both IPv4 and IPv6 via IPv4-mapped IPv6 addresses. This might not be the case in other places. 
+
+TODO: we may need to provide more information about what filter logic is implemented.
+
 
 ### Web Server
 
-It's a simple web server that serves a static page. The web server will request a certificate from the CA and use it to serve HTTPS requests.
+In this example, we use a web server to demonstrate how the PKI is used. 
+This is a simple web server that serves a static page. When this machine starts,
+it will request a certificate from the specified CA server, and use it to serve HTTPS requests.
 
 ```python
 webServer: WebServer = web.install('web-vnode')
@@ -60,14 +70,21 @@ webServer.getCertificatesFrom(ca).enableHTTPS()
 ```
 
 Server names are required for the web server to request a certificate from the CA. The ACME client will use the server names to determine which nginx configuration to use.
+The `enableHTTPS` API will configure the web server using the certificate, allowing
+the server to serve HTTPS requests.
 
-After enabling HTTPS, the web server will serve HTTPS requests.
+TODO: the `getCertificatesFrom()` API name might be a little bit misleading,
+because an API likes this implies it will return a certificate. That is not the case.
+It might be better to call it `setCAServer` or something like that, starting with `set`.  
+
+TODO: It might be helpful to set up multiple web servers in the emulator. 
+This will allow us to demonstrate the uses of other interesting APIs, if any.
 
 ### Demo
 
-On any nodes that have the Root CA certificate installed (not router or ix nodes, they might not have dns properly configured):
+On nodes that have the Root CA certificate installed (not routers or ix nodes, as they might not have DNS configured properly):
 
-In this example, as we only set up https for https://user.internal.
+In this example, we only set up https for https://user.internal.
 In your case you can set up https for any domain you want.
 Remember to change the domain name accordingly.
 
@@ -75,9 +92,7 @@ Remember to change the domain name accordingly.
 $ curl https://user.internal
 ```
 
-You will not encounter any certificate errors as the PKI infrastructure is set up correctly.
-
-If it is not set up correctly, you will encounter an error like this:
+You will not encounter any certificate errors as the PKI infrastructure is set up correctly. If it is not set up correctly, you will encounter an error like this:
 
 ```bash
 $ curl https://self-signed.badssl.com/
