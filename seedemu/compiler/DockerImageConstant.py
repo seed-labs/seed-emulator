@@ -1,6 +1,6 @@
 from .DockerImage import DockerImage
 from seedemu.core import BaseSystem
-from enum import Enum 
+from enum import Enum
 
 UBUNTU_IMAGE   = DockerImage(name='ubuntu:20.04',
                                 software=[],
@@ -23,6 +23,10 @@ OP_STACK_IMAGE = DockerImage(name='huagluck/seedemu-op-stack', software=[], subs
 
 SC_DEPLOYER_IMAGE = DockerImage(name='huagluck/seedemu-sc-deployer', software=[], subset=BASE_IMAGE)
 
+CHAINLINK_IMAGE = DockerImage(name='amanvelani/chainlink-develop:amd64',
+                                software=[],
+                                subset=None)
+
 UBUNTU_IMAGE_ARM64   = DockerImage(name='ubuntu:20.04',
                                 software=[],
                                 subset=None)
@@ -44,6 +48,10 @@ OP_STACK_IMAGE_ARM64 = DockerImage(name='huagluck/seedemu-op-stack', software=[]
 
 SC_DEPLOYER_IMAGE_ARM64 = DockerImage(name='huagluck/seedemu-sc-deployer', software=[], subset=BASE_IMAGE_ARM64)
 
+CHAINLINK_IMAGE_ARM64 = DockerImage(name='amanvelani/chainlink-develop:arm64',
+                                software=[],
+                                subset=None)
+
 BASESYSTEM_DOCKERIMAGE_MAPPING = {
         BaseSystem.UBUNTU_20_04:           UBUNTU_IMAGE,
         BaseSystem.SEEDEMU_BASE:           BASE_IMAGE,
@@ -60,6 +68,15 @@ BASESYSTEM_ARM64_DOCKERIMAGE_MAPPING = {
         BaseSystem.SEEDEMU_ETHEREUM:    ETHEREUM_IMAGE_ARM64,
         BaseSystem.SEEDEMU_OP_STACK:    OP_STACK_IMAGE_ARM64,
         BaseSystem.SEEDEMU_SC_DEPLOYER: SC_DEPLOYER_IMAGE_ARM64
+        BaseSystem.SEEDEMU_CHAINLINK:      CHAINLINK_IMAGE
+}
+
+BASESYSTEM_ARM64_DOCKERIMAGE_MAPPING = {
+        BaseSystem.UBUNTU_20_04:     UBUNTU_IMAGE_ARM64,
+        BaseSystem.SEEDEMU_BASE:     BASE_IMAGE_ARM64,
+        BaseSystem.SEEDEMU_ROUTER:   ROUTER_IMAGE_ARM64,
+        BaseSystem.SEEDEMU_ETHEREUM: ETHEREUM_IMAGE_ARM64,
+        BaseSystem.SEEDEMU_CHAINLINK: CHAINLINK_IMAGE_ARM64
 }
 
 class Platform(Enum):
