@@ -49,7 +49,7 @@ timeout = 600
 start_time = time.time()
 while True:
     try:
-        response = requests.get("{faucet_url}")
+        response = requests.get(faucet_url)
         if response.status_code == 200:
             logging.info("faucet server connection succeed.")
             break
