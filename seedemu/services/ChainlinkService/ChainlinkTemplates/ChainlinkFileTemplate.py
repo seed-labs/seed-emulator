@@ -110,17 +110,6 @@ done
 echo "All jobs have been created."
 """
 
-ChainlinkFileTemplate['save_sender_address'] = """\
-chainlink admin login -f /api.txt
-ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
-if [ -z "$ETH_ADDRESS" ]; then
-    echo "Error: Ethereum address not found."
-    exit 1
-fi
-mkdir -p /deployed_contracts
-echo $ETH_ADDRESS > /deployed_contracts/sender.txt
-"""
-
 ChainlinkFileTemplate['nginx_site'] = """\
 server {{
     listen {port};
@@ -282,4 +271,7 @@ while true; do
     fi
     sleep 30
 done
+
+mkdir -p /deployed_contracts
+echo $ETH_ADDRESS > /deployed_contracts/auth_sender.txt
 """

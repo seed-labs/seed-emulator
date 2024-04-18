@@ -63,7 +63,8 @@ class ChainlinkUserServer(Server):
             raise Exception('Faucet URL not set')
         
         # Check if the chainlink init node is up and running
-        self.__node.appendStartCommand(ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
+        self.__node.setFile('/check_init_node.sh', ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
+        self.__node.appendStartCommand('bash /check_init_node.sh')       
         # Get the link token and oracle contract addresses
         self.__node.setFile('./requests/get_contract_addresses.py', ChainlinkUserTemplate['get_contract_addresses'].format(init_node_url=self.__init_node_url, number_of_normal_servers=self.__number_of_normal_servers))
         self.__node.appendStartCommand(f'python3 ./requests/get_contract_addresses.py')
