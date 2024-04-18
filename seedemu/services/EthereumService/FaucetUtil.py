@@ -6,6 +6,9 @@ from seedemu.core.enums import NetworkType
 
 
 FaucetServerFileTemplates: Dict[str, str] = {}
+FaucetServerFileTemplates['faucet_fund_url'] = "http://{address}:{port}/fundme"
+FaucetServerFileTemplates['faucet_url'] = "http://{address}:{port}/"
+
 FaucetServerFileTemplates['fund_curl'] = "curl -X POST -d 'address={recipient}&amount={amount}' http://{address}:{port}/fundme"
 FaucetServerFileTemplates['fund_script'] = '''\
 #!/bin/bash
@@ -250,6 +253,15 @@ class FaucetUtil(Configurable):
     def addFund(self, recipientAddress:str, amount:int):
         self.__fund_list.append((recipientAddress, amount))
         return self
+    
+    def getFaucetFundUrl(self):
+        return FaucetServerFileTemplates['faucet_fund_url'].format(address=self.__faucet_server_address,
+                                                            port = self.__port)
+    
+    def getFacuetUrl(self):
+        return FaucetServerFileTemplates['faucet_url'].format(address=self.__faucet_server_address,
+                                                            port = self.__port)
+     
     
     def getFundApi(self, recipientAddress:str, amount:int):
         return FaucetServerFileTemplates['fund_curl'].format(recipient=recipientAddress, 
