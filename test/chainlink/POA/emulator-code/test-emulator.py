@@ -2,9 +2,8 @@
 # encoding: utf-8
 
 from seedemu import *
-import os, sys
+import os
 import platform
-from typing import List
 
 ###############################################################################
 #!/usr/bin/env python3
@@ -263,6 +262,13 @@ emu.addLayer(chainlink)
 OUTPUTDIR = './output'
 emu.render()
 
-docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=Platform.AMD64)
+# Access an environment variable
+platform = os.environ.get('platform')
+
+platform_mapping = {
+    "amd": Platform.AMD64,
+    "arm": Platform.ARM64
+}
+docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=platform_mapping[platform])
 
 emu.compile(docker, OUTPUTDIR, override = True)
