@@ -21,6 +21,7 @@ class FaucetServer(Server):
     __chain_id: int
     __consensus: ConsensusMechanism
     __max_fund_amount: int
+    __max_fund_attemps: int
 
     def __init__(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int, max_fund_amount:int):
         """!
@@ -40,6 +41,7 @@ class FaucetServer(Server):
         self.__fundlist = []
         self.__consensus = blockchain.getConsensusMechanism()
         self.__max_fund_amount = max_fund_amount
+        self.__max_fund_attempts = 30
     
     def setOwnerPrivateKey(self, keyString: str, isEncrypted = False, password = ""):
         """
@@ -119,6 +121,9 @@ class FaucetServer(Server):
     def getFaucetBalance(self) -> int:
         return self.__balance
     
+    def setFundMaxAttempts(self, attempts:int) -> FaucetServer:
+        self.__max_fund_attempts = attempts
+    
     def install(self, node: Node):
         """!
         @brief Install the service.
@@ -147,6 +152,7 @@ class FaucetServer(Server):
                                                                             port = self.__port))
             
         node.setFile('/fund.sh', FaucetServerFileTemplates['fund_script'].format(address='localhost', 
+                                                                                 max_attempts = self.__max_fund_attempts,
                                                                                  port=self.__port,
                                                                                  fund_command=';'.join(funds_list)))
         node.appendStartCommand('chmod +x /fund.sh')

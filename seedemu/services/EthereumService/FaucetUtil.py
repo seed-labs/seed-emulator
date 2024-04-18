@@ -14,7 +14,7 @@ FaucetServerFileTemplates['fund_script'] = '''\
 SERVER_URL="http://{address}:{port}"
 
 # Number of attempts
-ATTEMPTS=30
+ATTEMPTS={max_attempts}
 
 # Initialize a counter
 count=0
