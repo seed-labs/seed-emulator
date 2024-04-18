@@ -186,6 +186,27 @@ class EthAccount():
         return AccountStructure(account.address, balance, keystore_filename, keystore_content, password)
 
     @staticmethod
+    def importAccountFromKey(key:str, balance: int):
+        """
+        @brief Call this api to import an account from key.
+
+        @param key key hex string of an account to import.
+        @param balance The balance to allocate to the account.
+
+        @returns self, for chaining API calls.
+        """
+        from eth_account import Account
+
+        account = Account.from_key(key)
+
+        keystore_content = json.dumps(EthAccount.__encryptAccount(account=account, password="admin"))
+
+        datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
+        keystore_filename = "UTC--"+datastr+"--"+account.address
+        
+        return AccountStructure(account.address, balance, keystore_filename, keystore_content, "admin")
+    
+    @staticmethod
     def __encryptAccount(account, password:str):
         from eth_account import Account
         while True:
