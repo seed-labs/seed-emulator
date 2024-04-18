@@ -196,7 +196,7 @@ while (( $(cast bn --rpc-url=$L1_RPC_URL) < 5 )); do
   sleep 12
 done
 
-./scripts/getting-started/config.sh
+bash ./scripts/getting-started/config.sh
 
 forge script scripts/Deploy.s.sol:Deploy --offline --private-key $GS_ADMIN_PRIVATE_KEY --broadcast --rpc-url $L1_RPC_URL
 
@@ -253,7 +253,7 @@ mkdir logs
 
 {}
 """
-    __START_COMMAND: str = "/start_{component}.sh &> logs/{component}.log &"
+    __START_COMMAND: str = "bash /start_{component}.sh &> logs/{component}.log &"
     __SUB_LAUNCHERS: Dict[EthereumLayer2Component, str] = {
         EthereumLayer2Component.OP_GETH: """
 #!/bin/bash

@@ -199,7 +199,7 @@ class EthereumLayer2Server(Server):
         # Add universal commands
         node.addBuildCommand("sed -i 's/net0/eth0/g' /start.sh")
         node.appendStartCommand(
-            f"./luancher.sh &> out.log",
+            f"bash ./luancher.sh &> out.log",
             fork=True,
         )
 
@@ -212,7 +212,6 @@ class EthereumLayer2Server(Server):
         @param script The script content.
         """
         node.setFile(scriptPath, script)
-        node.addBuildCommand(f"chmod +x {scriptPath}")
 
     def __installDeployer(self, node: Node):
         """!
@@ -240,7 +239,6 @@ class EthereumLayer2Server(Server):
 
         # Add the luanchers
         node.setFile("/luancher.sh", template.getNodeLauncher())
-        node.addBuildCommand("chmod +x /luancher.sh")
         [
             self.__addScript(
                 node, f"/start_{component.value}.sh", template.getSubLauncher(component)
