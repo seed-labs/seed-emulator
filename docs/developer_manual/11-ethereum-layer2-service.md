@@ -23,8 +23,8 @@ There are three types of node in the layer2 service:
 
 The layer2 nodes use following docker images:
 
-- `deployer node` uses the `sc-deployer:latest` image
-- `sequencer node` and `non-sequencer node` use the `op-stack:local` image
+- `deployer` node uses the `huagluck/seedemu-sc-deployer` image
+- `sequencer` node and `non-sequencer` node use the `huagluck/seedemu-op-stack` image
 
 ## Design Choices
 
