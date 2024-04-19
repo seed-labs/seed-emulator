@@ -41,3 +41,8 @@
 .display {
   margin-top: 5%;
 }
+
+/* Make sure that Onboard-Web3 is displayed on top of SetupWizard whose z-index is 1300. */
+:root {
+  --onboard-modal-z-index: 1500
+}

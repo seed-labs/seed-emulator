@@ -105,7 +105,7 @@ webHost = webASN.createHost('webhost').joinNetwork('net0')
 webHost.addSoftware('curl')
 webHost.addBuildCommand('curl -fsSL https://deb.nodesource.com/setup_21.x | bash - && apt update -y && apt install -y nodejs')
 webHost.addBuildCommand('npm install -g serve')
-webHost.addBuildCommand('npm install -g truffle')   # For Ethereum smart contract development
+# webHost.addBuildCommand('npm install -g truffle')   # For Ethereum smart contract development
 
 # Make changes to active Kubo configuration:
 webKubo.appendStartConfig('API.HTTPHeaders.Access-Control-Allow-Origin', ["*"], isJSON=True)
