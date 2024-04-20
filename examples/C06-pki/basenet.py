@@ -1,10 +1,6 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-
-from seedemu.compiler import Docker
 from seedemu.core import Binding, Emulator, Filter, Action
 from seedemu.layers import Base, Ebgp, Ibgp, Ospf, Routing, PeerRelationship
-from seedemu.services import DomainNameCachingService, DomainNameService, CAService, WebService, WebServer, RootCAStore
+from seedemu.services import DomainNameCachingService, DomainNameService
 
 emu = Emulator()
 base = Base()
@@ -12,9 +8,6 @@ routing = Routing()
 ebgp = Ebgp()
 ibgp = Ibgp()
 ospf = Ospf()
-caStore = RootCAStore(caDomain='ca.internal')
-ca = CAService(caStore)
-web = WebService()
 
 ###########################################################
 
@@ -34,30 +27,17 @@ as2.createNetwork('net0')
 as2.createRouter('r1').joinNetwork('net0').joinNetwork('ix100')
 as2.createRouter('r2').joinNetwork('net0').joinNetwork('ix101')
 
-ca.install('ca-vnode')
-ca.installCACert()
-
 as150 = base.createAutonomousSystem(150)
 as150.createNetwork('net0')
 as150.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
 for i in range(6):
     host = as150.createHost('host_{}'.format(i)).joinNetwork('net0')
-# Do not install the CA cert on the CA host
-host_ca = as150.createHost('ca').joinNetwork('net0', address='10.150.0.7')
 
 as151 = base.createAutonomousSystem(151)
 as151.createNetwork('net0')
 as151.createRouter('router0').joinNetwork('net0').joinNetwork('ix101')
 for i in range(2):
     host = as151.createHost('host_{}'.format(i)).joinNetwork('net0')
-host_web = as151.createHost('web').joinNetwork('net0', address='10.151.0.7')
-
-webServer: WebServer = web.install('web-vnode')
-webServer.setServerNames(['user.internal'])
-webServer.useCAService(ca).enableHTTPS()
-emu.addBinding(Binding('ca-vnode', filter=Filter(nodeName='ca'), action=Action.FIRST))
-emu.addBinding(Binding('web-vnode', filter=Filter(nodeName='web'), action=Action.FIRST))
-
 
 ebgp.addPrivatePeering(100, 2, 150, abRelationship = PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 2, 151, abRelationship = PeerRelationship.Provider)
@@ -67,8 +47,6 @@ emu.addLayer(routing)
 emu.addLayer(ebgp)
 emu.addLayer(ibgp)
 emu.addLayer(ospf)
-emu.addLayer(ca)
-emu.addLayer(web)
 
 ###########################################################
 # Create a DNS layer
@@ -84,11 +62,8 @@ dns.install('a-internal-server').addZone('internal.').setMaster()
 dns.install('b-internal-server').addZone('internal.')
 
 dns.install('ns-ca-internal').addZone('ca.internal.')
-dns.install('ns-user-internal').addZone('user.internal.')
-
-# Add records to zones
-dns.getZone('ca.internal.').addRecord('@ A 10.150.0.7')
-dns.getZone('user.internal.').addRecord('@ A 10.151.0.7')
+dns.install('ns-user-internal').addZone('user1.internal.')
+dns.install('ns-user-internal').addZone('user2.internal.')
 
 emu.addLayer(dns)
 
@@ -120,5 +95,6 @@ emu.addLayer(ldns)
 
 ###########################################################
 
-emu.render()
-emu.compile(Docker(), './output', override=True)
+def dump(path='./net.bin'):
+    emu.dump(path)
+    return path

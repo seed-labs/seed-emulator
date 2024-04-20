@@ -51,9 +51,10 @@ class BuildtimeDockerImage:
             context = tempfile.mkdtemp(prefix="seedemu-docker-")
         with cd(context):
             build_command = f"docker build -t {self.__imageName}"
-            for arg, value in args.items():
-                build_command += f" --build-arg {arg}={value}"
-            sh(build_command + " -", input=dockerfile.getContent())
+            if args:
+                for arg, value in args.items():
+                    build_command += f" --build-arg {arg}={value}"
+            sh(build_command + " -", input=dockerfile.getContent().encode())
         return self
 
     def container(self):
