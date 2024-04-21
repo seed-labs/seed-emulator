@@ -1,0 +1,1218 @@
+<!-- Author: Tabaeiaghdaei, Seyedali Green Inter-Domain Routing in the
+SCION Internet Architecture , 2021 -->
+<topology linkdefault="directed">
+    <property name="name" type="string" />
+    <property name="type" type="string">caida_as_relationships</property>
+    <property name="capacity_unit" type="string">Mbps</property>
+    <node id="3356" id.type="int">
+        <property name="type" type="string">core</property>
+        <property name="latency_coef" type="float">0.03116522748836681</property>
+        <property name="bandwidth_coef" type="float">0.758217570611977</property>
+        <property name="AS_level_diversity_coef" type="float">0.8279366462608058</property>
+        <property name="link_level_diversity_coef" type="float">0.15455157762003036</property>
+    </node>
+    <node id="2914" id.type="int">
+        <property name="type" type="string">core</property>
+        <property name="latency_coef" type="float">0.3605545717145815</property>
+        <property name="bandwidth_coef" type="float">0.1392311023344719</property>
+        <property name="AS_level_diversity_coef" type="float">0.17126575166007207</property>
+        <property name="link_level_diversity_coef" type="float">0.2832171229633935</property>
+    </node>
+    <node id="6453" id.type="int">
+        <property name="type" type="string">core</property>
+        <property name="latency_coef" type="float">0.3253560413531743</property>
+        <property name="bandwidth_coef" type="float">0.662455570757591</property>
+        <property name="AS_level_diversity_coef" type="float">0.3218466789745318</property>
+        <property name="link_level_diversity_coef" type="float">0.7032153252330976</property>
+    </node>
+    <node id="3257" id.type="int">
+        <property name="type" type="string">core</property>
+        <property name="latency_coef" type="float">0.45517485971898886</property>
+        <property name="bandwidth_coef" type="float">0.7825968151079704</property>
+        <property name="AS_level_diversity_coef" type="float">0.6353221115195472</property>
+        <property name="link_level_diversity_coef" type="float">0.874511585804984</property>
+    </node>
+    <node id="6762" id.type="int">
+        <property name="type" type="string">core</property>
+        <property name="latency_coef" type="float">0.5037649803020969</property>
+        <property name="bandwidth_coef" type="float">0.6233977825384913</property>
+        <property name="AS_level_diversity_coef" type="float">0.3878019613406902</property>
+        <property name="link_level_diversity_coef" type="float">0.27666668422310403</property>
+    </node>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.04372</property>
+        <property name="longitude" type="float">-77.48749</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">33.749</property>
+        <property name="longitude" type="float">-84.38798</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">41.85003</property>
+        <property name="longitude" type="float">-87.65005</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">32.78306</property>
+        <property name="longitude" type="float">-96.80667</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">50.11552</property>
+        <property name="longitude" type="float">8.68417</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">52.3025</property>
+        <property name="longitude" type="float">4.68889</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">51.51066</property>
+        <property name="longitude" type="float">-0.10879</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">34.05223</property>
+        <property name="longitude" type="float">-118.24368</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.4165</property>
+        <property name="longitude" type="float">-3.70256</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">25.77427</property>
+        <property name="longitude" type="float">-80.19366</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">45.46427</property>
+        <property name="longitude" type="float">9.18951</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">43.5789</property>
+        <property name="longitude" type="float">-79.6583</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">48.85341</property>
+        <property name="longitude" type="float">2.3488</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.33939</property>
+        <property name="longitude" type="float">-121.89496</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">47.60621</property>
+        <property name="longitude" type="float">-122.33207</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">38.89511</property>
+        <property name="longitude" type="float">-77.03637</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">50.11552</property>
+        <property name="longitude" type="float">8.68417</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">51.51066</property>
+        <property name="longitude" type="float">-0.10879</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">34.05223</property>
+        <property name="longitude" type="float">-118.24368</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">25.77427</property>
+        <property name="longitude" type="float">-80.19366</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">45.46427</property>
+        <property name="longitude" type="float">9.18951</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.71427</property>
+        <property name="longitude" type="float">-74.00597</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.73566</property>
+        <property name="longitude" type="float">-74.17237</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">48.85341</property>
+        <property name="longitude" type="float">2.3488</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">3356</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">59.33258</property>
+        <property name="longitude" type="float">18.0649</property>
+        <property name="capacity" type="int">100</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">51.51066</property>
+        <property name="longitude" type="float">-0.10879</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">34.05223</property>
+        <property name="longitude" type="float">-118.24368</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.4165</property>
+        <property name="longitude" type="float">-3.70256</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">25.77427</property>
+        <property name="longitude" type="float">-80.19366</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">45.46427</property>
+        <property name="longitude" type="float">9.18951</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.71427</property>
+        <property name="longitude" type="float">-74.00597</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">48.85341</property>
+        <property name="longitude" type="float">2.3488</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.33939</property>
+        <property name="longitude" type="float">-121.89496</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.35411</property>
+        <property name="longitude" type="float">-121.95524</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">47.60621</property>
+        <property name="longitude" type="float">-122.33207</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.00622</property>
+        <property name="longitude" type="float">-77.4286</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3257</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">38.89511</property>
+        <property name="longitude" type="float">-77.03637</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">33.749</property>
+        <property name="longitude" type="float">-84.38798</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">42.35843</property>
+        <property name="longitude" type="float">-71.05977</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">41.85003</property>
+        <property name="longitude" type="float">-87.65005</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">32.78306</property>
+        <property name="longitude" type="float">-96.80667</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">50.11552</property>
+        <property name="longitude" type="float">8.68417</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">52.3025</property>
+        <property name="longitude" type="float">4.68889</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">29.76328</property>
+        <property name="longitude" type="float">-95.36327</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">51.51066</property>
+        <property name="longitude" type="float">-0.10879</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">34.05223</property>
+        <property name="longitude" type="float">-118.24368</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.4165</property>
+        <property name="longitude" type="float">-3.70256</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">25.77427</property>
+        <property name="longitude" type="float">-80.19366</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.71427</property>
+        <property name="longitude" type="float">-74.00597</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">48.85341</property>
+        <property name="longitude" type="float">2.3488</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.33939</property>
+        <property name="longitude" type="float">-121.89496</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.35411</property>
+        <property name="longitude" type="float">-121.95524</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">47.60621</property>
+        <property name="longitude" type="float">-122.33207</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.00622</property>
+        <property name="longitude" type="float">-77.4286</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">59.33258</property>
+        <property name="longitude" type="float">18.0649</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.04372</property>
+        <property name="longitude" type="float">-77.48749</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">33.749</property>
+        <property name="longitude" type="float">-84.38798</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">1.34012669563293</property>
+        <property name="longitude" type="float">103.996002197265</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">41.85003</property>
+        <property name="longitude" type="float">-87.65005</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">50.11552</property>
+        <property name="longitude" type="float">8.68417</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">52.3025</property>
+        <property name="longitude" type="float">4.68889</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">29.76328</property>
+        <property name="longitude" type="float">-95.36327</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">51.51066</property>
+        <property name="longitude" type="float">-0.10879</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">34.05223</property>
+        <property name="longitude" type="float">-118.24368</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">25.77427</property>
+        <property name="longitude" type="float">-80.19366</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">45.46427</property>
+        <property name="longitude" type="float">9.18951</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.71427</property>
+        <property name="longitude" type="float">-74.00597</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">48.85341</property>
+        <property name="longitude" type="float">2.3488</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.33939</property>
+        <property name="longitude" type="float">-121.89496</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.35411</property>
+        <property name="longitude" type="float">-121.95524</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">47.60621</property>
+        <property name="longitude" type="float">-122.33207</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.00622</property>
+        <property name="longitude" type="float">-77.4286</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">22.33</property>
+        <property name="longitude" type="float">114.25</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.04372</property>
+        <property name="longitude" type="float">-77.48749</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">1.34012669563293</property>
+        <property name="longitude" type="float">103.996002197265</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">41.85003</property>
+        <property name="longitude" type="float">-87.65005</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">32.78306</property>
+        <property name="longitude" type="float">-96.80667</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">50.11552</property>
+        <property name="longitude" type="float">8.68417</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">29.76328</property>
+        <property name="longitude" type="float">-95.36327</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">51.51066</property>
+        <property name="longitude" type="float">-0.10879</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">25.77427</property>
+        <property name="longitude" type="float">-80.19366</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">45.46427</property>
+        <property name="longitude" type="float">9.18951</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.44188</property>
+        <property name="longitude" type="float">-122.14302</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">48.85341</property>
+        <property name="longitude" type="float">2.3488</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.35411</property>
+        <property name="longitude" type="float">-121.95524</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">-23.5475</property>
+        <property name="longitude" type="float">-46.63611</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">2914</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.00622</property>
+        <property name="longitude" type="float">-77.4286</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">6453</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.04372</property>
+        <property name="longitude" type="float">-77.48749</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">6453</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">50.11552</property>
+        <property name="longitude" type="float">8.68417</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">6453</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">52.3025</property>
+        <property name="longitude" type="float">4.68889</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">6453</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">51.51066</property>
+        <property name="longitude" type="float">-0.10879</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">6453</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">25.77427</property>
+        <property name="longitude" type="float">-80.19366</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">6453</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.71427</property>
+        <property name="longitude" type="float">-74.00597</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">6453</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.44188</property>
+        <property name="longitude" type="float">-122.14302</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">6453</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">48.85341</property>
+        <property name="longitude" type="float">2.3488</property>
+        <property name="capacity" type="int">10</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">33.749</property>
+        <property name="longitude" type="float">-84.38798</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">50.85045</property>
+        <property name="longitude" type="float">4.34878</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">41.85003</property>
+        <property name="longitude" type="float">-87.65005</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">55.67594</property>
+        <property name="longitude" type="float">12.56553</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">32.78306</property>
+        <property name="longitude" type="float">-96.80667</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.73915</property>
+        <property name="longitude" type="float">-104.9847</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">50.11552</property>
+        <property name="longitude" type="float">8.68417</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">52.3025</property>
+        <property name="longitude" type="float">4.68889</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">51.51066</property>
+        <property name="longitude" type="float">-0.10879</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">34.05223</property>
+        <property name="longitude" type="float">-118.24368</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">43.29695</property>
+        <property name="longitude" type="float">5.38107</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">25.77427</property>
+        <property name="longitude" type="float">-80.19366</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">43.5789</property>
+        <property name="longitude" type="float">-79.6583</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.71427</property>
+        <property name="longitude" type="float">-74.00597</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">48.85341</property>
+        <property name="longitude" type="float">2.3488</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.33939</property>
+        <property name="longitude" type="float">-121.89496</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">47.60621</property>
+        <property name="longitude" type="float">-122.33207</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">59.33258</property>
+        <property name="longitude" type="float">18.0649</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">52.22977</property>
+        <property name="longitude" type="float">21.01178</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">3356</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">38.89511</property>
+        <property name="longitude" type="float">-77.03637</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.04372</property>
+        <property name="longitude" type="float">-77.48749</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">33.749</property>
+        <property name="longitude" type="float">-84.38798</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">41.85003</property>
+        <property name="longitude" type="float">-87.65005</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">32.78306</property>
+        <property name="longitude" type="float">-96.80667</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">50.11552</property>
+        <property name="longitude" type="float">8.68417</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">52.3025</property>
+        <property name="longitude" type="float">4.68889</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">51.51066</property>
+        <property name="longitude" type="float">-0.10879</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">34.05223</property>
+        <property name="longitude" type="float">-118.24368</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.4165</property>
+        <property name="longitude" type="float">-3.70256</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">25.77427</property>
+        <property name="longitude" type="float">-80.19366</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">45.46427</property>
+        <property name="longitude" type="float">9.18951</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">43.5789</property>
+        <property name="longitude" type="float">-79.6583</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.71427</property>
+        <property name="longitude" type="float">-74.00597</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">48.85341</property>
+        <property name="longitude" type="float">2.3488</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">37.33939</property>
+        <property name="longitude" type="float">-121.89496</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">47.60621</property>
+        <property name="longitude" type="float">-122.33207</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6453</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">38.89511</property>
+        <property name="longitude" type="float">-77.03637</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">39.04372</property>
+        <property name="longitude" type="float">-77.48749</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">1.34012669563293</property>
+        <property name="longitude" type="float">103.996002197265</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">22.3288002014</property>
+        <property name="longitude" type="float">114.194000244</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">41.85003</property>
+        <property name="longitude" type="float">-87.65005</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">50.11552</property>
+        <property name="longitude" type="float">8.68417</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">52.3025</property>
+        <property name="longitude" type="float">4.68889</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">51.51066</property>
+        <property name="longitude" type="float">-0.10879</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">34.05223</property>
+        <property name="longitude" type="float">-118.24368</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">43.29695</property>
+        <property name="longitude" type="float">5.38107</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">25.77427</property>
+        <property name="longitude" type="float">-80.19366</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">45.46427</property>
+        <property name="longitude" type="float">9.18951</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">40.71427</property>
+        <property name="longitude" type="float">-74.00597</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">48.85341</property>
+        <property name="longitude" type="float">2.3488</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">59.33258</property>
+        <property name="longitude" type="float">18.0649</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+    <link>
+        <from type="int">3257</from>
+        <to type="int">6762</to>
+        <property name="rel" type="string">core</property>
+        <property name="latitude" type="float">38.89511</property>
+        <property name="longitude" type="float">-77.03637</property>
+        <property name="capacity" type="int">40</property>
+    </link>
+</topology>

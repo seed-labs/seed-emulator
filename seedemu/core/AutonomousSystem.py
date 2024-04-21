@@ -4,7 +4,7 @@ from .Printable import Printable
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from .enums import NetworkType, NodeRole
-from .Node import Node
+from .Node import Node,Router
 from .Emulator import Emulator
 from .Configurable import Configurable
 from .Node import RealWorldRouter
@@ -129,11 +129,13 @@ class AutonomousSystem(Printable, Graphable, Configurable):
             
             host.configure(emulator)
         
-        for router in self.__routers.values():
+        for name, router in self.__routers.items():
             if len(router.getNameServers()) == 0:
                 router.setNameServers(self.__name_servers)
 
             router.configure(emulator)
+            if router.isBorderRouter():
+                emulator.getRegistry().register( str(self.__asn), 'brdnode', name, router )
 
     def getAsn(self) -> int:
         """!
@@ -192,7 +194,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns Node.
         """
         assert name not in self.__routers, 'Router with name {} already exists.'.format(name)
-        self.__routers[name] = Node(name, NodeRole.Router, self.__asn)
+        self.__routers[name] = Router(name, NodeRole.Router, self.__asn)
 
         return self.__routers[name]
 
@@ -235,6 +237,12 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns list of routers.
         """
         return list(self.__routers.keys())
+    
+    def getBorderRouters(self)->List[str]:
+        """
+        @brief return the subset of all routers that participate in inter-domain routing
+        """
+        return [router for name, router in self.__routers.items() if router.isBorderRouter() ]
 
     def getRouter(self, name: str) -> Node:
         """!
