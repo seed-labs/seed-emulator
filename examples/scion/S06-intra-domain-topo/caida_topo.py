@@ -21,14 +21,15 @@ provider = CaidaDataProvider("5_geo_rel.xml")
 
 generator = DefaultScionGenerator(provider,CommonRouterForAllIF)
 
-emu = generator.generate(2,5)
+emu = generator.generate(2,7)
 
 
 base = emu.getLayer('Base')
 reg = emu.getRegistry()
 for asn in provider.getASes():
     
-    _as = base.getAutonomousSystem(asn)   
+    _as = base.getAutonomousSystem(asn)
+    _as.setBeaconingIntervals('90s', '90s', '90s')
     host = _as.createHost('host00')
     for netname in _as.getNetworks():
         net = _as.getNetwork(netname)
@@ -42,5 +43,5 @@ emu.render()
 
 # Compilation
 emu.compile(Docker(), './output')
-emu.compile(Graphviz(), './output_graph')
+#emu.compile(Graphviz(), './output_graph')
 

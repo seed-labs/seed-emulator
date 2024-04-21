@@ -50,7 +50,7 @@ def LinkTypeFromTopo(link_type: str, dir: Tuple[int,int] =(-1,-1) ) -> ScLinkTyp
 
 class CrossConnectNetAssigner:
     def __init__(self, prefix = "10.254.0.0/16"):
-        self.subnet_iter = IPv4Network(prefix).subnets(new_prefix=29)
+        self.subnet_iter = IPv4Network(prefix).subnets(new_prefix=28)
         self.xc_nets = {}
 
     def next_addr(self, asn_a: int, asn_b: int):
@@ -59,7 +59,7 @@ class CrossConnectNetAssigner:
             hosts = next(self.subnet_iter).hosts()
             next(hosts) # Skip first IP (reserved for Docker)
             self.xc_nets[net] = hosts
-        return "{}/29".format(next(self.xc_nets[net]))
+        return "{}/28".format(next(self.xc_nets[net]))
 
 class ScionTopoJsonProvider(DataProvider):
     """!
