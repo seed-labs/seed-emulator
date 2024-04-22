@@ -8,14 +8,14 @@ from seedemu.layers import EtcHosts
 
 emu = Emulator()
 # Load the pre-built mini-internet component
-emu.load("../B00-mini-internet/base-component.bin")
+emu.load("../../B00-mini-internet/base-component.bin")
 base = emu.getLayer("Base")
 
 etc_hosts = EtcHosts()
 
 traffic_service = TrafficService()
-traffic_service.install("iperf-receiver-1", TrafficServiceType.IPERF_RECEIVER)
-traffic_service.install("iperf-receiver-2", TrafficServiceType.IPERF_RECEIVER)
+traffic_service.install("iperf-receiver-1", TrafficServiceType.IPERF_RECEIVER, log_file="/root/iperf3_receiver.log")
+traffic_service.install("iperf-receiver-2", TrafficServiceType.IPERF_RECEIVER, log_file="/root/iperf3_receiver.log")
 traffic_service.install(
     "iperf-generator",
     TrafficServiceType.IPERF_GENERATOR,

@@ -107,3 +107,18 @@ The following includes some technical notes on the implementation, including asp
 - We also implement a few simple utility functions to get a local IPv4 address from a given
   physical node on the Emulator, and to verify that a given string represents a valid IPv4
   address.
+
+  ## Traffic Generator
+
+The `TrafficGenerator` class is the base class for all traffic generators. The `TrafficGenerator` class provides the following methods:
+
+1. `__init__`: Initializes the traffic generator with the specified parameters. The `name` parameter specifies the virtual node name for the traffic service application. It is used to configure the custom domain name for the underlying host. The `log_file` parameter specifies the log file where the traffic generation logs will be stored .The `protocol` parameter specifies the protocol to be used for traffic generation. The `duration` parameter specifies the duration of the traffic generation process. The `rate` parameter specifies the rate of the traffic generation process. The `extra_options` parameter specifies the extra options to be used for the traffic generation process. The `extra_options` parameter value depends on the type of traffic generator being used.
+2. `addReceivers`: Adds receivers to the traffic generator. We can specify the list of receiver hosts for the traffic generator using the `hosts` parameter.
+3. `install`: Installs the traffic generator application on the host. It creates `/root/traffic-targets` file on the host to store the list of receiver hosts.
+4. `start`: Starts the traffic generation process on the host.
+
+## Traffic Receiver
+
+The `TrafficReceiver` class is the base class for all traffic receivers. The `TrafficReceiver` class provides the following methods:
+
+1. `install`: Installs the traffic receiver application on the host and configures a custom domain name for it, matching the name of the traffic receiver itself.

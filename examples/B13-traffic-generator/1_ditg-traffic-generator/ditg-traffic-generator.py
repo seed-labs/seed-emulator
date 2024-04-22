@@ -8,7 +8,7 @@ from seedemu.layers import EtcHosts
 
 emu = Emulator()
 # Load the pre-built mini-internet component
-emu.load("../B00-mini-internet/base-component.bin")
+emu.load("../../B00-mini-internet/base-component.bin")
 base = emu.getLayer("Base")
 
 etc_hosts = EtcHosts()

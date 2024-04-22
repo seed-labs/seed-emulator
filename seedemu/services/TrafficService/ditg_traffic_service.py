@@ -5,14 +5,6 @@ from .traffic_generator import TrafficGenerator
 
 
 class DITGReceiver(TrafficReceiver):
-    def __init__(self, name: str = None, log_file: str = "/root/ditg_receiver.log"):
-        """!
-        @brief DITGReceiver constructor.
-
-        @param name name of the receiver.
-        @param log_file log file.
-        """
-        super().__init__(name, log_file)
 
     def install(self, node: Node):
         """!
