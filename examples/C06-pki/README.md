@@ -6,8 +6,15 @@ In this example we create a PKI infrastructure on node `ca` with ACME support. A
 
 ## What is ACME
 
-TODO: give a brief introduction of ACME.
+The Automatic Certificate Management Environment (ACME) protocol is a communications protocol for automating interactions between certificate authorities and their users' servers, allowing servers and infrastructure software to obtain certificates without user interaction.
 
+The protocol itself has been published as an Internet Standard in [RFC 8555](https://datatracker.ietf.org/doc/html/rfc8555).
+
+As of 2024, over 42% of certificates in the world are issued by Let's Encrypt using ACME protocol.
+
+The real user count of ACME protocol is much higher than 42% because many other CAs also support ACME protocol.
+
+More details about ACME protocol can be found [here](./ACME.md).
 
 ## Key Components
 
@@ -16,9 +23,6 @@ TODO: give a brief introduction of ACME.
 DNS infrastructure is required for the PKI infrastructure to work. The PKI infrastructure will consult the DNS infrastructure to resolve the domain names and verify the target node's control of domain in ACME challenges.
 
 The DNS component used in this example is the same as examples/B02-mini-internet-with-dns. Instead of using the DNS component, we can also use the `EtcHosts` layer to add mappings to the `/etc/hosts` file. 
-
-TODO: separate the example code to two programs, one for the base (internet + DNS),
-and the other just for the `ca` component.
 
 
 ## PKI Infrastructure
@@ -35,6 +39,7 @@ After creating the Root CA store, we can create a PKI infrastructure.
 ```python
 from seedemu.services import CAService
 ca = CAService(caStore)
+ca.setCertDuration("2160h")
 ca.install('ca-vnode')
 ca.installCACert()
 # ca.installCACert(Filter(asn=160))
@@ -54,8 +59,8 @@ For example, the `allowBound` filter is not supported in the `CAService`.
 Moreover, inside the `CAService`, the prefix filter is implemented in a portable way that
 supports both IPv4 and IPv6 via IPv4-mapped IPv6 addresses. This might not be the case in other places. 
 
-TODO: we may need to provide more information about what filter logic is implemented.
-
+Filter logic is described in [developer manual](../../docs/developer_manual/11-ca-service.md).
+More API examples are available in the [user manual](../../docs/user_manual/internet/ca.md).
 
 ### Web Server
 
@@ -65,31 +70,24 @@ it will request a certificate from the specified CA server, and use it to serve 
 
 ```python
 webServer: WebServer = web.install('web-vnode')
-webServer.setServerNames(['user.internal'])
-webServer.getCertificatesFrom(ca).enableHTTPS()
+webServer.setServerNames(['user1.internal'])
+webServer.useCAService(ca).enableHTTPS()
 ```
 
 Server names are required for the web server to request a certificate from the CA. The ACME client will use the server names to determine which nginx configuration to use.
 The `enableHTTPS` API will configure the web server using the certificate, allowing
 the server to serve HTTPS requests.
 
-TODO: the `getCertificatesFrom()` API name might be a little bit misleading,
-because an API likes this implies it will return a certificate. That is not the case.
-It might be better to call it `setCAServer` or something like that, starting with `set`.  
-
-TODO: It might be helpful to set up multiple web servers in the emulator. 
-This will allow us to demonstrate the uses of other interesting APIs, if any.
-
 ### Demo
 
 On nodes that have the Root CA certificate installed (not routers or ix nodes, as they might not have DNS configured properly):
 
-In this example, we only set up https for https://user.internal.
+In this example, we set up https for https://user1.internal and https://user2.internal.
 In your case you can set up https for any domain you want.
 Remember to change the domain name accordingly.
 
 ```bash
-$ curl https://user.internal
+$ curl https://user1.internal
 ```
 
 You will not encounter any certificate errors as the PKI infrastructure is set up correctly. If it is not set up correctly, you will encounter an error like this:
@@ -109,7 +107,7 @@ how to fix it, please visit the web page mentioned above.
 We can verify that the certificate is issued by SEEDEMU Internal.
 
 ```bash
-$ step certificate inspect https://user.internal
+$ step certificate inspect https://user1.internal
 Certificate:
     Data:
         Version: 3 (0x2)

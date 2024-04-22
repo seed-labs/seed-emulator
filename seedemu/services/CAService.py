@@ -2,6 +2,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 import os
+import random
 import re
 import secrets
 import shutil
@@ -329,7 +330,7 @@ class RootCAStore:
         """
         return self.__caDir
     
-    def setPassword(self, password: str)  -> RootCAStore:
+    def setPassword(self, password: str) -> RootCAStore:
         """!
         @brief Set the password to decrypt the CA Key if it is provided, otherwise, the password is used to encrypt the CA Key.
         It must be called before the CA store is initialized.

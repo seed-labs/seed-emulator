@@ -75,7 +75,7 @@ class WebServer(Server):
 
         return self
     
-    def getCertificatesFrom(self, ca: CAService) -> WebServer:
+    def useCAService(self, ca: CAService) -> WebServer:
         """!
         @brief Get certificates from a CA.
 
