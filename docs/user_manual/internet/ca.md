@@ -1,12 +1,14 @@
-# CA Service
+# CA Service and PKI
+
+A full example can be found in the `examples` folder ([here](../../../examples/C06-pki/)) 
 
 ## Root CA Store
 
-The `RootCAStore` class is a store which contains the Root CA certificate and its private key. It is used by the `CAService` to setup the PKI infrastructure and install the Root CA certificate to the nodes.
+The `RootCAStore` class is a store containing the root CA certificate and its private key. It is used by the `CAService` to set up the PKI infrastructure and install the root CA certificate on nodes.
 
-If no Root CA certificate is provided, the `RootCAStore` will generate a new Root CA certificate and private key on the fly. The Root CA certificate and private key are stored in the host machine's `/tmp/seedemu-ca-*` directory.
+If no root CA certificate is provided, the `RootCAStore` will generate a new root CA certificate and the corresponding private key on the fly. The root CA certificate and private key are stored in the host machine's `/tmp/seedemu-ca-*` directory.
 
-### Initialize
+### Initialization
 
 ```python
 from seedemu.services import RootCAStore
@@ -23,11 +25,12 @@ caStore = RootCAStore(caDomain='ca.internal')
 ca = CAService(caStore)
 ```
 
-User can either call it manually or let the CA service to call it.
+User can either call the initialization manually or let the CA service call it. 
+
 
 ### Save and Restore
 
-Save the Root CA certificate and private key to a folder for later reuse.
+After the initialization, we save the root CA certificate and the private key to a folder for later reuse.
 
 ```python
 from seedemu.services import RootCAStore
@@ -46,7 +49,7 @@ ca = CAService(caStore)
 caStore.save("/tmp/ca")
 ```
 
-Restore the Root CA certificate and private key from a folder.
+We can also restore the root CA certificate and private key from a folder.
 
 ```python
 from seedemu.services import RootCAStore
@@ -57,51 +60,54 @@ caStore.restore("/tmp/ca")
 
 ### Supply your own Root CA certificate and private key
 
+Users can also provide their own root CA certificates and private keys.
+
 ```python
 from seedemu.services import RootCAStore
 caStore = RootCAStore(caDomain='ca.internal')
 caStore.setRootCertAndKey("/path/to/ca.crt", "/path/to/ca.key")
-# Yes, the private key should be encrypted.
+# The private key should be encrypted.
 # This is the password to decrypt the private key.
 caStore.setPassword("QDsd0nyzwz0")
 caStore.initialize()
 ```
 
+
 ## CA Service
 
-The `CAService` class is a service that uses the `RootCAStore` to serve the PKI infrastructure.
+The `CAService` class is a service that uses the root certificates from the `RootCAStore` to serve the PKI infrastructure.
 
-The `CAService` class for now only supports:
+The `CAService` class for now only supports the following, but
+it can be easily extended to support other certificate types.
 
-- Generate TLS certificates for private infrastructure using the ACME protocol.
+- Generate TLS certificates for the PKI infrastructure using the ACME protocol.
 - Automate TLS certificate renewal.
 
-But it can be easily extended to support other certificate types if needed.
 
-### Install CA Certificate in nodes
+### Install CA Certificate on nodes
 
-#### Install to all nodes
+We need to install the root CA certificates nodes. We can install the certificates
+on all the nodes or use `Filter` to specify the candidate nodes. See the
+following examples. 
 
-```python
-from seedemu.services import RootCAStore, CAService
-caStore = RootCAStore(caDomain='ca.internal')
-ca = CAService(caStore)
-ca.installCACert()
-```
-
-#### Install to specific nodes
 
 ```python
 from seedemu.services import RootCAStore, CAService
 caStore = RootCAStore(caDomain='ca.internal')
 ca = CAService(caStore)
-ca.installCACert(Filter(asn=160))
-ca.installCACert(Filter(asn=161))
+ca.installCACert()    # On all the nodes
 ```
 
-The Root CA certificate will be installed to the nodes with ASN 160 and 161 respectively.
+```python
+from seedemu.services import RootCAStore, CAService
+caStore = RootCAStore(caDomain='ca.internal')
+ca = CAService(caStore)
+ca.installCACert(Filter(asn=160))  # Only on nodes in ASN 160
+ca.installCACert(Filter(asn=161))  # Only on nodes in ASN 161
+```
 
-#### Lax filter will override strict filter
+It should be noted that a lax filter will override a more strict filter. This is because the filters are applied individually, so the final set of candidates is the union of the candidates from each filter.
+In the following example, the root CA certificate will be installed on the node with ASN 160 (i.e., the one with the `ip` restriction will be overriden). 
 
 ```python
 from seedemu.services import RootCAStore, CAService
@@ -111,7 +117,8 @@ ca.installCACert(Filter(asn=160))
 ca.installCACert(Filter(asn=160, ip='10.160.1.3'))
 ```
 
-The Root CA certificate will be installed to the node with ASN 160.
+In the following example, the root CA certificate will be installed to all the nodes (i.e., the one with `asn` restriction will be overriden). 
+
 
 ```python
 from seedemu.services import RootCAStore, CAService
@@ -121,9 +128,10 @@ ca.installCACert()
 ca.installCACert(Filter(asn=160))
 ```
 
-The Root CA certificate will be installed to all the nodes.
 
-### Set Leaf Certificate Duration
+### Set Certificate Duration
+
+Users can set the valid duration for certificates. 
 
 ```python
 from seedemu.services import RootCAStore, CAService
@@ -132,8 +140,5 @@ ca = CAService(caStore)
 ca.setCertDuration('48h')
 ```
 
-The duration must end with "h".
-The duration must no less than 12h.
-
-Even if you don't set duration manually, it will not expire as it will be renewed automatically.
-It is recommended to preserve the default duration 2160h.
+The duration must end with "h". The duration must be no less than 12h.
+It is recommended to preserve the default duration `2160h`. Before a certificate expires, it will be renewed automatically. 
