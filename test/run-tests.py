@@ -4,6 +4,7 @@ from internet import IPAnyCastTestCase, MiniInternetTestCase, HostMgmtTestCase
 from ethereum import EthereumPOATestCase, EthereumPOSTestCase, EthereumPOWTestCase
 from scion import ScionBgpMixedTestCase, ScionBwtesterTestCase
 from kubo import KuboTestCase, KuboUtilFuncsTestCase, DottedDictTestCase
+from traffic_generator import TrafficGeneratorTestCase
 import unittest
 import os, sys
 
@@ -26,7 +27,8 @@ test_case_list = [
     ScionBwtesterTestCase,
     KuboTestCase,
     KuboUtilFuncsTestCase,
-    DottedDictTestCase
+    DottedDictTestCase,
+    TrafficGeneratorTestCase
 ]
 
 for test_case in test_case_list:
