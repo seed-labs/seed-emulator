@@ -3,7 +3,6 @@ import * as React from 'react';
 import { useState } from 'react';
 import { Buffer } from 'buffer';
 import Cookies from 'js-cookie';
-import logo from './logo.svg';
 // Custom Imports:
 import ImageBoard from './ImageFiles';
 import { SetupWizard, WalletConnectPopup } from './SetupWizard';
@@ -45,7 +44,9 @@ const SEEDchain = {
   id: 1337,
   token: 'ETH',
   label: 'SEED Emulator Blockchain',
-  rpcUrl: 'http://localhost:8545'
+  rpcUrl: 'http://localhost:8545',
+  icon: 'SEEDfavicon.ico',
+  color: '#2471A3'
 }
 const wallets = [injectedModule()]
 const chains = [SEEDchain]
@@ -54,8 +55,9 @@ const web3Onboard = init({
   chains,
   appMetadata: {
     name: 'SEED Image Board',
-    logo: logo,
-    description: 'A demo of a dApp built with Ethereum smart contracts and the InterPlanetary File System.'
+    logo: '/logo512.png',
+    icon: '/favicon.ico',
+    description: 'A demo image board dApp built with Ethereum smart contracts and the InterPlanetary File System.'
   },
   connect: {
     autoConnectLastWallet: true
