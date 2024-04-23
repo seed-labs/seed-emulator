@@ -55,3 +55,15 @@ shutil.copytree(tmp_dir, output_dir)
 
 shutil.rmtree(tmp_dir, ignore_errors=True)
 ```
+
+## Note
+
+Older versions of `docker` have limit on the number of threads that can be created in a container.
+
+When using `pip install` in the Dockerfile, it is recommended to use the `--progress-bar off` option to avoid issues with the progress bar.
+
+Otherwise, users may encounter the following error when `pip install` is called:
+
+```
+RuntimeError: can't start new thread
+```
