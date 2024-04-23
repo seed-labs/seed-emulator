@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import Button from '@mui/material/Button';
 import {
@@ -31,6 +31,19 @@ export const VisuallyHiddenInput = styled('input')({
  });
 
  export function FileUploadBtn({onChange, className, disabled}){
+  const [btnLabel, setBtnLabel] = useState('Upload File');
+
+  const handleChange = (e) => {
+    setBtnLabel(e.target.files[0].name);
+    onChange(e);
+  };
+
+  React.useEffect(() => {
+    if (!disabled && btnLabel !== 'Upload File'){
+      setBtnLabel('Upload File');
+    }
+  }, [disabled]);
+
   return (
     <Button
       component="label"
@@ -41,13 +54,13 @@ export const VisuallyHiddenInput = styled('input')({
       className="btn-upload"
       disabled={disabled}
     >
-      Upload File
+      {btnLabel}
       <VisuallyHiddenInput 
         type="file"
         accept="image/*"
         name="data"
         id="file-upload"
-        onChange={onChange}
+        onChange={handleChange}
         className={className}
       />
     </Button>

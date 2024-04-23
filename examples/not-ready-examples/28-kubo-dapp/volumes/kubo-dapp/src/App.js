@@ -7,7 +7,6 @@ import Cookies from 'js-cookie';
 import ImageBoard from './ImageFiles';
 import { SetupWizard, WalletConnectPopup } from './SetupWizard';
 import {
-  FileUploadBtn,
   ErrorPopup
 } from './CustomMUI';
 import { abi } from './ContractInfo';
@@ -20,16 +19,12 @@ import {
   createTheme,
   ThemeProvider,
   CssBaseline,
-  Box,
-  Typography,
-  Fab
+  Box
 } from '@mui/material';
-import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 // Web-3 Onboard Imports:
 import {
   Web3OnboardProvider,
   init,
-  useWallets,
   useConnectWallet
 } from '@web3-onboard/react';
 import injectedModule from '@web3-onboard/injected-wallets';
@@ -55,13 +50,14 @@ const web3Onboard = init({
   chains,
   appMetadata: {
     name: 'SEED Image Board',
-    logo: '/logo512.png',
+    logo: '/internet-emulator-s.jpg',
     icon: '/favicon.ico',
     description: 'A demo image board dApp built with Ethereum smart contracts and the InterPlanetary File System.'
   },
   connect: {
     autoConnectLastWallet: true
-  }
+  },
+  theme: 'dark'
 })
 var web3 = null;
 const ipfs = create('http://localhost:5001');
@@ -127,6 +123,7 @@ function ImageBoardApp({ pageProps }) {
     console.log('Submitting...');
     try {
     const { cid } = await ipfs.add(file.data);
+    console.log('Added to IPFS')
 
     // Create smart contract interface:
     const ipfsStorage = new web3.eth.Contract(abi, Cookies.get('contractAddress'));

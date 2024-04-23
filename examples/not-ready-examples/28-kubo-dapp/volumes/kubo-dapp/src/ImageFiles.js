@@ -30,15 +30,16 @@ export default function ImageBoard({itemData, onUpload, onSubmit}) {
 }
 
 function ImageFilesLayout({itemData}) {
-   return (
-     <ImageList>
-       <ImageListItem key="Subheader" cols={4} sx={{ mb: 3 }}>
-         <ListSubheader component="div"><Typography variant="h5">Uploaded Images</Typography></ListSubheader>
-       </ImageListItem>
-       {itemData.map((item) => (
-         <IPFSImageItem item={item} />
-       ))}
-     </ImageList>
+  const numCols = 3;
+    return (
+        <ImageList cols={numCols}>
+          <ImageListItem key="Subheader" cols={numCols} sx={{ mb: 3 }}>
+            <ListSubheader component="div"><Typography variant="h5">Uploaded Images</Typography></ListSubheader>
+          </ImageListItem>
+          {itemData.map((item) => (
+            <IPFSImageItem item={item} />
+          ))}
+        </ImageList>
    );
  }
 
@@ -84,7 +85,7 @@ function ImageFilesLayout({itemData}) {
       </Typography>
       <FormControl sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center' , gap: '1rem'}}>
         <FileUploadBtn onChange={handleUpload} disabled={uploaded}/>
-        <Button variant='outlined' type='submit'>Add to Board</Button>
+        <Button variant='outlined' type='submit' disabled={!uploaded}>Add to Board</Button>
       </FormControl>
     </Paper>
   );
@@ -111,6 +112,6 @@ function ImageFilesLayout({itemData}) {
             borderBottomRightRadius: '0.5rem',
           }}
         />
-      </ImageListItem>
+    </ImageListItem>
   );
  }
