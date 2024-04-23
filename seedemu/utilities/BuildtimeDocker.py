@@ -54,7 +54,9 @@ class BuildtimeDockerImage:
             if args:
                 for arg, value in args.items():
                     build_command += f" --build-arg {arg}={value}"
-            sh(build_command + " -", input=dockerfile.getContent().encode())
+            code = sh(build_command + " -", input=dockerfile.getContent().encode())
+            if code != 0:
+                raise Exception("Failed to build docker image:\n" + build_command)
         return self
 
     def container(self):
@@ -98,4 +100,6 @@ class BuildtimeDockerContainer:
         run_command += f" {self.__imageName}"
         if command:
             run_command += f" {command}"
-        sh(run_command)
+        code = sh(run_command)
+        if code != 0:
+            raise Exception("Failed to run docker container:\n" + run_command)
