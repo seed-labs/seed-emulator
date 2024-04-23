@@ -8,7 +8,8 @@ import {
   Box,
   FormControl,
   Paper,
-  Button
+  Button,
+  useTheme
 } from '@mui/material';
 import {
   green
@@ -31,7 +32,7 @@ export default function ImageBoard({itemData, onUpload, onSubmit}) {
 function ImageFilesLayout({itemData}) {
    return (
      <ImageList>
-       <ImageListItem key="Subheader" cols={2} sx={{ mb: 3 }}>
+       <ImageListItem key="Subheader" cols={4} sx={{ mb: 3 }}>
          <ListSubheader component="div"><Typography variant="h5">Uploaded Images</Typography></ListSubheader>
        </ImageListItem>
        {itemData.map((item) => (
@@ -90,6 +91,9 @@ function ImageFilesLayout({itemData}) {
  }
 
  function IPFSImageItem({item}) {
+  const theme = useTheme();
+  const cidSubtitle = (<Typography variant='caption' sx={{color: theme.palette.text.secondary}}>{item.cid}</Typography>);
+
   return (
     <ImageListItem key={item.cid}>
       <img
@@ -101,6 +105,7 @@ function ImageFilesLayout({itemData}) {
       />
       <ImageListItemBar
           title={item.name}
+          subtitle={cidSubtitle}
           sx={{
             borderBottomLeftRadius: '0.5rem',
             borderBottomRightRadius: '0.5rem',

@@ -93,7 +93,8 @@ for asNum in asns:
 
 ###############################################################################
 # Expose Ethereum on a node:
-ethNode = emu.getVirtualNode(random.choice(signers))
+ethVnode = random.choice(signers)
+ethNode = emu.getVirtualNode(ethVnode)
 ethNode.addPortForwarding(8545, 8545)
 
 webKubo = ipfs.install('extraKubo')
@@ -112,7 +113,7 @@ webKubo.appendStartConfig('API.HTTPHeaders.Access-Control-Allow-Origin', ["*"], 
 
 # Build and run the web app:
 # webHost.appendStartCommand('cd volumes/kubo-dapp && npm start')
-webHost.appendStartCommand('cd volumes/kubo-dapp && npm run build')
+# webHost.appendStartCommand('cd volumes/kubo-dapp && npm run build')
 webHost.appendStartCommand('serve -sC /volumes/kubo-dapp/build', fork=True)
 
 # Allocate node resources:
@@ -129,5 +130,11 @@ print(len(emu.getBindings()))
 emu.addLayer(ipfs)
 emu.addLayer(eth)
 emu.render()
+
+# # Deploy the smart contract automatically:
+# print(ethVnode)
+# ethServer = emu.getServerByVirtualNodeName(ethVnode)
+# ethServer.deploySmartContract(SmartContract('./contract/IPFS_StorageBin', './contract/IPFS_StorageAbi'))
+
 docker = Docker(internetMapEnabled=True, etherViewEnabled=True)
 emu.compile(docker, OUTPUTDIR, override = True)

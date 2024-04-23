@@ -254,7 +254,11 @@ const steps = [
          <Typography variant="h4" sx={{ paddingBottom: '1rem' }}>Smart Contract Setup</Typography>
          <DialogContentText sx={{ paddingBottom: '0.5rem' }}>
             At this point, you should have already compiled and deployed the smart contract
-            onto the local Ethereum blockchain using <Link href='https://remix.ethereum.org/' underline='hover' target='_blank' rel='noopener'>Remix</Link>.
+            onto the local Ethereum blockchain using <Link 
+               href='https://remix.ethereum.org/#lang=en&optimize=true&runs=200&evmVersion=paris&version=soljson-v0.8.25'
+               underline='hover'
+               target='_blank'
+               rel='noopener'>Remix</Link>.
             If you have not done so already, please follow the instructions in the example's
             README file and then return here once you have done so.
          </DialogContentText>

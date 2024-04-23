@@ -7,7 +7,10 @@ import logo from './logo.svg';
 // Custom Imports:
 import ImageBoard from './ImageFiles';
 import { SetupWizard, WalletConnectPopup } from './SetupWizard';
-import { FileUploadBtn } from './CustomMUI';
+import {
+  FileUploadBtn,
+  ErrorPopup
+} from './CustomMUI';
 import { abi } from './ContractInfo';
 // Material UI Imports:
 import '@fontsource/roboto/300.css';
@@ -63,12 +66,24 @@ const ipfs = create('http://localhost:5001');
 
 function ImageBoardApp({ pageProps }) {
   // Store in cookie: contractAddress, onboarded
+  const appCookies = ['onboarded', 'contractAddress'];
   // imgArr = [{name: 'filename.png', cid: 'CIDasAString', url: 'http://localhost:8081/dsajfhasjdfkald'}]
   const [imgArr, setImgArr] = useState([]);
   const [{wallet, connecting}, connectWallet, disconnectWallet] = useConnectWallet();
   const [wizardComplete, setWizardComplete] = useState(false);
   const [connectedAccount, setConnectedAccount] = useState(null);
+  // File: {name: 'name', data: Buffer}
   const [file, setFile] = useState(null);
+  const [error, setError] = useState(null);
+
+  function resetDapp(e) {
+    try{
+      appCookies.map((value) => Cookies.remove(value));
+      window.location.reload();
+    } catch (err) {
+      setError(err);
+    }
+  }
   
   function handleWizardFinish(contractAddr) {
     setWizardComplete(true);
@@ -78,20 +93,30 @@ function ImageBoardApp({ pageProps }) {
   }
 
   function handleConnect() {
-    web3 = new Web3(window.ethereum);
-    web3.eth.getChainId().then(console.log);
-    console.log(web3Onboard.state.get());
-    setConnectedAccount(wallet?.accounts[0].address);
+    try {
+      web3 = new Web3(window.ethereum);
+      setConnectedAccount(wallet?.accounts[0].address);
+    } catch (err) {
+      setError(err);
+    }
   }
 
   const retrieveFile = (e) => {
     const data = e.target.files[0];
     const reader = new window.FileReader()
-    reader.readAsArrayBuffer(data)
-    reader.onloadend = () => {
-      setFile(Buffer(reader.result));
+    try {
+      reader.readAsArrayBuffer(data)
+      reader.onloadend = () => {
+        setFile({
+          name: data.name,
+          data: Buffer(reader.result)
+          });
+      }
+      console.log('Read file ', data.name);
+    } catch (err) {
+      setError(err);
     }
-    console.log('Read file ', data.name);
+    
     e.preventDefault();
   };
 
@@ -99,13 +124,13 @@ function ImageBoardApp({ pageProps }) {
     e.preventDefault();
     console.log('Submitting...');
     try {
-    const { cid } = await ipfs.add(file);
+    const { cid } = await ipfs.add(file.data);
 
     // Create smart contract interface:
     const ipfsStorage = new web3.eth.Contract(abi, Cookies.get('contractAddress'));
     
     // Save this to account's photos:
-    const txReceipt = ipfsStorage.methods.putFile(cid.toString()).send({
+    const txReceipt = ipfsStorage.methods.putFile(cid.toString(), file.name).send({
       from: connectedAccount,
     });
     console.log(`Saved ${cid} for current account.`);
@@ -115,51 +140,66 @@ function ImageBoardApp({ pageProps }) {
     const img = {
       cid: cid.toString(),
       url: url,
-      name: "Test"
+      name: file.name
     }
     setImgArr(prev => [...prev, img]);
-    } catch (error) {
-    console.log(error.message);
+    } catch (err) {
+      setError(err);
     }
-    console.log('URLs: ', imgArr);
   };
 
   async function getStoredImages() {
+    try {
     // Create smart contract interface:
     const ipfsStorage = new web3.eth.Contract(abi, Cookies.get('contractAddress'));
-    console.log(ipfsStorage.options);
 
     // Populate with user's images, if they have any:
     var myCIDs = await ipfsStorage.methods.getFiles().call({
       from: connectedAccount,
     });
     console.log('From contract: ', myCIDs);
-    const myUrls = myCIDs.map((cid) => { return { cid: cid.toString(), url: `http://localhost:8081/ipfs/${cid}`, name: "Test" } } );
-    console.log('URLs: ', myUrls);
+    const myUrls = myCIDs.map((file) => { return { cid: file.cid, url: `http://localhost:8081/ipfs/${file.cid}`, name: file.name } } );
     setImgArr(myUrls);
+  } catch (err) {
+    setError(err);
+  }
   }
 
+  // DEBUGGING:
   React.useEffect(() => {
+    console.log('Images: ', imgArr);
+  }, [imgArr]);
+  React.useEffect(() => {
+    console.log('Connected Account: ', connectedAccount);
+  }, [connectedAccount]);
+  React.useEffect(() => {
+    console.log('Contract Address: ', Cookies.get('contractAddress'));
+  }, [Cookies.get('contractAddress')]);
+
+  // Get new images if user changes:
+  // React.useEffect(() => {
+  //   if (connectedAccount !== null || connectedAccount !== undefined) {
+  //     window.location.reload();
+  //   }
+  // }, [connectedAccount]);
+
+  React.useEffect(() => {
+    // If web3 isn't connected to the provider, but we've already onboarded
+    // just connect:
     if (!web3 && Cookies.get('onboarded')){
       handleConnect();
-      getStoredImages();
     }
 
+    // If there is a connected wallet but no account, update that:
     if (wallet && !connectedAccount){
       setConnectedAccount(wallet?.accounts[0].address);
-      getStoredImages();
     }
 
-    if (Cookies.get('contractAddress') && connectedAccount && web3) {
+    // If we have the contract, account, web3, and ipfs, get the user's images:
+    if (Cookies.get('contractAddress') && connectedAccount && web3 && ipfs) {
       getStoredImages();
     }
   }, [wallet, web3, connectedAccount]);
-
-  // React.useEffect(() => {
-  //   console.log('Onboarded: ', Cookies.get('onboarded'));
-  //   console.log('Contract Address: ', Cookies.get('contractAddress'));
-  //   console.log(web3Onboard.state.get());
-  // });
 
   return (
       <ThemeProvider theme={darkTheme}>
@@ -177,6 +217,10 @@ function ImageBoardApp({ pageProps }) {
           }
           {!wallet && Cookies.get('onboarded')
             ? <WalletConnectPopup />
+            : <React.Fragment></React.Fragment>
+          }
+          {error
+            ? <ErrorPopup msg={error.message} onAttemptFix={resetDapp} onClose={() => setError(null)}/>
             : <React.Fragment></React.Fragment>
           }
         </Box>
