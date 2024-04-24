@@ -200,7 +200,7 @@ There are two ways to interact with a layer2 blockchain:
 
 ### B.1 Using geth
 
-To use geth inside the docker container please refer to the ethereum [documentation](../B06-blockchain/README.md#Use-Blockchain)
+To use geth inside the docker container please refer to the ethereum [documentation](../B06-blockchain/README.md#use-blockchain)
 
 ### B.2 Using L2Util
 
