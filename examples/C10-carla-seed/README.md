@@ -139,7 +139,7 @@ Upon launching CARLA, a window showcasing a cityscape in spectator mode appears;
 - **Private Network:** `11872/rw-11872-syr` - Allow network to access Syracuse University
 - **Real World Network:** `99999/rw-real-world` - Allow network to access Internet
 ![carlaseed](figs/carlaseed.png)
-### Testing After Installation
+### Post-Installation Testing 
 After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along with the Internet Map feature, it's crucial to ensure everything is functioning correctly. This section will guide you through the testing process to verify the operational status of these components.
 #### Testing Carlaviz and Internet Map
 1. **Verify Carlaviz is Running:**
@@ -165,7 +165,34 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 - **Dashboard/Visualization Not Loading:** Verify the server ports are not in use by another application and firewall settings allow traffic on ports 8080 and 8090.
 - **Scenario Not Progressing:** Check the connection between the SEED Emulator and CARLA. The emulator should properly configure scenario based on its script, which then should be visible in CARLA and Carlaviz.
 ### Usage 
-
+1. **Launching the Simulation:**
+	Ensure that both the SEED Emulator and the CARLA simulation are up and running. Verify the connection between them to ensure data can be transferred seamlessly.
+2. **Access the Controller Container:**
+	Navigate to the controller container where the interaction scripts are located:
+	- `controller.py`
+	- `config.py`
+3. **Understanding `controller.py`:**
+	This script is essential for sending commands and retrieving information from the simulated vehicles:
+	- **Send Locations**: It can broadcast location updates to all vehicles simultaneously or target individual vehicles.
+	- **Get Vehicle Info**: Retrieves data such as speed, throttle position, brake status, model, and real-time GPS coordinates.
+	- **List Vehicles**: Lists all active vehicles in the simulation that start with the prefix "seed."
+	- **`controller.py`Options:**
+		- **WebSocket IP (`--w_ip`)**: Specifies the IP address of the WebSocket server, defaulting to "localhost".
+		- **WebSocket Port (`--w_port`)**: Sets the port number for the WebSocket server, with a default of 6789.
+		- **CARLA Server IP (`--c_ip`)**: Defines the IP address of the CARLA server, typically set to "localhost".
+		- **CARLA Server Port (`--c_port`)**: Indicates the port number for the CARLA server, defaulting to 2000.
+		- **Location (`--location`)**: Allows setting a predefined destination for vehicle navigation such as Townhall, Museum, etc.
+		- **Identifier (`--id`)**: Targets a specific vehicle by its identifier or 'all' to apply commands to all vehicles.
+		- **List Vehicles (`--list`)**: Lists all car role names currently in the simulation and then exits.
+		- **Car Info (`--c_info`)**: Retrieves detailed information about a specific car based on its role name.
+1. **Understanding `config.py`:**
+	Use this script to set up and modify parameters for connection and interaction with the CARLA server:
+	- **Server IP and Port**: Specify the IP address and port number of the CARLA server.
+	- **Adjust Parameters**: Change parameters to alter simulation settings, affecting how vehicles respond to commands from `controller.py`.
+5. **Execute Commands:**
+	Run `controller.py` to start sending commands based on the configurations set in `config.py`. This will allow you to control the simulation dynamically, adjusting vehicle behaviors and monitoring their statuses in real-time.
+6. **Monitoring and Adjustments:**
+	Continuously monitor the outputs and effects of your commands within the CARLA visualization environment. Make adjustments in `controller.py` and `config.py` as needed to refine vehicle behavior and simulation parameters.
 
 
 
