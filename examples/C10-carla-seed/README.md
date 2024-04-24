@@ -43,7 +43,7 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
 ## CARLA Simulator + SEED Emulator 
 ### Integration Architecture
 
-![carlaseed arch](carlaseed_arch.png)
+![carlaseed arch](figs/carlaseed_arch.png)
 ### Integration Features
 #### Simulation Controls
 #### Data Exchange
@@ -111,7 +111,7 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
 6. **Launch CARLA:**
     - Run the command `./CarlaUE4.sh` to start CARLA.
 
-![carla_server](carla_server.png)
+![carla_server](figs/carla_server.png)
 Upon launching CARLA, a window showcasing a cityscape in spectator mode appears; navigate using the mouse and WASD keys, with the right mouse button for directional control, as the server awaits client connections for interactive simulation.
 ### SEED Emulator Installation
 1. **Install the necessary software**
@@ -121,7 +121,7 @@ Upon launching CARLA, a window showcasing a cityscape in spectator mode appears;
 3. **Run SEED Emulator**
 	- Build and run the pre-generated containers. First `cd output/`, then do `docker-compose build && docker-compose up`. The emulator will start running.
 
-![carlaseed](carlaseed.png)
+![carlaseed](figs/carlaseed.png)
 
 ### SEED Emulator Container Terminology
 - **Web Socket Server**: `hnode_150_host_0` - Manages Web Socket services for real-time communication.
@@ -139,7 +139,7 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 1. **Verify Carlaviz is Running:**
     - After launching Carlaviz, open a web browser and visit `http://localhost:8080`. You should see a visualization interface of CARLA’s environment. If this page loads successfully, Carlaviz is running correctly.
 
-	![carlaviz](carlaviz.png)
+	![carlaviz](figs/carlaviz.png)
 	
 2. **Check Internet Map on SEED Emulator:**
     - Similarly, to check if the Internet Map feature of the SEED Emulator is working, navigate to `http://localhost:8090` in your web browser. This should load the Internet Map dashboard if the emulator is correctly set up and running.
