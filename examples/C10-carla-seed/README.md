@@ -114,25 +114,31 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
 ![carla_server](figs/carla_server.png)
 Upon launching CARLA, a window showcasing a cityscape in spectator mode appears; navigate using the mouse and WASD keys, with the right mouse button for directional control, as the server awaits client connections for interactive simulation.
 ### SEED Emulator Installation
-1. **Install the necessary software**
-	- To run the emulator, you need to install `docker`, `docker-compose`, and `python3`
-2. **Set up the environment variable**
-	- To run the emulator code, you need to add this folder to the `PYTHONPATH` environment variable. This can be done by running `source development.env` inside the project's root directory.
-3. **Run SEED Emulator**
-	- Build and run the pre-generated containers. First `cd output/`, then do `docker-compose build && docker-compose up`. The emulator will start running.
-
-![carlaseed](figs/carlaseed.png)
-
+1. **Install the Necessary Software**
+    - Install `docker`, `docker-compose`, and `python3` to ensure all required tools for running the emulator are available.
+2. **Set Up the Environment Variable**
+    - Add the project folder to the `PYTHONPATH` environment variable by executing `source development.env` in the project's root directory.
+3. **Configure Environment Settings**
+    - Update the`.env`file in the`carla-seed`directory with necessary parameters such as:
+	    - CARLA server IP (`CARLA_IP`) and port (`CARLA_PORT`)
+	    - Role names and camera settings for vehicles (`ROLE_NAME_1` to `ROLE_NAME_6`, `CAMERA_1` to `CAMERA_6`)
+	    - Traffic simulation settings (`TRAFFIC_VEHICLES_NO`, `TRAFFIC_WALKERS_NO`)
+	    - Carlaviz configurations (`CARLAVIZ_LOGFILE_NAME`, `CARLAVIZ_RETRY_SECONDS`, `CARLAVIZ_EGO_VEHICLE_NAME=car1`)
+4. **Run SEED Emulator**
+    - Navigate to the emulator directory with `cd carla-seed/`, build, and start the emulator using `docker-compose build && docker-compose up`.
 ### SEED Emulator Container Terminology
-- **Web Socket Server**: `hnode_150_host_0` - Manages Web Socket services for real-time communication.
-- **Controller**: `151/host_0` - Handles control logic for simulations. 
-- **Seed Car 1**: `152/host_0` - Represents the first autonomous vehicle in the simulation.
-- **Seed Car 2**: `153/host_0` - Represents the second autonomous vehicle.
-- **Seed Car 3**: `154/host_0` - Represents the third autonomous vehicle.
-- **Seed Car 4**: `155/host_0` - Represents the fourth autonomous vehicle.
-- **Seed Car 5**: `156/host_0` - Represents the fifth autonomous vehicle.
-- **Seed Car 6**: `157/host_0` - Represents the sixth autonomous vehicle.
-- **Traffic Generator**: `158/host_0` - Generates traffic scenarios within the simulation.
+- **Web Socket Server**: `150/websocket` - Manages Web Socket services for real-time communication.
+- **Controller**: `151/controller` - Handles control logic for simulations. 
+- **Seed Car 1**: `152/seedcar1` - Represents the first autonomous vehicle in the simulation.
+- **Seed Car 2**: `153/seedcar2` - Represents the second autonomous vehicle.
+- **Seed Car 3**: `154/seedcar3` - Represents the third autonomous vehicle.
+- **Seed Car 4**: `155/seedcar4` - Represents the fourth autonomous vehicle.
+- **Seed Car 5**: `156/seedcar5` - Represents the fifth autonomous vehicle.
+- **Seed Car 6**: `157/seedcar6` - Represents the sixth autonomous vehicle.
+- **Traffic Generator**: `158/traffic` - Generates traffic scenarios within the simulation.
+- **Private Network:** `11872/rw-11872-syr` - Allow network to access Syracuse University
+- **Real World Network:** `99999/rw-real-world` - Allow network to access Internet
+![carlaseed](figs/carlaseed.png)
 ### Testing After Installation
 After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along with the Internet Map feature, it's crucial to ensure everything is functioning correctly. This section will guide you through the testing process to verify the operational status of these components.
 #### Testing Carlaviz and Internet Map
