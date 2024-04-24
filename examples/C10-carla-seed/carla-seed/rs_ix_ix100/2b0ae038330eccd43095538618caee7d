@@ -1,0 +1,103 @@
+router id 10.100.0.100;
+protocol device {
+}
+protocol bgp p_as150 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.150 as 150;
+}
+protocol bgp p_as151 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.151 as 151;
+}
+protocol bgp p_as152 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.152 as 152;
+}
+protocol bgp p_as153 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.153 as 153;
+}
+protocol bgp p_as154 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.154 as 154;
+}
+protocol bgp p_as155 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.155 as 155;
+}
+protocol bgp p_as156 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.156 as 156;
+}
+protocol bgp p_as157 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.157 as 157;
+}
+protocol bgp p_as158 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.158 as 158;
+}
+protocol bgp p_as11872 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.95 as 11872;
+}
+protocol bgp p_as99999 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.100.0.100 as 100;
+    neighbor 10.100.0.99 as 99999;
+}
+

@@ -1,0 +1,20 @@
+10.150.0.71 150-websocket websocket
+10.150.0.254 150-router0
+10.151.0.71 151-controller controller
+10.151.0.254 151-router0
+10.152.0.71 152-seedcar1 seedcar1
+10.152.0.254 152-router0
+10.153.0.71 153-seedcar2 seedcar2
+10.153.0.254 153-router0
+10.154.0.71 154-seedcar3 seedcar3
+10.154.0.254 154-router0
+10.155.0.71 155-seedcar4 seedcar4
+10.155.0.254 155-router0
+10.156.0.71 156-seedcar5 seedcar5
+10.156.0.254 156-router0
+10.157.0.71 157-seedcar6 seedcar6
+10.157.0.254 157-router0
+10.158.0.71 158-traffic traffic
+10.158.0.254 158-router0
+192.168.160.253 99999-rw-real-world
+192.168.160.254 11872-rw-11872-syr

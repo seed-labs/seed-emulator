@@ -1,0 +1,8 @@
+#!/bin/bash
+gw="`ip rou show default | cut -d' ' -f3`"
+sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
+iptables -t nat -A POSTROUTING -d 0.0.0.0/1 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 0.0.0.0/1 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 128.0.0.0/1 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 128.0.0.0/1 -j TTL --ttl-set 64
+

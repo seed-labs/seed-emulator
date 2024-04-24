@@ -1,0 +1,13 @@
+#!/bin/bash
+chmod +x /interface_setup
+/interface_setup
+ip rou del default 2> /dev/null
+ip route add default via 10.154.0.254 dev net0
+cat /tmp/etc-hosts >> /etc/hosts
+
+echo "ready! run 'docker exec -it $HOSTNAME /bin/zsh' to attach to this node" >&2
+for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 0 > "$f"; done
+sleep 30
+python3.7 -u /carla/headless_automatic_control.py --ws_ip=${WS_IP} --ws_port=${WS_PORT} --host=${CARLA_IP} --port=${CARLA_PORT} --r_name=${ROLE_NAME} --cam=${CAMERA} --ws_enable on -l > /seed_${ROLE_NAME}.log 2>&1
+tail -f /dev/null
+

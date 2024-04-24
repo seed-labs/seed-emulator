@@ -1,0 +1,36 @@
+#!/bin/bash
+gw="`ip rou show default | cut -d' ' -f3`"
+sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
+iptables -t nat -A POSTROUTING -d 149.119.192.0/18 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 149.119.192.0/18 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 149.119.0.0/18 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 149.119.0.0/18 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 74.80.186.0/24 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 74.80.186.0/24 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 128.230.64.0/18 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 128.230.64.0/18 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 128.230.0.0/18 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 128.230.0.0/18 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 128.230.60.0/24 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 128.230.60.0/24 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 149.119.0.0/16 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 149.119.0.0/16 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 128.230.192.0/18 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 128.230.192.0/18 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 149.119.128.0/18 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 149.119.128.0/18 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 128.230.0.0/16 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 128.230.0.0/16 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 149.119.64.0/18 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 149.119.64.0/18 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 128.230.128.0/18 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 128.230.128.0/18 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 149.119.128.0/17 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 149.119.128.0/17 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 128.230.0.0/17 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 128.230.0.0/17 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 128.230.128.0/17 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 128.230.128.0/17 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 149.119.0.0/17 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 149.119.0.0/17 -j TTL --ttl-set 64
+
