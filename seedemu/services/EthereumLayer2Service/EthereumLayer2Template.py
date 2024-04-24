@@ -32,6 +32,7 @@ class EthereumLayer2Account(Enum):
     GS_BATCHER = "GS_BATCHER"
     GS_PROPOSER = "GS_PROPOSER"
     GS_SEQUENCER = "GS_SEQUENCER"
+    GS_TEST = "GS_TEST"
 
 
 class EthereumLayer2Config(Enum):

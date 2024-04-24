@@ -2,30 +2,13 @@
 # encoding: utf-8
 
 from seedemu import *
+from L2Util import generateAccounts
+
 import sys
 
-# Setting privileged accounts for layer2
-ADMIN_ACC = (
-    "0xdFC7d61047DAc7735d42Fd517e39e89C57083b45",
-    "0xd1e9509fa96d231fe323bda01cd954d4a74796a859ebe9dd638d5f0824d1ebd4",
-)
-BATCHER_ACC = (
-    "0x9C1EA6d1f5E3E8aE21fdaF808b2e13698737643C",
-    "0x742dd19d7c2ed107027d8844e72ebc34b83091e1f58a7e95009e829fe06a7b12",
-)
-PROPOSER_ACC = (
-    "0x30ca907e4028346E93c081f30345d3319cb20972",
-    "0x00683c828f09af18e0febb495ebee48fb2c581e2a6fa83e6ddaee3a359358af9",
-)
-SEQUENCER_ACC = (
-    "0x0e259e03bABD47f8bab8Ec93a2C5fB39DB443a3d",
-    "0x9a031a3aee8b73427b86d195b387a10dd471f5707709923a16882141b37a1c17",
-)
-# Test account
-TEST_ACC = (
-    "0x2DDAaA366dc75119A256C41b9bd483D13A64389d",
-    "0x4ba1ada11a1d234c3a03c08395c82e65320b5ae4aecca4a70143f4c157230528",
-)
+
+# Generate privileged & test accounts for layer2
+accs = generateAccounts()
 
 emu = Makers.makeEmulatorBaseWith10StubASAndHosts(1)
 
@@ -49,12 +32,14 @@ initBal = 10**8
 blockchain.setGasLimitPerBlock(30_000_000)
 # Pre-deploy the smart contract factory for layer2 smart contract deployment
 blockchain.addLocalAccount(EthereumLayer2SCFactory.ADDRESS.value, 0)
-blockchain.addCode(EthereumLayer2SCFactory.ADDRESS.value, EthereumLayer2SCFactory.BYTECODE.value)
+blockchain.addCode(
+    EthereumLayer2SCFactory.ADDRESS.value, EthereumLayer2SCFactory.BYTECODE.value
+)
 # Funding accounts
-blockchain.addLocalAccount(ADMIN_ACC[0], initBal)
-blockchain.addLocalAccount(BATCHER_ACC[0], initBal)
-blockchain.addLocalAccount(PROPOSER_ACC[0], initBal)
-blockchain.addLocalAccount(TEST_ACC[0], initBal)
+blockchain.addLocalAccount(accs[EthereumLayer2Account.GS_ADMIN][0], initBal)
+blockchain.addLocalAccount(accs[EthereumLayer2Account.GS_BATCHER][0], initBal)
+blockchain.addLocalAccount(accs[EthereumLayer2Account.GS_PROPOSER][0], initBal)
+blockchain.addLocalAccount(accs[EthereumLayer2Account.GS_TEST][0], initBal)
 
 
 # Create blockchain nodes (POA Ethereum)
@@ -96,11 +81,22 @@ l2Bkc = l2.createL2Blockchain("test")
 l2Bkc.setL1VNode("poa-eth5", e5.getGethHttpPort())
 
 # Configure the admin accounts for layer2 blockchain
-# Theses accounts must be funded in the layer1 blockchain
-l2Bkc.setAdminAccount(EthereumLayer2Account.GS_ADMIN, ADMIN_ACC)
-l2Bkc.setAdminAccount(EthereumLayer2Account.GS_BATCHER, BATCHER_ACC)
-l2Bkc.setAdminAccount(EthereumLayer2Account.GS_PROPOSER, PROPOSER_ACC)
-l2Bkc.setAdminAccount(EthereumLayer2Account.GS_SEQUENCER, SEQUENCER_ACC)
+# Admin, batcher, proposer must be funded in the layer1 blockchain
+l2Bkc.setAdminAccount(
+    EthereumLayer2Account.GS_ADMIN, accs[EthereumLayer2Account.GS_ADMIN]
+)
+l2Bkc.setAdminAccount(
+    EthereumLayer2Account.GS_BATCHER, accs[EthereumLayer2Account.GS_BATCHER]
+)
+l2Bkc.setAdminAccount(
+    EthereumLayer2Account.GS_PROPOSER, accs[EthereumLayer2Account.GS_PROPOSER]
+)
+l2Bkc.setAdminAccount(
+    EthereumLayer2Account.GS_SEQUENCER, accs[EthereumLayer2Account.GS_SEQUENCER]
+)
+l2Bkc.setAdminAccount(
+    EthereumLayer2Account.GS_TEST, accs[EthereumLayer2Account.GS_TEST]
+)
 
 # Create layer2 nodes
 # Set l2-1 to be a sequencer node, only one sequencer node is allowed in a layer2 blockchain
@@ -122,6 +118,7 @@ deployer = l2Bkc.createNode("l2-deployer", EthereumLayer2Node.DEPLOYER)
 
 # Set an external port for user interaction
 emu.getVirtualNode("l2-3").addPortForwarding(8545, l2_3.getHttpPort())
+emu.getVirtualNode("l2-deployer").addPortForwarding(8888, 8888)
 
 
 # Binding virtual nodes to physical nodes

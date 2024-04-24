@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
+import sys
+import time
+import os
+import typing
+
+import web3
+
 from web3 import Web3
 from web3.middleware import signing
 from web3.exceptions import TransactionNotFound
 
-import sys
-import time
+from seedemu.services.EthereumLayer2Service import EthereumLayer2Account
+
 
 L1_CHAIN_ID = 1337
 L2_CHAIN_ID = 42069
+
 
 # Monitor block using polling
 def monitor_block(RPC):
@@ -40,10 +48,7 @@ def monitor_block(RPC):
 
 
 def deposit(l1RPC, l2RPC, amountInETH=1):
-    TEST_ACC = (
-        "0x2DDAaA366dc75119A256C41b9bd483D13A64389d",
-        "0x4ba1ada11a1d234c3a03c08395c82e65320b5ae4aecca4a70143f4c157230528",
-    )
+    TEST_ACC = (os.getenv("TEST_ADDR"), os.getenv("TEST_PK"))
     TIMEOUT = 120
 
     acc = signing.private_key_to_account(TEST_ACC[1])
@@ -126,6 +131,35 @@ def sendL2Tx(l2RPC, to, value=0, data="0x"):
     print(f"Transaction receipt: {receipt}")
 
 
+def generateAccounts() -> typing.Dict[EthereumLayer2Account, typing.Tuple[str, str]]:
+    adminAcc = web3.Account.create()
+    batcherAcc = web3.Account.create()
+    proposerAcc = web3.Account.create()
+    sequencerAcc = web3.Account.create()
+    testAcc = web3.Account.create()
+
+    with open(".env", "w") as f:
+        f.write(f"TEST_ADDR={testAcc.address}\n")
+        f.write(f"TEST_PK={testAcc.privateKey.hex()}\n")
+
+    return {
+        EthereumLayer2Account.GS_ADMIN: (adminAcc.address, adminAcc.privateKey.hex()),
+        EthereumLayer2Account.GS_BATCHER: (
+            batcherAcc.address,
+            batcherAcc.privateKey.hex(),
+        ),
+        EthereumLayer2Account.GS_PROPOSER: (
+            proposerAcc.address,
+            proposerAcc.privateKey.hex(),
+        ),
+        EthereumLayer2Account.GS_SEQUENCER: (
+            sequencerAcc.address,
+            sequencerAcc.privateKey.hex(),
+        ),
+        EthereumLayer2Account.GS_TEST: (testAcc.address, testAcc.privateKey.hex()),
+    }
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <monitor/deposit/sendTx>")
@@ -139,7 +173,9 @@ if __name__ == "__main__":
         monitor_block(sys.argv[2])
     elif method == "deposit":
         if len(sys.argv) < 4:
-            print(f"Usage: {sys.argv[0]} deposit <l1RPC> <l2RPC> [amount in ether (default=1)]")
+            print(
+                f"Usage: {sys.argv[0]} deposit <l1RPC> <l2RPC> [amount in ether (default=1)]"
+            )
             sys.exit(1)
         if len(sys.argv) == 4:
             deposit(sys.argv[2], sys.argv[3])
@@ -148,7 +184,9 @@ if __name__ == "__main__":
 
     elif method == "sendTx":
         if len(sys.argv) < 4:
-            print(f"Usage: {sys.argv[0]} sendTx <l2RPC> <to> [value in ether (default=0)] [data (default=0x)]")
+            print(
+                f"Usage: {sys.argv[0]} sendTx <l2RPC> <to> [value in ether (default=0)] [data (default=0x)]"
+            )
             sys.exit(1)
         sendL2Tx(
             sys.argv[2],
