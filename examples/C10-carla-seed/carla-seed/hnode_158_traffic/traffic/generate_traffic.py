@@ -12,6 +12,7 @@ import glob
 import os
 import sys
 import time
+import signal
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -340,12 +341,29 @@ def main():
 
         # Example of how to use Traffic Manager parameters
         traffic_manager.global_percentage_speed_difference(30.0)
+        def signal_handler(signum, frame):
+            print("Signal received:", signum)
+            print('\ndestroying %d vehicles' % len(vehicles_list))
+            client.apply_batch([carla.command.DestroyActor(x) for x in vehicles_list])
 
+            # stop walker controllers (list is [controller, actor, controller, actor ...])
+            for i in range(0, len(all_id), 2):
+                all_actors[i].stop()
+
+            print('\ndestroying %d walkers' % len(walkers_list))
+            client.apply_batch([carla.command.DestroyActor(x) for x in all_id])
+
+            sys.exit(0)
+
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
         while True:
             if not args.asynch and synchronous_master:
                 world.tick()
             else:
                 world.wait_for_tick()
+
+        
 
     finally:
 

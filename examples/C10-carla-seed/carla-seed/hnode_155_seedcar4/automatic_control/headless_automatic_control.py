@@ -539,6 +539,7 @@ def game_loop(args):
             global destroy
             destroy=True
             world.destroy()
+            sys.exit(0)
         world.player.collision_sensor = CollisionSensor(world.player)
         if args.agent == "Basic":
             agent = BasicAgent(world.player, 30)
