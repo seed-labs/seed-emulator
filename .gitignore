@@ -27,3 +27,4 @@ client/backend/bin
 output
 project-words.txt
 .venv
+**/.obsidian/**
