@@ -8912,3 +8912,219 @@ as152h-Kubo-4_Peer-10.152.0.71: [PASS]
 as154h-Kubo-8_Peer-10.154.0.71: [PASS]
 =========================================== Test Results ===========================================
 score: 12 of 12 (0 errors, 0 failures)
+==============================
+__main__ Start
+==============================
+==================================== Test Case: test_init_empty ====================================
+DottedDict()                  [PASS]
+DottedDict([])                [PASS]
+DottedDict({})                [PASS]
+DottedDict(set())             [PASS]
+DottedDict(())                [PASS]
+==================================== Test Case: test_init_good =====================================
+DottedDict([('a', 1), ('b', 2), (5, 'ff'), (55.7, True)])                  [PASS]
+DottedDict([('a', 1), ('b', [('c', [('d', 4), ('e', 5)])]), ('f', 6)])     [PASS]
+DottedDict((('a', 1), ('b', 2), (5, 'ff'), (55.7, True)))                  [PASS]
+DottedDict((('a', 1), ('b', ('c', (('d', 4), ('e', 5)))), ('f', 6)))       [PASS]
+DottedDict({(55.7, True), (5, 'ff'), ('a', 1), ('b', 2)})                  [PASS]
+DottedDict({'a': 1, 'b': 2, 5: 'ff', 55.7: True})                          [PASS]
+DottedDict({'a': 1, 'b': {'c': {'d': 4, 'e': 5}}, 'f': 6})                 [PASS]
+===================================== Test Case: test_init_bad =====================================
+DottedDict(True)                                  [PASS]
+DottedDict(False)                                 [PASS]
+DottedDict(1)                                     [PASS]
+DottedDict(346.72)                                [PASS]
+DottedDict(55555)                                 [PASS]
+DottedDict([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])        [PASS]
+DottedDict(range(0, 10))                          [PASS]
+DottedDict({0, 1, 2, 3, 4, 5, 6, 7, 8, 9})        [PASS]
+DottedDict((0, 1, 2, 3, 4, 5, 6, 7, 8, 9))        [PASS]
+DottedDict([(1, 'a'), 2, 3])                      [PASS]
+DottedDict((1, (2, 'b'), 3, 4, 5))                [PASS]
+DottedDict([{'a': 1}, True])                      [PASS]
+================================ Test Case: test_get_item_expected =================================
+DottedDict[simple] = True                                                                 [PASS]
+DottedDict[a.b] = 2                                                                       [PASS]
+DottedDict[a.c] = {'red': False, 'orange': True, 'yellow': False, 'green': True, 'blue': True, 'purple': True, 'pink': True}[PASS]
+DottedDict[a.c.red] = False                                                               [PASS]
+DottedDict[a.c.orange] = True                                                             [PASS]
+DottedDict[a.c.blue] = True                                                               [PASS]
+DottedDict[a.deepest] = {'level1': {'level2': {'level3': {'level4': {'level5': 'done'}}}}}[PASS]
+DottedDict[a.deepest.level1.level2.level3.level4.level5] = done                           [PASS]
+DottedDict[simple] = True                                                                 [PASS]
+DottedDict[ ] = False                                                                     [PASS]
+DottedDict[,] = {'!': '#'}                                                                [PASS]
+DottedDict[,.!] = #                                                                       [PASS]
+=============================== Test Case: test_get_item_unexpected ================================
+DottedDict[] -> KeyError                                                   [PASS]
+DottedDict[.] -> KeyError                                                  [PASS]
+DottedDict[	] -> KeyError                                                  [PASS]
+DottedDict[.a] -> KeyError                                                 [PASS]
+DottedDict[a.] -> KeyError                                                 [PASS]
+DottedDict[a.b.] -> KeyError                                               [PASS]
+DottedDict[a.b.c] -> KeyError                                              [PASS]
+DottedDict[a.c.c] -> KeyError                                              [PASS]
+DottedDict[a.c.red.orange] -> KeyError                                     [PASS]
+DottedDict[a.c.orange.] -> KeyError                                        [PASS]
+DottedDict[a.c.blue.deepest] -> KeyError                                   [PASS]
+DottedDict[a..deepest] -> KeyError                                         [PASS]
+DottedDict[..a.deepest.level1.level2.level3.level4.level5..] -> KeyError   [PASS]
+DottedDict[simple..] -> KeyError                                           [PASS]
+================================ Test Case: test_set_item_expected =================================
+DottedDict[simple] = False                                                                                              [PASS]
+DottedDict[a.b] = 4                                                                                                     [PASS]
+DottedDict[a.c] = {'level1': 1, 'level2': {'diff': 4, 'bbb': False}}                                                    [PASS]
+DottedDict[a.c.red] = 6                                                                                                 [PASS]
+DottedDict[a.c.orange] = apple                                                                                          [PASS]
+DottedDict[a.c.blue] = 36.788                                                                                           [PASS]
+DottedDict[a.deepest.level1.level2.level3.level4.level5] = ready                                                        [PASS]
+DottedDict[a.deepest] = {'apple': {'bicycle': {'car': {'dream': {'engine': 'huh', 'fog': 'yes', 'golf': 'ball'}}}}}     [PASS]
+DottedDict[simple] = False                                                                                              [PASS]
+DottedDict[ ] = True                                                                                                    [PASS]
+DottedDict[,.!] = #                                                                                                     [PASS]
+DottedDict[,] = ['!', '#']                                                                                              [PASS]
+=============================== Test Case: test_set_item_unexpected ================================
+DottedDict[] -> KeyError                                                   [PASS]
+DottedDict[.] -> KeyError                                                  [PASS]
+DottedDict[.a] -> KeyError                                                 [PASS]
+DottedDict[a.] -> KeyError                                                 [PASS]
+DottedDict[a.b.] -> KeyError                                               [PASS]
+DottedDict[a..b..c] -> KeyError                                            [PASS]
+DottedDict[a.c.orange.] -> KeyError                                        [PASS]
+DottedDict[a..deepest] -> KeyError                                         [PASS]
+DottedDict[..a.deepest.level1.level2.level3.level4.level5..] -> KeyError   [PASS]
+DottedDict[simple..] -> KeyError                                           [PASS]
+================================ Test Case: test_del_item_expected =================================
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[a.b]                                                        [PASS]
+del DottedDict[a.c]                                                        [PASS]
+del DottedDict[a.c.red]                                                    [PASS]
+del DottedDict[a.c.orange]                                                 [PASS]
+del DottedDict[a.c.blue]                                                   [PASS]
+del DottedDict[a.deepest]                                                  [PASS]
+del DottedDict[a.deepest.level1.level2.level3.level4.level5]               [PASS]
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[ ]                                                          [PASS]
+del DottedDict[,]                                                          [PASS]
+del DottedDict[,.!]                                                        [PASS]
+=============================== Test Case: test_del_item_unexpected ================================
+del DottedDict[simpl]                                                      [PASS]
+del DottedDict[.a.b]                                                       [PASS]
+del DottedDict[a..c]                                                       [PASS]
+del DottedDict[a..c..red]                                                  [PASS]
+del DottedDict[..a.c.orange]                                               [PASS]
+del DottedDict[a.c.blue.]                                                  [PASS]
+del DottedDict[a.deepest...]                                               [PASS]
+del DottedDict[a.deepest.level2.level2.level3.level4.level5]               [PASS]
+del DottedDict[simple.]                                                    [PASS]
+del DottedDict[]                                                           [PASS]
+del DottedDict[,.]                                                         [PASS]
+del DottedDict[,.!.]                                                       [PASS]
+================================ Test Case: test_contains_expected =================================
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[a.b]                                                        [PASS]
+del DottedDict[a.c]                                                        [PASS]
+del DottedDict[a.c.red]                                                    [PASS]
+del DottedDict[a.c.orange]                                                 [PASS]
+del DottedDict[a.c.blue]                                                   [PASS]
+del DottedDict[a.deepest]                                                  [PASS]
+del DottedDict[a.deepest.level1.level2.level3.level4.level5]               [PASS]
+del DottedDict[simple]                                                     [PASS]
+del DottedDict[ ]                                                          [PASS]
+del DottedDict[,]                                                          [PASS]
+del DottedDict[,.!]                                                        [PASS]
+=============================== Test Case: test_contains_unexpected ================================
+simplest in DottedDict -> False                                            [PASS]
+a.b.c in DottedDict -> False                                               [PASS]
+b.a.c in DottedDict -> False                                               [PASS]
+a.cat.red in DottedDict -> False                                           [PASS]
+a.c.cyan in DottedDict -> False                                            [PASS]
+simple.c.blue in DottedDict -> False                                       [PASS]
+deepest in DottedDict -> False                                             [PASS]
+a.deepest.level1.level2.level5.level4.level5 in DottedDict -> False        [PASS]
+simple.1 in DottedDict -> False                                            [PASS]
+a.  in DottedDict -> False                                                 [PASS]
+b., in DottedDict -> False                                                 [PASS]
+,.!.% in DottedDict -> False                                               [PASS]
+ in DottedDict -> KeyError                                                 [PASS]
+. in DottedDict -> KeyError                                                [PASS]
+.a in DottedDict -> KeyError                                               [PASS]
+a. in DottedDict -> KeyError                                               [PASS]
+a.b. in DottedDict -> KeyError                                             [PASS]
+a.c.orange. in DottedDict -> KeyError                                      [PASS]
+a..deepest in DottedDict -> KeyError                                       [PASS]
+..a.deepest.level1.level2.level3.level4.level5.. in DottedDict -> KeyError [PASS]
+simple.. in DottedDict -> KeyError                                         [PASS]
+======================================= Test Case: test_copy =======================================
+Testing copy operation... [PASS]
+Testing modification of copy... [PASS]
+====================================== Test Case: test_merge =======================================
+[PASS] {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'test': True, 'deep': {'level1': {'level2': 'done'}, 'end': False}} = {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'test': True, 'deep': {'level1': {'level2': 'done'}, 'end': False}}
+[PASS] {'test': True, 'deep': {'level1': {'level2': 'done', 'leaf': True}, 'end': False}} = {'test': True, 'deep': {'level1': {'level2': 'done', 'leaf': True}, 'end': False}}
+[PASS] {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122} = {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122}
+[PASS] {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'new': True} = {'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103, 'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111, 'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119, 'x': 120, 'y': 121, 'z': 122, 'new': True}
+[PASS] {'test': True, 'deep': {'level1': {'level2': 'merged'}, 'end': 'merged'}} = {'test': True, 'deep': {'level1': {'level2': 'merged'}, 'end': 'merged'}}
+====================================== Test Case: test_empty =======================================
+DottedDict(None)                                  [PASS]
+DottedDict(())                                    [PASS]
+DottedDict({})                                    [PASS]
+DottedDict(set())                                 [PASS]
+DottedDict({})                                    [PASS]
+DottedDict([])                                    [PASS]
+DottedDict([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])        [PASS]
+DottedDict(range(0, 10))                          [PASS]
+DottedDict({0, 1, 2, 3, 4, 5, 6, 7, 8, 9})        [PASS]
+DottedDict((0, 1, 2, 3, 4, 5))                    [PASS]
+DottedDict::popitem                               [PASS]
+DottedDict::clear                                 [PASS]
+=================================== Test Case: test_dottedItems ====================================
+DottedDict::dottedItems() #0                      [PASS]
+DottedDict::dottedItems() #1                      [PASS]
+DottedDict::dottedItems() #2                      [PASS]
+==============================
+__main__ Start
+==============================
+====================================== Test Case: test_getIP =======================================
+Testing nodes in AS 150:
+	host_0 -> 10.150.0.71 [PASS]
+	host_1 -> 10.150.0.72 [PASS]
+	router0 -> 10.150.0.254 [PASS]
+Testing nodes in AS 151:
+	host_0 -> 10.151.0.71 [PASS]
+	host_1 -> 10.151.0.72 [PASS]
+	router0 -> 10.151.0.254 [PASS]
+Testing nodes in AS 152:
+	host_0 -> 10.152.0.71 [PASS]
+	host_1 -> 10.152.0.72 [PASS]
+	router0 -> 10.152.0.254 [PASS]
+Testing nodes in AS 153:
+	host_0 -> 10.153.0.71 [PASS]
+	host_1 -> 10.153.0.72 [PASS]
+	router0 -> 10.153.0.254 [PASS]
+Testing nodes in AS 154:
+	host_0 -> 10.154.0.71 [PASS]
+	host_1 -> 10.154.0.72 [PASS]
+	router0 -> 10.154.0.254 [PASS]
+====================================== Test Case: test_isIPv4 ======================================
+[PASS] isIPv4(141.31.17.168) -> True
+[PASS] isIPv4(166.98.215.56) -> True
+[PASS] isIPv4(215.238.194.172) -> True
+[PASS] isIPv4(121.79.135.64) -> True
+[PASS] isIPv4(4.1.80.152) -> True
+[PASS] isIPv4(94.83.243.233) -> True
+[PASS] isIPv4(18.116.8.93) -> True
+[PASS] isIPv4(55.233.18.3) -> True
+[PASS] isIPv4(156.118.184.203) -> True
+[PASS] isIPv4(199.174.109.204) -> True
+[PASS] isIPv4(255.255.255.256) -> False
+[PASS] isIPv4(300.1.1.1) -> False
+[PASS] isIPv4(55.288.155.0) -> False
+[PASS] isIPv4(0.0.888.1) -> False
+[PASS] isIPv4(55.55.55) -> False
+[PASS] isIPv4(55.55) -> False
+[PASS] isIPv4(55) -> False
+[PASS] isIPv4(1.1.1.1.1) -> False
+=========================================== Test Results ===========================================
+score: 17 of 17 (0 errors, 0 failures)
+=========================================== Test Results ===========================================
+score: 17 of 17 (0 errors, 0 failures)
