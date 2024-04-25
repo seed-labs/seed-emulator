@@ -7,97 +7,68 @@ The Developer Manual offers detailed insights into project architecture, technic
   - [Core Concepts](#core-concepts)
   - [Project Architecture](#project-architecture)
 	  - [Base components of Architecture](#base-components-of-architecture)
-      - [Initialization Work Flow](#initialization-flow)
-	  -  [Setting a destination Workflow](#setting-a-destination-workflow)
+      - [How CARLA-SEED Works Behind the Scenes](#initialization-flow)
+	  - [How User Set Destination to Vehicles](#setting-a-destination-workflow)
   - [Technical Implementation](#technical-implementation)
-	  - [Controller.py](#controllerpy)
-	  - [Webserver.py](#webserverpy)
-	  - [Config.py](#configpy)
-	  - [Generate Traffic.py](#generate_trafficpy)
-	  - [Carla Viz](#carla-viz)
-	  - [Headless_automatic_control.py](#headless_automatic_controlpy)
-	
-	
+	  - [carla server](#carlaserver)
+	  - [web server](#webserverpy)
+	  - [controller](#controllerpy)
+	  - [config](#configpy)
+	  - [headless_automatic_control](#headless_automatic_controlpy)
+	  - [generate_traffic](#generate_trafficpy)
+	  - [carlaviz](#carla-viz)
+  - [Troubleshooting](#troubleshooting)
+  - [Future Work](#future-work)
 ## Core concepts
 ### World and client
-
 The 'world' is the central element of the server that holds the simulation's state, and clients connect to it using the IP address (default: localhost) and port (default: 2000) to interact or modify the simulation.
-
 Read More: https://carla.readthedocs.io/en/latest/core_concepts/#1st-world-and-client
 ### Traffic Manager
-
 The Traffic Manager in CARLA Simulator acts as a built-in system that governs vehicles not involved in learning, orchestrating realistic behaviors to emulate urban environments accurately.
-
 Read More: https://carla.readthedocs.io/en/latest/ts_traffic_simulation_overview/#traffic-manager
 ### Synchronous and asynchronous mode
-
 In this mode, the client and server operate in lockstep, with the server waiting for the client to process each simulation step before proceeding to the next. This ensures determinism and precise control over the simulation but can lead to slower overall execution.
-
 Read More : https://carla.readthedocs.io/en/latest/foundations/#synchronous-and-asynchronous-mode
-
 ### Sensors
-
 In CARLA, sensors are vital for vehicles to gather information about their surroundings. These specialized actors, attached to vehicles, capture data such as camera images, radar readings, and lidar scans, aiding in simulation and analysis tasks.
-
 Read More: https://carla.readthedocs.io/en/latest/core_concepts/#4th-sensors-and-data
 ## Project Architecture
-
 ![architecure_diagram](figs/architecture_diagram.png)
-
-
-
 ### Base components of Architecture
-
-**Car Containers (Host-152 to Host-157):**
+1. **Car Containers (Host-152 to Host-157):**
 Each car container runs an instance of `automatic.control.py`, with six distinct containers handling separate cars in the simulation. They're designed for minimal CPU usage and are identified as Host-152 through Host-157 in the architecture
-
-**Web Socket Container (Host-150):**
+2. **Web Socket Container (Host-150):**
 This container acts as a dedicated communication hub, enabling real-time interactions between the Controller and the Car containers. It uses WebSocket protocol to facilitate bidirectional messaging.
-
-**Controller (Host-151)**
+3. **Controller (Host-151)**
 The Controller orchestrates the simulation by setting car locations, fetching data, and issuing commands to the Car containers. It's the administrative center of the simulation, interacting with the cars through the WebSocket container.
-
-**Internet Router (99999/real-world):**
+4. **Internet Router (99999/real-world):**
 This router represents the gateway for all the containers to connect with the wider internet, allowing data to flow between the CARLA server and the SEED emulator, effectively bridging the simulation with the client machine.
-
-**Traffic Manager(Host -158):**
+5. **Traffic Manager(Host -158):**
 The Traffic Manager generates both vehicle and pedestrian traffic, creating a comprehensive and lively urban simulation environment.
-
-**CARLA Server:**
+6. **CARLA Server:**
  Running remotely, the CARLA server is the simulation engine powered by Unreal Engine, creating high-fidelity visual and physical simulations of driving environments. It connects to the SEED emulator via the internet.
- 
- **Client Machine:**
+ 7. **Client Machine:**
 Located elsewhere, this machine serves as the user's point of access to the simulation.
-
-**SEED Emulator Internet Map:**
+8. **SEED Emulator Internet Map:**
 The SEED Emulator acts like a virtual traffic system, simulating the network that connects all the cars in the simulation. It makes sure that messages and data travel between the cars and the controllers just like they would over real-world internet connections. It's a key part of the setup that lets the cars "talk" to each other and to the main control center.
-
-**CarlaViz Container**:
+9. **CarlaViz Container**:
 Although not depicted in the diagram, the CarlaViz container is an integral part of the Docker network. It offers a live visual feed of the simulation, enabling users to graphically track and analyze the movements and interactions of the vehicles within the CARLA Server environment. Its connectivity to the same network ensures seamless integration with the simulation data flow.
-
-### Initialization Flow:
+### How CARLA-SEED Works Behind the Scenes
 ![Intialization](figs/initialization.png)
-
 This flowchart details the process for a car container to establish a connection to the CARLA simulation world and to the WebSocket container. Initially, the car container sends two separate connection requests: one to the CARLA world and another to the WebSocket container. Both requests are relayed through the Internet Exchange, with the CARLA world request proceeding to the Internet Router and then to the CARLA Server, while the WebSocket request goes directly to the WebSocket Container. If the CARLA Server is running, it accepts the connection and sends a confirmation back to the car container via the Internet Router, establishing a continuous sensory data feed. Conversely, if the WebSocket Container is not running, the connection request is refused. Otherwise, the connection is accepted. Once the car container is successfully connected, it processes the data from the CARLA Server, makes decisions based on that data, and then sends the decisions back to the CARLA Server. Meanwhile, it connects to the webserver, listens on a port, and waits for any instructions from the Controller, completing the initialization process and being ready for interactive simulation.
-
-### Setting a destination Workflow:
+### How User Set Destination to Vehicles
 ![Destination](figs/destination.png)
-
-
 The diagram outlines the workflow for setting a destination in a vehicle simulation system. The process begins with the Controller Container, which sends a destination to the WebSocket Container. This request is routed through the Internet Exchange to the WebSocket Container, which checks if the destination is meant for one car or all cars. If it’s for one car, the WebSocket sends the information to that specific car. If it’s for all cars, the WebSocket broadcasts the destination to every car container. Once the correct car or cars receive the request, they set the new destination. As a car reaches the destination, it sends a notification back through the WebSocket Container. Finally, the Controller receives a notification that confirms the car's arrival at the specified location. This workflow ensures that destination commands are accurately communicated and acknowledged within the system.
 ### Technical Implementation:
-#### Controller.py
+#### controller.py
 ##### **Command Line Argument Details**
-
-***WebSocket and CARLA Server Configurations****: The script allows configuration of IP addresses and port numbers for both the WebSocket and CARLA servers to establish connections. This is crucial for environments where the servers may not run on default settings or local hosts.
+**WebSocket and CARLA Server Configurations**: The script allows configuration of IP addresses and port numbers for both the WebSocket and CARLA servers to establish connections. This is crucial for environments where the servers may not run on default settings or local hosts.
 ```python
 parser.add_argument("--w_ip", default="localhost", help="IP address of the WebSocket server") `
 parser.add_argument("--w_port", default="6789", help="Port number of the WebSocket server") `
 parser.add_argument("--c_ip", default="localhost", help="IP address of the CARLA server") `
 parser.add_argument("--c_port", d- ￼￼Code Snippet￼￼:efault=2000, type=int, help="Port number of the CARLA server")`
 ```
-
-
 ##### Arguments information
 ###### **WebSocket IP (--w_ip)**
 - **Default**: `localhost`
@@ -154,7 +125,7 @@ parser.add_argument("--c_port", d- ￼￼Code Snippet￼￼:efault=2000, type=in
     ```cmd
 	--c_info role123
 	```
-#### **Destination Management**
+##### **Destination Management**
 
 - **Setting and Broadcasting Destinations**: The script provides functionality to set a destination for a specific vehicle or all vehicles, which is crucial for tests involving navigation and route planning. The destination is sent via WebSocket, ensuring that it reaches all relevant clients connected to the server.
 **Function Name:**
@@ -177,7 +148,7 @@ async with websockets.connect(WEBSOCKET_URI) as websocket
 await websocket.send(json.dumps(destination))
 ```
 **Purpose**: Sends the JSON-encoded destination data over the WebSocket connection to the server, which then communicates it to the designated vehicle(s).
-#### **Notification Handling**
+##### **Notification Handling**
 
 ##### **Listening for Status Updates**: 
 This function listens for notifications such as 'destination reached', allowing the script to handle real-time updates about vehicle states which are essential for monitoring the progress of navigation tasks.
@@ -335,7 +306,7 @@ await asyncio.wait(tasks)
 ```
 **Purpose**: Sends messages to all connected clients except the sender, facilitating functionality like live updates and synchronization among multiple clients.
 
-### **Server Initialization**
+#### **Server Initialization**
 ```python
 start_server = websockets.serve(handle_client, args.w_ip, args.w_port)
 ```
@@ -351,7 +322,6 @@ asyncio.get_event_loop().run_forever()
 `Config.py` is a configuration script for the CARLA simulation server, enabling detailed customization of network settings, environmental conditions, and simulation parameters via a command-line interface. This tool allows users to tailor the simulation environment to specific research and testing needs, ensuring optimal performance and precise control.
 
 Read more: https://carla.readthedocs.io/en/0.9.7/configuring_the_simulation/
-
 #### **Command Line Arguments for CARLA Config.py Script**
 
 This script provides a flexible setup to configure and control various aspects of the CARLA simulation environment. Command-line arguments allow users to customize settings such as host and port configuration, map management, and simulation settings.
@@ -583,7 +553,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --connector_port 9090
 ```
-#### **Connector Update Interval Milliseconds 
+##### Connector Update Interval Milliseconds 
 (--connector_update_interval_milliseconds)
 - **Type**: uint32
 - **Purpose**: Determines how frequently, in milliseconds, the connector should update. Basically, in how many milliseconds Carla Viz will get data from Carla World.
@@ -592,14 +562,14 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --connector_update_interval_milliseconds 1000
 ```
-#### **Log Filename (--log_filename)**
+##### **Log Filename (--log_filename)**
 - **Type**: string
 - **Purpose**: Sets the filename where logs will be stored.
 - **Usage Example**:
 ```cmd
 --log_filename server.log
 ```
-#### **Log Level (--log_level)**
+##### **Log Level (--log_level)**
 - **Type**: string
 - **Purpose**: Sets the level of logging detail.
 - **Default**: "info"
@@ -607,7 +577,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --log_level debug
 ```
-#### **Simulator Ego Vehicle Name (--simulator_ego_vehicle_name)**
+##### **Simulator Ego Vehicle Name (--simulator_ego_vehicle_name)**
 - **Type**: string
 - **Purpose**: Role Name the vehicle in the simulator which you monitor.
 - **Default**: "ego"
@@ -615,7 +585,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --simulator_ego_vehicle_name alpha
 ```
-#### **Simulator Host (--simulator_host)**
+##### **Simulator Host (--simulator_host)**
 - **Type**: string
 - **Purpose**: Defines the host address of the CARLA simulator( CARLA world).
 - **Default**: "localhost"
@@ -623,7 +593,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --simulator_host 10.0.0.2
 ```
-#### **Simulator Port (--simulator_port)**
+##### **Simulator Port (--simulator_port)**
 - **Type**: uint32
 - **Purpose**: Specifies the port number for connecting to the simulator.
 - **Default**: 2000
@@ -631,7 +601,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --simulator_port 3000
 ```
-#### **Simulator Retry Interval Seconds (--simulator_retry_interval_seconds)**
+##### **Simulator Retry Interval Seconds (--simulator_retry_interval_seconds)**
 - **Type**: uint32
 - **Purpose**: Sets the interval, in seconds, between connection retries to the simulator.
 - **Default**: 1
@@ -639,7 +609,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --simulator_retry_interval_seconds 5
 ```
-#### **Simulator Retry Times After Disconnection (--simulator_retry_times_after_disconnection)**
+##### **Simulator Retry Times After Disconnection (--simulator_retry_times_after_disconnection)**
 - **Type**: uint32
 - **Purpose**: Specifies how many times to retry connecting to the simulator after a disconnection.
 - **Default**: 3
@@ -647,7 +617,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --simulator_retry_times_after_disconnection 10
 ```
-#### **Simulator Sensor Max Lag Frame (--simulator_sensor_max_lag_frame)**
+##### **Simulator Sensor Max Lag Frame (--simulator_sensor_max_lag_frame)**
 - **Type**: uint32
 - **Purpose**: Limits the maximum frame lag for sensors in the simulator.
 - **Default**: 30
@@ -655,7 +625,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --simulator_sensor_max_lag_frame 10
 ```
-#### **Simulator Sleep Between Updates Milliseconds (--simulator_sleep_between_updates_milliseconds)**
+##### **Simulator Sleep Between Updates Milliseconds (--simulator_sleep_between_updates_milliseconds)**
 - **Type**: uint32
 - **Purpose**: Decides whether to insert a delay between two updates in the simulator, and if so, how long in milliseconds.
 - **Default**: 0
@@ -663,7 +633,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --simulator_sleep_between_updates_milliseconds 100
 ```
-#### **Simulator Timeout Seconds (--simulator_timeout_seconds)**
+##### **Simulator Timeout Seconds (--simulator_timeout_seconds)**
 - **Type**: uint32
 - **Purpose**: Sets the timeout duration, in seconds, for connecting to the simulator.
 - **Default**: 10
@@ -671,7 +641,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --simulator_timeout_seconds 30
 ```
-#### **Translation Allow Static Objects (--translation_allow_static_objects)**
+##### **Translation Allow Static Objects (--translation_allow_static_objects)**
 - **Type**: bool
 - **Purpose**: Controls whether static objects are shown in translations.
 - **Default**: true
@@ -679,7 +649,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --translation_allow_static_objects false
 ```
-### Headless_Automatic_control.py
+#### Headless_Automatic_control.py
 `Headless_Automatic_control.py` manages the autonomous behavior of vehicles in a headless mode, meaning it runs without a graphical user interface, facilitating the creation and control of multiple cars through scriptable, automated scenarios in a distributed system. This script interacts with a CARLA server remotely, receiving commands and sending vehicle status via WebSocket connections.
 ##### **Command Line Argument Details**
 ##### Host (--host)
@@ -789,15 +759,6 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 ```cmd
 --ws_enable "off"
 ```
-### Usage 
-### Integration Features
-
-#### Simulation Controls
-
-#### Data Exchange
-
-#### Visualizations
-
 ### Troubleshooting
 
 #### Common Issues
@@ -806,4 +767,6 @@ A list of common problems that may arise when using the integration and their so
 #### Debugging Tips 
 
 Tips for diagnosing and fixing issues specific to the integration
+
+### Future Work
 
