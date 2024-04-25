@@ -224,12 +224,12 @@ accs = generateAccounts()
 writeConfig(L1_PORT, L2_PORT, DEPLOYER_PORT, blockchain.getChainId(), l2Bkc.getChainID())
 ```
 
-#### B.2.1 `monitor` monitor layer2 blockchain status
+#### B.2.1 `monitor block` monitor blockchain blocks
 
-Monitor the layer2 blockchain blocks  
+Monitor the blockchain blocks  
 
-usage: `$ ./L2Util.py monitor <isL2: true/false> [custom RPC]`  
-example: `$ ./L2Util.py monitor true` (the l2 geth http port must be forwarded)  
+usage: `$ ./L2Util.py monitor block <isL2: true/false> [custom RPC]`  
+example: `$ ./L2Util.py monitor block true`  
 output:
 
 ```shell
@@ -254,12 +254,31 @@ Transaction hashes:
 ======================================================================
 ```
 
-#### B.2.2 `deposit` deposit ETH from layer1 to layer2
+#### B.2.2 `monitor batch` monitor layer2 batches
+
+Monitor the layer2 batches
+
+usage: `$ ./L2Util.py monitor batch`  
+example: `$ ./L2Util.py monitor batch`  
+output:
+
+```shell
+======================================================================
+New batch transaction:
+  Block number: 67
+  Tx hash: 0x0ce4d822a7126784140c4b1c68c3768e0ad9ebfa4df7b3b035676c6d52d0c71a
+  Data size: 864
+  Data:
+0x0017805743858e4ab13976ef1b9cef936300000000019778dadae1c3f0c373c18bbf7dbd3f77050b9f2dffeff9ab7da5b5f0c3e69417fa6cd784363a98a6aabf7d6cbd4047b0bef8d4da1d0b0af26ecccedcd219c47556efe70aaf995393f7c7cb5bfe3d73a2254df35ec5018869b1ecf33e9dbecc32e5544380aff0875d876a6c195fde6ae5d3669ad770977992fe319b05476295b7e8fc3e372fb953ccf7f0b75df3cc7537fbefe5b2f8b1684bf13f2b6ba7b920d3aaa0a6f12c95f8aecfb796cf6719178b75efa1ffad1a124bf8622fc91eef8c3bc421f5622171a6d5404d7b704e7552b870d12cee7f6bb7e798cfda1ebfcf3fc3a7a858e8e7ac191649120ea78833ad0e6ada842f5bd7cf093dd926e0bc53627d77eb7e06af859f9a2cd7eff8e4b4fb4f51f2591ee24c6b809ae6c1a6cd17659f704a4c29fd4deafac4d393cf69b2ac69f7d61014cf302cdba8ad499c694d50d3266a78cdb797f81cfad93f272458ebd5aad307a6f7a9b59b24fef0fbbfdbade36b2271a6b5404d7bebeb24ec7a7fcddc15f9eb5e7d7cbafa794aec7431ffb2355744f6466ffbc0f7a28c38d3da0e00020000ffffdd50378701
+======================================================================
+```
+
+#### B.2.3 `deposit` deposit ETH from layer1 to layer2
 
 Deposit test account's (defined in the example) ETH from layer1 to layer2.  
 
 usage: `$ ./L2Util.py deposit [amount in ether (default=1)]`  
-example: `$ ./L2Util.py deposit` (the l1, l2 geth http ports must be forwarded)  
+example: `$ ./L2Util.py deposit`  
 output:
 
 ```shell
@@ -271,17 +290,38 @@ L1 balance after: 99999997988127000000000000
 L2 balance after: 1999978982765118528
 ```
 
-#### B.2.3 `sendTx` send a layer2 tx
+#### B.2.4 `sendTx` send a layer2 tx
 
 This command can send a simple transaction using the test account (defined in the example).  
 **Note: Must deposit before sending a layer2 tx**  
 
-usage: `$ ./L2Util.py <to> [value in ether (default=0)] [data (default=0x)]`  
-example: `$ ./L2Util.py sendTx 0x2DDAaA366dc75119A256C41b9bd483D13A64389d 0.1 0x10` (the l2 geth http port must be forwarded)  
+usage: `$ ./L2Util.py <to> [value in ether (default=0)] [data (default=0x)] [amount (default=1)]`  
+example: `$ ./L2Util.py sendTx 0x2DDAaA366dc75119A256C41b9bd483D13A64389d 0.1 0x10 1`  
 output:
 
 ```shell
-L2 transaction sent: 0x954146bd223102e9380b09fb4417301db3001016031e84ea44ac8551d826e434
+L2 transaction sent: 0xfad7c21f6739d363334f2684a2365db09cab173f476649c950747962df2c7aaa
 Waiting for transaction to be mined...
-Transaction receipt: AttributeDict({'blockHash': HexBytes('0xf78331202785c516c6402fc45eaf6c130081fb727249d4405a6d594b3ce452ab'), 'blockNumber': 481, 'contractAddress': None, 'cumulativeGasUsed': 84969, 'effectiveGasPrice': 1000000000, 'from': '0x2DDAaA366dc75119A256C41b9bd483D13A64389d', 'gasUsed': 21016, 'l1Fee': '0x499acbc0', 'l1FeeScalar': '1', 'l1GasPrice': '0x4ddce', 'l1GasUsed': '0xf20', 'logs': [], 'logsBloom': HexBytes('0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'), 'status': 1, 'to': '0x2DDAaA366dc75119A256C41b9bd483D13A64389d', 'transactionHash': HexBytes('0x954146bd223102e9380b09fb4417301db3001016031e84ea44ac8551d826e434'), 'transactionIndex': 1, 'type': '0x0'})
+Transaction receipts:
+======================================================================
+{
+  "blockHash": "0x6bb27e1a3d1ff853b55504565f71fca099812da538cdccb9f164096600dbcc99",
+  "blockNumber": 1007,
+  "contractAddress": null,
+  "cumulativeGasUsed": 71445,
+  "effectiveGasPrice": 1000000000,
+  "from": "0xa6FBF2719E5541Efa4721cD0905CF0d056a7B9cC",
+  "gasUsed": 21016,
+  "l1Fee": "0x1b6a0",
+  "l1FeeScalar": "1",
+  "l1GasPrice": "0x1d",
+  "l1GasUsed": "0xf20",
+  "logs": [],
+  "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "status": 1,
+  "to": "0x2DDAaA366dc75119A256C41b9bd483D13A64389d",
+  "transactionHash": "0xfad7c21f6739d363334f2684a2365db09cab173f476649c950747962df2c7aaa",
+  "transactionIndex": 1,
+  "type": "0x0"
+}
 ```
