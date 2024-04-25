@@ -9,39 +9,19 @@ This an example showing how to install, configure, and interact with layer2 bloc
 
 ## Building the Layer2 Blockchain
 
-### A.0 Set the layer2 privileged & test accounts
+### A.0 Generate the layer2 privileged & test accounts
 
-Some accounts must be set to use the layer2 service:
+Four accounts will be generated for the layer2 service:
 
-- `ADMIN_ACC` has the ability to upgrade layer2 system contracts and settings (e.g. layer2 gasprice, other privileged accounts) on layer1.
-- `BATCHER_ACC` publishes Sequencer transaction data to layer1.
-- `PROPOSER_ACC` publishes L2 transaction results (state roots) to L1.
-- `SEQUENCER_ACC` signs blocks on the layer2 p2p network (for a more rapid blockchain state synchronization).
-- `TEST_ACC` will be used by the [L2Util](./L2Util.py) to interact with layer2.
+- `GS_ADMIN` has the ability to upgrade layer2 system contracts and settings (e.g. layer2 gasprice, other privileged accounts) on layer1.
+- `GS_BATCHER` publishes Sequencer transaction data to layer1.
+- `GS_PROPOSER` publishes L2 transaction results (state roots) to L1.
+- `GS_SEQUENCER` signs blocks on the layer2 p2p network (for a more rapid blockchain state synchronization).
+- `GS_TEST` will be used by the [L2Util](./L2Util.py) to interact with layer2.
 
 ```python
-# Setting privileged accounts for layer2
-ADMIN_ACC = (
-    "0xdFC7d61047DAc7735d42Fd517e39e89C57083b45",
-    "0xd1e9509fa96d231fe323bda01cd954d4a74796a859ebe9dd638d5f0824d1ebd4",
-)
-BATCHER_ACC = (
-    "0x9C1EA6d1f5E3E8aE21fdaF808b2e13698737643C",
-    "0x742dd19d7c2ed107027d8844e72ebc34b83091e1f58a7e95009e829fe06a7b12",
-)
-PROPOSER_ACC = (
-    "0x30ca907e4028346E93c081f30345d3319cb20972",
-    "0x00683c828f09af18e0febb495ebee48fb2c581e2a6fa83e6ddaee3a359358af9",
-)
-SEQUENCER_ACC = (
-    "0x0e259e03bABD47f8bab8Ec93a2C5fB39DB443a3d",
-    "0x9a031a3aee8b73427b86d195b387a10dd471f5707709923a16882141b37a1c17",
-)
-# Test account
-TEST_ACC = (
-    "0x2DDAaA366dc75119A256C41b9bd483D13A64389d",
-    "0x4ba1ada11a1d234c3a03c08395c82e65320b5ae4aecca4a70143f4c157230528",
-)
+# Generate privileged & test accounts for layer2
+accs = generateAccounts()
 ```
 
 ### A.1 Create a layer1 (Ethereum) blockchain
@@ -92,10 +72,10 @@ blockchain.setGasLimitPerBlock(30_000_000)
 blockchain.addLocalAccount(EthereumLayer2SCFactory.ADDRESS.value, 0)
 blockchain.addCode(EthereumLayer2SCFactory.ADDRESS.value, EthereumLayer2SCFactory.BYTECODE.value)
 # Funding accounts
-blockchain.addLocalAccount(ADMIN_ACC[0], initBal)
-blockchain.addLocalAccount(BATCHER_ACC[0], initBal)
-blockchain.addLocalAccount(PROPOSER_ACC[0], initBal)
-blockchain.addLocalAccount(TEST_ACC[0], initBal)
+blockchain.addLocalAccount(accs[EthereumLayer2Account.GS_ADMIN][0], initBal)
+blockchain.addLocalAccount(accs[EthereumLayer2Account.GS_BATCHER][0], initBal)
+blockchain.addLocalAccount(accs[EthereumLayer2Account.GS_PROPOSER][0], initBal)
+blockchain.addLocalAccount(accs[EthereumLayer2Account.GS_TEST][0], initBal)
 ```
 
 ### A.3 Enable geth http of layer1 nodes
@@ -128,11 +108,22 @@ l2Bkc = l2.createL2Blockchain("test")
 l2Bkc.setL1VNode("poa-eth5", e5.getGethHttpPort())
 
 # Configure the admin accounts for layer2 blockchain
-# Theses accounts must be funded in the layer1 blockchain
-l2Bkc.setAdminAccount(EthereumLayer2Account.GS_ADMIN, ADMIN_ACC)
-l2Bkc.setAdminAccount(EthereumLayer2Account.GS_BATCHER, BATCHER_ACC)
-l2Bkc.setAdminAccount(EthereumLayer2Account.GS_PROPOSER, PROPOSER_ACC)
-l2Bkc.setAdminAccount(EthereumLayer2Account.GS_SEQUENCER, SEQUENCER_ACC)
+# Admin, batcher, proposer, and test must be funded in the layer1 blockchain
+l2Bkc.setAdminAccount(
+    EthereumLayer2Account.GS_ADMIN, accs[EthereumLayer2Account.GS_ADMIN]
+)
+l2Bkc.setAdminAccount(
+    EthereumLayer2Account.GS_BATCHER, accs[EthereumLayer2Account.GS_BATCHER]
+)
+l2Bkc.setAdminAccount(
+    EthereumLayer2Account.GS_PROPOSER, accs[EthereumLayer2Account.GS_PROPOSER]
+)
+l2Bkc.setAdminAccount(
+    EthereumLayer2Account.GS_SEQUENCER, accs[EthereumLayer2Account.GS_SEQUENCER]
+)
+l2Bkc.setAdminAccount(
+    EthereumLayer2Account.GS_TEST, accs[EthereumLayer2Account.GS_TEST]
+)
 ```
 
 ### A.5 Create layer2 nodes
@@ -204,14 +195,41 @@ To use geth inside the docker container please refer to the ethereum [documentat
 
 ### B.2 Using L2Util
 
-This cmd line tool has three functions:
+#### B.2.0 Save configs
+
+These configs are required to set before using the cmd line tool:
+
+- `l1Port`: a layer1 node's geth http port (need to be enabled and forwarded to the host)
+- `l2Port`: a layer2 node's(sequencer/non-sequencer) geth http port (need to be forwarded to the host)
+- `deployerPort`:the layer2 deployer node's web server port (need to be forwarded to the host)
+- `l1ChainId`: the layer1 blockchain chain id
+- `l2ChainId`: the layer2 blockchain chain id
+
+For example, in `layer2.py`:
+
+```python
+# Configs for L2Util
+L1_PORT = 12545
+L2_PORT = 8545
+DEPLOYER_PORT = 8888
+...
+emu.getVirtualNode("poa-eth7").setDisplayName("Ethereum-POA-7").addPortForwarding(
+    L1_PORT, e7.getGethHttpPort()
+)
+...
+# Generate privileged & test accounts for layer2
+accs = generateAccounts()
+...
+# Save the configuration to interact with the layer2 blockchain
+writeConfig(L1_PORT, L2_PORT, DEPLOYER_PORT, blockchain.getChainId(), l2Bkc.getChainID())
+```
 
 #### B.2.1 `monitor` monitor layer2 blockchain status
 
 Monitor the layer2 blockchain blocks  
 
-usage: `$ ./L2Util.py monitor <l2RPC>`  
-example: `$ ./L2Util.py monitor http://localhost:8545` (the port must be forwarded)  
+usage: `$ ./L2Util.py monitor <isL2: true/false> [custom RPC]`  
+example: `$ ./L2Util.py monitor true` (the l2 geth http port must be forwarded)  
 output:
 
 ```shell
@@ -240,8 +258,8 @@ Transaction hashes:
 
 Deposit test account's (defined in the example) ETH from layer1 to layer2.  
 
-usage: `$ ./L2Util.py deposit <l1RPC> <l2RPC> [amount in ether (default=1)]`  
-example: `$ ./L2Util.py deposit http://localhost:12545 http://localhost:8545` (the ports must be forwarded)  
+usage: `$ ./L2Util.py deposit [amount in ether (default=1)]`  
+example: `$ ./L2Util.py deposit` (the l1, l2 geth http ports must be forwarded)  
 output:
 
 ```shell
@@ -258,8 +276,8 @@ L2 balance after: 1999978982765118528
 This command can send a simple transaction using the test account (defined in the example).  
 **Note: Must deposit before sending a layer2 tx**  
 
-usage: `$ ./L2Util.py <l2RPC> <to> [value in ether (default=0)] [data (default=0x)]`  
-example: `$ ./L2Util.py sendTx http://localhost:8545 0x2DDAaA366dc75119A256C41b9bd483D13A64389d 0.1 0x10` (the port must be forwarded)  
+usage: `$ ./L2Util.py <to> [value in ether (default=0)] [data (default=0x)]`  
+example: `$ ./L2Util.py sendTx 0x2DDAaA366dc75119A256C41b9bd483D13A64389d 0.1 0x10` (the l2 geth http port must be forwarded)  
 output:
 
 ```shell
