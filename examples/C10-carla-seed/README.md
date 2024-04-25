@@ -253,3 +253,13 @@ For detailed configurations and troubleshooting, refer to the developer manual [
 	- **CARLAVIZ**: Visualization logs can be found in `/carlaviz.log`, and additional output might also be visible directly on the terminal.
 	- **SEED Emulator**: General output and error messages are displayed directly on the terminal.
 ### FAQ's
+1. **Are the CARLA server, Seed Cars, and traffic generators running in synchronous or asynchronous mode?**
+	The CARLA server, seed cars, and traffic generators are set to operate in asynchronous mode. This configuration allows each component to run independently without waiting for frame synchronization, providing greater flexibility and enhancing the real-time responsiveness of the simulation environment.
+2. **What is the impact of running the CARLA server and SEED Emulator on different networks?**
+	Running the CARLA server on localhost ensures optimal bandwidth and smooth integration with the SEED Emulator. Using a private network may introduce some lag, and this lag can increase significantly on a public network, especially if cameras are enabled on all vehicles.
+3. **What should I do if I experience connectivity issues with the CARLA server and SEED Emulator?** 
+	If connectivity issues arise, it's advisable to restart the CARLA server and restart the SEED Emulator from scratch. This can help reset the network connections and clear any session-specific conflicts that may be causing the problems.
+4. **How can I follow a specific car in Carlaviz visualization?**
+	To focus on a specific car in Carlaviz during the simulation, set the 'ego vehicle' parameters in the `.env` file accordingly. Specify the role name of the car you want to follow under the `CARLAVIZ_EGO_VEHICLE_NAME` parameter to ensure that Carlaviz tracks and displays this vehicle prominently in the visualization.
+5. **What should I do if there are frequent collisions among vehicles in the simulation?** 
+	To reduce collisions, manage camera settings by enabling the camera manager for one car and disabling cameras on other vehicles. This reduces computational demands and potential lag, enhancing simulation stability.
