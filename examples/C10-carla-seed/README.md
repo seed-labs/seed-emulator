@@ -204,26 +204,23 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 	```shell
 	    python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --list
 	 ```  
-	2.**Send Location to All Vehicles:**    
+	2. **Send Location to All Vehicles:**    
 	```shell
 	    python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --location Hotel --id all
 	```
 	3. **Send Location to Specific Vehicle**:
 	```shell
-		    python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --location Hotel --id seedcar1
+		python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --location Hotel --id seedcar1
     ```
-4. **Get Real-time Information for Specific Vehicle**:
+	4. **Get Real-time Information for Specific Vehicle**:
 	```shell
 		python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --c_info seedcar1
     ```
-1. **Inspect the CARLA Simulator**:
-    
-    bash
-    
-    Copy code
-    
-    `python3.7 config.py --host 128.230.114.88 --inspect`
-6. **Monitoring and Adjustments:**
+	5. **Inspect the CARLA Simulator**:
+	```shell
+		python3.7 config.py --host 128.230.114.88 --inspect
+	```
+1. **Monitoring and Adjustments:**
 	Continuously monitor the outputs and effects of your commands within the CARLA visualization environment. Make adjustments in `controller.py` as needed to refine vehicle behavior.
 
 ### Troubleshooting
