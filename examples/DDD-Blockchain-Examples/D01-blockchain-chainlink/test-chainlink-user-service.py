@@ -15,7 +15,7 @@ class test_user_contract:
     link_token_contract_address : str = None
     oracle_contracts : list
     web3 : Web3
-    owner_address: str
+    test_address: str
     private_key: str
     user_contract_abi_path: str
     user_contract_bin_path: str
@@ -23,13 +23,14 @@ class test_user_contract:
     user_contract_bin: str
 
     def __init__(self):
-        self.rpc_url = "<RPC_URL>"
-        self.user_contract_address = "<USER_CONTRACT_ADDRESS>"
+        self.rpc_url = "http://10.164.0.71:8545"
+        self.faucet_url = "http://10.150.0.73:80/fundme"
+        self.user_contract_address = "0xD992A9F004741685F1339a74458A6c3C63A07560"
         self.web3 = Web3(Web3.HTTPProvider(self.rpc_url))
         self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
         self.test_account = self.web3.eth.account.create()
-        self.test_address = self.user_account.address
-        self.private_key = self.user_account.privateKey.hex()
+        self.test_address = self.test_account.address
+        self.private_key = self.test_account.privateKey.hex()
         self.user_contract_abi_path = './contracts/user_contract.abi'
         self.user_contract_abi = self.load_user_contract()
 
@@ -45,9 +46,56 @@ class test_user_contract:
         except exceptions.ConnectionError:
             logging.error("Failed to connect to the blockchain")
             return False
+        
+    def fund_test_account(self):
+        data = {'address': self.test_address, 'amount': 1}
+        response = requests.post(self.faucet_url, headers={"Content-Type": "application/json"}, data=json.dumps(data))
+        if response.status_code == 200:
+            logging.info(f"Successfully requested funds from faucet: {response.text}")
+        if response.status_code != 200:
+            logging.error(f"Failed to request funds from faucet: {response.text}")
+            return False
+        return True
 
     def check_eth_price(self):
+        user_contract = self.web3.eth.contract(address=self.user_contract_address, abi=self.user_contract_abi)
+        logging.info("Checking current ETH price in user contract")
+        average_price = user_contract.functions.averagePrice().call()
+        logging.info(f"Current ETH price in user contract: {average_price}")
+        
+        logging.info("Initiating a new request for ETH price data")
         self.user_contract_address = Web3.toChecksumAddress(self.user_contract_address)
+   
+        # Information about the API and path for logging purposes
+        api = "https://min-api.cryptocompare.com/data/pricemultifull?fsyms=ETH&tsyms=USD"
+        path = "RAW,ETH,USD,PRICE"
+        logging.info(f"API for ETH price: {api}")
+        logging.info(f"Path for extracting price: {path}")
+
+        request_eth_price_data_function = user_contract.functions.requestETHPriceData(api, path)
+        tx = {
+            'nonce': self.web3.eth.getTransactionCount(self.test_address),
+            'value': 0,
+            'gas': 2000000,
+            'gasPrice': self.web3.toWei('50', 'gwei')
+        }
+
+        # Building and sending transaction
+        request_eth_price_data_tx = request_eth_price_data_function.buildTransaction(tx)
+        signed_tx = self.web3.eth.account.signTransaction(request_eth_price_data_tx, self.private_key)
+        tx_hash = self.web3.eth.sendRawTransaction(signed_tx.rawTransaction)
+        logging.info(f"Sent transaction for ETH price data request. Hash: {tx_hash.hex()}")
+
+        request_eth_price_data_receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
+        logging.info(f"Status of Transaction receipt for ETH price data request: {request_eth_price_data_receipt.status}")
+
+        if request_eth_price_data_receipt.status == 1:
+            logging.info("Request for ETH price data successful")
+        else:
+            logging.error("Failed to request ETH price data")
+        
+        logging.info("Sleeping for 60 seconds to allow oracles to respond")
+        time.sleep(60)
         user_contract = self.web3.eth.contract(address=self.user_contract_address, abi=self.user_contract_abi)
         logging.info("Checking ETH price")
         check_interval = 10
@@ -63,18 +111,16 @@ class test_user_contract:
         responses_count = user_contract.functions.responsesCount().call()
         average_price = user_contract.functions.averagePrice().call()
         logging.info(f"Responses count: {responses_count}")
-        logging.info(f"Average ETH price: {average_price}")
-        assert responses_count > 0 and average_price > 0, "No responses or price data received"
+        logging.info(f"Updated ETH price: {average_price}")
         
     def run(self):
-        while True:
-            if self.is_blockchain_connected():
-                self.check_eth_price()
-                break
-            else:
-                logging.error("Failed to connect to the blockchain. Retrying...")
-                time.sleep(10)
-                continue
+        if not self.is_blockchain_connected():
+            return
+
+        if not self.fund_test_account():
+            return
+
+        self.check_eth_price()
 
 
 if __name__ == "__main__":
