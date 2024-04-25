@@ -61,7 +61,7 @@ You will see the container ID of the Chainlink User Service. You can use the fol
 docker logs <CONTAINER ID>
 ```
 At the end of the logs, you will see the contract address of the user contract deployed by the Chainlink User Service. And also you will see the latest ETH price. Here is the example output:
-![Chainlink User Service Logs](./images/chainlink_user_service_logs.png)
+![Chainlink User Service Logs](./images/chainlink-user-service-logs.png)
 
 You can use the contract address to interact with the user contract using Remix or any other Ethereum development tool as described below.
 
