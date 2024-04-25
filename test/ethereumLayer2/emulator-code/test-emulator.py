@@ -101,6 +101,7 @@ l2Bkc.setAdminAccount(EthereumLayer2Account.GS_ADMIN, ADMIN_ACC)
 l2Bkc.setAdminAccount(EthereumLayer2Account.GS_BATCHER, BATCHER_ACC)
 l2Bkc.setAdminAccount(EthereumLayer2Account.GS_PROPOSER, PROPOSER_ACC)
 l2Bkc.setAdminAccount(EthereumLayer2Account.GS_SEQUENCER, SEQUENCER_ACC)
+l2Bkc.setAdminAccount(EthereumLayer2Account.GS_TEST, TEST_ACC)
 
 # Create layer2 nodes
 # Set l2-1 to be a sequencer node, only one sequencer node is allowed in a layer2 blockchain
