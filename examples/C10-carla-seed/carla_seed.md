@@ -59,9 +59,9 @@ This flowchart details the process for a car container to establish a connection
 ### How User Set Destination to Vehicles
 ![Destination](figs/destination.png)
 The diagram outlines the workflow for setting a destination in a vehicle simulation system. The process begins with the Controller Container, which sends a destination to the WebSocket Container. This request is routed through the Internet Exchange to the WebSocket Container, which checks if the destination is meant for one car or all cars. If it’s for one car, the WebSocket sends the information to that specific car. If it’s for all cars, the WebSocket broadcasts the destination to every car container. Once the correct car or cars receive the request, they set the new destination. As a car reaches the destination, it sends a notification back through the WebSocket Container. Finally, the Controller receives a notification that confirms the car's arrival at the specified location. This workflow ensures that destination commands are accurately communicated and acknowledged within the system.
-### Technical Implementation:
-#### Controller
-##### Command Line Argument Details
+## Technical Implementation
+### Controller Program
+#### Command Line Arguments
 1. **WebSocket IP (--w_ip)**
 	- **Default**: `localhost`
 	- **Purpose**: Specifies the IP address of the WebSocket server.
@@ -87,347 +87,314 @@ The diagram outlines the workflow for setting a destination in a vehicle simulat
 	- **Default**: `2000`
 	- **Purpose**: Specifies the port number on which the CARLA server is listening.
 	- **Usage Example**:  
-	    ```cmd
-		--c_port 2000
+	    ```shell
+			--c_port 2000
 		```
-##### **Location (--location)**
-- **Default**: `"Townhall"`
-- **Purpose**: Specifies a predefined location name to set as the destination for the vehicle(s).
-- **Predefined Options**: `"Townhall"`, `"Museum"`, `"Hotel"`, `"Basketballcourt"`, `"Skateboardpark"`
-- **Usage Example**:
-    ```cmd
-	--location Museum
-	```
-##### **Vehicle Identifier (--id)**
-- **Default**: `"all"`
-- **Purpose**: Specifies the identifier for the vehicle to which the location will be sent or `"all"` to send to all vehicles.
-- **Usage Example**:
-    ```cmd
-	--id carlaseed1
-	```
-##### **List Cars (--list)**
-- **Purpose**: When this flag is used, the script will list all vehicle role names and exit.
-- **Usage Example**:
-    ```cmd
-	--list
-	```
-##### **Car Info (--c_info)**
-- **Purpose**: Retrieves detailed information for a specific car based on its role name.
-- **Usage Example**:
-    ```cmd
-	--c_info role123
-	```
-##### **Destination Management**
-
-- **Setting and Broadcasting Destinations**: The script provides functionality to set a destination for a specific vehicle or all vehicles, which is crucial for tests involving navigation and route planning. The destination is sent via WebSocket, ensuring that it reaches all relevant clients connected to the server.
+5. **Location (--location)**
+	- **Default**: `"Townhall"`
+	- **Purpose**: Specifies a predefined location name to set as the destination for the vehicle(s).
+	- **Predefined Options**: `"Townhall"`, `"Museum"`, `"Hotel"`, `"Basketballcourt"`, `"Skateboardpark"`
+	- **Usage Example**:
+	    ```shell
+			--location Museum
+		```
+6. **Vehicle Identifier (--id)** 
+	- **Default**: `"all"`
+	- **Purpose**: Specifies the identifier for the vehicle to which the location will be sent or `"all"` to send to all vehicles.
+	- **Usage Example**:
+	    ```shell
+			--id seedcar1
+		```
+7. **List Cars (--list)** 
+	- **Purpose**: When this flag is used, the script will list all vehicle role names and exit.
+	- **Usage Example**:
+	    ```shell
+			--list
+		```
+8. **Car Info (--c_info)** 
+	- **Purpose**: Retrieves detailed information for a specific car based on its role name.
+	- **Usage Example**:
+	    ```shell
+			--c_info seedcar1
+		```
+#### Destination Management
+**Setting and Broadcasting Destinations**: The script provides functionality to set a destination for a specific vehicle or all vehicles, which is crucial for tests involving navigation and route planning. The destination is sent via WebSocket, ensuring that it reaches all relevant clients connected to the server.
 **Function Name:**
 ```python
-async def set_destination(location_name, id="all")
+	async def set_destination(location_name, id="all")
 ```
-###### **Define Destination Data**:
+**Define Destination Data**:
 ```python
-destination = {"type": "set_destination", "location_name": location_name, "car_id": id}
+	destination = {"type": "set_destination", "location_name": location_name, "car_id": id}
  ```
 **Purpose**: Constructs a JSON object containing the type of request, the destination location, and the car ID, preparing it for transmission.
-###### Establish Web Socket Connection:
+**Establish Web Socket Connection:** 
 ```python
-async with websockets.connect(WEBSOCKET_URI) as websocket
+	async with websockets.connect(WEBSOCKET_URI) as websocket
 ```
 **Purpose**: Opens a WebSocket connection using the previously constructed URI, enabling real-time data transfer.
-
- ##### **Send Destination Data**:
+**Send Destination Data**:
 ```python
-await websocket.send(json.dumps(destination))
+	await websocket.send(json.dumps(destination))
 ```
 **Purpose**: Sends the JSON-encoded destination data over the WebSocket connection to the server, which then communicates it to the designated vehicle(s).
-##### **Notification Handling**
-
-##### **Listening for Status Updates**: 
+#### Notification Handling
+**Listening for Status Updates**: 
 This function listens for notifications such as 'destination reached', allowing the script to handle real-time updates about vehicle states which are essential for monitoring the progress of navigation tasks.
 **Function Name:**
 ```python
-async def receive_notifications()
+	async def receive_notifications()
 ```
-##### Receiving Messages:
+**Receiving Messages:**
 ```python
-message = await websocket.recv()
+	message = await websocket.recv()
 ```
 **Purpose**: Suspends the function to wait for and receive a message from the WebSocket server.
-##### Checking Mechanism:
+**Checking Mechanism:**
 ```python 
-if data['type'] == 'destination_reached'
+	if data['type'] == 'destination_reached'
 ```
 **Purpose**: Checks if the received message indicates that a vehicle has reached its designated destination, triggering specific actions based on this event.
-
-##### Parsing JSON Message:
-
+**Parsing JSON Message:** 
 ```python
-data = json.loads(message)
+	data = json.loads(message)
 ```
 **Purpose**: Converts the received JSON string into a Python dictionary for easy data manipulation.
 #### Asynchronous Execution 
-##### Asynchronous Functions
+**Asynchronous Functions**
 ```python 
-async def set_destination(location_name, id="all")
-async def receive_notifications()
-async def get_vehicle_info(role_name)
+	async def set_destination(location_name, id="all")
+	async def receive_notifications()
+	async def get_vehicle_info(role_name)
 ```
 **Purpose**: Marks the function as a coroutine, enabling it to perform non-blocking operations and efficiently manage asynchronous tasks like network communication and data processing.
-##### **Running Asynchronous Tasks**
-
+**Running Asynchronous Tasks**
 ``` python
-```if __name__ == "__main__":  asyncio.get_event_loop().run_until_complete(set_destination(location_name,args.id)) 
-asyncio.get_event_loop().run_until_complete(receive_notifications())
+	if __name__ == "__main__":  asyncio.get_event_loop().run_until_complete(set_destination(location_name,args.id)) 
+	asyncio.get_event_loop().run_until_complete(receive_notifications())
 ```
 **Purpose**: This section manages the execution of asynchronous tasks when the script runs directly. `run_until_complete` is used to initiate and run the tasks to completion. It orchestrates the start, execution, and orderly conclusion of asynchronous operations, ensuring that they complete before the script exits.
-#### **Predefined Locations and Navigation**
-
+#### Predefined Locations and Navigation
 ```python
-locations = {"Townhall": (112.705, 9.616, 0.605), 
-	"Museum": (-115.36235046386719, 11.285353660583496, 1.249739170074463),
-	"Hotel": (-3.092482805252075, -67.59429931640625, 0.872872531414032),
-	"Basketballcourt": (-40.11349105834961, 109.1531982421875, 0.16197647154331207),
-	"Skateboardpark": (-89.92167663574219, 131.5748748779297, 1.4565911293029785)}
-	````
+	locations = {"Townhall": (112.705, 9.616, 0.605), 
+		"Museum": (-115.36235046386719, 11.285353660583496, 1.249739170074463),
+		"Hotel": (-3.092482805252075, -67.59429931640625, 0.872872531414032),
+		"Basketballcourt": (-40.11349105834961, 109.1531982421875, 0.16197647154331207),
+		"Skateboardpark": (-89.92167663574219, 131.5748748779297, 1.4565911293029785)}
+	```
 **Purpose**: Maps predefined location names to their coordinates within the CARLA environment, facilitating easy setting of destinations for vehicles. This feature supports simulations that require vehicles to navigate to specific points.
-#### **Construct Web Socket URL**
+#### Construct Web Socket URL
 ```python
-WEBSOCKET_URI = f"ws://{args.w_ip}:{args.w_port}"
+	WEBSOCKET_URI = f"ws://{args.w_ip}:{args.w_port}"
 ```
 - **Purpose**: Build the URI needed to connect to the WebSocket using command-line-provided IP and port.
-#### **Get Vehicle Roles Function**
-
+#### Get Vehicle Roles Function
 ```python
-def get_vehicle_roles():
+	def get_vehicle_roles():
 ```
 **Purpose**: Fetch and display the roles and IDs of all vehicles present in the simulation, useful for targeting commands.
-##### **Creating a CARLA Client**
+#### Creating a CARLA Client
 ```python
-client = carla.Client(args.c_ip, args.c_port)
+	client = carla.Client(args.c_ip, args.c_port)
 ```
 **Purpose**: Initializes a connection to the CARLA server using the provided IP address and port number, setting up the client to interact with the simulation environment.
-
-##### **Getting the World**:
+#### Getting the World
 ```python 
-world = client.get_world()
+	world = client.get_world()
 ```
 **Purpose**: Retrieves the world from the CARLA server which contains all the dynamic elements, like vehicles and sensors, facilitating access to further simulation data.
-##### **Filtering Vehicle Actors**:
+#### Filtering Vehicle Actors:
 ```python 
-vehicle_actors = world.get_actors().filter('vehicle.*')
+	vehicle_actors = world.get_actors().filter('vehicle.*')
 ```
 **Purpose**: Retrieves all actors from the simulation that match the vehicle pattern, ensuring the function focuses only on vehicle entities for role extraction.
-##### Iterating and Printing Vehicle Roles:
+#### Iterating and Printing Vehicle Roles:
 ```python 
-for vehicle in vehicle_actors:     
-	role_name = vehicle.attributes.get('role_name', 'Unknown')     
-		if role_name.startswith('seed'):         
-			print(f"Vehicle {vehicle.id} with role: {role_name}")`
+	for vehicle in vehicle_actors:     
+		role_name = vehicle.attributes.get('role_name', 'Unknown')     
+			if role_name.startswith('seed'):         
+				print(f"Vehicle {vehicle.id} with role: {role_name}")
 ```
 **Purpose**: Iterates through each vehicle actor, extracts the role name attribute, and prints it. The filtering condition checks if the role name starts with 'seed', allowing for specific output customization or filtering based on predefined conditions.
-
-##### Get Vehicle Info Function
+#### Get Vehicle Info Function
 ```python
-async def get_vehicle_info(role_name):
+	async def get_vehicle_info(role_name):
 ```
-- **Purpose**: Obtain and print detailed data about a specific vehicle based on its role name, including real-time location and movement parameters.
-##### Retrieving and Calculating Vehicle Speed:
+ **Purpose**: Obtain and print detailed data about a specific vehicle based on its role name, including real-time location and movement parameters.
+#### Retrieving and Calculating Vehicle Speed:
 ```python
-speed_kmh = 3.6 * math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2)
+	speed_kmh = 3.6 * math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2)
 ```
 **Purpose**: Calculates the speed of the vehicle in kilometers per hour from its velocity vector, providing a crucial metric for assessing vehicle performance in real-time.
-#### Webserver.py
+### Web server Program
 This server is set up to dynamically accept Web Socket connections, manage messages related to vehicle destinations and updates, and maintain a list of connected clients to facilitate message broadcasting.
-##### **Command Line Argument Details**
-The script allows for the dynamic configuration of IP addresses and port numbers for the Web Socket server, facilitating the customization necessary for various network environments.
+#### Command Line Arguments
+1. **Web Socket Server IP (--ws_ip)** 
+	- **Default**: `localhost`
+	- **Purpose**: Specifies the IP address where the Web Socket server will listen for incoming connections.
+	- **Usage Example**:
+	```shell
+		--ws_ip 192.168.1.1
+	```
+2. **Web Socket Server Port (--ws_port)** 
+	- **Default**: `6789`
+	- **Purpose**: Defines the port number on which the Web Socket server will accept connections.
+	- **Usage Example**:
+	```shell
+		--ws_port 6789
+	```
+#### Connected Clients Management
 ```python
-parser.add_argument("--ws_ip", default="localhost", help="IP address of the WebSocket server") 
-parser.add_argument("--ws_port", default=6789, type=int, help="Port number of the WebSocket server")
-```
-
-##### Arguments Information
-###### **Web Socket Server IP (--ws_ip)**
-- **Default**: `localhost`
-- **Purpose**: Specifies the IP address where the Web Socket server will listen for incoming connections.
-- **Usage Example**:
-```cmd
---ws_ip 192.168.1.100
-```
-###### **Web Socket Server Port (--ws_port)**
-- **Default**: `6789`
-- **Purpose**: Defines the port number on which the Web Socket server will accept connections.
-- **Usage Example**:
-```cmd
---ws_port 8080
-```
-##### **Connected Clients Management**
-```python
-connected_clients = set()
+	connected_clients = set()
 ```
 **Purpose**: Maintains a set of active client connections to manage broadcasting messages effectively.
-
-##### **Handle Client Connections**
+#### Handle Client Connections
 ```python
-async def handle_client(websocket, path)
+	async def handle_client(websocket, path)
 ```
 **Purpose**: Manages Web Socket connections in an asynchronous manner, handling each client in a separate coroutine which allows for concurrent operations without blocking
-##### Connection Tracking
+#### Connection Tracking
 ```python
-connected_clients.add(websocket)
+	connected_clients.add(websocket)
 ```
 **Purpose**: This line is crucial as it adds the newly connected Web Socket client to the `connected_clients` set. This action is essential for managing and maintaining a record of all active client connections.
-
-#### **Message Handling Loop**
-
+#### Message Handling Loop
 ```python 
-async for message in websocket:     
-	data = json.loads(message)
+	async for message in websocket:     
+		data = json.loads(message)
 ```
 **Purpose**: Continuously listens for incoming messages from clients, decoding JSON messages for further processing.
-#### **Message Processing**
+#### Message Processing
 ```python
-if data["type"] == "set_destination":`
+	if data["type"] == "set_destination":`
 ```
-	
 **Purpose**: Handles specific types of messages (e.g., setting a vehicle's destination), and then broadcasts these messages to other connected clients, ensuring all clients are updated about relevant actions.
-#### **Broadcasting Messages**
-
+#### Broadcasting Messages
 ```python
-tasks = [client.send(message) for client in connected_clients if client != websocket] 
-await asyncio.wait(tasks)
+	tasks = [client.send(message) for client in connected_clients if client != websocket] 
+	await asyncio.wait(tasks)
 ```
 **Purpose**: Sends messages to all connected clients except the sender, facilitating functionality like live updates and synchronization among multiple clients.
-
 #### **Server Initialization**
 ```python
-start_server = websockets.serve(handle_client, args.w_ip, args.w_port)
+	start_server = websockets.serve(handle_client, args.w_ip, args.w_port)
 ```
 **Purpose**: Initializes the WebSocket server, binding it to the specified IP address and port, ready to accept client connections.
-#### **Infinite Server Run**
+#### Infinite Server Run
 ```python
-asyncio.get_event_loop().run_forever()
+	asyncio.get_event_loop().run_forever()
 ```
 **Purpose**: Keeps the server running indefinitely, handling incoming connections and data continuously until manually interrupted, typically by a user with Ctrl+C.
-
-#### Config.py
-
+### Config Program
 `Config.py` is a configuration script for the CARLA simulation server, enabling detailed customization of network settings, environmental conditions, and simulation parameters via a command-line interface. This tool allows users to tailor the simulation environment to specific research and testing needs, ensuring optimal performance and precise control.
-
 Read more: https://carla.readthedocs.io/en/0.9.7/configuring_the_simulation/
-#### **Command Line Arguments for CARLA Config.py Script**
-
+#### Command Line Arguments
 This script provides a flexible setup to configure and control various aspects of the CARLA simulation environment. Command-line arguments allow users to customize settings such as host and port configuration, map management, and simulation settings.
-##### **Host (--host)**
-- **Default**: `localhost`
-- **Purpose**: Specifies the IP address of the CARLA server.
-- **Usage Example**:
-```cmd
---host 192.168.1.100
-```
-##### **Port (--port, -p)**
-- **Default**: `2000`
-- **Purpose**: Sets the TCP port for the CARLA server.
-- **Usage Example**:
-```cmd
---port 2000
-```
-##### **Default Settings (--default)**
-- **Purpose**: Applies default simulation settings.
-- **Usage Example**:
- ```cmd
---default
-```
-##### **Map (--map, -m)**
-- **Purpose**: Loads a specific map; use the `--list` option to view available maps.
-- **Usage Example**:
- ```cmd
---map Town05
-```
-##### **Reload Map (--reload-map, -r)**
-- **Purpose**: Reloads the current map.
-- **Usage Example**:
-
-```cmd
---reload-map
-```
-##### **Delta Seconds (--delta-seconds)**
-- **Purpose**: Sets fixed delta seconds for the simulation's frame rate; zero for variable frame rate.
-- **Usage Example**:
-```cmd
---delta-seconds 0.05
-```
-#### **Fixed FPS (--fps)**
-- **Purpose**: Sets a fixed frames per second rate; similar to `--delta-seconds`.
-- **Usage Example**:
-```cmd
---fps 20
-```
-#### **Rendering (--rendering)**
-- **Purpose**: Enables rendering in the CARLA(Carla Server) simulation.
-- **Usage Example**:
-```cmd
---rendering
-```
-#### **No Rendering (--no-rendering)**
-- **Purpose**: Disables rendering in the simulation(Carla Server).
-- **Usage Example**:
-```cmd
---no-rendering
-```
-#### **Disable Synchronous Mode (--no-sync)**
-- **Purpose**: Disables synchronous mode, allowing the simulation to run asynchronously.
-- **Usage Example**:
-```cmd
---no-sync
-```
-#### **Weather (--weather)**
-- **Purpose**: Sets a weather preset; use `--list` to view available presets.
-- **Usage Example**:
-```cmd
---weather ClearNoon
-```
-#### **Inspect (--inspect, -i)**
-- **Purpose**: Inspects the current simulation state and prints details.
-- **Usage Example**:
-```cmd
---inspect
-```
-#### **List Options (--list, -l)**
-- **Purpose**: Lists available maps, weather presets, and other configurable options.
-- **Usage Example**:
-```cmd
---list
-```
-
-#### Generate_traffic.py
-
+1. **Host (--host)** 
+	- **Default**: `localhost`
+	- **Purpose**: Specifies the IP address of the CARLA server.
+	- **Usage Example**:
+	```shell
+		--host 192.168.1.2
+	```
+2. **Port (--port, -p)**
+	- **Default**: `2000`
+	- **Purpose**: Sets the TCP port for the CARLA server.
+	- **Usage Example**:
+	```shell
+		--port 2000
+	```
+3.  **Default Settings (--default)**
+	- **Purpose**: Applies default simulation settings.
+	- **Usage Example**:
+	 ```shell
+		--default
+	```
+4. **Map (--map, -m)**
+	- **Purpose**: Loads a specific map; use the `--list` option to view available maps.
+	- **Usage Example**:
+	 ```shell
+		--map Town05
+	```
+5. **Reload Map (--reload-map, -r)**
+	- **Purpose**: Reloads the current map.
+	- **Usage Example**:
+	```shell
+		--reload-map
+	```
+6. **Delta Seconds (--delta-seconds)**
+	- **Purpose**: Sets fixed delta seconds for the simulation's frame rate; zero for variable frame rate.
+	- **Usage Example**:
+	```shell
+		--delta-seconds 0.05
+	```
+7. **Fixed FPS (--fps)**
+	- **Purpose**: Sets a fixed frames per second rate; similar to `--delta-seconds`.
+	- **Usage Example**:
+	```cmd
+		--fps 20
+	```
+8. **Rendering (--rendering)**
+	- **Purpose**: Enables rendering in the CARLA(Carla Server) simulation.
+	- **Usage Example**:
+	```shell
+		--rendering
+	```
+9. **No Rendering (--no-rendering)**
+	- **Purpose**: Disables rendering in the simulation(Carla Server).
+	- **Usage Example**:
+	```shell
+		--no-rendering
+	```
+10. **Disable Synchronous Mode (--no-sync)**
+	- **Purpose**: Disables synchronous mode, allowing the simulation to run asynchronously.
+	- **Usage Example**:
+	```shell
+		--no-sync
+	```
+11. **Weather (--weather)**
+	- **Purpose**: Sets a weather preset; use `--list` to view available presets.
+	- **Usage Example**:
+	```shell
+	--weather ClearNoon
+	```
+12. **Inspect (--inspect, -i)**
+	- **Purpose**: Inspects the current simulation state and prints details.
+	- **Usage Example**:
+	```cmd
+		--inspect
+	```
+13. **List Options (--list, -l)**
+	- **Purpose**: Lists available maps, weather presets, and other configurable options.
+	- **Usage Example**:
+	```shell
+		--list
+	```
+### Traffic Generator Program
 `generate_traffic.py` is a Python script designed for the CARLA simulation(CARLA World) environment to dynamically generate and manage traffic, including vehicles and pedestrians.
-
 Read more: https://carla.readthedocs.io/en/latest/adv_traffic_manager/#creating-a-traffic-manager
-#### Command Line Arguments for CARLA Generate_traffic.py Script
-#### **Host Server (--host)**
-- **Default**: `127.0.0.1`
-- **Purpose**: Specifies the IP address of the host server where the CARLA simulation is running.
-- **Usage Example**:
-```cmd
---host 127.0.0.1
-```
-#### **Port (--port, -p)**
-
-- **Default**: `2000`
-- **Purpose**: Sets the TCP port for connecting to the CARLA server.
-- **Usage Example**:
-```cmd
---port 2000
-```
-#### **Number of Vehicles (--number-of-vehicles, -n)**
-
-- **Default**: `30`
-- **Purpose**: Specifies the number of vehicles to spawn in the simulation.
-- **Usage Example**:
-```cmd
- --number-of-vehicles 50
- ```
+#### Command Line Arguments
+1. **Host Server (--host)**
+	- **Default**: `127.0.0.1`
+	- **Purpose**: Specifies the IP address of the host server where the CARLA simulation is running.
+	- **Usage Example**:
+	```shell
+		--host 192.168.1.2
+	```
+2. **Port (--port, -p)**
+	- **Default**: `2000`
+	- **Purpose**: Sets the TCP port for connecting to the CARLA server.
+	- **Usage Example**:
+	```shell
+		--port 2000
+	```
+3. **Number of Vehicles (--number-of-vehicles, -n)**
+	- **Default**: `30`
+	- **Purpose**: Specifies the number of vehicles to spawn in the simulation.
+	- **Usage Example**:
+	```shell
+		 --number-of-vehicles 50
+	 ```
 #### **Number of Walkers (--number-of-walkers, -w)**
 - **Default**: `10`
 - **Purpose**: Specifies the number of pedestrian actors (walkers) to spawn.
