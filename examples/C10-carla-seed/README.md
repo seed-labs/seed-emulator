@@ -118,7 +118,8 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
 6. **Launch CARLA:**
     - Run the command `./CarlaUE4.sh` to start CARLA.
 
-![carla_server](figs/carla_server.png)Upon launching CARLA, a window showcasing a cityscape in spectator mode appears; navigate using the mouse and WASD keys, with the right mouse button for directional control, as the server awaits client connections for interactive simulation.
+![carla_server](figs/carla_server.png)
+Upon launching CARLA, a window showcasing a cityscape in spectator mode appears; navigate using the mouse and WASD keys, with the right mouse button for directional control, as the server awaits client connections for interactive simulation.
 ### SEED Emulator Installation
 1. **Install the Necessary Software**
     - Install `docker`, `docker-compose`, and `python3` to ensure all required tools for running the emulator are available.
@@ -227,6 +228,11 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 	```
 6. **Monitoring and Visualization:** Continuously observe vehicle behaviors and dynamics using Carlaviz at `http://localhost:8080`. This real-time visualization provides insight into vehicle movements and interactions within the CARLA simulation, aiding in the evaluation of simulation performance and the effectiveness of applied settings or commands.
 ### Demo
+
+```
+<iframe width="560" height="315" src="https://www.youtube.com/embed/R1E40U-jeL0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+```
+
 [![Video Title](http://img.youtube.com/vi/R1E40U-jeL0/0.jpg)](http://www.youtube.com/watch?v=R1E40U-jeL0 "CARLA-SEED")
 ### Troubleshooting
 #### Common Issues
