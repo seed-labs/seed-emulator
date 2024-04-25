@@ -14,7 +14,7 @@ class DottedDictTestCase(SeedEmuTestCase):
     """
     @classmethod
     def setUpClass(cls) -> None:
-        super().setUpClass(testLogOverwrite=True, online=False)
+        super().setUpClass(testLogOverwrite=False, online=False)
         
         # Initialize some class variables:
         cls.simpleDict = {'a': 1, 'b': 2, 'c': 3, 'd': 4, 'red': True, 'blue': 50}
@@ -421,7 +421,7 @@ class DottedDictTestCase(SeedEmuTestCase):
 class KuboUtilFuncsTestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        super().setUpClass(testLogOverwrite=True, online=False)
+        super().setUpClass(testLogOverwrite=False, online=False)
         
         # Set up some class variables to use later:
         Faker.seed(time())
