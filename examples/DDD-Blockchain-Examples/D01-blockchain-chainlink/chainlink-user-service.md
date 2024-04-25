@@ -50,6 +50,7 @@ This example demonstrates how to interact with the Chainlink service using a [us
 8. Call the main function in the user contract
 
 ## Interating with the User contract deployed by the Chainlink User Service
+The User contract can be found in the contracts folder: [user_contract.sol](./contracts/user_contract.sol)
 
 ### Checking the logs of the Chainlink User Service
 The Chainlink User Service will work as the flow described above. You can check the logs of the Chainlink User Service to see the progress of the Chainlink User Service. You can use the following command to check the logs of the Chainlink User Service:
