@@ -1,6 +1,14 @@
 # Chainlink User Service
 The Chainlink User Service is an automated example that demonstrates how to interact with the Chainlink service. First let's take a look how to build the emulation for the Chainlink User Service:
 
+## Table of Contents
+- [Chainlink User Service](#chainlink-user-service)
+  - [Table of Contents](#table-of-contents)
+  - [Building the Chainlink User Service](#building-the-chainlink-user-service)
+    - [Interacting with the User contract using Remix](#interacting-with-the-user-contract-using-remix)
+    - [Interacting with the User contract using the Python script](#interacting-with-the-user-contract-using-the-python-script)
+
+## Building the Chainlink User Service
 1. Create an instance of the Chainlink User Service:
     ```python
     chainlink_user = ChainlinkUserService()
@@ -42,7 +50,24 @@ This example demonstrates how to interact with the Chainlink service using a [us
 8. Call the main function in the user contract
 
 ## Interating with the User contract deployed by the Chainlink User Service
-After the Chainlink User Service is done running, you can interact with the user contract deployed by the Chainlink User Service. To get the User contract address, you can check the logs of the Chainlink User Service. And another way is to do the following steps:
+The User contract can be found in the contracts folder: [user_contract.sol](./contracts/user_contract.sol)
+
+### Checking the logs of the Chainlink User Service
+The Chainlink User Service will work as the flow described above. You can check the logs of the Chainlink User Service to see the progress of the Chainlink User Service. You can use the following command to check the logs of the Chainlink User Service:
+```bash
+docker ps | grep Chainlink
+```
+You will see the container ID of the Chainlink User Service. You can use the following command to check the logs of the Chainlink User Service:
+```bash
+docker logs <CONTAINER ID>
+```
+At the end of the logs, you will see the contract address of the user contract deployed by the Chainlink User Service. And also you will see the latest ETH price. Here is the example output:
+![Chainlink User Service Logs](./images/chainlink-user-service-logs.png)
+
+You can use the contract address to interact with the user contract using Remix or any other Ethereum development tool as described below.
+
+### Interacting with the User contract using Remix
+After the Chainlink User Service is done running, you can interact with the [user contract](./contracts/user_contract.sol) deployed by the Chainlink User Service. To get the User contract address, you can check the logs of the Chainlink User Service. And another way is to do the following steps:
 1. Execute the following command to get the container ID of the Chainlink User Service:
     ```bash
     docker ps | grep Chainlink-User
@@ -57,9 +82,35 @@ After the Chainlink User Service is done running, you can interact with the user
     ```
 4. Now you can interact with the user contract using Remix or any other Ethereum development tool.
    - Compile the user contract
+    ![Compile User Contract](./images/compile-user-contract.png)
    - Go to the Deploy and Run Transactions tab
    - In the Environment dropdown, select MetaMask
-   - Select the user contract in the contract dropdown
+   - In the Account dropdown, select the account you want to use to interact with the user contract
+    ![Select Account](./images/chainlink-user-service-select-account.png)
    - In the At Address field, enter the contract address
+    ![Enter Contract Address](./images/chainlink-user-service-enter-contract-address.png)
    - Click the At Address button
    - You can now interact with the user contract
+    ![Interact with User Contract](./images/chainlink-user-service-interact-with-user-contract.png)
+
+### Interacting with the User contract using the Python script
+You can also run the python script to interact with the user contract. The python script can be found: [test-chainlink-user-service.py](./test-chainlink-user-service.py). Using the above steps, you can get the contract address which will be used in the python script. You will need to change the rpc_url, faucet_url and user_contract_address in the python script according to the configuration to interact with the user contract. Then the python script using the following command:
+```bash
+python3 test-chainlink-user-service.py
+```
+The python script will interact with the user contract and display the latest price of the asset. Here is the example output:
+```bash
+2024-04-25 11:45:58,043 - INFO - Checking current ETH price in user contract
+2024-04-25 11:45:58,049 - INFO - Current ETH price in user contract: 315075
+2024-04-25 11:45:58,049 - INFO - Initiating a new request for ETH price data
+2024-04-25 11:45:58,049 - INFO - API for ETH price: https://min-api.cryptocompare.com/data/pricemultifull?fsyms=ETH&tsyms=USD
+2024-04-25 11:45:58,049 - INFO - Path for extracting price: RAW,ETH,USD,PRICE
+2024-04-25 11:45:58,062 - INFO - Sent transaction for ETH price data request. Hash: 0x8cabcb43db6a39805e51c065248342d7804dbd8705928732eb7aa20ef21effc7
+2024-04-25 11:46:13,042 - INFO - Status of Transaction receipt for ETH price data request: 1
+2024-04-25 11:46:13,042 - INFO - Request for ETH price data successful
+2024-04-25 11:46:13,042 - INFO - Sleeping for 60 seconds to allow oracles to respond
+2024-04-25 11:47:13,124 - INFO - Checking ETH price
+2024-04-25 11:47:13,131 - INFO - Responses received from oracles
+2024-04-25 11:47:13,141 - INFO - Responses count: 2
+2024-04-25 11:47:13,141 - INFO - Updated ETH price: 314862
+```

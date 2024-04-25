@@ -2,9 +2,6 @@
 # encoding: utf-8
 
 from seedemu import *
-import os, sys
-import platform
-from typing import List
 
 ###############################################################################
 emu = Emulator()

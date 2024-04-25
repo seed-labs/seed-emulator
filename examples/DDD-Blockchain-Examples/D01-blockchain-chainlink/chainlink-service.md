@@ -15,31 +15,16 @@ This README provides a step-by-step guide to build the Chainlink service on the 
     ```python
     emu = Emulator()
     ```
-2. Load the base layer:
-We are using a slighly modified version of the hybrid-internet. So to generate the hybrid-internet.bin file, run the following command:
-
+2. Load the modified blockchain layer:
+We are using a slighly modified version of the blockchain with hybrid internet layer. The blockchain layer also includes the faucet server which is essential for the chainlink service. Please refer to the steps [here](README.md) to build the blockchain layer with the hybrid internet layer. Once you have built the blockchain layer, you can load the blockchain layer using the following command:
     ```python
-    python3 hybrid-internet.py
+    emu.load('./blockchain-poa.bin')
     ```
-    
-    Then load the base layer:
-
-    ```python
-    emu.load('./hybrid-internet.bin')
-    ```
-3. Initialize the blockchain:
-Use the template from the blockchain-poa example and make sure to enable the websocket on the ethereum nodes:
-    ```python
-    e.enableGethWs()    # Enable WS on all nodes for chainlink service to listen
-    ```
-4. Initialize the faucet:
-Use the template from the ethereum-faucet example:
-
-5. Initialize the Chainlink Service:
+3. Initialize the Chainlink Service:
     ```python
     chainlink = ChainlinkService()
     ```
-6. Initialize the Chainlink Initializer Server:
+4. Initialize the Chainlink Initializer Server:
     ```python
       cnode = 'chainlink_init_server'
       c_init = chainlink.installInitializer(cnode)
@@ -60,7 +45,7 @@ Use the template from the ethereum-faucet example:
 
     Finally, a network binding is established for the Chainlink initializer server to a host node identified by ASN and node name 'host_2'.
 
-7. Initialize the Chainlink Node:
+5. Initialize the Chainlink Server:
    ```python
     i = 0
     c_asns  = [150, 151]
@@ -88,15 +73,13 @@ Use the template from the ethereum-faucet example:
 
     Finally, a network binding is established for each Chainlink server to a host node identified by ASN and node name 'host_2'.
 
-8. Once you have completed the installation and configuration the Chainlink initializer and Chainlink node, you can add the Chainlink Service layer to the emulation. Additionaly we have to add the blockchain and faucet layers to the emulation.:
+6. Once you have completed the installation and configuration the Chainlink initializer and Chainlink node, you can add the Chainlink Service layer to the emulation.
     ```python
-    emu.addLayer(eth)
-    emu.addLayer(faucet)
     emu.addLayer(chainlink)
     ```
-9. Now, we can render and compile the emulation:
+7. Now, we can render and compile the emulation:
     ```python
-    OUTPUTDIR = './emulator_20'
+    OUTPUTDIR = './output'
     emu.render()
     docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=Platform.AMD64)
     emu.compile(docker, OUTPUTDIR, override = True)
@@ -110,9 +93,23 @@ Use the template from the ethereum-faucet example:
 ## Running the Emulation
 Within the output directory, a docker-compose.yml file is generated. Run the following command to start the emulation:
 ```bash
-./emulator_20$ docker-compose build
-./emulator_20$ docker-compose up
+./output$ docker-compose build
+./output$ docker-compose up
 ```
+
+## Interacting with the Chainlink Initializer Server
+The Chainlink Initializer server is used to deploy the LINK token contract and display the deployed oracle contract address. You can access the Chainlink Initializer server by navigating to `http://<host_ip>:80` in your web browser. The Chainlink Initializer server displays the deployed oracle contract address and the LINK token contract address. This information is useful for building and deploying solidity contracts and deploying jobs.
+
+### How to know if the Chainlink Initializer Server is running?
+You can check if the Chainlink Initializer server is running by navigating to `http://<host_ip>:80` in your web browser. If the Chainlink Initializer server is running, you will see the deployed oracle contract address and the LINK token contract address. Additionaly, you can check logs of the Chainlink Initializer server by running the following command:
+```bash
+docker ps | grep Chainlink-Init
+docker logs <CONTAINER ID>
+```
+The web server will display the deployed oracle contract address as it is deployed on the Ethereum blockchain by the chainlink normal node.
+
+Here is the sample output of the Chainlink Initializer server:
+![Chainlink Initializer Server](./images/chainlink-init.png)
 
 ## Interacting with the Chainlink Normal Server
 There are two ways to interact with the Chainlink service:
@@ -123,5 +120,25 @@ There are two ways to interact with the Chainlink service:
     chainlink admin login
     ```
 
-## Interacting with the Chainlink Initializer Server
-The Chainlink Initializer server is used to deploy the LINK token contract and display the deployed oracle contract address. You can access the Chainlink Initializer server by navigating to `http://<host_ip>:80` in your web browser. The Chainlink Initializer server displays the deployed oracle contract address and the LINK token contract address. This information is useful for building and deploying solidity contracts and deploying jobs.
+### How to know if the Chainlink Normal Server is running?
+You can check if the Chainlink Normal server is running by navigating to `http://<host_ip>:6688` in your web browser. If the Chainlink Normal server is running, you will see the Chainlink UI. Additionaly, you can check logs of the Chainlink Normal server by running the following command:
+```bash
+docker ps | grep Chainlink
+docker logs <CONTAINER ID>
+```
+Here is the screenshots of the Chainlink UI and how to interact with the Chainlink UI:
+1. Chainlink UI Login Page:
+![Chainlink UI Login Page](./images/chainlink-login.png)
+This is the login page of the Chainlink UI. You can login using the username and password you have set during the configuration of the Chainlink server.
+2. Chainlink UI Dashboard:
+![Chainlink UI Dashboard](./images/chainlink-dashboard.png)
+This is the dashboard of the Chainlink UI. You can create and manage Chainlink jobs, check the status of the Chainlink node, and more. It will show the ETH address of the account created during chainlink start command which should be funded with 5 ETH tokens.
+3. Chainlink UI Nodes:
+![Chainlink UI Nodes](./images/chainlink-nodes.png)
+This is the nodes page of the Chainlink UI. You can check the status of the Chainlink node, add new nodes, and more.
+4. Chainlink UI Jobs:
+![Chainlink UI Jobs](./images/chainlink-jobs.png)
+- This is the jobs page of the Chainlink UI. You can create and manage Chainlink jobs. The Chainlink jobs are used to fetch data from external APIs and send it to the Ethereum blockchain.
+![Chainlink UI Job 1](./images/chainlink-job-example.png)
+- Click on one of the jobs and then go to definition of that job. Here you will see the contract address of the oracle contract deployed on the Ethereum blockchain. This can be used by the user to create new jobs. Another way is to use the Chainlink Init Node webserver to get the contract address and then call the getAuthorizedSenders function to get the chainlink node address which can be used to create new jobs on that oracle contract as chainlink node and oracle contract have 1-1 relationship. 
+
