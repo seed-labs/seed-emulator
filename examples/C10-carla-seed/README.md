@@ -155,7 +155,7 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 #### Validating Vehicle Spawn and Web Socket Server:
 1. **Wait for Initialization:**
     - After starting the SEED Emulator, allow up to one minute for initial setups to complete and for it to begin communicating with CARLA.
-2. **Observe Vehicle Spawn:**
+2. **Observe Vehicle Spawn and Traffic Generation:**
     - Within the CARLA environment (the spectator view window that appeared upon running `./CarlaUE4.sh`), observe for vehicle spawn. The process might take a moment after the emulator starts.
 3. **Check Carlaviz Visualization:**
     - Refresh the Carlaviz page (`http://localhost:8080`) and check for the visualization of spawned vehicles and any ongoing scenarios. Movement and interaction should reflect real-time simulation data.
@@ -220,9 +220,7 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 	```shell
 	python3.7 config.py --host 128.230.114.88 --inspect
 	```
-1. **Monitoring and Adjustments:**
-	Continuously monitor the outputs and effects of your commands within the CARLA visualization environment. Make adjustments in `controller.py` as needed to refine vehicle behavior.
-
+6. **Monitoring and Visualization:** Continuously observe vehicle behaviors and dynamics using Carlaviz at `http://localhost:8080`. This real-time visualization provides insight into vehicle movements and interactions within the CARLA simulation, aiding in the evaluation of simulation performance and the effectiveness of applied settings or commands.
 ### Troubleshooting
 #### Common Issues
 A list of common problems that may arise when using the integration and their solutions.
