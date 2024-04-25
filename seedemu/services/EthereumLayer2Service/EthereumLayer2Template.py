@@ -215,6 +215,7 @@ mkdir chain_configs
 
 cp deployments/getting-started/L2OutputOracleProxy.json chain_configs/
 cp deployments/getting-started/L1StandardBridgeProxy.json chain_configs/
+cp deploy-config/getting-started.json chain_configs/
 
 op-node genesis l2 \
   --deploy-config deploy-config/getting-started.json \

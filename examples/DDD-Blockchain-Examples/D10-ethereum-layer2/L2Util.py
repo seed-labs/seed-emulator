@@ -14,6 +14,7 @@ from web3.middleware import signing
 from web3.middleware import geth_poa_middleware
 from web3.exceptions import TransactionNotFound
 
+from hexbytes import HexBytes
 from seedemu.services.EthereumLayer2Service import EthereumLayer2Account
 
 
@@ -23,13 +24,15 @@ class L2Util:
     __deployerURL: int
     __l1ChainId: int
     __l2ChainId: int
+    __postfixL1Bridge = '/L1StandardBridgeProxy.json'
+    __postfixInbox = "/getting-started.json"
 
     def __init__(self):
-        config = L2Util.loadConfig()
+        config = L2Util._loadConfig()
         self.__l1RPC = f'http://localhost:{config["l1Port"]}'
         self.__l2RPC = f'http://localhost:{config["l2Port"]}'
         self.__deployerURL = (
-            f'http://localhost:{config["deployerPort"]}/L1StandardBridgeProxy.json'
+            f'http://localhost:{config["deployerPort"]}'
         )
         self.__l1ChainId = config["l1ChainId"]
         self.__l2ChainId = config["l2ChainId"]
@@ -38,8 +41,7 @@ class L2Util:
             json.loads(open("test_acc.json", "r").read())["privateKey"]
         )
 
-    # Monitor block using polling
-    def monitor_block(self, isL2: bool = True, RPC: str = None):
+    def monitorBlock(self, isL2: bool = True, RPC: str = None):
         _RPC = self.__l2RPC if isL2 else self.__l1RPC
         if RPC is not None:
             _RPC = RPC
@@ -72,7 +74,7 @@ class L2Util:
 
     def deposit(self, amountInETH=1):
         TIMEOUT = 120
-        resp = requests.get(self.__deployerURL)
+        resp = requests.get(self.__deployerURL + self.__postfixL1Bridge)
         l1bridge = resp.json()["address"]
 
         l1Provider = Web3(Web3.HTTPProvider(self.__l1RPC))
@@ -110,7 +112,7 @@ class L2Util:
         print(f"L1 balance after: {l1Provider.eth.get_balance(self._testAcc.address)}")
         print(f"L2 balance after: {l2BalanceAfter}")
 
-    def sendL2Tx(self, to, value=0, data="0x"):
+    def sendL2Tx(self, to, value=0, data="0x", amount=1):
         TIMEOUT = 120
 
         l2Provider = Web3(Web3.HTTPProvider(self.__l2RPC))
@@ -119,18 +121,20 @@ class L2Util:
             return
 
         # Send transaction
-        tx = {
-            "chainId": self.__l2ChainId,
-            "to": to,
-            "value": l2Provider.toWei(value, "ether"),
-            "gas": 10**7,
-            "gasPrice": l2Provider.toWei(1, "gwei"),
-            "nonce": l2Provider.eth.get_transaction_count(self._testAcc.address),
-            "data": data,
-        }
-        signed_tx = self._testAcc.sign_transaction(tx)
-        tx_hash = l2Provider.eth.send_raw_transaction(signed_tx.rawTransaction)
-        print(f"L2 transaction sent: {tx_hash.hex()}")
+        tx_hashes = []
+        for i in range(amount):
+            tx = {
+                "chainId": self.__l2ChainId,
+                "to": to,
+                "value": l2Provider.toWei(value, "ether"),
+                "gas": 10**7,
+                "gasPrice": l2Provider.toWei(1, "gwei"),
+                "nonce": l2Provider.eth.get_transaction_count(self._testAcc.address) + i,
+                "data": data,
+            }
+            signed_tx = self._testAcc.sign_transaction(tx)
+            tx_hashes.append(l2Provider.eth.send_raw_transaction(signed_tx.rawTransaction))
+            print(f"L2 transaction sent: {tx_hashes[-1].hex()}")
 
         print(f"Waiting for transaction to be mined...")
         start = time.time()
@@ -138,17 +142,56 @@ class L2Util:
         # Wait for transaction to be mined
         while current - start < TIMEOUT:
             try:
-                receipt = l2Provider.eth.get_transaction_receipt(tx_hash)
-                if receipt is not None:
+                receipts = []
+                for tx_hash in tx_hashes:
+                    receipt = l2Provider.eth.get_transaction_receipt(tx_hash)
+                    if receipt is not None:
+                        receipts.append(receipt)
+                if len(receipts) == len(tx_hashes):
                     break
             except TransactionNotFound as e:
                 pass
             time.sleep(5)
             current = time.time()
 
-        print(f"Transaction receipt: {receipt}")
+        print(f"Transaction receipts:")
+        for receipt in receipts:
+            print("=" * 70)
+            print(json.dumps({k: v.hex() if isinstance(v, HexBytes) else v for k, v in dict(receipt).items()}, indent=2))
+    
+    def monitorBatch(self):
+        resp = requests.get(self.__deployerURL + self.__postfixInbox)
+        batchInbox = resp.json()["batchInboxAddress"]
+        batchSender = resp.json()["batchSenderAddress"]
+        print(f"Batch inbox: {batchInbox}")
+        print(f"Batch sender: {batchSender}")
 
-    def loadConfig() -> typing.Dict[str, int]:
+        w3 = Web3(Web3.HTTPProvider(self.__l1RPC))
+        if not w3.isConnected():
+            print("Failed to connect to RPC")
+            return
+        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        print(f"Connected to RPC: {self.__l1RPC}")
+        block_number = w3.eth.block_number
+        print(f"Current block number: {block_number}")
+
+        while True:
+            new_block_number = w3.eth.block_number
+            if new_block_number > block_number:
+                block = w3.eth.get_block(new_block_number, True)
+                for tx in block["transactions"]:
+                    if tx["to"].lower() == batchInbox and tx["from"] == batchSender:
+                        print("=" * 70)
+                        print("New batch transaction:")
+                        print(f"  Block number: {new_block_number}")
+                        print(f"  Tx hash: {tx['hash'].hex()}")
+                        print(f"  Data size: {len(tx['input'])}")
+                        print(f"  Data:\n{tx['input']}")
+                block_number = new_block_number
+
+        
+
+    def _loadConfig() -> typing.Dict[str, int]:
         with open("config.json", "r") as f:
             return json.loads(f.read())
 
@@ -218,12 +261,21 @@ if __name__ == "__main__":
 
     if method == "monitor":
         if len(sys.argv) < 3:
-            print(f"Usage: {sys.argv[0]} monitor <isL2: true/false> [custom RPC]")
+            print(f"Usage: {sys.argv[0]} monitor <block/batch>")
             sys.exit(1)
-        if len(sys.argv) == 3:
-            l2util.monitor_block(sys.argv[2] == "true")
+        if sys.argv[2] == "block":
+            if len(sys.argv) < 4:
+                print(f"Usage: {sys.argv[0]} monitor block <isL2: true/false> [custom RPC]")
+                sys.exit(1)
+            if len(sys.argv) == 4:
+                l2util.monitorBlock(sys.argv[3] == "true")
+            else:
+                l2util.monitorBlock(sys.argv[3] == "true", sys.argv[4])
+        elif sys.argv[2] == "batch":
+            l2util.monitorBatch()
         else:
-            l2util.monitor_block(sys.argv[2] == "true", sys.argv[3])
+            print(f"Unknown monitor type: {sys.argv[2]}")
+            sys.exit(1)
     elif method == "deposit":
         if len(sys.argv) < 2:
             print(
@@ -238,13 +290,14 @@ if __name__ == "__main__":
     elif method == "sendTx":
         if len(sys.argv) < 3:
             print(
-                f"Usage: {sys.argv[0]} sendTx <to> [value in ether (default=0)] [data (default=0x)]"
+                f"Usage: {sys.argv[0]} sendTx <to> [value in ether (default=0)] [data (default=0x)] [amount (default=1)]"
             )
             sys.exit(1)
         l2util.sendL2Tx(
             sys.argv[2],
             float(sys.argv[3]) if len(sys.argv) > 3 else 0,
             sys.argv[4] if len(sys.argv) > 4 else "0x",
+            int(sys.argv[5]) if len(sys.argv) > 5 else 1,
         )
     else:
         print(f"Unknown method: {method}")

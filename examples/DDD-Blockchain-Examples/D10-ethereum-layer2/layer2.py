@@ -121,7 +121,7 @@ l2_4 = l2Bkc.createNode("l2-4").setWSPort(9547)
 deployer = l2Bkc.createNode("l2-deployer", EthereumLayer2Node.DEPLOYER)
 
 # Set an external port for user interaction
-emu.getVirtualNode("l2-3").addPortForwarding(L2_PORT, l2_3.getHttpPort())
+emu.getVirtualNode("l2-1").addPortForwarding(L2_PORT, l2_1.getHttpPort())
 emu.getVirtualNode("l2-deployer").addPortForwarding(
     DEPLOYER_PORT, EthereumLayer2Template.WEB_SERVER_PORT
 )
