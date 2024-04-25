@@ -73,11 +73,11 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
 4. **Install  important pip3 packages:**
     - Open Command Prompt as an administrator.
     - Run the command to install Pygame and NumPy.
-	```python 
+	```cmd 
 		pip3 install --user pygame numpy	
 	```
     - Additionally, install CARLA python package run this command.
-    ```python
+    ```cmd
 		pip3 install carla
 	```
 5. **Navigate to CARLA Root Directory:**
@@ -99,7 +99,7 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
 	```
 4. **Install important pip3 packages:**
     - In Terminal, install Pygame and NumPy, and then the CARLA Python package.
-    ```python
+    ```shell
 		pip3 install --user pygame numpy 
 		pip3 install carla
 	```
@@ -112,6 +112,7 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
     - Run the command `./CarlaUE4.sh` to start CARLA.
 
 ![carla_server](figs/carla_server.png)
+
 Upon launching CARLA, a window showcasing a cityscape in spectator mode appears; navigate using the mouse and WASD keys, with the right mouse button for directional control, as the server awaits client connections for interactive simulation.
 ### SEED Emulator Installation
 1. **Install the Necessary Software**
@@ -177,36 +178,59 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 	- **Get Vehicle Info**: Retrieves data such as speed, throttle position, brake status, model, and real-time GPS coordinates.
 	- **List Vehicles**: Lists all active vehicles in the simulation that start with the prefix "seed."
 	- **`controller.py`Options:**
-		- **WebSocket IP (`--w_ip`)**: Specifies the IP address of the WebSocket server, defaulting to "localhost".
-		- **WebSocket Port (`--w_port`)**: Sets the port number for the WebSocket server, with a default of 6789.
-		- **CARLA Server IP (`--c_ip`)**: Defines the IP address of the CARLA server, typically set to "localhost".
-		- **CARLA Server Port (`--c_port`)**: Indicates the port number for the CARLA server, defaulting to 2000.
+		- **WebSocket IP (`--w_ip`)**: Utilizes this IP address to connect to the WebSocket server; defaults to "localhost".
+		- **WebSocket Port (`--w_port`)**: Uses this port number to connect to the WebSocket server; defaults to 6789.
+		- **CARLA Server IP (`--c_ip`)**: Utilizes this IP address to connect to the CARLA server; typically set to "localhost".
+		- **CARLA Server Port (`--c_port`)**: Uses this port number to connect to the CARLA server; defaults to 2000.
 		- **Location (`--location`)**: Allows setting a predefined destination for vehicle navigation such as Townhall, Museum, etc.
 		- **Identifier (`--id`)**: Targets a specific vehicle by its identifier or 'all' to apply commands to all vehicles.
 		- **List Vehicles (`--list`)**: Lists all car role names currently in the simulation and then exits.
 		- **Car Info (`--c_info`)**: Retrieves detailed information about a specific car based on its role name.
-1. **Understanding `config.py`:**
-	Use this script to set up and modify parameters for connection and interaction with the CARLA server:
-	- **Server IP and Port**: Specify the IP address and port number of the CARLA server.
-	- **Adjust Parameters**: Change parameters to alter simulation settings, affecting how vehicles respond to commands from `controller.py`.
+4. **Understanding `config.py`:**
+	 This script enables the user to modify various simulation settings, impacting how the virtual environment and its elements behave during simulations.
+	- **`config.py` Options:** 
+		- **Host (`--host`)**: Utilizes this IP address to connect to the CARLA server; typically set to "localhost".
+		- **Port (`--port`)**: Uses this port number to connect to the CARLA server; defaults to 2000.
+		- **Default Settings (`--default`)**: Apply default settings for the simulation.
+		- **Map Management (`--map`, `--reload-map`)**: Load or reload specific maps; use `--list` to view available maps.
+		- **Simulation Parameters (`--delta-seconds`, `--fps`)**: Set fixed simulation intervals or frame rates.
+		- **Rendering Options (`--rendering`, `--no-rendering`)**: Enable or disable rendering.
+		- **Synchronous Mode (`--no-sync`)**: Toggle synchronous mode.
+		- **Weather Conditions (`--weather`)**: Change the weather settings; use `--list` to see available presets.
+		- **Inspect Mode (`--inspect`)**: Inspect the simulation environment.
+		- **Listing Options (`--list`, `--list-blueprints`)**: List simulation options or available vehicle blueprints.
 5. **Execute Commands:**
-	Run `controller.py` to start sending commands based on the configurations set in `config.py`. This will allow you to control the simulation dynamically, adjusting vehicle behaviors and monitoring their statuses in real-time.
+	1. **List Vehicles with Prefix 'seed'**:
+	```shell
+	    python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --list
+	 ```  
+	2.**Send Location to All Vehicles:**    
+	```shell
+	    python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --location Hotel --id all
+	```
+	3. **Send Location to Specific Vehicle**:
+	```shell
+		    python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --location Hotel --id seedcar1
+    ```
+4. **Get Real-time Information for Specific Vehicle**:
+	```shell
+		python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --c_info seedcar1
+    ```
+1. **Inspect the CARLA Simulator**:
+    
+    bash
+    
+    Copy code
+    
+    `python3.7 config.py --host 128.230.114.88 --inspect`
 6. **Monitoring and Adjustments:**
-	Continuously monitor the outputs and effects of your commands within the CARLA visualization environment. Make adjustments in `controller.py` and `config.py` as needed to refine vehicle behavior and simulation parameters.
-
-
-
-
+	Continuously monitor the outputs and effects of your commands within the CARLA visualization environment. Make adjustments in `controller.py` as needed to refine vehicle behavior.
 
 ### Troubleshooting
-
 #### Common Issues
-
 A list of common problems that may arise when using the integration and their solutions.
 #### Debugging Tips 
-
 Tips for diagnosing and fixing issues specific to the integration
-
 ### FAQ's
 ### Future Work 
 
