@@ -19,7 +19,7 @@ traffic_service.install(
     "ditg-generator",
     TrafficServiceType.DITG_GENERATOR,
     log_file="/root/ditg_generator.log",
-    protocol="TCP",
+    protocol="UDP",
     duration=600,
     rate=5000,
 ).addReceivers(hosts=["ditg-receiver"])
