@@ -92,3 +92,10 @@ After the Chainlink User Service is done running, you can interact with the [use
    - Click the At Address button
    - You can now interact with the user contract
     ![Interact with User Contract](./images/chainlink-user-service-interact-with-user-contract.png)
+
+### Running the Python Script
+You can also run the python script to interact with the user contract. The python script can be found: [test-chainlink-user-service.py](./test-chainlink-user-service.py). Using the above steps, you can get the contract address which will be used in the python script. You will need to change the rpc_url and user_contract_address in the python script to interact with the user contract. Then the python script using the following command:
+```bash
+python3 test-chainlink-user-service.py
+```
+The python script will interact with the user contract and display the latest price of the asset. Here is the example output:
