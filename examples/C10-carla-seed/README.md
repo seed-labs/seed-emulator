@@ -167,7 +167,7 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 3. **Check Carlaviz Visualization:**
     - Refresh the Carlaviz page (`http://localhost:8080`) and check for the visualization of spawned vehicles and any ongoing scenarios. Movement and interaction should reflect real-time simulation data.
 4. **Web Socket Server Check**: 
-	- 4. Verify the Web Socket server's functionality on `150/host_0` at `10.150.0.71:6789` by accessing it via the SEED Emulator's Internet Map dashboard.
+	- Verify the Web Socket server's functionality on `150/host_0` at `10.150.0.71:6789` by accessing it via the SEED Emulator's Internet Map dashboard.
 ### Installation Troubleshooting
 - **No Vehicles in CARLA or Carlaviz:** Ensure that the SEED Emulator is running without errors. Check the terminal or command prompt for error messages. Revisit the `docker-compose.yml` file for any configuration issues.
 - **Dashboard/Visualization Not Loading:** Verify the server ports are not in use by another application and firewall settings allow traffic on ports 8080 and 8090.

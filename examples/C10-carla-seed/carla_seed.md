@@ -76,12 +76,12 @@ The SEED Emulator acts like a virtual traffic system, simulating the network tha
 Although not depicted in the diagram, the CarlaViz container is an integral part of the Docker network. It offers a live visual feed of the simulation, enabling users to graphically track and analyze the movements and interactions of the vehicles within the CARLA Server environment. Its connectivity to the same network ensures seamless integration with the simulation data flow.
 
 ### Initialization Flow:
-![Intialization](figs/Initialization.png)
+![Intialization](figs/initialization.png)
 
 This flowchart details the process for a car container to establish a connection to the CARLA simulation world and to the WebSocket container. Initially, the car container sends two separate connection requests: one to the CARLA world and another to the WebSocket container. Both requests are relayed through the Internet Exchange, with the CARLA world request proceeding to the Internet Router and then to the CARLA Server, while the WebSocket request goes directly to the WebSocket Container. If the CARLA Server is running, it accepts the connection and sends a confirmation back to the car container via the Internet Router, establishing a continuous sensory data feed. Conversely, if the WebSocket Container is not running, the connection request is refused. Otherwise, the connection is accepted. Once the car container is successfully connected, it processes the data from the CARLA Server, makes decisions based on that data, and then sends the decisions back to the CARLA Server. Meanwhile, it connects to the webserver, listens on a port, and waits for any instructions from the Controller, completing the initialization process and being ready for interactive simulation.
 
 ### Setting a destination Workflow:
-![Destination](figs/Destination.png)
+![Destination](figs/destination.png)
 
 
 The diagram outlines the workflow for setting a destination in a vehicle simulation system. The process begins with the Controller Container, which sends a destination to the WebSocket Container. This request is routed through the Internet Exchange to the WebSocket Container, which checks if the destination is meant for one car or all cars. If it’s for one car, the WebSocket sends the information to that specific car. If it’s for all cars, the WebSocket broadcasts the destination to every car container. Once the correct car or cars receive the request, they set the new destination. As a car reaches the destination, it sends a notification back through the WebSocket Container. Finally, the Controller receives a notification that confirms the car's arrival at the specified location. This workflow ensures that destination commands are accurately communicated and acknowledged within the system.
