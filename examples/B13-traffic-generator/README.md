@@ -92,8 +92,6 @@ Demonstrates how to install and configure the iperf3 Traffic Generator. iPerf3 i
 
 We can visualize the live traffic generation using the seed emulators' web interface by filtering the traffic with appropriate filters. In our example, iperf traffic generator generats `TCP` traffic. So, we can filter the traffic using the `TCP` filter. Following is the screen recording of the live traffic generation using the seed emulator's web interface.
 
-<video src='media/iperf-recording.mov' width=180/>
-
 ![iPerf Demo](media/iperf-recording.mov)
 
 The traffic generation logs will be stored in the log file you specify when installing the traffic generator. In this example, the logs are in `/root/iperf3_generator.log` file. Following is the screenshot of the iPerf3 traffic generation logs.
