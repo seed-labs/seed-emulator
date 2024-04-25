@@ -56,10 +56,6 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
 3. **Visualization Tools**: Two additional background containers support visualization:
     - **Carlaviz**: Provides visualization for the CARLA simulation.
     - **SEED Internet Map**: Offers a visual mapping interface for the SEED Emulator.
-### Integration Features
-#### Simulation Controls
-#### Data Exchange
-#### Visualizations
 ### CARLA Simulator Installation
 #### System Requirements for CARLA Server
 - **Operating Systems:** Windows, Linux
@@ -85,18 +81,18 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
 4. **Install  important pip3 packages:**
     - Open Command Prompt as an administrator.
     - Run the command to install Pygame and NumPy.
-	```cmd 
+		```cmd 
 		pip3 install --user pygame numpy	
-	```
+		```
     - Additionally, install CARLA python package run this command.
-    ```cmd
+	    ```cmd
 		pip3 install carla
-	```
+		```
 5. **Navigate to CARLA Root Directory:**
     - Use the Command Prompt to move to the directory where CARLA was extracted.
-        ```cmd
-	    cd path\to\carla\root		
-        ```
+		```cmd
+		cd path\to\carla\root		
+		```
 6. **Launch CARLA:**
     - Run the command `CarlaUE4.exe` to start CARLA.
 #### Linux Installation
@@ -106,19 +102,19 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
     - Look for the latest CARLA package for Linux and proceed to download it. 
 3. **Download and Unzip:**
     - Utilize `tar` to extract the contents of the CARLA package.
-    ```bash
-	    tar -xvzf CARLA_PACKAGE_NAME.tar.gz
+    ```shell
+	tar -xvzf CARLA_PACKAGE_NAME.tar.gz
 	```
 4. **Install important pip3 packages:**
     - In Terminal, install Pygame and NumPy, and then the CARLA Python package.
     ```shell
-		pip3 install --user pygame numpy 
-		pip3 install carla
+	pip3 install --user pygame numpy 
+	pip3 install carla
 	```
 5. **Navigate to CARLA Root Directory:**
     - Change directory to where you extracted CARLA.
 	```shell
-	    cd path/to/carla/root
+	cd path/to/carla/root
 	```
 6. **Launch CARLA:**
     - Run the command `./CarlaUE4.sh` to start CARLA.
