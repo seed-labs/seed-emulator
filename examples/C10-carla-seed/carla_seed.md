@@ -60,44 +60,36 @@ This flowchart details the process for a car container to establish a connection
 ![Destination](figs/destination.png)
 The diagram outlines the workflow for setting a destination in a vehicle simulation system. The process begins with the Controller Container, which sends a destination to the WebSocket Container. This request is routed through the Internet Exchange to the WebSocket Container, which checks if the destination is meant for one car or all cars. If it’s for one car, the WebSocket sends the information to that specific car. If it’s for all cars, the WebSocket broadcasts the destination to every car container. Once the correct car or cars receive the request, they set the new destination. As a car reaches the destination, it sends a notification back through the WebSocket Container. Finally, the Controller receives a notification that confirms the car's arrival at the specified location. This workflow ensures that destination commands are accurately communicated and acknowledged within the system.
 ### Technical Implementation:
-#### controller.py
-##### **Command Line Argument Details**
-**WebSocket and CARLA Server Configurations**: The script allows configuration of IP addresses and port numbers for both the WebSocket and CARLA servers to establish connections. This is crucial for environments where the servers may not run on default settings or local hosts.
-```python
-parser.add_argument("--w_ip", default="localhost", help="IP address of the WebSocket server") `
-parser.add_argument("--w_port", default="6789", help="Port number of the WebSocket server") `
-parser.add_argument("--c_ip", default="localhost", help="IP address of the CARLA server") `
-parser.add_argument("--c_port", d- ￼￼Code Snippet￼￼:efault=2000, type=int, help="Port number of the CARLA server")`
-```
-##### Arguments information
-###### **WebSocket IP (--w_ip)**
-- **Default**: `localhost`
-- **Purpose**: Specifies the IP address of the WebSocket server.
-- **Usage Example**:
-	```cmd
-	 --w_ip 192.168.1.1 
-	 ```
-###### **WebSocket Port (--w_port)**
-- **Default**: `6789`
-- **Purpose**: Specifies the port number on which the WebSocket server is listening.
-- **Usage Example**: 
-    ```cmd
-    -- w_port 6789
+#### Controller
+##### Command Line Argument Details
+1. **WebSocket IP (--w_ip)**
+	- **Default**: `localhost`
+	- **Purpose**: Specifies the IP address of the WebSocket server.
+	- **Usage Example**:
+	```shell
+		--w_ip 192.168.1.1 
+	```
+2. **WebSocket Port (--w_port)**
+	- **Default**: `6789`
+	- **Purpose**: Specifies the port number on which the WebSocket server is listening.
+	- **Usage Example**: 
+	```shell
+	    -- w_port 6789
     ```
-###### **CARLA Server IP (--c_ip)**
-- **Default**: `"localhost"`
-- **Purpose**: Specifies the IP address of the CARLA server.
-- **Usage Example**:
-    ```cmd
-	--c_ip 192.168.1.2
+3. **CARLA Server IP (--c_ip)** 
+	- **Default**: `"localhost"`
+	- **Purpose**: Specifies the IP address of the CARLA server.
+	- **Usage Example**:
+	```shell
+		--c_ip 192.168.1.2
 	```
-###### **CARLA Server Port (--c_port)**
-- **Default**: `2000`
-- **Purpose**: Specifies the port number on which the CARLA server is listening.
-- **Usage Example**:  
-    ```cmd
-	--c_port 2000
-	```
+ 4. **CARLA Server Port (--c_port)**
+	- **Default**: `2000`
+	- **Purpose**: Specifies the port number on which the CARLA server is listening.
+	- **Usage Example**:  
+	    ```cmd
+		--c_port 2000
+		```
 ##### **Location (--location)**
 - **Default**: `"Townhall"`
 - **Purpose**: Specifies a predefined location name to set as the destination for the vehicle(s).
