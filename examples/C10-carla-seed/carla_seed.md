@@ -1,5 +1,4 @@
 # CARLA-SEED 
-
 The Developer Manual offers detailed insights into project architecture, technical implementation, visualization, and future developments, as well as troubleshooting guidance. 
 ## Table of Contents
 - [CARLA-SEED](#carla-seed)
@@ -22,15 +21,19 @@ The Developer Manual offers detailed insights into project architecture, technic
 ## Core concepts
 ### World and client
 The 'world' is the central element of the server that holds the simulation's state, and clients connect to it using the IP address (default: localhost) and port (default: 2000) to interact or modify the simulation.
+
 Read More: https://carla.readthedocs.io/en/latest/core_concepts/#1st-world-and-client
 ### Traffic Manager
 The Traffic Manager in CARLA Simulator acts as a built-in system that governs vehicles not involved in learning, orchestrating realistic behaviors to emulate urban environments accurately.
+
 Read More: https://carla.readthedocs.io/en/latest/ts_traffic_simulation_overview/#traffic-manager
 ### Synchronous and asynchronous mode
 In this mode, the client and server operate in lockstep, with the server waiting for the client to process each simulation step before proceeding to the next. This ensures determinism and precise control over the simulation but can lead to slower overall execution.
+
 Read More : https://carla.readthedocs.io/en/latest/foundations/#synchronous-and-asynchronous-mode
 ### Sensors
 In CARLA, sensors are vital for vehicles to gather information about their surroundings. These specialized actors, attached to vehicles, capture data such as camera images, radar readings, and lidar scans, aiding in simulation and analysis tasks.
+
 Read More: https://carla.readthedocs.io/en/latest/core_concepts/#4th-sensors-and-data
 ## Project Architecture
 ![architecure_diagram](figs/architecture_diagram.png)
@@ -60,6 +63,8 @@ This flowchart details the process for a car container to establish a connection
 ![Destination](figs/destination.png)
 The diagram outlines the workflow for setting a destination in a vehicle simulation system. The process begins with the Controller Container, which sends a destination to the WebSocket Container. This request is routed through the Internet Exchange to the WebSocket Container, which checks if the destination is meant for one car or all cars. If it’s for one car, the WebSocket sends the information to that specific car. If it’s for all cars, the WebSocket broadcasts the destination to every car container. Once the correct car or cars receive the request, they set the new destination. As a car reaches the destination, it sends a notification back through the WebSocket Container. Finally, the Controller receives a notification that confirms the car's arrival at the specified location. This workflow ensures that destination commands are accurately communicated and acknowledged within the system.
 ## Technical Implementation
+
+### CARLA Server
 ### Controller Program
 #### Command Line Arguments
 1. **WebSocket IP (--w_ip)**
@@ -193,22 +198,22 @@ This function listens for notifications such as 'destination reached', allowing 
 	def get_vehicle_roles():
 ```
 **Purpose**: Fetch and display the roles and IDs of all vehicles present in the simulation, useful for targeting commands.
-#### Creating a CARLA Client
+**Creating a CARLA Client**
 ```python
 	client = carla.Client(args.c_ip, args.c_port)
 ```
 **Purpose**: Initializes a connection to the CARLA server using the provided IP address and port number, setting up the client to interact with the simulation environment.
-#### Getting the World
+**Getting the World**
 ```python 
 	world = client.get_world()
 ```
 **Purpose**: Retrieves the world from the CARLA server which contains all the dynamic elements, like vehicles and sensors, facilitating access to further simulation data.
-#### Filtering Vehicle Actors:
+**Filtering Vehicle Actors:**
 ```python 
 	vehicle_actors = world.get_actors().filter('vehicle.*')
 ```
 **Purpose**: Retrieves all actors from the simulation that match the vehicle pattern, ensuring the function focuses only on vehicle entities for role extraction.
-#### Iterating and Printing Vehicle Roles:
+**Iterating and Printing Vehicle Roles:**
 ```python 
 	for vehicle in vehicle_actors:     
 		role_name = vehicle.attributes.get('role_name', 'Unknown')     
@@ -221,7 +226,7 @@ This function listens for notifications such as 'destination reached', allowing 
 	async def get_vehicle_info(role_name):
 ```
  **Purpose**: Obtain and print detailed data about a specific vehicle based on its role name, including real-time location and movement parameters.
-#### Retrieving and Calculating Vehicle Speed:
+**Retrieving and Calculating Vehicle Speed:**
 ```python
 	speed_kmh = 3.6 * math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2)
 ```
@@ -243,39 +248,39 @@ This server is set up to dynamically accept Web Socket connections, manage messa
 	```shell
 		--ws_port 6789
 	```
-#### Connected Clients Management
-```python
-	connected_clients = set()
-```
-**Purpose**: Maintains a set of active client connections to manage broadcasting messages effectively.
 #### Handle Client Connections
 ```python
 	async def handle_client(websocket, path)
 ```
 **Purpose**: Manages Web Socket connections in an asynchronous manner, handling each client in a separate coroutine which allows for concurrent operations without blocking
-#### Connection Tracking
+**Connected Clients Management**
+```python
+	connected_clients = set()
+```
+**Purpose**: Maintains a set of active client connections to manage broadcasting messages effectively.
+**Connection Tracking**
 ```python
 	connected_clients.add(websocket)
 ```
 **Purpose**: This line is crucial as it adds the newly connected Web Socket client to the `connected_clients` set. This action is essential for managing and maintaining a record of all active client connections.
-#### Message Handling Loop
+**Message Handling Loop**
 ```python 
 	async for message in websocket:     
 		data = json.loads(message)
 ```
 **Purpose**: Continuously listens for incoming messages from clients, decoding JSON messages for further processing.
-#### Message Processing
+**Message Processing**
 ```python
 	if data["type"] == "set_destination":`
 ```
 **Purpose**: Handles specific types of messages (e.g., setting a vehicle's destination), and then broadcasts these messages to other connected clients, ensuring all clients are updated about relevant actions.
-#### Broadcasting Messages
+**Broadcasting Messages**
 ```python
 	tasks = [client.send(message) for client in connected_clients if client != websocket] 
 	await asyncio.wait(tasks)
 ```
 **Purpose**: Sends messages to all connected clients except the sender, facilitating functionality like live updates and synchronization among multiple clients.
-#### **Server Initialization**
+#### Server Initialization
 ```python
 	start_server = websockets.serve(handle_client, args.w_ip, args.w_port)
 ```
@@ -287,6 +292,7 @@ This server is set up to dynamically accept Web Socket connections, manage messa
 **Purpose**: Keeps the server running indefinitely, handling incoming connections and data continuously until manually interrupted, typically by a user with Ctrl+C.
 ### Config Program
 `Config.py` is a configuration script for the CARLA simulation server, enabling detailed customization of network settings, environmental conditions, and simulation parameters via a command-line interface. This tool allows users to tailor the simulation environment to specific research and testing needs, ensuring optimal performance and precise control.
+
 Read more: https://carla.readthedocs.io/en/0.9.7/configuring_the_simulation/
 #### Command Line Arguments
 This script provides a flexible setup to configure and control various aspects of the CARLA simulation environment. Command-line arguments allow users to customize settings such as host and port configuration, map management, and simulation settings.
@@ -331,7 +337,7 @@ This script provides a flexible setup to configure and control various aspects o
 7. **Fixed FPS (--fps)**
 	- **Purpose**: Sets a fixed frames per second rate; similar to `--delta-seconds`.
 	- **Usage Example**:
-	```cmd
+	```shell
 		--fps 20
 	```
 8. **Rendering (--rendering)**
@@ -361,7 +367,7 @@ This script provides a flexible setup to configure and control various aspects o
 12. **Inspect (--inspect, -i)**
 	- **Purpose**: Inspects the current simulation state and prints details.
 	- **Usage Example**:
-	```cmd
+	```shell
 		--inspect
 	```
 13. **List Options (--list, -l)**
@@ -372,6 +378,7 @@ This script provides a flexible setup to configure and control various aspects o
 	```
 ### Traffic Generator Program
 `generate_traffic.py` is a Python script designed for the CARLA simulation(CARLA World) environment to dynamically generate and manage traffic, including vehicles and pedestrians.
+
 Read more: https://carla.readthedocs.io/en/latest/adv_traffic_manager/#creating-a-traffic-manager
 #### Command Line Arguments
 1. **Host Server (--host)**

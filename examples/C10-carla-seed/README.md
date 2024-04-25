@@ -227,7 +227,7 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 	```
 6. **Monitoring and Visualization:** Continuously observe vehicle behaviors and dynamics using Carlaviz at `http://localhost:8080`. This real-time visualization provides insight into vehicle movements and interactions within the CARLA simulation, aiding in the evaluation of simulation performance and the effectiveness of applied settings or commands.
 ### Demo
-[![Video Title](http://img.youtube.com/vi/YOUTUBE_VIDEO_ID/0.jpg)](http://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID "Video Title")
+[![Video Title](http://img.youtube.com/vi/R1E40U-jeL0/0.jpg)](http://www.youtube.com/watch?v=R1E40U-jeL0 "CARLA-SEED")
 ### Troubleshooting
 #### Common Issues
 - **Collision Problems in Seed Cars**: If collisions occur with Seed Cars, stop the script by terminating the process (`kill <PID>`), then restart with the specific car command:
