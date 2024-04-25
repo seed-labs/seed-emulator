@@ -86,7 +86,9 @@ emu.addLayer(traffic_service)
 
 There are 4 examples in this directory:
 
-- `0-iperf-traffic-generator`: Demonstrates how to install and configure the iperf3 Traffic Generator. iPerf3 is a tool for active measurements of the maximum achievable bandwidth on IP networks. It supports tuning of various parameters related to timing, buffers, and protocols (TCP, UDP, SCTP with IPv4 and IPv6). For more information, see [iPerf3](https://iperf.fr/iperf-doc.php) documentation.
+#### 0-iperf-traffic-generator
+
+Demonstrates how to install and configure the iperf3 Traffic Generator. iPerf3 is a tool for active measurements of the maximum achievable bandwidth on IP networks. It supports tuning of various parameters related to timing, buffers, and protocols (TCP, UDP, SCTP with IPv4 and IPv6). For more information, see [iPerf3](https://iperf.fr/iperf-doc.php) documentation.
 
 We can visualize the live traffic generation using the seed emulators' web interface by filtering the traffic with appropriate filters. In our example, iperf traffic generator generats `TCP` traffic. So, we can filter the traffic using the `TCP` filter. Following is the screen recording of the live traffic generation using the seed emulator's web interface.
 
@@ -96,7 +98,9 @@ The traffic generation logs will be stored in the log file you specify when inst
 
 ![iPerf Logs](media/iperf-logs.png)
 
-- `1-ditg-traffic-generator`: Demonstrates how to install and configure the D-ITG (Distributed Internet Traffic Generator). D-ITG is a tool capable to produce traffic at packet level accurately replicating appropriate stochastic processes for both IDT (Inter Departure Time) and PS (Packet Size) random variables (exponential, uniform, cauchy, normal, pareto, etc.). D-ITG supports both IPv4 and IPv6 traffic generation and it is capable to 
+#### 1-ditg-traffic-generator
+
+Demonstrates how to install and configure the D-ITG (Distributed Internet Traffic Generator). D-ITG is a tool capable to produce traffic at packet level accurately replicating appropriate stochastic processes for both IDT (Inter Departure Time) and PS (Packet Size) random variables (exponential, uniform, cauchy, normal, pareto, etc.). D-ITG supports both IPv4 and IPv6 traffic generation and it is capable to 
 generate traffic at network, transport, and application layer. For more information, see [D-ITG](https://allstar.jhuapl.edu/repo/p1/amd64/d-itg/doc/d-itg-manual.pdf) manual.
 
 
@@ -108,7 +112,9 @@ The traffic generation logs will be stored in the log file you specify when inst
 
 ![D-ITG Logs](media/ditg-logs.png)
 
-- `2-scapy-traffic-generator`: Demonstrates how to install and configure the Scapy Traffic Generator. Scapy is a Python program that enables the user to send, sniff, dissect and forge network packets. This capability allows construction of tools that can probe, scan or attack networks. We can use Scapy to generate custom packets and send them to the network.
+#### 2-scapy-traffic-generator
+
+Demonstrates how to install and configure the Scapy Traffic Generator. Scapy is a Python program that enables the user to send, sniff, dissect and forge network packets. This capability allows construction of tools that can probe, scan or attack networks. We can use Scapy to generate custom packets and send them to the network.
 
 For more information, see [Scapy](https://scapy.readthedocs.io/en/latest/) documentation.
 
@@ -122,7 +128,9 @@ The traffic generation logs will be stored in the log file you specify when inst
 ![Scapy Main Log](media/scapy-logs-main.png)
 ![Scapy Host Pair Log](media/scapy-logs-host-pair.png)
 
-- `3-hybrid-traffic-generator`: Demonstrates how to install and configure the Hybrid Traffic Generator. It demostrates how we can combine multiple traffic generators into one application. The Hybrid Traffic Generator is a combination of the iPerf3 and D-ITG Traffic Generators. It allows the user to generate traffic using both of the two traffic generators.
+### 3-hybrid-traffic-generator
+
+Demonstrates how to install and configure the Hybrid Traffic Generator. It demostrates how we can combine multiple traffic generators into one application. The Hybrid Traffic Generator is a combination of the iPerf3 and D-ITG Traffic Generators. It allows the user to generate traffic using both of the two traffic generators.
 
 
 We can visualize the live traffic generation using the seed emulators' web interface by filtering the traffic with appropriate filters. In our example, Hybrid traffic generator generats both `TCP` and `UDP` traffic. So, we can filter the traffic using the `TCP` and `UDP` filters. Following is the screen recording of the live traffic generation using the seed emulator's web interface.
