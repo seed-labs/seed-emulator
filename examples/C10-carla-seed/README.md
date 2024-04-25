@@ -126,7 +126,7 @@ Upon launching CARLA, a window showcasing a cityscape in spectator mode appears;
     - Install `docker`, `docker-compose`, and `python3` to ensure all required tools for running the emulator are available.
 2. **Set Up the Environment Variable**
     - Add the project folder to the `PYTHONPATH` environment variable by executing `source development.env` in the project's root directory.
-3. **Configure Environment Settings**
+3. **Configure CARLA-SEED Environment Settings**
     - Update the`.env`file in the`carla-seed`directory with necessary parameters such as:
 	    - CARLA server IP (`CARLA_IP`) and port (`CARLA_PORT`)
 	    - Role names and camera settings for vehicles (`ROLE_NAME_1` to `ROLE_NAME_6`, `CAMERA_1` to `CAMERA_6`)
