@@ -24,7 +24,6 @@ This manual provides comprehensive guidance on setting up, operating, and optimi
 		  - [Common Issues](#common-issues)
 		  - [Debugging Tips](#debugging-tips)
 	  - [FAQ's](#faqs)
-	  - [Future Work](#future-work)
 ## What is CARLA Simulator
 CARLA Simulator is an open-source platform designed specifically for the development and testing of autonomous driving systems. It uses Unreal Engine, known for its powerful rendering capabilities, to create highly realistic urban environments. This allows researchers and developers to simulate and analyze various scenarios that autonomous vehicles might encounter.
 
@@ -133,6 +132,8 @@ Upon launching CARLA, a window showcasing a cityscape in spectator mode appears;
 	    - Role names and camera settings for vehicles (`ROLE_NAME_1` to `ROLE_NAME_6`, `CAMERA_1` to `CAMERA_6`)
 	    - Traffic simulation settings (`TRAFFIC_VEHICLES_NO`, `TRAFFIC_WALKERS_NO`)
 	    - Carlaviz configurations (`CARLAVIZ_LOGFILE_NAME`, `CARLAVIZ_RETRY_SECONDS`, `CARLAVIZ_EGO_VEHICLE_NAME=car1`)
+> [!WARNING]
+> Enabling cameras on all vehicles (`CAMERA_1` to `CAMERA_6`) can significantly increase bandwidth usage, as the data is transmitted from a remote server. This may affect the simulation's responsiveness and could potentially lead to more frequent collisions.
 4. **Run SEED Emulator**
     - Navigate to the emulator directory with `cd carla-seed/`, build, and start the emulator using `docker-compose build && docker-compose up`.
 ### SEED Emulator Container Terminology
@@ -153,9 +154,7 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 #### Testing Carlaviz and Internet Map
 1. **Verify Carlaviz is Running:**
     - After launching Carlaviz, open a web browser and visit `http://localhost:8080`. You should see a visualization interface of CARLA’s environment. If this page loads successfully, Carlaviz is running correctly.
-
 	![carlaviz](figs/carlaviz.png)
-	
 2. **Check Internet Map on SEED Emulator:**
     - Similarly, to check if the Internet Map feature of the SEED Emulator is working, navigate to `http://localhost:8090` in your web browser. This should load the Internet Map dashboard if the emulator is correctly set up and running.
 3. **Ensure Proper Communication:**
@@ -229,13 +228,28 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 	python3.7 config.py --host 128.230.114.88 --inspect
 	```
 6. **Monitoring and Visualization:** Continuously observe vehicle behaviors and dynamics using Carlaviz at `http://localhost:8080`. This real-time visualization provides insight into vehicle movements and interactions within the CARLA simulation, aiding in the evaluation of simulation performance and the effectiveness of applied settings or commands.
-
 ### Demo
+[![Video Title](http://img.youtube.com/vi/YOUTUBE_VIDEO_ID/0.jpg)](http://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID "Video Title")
 ### Troubleshooting
 #### Common Issues
-A list of common problems that may arise when using the integration and their solutions.
+- **Collision Problems in Seed Cars**: If collisions occur with Seed Cars, stop the script by terminating the process (`kill <PID>`), then restart with the specific car command:
+- Replace `CARLA_SERVER_IP`, `ROLE_NAME`, and `CAMERA` with the appropriate values.
+```shell
+python3.7 -u /carla/headless_automatic_control.py --ws_ip=websocket --host=CARLA_SERVER_IP --r_name=ROLE_NAME --cam=CAMERA -l > /seed_ROLE_NAME.log 2>&1
+```
+- **Collision Problems in Traffic Generator Vehicles**: Similarly, halt the traffic script with `kill <PID>`, and restart with:
+- Ensure to substitute `CARLA_SERVER_IP`, `TRAFFIC_VEHICLES_NO`, and `TRAFFIC_WALKERS_NO` with the respective variable values.
+```shell
+python3.7 -u generate_traffic.py --host CARLA_SERVER_IP -n TRAFFIC_VEHICLES_NO -w TRAFFIC_WALKERS_NO --asynch --safe --respawn
+```
+For detailed configurations and troubleshooting, refer to the developer manual [here](carla_seed.md).
+- **Carlaviz Connection Issues**: If Carlaviz cannot connect to the CARLA server for visualization, first stop the SEED Emulator. Then, restart the CARLA server to re-establish the connection. After restarting the CARLA server, retry connecting Carlaviz to ensure the visualization links properly. This process can help reset the network connections and clear any temporary conflicts that may be preventing Carlaviz from accessing the CARLA server data.
+- **Persistent Sensor Data Issue**: Each time you use `docker-compose down` in the SEED Emulator, consider restarting the CARLA server as well. This is recommended because stopping the Docker containers without restarting the CARLA server might leave residual sensor data from previous simulations, which could lead to unexpected collisions in new sessions. Restarting the CARLA server clears old simulation states, although this step is optional and should be performed based on your specific needs for a fresh simulation environment.
 #### Debugging Tips 
-Tips for diagnosing and fixing issues specific to the integration
+- **Logs Inspection**: Regularly review the logs produced by both the CARLA simulator and the SEED Emulator for any error messages that might indicate what issues are occurring. Each component and container within the SEED Emulator logs its activity, which can be crucial for troubleshooting:
+	- **Web Socket**: Logs are stored in `/carla_webserver.log`.
+	- **Seed Cars [1-6]**: Each car generates its own log in `/seed_car[1-6].log` within its respective container.
+	- **Traffic Generator**: Traffic activity is logged in `/traffic.log`.
+	- **CARLAVIZ**: Visualization logs can be found in `/carlaviz.log`, and additional output might also be visible directly on the terminal.
+	- **SEED Emulator**: General output and error messages are displayed directly on the terminal.
 ### FAQ's
-### Future Work 
-
