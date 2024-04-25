@@ -1,7 +1,7 @@
 from seedemu.core import Node, Server, Service, BaseSystem
 from seedemu.services.KuboService.KuboEnums import Architecture, Distribution
 from seedemu.services.KuboService.KuboUtils import DottedDict, getIP
-from typing import Any
+from typing import Any, Collection
 from typing_extensions import Self
 import json, re
 
@@ -14,12 +14,13 @@ class KuboServer(Server):
     
     Attributes
     ----------
-    config : a DottedDict representation of the Kubo config JSON file, by default None
+    initConfig : a DottedDict representation of the Kubo config JSON file, by default None
+    startConfig : a DottedDict representing all Kubo config changes to be made on startup, by default None
     """
 
     _version:str
     _is_bootnode:bool
-    config:DottedDict
+    initConfig:DottedDict
     _profile:str
 
     def __init__(self):
@@ -34,7 +35,8 @@ class KuboServer(Server):
         self._version = DEFAULT_KUBO_VERSION
         self._is_bootnode = False
         self._config_cmds = []
-        self.config = DottedDict()
+        self.initConfig = DottedDict()
+        self.startConfig = DottedDict()
         self._profile = None
     
     def install(self, node:Node, service:Service):
@@ -60,8 +62,8 @@ class KuboServer(Server):
         node.addBuildCommand('cd kubo && bash install.sh')
         
         # Add configuration file to IPFS before initialization (read here) if additional configuration is given:
-        if not self.config.empty():
-            node.appendFile('/root/.ipfs/config', json.dumps(self.config, indent=2))
+        if not self.initConfig.empty():
+            node.appendFile('/root/.ipfs/config', json.dumps(self.initConfig, indent=2))
         
         # Initialize IFPS
         if self._profile is None or self._profile in ['', 'default', 'none']:
@@ -69,9 +71,13 @@ class KuboServer(Server):
         else:
             node.appendStartCommand(f'ipfs init --profile={self._profile}')
             
-        # Add startup configuration changes if they exist:
-        for cmd in self._config_cmds:
-            node.appendStartCommand(cmd)
+        # Add startup config commands if they exist:
+        if not self.startConfig.empty():
+            for key, val in self.startConfig.dottedItems():
+                if isinstance(val, str):
+                    node.appendStartCommand(f'ipfs config {key} {val}')
+                else:
+                    node.appendStartCommand(f"ipfs config --json {key} '{json.dumps(val)}'")
         
         # Remainder of configuration is done at the service level (see KuboService).
         
@@ -128,8 +134,8 @@ class KuboServer(Server):
         """
         return self._version
     
-    def importConfig(self, config:dict) -> Self:
-        """Import an entire config file in dictionary representation. This overrides the default config file.
+    def replaceConfig(self, config:dict) -> Self:
+        """Import an entire config file in dictionary representation. This overrides the default config file at initialization.
 
         Parameters
         ----------
@@ -141,7 +147,23 @@ class KuboServer(Server):
         Self
             This KuboServer instance for chaining API calls.
         """
-        self.config = DottedDict(config)
+        self.initConfig = DottedDict(config)
+        return self
+    
+    def importConfig(self, config:dict) -> Self:
+        """Import an entire config file in dictionary representation. Its keys and values will be configured at startup.
+
+        Parameters
+        ----------
+        config : dict
+            representation of the Kubo config JSON file (located at $IPFS_PATH/config).
+
+        Returns
+        -------
+        Self
+            This KuboServer instance for chaining API calls.
+        """
+        self.startConfig = DottedDict(config)
         return self
     
     def setConfig(self, key:str, value:Any) -> Self:
@@ -159,32 +181,8 @@ class KuboServer(Server):
         Self
             This KuboServer instance for chaining API calls.
         """
-        self.config[key] = value
+        self.startConfig[key] = value
         return self
-    
-    def appendStartConfig(self, key:str, val:Any, isJSON:bool=False) -> Self:
-        """Append changes to the configuration on startup.
-
-        Parameters
-        ----------
-        key : str
-            The key that you would like to change, in JSON dot notation.
-        val : Any
-            The value that you would like to set.
-        isJSON : bool, optional
-            Whether the value should be interpreted as JSON, by default False
-
-        Returns
-        -------
-        Self
-            This KuboServer instance for chaining API calls.
-        """
-        if isJSON:
-            cmd = f"ipfs config --json {key} '{json.dumps(val)}'"
-        else:
-            cmd = f'ipfs config {key} {val}'
-        
-        self._config_cmds.append(cmd)
         
         
     def setProfile(self, profile:str) -> Self:

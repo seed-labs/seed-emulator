@@ -102,16 +102,16 @@ asn, node = random.choice(webAppCandidates)
 webASN = emu.getLayer('Base').getAutonomousSystem(asn)
 webHost = webASN.createHost('webhost').joinNetwork('net0')
 
+# Make changes to active Kubo configuration:
+webKubo.setConfig('API.HTTPHeaders.Access-Control-Allow-Origin', ["*"])
+
 # Add software to node:
 webHost.addSoftware('curl')
 webHost.addBuildCommand('curl -fsSL https://deb.nodesource.com/setup_21.x | bash - && apt update -y && apt install -y nodejs')
 webHost.addBuildCommand('npm install -g serve')
 
-# Make changes to active Kubo configuration:
-webKubo.appendStartConfig('API.HTTPHeaders.Access-Control-Allow-Origin', ["*"], isJSON=True)
-
 # Build and run the web app:
-# webHost.appendStartCommand('serve -sC /volumes/kubo-dapp/build', fork=True)
+webHost.appendStartCommand('serve -sC /volumes/kubo-dapp/build', fork=True)
 
 # Allocate node resources:
 webHost.addSharedFolder('/volumes', '../volumes')
@@ -120,18 +120,11 @@ webHost.addPortForwarding(5001, 5001)
 webHost.addPortForwarding(8081, 8081)
 webHost.setDisplayName('WebHost')
 emu.addBinding(Binding('extraKubo', filter = Filter(asn=asn, nodeName='webhost')))
-print(f'Web host is hnode_{asn}_{node}')
-print(len(emu.getBindings()))
 
 # Render and compile 
 emu.addLayer(ipfs)
 emu.addLayer(eth)
 emu.render()
-
-# # Deploy the smart contract automatically:
-# print(ethVnode)
-# ethServer = emu.getServerByVirtualNodeName(ethVnode)
-# ethServer.deploySmartContract(SmartContract('./contract/IPFS_StorageBin', './contract/IPFS_StorageAbi'))
 
 docker = Docker(internetMapEnabled=True, etherViewEnabled=True)
 emu.compile(docker, OUTPUTDIR, override = True)

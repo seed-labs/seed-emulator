@@ -47,25 +47,39 @@ for asNum in range(150, 155):
             i += 1
 emu.addLayer(ipfs)
 
+# Prepare for testing:
 kuboPeers = [v for v in kuboAll if not emu.getServerByVirtualNodeName(v).isBootNode()]
+testCases = ['profile', 'version', 'set_config', 'import_config', 'replace_config']
+testNodes = { group : vnode for (vnode, group) in zip(random.sample(kuboPeers, len(testCases)), testCases) }
             
 # Specify profile for a container for testing:
-vnode_profile = random.choice(kuboPeers)
-emu.getServerByVirtualNodeName(vnode_profile).setProfile('lowpower')
+emu.getServerByVirtualNodeName(testNodes['profile']).setProfile('lowpower')
 
-
-# Specify config for a container for testing.
+# Specify init config for a container for testing.
 # Config changes:
 #    - Datastore.StorageMax = "20GB"
 #    - Gateway.HTTPHeaders.x-kubo-test = "true"
 with open('sample-config.json', 'r') as f:
     conf = json.loads(f.read())
-vnode_config = random.choice(kuboPeers)
-emu.getServerByVirtualNodeName(vnode_config).importConfig(conf)
+emu.getServerByVirtualNodeName(testNodes['replace_config']).replaceConfig(conf)
+
+# Specify start config for a container, by import:
+testConf = {
+    'API': {
+        'HTTPHeaders': {
+            'Access-Control-Allow-Origin': ['*']
+        }
+    }
+}
+emu.getServerByVirtualNodeName(testNodes['import_config']).importConfig(testConf)
+
+# Specify start config for a container, by key:
+emu.getServerByVirtualNodeName(testNodes['set_config']).setConfig('API.HTTPHeaders.Access-Control-Allow-Origin', ['*'])
+emu.getServerByVirtualNodeName(testNodes['set_config']).setConfig('Gateway.ExposeRoutingAPI', True)
+emu.getServerByVirtualNodeName(testNodes['set_config']).setConfig('Gateway.RootRedirect', 'ThisIsOnlyATest')
 
 # Change the Kubo version for a container for testing:
-vnode_version = random.choice(kuboPeers)
-emu.getServerByVirtualNodeName(vnode_version).setVersion('v0.26.0')
+emu.getServerByVirtualNodeName(testNodes['version']).setVersion('v0.28.0')
         
 
 # Render and compile 
@@ -74,8 +88,7 @@ emu.render()
 
 # Add some labels that are used for testing purposes only (must be added to physical nodes post-render):
 for vnode in kuboAll: emu.resolvVnode(vnode).setLabel('kubo.test.group', '[\\"basic\\"]')
-emu.resolvVnode(vnode_profile).setLabel('kubo.test.group', '[\\"profile\\"]')
-emu.resolvVnode(vnode_config).setLabel('kubo.test.group', '[\\"config\\"]')
-emu.resolvVnode(vnode_version).setLabel('kubo.test.group', '[\\"basic\\", \\"version\\"]')
+for group, vnode in testNodes.items(): emu.resolvVnode(vnode).setLabel('kubo.test.group', f'[\\"{group}\\"]')
 
 emu.compile(docker, OUTPUTDIR, override = True)
+
