@@ -2,7 +2,6 @@ from web3 import Web3, exceptions, HTTPProvider
 import json
 import time
 import requests
-import re
 from web3.middleware import geth_poa_middleware
 import logging
 
@@ -11,17 +10,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 class test_user_contract:
     url : str
     faucet_url : str
-    init_server_url : str
-    link_token_contract_address : str = None
-    oracle_contracts : list
     web3 : Web3
     test_address: str
     private_key: str
     user_contract_abi_path: str
-    user_contract_bin_path: str
     user_contract_abi: dict
-    user_contract_bin: str
-
+    
     def __init__(self):
         self.rpc_url = "<RPC_URL>"
         self.faucet_url = "<FAUCET_URL>"
