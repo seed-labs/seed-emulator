@@ -19,7 +19,7 @@ This manual provides comprehensive guidance on setting up, operating, and optimi
 		  - [Validating Vehicle Spawn and Web Socket Server](#validating-vehicle-spawn-and-web-socket-server)
 	  - [Installation Troubleshooting](#installation-troubleshooting)
 	  - [Usage](#usage)
-	  - [Demo][#demo]
+	  - [Demo](#demo)
 	  - [Troubleshooting](#troubleshooting)
 		  - [Common Issues](#common-issues)
 		  - [Debugging Tips](#debugging-tips)
