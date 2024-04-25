@@ -20,10 +20,10 @@ done < /root/traffic-targets
         name: str = None,
         log_file: str = "/root/traffic_generator.log",
         duration: int = 300,
-        rate: int = 1,
+        rate: int = 5000,
         protocol: str = "TCP",
-        extra_options: str = "",
         auto_start: bool = True,
+        extra_options: str = ""
     ):
         """!
         @brief TrafficGenerator constructor.
@@ -32,8 +32,8 @@ done < /root/traffic-targets
         @param duration duration of traffic generation process.
         @param rate rate in bits/sec (0 for unlimited).
         @param protocol protocol.
-        @param extra_options extra options.
         @param auto_start start the traffic generator script automatically.
+        @param extra_options extra options.
         """
         super().__init__()
         self.name = name or self.__class__.__name__
