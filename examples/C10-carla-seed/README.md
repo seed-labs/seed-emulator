@@ -14,14 +14,16 @@ This manual provides comprehensive guidance on setting up, operating, and optimi
 		  - [Linux Installation](#linux-installation)
 	  - [SEED Emulator Installation](#seed-emulator-installation)
 	  - [SEED Emulator Container Terminology](#seed-emulator-container-terminology)
-	  - [Testing After Installation](#testing-after-installation)
+	  - [Post-Installation Testing ](#post-installation-testing)
 		  - [Testing Carlaviz and Internet Map](testing-carlaviz-and-internet-map-integration)
 		  - [Validating Vehicle Spawn and Web Socket Server](#validating-vehicle-spawn-and-web-socket-server)
 	  - [Installation Troubleshooting](#installation-troubleshooting)
 	  - [Usage](#usage)
+	  - [Demo][#demo]
 	  - [Troubleshooting](#troubleshooting)
 		  - [Common Issues](#common-issues)
 		  - [Debugging Tips](#debugging-tips)
+	  - [FAQ's](#faqs)
 	  - [Future Work](#future-work)
 ## What is CARLA Simulator
 CARLA Simulator is an open-source platform designed specifically for the development and testing of autonomous driving systems. It uses Unreal Engine, known for its powerful rendering capabilities, to create highly realistic urban environments. This allows researchers and developers to simulate and analyze various scenarios that autonomous vehicles might encounter.
@@ -44,6 +46,16 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
 ### Integration Architecture
 
 ![carlaseed arch](figs/carlaseed_arch.png)
+
+1. **CARLA Simulator**: Hosted on a **Remote GPU Server** to run the vehicle simulation environment.
+2. **SEED Emulator**: Running on a local machine with a total of nine containers:
+    - One container operates as the **Web Socket Server**, facilitating real-time communication.
+    - Another serves as the **Controller**, connected to both the Web Socket Server and the remote CARLA server, managing simulation commands.
+    - Six containers, designated as **Seed Cars 1-6**, simulate autonomous vehicles within the CARLA environment and receive instructions from the Web Socket Server.
+    - One container is dedicated to **Traffic Generation**, creating realistic traffic scenarios within the simulation.
+3. **Visualization Tools**: Two additional background containers support visualization:
+    - **Carlaviz**: Provides visualization for the CARLA simulation.
+    - **SEED Internet Map**: Offers a visual mapping interface for the SEED Emulator.
 ### Integration Features
 #### Simulation Controls
 #### Data Exchange
@@ -221,6 +233,8 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 	python3.7 config.py --host 128.230.114.88 --inspect
 	```
 6. **Monitoring and Visualization:** Continuously observe vehicle behaviors and dynamics using Carlaviz at `http://localhost:8080`. This real-time visualization provides insight into vehicle movements and interactions within the CARLA simulation, aiding in the evaluation of simulation performance and the effectiveness of applied settings or commands.
+
+### Demo
 ### Troubleshooting
 #### Common Issues
 A list of common problems that may arise when using the integration and their solutions.
