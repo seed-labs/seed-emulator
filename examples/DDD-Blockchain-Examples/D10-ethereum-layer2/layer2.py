@@ -2,10 +2,14 @@
 # encoding: utf-8
 
 from seedemu import *
-from L2Util import generateAccounts
+from L2Util import generateAccounts, writeConfig
 
 import sys
 
+# Configs for L2Util
+L1_PORT = 12545
+L2_PORT = 8545
+DEPLOYER_PORT = 8888
 
 # Generate privileged & test accounts for layer2
 accs = generateAccounts()
@@ -64,7 +68,7 @@ e7.enableGethHttp()
 emu.getVirtualNode("poa-eth5").setDisplayName("Ethereum-POA-5")
 emu.getVirtualNode("poa-eth6").setDisplayName("Ethereum-POA-6")
 emu.getVirtualNode("poa-eth7").setDisplayName("Ethereum-POA-7").addPortForwarding(
-    12545, e7.getGethHttpPort()
+    L1_PORT, e7.getGethHttpPort()
 )
 emu.getVirtualNode("poa-eth8").setDisplayName("Ethereum-POA-8")
 
@@ -81,7 +85,7 @@ l2Bkc = l2.createL2Blockchain("test")
 l2Bkc.setL1VNode("poa-eth5", e5.getGethHttpPort())
 
 # Configure the admin accounts for layer2 blockchain
-# Admin, batcher, proposer must be funded in the layer1 blockchain
+# Admin, batcher, proposer, and test must be funded in the layer1 blockchain
 l2Bkc.setAdminAccount(
     EthereumLayer2Account.GS_ADMIN, accs[EthereumLayer2Account.GS_ADMIN]
 )
@@ -117,9 +121,13 @@ l2_4 = l2Bkc.createNode("l2-4").setWSPort(9547)
 deployer = l2Bkc.createNode("l2-deployer", EthereumLayer2Node.DEPLOYER)
 
 # Set an external port for user interaction
-emu.getVirtualNode("l2-3").addPortForwarding(8545, l2_3.getHttpPort())
-emu.getVirtualNode("l2-deployer").addPortForwarding(8888, 8888)
+emu.getVirtualNode("l2-3").addPortForwarding(L2_PORT, l2_3.getHttpPort())
+emu.getVirtualNode("l2-deployer").addPortForwarding(
+    DEPLOYER_PORT, EthereumLayer2Template.WEB_SERVER_PORT
+)
 
+# Save the configuration to interact with the layer2 blockchain
+writeConfig(L1_PORT, L2_PORT, DEPLOYER_PORT, blockchain.getChainId(), l2Bkc.getChainID())
 
 # Binding virtual nodes to physical nodes
 emu.addBinding(Binding("poa-eth5", filter=Filter(asn=160, nodeName="host_0")))

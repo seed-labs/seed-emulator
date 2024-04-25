@@ -68,6 +68,7 @@ class EthereumLayer2Template:
     __isSequencer: bool
     __components: List[EthereumLayer2Component]
     __ENV: Dict[str, str]
+    WEB_SERVER_PORT = WEB_SERVER_PORT
     CHAIN_CONFIG: str = """
 #!/usr/bin/env bash
 
@@ -213,6 +214,7 @@ fi
 mkdir chain_configs
 
 cp deployments/getting-started/L2OutputOracleProxy.json chain_configs/
+cp deployments/getting-started/L1StandardBridgeProxy.json chain_configs/
 
 op-node genesis l2 \
   --deploy-config deploy-config/getting-started.json \
