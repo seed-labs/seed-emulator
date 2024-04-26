@@ -137,7 +137,7 @@ The diagram outlines the workflow for setting a destination in a vehicle simulat
 ```python
 	async with websockets.connect(WEBSOCKET_URI) as websocket
 ```
-**Purpose**: Opens a WebSocket connection using the previously constructed URI, enabling real-time data transfer.
+**Purpose**: Opens a WebSocket connection using the previously constructed URI, enabling real-time data transfer. <br />
 **Send Destination Data**:
 ```python
 	await websocket.send(json.dumps(destination))
@@ -146,7 +146,7 @@ The diagram outlines the workflow for setting a destination in a vehicle simulat
 #### Notification Handling
 **Listening for Status Updates**: 
 This function listens for notifications such as 'destination reached', allowing the script to handle real-time updates about vehicle states which are essential for monitoring the progress of navigation tasks.
-**Function Name:**
+
 ```python
 	async def receive_notifications()
 ```
@@ -154,12 +154,12 @@ This function listens for notifications such as 'destination reached', allowing 
 ```python
 	message = await websocket.recv()
 ```
-**Purpose**: Suspends the function to wait for and receive a message from the WebSocket server.
+**Purpose**: Suspends the function to wait for and receive a message from the WebSocket server. <br />
 **Checking Mechanism:**
 ```python 
 	if data['type'] == 'destination_reached'
 ```
-**Purpose**: Checks if the received message indicates that a vehicle has reached its designated destination, triggering specific actions based on this event.
+**Purpose**: Checks if the received message indicates that a vehicle has reached its designated destination, triggering specific actions based on this event. <br />
 **Parsing JSON Message:** 
 ```python
 	data = json.loads(message)
@@ -172,7 +172,7 @@ This function listens for notifications such as 'destination reached', allowing 
 	async def receive_notifications()
 	async def get_vehicle_info(role_name)
 ```
-**Purpose**: Marks the function as a coroutine, enabling it to perform non-blocking operations and efficiently manage asynchronous tasks like network communication and data processing.
+**Purpose**: Marks the function as a coroutine, enabling it to perform non-blocking operations and efficiently manage asynchronous tasks like network communication and data processing. <br />
 **Running Asynchronous Tasks**
 ``` python
 	if __name__ == "__main__":  asyncio.get_event_loop().run_until_complete(set_destination(location_name,args.id)) 
@@ -192,27 +192,27 @@ This function listens for notifications such as 'destination reached', allowing 
 ```python
 	WEBSOCKET_URI = f"ws://{args.w_ip}:{args.w_port}"
 ```
-- **Purpose**: Build the URI needed to connect to the WebSocket using command-line-provided IP and port.
+**Purpose**: Build the URI needed to connect to the WebSocket using command-line-provided IP and port.
 #### Get Vehicle Roles Function
 ```python
 	def get_vehicle_roles():
 ```
-**Purpose**: Fetch and display the roles and IDs of all vehicles present in the simulation, useful for targeting commands.
+**Purpose**: Fetch and display the roles and IDs of all vehicles present in the simulation, useful for targeting commands. <br />
 **Creating a CARLA Client**
 ```python
 	client = carla.Client(args.c_ip, args.c_port)
 ```
-**Purpose**: Initializes a connection to the CARLA server using the provided IP address and port number, setting up the client to interact with the simulation environment.
+**Purpose**: Initializes a connection to the CARLA server using the provided IP address and port number, setting up the client to interact with the simulation environment. <br />
 **Getting the World**
 ```python 
 	world = client.get_world()
 ```
-**Purpose**: Retrieves the world from the CARLA server which contains all the dynamic elements, like vehicles and sensors, facilitating access to further simulation data.
+**Purpose**: Retrieves the world from the CARLA server which contains all the dynamic elements, like vehicles and sensors, facilitating access to further simulation data. <br />
 **Filtering Vehicle Actors:**
 ```python 
 	vehicle_actors = world.get_actors().filter('vehicle.*')
 ```
-**Purpose**: Retrieves all actors from the simulation that match the vehicle pattern, ensuring the function focuses only on vehicle entities for role extraction.
+**Purpose**: Retrieves all actors from the simulation that match the vehicle pattern, ensuring the function focuses only on vehicle entities for role extraction. <br />
 **Iterating and Printing Vehicle Roles:**
 ```python 
 	for vehicle in vehicle_actors:     
@@ -225,7 +225,7 @@ This function listens for notifications such as 'destination reached', allowing 
 ```python
 	async def get_vehicle_info(role_name):
 ```
- **Purpose**: Obtain and print detailed data about a specific vehicle based on its role name, including real-time location and movement parameters.
+ **Purpose**: Obtain and print detailed data about a specific vehicle based on its role name, including real-time location and movement parameters. <br />
 **Retrieving and Calculating Vehicle Speed:**
 ```python
 	speed_kmh = 3.6 * math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2)
@@ -252,28 +252,28 @@ This server is set up to dynamically accept Web Socket connections, manage messa
 ```python
 	async def handle_client(websocket, path)
 ```
-**Purpose**: Manages Web Socket connections in an asynchronous manner, handling each client in a separate coroutine which allows for concurrent operations without blocking
+**Purpose**: Manages Web Socket connections in an asynchronous manner, handling each client in a separate coroutine which allows for concurrent operations without blocking <br />
 **Connected Clients Management**
 ```python
 	connected_clients = set()
 ```
-**Purpose**: Maintains a set of active client connections to manage broadcasting messages effectively.
+**Purpose**: Maintains a set of active client connections to manage broadcasting messages effectively. <br />
 **Connection Tracking**
 ```python
 	connected_clients.add(websocket)
 ```
-**Purpose**: This line is crucial as it adds the newly connected Web Socket client to the `connected_clients` set. This action is essential for managing and maintaining a record of all active client connections.
+**Purpose**: This line is crucial as it adds the newly connected Web Socket client to the `connected_clients` set. This action is essential for managing and maintaining a record of all active client connections. <br />
 **Message Handling Loop**
 ```python 
 	async for message in websocket:     
 		data = json.loads(message)
 ```
-**Purpose**: Continuously listens for incoming messages from clients, decoding JSON messages for further processing.
+**Purpose**: Continuously listens for incoming messages from clients, decoding JSON messages for further processing. <br />
 **Message Processing**
 ```python
 	if data["type"] == "set_destination":`
 ```
-**Purpose**: Handles specific types of messages (e.g., setting a vehicle's destination), and then broadcasts these messages to other connected clients, ensuring all clients are updated about relevant actions.
+**Purpose**: Handles specific types of messages (e.g., setting a vehicle's destination), and then broadcasts these messages to other connected clients, ensuring all clients are updated about relevant actions. <br />
 **Broadcasting Messages**
 ```python
 	tasks = [client.send(message) for client in connected_clients if client != websocket] 
