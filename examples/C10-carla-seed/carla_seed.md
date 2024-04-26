@@ -124,7 +124,7 @@ The diagram outlines the workflow for setting a destination in a vehicle simulat
 		```
 #### Destination Management
 **Setting and Broadcasting Destinations**: The script provides functionality to set a destination for a specific vehicle or all vehicles, which is crucial for tests involving navigation and route planning. The destination is sent via WebSocket, ensuring that it reaches all relevant clients connected to the server.
-**Function Name:**
+
 ```python
 	async def set_destination(location_name, id="all")
 ```
