@@ -406,98 +406,98 @@ Read more: https://carla.readthedocs.io/en/latest/adv_traffic_manager/#creating-
 - **Default**: `10`
 - **Purpose**: Specifies the number of pedestrian actors (walkers) to spawn.
 - **Usage Example**:
-```cmd
---number-of-walkers 15
+```shell
+		--number-of-walkers 15
 ```
 #### **Safe (--safe)**
 - **Purpose**: Ensures that vehicles are spawned in a 'safe' mode, preventing spawning in locations that would immediately cause collisions.
 - **Usage Example**:
-```cmd
---safe
+```shell
+		--safe
 ```
 #### **Vehicle Filter (--filterv)**
 - **Default**: `vehicle.*`
 - **Purpose**: Filters the vehicle models based on the given pattern.
 - **Usage Example**:
-```cmd
---filterv "vehicle.audi.*"
+```shell
+		--filterv "vehicle.audi.*"
 ```
 #### **Walker Filter (--filterw)**
 - **Default**: `walker.pedestrian.*`
 - **Purpose**: Filters the pedestrian types based on the given pattern.
 - **Usage Example**:
-```cmd
---filterw "walker.pedestrian.adult.*"
+```shell
+		--filterw "walker.pedestrian.adult.*"
 ```
 #### **Vehicle Generation (--generationv)**
 - **Default**: `All`
 - **Purpose**: Restricts the vehicle models to a specific generation.
 - **Usage Example**:
-```cmd
---generationv 2
+```shell
+		--generationv 2
 ```
 #### **Walker Generation (--generationw)**
 - **Default**: `2`
 - **Purpose**: Restricts the pedestrian types to a specific generation.
 - **Usage Example**:
-```cmd
---generationw 1
+```shell
+		--generationw 1
 ```
 #### **Traffic Manager Port (--tm-port)**
 - **Default**: `8000`
 - **Purpose**: Specifies the port for communication with the Traffic Manager.
 - **Usage Example**:
-```cmd
---tm-port 8000
+```shell
+		--tm-port 8000
 ```
 #### **Asynchronous Mode (--asynch)**
 - **Purpose**: Activates asynchronous mode execution in the simulation(CARLA world).
 - **Usage Example**:
-```cmd
---asynch
+```shell
+		--asynch
 ```
 #### **Hybrid Mode (--hybrid)**
 - **Purpose**: Activates hybrid mode for the Traffic Manager to manage vehicle physics more realistically.
 - **Usage Example**:
-```cmd
---hybrid
+```shell
+		--hybrid
 ```
 #### **Seed (--seed,-s)**
 - **Purpose**: Sets a deterministic seed for vehicle and pedestrian behavior in the simulation.
 - **Usage Example**:
-```cmd
---seed 12345
+```shell
+		--seed 12345
 ```
 #### **Pedestrian Seed (--seedw)**
 - **Default**: `0`
 - **Purpose**: Sets the seed for pedestrian module behavior.
 - **Usage Example**:
-```cmd
---seedw 456
+```shell
+		--seedw 456
 ```
 #### **Car Lights On (--car-lights-on)**
 - **Purpose**: Enables automatic management of car lights.
 - **Usage Example**:
-```cmd
---car-lights-on
+```shell
+		--car-lights-on
 ```
 #### **Hero Vehicle (--hero)**
 - **Purpose**: Designates one of the vehicles as a 'hero' vehicle for specific testing or observation.
 - **Usage Example**:
-```cmd
---hero
+```shell
+		--hero
 ```
 #### **Respawn (--respawn)**
 - **Purpose**: Enables automatic respawning of dormant vehicles, useful in large maps.
 - **Usage Example**:
-```cmd
---respawn
+```shell
+		--respawn
 ```
 #### **No Rendering (--no-rendering)**
 - **Purpose**: Activates a mode where the simulation runs without graphical rendering.
 - **Usage Example**:
-```cmd
---no-rendering
+```shell
+		--no-rendering
 ```
 #### Carla Viz
 CARLA VIZ is a visualization tool designed to enhance the user experience when working with the CARLA simulator(CARLA world). It provides real-time graphical representation of simulations, enabling detailed analysis and debugging of autonomous vehicle behaviors in dynamic environments.
@@ -508,16 +508,16 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 - **Default:** "0.0.0.0"
 - **Purpose:** Specifies the host address for the Carla Viz server to listen on. Basically, to set ip address of Carla Viz Server
 - **Usage Example:** 
-```cmd
---connector_host 192.168.1.5
+```shell
+		--connector_host 192.168.1.5
 ```
 ##### **Connector Port (--connector_port)**
 - **Type**: uint32
 - **Purpose**: Specifies the port number for the Carla Viz server to listen on. Basically, to set port number of Carla Viz Server.
 - **Default**: 8081
 - **Usage Example**:
-```cmd
---connector_port 9090
+```shell
+		--connector_port 9090
 ```
 ##### Connector Update Interval Milliseconds 
 (--connector_update_interval_milliseconds)
@@ -525,95 +525,95 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 - **Purpose**: Determines how frequently, in milliseconds, the connector should update. Basically, in how many milliseconds Carla Viz will get data from Carla World.
 - **Default**: 500
 - **Usage Example**:
-```cmd
---connector_update_interval_milliseconds 1000
+```shell
+		--connector_update_interval_milliseconds 1000
 ```
 ##### **Log Filename (--log_filename)**
 - **Type**: string
 - **Purpose**: Sets the filename where logs will be stored.
 - **Usage Example**:
-```cmd
---log_filename server.log
+```shell
+		--log_filename server.log
 ```
 ##### **Log Level (--log_level)**
 - **Type**: string
 - **Purpose**: Sets the level of logging detail.
 - **Default**: "info"
 - **Usage Example**:
-```cmd
---log_level debug
+```shell
+		--log_level debug
 ```
 ##### **Simulator Ego Vehicle Name (--simulator_ego_vehicle_name)**
 - **Type**: string
 - **Purpose**: Role Name the vehicle in the simulator which you monitor.
 - **Default**: "ego"
 - **Usage Example**:
-```cmd
---simulator_ego_vehicle_name alpha
+```shell
+		--simulator_ego_vehicle_name alpha
 ```
 ##### **Simulator Host (--simulator_host)**
 - **Type**: string
 - **Purpose**: Defines the host address of the CARLA simulator( CARLA world).
 - **Default**: "localhost"
 - **Usage Example**:
-```cmd
---simulator_host 10.0.0.2
+```shell
+		--simulator_host 10.0.0.2
 ```
 ##### **Simulator Port (--simulator_port)**
 - **Type**: uint32
 - **Purpose**: Specifies the port number for connecting to the simulator.
 - **Default**: 2000
 - **Usage Example**:
-```cmd
---simulator_port 3000
+```shell
+		--simulator_port 3000
 ```
 ##### **Simulator Retry Interval Seconds (--simulator_retry_interval_seconds)**
 - **Type**: uint32
 - **Purpose**: Sets the interval, in seconds, between connection retries to the simulator.
 - **Default**: 1
 - **Usage Example**:
-```cmd
---simulator_retry_interval_seconds 5
+```shell
+		--simulator_retry_interval_seconds 5
 ```
 ##### **Simulator Retry Times After Disconnection (--simulator_retry_times_after_disconnection)**
 - **Type**: uint32
 - **Purpose**: Specifies how many times to retry connecting to the simulator after a disconnection.
 - **Default**: 3
 - **Usage Example**:
-```cmd
---simulator_retry_times_after_disconnection 10
+```shell
+		--simulator_retry_times_after_disconnection 10
 ```
 ##### **Simulator Sensor Max Lag Frame (--simulator_sensor_max_lag_frame)**
 - **Type**: uint32
 - **Purpose**: Limits the maximum frame lag for sensors in the simulator.
 - **Default**: 30
 - **Usage Example**:
-```cmd
---simulator_sensor_max_lag_frame 10
+```shell
+		--simulator_sensor_max_lag_frame 10
 ```
 ##### **Simulator Sleep Between Updates Milliseconds (--simulator_sleep_between_updates_milliseconds)**
 - **Type**: uint32
 - **Purpose**: Decides whether to insert a delay between two updates in the simulator, and if so, how long in milliseconds.
 - **Default**: 0
 - **Usage Example**:
-```cmd
---simulator_sleep_between_updates_milliseconds 100
+```shell
+		--simulator_sleep_between_updates_milliseconds 100
 ```
 ##### **Simulator Timeout Seconds (--simulator_timeout_seconds)**
 - **Type**: uint32
 - **Purpose**: Sets the timeout duration, in seconds, for connecting to the simulator.
 - **Default**: 10
 - **Usage Example**:
-```cmd
---simulator_timeout_seconds 30
+```shell
+		--simulator_timeout_seconds 30
 ```
 ##### **Translation Allow Static Objects (--translation_allow_static_objects)**
 - **Type**: bool
 - **Purpose**: Controls whether static objects are shown in translations.
 - **Default**: true
 - **Usage Example**:
-```cmd
---translation_allow_static_objects false
+```shell
+		--translation_allow_static_objects false
 ```
 #### Headless_Automatic_control.py
 `Headless_Automatic_control.py` manages the autonomous behavior of vehicles in a headless mode, meaning it runs without a graphical user interface, facilitating the creation and control of multiple cars through scriptable, automated scenarios in a distributed system. This script interacts with a CARLA server remotely, receiving commands and sending vehicle status via WebSocket connections.
@@ -622,58 +622,58 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 - **Default:** "127.0.0.1"
 - **Purpose:** Specifies the IP address of the host server where the CARLA World is running.
 - **Usage Example:**
-```cmd
---host 192.168.1.100
+```shell
+		--host 192.168.1.100
 ```
 ##### Port (--port)
 - **Default:** 2000
 - **Purpose:** Specifies the TCP port of the host server for connecting to the CARLA server.
 - **Usage Example:**
-```cmd
---port 2000
+```shell
+		--port 2000
 ```
 ##### Resolution (--res)
 - **Default:** "1280x720"
 - **Purpose:** Sets the simulation window resolution, formatted as WIDTHxHEIGHT.
 - **Usage Example:**
-```cmd
---res 1920x1080
+```shell
+		--res 1920x1080
 ```
 ##### Synchronous Mode (--sync)
 - **Default:** False
 - **Purpose:** Enables synchronous mode, ensuring the simulation only advances on command, which is crucial for precise simulations.
 - **Usage Example:**
-```cmd
---sync
+```shell
+		--sync
 ```
 ##### Actor Filter (--filter)
 - **Default:** "vehicle.*"
 - **Purpose:** Filters the types of vehicle actors to spawn based on a pattern.
 - **Usage Example:**
-```cmd
---filter "vehicle.audi.*"
+```shell
+		--filter "vehicle.audi.*"
 ```
 ##### Actor Generation (--generation)
 - **Default:** "2"
 - **Purpose:** Restricts vehicle selection to a specific generation, useful for controlling vehicle types in scenarios.
-```cmd
---generation "1
+```shell
+		--generation "1
 ```
 ##### Loop (--loop,-l)
 - **Type**: bool
 - **Default:** False
 - **Purpose:** Enables continuous reassignment of random destinations after reaching each one, for ongoing testing.
 - **Usage Example:**
-```cmd
---loop
+```shell
+		--loop
 ```
 ##### Agent Type (--agent)
 - **Default:** "Behavior"
 - **Choices**:"Behavior", "Basic", "Constant"
 - **Purpose:** Chooses the type of driving agent to control the vehicle dynamically.
 - **Usage Example:**
-```cmd
---agent "Constant"
+```shell
+		--agent "Constant"
 ```
 
 ##### Agent Behavior (--behavior)
@@ -681,49 +681,49 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 - **Choices**:"cautious", "normal", "aggressive"
 - **Purpose:** Sets the behavior mode of the agent to adjust driving style according to traffic conditions.
 - **Usage Example:**
-```cmd
---behavior "aggressive"
+```shell
+		--behavior "aggressive"
 ```
 ##### Seed (--seed)
 - **Default:** None
 - **Purpose:** Sets a seed for random number generation, ensuring scenario repeatability.
 - **Usage Example:**
-```cmd
---seed 12345
+```shell
+		--seed 12345
 ```
 ##### WebSocket IP (--ws_ip)
 - **Default:** "localhost"
 - **Purpose:** Specifies the IP address of the WebSocket server for vehicle to controller communications.
 - **Usage Example:**
-```cmd
---ws_ip "10.0.1.5"
+```shell
+		--ws_ip "10.0.1.5"
 ```
 ##### WebSocket Port (--ws_port)
 - **Default:** 6789
 - **Purpose:** Specifies the port for the WebSocket server.
 - **Usage Example:**
-```
---ws_port 6789
+``` shell
+		--ws_port 6789
 ```
 ##### Role Name (--r_name)
 - **Default:** "seed_car_1"
 - **Purpose:** Assigns a specific role name to the vehicle, useful for identification in scripts or logs.
-```cmd
---r_name "seed_car_2"
+```shell
+		--r_name "seed_car_2"
 ```
 ##### Camera Manager (--cam)
 - **Default:** "off"
 - **Purpose:** Toggles the camera manager on or off, essential for visual monitoring or running in a headless environment.
 - **Usage Example:**
-```cmd
---cam "on"
+```shell
+		--cam "on"
 ```
 ##### WebSocket Enable (--ws_enable)
 - **Default:** "on"
 - **Purpose:** Enables or disables WebSocket communication for the vehicle.
 - **Usage Example:**
-```cmd
---ws_enable "off"
+```shell
+		--ws_enable "off"
 ```
 ### Troubleshooting
 
