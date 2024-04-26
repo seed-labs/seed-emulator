@@ -25,6 +25,7 @@ This manual provides comprehensive guidance on setting up, operating, and optimi
 		  - [Common Issues](#common-issues)
 		  - [Debugging Tips](#debugging-tips)
 	  - [FAQ's](#faqs)
+	  - [Appendix](#appendix)
 
 ## Introduction 
 The CARLA-SEED example showcases an advanced simulation environment where users can orchestrate the movements of multiple autonomous vehicles within separate containers. This setup enables precise location settings for each car, offering a detailed visual display of their distribution and movement in a simulated space. The system is designed for users to extract specific data points for individual vehicles, enhancing analysis and research in autonomous vehicle technologies.
@@ -278,3 +279,8 @@ For detailed configurations and troubleshooting, refer to the developer manual [
 	To focus on a specific car in Carlaviz during the simulation, set the 'ego vehicle' parameters in the `.env` file accordingly. Specify the role name of the car you want to follow under the `CARLAVIZ_EGO_VEHICLE_NAME` parameter to ensure that Carlaviz tracks and displays this vehicle prominently in the visualization.
 5. **What should I do if there are frequent collisions among vehicles in the simulation?** 
 	To reduce collisions, manage camera settings by enabling the camera manager for one car and disabling cameras on other vehicles. This reduces computational demands and potential lag, enhancing simulation stability.
+### Appendix
+
+To leverage machine learning models for training within the CARLA simulation environment, users should explore the "agents" folder. This folder contains scripts that enable vehicles to navigate the simulation world autonomously, either by following random routes or driving to specified destinations while complying with traffic rules and responding to dynamic obstacles.
+
+Read More: https://carla.readthedocs.io/en/0.9.12/adv_agents/

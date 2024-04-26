@@ -1,4 +1,4 @@
-# CARLA-SEED 
+#traffic-generator-program#web-server-program# CARLA-SEED 
 The Developer Manual offers detailed insights into project architecture, technical implementation, visualization, and future developments.
 ## Table of Contents
 - [CARLA-SEED](#carla-seed)
@@ -6,17 +6,15 @@ The Developer Manual offers detailed insights into project architecture, technic
   - [Core Concepts](#core-concepts)
   - [Project Architecture](#project-architecture)
 	  - [Base components of Architecture](#base-components-of-architecture)
-      - [How CARLA-SEED Works Behind the Scenes](#initialization-flow)
-	  - [How User Set Destination to Vehicles](#setting-a-destination-workflow)
+      - [How CARLA-SEED Works Behind the Scenes](#how-carla-seed-works-behind-the-scenes)
+	  - [How User Set Destination to Vehicles](#how-user-set-destination-to-vehicles)
   - [Technical Implementation](#technical-implementation)
-	  - [web server](#webserverpy)
-	  - [controller](#controllerpy)
-	  - [config](#configpy)
-	  - [headless_automatic_control](#headless_automatic_controlpy)
-	  - [generate_traffic](#generate_trafficpy)
-	  - [carlaviz](#carla-viz)
-  - [Troubleshooting](#troubleshooting)
-  - [Appendix]()
+	  - [controller](#controller-program)
+	  -  [web server](#web-server-program)
+	  - [config](#config-program)
+	  - [generate_traffic](#traffic-generator-program)
+	  - [carlaviz](#carlaviz)
+	  - [headless_automatic_control](#headless-automatic-control-program)
   - [Future Work](#future-work)
 ## Core concepts
 ### World and client
@@ -823,8 +821,4 @@ Continuous optimization of sensor usage and computational processes is necessary
 #### Scenario-Based Testing Enhancements
 
 To develop an expanded set of test scenarios that can automatically adapt based on vehicle behavior and environmental changes, increasing the robustness and reliability of autonomous systems.
-### Appendix
 
-To leverage machine learning models for training within the CARLA simulation environment, users should explore the "agents" folder. This folder contains scripts that enable vehicles to navigate the simulation world autonomously, either by following random routes or driving to specified destinations while complying with traffic rules and responding to dynamic obstacles.
-
-Read More: https://carla.readthedocs.io/en/0.9.12/adv_agents/
