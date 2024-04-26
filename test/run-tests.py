@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
-from internet import IPAnyCastTestCase, MiniInternetTestCase
+from internet import IPAnyCastTestCase, MiniInternetTestCase, HostMgmtTestCase
 from ethereum import EthereumPOATestCase, EthereumPOSTestCase, EthereumPOWTestCase
 from scion import ScionBgpMixedTestCase, ScionBwtesterTestCase
+from kubo import KuboTestCase, KuboUtilFuncsTestCase, DottedDictTestCase
+from pki import PKITestCase
+from chainlink import ChainlinkPOATestCase
 import unittest
 import os, sys
 
@@ -17,11 +20,18 @@ os.environ['platform'] = platform
 test_case_list = [
     MiniInternetTestCase,
     IPAnyCastTestCase,
+    HostMgmtTestCase,
     EthereumPOATestCase,
     EthereumPOSTestCase,
     EthereumPOWTestCase,
+    ChainlinkPOATestCase,
     ScionBgpMixedTestCase,
-    ScionBwtesterTestCase ]
+    ScionBwtesterTestCase,
+    KuboTestCase,
+    KuboUtilFuncsTestCase,
+    DottedDictTestCase,
+    PKITestCase,
+]
 
 for test_case in test_case_list:
     test_suite = test_case.get_test_suite()

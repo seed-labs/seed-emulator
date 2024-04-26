@@ -75,9 +75,11 @@ class Routing(Layer):
         """!
         @brief Install bird on node, and handle the bug.
         """
-        # node.addBuildCommand('mkdir -p /usr/share/doc/bird2/examples/')
-        # node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
-        # node.addBuildCommand('apt-get update && apt-get install -y --no-install-recommends bird2')
+        # addBuildCommand and addSoftware lines are needed when user wants to use custom image.
+        node.addBuildCommand('mkdir -p /usr/share/doc/bird2/examples/')
+        node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
+        node.addSoftware('bird2')
+
         node.setBaseSystem(BaseSystem.SEEDEMU_ROUTER)
 
     def configure(self, emulator: Emulator):

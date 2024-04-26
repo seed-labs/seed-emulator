@@ -21,11 +21,10 @@ emu.load('../01-transit-as/base-component.bin')
 
 If we want to make changes to any layer, we first need to get 
 the layer object. In this example, we need to make changes
-to the `base`, `web`, and `ebgp` layers, so we get their references.
+to the `base` and `ebgp` layers, so we get their references.
 
 ```
 base: Base       = emu.getLayer('Base')
-web:  WebService = emu.getLayer('WebService')
 ebgp: Ebgp       = emu.getLayer('Ebgp')
 ```
 
@@ -45,13 +44,13 @@ as151.createHost('web-2').joinNetwork('net0')
 Once we get the `base` layer, we can add new elements to the layer,
 such as a new autonomous system, a new internet exchange, etc. 
 The code to do this is the same as that in building an emulation
-from scratch. In this example, we created a new autonomous system `AS-153`,
+from scratch. In this example, we created a new autonomous system `AS-154`,
 and then peer it with the other two ASes from the component at the
-internet exchange `ix100`, which is also from the component.
+internet exchanges `ix100` and `ix101, which are also from the component.
 
 ```python
-ebgp.addPrivatePeering(100, 150, 153, abRelationship = PeerRelationship.Provider)
-ebgp.addPrivatePeering(100, 151, 153, abRelationship = PeerRelationship.Peer)
+ebgp.addPrivatePeering(100, 151, 153, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 152, 153, abRelationship = PeerRelationship.Peer)
 ```
 
 ## Adding a New Internet Exchange 

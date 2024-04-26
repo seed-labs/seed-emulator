@@ -3,8 +3,7 @@
 We have plenty of examples to demonstrate the usages of the SEED emulator.
 This document provides a portal to those examples.
 
-
-## Internet Emulator: the Base
+## Internet Emulator: Basic elements
 
   - [Create an emulator: the overall flow](./overall_flow.md)
   - [Autonomous system](./as.md)
@@ -17,25 +16,8 @@ This document provides a portal to those examples.
   - [Visualization](./visualization.md)
   - [Docker image](./docker.md)
 
+## [Internet Emulator: Components and Advanced Features](./internet/README.md)
 
-## Internet Emulator: Additional Features
-
-  - [Connect to the real world](./bgp.md#connect-to-realworld)
-  - [IP anycast (example)](../../examples/B03-ip-anycast/)
-  - [DHCP (example)](../../examples/B10-dhcp/)
-  - [Support Apple Silicon machines (arm64)](./docker.md#platform)
-  - [Hybrid emulation: Integrating physical devices in emulation (example)](../../examples/C03-bring-your-own-internet/)
-
-
-## Blockchain Emulator
-  
-  - [Build a Blockchain emulator](../../examples/B06-blockchain/)
-  - [Connect MetaMask to SEED Emulator](https://github.com/seed-labs/seed-labs/blob/master/manuals/emulator/metamask.md)
-  - [Connect Remix to SEED Emulator](https://github.com/seed-labs/seed-labs/blob/master/manuals/emulator/remix.md)
-
+## [Blockchain Emulator](./blockchain/README.md)
 
 ## Frequently Asked Questions (FAQ)
-
-  - Install python package
-  - AMD issue
-  - How to use custom docker image
