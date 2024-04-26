@@ -450,6 +450,7 @@ Read more: https://carla.readthedocs.io/en/latest/adv_traffic_manager/#creating-
 	```shell
 		--tm-port 8000
 ```
+
 11. **Asynchronous Mode (--asynch)**
 	- **Purpose**: Activates asynchronous mode execution in the simulation(CARLA world).
 	- **Usage Example**:
