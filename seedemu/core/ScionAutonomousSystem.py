@@ -52,7 +52,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__beaconing_policy = {}
         self.__next_ifid = 1
         self.__note = None
-        self.__getGenerateStaticInfoConfig = True
+        self.__generateStaticInfoConfig = True
     
 
     def registerNodes(self, emulator: Emulator):
