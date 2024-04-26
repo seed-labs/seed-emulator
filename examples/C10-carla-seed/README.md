@@ -1,14 +1,9 @@
 # CARLA-SEED Example
-
-By implementing this project, users can deploy multiple cars across different containers and precisely define the location of each vehicle. The output will provide a visual representation illustrating the spatial arrangement and dynamic movement of all the cars. Furthermore, users can retrieve specific data pertaining to individual cars.
-
-
-Requirements: This project requires a robust computational infrastructure capable of supporting containerization technology and advanced graphical rendering capabilities. Additionally, ample computing resources, including CPU and memory, are essential to effectively manage the deployment and visualization of multiple cars simultaneously.
-
 This manual provides comprehensive guidance on setting up, operating, and optimizing Carla-Seed, ensuring you efficiently leverage both simulation and emulation.The developer manual can be found [here](carla_seed.md)
 ## Table of Contents
 - [CARLA-SEED Example](#carla-seed-example)
   - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
   - [What is CARLA Simulator](#what-is-carla-simulator)
   - [Key Components of CARLA Simulator](#key-components-of-carla-simulator)
   - [CARLA Simulator + SEED Emulator](#carla-simulator--seed-emulator)
@@ -30,6 +25,11 @@ This manual provides comprehensive guidance on setting up, operating, and optimi
 		  - [Common Issues](#common-issues)
 		  - [Debugging Tips](#debugging-tips)
 	  - [FAQ's](#faqs)
+
+## Introduction 
+The CARLA-SEED example showcases an advanced simulation environment where users can orchestrate the movements of multiple autonomous vehicles within separate containers. This setup enables precise location settings for each car, offering a detailed visual display of their distribution and movement in a simulated space. The system is designed for users to extract specific data points for individual vehicles, enhancing analysis and research in autonomous vehicle technologies.
+
+**Requirements**: To utilize this project, a powerful computational setup is needed. This includes containerization support and high-end graphics rendering capabilities, along with sufficient CPU and memory to manage and visualize several cars in real-time effectively.
 ## What is CARLA Simulator
 CARLA Simulator is an open-source platform designed specifically for the development and testing of autonomous driving systems. It uses Unreal Engine, known for its powerful rendering capabilities, to create highly realistic urban environments. This allows researchers and developers to simulate and analyze various scenarios that autonomous vehicles might encounter.
 
@@ -172,7 +172,7 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 3. **Check Carlaviz Visualization:**
     - Refresh the Carlaviz page (`http://localhost:8080`) and check for the visualization of spawned vehicles and any ongoing scenarios. Movement and interaction should reflect real-time simulation data.
 4. **Web Socket Server Check**: 
-	- Verify the Web Socket server's functionality on `150/host_0` at `10.150.0.71:6789` by accessing it via the SEED Emulator's Internet Map dashboard.
+	- Verify the Web Socket server's functionality on `150/host_0` at `WEBSOCKET_IP:6789` by accessing it via the SEED Emulator's Internet Map dashboard.
 ### Installation Troubleshooting
 - **No Vehicles in CARLA or Carlaviz:** Ensure that the SEED Emulator is running without errors. Check the terminal or command prompt for error messages. Revisit the `docker-compose.yml` file for any configuration issues.
 - **Dashboard/Visualization Not Loading:** Verify the server ports are not in use by another application and firewall settings allow traffic on ports 8080 and 8090.
@@ -214,23 +214,23 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 5. **Execute Commands:**
 	1. **List Vehicles with Prefix 'seed'**:
 	```shell
-	python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --list
+	python3.7 controller.py --w_ip websocket --c_ip CARLA_IP --list
 	 ```  
 	2. **Send Location to All Vehicles:**    
 	```shell
-	python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --location Hotel --id all
+	python3.7 controller.py --w_ip websocket --c_ip CARLA_IP --location Hotel --id all
 	```
 	3. **Send Location to Specific Vehicle**:
 	```shell
-	python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --location Hotel --id seedcar1
+	python3.7 controller.py --w_ip websocket --c_ip CARLA_IP --location Hotel --id seedcar1
     ```
 	4. **Get Real-time Information for Specific Vehicle**:
 	```shell
-	python3.7 controller.py --w_ip websocket --c_ip 128.230.114.88 --c_info seedcar1
+	python3.7 controller.py --w_ip websocket --c_ip CARLA_IP --c_info seedcar1
     ```
 	5. **Inspect the CARLA Simulator**:
 	```shell
-	python3.7 config.py --host 128.230.114.88 --inspect
+	python3.7 config.py --host CARLA_IP --inspect
 	```
 6. **Monitoring and Visualization:** Continuously observe vehicle behaviors and dynamics using Carlaviz at `http://localhost:8080`. This real-time visualization provides insight into vehicle movements and interactions within the CARLA simulation, aiding in the evaluation of simulation performance and the effectiveness of applied settings or commands.
 ### Demo
@@ -238,14 +238,14 @@ After installing CARLA Simulator, SEED Emulator, and setting up Carlaviz along w
 ### Troubleshooting
 #### Common Issues
 - **Collision Problems in Seed Cars**: If collisions occur with Seed Cars, stop the script by terminating the process (`kill <PID>`), then restart with the specific car command:
-- Replace `CARLA_SERVER_IP`, `ROLE_NAME`, and `CAMERA` with the appropriate values.
+- Replace `CARLA_IP`, `ROLE_NAME`, and `CAMERA` with the appropriate values.
 ```shell
-python3.7 -u /carla/headless_automatic_control.py --ws_ip=websocket --host=CARLA_SERVER_IP --r_name=ROLE_NAME --cam=CAMERA -l > /seed_ROLE_NAME.log 2>&1
+python3.7 -u /carla/headless_automatic_control.py --ws_ip=websocket --host=CARLA_IP --r_name=ROLE_NAME --cam=CAMERA -l > /seed_ROLE_NAME.log 2>&1
 ```
 - **Collision Problems in Traffic Generator Vehicles**: Similarly, halt the traffic script with `kill <PID>`, and restart with:
-- Ensure to substitute `CARLA_SERVER_IP`, `TRAFFIC_VEHICLES_NO`, and `TRAFFIC_WALKERS_NO` with the respective variable values.
+- Ensure to substitute `CARLA_IP`, `TRAFFIC_VEHICLES_NO`, and `TRAFFIC_WALKERS_NO` with the respective variable values.
 ```shell
-python3.7 -u generate_traffic.py --host CARLA_SERVER_IP -n TRAFFIC_VEHICLES_NO -w TRAFFIC_WALKERS_NO --asynch --safe --respawn
+python3.7 -u generate_traffic.py --host CARLA_IP -n TRAFFIC_VEHICLES_NO -w TRAFFIC_WALKERS_NO --asynch --safe --respawn
 ```
 For detailed configurations and troubleshooting, refer to the developer manual [here](carla_seed.md).
 - **Carlaviz Connection Issues**: If Carlaviz cannot connect to the CARLA server for visualization, first stop the SEED Emulator. Then, restart the CARLA server to re-establish the connection. After restarting the CARLA server, retry connecting Carlaviz to ensure the visualization links properly. This process can help reset the network connections and clear any temporary conflicts that may be preventing Carlaviz from accessing the CARLA server data.
