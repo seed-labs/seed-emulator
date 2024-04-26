@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-
-from __future__ import print_function
+# Importing necessary libraries and modules for script functionality
+from __future__ import print_function # Ensures print function compatibility with Python 2/3
 
 import argparse
 import collections
@@ -21,7 +21,7 @@ import json
 from threading import Thread
 import websockets.exceptions
 
-
+# Global locations dict for destination management
 location_name = None
 locations = {
         "Townhall": (112.70506286621094, 9.616304397583008, 0.6047301888465881),
@@ -67,32 +67,33 @@ from agents.navigation.constant_velocity_agent import ConstantVelocityAgent  # p
 # ==============================================================================
 # -- WebSocketClient -----------------------------------------------------------
 # ==============================================================================
-
+# WebSocketClient class handles WebSocket communication with the server
+# It listens for destination updates and notifies the server when the destination is reached
 class WebSocketClient:
     """Class for WebSocket client functionality"""
 
-    def __init__(self, vehicle, agent, ws_ip, ws_port):
+    def __init__(self, vehicle, agent, ws_ip, ws_port): # Initialization of the WebSocket client
         """Constructor method"""
-        self.vehicle = vehicle
-        self.agent = agent
-        self.ws_ip = ws_ip
-        self.ws_port = ws_port
+        self.vehicle = vehicle # vehicle: reference to the car actor
+        self.agent = agent     # agent: the agent controlling the car
+        self.ws_ip = ws_ip     # ws_ip: WebSocket server IP address
+        self.ws_port = ws_port # ws_port: WebSocket server port number
 
-    def start_websocket_client(self):
+    def start_websocket_client(self): #  Starts the WebSocket client and listens for messages.
         """Start the WebSocket client"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.listen_for_destination())
+        loop = asyncio.new_event_loop()         # Create a new event loop
+        asyncio.set_event_loop(loop)        # Set the event loop
+        loop.run_until_complete(self.listen_for_destination())      # Listen for destination updates
         loop.close()
 
-    async def listen_for_destination(self):
+    async def listen_for_destination(self): # Listens for destination updates from the WebSocket server
         """Listen for destination updates from the WebSocket server"""
         uri = f"ws://{self.ws_ip}:{self.ws_port}"
         try:
-            async with websockets.connect(uri) as websocket:
+            async with websockets.connect(uri) as websocket:    # Connect to the WebSocket server
                 async for message in websocket:
                     data = json.loads(message)
-                    if data["type"] == "set_destination" and (data["car_id"] == self.vehicle.attributes.get('role_name') or data["car_id"] == "all"):
+                    if data["type"] == "set_destination" and (data["car_id"] == self.vehicle.attributes.get('role_name') or data["car_id"] == "all"):   # Check if the message is a destination update
                         global location_name
                         location_name = data.get("location_name")
                         if location_name in locations:
@@ -110,14 +111,14 @@ class WebSocketClient:
         
 
 
-    async def check_and_notify_destination_reached(self):
+    async def check_and_notify_destination_reached(self):   # Checks if the destination is reached and notifies the WebSocket server
         """Check if the destination is reached and notify the WebSocket server"""
-        uri = f"ws://{self.ws_ip}:{self.ws_port}"
+        uri = f"ws://{self.ws_ip}:{self.ws_port}"       # WebSocket server URI
         #await asyncio.sleep(5)
         # Check every second, adjust as needed
         # Once done, send notification
         r_name = self.vehicle.attributes.get('role_name')
-        message = json.dumps({
+        message = json.dumps({          # Create a JSON message
             "type": "destination_reached",
             "role_name": r_name,
             "message": f"{self.vehicle.attributes.get('role_name')} has reached the destination {location_name}"
@@ -132,20 +133,20 @@ class WebSocketClient:
 role_name = None
 destroy = False
 
-def find_weather_presets():
+def find_weather_presets():     # Method to find weather presets
     """Method to find weather presets"""
     rgx = re.compile('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)')
     def name(x): return ' '.join(m.group(0) for m in rgx.finditer(x))
     presets = [x for x in dir(carla.WeatherParameters) if re.match('[A-Z].+', x)]
     return [(getattr(carla.WeatherParameters, x), name(x)) for x in presets]
 
-def get_actor_display_name(actor, truncate=250):
+def get_actor_display_name(actor, truncate=250):            # Method to get actor display name
     """Method to get actor display name"""
     name = ' '.join(actor.type_id.replace('_', '.').title().split('.')[1:])
     return (name[:truncate - 1] + u'\u2026') if len(name) > truncate else name
 
-def get_actor_blueprints(world, filter, generation):
-    bps = world.get_blueprint_library().filter(filter)
+def get_actor_blueprints(world, filter, generation):                # Method to get actor blueprints
+    bps = world.get_blueprint_library().filter(filter)                  # Get the blueprint library
 
     if generation.lower() == "all":
         return bps
@@ -157,9 +158,9 @@ def get_actor_blueprints(world, filter, generation):
 
 
     try:
-        int_generation = int(generation)
-        # Check if generation is in available generations
-        if int_generation in [1, 2, 3]:
+        int_generation = int(generation)                            
+        # Check if generation is in available generations                   
+        if int_generation in [1, 2, 3]:                     
             bps = [x for x in bps if int(x.get_attribute('generation')) == int_generation]
             return bps
         else:
@@ -174,14 +175,14 @@ def get_actor_blueprints(world, filter, generation):
 # -- World ---------------------------------------------------------------
 # ==============================================================================
 
-class World(object):
+class World(object):                                    # World class for the surrounding environment
     """ Class representing the surrounding environment """
 
-    def __init__(self, carla_world, args):
+    def __init__(self, carla_world, args):        # Constructor method
         """Constructor method"""
-        self._args = args
-        self.world = carla_world
-        self.camera_enabled = (args.cam == 'on')
+        self._args = args                 # Arguments
+        self.world = carla_world                # World
+        self.camera_enabled = (args.cam == 'on')                                               
         try:
             self.map = self.world.get_map()
         except RuntimeError as error:
@@ -202,7 +203,7 @@ class World(object):
         self.restart(args)
         
 
-    def restart(self, args):
+    def restart(self, args):        # Restart the simulation
         """Restart the world"""
         # Keep same camera config if the camera manager exists.
         if self.camera_enabled:
@@ -214,7 +215,7 @@ class World(object):
         if not blueprint_list:
             raise ValueError("Couldn't find any blueprints with the specified filters")
         blueprint = random.choice(blueprint_list)
-        blueprint.set_attribute('role_name', role_name)
+        blueprint.set_attribute('role_name', role_name)               # Set the role name for the vehicle
         if blueprint.has_attribute('color'):
             color = random.choice(blueprint.get_attribute('color').recommended_values)
             blueprint.set_attribute('color', color)
@@ -225,7 +226,7 @@ class World(object):
             spawn_point.location.z += 2.0
             spawn_point.rotation.roll = 0.0
             spawn_point.rotation.pitch = 0.0
-            self.destroy()
+            self.destroy()                    # Destroy the player  
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
             self.modify_vehicle_physics(self.player)
         while self.player is None:
@@ -254,7 +255,7 @@ class World(object):
         actor_type = get_actor_display_name(self.player)
         print(actor_type)
 
-    def next_weather(self, reverse=False):
+    def next_weather(self, reverse=False):      # Get the next weather setting
         """Get next weather setting"""
         self._weather_index += -1 if reverse else 1
         self._weather_index %= len(self._weather_presets)
@@ -262,7 +263,7 @@ class World(object):
         print('Weather: %s' % preset[1])
         self.player.get_world().set_weather(preset[0])
 
-    def modify_vehicle_physics(self, actor):
+    def modify_vehicle_physics(self, actor):    # Modify the vehicle physics
         #If actor is not a vehicle, we cannot use the physics control
         try:
             physics_control = actor.get_physics_control()
@@ -271,18 +272,18 @@ class World(object):
         except Exception:
             pass
 
-    def tick(self, clock):
+    def tick(self, clock):      # Method for every tick
         """Method for every tick"""
         self.tick(self, clock)
            
-    def destroy_sensors(self):
+    def destroy_sensors(self):      # Destroy the sensors
         """Destroy sensors"""
         if self.camera_enabled:
             self.camera_manager.sensor.destroy()
             self.camera_manager.sensor = None
             self.camera_manager.index = None
 
-    def destroy(self):
+    def destroy(self):                  # Destroy all actors
         """Destroys all actors"""
         actors = [
             self.camera_manager.sensor if self.camera_enabled else None,
@@ -299,10 +300,10 @@ class World(object):
 # ==============================================================================
 
 
-class CollisionSensor(object):
+class CollisionSensor(object):                  # CollisionSensor class to detect collisions involving the player vehicle
     """ Class for collision sensors"""
 
-    def __init__(self, parent_actor):
+    def __init__(self, parent_actor):   #Attaches a collision sensor to the specified parent actor (vehicle)
         """Constructor method"""
         self.sensor = None
         self.history = []
@@ -316,7 +317,7 @@ class CollisionSensor(object):
         weak_self = weakref.ref(self)
         self.sensor.listen(lambda event: CollisionSensor._on_collision(weak_self, event))
 
-    def get_collision_history(self):
+    def get_collision_history(self): # Get the history of collisions
         """Gets the history of collisions"""
         history = collections.defaultdict(int)
         for frame, intensity in self.history:
@@ -324,12 +325,12 @@ class CollisionSensor(object):
         return history
 
     @staticmethod
-    def _on_collision(weak_self, event):
+    def _on_collision(weak_self, event): # Method to handle collisions
         """On collision method"""
         self = weak_self()
         if not self:
             return
-        actor_type = get_actor_display_name(event.other_actor)
+        actor_type = get_actor_display_name(event.other_actor) # Get the actor type
         print('Collision with %r' % actor_type)
         impulse = event.normal_impulse
         intensity = math.sqrt(impulse.x ** 2 + impulse.y ** 2 + impulse.z ** 2)
@@ -342,10 +343,10 @@ class CollisionSensor(object):
 # ==============================================================================
 
 
-class LaneInvasionSensor(object):
+class LaneInvasionSensor(object): # Class for lane invasion sensors
     """Class for lane invasion sensors"""
 
-    def __init__(self, parent_actor):
+    def __init__(self, parent_actor): # Attaches a lane invasion sensor to the specified parent actor (vehicle)
         """Constructor method"""
         self.sensor = None
         self._parent = parent_actor
@@ -358,7 +359,7 @@ class LaneInvasionSensor(object):
         self.sensor.listen(lambda event: LaneInvasionSensor._on_invasion(weak_self, event))
 
     @staticmethod
-    def _on_invasion(weak_self, event):
+    def _on_invasion(weak_self, event): # Method to handle lane invasions
         """On invasion method"""
         self = weak_self()
         if not self:
@@ -372,10 +373,10 @@ class LaneInvasionSensor(object):
 # ==============================================================================
 
 
-class GnssSensor(object):
+class GnssSensor(object): # Class for GNSS sensors
     """ Class for GNSS sensors"""
 
-    def __init__(self, parent_actor):
+    def __init__(self, parent_actor): # Attaches a GNSS sensor to the specified parent actor (vehicle)
         """Constructor method"""
         self.sensor = None
         self._parent = parent_actor
@@ -391,7 +392,7 @@ class GnssSensor(object):
         self.sensor.listen(lambda event: GnssSensor._on_gnss_event(weak_self, event))
 
     @staticmethod
-    def _on_gnss_event(weak_self, event):
+    def _on_gnss_event(weak_self, event): # Method to handle GNSS events
         """GNSS method"""
         self = weak_self()
         if not self:
@@ -404,10 +405,10 @@ class GnssSensor(object):
 # ==============================================================================
 
 
-class CameraManager(object):
+class CameraManager(object): # CameraManager class for camera management
     """ Class for camera management"""
 
-    def __init__(self, parent_actor):
+    def __init__(self, parent_actor): # Attaches a camera sensor to the specified parent actor (vehicle)
         """Constructor method"""
         self.sensor = None
         self.surface = None
@@ -445,12 +446,12 @@ class CameraManager(object):
             item.append(blp)
         self.index = None
 
-    def toggle_camera(self):
+    def toggle_camera(self): # Activate a camera
         """Activate a camera"""
         self.transform_index = (self.transform_index + 1) % len(self._camera_transforms)
         self.set_sensor(self.index, notify=False, force_respawn=True)
 
-    def set_sensor(self, index, notify=True, force_respawn=False):
+    def set_sensor(self, index, notify=True, force_respawn=False): # Set a sensor
         """Set a sensor"""
         index = index % len(self.sensors)
         needs_respawn = True if self.index is None else (
@@ -473,16 +474,16 @@ class CameraManager(object):
             print(self.sensors[index][2])
         self.index = index
 
-    def next_sensor(self):
+    def next_sensor(self): # Get the next sensor
         """Get the next sensor"""
         self.set_sensor(self.index + 1)
 
     @staticmethod
-    def _parse_image(weak_self, image):
+    def _parse_image(weak_self, image): # Method to parse the image
         self = weak_self()
         if not self:
             return
-        if self.sensors[self.index][0].startswith('sensor.lidar'):
+        if self.sensors[self.index][0].startswith('sensor.lidar'): # If the sensor is a LiDAR sensor
             points = np.frombuffer(image.raw_data, dtype=np.dtype('f4'))
             points = np.reshape(points, (int(points.shape[0] / 4), 4))
             lidar_data = np.array(points[:, :2])
@@ -507,7 +508,7 @@ class CameraManager(object):
 # -- Game Loop ---------------------------------------------------------
 # ==============================================================================
 
-def game_loop(args):
+def game_loop(args): # Main loop of the simulation
     """
     Main loop of the simulation. It handles updating all the HUD information,
     ticking the agent and, if needed, the world.
@@ -516,20 +517,20 @@ def game_loop(args):
     world = None
 
     try:
-        if args.seed:
+        if args.seed:   # If a seed is provided
             random.seed(args.seed)
 
-        client = carla.Client(args.host, args.port)
-        client.set_timeout(60.0)
+        client = carla.Client(args.host, args.port) # Connect to the CARLA server
+        client.set_timeout(60.0) # Set the timeout for the connection
 
-        traffic_manager = client.get_trafficmanager()
-        sim_world = client.get_world()
+        traffic_manager = client.get_trafficmanager() # Get the traffic manager
+        sim_world = client.get_world() # Get the simulation world
 
         if args.sync:
-            settings = sim_world.get_settings()
-            settings.synchronous_mode = True
-            settings.fixed_delta_seconds = 0.05
-            sim_world.apply_settings(settings)
+            settings = sim_world.get_settings() # Get the simulation settings
+            settings.synchronous_mode = True # Set the synchronous mode
+            settings.fixed_delta_seconds = 0.05 # Set the fixed delta seconds
+            sim_world.apply_settings(settings) # Apply the settings
 
             traffic_manager.set_synchronous_mode(True)
 
@@ -598,7 +599,7 @@ def game_loop(args):
         destroy=True
     
     finally:
-        if world is not None:
+        if world is not None:   # If the world is not None
             settings = world.world.get_settings()
             settings.synchronous_mode = False
             settings.fixed_delta_seconds = None
@@ -613,7 +614,7 @@ def game_loop(args):
 # -- main() --------------------------------------------------------------
 # ==============================================================================
             
-def main():
+def main(): # Main method
     """Main method"""
 
     argparser = argparse.ArgumentParser(
@@ -696,7 +697,7 @@ def main():
         default="on", 
         help="Enable or disable the WebSocket client (on/off)")
 
-    args = argparser.parse_args()
+    args = argparser.parse_args() # Parse the arguments
     global role_name 
     role_name= "seed" + args.r_name
 
@@ -705,14 +706,14 @@ def main():
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
 
-    logging.info('listening to server %s:%s', args.host, args.port)
+    logging.info('listening to server %s:%s', args.host, args.port) # Log the server details
 
     print(__doc__)
 
     try:
         game_loop(args)
 
-    except KeyboardInterrupt:
+    except KeyboardInterrupt: # Handle keyboard interrupts
         print('\nCancelled by user. Bye!')
 
 
