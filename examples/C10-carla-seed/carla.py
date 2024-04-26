@@ -114,5 +114,6 @@ emu.addLayer(etc_hosts)
 # Uncomment the following if you want to generate the final emulation files
 emu.render()
 #print(dns.getZone('.').getRecords())
-emu.compile(Docker(), './output', override=True)
+docker = Docker(internetMapEnabled=True,internetMapPort=8090)
+emu.compile(docker, './output/', override = True)
 
