@@ -125,6 +125,7 @@ For detailed usage, please refer to the CARLAVIZ documentation [here](https://gi
     - Run the command `./CarlaUE4.sh` to start CARLA.
 
 ![carla_server](figs/carla_server.png)
+
 Upon launching CARLA, a window showcasing a cityscape in spectator mode appears; navigate using the mouse and WASD keys, with the right mouse button for directional control, as the server awaits client connections for interactive simulation.
 ### SEED Emulator Installation
 1. **Install the Necessary Software**
