@@ -71,9 +71,9 @@ The diagram outlines the workflow for setting a destination in a vehicle simulat
 	- **Default**: `localhost`
 	- **Purpose**: Specifies the IP address of the WebSocket server.
 	- **Usage Example**:
-	```shell
-		--w_ip 192.168.1.1 
-	```
+```shell
+-w_ip 192.168.1.1 
+```
 2. **WebSocket Port (--w_port)**
 	- **Default**: `6789`
 	- **Purpose**: Specifies the port number on which the WebSocket server is listening.
