@@ -1,4 +1,8 @@
 # CARLA-SEED Example
+By implementing this project, users can deploy numerous cars across various containers and specify the location of each vehicle. The output will include a visual representation showcasing the spatial arrangement and movement of all the cars.
+
+Requirements: This project requires a robust computational infrastructure capable of supporting containerization technology and advanced graphical rendering capabilities. Additionally, ample computing resources, including CPU and memory, are essential to effectively manage the deployment and visualization of multiple cars simultaneously.
+
 This manual provides comprehensive guidance on setting up, operating, and optimizing Carla-Seed, ensuring you efficiently leverage both simulation and emulation.The developer manual can be found [here](carla_seed.md)
 ## Table of Contents
 - [CARLA-SEED Example](#carla-seed-example)
