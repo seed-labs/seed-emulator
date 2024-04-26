@@ -283,4 +283,4 @@ For detailed configurations and troubleshooting, refer to the developer manual [
 
 To leverage machine learning models for training within the CARLA simulation environment, users should explore the "agents" folder. This folder contains scripts that enable vehicles to navigate the simulation world autonomously, either by following random routes or driving to specified destinations while complying with traffic rules and responding to dynamic obstacles.
 
-Read More: https://carla.readthedocs.io/en/0.9.12/adv_agents/
+Read More: https://carla.readthedocs.io/en/latest/adv_agents/
