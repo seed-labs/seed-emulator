@@ -534,14 +534,14 @@ def game_loop(args): # Main loop of the simulation
 
             traffic_manager.set_synchronous_mode(True)
 
-        world = World(client.get_world(), args)
-        def signal_handler(signum, frame):
-            print("Signal received:", signum)
+        world = World(client.get_world(), args) # Create the world object
+        def signal_handler(signum, frame): # Signal handler method
+            print("Signal received:", signum) # Print the signal received
             global destroy
             destroy=True
             world.destroy()
             sys.exit(0)
-        world.player.collision_sensor = CollisionSensor(world.player)
+        world.player.collision_sensor = CollisionSensor(world.player) # Create the collision sensor
         if args.agent == "Basic":
             agent = BasicAgent(world.player, 30)
             agent.follow_speed_limits(True)
@@ -555,7 +555,7 @@ def game_loop(args): # Main loop of the simulation
             agent = BehaviorAgent(world.player, behavior=args.behavior)
 
         # Set the Websocket client
-        if args.ws_enable == "on":   
+        if args.ws_enable == "on":    # If the WebSocket client is enabled
             websocket_client = WebSocketClient(world.player, agent, args.ws_ip, args.ws_port)
             thread = Thread(target=websocket_client.start_websocket_client)
             thread.daemon = True
@@ -564,12 +564,12 @@ def game_loop(args): # Main loop of the simulation
             print("WebSocket client is disabled.")
 
         # Set the agent destination
-        spawn_points = world.map.get_spawn_points()
-        destination = random.choice(spawn_points).location
-        agent.set_destination(destination)
+        spawn_points = world.map.get_spawn_points() # Get the spawn points
+        destination = random.choice(spawn_points).location # Get a random destination
+        agent.set_destination(destination) # Set the destination for the agent
 
-        signal.signal(signal.SIGTERM, signal_handler)
-        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler) # Set the signal handler for SIGTERM
+        signal.signal(signal.SIGINT, signal_handler) #  Set the signal handler for SIGINT
         while True:
             
             if args.sync:
@@ -577,20 +577,20 @@ def game_loop(args): # Main loop of the simulation
             else:
                 world.world.wait_for_tick()
 
-            if agent.done():
-                if args.loop:
-                    asyncio.run(websocket_client.check_and_notify_destination_reached())
-                    agent.set_destination(random.choice(spawn_points).location)
-                    print("The target has been reached, searching for another target")
+            if agent.done(): # If the agent is done
+                if args.loop: # If the loop is enabled
+                    asyncio.run(websocket_client.check_and_notify_destination_reached()) # Check and notify the destination reached
+                    agent.set_destination(random.choice(spawn_points).location) # Set a new destination
+                    print("The target has been reached, searching for another target") # Print the target has been reached
                 else:
-                    print("The target has been reached, stopping the simulation")
+                    print("The target has been reached, stopping the simulation") # Print the target has been reached
                     return
 
-            control = agent.run_step()
-            control.manual_gear_shift = False
-            world.player.apply_control(control)
+            control = agent.run_step() # Run the agent step
+            control.manual_gear_shift = False # Set the manual gear shift to False
+            world.player.apply_control(control) # Apply the control to the player
             
-    except Exception as e:
+    except Exception as e: # Handle exceptions
         print("Failed to connect to the CARLA server or get the traffic manager:", e)
     except KeyboardInterrupt:
         print("The simulation has been stopped by the user.")
@@ -600,11 +600,11 @@ def game_loop(args): # Main loop of the simulation
     
     finally:
         if world is not None:   # If the world is not None
-            settings = world.world.get_settings()
-            settings.synchronous_mode = False
-            settings.fixed_delta_seconds = None
-            world.world.apply_settings(settings)
-            traffic_manager.set_synchronous_mode(True)
+            settings = world.world.get_settings() # Get the simulation settings
+            settings.synchronous_mode = False # Set the synchronous mode to False
+            settings.fixed_delta_seconds = None # Set the fixed delta seconds to None
+            world.world.apply_settings(settings) # Apply the settings
+            traffic_manager.set_synchronous_mode(True) # Set the synchronous mode
             if not destroy:
                 world.destroy()
     
@@ -701,9 +701,9 @@ def main(): # Main method
     global role_name 
     role_name= "seed" + args.r_name
 
-    args.width, args.height = [int(x) for x in args.res.split('x')]
+    args.width, args.height = [int(x) for x in args.res.split('x')] # Set the window resolution
 
-    log_level = logging.DEBUG if args.debug else logging.INFO
+    log_level = logging.DEBUG if args.debug else logging.INFO # Set the log level
     logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
 
     logging.info('listening to server %s:%s', args.host, args.port) # Log the server details
@@ -711,7 +711,7 @@ def main(): # Main method
     print(__doc__)
 
     try:
-        game_loop(args)
+        game_loop(args) # Run the game loop with the arguments
 
     except KeyboardInterrupt: # Handle keyboard interrupts
         print('\nCancelled by user. Bye!')
