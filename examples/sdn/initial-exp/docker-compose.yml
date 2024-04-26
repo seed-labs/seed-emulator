@@ -47,27 +47,4 @@ services:
                       /etc/init.d/openbsd-inetd start  &&
                       tail -f /dev/null
                  "
-    host-c1:
-        image: handsonsecurity/seed-ubuntu:large-arm
-        container_name: host-c1
-        tty: true
-        cap_add:
-                - ALL
-        network_mode: none
-        command: bash -c "
-                      /etc/init.d/openbsd-inetd start  &&
-                      tail -f /dev/null
-                 "
-
-    host-c2:
-        image: handsonsecurity/seed-ubuntu:large-arm
-        container_name: host-c2
-        tty: true
-        cap_add:
-                - ALL
-        network_mode: none
-        command: bash -c "
-                      /etc/init.d/openbsd-inetd start  &&
-                      tail -f /dev/null
-                 "
 
