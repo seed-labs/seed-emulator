@@ -804,28 +804,28 @@ Tips for diagnosing and fixing issues specific to the integration
 
 #### Enhanced Respawn Mechanics
 
-**Objective**: To introduce an automated system that allows for the quick re-entry of vehicles into the simulation after a crash, improving continuous testing flow.
+To introduce an automated system that allows for the quick re-entry of vehicles into the simulation after a crash, improving continuous testing flow.
 
 #### Dynamic Perspective Switching in CARLA Viz
 
-**Objective**: To upgrade CARLA Viz with capabilities that enable users to switch perspectives between various vehicles and environmental cameras for a more comprehensive analysis.
+To upgrade CARLA Viz with capabilities that enable users to switch perspectives between various vehicles and environmental cameras for a more comprehensive analysis.
 
 #### V2V Communication Expansion
 
-**Objective**: To implement and refine Vehicle-to-Vehicle (V2V) communication within the simulation, allowing for complex scenario testing involving direct interactions between autonomous vehicles.
+To implement and refine Vehicle-to-Vehicle (V2V) communication within the simulation, allowing for complex scenario testing involving direct interactions between autonomous vehicles.
 
 #### Sensor Suite Enhancement
 
-**Objective**: To integrate a broader range of sensors, like Obstacle Detection and IMU sensors, to simulate more advanced vehicle sensing capabilities and enhance decision-making algorithms.
+To integrate a broader range of sensors, like Obstacle Detection and IMU sensors, to simulate more advanced vehicle sensing capabilities and enhance decision-making algorithms.
 
 #### SEED Emulator Wireless Integration
 
-**Objective**: To utilize the SEED Emulator's wireless networking capabilities for simulating realistic network environments, essential for testing AV's network resilience and performance.
+To utilize the SEED Emulator's wireless networking capabilities for simulating realistic network environments, essential for testing AV's network resilience and performance.
 
 #### Performance Optimization
 
-**Objective**: Continuous optimization of sensor usage and computational processes is necessary to maintain and improve simulation efficiency, particularly as the complexity and scale of the simulation environment grow.
+Continuous optimization of sensor usage and computational processes is necessary to maintain and improve simulation efficiency, particularly as the complexity and scale of the simulation environment grow.
 
 #### Scenario-Based Testing Enhancements
 
-**Objective**: To develop an expanded set of test scenarios that can automatically adapt based on vehicle behavior and environmental changes, increasing the robustness and reliability of autonomous systems.
+To develop an expanded set of test scenarios that can automatically adapt based on vehicle behavior and environmental changes, increasing the robustness and reliability of autonomous systems.
