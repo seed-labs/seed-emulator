@@ -132,7 +132,7 @@ The diagram outlines the workflow for setting a destination in a vehicle simulat
 ```python
 	destination = {"type": "set_destination", "location_name": location_name, "car_id": id}
  ```
-**Purpose**: Constructs a JSON object containing the type of request, the destination location, and the car ID, preparing it for transmission.
+**Purpose**: Constructs a JSON object containing the type of request, the destination location, and the car ID, preparing it for transmission. <br />
 **Establish Web Socket Connection:** 
 ```python
 	async with websockets.connect(WEBSOCKET_URI) as websocket
