@@ -1,4 +1,4 @@
-#traffic-generator-program#web-server-program# CARLA-SEED 
+# CARLA-SEED 
 The Developer Manual offers detailed insights into project architecture, technical implementation, visualization, and future developments.
 ## Table of Contents
 - [CARLA-SEED](#carla-seed)
