@@ -15,6 +15,8 @@ The Developer Manual offers detailed insights into project architecture, technic
 	  - [headless_automatic_control](#headless_automatic_controlpy)
 	  - [generate_traffic](#generate_trafficpy)
 	  - [carlaviz](#carla-viz)
+  - [Troubleshooting](#troubleshooting)
+  - [Appendix]()
   - [Future Work](#future-work)
 ## Core concepts
 ### World and client
@@ -819,4 +821,10 @@ To utilize the SEED Emulator's wireless networking capabilities for simulating r
 #### Performance Optimization
 Continuous optimization of sensor usage and computational processes is necessary to maintain and improve simulation efficiency, particularly as the complexity and scale of the simulation environment grow.
 #### Scenario-Based Testing Enhancements
+
 To develop an expanded set of test scenarios that can automatically adapt based on vehicle behavior and environmental changes, increasing the robustness and reliability of autonomous systems.
+### Appendix
+
+To leverage machine learning models for training within the CARLA simulation environment, users should explore the "agents" folder. This folder contains scripts that enable vehicles to navigate the simulation world autonomously, either by following random routes or driving to specified destinations while complying with traffic rules and responding to dynamic obstacles.
+
+Read More: https://carla.readthedocs.io/en/0.9.12/adv_agents/
