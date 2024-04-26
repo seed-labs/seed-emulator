@@ -1,5 +1,5 @@
 # CARLA-SEED 
-The Developer Manual offers detailed insights into project architecture, technical implementation, visualization, and future developments, as well as troubleshooting guidance. 
+The Developer Manual offers detailed insights into project architecture, technical implementation, visualization, and future developments.
 ## Table of Contents
 - [CARLA-SEED](#carla-seed)
   - [Table of Contents](#table-of-contents)
@@ -9,14 +9,12 @@ The Developer Manual offers detailed insights into project architecture, technic
       - [How CARLA-SEED Works Behind the Scenes](#initialization-flow)
 	  - [How User Set Destination to Vehicles](#setting-a-destination-workflow)
   - [Technical Implementation](#technical-implementation)
-	  - [carla server](#carlaserver)
 	  - [web server](#webserverpy)
 	  - [controller](#controllerpy)
 	  - [config](#configpy)
 	  - [headless_automatic_control](#headless_automatic_controlpy)
 	  - [generate_traffic](#generate_trafficpy)
 	  - [carlaviz](#carla-viz)
-  - [Troubleshooting](#troubleshooting)
   - [Future Work](#future-work)
 ## Core concepts
 ### World and client
@@ -38,15 +36,15 @@ Read More: https://carla.readthedocs.io/en/latest/core_concepts/#4th-sensors-and
 ## Project Architecture
 ![architecure_diagram](figs/architecture_diagram.png)
 ### Base components of Architecture
-1. **Car Containers (Host-152 to Host-157):**
+1. **Car Containers (seedcar1/152 to seedcar6/157):**
 Each car container runs an instance of `automatic.control.py`, with six distinct containers handling separate cars in the simulation. They're designed for minimal CPU usage and are identified as Host-152 through Host-157 in the architecture
-2. **Web Socket Container (Host-150):**
+2. **Web Socket Container (websocket/150):**
 This container acts as a dedicated communication hub, enabling real-time interactions between the Controller and the Car containers. It uses WebSocket protocol to facilitate bidirectional messaging.
-3. **Controller (Host-151)**
+3. **Controller (controller/151)**
 The Controller orchestrates the simulation by setting car locations, fetching data, and issuing commands to the Car containers. It's the administrative center of the simulation, interacting with the cars through the WebSocket container.
 4. **Internet Router (99999/real-world):**
 This router represents the gateway for all the containers to connect with the wider internet, allowing data to flow between the CARLA server and the SEED emulator, effectively bridging the simulation with the client machine.
-5. **Traffic Manager(Host -158):**
+5. **Traffic Manager(traffic-158):**
 The Traffic Manager generates both vehicle and pedestrian traffic, creating a comprehensive and lively urban simulation environment.
 6. **CARLA Server:**
  Running remotely, the CARLA server is the simulation engine powered by Unreal Engine, creating high-fidelity visual and physical simulations of driving environments. It connects to the SEED emulator via the internet.
@@ -97,7 +95,6 @@ Although not depicted in the diagram, the CarlaViz container is an integral part
 6. **Confirmation to Controller**:
     - The Controller Container receives a notification confirming the car's arrival at the specified destination.
 ## Technical Implementation
-### CARLA Server
 ### Controller Program
 #### Command Line Arguments
 1. **WebSocket IP (--w_ip)**
@@ -807,11 +804,6 @@ Read more: https://carla.readthedocs.io/en/0.9.6/python_api_tutorial/
 - `signal_handler()`: Gracefully handles termination signals to ensure proper cleanup.
 ##### Game Loop
 - `game_loop()`: The main loop that runs the simulation, handling agent updates, world ticks, and event parsing.
-### Troubleshooting
-#### Common Issues
-A list of common problems that may arise when using the integration and their solutions.
-#### Debugging Tips 
-Tips for diagnosing and fixing issues specific to the integration
 ### Future Work
 
 #### Enhanced Respawn Mechanics
