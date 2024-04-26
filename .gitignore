@@ -24,6 +24,7 @@ client/frontend/node_modules
 client/backend/node_modules
 client/backend/bin
 *.bin
-output
+output*
 project-words.txt
 .venv
+test_result.txt

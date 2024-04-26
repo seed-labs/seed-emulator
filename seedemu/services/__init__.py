@@ -11,6 +11,7 @@ from .DHCPService import DHCPServer, DHCPService
 from .EthereumService import *
 from .ScionBwtestService import ScionBwtestService
 from .KuboService import *
+from .CAService import CAService, CAServer, RootCAStore
 from .ChainlinkService.ChainlinkService import ChainlinkService
 from .ChainlinkService.ChainlinkUserService import ChainlinkUserService
 
