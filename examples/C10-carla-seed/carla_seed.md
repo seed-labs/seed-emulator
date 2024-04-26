@@ -402,217 +402,218 @@ Read more: https://carla.readthedocs.io/en/latest/adv_traffic_manager/#creating-
 	```shell
 		 --number-of-vehicles 50
 	 ```
-#### **Number of Walkers (--number-of-walkers, -w)**
-- **Default**: `10`
-- **Purpose**: Specifies the number of pedestrian actors (walkers) to spawn.
-- **Usage Example**:
+4. **Number of Walkers (--number-of-walkers, -w)**
+	- **Default**: `10`
+	- **Purpose**: Specifies the number of pedestrian actors (walkers) to spawn.
+	- **Usage Example**:
 ```shell
 		--number-of-walkers 15
 ```
-#### **Safe (--safe)**
-- **Purpose**: Ensures that vehicles are spawned in a 'safe' mode, preventing spawning in locations that would immediately cause collisions.
-- **Usage Example**:
+5. **Safe (--safe)**
+	- **Purpose**: Ensures that vehicles are spawned in a 'safe' mode, preventing spawning in locations that would immediately cause collisions.
+	- **Usage Example**:
 ```shell
 		--safe
 ```
-#### **Vehicle Filter (--filterv)**
-- **Default**: `vehicle.*`
-- **Purpose**: Filters the vehicle models based on the given pattern.
-- **Usage Example**:
+6. **Vehicle Filter (--filterv)**
+	- **Default**: `vehicle.*`
+	- **Purpose**: Filters the vehicle models based on the given pattern.
+	- **Usage Example**:
 ```shell
 		--filterv "vehicle.audi.*"
 ```
-#### **Walker Filter (--filterw)**
-- **Default**: `walker.pedestrian.*`
-- **Purpose**: Filters the pedestrian types based on the given pattern.
-- **Usage Example**:
+7. **Walker Filter (--filterw)**
+	- **Default**: `walker.pedestrian.*`
+	- **Purpose**: Filters the pedestrian types based on the given pattern.
+	- **Usage Example**:
 ```shell
 		--filterw "walker.pedestrian.adult.*"
 ```
-#### **Vehicle Generation (--generationv)**
-- **Default**: `All`
-- **Purpose**: Restricts the vehicle models to a specific generation.
-- **Usage Example**:
+8. **Vehicle Generation (--generationv)**
+	- **Default**: `All`
+	- **Purpose**: Restricts the vehicle models to a specific generation.
+	- **Usage Example**:
 ```shell
 		--generationv 2
 ```
-#### **Walker Generation (--generationw)**
-- **Default**: `2`
-- **Purpose**: Restricts the pedestrian types to a specific generation.
-- **Usage Example**:
+9. **Walker Generation (--generationw)**
+	- **Default**: `2`
+	- **Purpose**: Restricts the pedestrian types to a specific generation.
+	- **Usage Example**:
 ```shell
 		--generationw 1
 ```
-#### **Traffic Manager Port (--tm-port)**
-- **Default**: `8000`
-- **Purpose**: Specifies the port for communication with the Traffic Manager.
-- **Usage Example**:
-```shell
+10. **Traffic Manager Port (--tm-port)**
+	- **Default**: `8000`
+	- **Purpose**: Specifies the port for communication with the Traffic Manager.
+	- **Usage Example:**	
+	```shell
 		--tm-port 8000
 ```
-#### **Asynchronous Mode (--asynch)**
-- **Purpose**: Activates asynchronous mode execution in the simulation(CARLA world).
-- **Usage Example**:
-```shell
+11. **Asynchronous Mode (--asynch)**
+	- **Purpose**: Activates asynchronous mode execution in the simulation(CARLA world).
+	- **Usage Example**:
+	```shell
 		--asynch
 ```
-#### **Hybrid Mode (--hybrid)**
-- **Purpose**: Activates hybrid mode for the Traffic Manager to manage vehicle physics more realistically.
-- **Usage Example**:
-```shell
+12. **Hybrid Mode (--hybrid)**
+	- **Purpose**: Activates hybrid mode for the Traffic Manager to manage vehicle physics more realistically.
+	- **Usage Example**:
+	```shell
 		--hybrid
 ```
-#### **Seed (--seed,-s)**
-- **Purpose**: Sets a deterministic seed for vehicle and pedestrian behavior in the simulation.
-- **Usage Example**:
-```shell
+13. **Seed (--seed,-s)**
+	- **Purpose**: Sets a deterministic seed for vehicle and pedestrian behavior in the simulation.
+	- **Usage Example**:
+	```shell
 		--seed 12345
 ```
-#### **Pedestrian Seed (--seedw)**
-- **Default**: `0`
-- **Purpose**: Sets the seed for pedestrian module behavior.
-- **Usage Example**:
-```shell
+14. **Pedestrian Seed (--seedw)**
+	- **Default**: `0`
+	- **Purpose**: Sets the seed for pedestrian module behavior.
+	- **Usage Example**:
+	```shell
 		--seedw 456
 ```
-#### **Car Lights On (--car-lights-on)**
-- **Purpose**: Enables automatic management of car lights.
-- **Usage Example**:
-```shell
+15. **Car Lights On (--car-lights-on)**
+	- **Purpose**: Enables automatic management of car lights.
+	- **Usage Example**:
+	```shell
 		--car-lights-on
 ```
-#### **Hero Vehicle (--hero)**
-- **Purpose**: Designates one of the vehicles as a 'hero' vehicle for specific testing or observation.
-- **Usage Example**:
-```shell
+16. **Hero Vehicle (--hero)**
+	- **Purpose**: Designates one of the vehicles as a 'hero' vehicle for specific testing or observation.
+	- **Usage Example**:
+	```shell
 		--hero
 ```
-#### **Respawn (--respawn)**
-- **Purpose**: Enables automatic respawning of dormant vehicles, useful in large maps.
-- **Usage Example**:
-```shell
+17. **Respawn (--respawn)**
+	- **Purpose**: Enables automatic respawning of dormant vehicles, useful in large maps.
+	- **Usage Example**:
+	```shell
 		--respawn
 ```
-#### **No Rendering (--no-rendering)**
-- **Purpose**: Activates a mode where the simulation runs without graphical rendering.
-- **Usage Example**:
-```shell
+18. **No Rendering (--no-rendering)**
+	- **Purpose**: Activates a mode where the simulation runs without graphical rendering.
+	- **Usage Example**:
+	```shell
 		--no-rendering
 ```
 #### Carla Viz
 CARLA VIZ is a visualization tool designed to enhance the user experience when working with the CARLA simulator(CARLA world). It provides real-time graphical representation of simulations, enabling detailed analysis and debugging of autonomous vehicle behaviors in dynamic environments.
 
 Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
-##### Connector Host(--connector_host)
-- **Type**: string
-- **Default:** "0.0.0.0"
-- **Purpose:** Specifies the host address for the Carla Viz server to listen on. Basically, to set ip address of Carla Viz Server
-- **Usage Example:** 
+
+1. **Connector Host(--connector_host)**
+	- **Type**: string
+	- **Default:** "0.0.0.0"
+	- **Purpose:** Specifies the host address for the Carla Viz server to listen on. Basically, to set ip address of Carla Viz Server
+	- **Usage Example:** 
 ```shell
 		--connector_host 192.168.1.5
 ```
-##### **Connector Port (--connector_port)**
-- **Type**: uint32
-- **Purpose**: Specifies the port number for the Carla Viz server to listen on. Basically, to set port number of Carla Viz Server.
-- **Default**: 8081
-- **Usage Example**:
-```shell
+ 2. **Connector Port (--connector_port)**
+	- **Type**: uint32
+	- **Purpose**: Specifies the port number for the Carla Viz server to listen on. Basically, to set port number of Carla Viz Server.
+	- **Default**: 8081
+	- **Usage Example**:
+	```shell
 		--connector_port 9090
 ```
-##### Connector Update Interval Milliseconds 
-(--connector_update_interval_milliseconds)
-- **Type**: uint32
-- **Purpose**: Determines how frequently, in milliseconds, the connector should update. Basically, in how many milliseconds Carla Viz will get data from Carla World.
-- **Default**: 500
-- **Usage Example**:
+3. **Connector Update Interval Milliseconds 
+(--connector_update_interval_milliseconds)**
+	- **Type**: uint32
+	- **Purpose**: Determines how frequently, in milliseconds, the connector should update. Basically, in how many milliseconds Carla Viz will get data from Carla World.
+	- **Default**: 500
+	- **Usage Example**:
 ```shell
 		--connector_update_interval_milliseconds 1000
 ```
-##### **Log Filename (--log_filename)**
-- **Type**: string
-- **Purpose**: Sets the filename where logs will be stored.
-- **Usage Example**:
+4. **Log Filename (--log_filename)**
+	- **Type**: string
+	- **Purpose**: Sets the filename where logs will be stored.
+	- **Usage Example**:
 ```shell
 		--log_filename server.log
 ```
-##### **Log Level (--log_level)**
-- **Type**: string
-- **Purpose**: Sets the level of logging detail.
-- **Default**: "info"
-- **Usage Example**:
+5. **Log Level (--log_level)**
+	- **Type**: string
+	- **Purpose**: Sets the level of logging detail.
+	- **Default**: "info"
+	- **Usage Example**:
 ```shell
 		--log_level debug
 ```
-##### **Simulator Ego Vehicle Name (--simulator_ego_vehicle_name)**
-- **Type**: string
-- **Purpose**: Role Name the vehicle in the simulator which you monitor.
-- **Default**: "ego"
-- **Usage Example**:
+6. Simulator Ego Vehicle Name (--simulator_ego_vehicle_name)**
+	- **Type**: string
+	- **Purpose**: Role Name the vehicle in the simulator which you monitor.
+	- **Default**: "ego"
+	- **Usage Example**:
 ```shell
 		--simulator_ego_vehicle_name alpha
 ```
-##### **Simulator Host (--simulator_host)**
-- **Type**: string
-- **Purpose**: Defines the host address of the CARLA simulator( CARLA world).
-- **Default**: "localhost"
-- **Usage Example**:
+7. **Simulator Host (--simulator_host)**
+	- **Type**: string
+	- **Purpose**: Defines the host address of the CARLA simulator( CARLA world).
+	- **Default**: "localhost"
+	- **Usage Example**:
 ```shell
 		--simulator_host 10.0.0.2
 ```
-##### **Simulator Port (--simulator_port)**
-- **Type**: uint32
-- **Purpose**: Specifies the port number for connecting to the simulator.
-- **Default**: 2000
-- **Usage Example**:
+8. **Simulator Port (--simulator_port)**
+	- **Type**: uint32
+	- **Purpose**: Specifies the port number for connecting to the simulator.
+	- **Default**: 2000
+	- **Usage Example**:
 ```shell
 		--simulator_port 3000
 ```
-##### **Simulator Retry Interval Seconds (--simulator_retry_interval_seconds)**
-- **Type**: uint32
-- **Purpose**: Sets the interval, in seconds, between connection retries to the simulator.
-- **Default**: 1
-- **Usage Example**:
+9. **Simulator Retry Interval Seconds (--simulator_retry_interval_seconds)**
+	- **Type**: uint32
+	- **Purpose**: Sets the interval, in seconds, between connection retries to the simulator.
+	- **Default**: 1
+	- **Usage Example**:
 ```shell
 		--simulator_retry_interval_seconds 5
 ```
-##### **Simulator Retry Times After Disconnection (--simulator_retry_times_after_disconnection)**
-- **Type**: uint32
-- **Purpose**: Specifies how many times to retry connecting to the simulator after a disconnection.
-- **Default**: 3
-- **Usage Example**:
-```shell
+10. **Simulator Retry Times After Disconnection (--simulator_retry_times_after_disconnection)**
+	- **Type**: uint32
+	- **Purpose**: Specifies how many times to retry connecting to the simulator after a disconnection.
+	- **Default**: 3
+	- **Usage Example**:
+	```shell
 		--simulator_retry_times_after_disconnection 10
 ```
-##### **Simulator Sensor Max Lag Frame (--simulator_sensor_max_lag_frame)**
-- **Type**: uint32
-- **Purpose**: Limits the maximum frame lag for sensors in the simulator.
-- **Default**: 30
-- **Usage Example**:
-```shell
+11. Simulator Sensor Max Lag Frame (--simulator_sensor_max_lag_frame)**
+	- **Type**: uint32
+	- **Purpose**: Limits the maximum frame lag for sensors in the simulator.
+	- **Default**: 30
+	- **Usage Example**:
+	```shell
 		--simulator_sensor_max_lag_frame 10
 ```
-##### **Simulator Sleep Between Updates Milliseconds (--simulator_sleep_between_updates_milliseconds)**
-- **Type**: uint32
-- **Purpose**: Decides whether to insert a delay between two updates in the simulator, and if so, how long in milliseconds.
-- **Default**: 0
-- **Usage Example**:
-```shell
+12. **Simulator Sleep Between Updates Milliseconds (--simulator_sleep_between_updates_milliseconds)**
+	- **Type**: uint32
+	- **Purpose**: Decides whether to insert a delay between two updates in the simulator, and if so, how long in milliseconds.
+	- **Default**: 0
+	- **Usage Example**:
+	```shell
 		--simulator_sleep_between_updates_milliseconds 100
 ```
-##### **Simulator Timeout Seconds (--simulator_timeout_seconds)**
-- **Type**: uint32
-- **Purpose**: Sets the timeout duration, in seconds, for connecting to the simulator.
-- **Default**: 10
-- **Usage Example**:
-```shell
+13. **Simulator Timeout Seconds (--simulator_timeout_seconds)**
+	- **Type**: uint32
+	- **Purpose**: Sets the timeout duration, in seconds, for connecting to the simulator.
+	- **Default**: 10
+	- **Usage Example**:
+	```shell
 		--simulator_timeout_seconds 30
 ```
-##### **Translation Allow Static Objects (--translation_allow_static_objects)**
-- **Type**: bool
-- **Purpose**: Controls whether static objects are shown in translations.
-- **Default**: true
-- **Usage Example**:
-```shell
+14. **Translation Allow Static Objects (--translation_allow_static_objects)**
+	- **Type**: bool
+	- **Purpose**: Controls whether static objects are shown in translations.
+	- **Default**: true
+	- **Usage Example**:
+	```shell
 		--translation_allow_static_objects false
 ```
 #### Headless_Automatic_control.py
