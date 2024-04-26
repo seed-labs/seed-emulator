@@ -3,8 +3,8 @@
 
 dps:
     sw1:
-        dp_id: 0x1
-        timeout: 250
+        dp_id: 0x1 # This must match with the datapath-id when setting the controller using ovs-vsctl 
+        timeout: 250 # This is the time out after which SDN controller will reconfirm MAC address of the devices. It must be more than 2 times of ARP neighbor timeout.
         arp_neighbor_timeout: 120
         interfaces:
             1:
@@ -35,7 +35,7 @@ dps:
 vlans:
     vlan100:
         vid: 100
-        faucet_vips: ["10.150.1.252/24"]
+        faucet_vips: ["10.150.1.252/24"] # when routing is enabled this is the router-ip for this vlan
         faucet_mac: "aa:bb:cc:dd:ee:01"
     vlan200:
         vid: 200
@@ -48,7 +48,7 @@ vlans:
 
 routers:
     router_1:
-        vlans: [vlan100, vlan200]
+        vlans: [vlan100, vlan200] #inter-vlan routing
     #router_2:
     #    vlans: [vlan200, vlan300]
     bgp_router:
