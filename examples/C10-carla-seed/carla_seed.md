@@ -678,7 +678,7 @@ Read more: https://carla.readthedocs.io/en/0.9.6/python_api_tutorial/
 	```shell
 		--sync
 	```
-5. Actor Filter (--filter)
+5. **Actor Filter (--filter)**
 	- **Default:** "vehicle.*"
 	- **Purpose:** Filters the types of vehicle actors to spawn based on a pattern.
 	- **Usage Example:**
@@ -805,7 +805,6 @@ Read more: https://carla.readthedocs.io/en/0.9.6/python_api_tutorial/
 ##### Game Loop
 - `game_loop()`: The main loop that runs the simulation, handling agent updates, world ticks, and event parsing.
 ### Future Work
-
 #### Enhanced Respawn Mechanics
 To introduce an automated system that allows for the quick re-entry of vehicles into the simulation after a crash, improving continuous testing flow.
 #### Dynamic Perspective Switching in CARLA Viz
@@ -819,6 +818,5 @@ To utilize the SEED Emulator's wireless networking capabilities for simulating r
 #### Performance Optimization
 Continuous optimization of sensor usage and computational processes is necessary to maintain and improve simulation efficiency, particularly as the complexity and scale of the simulation environment grow.
 #### Scenario-Based Testing Enhancements
-
 To develop an expanded set of test scenarios that can automatically adapt based on vehicle behavior and environmental changes, increasing the robustness and reliability of autonomous systems.
 
