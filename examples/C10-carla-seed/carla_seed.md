@@ -82,7 +82,20 @@ Although not depicted in the diagram, the CarlaViz container is an integral part
     - The initialization process is completed, and the car container is now ready for interactive simulation, awaiting further instructions or tasks.
 ### How User Set Destination to Vehicles
 ![Destination](figs/destination.png)
-The diagram outlines the workflow for setting a destination in a vehicle simulation system. The process begins with the Controller Container, which sends a destination to the WebSocket Container. This request is routed through the Internet Exchange to the WebSocket Container, which checks if the destination is meant for one car or all cars. If it’s for one car, the WebSocket sends the information to that specific car. If it’s for all cars, the WebSocket broadcasts the destination to every car container. Once the correct car or cars receive the request, they set the new destination. As a car reaches the destination, it sends a notification back through the WebSocket Container. Finally, the Controller receives a notification that confirms the car's arrival at the specified location. This workflow ensures that destination commands are accurately communicated and acknowledged within the system.
+- **Destination Request Initiation**:
+    - The Controller Container starts the process by sending a destination request to the WebSocket Container.
+- **Request Routing**:
+    - The destination request is routed through the Internet Exchange to the WebSocket Container.
+- **Destination Check by WebSocket Container**:
+    - The WebSocket Container checks the destination request to determine if it is meant for a specific car or all cars:
+        - If the request is for one specific car, the WebSocket sends the information directly to that car.
+        - If the request is for all cars, the WebSocket broadcasts the destination to every car container.
+- **Destination Setting by Cars**:
+    - The targeted car or cars receive the destination request and set the new destination accordingly.
+- **Destination Reach Notification**:
+    - As a car reaches the new destination, it sends a notification back through the WebSocket Container.
+- **Confirmation to Controller**:
+    - The Controller Container receives a notification confirming the car's arrival at the specified destination.
 ## Technical Implementation
 
 ### CARLA Server
