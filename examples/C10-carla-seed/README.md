@@ -1,5 +1,7 @@
 # CARLA-SEED Example
-By implementing this project, users can deploy numerous cars across various containers and specify the location of each vehicle. The output will include a visual representation showcasing the spatial arrangement and movement of all the cars.
+
+By implementing this project, users can deploy multiple cars across different containers and precisely define the location of each vehicle. The output will provide a visual representation illustrating the spatial arrangement and dynamic movement of all the cars. Furthermore, users can retrieve specific data pertaining to individual cars.
+
 
 Requirements: This project requires a robust computational infrastructure capable of supporting containerization technology and advanced graphical rendering capabilities. Additionally, ample computing resources, including CPU and memory, are essential to effectively manage the deployment and visualization of multiple cars simultaneously.
 
