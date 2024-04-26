@@ -483,57 +483,57 @@ Read more: https://carla.readthedocs.io/en/latest/adv_traffic_manager/#creating-
 	- **Usage Example:**	
 	```shell
 		--tm-port 8000
-```
+	```
 
 11. **Asynchronous Mode (--asynch)**
 	- **Purpose**: Activates asynchronous mode execution in the simulation(CARLA world).
 	- **Usage Example**:
 	```shell
 		--asynch
-```
+	```
 12. **Hybrid Mode (--hybrid)**
 	- **Purpose**: Activates hybrid mode for the Traffic Manager to manage vehicle physics more realistically.
 	- **Usage Example**:
 	```shell
 		--hybrid
-```
+	```
 13. **Seed (--seed,-s)**
 	- **Purpose**: Sets a deterministic seed for vehicle and pedestrian behavior in the simulation.
 	- **Usage Example**:
 	```shell
 		--seed 12345
-```
+	```
 14. **Pedestrian Seed (--seedw)**
 	- **Default**: `0`
 	- **Purpose**: Sets the seed for pedestrian module behavior.
 	- **Usage Example**:
 	```shell
 		--seedw 456
-```
+	```
 15. **Car Lights On (--car-lights-on)**
 	- **Purpose**: Enables automatic management of car lights.
 	- **Usage Example**:
 	```shell
 		--car-lights-on
-```
+	```
 16. **Hero Vehicle (--hero)**
 	- **Purpose**: Designates one of the vehicles as a 'hero' vehicle for specific testing or observation.
 	- **Usage Example**:
 	```shell
 		--hero
-```
+	```
 17. **Respawn (--respawn)**
 	- **Purpose**: Enables automatic respawning of dormant vehicles, useful in large maps.
 	- **Usage Example**:
 	```shell
 		--respawn
-```
+	```
 18. **No Rendering (--no-rendering)**
 	- **Purpose**: Activates a mode where the simulation runs without graphical rendering.
 	- **Usage Example**:
 	```shell
 		--no-rendering
-```
+	```
 #### Carla Viz
 CARLA VIZ is a visualization tool designed to enhance the user experience when working with the CARLA simulator(CARLA world). It provides real-time graphical representation of simulations, enabling detailed analysis and debugging of autonomous vehicle behaviors in dynamic environments.
 
@@ -554,7 +554,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 	- **Usage Example**:
 	```shell
 		--connector_port 9090
-```
+	```
 3. **Connector Update Interval Milliseconds 
 (--connector_update_interval_milliseconds)**
 	- **Type**: uint32
@@ -618,7 +618,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 	- **Usage Example**:
 	```shell
 		--simulator_retry_times_after_disconnection 10
-```
+	```
 11. Simulator Sensor Max Lag Frame (--simulator_sensor_max_lag_frame)**
 	- **Type**: uint32
 	- **Purpose**: Limits the maximum frame lag for sensors in the simulator.
@@ -626,7 +626,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 	- **Usage Example**:
 	```shell
 		--simulator_sensor_max_lag_frame 10
-```
+	```
 12. **Simulator Sleep Between Updates Milliseconds (--simulator_sleep_between_updates_milliseconds)**
 	- **Type**: uint32
 	- **Purpose**: Decides whether to insert a delay between two updates in the simulator, and if so, how long in milliseconds.
@@ -634,7 +634,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 	- **Usage Example**:
 	```shell
 		--simulator_sleep_between_updates_milliseconds 100
-```
+	```
 13. **Simulator Timeout Seconds (--simulator_timeout_seconds)**
 	- **Type**: uint32
 	- **Purpose**: Sets the timeout duration, in seconds, for connecting to the simulator.
@@ -642,7 +642,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 	- **Usage Example**:
 	```shell
 		--simulator_timeout_seconds 30
-```
+	```
 14. **Translation Allow Static Objects (--translation_allow_static_objects)**
 	- **Type**: bool
 	- **Purpose**: Controls whether static objects are shown in translations.
