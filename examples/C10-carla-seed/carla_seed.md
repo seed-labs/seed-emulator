@@ -71,9 +71,9 @@ The diagram outlines the workflow for setting a destination in a vehicle simulat
 	- **Default**: `localhost`
 	- **Purpose**: Specifies the IP address of the WebSocket server.
 	- **Usage Example**:
-```shell
--w_ip 192.168.1.1 
-```
+	```shell
+		--w_ip 192.168.1.1 
+	```
 2. **WebSocket Port (--w_port)**
 	- **Default**: `6789`
 	- **Purpose**: Specifies the port number on which the WebSocket server is listening.
@@ -616,7 +616,9 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 		--translation_allow_static_objects false
 ```
 #### Headless_Automatic_control.py
-`Headless_Automatic_control.py` manages the autonomous behavior of vehicles in a headless mode, meaning it runs without a graphical user interface, facilitating the creation and control of multiple cars through scriptable, automated scenarios in a distributed system. This script interacts with a CARLA server remotely, receiving commands and sending vehicle status via WebSocket connections.
+`Headless_Automatic_control.py` manages the autonomous behavior of vehicles in a headless mode, meaning it runs without a graphical user interface, facilitating the creation and control of multiple cars through scriptable, automated scenarios in a distributed system. This script interacts with a CARLA server remotely, receiving commands and sending vehicle status via Web Socket connections.
+
+Read more: https://carla.readthedocs.io/en/0.9.6/python_api_tutorial/
 ##### **Command Line Argument Details**
 ##### Host (--host)
 - **Default:** "127.0.0.1"
@@ -723,10 +725,74 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 - **Purpose:** Enables or disables WebSocket communication for the vehicle.
 - **Usage Example:**
 ```shell
-		--ws_enable "off"
+	--ws_enable "off"
 ```
-### Troubleshooting
+####  Classes and Functions in Headless_Automatic_Control.py
 
+##### World 
+**Purpose**: Manages the simulation environment and lifecycle of various actors, like vehicles and sensors.
+
+- `__init__()`: Initializes the world with a given CARLA world, HUD, and command-line arguments.
+- `restart()`: Resets the player vehicle and sensors.
+- `next_weather()` :  Cycles through predefined weather presets.
+- `modify_vehicle_physics()`: Applies physics settings to the vehicle.
+- `destroy_sensor()` : Cleans up and destroys sensors attached to the vehicle.
+- `destroy()` : Cleans up and destroys sensors attached to the vehicle.
+
+##### HUD (Heads-Up Display)
+
+**Purpose:** `HUD` class provides an on-screen display of simulation and vehicle statistics such as speed, control inputs, and notifications.
+
+- `tick()`: Updates HUD elements with new data each frame.
+- `render()`: Renders the HUD onto the screen.
+- `_notifications.set_text()` : Displays a text notification on the HUD for a specific duration.
+##### Collision Sensor
+
+**Purpose:** `CollisionSensor` class creates a sensor to detect collisions involving the player vehicle and logs them
+
+- `__init__()`: Attaches the sensor to the specified vehicle and sets up notification handling.
+- `_on_collision()` : - Callback function triggered upon collision detection, logging the event and notifying the HUD.
+- `get_collision_history()`: Returns a history of collision intensities.
+##### Lane Invasion Sensor
+
+**Purpose**: Detects when the vehicle invades a different lane, which is critical for monitoring traffic rule adherence.
+
+- `__init__()`: Attaches the sensor to the vehicle and listens for lane invasions.
+- `_on_invasion()`: Callback for lane invasion events that logs the incident.
+##### Gnss Sensor 
+
+**Purpose**: Provides global positioning data for the vehicle.
+
+- ` __init__()`: Attaches the sensor to the vehicle and listens for lane invasions.
+- `_on_gnss_event()` : Callback for GNSS updates that records the vehicle's location.
+##### Camera Manager 
+
+**Purpose**: Manages camera sensors and image rendering for the vehicle.
+
+- ` __init__()`: Sets up the camera and its configurations.
+- `toggle_camera()`: Switches between different camera views.
+- `set_sensor()` : Activates a specific camera sensor.
+- `next_sensor()` : Switches to the next sensor in the list.
+- `_parse_image()` : Callback that processes the image data from the camera.
+##### Web Socket Client
+
+**Purpose**: Manages WebSocket communication for receiving destination data and sending notifications.
+
+- ` __init__()`: Sets up the WebSocket client with references to vehicle and agent.
+- `start_websocket_client()`: Starts the WebSocket client and listens for messages.
+- `listen_for_destination()`: Listens for destination updates from the Web Socket server.
+- `check_and_notify_destination_reached()`: Checks if the destination has been reached and sends a notification.
+##### Global Functions
+
+- `find_weather_presets()`: Retrieves a list of predefined weather configurations.
+- `get_actor_display_name()`: Generates a display name for an actor.
+- `get_actor_blueprints()`: Filters the blueprints available in the world based on criteria.
+#### Signal Handlers
+
+- `signal_handler()`: Gracefully handles termination signals to ensure proper cleanup.
+#### Game Loop
+
+- `game_loop()`: The main loop that runs the simulation, handling agent updates, world ticks, and event parsing.
 #### Common Issues
 
 A list of common problems that may arise when using the integration and their solutions.
@@ -736,3 +802,30 @@ Tips for diagnosing and fixing issues specific to the integration
 
 ### Future Work
 
+#### Enhanced Respawn Mechanics
+
+**Objective**: To introduce an automated system that allows for the quick re-entry of vehicles into the simulation after a crash, improving continuous testing flow.
+
+#### Dynamic Perspective Switching in CARLA Viz
+
+**Objective**: To upgrade CARLA Viz with capabilities that enable users to switch perspectives between various vehicles and environmental cameras for a more comprehensive analysis.
+
+#### V2V Communication Expansion
+
+**Objective**: To implement and refine Vehicle-to-Vehicle (V2V) communication within the simulation, allowing for complex scenario testing involving direct interactions between autonomous vehicles.
+
+#### Sensor Suite Enhancement
+
+**Objective**: To integrate a broader range of sensors, like Obstacle Detection and IMU sensors, to simulate more advanced vehicle sensing capabilities and enhance decision-making algorithms.
+
+#### SEED Emulator Wireless Integration
+
+**Objective**: To utilize the SEED Emulator's wireless networking capabilities for simulating realistic network environments, essential for testing AV's network resilience and performance.
+
+#### Performance Optimization
+
+**Objective**: Continuous optimization of sensor usage and computational processes is necessary to maintain and improve simulation efficiency, particularly as the complexity and scale of the simulation environment grow.
+
+#### Scenario-Based Testing Enhancements
+
+**Objective**: To develop an expanded set of test scenarios that can automatically adapt based on vehicle behavior and environmental changes, increasing the robustness and reliability of autonomous systems.
