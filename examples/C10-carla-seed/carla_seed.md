@@ -58,46 +58,45 @@ The SEED Emulator acts like a virtual traffic system, simulating the network tha
 Although not depicted in the diagram, the CarlaViz container is an integral part of the Docker network. It offers a live visual feed of the simulation, enabling users to graphically track and analyze the movements and interactions of the vehicles within the CARLA Server environment. Its connectivity to the same network ensures seamless integration with the simulation data flow.
 ### How CARLA-SEED Works Behind the Scenes
 ![Intialization](figs/initialization.png)
-- **Initial Connection Requests**:
+1. **Initial Connection Requests**:
     - The car container initiates two separate connection requests:
         - One request is sent to the CARLA world.
         - Another request is sent to the WebSocket container.
-- **Routing of Requests**:
+2. **Routing of Requests**:
     - Both requests are relayed through the Internet Exchange.
     - The CARLA world request proceeds to the Internet Router and then to the CARLA Server.
     - The WebSocket request is directed straight to the WebSocket Container.
-- **Response from CARLA Server**:
+3. **Response from CARLA Server**:
     - If the CARLA Server is operational, it accepts the connection from the car container.
     - A confirmation is sent back to the car container via the Internet Router, establishing a continuous sensory data feed.
-- **Response from WebSocket Container**:
+4. **Response from WebSocket Container**:
     - If the WebSocket Container is not operational, the connection request is refused.
     - If it is operational, the connection is accepted.
-- **Post-Connection Processing**:
+5. **Post-Connection Processing**:
     - Once successfully connected, the car container processes the sensory data received from the CARLA Server.
     - Based on this data, the car container makes decisions and sends these decisions back to the CARLA Server for actions to be taken.
-- **Connection to Web Server**:
+6. **Connection to Web Server**:
     - Simultaneously, the car container connects to a webserver.
     - It listens on a specified port for any incoming instructions from the Controller.
-- **Final Setup**:
+7. **Final Setup**:
     - The initialization process is completed, and the car container is now ready for interactive simulation, awaiting further instructions or tasks.
 ### How User Set Destination to Vehicles
 ![Destination](figs/destination.png)
-- **Destination Request Initiation**:
+1. **Destination Request Initiation**:
     - The Controller Container starts the process by sending a destination request to the WebSocket Container.
-- **Request Routing**:
+2. **Request Routing**:
     - The destination request is routed through the Internet Exchange to the WebSocket Container.
-- **Destination Check by WebSocket Container**:
+3. **Destination Check by WebSocket Container**:
     - The WebSocket Container checks the destination request to determine if it is meant for a specific car or all cars:
         - If the request is for one specific car, the WebSocket sends the information directly to that car.
         - If the request is for all cars, the WebSocket broadcasts the destination to every car container.
-- **Destination Setting by Cars**:
+4. **Destination Setting by Cars**:
     - The targeted car or cars receive the destination request and set the new destination accordingly.
-- **Destination Reach Notification**:
+5. **Destination Reach Notification**:
     - As a car reaches the new destination, it sends a notification back through the WebSocket Container.
-- **Confirmation to Controller**:
+6. **Confirmation to Controller**:
     - The Controller Container receives a notification confirming the car's arrival at the specified destination.
 ## Technical Implementation
-
 ### CARLA Server
 ### Controller Program
 #### Command Line Arguments
@@ -122,11 +121,11 @@ Although not depicted in the diagram, the CarlaViz container is an integral part
 	```shell
 		--c_ip 192.168.1.2
 	```
- 4. **CARLA Server Port (--c_port)**
+4. **CARLA Server Port (--c_port)**
 	- **Default**: `2000`
 	- **Purpose**: Specifies the port number on which the CARLA server is listening.
 	- **Usage Example**:  
-	    ```shell
+		```shell
 			--c_port 2000
 		```
 5. **Location (--location)**
@@ -396,7 +395,7 @@ This script provides a flexible setup to configure and control various aspects o
 	- **Purpose**: Sets a weather preset; use `--list` to view available presets.
 	- **Usage Example**:
 	```shell
-	--weather ClearNoon
+		--weather ClearNoon
 	```
 12. **Inspect (--inspect, -i)**
 	- **Purpose**: Inspects the current simulation state and prints details.
@@ -434,49 +433,49 @@ Read more: https://carla.readthedocs.io/en/latest/adv_traffic_manager/#creating-
 	- **Purpose**: Specifies the number of vehicles to spawn in the simulation.
 	- **Usage Example**:
 	```shell
-		 --number-of-vehicles 50
+		--number-of-vehicles 50
 	 ```
 4. **Number of Walkers (--number-of-walkers, -w)**
 	- **Default**: `10`
 	- **Purpose**: Specifies the number of pedestrian actors (walkers) to spawn.
 	- **Usage Example**:
-```shell
+	```shell
 		--number-of-walkers 15
-```
+	```
 5. **Safe (--safe)**
 	- **Purpose**: Ensures that vehicles are spawned in a 'safe' mode, preventing spawning in locations that would immediately cause collisions.
 	- **Usage Example**:
-```shell
+	```shell
 		--safe
-```
+	```
 6. **Vehicle Filter (--filterv)**
 	- **Default**: `vehicle.*`
 	- **Purpose**: Filters the vehicle models based on the given pattern.
 	- **Usage Example**:
-```shell
+	```shell
 		--filterv "vehicle.audi.*"
-```
+	```
 7. **Walker Filter (--filterw)**
 	- **Default**: `walker.pedestrian.*`
 	- **Purpose**: Filters the pedestrian types based on the given pattern.
 	- **Usage Example**:
-```shell
+	```shell
 		--filterw "walker.pedestrian.adult.*"
-```
+	```
 8. **Vehicle Generation (--generationv)**
 	- **Default**: `All`
 	- **Purpose**: Restricts the vehicle models to a specific generation.
 	- **Usage Example**:
-```shell
+	```shell
 		--generationv 2
-```
+	```
 9. **Walker Generation (--generationw)**
 	- **Default**: `2`
 	- **Purpose**: Restricts the pedestrian types to a specific generation.
 	- **Usage Example**:
-```shell
+	```shell
 		--generationw 1
-```
+	```
 10. **Traffic Manager Port (--tm-port)**
 	- **Default**: `8000`
 	- **Purpose**: Specifies the port for communication with the Traffic Manager.
@@ -484,7 +483,6 @@ Read more: https://carla.readthedocs.io/en/latest/adv_traffic_manager/#creating-
 	```shell
 		--tm-port 8000
 	```
-
 11. **Asynchronous Mode (--asynch)**
 	- **Purpose**: Activates asynchronous mode execution in the simulation(CARLA world).
 	- **Usage Example**:
@@ -534,20 +532,20 @@ Read more: https://carla.readthedocs.io/en/latest/adv_traffic_manager/#creating-
 	```shell
 		--no-rendering
 	```
-#### Carla Viz
+### CarlaViz
 CARLA VIZ is a visualization tool designed to enhance the user experience when working with the CARLA simulator(CARLA world). It provides real-time graphical representation of simulations, enabling detailed analysis and debugging of autonomous vehicle behaviors in dynamic environments.
 
 Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
-
+#### Command Line Arguments
 1. **Connector Host(--connector_host)**
 	- **Type**: string
 	- **Default:** "0.0.0.0"
 	- **Purpose:** Specifies the host address for the Carla Viz server to listen on. Basically, to set ip address of Carla Viz Server
 	- **Usage Example:** 
-```shell
+	```shell
 		--connector_host 192.168.1.5
-```
- 2. **Connector Port (--connector_port)**
+	```
+2. **Connector Port (--connector_port)**
 	- **Type**: uint32
 	- **Purpose**: Specifies the port number for the Carla Viz server to listen on. Basically, to set port number of Carla Viz Server.
 	- **Default**: 8081
@@ -555,62 +553,61 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 	```shell
 		--connector_port 9090
 	```
-3. **Connector Update Interval Milliseconds 
-(--connector_update_interval_milliseconds)**
+3. **Connector Update Interval Milliseconds (--connector_update_interval_milliseconds)**
 	- **Type**: uint32
 	- **Purpose**: Determines how frequently, in milliseconds, the connector should update. Basically, in how many milliseconds Carla Viz will get data from Carla World.
 	- **Default**: 500
 	- **Usage Example**:
-```shell
+	```shell
 		--connector_update_interval_milliseconds 1000
-```
+	```
 4. **Log Filename (--log_filename)**
 	- **Type**: string
 	- **Purpose**: Sets the filename where logs will be stored.
 	- **Usage Example**:
-```shell
+	```shell
 		--log_filename server.log
-```
+	```
 5. **Log Level (--log_level)**
 	- **Type**: string
 	- **Purpose**: Sets the level of logging detail.
 	- **Default**: "info"
 	- **Usage Example**:
-```shell
+	```shell
 		--log_level debug
-```
+	```
 6. Simulator Ego Vehicle Name (--simulator_ego_vehicle_name)**
 	- **Type**: string
 	- **Purpose**: Role Name the vehicle in the simulator which you monitor.
 	- **Default**: "ego"
 	- **Usage Example**:
-```shell
+	```shell
 		--simulator_ego_vehicle_name alpha
-```
+	```
 7. **Simulator Host (--simulator_host)**
 	- **Type**: string
 	- **Purpose**: Defines the host address of the CARLA simulator( CARLA world).
 	- **Default**: "localhost"
 	- **Usage Example**:
-```shell
+	```shell
 		--simulator_host 10.0.0.2
-```
+	```
 8. **Simulator Port (--simulator_port)**
 	- **Type**: uint32
 	- **Purpose**: Specifies the port number for connecting to the simulator.
 	- **Default**: 2000
 	- **Usage Example**:
-```shell
+	```shell
 		--simulator_port 3000
-```
+	```
 9. **Simulator Retry Interval Seconds (--simulator_retry_interval_seconds)**
 	- **Type**: uint32
 	- **Purpose**: Sets the interval, in seconds, between connection retries to the simulator.
 	- **Default**: 1
 	- **Usage Example**:
-```shell
+	```shell
 		--simulator_retry_interval_seconds 5
-```
+	```
 10. **Simulator Retry Times After Disconnection (--simulator_retry_times_after_disconnection)**
 	- **Type**: uint32
 	- **Purpose**: Specifies how many times to retry connecting to the simulator after a disconnection.
@@ -619,7 +616,7 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 	```shell
 		--simulator_retry_times_after_disconnection 10
 	```
-11. Simulator Sensor Max Lag Frame (--simulator_sensor_max_lag_frame)**
+11. **Simulator Sensor Max Lag Frame (--simulator_sensor_max_lag_frame)**
 	- **Type**: uint32
 	- **Purpose**: Limits the maximum frame lag for sensors in the simulator.
 	- **Default**: 30
@@ -650,220 +647,184 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 	- **Usage Example**:
 	```shell
 		--translation_allow_static_objects false
-		```
-
-
-#### Headless_Automatic_control.py
-`Headless_Automatic_control.py` manages the autonomous behavior of vehicles in a headless mode, meaning it runs without a graphical user interface, facilitating the creation and control of multiple cars through scriptable, automated scenarios in a distributed system. This script interacts with a CARLA server remotely, receiving commands and sending vehicle status via Web Socket connections.
+	```
+### Headless Automatic Control Program
+`Headless_Automatic_control.py` manages the autonomous behavior of vehicles in a headless mode, meaning it runs without a graphical user interface, facilitating the creation and control of multiple cars through scrip table, automated scenarios in a distributed system. This script interacts with a CARLA server remotely, receiving commands and sending vehicle status via Web Socket connections.
 
 Read more: https://carla.readthedocs.io/en/0.9.6/python_api_tutorial/
-##### **Command Line Argument Details**
-##### Host (--host)
-- **Default:** "127.0.0.1"
-- **Purpose:** Specifies the IP address of the host server where the CARLA World is running.
-- **Usage Example:**
-```shell
+#### Command Line Arguments
+1. **Host (--host)**
+	- **Default:** "127.0.0.1"
+	- **Purpose:** Specifies the IP address of the host server where the CARLA World is running.
+	- **Usage Example:**
+	```shell
 		--host 192.168.1.100
-```
-##### Port (--port)
-- **Default:** 2000
-- **Purpose:** Specifies the TCP port of the host server for connecting to the CARLA server.
-- **Usage Example:**
-```shell
+	```
+2. **Port (--port)**
+	- **Default:** 2000
+	- **Purpose:** Specifies the TCP port of the host server for connecting to the CARLA server.
+	- **Usage Example:**
+	```shell
 		--port 2000
-```
-##### Resolution (--res)
-- **Default:** "1280x720"
-- **Purpose:** Sets the simulation window resolution, formatted as WIDTHxHEIGHT.
-- **Usage Example:**
-```shell
+	```
+3. **Resolution (--res)**
+	- **Default:** "1280x720"
+	- **Purpose:** Sets the simulation window resolution, formatted as WIDTHxHEIGHT.
+	- **Usage Example:**
+	```shell
 		--res 1920x1080
-```
-##### Synchronous Mode (--sync)
-- **Default:** False
-- **Purpose:** Enables synchronous mode, ensuring the simulation only advances on command, which is crucial for precise simulations.
-- **Usage Example:**
-```shell
+	```
+4. **Synchronous Mode (--sync)**
+	- **Default:** False
+	- **Purpose:** Enables synchronous mode, ensuring the simulation only advances on command, which is crucial for precise simulations.
+	- **Usage Example:**
+	```shell
 		--sync
-```
-##### Actor Filter (--filter)
-- **Default:** "vehicle.*"
-- **Purpose:** Filters the types of vehicle actors to spawn based on a pattern.
-- **Usage Example:**
-```shell
+	```
+5. Actor Filter (--filter)
+	- **Default:** "vehicle.*"
+	- **Purpose:** Filters the types of vehicle actors to spawn based on a pattern.
+	- **Usage Example:**
+	```shell
 		--filter "vehicle.audi.*"
-```
-##### Actor Generation (--generation)
-- **Default:** "2"
-- **Purpose:** Restricts vehicle selection to a specific generation, useful for controlling vehicle types in scenarios.
-```shell
-		--generation "1
-```
-##### Loop (--loop,-l)
-- **Type**: bool
-- **Default:** False
-- **Purpose:** Enables continuous reassignment of random destinations after reaching each one, for ongoing testing.
-- **Usage Example:**
-```shell
+	```
+6. **Actor Generation (--generation)**
+	- **Default:** "2"
+	- **Purpose:** Restricts vehicle selection to a specific generation, useful for controlling vehicle types in scenarios.
+	```shell
+		--generation "1"
+	```
+7. **Loop (--loop,-l)**
+	- **Type**: bool
+	- **Default:** False
+	- **Purpose:** Enables continuous reassignment of random destinations after reaching each one, for ongoing testing.
+	- **Usage Example:**
+	```shell
 		--loop
-```
-##### Agent Type (--agent)
-- **Default:** "Behavior"
-- **Choices**:"Behavior", "Basic", "Constant"
-- **Purpose:** Chooses the type of driving agent to control the vehicle dynamically.
-- **Usage Example:**
-```shell
+	```
+8. **Agent Type (--agent)**
+	- **Default:** "Behavior"
+	- **Choices**:"Behavior", "Basic", "Constant"
+	- **Purpose:** Chooses the type of driving agent to control the vehicle dynamically.
+	- **Usage Example:**
+	```shell
 		--agent "Constant"
-```
-
-##### Agent Behavior (--behavior)
-- **Default:** "normal"
-- **Choices**:"cautious", "normal", "aggressive"
-- **Purpose:** Sets the behavior mode of the agent to adjust driving style according to traffic conditions.
-- **Usage Example:**
-```shell
+	```
+9. **Agent Behavior (--behavior)**
+	- **Default:** "normal"
+	- **Choices**:"cautious", "normal", "aggressive"
+	- **Purpose:** Sets the behavior mode of the agent to adjust driving style according to traffic conditions.
+	- **Usage Example:**
+	```shell
 		--behavior "aggressive"
-```
-##### Seed (--seed)
-- **Default:** None
-- **Purpose:** Sets a seed for random number generation, ensuring scenario repeatability.
-- **Usage Example:**
-```shell
+	```
+10. **Seed (--seed)**
+	- **Default:** None
+	- **Purpose:** Sets a seed for random number generation, ensuring scenario repeatability.
+	- **Usage Example:**
+	```shell
 		--seed 12345
-```
-##### WebSocket IP (--ws_ip)
-- **Default:** "localhost"
-- **Purpose:** Specifies the IP address of the WebSocket server for vehicle to controller communications.
-- **Usage Example:**
-```shell
+	```
+11. **WebSocket IP (--ws_ip)**
+	- **Default:** "localhost"
+	- **Purpose:** Specifies the IP address of the WebSocket server for vehicle to controller communications.
+	- **Usage Example:**
+	```shell
 		--ws_ip "10.0.1.5"
-```
-##### WebSocket Port (--ws_port)
-- **Default:** 6789
-- **Purpose:** Specifies the port for the WebSocket server.
-- **Usage Example:**
-``` shell
+	```
+12. **WebSocket Port (--ws_port)**
+	- **Default:** 6789
+	- **Purpose:** Specifies the port for the WebSocket server.
+	- **Usage Example:**
+	``` shell
 		--ws_port 6789
-```
-##### Role Name (--r_name)
-- **Default:** "seed_car_1"
-- **Purpose:** Assigns a specific role name to the vehicle, useful for identification in scripts or logs.
-```shell
+	```
+13. **Role Name (--r_name)**
+	- **Default:** "seed_car_1"
+	- **Purpose:** Assigns a specific role name to the vehicle, useful for identification in scripts or logs.
+	```shell
 		--r_name "seed_car_2"
-```
-##### Camera Manager (--cam)
-- **Default:** "off"
-- **Purpose:** Toggles the camera manager on or off, essential for visual monitoring or running in a headless environment.
-- **Usage Example:**
-```shell
+	```
+14. **Camera Manager (--cam)**
+	- **Default:** "off"
+	- **Purpose:** Toggles the camera manager on or off, essential for visual monitoring or running in a headless environment.
+	- **Usage Example:**
+	```shell
 		--cam "on"
-```
-##### WebSocket Enable (--ws_enable)
-- **Default:** "on"
-- **Purpose:** Enables or disables WebSocket communication for the vehicle.
-- **Usage Example:**
-```shell
-	--ws_enable "off"
-```
-####  Classes and Functions in Headless_Automatic_Control.py
-
+	```
+15. **WebSocket Enable (--ws_enable)**
+	- **Default:** "on"
+	- **Purpose:** Enables or disables WebSocket communication for the vehicle.
+	- **Usage Example:**
+	```shell
+		--ws_enable "off"
+	```
+#### Classes and Functions in Headless_Automatic_Control.py
 ##### World 
 **Purpose**: Manages the simulation environment and lifecycle of various actors, like vehicles and sensors.
-
 - `__init__()`: Initializes the world with a given CARLA world, HUD, and command-line arguments.
 - `restart()`: Resets the player vehicle and sensors.
 - `next_weather()` :  Cycles through predefined weather presets.
 - `modify_vehicle_physics()`: Applies physics settings to the vehicle.
 - `destroy_sensor()` : Cleans up and destroys sensors attached to the vehicle.
 - `destroy()` : Cleans up and destroys sensors attached to the vehicle.
-
 ##### HUD (Heads-Up Display)
-
 **Purpose:** `HUD` class provides an on-screen display of simulation and vehicle statistics such as speed, control inputs, and notifications.
-
 - `tick()`: Updates HUD elements with new data each frame.
 - `render()`: Renders the HUD onto the screen.
 - `_notifications.set_text()` : Displays a text notification on the HUD for a specific duration.
 ##### Collision Sensor
-
 **Purpose:** `CollisionSensor` class creates a sensor to detect collisions involving the player vehicle and logs them
-
 - `__init__()`: Attaches the sensor to the specified vehicle and sets up notification handling.
 - `_on_collision()` : - Callback function triggered upon collision detection, logging the event and notifying the HUD.
 - `get_collision_history()`: Returns a history of collision intensities.
 ##### Lane Invasion Sensor
-
 **Purpose**: Detects when the vehicle invades a different lane, which is critical for monitoring traffic rule adherence.
-
 - `__init__()`: Attaches the sensor to the vehicle and listens for lane invasions.
 - `_on_invasion()`: Callback for lane invasion events that logs the incident.
 ##### Gnss Sensor 
-
 **Purpose**: Provides global positioning data for the vehicle.
-
 - ` __init__()`: Attaches the sensor to the vehicle and listens for lane invasions.
 - `_on_gnss_event()` : Callback for GNSS updates that records the vehicle's location.
 ##### Camera Manager 
-
 **Purpose**: Manages camera sensors and image rendering for the vehicle.
-
 - ` __init__()`: Sets up the camera and its configurations.
 - `toggle_camera()`: Switches between different camera views.
 - `set_sensor()` : Activates a specific camera sensor.
 - `next_sensor()` : Switches to the next sensor in the list.
 - `_parse_image()` : Callback that processes the image data from the camera.
 ##### Web Socket Client
-
 **Purpose**: Manages WebSocket communication for receiving destination data and sending notifications.
-
 - ` __init__()`: Sets up the WebSocket client with references to vehicle and agent.
 - `start_websocket_client()`: Starts the WebSocket client and listens for messages.
 - `listen_for_destination()`: Listens for destination updates from the Web Socket server.
 - `check_and_notify_destination_reached()`: Checks if the destination has been reached and sends a notification.
 ##### Global Functions
-
 - `find_weather_presets()`: Retrieves a list of predefined weather configurations.
 - `get_actor_display_name()`: Generates a display name for an actor.
 - `get_actor_blueprints()`: Filters the blueprints available in the world based on criteria.
-#### Signal Handlers
-
+##### Signal Handlers
 - `signal_handler()`: Gracefully handles termination signals to ensure proper cleanup.
-#### Game Loop
-
+##### Game Loop
 - `game_loop()`: The main loop that runs the simulation, handling agent updates, world ticks, and event parsing.
+### Troubleshooting
 #### Common Issues
-
 A list of common problems that may arise when using the integration and their solutions.
 #### Debugging Tips 
-
 Tips for diagnosing and fixing issues specific to the integration
-
 ### Future Work
 
 #### Enhanced Respawn Mechanics
-
 To introduce an automated system that allows for the quick re-entry of vehicles into the simulation after a crash, improving continuous testing flow.
-
 #### Dynamic Perspective Switching in CARLA Viz
-
 To upgrade CARLA Viz with capabilities that enable users to switch perspectives between various vehicles and environmental cameras for a more comprehensive analysis.
-
-#### V2V Communication Expansion
-
+#### V2V & V2X Communication Expansion
 To implement and refine Vehicle-to-Vehicle (V2V) communication within the simulation, allowing for complex scenario testing involving direct interactions between autonomous vehicles.
-
 #### Sensor Suite Enhancement
-
 To integrate a broader range of sensors, like Obstacle Detection and IMU sensors, to simulate more advanced vehicle sensing capabilities and enhance decision-making algorithms.
-
 #### SEED Emulator Wireless Integration
-
 To utilize the SEED Emulator's wireless networking capabilities for simulating realistic network environments, essential for testing AV's network resilience and performance.
-
 #### Performance Optimization
-
 Continuous optimization of sensor usage and computational processes is necessary to maintain and improve simulation efficiency, particularly as the complexity and scale of the simulation environment grow.
-
 #### Scenario-Based Testing Enhancements
-
 To develop an expanded set of test scenarios that can automatically adapt based on vehicle behavior and environmental changes, increasing the robustness and reliability of autonomous systems.
