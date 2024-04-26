@@ -651,6 +651,8 @@ Read more: https://carla.readthedocs.io/en/latest/plugins_carlaviz/#get-carlaviz
 	```shell
 		--translation_allow_static_objects false
 		```
+
+
 #### Headless_Automatic_control.py
 `Headless_Automatic_control.py` manages the autonomous behavior of vehicles in a headless mode, meaning it runs without a graphical user interface, facilitating the creation and control of multiple cars through scriptable, automated scenarios in a distributed system. This script interacts with a CARLA server remotely, receiving commands and sending vehicle status via Web Socket connections.
 
