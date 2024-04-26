@@ -147,7 +147,7 @@ class Network(Printable, Registrable, Vertex):
 
         return self
 
-    def getDefaultLinkProperties(self) -> Tuple[int, int, int]:
+    def getDefaultLinkProperties(self) -> Tuple[int, int, float]:
         """!
         @brief Get default link properties.
 
