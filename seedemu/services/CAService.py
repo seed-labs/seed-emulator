@@ -131,8 +131,9 @@ class CAService(Service):
         @param caStore The RootCAStore object.
         """
         super().__init__()
-        self.addDependency("DomainNameService", False, False)
         self.addDependency("Routing", False, False)
+        self.addDependency("DomainNameService", False, True)
+        self.addDependency("EtcHost", False, True)
         self.__ca_store = caStore
         self.__ca_store.initialize()
         self.__ca_domain = self.__ca_store._caDomain
