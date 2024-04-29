@@ -42,17 +42,39 @@ as151.createHost('web2').joinNetwork('net0').addHostName('bank32.com')
 
 ### Using `DomainNameService` service
 
-This approach is much more complicated, as it needs to set up a full-scale
-DNS infrastructure, including the root servers, TLDs, and some specific
-name servers. The example `pki-with-dns.py` uses this approach. Part of the
-DNS set up is in `basenetwithDNS.py`. For details instructions on 
-how to create a DNS, please see Example `B01-dns-component`.
+This approach is much more complicated, as it needs to set up a
+DNS infrastructure, consisting of multiple nameservers,
+including the root servers, TLD name servers, and specific domain name servers. 
+The example `pki-with-dns.py` uses this approach. Part of the
+DNS set up is in `basenetwithDNS.py`. For detailed instructions on 
+how to create a DNS, please see `examples/B01-dns-component`.
+
+In this example, we create three physical nodes, and then
+add then assign a hostname to each of them using DNS, i.e., adding 
+records to the corresponding zones. 
+
+```python
+# Create physical nodes
+as150.createHost('ca').joinNetwork('net0', address='10.150.0.7')
+as151.createHost('web1').joinNetwork('net0', address='10.151.0.7')
+as151.createHost('web2').joinNetwork('net0', address='10.151.0.8')
+
+# Assign hostnames 
+dns.getZone('ca.internal.').addRecord('@ A 10.150.0.7')
+dns.getZone('user1.internal.').addRecord('@ A 10.151.0.7')
+dns.getZone('user2.internal.').addRecord('@ A 10.151.0.8')
+```
 
 
 
 ## PKI Infrastructure
 
-To create a PKI infrastructure, we need to prepare the Root CA store. The Root CA store is abstracted as a class but it is essentially a folder living in the host machine's `/tmp` directory. The Root CA store is used to generate the corresponding Root CA certificate and private key at the build time. It is also possible to supply your own Root CA certificate and private key.
+To create a PKI infrastructure, we need root CAs. We will generate 
+a root CA certificate and its corresponding private key during the emulator build time. 
+This is done through the `RootCAStore` class, which generates the root CA
+certificate and private key on the host machines at the build time
+and stores it inside the `/tmp` folder.
+Users can also supply their own Root CA certificate and private key.
 
 ```python
 from seedemu.services import RootCAStore
@@ -64,18 +86,25 @@ After creating the Root CA store, we can create a PKI infrastructure.
 ```python
 from seedemu.services import CAService
 ca = CAService(caStore)
-ca.setCertDuration("2160h")
-ca.install('ca-vnode')
-ca.installCACert()
-# ca.installCACert(Filter(asn=160))
+ca.setCertDuration("2160h")  # Set the expiration date 
+ca.install('ca-vnode')       # Create a node for CA
+ca.installCACert()           # Install the root CA certficate to all nodes
+# ca.installCACert(Filter(asn=160))  
 emu.addLayer(ca)
 ```
 
-The CA service here uses a private certificate authority program `smallstep` to provide the PKI infrastructure.
+The current CA service uses a private certificate authority program called `smallstep`
+to provide the PKI infrastructure.
 For now, the CA service only supports the ACME protocol, but it can be easily extended to support X.509 & SSH certificates. 
 
-`ca.installCACert()` will by default install the Root CA certificate to all the nodes in the emulator.
-It accepts a `Filter` as parameter to install the certificate to specific nodes.
+In the example, `ca.install('ca-vnode')` will create a CA server node, which will
+accept certificate-signing requests from clients, conduct verification, and then
+issue certificates. The generated root CA certificate and private key
+will be copied to this node, to the corresponding sub-folders inside `/root/.step/`.
+
+We also need to copy all the root CA certificates to all the nodes.
+This is done via `ca.installCACert()`, which by default installs the Root CA certificate to all the nodes in the emulator. If we only want to install the certificate to specific nodes,
+we can use pass a `Filter` argument to this call. 
 
 It should be noted that since the actual filter logic is implemented inside the class that uses the filter,
 not inside the `Filter` class itself, the `Filter` object might perform differently
@@ -99,7 +128,7 @@ webServer.setServerNames(['example32.com'])
 webServer.useCAService(ca).enableHTTPS()
 ```
 
-Server names are required for the web server to request a certificate from the CA. The ACME client will use the server names to determine which nginx configuration to use.
+Server names are required for the web server to request a certificate from the CA. The ACME client will also use the server names to determine which nginx configuration to use.
 The `enableHTTPS` API will configure the web server using the certificate, allowing
 the server to serve HTTPS requests.
 
@@ -113,6 +142,7 @@ Remember to change the domain name accordingly.
 
 ```bash
 $ curl https://example32.com
+<h1>web server at example32.com</h1>
 ```
 
 You will not encounter any certificate errors as the PKI infrastructure is set up correctly. If it is not set up correctly, you will encounter an error like this:
@@ -127,10 +157,20 @@ establish a secure connection to it. To learn more about this situation and
 how to fix it, please visit the web page mentioned above.
 ```
 
-## Inspect the certificate
+### Inspect the certificate
 
-We can verify that the certificate is issued by SEEDEMU Internal. We can go to
-any node in the emulator and run the `step` command. 
+We can verify the certificate of a server from any node; run the `step` command. 
+
+```
+$ step certificate verify https://bank32.com --roots="/etc/ssl/certs/vTrus_ECC_Root_CA.pem"
+
+failed to connect: tls: failed to verify certificate: x509: certificate signed by unknown authority
+
+$ step certificate verify https://bank32.com \
+       --roots="/etc/ssl/certs/SEEDEMU_Internal_Root_CA.pem"
+```
+
+We can also display the certificate obtained from a server:
 
 ```bash
 $ step certificate inspect https://example32.com
@@ -149,7 +189,6 @@ Certificate:
                 Public-Key: (2048 bit)
                 Modulus:
                     a9:02:3e:b0:f1:27:f4:a0:6b:c9:0a:6a:2d:49:6b:
-                    ed:c5:3f:15:71:bf:ba:54:d5:ea:78:0b:b8:52:a8:
                     ...
                     20:eb:3c:5f:17:e8:a0:08:a2:6c:1f:bb:3b:91:d2:
                     b1
@@ -174,4 +213,3 @@ Certificate:
          55:83:bd:ab:26:0f:66:1f:38:5f:24:67:17:d3:e0:32
 ```
 
-It shows the same content as the certificate viewer in the browser.
