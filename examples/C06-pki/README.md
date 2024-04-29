@@ -60,12 +60,10 @@ as151.createHost('web1').joinNetwork('net0', address='10.151.0.7')
 as151.createHost('web2').joinNetwork('net0', address='10.151.0.8')
 
 # Assign hostnames 
-dns.getZone('ca.internal.').addRecord('@ A 10.150.0.7')
-dns.getZone('user1.internal.').addRecord('@ A 10.151.0.7')
-dns.getZone('user2.internal.').addRecord('@ A 10.151.0.8')
+dns.getZone('seedCA.net.').addRecord('@ A 10.150.0.7')
+dns.getZone('example32.com.').addRecord('@ A 10.151.0.7')
+dns.getZone('bank32.com.').addRecord('@ A 10.151.0.8')
 ```
-
-
 
 ## PKI Infrastructure
 

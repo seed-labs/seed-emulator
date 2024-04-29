@@ -14,16 +14,16 @@ emu.load(basenet)
 base: Base = emu.getLayer('Base')
 dns: DomainNameService = emu.getLayer('DomainNameService')
 
-caStore = RootCAStore(caDomain='ca.internal')
+caStore = RootCAStore(caDomain='seedCA.net')
 ca = CAService(caStore)
 web = WebService()
 
 ca.setCertDuration("2160h")
 
 # Add records to zones
-dns.getZone('ca.internal.').addRecord('@ A 10.150.0.7')
-dns.getZone('user1.internal.').addRecord('@ A 10.151.0.7')
-dns.getZone('user2.internal.').addRecord('@ A 10.151.0.8')
+dns.getZone('seedCA.net.').addRecord('@ A 10.150.0.7')
+dns.getZone('example32.com.').addRecord('@ A 10.151.0.7')
+dns.getZone('bank32.com.').addRecord('@ A 10.151.0.8')
 
 ca.install('ca-vnode')
 ca.installCACert()
@@ -37,11 +37,15 @@ as151.createHost('web1').joinNetwork('net0', address='10.151.0.7')
 as151.createHost('web2').joinNetwork('net0', address='10.151.0.8')
 
 webServer1: WebServer = web.install('web1-vnode')
-webServer1.setServerNames(['user1.internal'])
+webServer1.setServerNames(['example32.com'])
 webServer1.useCAService(ca).enableHTTPS()
+webServer1.setIndexContent("<h1>Web server at example32.com</h1>")
+
 webServer2: WebServer = web.install('web2-vnode')
-webServer2.setServerNames(['user2.internal'])
+webServer2.setServerNames(['bank32.com'])
 webServer2.useCAService(ca).enableHTTPS()
+webServer2.setIndexContent("<h1>Web server at bank32.com</h1>")
+
 emu.addBinding(Binding('ca-vnode', filter=Filter(nodeName='ca'), action=Action.FIRST))
 emu.addBinding(Binding('web1-vnode', filter=Filter(nodeName='web1'), action=Action.FIRST))
 emu.addBinding(Binding('web2-vnode', filter=Filter(nodeName='web2'), action=Action.FIRST))

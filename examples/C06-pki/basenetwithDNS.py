@@ -30,7 +30,7 @@ as2.createRouter('r2').joinNetwork('net0').joinNetwork('ix101')
 as150 = base.createAutonomousSystem(150)
 as150.createNetwork('net0')
 as150.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
-for i in range(6):
+for i in range(8):
     host = as150.createHost('host_{}'.format(i)).joinNetwork('net0')
 
 as151 = base.createAutonomousSystem(151)
@@ -58,21 +58,21 @@ dns.install('b-root-server').addZone('.')               # Slave server
 
 # Create nameservers for TLD and ccTLD zones
 # https://itp.cdn.icann.org/en/files/root-system/identification-tld-private-use-24-01-2024-en.pdf
-dns.install('a-internal-server').addZone('internal.').setMaster()  
-dns.install('b-internal-server').addZone('internal.')
-
-dns.install('ns-ca-internal').addZone('ca.internal.')
-dns.install('ns-user-internal').addZone('user1.internal.')
-dns.install('ns-user-internal').addZone('user2.internal.')
+dns.install('ns-net').addZone('net.')
+dns.install('ns-com').addZone('com.')
+dns.install('ns-seedca-net').addZone('seedCA.net.')
+dns.install('ns-example32-com').addZone('example32.com.')
+dns.install('ns-bank32-com').addZone('bank32.com.')
 
 emu.addLayer(dns)
 
 emu.addBinding(Binding('a-root-server', filter=Filter(asn=150), action=Action.FIRST))
 emu.addBinding(Binding('b-root-server', filter=Filter(asn=150), action=Action.FIRST))
-emu.addBinding(Binding('a-internal-server', filter=Filter(asn=150), action=Action.FIRST))
-emu.addBinding(Binding('b-internal-server', filter=Filter(asn=150), action=Action.FIRST))
-emu.addBinding(Binding('ns-ca-internal', filter=Filter(asn=150), action=Action.FIRST))
-emu.addBinding(Binding('ns-user-internal', filter=Filter(asn=150), action=Action.FIRST))
+emu.addBinding(Binding('ns-net', filter=Filter(asn=150), action=Action.FIRST))
+emu.addBinding(Binding('ns-com', filter=Filter(asn=150), action=Action.FIRST))
+emu.addBinding(Binding('ns-seedca-net', filter=Filter(asn=150), action=Action.FIRST))
+emu.addBinding(Binding('ns-example32-com', filter=Filter(asn=150), action=Action.FIRST))
+emu.addBinding(Binding('ns-bank32-com', filter=Filter(asn=150), action=Action.FIRST))
 
 ###########################################################
 # Create two local DNS servers (virtual nodes).
