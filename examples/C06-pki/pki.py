@@ -19,8 +19,10 @@ as150.createHost('ca').joinNetwork('net0').addHostName('seedCA.net')
 
 # Create two physical nodes for web servers
 as151 = base.getAutonomousSystem(151)
-as151.createHost('web1').joinNetwork('net0').addHostName('example32.com')
-as151.createHost('web2').joinNetwork('net0').addHostName('bank32.com')
+as151.createHost('web1').joinNetwork('net0', address='10.151.0.7') \
+                        .addHostName('example32.com')
+as151.createHost('web2').joinNetwork('net0', address='10.151.0.8') \
+                        .addHostName('bank32.com')
 
 # Create and configure CA server vnodes
 caStore = RootCAStore(caDomain='seedCA.net')

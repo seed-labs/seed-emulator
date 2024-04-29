@@ -30,11 +30,11 @@ ca.installCACert()
 
 as150 = base.getAutonomousSystem(150)
 # Do not install the CA cert on the CA host
-host_ca = as150.createHost('ca').joinNetwork('net0', address='10.150.0.7')
+as150.createHost('ca').joinNetwork('net0', address='10.150.0.7')
 
 as151 = base.getAutonomousSystem(151)
-host_web = as151.createHost('web1').joinNetwork('net0', address='10.151.0.7')
-host_web = as151.createHost('web2').joinNetwork('net0', address='10.151.0.8')
+as151.createHost('web1').joinNetwork('net0', address='10.151.0.7')
+as151.createHost('web2').joinNetwork('net0', address='10.151.0.8')
 
 webServer1: WebServer = web.install('web1-vnode')
 webServer1.setServerNames(['user1.internal'])
