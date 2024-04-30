@@ -5,11 +5,14 @@ import random
 from seedemu.core import Emulator, Binding, Filter, Action
 from seedemu.services import BotnetService, BotnetClientService
 from seedemu.compiler import Docker
+from examples.internet.B00_mini_internet import mini_internet
+
+mini_internet.run(dumpfile='./base-internet.bin')
 
 emu = Emulator()
 
 # Load the pre-built component
-emu.load('../B00-mini-internet/base-component.bin')
+emu.load('./base-internet.bin')
 
 ###############################################################################
 # Build a botnet

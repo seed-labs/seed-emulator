@@ -2,11 +2,14 @@
 # encoding: utf-8
 
 from seedemu import *
+from examples.internet.B00_mini_internet import mini_internet
+
+mini_internet.run(dumpfile='./base-internet.bin')
 
 emu = Emulator()
 
 # Load the pre-built component
-emu.load('../B00-mini-internet/base-component.bin')
+emu.load('./base-internet.bin')
 
 base:Base = emu.getLayer('Base')
 

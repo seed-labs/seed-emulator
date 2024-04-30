@@ -3,11 +3,14 @@
 
 from ipaddress import ip_address
 from seedemu import *
+from examples.internet.C02_hybrid_internet_with_dns import hybrid_internet_with_dns
+
+hybrid_internet_with_dns.run(dumpfile='./hybrid_base_with_dns.bin')
 
 emu = Emulator()
 
 # Load the pre-built component
-emu.load('../C02-hybrid-internet-with-dns/hybrid_base_with_dns.bin')
+emu.load('./hybrid_base_with_dns.bin')
 
 base:Base = emu.getLayer('Base')
 

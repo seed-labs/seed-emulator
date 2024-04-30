@@ -7,13 +7,18 @@ from seedemu.hooks import ResolvConfHook
 from seedemu.compiler import Docker
 from seedemu.services import DomainNameService, DomainNameCachingService
 from seedemu.layers import Base
+from examples.internet.B00_mini_internet import mini_internet
+from examples.internet.B01_dns_component import dns_component
+
+mini_internet.run(dumpfile='./base-internet.bin')
+dns_component.run(dumpfile='./dns-component.bin')
 
 emuA = Emulator()
 emuB = Emulator()
 
 # Load the pre-built components and merge them
-emuA.load('../B00-mini-internet/base-component.bin')
-emuB.load('../B01-dns-component/dns-component.bin')
+emuA.load('./base-internet.bin')
+emuB.load('./dns-component.bin')
 emu = emuA.merge(emuB, DEFAULT_MERGERS)
 
 

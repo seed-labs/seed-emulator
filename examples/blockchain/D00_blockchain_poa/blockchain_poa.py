@@ -7,7 +7,6 @@ from examples.blockchain.D00_blockchain_poa import base_internet
 def run(dumpfile = None):
     ###############################################################################
     emu = Emulator()
-    local_dump_path = './base-component.bin'
     base_internet.run(hosts_total=3, dumpfile='./base-component.bin')
     # Load the pre-built components and merge them
     emu.load('./base-component.bin')
