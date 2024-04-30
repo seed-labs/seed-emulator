@@ -6,13 +6,14 @@ from seedemu.compiler import Docker, DistributedDocker, GcpDistributedDocker, Gr
 from seedemu.services import WebService
 from seedemu.core import Emulator, Binding, Filter
 from os import mkdir
+from examples.basic.A01_transit_as import transit_as
 
 ###############################################################################
 # Load the pre-built component from example 01-transit-as
-# Need to go to 01-transit-as and generate the component first
+transit_as.run(dumpfile='./base-component.bin')
 
 emu = Emulator()
-emu.load('../A01-transit-as/base-component.bin')
+emu.load('./base-component.bin')
 
 ###############################################################################
 # Render the emulation
