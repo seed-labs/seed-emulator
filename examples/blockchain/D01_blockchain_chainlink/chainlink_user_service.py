@@ -2,12 +2,8 @@
 # encoding: utf-8
 
 from seedemu import *
-import sys, os
-
-example_dir = "/".join(os.path.realpath(__file__).split("/")[0:-2])
-sys.path.insert(1, example_dir)
-
-from D01_blockchain_chainlink import chainlink_service
+from examples.blockchain.D01_blockchain_chainlink import chainlink_service
+import os
 
 local_dump_path = './blockchain-chainlink.bin'
 

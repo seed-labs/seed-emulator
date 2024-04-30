@@ -2,12 +2,7 @@
 # encoding: utf-8
 
 from seedemu import *
-import sys, os
-
-example_dir = "/".join(os.path.realpath(__file__).split("/")[0:-2])
-sys.path.insert(1, example_dir)
-
-from D00_blockchain_poa import base_internet
+from examples.blockchain.D00_blockchain_poa import base_internet
 
 def run(dumpfile = None):
     ###############################################################################
