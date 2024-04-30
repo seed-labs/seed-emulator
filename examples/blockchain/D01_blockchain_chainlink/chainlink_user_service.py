@@ -2,6 +2,17 @@
 # encoding: utf-8
 
 from seedemu import *
+import sys, os
+
+example_dir = "/".join(os.path.realpath(__file__).split("/")[0:-2])
+sys.path.insert(1, example_dir)
+
+from D01_blockchain_chainlink import chainlink_service
+
+local_dump_path = './blockchain-chainlink.bin'
+
+if not os.path.exists(local_dump_path):
+    chainlink_service.run(dumpfile=local_dump_path)
 
 # Load the pre-built components and merge them
 emu = Emulator()
