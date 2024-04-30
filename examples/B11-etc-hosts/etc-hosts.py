@@ -4,13 +4,20 @@
 from seedemu.compiler import Docker
 from seedemu.layers import Base, EtcHosts
 from seedemu.core import Emulator
+import os, sys
+
+# Add to the python path, and then import the mini internet
+example_dir = "/".join(os.path.realpath(__file__).split("/")[0:-2])
+sys.path.insert(1, example_dir + "/B00-mini-internet")
+
+import mini_internet
+
+mini_internet.run('base-internet.bin')
 
 emu = Emulator()
+emu.load('base-internet.bin')
+
 etc_hosts = EtcHosts()
-
-# Load the pre-built mini-internet component
-emu.load('../B00-mini-internet/base-component.bin')
-
 
 # Create a new host in AS-152 with custom host name
 base: Base = emu.getLayer('Base')
@@ -22,4 +29,4 @@ emu.addLayer(etc_hosts)
 
 # Render the emulation and further customization
 emu.render()
-emu.compile(Docker(), './output')
+emu.compile(Docker(), './output', override=True)
