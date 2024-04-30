@@ -66,7 +66,7 @@ def run(dumpfile = None):
             emu.addBinding(Binding(vnode, filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
             i = i+1
                 
-        # Create the Faucet server
+    # Create the Faucet server
     faucet:FaucetServer = blockchain.createFaucetServer(vnode='faucet', 
                                                         port=80, 
                                                         linked_eth_node='eth5',

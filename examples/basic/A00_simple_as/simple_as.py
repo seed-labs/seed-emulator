@@ -91,3 +91,6 @@ def run(dumpfile = None):
         # Compilation
 
         emu.compile(Docker(), './output')
+
+if __name__ == '__main__':
+    run()

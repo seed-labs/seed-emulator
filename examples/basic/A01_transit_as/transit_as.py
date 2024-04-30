@@ -99,3 +99,5 @@ def run(dumpfile = None):
         docker = Docker(internetMapEnabled=True, platform=Platform.AMD64)
         emu.compile(docker, './output', override = True)
 
+if __name__ == "__main__":
+    run()
