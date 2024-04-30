@@ -4,13 +4,7 @@
 from seedemu.compiler import Docker
 from seedemu.layers import Base, EtcHosts
 from seedemu.core import Emulator
-import os, sys
-
-# Add to example folder to the python path, and then import the mini internet
-example_dir = "/".join(os.path.realpath(__file__).split("/")[0:-2])
-sys.path.insert(1, example_dir)
-
-from B00_mini_internet import mini_internet
+from examples.internet.B00_mini_internet import mini_internet
 
 mini_internet.run('base-internet.bin')
 
