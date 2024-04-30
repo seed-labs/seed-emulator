@@ -5,11 +5,12 @@ from seedemu.compiler import Docker
 from seedemu.core import Binding, Emulator, Filter, Action
 from seedemu.layers import Base
 from seedemu.services import DomainNameService, CAService, WebService, WebServer, RootCAStore
-from basenetwithDNS import dump
+import base_internet_dns
+
+base_internet_dns.run(dumpfile='./base-internet-dns.bin')
 
 emu = Emulator()
-basenet = dump()
-emu.load(basenet)
+emu.load('./base-internet-dns.bin')
 
 base: Base = emu.getLayer('Base')
 dns: DomainNameService = emu.getLayer('DomainNameService')
