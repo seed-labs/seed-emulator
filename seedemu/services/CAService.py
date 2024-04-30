@@ -333,7 +333,7 @@ class RootCAStore:
         self.__initialized = False
         self.__pendingRootCertAndKey = None
         with cd(self.__caDir):
-            self.__container = BuildtimeDockerImage("smallstep/step-cli").container()
+            self.__container = BuildtimeDockerImage(f"smallstep/step-cli:{CAService._step_version()}").container()
             self.__container.user(f"{os.getuid()}:{os.getuid()}").mountVolume(
                 self.__caDir, "/tmp"
             ).env("STEPPATH", "/tmp/.step").entrypoint("step")
