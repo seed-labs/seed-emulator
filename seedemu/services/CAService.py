@@ -110,7 +110,7 @@ update-ca-certificates"
             f"jq '.authority.claims.defaultTLSCertDuration |= \"{self.__duration}\"' $(step path)/config/ca.json > $(step path)/config/ca.json.tmp && mv $(step path)/config/ca.json.tmp $(step path)/config/ca.json"
         )
         node.appendStartCommand(
-            "step-ca --password-file /root/password.txt $(step path)/config/ca.json > /var/step-ca.log 2> /var/step-ca.log",
+            "step-ca --password-file /tmp/password.txt $(step path)/config/ca.json > /var/step-ca.log 2> /var/step-ca.log",
             fork=True,
         )
 
@@ -376,10 +376,10 @@ class RootCAStore:
                 f.write(self.__password)
             initialize_command = "ca init"
             if self.__pendingRootCertAndKey:
-                initialize_command += ' --root /root/root_ca.crt --key /root/root_ca_key'
+                initialize_command += ' --root /tmp/root_ca.crt --key /tmp/root_ca_key'
             initialize_command += f' --deployment-type "standalone" --name "SEEDEMU Internal" \
 --dns "{self._caDomain}" --address ":443" --provisioner "admin" --with-ca-url "https://{self._caDomain}" \
---password-file /root/password.txt --provisioner-password-file /root/password.txt --acme'
+--password-file /tmp/password.txt --provisioner-password-file /tmp/password.txt --acme'
             self.__container.run(initialize_command)
         self.__initialized = True
 
