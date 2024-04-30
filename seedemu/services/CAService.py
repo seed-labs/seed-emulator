@@ -317,8 +317,8 @@ class RootCAStore:
         self.__pendingRootCertAndKey = None
         with cd(self.__caDir):
             self.__container = BuildtimeDockerImage("smallstep/step-ca").container()
-            self.__container.mountVolume(self.__caDir, "/root").env(
-                "STEPPATH", "/root/.step"
+            self.__container.mountVolume(self.__caDir, "/tmp").env(
+                "STEPPATH", "/tmp/.step"
             ).entrypoint(
                 "step"
             )
