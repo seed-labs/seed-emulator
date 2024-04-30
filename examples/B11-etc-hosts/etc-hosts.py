@@ -6,11 +6,11 @@ from seedemu.layers import Base, EtcHosts
 from seedemu.core import Emulator
 import os, sys
 
-# Add to the python path, and then import the mini internet
+# Add to example folder to the python path, and then import the mini internet
 example_dir = "/".join(os.path.realpath(__file__).split("/")[0:-2])
-sys.path.insert(1, example_dir + "/B00-mini-internet")
+sys.path.insert(1, example_dir)
 
-import mini_internet
+from B00_mini_internet import mini_internet
 
 mini_internet.run('base-internet.bin')
 
