@@ -137,9 +137,7 @@ def run(dumpfile = None):
            # Save it to a component file, so it can be used by other emulators
            emu.dump(dumpfile) 
        else:
-           # Uncomment the following if you want to generate the final emulation files
            emu.render()
-           #print(dns.getZone('.').getRecords())
            emu.compile(Docker(), './output', override=True)
 
 if __name__ == "__main__":

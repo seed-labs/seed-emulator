@@ -73,36 +73,10 @@ base.setNameServers(['10.153.0.53'])
 # Add the ldns layer
 emu.addLayer(ldns)
 
-# Dump to a file
-emu.dump('base_with_dns.bin')
-
 
 ###############################################
-# Render the emulation and further customization
+# Rendering compilation 
+
 emu.render()
-
-# After the rendering, we can now find the physical node for 
-# a given virtual node, and further customize the physical node.
-# Note: In our newer design, the display name customization can be 
-# done when building the virtual nodes, so we are commenting out this part.
-#emu.getBindingFor('a-root-server').setDisplayName('A-Root')
-#emu.getBindingFor('b-root-server').setDisplayName('B-Root')
-#emu.getBindingFor('a-com-server').setDisplayName('A-COM')
-#emu.getBindingFor('b-com-server').setDisplayName('B-COM')
-#emu.getBindingFor('a-net-server').setDisplayName('NET')
-#emu.getBindingFor('a-edu-server').setDisplayName('EDU')
-#emu.getBindingFor('a-cn-server').setDisplayName('A-CN')
-#emu.getBindingFor('b-cn-server').setDisplayName('B-CN')
-#emu.getBindingFor('ns-twitter-com').setDisplayName('Twitter')
-#emu.getBindingFor('ns-google-com').setDisplayName('Google')
-#emu.getBindingFor('ns-example-net').setDisplayName('Example')
-#emu.getBindingFor('ns-syr-edu').setDisplayName('Syracuse')
-#emu.getBindingFor('ns-weibo-cn').setDisplayName('微博')
-
-
-
-###############################################
-# Render the emulation
-
 emu.compile(Docker(), './output', override=True)
 

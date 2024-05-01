@@ -28,11 +28,24 @@ emulator. It consists of three steps:
          Root servers (entry point of the DNS infrastructure)
     ```
 
-## Loading the DNS Infrastructure and Base Network
+## Loading the Base Network and DNS Infrastructure 
+
+The base network is provided in the `B00_mini_internet` example,
+while the DNS component is provided in the `B01_dns_component` example.
+We first run the programs in these examples, which saves their 
+result in a file. We then load and merge them in our current
+emulator. 
+
 
 ```
-emuA.load('../B00-mini-internet/base-component.bin')
-emuB.load('../B01-dns-component/dns-component.bin')
+from examples.internet.B00_mini_internet import mini_internet
+from examples.internet.B01_dns_component import dns_component
+
+mini_internet.run(dumpfile='./base-internet.bin')
+dns_component.run(dumpfile='./dns-component.bin')
+
+emuA.load('./base-internet.bin')
+emuB.load('./dns-component.bin')
 emu = emuA.merge(emuB, DEFAULT_MERGERS)
 ```
 
