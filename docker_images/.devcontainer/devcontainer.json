@@ -1,0 +1,13 @@
+{
+    "name": "seedemu",
+    "build": {
+        "dockerfile": "./Dockerfile",
+        "context": ".."
+    },
+    "containerUser": "seed",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/home/seed/${localWorkspaceFolderBasename},type=bind,consistency=cached",
+    "workspaceFolder": "/home/seed/${localWorkspaceFolderBasename}",
+    "postCreateCommand": "echo 'source /opt/venv/bin/activate' >> ~/.bashrc",
+    "features": {},
+    "customizations": {}
+}

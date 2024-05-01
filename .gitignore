@@ -24,7 +24,8 @@ client/frontend/node_modules
 client/backend/node_modules
 client/backend/bin
 *.bin
-output
+output*
 project-words.txt
 .venv
 **/.obsidian/**
+test_result.txt

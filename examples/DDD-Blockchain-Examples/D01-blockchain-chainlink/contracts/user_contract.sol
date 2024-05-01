@@ -56,7 +56,7 @@ contract ETHPriceAverageFeed is ChainlinkClient, Ownable {
         oracles[_index].isActive = false;
     }
 
-    function requestETHPriceData(string memory url, string memory path) public onlyOwner {
+    function requestETHPriceData(string memory url, string memory path) public {
         for (uint256 i = 0; i < oracles.length; i++) {
             if (oracles[i].isActive) {
                 Chainlink.Request memory request = buildChainlinkRequest(

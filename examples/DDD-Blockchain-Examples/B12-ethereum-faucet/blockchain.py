@@ -3,7 +3,6 @@
 
 from seedemu import *
 import sys
-from eth_account import Account
 
 
 emu = Makers.makeEmulatorBaseWith10StubASAndHosts(1)
@@ -59,19 +58,12 @@ emu.addBinding(Binding('poa-eth8', filter = Filter(asn = 163, nodeName='host_0')
 e5.enableGethHttp()
 
 # Faucet Service
-# 0x8E974a8B3Af8c93FB89f8Af907b279e914081694
-
 blockchain1:Blockchain
+# Make sure that eth5 node has enabled geth.
 faucet:FaucetServer = blockchain1.createFaucetServer(vnode='faucet', 
                                                      port=80, 
                                                      linked_eth_node='poa-eth5',
                                                      balance=1000)
-
-# if user know the url of the eth node,
-# user can use faucet::setRpcUrl method instead.
-# But in this scenario, we have no information of the ip address of eth5 node.
-# So, we are using FaucetService::setRpcUrlByVirtualNodeName method to link the faucet service to the ethnode specified.
-# Make sure that eth5 node has enabled geth.
 
 
 faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
@@ -79,17 +71,15 @@ faucet.fund('0x5449ba5c5f185e9694146d60cfe72681e2158499', 5)
 
 emu.addBinding(Binding('faucet', filter=Filter(asn=154, nodeName='host_0')))
 
-###############################################################
-# Faucet User Server Example => chainlink
-faucetUser = FaucetUserService()
-faucetUser.setFaucetServerInfo(vnode = 'faucet', port=80)
-faucetUser.install('faucet_user')
+faucetUserService = FaucetUserService()
+faucetUserService.install('faucetUser')
+faucetUserService.setFaucetServerInfo(vnode = 'faucet', port=80)
+emu.addBinding(Binding('faucetUser', filter=Filter(asn=164, nodeName='host_0')))
 
-emu.addBinding(Binding('faucet_user', filter=Filter(asn=164, nodeName='host_0')))
 
 # Add the layer and save the component to a file
 emu.addLayer(eth)
-emu.addLayer(faucetUser)
+emu.addLayer(faucetUserService)
 emu.dump('component-blockchain.bin')
 
 emu.render()

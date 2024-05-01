@@ -5,7 +5,6 @@ from .EthUtil import Genesis, EthAccount, AccountStructure
 from .EthereumServer import EthereumServer, PoAServer, PoWServer, PoSServer
 from os import mkdir, path, makedirs, rename
 from seedemu.core import Node, Service, Server, Emulator
-from eth_account import Account
 from seedemu.core.enums import NetworkType
 from .FaucetServer import FaucetServer
 from typing import Dict, List
