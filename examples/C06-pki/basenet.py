@@ -1,6 +1,5 @@
 from seedemu.core import Binding, Emulator, Filter, Action
-from seedemu.layers import Base, Ebgp, Ibgp, Ospf, Routing, PeerRelationship
-from seedemu.services import DomainNameCachingService, DomainNameService
+from seedemu.layers import Base, Ebgp, Ibgp, Ospf, Routing, PeerRelationship, EtcHosts
 
 emu = Emulator()
 base = Base()
@@ -43,55 +42,11 @@ ebgp.addPrivatePeering(100, 2, 150, abRelationship = PeerRelationship.Provider)
 ebgp.addPrivatePeering(101, 2, 151, abRelationship = PeerRelationship.Provider)
 
 emu.addLayer(base)
+emu.addLayer(EtcHosts())
 emu.addLayer(routing)
 emu.addLayer(ebgp)
 emu.addLayer(ibgp)
 emu.addLayer(ospf)
-
-###########################################################
-# Create a DNS layer
-dns = DomainNameService()
-
-# Create two nameservers for the root zone
-dns.install('a-root-server').addZone('.').setMaster()   # Master server
-dns.install('b-root-server').addZone('.')               # Slave server
-
-# Create nameservers for TLD and ccTLD zones
-# https://itp.cdn.icann.org/en/files/root-system/identification-tld-private-use-24-01-2024-en.pdf
-dns.install('a-internal-server').addZone('internal.').setMaster()  
-dns.install('b-internal-server').addZone('internal.')
-
-dns.install('ns-ca-internal').addZone('ca.internal.')
-dns.install('ns-user-internal').addZone('user1.internal.')
-dns.install('ns-user-internal').addZone('user2.internal.')
-
-emu.addLayer(dns)
-
-emu.addBinding(Binding('a-root-server', filter=Filter(asn=150), action=Action.FIRST))
-emu.addBinding(Binding('b-root-server', filter=Filter(asn=150), action=Action.FIRST))
-emu.addBinding(Binding('a-internal-server', filter=Filter(asn=150), action=Action.FIRST))
-emu.addBinding(Binding('b-internal-server', filter=Filter(asn=150), action=Action.FIRST))
-emu.addBinding(Binding('ns-ca-internal', filter=Filter(asn=150), action=Action.FIRST))
-emu.addBinding(Binding('ns-user-internal', filter=Filter(asn=150), action=Action.FIRST))
-
-###########################################################
-# Create two local DNS servers (virtual nodes).
-ldns = DomainNameCachingService()
-ldns.install('global-dns')
-
-# Customize the display name (for visualization purpose)
-emu.getVirtualNode('global-dns').setDisplayName('Global DNS')
-
-as151 = base.getAutonomousSystem(151)
-as151.createHost('local-dns').joinNetwork('net0', address = '10.151.0.53')
-
-emu.addBinding(Binding('global-dns', filter = Filter(asn=151, nodeName="local-dns")))
-
-# Add 10.153.0.53 as the local DNS server for all the other nodes
-base.setNameServers(['10.151.0.53'])
-
-# Add the ldns layer
-emu.addLayer(ldns)
 
 ###########################################################
 

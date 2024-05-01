@@ -16,22 +16,67 @@ The real user count of ACME protocol is much higher than 42% because many other 
 
 More details about ACME protocol can be found [here](./ACME.md).
 
-## Key Components
 
-### DNS Infrastructure
+## DNS Infrastructure
 
-DNS infrastructure is required for the PKI infrastructure to work. The PKI infrastructure will consult the DNS infrastructure to resolve the domain names and verify the target node's control of domain in ACME challenges.
+DNS is required for the PKI infrastructure to work. The PKI infrastructure will use the DNS service to resolve the domain names and verify the target node's control of domain in ACME challenges.
 
-The DNS component used in this example is the same as examples/B02-mini-internet-with-dns. Instead of using the DNS component, we can also use the `EtcHosts` layer to add mappings to the `/etc/hosts` file. 
+The DNS service can be provided via a DNS infrastructure or simply
+using the `/etc/hosts` file. We provide two sets of examples,
+one for each approach. 
 
+### Using `EtcHosts` layer 
+
+Using this approach, the static name-to-ip mappings will be added to
+the `/etc/hosts` file of all the nodes. 
+In our example code in `pki.py`, we created three physical nodes, and assign each of them a using the
+`addHostName` API. The mapping of this name to the node's IP address will be added
+to the `/etc/hosts` file of all the nodes in the emulator. 
+
+```python
+as150.createHost('ca').joinNetwork('net0').addHostName('seedCA.net')
+as151.createHost('web1').joinNetwork('net0').addHostName('example32.com')
+as151.createHost('web2').joinNetwork('net0').addHostName('bank32.com')
+``` 
+
+
+### Using `DomainNameService` service
+
+This approach is much more complicated, as it needs to set up a
+DNS infrastructure, consisting of multiple nameservers,
+including the root servers, TLD name servers, and specific domain name servers. 
+The example `pki-with-dns.py` uses this approach. Part of the
+DNS set up is in `basenetwithDNS.py`. For detailed instructions on 
+how to create a DNS, please see `examples/B01-dns-component`.
+
+In this example, we create three physical nodes, and then
+add then assign a hostname to each of them using DNS, i.e., adding 
+records to the corresponding zones. 
+
+```python
+# Create physical nodes
+as150.createHost('ca').joinNetwork('net0', address='10.150.0.7')
+as151.createHost('web1').joinNetwork('net0', address='10.151.0.7')
+as151.createHost('web2').joinNetwork('net0', address='10.151.0.8')
+
+# Assign hostnames 
+dns.getZone('seedCA.net.').addRecord('@ A 10.150.0.7')
+dns.getZone('example32.com.').addRecord('@ A 10.151.0.7')
+dns.getZone('bank32.com.').addRecord('@ A 10.151.0.8')
+```
 
 ## PKI Infrastructure
 
-To create a PKI infrastructure, we need to prepare the Root CA store. The Root CA store is abstracted as a class but it is essentially a folder living in the host machine's `/tmp` directory. The Root CA store is used to generate the corresponding Root CA certificate and private key at the build time. It is also possible to supply your own Root CA certificate and private key.
+To create a PKI infrastructure, we need root CAs. We will generate 
+a root CA certificate and its corresponding private key during the emulator build time. 
+This is done through the `RootCAStore` class, which generates the root CA
+certificate and private key on the host machines at the build time
+and stores it inside the `/tmp` folder.
+Users can also supply their own Root CA certificate and private key.
 
 ```python
 from seedemu.services import RootCAStore
-caStore = RootCAStore(caDomain='ca.internal')
+caStore = RootCAStore(caDomain='seedCA.net')
 ```
 
 After creating the Root CA store, we can create a PKI infrastructure.
@@ -39,18 +84,25 @@ After creating the Root CA store, we can create a PKI infrastructure.
 ```python
 from seedemu.services import CAService
 ca = CAService(caStore)
-ca.setCertDuration("2160h")
-ca.install('ca-vnode')
-ca.installCACert()
-# ca.installCACert(Filter(asn=160))
+ca.setCertDuration("2160h")  # Set the expiration date 
+ca.install('ca-vnode')       # Create a node for CA
+ca.installCACert()           # Install the root CA certficate to all nodes
+# ca.installCACert(Filter(asn=160))  
 emu.addLayer(ca)
 ```
 
-The CA service here uses a private certificate authority program `smallstep` to provide the PKI infrastructure.
+The current CA service uses a private certificate authority program called `smallstep`
+to provide the PKI infrastructure.
 For now, the CA service only supports the ACME protocol, but it can be easily extended to support X.509 & SSH certificates. 
 
-`ca.installCACert()` will by default install the Root CA certificate to all the nodes in the emulator.
-It accepts a `Filter` as parameter to install the certificate to specific nodes.
+In the example, `ca.install('ca-vnode')` will create a CA server node, which will
+accept certificate-signing requests from clients, conduct verification, and then
+issue certificates. The generated root CA certificate and private key
+will be copied to this node, to the corresponding sub-folders inside `/root/.step/`.
+
+We also need to copy all the root CA certificates to all the nodes.
+This is done via `ca.installCACert()`, which by default installs the Root CA certificate to all the nodes in the emulator. If we only want to install the certificate to specific nodes,
+we can use pass a `Filter` argument to this call. 
 
 It should be noted that since the actual filter logic is implemented inside the class that uses the filter,
 not inside the `Filter` class itself, the `Filter` object might perform differently
@@ -62,7 +114,7 @@ supports both IPv4 and IPv6 via IPv4-mapped IPv6 addresses. This might not be th
 Filter logic is described in [developer manual](../../docs/developer_manual/11-ca-service.md).
 More API examples are available in the [user manual](../../docs/user_manual/internet/ca.md).
 
-### Web Server
+## Web Server
 
 In this example, we use a web server to demonstrate how the PKI is used. 
 This is a simple web server that serves a static page. When this machine starts,
@@ -70,24 +122,25 @@ it will request a certificate from the specified CA server, and use it to serve 
 
 ```python
 webServer: WebServer = web.install('web-vnode')
-webServer.setServerNames(['user1.internal'])
+webServer.setServerNames(['example32.com'])
 webServer.useCAService(ca).enableHTTPS()
 ```
 
-Server names are required for the web server to request a certificate from the CA. The ACME client will use the server names to determine which nginx configuration to use.
+Server names are required for the web server to request a certificate from the CA. The ACME client will also use the server names to determine which nginx configuration to use.
 The `enableHTTPS` API will configure the web server using the certificate, allowing
 the server to serve HTTPS requests.
 
-### Demo
+## Demo
 
 On nodes that have the Root CA certificate installed (not routers or ix nodes, as they might not have DNS configured properly):
 
-In this example, we set up https for https://user1.internal and https://user2.internal.
+In this example, we set up https for https://example32.com and https://bank32.com.
 In your case you can set up https for any domain you want.
 Remember to change the domain name accordingly.
 
 ```bash
-$ curl https://user1.internal
+$ curl https://example32.com
+<h1>web server at example32.com</h1>
 ```
 
 You will not encounter any certificate errors as the PKI infrastructure is set up correctly. If it is not set up correctly, you will encounter an error like this:
@@ -104,10 +157,21 @@ how to fix it, please visit the web page mentioned above.
 
 ### Inspect the certificate
 
-We can verify that the certificate is issued by SEEDEMU Internal.
+We can verify the certificate of a server from any node; run the `step` command. 
+
+```
+$ step certificate verify https://bank32.com --roots="/etc/ssl/certs/vTrus_ECC_Root_CA.pem"
+
+failed to connect: tls: failed to verify certificate: x509: certificate signed by unknown authority
+
+$ step certificate verify https://bank32.com \
+       --roots="/etc/ssl/certs/SEEDEMU_Internal_Root_CA.pem"
+```
+
+We can also display the certificate obtained from a server:
 
 ```bash
-$ step certificate inspect https://user1.internal
+$ step certificate inspect https://example32.com
 Certificate:
     Data:
         Version: 3 (0x2)
@@ -123,21 +187,7 @@ Certificate:
                 Public-Key: (2048 bit)
                 Modulus:
                     a9:02:3e:b0:f1:27:f4:a0:6b:c9:0a:6a:2d:49:6b:
-                    ed:c5:3f:15:71:bf:ba:54:d5:ea:78:0b:b8:52:a8:
-                    52:06:7f:d7:bf:6f:40:21:40:27:18:86:cf:7d:5e:
-                    eb:24:7b:e1:be:05:21:79:a4:c0:dd:c0:eb:06:da:
-                    ee:76:19:10:69:ad:64:3d:c3:44:b4:8d:25:a3:5e:
-                    31:5b:e7:74:71:f6:2e:d1:54:13:e6:cb:f5:3c:65:
-                    94:3c:28:0f:3f:7a:7b:08:d5:08:4d:65:5c:c9:86:
-                    2f:9b:57:46:28:9d:a9:a3:e6:6b:12:d0:83:52:a0:
-                    fd:fc:e1:c7:38:26:21:19:1b:d5:75:73:5c:69:cb:
-                    10:31:74:5d:fa:e9:28:e0:7e:5f:5e:02:72:7c:8a:
-                    54:4f:09:27:73:5d:8e:3a:ae:cb:14:ab:16:46:17:
-                    7a:89:d4:f3:44:ef:e6:7d:ef:6f:74:e6:b5:a7:ab:
-                    a0:0f:8e:dd:c2:47:28:b6:b1:69:6b:d0:2b:ac:a9:
-                    79:1e:4b:0e:b3:bc:de:3a:b6:b9:95:9c:6f:cb:e5:
-                    85:85:c8:d5:ad:d6:c7:1c:74:34:1a:5b:9c:6e:a5:
-                    48:98:ad:05:5d:96:33:ec:1d:e4:21:bd:e7:f8:ed:
+                    ...
                     20:eb:3c:5f:17:e8:a0:08:a2:6c:1f:bb:3b:91:d2:
                     b1
                 Exponent: 65537 (0x10001)
@@ -151,15 +201,13 @@ Certificate:
             X509v3 Authority Key Identifier:
                 keyid:68:B3:54:CA:24:87:3F:D1:30:32:41:42:34:1A:11:34:5E:98:8C:D0
             X509v3 Subject Alternative Name: critical
-                DNS:user.internal
+                DNS:example32.com
             X509v3 Step Provisioner:
                 Type: ACME
                 Name: acme
     Signature Algorithm: ECDSA-SHA256
          30:44:02:20:65:7e:a2:57:b5:fa:db:53:32:d3:0b:f3:c5:aa:
-         95:09:75:eb:75:9d:27:fb:87:fb:09:e4:bd:b9:77:95:01:00:
-         02:20:0f:e2:7f:49:70:86:a0:00:a8:9f:2b:fe:cd:9b:12:da:
+         ...
          55:83:bd:ab:26:0f:66:1f:38:5f:24:67:17:d3:e0:32
 ```
 
-It shows the same content as the certificate viewer in the browser.
