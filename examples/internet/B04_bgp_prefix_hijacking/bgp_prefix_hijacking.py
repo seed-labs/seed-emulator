@@ -27,4 +27,4 @@ ebgp.addPrivatePeerings(105, [2],  [199], PeerRelationship.Provider)
 
 ###############################################
 emu.render()
-emu.compile(Docker(), './output')
+emu.compile(Docker(), './output', override=True)

@@ -67,5 +67,5 @@ emu_merged = emuA.merge(emuB, DEFAULT_MERGERS)
 # Generate the final emulation files
 
 emu_merged.render()
-emu_merged.compile(Docker(), './output')
+emu_merged.compile(Docker(), './output', override=True)
 

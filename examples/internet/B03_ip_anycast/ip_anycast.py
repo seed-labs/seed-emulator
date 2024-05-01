@@ -40,5 +40,5 @@ ebgp.addPrivatePeerings(105, [2, 3],  [180], PeerRelationship.Provider)
 emu.render()
 
 # We need to set the selfManagedNetwork option to True (see README)
-emu.compile(Docker(selfManagedNetwork=True), './output')
+emu.compile(Docker(selfManagedNetwork=True), './output', override=True)
 

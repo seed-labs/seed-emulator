@@ -85,5 +85,5 @@ emu.render()
 #emu.dump('base-component.bin')
 
 # Generate the Docker files
-emu.compile(Docker(), './output')
+emu.compile(Docker(), './output', override=True)
 

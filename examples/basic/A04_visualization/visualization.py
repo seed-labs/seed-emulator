@@ -37,4 +37,4 @@ ix101_lan.setDisplayName('New York')
 # Render and compile
 
 emu.render()
-emu.compile(Docker(), './output')
+emu.compile(Docker(), './output', override=True)

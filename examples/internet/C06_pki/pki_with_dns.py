@@ -5,9 +5,9 @@ from seedemu.compiler import Docker
 from seedemu.core import Binding, Emulator, Filter, Action
 from seedemu.layers import Base
 from seedemu.services import DomainNameService, CAService, WebService, WebServer, RootCAStore
-import base_internet_dns
+from examples.internet.C06_pki import base_internet_with_dns
 
-base_internet_dns.run(dumpfile='./base-internet-dns.bin')
+base_internet_with_dns.run(dumpfile='./base-internet-dns.bin')
 
 emu = Emulator()
 emu.load('./base-internet-dns.bin')

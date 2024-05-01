@@ -84,4 +84,4 @@ emu.render()
 
 ###############################################################################
 
-emu.compile(Docker(), './output')
+emu.compile(Docker(), './output', override=True)

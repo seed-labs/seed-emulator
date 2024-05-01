@@ -78,4 +78,4 @@ ebgp.addPrivatePeering(102, 152, 154, abRelationship = PeerRelationship.Peer)
 # Render and compile
 
 emu.render()
-emu.compile(Docker(), './output')
+emu.compile(Docker(), './output', override=True)

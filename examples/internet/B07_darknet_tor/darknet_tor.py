@@ -83,4 +83,4 @@ emu.addBinding(Binding("webserver", filter=Filter(asn=170), action=Action.NEW))
 
 emu.addLayer(tor)
 emu.render()
-emu.compile(Docker(), './output')
+emu.compile(Docker(), './output', override=True)

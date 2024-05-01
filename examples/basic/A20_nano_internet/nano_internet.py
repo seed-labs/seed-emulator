@@ -155,11 +155,15 @@ docker.addImage(DockerImage('seed-ubuntu-large', [], local = True), priority=-1)
 docker.setImageOverride(as152.getHost('host2'), 'seed-ubuntu-large')
 
 # Generate the Docker files
-emu.compile(docker, './output')
+emu.compile(docker, './output', override=True)
 
 # Copy the base container image to the output folder
 # the base container image should be located under the ouput folder to add it as custom image.
-os.system('cp -r seed-ubuntu-large ./output')
+script_dir = os.path.dirname(os.path.abspath(__file__))
+image_dir = os.path.join(script_dir, 'seed-ubuntu-large')
+output_dir = os.path.join(script_dir, 'output')
+command = 'cp -r "{image_dir}" "{output_dir}"'.format(image_dir=image_dir, output_dir=output_dir)
+os.system(command)
 
 # Generate other type of outputs
 #emu.compile(Graphviz(), './others/graphs')

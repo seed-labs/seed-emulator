@@ -104,5 +104,5 @@ emu.render()
 ###############################################
 # Render the emulation
 
-emu.compile(Docker(), './output')
+emu.compile(Docker(), './output', override=True)
 

@@ -5,7 +5,7 @@ from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Mpls
 from seedemu.compiler import Docker, DistributedDocker, GcpDistributedDocker, Graphviz
 from seedemu.services import WebService
 from seedemu.core import Emulator, Binding, Filter
-from os import mkdir
+import os
 from examples.basic.A01_transit_as import transit_as
 
 ###############################################################################
@@ -30,9 +30,10 @@ print(emu.getRegistry())
 
 ###############################################################################
 # Compile the emulation
-
-mkdir('./output')
-emu.compile(Docker(), './output/regular-docker')
-emu.compile(Graphviz(), './output/graphs')
-emu.compile(DistributedDocker(), './output/distributed-docker')
-emu.compile(GcpDistributedDocker(), './output/gcp-distributed-docker')
+script_dir = os.path.dirname(os.path.abspath(__file__))
+output_dir = os.path.join(script_dir, 'output')
+os.makedirs(output_dir, exist_ok=True)
+emu.compile(Docker(), './output/regular-docker', override=True)
+emu.compile(Graphviz(), './output/graphs', override=True)
+emu.compile(DistributedDocker(), './output/distributed-docker', override=True)
+emu.compile(GcpDistributedDocker(), './output/gcp-distributed-docker', override=True)
