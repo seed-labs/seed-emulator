@@ -3,8 +3,6 @@ from seedemu.core import Node, Service, Server
 from seedemu.core.Emulator import Emulator
 from seedemu.core.enums import NetworkType
 from seedemu.services.EthereumService import *
-from eth_account import Account
-from eth_account.signers.local import LocalAccount
 from os import path
 from .FaucetUtil import FaucetServerFileTemplates
 from seedemu.services.EthereumService import *
@@ -17,22 +15,24 @@ class FaucetServer(Server):
     
     __blockchain:Blockchain
     __port: int
-    __account: LocalAccount
     __balance: int
     __rpc_url: str
     __linked_eth_node:str
     __chain_id: int
     __consensus: ConsensusMechanism
     __max_fund_amount: int
+    __max_fund_attemps: int
 
     def __init__(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int, max_fund_amount:int):
         """!
         @brief FaucetServer constructor.
         """
         super().__init__()
+        from eth_account import Account
+        self.__Account = Account
         self.__blockchain = blockchain
         self.__port = port
-        self.__account = Account.from_key('0xa9aec7f51b6b872d86676d4e5facf4ddf6850745af133b647781d008894fa3aa')
+        self.__account = self.__Account.from_key('0xa9aec7f51b6b872d86676d4e5facf4ddf6850745af133b647781d008894fa3aa')
         self.__balance = balance
         self.__balance_unit = EthUnit.ETHER
         self.__rpc_url = ''
@@ -41,6 +41,7 @@ class FaucetServer(Server):
         self.__fundlist = []
         self.__consensus = blockchain.getConsensusMechanism()
         self.__max_fund_amount = max_fund_amount
+        self.__max_fund_attempts = 30
     
     def setOwnerPrivateKey(self, keyString: str, isEncrypted = False, password = ""):
         """
@@ -56,9 +57,9 @@ class FaucetServer(Server):
         """
         
         if isEncrypted:
-            self.__account = Account.from_key(Account.decrypt(keyfile_json=keyString,password=password))
+            self.__account =self.__Account.from_key(self.__Account.decrypt(keyfile_json=keyString,password=password))
         else:
-            self.__account = Account.from_key(keyString)
+            self.__account =self.__Account.from_key(keyString)
         return self
     
     
@@ -80,9 +81,9 @@ class FaucetServer(Server):
         keyfileContent = f.read()
         f.close()
         if isEncrypted:
-            self.__account = Account.from_key(Account.decrypt(keyfile_json=keyfileContent,password=password))
+            self.__account =self.__Account.from_key(self.__Account.decrypt(keyfile_json=keyfileContent,password=password))
         else: 
-            self.__account = Account.from_key(keyfileContent)
+            self.__account =self.__Account.from_key(keyfileContent)
         return self
 
     def fund(self, recipient, amount):
@@ -120,6 +121,9 @@ class FaucetServer(Server):
     def getFaucetBalance(self) -> int:
         return self.__balance
     
+    def setFundMaxAttempts(self, attempts:int) -> FaucetServer:
+        self.__max_fund_attempts = attempts
+    
     def install(self, node: Node):
         """!
         @brief Install the service.
@@ -148,6 +152,7 @@ class FaucetServer(Server):
                                                                             port = self.__port))
             
         node.setFile('/fund.sh', FaucetServerFileTemplates['fund_script'].format(address='localhost', 
+                                                                                 max_attempts = self.__max_fund_attempts,
                                                                                  port=self.__port,
                                                                                  fund_command=';'.join(funds_list)))
         node.appendStartCommand('chmod +x /fund.sh')
@@ -155,6 +160,6 @@ class FaucetServer(Server):
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'Web server object.\n'
+        out += 'Faucet server object.\n'
 
         return out

@@ -2,15 +2,72 @@
 from __future__ import annotations
 from seedemu.core import Node, Service, Server
 from seedemu.core.Emulator import Emulator
-from seedemu.core.enums import NetworkType
 from seedemu.services.EthereumService import *
-from eth_account import Account
-from eth_account.signers.local import LocalAccount
-from os import path
 from .FaucetUtil import *
 
-# This service is a mock service to show how a service can use the Faucet Service.
-# This will be deleted eventually.
+# This service is a base code of a service utilizing faucetServer.
+
+FUND_SCRIPT = '''\
+#!/bin/env python3
+
+import time
+import requests
+import json
+from eth_account import Account
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Check if the faucet server is running for 600 seconds
+timeout = 600
+start_time = time.time()
+while True:
+    try:
+        response = requests.get("{faucet_url}")
+        if response.status_code == 200:
+            logging.info("faucet server connection succeed.")
+            break
+        logging.info("faucet server connection failed: try again 10 seconds after.")
+        
+        time.sleep(10)
+        if time.time() - start_time > timeout:
+            logging.info("faucet server connection failed: 600 seconds exhausted.")
+            exit()
+    except Exception as e:
+        pass
+
+def send_fundme_request(account_address):
+	data = {{'address': account_address, 'amount': 10}}
+	logging.info(data)
+	request_url = "{faucet_fund_url}"
+	try:
+		response = requests.post(request_url, headers={{"Content-Type": "application/json"}}, data=json.dumps(data))
+		logging.info(response)
+		if response.status_code == 200:
+			api_response = response.json()
+			message = api_response['message']
+			if message:
+				print(f"Success: {{message}}")
+			else:
+				logging.error("Funds request was successful but the response format is unexpected.")
+		else:
+			api_response = response.json()
+			message = api_response['message']
+			logging.error(f"Failed to request funds from faucet server. Status code: {{response.status_code}} Message: {{message}}")
+			# Send another request
+			logging.info("Sending another request to faucet server.")
+			send_fundme_request(account_address)
+	except Exception as e:
+		logging.error(f"An error occurred: {{str(e)}}")
+		exit()
+
+# Create an account
+user_account = Account.create()
+account_address = user_account.address
+
+# Send /fundme request to faucet server
+send_fundme_request(account_address)
+'''
 
 class FaucetUserServer(Server):
     """!
@@ -52,12 +109,12 @@ class FaucetUserServer(Server):
         @brief Install the service.
         """
         node.appendClassName("FaucetUserService")
-        self.__faucet_util.addFund("0x4899DA58039396E9eC4F171aa3cB20762c1f8C6c", 2)
-        self.__faucet_util.addFund("0xF5c8747aD31c8726bA4bf8C6492c07625b55eE04", 3)
-        node.setFile('/fund.sh', self.__faucet_util.getFundScript())
-        node.appendStartCommand('chmod +x /fund.sh')
-        node.appendStartCommand('/fund.sh')
-    
+        node.addSoftware('python3 python3-pip')
+        node.addBuildCommand('pip3 install eth_account==0.5.9 requests')
+        node.setFile('/fund.py', FUND_SCRIPT.format(faucet_url=self.__faucet_util.getFacuetUrl(),
+                                                    faucet_fund_url=self.__faucet_util.getFaucetFundUrl()))
+        node.appendStartCommand('chmod +x /fund.py')
+        node.appendStartCommand('/fund.py')
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -67,7 +124,7 @@ class FaucetUserServer(Server):
 
 class FaucetUserService(Service):
     """!
-    @brief The FaucetService class.
+    @brief The FaucetUserService class.
     """
     __faucet_port: int
     __faucet_vnode_name:set

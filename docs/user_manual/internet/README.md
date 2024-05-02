@@ -21,7 +21,7 @@
   - [Botnet](../../../examples/B05-botnet/)
   - [The Hosts file (add IP-hostname mappings)](../../../examples/B11-etc-hosts/): 
     inside the emulator, we add ip-hostname mappings to the `/etc/hosts` file. 
-  - [Public Key Infrastructure (PKI)](../../../examples/)
+  - [Public Key Infrastructure (PKI)](./ca.md) 
   - [IPFS (InterPlanetary File System)](../../../examples/C05-kubo)
   - [IPFS Kubo](./kubo.md)
 

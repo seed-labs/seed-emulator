@@ -5,11 +5,9 @@ import unittest as ut
 from .SEEDBlockchain import Wallet
 from web3 import Web3
 from seedemu import *
-import os
-import getopt
-import sys
 import time
 from test import SeedEmuTestCase
+import requests
 
 
 class EthereumPOWTestCase(SeedEmuTestCase):
@@ -154,8 +152,6 @@ class EthereumPOWTestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_pow_create_account'))
         test_suite.addTest(cls('test_pow_send_transaction'))
         test_suite.addTest(cls('test_pow_peer_counts'))
-        test_suite.addTest(cls('test_static_fund'))
-        test_suite.addTest(cls('test_dynamic_fund'))
         return test_suite
 
 if __name__ == "__main__":

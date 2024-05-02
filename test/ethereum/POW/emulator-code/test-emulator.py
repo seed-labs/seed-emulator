@@ -55,7 +55,7 @@ emu.addBinding(Binding('pow-eth5', filter = Filter(asn = 154, nodeName='host_0')
 
 faucet:FaucetServer = blockchain1.createFaucetServer(vnode='faucet',
                                                     port=80,
-                                                    linked_eth_node="poa-eth1",
+                                                    linked_eth_node="pow-eth1",
                                                     balance=1000)
 
 faucet.fund('0x40e38EF94ab2bC9506167D478821ffd55ff2d88d',2)

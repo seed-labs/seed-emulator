@@ -11,14 +11,14 @@ from queue import Queue
 from web3 import Web3, HTTPProvider
 import re
 import requests
-import random
 import json
 
 rpc_url = "http://{rpc_url}:{rpc_port}"
 faucet_url = "http://{faucet_url}:{faucet_port}"
 
 contract_folder = './contracts/'
-retry_delay = random.randint(20, 100)
+# If the deployment od oracle contract fails, the script will retry after this delay in seconds
+retry_delay = 20
 
 deployment_queue = Queue()
 deployment_queue.put({{}})
@@ -51,7 +51,14 @@ while True:
     try:
         response = requests.get(faucet_url)
         if response.status_code == 200:
+            logging.info("faucet server connection succeed.")
             break
+        logging.info("faucet server connection failed: try again 10 seconds after.")
+        
+        time.sleep(10)
+        if time.time() - start_time > timeout:
+            logging.info("faucet server connection failed: 600 seconds exhausted.")
+            exit()
     except Exception as e:
         pass
 
@@ -154,6 +161,7 @@ def authorize_address(sender, oracle_contract_address, nonce):
         txn_receipt = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
         txn_receipt = web3.eth.wait_for_transaction_receipt(txn_receipt)
         logging.info(f'Success: {{txn_receipt}}')
+        logging.info(f'Successfully set authorized sender: {{sender}} in Oracle contract: {{oracle_contract_address}}')
         return True
     except Exception as e:
         logging.error(f'Error: {{e}}')
@@ -163,7 +171,7 @@ def authorize_address(sender, oracle_contract_address, nonce):
         else:
             return True
 
-with open('./deployed_contracts/sender.txt', 'r') as file:
+with open('./deployed_contracts/auth_sender.txt', 'r') as file:
     sender = file.read().strip()
 authorization_success = False
 while not authorization_success:

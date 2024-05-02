@@ -10,4 +10,4 @@ from .EthereumServer import *
 from .EthereumService import *
 from .FaucetServer import *
 from .FaucetUtil import *
-from .FaucetUserService import *
+from .FaucetUserService import FaucetUserService, FaucetUserServer
