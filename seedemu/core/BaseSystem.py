@@ -7,9 +7,9 @@ class BaseSystem(Enum):
     @brief Base System Enum.
     """
 
-    # These are code names for the systems that can be used as
+    # These are code names for the systems that can be used as 
     # the base for the node. During the Docker compilation time, these
-    # names will be used to find the corresponding docker images.
+    # names will be used to find the corresponding docker images. 
     UBUNTU_20_04        = 'ubuntu20.04'
     SEEDEMU_BASE        = 'seedemu-base'
     SEEDEMU_ROUTER      = 'seedemu-router'
@@ -19,8 +19,8 @@ class BaseSystem(Enum):
     SEEDEMU_CHAINLINK   = 'seedemu-chainlink'
     DEFAULT             = SEEDEMU_BASE
 
-    # The relationship of the images: B is a subset of A means that
-    # A is built on top of A and has
+    # The relationship of the images: B is a subset of A means that 
+    # A is built on top of A and has 
     SUBSET: Dict[str, list(str)] = {
                 UBUNTU_20_04: [],
                 SEEDEMU_BASE: [UBUNTU_20_04],
@@ -30,9 +30,8 @@ class BaseSystem(Enum):
                 SEEDEMU_SC_DEPLOYER: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_CHAINLINK: [UBUNTU_20_04, SEEDEMU_BASE],
             }
-
-    @staticmethod
-    def doesAContainB(A: BaseSystem, B: BaseSystem):
+    @staticmethod 
+    def doesAContainB(A: BaseSystem, B: BaseSystem):  
         """!
         @brief Check if B is subset of A.
 

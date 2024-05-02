@@ -1,11 +1,10 @@
 from __future__ import annotations
 from .EthEnum import ConsensusMechanism
-from typing import Dict, List
+from typing import List
 import json
 from datetime import datetime, timezone
 from os import path
 from .EthTemplates import GenesisFileTemplates
-from web3 import Web3
 from sys import stderr
 from time import time
 
@@ -18,9 +17,12 @@ class Genesis():
     _consensusMechanism:ConsensusMechanism
 
     def __init__(self, consensus:ConsensusMechanism):
-        self._consensusMechanism = consensus
-        self._genesis = json.loads(GenesisFileTemplates[self._consensusMechanism.value])
-        self._genesis["timestamp"] = hex(int((time())))
+        from web3 import Web3
+        self.__Web3 = Web3
+        self.__consensusMechanism = consensus
+        self.__genesis = json.loads(GenesisFileTemplates[self.__consensusMechanism.value])
+        self.__genesis["timestamp"] = hex(int((time())))
+        
 
     def setGenesis(self, customGenesis:str):
         """!
@@ -87,8 +89,8 @@ class Genesis():
         """
 
         assert balance >= 0, "Genesis::allocateBalance: balance cannot have a negative value. Requested Balance Value : {}".format(balance)
-        checksum_address = Web3.toChecksumAddress(address)
-        self._genesis["alloc"][checksum_address[2:]] = {"balance":"{}".format(balance)}
+        checksum_address = self.__Web3.toChecksumAddress(address)
+        self.__genesis["alloc"][checksum_address[2:]] = {"balance":"{}".format(balance)}
 
         return self
 
@@ -217,6 +219,7 @@ class EthAccount():
     @staticmethod
     def createEmulatorAccountFromMnemonic(id:int, mnemonic:str, balance:int, index:int, password:str):
         from eth_account import Account
+        from web3 import Web3
         Account.enable_unaudited_hdwallet_features()
 
         EthAccount._log('creating node_{} emulator account {} from mnemonic...'.format(id, index))
@@ -242,6 +245,7 @@ class EthAccount():
     @staticmethod
     def createLocalAccountFromMnemonic(mnemonic:str, balance:int, index:int):
         from eth_account import Account
+        from web3 import Web3
         Account.enable_unaudited_hdwallet_features()
 
         EthAccount._log('creating local account {} from mnemonic...'.format(index))

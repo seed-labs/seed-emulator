@@ -1,0 +1,65 @@
+---
+
+
+dps:
+    sw1:
+        dp_id: 0x1 # This must match with the datapath-id when setting the controller using ovs-vsctl 
+        timeout: 250 # This is the time out after which SDN controller will reconfirm MAC address of the devices. It must be more than 2 times of ARP neighbor timeout.
+        arp_neighbor_timeout: 120
+        interfaces:
+            1:
+                name: "a1"
+                description: "host1 container"
+                native_vlan: vlan100
+            2:
+                name: "a2"
+                description: "host2 container"
+                native_vlan: vlan100
+            3:
+                name: "b1"
+                description: "host1 container"
+                native_vlan: vlan200
+            4:
+                name: "b2"
+                description: "host2 container"
+                native_vlan: vlan200
+            5:
+                name: "bgp"
+                description: "bgp router container"
+                native_vlan: vlan100
+            6:
+                name: "veth_faucet"
+                description: "faucet dataplane connection"
+                native_vlan: vlan100
+
+vlans:
+    vlan100:
+        vid: 100
+        faucet_vips: ["10.150.1.252/24"] # when routing is enabled this is the router-ip for this vlan
+        faucet_mac: "aa:bb:cc:dd:ee:01"
+    vlan200:
+        vid: 200
+        faucet_vips: ["10.150.2.252/24"]
+        faucet_mac: "aa:bb:cc:dd:ee:02"
+    # vlan300:
+    #     vid: 300
+    #     faucet_vips: ["10.100.0.254/24"]
+    #    faucet_mac: "aa:bb:cc:dd:ee:03" 
+
+routers:
+    router_1:
+        vlans: [vlan100, vlan200] #inter-vlan routing
+    #router_2:
+    #    vlans: [vlan200, vlan300]
+    bgp_router:
+        bgp:
+            vlan: vlan100                       # The VLAN faucet use for BGP
+            as: 65000                           # Faucet's AS number
+            port: 9179                          # BGP port for Faucet to listen on.
+            routerid: '10.150.1.253'                # Faucet's Unique ID.
+            server_addresses: ['10.150.1.253']      # Faucet's listen IP for BGP
+            neighbor_addresses: ['10.150.1.254']    #   Neighbouring IP addresses (IPv4/IPv6)
+            neighbor_as: 150                  # Neighbour's AS number
+    # router-3:
+    #     vlans: [vlan300, vlan200]
+
