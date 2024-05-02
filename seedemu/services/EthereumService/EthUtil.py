@@ -18,10 +18,10 @@ class Genesis():
 
     def __init__(self, consensus:ConsensusMechanism):
         from web3 import Web3
-        self.__Web3 = Web3
-        self.__consensusMechanism = consensus
-        self.__genesis = json.loads(GenesisFileTemplates[self.__consensusMechanism.value])
-        self.__genesis["timestamp"] = hex(int((time())))
+        self._Web3 = Web3
+        self._consensusMechanism = consensus
+        self._genesis = json.loads(GenesisFileTemplates[self._consensusMechanism.value])
+        self._genesis["timestamp"] = hex(int((time())))
         
 
     def setGenesis(self, customGenesis:str):
@@ -89,8 +89,8 @@ class Genesis():
         """
 
         assert balance >= 0, "Genesis::allocateBalance: balance cannot have a negative value. Requested Balance Value : {}".format(balance)
-        checksum_address = self.__Web3.toChecksumAddress(address)
-        self.__genesis["alloc"][checksum_address[2:]] = {"balance":"{}".format(balance)}
+        checksum_address = self._Web3.toChecksumAddress(address)
+        self._genesis["alloc"][checksum_address[2:]] = {"balance":"{}".format(balance)}
 
         return self
 
