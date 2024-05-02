@@ -3,6 +3,9 @@
 
 from seedemu import *
 from L2Util import generateAccounts, writeConfig
+from lib.services.EthereumLayer2Service import *
+from lib.services.EthereumService.EthUtil import CustomGenesis
+from lib.services.EthereumService.EthereumService import CustomBlockchain
 
 import sys
 
@@ -29,6 +32,7 @@ eth = EthereumService(override=True)
 
 # Create the 1 Blockchain layers, which is a sub-layer of Ethereum layer
 blockchain = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.POA)
+blockchain.__class__ = CustomBlockchain
 
 # Customize blockchain genesis file
 initBal = 10**8

@@ -15,7 +15,7 @@ from web3.middleware import geth_poa_middleware
 from web3.exceptions import TransactionNotFound
 
 from hexbytes import HexBytes
-from seedemu.services.EthereumLayer2Service import EthereumLayer2Account
+from lib.services.EthereumLayer2Service import EthereumLayer2Account
 
 
 class L2Util:
