@@ -5,6 +5,7 @@ from .IsolationDomain import IsolationDomain
 from .InternetExchange import InternetExchange
 from .Network import Network
 from .Node import Node, File, Interface, Router, RealWorldRouter, ScionRouter
+from .enums import NodeRole
 from .Printable import Printable
 from .Registry import Registry, ScopedRegistry, Registrable
 from .Graphable import Graphable, Graph, Vertex, Edge

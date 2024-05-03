@@ -97,7 +97,9 @@ class Routing(Layer):
 
                 rs_iface = rs_ifaces[0]
 
-                if not issubclass(rs_node.__class__, Router): rs_node.__class__ = Router
+                if not issubclass(rs_node.__class__, Router):
+                    rs_node.__class__ = Router
+                    rs_node.setBorderRouter(True)
                 rs_node.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rs_bird"].format(
                     routerId = rs_iface.getAddress()
                 ))

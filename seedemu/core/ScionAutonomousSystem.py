@@ -57,7 +57,8 @@ class ScionAutonomousSystem(AutonomousSystem):
         super().registerNodes(emulator)
         reg = emulator.getRegistry()
         asn = str(self.getAsn())
-        for (key, val) in self.__control_services.items(): reg.register(asn, 'csnode', key, val)
+        for (key, val) in self.__control_services.items():
+            reg.register(asn, 'csnode', key, val)
 
     def configure(self, emulator: Emulator):
         """!
@@ -180,8 +181,8 @@ class ScionAutonomousSystem(AutonomousSystem):
 
         # Border routers
         border_routers = {}
-        for router in self.getRouters():
-            rnode: ScionRouter = self.getRouter(router)
+        for router in self.getBorderRouters():
+            rnode: ScionRouter = self.getRouter( router.getName() )
 
             border_routers[rnode.getName()] = {
                 "internal_addr": f"{rnode.getLoopbackAddress()}:30042",
@@ -206,7 +207,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         @returns Node.
         """
         assert name not in self.__control_services, 'Control service with name {} already exists.'.format(name)
-        self.__control_services[name] = Node(name, NodeRole.Host, self.getAsn())
+        self.__control_services[name] = Node(name, NodeRole.ControlService, self.getAsn())
 
         return self.__control_services[name]
 
