@@ -1,8 +1,14 @@
 from __future__ import annotations
 from contextlib import contextmanager
-from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
+from ipaddress import (
+    IPv4Address,
+    IPv4Network,
+    IPv6Address,
+    IPv6Network,
+    ip_address,
+    ip_network,
+)
 import os
-import random
 import re
 import secrets
 import shutil
@@ -41,6 +47,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 * */1 * * * root test -x /usr/bin/certbot -a \! -d /run/systemd/system && perl -e 'sleep int(rand(3600))' && REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt certbot -q renew
 """
 
+
 def ipsInNetwork(ips: Iterable, network: str) -> bool:
     """!
     @brief Check if any of the IPs in the iterable is in the network.
@@ -53,14 +60,14 @@ def ipsInNetwork(ips: Iterable, network: str) -> bool:
     @returns True if any of the IPs is in the network, False otherwise.
     """
     net = ip_network(network)
-    map6to4 = int(IPv6Address('::ffff:0:0'))
+    map6to4 = int(IPv6Address("::ffff:0:0"))
     if isinstance(net, IPv4Network):
         net = IPv6Network(
             # convert to IPv4-Mapped IPv6 Address for computation
             #   ::ffff:V4ADDR
             # 80 + 16 +  32
             # https://datatracker.ietf.org/doc/html/rfc4291#section-2.5.5.2
-            f'{IPv6Address(map6to4 | int(net.network_address))}/{96 + net.prefixlen}'
+            f"{IPv6Address(map6to4 | int(net.network_address))}/{96 + net.prefixlen}"
         )
     for ip in ips:
         ip = ip_address(ip)
@@ -69,6 +76,7 @@ def ipsInNetwork(ips: Iterable, network: str) -> bool:
         if ip in net:
             return True
     return False
+
 
 class CAServer(Server):
     def __init__(self, duration: str, caStore: RootCAStore, step_version: str):
@@ -139,7 +147,11 @@ class CAService(Service):
         self.__ca_domain = self.__ca_store._caDomain
         self.__duration = "2160h"
         self.__filters: List[Filter | None] = []
-        self._step_version = "0.26.0"
+        self._step_version = self._step_version()
+
+    @classmethod
+    def _step_version(cls):
+        return "0.26.1"
 
     def setCertDuration(self, duration: str) -> CAService:
         """!
@@ -215,28 +227,28 @@ certbot --server https://{ca_domain}/acme/acme/directory --non-interactive --ngi
         @param filter The filter to match the nodes. Default is None, which means all nodes.
 
         @returns self, for chaining API calls.
-        """ 
+        """
         # This is possible to do it in runtime
         if filter:
             assert (
                 not filter.allowBound
-            ), 'allowBound filter is not supported in the global layer.'
+            ), "allowBound filter is not supported in the global layer."
         self.__filters.append(filter)
         return self
-    
+
     def configure(self, emulator: Emulator):
         super().configure(emulator)
         all_nodes_items = emulator.getRegistry().getAll().items()
         all_nodes: Dict[Node, bool] = {}
         for (_, type, name), obj in all_nodes_items:
-            if type not in ['rs', 'rnode', 'hnode', 'csnode']:
+            if type not in ["rs", "rnode", "hnode", "csnode"]:
                 continue
             all_nodes[obj] = False
         if None in self.__filters:
             self.__filters = [None]
         for node in all_nodes:
             node.addBuildCommand(
-            f"\
+                f"\
 if uname -m | grep x86_64 > /dev/null; then \
 curl -O -L https://github.com/smallstep/cli/releases/download/v{self._step_version}/step-cli_{self._step_version}_amd64.deb && \
 apt install -y ./step-cli_{self._step_version}_amd64.deb; \
@@ -244,7 +256,7 @@ else \
 curl -O -L https://github.com/smallstep/cli/releases/download/v{self._step_version}/step-cli_{self._step_version}_arm64.deb && \
 apt install -y ./step-cli_{self._step_version}_arm64.deb; \
 fi"
-        )
+            )
         for filter in self.__filters:
             for node in all_nodes:
                 if all_nodes[node]:
@@ -269,9 +281,14 @@ fi"
                             continue
                     if filter.custom and not filter.custom(node.getName(), node):
                         continue
-                node.addSoftware('ca-certificates')
-                node.importFile(os.path.join(self.__ca_store.getStorePath(), '.step/certs/root_ca.crt'), '/usr/local/share/ca-certificates/SEEDEMU_Internal_Root_CA.crt')
-                node.appendStartCommand('update-ca-certificates')
+                node.addSoftware("ca-certificates")
+                node.importFile(
+                    os.path.join(
+                        self.__ca_store.getStorePath(), ".step/certs/root_ca.crt"
+                    ),
+                    "/usr/local/share/ca-certificates/SEEDEMU_Internal_Root_CA.crt",
+                )
+                node.appendStartCommand("update-ca-certificates")
                 all_nodes[node] = True
 
 
@@ -316,12 +333,10 @@ class RootCAStore:
         self.__initialized = False
         self.__pendingRootCertAndKey = None
         with cd(self.__caDir):
-            self.__container = BuildtimeDockerImage("smallstep/step-ca").container()
-            self.__container.mountVolume(self.__caDir, "/tmp").env(
-                "STEPPATH", "/tmp/.step"
-            ).entrypoint(
-                "step"
-            )
+            self.__container = BuildtimeDockerImage(f"smallstep/step-cli:{CAService._step_version()}").container()
+            self.__container.user(f"{os.getuid()}:{os.getuid()}").mountVolume(
+                self.__caDir, "/tmp"
+            ).env("STEPPATH", "/tmp/.step").entrypoint("step")
 
     def getStorePath(self) -> str:
         """!
@@ -330,7 +345,7 @@ class RootCAStore:
         @returns The path of the CA store.
         """
         return self.__caDir
-    
+
     def setPassword(self, password: str) -> RootCAStore:
         """!
         @brief Set the password to decrypt the CA Key if it is provided, otherwise, the password is used to encrypt the CA Key.
@@ -361,9 +376,12 @@ class RootCAStore:
         with cd(self.__caDir):
             shutil.copyfile(rootCertPath, "root_ca.crt")
             shutil.copyfile(rootKeyPath, "root_ca_key")
-        self.__pendingRootCertAndKey = (f"{self.__caDir}/root_ca.crt", f"{self.__caDir}/root_ca_key")
+        self.__pendingRootCertAndKey = (
+            f"{self.__caDir}/root_ca.crt",
+            f"{self.__caDir}/root_ca_key",
+        )
         return self
-    
+
     def initialize(self):
         """!
         @brief Initialize the CA store.
@@ -376,7 +394,7 @@ class RootCAStore:
                 f.write(self.__password)
             initialize_command = "ca init"
             if self.__pendingRootCertAndKey:
-                initialize_command += ' --root /tmp/root_ca.crt --key /tmp/root_ca_key'
+                initialize_command += " --root /tmp/root_ca.crt --key /tmp/root_ca_key"
             initialize_command += f' --deployment-type "standalone" --name "SEEDEMU Internal" \
 --dns "{self._caDomain}" --address ":443" --provisioner "admin" --with-ca-url "https://{self._caDomain}" \
 --password-file /tmp/password.txt --provisioner-password-file /tmp/password.txt --acme'
