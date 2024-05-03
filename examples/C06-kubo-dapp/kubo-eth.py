@@ -121,7 +121,8 @@ emu.render()
 # Deploy the smart contract:
 webHost.appendStartCommand(f'python3 volumes/deployContract.py {getIP(emu.resolvVnode(ethVnode))}')
 
-# Build and run the web app:
+# Build (if not built) and run the web app:
+webHost.appendStartCommand('cd /volumes/kubo-dapp/ && [ ! -d build ] && npm run build')
 webHost.appendStartCommand('serve -sC /volumes/kubo-dapp/build', fork=True)
 
 docker = Docker(internetMapEnabled=True, etherViewEnabled=True)
