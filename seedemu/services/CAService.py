@@ -118,7 +118,7 @@ update-ca-certificates"
             f"jq '.authority.claims.defaultTLSCertDuration |= \"{self.__duration}\"' $(step path)/config/ca.json > $(step path)/config/ca.json.tmp && mv $(step path)/config/ca.json.tmp $(step path)/config/ca.json"
         )
         node.appendStartCommand(
-            "step-ca --password-file /tmp/password.txt $(step path)/config/ca.json > /var/step-ca.log 2> /var/step-ca.log",
+            "step-ca --password-file /root/password.txt $(step path)/config/ca.json > /var/step-ca.log 2> /var/step-ca.log",
             fork=True,
         )
 
