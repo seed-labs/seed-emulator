@@ -59,9 +59,6 @@ for asn in asns:
         emu.addBinding(Binding(vnode, filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
         i = i+1
 
-# Add the Ethereum layer
-# emu.addLayer(eth)
-
 
 ###############################################################################
 # Initialize the KuboService (you may specify additional parameters here):
@@ -86,8 +83,6 @@ for asNum in asns:
         print(f'Bound {vnode} to hnode_{asNum}_host_{h}')
         emu.addBinding(Binding(vnode, filter=Filter(asn=asNum, nodeName='host_{}'.format(h), allowBound=True)))
         i += 1
-# Add the KuboService layer (ipfs) to the Emulator so that it is rendered and compiled:
-# emu.addLayer(ipfs)
 
 ###############################################################################
 # Expose Ethereum on a node:
@@ -108,7 +103,7 @@ webHost.addSoftware('curl python3 python3-pip')
 webHost.addBuildCommand('curl -fsSL https://deb.nodesource.com/setup_21.x | bash - && apt update -y && apt install -y nodejs')
 webHost.addBuildCommand('npm install -g serve')
 webHost.addBuildCommand('pip install web3 py-solc-x')   # Used to deploy the smart contract
-webHost.addBuildCommand("""python3 -c 'from solcx import install_solc;install_solc(version="0.8.15")'""")
+webHost.addBuildCommand("""python3 -c 'from solcx import install_solc;install_solc(version="0.8.15")'""")   # Install the solc compiler to compile the smart contract
 
 # Allocate node resources:
 webHost.addSharedFolder('/volumes', '../volumes')

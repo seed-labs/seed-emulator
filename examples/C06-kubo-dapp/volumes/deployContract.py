@@ -5,7 +5,7 @@ from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware, construct_sign_and_send_raw_middleware
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from solcx import install_solc, compile_files
+from solcx import compile_files
 
 CONTRACT_DIR = '/volumes/contract/'
 RPC_URL = f'http://{sys.argv[1]}:8545'
@@ -43,12 +43,7 @@ deployerAccount: LocalAccount = Account.from_key(DEPLOYER_ACC_KEY)
 web3.middleware_onion.add(construct_sign_and_send_raw_middleware(deployerAccount))
 web3.eth.default_account = deployerAccount.address
 
-
 # Construct the smart contract object:
-# with open(os.path.join(CONTRACT_DIR, 'IPFS_StorageAbi'), 'r') as file:
-#    contract_abi = file.read()
-# with open(os.path.join(CONTRACT_DIR, 'IPFS_StorageBin'), 'r') as file:
-#    contract_bin = file.read()
 ipfsStorage = web3.eth.contract(abi=contract_abi, bytecode=contract_bin)
 logging.info('Successfully imported ABI and bytecode to create contract.')
 
