@@ -18,14 +18,9 @@ emu.load('./base-component.bin')
 eth = EthereumService()
 blockchain = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.POA)
 
-# Create 5 accounts, each with 100 Ethers. We will use these accounts to
-# generate background traffic (sending random transactions from them).
-words = "great amazing fun seed lab protect network system security prevent attack future"
-blockchain.setLocalAccountParameters(mnemonic=words, total=5, balance=999999999) 
-
 # These 3 accounts are generated from the following phrase:
 # "gentle always fun glass foster produce north tail security list example gain"
-# They are for users. We will use them in MetaMask, as well as in our sample code.  
+# They are for users. We will use them in MetaMask, as well as in our sample code.
 blockchain.addLocalAccount(address='0xF5406927254d2dA7F7c28A61191e3Ff1f2400fe9',
                            balance=30)
 blockchain.addLocalAccount(address='0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9', 
@@ -33,6 +28,9 @@ blockchain.addLocalAccount(address='0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9',
 blockchain.addLocalAccount(address='0xCBF1e330F0abD5c1ac979CF2B2B874cfD4902E24', 
                            balance=10)
 
+# The smart contract will be deployed from this account:
+blockchain.addLocalAccount(address='0xad15bEbf1992212A57dC3513acc77796110E2bD4', 
+                           balance=9999999)
 
 # Create the Ethereum servers. 
 asns  = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
@@ -106,12 +104,11 @@ webHost = webASN.createHost('webhost').joinNetwork('net0')
 webKubo.setConfig('API.HTTPHeaders.Access-Control-Allow-Origin', ["*"])
 
 # Add software to node:
-webHost.addSoftware('curl')
+webHost.addSoftware('curl python3 python3-pip')
 webHost.addBuildCommand('curl -fsSL https://deb.nodesource.com/setup_21.x | bash - && apt update -y && apt install -y nodejs')
 webHost.addBuildCommand('npm install -g serve')
-
-# Build and run the web app:
-webHost.appendStartCommand('serve -sC /volumes/kubo-dapp/build', fork=True)
+webHost.addBuildCommand('pip install web3 py-solc-x')   # Used to deploy the smart contract
+webHost.addBuildCommand("""python3 -c 'from solcx import install_solc;install_solc(version="0.8.15")'""")
 
 # Allocate node resources:
 webHost.addSharedFolder('/volumes', '../volumes')
@@ -125,6 +122,12 @@ emu.addBinding(Binding('extraKubo', filter = Filter(asn=asn, nodeName='webhost')
 emu.addLayer(ipfs)
 emu.addLayer(eth)
 emu.render()
+
+# Deploy the smart contract:
+webHost.appendStartCommand(f'python3 volumes/deployContract.py {getIP(emu.resolvVnode(ethVnode))}')
+
+# Build and run the web app:
+webHost.appendStartCommand('serve -sC /volumes/kubo-dapp/build', fork=True)
 
 docker = Docker(internetMapEnabled=True, etherViewEnabled=True)
 emu.compile(docker, OUTPUTDIR, override = True)

@@ -63,8 +63,8 @@ var web3 = null;
 const ipfs = create('http://localhost:5001');
 
 function ImageBoardApp({ pageProps }) {
-  // Store in cookie: contractAddress, onboarded
-  const appCookies = ['onboarded', 'contractAddress'];
+  // Store in cookie: onboarded
+  const appCookies = ['onboarded'];
   // imgArr = [{name: 'filename.png', cid: 'CIDasAString', url: 'http://localhost:8081/dsajfhasjdfkald'}]
   const [imgArr, setImgArr] = useState([]);
   const [{wallet, connecting}, connectWallet, disconnectWallet] = useConnectWallet();
@@ -73,6 +73,7 @@ function ImageBoardApp({ pageProps }) {
   // File: {name: 'name', data: Buffer}
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
+  const [contractAddress, setContractAddress] = useState(null);
 
   function resetDapp(e) {
     try{
@@ -86,7 +87,8 @@ function ImageBoardApp({ pageProps }) {
   function handleWizardFinish(contractAddr) {
     setWizardComplete(true);
     Cookies.set('onboarded', true);
-    Cookies.set('contractAddress', contractAddr);
+    // Uncomment the below and re-enable the contract step in the SetupWizard to add this manually.
+    // setContractAddress(contractAddr);
     handleConnect();
   }
 
@@ -126,7 +128,7 @@ function ImageBoardApp({ pageProps }) {
     console.log('Added to IPFS')
 
     // Create smart contract interface:
-    const ipfsStorage = new web3.eth.Contract(abi, Cookies.get('contractAddress'));
+    const ipfsStorage = new web3.eth.Contract(abi, contractAddress);
     
     // Save this to account's photos:
     const txReceipt = ipfsStorage.methods.putFile(cid.toString(), file.name).send({
@@ -150,7 +152,7 @@ function ImageBoardApp({ pageProps }) {
   async function getStoredImages() {
     try {
     // Create smart contract interface:
-    const ipfsStorage = new web3.eth.Contract(abi, Cookies.get('contractAddress'));
+    const ipfsStorage = new web3.eth.Contract(abi, contractAddress);
 
     // Populate with user's images, if they have any:
     var myCIDs = await ipfsStorage.methods.getFiles().call({
@@ -172,8 +174,8 @@ function ImageBoardApp({ pageProps }) {
     console.log('Connected Account: ', connectedAccount);
   }, [connectedAccount]);
   React.useEffect(() => {
-    console.log('Contract Address: ', Cookies.get('contractAddress'));
-  }, [Cookies.get('contractAddress')]);
+    console.log('Contract Address: ', contractAddress);
+  }, [contractAddress]);
 
   // Get new images if user changes:
   // React.useEffect(() => {
@@ -181,6 +183,16 @@ function ImageBoardApp({ pageProps }) {
   //     window.location.reload();
   //   }
   // }, [connectedAccount]);
+
+  // Get the deployed smart contract's address:
+  React.useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch('/contract_address.txt');
+      const rData = await response.text();
+      setContractAddress(rData);
+    };
+    fetchData();
+  }, []);
 
   React.useEffect(() => {
     // If web3 isn't connected to the provider, but we've already onboarded
@@ -195,10 +207,10 @@ function ImageBoardApp({ pageProps }) {
     }
 
     // If we have the contract, account, web3, and ipfs, get the user's images:
-    if (Cookies.get('contractAddress') && connectedAccount && web3 && ipfs) {
+    if (contractAddress && connectedAccount && web3 && ipfs) {
       getStoredImages();
     }
-  }, [wallet, web3, connectedAccount]);
+  }, [wallet, connectedAccount]);
 
   return (
       <ThemeProvider theme={darkTheme}>

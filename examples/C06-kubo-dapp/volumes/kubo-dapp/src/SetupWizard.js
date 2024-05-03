@@ -25,9 +25,9 @@ import { useConnectWallet, useWallets } from '@web3-onboard/react';
 
 const steps = [
    'Welcome',
-   'Connect to Wallet',
-   'Deploy the Smart Contract'
+   'Connect to Wallet'
 ];
+// Additional step 'Deploy the Smart Contract' is disabled because we deploy this and get it automatically.
 
  export function SetupWizard({onFinish}) {
    const [activeStep, setActiveStep] = React.useState(0);
