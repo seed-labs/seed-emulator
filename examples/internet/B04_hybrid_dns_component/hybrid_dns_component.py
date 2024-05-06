@@ -26,7 +26,6 @@ def run(dumpfile = None):
 
     # Customize the display names (for visualization purpose)
     emu.getVirtualNode('a-root-server').setDisplayName('Root-A')
-    emu.getVirtualNode('b-root-server').setDisplayName('Root-B')
     emu.getVirtualNode('ns-twitter-com').setDisplayName('twitter.com')
     emu.getVirtualNode('ns-google-com').setDisplayName('google.com')
 

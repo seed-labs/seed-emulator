@@ -10,8 +10,6 @@ from seedemu.layers import Base
 from examples.internet.C00_hybrid_internet import hybrid_internet
 from examples.internet.C01_hybrid_dns_component import hybrid_dns_component
 
-hybrid_internet.run(dumpfile='./base-hybrid-component.bin')
-hybrid_dns_component.run(dumpfile='./hybrid-dns-component.bin')
 
 
 
@@ -19,11 +17,12 @@ def run(dumpfile = None):
     emuA = Emulator()
     emuB = Emulator()
 
-    # Load the pre-built components and merge them
+    # Run, load, and merge the pre-built components
+    hybrid_internet.run(dumpfile='./base-hybrid-component.bin')
+    hybrid_dns_component.run(dumpfile='./hybrid-dns-component.bin')
     emuA.load('./base-hybrid-component.bin')
     emuB.load('./hybrid-dns-component.bin')
     emu = emuA.merge(emuB, DEFAULT_MERGERS)
-
 
     #####################################################################################
     # Bind the virtual nodes in the DNS infrastructure layer to physical nodes.
@@ -63,10 +62,6 @@ def run(dumpfile = None):
         emu.dump(dumpfile)
     else:
         emu.render()
-
-        ###############################################
-        # Render the emulation
-
         emu.compile(Docker(), './output', override=True)
 
 if __name__ == "__main__":

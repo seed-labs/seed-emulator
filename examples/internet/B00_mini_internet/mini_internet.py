@@ -86,22 +86,9 @@ def run(dumpfile=None):
     Makers.makeStubAs(emu, base, 170, 105, [web, None])
     Makers.makeStubAs(emu, base, 171, 105, [None])
     
-    
-    # Add a host with customized IP address to AS-154 
+    # An example to show how to add a host with customized IP address
     as154 = base.getAutonomousSystem(154)
     as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129')
-    
-    
-    # Create real-world AS.
-    # AS11872 is the Syracuse University's autonomous system
-    
-    as11872 = base.createAutonomousSystem(11872)
-    as11872.createRealWorldRouter('rw').joinNetwork('ix102', '10.102.0.118')
-    
-    # Allow outside computer to VPN into AS-152's network
-    as152 = base.getAutonomousSystem(152)
-    as152.getNetwork('net0').enableRemoteAccess(ovpn)
-    
     
     ###############################################################################
     # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
@@ -119,12 +106,12 @@ def run(dumpfile=None):
     
     ebgp.addPrivatePeerings(100, [2],  [150, 151], PeerRelationship.Provider)
     ebgp.addPrivatePeerings(100, [3],  [150], PeerRelationship.Provider)
-    
+
     ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
     ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)
     
     ebgp.addPrivatePeerings(102, [2, 4],  [11, 154], PeerRelationship.Provider)
-    ebgp.addPrivatePeerings(102, [11], [154, 11872], PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(102, [11], [154], PeerRelationship.Provider)
     
     ebgp.addPrivatePeerings(103, [3],  [160, 161, 162], PeerRelationship.Provider)
     
