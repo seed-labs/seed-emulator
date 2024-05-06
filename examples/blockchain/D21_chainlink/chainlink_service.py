@@ -4,6 +4,8 @@
 from seedemu import *
 from examples.blockchain.D00_ethereum_poa import ethereum_poa
 import os
+import platform
+
 
 def run(dumpfile = None, total_chainlink_nodes = 3):
     ###############################################################################
@@ -53,7 +55,11 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
         # Render and compile
         OUTPUTDIR = './output'
         emu.render()
-        docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=Platform.AMD64)
+        if platform.machine() == 'aarch64' or platform.machine() == 'arm64':
+            current_platform = Platform.ARM64
+        else:
+            current_platform = Platform.AMD64
+        docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=current_platform)
         emu.compile(docker, OUTPUTDIR, override = True)
 
 if __name__ == "__main__":
