@@ -5,42 +5,48 @@ from seedemu import *
 from examples.blockchain.D00_ethereum_poa import ethereum_poa
 import os
 
-def run(dumpfile = None):
+def run(dumpfile = None, total_chainlink_nodes = 3):
     ###############################################################################
-    emu = Emulator()
+    emuA = Emulator()
     local_dump_path = './blockchain-poa.bin'
     if not os.path.exists(local_dump_path):
         ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4)
-    # Load the pre-built components and merge them
-    emu.load(local_dump_path)
+    # Load the pre-built ethereum poa component
+    emuA.load(local_dump_path)
 
-    # Create the Chainlink Init server
+    # Build the chainlink service
+    emuB = Emulator()
+    cnode_dict = {}
     chainlink = ChainlinkService()
     cnode = 'chainlink_init_server'
     c_init = chainlink.installInitializer(cnode)
     c_init.setFaucetServerInfo(vnode = 'faucet', port = 80)
     c_init.setRPCbyEthNodeName('eth2')
     service_name = 'Chainlink-Init'
-    emu.getVirtualNode(cnode).setDisplayName(service_name)
-    emu.addBinding(Binding(cnode, filter = Filter(asn=151), action=Action.LAST))
+    cnode_dict[cnode] = service_name
 
-    i = 0
-    c_asns  = [152, 153]
     # Create Chainlink normal servers
-    for asn in c_asns:
+    for i in range(total_chainlink_nodes):
         cnode = 'chainlink_server_{}'.format(i)
         c_normal = chainlink.install(cnode)
         c_normal.setRPCbyEthNodeName('eth{}'.format(i))
         c_normal.setInitNodeIP("chainlink_init_server")
         c_normal.setFaucetServerInfo(vnode = 'faucet', port = 80)
         service_name = 'Chainlink-{}'.format(i)
-        emu.getVirtualNode(cnode).setDisplayName(service_name)
-        emu.addBinding(Binding(cnode, filter = Filter(asn=asn), action=Action.LAST))
+        cnode_dict[cnode] = service_name
         i = i + 1
-        
+    
     # Add the Chainlink layer
-    emu.addLayer(chainlink)
-
+    emuB.addLayer(chainlink)
+    
+    # Merge the two components
+    emu = emuA.merge(emuB, DEFAULT_MERGERS)
+    
+    # Bind each v-node to a randomly selected physical nodes (no filters)
+    for cnode in cnode_dict:
+        emu.getVirtualNode(cnode).setDisplayName(cnode_dict[cnode])
+        emu.addBinding(Binding(cnode))
+    
     if dumpfile is not None:
         emu.dump(dumpfile)
     else:
