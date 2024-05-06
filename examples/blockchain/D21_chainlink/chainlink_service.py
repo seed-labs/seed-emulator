@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 from seedemu import *
-from examples.blockchain.D00_blockchain_poa import blockchain_poa
+from examples.blockchain.D00_ethereum_poa import ethereum_poa
 import os
 
 def run(dumpfile = None):
@@ -10,7 +10,7 @@ def run(dumpfile = None):
     emu = Emulator()
     local_dump_path = './blockchain-poa.bin'
     if not os.path.exists(local_dump_path):
-        blockchain_poa.run(dumpfile=local_dump_path)
+        ethereum_poa.run(dumpfile=local_dump_path)
     # Load the pre-built components and merge them
     emu.load(local_dump_path)
 
