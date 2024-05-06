@@ -2,6 +2,8 @@
 # encoding: utf-8
 
 from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
+from seedemu.services import WebService, DomainNameService, DomainNameCachingService
+from seedemu.services import CymruIpOriginService, ReverseDomainNameService, BgpLookingGlassService
 from seedemu.compiler import Docker, Graphviz
 from seedemu.hooks import ResolvConfHook
 from seedemu.core import Emulator, Service, Binding, Filter
@@ -13,13 +15,19 @@ from typing import List, Tuple, Dict
 
 
 def run(dumpfile=None, hosts_per_as=2): 
-
-    emu   = Emulator()
-    ebgp  = Ebgp()
-    base  = Base()
+    ###############################################################################
+    emu     = Emulator()
+    base    = Base()
+    routing = Routing()
+    ebgp    = Ebgp()
+    ibgp    = Ibgp()
+    ospf    = Ospf()
+    web     = WebService()
+    ovpn    = OpenVpnRemoteAccessProvider()
+    
     
     ###############################################################################
-    # Create internet exchanges
+    
     ix100 = base.createInternetExchange(100)
     ix101 = base.createInternetExchange(101)
     ix102 = base.createInternetExchange(102)
@@ -58,23 +66,24 @@ def run(dumpfile=None, hosts_per_as=2):
     
     
     ###############################################################################
-    # Create single-homed stub ASes. 
-    Makers.makeStubAsWithHosts(emu, base, 150, 100, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 151, 100, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 152, 101, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 153, 101, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 154, 102, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 160, 103, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 161, 103, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 162, 103, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 163, 104, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 164, 104, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 170, 105, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 171, 105, hosts_per_as)
+    # Create single-homed stub ASes. "None" means create a host only 
+    
+    Makers.makeStubAs(emu, base, 150, 100, [web, None])
+    Makers.makeStubAs(emu, base, 151, 100, [web, None])
+    Makers.makeStubAs(emu, base, 152, 101, [None, None])
+    Makers.makeStubAs(emu, base, 153, 101, [web, None, None])
+    Makers.makeStubAs(emu, base, 154, 102, [None, web])
+    Makers.makeStubAs(emu, base, 160, 103, [web, None])
+    Makers.makeStubAs(emu, base, 161, 103, [web, None])
+    Makers.makeStubAs(emu, base, 162, 103, [web, None])
+    Makers.makeStubAs(emu, base, 163, 104, [web, None])
+    Makers.makeStubAs(emu, base, 164, 104, [None, None])
+    Makers.makeStubAs(emu, base, 170, 105, [web, None])
+    Makers.makeStubAs(emu, base, 171, 105, [None])
     
     # An example to show how to add a host with customized IP address
     as154 = base.getAutonomousSystem(154)
-    as154.createHost('host_new').joinNetwork('net0', address = '10.154.0.129')
+    as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129')
     
     ###############################################################################
     # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
@@ -110,14 +119,15 @@ def run(dumpfile=None, hosts_per_as=2):
     
     
     ###############################################################################
+    
     # Add layers to the emulator
-
     emu.addLayer(base)
-    emu.addLayer(Routing())
-    emu.addLayer(ebgp) 
-    emu.addLayer(Ibgp())
-    emu.addLayer(Ospf())
-
+    emu.addLayer(routing)
+    emu.addLayer(ebgp)
+    emu.addLayer(ibgp)
+    emu.addLayer(ospf)
+    emu.addLayer(web)
+    
     if dumpfile is not None: 
        # Save it to a file, so it can be used by other emulators
        emu.dump(dumpfile)

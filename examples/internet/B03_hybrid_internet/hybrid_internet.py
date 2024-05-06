@@ -3,7 +3,7 @@
 
 from seedemu import *
 
-def run(dumpfile = None):
+def run(dumpfile = None, hosts_per_as=2):
        ###############################################################################
        emu     = Emulator()
        base    = Base()
@@ -16,7 +16,7 @@ def run(dumpfile = None):
 
 
        ###############################################################################
-
+       # Create Internet Exchanges 
        ix100 = base.createInternetExchange(100)
        ix101 = base.createInternetExchange(101)
        ix102 = base.createInternetExchange(102)
@@ -57,23 +57,18 @@ def run(dumpfile = None):
        ###############################################################################
        # Create single-homed stub ASes. "None" means create a host only 
 
-       Makers.makeStubAs(emu, base, 150, 100, [web, None])
-       Makers.makeStubAs(emu, base, 151, 100, [web, None])
-
-       Makers.makeStubAs(emu, base, 152, 101, [None, None])
-       Makers.makeStubAs(emu, base, 153, 101, [web, None, None])
-
-       Makers.makeStubAs(emu, base, 154, 102, [None, web])
-
-       Makers.makeStubAs(emu, base, 160, 103, [web, None])
-       Makers.makeStubAs(emu, base, 161, 103, [web, None])
-       Makers.makeStubAs(emu, base, 162, 103, [web, None])
-
-       Makers.makeStubAs(emu, base, 163, 104, [web, None])
-       Makers.makeStubAs(emu, base, 164, 104, [None, None])
-
-       Makers.makeStubAs(emu, base, 170, 105, [web, None])
-       Makers.makeStubAs(emu, base, 171, 105, [None])
+       Makers.makeStubAsWithHosts(emu, base, 150, 100, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 151, 100, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 152, 101, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 153, 101, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 154, 102, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 160, 103, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 161, 103, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 162, 103, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 163, 104, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 164, 104, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 170, 105, hosts_per_as)
+       Makers.makeStubAsWithHosts(emu, base, 171, 105, hosts_per_as)
 
        # Allow outside computers to VPN into AS-152's network
        as152 = base.getAutonomousSystem(152)
