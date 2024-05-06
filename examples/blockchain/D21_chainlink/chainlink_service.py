@@ -10,7 +10,7 @@ def run(dumpfile = None):
     emu = Emulator()
     local_dump_path = './blockchain-poa.bin'
     if not os.path.exists(local_dump_path):
-        ethereum_poa.run(dumpfile=local_dump_path)
+        ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4)
     # Load the pre-built components and merge them
     emu.load(local_dump_path)
 
@@ -22,7 +22,7 @@ def run(dumpfile = None):
     c_init.setRPCbyEthNodeName('eth2')
     service_name = 'Chainlink-Init'
     emu.getVirtualNode(cnode).setDisplayName(service_name)
-    emu.addBinding(Binding(cnode, filter = Filter(asn=151, nodeName='host_2')))
+    emu.addBinding(Binding(cnode, filter = Filter(asn=151), action=Action.LAST))
 
     i = 0
     c_asns  = [152, 153]
@@ -35,7 +35,7 @@ def run(dumpfile = None):
         c_normal.setFaucetServerInfo(vnode = 'faucet', port = 80)
         service_name = 'Chainlink-{}'.format(i)
         emu.getVirtualNode(cnode).setDisplayName(service_name)
-        emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
+        emu.addBinding(Binding(cnode, filter = Filter(asn=asn), action=Action.LAST))
         i = i + 1
         
     # Add the Chainlink layer

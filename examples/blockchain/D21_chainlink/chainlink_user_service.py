@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 from seedemu import *
-from examples.blockchain.D01_blockchain_chainlink import chainlink_service
+import chainlink_service
 import os
 
 local_dump_path = './blockchain-chainlink.bin'
@@ -38,7 +38,7 @@ c_user.setRPCbyEthNodeName('eth2')
 c_user.setFaucetServerInfo(vnode = 'faucet', port = 80)
 c_user.setChainlinkServiceInfo(init_node_name='chainlink_init_server', number_of_normal_servers=2)
 emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
-emu.addBinding(Binding(cnode, filter = Filter(asn=160, nodeName='host_2')))
+emu.addBinding(Binding(cnode, filter = Filter(asn=160), action=Action.LAST))
 
 
 # Add the Chainlink User Service Layer
