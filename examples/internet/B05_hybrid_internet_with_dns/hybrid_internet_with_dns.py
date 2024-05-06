@@ -7,8 +7,8 @@ from seedemu.hooks import ResolvConfHook
 from seedemu.compiler import Docker
 from seedemu.services import DomainNameService, DomainNameCachingService, DomainNameCachingServer
 from seedemu.layers import Base
-from examples.internet.C00_hybrid_internet import hybrid_internet
-from examples.internet.C01_hybrid_dns_component import hybrid_dns_component
+from examples.internet.B03_hybrid_internet import hybrid_internet
+from examples.internet.B04_hybrid_dns_component import hybrid_dns_component
 
 
 
