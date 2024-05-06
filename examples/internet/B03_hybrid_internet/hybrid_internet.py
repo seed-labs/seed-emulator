@@ -75,24 +75,31 @@ def run(dumpfile = None):
        Makers.makeStubAs(emu, base, 170, 105, [web, None])
        Makers.makeStubAs(emu, base, 171, 105, [None])
 
+       # Allow outside computers to VPN into AS-152's network
+       as152 = base.getAutonomousSystem(152)
+       as152.getNetwork('net0').enableRemoteAccess(ovpn)
+
+       ###############################################################################
        # Create real-world AS.
        # AS11872 is the Syracuse University's autonomous system
 
        as11872 = base.createAutonomousSystem(11872)
        as11872.createRealWorldRouter('rw-11872-syr').joinNetwork('ix102', '10.102.0.118')
 
-
        ###############################################################################
        # Create hybrid AS.
-       # AS99999 is the emulator's autonomous system that routes the traffics to the real-world internet
+       # AS99999 is the emulator's autonomous system that routes the traffics 
+       #   to the real-world internet
        as99999 = base.createAutonomousSystem(99999)
-       as99999.createRealWorldRouter('rw-real-world', prefixes=['0.0.0.0/1', '128.0.0.0/1']).joinNetwork('ix100', '10.100.0.99')
-       ###############################################################################
+       as99999.createRealWorldRouter('rw-real-world', 
+             prefixes=['0.0.0.0/1', '128.0.0.0/1']).joinNetwork('ix100', '10.100.0.99')
 
 
+
        ###############################################################################
-       # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
-       # which means each AS will only export its customers and their own prefixes. 
+       # Peering via RS (route server). The default peering mode for RS is 
+       # PeerRelationship.Peer, which means each AS will only export its customers 
+       # and their own prefixes. 
        # We will use this peering relationship to peer all the ASes in an IX.
        # None of them will provide transit service for others. 
 
@@ -124,7 +131,6 @@ def run(dumpfile = None):
 
 
        ###############################################################################
-
        # Add layers to the emulator
        emu.addLayer(base)
        emu.addLayer(routing)
