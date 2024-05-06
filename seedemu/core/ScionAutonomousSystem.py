@@ -38,6 +38,8 @@ class ScionAutonomousSystem(AutonomousSystem):
     __next_ifid: int                     # Next IFID assigned to a link
     __note: str # optional free form parameter that contains interesting information about AS. This will be included in beacons if it is set
     __generateStaticInfoConfig:  bool
+    __sigs: Dict[str, Dict]
+    __num_sigs: int
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
@@ -53,6 +55,8 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__next_ifid = 1
         self.__note = None
         self.__generateStaticInfoConfig = False
+        self.__sigs = {}
+        self.__num_sigs = 0
     
 
     def registerNodes(self, emulator: Emulator):
@@ -166,6 +170,37 @@ class ScionAutonomousSystem(AutonomousSystem):
         assert type in types, "Unknown policy type"
         return self.__beaconing_policy.get(type)
 
+    def addSIG(self) -> ScionAutonomousSystem:
+        """
+        @brief set the SIGs
+
+        @param sigs Dict of SIGs
+        """
+
+        if self.getAsn() == 150:
+            cs_addr = "10.150.0.71"
+        elif self.getAsn() == 153:
+            cs_addr = "10.153.0.71"
+        
+        self.__sigs["sig-{}".format(self.__num_sigs)] = {
+            "ctrl_addr": f"{cs_addr}:30252",
+            "data_addr": f"10.{self.getAsn()}.0.254:30042"
+        }
+
+        self.__num_sigs += 1
+
+        return self
+
+    def getSIG(self) -> Dict:
+        """
+        @brief get the configured SIGs
+
+        @returns Dict of SIGs
+        """
+
+        return self.__sigs
+
+
     def getTopology(self, isd: int) -> Dict:
         """!
         @brief Create the AS topology definition.
@@ -192,6 +227,7 @@ class ScionAutonomousSystem(AutonomousSystem):
                 "internal_addr": f"{rnode.getLoopbackAddress()}:30042",
                 "interfaces": rnode.getScionInterfaces()
             }
+        
 
         return {
             'attributes': self.getAsAttributes(isd),
@@ -201,6 +237,7 @@ class ScionAutonomousSystem(AutonomousSystem):
             'discovery_service': control_services,
             'border_routers': border_routers,
             'colibri_service': {},
+            'sigs': self.__sigs,
         }
 
     def createControlService(self, name: str) -> Node:
