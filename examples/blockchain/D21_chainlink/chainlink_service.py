@@ -3,7 +3,6 @@
 
 from seedemu import *
 from examples.blockchain.D00_ethereum_poa import ethereum_poa
-import os
 import platform
 
 
@@ -11,8 +10,7 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     ###############################################################################
     emuA = Emulator()
     local_dump_path = './blockchain-poa.bin'
-    if not os.path.exists(local_dump_path):
-        ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4)
+    ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4)
     # Load the pre-built ethereum poa component
     emuA.load(local_dump_path)
 

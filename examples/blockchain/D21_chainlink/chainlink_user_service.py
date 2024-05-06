@@ -3,13 +3,11 @@
 
 from seedemu import *
 import chainlink_service
-import os
 import platform
 
 local_dump_path = './blockchain-chainlink.bin'
 
-if not os.path.exists(local_dump_path):
-    chainlink_service.run(dumpfile=local_dump_path)
+chainlink_service.run(dumpfile=local_dump_path)
 
 # Load the pre-built component
 emuA = Emulator()
