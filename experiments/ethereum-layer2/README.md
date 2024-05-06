@@ -6,6 +6,7 @@ This an example showing how to install, configure, and interact with layer2 bloc
 
 - [Building the Layer2 Blockchain](#building-the-layer2-blockchain)
 - [Interacting with Layer2 Blockchain](#interacting-with-layer2-blockchain)
+- [TODO for future implementation](#to-do-for-future-implementation)
 
 ## Building the Layer2 Blockchain
 
@@ -325,3 +326,16 @@ Transaction receipts:
   "type": "0x0"
 }
 ```
+
+
+# TO-DO for future implementation
+1) addCode : 
+Using `addCode` api to set a contract on the genesis block is a good approach. But we still need to investigate on the limitation of using this approach.
+
+Overall, we need to make this design more generic. 
+2) Accounts generation.
+Current : An user needs to generate and fund the `ADMIN`, `BATCHER`, `PROPOSER`, `SEQUENCER` and `TEST` accounts and set them manually. 
+
+Thoughts : `ADMIN`, `BATCHER`, `PROPERSER`, and `SEQUENCER` is essential to run L2. How about creating those accounts inside the service class and provide apis to allow users to customize them.
+
+In case of test account, it is natural to generate and fund by user side.
