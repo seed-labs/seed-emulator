@@ -11,8 +11,8 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     ###############################################################################
     emuA = Emulator()
     local_dump_path = './blockchain-poa.bin'
+    # Run and load the pre-built ethereum poa component
     ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4)
-    # Load the pre-built ethereum poa component
     emuA.load(local_dump_path)
     
     eth:EthereumService = emuA.getLayer('EthereumService')
@@ -33,15 +33,15 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
             .setLinkedEthNode(name=random.choice(eth_nodes)) \
             .setDisplayName('Chainlink-Init')
 
-    chainlink_nodes.append(cnode)
-
     # Create Chainlink normal servers
     for i in range(total_chainlink_nodes):
         cnode = 'chainlink_server_{}'.format(i)
         chainlink.install(cnode) \
                 .setLinkedEthNode(name=random.choice(eth_nodes)) \
                 .setDisplayName('Chainlink-{}'.format(i))
-        chainlink_nodes.append(cnode)
+
+    init_node    = chainlink.getChainlinkInitServerName()
+    server_nodes = chainlink.getChainlinkServerNames()
     
     # Add the Chainlink layer
     emuB.addLayer(chainlink)
@@ -50,7 +50,8 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     emu = emuA.merge(emuB, DEFAULT_MERGERS)
     
     # Bind each v-node to a randomly selected physical nodes (no filters)
-    for cnode in chainlink_nodes:
+    emu.addBinding(Binding(init_node))
+    for cnode in server_nodes:
         emu.addBinding(Binding(cnode))
     
     if dumpfile is not None:
@@ -63,9 +64,12 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
         else:
             current_platform = Platform.AMD64
 
-        docker = Docker(internetMapEnabled=True, internetMapPort=8081, 
-                        etherViewEnabled=True, platform=current_platform)
+        docker = Docker(etherViewEnabled=True, platform=current_platform)
         emu.compile(docker, './output', override = True)
+
+    print("-------------------")
+    print("Chainlink server nodes: " + str(server_nodes))
+    print("Chainlink initialization node: " + init_node)
 
 if __name__ == "__main__":
     run()
