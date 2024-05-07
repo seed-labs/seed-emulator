@@ -442,7 +442,7 @@ class Blockchain:
         self.__pending_targets.append(vnode)
         return eth.installFaucet(vnode, self, linked_eth_node, port, balance, max_fund_amount)
     
-    def getFaucetServerInfos(self) -> List[Dict]:
+    def getFaucetServerInfo(self) -> List[Dict]:
         faucetInfos = []
         for key, value in self.__eth_service.getPendingTargets().items():
             if key in self.__pending_targets and isinstance(value, FaucetServer):
@@ -466,7 +466,7 @@ class Blockchain:
                 ethServerNames.append(key)
         return ethServerNames
     
-    def getEthServerInfos(self) -> List[Dict]:
+    def getEthServerInfo(self) -> List[Dict]:
         ethInfos = []
         for key, value in self.__eth_service.getPendingTargets().items():
             if key in self.__pending_targets and isinstance(value, EthereumServer):
