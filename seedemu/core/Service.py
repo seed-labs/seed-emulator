@@ -15,10 +15,12 @@ class Server(Printable):
     The Server class is the handler for installed services.
     """
     __class_names: list
+    __display_name: str
     _base_system: BaseSystem
     def __init__(self):
         super().__init__()
         self.__class_names = []
+        self.__display_name = ''
         self._base_system = BaseSystem.DEFAULT
 
     def install(self, node: Node):
@@ -64,6 +66,22 @@ class Server(Printable):
 
         return self
         
+    def setDisplayName(self, name:str) -> Server:
+        """!
+        @breif set display name
+
+        @param name display name
+
+        @return self
+        """
+
+        self.__display_name = name
+
+        return self
+    
+    def getDisplayName(self) -> str:
+        return self.__display_name
+
 class Service(Layer):
     """!
     @brief Service base class.
@@ -180,6 +198,8 @@ class Service(Layer):
             self._doInstall(node, server)
             for className in server.getClassNames():
                 node.appendClassName(className)
+            if server.getDisplayName() != '':
+                node.setDisplayName(server.getDisplayName())
         
     def getConflicts(self) -> List[str]:
         """!
