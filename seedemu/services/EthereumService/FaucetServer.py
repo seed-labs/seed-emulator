@@ -101,6 +101,10 @@ class FaucetServer(Server):
         self.__port = port
 
         return self
+    
+    def setLinkedEthNode(self, vnodeName:str):
+        self.__linked_eth_node = vnodeName
+        return self
 
     def setRpcUrl(self, url):
         self.__rpc_url = url
