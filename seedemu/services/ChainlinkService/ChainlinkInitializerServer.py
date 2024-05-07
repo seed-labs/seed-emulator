@@ -1,13 +1,6 @@
 from seedemu import *
-from typing import Dict
-from seedemu.core.Node import Node
-
-from seedemu.core.Service import Server
-from enum import Enum
 from seedemu.core.enums import NetworkType
 from seedemu.services.ChainlinkService.ChainlinkTemplates import *
-import re
-from seedemu.services.WebService import WebServerFileTemplates
 
 class ChainlinkInitializerServer(Server):
     """
@@ -77,14 +70,16 @@ class ChainlinkInitializerServer(Server):
         @param deploymentType The deployment type.
         """
         self.__deploymentType = deploymentType
+        return self
     
-    def setFaucetServerInfo(self, vnode: str, port = 80):
+    def setFaucetServerInfo(self, vnode: str, port:int = 80):
          """
             @brief Set the faucet server information.
          """
 
          self.__faucet_vnode_name = vnode
          self.__faucet_port = port
+         return self
         
     def setRPCbyUrl(self, address: str):
         """
@@ -93,14 +88,18 @@ class ChainlinkInitializerServer(Server):
         @param address The RPC address or hostname for the chainlink node
         """
         self.__rpc_url = address
+        return self
         
-    def setRPCbyEthNodeName(self, vnode:str):
+    def setRPCbyEthNodeName(self, vnode:str, rpc_port:int = 8545, chain_id:int = 1337):
         """
         @brief Set the ethereum RPC address.
 
         @param vnode The name of the ethereum node
         """
         self.__rpc_vnode_name=vnode
+        self.__rpc_port = rpc_port
+        self.__chain_id = chain_id
+        return self
         
     def __deployThroughWeb3(self):
         """

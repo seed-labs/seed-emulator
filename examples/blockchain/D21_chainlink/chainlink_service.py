@@ -19,19 +19,18 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     cnode_dict = {}
     chainlink = ChainlinkService()
     cnode = 'chainlink_init_server'
-    c_init = chainlink.installInitializer(cnode)
-    c_init.setFaucetServerInfo(vnode = 'faucet', port = 80)
-    c_init.setRPCbyEthNodeName('eth2')
+    chainlink.installInitializer(cnode) \
+        .setFaucetServerInfo(vnode = 'faucet', port = 80) \
+            .setRPCbyEthNodeName('eth2')
     service_name = 'Chainlink-Init'
     cnode_dict[cnode] = service_name
 
     # Create Chainlink normal servers
     for i in range(total_chainlink_nodes):
         cnode = 'chainlink_server_{}'.format(i)
-        c_normal = chainlink.install(cnode)
-        c_normal.setRPCbyEthNodeName('eth{}'.format(i))
-        c_normal.setInitNodeIP("chainlink_init_server")
-        c_normal.setFaucetServerInfo(vnode = 'faucet', port = 80)
+        chainlink.install(cnode).setRPCbyEthNodeName('eth{}'.format(i)) \
+            .setInitNodeIP("chainlink_init_server") \
+                .setFaucetServerInfo(vnode = 'faucet', port = 80)
         service_name = 'Chainlink-{}'.format(i)
         cnode_dict[cnode] = service_name
         i = i + 1

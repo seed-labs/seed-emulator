@@ -1,14 +1,7 @@
 from seedemu import *
-from typing import Dict
-from seedemu.core.Node import Node
-
-from seedemu.core.Service import Server
-from enum import Enum
 from seedemu.core.enums import NetworkType
 from seedemu.services.ChainlinkService.ChainlinkTemplates import *
 import re
-
-
 
 class ChainlinkServer(Server):
     """
@@ -127,6 +120,7 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         @brief Set the chainlink init node
         """
         self.__init_node_name = init_node_name
+        return self
                 
     def setRPCbyUrl(self, address: str):
         """
@@ -135,14 +129,19 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         @param address The RPC address or hostname for the chainlink node
         """
         self.__rpc_url = address
+        return self
         
-    def setRPCbyEthNodeName(self, vnode:str):
+    def setRPCbyEthNodeName(self, vnode:str, rpc_port:int = 8545, ws_port:int = 8546, chain_id:int = 1337):
         """
         @brief Set the ethereum RPC address.
 
         @param vnode The name of the ethereum node
         """
         self.__rpc_vnode_name=vnode
+        self.__rpc_port = rpc_port
+        self.__rpc_ws_port = ws_port
+        self.__chain_id = chain_id
+        return self
     
     def setUsernameAndPassword(self, username: str, password: str):
         """
@@ -158,6 +157,7 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
 
         self.__username = username
         self.__password = password
+        return self
         
     def __validate_username(self, username: str) -> bool:
         """
@@ -179,6 +179,7 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
 
          self.__faucet_vnode_name = vnode
          self.__faucet_port = port
+         return self
         
     def __getIPbyEthNodeName(self, vnode:str):
         """

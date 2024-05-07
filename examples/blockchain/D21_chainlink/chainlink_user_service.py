@@ -33,10 +33,10 @@ Behind the scenes:
 '''
 chainlink_user = ChainlinkUserService()
 cnode = 'chainlink_user'
-c_user = chainlink_user.install(cnode)
-c_user.setRPCbyEthNodeName('eth2')
-c_user.setFaucetServerInfo(vnode = 'faucet', port = 80)
-c_user.setChainlinkServiceInfo(init_node_name='chainlink_init_server', number_of_normal_servers=2)
+chainlink_user.install(cnode) \
+    .setRPCbyEthNodeName('eth2') \
+        .setFaucetServerInfo(vnode = 'faucet', port = 80) \
+            .setChainlinkServiceInfo(init_node_name='chainlink_init_server', number_of_normal_servers=3)
 
 # Add the Chainlink User Service Layer
 emuB.addLayer(chainlink_user)
