@@ -29,21 +29,19 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     
     # Create Chainlink init server
     cnode = 'chainlink_init_server'
-    chainlink_init_node = chainlink.installInitializer(cnode) \
-            .setLinkedEthNode(name=random.choice(eth_nodes))
-    service_name = 'Chainlink-Init'
-    chainlink_init_node.setDisplayName(service_name)
+    chainlink.installInitializer(cnode) \
+            .setLinkedEthNode(name=random.choice(eth_nodes)) \
+            .setDisplayName('Chainlink-Init')
+
     chainlink_nodes.append(cnode)
 
     # Create Chainlink normal servers
     for i in range(total_chainlink_nodes):
         cnode = 'chainlink_server_{}'.format(i)
-        chainlink_normal_node = chainlink.install(cnode) \
-            .setLinkedEthNode(name=random.choice(eth_nodes))
-        service_name = 'Chainlink-{}'.format(i)
-        chainlink_normal_node.setDisplayName(service_name)
+        chainlink.install(cnode) \
+                .setLinkedEthNode(name=random.choice(eth_nodes)) \
+                .setDisplayName('Chainlink-{}'.format(i))
         chainlink_nodes.append(cnode)
-        i = i + 1
     
     # Add the Chainlink layer
     emuB.addLayer(chainlink)
@@ -59,14 +57,15 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
         emu.dump(dumpfile)
     else:
         # Render and compile
-        OUTPUTDIR = './output'
         emu.render()
         if platform.machine() == 'aarch64' or platform.machine() == 'arm64':
             current_platform = Platform.ARM64
         else:
             current_platform = Platform.AMD64
-        docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=current_platform)
-        emu.compile(docker, OUTPUTDIR, override = True)
+
+        docker = Docker(internetMapEnabled=True, internetMapPort=8081, 
+                        etherViewEnabled=True, platform=current_platform)
+        emu.compile(docker, './output', override = True)
 
 if __name__ == "__main__":
     run()
