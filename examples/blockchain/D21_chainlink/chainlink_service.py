@@ -13,25 +13,35 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4)
     # Load the pre-built ethereum poa component
     emuA.load(local_dump_path)
+    
+    # faucet:dict = emu.getLayer('EthereumService').getFaucetInfo()
+    # eth_nodes = emu.getLayer('EthereumService').getEthNodeNames()
 
-    # Build the chainlink service
+    # chainlink.setFaucetServer(vnode = faucet.name, port = faucet.port)
+    # chainlink.installInitializer(cnode).setLinkedEthNode(name=random.choice(eth_nodes))
+
+
+    # chainlink.install(cnode).setLinkedEthNode(name=random.choice(eth_nodes))
+
     emuB = Emulator()
+    # Build the chainlink service
     cnode_dict = {}
     chainlink = ChainlinkService()
+    # Set the faucet server in the service class
+    chainlink.setFaucetServer(vnode='faucet', port=80)
+    
+    # Create Chainlink init server
     cnode = 'chainlink_init_server'
-    c_init = chainlink.installInitializer(cnode)
-    c_init.setFaucetServerInfo(vnode = 'faucet', port = 80)
-    c_init.setRpcByEthNodeName('eth2')
+    chainlink.installInitializer(cnode) \
+            .setLinkedEthNode(name='eth2')
     service_name = 'Chainlink-Init'
     cnode_dict[cnode] = service_name
 
     # Create Chainlink normal servers
     for i in range(total_chainlink_nodes):
         cnode = 'chainlink_server_{}'.format(i)
-        c_normal = chainlink.install(cnode)
-        c_normal.setRpcByEthNodeName('eth{}'.format(i))
-        c_normal.setInitNodeIP("chainlink_init_server")
-        c_normal.setFaucetServerInfo(vnode = 'faucet', port = 80)
+        chainlink.install(cnode) \
+            .setLinkedEthNode('eth{}'.format(i))
         service_name = 'Chainlink-{}'.format(i)
         cnode_dict[cnode] = service_name
         i = i + 1
