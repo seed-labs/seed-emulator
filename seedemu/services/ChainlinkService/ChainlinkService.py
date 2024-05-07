@@ -51,7 +51,7 @@ class ChainlinkService(Service):
             raise TypeError("Server class must override one of 'install' or 'installInitializer'.")
 
         if install_implemented:
-            server.install(node, self.__faucet_vnode_name, self.__faucet_port, self.getChainlinkInitServerNames())
+            server.install(node, self.__faucet_vnode_name, self.__faucet_port, self.getChainlinkInitServerName())
         elif installInitializer_implemented:
             server.installInitializer(node, self.__faucet_vnode_name, self.__faucet_port)
             
@@ -66,7 +66,7 @@ class ChainlinkService(Service):
         self.__faucet_port = port
         return self
     
-    def getChainlinkInitServerNames(self) -> str:
+    def getChainlinkInitServerName(self) -> str:
         """
         @brief Get the name of the Chainlink initializer server.
         

@@ -38,6 +38,11 @@ class ChainlinkUserServer(Server):
         """
         @brief Install the service.
         """
+        eth_node = self.__emulator.getServerByVirtualNodeName(self.__rpc_vnode_name)
+        # Dynamically set the chain id and rpc port
+        self.__chain_id = eth_node.getChainId()
+        self.__rpc_port = eth_node.getGethHttpPort()
+        
         self.__installSoftware()
         if self.__rpc_vnode_name is not None:
             self.__rpc_url = self.__getIPbyEthNodeName(self.__rpc_vnode_name)
@@ -128,15 +133,13 @@ class ChainlinkUserServer(Server):
         self.__rpc_url = address
         return self
         
-    def setRPCbyEthNodeName(self, vnode:str, rpc_port:int = 8545, chain_id:int = 1337):
+    def setLinkedEthNode(self, name:str):
         """
         @brief Set the ethereum RPC address.
 
         @param vnode The name of the ethereum node
         """
-        self.__rpc_vnode_name=vnode
-        self.__rpc_port = rpc_port
-        self.__chain_id = chain_id
+        self.__rpc_vnode_name=name
         return self
     
     def setFaucetServerInfo(self, vnode: str, port = 80):

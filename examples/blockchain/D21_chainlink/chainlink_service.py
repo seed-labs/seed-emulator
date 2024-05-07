@@ -4,6 +4,7 @@
 from seedemu import *
 from examples.blockchain.D00_ethereum_poa import ethereum_poa
 import platform
+import random
 
 
 def run(dumpfile = None, total_chainlink_nodes = 3):
@@ -14,36 +15,34 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     # Load the pre-built ethereum poa component
     emuA.load(local_dump_path)
     
-    # faucet:dict = emu.getLayer('EthereumService').getFaucetInfo()
-    # eth_nodes = emu.getLayer('EthereumService').getEthNodeNames()
-
-    # chainlink.setFaucetServer(vnode = faucet.name, port = faucet.port)
-    # chainlink.installInitializer(cnode).setLinkedEthNode(name=random.choice(eth_nodes))
-
-
-    # chainlink.install(cnode).setLinkedEthNode(name=random.choice(eth_nodes))
-
+    eth:EthereumService = emuA.getLayer('EthereumService')
+    blockchain: Blockchain =  eth.getBlockchainByName(eth.getBlockchainNames()[0])
+    faucet_dict = blockchain.getFaucetServerInfo()
+    eth_nodes = blockchain.getEthServerNames()
+    
     emuB = Emulator()
     # Build the chainlink service
-    cnode_dict = {}
+    chainlink_nodes = []
     chainlink = ChainlinkService()
     # Set the faucet server in the service class
-    chainlink.setFaucetServer(vnode='faucet', port=80)
+    chainlink.setFaucetServer(faucet_dict[0]['name'], faucet_dict[0]['port'])
     
     # Create Chainlink init server
     cnode = 'chainlink_init_server'
-    chainlink.installInitializer(cnode) \
-            .setLinkedEthNode(name='eth2')
+    chainlink_init_node = chainlink.installInitializer(cnode) \
+            .setLinkedEthNode(name=random.choice(eth_nodes))
     service_name = 'Chainlink-Init'
-    cnode_dict[cnode] = service_name
+    chainlink_init_node.setDisplayName(service_name)
+    chainlink_nodes.append(cnode)
 
     # Create Chainlink normal servers
     for i in range(total_chainlink_nodes):
         cnode = 'chainlink_server_{}'.format(i)
-        chainlink.install(cnode) \
-            .setLinkedEthNode('eth{}'.format(i))
+        chainlink_normal_node = chainlink.install(cnode) \
+            .setLinkedEthNode(name=random.choice(eth_nodes))
         service_name = 'Chainlink-{}'.format(i)
-        cnode_dict[cnode] = service_name
+        chainlink_normal_node.setDisplayName(service_name)
+        chainlink_nodes.append(cnode)
         i = i + 1
     
     # Add the Chainlink layer
@@ -53,8 +52,7 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     emu = emuA.merge(emuB, DEFAULT_MERGERS)
     
     # Bind each v-node to a randomly selected physical nodes (no filters)
-    for cnode in cnode_dict:
-        emu.getVirtualNode(cnode).setDisplayName(cnode_dict[cnode])
+    for cnode in chainlink_nodes:
         emu.addBinding(Binding(cnode))
     
     if dumpfile is not None:

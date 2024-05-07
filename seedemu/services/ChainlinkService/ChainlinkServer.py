@@ -36,7 +36,6 @@ class ChainlinkServer(Server):
         @brief Configure the node.
         """
         self.__node = node
-        print(f"Emulator: {emulator}")
         self.__emulator = emulator
 
     def install(self, node: Node, faucet_vnode_name: str, faucet_port: int, chainlink_init_server: str):

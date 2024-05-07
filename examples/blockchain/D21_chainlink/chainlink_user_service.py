@@ -4,6 +4,7 @@
 from seedemu import *
 import chainlink_service
 import platform
+import random
 
 local_dump_path = './blockchain-chainlink.bin'
 
@@ -12,6 +13,13 @@ chainlink_service.run(dumpfile=local_dump_path)
 # Load the pre-built component
 emuA = Emulator()
 emuA.load('./blockchain-chainlink.bin')
+
+eth:EthereumService = emuA.getLayer('EthereumService')
+blockchain: Blockchain =  eth.getBlockchainByName(eth.getBlockchainNames()[0])
+faucet_dict = blockchain.getFaucetServerInfo()
+eth_nodes = blockchain.getEthServerNames()
+
+chainlink: ChainlinkService = emuA.getLayer('ChainlinkService')
 
 # Chainlink User Service
 emuB = Emulator()
@@ -34,9 +42,9 @@ Behind the scenes:
 chainlink_user = ChainlinkUserService()
 cnode = 'chainlink_user'
 chainlink_user.install(cnode) \
-    .setRPCbyEthNodeName('eth2') \
-        .setFaucetServerInfo(vnode = 'faucet', port = 80) \
-            .setChainlinkServiceInfo(init_node_name='chainlink_init_server', number_of_normal_servers=3)
+    .setLinkedEthNode(name=random.choice(eth_nodes)) \
+        .setFaucetServerInfo(faucet_dict[0]['name'], faucet_dict[0]['port']) \
+            .setChainlinkServiceInfo(chainlink.getChainlinkInitServerName(), len(chainlink.getChainlinkServerNames()))
 
 # Add the Chainlink User Service Layer
 emuB.addLayer(chainlink_user)
