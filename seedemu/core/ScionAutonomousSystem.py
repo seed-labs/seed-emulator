@@ -183,8 +183,8 @@ class ScionAutonomousSystem(AutonomousSystem):
             cs_addr = "10.153.0.71"
         
         self.__sigs["sig-{}".format(self.__num_sigs)] = {
-            "ctrl_addr": f"{cs_addr}:30252",
-            "data_addr": f"10.{self.getAsn()}.0.254:30042"
+            "ctrl_addr": f"127.0.0.1:30252",
+            "data_addr": f"127.0.0.1:30042"
         }
 
         self.__num_sigs += 1
