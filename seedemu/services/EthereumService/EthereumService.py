@@ -442,6 +442,41 @@ class Blockchain:
         self.__pending_targets.append(vnode)
         return eth.installFaucet(vnode, self, linked_eth_node, port, balance, max_fund_amount)
     
+    def getFaucetServerInfos(self) -> List[Dict]:
+        faucetInfos = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, FaucetServer):
+                faucetInfo = {}
+                faucetInfo['name'] = key
+                faucetInfo['port'] = value.getPort()
+                faucetInfos.append(faucetInfo)
+        return faucetInfos
+
+    def getFaucetServerNames(self) -> List[str]:
+        faucetServerNames = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, FaucetServer):
+                faucetServerNames.append(key)
+        return faucetServerNames
+    
+    def getEthServerNames(self) -> List[str]:
+        ethServerNames = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, EthereumServer):
+                ethServerNames.append(key)
+        return ethServerNames
+    
+    def getEthServerInfos(self) -> List[Dict]:
+        ethInfos = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, EthereumServer):
+                ethInfo = {}
+                ethInfo['name'] = key
+                ethInfo['geth_http_port'] = value.getGethHttpPort()
+                ethInfo['geth_ws_port'] = value.getGethWsPort()
+                ethInfos.append(ethInfo)
+        return ethInfos
+
     def _log(self, message: str) -> None:
         """!
         @brief Log to stderr.
@@ -563,8 +598,6 @@ class EthereumService(Service):
 
         return self._pending_targets[vnode]
 
-        
-
     def installFaucet(self, vnode:str, blockchain:Blockchain, linked_eth_node:str, port:int=80, balance:int=1000, max_fund_amount:int=10) -> FaucetServer:
         """!
         @brief Install the server on a node identified by given name.
@@ -576,6 +609,27 @@ class EthereumService(Service):
 
         return self._pending_targets[vnode]
 
+    def getBlockchainNames(self) -> List[str]:
+        """!
+        @brief Get installed blockchain names.
+
+        @returns a list of blockchain name
+        """
+        blockchainNames = [chainName for chainName in self.__blockchains.keys()]
+        return blockchainNames
+    
+    def getBlockchainByName(self, blockchainName) -> Blockchain:
+        """!
+        @brief get Blockchain object by its name
+
+        @returns a blockchain object
+        """
+        return self.__blockchains[blockchainName]
+    
+    
+        
+
+    
     def createBlockchain(self, chainName:str, consensus: ConsensusMechanism, chainId: int = -1):
         """!
         @brief Create an instance of Blockchain class which is a sub-layer of the EthereumService.

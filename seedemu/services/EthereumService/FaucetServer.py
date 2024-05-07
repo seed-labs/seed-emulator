@@ -121,6 +121,9 @@ class FaucetServer(Server):
     def getFaucetBalance(self) -> int:
         return self.__balance
     
+    def getPort(self) -> int:
+        return self.__port
+    
     def setFundMaxAttempts(self, attempts:int) -> FaucetServer:
         self.__max_fund_attempts = attempts
     
