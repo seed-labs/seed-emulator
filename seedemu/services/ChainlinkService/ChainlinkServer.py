@@ -1,5 +1,6 @@
 from seedemu import *
 from seedemu.core.enums import NetworkType
+from seedemu.services.ChainlinkService import ChainlinkInitializerServer
 from seedemu.services.ChainlinkService.ChainlinkTemplates import *
 import re
 
@@ -21,8 +22,7 @@ class ChainlinkServer(Server):
     __faucet_port: int
     __chain_id: int = 1337
     __rpc_ws_port: int = 8546
-    __rpc_port: int = 8545
-    
+    __rpc_port: int = 8545    
     
     def __init__(self):
         """
@@ -30,18 +30,33 @@ class ChainlinkServer(Server):
         """
         super().__init__()
         self._base_system = BaseSystem.SEEDEMU_CHAINLINK
-
+        
     def configure(self, node: Node, emulator: Emulator):
         """
         @brief Configure the node.
         """
         self.__node = node
+        print(f"Emulator: {emulator}")
         self.__emulator = emulator
 
-    def install(self, node: Node):
+    def install(self, node: Node, faucet_vnode_name: str, faucet_port: int, chainlink_init_server: str):
         """
         @brief Install the service.
         """
+        self.__faucet_vnode_name = faucet_vnode_name
+        self.__faucet_port = faucet_port
+        # Get the ethereum node details
+        eth_node = self.__emulator.getServerByVirtualNodeName(self.__rpc_vnode_name)
+        # Dynamically set the chain id and rpc port
+        self.__chain_id = eth_node.getChainId()
+        self.__rpc_port = eth_node.getGethHttpPort()
+        self.__rpc_ws_port = eth_node.getGethWsPort()
+        
+        if chainlink_init_server != "":
+            self.__init_node_name = chainlink_init_server
+        else:
+            raise Exception('Chainlink init server not set')
+        
         self.__installSoftware()
         
         if self.__rpc_vnode_name is not None:
@@ -114,13 +129,6 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         self.__node.setFile('/contracts/oracle_contract.abi', OracleContractDeploymentTemplate['oracle_contract_abi'])
         self.__node.setFile('/contracts/oracle_contract.bin', OracleContractDeploymentTemplate['oracle_contract_bin'])
         self.__node.appendStartCommand(f'python3 ./contracts/deploy_oracle_contract.py')
-
-    def setInitNodeIP(self, init_node_name: str):
-        """
-        @brief Set the chainlink init node
-        """
-        self.__init_node_name = init_node_name
-        return self
                 
     def setRPCbyUrl(self, address: str):
         """
@@ -131,16 +139,13 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         self.__rpc_url = address
         return self
         
-    def setRPCbyEthNodeName(self, vnode:str, rpc_port:int = 8545, ws_port:int = 8546, chain_id:int = 1337):
+    def setLinkedEthNode(self, name:str):        
         """
         @brief Set the ethereum RPC address.
 
         @param vnode The name of the ethereum node
         """
-        self.__rpc_vnode_name=vnode
-        self.__rpc_port = rpc_port
-        self.__rpc_ws_port = ws_port
-        self.__chain_id = chain_id
+        self.__rpc_vnode_name = name
         return self
     
     def setUsernameAndPassword(self, username: str, password: str):
@@ -171,15 +176,6 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         Check if the password length is between 16 and 50 characters.
         """
         return 16 <= len(password) <= 50
-    
-    def setFaucetServerInfo(self, vnode: str, port = 80):
-         """
-            @brief Set the faucet server information.
-         """
-
-         self.__faucet_vnode_name = vnode
-         self.__faucet_port = port
-         return self
         
     def __getIPbyEthNodeName(self, vnode:str):
         """

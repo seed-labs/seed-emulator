@@ -9,7 +9,7 @@ class ChainlinkInitializerServer(Server):
     __node: Node
     __emulator: Emulator
     __deploymentType: str = "web3"
-    __rpc_url: str
+    # __rpc_url: str
     __chain_id: int = 1337
     __rpc_port: int = 8545
     __rpc_vnode_name: str = None
@@ -31,10 +31,18 @@ class ChainlinkInitializerServer(Server):
         self.__node = node
         self.__emulator = emulator
 
-    def installInitializer(self, node: Node):
+    def installInitializer(self, node: Node, faucet_vnode_name: str, faucet_port: int):
         """
         @brief Install the service.
         """
+        self.__faucet_vnode_name = faucet_vnode_name
+        self.__faucet_port = faucet_port
+        # Get the ethereum node details
+        eth_node = self.__emulator.getServerByVirtualNodeName(self.__rpc_vnode_name)
+        # Dynamically set the chain id and rpc port
+        self.__chain_id = eth_node.getChainId()
+        self.__rpc_port = eth_node.getGethHttpPort()
+        
         self.__installInitSoftware()
         if self.__rpc_vnode_name is not None:
             self.__rpc_url = self.__getIPbyEthNodeName(self.__rpc_vnode_name)
@@ -71,34 +79,14 @@ class ChainlinkInitializerServer(Server):
         """
         self.__deploymentType = deploymentType
         return self
-    
-    def setFaucetServerInfo(self, vnode: str, port:int = 80):
-         """
-            @brief Set the faucet server information.
-         """
-
-         self.__faucet_vnode_name = vnode
-         self.__faucet_port = port
-         return self
         
-    def setRPCbyUrl(self, address: str):
+    def setLinkedEthNode(self, name:str):
         """
-        @brief Set the ethereum RPC address.
-
-        @param address The RPC address or hostname for the chainlink node
-        """
-        self.__rpc_url = address
-        return self
-        
-    def setRPCbyEthNodeName(self, vnode:str, rpc_port:int = 8545, chain_id:int = 1337):
-        """
-        @brief Set the ethereum RPC address.
+        @brief Set the ethereum RPC node name.
 
         @param vnode The name of the ethereum node
         """
-        self.__rpc_vnode_name=vnode
-        self.__rpc_port = rpc_port
-        self.__chain_id = chain_id
+        self.__rpc_vnode_name=name
         return self
         
     def __deployThroughWeb3(self):
