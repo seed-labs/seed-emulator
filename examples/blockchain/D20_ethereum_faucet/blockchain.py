@@ -3,9 +3,17 @@
 
 from seedemu import *
 import sys
+from examples.internet.B00_mini_internet import mini_internet
 
 
-emu = Makers.makeEmulatorBaseWith10StubASAndHosts(1)
+emu = Emulator()
+
+# Run and load the pre-built component
+mini_internet.run(dumpfile='./base-internet.bin')
+emu.load('./base-internet.bin')
+
+#This is another way to generate the base internet
+#emu = Makers.makeEmulatorBaseWith10StubASAndHosts(1)
 
 # Create the Ethereum layer
 # saveState=True: will set the blockchain folder using `volumes`, 
@@ -17,14 +25,14 @@ eth = EthereumService(saveState = False, override=True)
 blockchain1 = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.POA)
 
 # Create blockchain1 nodes (POA Etheruem) (nodes in this layer are virtual)
-e1 = blockchain1.createNode("poa-eth1").enableGethHttp()
-e2 = blockchain1.createNode("poa-eth2").enableGethHttp()
-e3 = blockchain1.createNode("poa-eth3").enableGethHttp()
-e4 = blockchain1.createNode("poa-eth4").enableGethHttp()
-e5 = blockchain1.createNode("poa-eth5").enableGethHttp()
-e6 = blockchain1.createNode("poa-eth6").enableGethHttp()
-e7 = blockchain1.createNode("poa-eth7").enableGethHttp()
-e8 = blockchain1.createNode("poa-eth8").enableGethHttp()
+e1 = blockchain1.createNode("poa-eth1").enableGethHttp().setDisplayName('Ethereum-POA-1')
+e2 = blockchain1.createNode("poa-eth2").enableGethHttp().setDisplayName('Ethereum-POA-2')
+e3 = blockchain1.createNode("poa-eth3").enableGethHttp().setDisplayName('Ethereum-POA-3')
+e4 = blockchain1.createNode("poa-eth4").enableGethHttp().setDisplayName('Ethereum-POA-4')
+e5 = blockchain1.createNode("poa-eth5").enableGethHttp().setDisplayName('Ethereum-POA-5')
+e6 = blockchain1.createNode("poa-eth6").enableGethHttp().setDisplayName('Ethereum-POA-6')
+e7 = blockchain1.createNode("poa-eth7").enableGethHttp().setDisplayName('Ethereum-POA-7')
+e8 = blockchain1.createNode("poa-eth8").enableGethHttp().setDisplayName('Ethereum-POA-8')
 
 # Set bootnodes on e1 and e5. The other nodes can use these bootnodes to find peers.
 # Start mining on e1,e2, e5, and e6
@@ -34,15 +42,8 @@ e2.unlockAccounts().startMiner()
 e5.setBootNode(True).unlockAccounts().startMiner()
 e6.unlockAccounts().startMiner()
 
-# Customizing the display names (for visualization purpose)
-emu.getVirtualNode('poa-eth1').setDisplayName('Ethereum-POA-1')
-emu.getVirtualNode('poa-eth2').setDisplayName('Ethereum-POA-2')
-emu.getVirtualNode('poa-eth3').setDisplayName('Ethereum-POA-3').addPortForwarding(8545, 8540)
-emu.getVirtualNode('poa-eth4').setDisplayName('Ethereum-POA-4')
-emu.getVirtualNode('poa-eth5').setDisplayName('Ethereum-POA-5')
-emu.getVirtualNode('poa-eth6').setDisplayName('Ethereum-POA-6')
-emu.getVirtualNode('poa-eth7').setDisplayName('Ethereum-POA-7')
-emu.getVirtualNode('poa-eth8').setDisplayName('Ethereum-POA-8')
+# Set port forwarding on eth3
+emu.getVirtualNode('poa-eth3').addPortForwarding(8545, 8540)
 
 # Binding virtual nodes to physical nodes
 emu.addBinding(Binding('poa-eth1', filter = Filter(asn = 150, nodeName='host_0')))
@@ -80,7 +81,6 @@ emu.addBinding(Binding('faucetUser', filter=Filter(asn=164, nodeName='host_0')))
 # Add the layer and save the component to a file
 emu.addLayer(eth)
 emu.addLayer(faucetUserService)
-emu.dump('component-blockchain.bin')
 
 emu.render()
 
@@ -93,8 +93,7 @@ platform_mapping = {
     "amd": Platform.AMD64,
     "arm": Platform.ARM64
 }
-docker = Docker(etherViewEnabled=True, platform=platform_mapping[platform])
 
-# If output directory exists and override is set to false, we call exit(1)
-# updateOutputdirectory will not be called
+docker = Docker(etherViewEnabled=True, platform=platform_mapping[platform])
 emu.compile(docker, './output', override=True)
+
