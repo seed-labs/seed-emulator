@@ -88,8 +88,8 @@ Enter the IP address of the Chainlink node followed by the port number 6688 in t
 2. **Server Configuration Methods**:
     - [setFaucetServerInfo](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L81): Configures information about the faucet server including the virtual node name and port number.
     - [setDeploymentType](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L73): Allows specification of the deployment strategy (default is 'web3').
-    - [setRPCbyUrl](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L89): Sets the Ethereum RPC address directly by URL.
-    - [setRPCbyEthNodeName](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L97): Configures the Ethereum RPC address by referencing another node's name within the emulator.
+    - [setRpcByUrl](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L89): Sets the Ethereum RPC address directly by URL.
+    - [setRpcByEthNodeName](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L97): Configures the Ethereum RPC address by referencing another node's name within the emulator.
 3. **Private Helper Methods**:
     - [__installInitSoftware](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L64): Installs essential software on the node such as networking tools and Python packages required for running Chainlink.
     - [__deployThroughWeb3](../../seedemu/services/ChainlinkService/ChainlinkInitializerServer.py#L105): Deploys the LinkToken contract using web3 by setting up necessary files and commands on the node.
@@ -102,8 +102,8 @@ Enter the IP address of the Chainlink node followed by the port number 6688 in t
 2. **Server Configuration Methods**:
    - [setFaucetServerInfo](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L173): Configures information about the faucet server including the virtual node name and port number.
    - [setUsernameAndPassword](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L145): Sets the username and password for the Chainlink web interface.
-   - [setRPCbyUrl](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L129): Sets the Ethereum RPC address directly by URL.
-   - [setRPCbyEthNodeName](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L137): Configures the Ethereum RPC address by referencing another node's name within the emulator.
+   - [setRpcByUrl](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L129): Sets the Ethereum RPC address directly by URL.
+   - [setRpcByEthNodeName](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L137): Configures the Ethereum RPC address by referencing another node's name within the emulator.
 3. **Private Helper Methods**:
    - [__installSoftware](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L81): Installs essential software on the node such as networking tools and Python packages required for running Chainlink.
    - [__setConfigurationFiles](../../seedemu/services/ChainlinkService/ChainlinkServer.py#L90): Configures the Chainlink node by setting up necessary files and commands on the node.

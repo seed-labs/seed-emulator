@@ -128,7 +128,7 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         """
         self.__init_node_name = init_node_name
                 
-    def setRPCbyUrl(self, address: str):
+    def setRpcByUrl(self, address: str):
         """
         @brief Set the ethereum RPC address.
 
@@ -136,7 +136,7 @@ nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api
         """
         self.__rpc_url = address
         
-    def setRPCbyEthNodeName(self, vnode:str):
+    def setRpcByEthNodeName(self, vnode:str):
         """
         @brief Set the ethereum RPC address.
 

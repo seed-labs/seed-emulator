@@ -233,7 +233,7 @@ chainlink = ChainlinkService()
 cnode = 'chainlink_init_server'
 c_init = chainlink.installInitializer(cnode)
 c_init.setFaucetServerInfo(vnode = 'faucet', port = 80)
-c_init.setRPCbyEthNodeName('eth2')
+c_init.setRpcByEthNodeName('eth2')
 service_name = 'Chainlink-Init'
 emu.getVirtualNode(cnode).setDisplayName(service_name)
 emu.addBinding(Binding(cnode, filter = Filter(asn=151, nodeName='host_2')))
@@ -244,7 +244,7 @@ i = 0
 for asn in c_asns:
     cnode = 'chainlink_server_{}'.format(i)
     c_normal = chainlink.install(cnode)
-    c_normal.setRPCbyEthNodeName('eth{}'.format(i))
+    c_normal.setRpcByEthNodeName('eth{}'.format(i))
     c_normal.setInitNodeIP("chainlink_init_server")
     c_normal.setFaucetServerInfo(vnode = 'faucet', port = 80)
     service_name = 'Chainlink-{}'.format(i)

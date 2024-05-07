@@ -86,7 +86,7 @@ class ChainlinkInitializerServer(Server):
          self.__faucet_vnode_name = vnode
          self.__faucet_port = port
         
-    def setRPCbyUrl(self, address: str):
+    def setRpcByUrl(self, address: str):
         """
         @brief Set the ethereum RPC address.
 
@@ -94,7 +94,7 @@ class ChainlinkInitializerServer(Server):
         """
         self.__rpc_url = address
         
-    def setRPCbyEthNodeName(self, vnode:str):
+    def setRpcByEthNodeName(self, vnode:str):
         """
         @brief Set the ethereum RPC address.
 

@@ -29,7 +29,7 @@ We are using a slighly modified version of the blockchain with hybrid internet l
       cnode = 'chainlink_init_server'
       c_init = chainlink.installInitializer(cnode)
       c_init.setFaucetServerInfo(vnode = 'faucet', port = 80)
-      c_init.setRPCbyEthNodeName('eth2')
+      c_init.setRpcByEthNodeName('eth2')
       service_name = 'Chainlink-Init'
       emu.getVirtualNode(cnode).setDisplayName(service_name)
       emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
@@ -38,10 +38,10 @@ We are using a slighly modified version of the blockchain with hybrid internet l
     
     The following essential functions are used to set up the Chainlink initializer server:
     - `setFaucetServerInfo(vnode = 'faucet', port = 80)`: This function sets up the faucet server information for the Chainlink initializer server. The faucet server is used to fund the Chainlink server with ETH tokens. The function requires the virtual node name of the faucet server and the port number.
-    - `setRPCbyEthNodeName('eth2')`: This function configures the Ethereum RPC address for the Chainlink initializer server. The function requires the node name of the Ethereum node to which the Chainlink initializer server  will use to interact with the blockchain.
+    - `setRpcByEthNodeName('eth2')`: This function configures the Ethereum RPC address for the Chainlink initializer server. The function requires the node name of the Ethereum node to which the Chainlink initializer server  will use to interact with the blockchain.
     
     Additionaly, these are the API functions that are avilable for configuration:
-    - `setRPCbyUrl("<RPC_URL>")`: This function should only be used if the user is sure about the RPC URL. The function requires the RPC URL of the Ethereum node to which will be used by the Chainlink initializer server to connect to the Ethereum node.
+    - `setRpcByUrl("<RPC_URL>")`: This function should only be used if the user is sure about the RPC URL. The function requires the RPC URL of the Ethereum node to which will be used by the Chainlink initializer server to connect to the Ethereum node.
 
     Finally, a network binding is established for the Chainlink initializer server to a host node identified by ASN and node name 'host_2'.
 
@@ -53,7 +53,7 @@ We are using a slighly modified version of the blockchain with hybrid internet l
     for asn in c_asns:
         cnode = 'chainlink_server_{}'.format(i)
         c_normal = chainlink.install(cnode)
-        c_normal.setRPCbyEthNodeName('eth{}'.format(i))
+        c_normal.setRpcByEthNodeName('eth{}'.format(i))
         c_normal.setInitNodeIP("chainlink_init_server")
         c_normal.setFaucetServerInfo(vnode = 'faucet', port = 80)
         service_name = 'Chainlink-{}'.format(i)
@@ -64,7 +64,7 @@ We are using a slighly modified version of the blockchain with hybrid internet l
     In the above code, we are creating multiple chainlink server nodes each associated with different autonoumous system (ASNs). For each server we are assigning the server instance chainlink.install(cnode) to c_normal, specifying the virtual node cnode named 'chainlink_server_{}'.format(i). 
     
     The following essential functions are used to set up the Chainlink server:
-    - `setRPCbyEthNodeName('eth{}'.format(i))`: This function configures the Ethereum RPC address for the Chainlink server. The function requires the node name of the Ethereum node to which the Chainlink server will be listening through the websocket and interacting with the blockchain.
+    - `setRpcByEthNodeName('eth{}'.format(i))`: This function configures the Ethereum RPC address for the Chainlink server. The function requires the node name of the Ethereum node to which the Chainlink server will be listening through the websocket and interacting with the blockchain.
     - `setInitNodeIP("chainlink_init_server")`: This function sets the IP address of the Chainlink initializer server. This is necessary for the Chainlink server to get the LINK token address and send the deployed oracle contract address to be displayed on the Chainlink Init server.
     - `setFaucetServerInfo(vnode = 'faucet', port = 80)`: This function sets up the faucet server information for the Chainlink server. The faucet server is used to fund the Chainlink server with ETH tokens. The function requires the virtual node name of the faucet server and the port number.
 

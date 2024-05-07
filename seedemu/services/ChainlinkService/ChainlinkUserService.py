@@ -123,7 +123,7 @@ class ChainlinkUserServer(Server):
         self.__init_node_name = init_node_name
         self.__number_of_normal_servers = number_of_normal_servers
     
-    def setRPCbyUrl(self, address: str):
+    def setRpcByUrl(self, address: str):
         """
         @brief Set the ethereum RPC address.
 
@@ -131,7 +131,7 @@ class ChainlinkUserServer(Server):
         """
         self.__rpc_url = address
         
-    def setRPCbyEthNodeName(self, vnode:str):
+    def setRpcByEthNodeName(self, vnode:str):
         """
         @brief Set the ethereum RPC address.
 

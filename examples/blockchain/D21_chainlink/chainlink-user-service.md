@@ -17,7 +17,7 @@ The Chainlink User Service is an automated example that demonstrates how to inte
    ```python
     cnode = 'chainlink_user'
     c_user = chainlink_user.install(cnode)
-    c_user.setRPCbyEthNodeName('eth2')
+    c_user.setRpcByEthNodeName('eth2')
     c_user.setFaucetServerInfo(vnode = 'faucet', port = 80)
     c_user.setChainlinkServiceInfo(init_node_name='chainlink_init_server', number_of_normal_servers=2)
     emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
@@ -26,7 +26,7 @@ The Chainlink User Service is an automated example that demonstrates how to inte
     In the above code, we are assigning the server instance chainlink_user.install(cnode) to c_user, specifying the virtual node cnode named 'chainlink_user'.
 
     The following essential functions are used to set up the Chainlink user server:
-    - `setRPCbyEthNodeName('eth2')`: This function configures the Ethereum RPC address for the Chainlink user server. The function requires the node name of the Ethereum node to which the Chainlink user server will use to interact with the blockchain.
+    - `setRpcByEthNodeName('eth2')`: This function configures the Ethereum RPC address for the Chainlink user server. The function requires the node name of the Ethereum node to which the Chainlink user server will use to interact with the blockchain.
     - `setFaucetServerInfo(vnode = 'faucet', port = 80)`: This function sets up the faucet server information for the Chainlink user server. The faucet server is used to fund the Chainlink user server with ETH tokens. The function requires the virtual node name of the faucet server and the port number.
     - `setChainlinkServiceInfo(init_node_name='chainlink_init_server', number_of_normal_servers=2)`: This function sets the Chainlink service information for the Chainlink user server. The function requires the node name of the Chainlink initializer server and the number of Chainlink normal servers. This information is necessary for the Chainlink user server to get the LINK token contract address and the oracle contract addresses.
 
