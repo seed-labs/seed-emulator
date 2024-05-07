@@ -4,6 +4,8 @@ from internet import IPAnyCastTestCase, MiniInternetTestCase, HostMgmtTestCase
 from ethereum import EthereumPOATestCase, EthereumPOSTestCase, EthereumPOWTestCase
 from scion import ScionBgpMixedTestCase, ScionBwtesterTestCase
 from kubo import KuboTestCase, KuboUtilFuncsTestCase, DottedDictTestCase
+from pki import PKITestCase
+from chainlink import ChainlinkPOATestCase
 from traffic_generator import TrafficGeneratorTestCase
 import unittest
 import os, sys
@@ -23,11 +25,13 @@ test_case_list = [
     EthereumPOATestCase,
     EthereumPOSTestCase,
     EthereumPOWTestCase,
+    ChainlinkPOATestCase,
     ScionBgpMixedTestCase,
     ScionBwtesterTestCase,
     KuboTestCase,
     KuboUtilFuncsTestCase,
     DottedDictTestCase,
+    PKITestCase,
     TrafficGeneratorTestCase
 ]
 

@@ -110,17 +110,6 @@ done
 echo "All jobs have been created."
 """
 
-ChainlinkFileTemplate['save_sender_address'] = """\
-chainlink admin login -f /api.txt
-ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
-if [ -z "$ETH_ADDRESS" ]; then
-    echo "Error: Ethereum address not found."
-    exit 1
-fi
-mkdir -p /deployed_contracts
-echo $ETH_ADDRESS > /deployed_contracts/sender.txt
-"""
-
 ChainlinkFileTemplate['nginx_site'] = """\
 server {{
     listen {port};
@@ -208,9 +197,21 @@ echo "$RESPONSE"
 
 ChainlinkFileTemplate['send_get_eth_request'] = """\
 # Wait for the Chainlink node to be up
-sleep 20
-chainlink admin login -f /api.txt
-ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
+while true; do
+    sleep 20
+    # Get Ethereum address
+    chainlink admin login -f /api.txt
+    ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
+
+    # Check if the address is empty
+    if [ -z "$ETH_ADDRESS" ]; then
+        echo "Error: Ethereum address cannot be empty."
+    else
+        # Address is not empty, break the loop
+        echo "Ethereum address: $ETH_ADDRESS"
+        break
+    fi
+done
 FAUCET_SERVER_URL={faucet_server_url}
 FAUCET_SERVER_PORT={faucet_server_port}
 RPC_URL="http://{rpc_url}:{rpc_port}"
@@ -240,6 +241,7 @@ while [ "$SERVER_STATUS" -ne 200 ]; do
 done
 
 echo "Faucet server is up. Proceeding to send fund request."
+echo "curl -X POST -d address=$ETH_ADDRESS&amount=$AMOUNT http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme > /dev/null 2>&1 &"
 curl -X POST -d "address=$ETH_ADDRESS&amount=$AMOUNT" "http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme" > /dev/null 2>&1 &
 echo "Fund request sent to the faucet server."
 
@@ -261,6 +263,7 @@ while true; do
         break
     elif [ $elapsed_time -gt $TIME_LIMIT ]; then
         echo "Account not funded after $TIME_LIMIT seconds. Sending another request..."
+        echo "curl -X POST -d address=$ETH_ADDRESS&amount=$AMOUNT http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme > /dev/null 2>&1 &"
         curl -X POST -d "address=$ETH_ADDRESS&amount=$AMOUNT" "http://$FAUCET_SERVER_URL:$FAUCET_SERVER_PORT/fundme" > /dev/null 2>&1 &
         start_time=$(date +%s)
     else
@@ -268,4 +271,7 @@ while true; do
     fi
     sleep 30
 done
+
+mkdir -p /deployed_contracts
+echo $ETH_ADDRESS > /deployed_contracts/auth_sender.txt
 """
