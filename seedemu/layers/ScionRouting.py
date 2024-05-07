@@ -176,7 +176,7 @@ class ScionRouting(Routing):
             _Templates["general"].format(name=name))
     
     @staticmethod
-    def _get_networks_from_router(router1 : str, router2 : str, as_ : ScionAutonomousSystem) -> list[Network]:
+    def _get_networks_from_router(router1 : str, router2 : str, as_ : ScionAutonomousSystem) -> Network:
         """
         gets all networks that both router1 and router2 are part of
 
@@ -193,7 +193,7 @@ class ScionRouting(Routing):
         try:
             return joint_nets[0]
         except:
-            raise Exception(f"No common network between {router1} and {router2} but they are in the same AS")
+            return None
     
     @staticmethod
     def _get_BR_from_interface(interface : int, as_ : ScionAutonomousSystem) -> str:
@@ -247,16 +247,15 @@ class ScionRouting(Routing):
                         ifs["Hops"][str(other_if)] =  0 # if interface is on same router, hops is 0
                     else:
                         net = ScionRouting._get_networks_from_router(this_br_name, br_str, as_) # get network between the two routers (Assume any two routers in AS are connected through a network)
-                        (latency, bandwidth, packetDrop) = net.getDefaultLinkProperties()
-                        mtu = net.getMtu()
-                        ifs["Latency"][str(other_if)] =  f"{latency}ms"
-                        if bandwidth != 0: # if bandwidth is not 0, add it
-                            ifs["Bandwidth"][str(other_if)] =  int(bandwidth/1000) # convert bps to kbps
-                        ifs["packetDrop"][str(other_if)] =  f"{packetDrop}"
-                        ifs["MTU"][str(other_if)] =  f"{mtu}"
-                        ifs["Hops"][str(other_if)] =  1 # NOTE: if interface is on different router, hops is 1 since we assume all routers are connected through a network
-        
-        
+                        if net:
+                            (latency, bandwidth, packetDrop) = net.getDefaultLinkProperties()
+                            mtu = net.getMtu()
+                            ifs["Latency"][str(other_if)] =  f"{latency}ms"
+                            if bandwidth != 0: # if bandwidth is not 0, add it
+                                ifs["Bandwidth"][str(other_if)] =  int(bandwidth/1000) # convert bps to kbps
+                            ifs["packetDrop"][str(other_if)] =  f"{packetDrop}"
+                            ifs["MTU"][str(other_if)] =  f"{mtu}"
+                            ifs["Hops"][str(other_if)] =  1 # NOTE: if interface is on different router, hops is 1 since we assume all routers are connected through a network
         return ifs
 
     @staticmethod
