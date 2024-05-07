@@ -20,8 +20,9 @@ emu.load('../A01-transit-as/base-component.bin')
 # To make changes to any existing layer, we need to get the layer reference 
 
 base: Base       = emu.getLayer('Base')
-web:  WebService = emu.getLayer('WebService')
 ebgp: Ebgp       = emu.getLayer('Ebgp')
+
+web:  WebService = WebService()
 
 
 
@@ -35,21 +36,22 @@ emu.addBinding(Binding('web151-2', filter = Filter(nodeName = 'web-2', asn = 151
 
 
 ###############################################################################
-# Add a new autonomous system (AS-153)
+# Add a new autonomous system (AS-154)
 # This requires making changes to the base and ebgp layers.
 
-as153 = base.createAutonomousSystem(153)
-as153.createNetwork('net0')
+as154 = base.createAutonomousSystem(154)
+as154.createNetwork('net0')
 
-as153.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
+as154.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
+as154.createRouter('router1').joinNetwork('net0').joinNetwork('ix101')
 
-as153.createHost('web').joinNetwork('net0')
-web.install('web153')
-emu.addBinding(Binding('web153', filter = Filter(nodeName = 'web', asn = 153)))
+as154.createHost('web').joinNetwork('net0')
+web.install('web154')
+emu.addBinding(Binding('web154', filter = Filter(nodeName = 'web', asn = 154)))
 
-# Peer with AS-150 and AS-151 at IX-100
-ebgp.addPrivatePeering(100, 150, 153, abRelationship = PeerRelationship.Provider)
-ebgp.addPrivatePeering(100, 151, 153, abRelationship = PeerRelationship.Peer)
+# Peer with AS-151 and AS-152 
+ebgp.addPrivatePeering(100, 151, 154, abRelationship = PeerRelationship.Provider)
+ebgp.addPrivatePeering(101, 152, 154, abRelationship = PeerRelationship.Peer)
 
 
 
@@ -64,10 +66,10 @@ as152 = base.getAutonomousSystem(152)
 as152.createRouter('router1').joinNetwork('net0').joinNetwork('ix102')
 
 # Add a BGP router to AS-153 and connect it to IX-102
-as153.createRouter('router1').joinNetwork('net0').joinNetwork('ix102')
+as154.createRouter('router2').joinNetwork('net0').joinNetwork('ix102')
 
 # Peer them
-ebgp.addPrivatePeering(102, 152, 153, abRelationship = PeerRelationship.Peer)
+ebgp.addPrivatePeering(102, 152, 154, abRelationship = PeerRelationship.Peer)
 
 
 

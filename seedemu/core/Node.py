@@ -268,10 +268,11 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__shared_folders = {}
         self.__persistent_storages = []
 
-        # for soft in DEFAULT_SOFTWARE:
-        #     self.__softwares.add(soft)
+        for soft in DEFAULT_SOFTWARE:
+            self.__softwares.add(soft)
 
         self.__name_servers = []
+        self.__host_names = [f"{self.__scope}-{self.__name}"]
 
         self.__geo = None
         self.__note = None
@@ -288,6 +289,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         assert not self.__configured, 'Node already configured.'
         assert not self.__asn == 0, 'Virtual physical node must not be used in render/configure'
 
+        self.__configured = True
         reg = emulator.getRegistry()
 
         for (netname, address) in self.__pending_nets:
@@ -353,6 +355,22 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         self.__name_servers = servers
 
+        return self
+
+    def getHostNames(self) -> str:
+        """!
+        @brief Get all host names for this node.
+        @returns node host names.
+        """
+        return self.__host_names
+
+    def addHostName(self, name: str) -> Node:
+        """!
+        @brief Add a new host name to this node.
+        @param name new host name.
+        @returns self, for chaining API calls.
+        """
+        self.__host_names.append(name)
         return self
 
     def getNameServers(self) -> List[str]:
