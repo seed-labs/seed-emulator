@@ -4,8 +4,8 @@
 from seedemu import *
 from examples.internet.B03_hybrid_internet import hybrid_internet
 
-def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2) -> list:
-    # Create the Ethereum layer, return a list of vnodes
+def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2): 
+    # Create the Ethereum layer
 
     emu = Emulator()
 
@@ -34,31 +34,27 @@ def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2) -> list:
 
 
     # Create the Ethereum servers. 
-    vnodes_list = [] 
     signers  = []
     for i in range(total_eth_nodes):
        vnode = 'eth{}'.format(i)
-       vnodes_list.append(vnode)
-       e = blockchain.createNode(vnode)
+       e = blockchain.createNode(vnode) 
+       e.enableGethHttp()    # Enable HTTP on all nodes
+       e.enableGethWs()      # Enable WebSocket on all nodes
+       e.unlockAccounts()
 
        displayName = 'Ethereum-POA-%.2d'
-       e.enableGethHttp()  # Enable HTTP on all nodes
-       e.enableGethWs()    # Enable WebSocket on all nodes
-       e.unlockAccounts()
        if i%2  == 0:
            e.startMiner()
            signers.append(vnode)
            displayName = displayName + '-Signer'
-           emu.getVirtualNode(vnode).appendClassName("Signer")
+           e.appendClassName("Signer")
        if i%3 == 0:
            e.setBootNode(True)
            displayName = displayName + '-BootNode'
-           emu.getVirtualNode(vnode).appendClassName("BootNode")
-
-       emu.getVirtualNode(vnode).setDisplayName(displayName%(i))
+           e.appendClassName("BootNode")
+       e.setDisplayName(displayName%(i))
                 
     # Create the Faucet server
-    vnodes_list.append('faucet')
     faucet:FaucetServer = blockchain.createFaucetServer(
                vnode='faucet', 
                port=80, 
@@ -69,13 +65,11 @@ def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2) -> list:
     # Add the Ethereum layer
     emu.addLayer(eth)
 
+    # Generate output
     if dumpfile is not None:
         emu.dump(dumpfile)
     else:
         emu.dump("component_poa.bin")
 
-    return vnodes_list
-
 if __name__ == "__main__":
-    vlist = run()
-    print(vlist)
+    run()
