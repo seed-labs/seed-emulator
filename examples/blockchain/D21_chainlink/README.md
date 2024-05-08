@@ -1,38 +1,88 @@
-# Chainlink Example
-This example demonstrates how to use Chainlink with a blockchain. The developer manual can be found [here](../../../docs/developer_manual/06-chainlink-service.md)
+# Adding Chainlink Service to Blockchain
 
-## Table of Contents
-- [Chainlink Example](#chainlink-example)
-  - [Table of Contents](#table-of-contents)
-  - [Building the Emulation](#building-the-emulation)
-  - [To Do](#to-do)
+## Adding the Chainlink Service
 
-## Building the Emulation
-1. Build the components for hybrid-internet:
-    ```bash
-    python3 hybrid-internet.py
-    ```
-    This will generate the `hybrid-internet.bin` file.
-    - Information about the hybrid-internet example can be found here: [hybrid-interet](../../C00-hybrid-internet/README.md)
-2. Using the `hybrid-internet.bin` file, build the blockchain and faucet components:
-    ```python
-    python3 blockchain-poa.py
-    ```
-    This is a modified version of the blockchain-poa example. The only difference is that the websocket is enabled on all nodes for the Chainlink service to listen. And a faucet is initialized to fund the Chainlink service with ETH tokens. This will generate the `blockchain-poa.bin` file.
-    - Information about the blockchain-poa example can be found here: [blockchain-poa](../D00-blockchain-poa/README.md)
-    - Information about the ethereum-faucet example can be found here: [faucet](../../B12-ethereum-faucet/blockchain.py)
-3. Now that the blockchain and faucet components are built, initialize the Chainlink service:
-    ```python
-    python3 chainlink-service.py
-    ```
-    This will generate the `chainlink-service.bin` file. This file will also generate the docker-compose file for the Chainlink service in the `/output` directory.
-    - Information about the Chainlink service can be found here: [chainlink-service](./chainlink-service.md)
-4. There is an automated user example service also built to showcase how the user can interact with the Chainlink service. This example service is built using the Chainlink service and the blockchain service. To build the example service, run the following command:
-    ```python
-    python3 chainlink-user-service.py
-    ```
-    This file will also generate the docker-compose file for the Chainlink example service in the `/output` directory.
-    - Information about the Chainlink example service can be found here: [chainlink-example-service](./chainlink-user-service.md)
+Detailed explanation of each of the code is already provided as comments
+in the code, so we will not repeat them in this document. 
+Each server is protected by a login page; the default username 
+is `seed@seed.com` and the default password is `Seed@emulator123`. 
+We can change them using the following API of the server 
+class (the username must be an email address and the password
+must have 16 to 50 characters).
 
-## To Do
-- [ ] Make a video tutorial for the Chainlink example and how to interact with the Chainlink service
+```python
+setUsernameAndPassword(username = '<username>', password = '<password>')
+```
+
+## Interacting with the Chainlink Initializer Server
+
+The Chainlink Initializer server is used to deploy the LINK token contract and
+display the deployed oracle contract address. You can access the Chainlink
+Initializer server by navigating to `http://<host_ip>:80` in your web browser.
+The Chainlink Initializer server displays the deployed oracle contract address
+and the LINK token contract address. This information is useful for building
+and deploying solidity contracts and deploying jobs.
+
+
+```bash
+docker ps | grep Chainlink-Init
+docker logs <CONTAINER ID>
+```
+
+Here is the sample output of the Chainlink Initializer server:
+```
+Link Token Contract: 0x34CFC22C4A0Bf351654CDADadAe821a86fc91554
+Oracle Contract Address: 0x3F25076D76623e1A713A4fAEB78fc59Ee8E79024
+Oracle Contract Address: 0xE1ca974bEC6f7FEA67BB9f7FF699390702EB00F8
+Oracle Contract Address: 0xE4ea89d4557EFeF39B7e14ad4db6D942AeA7ac96
+```
+
+## Interacting with the Chainlink Server using CLI
+
+Chainlink CLI: You can interact with the Chainlink service using the Chainlink
+CLI. The Chainlink CLI is a command-line tool that allows you to interact with
+the Chainlink node. You can use the CLI to create and manage Chainlink jobs,
+check the status of the Chainlink node, and more. The Chainlink CLI can be
+accessed by running the following command on Chainlink servers: 
+
+```bash
+# chainlink admin login
+
+Default username: seed@seed.com
+Default password: Seed@emulator123
+```
+
+Instructions on how to use the Chainlink CLI can be found
+[here](https://github.com/smartcontractkit/chainlink/wiki/Command-Line-Options).
+
+
+## Interacting with the Chainlink Server using UI
+
+### Login  
+
+Each Chainlink server comes with a web UI that can
+be used to interact with the server.  You can access the UI by navigating
+to `http://<host_ip>:6688`. It allows you to create and manage Chainlink jobs. 
+
+  ```
+  Default username: seed@seed.com
+  Default password: Seed@emulator123
+  ```
+
+### Dashboard
+
+After the login, we will enter the dashboard. From here, 
+we can create and manage Chainlink jobs,
+check the status of the Chainlink node, and more.
+It will show the address of 
+the account created during chainlink start command which 
+should be funded with 5 ETH tokens.
+```
+Account Balance
+Address  0xC485bC418643777f98A0C0eF31244Ea766028088
+Native Token Balance 5.000000000000000000
+LINK Balance         0.00000000
+```
+
+Instructions on how to use the dashboard to manage jobs can be
+found [here](https://docs.chain.link/chainlink-nodes)
