@@ -6,85 +6,102 @@ This README provides a step-by-step guide to build the Chainlink service on the 
 - [Building the Chainlink Service](#building-the-chainlink-service)
   - [Table of Contents](#table-of-contents)
   - [Building the Emulation](#building-the-emulation)
-  - [Interacting with the Chainlink Normal Server](#interacting-with-the-chainlink-normal-server)
   - [Interacting with the Chainlink Initializer Server](#interacting-with-the-chainlink-initializer-server)
+    - [How to know if the Chainlink Initializer Server is running?](#how-to-know-if-the-chainlink-initializer-server-is-running)
+  - [Interacting with the Chainlink Normal Server](#interacting-with-the-chainlink-normal-server)
+    - [How to know if the Chainlink Normal Server is running?](#how-to-know-if-the-chainlink-normal-server-is-running)
 
 
 ## Building the Emulation
-1. Create an instance of the emulator:
+1. Load the instance of the blockchain layer with the hybrid internet layer:
     ```python
-    emu = Emulator()
+    emuA = Emulator()
+    local_dump_path = './blockchain-poa.bin'
+    # Run and load the pre-built ethereum poa component
+    ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4)
+    emuA.load(local_dump_path)
     ```
-2. Load the modified blockchain layer:
-We are using a slighly modified version of the blockchain with hybrid internet layer. The blockchain layer also includes the faucet server which is essential for the chainlink service. Please refer to the steps [here](README.md) to build the blockchain layer with the hybrid internet layer. Once you have built the blockchain layer, you can load the blockchain layer using the following command:
+2. Get the information about faucet and eth nodes from the above loaded component:
     ```python
-    emu.load('./blockchain-poa.bin')
+    eth:EthereumService = emuA.getLayer('EthereumService')
+    blockchain: Blockchain =  eth.getBlockchainByName(eth.getBlockchainNames()[0])
+    faucet_dict = blockchain.getFaucetServerInfo()
+    eth_nodes = blockchain.getEthServerNames()
     ```
-3. Initialize the Chainlink Service:
+3. Initialize the Chainlink Service with faucet server info:
     ```python
+    emuB = Emulator()
     chainlink = ChainlinkService()
+    # Set the faucet server in the service class
+    chainlink.setFaucetServerInfo(faucet_dict[0]['name'], faucet_dict[0]['port'])
     ```
+    - `setFaucetServerInfo(vnode = 'faucet', port = 80)`: This function sets up the faucet server information for the Chainlink initializer server. The faucet server is used to fund the Chainlink server with ETH tokens. The function requires the virtual node name of the faucet server and the port number.
+
 4. Initialize the Chainlink Initializer Server:
     ```python
-      cnode = 'chainlink_init_server'
-      c_init = chainlink.installInitializer(cnode)
-      c_init.setFaucetServerInfo(vnode = 'faucet', port = 80)
-      c_init.setRpcByEthNodeName('eth2')
-      service_name = 'Chainlink-Init'
-      emu.getVirtualNode(cnode).setDisplayName(service_name)
-      emu.addBinding(Binding(cnode, filter = Filter(asn=164, nodeName='host_2')))
-    ```
-    In the above code, we are assigning the server instance chainlink.installInitializer(cnode) to c_init, specifying the virtual node cnode named 'chainlink_init_server'. 
-    
+    # Create Chainlink init server
+    cnode = 'chainlink_init_server'
+    chainlink.installInitializer(cnode) \
+            .setLinkedEthNode(name=random.choice(eth_nodes)) \
+            .setDisplayName('Chainlink-Init')
+    ```    
     The following essential functions are used to set up the Chainlink initializer server:
-    - `setFaucetServerInfo(vnode = 'faucet', port = 80)`: This function sets up the faucet server information for the Chainlink initializer server. The faucet server is used to fund the Chainlink server with ETH tokens. The function requires the virtual node name of the faucet server and the port number.
-    - `setRpcByEthNodeName('eth2')`: This function configures the Ethereum RPC address for the Chainlink initializer server. The function requires the node name of the Ethereum node to which the Chainlink initializer server  will use to interact with the blockchain.
+    - `setLinkedEthNode('eth2')`: This function configures the Ethereum RPC address for the Chainlink initializer server. The function requires the node name of the Ethereum node to which the Chainlink initializer server  will use to interact with the blockchain.
     
     Additionaly, these are the API functions that are avilable for configuration:
-    - `setRpcByUrl("<RPC_URL>")`: This function should only be used if the user is sure about the RPC URL. The function requires the RPC URL of the Ethereum node to which will be used by the Chainlink initializer server to connect to the Ethereum node.
-
-    Finally, a network binding is established for the Chainlink initializer server to a host node identified by ASN and node name 'host_2'.
+    - `setDisplayName('Chainlink-Init')`: This function sets the display name for the Chainlink initializer server. The display name is used to identify the Chainlink initializer server in the emulator.
 
 5. Initialize the Chainlink Server:
    ```python
-    i = 0
-    c_asns  = [150, 151]
     # Create Chainlink normal servers
-    for asn in c_asns:
+    for i in range(total_chainlink_nodes):
         cnode = 'chainlink_server_{}'.format(i)
-        c_normal = chainlink.install(cnode)
-        c_normal.setRpcByEthNodeName('eth{}'.format(i))
-        c_normal.setInitNodeIP("chainlink_init_server")
-        c_normal.setFaucetServerInfo(vnode = 'faucet', port = 80)
-        service_name = 'Chainlink-{}'.format(i)
-        emu.getVirtualNode(cnode).setDisplayName(service_name)
-        emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
-        i = i + 1
+        chainlink.install(cnode) \
+                .setLinkedEthNode(name=random.choice(eth_nodes)) \
+                .setDisplayName('Chainlink-{}'.format(i))
     ```
     In the above code, we are creating multiple chainlink server nodes each associated with different autonoumous system (ASNs). For each server we are assigning the server instance chainlink.install(cnode) to c_normal, specifying the virtual node cnode named 'chainlink_server_{}'.format(i). 
     
     The following essential functions are used to set up the Chainlink server:
-    - `setRpcByEthNodeName('eth{}'.format(i))`: This function configures the Ethereum RPC address for the Chainlink server. The function requires the node name of the Ethereum node to which the Chainlink server will be listening through the websocket and interacting with the blockchain.
-    - `setInitNodeIP("chainlink_init_server")`: This function sets the IP address of the Chainlink initializer server. This is necessary for the Chainlink server to get the LINK token address and send the deployed oracle contract address to be displayed on the Chainlink Init server.
-    - `setFaucetServerInfo(vnode = 'faucet', port = 80)`: This function sets up the faucet server information for the Chainlink server. The faucet server is used to fund the Chainlink server with ETH tokens. The function requires the virtual node name of the faucet server and the port number.
+    - `setLinkedEthNode('eth{}'.format(i))`: This function configures the Ethereum RPC address for the Chainlink server. The function requires the node name of the Ethereum node to which the Chainlink server will be listening through the websocket and interacting with the blockchain.
+    - `setDisplayName('Chainlink-{}'.format(i))`: This function sets the display name for the Chainlink Normal server. The display name is used to identify the Chainlink normal server in the emulator.
 
     Additionaly, these are the API functions that are avilable for configuration:
     - `setUsernameAndPassword(username = '<username>', password = '<password>')`: This function sets the username and password for the Chainlink server. The default username is 'seed@seed.com' and the default password is 'Seed@emulator123'. The username must be a valid email address and password must be between 16 to 50 characters.
-
-    Finally, a network binding is established for each Chainlink server to a host node identified by ASN and node name 'host_2'.
-
+    - 
 6. Once you have completed the installation and configuration the Chainlink initializer and Chainlink node, you can add the Chainlink Service layer to the emulation.
     ```python
-    emu.addLayer(chainlink)
+    emuB.addLayer(chainlink)
     ```
-7. Now, we can render and compile the emulation:
+
+7. Merge the two emulator components:
+   ```python
+    # Merge the two components
+    emu = emuA.merge(emuB, DEFAULT_MERGERS)
+    ```
+
+8. Get the information about the chainlink initialized virtual nodes and bind them to physical nodes on the emulator
+   ```python
+    init_node    = chainlink.getChainlinkInitServerName()
+    server_nodes = chainlink.getChainlinkServerNames()
+    # Bind each v-node to a randomly selected physical nodes (no filters)
+    emu.addBinding(Binding(init_node))
+    for cnode in server_nodes:
+        emu.addBinding(Binding(cnode))
+    ```
+
+9.  Now, we can render and compile the emulation:
     ```python
-    OUTPUTDIR = './output'
+    # Render and compile
     emu.render()
-    docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=Platform.AMD64)
-    emu.compile(docker, OUTPUTDIR, override = True)
+    if platform.machine() == 'aarch64' or platform.machine() == 'arm64':
+        current_platform = Platform.ARM64
+    else:
+        current_platform = Platform.AMD64
+
+    docker = Docker(etherViewEnabled=True, platform=current_platform)
+    emu.compile(docker, './output', override = True)
     ```
-    Here we have enabled the etherView, this displays the Ethereum transactions on the emulator. The internetMap is enabled to view the network topology of the emulated network. The platform is set to AMD64. The compiled emulation is stored in the directory 'emulator_20'. If you want to use a ARM platform, you can set the platform to `Platform.ARM64`.
 10. Finally, run the emulation script using the following command:
     ```python
     python3 blochain-poa-chainlink.py
