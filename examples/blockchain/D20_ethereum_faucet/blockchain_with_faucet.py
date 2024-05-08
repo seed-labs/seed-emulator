@@ -54,7 +54,7 @@ faucet:FaucetServer = blockchain1.createFaucetServer(vnode='faucet',
                                                      port=80, 
                                                      linked_eth_node='poa-eth5',
                                                      balance=1000)
-faucet.appendClassName("FaucetServer")
+faucet.appendClassName('FaucetServer')
 faucet.setDisplayName('FaucetServer')
 
 # Funding accounts during the build time
@@ -64,7 +64,7 @@ faucet.fund('0x5449ba5c5f185e9694146d60cfe72681e2158499', 5)
 # Funding accounts during the run time, i.e., after the emulation starts 
 faucetUserService = FaucetUserService()
 faucetUserService.install('faucetUser') \
-         .appendClassName("FaucetUser").setDisplayName('FaucetUser')
+         .appendClassName('FaucetUser').setDisplayName('FaucetUser')
 faucetUserService.setFaucetServerInfo(vnode = 'faucet', port=80)
 # Here is a way to avoid hardcoding the faucet server name and port number
 #faucet_info = blockchain1.getFaucetServerInfo()
