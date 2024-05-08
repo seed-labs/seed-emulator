@@ -230,7 +230,7 @@ emu.getVirtualNode('faucet').setDisplayName('FaucetServer')
 
 # Create the Chainlink Init server
 chainlink = ChainlinkService()
-chainlink.setFaucetServer('faucet', 80)
+chainlink.setFaucetServerInfo('faucet', 80)
 cnode = 'chainlink_init_server'
 c_init = chainlink.installInitializer(cnode)
 c_init.setLinkedEthNode('eth2')
