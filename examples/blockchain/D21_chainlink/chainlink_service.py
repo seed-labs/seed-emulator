@@ -25,18 +25,17 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     # Create the Chainlink service, and set the faucet server. 
     # Accounts will be created for the Chainlink service, and they
     # will be funded via the faucet server. 
-    chainlink_nodes = []
     chainlink = ChainlinkService()
-    chainlink.setFaucetServer(faucet_info[0]['name'], faucet_info[0]['port'])
+    chainlink.setFaucetServerInfo(faucet_info[0]['name'], faucet_info[0]['port'])
     
     # Create the Chainlink initialization server.
     # This server will be used to deploy the necessary contract, and provide
-    # contract addresses to the chainlink servers
+    # contract addresses to the Chainlink servers
     # We need to provide a blockchain node for this server to send transactions
     # to the blockchain. This is done via the setLinkedEthNode() method. 
     chainlink.installInitializer('chainlink_init_server') \
             .setLinkedEthNode(name=random.choice(eth_nodes)) \
-            .setDisplayName('Chainlink-Init').appendClassName('ChainlinkInitServer')
+            .setDisplayName('Chainlink-Init')
 
     # Create Chainlink servers.
     # We need to provide a blockchain node for this server to send transactions
@@ -44,8 +43,7 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     for i in range(total_chainlink_nodes):
         chainlink.install('chainlink_server_{}'.format(i)) \
                 .setLinkedEthNode(name=random.choice(eth_nodes)) \
-                .setDisplayName('Chainlink-{}'.format(i)).appendClassName('ChainlinkServer') 
-                #.setUsernameAndPassword(username = '', password = '')
+                .setDisplayName('Chainlink-{}'.format(i))
 
     # Add the Chainlink layer
     emu.addLayer(chainlink)
@@ -54,7 +52,7 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     init_node    = chainlink.getChainlinkInitServerName()
     server_nodes = chainlink.getChainlinkServerNames()
     
-    # Bind each Chainlin node to a physical node (no filters, so random binding)
+    # Bind each Chainlink node to a physical node (no filters, so random binding)
     emu.addBinding(Binding(init_node))
     for cnode in server_nodes:
         emu.addBinding(Binding(cnode))
