@@ -9,55 +9,60 @@ import random
 
 def run(dumpfile = None, total_chainlink_nodes = 3):
     ###############################################################################
-    emuA = Emulator()
+    emu = Emulator()
+
+    # Run and load the pre-built ethereum component; it is used as the base blockchain
     local_dump_path = './blockchain-poa.bin'
-    # Run and load the pre-built ethereum poa component
     ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4)
-    emuA.load(local_dump_path)
+    emu.load(local_dump_path)
     
-    eth:EthereumService = emuA.getLayer('EthereumService')
+    # Get the blockchain and faucet information
+    eth:EthereumService = emu.getLayer('EthereumService')
     blockchain: Blockchain =  eth.getBlockchainByName(eth.getBlockchainNames()[0])
-    faucet_dict = blockchain.getFaucetServerInfo()
-    eth_nodes = blockchain.getEthServerNames()
+    faucet_info = blockchain.getFaucetServerInfo()
+    eth_nodes   = blockchain.getEthServerNames()
     
-    emuB = Emulator()
-    # Build the chainlink service
+    # Create the Chainlink service, and set the faucet server. 
+    # Accounts will be created for the Chainlink service, and they
+    # will be funded via the faucet server. 
     chainlink_nodes = []
     chainlink = ChainlinkService()
-    # Set the faucet server in the service class
-    chainlink.setFaucetServer(faucet_dict[0]['name'], faucet_dict[0]['port'])
+    chainlink.setFaucetServer(faucet_info[0]['name'], faucet_info[0]['port'])
     
-    # Create Chainlink init server
-    cnode = 'chainlink_init_server'
-    chainlink.installInitializer(cnode) \
+    # Create the Chainlink initialization server.
+    # This server will be used to deploy the necessary contract, and provide
+    # contract addresses to the chainlink servers
+    # We need to provide a blockchain node for this server to send transactions
+    # to the blockchain. This is done via the setLinkedEthNode() method. 
+    chainlink.installInitializer('chainlink_init_server') \
             .setLinkedEthNode(name=random.choice(eth_nodes)) \
-            .setDisplayName('Chainlink-Init')
+            .setDisplayName('Chainlink-Init').appendClassName('ChainlinkInitServer')
 
-    # Create Chainlink normal servers
+    # Create Chainlink servers.
+    # We need to provide a blockchain node for this server to send transactions
+    # to the blockchain. 
     for i in range(total_chainlink_nodes):
-        cnode = 'chainlink_server_{}'.format(i)
-        chainlink.install(cnode) \
+        chainlink.install('chainlink_server_{}'.format(i)) \
                 .setLinkedEthNode(name=random.choice(eth_nodes)) \
-                .setDisplayName('Chainlink-{}'.format(i))
+                .setDisplayName('Chainlink-{}'.format(i)).appendClassName('ChainlinkServer') 
+                #.setUsernameAndPassword(username = '', password = '')
 
+    # Add the Chainlink layer
+    emu.addLayer(chainlink)
+
+    # Get the Chainlink node names
     init_node    = chainlink.getChainlinkInitServerName()
     server_nodes = chainlink.getChainlinkServerNames()
     
-    # Add the Chainlink layer
-    emuB.addLayer(chainlink)
-    
-    # Merge the two components
-    emu = emuA.merge(emuB, DEFAULT_MERGERS)
-    
-    # Bind each v-node to a randomly selected physical nodes (no filters)
+    # Bind each Chainlin node to a physical node (no filters, so random binding)
     emu.addBinding(Binding(init_node))
     for cnode in server_nodes:
         emu.addBinding(Binding(cnode))
-    
+
+    # Generate the emulator files
     if dumpfile is not None:
         emu.dump(dumpfile)
     else:
-        # Render and compile
         emu.render()
         if platform.machine() == 'aarch64' or platform.machine() == 'arm64':
             current_platform = Platform.ARM64
@@ -67,7 +72,7 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
         docker = Docker(etherViewEnabled=True, platform=current_platform)
         emu.compile(docker, './output', override = True)
 
-    print("-------------------")
+    print("-----------------------------------------")
     print("Chainlink server nodes: " + str(server_nodes))
     print("Chainlink initialization node: " + init_node)
 
