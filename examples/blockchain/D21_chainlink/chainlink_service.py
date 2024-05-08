@@ -25,7 +25,7 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     chainlink_nodes = []
     chainlink = ChainlinkService()
     # Set the faucet server in the service class
-    chainlink.setFaucetServer(faucet_dict[0]['name'], faucet_dict[0]['port'])
+    chainlink.setFaucetServerInfo(faucet_dict[0]['name'], faucet_dict[0]['port'])
     
     # Create Chainlink init server
     cnode = 'chainlink_init_server'

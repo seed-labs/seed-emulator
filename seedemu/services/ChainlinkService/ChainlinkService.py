@@ -61,7 +61,7 @@ class ChainlinkService(Service):
         for (server, node) in targets:
             server.configure(node, emulator)
     
-    def setFaucetServer(self, vnode: str, port: int):
+    def setFaucetServerInfo(self, vnode: str, port: int = 80):
         self.__faucet_vnode_name = vnode
         self.__faucet_port = port
         return self
