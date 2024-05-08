@@ -34,16 +34,41 @@ e6 = blockchain1.createNode("poa-eth6").enableGethHttp().setDisplayName('Ethereu
 e7 = blockchain1.createNode("poa-eth7").enableGethHttp().setDisplayName('Ethereum-POA-7')
 e8 = blockchain1.createNode("poa-eth8").enableGethHttp().setDisplayName('Ethereum-POA-8')
 
-# Set bootnodes on e1 and e5. The other nodes can use these bootnodes to find peers.
-# Start mining on e1,e2, e5, and e6
-# To start mine(seal) in POA consensus, the account should be unlocked first. 
+# Set bootnodes and mining nodes (sealing)
+# The accounts on the mining nodes should be unlocked first 
 e1.setBootNode(True).unlockAccounts().startMiner()
-e2.unlockAccounts().startMiner()
 e5.setBootNode(True).unlockAccounts().startMiner()
+e2.unlockAccounts().startMiner()
 e6.unlockAccounts().startMiner()
 
 # Set port forwarding on eth3
 emu.getVirtualNode('poa-eth3').addPortForwarding(8545, 8540)
+
+
+# Enable http connection on the e5 node (e5 is used by Faucet)
+e5.enableGethHttp()
+
+# Create a faucet server
+blockchain1:Blockchain
+faucet:FaucetServer = blockchain1.createFaucetServer(vnode='faucet', 
+                                                     port=80, 
+                                                     linked_eth_node='poa-eth5',
+                                                     balance=1000)
+faucet.appendClassName("FaucetServer")
+faucet.setDisplayName('FaucetServer')
+
+# Funding accounts during the build time
+faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
+faucet.fund('0x5449ba5c5f185e9694146d60cfe72681e2158499', 5)
+
+# Funding accounts during the run time, i.e., after the emulation starts 
+faucetUserService = FaucetUserService()
+faucetUserService.install('faucetUser') \
+         .appendClassName("FaucetUser").setDisplayName('FaucetUser')
+faucetUserService.setFaucetServerInfo(vnode = 'faucet', port=80)
+# Here is a way to avoid hardcoding the faucet server name and port number
+#faucet_info = blockchain1.getFaucetServerInfo()
+#faucetUserService.setFaucetServerInfo(faucet_info[0]['name'], faucet_info[0]['port'])
 
 # Binding virtual nodes to physical nodes
 emu.addBinding(Binding('poa-eth1', filter = Filter(asn = 150, nodeName='host_0')))
@@ -54,28 +79,8 @@ emu.addBinding(Binding('poa-eth5', filter = Filter(asn = 160, nodeName='host_0')
 emu.addBinding(Binding('poa-eth6', filter = Filter(asn = 161, nodeName='host_0')))
 emu.addBinding(Binding('poa-eth7', filter = Filter(asn = 162, nodeName='host_0')))
 emu.addBinding(Binding('poa-eth8', filter = Filter(asn = 163, nodeName='host_0')))
-
-# Enable http connection on e5 geth
-e5.enableGethHttp()
-
-# Faucet Service
-blockchain1:Blockchain
-# Make sure that eth5 node has enabled geth.
-faucet:FaucetServer = blockchain1.createFaucetServer(vnode='faucet', 
-                                                     port=80, 
-                                                     linked_eth_node='poa-eth5',
-                                                     balance=1000)
-
-
-faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
-faucet.fund('0x5449ba5c5f185e9694146d60cfe72681e2158499', 5)
-
-emu.addBinding(Binding('faucet', filter=Filter(asn=154, nodeName='host_0')))
-
-faucetUserService = FaucetUserService()
-faucetUserService.install('faucetUser')
-faucetUserService.setFaucetServerInfo(vnode = 'faucet', port=80)
-emu.addBinding(Binding('faucetUser', filter=Filter(asn=164, nodeName='host_0')))
+emu.addBinding(Binding('faucet',   filter = Filter(asn = 154, nodeName='host_0')))
+emu.addBinding(Binding('faucetUser', filter=Filter(asn = 164, nodeName='host_0')))
 
 
 # Add the layer and save the component to a file
