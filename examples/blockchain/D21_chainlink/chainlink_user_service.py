@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 from seedemu import *
-import chainlink_service
+import chainlink
 import platform
 import random
 
@@ -10,7 +10,7 @@ emu = Emulator()
 
 # Run and load the pre-built component
 local_dump_path = './blockchain-with-chainlink.bin'
-chainlink_service.run(dumpfile=local_dump_path)
+chainlink.run(dumpfile=local_dump_path)
 emu.load(local_dump_path)
 
 eth:EthereumService    = emu.getLayer('EthereumService')
