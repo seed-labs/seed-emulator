@@ -61,6 +61,7 @@ def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2):
                linked_eth_node='eth5',
                balance=10000,
                max_fund_amount=10)
+    faucet.setDisplayName('Faucet')
 
     # Add the Ethereum layer
     emu.addLayer(eth)
