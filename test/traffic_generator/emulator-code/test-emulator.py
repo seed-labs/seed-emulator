@@ -5,10 +5,13 @@ from seedemu.compiler import Docker
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.services import TrafficService, TrafficServiceType
 from seedemu.layers import EtcHosts
+from examples.internet.B00_mini_internet import mini_internet
 
+# Run the pre-built components
+mini_internet.run(dumpfile='./base-internet.bin')
 emu = Emulator()
 # Load the pre-built mini-internet component
-emu.load("../../../examples/B00-mini-internet/base-component.bin")
+emu.load("./base-internet.bin")
 base = emu.getLayer("Base")
 
 etc_hosts = EtcHosts()
