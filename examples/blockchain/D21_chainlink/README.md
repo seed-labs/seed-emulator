@@ -4,7 +4,7 @@
 
 Detailed explanation of each of the code is already provided as comments
 in the code, so we will not repeat them in this document. 
-Each server is protected by a login page; the default username 
+Each server (Chainlink node) is protected by a login page; the default username 
 is `seed@seed.com` and the default password is `Seed@emulator123`. 
 We can change them using the following API of the server 
 class (the username must be an email address and the password
@@ -39,11 +39,11 @@ Oracle Contract Address: 0xE4ea89d4557EFeF39B7e14ad4db6D942AeA7ac96
 
 ## Interacting with the Chainlink Server using CLI
 
-Chainlink CLI: You can interact with the Chainlink service using the Chainlink
+Chainlink CLI: You can interact with the Chainlink nodes using the Chainlink
 CLI. The Chainlink CLI is a command-line tool that allows you to interact with
 the Chainlink node. You can use the CLI to create and manage Chainlink jobs,
 check the status of the Chainlink node, and more. The Chainlink CLI can be
-accessed by running the following command on Chainlink servers: 
+accessed by running the following command on Chainlink nodes: 
 
 ```bash
 # chainlink admin login
@@ -60,8 +60,8 @@ Instructions on how to use the Chainlink CLI can be found
 
 ### Login  
 
-Each Chainlink server comes with a web UI that can
-be used to interact with the server.  You can access the UI by navigating
+Each Chainlink node comes with a web UI that can
+be used to interact with the node.  You can access the UI by navigating
 to `http://<host_ip>:6688`. It allows you to create and manage Chainlink jobs. 
 
   ```
