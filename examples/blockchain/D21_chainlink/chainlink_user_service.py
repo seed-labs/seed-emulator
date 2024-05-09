@@ -6,30 +6,52 @@ import chainlink_service
 import platform
 import random
 
-local_dump_path = './blockchain-chainlink.bin'
+emu = Emulator()
 
+# Run and load the pre-built component
+local_dump_path = './blockchain-with-chainlink.bin'
 chainlink_service.run(dumpfile=local_dump_path)
+emu.load(local_dump_path)
 
-# Load the pre-built component
-emuA = Emulator()
-emuA.load('./blockchain-chainlink.bin')
+eth:EthereumService    = emu.getLayer('EthereumService')
+blockchain: Blockchain = eth.getBlockchainByName(eth.getBlockchainNames()[0])
+faucet_info = blockchain.getFaucetServerInfo()
+eth_nodes   = blockchain.getEthServerNames()
 
-eth:EthereumService = emuA.getLayer('EthereumService')
-blockchain: Blockchain =  eth.getBlockchainByName(eth.getBlockchainNames()[0])
-faucet_dict = blockchain.getFaucetServerInfo()
-eth_nodes = blockchain.getEthServerNames()
-
-chainlink: ChainlinkService = emuA.getLayer('ChainlinkService')
+chainlink: ChainlinkService = emu.getLayer('ChainlinkService')
+init_server = chainlink.getChainlinkInitServerName()
 
 # Chainlink User Service
-emuB = Emulator()
-# This will work with the default jobs configured on the chainlink servers
+# This will work with the default jobs configured on the Chainlink servers
+chainlink_user = ChainlinkUserService()
+cnode = 'chainlink_user'
+chainlink_user.install(cnode) \
+      .setLinkedEthNode(name=random.choice(eth_nodes)) \
+      .setFaucetServerInfo(faucet_info[0]['name'], faucet_info[0]['port']) \
+      .setChainlinkServiceInfo(init_server, len(chainlink.getChainlinkServerNames()))\
+      .setDisplayName('Chainlink-User')
+
+
+# Add the Chainlink User Service Layer
+emu.addLayer(chainlink_user)
+
+# Bind the chainlink user service to a random physical node
+emu.addBinding(Binding(cnode))
+
+emu.render()
+
+if platform.machine() == 'aarch64' or platform.machine() == 'arm64':
+    current_platform = Platform.ARM64
+else:
+    current_platform = Platform.AMD64
+
+docker = Docker(etherViewEnabled=True, platform=current_platform)
+emu.compile(docker, './output', override = True)
+
+
 '''
 Flow of ChainlinkUserService:
-1. Create an instance of ChainlinkUserService
-2. Install the service
-3. Set the RPC server to connect to the Ethereum node
-4. Set the Faucet server to connect to the Faucet server
+
 Behind the scenes:
 1. Wait for the chainlink init server to be up. Get LINK token contract address and oracle contract addresses
 2. Fund the user account
@@ -39,30 +61,3 @@ Behind the scenes:
 6. Transfer LINK token to the user contract
 7. Call the main function in the user contract
 '''
-chainlink_user = ChainlinkUserService()
-cnode = 'chainlink_user'
-chainlink_user.install(cnode) \
-    .setLinkedEthNode(name=random.choice(eth_nodes)) \
-        .setFaucetServerInfo(faucet_dict[0]['name'], faucet_dict[0]['port']) \
-            .setChainlinkServiceInfo(chainlink.getChainlinkInitServerName(), len(chainlink.getChainlinkServerNames()))
-
-# Add the Chainlink User Service Layer
-emuB.addLayer(chainlink_user)
-
-# Merge the two components
-emu = emuA.merge(emuB, DEFAULT_MERGERS)
-
-# Bind the chainlink user service to a random physical node
-emu.getVirtualNode(cnode).setDisplayName('Chainlink-User')
-emu.addBinding(Binding(cnode))
-
-OUTPUTDIR = './output'
-emu.render()
-
-if platform.machine() == 'aarch64' or platform.machine() == 'arm64':
-    current_platform = Platform.ARM64
-else:
-    current_platform = Platform.AMD64
-
-docker = Docker(internetMapEnabled=True, internetMapPort=8081, etherViewEnabled=True, platform=current_platform)
-emu.compile(docker, OUTPUTDIR, override = True)

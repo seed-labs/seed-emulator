@@ -37,11 +37,11 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
             .setLinkedEthNode(name=random.choice(eth_nodes)) \
             .setDisplayName('Chainlink-Init')
 
-    # Create Chainlink servers.
-    # We need to provide a blockchain node for this server to send transactions
+    # Create Chainlink nodes (called server in our code)
+    # We need to provide a blockchain node for this node to send transactions
     # to the blockchain. 
     for i in range(total_chainlink_nodes):
-        chainlink.install('chainlink_server_{}'.format(i)) \
+        chainlink.install('chainlink_node_{}'.format(i)) \
                 .setLinkedEthNode(name=random.choice(eth_nodes)) \
                 .setDisplayName('Chainlink-{}'.format(i))
 
@@ -71,7 +71,7 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
         emu.compile(docker, './output', override = True)
 
     print("-----------------------------------------")
-    print("Chainlink server nodes: " + str(server_nodes))
+    print("Chainlink nodes: " + str(server_nodes))
     print("Chainlink initialization node: " + init_node)
 
 if __name__ == "__main__":
