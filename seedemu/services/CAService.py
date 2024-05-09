@@ -100,6 +100,7 @@ curl -O -L https://github.com/smallstep/certificates/releases/download/v{self._s
 apt install -y ./step-ca_{self._step_version}_arm64.deb; \
 fi"
         )
+        node.appendStartCommand('ln -s /root/.step /tmp/.step')
         self.__caDir = self.__ca_store.getStorePath()
         for root, _, files in os.walk(self.__caDir):
             for file in files:
