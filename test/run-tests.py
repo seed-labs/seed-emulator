@@ -6,6 +6,7 @@ from scion import ScionBgpMixedTestCase, ScionBwtesterTestCase
 from kubo import KuboTestCase, KuboUtilFuncsTestCase, DottedDictTestCase
 from pki import PKITestCase
 from chainlink import ChainlinkPOATestCase
+from traffic_generator import TrafficGeneratorTestCase
 from ethereumLayer2 import EthereumLayer2TestCase
 import unittest
 import os, sys
@@ -32,6 +33,7 @@ test_case_list = [
     KuboUtilFuncsTestCase,
     DottedDictTestCase,
     PKITestCase,
+    TrafficGeneratorTestCase
     EthereumLayer2TestCase
 ]
 
