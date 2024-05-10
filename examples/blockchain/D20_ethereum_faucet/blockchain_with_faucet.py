@@ -22,17 +22,17 @@ eth = EthereumService(saveState = False, override=True)
 
 # Create a POA Blockchain layer, which is a sub-layer of Ethereum layer
 # Need to specify chainName and consensus when create Blockchain layer.
-blockchain1 = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.POA)
+blockchain = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.POA)
 
-# Create blockchain1 nodes (POA Etheruem) (nodes in this layer are virtual)
-e1 = blockchain1.createNode("poa-eth1").enableGethHttp().setDisplayName('Ethereum-POA-1')
-e2 = blockchain1.createNode("poa-eth2").enableGethHttp().setDisplayName('Ethereum-POA-2')
-e3 = blockchain1.createNode("poa-eth3").enableGethHttp().setDisplayName('Ethereum-POA-3')
-e4 = blockchain1.createNode("poa-eth4").enableGethHttp().setDisplayName('Ethereum-POA-4')
-e5 = blockchain1.createNode("poa-eth5").enableGethHttp().setDisplayName('Ethereum-POA-5')
-e6 = blockchain1.createNode("poa-eth6").enableGethHttp().setDisplayName('Ethereum-POA-6')
-e7 = blockchain1.createNode("poa-eth7").enableGethHttp().setDisplayName('Ethereum-POA-7')
-e8 = blockchain1.createNode("poa-eth8").enableGethHttp().setDisplayName('Ethereum-POA-8')
+# Create blockchain nodes (POA Etheruem) (nodes in this layer are virtual)
+e1 = blockchain.createNode("poa-eth1").enableGethHttp().setDisplayName('Ethereum-POA-1')
+e2 = blockchain.createNode("poa-eth2").enableGethHttp().setDisplayName('Ethereum-POA-2')
+e3 = blockchain.createNode("poa-eth3").enableGethHttp().setDisplayName('Ethereum-POA-3')
+e4 = blockchain.createNode("poa-eth4").enableGethHttp().setDisplayName('Ethereum-POA-4')
+e5 = blockchain.createNode("poa-eth5").enableGethHttp().setDisplayName('Ethereum-POA-5')
+e6 = blockchain.createNode("poa-eth6").enableGethHttp().setDisplayName('Ethereum-POA-6')
+e7 = blockchain.createNode("poa-eth7").enableGethHttp().setDisplayName('Ethereum-POA-7')
+e8 = blockchain.createNode("poa-eth8").enableGethHttp().setDisplayName('Ethereum-POA-8')
 
 # Set bootnodes and mining nodes (sealing)
 # The accounts on the mining nodes should be unlocked first 
@@ -49,11 +49,12 @@ emu.getVirtualNode('poa-eth3').addPortForwarding(8545, 8540)
 e5.enableGethHttp()
 
 # Create a faucet server
-blockchain1:Blockchain
-faucet:FaucetServer = blockchain1.createFaucetServer(vnode='faucet', 
-                                                     port=80, 
-                                                     linked_eth_node='poa-eth5',
-                                                     balance=1000)
+blockchain:Blockchain
+faucet:FaucetServer = blockchain.createFaucetServer(
+           vnode='faucet', 
+           port=80, 
+           linked_eth_node='poa-eth5',
+           balance=1000)
 faucet.setDisplayName('FaucetServer')
 
 # Funding accounts during the build time
@@ -65,7 +66,7 @@ faucetUserService = FaucetUserService()
 faucetUserService.install('faucetUser').setDisplayName('FaucetUser')
 faucetUserService.setFaucetServerInfo(vnode = 'faucet', port=80)
 # Here is a way to avoid hardcoding the faucet server name and port number
-#faucet_info = blockchain1.getFaucetServerInfo()
+#faucet_info = blockchain.getFaucetServerInfo()
 #faucetUserService.setFaucetServerInfo(faucet_info[0]['name'], faucet_info[0]['port'])
 
 # Binding virtual nodes to physical nodes

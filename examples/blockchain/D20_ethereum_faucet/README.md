@@ -27,14 +27,15 @@ We can specify 4 parameters: `vnode`, `port`, `linked_eth_node`, and `balance`.
 - `balance`: the initial balance (ETH) of the account used by the faucet server.
 
 ```python
-e5 = blockchain1.createNode("poa-eth5").enableGethHttp()
+e5 = blockchain.createNode("poa-eth5").enableGethHttp()
 
 # Faucet Service
-blockchain1:Blockchain
-faucet:FaucetServer = blockchain1.createFaucetServer(vnode='faucet', 
-                                                     port=80, 
-                                                     linked_eth_node='poa-eth5',
-                                                     balance=1000)
+blockchain:Blockchain
+faucet:FaucetServer = blockchain.createFaucetServer(
+           vnode='faucet', 
+           port=80, 
+           linked_eth_node='poa-eth5',
+           balance=1000)
 ```
 
 ## Fund Accounts Using Faucet
@@ -99,7 +100,7 @@ To make code more portable, we can get the faucet server information from
 the blockchain service. 
 
 ```python
-faucet_info = blockchain1.getFaucetServerInfo()  # returns a list of dictionary
+faucet_info = blockchain.getFaucetServerInfo()  # returns a list of dictionary
 faucetUserService.setFaucetServerInfo(faucet_info[0]['name'], faucet_info[0]['port'])
 ```
 
