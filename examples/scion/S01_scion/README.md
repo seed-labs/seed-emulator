@@ -108,6 +108,8 @@ Inter-AS routing in SCION is based on fixed "links" which are combined during th
 
 The `Scion` layer exposes two methods `addIxLink()` and `addXcLink()` for setting up SCION links over an IX and via direct cross-connect links, respectively. In both methods, we must specify the two endpoints of the link as pairs of ISD and ASN. The order of endpoints matters as SCION transit links are directional (for beaconing purposes, packets are still forwarded in both directions) from `a` to `b`. The reason we must name ASes by ASN and ISD is that only the pair of ISD and ASN uniquely identifies a SCION AS, i.e., a link from (1, 150) to (1, 151) is completely different from a hypothetical link between (2, 150) and (2, 151).
 
+Additionally, there are two optional arguments `a_router` and `b_router`. If there is only one link between a pair of ASN's specifying these is not necessary. But if there are several cross-connects or several routers on the internet exchange, a_router has to be set to the name of the border-router. If you want to see an example of this check out S06-scion-link-properties
+
 Besides the endpoints every SCION link has a type. Currently there are three types:
 - `Core` links connect core ASes of the same or different ISDs. The core ASes of every ISD must all be reachable by one another via core links. The BGP analogy to core links is peering between Tier 1 ASes.
 - `Transit` links connect core ASes to non-core ASes in the same ISD. They model Internet transit as sold from a provider AS to a customer AS.
