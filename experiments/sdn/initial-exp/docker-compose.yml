@@ -1,0 +1,50 @@
+version: "3"
+
+services:
+    host-a1:
+        image: handsonsecurity/seed-ubuntu:large-arm
+        container_name: host-a1
+        tty: true
+        cap_add:
+                - ALL
+        network_mode: none
+        command: bash -c "
+                      /etc/init.d/openbsd-inetd start  &&
+                      tail -f /dev/null
+                 "
+    host-a2:
+        image: handsonsecurity/seed-ubuntu:large-arm
+        container_name: host-a2
+        tty: true
+        cap_add:
+                - ALL
+        network_mode: none
+        command: bash -c "
+                      /etc/init.d/openbsd-inetd start  &&
+                      tail -f /dev/null
+                 "
+                  
+    host-b1:
+        image: handsonsecurity/seed-ubuntu:large-arm
+        container_name: host-b1
+        tty: true
+        cap_add:
+                - ALL
+        network_mode: none
+        command: bash -c "
+                      /etc/init.d/openbsd-inetd start  &&
+                      tail -f /dev/null
+                 "
+
+    host-b2:
+        image: handsonsecurity/seed-ubuntu:large-arm
+        container_name: host-b2
+        tty: true
+        cap_add:
+                - ALL
+        network_mode: none
+        command: bash -c "
+                      /etc/init.d/openbsd-inetd start  &&
+                      tail -f /dev/null
+                 "
+

@@ -14,6 +14,8 @@ class BaseSystem(Enum):
     SEEDEMU_BASE        = 'seedemu-base'
     SEEDEMU_ROUTER      = 'seedemu-router'
     SEEDEMU_ETHEREUM    = 'seedemu-ethereum'
+    SEEDEMU_OP_STACK    = 'seedemu-op-stack'
+    SEEDEMU_SC_DEPLOYER = 'seedemu-sc-deployer'
     SEEDEMU_CHAINLINK   = 'seedemu-chainlink'
     DEFAULT             = SEEDEMU_BASE
 
@@ -24,6 +26,8 @@ class BaseSystem(Enum):
                 SEEDEMU_BASE: [UBUNTU_20_04],
                 SEEDEMU_ROUTER: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_ETHEREUM: [UBUNTU_20_04, SEEDEMU_BASE],
+                SEEDEMU_OP_STACK: [UBUNTU_20_04, SEEDEMU_BASE],
+                SEEDEMU_SC_DEPLOYER: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_CHAINLINK: [UBUNTU_20_04, SEEDEMU_BASE],
             }
     @staticmethod 
