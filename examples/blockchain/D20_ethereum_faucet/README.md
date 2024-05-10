@@ -24,7 +24,8 @@ We can specify 4 parameters: `vnode`, `port`, `linked_eth_node`, and `balance`.
   sends out transactions to the blockchain. We just need to provide the name
   of an existing eth node, but we need to make sure that the eth node
   has enabled the http connection (otherwise, it cannot accept external requests). 
-- `balance`: the initial balance (ETH) of the account used by the faucet server.
+- `balance`: set the initial balance (ETH) of the account used by the faucet server.
+  This account will be created during the build time and be added to the genesis block.
 
 ```python
 e5 = blockchain.createNode("poa-eth5").enableGethHttp()
@@ -37,6 +38,7 @@ faucet:FaucetServer = blockchain.createFaucetServer(
            linked_eth_node='poa-eth5',
            balance=1000)
 ```
+
 
 ## Fund Accounts Using Faucet
 
@@ -104,9 +106,8 @@ faucet_info = blockchain.getFaucetServerInfo()  # returns a list of dictionary
 faucetUserService.setFaucetServerInfo(faucet_info[0]['name'], faucet_info[0]['port'])
 ```
 
-After the emulator starts, we can log into the container that `faucetUser` binds
-to. We will find a script called `fund.py` in the root folder.
+After the emulator starts, we can log into the `faucetUser` container.
+We will find a script called `fund.py` in the root folder.
 This script is generated during the build time based on the parameters
 provided. It sends a fund request for a newly created account.
-
 

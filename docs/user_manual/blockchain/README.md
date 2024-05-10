@@ -10,7 +10,8 @@
   - [Build a Blockchain Emulator (POA)](../../../examples/blockchain/D00_ethereum_poa)
   - [Create prefunded accounts](./accounts.md)
   - [Use Faucet to Fund Accounts](../../../examples/blockchain/D20_ethereum_faucet)
-  - [Deploy contract](./under_construction.md)
+  - [Deploy contract](./deploy_contracts.md)
+
 
 ## Advanced features 
 
