@@ -23,6 +23,7 @@ phrase is
 great awesome fun seed security lab protect system network prevent attack future
 ```
 
+
 ## Local Accounts 
 
 
@@ -33,8 +34,13 @@ blockchain.setLocalAccountParameters(mnemonic=words, total=10, balance=100)
 Default: total is 5, balance is 10, the phrase is the same as the example
 ```
 
+
+## Various Account APIs
+
+Import accounts, etc. 
+
+
 ## Generating Accounts Using Python
 
 Tools to generate accounts (put in the `code/` folder) 
-
 
