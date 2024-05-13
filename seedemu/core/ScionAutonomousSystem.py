@@ -38,8 +38,7 @@ class ScionAutonomousSystem(AutonomousSystem):
     __next_ifid: int                     # Next IFID assigned to a link
     __note: str # optional free form parameter that contains interesting information about AS. This will be included in beacons if it is set
     __generateStaticInfoConfig:  bool
-    __sigs: Dict[str, Dict]
-    __num_sigs: int
+    __sigs_config: Dict[str, Dict] # data structure to hold configuration for sig nodes
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
@@ -55,9 +54,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__next_ifid = 1
         self.__note = None
         self.__generateStaticInfoConfig = False
-        self.__sigs = {}
-        self.__num_sigs = 0
-    
+        self.__sigs_config = {}
 
     def registerNodes(self, emulator: Emulator):
         """!
@@ -170,37 +167,6 @@ class ScionAutonomousSystem(AutonomousSystem):
         assert type in types, "Unknown policy type"
         return self.__beaconing_policy.get(type)
 
-    def addSIG(self) -> ScionAutonomousSystem:
-        """
-        @brief set the SIGs
-
-        @param sigs Dict of SIGs
-        """
-
-        if self.getAsn() == 150:
-            cs_addr = "10.150.0.71"
-        elif self.getAsn() == 153:
-            cs_addr = "10.153.0.71"
-        
-        self.__sigs["sig-{}".format(self.__num_sigs)] = {
-            "ctrl_addr": f"127.0.0.1:30252",
-            "data_addr": f"127.0.0.1:30042"
-        }
-
-        self.__num_sigs += 1
-
-        return self
-
-    def getSIG(self) -> Dict:
-        """
-        @brief get the configured SIGs
-
-        @returns Dict of SIGs
-        """
-
-        return self.__sigs
-
-
     def getTopology(self, isd: int) -> Dict:
         """!
         @brief Create the AS topology definition.
@@ -228,7 +194,18 @@ class ScionAutonomousSystem(AutonomousSystem):
                 "interfaces": rnode.getScionInterfaces()
             }
         
+        # SIGs
+        sigs = {}
+        for name in self.getHosts():
+            node = self.getHost(name)
+            if name in self.__sigs_config:
+                addr =  node.getInterfaces()[0].getAddress()
+                sigs[name] = {
+                    'ctrl_addr': f"{addr}:{self.__sigs_config[name]['ctrl_port']}",
+                    'data_addr': f"{addr}:{self.__sigs_config[name]['data_port']}"
+                }
 
+        
         return {
             'attributes': self.getAsAttributes(isd),
             'isd_as': f'{isd}-{self.getAsn()}',
@@ -237,7 +214,7 @@ class ScionAutonomousSystem(AutonomousSystem):
             'discovery_service': control_services,
             'border_routers': border_routers,
             'colibri_service': {},
-            'sigs': self.__sigs,
+            'sigs': sigs,
         }
 
     def createControlService(self, name: str) -> Node:
@@ -268,6 +245,40 @@ class ScionAutonomousSystem(AutonomousSystem):
         @returns Node.
         """
         return self.__control_services[name]
+
+    def setSigConfig(self, sig_name: str, other_ia: IA, local_net: str, remote_net: str, ctrl_port: int = 30256, data_port: int = 30056) -> ScionAutonomousSystem:
+        """!
+        @brief Set the configuration for a SIG.
+
+        @param sig_name Name of the SIG.
+        @param other_ia IA of the other AS.
+        """
+
+        assert sig_name not in self.__sigs_config, 'SIG with name {} already has a configuration.'.format(sig_name)
+
+
+        self.__sigs_config[sig_name] = {
+            "local_net": local_net,
+            "remote_net": remote_net,
+            "ctrl_port": ctrl_port,
+            "data_port": data_port,
+            "other_ia": other_ia,
+            "debug_level": "debug"
+        }
+
+        return self
+
+
+    def getSigConfig(self, sig_name: str) -> Dict:
+        """!
+        @brief Get the configuration for a SIG.
+
+        @param sig_name Name of the SIG.
+        @returns Configuration.
+        """
+        assert sig_name in self.__sigs_config, 'SIG with name {} does not have a configuration.'.format(sig_name)
+        return self.__sigs_config[sig_name]
+    
 
     def setNote(self, note: str) -> ScionAutonomousSystem:
         """!

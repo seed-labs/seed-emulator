@@ -11,3 +11,4 @@ from .DHCPService import DHCPServer, DHCPService
 from .EthereumService import *
 from .ScionBwtestService import ScionBwtestService
 from .ScionBwtestClientService import ScionBwtestClientService
+from .ScionSIGService import ScionSIGService
