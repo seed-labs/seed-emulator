@@ -110,3 +110,6 @@ class BuildtimeDockerContainer:
         code = sh(run_command)
         if code != 0:
             raise Exception("Failed to run docker container:\n" + run_command)
+        
+        for source, _ in self.__volumes:
+            sh(f"docker run -it --rm {source}:/tmp alpine:latest chown -R {os.getuid()}:{os.getgid()} /tmp")
