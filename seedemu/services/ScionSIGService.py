@@ -130,6 +130,9 @@ class ScionSIGServer(Server):
         """
         [node.addSoftware(software) for software in sig_default_software] # add default software
 
+        node.addBuildCommand(
+            "apt-get update && apt-get install -y scion-sig")
+
         self._append_sig_command(node)
 
         self._provision_sig_config(node)

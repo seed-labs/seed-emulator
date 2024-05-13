@@ -110,7 +110,7 @@ class ScionRouting(Routing):
         node.addBuildCommand(
             "apt-get update && apt-get install -y"
             " scion-border-router scion-control-service scion-daemon scion-dispatcher scion-tools"
-            " scion-apps-bwtester scion-sig")
+            " scion-apps-bwtester")
         node.addSoftware("apt-transport-https")
         node.addSoftware("ca-certificates")
 
