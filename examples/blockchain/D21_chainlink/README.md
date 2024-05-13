@@ -1,6 +1,26 @@
 # Chainlink Service 
 
-TODO: What is Chainlink  
+Chainlink is a decentralized oracle network designed to securely connect smart
+contracts on blockchain platforms with external data and services. It acts as a
+bridge between blockchains and real-world data, such as financial market
+prices, weather information, and other off-chain data sources. By providing
+reliable data feeds to smart contracts, Chainlink enhances the functionality
+and applicability of blockchain applications across various industries,
+enabling them to execute transactions based on real-time information.
+
+The Chainlink service in the emulator consists of two types of nodes (called
+servers in the emulator):
+
+- `ChainlinkInitializerServer`: Deploys the LINK token contract essential for
+  building the Chainlink decentralized oracle network and hosts a web server
+  displaying the LINK token and oracle contract addresses.
+
+- `ChainlinkServer`: Operates the Chainlink software starting with a
+  pre-configured setup. It funds a Chainlink node and a Web3 account using
+  faucet, deploys an oracle contract with the LINK token contract address and
+  node address as an authorized user, and establishes a one-to-one relationship
+  between the node and the contract. Pre-configured jobs are created with the
+  oracle contract address on the server.
 
 
 - [Add Chainlink service](#add-chainlink-service)
