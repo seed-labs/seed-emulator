@@ -100,7 +100,7 @@ curl -O -L https://github.com/smallstep/certificates/releases/download/v{self._s
 apt install -y ./step-ca_{self._step_version}_arm64.deb; \
 fi"
         )
-        node.appendStartCommand('ln -s /root/.step /tmp/.step')
+        # node.appendStartCommand('ln -s /root/.step /tmp/.step')
         self.__caDir = self.__ca_store.getStorePath()
         for root, _, files in os.walk(self.__caDir):
             for file in files:
@@ -336,8 +336,8 @@ class RootCAStore:
         with cd(self.__caDir):
             self.__container = BuildtimeDockerImage(f"smallstep/step-cli:{CAService._step_version()}").container()
             self.__container.user(f"{os.getuid()}:{os.getuid()}").mountVolume(
-                self.__caDir, "/tmp"
-            ).env("STEPPATH", "/tmp/.step").entrypoint("step")
+                self.__caDir, "/root"
+            ).env("STEPPATH", "/root/.step").entrypoint("step")
 
     def getStorePath(self) -> str:
         """!
@@ -395,11 +395,17 @@ class RootCAStore:
                 f.write(self.__password)
             initialize_command = "ca init"
             if self.__pendingRootCertAndKey:
-                initialize_command += " --root /tmp/root_ca.crt --key /tmp/root_ca_key"
+                initialize_command += " --root /root/root_ca.crt --key /root/root_ca_key"
             initialize_command += f' --deployment-type "standalone" --name "SEEDEMU Internal" \
 --dns "{self._caDomain}" --address ":443" --provisioner "admin" --with-ca-url "https://{self._caDomain}" \
---password-file /tmp/password.txt --provisioner-password-file /tmp/password.txt --acme'
+--password-file /root/password.txt --provisioner-password-file /root/password.txt --acme'
             self.__container.run(initialize_command)
+
+        # To change owner of the folder
+        container = BuildtimeDockerImage(f"alpine:latest").container()
+        container.user(f"{os.getuid()}:{os.getuid()}").mountVolume("/tmp", "/tmp")
+        # container.run('chown -R 1000:1000 /tmp')
+        # docker run -it --rm -v /tmp:/tmp ubuntu:latest chown -R 1000:1000 /tmp
         self.__initialized = True
 
     def save(self, path: str):
