@@ -100,7 +100,6 @@ curl -O -L https://github.com/smallstep/certificates/releases/download/v{self._s
 apt install -y ./step-ca_{self._step_version}_arm64.deb; \
 fi"
         )
-        # node.appendStartCommand('ln -s /root/.step /tmp/.step')
         self.__caDir = self.__ca_store.getStorePath()
         for root, _, files in os.walk(self.__caDir):
             for file in files:
@@ -401,12 +400,6 @@ class RootCAStore:
 --password-file /root/password.txt --provisioner-password-file /root/password.txt --acme'
             self.__container.run(initialize_command)
 
-        # # To change owner of the folder
-        # container = BuildtimeDockerImage(f"alpine:latest").container()
-        # container.mountVolume(self.__caDir, "/tmp")
-        # container.run(f"chown -R {os.getuid()}:{os.getgid()} /tmp")
-        # print(f"chown -R {os.getuid()}:{os.getgid()} /tmp")
-        # docker run -it --rm -v /tmp:/tmp ubuntu:latest chown -R 1000:1000 /tmp
         self.__initialized = True
 
     def save(self, path: str):
