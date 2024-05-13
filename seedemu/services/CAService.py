@@ -404,7 +404,7 @@ class RootCAStore:
         # To change owner of the folder
         container = BuildtimeDockerImage(f"alpine:latest").container()
         container.mountVolume(self.__caDir, "/tmp")
-        container.run(f"chown -R {os.getuid()}:{os.getuid()} /tmp")
+        container.run(f"chown -R {os.getuid()}:{os.getgid()} /tmp")
         # docker run -it --rm -v /tmp:/tmp ubuntu:latest chown -R 1000:1000 /tmp
         self.__initialized = True
 
