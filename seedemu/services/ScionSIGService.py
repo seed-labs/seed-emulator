@@ -18,7 +18,7 @@ _Templates["sig"] = """\
 src_ipv4 = "{src_ip}"
 
 [gateway]
-traffic_policy_file = "/etc/scion/sig.json"
+traffic_policy_file = "/etc/scion/{sig_name}.json"
 ctrl_addr = "{ctrl_addr}:{ctrl_port}"
 data_addr = "{data_addr}:{data_port}"
 """
@@ -45,7 +45,7 @@ class ScionSIGServer(Server):
     @brief SCION IP Gateway server.
     """
 
-    __config : Dict[str, str]
+    __config : Dict[str, Dict[str, str]] # maps sig_name to sig_config
 
     def __init__(self):
         """!
@@ -54,33 +54,45 @@ class ScionSIGServer(Server):
         super().__init__()
         self.__config = {}
 
-    def setConfig(self, config: {}) -> ScionSIGServer:
+    def setConfig(self, sig_name: str, config: Dict[str,str]) -> ScionSIGServer:
         """!
         @brief Set the configuration.
 
         @param config Configuration dictionary.
         """
-        self.__config = config
+        self.__config[sig_name] = config
 
         return self
+    
+    def getConfig(self, sig_name: str) -> Dict[str,str]:
+        """
+        Get the configuration for the SIG.
+        """
+        return self.__config[sig_name]
+    
+    def getSIGs(self) -> List[str]:
+        """
+        Get the names of the SIGs.
+        """
+        return list(self.__config.keys())
 
     def _append_sig_command(self, node: Node):
         """
         Append commands for starting the SCION SIG stack on the node.
         """
-        # get config
-        config = self.__config
-        ip = IPv4Network(config["local_net"]).network_address + 1
-        # add setup command
-        node.appendStartCommand(_CommandTemplates["sig_setup"].format(ip_addr=ip))
-        node.appendStartCommand(_CommandTemplates['sig_start'].format(name=node.getName()))
+        for sig_name in self.__config.keys():
+            # get config
+            config = self.__config[sig_name]
+            ip = IPv4Network(config["local_net"]).network_address + 1
+            # add setup command
+            node.appendStartCommand(_CommandTemplates["sig_setup"].format(ip_addr=ip))
+            node.appendStartCommand(_CommandTemplates['sig_start'].format(name=sig_name))
 
-    def _provision_sig_config(self, node: Node):
+    def _provision_sig_config(self, node: Node, sig_name: str):
         
-        name = node.getName()
+        config = self.__config[sig_name]
 
-        config = self.__config
-
+    
         # provision sig.json
 
         isd, as_num = config["other_ia"]
@@ -97,7 +109,7 @@ class ScionSIGServer(Server):
             "ConfigVersion": 9001
         }
 
-        node.setFile("/etc/scion/sig.json", json.dumps(sig_json, indent=4))
+        node.setFile(f"/etc/scion/{sig_name}.json", json.dumps(sig_json, indent=4))
 
         # provision sig.toml
 
@@ -119,10 +131,18 @@ class ScionSIGServer(Server):
             ctrl_addr=ip,
             ctrl_port=ctrl_port,
             data_addr=ip,
-            data_port=data_port 
+            data_port=data_port,
+            sig_name=sig_name
        )
     
-        node.setFile(f"/etc/scion/{name}.toml", sig_toml)
+        node.setFile(f"/etc/scion/{sig_name}.toml", sig_toml)
+
+    def _provision_sig_configs(self, node: Node):
+        """
+        @brief Provision the SIG configurations.
+        """
+        for sig_name in self.__config.keys():
+            self._provision_sig_config(node, sig_name)
 
     def install(self, node: Node):
         """!
@@ -135,7 +155,7 @@ class ScionSIGServer(Server):
 
         self._append_sig_command(node)
 
-        self._provision_sig_config(node)
+        self._provision_sig_configs(node)
 
         node.appendClassName("ScionSIGService")
 
