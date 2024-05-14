@@ -5,7 +5,6 @@ EthInitAndInfo Server has two roles. First role to deploy a contract when all th
 - [Create an EthInitAndInfo server](#add-ethinitandinfo-server)
 - [Deploy a contract](#deploy-contract)
 - [Interact with EthInitAndInfo server](#interact-with-server)
-- [Chainlink user service](#user-service)
 
 <a id="add-ethinitandinfo-server"></a>
 ## Create EthInitAndInfo Server
