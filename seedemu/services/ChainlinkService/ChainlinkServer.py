@@ -104,8 +104,8 @@ class ChainlinkServer(Server):
         """
         config_content = ChainlinkFileTemplate['config'].format(rpc_url=self.__rpc_url, chain_id=self.__chain_id, rpc_ws_port=self.__rpc_ws_port, rpc_port=self.__rpc_port)
         self.__node.setFile('/config.toml', config_content)
-        self.__node.setFile('/secrets.toml', ChainlinkFileTemplate['secrets'])
-        self.__node.setFile('/api.txt', ChainlinkFileTemplate['api'].format(username=self.__username, password=self.__password))
+        self.__node.setFile('/db_secret.toml', ChainlinkFileTemplate['secrets'])
+        self.__node.setFile('/password.txt', ChainlinkFileTemplate['api'].format(username=self.__username, password=self.__password))
         self.__node.setFile('/jobs/getUint256.toml', ChainlinkJobsTemplate['getUint256'])
         self.__node.setFile('/jobs/getBool.toml', ChainlinkJobsTemplate['getBool'])
         
@@ -116,7 +116,7 @@ class ChainlinkServer(Server):
         start_commands = """
 service postgresql restart
 su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\""
-nohup chainlink node -config /config.toml -secrets /secrets.toml start -api /api.txt > chainlink_logs.txt 2>&1 &
+nohup chainlink node -config /config.toml -secrets /db_secret.toml start -api /password.txt > chainlink_logs.txt 2>&1 &
 """
         self.__node.appendStartCommand(start_commands)
     
