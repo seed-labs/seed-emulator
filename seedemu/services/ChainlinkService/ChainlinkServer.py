@@ -12,8 +12,8 @@ class ChainlinkServer(Server):
     __emulator: Emulator
     __rpc_url: str
     __rpc_vnode_name: str = None
-    __username: str = "seed@seed.com"
-    __password: str = "Seed@emulator123"
+    __username: str = "seed@example.com"
+    __password: str = "blockchainemulator"
     __init_node_name: str = None
     __init_node_url: str
     __flask_server_port: int = 5000
