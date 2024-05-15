@@ -52,7 +52,7 @@ done
 """
 
 ChainlinkFileTemplate['create_jobs'] = """\
-DIRECTORY="/jobs/"
+DIRECTORY="/chainlink/jobs/"
 ORACLE_ADDRESS_FILE="/deployed_contracts/oracle_contract_address.txt"
 TIMEOUT=1000
 SLEEP_DURATION=10
@@ -88,7 +88,7 @@ if [ ! -d "$DIRECTORY" ]; then
 
     echo "All TOML files have been updated."
 
-chainlink admin login -f /api.txt
+chainlink admin login -f /chainlink/password.txt
 
 if [ ! -d "$DIRECTORY" ]; then
     echo "Error: Directory does not exist."
@@ -200,7 +200,7 @@ ChainlinkFileTemplate['send_get_eth_request'] = """\
 while true; do
     sleep 20
     # Get Ethereum address
-    chainlink admin login -f /api.txt
+    chainlink admin login -f /chainlink/password.txt
     ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
 
     # Check if the address is empty

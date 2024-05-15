@@ -62,7 +62,7 @@ This directory contains the Chainlink job templates that are used to create Chai
         - `get`: internet-facing URL from where the boolean value is retrieved
         - `path`: comma-separated JSON path used to extract the boolean value
      - Example:
-       - `get`: https://raw.githubusercontent.com/amanvelani/seed-emulator/master/seedemu/services/ChainlinkService/ChainlinkTemplates/jobs/status.json
+       - `get`: https://raw.githubusercontent.com/amanvelani/seed-emulator/ethereum-improvement/seedemu/services/ChainlinkService/ChainlinkTemplates/jobs/status.json
        - `path`: `values,seed`
 
         This will retrieve the json data in the following format:

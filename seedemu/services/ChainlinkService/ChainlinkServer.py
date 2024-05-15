@@ -78,16 +78,16 @@ class ChainlinkServer(Server):
         
         self.__setConfigurationFiles()
         self.__chainlinkStartCommands()
-        self.__node.setFile('/send_fund_request.sh', ChainlinkFileTemplate['send_get_eth_request'].format(faucet_server_url=self.__faucet_node_url, faucet_server_port=self.__faucet_port, rpc_url=self.__rpc_url, rpc_port=self.__rpc_port))
-        self.__node.appendStartCommand('bash /send_fund_request.sh')
-        self.__node.setFile('/check_init_node.sh', ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
-        self.__node.appendStartCommand('bash /check_init_node.sh')
+        self.__node.setFile('/chainlink/send_fund_request.sh', ChainlinkFileTemplate['send_get_eth_request'].format(faucet_server_url=self.__faucet_node_url, faucet_server_port=self.__faucet_port, rpc_url=self.__rpc_url, rpc_port=self.__rpc_port))
+        self.__node.appendStartCommand('bash /chainlink/send_fund_request.sh')
+        self.__node.setFile('/chainlink/check_init_node.sh', ChainlinkFileTemplate['check_init_node'].format(init_node_url=self.__init_node_url))
+        self.__node.appendStartCommand('bash /chainlink/check_init_node.sh')
         self.__deploy_oracle_contract()
-        self.__node.setFile('/send_flask_request.sh', ChainlinkFileTemplate['send_flask_request'].format(init_node_url=self.__init_node_url, flask_server_port=self.__flask_server_port))
-        self.__node.appendStartCommand('bash /send_flask_request.sh')
-        self.__node.setFile('/create_chainlink_jobs.sh', ChainlinkFileTemplate['create_jobs'])
-        self.__node.appendStartCommand('bash /create_chainlink_jobs.sh')
-        self.__node.appendStartCommand('tail -f chainlink_logs.txt')
+        self.__node.setFile('/chainlink/send_flask_request.sh', ChainlinkFileTemplate['send_flask_request'].format(init_node_url=self.__init_node_url, flask_server_port=self.__flask_server_port))
+        self.__node.appendStartCommand('bash /chainlink/send_flask_request.sh')
+        self.__node.setFile('/chainlink/create_chainlink_jobs.sh', ChainlinkFileTemplate['create_jobs'])
+        self.__node.appendStartCommand('bash /chainlink/create_chainlink_jobs.sh')
+        self.__node.appendStartCommand('tail -f /chainlink/chainlink_logs.txt')
         
     def __installSoftware(self):
         """
@@ -103,11 +103,11 @@ class ChainlinkServer(Server):
         @brief Set configuration files.
         """
         config_content = ChainlinkFileTemplate['config'].format(rpc_url=self.__rpc_url, chain_id=self.__chain_id, rpc_ws_port=self.__rpc_ws_port, rpc_port=self.__rpc_port)
-        self.__node.setFile('/config.toml', config_content)
-        self.__node.setFile('/db_secret.toml', ChainlinkFileTemplate['secrets'])
-        self.__node.setFile('/password.txt', ChainlinkFileTemplate['api'].format(username=self.__username, password=self.__password))
-        self.__node.setFile('/jobs/getUint256.toml', ChainlinkJobsTemplate['getUint256'])
-        self.__node.setFile('/jobs/getBool.toml', ChainlinkJobsTemplate['getBool'])
+        self.__node.setFile('/chainlink/config.toml', config_content)
+        self.__node.setFile('/chainlink/db_secret.toml', ChainlinkFileTemplate['secrets'])
+        self.__node.setFile('/chainlink/password.txt', ChainlinkFileTemplate['api'].format(username=self.__username, password=self.__password))
+        self.__node.setFile('/chainlink/jobs/getUint256.toml', ChainlinkJobsTemplate['getUint256'])
+        self.__node.setFile('/chainlink/jobs/getBool.toml', ChainlinkJobsTemplate['getBool'])
         
     def __chainlinkStartCommands(self):
         """
@@ -116,7 +116,7 @@ class ChainlinkServer(Server):
         start_commands = """
 service postgresql restart
 su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\""
-nohup chainlink node -config /config.toml -secrets /db_secret.toml start -api /password.txt > chainlink_logs.txt 2>&1 &
+nohup chainlink node -config /chainlink/config.toml -secrets /chainlink/db_secret.toml start -api /chainlink/password.txt > /chainlink/chainlink_logs.txt 2>&1 &
 """
         self.__node.appendStartCommand(start_commands)
     
