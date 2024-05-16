@@ -28,9 +28,9 @@ This document provides a detailed overview and operational guidelines for the sm
 - **Github Source**: https://github.com/smartcontractkit/chainlink/blob/develop/contracts/src/v0.8/ChainlinkClient.sol
 
 ### [ETHPriceAverageFeed/User Contract](./ETHPriceAverageFeed.sol):
-- **Purpose**: This contract is designed to fetch and aggregate Ethereum price data from multiple Chainlink oracles, ensuring data accuracy and reliability by leveraging the decentralized and secure Chainlink network.
+- **Purpose**:  Inherits from the ChainlinkClient to fetch and aggregate Ethereum price data from multiple Chainlink oracles.
 - **Key Features**:
-  - `requestPriceData`: Utilizes the `ChainlinkClient` to send data requests to multiple Chainlink oracles. This function configures a Chainlink request with the required job specification ID and callback function, then sends it through the `_sendChainlinkRequestTo` method of the `ChainlinkClient`. This ensures that each oracle receives an appropriate amount of LINK tokens along with the data request, leveraging the decentralized and reliable nature of oracle networks.
+  - `requestPriceData`: Utilizes the inherited `ChainlinkClient` methods to send data requests to multiple Chainlink oracles. This function configures a Chainlink request with the required job specification ID and callback function, then sends it through the `sendChainlinkRequestTo` method of the ChainlinkClient. This ensures that each oracle receives an appropriate amount of LINK tokens along with the data request.
   - `fulfill`: This callback function is triggered by the Oracle Contract once it receives the requested data from the Chainlink node. The function processes received price data from multiple oracles, aggregates this information, and calculates an average price. This method is crucial for ensuring robust data integrity and provides a reliable average price by considering responses from various sources.
 
 ## Chainlink Process Flow
@@ -38,9 +38,31 @@ This diagream illustrates the process flow for interacting with Chainlink oracle
 ![Chainlink Process Flow](./fig/chainlink_process.png)
 
 ### Understanding the Flow:
-1. **User Contract Interaction**: The user contract, such as the `ETHPriceAverageFeed`, interacts with the `ChainlinkClient` contract to request data from the Chainlink network. The user contract specifies the job ID, callback function, and other relevant parameters for the data request.
-2. **Chainlink Request Setup**: The `ChainlinkClient` contract constructs a Chainlink request using the `_buildChainlinkRequest` function, setting up the necessary parameters for the request. This request is then sent to the `Operator/Oracle` contract using the `_sendChainlinkRequestTo` function.
-3. **Oracle Request Handling**: The `Operator/Oracle` contract receives the data request from the `ChainlinkClient` and processes it accordingly. It logs the request, verifies its authenticity, and forwards emits event on the blockchain, which is then picked up by the Chainlink nodes.
+1. **User Contract Interaction**: The `ETHPriceAverageFeed/User Contract` contract, which directly inherits from the `ChainlinkClient`, initiates a data request. This request is built by using the inherited `buildChainlinkRequest` function, specifying the job ID, current contract address, callback function, and other relevant parameters necessary for the data request.
+  ```python
+    Chainlink.Request memory request = buildChainlinkRequest(
+        oracles[i].jobId,
+        address(this),
+        this.fulfill.selector
+    );
+
+    request.add("get", url);
+    request.add("path", path);
+    request.addInt("multiply", 100);
+
+    bytes32 requestId = sendChainlinkRequestTo(oracles[i].oracle, request, ORACLE_PAYMENT);
+  ```
+2. **Sending Request to Oracle**: After constructing the request, `User Contract` uses the inherited `sendChainlinkRequestTo` function to send the request directly to the Operator/Oracle contract. This function leverages the LINK token's `transferAndCall` functionality to send the request and payment in a single transaction, ensuring that the oracle is compensated for its services.
+  ```python
+    s_link.transferAndCall(oracleAddress, payment, encodedRequest)
+  ```
+3. **Oracle Request Handling**: Upon receiving the request, the `Operator/Oracle` contract logs, verifies, and processes the request accordingly. It then emits an event to notify the Chainlink nodes about the new request, triggering them to fetch data from external sources.
+  ```python
+    emit OracleRequest(specId, sender, requestId, payment, sender, callbackFunctionId, expiration, dataVersion, data);
+  ```
 4. **Chainlink Node Response**: Chainlink nodes receive the request, fetch data from external sources, and submit the data back to the `Operator/Oracle` contract using the `fulfillOracleRequest` function.
-5. **Data Processing**: The `Operator/Oracle` contract processes the data received from the Chainlink nodes, verifies its integrity, and forwards it to the user contract through the callback function specified in the initial request.
-6. **Data Aggregation**: The user contract, such as the `ETHPriceAverageFeed`, receives data from multiple Chainlink oracles, aggregates this information, and processes it to calculate an average price. This ensures data accuracy and reliability by leveraging multiple sources.
+5. **Data Processing**: The `fulfillOracleRequest` function in `Operator/Oracle` contract processes the data received from the Chainlink nodes, verifies its integrity, and forwards it to the user contract through the callback function specified in the initial request.
+  ```python
+    callbackAddress.call(abi.encodeWithSelector(callbackFunctionId, requestId, data));
+  ```
+6. **Data Aggregation**: The user contract, such as the `ETHPriceAverageFeed`, receives data from multiple Chainlink oracles in the `fulfill` callback function. It aggregates this data, calculates an average price.
