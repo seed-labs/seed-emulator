@@ -21,11 +21,13 @@ Or
 ```python
 from seedemu.services import RootCAStore, CAService
 caStore = RootCAStore(caDomain='ca.internal')
+ca = CAService()
+caServer: CAServer = ca.install('ca-vnode')
 # It initializes the Root CA store.
-ca = CAService(caStore)
+caServer.setCAStore(caStore)
 ```
 
-User can either call the initialization manually or let the CA service call it. 
+User can either call the initialization manually or let the CA server call it. 
 
 
 ### Save and Restore
@@ -44,8 +46,10 @@ Or
 ```python
 from seedemu.services import RootCAStore, CAService
 caStore = RootCAStore(caDomain='ca.internal')
+ca = CAService()
+caServer: CAServer = ca.install('ca-vnode')
 # It initializes the Root CA store.
-ca = CAService(caStore)
+caServer.setCAStore(caStore)
 caStore.save("/tmp/ca")
 ```
 
@@ -73,9 +77,9 @@ caStore.initialize()
 ```
 
 
-## CA Service
+## CA Service and CA Server
 
-The `CAService` class is a service that uses the root certificates from the `RootCAStore` to serve the PKI infrastructure.
+The `CAService` class is a service that creates `CAServer`s which use the `RootCAStore` to serve the PKI infrastructures.
 
 The `CAService` class for now only supports the following, but
 it can be easily extended to support other certificate types.
@@ -92,18 +96,23 @@ following examples.
 
 
 ```python
-from seedemu.services import RootCAStore, CAService
+from seedemu.services import RootCAStore, CAService, CAServer
 caStore = RootCAStore(caDomain='ca.internal')
-ca = CAService(caStore)
-ca.installCACert()    # On all the nodes
+ca = CAService()
+caServer: CAServer = ca.install('ca-vnode')
+caServer.setCAStore(caStore)
+caServer.installCACert()    # On all the nodes
 ```
 
 ```python
-from seedemu.services import RootCAStore, CAService
+from seedemu.services import RootCAStore, CAService, CAServer
+from seedemu.core import Filter
 caStore = RootCAStore(caDomain='ca.internal')
-ca = CAService(caStore)
-ca.installCACert(Filter(asn=160))  # Only on nodes in ASN 160
-ca.installCACert(Filter(asn=161))  # Only on nodes in ASN 161
+ca = CAService()
+caServer: CAServer = ca.install('ca-vnode')
+caServer.setCAStore(caStore)
+caServer.installCACert(Filter(asn=160))  # Only on nodes in ASN 160
+caServer.installCACert(Filter(asn=161))  # Only on nodes in ASN 161
 ```
 
 It should be noted that a lax filter will override a more strict filter. This is because the filters are applied individually, so the final set of candidates is the union of the candidates from each filter.
@@ -112,9 +121,11 @@ In the following example, the root CA certificate will be installed on the node 
 ```python
 from seedemu.services import RootCAStore, CAService
 caStore = RootCAStore(caDomain='ca.internal')
-ca = CAService(caStore)
-ca.installCACert(Filter(asn=160))
-ca.installCACert(Filter(asn=160, ip='10.160.1.3'))
+ca = CAService()
+caServer: CAServer = ca.install('ca-vnode')
+caServer.setCAStore(caStore)
+caServer.installCACert(Filter(asn=160))
+caServer.installCACert(Filter(asn=160, ip='10.160.1.3'))
 ```
 
 In the following example, the root CA certificate will be installed to all the nodes (i.e., the one with `asn` restriction will be overriden). 
@@ -123,9 +134,11 @@ In the following example, the root CA certificate will be installed to all the n
 ```python
 from seedemu.services import RootCAStore, CAService
 caStore = RootCAStore(caDomain='ca.internal')
-ca = CAService(caStore)
-ca.installCACert()
-ca.installCACert(Filter(asn=160))
+ca = CAService()
+caServer: CAServer = ca.install('ca-vnode')
+caServer.setCAStore(caStore)
+caServer.installCACert()
+caServer.installCACert(Filter(asn=160))
 ```
 
 
@@ -136,7 +149,9 @@ Users can set the valid duration for certificates.
 ```python
 from seedemu.services import RootCAStore, CAService
 caStore = RootCAStore(caDomain='ca.internal')
-ca = CAService(caStore)
+ca = CAService()
+caServer: CAServer = ca.install('ca-vnode')
+caServer.setCAStore(caStore)
 ca.setCertDuration('48h')
 ```
 

@@ -18,7 +18,7 @@ class PKITestCase(SeedEmuTestCase):
         for container in self.containers:
             if container.labels.get('org.seedsecuritylabs.seedemu.meta.nodename') is None:
                 continue
-            code, _ = container.exec_run("ls /etc/ssl/certs/SEEDEMU_Internal_Root_CA.pem")
+            code, _ = container.exec_run("ls /etc/ssl/certs/SEEDEMU_Internal_Root_CA_0.pem")
             self.assertEqual(code, 0)
 
     def test_web_cert_issued(self):

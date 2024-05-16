@@ -4,7 +4,7 @@
 from seedemu.compiler import Docker
 from seedemu.core import Binding, Emulator, Filter, Action
 from seedemu.layers import Base, Ebgp, Ibgp, Ospf, Routing, PeerRelationship
-from seedemu.services import DomainNameCachingService, DomainNameService, CAService, WebService, WebServer, RootCAStore
+from seedemu.services import DomainNameCachingService, DomainNameService, CAService, CAServer, WebService, WebServer, RootCAStore
 
 emu = Emulator()
 base = Base()
@@ -13,7 +13,7 @@ ebgp = Ebgp()
 ibgp = Ibgp()
 ospf = Ospf()
 caStore = RootCAStore(caDomain='ca.internal')
-ca = CAService(caStore)
+ca = CAService()
 web = WebService()
 
 ###########################################################
@@ -34,8 +34,9 @@ as2.createNetwork('net0')
 as2.createRouter('r1').joinNetwork('net0').joinNetwork('ix100')
 as2.createRouter('r2').joinNetwork('net0').joinNetwork('ix101')
 
-ca.install('ca-vnode')
-ca.installCACert()
+caServer: CAServer = ca.install('ca-vnode')
+caServer.setCAStore(caStore)
+caServer.installCACert()
 
 as150 = base.createAutonomousSystem(150)
 as150.createNetwork('net0')
@@ -54,7 +55,7 @@ host_web = as151.createHost('web').joinNetwork('net0', address='10.151.0.7')
 
 webServer: WebServer = web.install('web-vnode')
 webServer.setServerNames(['user.internal'])
-webServer.useCAService(ca).enableHTTPS()
+webServer.setCAServer(caServer).enableHTTPS()
 emu.addBinding(Binding('ca-vnode', filter=Filter(nodeName='ca'), action=Action.FIRST))
 emu.addBinding(Binding('web-vnode', filter=Filter(nodeName='web'), action=Action.FIRST))
 
