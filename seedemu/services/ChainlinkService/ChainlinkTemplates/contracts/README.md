@@ -37,4 +37,10 @@ This document provides a detailed overview and operational guidelines for the sm
 This diagream illustrates the process flow for interacting with Chainlink oracles and smart contracts within the Chainlink network.
 ![Chainlink Process Flow](./fig/chainlink_process.png)
 
-
+### Understanding the Flow:
+1. **User Contract Interaction**: The user contract, such as the `ETHPriceAverageFeed`, interacts with the `ChainlinkClient` contract to request data from the Chainlink network. The user contract specifies the job ID, callback function, and other relevant parameters for the data request.
+2. **Chainlink Request Setup**: The `ChainlinkClient` contract constructs a Chainlink request using the `_buildChainlinkRequest` function, setting up the necessary parameters for the request. This request is then sent to the `Operator/Oracle` contract using the `_sendChainlinkRequestTo` function.
+3. **Oracle Request Handling**: The `Operator/Oracle` contract receives the data request from the `ChainlinkClient` and processes it accordingly. It logs the request, verifies its authenticity, and forwards emits event on the blockchain, which is then picked up by the Chainlink nodes.
+4. **Chainlink Node Response**: Chainlink nodes receive the request, fetch data from external sources, and submit the data back to the `Operator/Oracle` contract using the `fulfillOracleRequest` function.
+5. **Data Processing**: The `Operator/Oracle` contract processes the data received from the Chainlink nodes, verifies its integrity, and forwards it to the user contract through the callback function specified in the initial request.
+6. **Data Aggregation**: The user contract, such as the `ETHPriceAverageFeed`, receives data from multiple Chainlink oracles, aggregates this information, and processes it to calculate an average price. This ensures data accuracy and reliability by leveraging multiple sources.
