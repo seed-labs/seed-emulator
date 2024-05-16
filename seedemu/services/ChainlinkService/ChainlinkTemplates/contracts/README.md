@@ -52,7 +52,7 @@ This diagream illustrates the process flow for interacting with Chainlink oracle
 
     bytes32 requestId = sendChainlinkRequestTo(oracles[i].oracle, request, ORACLE_PAYMENT);
   ```
-2. **Sending Request to Oracle**: After constructing the request, `User Contract` uses the inherited `sendChainlinkRequestTo` function to send the request directly to the Operator/Oracle contract. This function leverages the LINK token's `transferAndCall` functionality to send the request and payment in a single transaction, ensuring that the oracle is compensated for its services.
+2. **Sending Request to Oracle**: After constructing the request, User Contract uses the inherited `sendChainlinkRequestTo` function to send the request to the LINK token contract, which forwards the request to the `Operator/Oracle` contract. This function leverages the LINK token's `transferAndCall` functionality to send the request and payment in a single transaction, ensuring that the oracle is compensated for its services.
   ```python
     s_link.transferAndCall(oracleAddress, payment, encodedRequest)
   ```
