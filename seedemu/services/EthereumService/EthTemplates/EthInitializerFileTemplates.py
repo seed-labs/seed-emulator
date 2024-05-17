@@ -271,7 +271,7 @@ def get_contract_info():
         if not contract_name:
             return jsonify(contract_info), 200
         else:
-            if contract_info[contract_name]:
+            if contract_name in contract_info.keys():
                 return jsonify(contract_info[contract_name]), 200
             else:
                 return jsonify({{'error': 'No contract address matching with a given contract name'}}), 400

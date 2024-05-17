@@ -14,42 +14,45 @@ class EthInitAndInfoServer(Server):
     
     __blockchain:Blockchain
     __port: int
-    __rpc_url: str
+    __eth_node_url: str
     __linked_eth_node:str
     __chain_id: int
 
-    def __init__(self, blockchain:Blockchain):
+    def __init__(self, blockchain:Blockchain, port:int, linked_eth_node:str, linked_faucet_node:str):
         """!
         @brief FaucetServer constructor.
         """
         super().__init__()
         self.__blockchain = blockchain
-        self.__linked_eth_node = None
-        self.__linked_faucet_node = None
+        self.__linked_eth_node = linked_eth_node
+        self.__linked_faucet_node = linked_faucet_node
         self.__chain_id = blockchain.getChainId()
-        self.__rpc_url = ''
-        self.__rpc_port = None
+        self.__eth_node_url = ''
+        self.__eth_node_port = None
         self.__faucet_url = ''
         self.__faucet_port = None
         self.__contract_to_deploy = {}
         self.__contract_to_deploy_container_path = {}
-        self.__port = 5000
+        self.__contract_to_deploy_content = {}
+        self.__port = port
 
-    def setLinkedEthNode(self, vnodeName:str):
+    def setEthServerInfo(self, vnodeName:str, port:int):
         self.__linked_eth_node = vnodeName
+        self.__eth_node_port = port
         return self
     
     def getLinkedEthNodeName(self) -> str:
         return self.__linked_eth_node
     
-    def setLinkedFaucetNode(self, vnodeName:str):
+    def setFaucetServerInfo(self, vnodeName:str, port:int):
         self.__linked_faucet_node = vnodeName
+        self.__faucet_port = port
         return self
     
     def getLinkedFaucetNodeName(self) -> str:
         return self.__linked_faucet_node
     
-    def setPort(self, port: int) -> FaucetServer:
+    def setPort(self, port: int):
         """!
         @brief Set HTTP port.
 
@@ -60,16 +63,20 @@ class EthInitAndInfoServer(Server):
         self.__port = port
 
         return self
+    
+    def getPort(self) -> int:
+        return self.__port
+        
 
-    def setRpcUrl(self, url):
-        self.__rpc_url = url
+    def setEthServerUrl(self, url):
+        self.__eth_node_url = url
         return self
     
-    def getRpcUrl(self):
-        return self.__rpc_url
+    def getEthNodeUrl(self):
+        return self.__eth_node_url
     
-    def setRpcPort(self, port):
-        self.__rpc_port = port
+    def setEthServerPort(self, port):
+        self.__eth_node_port = port
         return self
     
     def setFaucetUrl(self, url):
@@ -80,7 +87,7 @@ class EthInitAndInfoServer(Server):
         self.__faucet_port = port
         return self
     
-    def deployContract(self, contract_name, abi_path, bin_path):
+    def deployContractByFilePath(self, contract_name, abi_path, bin_path):
         if not os.path.isabs(abi_path):
             base_dir = os.getcwd()
         
@@ -98,8 +105,18 @@ class EthInitAndInfoServer(Server):
             'bin_path': bin_path
         }
         self.__contract_to_deploy_container_path[contract_name] = {
-            'abi_path': f"/contracts/{abi_path.split('/')[-1]}",
-            'bin_path': f"/contracts/{bin_path.split('/')[-1]}"
+            'abi_path': f"/contracts/{contract_name}.abi",
+            'bin_path': f"/contracts/{contract_name}.bin"
+        }
+    
+    def deployContractByContent(self, contract_name, abi_content, bin_content):
+        self.__contract_to_deploy_content[contract_name] = {
+            'abi_content': abi_content,
+            'bin_content': bin_content
+        }
+        self.__contract_to_deploy_container_path[contract_name] = {
+            'abi_path': f"/contracts/{contract_name}.abi",
+            'bin_path': f"/contracts/{contract_name}.bin"
         }
     
     def getBlockchain(self):
@@ -119,16 +136,20 @@ class EthInitAndInfoServer(Server):
             node.importFile(hostpath=path['bin_path'], 
                             containerpath=self.__contract_to_deploy_container_path[contract_name]['bin_path'])
             
+        for contract_name, value in self.__contract_to_deploy_content.items():
+            node.setFile(self.__contract_to_deploy_container_path[contract_name]['abi_path'], value['abi_content'])
+            node.setFile(self.__contract_to_deploy_container_path[contract_name]['bin_path'], value['bin_content'])
+            
         node.setFile('/contracts/contract_file_paths.txt', json.dumps(self.__contract_to_deploy_container_path))
         node.setFile('/fund_account.py', EthInitializerTemplate['fund_account'].format(
-            rpc_url = self.__rpc_url,
-            rpc_port = self.__rpc_port,
+            rpc_url = self.__eth_node_url,
+            rpc_port = self.__eth_node_port,
             faucet_url = self.__faucet_url,
             faucet_port = self.__faucet_port
         ))
         node.setFile('/deploy_contract.py', EthInitializerTemplate['contract_deploy'].format(
-            rpc_url = self.__rpc_url,
-            rpc_port = self.__rpc_port,
+            rpc_url = self.__eth_node_url,
+            rpc_port = self.__eth_node_port,
             chain_id = self.__chain_id
         ))
 

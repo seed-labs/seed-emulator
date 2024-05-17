@@ -36,7 +36,7 @@ ChainlinkFileTemplate['api'] = """\
 """
 
 ChainlinkFileTemplate['check_init_node'] = """\
-URL="http://{init_node_url}"
+URL="http://{init_node_url}:{init_node_port}/contracts_info?name={contract_name}"
 EXPECTED_STATUS="200"
 while true; do
     STATUS=$(curl -Is "$URL" | head -n 1 | awk '{{print $2}}')
@@ -173,7 +173,7 @@ if __name__ == '__main__':
 """
 
 ChainlinkFileTemplate['send_flask_request'] = """\
-URL="http://{init_node_url}"
+URL="http://{init_node_url}:{init_node_port}"
 EXPECTED_STATUS="200"
 
 while true; do
@@ -188,9 +188,9 @@ while true; do
     fi
 done
 
-RESPONSE=$(curl -X POST http://{init_node_url}:{flask_server_port}/display_contract_address \\
+RESPONSE=$(curl -X POST http://{init_node_url}:{init_node_port}/register_contract \\
      -H "Content-Type: application/json" \\
-     -d "{{\\"contract_address\\":\\"$(tail -n 1 /deployed_contracts/oracle_contract_address.txt)\\"}}")
+     -d "{{\\"contract_name\\":\\"oracle-{contract_name}\\", \\"contract_address\\":\\"$(tail -n 1 /deployed_contracts/oracle_contract_address.txt)\\"}}")
 
 echo "$RESPONSE"
 """
