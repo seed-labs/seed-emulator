@@ -17,7 +17,7 @@ def run(dumpfile=None):
     ethereum_poa.run(
         dumpfile=local_dump_path,
         hosts_per_as=1,
-        total_eth_nodes=5,
+        total_eth_nodes=10,
         total_accounts_per_node=1,
     )
     emu.load(local_dump_path)
