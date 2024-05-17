@@ -26,7 +26,7 @@ def run(dumpfile=None):
     eth: EthereumService = emu.getLayer("EthereumService")
     blockchain: Blockchain = eth.getBlockchainByName(eth.getBlockchainNames()[0])
 
-    with open("./Contracts/Hello.bin-runtime", "r") as f:
+    with open("./Contracts/Contract.bin-runtime", "r") as f:
         runtime_bytecode = Web3.toHex(hexstr=f.read().strip())
 
     # This account has been generated from the mnemonic phrase: "gentle always fun glass foster produce north tail security list example gain"
