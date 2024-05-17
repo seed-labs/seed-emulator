@@ -8,8 +8,8 @@ import time
 from test import SeedEmuTestCase
 import requests
 import re
-from SEEDBlockchain import Wallet
-from resources import UserContractTemplate
+from .SEEDBlockchain import Wallet
+from .resources import UserContractTemplate
 
 class ChainlinkPOATestCase(SeedEmuTestCase):
     @classmethod
