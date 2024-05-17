@@ -6,8 +6,10 @@ from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
 from seedemu import *
 import time
+import json
 from test import SeedEmuTestCase
 import requests
+
 
 class EthInitAndInfoTestCase(SeedEmuTestCase):
     @classmethod
@@ -22,126 +24,139 @@ class EthInitAndInfoTestCase(SeedEmuTestCase):
         return
 
     @classmethod
-    def get_eth_init_info(self):
-        with open('./eth_init_info.json') as f:
+    def get_eth_init_info(cls):
+        with open("./eth_init_info.json") as f:
             data = json.load(f)
-        return data['eth_node'], data['faucet'], data['eth_init_info']
+        return data["eth_node"], data["faucet"], data["eth_init_info"]
 
     # Test if the blockchain is up and running
     def test_poa_chain_connection(self):
-        self.printLog("Testing POA Chain Connection")
+        self.printLog("--------Starting POA Chain Connection Test--------")
         i = 1
-        current_time = time.time()
+        start_time = time.time()
         while True:
-            self.printLog("\n----------Trial {}----------".format(i))
-            if time.time() - current_time > 600:
-                self.printLog("TimeExhausted: 600 sec")
-            try:
-                self.assertTrue(self.web3.isConnected())
-                self.printLog("Connection Succeed")
+            self.printLog(f"Trial #{i}: Attempting to connect to POA chain.")
+            if time.time() - start_time > 600:
+                self.printLog("Time Exhausted: 600 seconds.")
                 break
+            try:
+                if self.web3.isConnected():
+                    self.printLog("Connection Successful.")
+                    break
             except Exception as e:
-                self.printLog("Connection Failed trying again")
-                time.sleep(20)
-                i += 1
-        self.assertTrue(self.web3.isConnected())
-        
+                self.printLog(f"Connection Failed. Exception: {e}")
+            time.sleep(20)
+            i += 1
+        self.assertTrue(self.web3.isConnected(), "Failed to connect to POA chain.")
+
     # Test if the server is up
     def test_init_info_server_connection(self):
-        self.printLog("Testing EthInitAndInfo Server Connection")
+        self.printLog("--------Starting EthInitAndInfo Server Connection Test--------")
         url = f"http://{self.eth_init_node}:{self.eth_init_node_port}"
         i = 1
-        current_time = time.time()
+        start_time = time.time()
         while True:
-            self.printLog("\n----------Trial {}----------".format(i))
-            if time.time() - current_time > 600:
-                self.printLog("TimeExhausted: 600 sec")
+            self.printLog(f"Trial #{i}: Attempting to connect to server at {url}.")
+            if time.time() - start_time > 600:
+                self.printLog("Time Exhausted: 600 seconds.")
+                break
             try:
                 response = requests.get(url)
-                self.printLog("Connection Succeed: ", url)
-                break
+                if response.status_code == 200:
+                    self.printLog("Connection Successful.")
+                    break
             except Exception as e:
-                self.printLog(e)
-                time.sleep(20)
-                i += 1
-        self.assertTrue(response.status_code == 200)
-        
+                self.printLog(f"Connection Failed. Exception: {e}")
+            time.sleep(20)
+            i += 1
+        self.assertTrue(
+            response.status_code == 200, f"Failed to connect to server at {url}."
+        )
+
     # Test if the server has deployed the contract using contract_info API
     def test_contract_info(self):
-        self.printLog("Testing Contract Info")
+        self.printLog("--------Starting Contract Info Test--------")
         url = f"http://{self.eth_init_node}:{self.eth_init_node_port}/contracts_info"
-        try:
-            current_time = time.time()
-            while True:
+        start_time = time.time()
+        while True:
+            self.printLog(f"Attempting to fetch contract info from {url}.")
+            if time.time() - start_time > 600:
+                self.printLog("Time Exhausted: 600 seconds.")
+                break
+            try:
                 response = requests.get(url)
                 if response.status_code == 200:
                     try:
                         data = response.json()
                         if data:
-                            self.printLog("Contract Info: ", data)
-                            self.assertTrue(data['contract_name'] == 'test')
-                            self.assertTrue(data['contract_address'] is not None)
-                            break
+                            self.printLog(f"Contract Info: {data}")
+                            contract_name = list(data.keys())[0]
+                            contract_address = data[contract_name]
+                            self.printLog(
+                                f"Contract Name: {contract_name}, Contract Address: {contract_address}"
+                            )
+                            self.assertTrue(contract_name == "test")
+                            self.assertTrue(contract_address is not None)
+                        break
                     except ValueError:
-                        self.printLog("Invalid JSON received")
+                        self.printLog("Invalid JSON received.")
                 else:
-                    self.printLog(f"Non-200 status code received: {response.status_code}")
+                    self.printLog(
+                        f"Non-200 status code received: {response.status_code}"
+                    )
+            except Exception as e:
+                self.printLog(f"Exception: {e}")
+            time.sleep(5)
+        self.assertTrue(response.status_code == 200, "Failed to fetch contract info.")
 
-                if time.time() - current_time > 600:
-                    self.printLog("TimeExhausted: 600 sec")
-                    break
-                time.sleep(5)
-        except Exception as e:
-            self.printLog(e)
-    
     def fund_account(self, account_address):
+        self.printLog(
+            f"\n--------Starting Fund Account Test for {account_address}--------"
+        )
         url = f"http://{self.faucet_url}:{self.faucet_port}/fundme"
-        data = {
-            "address": account_address,
-            "amount": 10
-        }
-        
-        current_time = time.time()
+        data = {"address": account_address, "amount": 10}
+        start_time = time.time()
         while True:
             try:
-                response = requests.post(url, headers={"Content-Type": "application/json"}, json=data)
-                self.printLog(response)
+                response = requests.post(
+                    url, headers={"Content-Type": "application/json"}, json=data
+                )
                 if response.status_code == 200:
                     api_response = response.json()
-                    message = api_response.get('message', '')
+                    message = api_response.get("message", "")
                     if message:
                         self.printLog(f"Success: {message}")
                     else:
-                        self.printLog("Funds request was successful but the response format is unexpected.")
+                        self.printLog(
+                            "Funds request successful but response format unexpected."
+                        )
                     break
             except requests.exceptions.RequestException as e:
                 self.printLog(f"Request failed: {e}")
-            
-            if time.time() - current_time > 600:
-                self.printLog("TimeExhausted: 600 sec")
+            if time.time() - start_time > 600:
+                self.printLog("Time Exhausted: 600 seconds.")
                 break
             time.sleep(5)
 
         # Check balance of the account
-        current_time = time.time()
+        start_time = time.time()
         while True:
             balance = self.web3.eth.getBalance(account_address)
             if balance > 0:
-                self.printLog("Account funded successfully")
+                self.printLog("Account funded successfully.")
                 break
-            if time.time() - current_time > 100:
-                self.printLog("TimeExhausted: 600 sec")
+            if time.time() - start_time > 100:
+                self.printLog("Time Exhausted: 600 seconds.")
                 break
             time.sleep(5)
-        self.assertTrue(balance > 0)
-    
+        self.assertTrue(balance > 0, f"Failed to fund account {account_address}.")
+
     # Test using web3 if the contract is deployed on the blockchain
     def test_deployed_contract(self):
-        self.printLog("Testing Deployed Contract")
+        self.printLog("Starting Deployed Contract Test")
         test_account = self.web3.eth.account.create()
         test_account_address = test_account.address
         test_account_private_key = test_account.privateKey.hex()
-
         self.printLog(f"Test Account Address: {test_account_address}")
 
         # Fund the test account with some ether
@@ -149,94 +164,133 @@ class EthInitAndInfoTestCase(SeedEmuTestCase):
 
         # Get contract address
         url = f"http://{self.eth_init_node}:{self.eth_init_node_port}/contracts_info?name=test"
-        response = requests.get(url)
-        self.printLog(f"Response Status Code: {response.status_code}")
-        self.printLog(f"Response Content: {response.text}")
+        start_time = time.time()
+        while True:
+            response = requests.get(url)
+            self.printLog(f"Response Status Code: {response.status_code}")
+            self.printLog(f"Response Content: {response.text}")
 
-        if response.status_code == 200:
-            try:
-                data = response.json()
-                contract_address = self.web3.toChecksumAddress(data)
-                if contract_address:
-                    current_time = time.time()
-                    while True:
-                        code = self.web3.eth.getCode(contract_address)
-                        self.printLog(f"Contract Code at Address: {code.hex()}")
-                        if code != '0x':
-                            self.printLog("Contract is deployed successfully")
-                            break
-                        if time.time() - current_time > 600:
-                            self.printLog("TimeExhausted: 600 sec")
-                            break
-                        time.sleep(5)
+            if response.status_code == 200:
+                try:
+                    data = response.text.strip().strip('"')
+                    if data is not None:
+                        contract_address = self.web3.toChecksumAddress(
+                            data
+                        )
+                        break
+                    else:
+                        self.printLog("Contract address not found.")
+                except Exception as e:
+                    self.printLog(e)
+            else:
+                self.printLog(f"Non-200 status code received: {response.status_code}")
 
-                    self.assertTrue(code != '0x')
-                    
-                    
-                    # Load the ABI from the file
-                    abi_path = "./emulator-code/Contracts/contract.abi"
-                    with open(abi_path, 'r') as abi_file:
-                        contract_abi =  json.load(abi_file)
-                    
-                    contract = self.web3.eth.contract(address=contract_address, abi=contract_abi)
-                    
-                    # Check if the contract can receive funds
-                    tx = {
-                        'from': test_account_address,
-                        'to': contract_address,
-                        'value': self.web3.toWei(1, 'ether'),
-                        'gas': 2000000,
-                        'gasPrice': self.web3.toWei('50', 'gwei'),
-                        'nonce': self.web3.eth.get_transaction_count(test_account_address),
-                        'chainId': 1337,
-                    }
+            if time.time() - start_time > 600:
+                self.printLog("Time Exhausted: 600 seconds.")
+                self.assertTrue(
+                    False, "Failed to fetch contract info within time limit."
+                )
+            time.sleep(5)
 
-                    signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=test_account_private_key)
-                    tx_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-                    self.printLog(f"Transaction Hash: {tx_hash.hex()}")
+        # Check if the contract is deployed on the blockchain
+        start_time = time.time()
+        while True:
+            code = self.web3.eth.getCode(contract_address)
+            self.printLog(f"Contract Code at Address: {code.hex()}")
+            if code != "0x":
+                self.printLog("Contract deployed successfully.")
+                break
+            if time.time() - start_time > 600:
+                self.printLog("Time Exhausted: 600 seconds.")
+                self.assertTrue(
+                    False, "Contract not deployed on the blockchain within time limit."
+                )
+            time.sleep(5)
+        self.assertTrue(code != "0x", "Contract not deployed on the blockchain.")
 
-                    receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-                    self.printLog(f"Transaction Receipt: {receipt}")
+        # Load the ABI from the file
+        abi_path = "./emulator-code/Contracts/contract.abi"
+        with open(abi_path, "r") as abi_file:
+            contract_abi = json.load(abi_file)
 
-                    # Ensure the contract received funds
-                    contract_balance = self.web3.eth.getBalance(contract_address)
-                    self.printLog(f"Contract Balance: {self.web3.fromWei(contract_balance, 'ether')} Ether")
-                    self.assertTrue(contract_balance > 0)
-                else:
-                    self.printLog("Contract address not found.")
-                    self.assertTrue(False)
-            except ValueError:
-                self.printLog("Invalid JSON received")
-                self.assertTrue(False)
-        else:
-            self.printLog(f"Non-200 status code received: {response.status_code}")
-            self.assertTrue(False)
+        contract = self.web3.eth.contract(address=contract_address, abi=contract_abi)
+
+        # Check if the contract can receive funds
+        tx = {
+            "from": test_account_address,
+            "to": contract_address,
+            "value": self.web3.toWei(1, "ether"),
+            "gas": 2000000,
+            "gasPrice": self.web3.toWei("50", "gwei"),
+            "nonce": self.web3.eth.get_transaction_count(test_account_address),
+            "chainId": 1337,
+        }
+
+        signed_tx = self.web3.eth.account.sign_transaction(
+            tx, private_key=test_account_private_key
+        )
+        tx_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        self.printLog(f"Transaction Hash: {tx_hash.hex()}")
+
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        self.printLog(f"Transaction Receipt: {receipt}")
+
+        # Ensure the contract received funds
+        contract_balance = self.web3.eth.getBalance(contract_address)
+        self.printLog(
+            f"Contract Balance: {self.web3.fromWei(contract_balance, 'ether')} Ether"
+        )
+        self.assertTrue(contract_balance > 0, "Contract did not receive funds.")
 
     # Register the contract using register_contract API and test if we can get the registered contract using contract_info API
     def test_api_call(self):
-        self.printLog("Testing API Call")
+        self.printLog("--------Starting API Call Test--------")
         url = f"http://{self.eth_init_node}:{self.eth_init_node_port}/register_contract"
-        data = {
-            "contract_name": "api_test",
-            "contract_address": "0x1234567890123456789012345678901234567890"
-        }
-        
-        
-    
-    
+        contract_name = "api_test"
+        contract_address = "0x1234567890123456789012345678901234567890"
+        data = {"contract_name": contract_name, "contract_address": contract_address}
+        response = requests.post(
+            url, headers={"Content-Type": "application/json"}, json=data
+        )
+        self.printLog(f"Response Status Code: {response.status_code}")
+        self.assertTrue(response.status_code == 200, "Failed to register contract.")
+
+        # Check if the contract is registered
+        url = f"http://{self.eth_init_node}:{self.eth_init_node_port}/contracts_info?name={contract_name}"
+        response = requests.get(url)
+        self.printLog(f"Response Content: {response.text}")
+
+        if response.status_code == 200:
+            response_content = response.text.strip().strip('"')
+            self.printLog(f"Expected: '{contract_address}'")
+            self.printLog(f"Actual: '{response_content}'")
+            self.assertTrue(
+                response_content == contract_address,
+                f"Expected {contract_address} but got {response_content}",
+            )
+        else:
+            self.printLog(f"Failed to fetch contract info: {response.status_code}")
+            self.assertTrue(False, "Failed to fetch contract info")
+
     @classmethod
     def get_test_suite(cls):
         test_suite = ut.TestSuite()
-        test_suite.addTest(cls('test_poa_chain_connection'))
-        test_suite.addTest(cls('test_init_info_server_connection'))
-        test_suite.addTest(cls('test_contract_info'))
-        test_suite.addTest(cls('test_deployed_contract'))
+        test_suite.addTest(cls("test_poa_chain_connection"))
+        test_suite.addTest(cls("test_init_info_server_connection"))
+        test_suite.addTest(cls("test_contract_info"))
+        test_suite.addTest(cls("test_deployed_contract"))
+        test_suite.addTest(cls("test_api_call"))
         return test_suite
+
 
 if __name__ == "__main__":
     test_suite = EthInitAndInfoTestCase.get_test_suite()
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
-    EthInitAndInfoTestCase.printLog("----------Test #%d--------=")
+    EthInitAndInfoTestCase.printLog("----------Test Summary----------")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
-    EthInitAndInfoTestCase.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
+    EthInitAndInfoTestCase.printLog(
+        "Score: {}/{} ({} errors, {} failures)".format(
+            num - (errs + fails), num, errs, fails
+        )
+    )
