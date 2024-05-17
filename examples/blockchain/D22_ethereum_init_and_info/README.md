@@ -5,17 +5,17 @@ EthInitAndInfo Server has two roles. First role to deploy a contract when all th
 - [Create an EthInitAndInfo server](#add-ethinitandinfo-server)
 - [Deploy a contract](#deploy-contract)
 - [Interact with EthInitAndInfo server](#interact-with-server)
-- [Chainlink user service](#user-service)
 
 <a id="add-ethinitandinfo-server"></a>
 ## Create EthInitAndInfo Server
 
 We first need to add an EthInitAndInfo Server to a blockchain using the `createEthInitAndInfoServer` method. After creating the server, we need to set `linkedEthNode` and `linkedFaucetNode` to connect to the eth node via web3 and send fund api to the faucet node.
 ```python
-# Create the EthInit server, and set the eth node and faucet server.
-ethInitInfo:EthInitAndInfoServer = blockchain.createEthInitAndInfoServer('eth_init_info')
-ethInitInfo.setLinkedEthNode(vnodeName=random.choice(eth_nodes))
-ethInitInfo.setLinkedFaucetNode(vnodeName=random.choice(faucet_info))
+# Create the EthInit server, and set port number of the server, the eth node and faucet server.
+ethInitInfo:EthInitAndInfoServer = blockchain.createEthInitAndInfoServer(vnode='eth_init_info', 
+                                                                             port=5000, 
+                                                                             linked_eth_node=random.choice(eth_nodes),
+                                                                             linked_faucet_node=random.choice(faucet_info))
 ```
 
 <a id="deploy-contract"></a>
@@ -31,6 +31,11 @@ ethInitInfo.deployContract(contract_name='test',
 <a id="interact-with-server"></a>
 ## Interact with a EthInitAndInfo server
 
+### Get ip addr of the eth-init-info node. 
+```sh
+$ docker ps | grep -i init
+e22e918b4c90   output_hnode_150_host_0                                     "/start.sh"      2 minutes ago   Up 2 minutes                                                 as162h-EthInitAndInfo-10.150.0.71
+```
 In this example, the url of the server is `http://10.150.0.71:5000/`. Please replace it according to your setup.
 
 ### Register a contract

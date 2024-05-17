@@ -3,6 +3,7 @@
 
 from seedemu import *
 from examples.blockchain.D00_ethereum_poa import ethereum_poa
+from seedemu.services.EthereumService import *
 import random
 import platform
 
@@ -22,10 +23,11 @@ def run(dumpfile = None):
     eth_nodes   = blockchain.getEthServerNames()
     
     # Create the EthInit server, and set the eth node and faucet server.
-    ethInitInfo:EthInitAndInfoServer = blockchain.createEthInitAndInfoServer('eth_init_info')
-    ethInitInfo.setLinkedEthNode(vnodeName=random.choice(eth_nodes))
-    ethInitInfo.setLinkedFaucetNode(vnodeName=random.choice(faucet_info))
-    ethInitInfo.deployContract(contract_name='test', 
+    ethInitInfo:EthInitAndInfoServer = blockchain.createEthInitAndInfoServer(vnode='eth_init_info', 
+                                                                             port=5000, 
+                                                                             linked_eth_node=random.choice(eth_nodes),
+                                                                             linked_faucet_node=random.choice(faucet_info))
+    ethInitInfo.deployContractByFilePath(contract_name='test', 
                         abi_path="./Contracts/contract.abi",
                         bin_path="./Contracts/contract.bin")
     ethInitInfo.setDisplayName('EthInitAndInfo')

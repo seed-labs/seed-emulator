@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 from seedemu import *
+from seedemu.services.ChainlinkService.ChainlinkTemplates import *
 from examples.blockchain.D00_ethereum_poa import ethereum_poa
 import platform
 import random
@@ -13,49 +14,62 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
 
     # Run and load the pre-built ethereum component; it is used as the base blockchain
     local_dump_path = './blockchain-poa.bin'
-    ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4)
+    ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4, total_accounts_per_node=1)
     emu.load(local_dump_path)
     
     # Get the blockchain and faucet information
     eth:EthereumService = emu.getLayer('EthereumService')
     blockchain: Blockchain =  eth.getBlockchainByName(eth.getBlockchainNames()[0])
     faucet_info = blockchain.getFaucetServerInfo()
-    eth_nodes   = blockchain.getEthServerNames()
+    eth_nodes   = blockchain.getEthServerInfo()
     
-    # Create the Chainlink service, and set the faucet server. 
-    # Accounts will be created for the Chainlink service, and they
-    # will be funded via the faucet server. 
-    chainlink = ChainlinkService()
-    chainlink.setFaucetServerInfo(faucet_info[0]['name'], faucet_info[0]['port'])
-    
-    # Create the Chainlink initialization server.
+    print(faucet_info)
+    print(eth_nodes)
+    # Create the EthInitAndInfor server to initialize chainlink contract.
     # This server will be used to deploy the necessary contract, and provide
     # contract addresses to the Chainlink servers
     # We need to provide a blockchain node for this server to send transactions
     # to the blockchain. This is done via the setLinkedEthNode() method. 
-    chainlink.installInitializer('chainlink_init_server') \
-            .setLinkedEthNode(name=random.choice(eth_nodes)) \
-            .setDisplayName('Chainlink-Init')
+    eth_init_node:EthInitAndInfoServer = blockchain.createEthInitAndInfoServer(vnode='eth_init_info_node',
+                                                                               port=8080,
+                                                                               linked_eth_node=eth_nodes[0]['name'],
+                                                                               linked_faucet_node=faucet_info[0]['name']
+                                                                               )
+    eth_init_node.deployContractByContent(contract_name=LinkTokenDeploymentTemplate['link_token_name'], 
+                                         abi_content=LinkTokenDeploymentTemplate['link_token_abi'], 
+                                         bin_content=LinkTokenDeploymentTemplate['link_token_bin'])
+    eth_init_node.setDisplayName('eth_init_info_node')
+    # Create the Chainlink service, and set the faucet server. 
+    # Accounts will be created for the Chainlink service, and they
+    # will be funded via the faucet server. 
+    chainlink = ChainlinkService()
+    chainlink.setEthServer(random.choice(eth_nodes)['name'])
+    chainlink.setFaucetServer(faucet_info[0]['name'])
+    chainlink.setEthInitInfoServer(blockchain.getEthInitInfoServerInfo()[0]['name'])
+    # chainlink.installInitializer('chainlink_init_server') \
+    #         .setLinkedEthNode(name=random.choice(eth_nodes)) \
+    #         .setDisplayName('Chainlink-Init')
 
     # Create Chainlink nodes (called server in our code)
     # We need to provide a blockchain node for this node to send transactions
     # to the blockchain. 
     for i in range(total_chainlink_nodes):
         chainlink.install('chainlink_node_{}'.format(i)) \
-                .setLinkedEthNode(name=random.choice(eth_nodes)) \
                 .setDisplayName('Chainlink-{}'.format(i))
 
     # Add the Chainlink layer
     emu.addLayer(chainlink)
 
     # Get the Chainlink node names
-    init_node    = chainlink.getChainlinkInitServerName()
-    server_nodes = chainlink.getChainlinkServerNames()
+    # init_node    = chainlink.getChainlinkInitServerName()
+    server_nodes = chainlink.getAllServerNames()
     
     # Bind each Chainlink node to a physical node (no filters, so random binding)
-    emu.addBinding(Binding(init_node))
-    for cnode in server_nodes:
-        emu.addBinding(Binding(cnode))
+    emu.addBinding(Binding("eth_init_info_node"))
+
+    print(server_nodes)
+    for server_node in server_nodes['ChainlinkServer']:
+        emu.addBinding(Binding(server_node))
 
     # Generate the emulator files
     if dumpfile is not None:
@@ -72,7 +86,11 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
 
     print("-----------------------------------------")
     print("Chainlink nodes: " + str(server_nodes))
-    print("Chainlink initialization node: " + init_node)
+    # for cnode in server_nodes:
+    #     # emu.addBinding(Binding(cnode))
+    #     print(cnode)
+
+    # print("Chainlink initialization node: " + init_node)
 
 if __name__ == "__main__":
     run()

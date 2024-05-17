@@ -231,4 +231,19 @@ class Service(Layer):
         @brief Get a set of pending vnode to install the service on.
         """
         return self._pending_targets
+    
+    def getAllServerNames(self):
+        """
+        @brief Get the list of dictionary that stores vnode name and type of the servers.
+        
+        @return The list dictionary of the servers.
+        """
+        server_names = {}
+        pending_targets = self._pending_targets
+        for key, value in pending_targets.items():
+            server_type = value.__class__.__name__
+            if value.__class__.__name__ not in server_names.keys():
+                server_names[server_type] = []
+            server_names[server_type].append(key)
+        return server_names
 
