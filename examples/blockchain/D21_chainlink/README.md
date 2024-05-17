@@ -64,11 +64,13 @@ This information is useful for Chainlink services.
 $ docker ps | grep Chainlink-Init
 e0763604de80  as170h-Chainlink-Init-10.170.0.72
 
-$ curl http://10.170.0.72/
-<h1>Link Token Contract: 0x4AE2120e39BAB487Eab93fca517060199f26587B</h1>
-<h1>Oracle Contract Address: 0x0dfbD4C5f7d957B4e3adB9800fFa8AbDE7e7C4AC</h1>
-<h1>Oracle Contract Address: 0x54218D858f8A8Ae87aF0c260c260F49E761f6ac4</h1>
-<h1>Oracle Contract Address: 0xEEC422D9eBbbBa43402a9967942DeD6131082bb8</h1>
+$  curl 10.170.0.72:8080/contracts_info
+{
+  "link_token_contract": "0x7C71A6d36e5F89Db2c62872346BF733714c8E434",
+  "oracle-chainlink_node_0": "0xacCd860e5Ff9BaFd809c902FA6F1b27F317dD72e",
+  "oracle-chainlink_node_1": "0x601d53D7D99655909d54a7c0135612A383247078",
+  "oracle-chainlink_node_2": "0x5d76c2B6B12C106CDb83fbEAC54A3853fBC1A9DF"
+}
 ```
 
 
