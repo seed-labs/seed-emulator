@@ -70,6 +70,7 @@ class BuildtimeDockerContainer:
         self.__env = []
         self.__entrypoint = None
         self.__workdir = None
+        self.__user = None
 
     def mountVolume(self, source: str, target: str):
         self.__volumes.append((source, target))
@@ -82,6 +83,10 @@ class BuildtimeDockerContainer:
     def workdir(self, workdir: str):
         self.__workdir = workdir
         return self
+    
+    def user(self, user: str):
+        self.__user = user
+        return self
 
     def entrypoint(self, entrypoint: str):
         self.__entrypoint = entrypoint
@@ -89,6 +94,8 @@ class BuildtimeDockerContainer:
 
     def run(self, command: str = None):
         run_command = "docker run -it --rm"
+        if self.__user:
+            run_command += f" --user {self.__user}"
         if self.__workdir:
             run_command += f" -w {self.__workdir}"
         for key, value in self.__env:

@@ -1,3 +1,0 @@
-# Ethereum Blockchain (POA)
-
-
