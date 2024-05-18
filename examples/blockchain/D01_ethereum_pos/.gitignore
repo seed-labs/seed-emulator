@@ -1,0 +1,8 @@
+beacon-node/
+beacon-setup-node.sh
+archive/
+test_log/
+test2/
+PoS_Explained.md
+lighthouse.md
+log

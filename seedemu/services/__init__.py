@@ -16,3 +16,5 @@ from .CAService import CAService, CAServer, RootCAStore
 from .ChainlinkService.ChainlinkService import ChainlinkService
 from .ChainlinkService.ChainlinkUserService import ChainlinkUserService
 from .ScionSIGService import ScionSIGService
+from .TrafficService import *
+
