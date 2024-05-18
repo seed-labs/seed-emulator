@@ -246,14 +246,14 @@ class ScionAutonomousSystem(AutonomousSystem):
         """
         return self.__control_services[name]
 
-    def _checkPorts(self, ctrl_port: int, data_port: int, node_name: str) -> bool:
+    def _checkPorts(self, ctrl_port: int, data_port: int, probe_port: int, node_name: str) -> bool:
         for sig_name in self.__sigs_config.keys():
             if self.__sigs_config[sig_name]["node_name"] == node_name:
-                if self.__sigs_config[sig_name]["ctrl_port"] == ctrl_port or self.__sigs_config[sig_name]["data_port"] == data_port:
+                if self.__sigs_config[sig_name]["ctrl_port"] == ctrl_port or self.__sigs_config[sig_name]["data_port"] == data_port or self.__sigs_config[sig_name]["probe_port"] == probe_port:
                     return False
         return True
 
-    def setSigConfig(self, sig_name: str, node_name: str, other_ia: IA, local_net: str, remote_net: str, ctrl_port: int = 30256, data_port: int = 30056, debug_level: str = "debug") -> ScionAutonomousSystem:
+    def setSigConfig(self, sig_name: str, node_name: str, other_ia: IA, local_net: str, remote_net: str, ctrl_port: int = 30256, data_port: int = 30056, probe_port: int = 30856, debug_level: str = "debug") -> ScionAutonomousSystem:
         """!
         @brief Set the configuration for a SIG.
 
@@ -263,7 +263,7 @@ class ScionAutonomousSystem(AutonomousSystem):
 
         assert sig_name not in self.__sigs_config, 'SIG with name {} already has a configuration.'.format(sig_name)
         assert node_name in self.getHosts(), 'Host with name {} does not exist.'.format(node_name)
-        assert self._checkPorts(ctrl_port, data_port, node_name), 'Ports are already in use.'
+        assert self._checkPorts(ctrl_port, data_port, probe_port, node_name), 'Ports are already in use.'
 
 
         self.__sigs_config[sig_name] = {
@@ -271,6 +271,7 @@ class ScionAutonomousSystem(AutonomousSystem):
             "remote_net": remote_net,
             "ctrl_port": ctrl_port,
             "data_port": data_port,
+            "probe_port": probe_port,
             "other_ia": other_ia,
             "debug_level": debug_level,
             "node_name": node_name

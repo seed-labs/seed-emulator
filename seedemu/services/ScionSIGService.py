@@ -15,12 +15,14 @@ _Templates["sig"] = """\
         level = "{log_level}"
 
 [tunnel]
+name = "{sig_name}"
 src_ipv4 = "{src_ip}"
 
 [gateway]
 traffic_policy_file = "/etc/scion/{sig_name}.json"
 ctrl_addr = "{ctrl_addr}:{ctrl_port}"
 data_addr = "{data_addr}:{data_port}"
+probe_addr = "{probe_addr}:{probe_port}"
 """
 
 _CommandTemplates: Dict[str, str] = {}
@@ -124,12 +126,15 @@ class ScionSIGServer(Server):
         ctrl_port = config["ctrl_port"]
         data_port = config["data_port"]
         debug_level = config["debug_level"]
+        probe_port = config["probe_port"]
 
         sig_toml = _Templates["sig"].format(
             log_level=debug_level,  
             src_ip=src_ip,
             ctrl_addr=ip,
             ctrl_port=ctrl_port,
+            probe_addr=ip,
+            probe_port=probe_port,
             data_addr=ip,
             data_port=data_port,
             sig_name=sig_name
