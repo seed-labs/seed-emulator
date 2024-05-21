@@ -1,7 +1,7 @@
 # EthInitAndInfoTestCase
 
 ## Overview
-The `EthInitAndInfoTestCase.py` script performs a unit test for an Ethereum PoA blockchain setup and interacts with a Chainlink node. It uses the unittest library to define and execute the tests. This script includes several test cases to ensure the correct functioning of the blockchain, Chainlink node, and related smart contracts.
+The `EthInitAndInfoTestCase.py` script performs a unit test for deploying smart contract using the EthInitAndInfo Server. The script connects to the PoA chain, deploys a contract, and verifies the contract deployment and configuration. It also tests the connection to the EthInitAndInfo server and the contract registration API.
 
 ## Test Cases
 The script includes the following test cases:
@@ -16,5 +16,4 @@ To execute the test script, simply run the following command in your terminal:
 ```bash
 ./EthInitAndInfoTestCase.py
 ```
-Upon completion, a `test_log` folder will be created, which contains detailed logs of the test results. The logs are also printed to the terminal. 
-
+Upon completion, a `test_log` folder will be created, which contains detailed logs of the test results. The logs are also printed to the terminal.
