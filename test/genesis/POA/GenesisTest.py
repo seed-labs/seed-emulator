@@ -79,9 +79,11 @@ class GenesisTest(SeedEmuTestCase):
             contract_abi = json.load(abi_file)
 
         contract = self.web3.eth.contract(address=contract_address, abi=contract_abi)
-
+        self.printLog("Checking Total Supply of the Contract")
+        expected_total_supply = 200000000000000000000000
         totalSupply = contract.functions.totalSupply().call()
-        self.assertTrue(totalSupply == 200000000000000000000000, "Total Supply Mismatch")
+        self.printLog(f"Total Supply: {totalSupply}")
+        self.assertTrue(totalSupply == expected_total_supply, "Total Supply Mismatch")
 
     @classmethod
     def get_test_suite(cls):

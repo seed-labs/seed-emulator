@@ -17,7 +17,7 @@ Run the following command in your terminal to compile the contract:
 
 ```bash
 cd Contracts
-solc --bin-runtime --abi --version paris contract.sol -o .
+solc --bin-runtime --abi --evm-version paris contract.sol -o .
 ```
 - `solc`: The Solidity compiler.
 - `--bin-runtime`: Generates the runtime bytecode for the contract.
