@@ -19,19 +19,19 @@ else:
 os.environ['platform'] = platform
 
 test_case_list = [
-    # MiniInternetTestCase,
-    # IPAnyCastTestCase,
-    # HostMgmtTestCase,
-    # EthereumPOATestCase,
-    # EthereumPOSTestCase,
-    # EthereumPOWTestCase,
-    # ChainlinkPOATestCase,
-    # ScionBgpMixedTestCase,
-    # ScionBwtesterTestCase,
-    # KuboTestCase,
-    # KuboUtilFuncsTestCase,
-    # DottedDictTestCase,
-    # PKITestCase,
+    MiniInternetTestCase,
+    IPAnyCastTestCase,
+    HostMgmtTestCase,
+    EthereumPOATestCase,
+    EthereumPOSTestCase,
+    EthereumPOWTestCase,
+    ChainlinkPOATestCase,
+    ScionBgpMixedTestCase,
+    ScionBwtesterTestCase,
+    KuboTestCase,
+    KuboUtilFuncsTestCase,
+    DottedDictTestCase,
+    PKITestCase,
     TrafficGeneratorTestCase
 ]
 
