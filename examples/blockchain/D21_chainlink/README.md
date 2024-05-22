@@ -86,8 +86,8 @@ accessed by running the following command on Chainlink nodes:
 ```bash
 # chainlink admin login
 
-Default username: seed@seed.com
-Default password: Seed@emulator123
+Default username: seed@example.com
+Default password: blockchainemulator
 ```
 
 Instructions on how to use the Chainlink CLI can be found
