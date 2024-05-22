@@ -14,11 +14,10 @@ class ScapyGenerator(TrafficGenerator):
         with open(filename, "r") as file:
             return file.read()
 
-    def install(self, node: Node):
+    def install_softwares(self, node: Node):
         """
-        @brief Install the service.
+        @brief Install necessary softwares.
         """
-        super().install(node)
         node.addSoftware("python3")
         node.addSoftware("python3-pip")
         node.addBuildCommand("pip3 install scapy==2.5.0")
@@ -31,5 +30,3 @@ class ScapyGenerator(TrafficGenerator):
         node.appendStartCommand("chmod +x /root/traffic_generator.py")
         arguments = f"-t {self.duration} -l {self.log_file}"
         self.start_scripts.append(f"/root/traffic_generator.py {arguments} &")
-        if self.auto_start:
-            self.start(node)

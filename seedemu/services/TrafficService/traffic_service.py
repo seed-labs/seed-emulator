@@ -1,12 +1,13 @@
 from enum import Enum
+
 from . import (
+    TrafficReceiver,
+    TrafficGenerator,
     IperfGenerator,
     IperfReceiver,
     DITGReceiver,
     DITGGenerator,
-    ScapyGenerator,
-    HybridTrafficReceiver,
-    HybridTrafficGenerator,
+    ScapyGenerator
 )
 from seedemu.core import Service, Server
 
@@ -21,9 +22,6 @@ class TrafficServiceType(Enum):
     DITG_RECEIVER = "DITG_RECEIVER"
     DITG_GENERATOR = "DITG_GENERATOR"
     SCAPY_GENERATOR = "SCAPY_GENERATOR"
-    HYBRID_RECEIVER = "HYBRID_RECEIVER"
-    HYBRID_GENERATOR = "HYBRID_GENERATOR"
-
 
 class TrafficService(Service):
     def __init__(self):
@@ -40,6 +38,13 @@ class TrafficService(Service):
         @param vnode virtual node.
         @param server_type server type.
         @param kwargs keyword arguments."""
+        
+        if vnode not in self.servers:
+            if server_type in [TrafficServiceType.IPERF_RECEIVER, TrafficServiceType.DITG_RECEIVER]:
+                self.servers[vnode] = TrafficReceiver(vnode)
+            else:
+                self.servers[vnode] = TrafficGenerator(vnode)
+
         server = None
         if server_type == TrafficServiceType.IPERF_RECEIVER:
             server = IperfReceiver(vnode, **kwargs)
@@ -51,14 +56,11 @@ class TrafficService(Service):
             server = DITGGenerator(vnode, **kwargs)
         elif server_type == TrafficServiceType.SCAPY_GENERATOR:
             server = ScapyGenerator(vnode, **kwargs)
-        elif server_type == TrafficServiceType.HYBRID_RECEIVER:
-            server = HybridTrafficReceiver(vnode, **kwargs)
-        elif server_type == TrafficServiceType.HYBRID_GENERATOR:
-            server = HybridTrafficGenerator(vnode, **kwargs)
-
-        if server:
-            self._pending_targets[vnode] = server
-        return server
+        else:
+            raise ValueError(f"Unknown server type {server_type}")
+        self.servers[vnode].extend(server)
+        self._pending_targets[vnode] = self.servers[vnode]
+        return self.servers[vnode]
 
     def getName(self) -> str:
         return self.__class__.__name__
