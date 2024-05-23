@@ -16,6 +16,13 @@ class TrafficReceiver(Server):
         super().__init__()
         self.name = name or self.__class__.__name__
         self.log_file = log_file
+        self.traffic_receivers = []
+
+    def install_softwares(self, node: Node):
+        """!
+        @brief Install necessary softwares.
+        """
+        raise NotImplementedError
 
     def install(self, node: Node):
         """!
@@ -23,9 +30,18 @@ class TrafficReceiver(Server):
         """
         node.appendClassName("TrafficReceiver")
         node.addHostName(self.name)
+        for server in self.traffic_receivers:
+            server.install_softwares(node)
 
     def print(self, indent: int) -> str:
         out = " " * indent
         out += "Traffic receiver server object.\n"
 
         return out
+
+    def extend(self, server: TrafficReceiver):
+        """!
+        @brief Extend the traffic receiver.
+        """
+        self.traffic_receivers.append(server)
+        return self

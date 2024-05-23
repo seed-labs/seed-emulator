@@ -45,6 +45,7 @@ done < /root/traffic-targets
         self.auto_start = auto_start
         self.receiver_hosts = []
         self.start_scripts = []
+        self.traffic_generators = []
 
     def addReceivers(self, hosts: List[str] = []):
         """!
@@ -53,23 +54,43 @@ done < /root/traffic-targets
         """
         self.receiver_hosts.extend(hosts)
 
+    def install_softwares(self, node: Node):
+        """!
+        @brief Install necessary softwares.
+        """
+        raise NotImplementedError
+
     def install(self, node: Node):
         """!
         @brief Install the service.
         """
         node.addHostName(self.name)
         node.appendClassName("TrafficGenerator")
-        node.setFile("/root/traffic-targets", "\n".join(self.receiver_hosts))
+        node.setFile("/root/traffic-targets", "\n".join(list(set(self.receiver_hosts))))
+        
+        for server in self.traffic_generators:
+            server.install_softwares(node)
+
+        if self.auto_start:
+            self.start(node)
 
     def start(self, node: Node):
         """!
         @brief Start the scripts automatically on boot up.
         """
-        for script in self.start_scripts:
-            node.appendStartCommand(script)
+        for server in self.traffic_generators:
+            for script in server.start_scripts:
+                node.appendStartCommand(script)
 
     def print(self, indent: int) -> str:
         out = " " * indent
         out += "TrafficGenerator object.\n"
 
         return out
+
+    def extend(self, server: TrafficGenerator):
+        """!
+        @brief Extend the traffic generator.
+        """
+        self.traffic_generators.append(server)
+        return self

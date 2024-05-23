@@ -26,7 +26,6 @@ traffic_service.install(
     protocol="TCP",
     duration=600,
     rate=0,
-    extra_options="--debug",
 ).addReceivers(hosts=["iperf-receiver-1", "iperf-receiver-2"])
 
 traffic_service.install("ditg-receiver", TrafficServiceType.DITG_RECEIVER)
@@ -39,22 +38,37 @@ traffic_service.install(
     rate=5000,
 ).addReceivers(hosts=["ditg-receiver"])
 traffic_service.install('scapy-generator', TrafficServiceType.SCAPY_GENERATOR, log_file="/root/scapy-logs").addReceivers(hosts=["10.164.0.0/24", "10.170.0.0/24"])
-traffic_service.install('hybrid-receiver', TrafficServiceType.HYBRID_RECEIVER)
-traffic_service.install('hybrid-generator', TrafficServiceType.HYBRID_GENERATOR).addReceivers(hosts=["hybrid-receiver"])
-
+traffic_service.install("multi-traffic-receiver", TrafficServiceType.DITG_RECEIVER)
+traffic_service.install("multi-traffic-receiver", TrafficServiceType.IPERF_RECEIVER)
+traffic_service.install(
+    "multi-traffic-generator",
+    TrafficServiceType.DITG_GENERATOR,
+    log_file="/root/ditg_generator.log",
+    protocol="UDP",
+    duration=120,
+    rate=5000,
+).addReceivers(hosts=["multi-traffic-receiver"])
+traffic_service.install(
+    "multi-traffic-generator",
+    TrafficServiceType.IPERF_GENERATOR,
+    log_file="/root/iperf3_generator.log",
+    protocol="TCP",
+    duration=600,
+    rate=0,
+).addReceivers(hosts=["multi-traffic-receiver"])
 
 # Add hosts to AS-150
 as150 = base.getAutonomousSystem(150)
 as150.createHost("iperf-generator").joinNetwork("net0")
 as150.createHost("ditg-generator").joinNetwork("net0")
 as150.createHost('scapy-generator').joinNetwork('net0')
-as150.createHost('hybrid-generator').joinNetwork('net0')
+as150.createHost('multi-traffic-generator').joinNetwork('net0')
 
 # Add hosts to AS-162
 as162 = base.getAutonomousSystem(162)
 as162.createHost("iperf-receiver-1").joinNetwork("net0")
 as162.createHost("ditg-receiver").joinNetwork("net0")
-as162.createHost('hybrid-receiver').joinNetwork('net0')
+as162.createHost('multi-traffic-receiver').joinNetwork('net0')
 
 # Add hosts to AS-171
 as171 = base.getAutonomousSystem(171)
@@ -77,8 +91,8 @@ emu.addBinding(
     Binding("ditg-receiver", filter=Filter(asn=162, nodeName="ditg-receiver"))
 )
 emu.addBinding(Binding('scapy-generator', filter = Filter(asn = 150, nodeName='scapy-generator')))
-emu.addBinding(Binding('hybrid-generator', filter = Filter(asn = 150, nodeName='hybrid-generator')))
-emu.addBinding(Binding('hybrid-receiver', filter = Filter(asn = 162, nodeName='hybrid-receiver')))
+emu.addBinding(Binding('multi-traffic-generator', filter = Filter(asn = 150, nodeName='multi-traffic-generator')))
+emu.addBinding(Binding('multi-traffic-receiver', filter = Filter(asn = 162, nodeName='multi-traffic-receiver')))
 
 
 # Add the layers
