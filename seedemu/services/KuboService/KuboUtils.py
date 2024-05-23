@@ -1,7 +1,8 @@
 from __future__ import annotations
 import socket, re
 from ipaddress import IPv4Address
-from typing import Any, Mapping
+from typing import Any, Mapping, Tuple
+from typing_extensions import Self
 from seedemu import *
 from seedemu.core.enums import NetworkType
 
@@ -221,6 +222,45 @@ class DottedDict(dict):
             True if the DottedDict instance is empty, False otherwise.
         """
         return len(self) == 0
+    
+    def dottedItems(self) -> list[Tuple[str, Any]]:
+        """Like the standard dict::items(), but returns a list of key-value pairs where keys are JSON dot notation for deepest values.
+
+        Returns
+        -------
+        list[Tuple[str, Any]]
+            A list of key-value pairs for every item in the DottedDict.
+        """
+        deepestItems = []
+        for key in self:
+            newItem = self.__dfsHelper(key, set())
+            if newItem is not None: deepestItems.extend(newItem)
+        return deepestItems
+        
+    def __dfsHelper(self, curKey:str, visited:set) -> list[Tuple[str, Any]]:
+        """A private helper function to perform depth first search (DFS) on the DottedDict for the dottedItems() method.
+
+        Parameters
+        ----------
+        curKey : str
+            The current key being traversed.
+        visited : set
+            The set of keys that have already been visited.
+
+        Returns
+        -------
+        list[Tuple[str, Any]]
+            A list of key-value pairs, where the value is the deepest ('leaf') value in the DottedDict, starting from the specified key.
+        """
+        if curKey not in visited:
+            visited.add(curKey)
+            if isinstance(self[curKey], Mapping):
+                childItems = []
+                for childKey in self[curKey]:
+                    childItems.extend(self.__dfsHelper(f'{curKey}.{childKey}', visited))
+                return childItems
+            else:
+                return [(curKey, self[curKey])]
 
 
 def getIP(node:Node) -> IPv4Address:
