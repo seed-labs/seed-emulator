@@ -46,10 +46,7 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     chainlink.setEthServer(random.choice(eth_nodes)['name'])
     chainlink.setFaucetServer(faucet_info[0]['name'])
     chainlink.setEthInitInfoServer(blockchain.getEthInitInfoServerInfo()[0]['name'])
-    # chainlink.installInitializer('chainlink_init_server') \
-    #         .setLinkedEthNode(name=random.choice(eth_nodes)) \
-    #         .setDisplayName('Chainlink-Init')
-
+    
     # Create Chainlink nodes (called server in our code)
     # We need to provide a blockchain node for this node to send transactions
     # to the blockchain. 
@@ -67,7 +64,6 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
     # Bind each Chainlink node to a physical node (no filters, so random binding)
     emu.addBinding(Binding("eth_init_info_node"))
 
-    print(server_nodes)
     for server_node in server_nodes['ChainlinkServer']:
         emu.addBinding(Binding(server_node))
 
@@ -86,11 +82,8 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
 
     print("-----------------------------------------")
     print("Chainlink nodes: " + str(server_nodes))
-    # for cnode in server_nodes:
-    #     # emu.addBinding(Binding(cnode))
-    #     print(cnode)
-
-    # print("Chainlink initialization node: " + init_node)
+    for type, server_list in eth.getAllServerNames().items():
+        print("EthNodes: - type: "+ type + " - list: " + str(server_list))
 
 if __name__ == "__main__":
     run()
