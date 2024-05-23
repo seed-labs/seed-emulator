@@ -14,9 +14,9 @@ This is done by copying and pasting the whole ca folder from or to the host mach
 
 The new Root CA certificate and its private key are generated using `BuildtimeDockerImage` and `DockerContainer` classes. The generation process is done inside a Docker container to avoid polluting the emulator with unnecessary dependencies.
 
-## CA Service
+## CA Service and CA Server
 
-The `CAService` class is a service that uses the `RootCAStore` to serve the PKI infrastructure. It uses the `smallstep`'s `step-ca` program to serve the PKI infrastructure.
+The `CAService` class is a service that creates `CAServer`s which use the `RootCAStore` to serve the PKI infrastructures. It uses the `smallstep`'s `step-ca` program to serve the PKI infrastructure.
 
 The `CAService` class for now only supports:
 
@@ -39,15 +39,15 @@ Nodes need to be configured to trust the Root CA certificate in order to make th
 The `installCACert()` method installs the Root CA certificate to all the nodes in the emulator. It accepts a `Filter` as a parameter to install the certificate to specific nodes.
 
 ```python
-ca.installCACert(Filter(asn=160))
-ca.installCACert(Filter(asn=161))
+caServer.installCACert(Filter(asn=160))
+caServer.installCACert(Filter(asn=161))
 ```
 
 The examples above will install the Root CA certificate on the nodes in autonomous systems 160 and 161 respectively.
 If there are overlaps among the filters, the certificate will be installed only once.
-This is done by appending `Filter` to a list of filters in the `CAService` class.
+This is done by appending `Filter` to a list of filters in the `CAServer` class.
 It does not replace the existing filters, but appends the new filter to the list.
-In the configuration stage, the `CAService` will iterate through the list of filters and install the Root CA certificate to the nodes that match the filter.
+In the `CAService` configuration stage, the `CAServer` will iterate through the list of filters and install the Root CA certificate to the nodes that match the filter.
 
 The installation process is done by copying the Root CA certificate to the node's `/usr/local/share/ca-certificates` directory and running the `update-ca-certificates` command.
 
@@ -59,7 +59,7 @@ Detailed documentation of `step` can be found at https://smallstep.com/docs/step
 
 Enabling HTTPS should be configured inside the `WebService`. However, depending on
 how the certificates are managed, the way to configure HTTPS is different.
-Therefore, in our design we put the actual HTTPS configuration in the `CAService`, via
+Therefore, in our design we put the actual HTTPS configuration in the `CAServer`, via
 the `enableHTTPSFunc` function. We pass this function to the 
 `WebService`, so it can be called to enable the HTTPS. In the future, if we
 implement different types of CA services, we can use the same strategy.

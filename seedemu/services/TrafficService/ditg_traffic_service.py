@@ -6,22 +6,20 @@ from .traffic_generator import TrafficGenerator
 
 class DITGReceiver(TrafficReceiver):
 
-    def install(self, node: Node):
+    def install_softwares(self, node: Node):
         """!
-        @brief Install the service.
+        @brief Install necessary softwares.
         """
-        super().install(node)
         node.addSoftware("d-itg")
         node.appendStartCommand(f"ITGRecv  -l {self.log_file} &")
 
 
 class DITGGenerator(TrafficGenerator):
 
-    def install(self, node: Node):
+    def install_softwares(self, node: Node):
         """!
-        @brief Install the service.
+        @brief Install necessary softwares.
         """
-        super().install(node)
         node.addSoftware("d-itg")
         cmdline = (
             "ITGSend -a $client -T "
@@ -41,5 +39,3 @@ class DITGGenerator(TrafficGenerator):
         )
         node.appendStartCommand("chmod +x /root/traffic_generator_ditg.sh")
         self.start_scripts.append("/root/traffic_generator_ditg.sh &")
-        if self.auto_start:
-            self.start(node)

@@ -7,6 +7,7 @@ from os import mkdir, path, makedirs, rename
 from seedemu.core import Node, Service, Server, Emulator
 from seedemu.core.enums import NetworkType
 from .FaucetServer import FaucetServer
+from .EthInitAndInfoServer import EthInitAndInfoServer
 from typing import Dict, List
 from sys import stderr
 
@@ -15,26 +16,26 @@ class Blockchain:
     @brief The individual blockchain in EthereumService.
     This Blockchain class allows to maintain multiple blockchains inside EthereumService.
     """
-    __consensus: ConsensusMechanism
-    __genesis: Genesis
-    __eth_service: EthereumService
-    __boot_node_addresses: Dict[ConsensusMechanism, List[str]]
-    __joined_accounts: List[AccountStructure]
-    __joined_signer_accounts: List[AccountStructure]
-    __validator_ids: List[str]
-    __beacon_setup_node_address: str
-    __chain_id:int
-    __pending_targets:list
-    __chain_name:str
-    __emu_mnemonic:str
-    __total_accounts_per_node: int
-    __emu_account_balance: int
-    __local_mnemonic:str
-    __local_accounts_total:int
-    __local_account_balance:int
-    __terminal_total_difficulty:int
-    __target_aggregater_per_committee:int
-    __target_committee_size:int
+    _consensus: ConsensusMechanism
+    _genesis: Genesis
+    _eth_service: EthereumService
+    _boot_node_addresses: Dict[ConsensusMechanism, List[str]]
+    _joined_accounts: List[AccountStructure]
+    _joined_signer_accounts: List[AccountStructure]
+    _validator_ids: List[str]
+    _beacon_setup_node_address: str
+    _chain_id:int
+    _pending_targets:list
+    _chain_name:str
+    _emu_mnemonic:str
+    _total_accounts_per_node: int
+    _emu_account_balance: int
+    _local_mnemonic:str
+    _local_accounts_total:int
+    _local_account_balance:int
+    _terminal_total_difficulty:int
+    _target_aggregater_per_committee:int
+    _target_committee_size:int
 
     def __init__(self, service:EthereumService, chainName: str, chainId: int, consensus:ConsensusMechanism):
         """!
@@ -47,34 +48,39 @@ class Blockchain:
 
         @returns An instance of The Blockchain class.
         """
-        self.__eth_service = service
-        self.__consensus = consensus
-        self.__chain_name = chainName
-        self.__genesis = Genesis(ConsensusMechanism.POA) if self.__consensus == ConsensusMechanism.POS else Genesis(self.__consensus)
-        self.__boot_node_addresses = []
-        self.__miner_node_address = []
-        self.__joined_accounts = []
-        self.__joined_signer_accounts = []
-        self.__validator_ids = []
-        self.__beacon_setup_node_address = ''
-        self.__pending_targets = []
-        self.__emu_mnemonic = "great awesome fun seed security lab protect system network prevent attack future"
-        self.__total_accounts_per_node = 1
-        self.__emu_account_balance = 32 * EthUnit.ETHER.value
-        self.__local_mnemonic = "great amazing fun seed lab protect network system security prevent attack future"
-        self.__local_accounts_total = 5
-        self.__local_account_balance = 10 * EthUnit.ETHER.value
-        self.__chain_id = chainId
-        self.__terminal_total_difficulty = 20
-        self.__target_aggregater_per_committee = 2
-        self.__target_committee_size = 3
+        self._eth_service = service
+        self._consensus = consensus
+        self._chain_name = chainName
+        self._genesis = Genesis(ConsensusMechanism.POA) if self._consensus == ConsensusMechanism.POS else Genesis(self._consensus)
+        self._boot_node_addresses = []
+        self._miner_node_address = []
+        self._joined_accounts = []
+        self._joined_signer_accounts = []
+        self._validator_ids = []
+        self._beacon_setup_node_address = ''
+        self._pending_targets = []
+        self._emu_mnemonic = "great awesome fun seed security lab protect system network prevent attack future"
+        self._total_accounts_per_node = 1
+        self._emu_account_balance = 32 * EthUnit.ETHER.value
+        self._local_mnemonic = "great amazing fun seed lab protect network system security prevent attack future"
+        self._local_accounts_total = 5
+        self._local_account_balance = 10 * EthUnit.ETHER.value
+        self._chain_id = chainId
+        self._terminal_total_difficulty = 20
+        self._target_aggregater_per_committee = 2
+        self._target_committee_size = 3
         
 
     def _doConfigure(self, node:Node, server:Server):
         if isinstance(server, FaucetServer):
             self._log('configuring as{}/{} as an faucet node...'.format(node.getAsn(), node.getName()))
             self.addLocalAccount(server.getFaucetAddress(), balance=server.getFaucetBalance())
-            return       
+            return   
+
+        if isinstance(server, EthInitAndInfoServer):
+            self._log('configuring as{}/{} as an eth init and info node...'.format(node.getAsn(), node.getName()))
+            return
+        
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
 
         ifaces = node.getInterfaces()
@@ -82,66 +88,83 @@ class Blockchain:
         addr = '{}:{}'.format(str(ifaces[0].getAddress()), server.getBootNodeHttpPort())
         
         if server.isBootNode():
-            self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self.__consensus.value))
-            self.__boot_node_addresses.append(addr)
+            self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self._consensus.value))
+            self._boot_node_addresses.append(addr)
         
-        if self.__consensus == ConsensusMechanism.POS:
+        if self._consensus == ConsensusMechanism.POS:
             if server.isStartMiner():
-                self._log('adding as{}/{} as consensus-{} miner...'.format(node.getAsn(), node.getName(), self.__consensus.value))
-                self.__miner_node_address.append(str(ifaces[0].getAddress())) 
+                self._log('adding as{}/{} as consensus-{} miner...'.format(node.getAsn(), node.getName(), self._consensus.value))
+                self._miner_node_address.append(str(ifaces[0].getAddress())) 
             if server.isBeaconSetupNode():
-                self.__beacon_setup_node_address = '{}:{}'.format(ifaces[0].getAddress(), server.getBeaconSetupHttpPort())
+                self._beacon_setup_node_address = '{}:{}'.format(ifaces[0].getAddress(), server.getBeaconSetupHttpPort())
 
         server._createAccounts(self)
         
         accounts = server._getAccounts()
         if len(accounts) > 0:
-            if self.__consensus == ConsensusMechanism.POS and server.isValidatorAtRunning():
+            if self._consensus == ConsensusMechanism.POS and server.isValidatorAtRunning():
                 accounts[0].balance = 33 * EthUnit.ETHER.value
-            self.__joined_accounts.extend(accounts)
-            if self.__consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] and server.isStartMiner():
-                self.__joined_signer_accounts.append(accounts[0])
+            self._joined_accounts.extend(accounts)
+            if self._consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] and server.isStartMiner():
+                self._joined_signer_accounts.append(accounts[0])
 
-        if self.__consensus == ConsensusMechanism.POS and server.isValidatorAtGenesis():
-            self.__validator_ids.append(str(server.getId()))
+        if self._consensus == ConsensusMechanism.POS and server.isValidatorAtGenesis():
+            self._validator_ids.append(str(server.getId()))
         
         server._generateGethStartCommand()
 
-        if self.__eth_service.isSave():
-            save_path = self.__eth_service.getSavePath()
-            node.addSharedFolder('/root/.ethereum', '../{}/{}/{}/ethereum'.format(save_path, self.__chain_name, server.getId()))
-            node.addSharedFolder('/root/.ethash', '../{}/{}/{}/ethash'.format(save_path, self.__chain_name, server.getId()))
-            makedirs('{}/{}/{}/ethereum'.format(save_path, self.__chain_name, server.getId()))
-            makedirs('{}/{}/{}/ethash'.format(save_path, self.__chain_name, server.getId()))
+        if self._eth_service.isSave():
+            save_path = self._eth_service.getSavePath()
+            node.addSharedFolder('/root/.ethereum', '../{}/{}/{}/ethereum'.format(save_path, self._chain_name, server.getId()))
+            node.addSharedFolder('/root/.ethash', '../{}/{}/{}/ethash'.format(save_path, self._chain_name, server.getId()))
+            makedirs('{}/{}/{}/ethereum'.format(save_path, self._chain_name, server.getId()))
+            makedirs('{}/{}/{}/ethash'.format(save_path, self._chain_name, server.getId()))
 
     def configure(self, emulator:Emulator):
-        pending_targets = self.__eth_service.getPendingTargets()
-        localAccounts = EthAccount.createLocalAccountsFromMnemonic(mnemonic=self.__local_mnemonic, balance=self.__local_account_balance, total=self.__local_accounts_total)
-        self.__genesis.addAccounts(localAccounts)
-        self.__genesis.setChainId(self.__chain_id)
-        for vnode in self.__pending_targets:
+        pending_targets = self._eth_service.getPendingTargets()
+        localAccounts = EthAccount.createLocalAccountsFromMnemonic(mnemonic=self._local_mnemonic, balance=self._local_account_balance, total=self._local_accounts_total)
+        self._genesis.addAccounts(localAccounts)
+        self._genesis.setChainId(self._chain_id)
+        for vnode in self._pending_targets:
             node = emulator.getBindingFor(vnode)
             server = pending_targets[vnode]
             if isinstance(server, FaucetServer):
                 server.__class__ = FaucetServer
                 linked_eth_node_name = server.getLinkedEthNodeName()
-                assert linked_eth_node_name != ''  or server.getRpcUrl() !='' , 'both rpc url and eth node are not set'
-                server.setRpcUrl(f'http://{self.__getIpByVnodeName(emulator, linked_eth_node_name)}:8545')
-                
+                assert linked_eth_node_name != ''  or server.getEthServerUrl() !='' , 'both rpc url and eth node are not set'
+                server.setEthServerUrl(self.__getIpByVnodeName(emulator, linked_eth_node_name))
+                eth_server: EthereumServer = emulator.getServerByVirtualNodeName(linked_eth_node_name)
+                server.setEthServerPort(eth_server.getGethHttpPort())
+
+            elif isinstance(server, EthInitAndInfoServer):
+                server.__class__ = EthInitAndInfoServer
+                linked_eth_node_name = server.getLinkedEthNodeName()
+                assert linked_eth_node_name != '' , 'linked eth node is not set'
+                server.setEthServerUrl(self.__getIpByVnodeName(emulator, linked_eth_node_name))
+                eth_server: EthereumServer = emulator.getServerByVirtualNodeName(linked_eth_node_name)
+                server.setEthServerPort(eth_server.getGethHttpPort())
+
+                linked_faucet_node_name = server.getLinkedFaucetNodeName()
+                assert linked_faucet_node_name != '' , 'linked faucet node is not set'
+                server.setFaucetUrl(self.__getIpByVnodeName(emulator, linked_faucet_node_name))
+                faucet_server:FaucetServer = emulator.getServerByVirtualNodeName(linked_faucet_node_name)
+                server.setFaucetPort(faucet_server.getPort())
+
             elif self.__consensus == ConsensusMechanism.POS and server.isStartMiner():
+
                 ifaces = node.getInterfaces()
                 assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
                 addr = str(ifaces[0].getAddress())
-                miner_ip = self.__miner_node_address[0]
+                miner_ip = self._miner_node_address[0]
                 if addr == miner_ip:
                     validator_count = len(self.getValidatorIds())
-                    index = self.__joined_accounts.index(server._getAccounts()[0])
-                    self.__joined_accounts[index].balance = 32*pow(10,18)*(validator_count+2)
+                    index = self._joined_accounts.index(server._getAccounts()[0])
+                    self._joined_accounts[index].balance = 32*pow(10,18)*(validator_count+2)
         
-        self.__genesis.addAccounts(self.getAllAccounts())
+        self._genesis.addAccounts(self.getAllAccounts())
         
-        if self.__consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] :
-            self.__genesis.setSigner(self.getAllSignerAccounts())
+        if self._consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] :
+            self._genesis.setSigner(self.getAllSignerAccounts())
     
     def __getIpByVnodeName(self, emulator, nodename:str) -> str:
         node = emulator.getBindingFor(nodename)
@@ -160,7 +183,7 @@ class Blockchain:
 
         @returns List of bootnodes IP addresses.
         """
-        return self.__boot_node_addresses
+        return self._boot_node_addresses
 
     def getMinerNodes(self) -> List[str]:
         """!
@@ -168,7 +191,7 @@ class Blockchain:
 
         @returns List of miner nodes IP addresses.
         """
-        return self.__miner_node_address
+        return self._miner_node_address
 
     def getAllAccounts(self) -> List[AccountStructure]:
         """!
@@ -176,7 +199,7 @@ class Blockchain:
         
         @returns List of accounts.
         """
-        return self.__joined_accounts
+        return self._joined_accounts
 
     def getAllSignerAccounts(self) -> List[AccountStructure]:
         """!
@@ -184,7 +207,7 @@ class Blockchain:
         
         returns List of signer accounts.
         """
-        return self.__joined_signer_accounts
+        return self._joined_signer_accounts
 
     def getValidatorIds(self) -> List[str]:
         """!
@@ -192,7 +215,7 @@ class Blockchain:
         
         @returns List of all validators ids.
         """
-        return self.__validator_ids
+        return self._validator_ids
 
     def getBeaconSetupNodeIp(self) -> str:
         """!
@@ -200,7 +223,7 @@ class Blockchain:
 
         @returns The IP address.
         """
-        return self.__beacon_setup_node_address
+        return self._beacon_setup_node_address
 
     def setGenesis(self, genesis:str) -> EthereumServer:
         """!
@@ -210,7 +233,7 @@ class Blockchain:
 
         @returns Self, for chaining API calls.
         """
-        self.__genesis.setGenesis(genesis)
+        self._genesis.setGenesis(genesis)
 
         return self
 
@@ -220,7 +243,7 @@ class Blockchain:
 
         @returns Genesis. 
         """
-        return self.__genesis
+        return self._genesis
 
     def setConsensusMechanism(self, consensus:ConsensusMechanism) -> EthereumServer:
         """!
@@ -230,8 +253,8 @@ class Blockchain:
 
         @returns Self, for chaining API calls. 
         """
-        self.__consensus = consensus
-        self.__genesis = Genesis(self.__consensus)
+        self._consensus = consensus
+        self._genesis = Genesis(self._consensus)
         
         return self
 
@@ -241,7 +264,7 @@ class Blockchain:
 
         @returns ConsensusMechanism
         """
-        return self.__consensus
+        return self._consensus
     
     def setTerminalTotalDifficulty(self, ttd:int):
         """!
@@ -256,7 +279,7 @@ class Blockchain:
         
         @returns Self, for chaining API calls.
         """
-        self.__terminal_total_difficulty = ttd
+        self._terminal_total_difficulty = ttd
 
         return self
 
@@ -267,7 +290,7 @@ class Blockchain:
         @returns terminal_total_difficulty.
         """
 
-        return self.__terminal_total_difficulty
+        return self._terminal_total_difficulty
 
     def setGasLimitPerBlock(self, gasLimit:int):
         """!
@@ -277,7 +300,7 @@ class Blockchain:
         
         @returns Self, for chaining API calls.
         """
-        self.__genesis.setGasLimit(gasLimit)
+        self._genesis.setGasLimit(gasLimit)
         return self
 
     def setChainId(self, chainId:int):
@@ -289,7 +312,7 @@ class Blockchain:
         @returns Self, for chaining API calls
         """
 
-        self.__chain_id = chainId
+        self._chain_id = chainId
         return self
 
     def createNode(self, vnode: str) -> EthereumServer:
@@ -300,9 +323,21 @@ class Blockchain:
 
         @returns EthereumServer
         """
-        eth = self.__eth_service
-        self.__pending_targets.append(vnode)
+        eth = self._eth_service
+        self._pending_targets.append(vnode)
         return eth.installByBlockchain(vnode, self)
+    
+    def addCode(self, address: str, code: str) -> Blockchain:
+        """!
+        @brief Add code to an account by setting code field of genesis file.
+
+        @param address The account's address.
+        @param code The code to set.
+
+        @returns Self, for chaining calls.
+        """
+        self._genesis.addCode(address, code)
+        return self
     
     def addLocalAccount(self, address: str, balance: int, unit:EthUnit=EthUnit.ETHER) -> Blockchain:
         """!
@@ -315,7 +350,7 @@ class Blockchain:
         @returns Self, for chaining calls.
         """
         balance = balance * unit.value
-        self.__genesis.addLocalAccount(address, balance)
+        self._genesis.addLocalAccount(address, balance)
         
         return self
 
@@ -331,7 +366,7 @@ class Blockchain:
         """
         balance = balance * unit.value
         mnemonic_account = EthAccount.createLocalAccountsFromMnemonic(mnemonic = mnemonic, balance=balance, total=total)
-        self.__genesis.addAccounts(mnemonic_account)
+        self._genesis.addAccounts(mnemonic_account)
 
     def getChainName(self) -> str:
         """!
@@ -339,7 +374,7 @@ class Blockchain:
 
         @returns The name of this blockchain.
         """
-        return self.__chain_name
+        return self._chain_name
 
     def getChainId(self) -> int:
         """!
@@ -347,7 +382,7 @@ class Blockchain:
         
         @returns The chain Id of this blockchain.
         """
-        return self.__chain_id
+        return self._chain_id
 
     def setEmuAccountParameters(self, mnemonic:str, balance:int, total_per_node:int, unit:EthUnit=EthUnit.ETHER):
         """!
@@ -360,9 +395,9 @@ class Blockchain:
 
         @returns Self, for chaining calls.
         """
-        self.__emu_mnemonic = mnemonic
-        self.__emu_account_balance = balance * unit.value
-        self.__total_accounts_per_node = total_per_node
+        self._emu_mnemonic = mnemonic
+        self._emu_account_balance = balance * unit.value
+        self._total_accounts_per_node = total_per_node
         return self
 
     def getEmuAccountParameters(self):
@@ -371,7 +406,7 @@ class Blockchain:
         
         returns The value of mnemonic, balance, and total_per_node.
         """
-        return self.__emu_mnemonic, self.__emu_account_balance, self.__total_accounts_per_node
+        return self._emu_mnemonic, self._emu_account_balance, self._total_accounts_per_node
 
     def setLocalAccountParameters(self, mnemonic:str, balance:int, total:int, unit:EthUnit=EthUnit.ETHER):
         """!
@@ -384,9 +419,9 @@ class Blockchain:
 
         @returns Self, for chaining calls.
         """
-        self.__local_mnemonic = mnemonic
-        self.__local_account_balance = balance * unit.value
-        self.__local_accounts_total = total
+        self._local_mnemonic = mnemonic
+        self._local_account_balance = balance * unit.value
+        self._local_accounts_total = total
         return self
 
     def setTargetAggregatorPerCommittee(self, target_aggregator_per_committee:int):
@@ -397,7 +432,7 @@ class Blockchain:
         
         @returns Self, for chaining calls.
         """
-        self.__target_aggregater_per_committee = target_aggregator_per_committee
+        self._target_aggregater_per_committee = target_aggregator_per_committee
         return self
 
     def getTargetAggregatorPerCommittee(self):
@@ -406,7 +441,7 @@ class Blockchain:
         
         @returns The value of target_aggregator_per_committee.
         """
-        return self.__target_aggregater_per_committee
+        return self._target_aggregater_per_committee
 
     def setTargetCommitteeSize(self, target_committee_size:int):
         """!
@@ -416,7 +451,7 @@ class Blockchain:
 
         @returns Self, for chaining calls.
         """
-        self.__target_committee_size = target_committee_size
+        self._target_committee_size = target_committee_size
         return self
 
     def getTargetCommitteeSize(self):
@@ -425,7 +460,17 @@ class Blockchain:
 
         @returns The value of target_committee_size.
         """
-        return self.__target_committee_size
+        return self._target_committee_size
+    
+    def createEthInitAndInfoServer(self, vnode:str, port:int, linked_eth_node:str, linked_faucet_node:str):
+        """!
+        @brief Create a EthInitAndInfo Server that can deploy contract and runs webserver to provide contract address info.
+
+        @returns self, for chaining calls
+        """
+        eth = self.__eth_service
+        self.__pending_targets.append(vnode)
+        return eth.installEthInitAndInfoServer(vnode, self, port, linked_eth_node, linked_faucet_node)
     
     def createFaucetServer(self, vnode:str, port:int, linked_eth_node:str, balance=1000, max_fund_amount=10):
         """!
@@ -438,10 +483,63 @@ class Blockchain:
 
         @returns self, for chaining calls.
         """
-        eth = self.__eth_service
-        self.__pending_targets.append(vnode)
+        eth = self._eth_service
+        self._pending_targets.append(vnode)
         return eth.installFaucet(vnode, self, linked_eth_node, port, balance, max_fund_amount)
     
+    def getFaucetServerInfo(self) -> List[Dict]:
+        faucetInfo = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, FaucetServer):
+                info = {}
+                info['name'] = key
+                info['port'] = value.getPort()
+                faucetInfo.append(info)
+        return faucetInfo
+
+    def getFaucetServerNames(self) -> List[str]:
+        faucetServerNames = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, FaucetServer):
+                faucetServerNames.append(key)
+        return faucetServerNames
+    
+    def getEthServerNames(self) -> List[str]:
+        ethServerNames = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, EthereumServer):
+                ethServerNames.append(key)
+        return ethServerNames
+    
+    def getEthServerInfo(self) -> List[Dict]:
+        ethInfo = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, EthereumServer):
+                info = {}
+                info['name'] = key
+                info['geth_http_port'] = value.getGethHttpPort()
+                info['geth_ws_port'] = value.getGethWsPort()
+                ethInfo.append(info)
+        return ethInfo
+    
+    def getEthInitInfoServerNames(self) -> List[str]:
+        ethInitInfoServerNames = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, EthInitAndInfoServer):
+                ethInitInfoServerNames.append(key)
+        return ethInitInfoServerNames
+    
+    def getEthInitInfoServerInfo(self) -> List[Dict]:
+        ethInitInfo = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, EthInitAndInfoServer):
+                info = {}
+                info['name'] = key
+                info['port'] = value.getPort()
+                ethInitInfo.append(info)
+        return ethInitInfo
+
+
     def _log(self, message: str) -> None:
         """!
         @brief Log to stderr.
@@ -531,6 +629,8 @@ class EthereumService(Service):
             server.install(node, self)
         elif isinstance(server, FaucetServer):
             server.install(node)
+        elif isinstance(server, EthInitAndInfoServer):
+            server.install(node)
 
     def _createServer(self, blockchain: Blockchain = None) -> Server:
         self.__serial += 1
@@ -545,6 +645,9 @@ class EthereumService(Service):
         
     def _createFaucetServer(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int, max_fund_amount:int) -> FaucetServer:
         return FaucetServer(blockchain, linked_eth_node, port, balance, max_fund_amount)
+
+    def _createEthInitAndInfoServer(self, blockchain:Blockchain, port:int, linked_eth_node:str, linked_faucet_node:str) -> EthInitAndInfoServer:
+        return EthInitAndInfoServer(blockchain, port, linked_eth_node, linked_faucet_node)
 
     def installByBlockchain(self, vnode: str, blockchain: Blockchain) -> EthereumServer:
         """!
@@ -563,8 +666,6 @@ class EthereumService(Service):
 
         return self._pending_targets[vnode]
 
-        
-
     def installFaucet(self, vnode:str, blockchain:Blockchain, linked_eth_node:str, port:int=80, balance:int=1000, max_fund_amount:int=10) -> FaucetServer:
         """!
         @brief Install the server on a node identified by given name.
@@ -575,7 +676,36 @@ class EthereumService(Service):
         self._pending_targets[vnode] = s
 
         return self._pending_targets[vnode]
+    
+    def installEthInitAndInfoServer(self, vnode:str, blockchain:Blockchain, port:int, linked_eth_node:str, linked_faucet_node:str):
+        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
 
+        s = self._createEthInitAndInfoServer(blockchain, port, linked_eth_node, linked_faucet_node)
+        self._pending_targets[vnode] = s
+        
+        return self._pending_targets[vnode]
+
+    def getBlockchainNames(self) -> List[str]:
+        """!
+        @brief Get installed blockchain names.
+
+        @returns a list of blockchain name
+        """
+        blockchainNames = [chainName for chainName in self.__blockchains.keys()]
+        return blockchainNames
+    
+    def getBlockchainByName(self, blockchainName) -> Blockchain:
+        """!
+        @brief get Blockchain object by its name
+
+        @returns a blockchain object
+        """
+        return self.__blockchains[blockchainName]
+    
+    
+        
+
+    
     def createBlockchain(self, chainName:str, consensus: ConsensusMechanism, chainId: int = -1):
         """!
         @brief Create an instance of Blockchain class which is a sub-layer of the EthereumService.

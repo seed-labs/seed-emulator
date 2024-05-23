@@ -79,82 +79,42 @@ def ipsInNetwork(ips: Iterable, network: str) -> bool:
 
 
 class CAServer(Server):
-    def __init__(self, duration: str, caStore: RootCAStore, step_version: str):
+    def __init__(self, step_version: str):
         super().__init__()
-        self.__duration = duration
-        self.__ca_store = caStore
         self._step_version = step_version
+        self.__filters: List[Filter | None] = []
+        self.__duration = "2160h"
+        self.__id: int = None
 
-    def install(self, node: Node):
+    def installCACert(self, filter: Filter = None) -> CAServer:
         """!
-        @brief Install the CA on the node.
+        @brief Install the CA certificate to the nodes that match the filter.
+        Calling these function multiple times will not override the previous filter.
+        ```
+        caServer.installCACert(Filter(asn=150))
+        caServer.installCACert(Filter(asn=151))
+        # The above code will install the CA certificate to all nodes in ASN 150 and 151.
+        ```
+
+        @param filter The filter to match the nodes. Default is None, which means all nodes.
+
+        @returns self, for chaining API calls.
         """
-        node.addSoftware("ca-certificates")
-        node.addBuildCommand(
-            f"\
-if uname -m | grep x86_64 > /dev/null; then \
-curl -O -L https://github.com/smallstep/certificates/releases/download/v{self._step_version}/step-ca_{self._step_version}_amd64.deb && \
-apt install -y ./step-ca_{self._step_version}_amd64.deb; \
-else \
-curl -O -L https://github.com/smallstep/certificates/releases/download/v{self._step_version}/step-ca_{self._step_version}_arm64.deb && \
-apt install -y ./step-ca_{self._step_version}_arm64.deb; \
-fi"
-        )
-        node.appendStartCommand('ln -s /root/.step /tmp/.step')
-        self.__caDir = self.__ca_store.getStorePath()
-        for root, _, files in os.walk(self.__caDir):
-            for file in files:
-                node.importFile(
-                    os.path.join(root, file),
-                    os.path.join(
-                        "/root",
-                        os.path.relpath(os.path.join(root, file), self.__caDir),
-                    ),
-                )
-        node.appendStartCommand(
-            "cp $(step path)/certs/root_ca.crt /usr/local/share/ca-certificates/SEEDEMU_Internal_Root_CA.crt && \
-update-ca-certificates"
-        )
-        node.appendStartCommand(
-            f"jq '.authority.claims.defaultTLSCertDuration |= \"{self.__duration}\"' $(step path)/config/ca.json > $(step path)/config/ca.json.tmp && mv $(step path)/config/ca.json.tmp $(step path)/config/ca.json"
-        )
-        node.appendStartCommand(
-            "step-ca --password-file /root/password.txt $(step path)/config/ca.json > /var/step-ca.log 2> /var/step-ca.log",
-            fork=True,
-        )
+        # This is possible to do it in runtime
+        if filter:
+            assert (
+                not filter.allowBound
+            ), "allowBound filter is not supported in the global layer."
+        self.__filters.append(filter)
+        return self
 
-
-class CAService(Service):
-    """!
-    @brief The Certificate Authority (CA) service.
-
-    This service helps setting up a Certificate Authority (CA). It works by
-    generating a self-signed root certificate and then signing the server
-    certificate with the root certificate.
-    """
-
-    def __init__(self, caStore: RootCAStore):
-        """!
-        @brief create a new CA service which will setup the PKI infrastructure.
-
-        @param caStore The RootCAStore object.
-        """
-        super().__init__()
-        self.addDependency("Routing", False, False)
-        self.addDependency("DomainNameService", False, True)
-        self.addDependency("EtcHost", False, True)
+    def setCAStore(self, caStore: RootCAStore) -> CAServer:
         self.__ca_store = caStore
         self.__ca_store.initialize()
         self.__ca_domain = self.__ca_store._caDomain
-        self.__duration = "2160h"
-        self.__filters: List[Filter | None] = []
-        self._step_version = self._step_version()
+        return self
 
-    @classmethod
-    def _step_version(cls):
-        return "0.26.1"
-
-    def setCertDuration(self, duration: str) -> CAService:
+    def setCertDuration(self, duration: str) -> CAServer:
         """!
         @brief Set the certificate duration.
 
@@ -169,20 +129,6 @@ class CAService(Service):
             raise ValueError("The duration must no less than 12h.")
         self.__duration = duration
         return self
-
-    def getName(self):
-        return "CertificateAuthority"
-
-    def getCADomain(self) -> str:
-        """!
-        @brief Get the CA domain name.
-
-        @returns The CA domain name.
-        """
-        return self.__ca_domain
-
-    def _createServer(self) -> Server:
-        return CAServer(self.__duration, self.__ca_store, self._step_version)
 
     def enableHTTPSFunc(self, node: Node, web: WebServer):
         """!
@@ -215,57 +161,22 @@ certbot --server https://{ca_domain}/acme/acme/directory --non-interactive --ngi
         )
         node.appendStartCommand("crontab /etc/cron.d/certbot && service cron start")
 
-    def installCACert(self, filter: Filter = None) -> CAService:
-        """!
-        @brief Install the CA certificate to the nodes that match the filter.
-        Calling these function multiple times will not override the previous filter.
-        ```
-        caService.installCACert(Filter(asn=150))
-        caService.installCACert(Filter(asn=151))
-        # The above code will install the CA certificate to all nodes in ASN 150 and 151.
-        ```
-
-        @param filter The filter to match the nodes. Default is None, which means all nodes.
-
-        @returns self, for chaining API calls.
-        """
-        # This is possible to do it in runtime
-        if filter:
-            assert (
-                not filter.allowBound
-            ), "allowBound filter is not supported in the global layer."
-        self.__filters.append(filter)
-        return self
-
-    def configure(self, emulator: Emulator):
-        super().configure(emulator)
-        all_nodes_items = emulator.getRegistry().getAll().items()
-        all_nodes: Dict[Node, bool] = {}
-        for (_, type, name), obj in all_nodes_items:
-            if type not in ["rs", "rnode", "hnode", "csnode"]:
-                continue
-            all_nodes[obj] = False
+    def _serverConfigure(self, id: int, all_nodes: List[Node]):
+        # Install the CA certificate to the nodes
+        self.__id = id
         if None in self.__filters:
             self.__filters = [None]
-        for node in all_nodes:
-            node.addBuildCommand(
-                f"\
-if uname -m | grep x86_64 > /dev/null; then \
-curl -O -L https://github.com/smallstep/cli/releases/download/v{self._step_version}/step-cli_{self._step_version}_amd64.deb && \
-apt install -y ./step-cli_{self._step_version}_amd64.deb; \
-else \
-curl -O -L https://github.com/smallstep/cli/releases/download/v{self._step_version}/step-cli_{self._step_version}_arm64.deb && \
-apt install -y ./step-cli_{self._step_version}_arm64.deb; \
-fi"
-            )
+        all_nodes_dict = {node: False for node in all_nodes}
         for filter in self.__filters:
             for node in all_nodes:
-                if all_nodes[node]:
+                if all_nodes_dict[node]:
                     continue
                 if filter:
                     if filter.asn and filter.asn != node.getAsn():
                         continue
-                    if filter.nodeName and not re.compile(filter.nodeName).match(name):
+                    if filter.nodeName and not re.compile(filter.nodeName).match(
+                        node.getName()
+                    ):
                         continue
                     if filter.ip and filter.ip not in map(
                         lambda x: x.getAddress(), node.getInterfaces()
@@ -287,10 +198,105 @@ fi"
                     os.path.join(
                         self.__ca_store.getStorePath(), ".step/certs/root_ca.crt"
                     ),
-                    "/usr/local/share/ca-certificates/SEEDEMU_Internal_Root_CA.crt",
+                    f"/usr/local/share/ca-certificates/SEEDEMU_Internal_Root_CA_{id}.crt",
                 )
                 node.appendStartCommand("update-ca-certificates")
-                all_nodes[node] = True
+                all_nodes_dict[node] = True
+
+    def install(self, node: Node):
+        """!
+        @brief Install the CA Server on the node.
+        """
+        node.addSoftware("ca-certificates")
+        node.addBuildCommand(
+            f"\
+if uname -m | grep x86_64 > /dev/null; then \
+curl -O -L https://github.com/smallstep/certificates/releases/download/v{self._step_version}/step-ca_{self._step_version}_amd64.deb && \
+apt install -y ./step-ca_{self._step_version}_amd64.deb; \
+else \
+curl -O -L https://github.com/smallstep/certificates/releases/download/v{self._step_version}/step-ca_{self._step_version}_arm64.deb && \
+apt install -y ./step-ca_{self._step_version}_arm64.deb; \
+fi"
+        )
+        self.__caDir = self.__ca_store.getStorePath()
+        for root, _, files in os.walk(self.__caDir):
+            for file in files:
+                node.importFile(
+                    os.path.join(root, file),
+                    os.path.join(
+                        "/root",
+                        os.path.relpath(os.path.join(root, file), self.__caDir),
+                    ),
+                )
+        node.appendStartCommand(
+            f"cp $(step path)/certs/root_ca.crt /usr/local/share/ca-certificates/SEEDEMU_Internal_Root_CA_{self.__id}.crt && \
+update-ca-certificates"
+        )
+        node.appendStartCommand(
+            f"jq '.authority.claims.defaultTLSCertDuration |= \"{self.__duration}\"' $(step path)/config/ca.json > $(step path)/config/ca.json.tmp && mv $(step path)/config/ca.json.tmp $(step path)/config/ca.json"
+        )
+        node.appendStartCommand(
+            "step-ca --password-file /root/password.txt $(step path)/config/ca.json > /var/step-ca.log 2> /var/step-ca.log",
+            fork=True,
+        )
+
+
+class CAService(Service):
+    """!
+    @brief The Certificate Authority (CA) service.
+
+    This service helps setting up a Certificate Authority (CA). It works by
+    generating a self-signed root certificate and then signing the server
+    certificate with the root certificate.
+    """
+
+    def __init__(self):
+        """!
+        @brief create a new CA service which will setup the PKI infrastructure.
+
+        @param caStore The RootCAStore object.
+        """
+        super().__init__()
+        self.addDependency("Routing", False, False)
+        self.addDependency("DomainNameService", False, True)
+        self.addDependency("EtcHost", False, True)
+        self._caServers: List[CAServer] = []
+        self._step_version = self._preset_step_version()
+
+    @classmethod
+    def _preset_step_version(cls):
+        return "0.26.1"
+
+    def getName(self):
+        return "CertificateAuthority"
+
+    def _createServer(self) -> Server:
+        server = CAServer(self._step_version)
+        self._caServers.append(server)
+        return server
+
+    def configure(self, emulator: Emulator):
+        super().configure(emulator)
+        all_nodes_items = emulator.getRegistry().getAll().items()
+        all_nodes: List[Node] = []
+        for (_, type, _), obj in all_nodes_items:
+            if type not in ["rs", "rnode", "hnode", "csnode"]:
+                continue
+            all_nodes.append(obj)
+
+        for node in all_nodes:
+            node.addBuildCommand(
+                f"\
+if uname -m | grep x86_64 > /dev/null; then \
+curl -O -L https://github.com/smallstep/cli/releases/download/v{self._step_version}/step-cli_{self._step_version}_amd64.deb && \
+apt install -y ./step-cli_{self._step_version}_amd64.deb; \
+else \
+curl -O -L https://github.com/smallstep/cli/releases/download/v{self._step_version}/step-cli_{self._step_version}_arm64.deb && \
+apt install -y ./step-cli_{self._step_version}_arm64.deb; \
+fi"
+            )
+        for id, caServer in enumerate(self._caServers):
+            caServer._serverConfigure(id, all_nodes)
 
 
 @contextmanager
@@ -334,10 +340,12 @@ class RootCAStore:
         self.__initialized = False
         self.__pendingRootCertAndKey = None
         with cd(self.__caDir):
-            self.__container = BuildtimeDockerImage(f"smallstep/step-cli:{CAService._step_version()}").container()
+            self.__container = BuildtimeDockerImage(
+                f"smallstep/step-cli:{CAService._preset_step_version()}"
+            ).container()
             self.__container.user(f"{os.getuid()}:{os.getuid()}").mountVolume(
-                self.__caDir, "/tmp"
-            ).env("STEPPATH", "/tmp/.step").entrypoint("step")
+                self.__caDir, "/root"
+            ).env("STEPPATH", "/root/.step").entrypoint("step")
 
     def getStorePath(self) -> str:
         """!
@@ -386,7 +394,7 @@ class RootCAStore:
     def initialize(self):
         """!
         @brief Initialize the CA store.
-        User can either call it manually or let the CA service to call it.
+        User can either call it manually or let the CA server to call it.
         """
         if self.__initialized:
             return
@@ -395,11 +403,14 @@ class RootCAStore:
                 f.write(self.__password)
             initialize_command = "ca init"
             if self.__pendingRootCertAndKey:
-                initialize_command += " --root /tmp/root_ca.crt --key /tmp/root_ca_key"
+                initialize_command += (
+                    " --root /root/root_ca.crt --key /root/root_ca_key"
+                )
             initialize_command += f' --deployment-type "standalone" --name "SEEDEMU Internal" \
 --dns "{self._caDomain}" --address ":443" --provisioner "admin" --with-ca-url "https://{self._caDomain}" \
---password-file /tmp/password.txt --provisioner-password-file /tmp/password.txt --acme'
+--password-file /root/password.txt --provisioner-password-file /root/password.txt --acme'
             self.__container.run(initialize_command)
+
         self.__initialized = True
 
     def save(self, path: str):

@@ -127,7 +127,9 @@ with open('./deployed_contracts/link_token_address.txt', 'w') as address_file:
 with open('./deployed_contracts/sender_account.txt', 'w') as account_file:
 	account_file.write(f"Address: {{account_address}}\\nPrivate Key: {{private_key}}")
 '''
-    
+
+LinkTokenDeploymentTemplate['link_token_name'] = 'link_token_contract'
+
 LinkTokenDeploymentTemplate['link_token_abi'] = """\
 [
 	{

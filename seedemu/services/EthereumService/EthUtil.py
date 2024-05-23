@@ -13,17 +13,16 @@ class Genesis():
     @brief Genesis manage class
     """
 
-    __genesis:dict
-    __consensusMechanism:ConsensusMechanism
-    
+    _genesis:dict
+    _consensusMechanism:ConsensusMechanism
+
     def __init__(self, consensus:ConsensusMechanism):
         from web3 import Web3
-        self.__Web3 = Web3
-        self.__consensusMechanism = consensus
-        self.__genesis = json.loads(GenesisFileTemplates[self.__consensusMechanism.value])
-        self.__genesis["timestamp"] = hex(int((time())))
+        self._Web3 = Web3
+        self._consensusMechanism = consensus
+        self._genesis = json.loads(GenesisFileTemplates[self._consensusMechanism.value])
+        self._genesis["timestamp"] = hex(int((time())))
         
-
 
     def setGenesis(self, customGenesis:str):
         """!
@@ -33,7 +32,7 @@ class Genesis():
 
         @returns self, for chaining calls.
         """
-        self.__genesis = json.loads(customGenesis)
+        self._genesis = json.loads(customGenesis)
 
         return self
 
@@ -43,7 +42,23 @@ class Genesis():
         
         returns genesis.
         """
-        return json.dumps(self.__genesis)
+        return json.dumps(self._genesis)
+
+    def addCode(self, address: str, code: str) -> Genesis:
+        """!
+        @brief add code to genesis file.
+
+        @param address address to add code.
+        @param code code to add.
+
+        @returns self, for chaining calls.
+        """
+        if self._genesis["alloc"][address[2:]] is not None:
+            self._genesis["alloc"][address[2:]]["code"] = code
+        else:
+            self._genesis["alloc"][address[2:]] = {"code": code}
+
+        return self
 
     def addAccounts(self, accounts:List[AccountStructure]) -> Genesis:
         """!
@@ -58,7 +73,7 @@ class Genesis():
             balance = account.balance
 
             assert balance >= 0, "Genesis::addAccounts: balance cannot have a negative value. Requested Balance Value : {}".format(account.getBalance())
-            self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
+            self._genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
 
         return self
 
@@ -74,8 +89,8 @@ class Genesis():
         """
 
         assert balance >= 0, "Genesis::allocateBalance: balance cannot have a negative value. Requested Balance Value : {}".format(balance)
-        checksum_address = self.__Web3.toChecksumAddress(address)
-        self.__genesis["alloc"][checksum_address[2:]] = {"balance":"{}".format(balance)}
+        checksum_address = self._Web3.toChecksumAddress(address)
+        self._genesis["alloc"][checksum_address[2:]] = {"balance":"{}".format(balance)}
 
         return self
 
@@ -92,14 +107,14 @@ class Genesis():
         @returns self, for chaining API calls. 
         """
 
-        assert self.__consensusMechanism == ConsensusMechanism.POA, 'setSigner method supported only in POA consensus.'
+        assert self._consensusMechanism == ConsensusMechanism.POA, 'setSigner method supported only in POA consensus.'
 
         signerAddresses = ''
 
         for account in accounts:
             signerAddresses = signerAddresses + account.address[2:]
-        
-        self.__genesis["extraData"] = GenesisFileTemplates['POA_extra_data'].format(signer_addresses=signerAddresses)
+
+        self._genesis["extraData"] = GenesisFileTemplates['POA_extra_data'].format(signer_addresses=signerAddresses)
 
         return self
 
@@ -112,7 +127,7 @@ class Genesis():
         @returns self, for chaining API calls
         """
 
-        self.__genesis["gasLimit"] = hex(gasLimit) 
+        self._genesis["gasLimit"] = hex(gasLimit) 
 
         return self
 
@@ -123,7 +138,7 @@ class Genesis():
         @returns self, for chaining API calls
         """
 
-        self.__genesis["config"]["chainId"] = chainId
+        self._genesis["config"]["chainId"] = chainId
 
         return self
 
@@ -255,7 +270,7 @@ class EthAccount():
         @brief Log to stderr.
         """
         print("==== EthAccount: {}".format(message), file=stderr)
-        
+
 
 class SmartContract():
 

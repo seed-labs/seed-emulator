@@ -6,22 +6,20 @@ from .traffic_generator import TrafficGenerator
 
 class IperfReceiver(TrafficReceiver):
 
-    def install(self, node: Node):
+    def install_softwares(self, node: Node):
         """!
-        @brief Install the service.
+        @brief Install necessary softwares.
         """
-        super().install(node)
         node.addSoftware("iperf3")
         node.appendStartCommand("iperf3 -s -D --logfile " + self.log_file)
 
 
 class IperfGenerator(TrafficGenerator):
 
-    def install(self, node: Node):
+    def install_softwares(self, node: Node):
         """!
-        @brief Install the service.
+        @brief Install necessary softwares.
         """
-        super().install(node)
         node.addSoftware("iperf3")
 
         cmdline = f"iperf3 -c $client --logfile {self.log_file} -t {self.duration} -b {self.rate} "
@@ -36,5 +34,3 @@ class IperfGenerator(TrafficGenerator):
         node.appendStartCommand("chmod +x /root/traffic_generator_iperf3.sh")
         self.start_scripts.append("/root/traffic_generator_iperf3.sh &")
 
-        if self.auto_start:
-            self.start(node)

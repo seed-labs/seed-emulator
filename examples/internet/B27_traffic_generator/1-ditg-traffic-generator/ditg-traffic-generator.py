@@ -22,15 +22,16 @@ def run(dumpfile=None):
     etc_hosts = EtcHosts()
 
     traffic_service = TrafficService()
-    traffic_service.install("ditg-receiver", TrafficServiceType.DITG_RECEIVER)
+    traffic_service.install("ditg-receiver-1", TrafficServiceType.DITG_RECEIVER)
+    traffic_service.install("ditg-receiver-2", TrafficServiceType.DITG_RECEIVER)
     traffic_service.install(
         "ditg-generator",
         TrafficServiceType.DITG_GENERATOR,
         log_file="/root/ditg_generator.log",
         protocol="UDP",
-        duration=600,
+        duration=120,
         rate=5000,
-    ).addReceivers(hosts=["ditg-receiver"])
+    ).addReceivers(hosts=["ditg-receiver-1", "ditg-receiver-2"])
 
     # Add hosts to AS-150
     as150 = base.getAutonomousSystem(150)
@@ -38,14 +39,21 @@ def run(dumpfile=None):
 
     # Add hosts to AS-162
     as162 = base.getAutonomousSystem(162)
-    as162.createHost("ditg-receiver").joinNetwork("net0")
+    as162.createHost("ditg-receiver-1").joinNetwork("net0")
+
+    # Add hosts to AS-170
+    as162 = base.getAutonomousSystem(170)
+    as162.createHost("ditg-receiver-2").joinNetwork("net0")
 
     # Binding virtual nodes to physical nodes
     emu.addBinding(
         Binding("ditg-generator", filter=Filter(asn=150, nodeName="ditg-generator"))
     )
     emu.addBinding(
-        Binding("ditg-receiver", filter=Filter(asn=162, nodeName="ditg-receiver"))
+        Binding("ditg-receiver-1", filter=Filter(asn=162, nodeName="ditg-receiver-1"))
+    )
+    emu.addBinding(
+        Binding("ditg-receiver-2", filter=Filter(asn=170, nodeName="ditg-receiver-2"))
     )
 
     # Add the layers
