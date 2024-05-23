@@ -7,6 +7,7 @@ from os import mkdir, path, makedirs, rename
 from seedemu.core import Node, Service, Server, Emulator
 from seedemu.core.enums import NetworkType
 from .FaucetServer import FaucetServer
+from .EthInitAndInfoServer import EthInitAndInfoServer
 from typing import Dict, List
 from sys import stderr
 
@@ -74,7 +75,12 @@ class Blockchain:
         if isinstance(server, FaucetServer):
             self._log('configuring as{}/{} as an faucet node...'.format(node.getAsn(), node.getName()))
             self.addLocalAccount(server.getFaucetAddress(), balance=server.getFaucetBalance())
-            return       
+            return   
+
+        if isinstance(server, EthInitAndInfoServer):
+            self._log('configuring as{}/{} as an eth init and info node...'.format(node.getAsn(), node.getName()))
+            return
+        
         self._log('configuring as{}/{} as an eth node...'.format(node.getAsn(), node.getName()))
 
         ifaces = node.getInterfaces()
@@ -125,10 +131,27 @@ class Blockchain:
             if isinstance(server, FaucetServer):
                 server.__class__ = FaucetServer
                 linked_eth_node_name = server.getLinkedEthNodeName()
-                assert linked_eth_node_name != ''  or server.getRpcUrl() !='' , 'both rpc url and eth node are not set'
-                server.setRpcUrl(f'http://{self.__getIpByVnodeName(emulator, linked_eth_node_name)}:8545')
-                
-            elif self._consensus == ConsensusMechanism.POS and server.isStartMiner():
+                assert linked_eth_node_name != ''  or server.getEthServerUrl() !='' , 'both rpc url and eth node are not set'
+                server.setEthServerUrl(self.__getIpByVnodeName(emulator, linked_eth_node_name))
+                eth_server: EthereumServer = emulator.getServerByVirtualNodeName(linked_eth_node_name)
+                server.setEthServerPort(eth_server.getGethHttpPort())
+
+            elif isinstance(server, EthInitAndInfoServer):
+                server.__class__ = EthInitAndInfoServer
+                linked_eth_node_name = server.getLinkedEthNodeName()
+                assert linked_eth_node_name != '' , 'linked eth node is not set'
+                server.setEthServerUrl(self.__getIpByVnodeName(emulator, linked_eth_node_name))
+                eth_server: EthereumServer = emulator.getServerByVirtualNodeName(linked_eth_node_name)
+                server.setEthServerPort(eth_server.getGethHttpPort())
+
+                linked_faucet_node_name = server.getLinkedFaucetNodeName()
+                assert linked_faucet_node_name != '' , 'linked faucet node is not set'
+                server.setFaucetUrl(self.__getIpByVnodeName(emulator, linked_faucet_node_name))
+                faucet_server:FaucetServer = emulator.getServerByVirtualNodeName(linked_faucet_node_name)
+                server.setFaucetPort(faucet_server.getPort())
+
+            elif self.__consensus == ConsensusMechanism.POS and server.isStartMiner():
+
                 ifaces = node.getInterfaces()
                 assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
                 addr = str(ifaces[0].getAddress())
@@ -439,6 +462,16 @@ class Blockchain:
         """
         return self._target_committee_size
     
+    def createEthInitAndInfoServer(self, vnode:str, port:int, linked_eth_node:str, linked_faucet_node:str):
+        """!
+        @brief Create a EthInitAndInfo Server that can deploy contract and runs webserver to provide contract address info.
+
+        @returns self, for chaining calls
+        """
+        eth = self.__eth_service
+        self.__pending_targets.append(vnode)
+        return eth.installEthInitAndInfoServer(vnode, self, port, linked_eth_node, linked_faucet_node)
+    
     def createFaucetServer(self, vnode:str, port:int, linked_eth_node:str, balance=1000, max_fund_amount=10):
         """!
         @brief Create a Faucet Server that can fund ethereum accounts using http api.
@@ -454,6 +487,59 @@ class Blockchain:
         self._pending_targets.append(vnode)
         return eth.installFaucet(vnode, self, linked_eth_node, port, balance, max_fund_amount)
     
+    def getFaucetServerInfo(self) -> List[Dict]:
+        faucetInfo = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, FaucetServer):
+                info = {}
+                info['name'] = key
+                info['port'] = value.getPort()
+                faucetInfo.append(info)
+        return faucetInfo
+
+    def getFaucetServerNames(self) -> List[str]:
+        faucetServerNames = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, FaucetServer):
+                faucetServerNames.append(key)
+        return faucetServerNames
+    
+    def getEthServerNames(self) -> List[str]:
+        ethServerNames = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, EthereumServer):
+                ethServerNames.append(key)
+        return ethServerNames
+    
+    def getEthServerInfo(self) -> List[Dict]:
+        ethInfo = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, EthereumServer):
+                info = {}
+                info['name'] = key
+                info['geth_http_port'] = value.getGethHttpPort()
+                info['geth_ws_port'] = value.getGethWsPort()
+                ethInfo.append(info)
+        return ethInfo
+    
+    def getEthInitInfoServerNames(self) -> List[str]:
+        ethInitInfoServerNames = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, EthInitAndInfoServer):
+                ethInitInfoServerNames.append(key)
+        return ethInitInfoServerNames
+    
+    def getEthInitInfoServerInfo(self) -> List[Dict]:
+        ethInitInfo = []
+        for key, value in self.__eth_service.getPendingTargets().items():
+            if key in self.__pending_targets and isinstance(value, EthInitAndInfoServer):
+                info = {}
+                info['name'] = key
+                info['port'] = value.getPort()
+                ethInitInfo.append(info)
+        return ethInitInfo
+
+
     def _log(self, message: str) -> None:
         """!
         @brief Log to stderr.
@@ -543,6 +629,8 @@ class EthereumService(Service):
             server.install(node, self)
         elif isinstance(server, FaucetServer):
             server.install(node)
+        elif isinstance(server, EthInitAndInfoServer):
+            server.install(node)
 
     def _createServer(self, blockchain: Blockchain = None) -> Server:
         self.__serial += 1
@@ -557,6 +645,9 @@ class EthereumService(Service):
         
     def _createFaucetServer(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int, max_fund_amount:int) -> FaucetServer:
         return FaucetServer(blockchain, linked_eth_node, port, balance, max_fund_amount)
+
+    def _createEthInitAndInfoServer(self, blockchain:Blockchain, port:int, linked_eth_node:str, linked_faucet_node:str) -> EthInitAndInfoServer:
+        return EthInitAndInfoServer(blockchain, port, linked_eth_node, linked_faucet_node)
 
     def installByBlockchain(self, vnode: str, blockchain: Blockchain) -> EthereumServer:
         """!
@@ -575,8 +666,6 @@ class EthereumService(Service):
 
         return self._pending_targets[vnode]
 
-        
-
     def installFaucet(self, vnode:str, blockchain:Blockchain, linked_eth_node:str, port:int=80, balance:int=1000, max_fund_amount:int=10) -> FaucetServer:
         """!
         @brief Install the server on a node identified by given name.
@@ -587,7 +676,36 @@ class EthereumService(Service):
         self._pending_targets[vnode] = s
 
         return self._pending_targets[vnode]
+    
+    def installEthInitAndInfoServer(self, vnode:str, blockchain:Blockchain, port:int, linked_eth_node:str, linked_faucet_node:str):
+        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
 
+        s = self._createEthInitAndInfoServer(blockchain, port, linked_eth_node, linked_faucet_node)
+        self._pending_targets[vnode] = s
+        
+        return self._pending_targets[vnode]
+
+    def getBlockchainNames(self) -> List[str]:
+        """!
+        @brief Get installed blockchain names.
+
+        @returns a list of blockchain name
+        """
+        blockchainNames = [chainName for chainName in self.__blockchains.keys()]
+        return blockchainNames
+    
+    def getBlockchainByName(self, blockchainName) -> Blockchain:
+        """!
+        @brief get Blockchain object by its name
+
+        @returns a blockchain object
+        """
+        return self.__blockchains[blockchainName]
+    
+    
+        
+
+    
     def createBlockchain(self, chainName:str, consensus: ConsensusMechanism, chainId: int = -1):
         """!
         @brief Create an instance of Blockchain class which is a sub-layer of the EthereumService.
