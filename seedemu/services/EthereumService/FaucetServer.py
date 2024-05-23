@@ -16,7 +16,8 @@ class FaucetServer(Server):
     __blockchain:Blockchain
     __port: int
     __balance: int
-    __rpc_url: str
+    __eth_server_url: str
+    __eth_server_port: int
     __linked_eth_node:str
     __chain_id: int
     __consensus: ConsensusMechanism
@@ -35,7 +36,7 @@ class FaucetServer(Server):
         self.__account = self.__Account.from_key('0xa9aec7f51b6b872d86676d4e5facf4ddf6850745af133b647781d008894fa3aa')
         self.__balance = balance
         self.__balance_unit = EthUnit.ETHER
-        self.__rpc_url = ''
+        self.__eth_server_url = ''
         self.__linked_eth_node = linked_eth_node
         self.__chain_id = blockchain.getChainId()
         self.__fundlist = []
@@ -101,13 +102,24 @@ class FaucetServer(Server):
         self.__port = port
 
         return self
+    
+    def setLinkedEthNode(self, vnodeName:str):
+        self.__linked_eth_node = vnodeName
+        return self
 
-    def setRpcUrl(self, url):
-        self.__rpc_url = url
+    def setEthServerUrl(self, url:str):
+        self.__eth_server_url = url
         return self
     
-    def getRpcUrl(self):
-        return self.__rpc_url
+    def getEthServerUrl(self):
+        return self.__eth_server_url
+    
+    def setEthServerPort(self, port:int):
+        self.__eth_server_port = port
+        return self
+    
+    def getEthServerPort(self):
+        return self.__eth_server_port
         
     def getLinkedEthNodeName(self) -> str:
         return self.__linked_eth_node
@@ -120,6 +132,9 @@ class FaucetServer(Server):
     
     def getFaucetBalance(self) -> int:
         return self.__balance
+    
+    def getPort(self) -> int:
+        return self.__port
     
     def setFundMaxAttempts(self, attempts:int) -> FaucetServer:
         self.__max_fund_attempts = attempts
@@ -137,7 +152,8 @@ class FaucetServer(Server):
         # node.setFile('/var/www/html/index.html', self.__index.format(asn = node.getAsn(), nodeName = node.getName()))
         node.setFile('/app.py', FaucetServerFileTemplates['faucet_server'].format(max_fund_amount=self.__max_fund_amount,
                                                                                   chain_id=self.__chain_id,
-                                                                                  rpc_url = self.__rpc_url, 
+                                                                                  eth_server_url = self.__eth_server_url, 
+                                                                                  eth_server_http_port = self.__eth_server_port,
                                                                                   consensus= self.__consensus.value,
                                                                                   account_address = self.__account.address, 
                                                                                   account_key=self.__account.privateKey.hex(),

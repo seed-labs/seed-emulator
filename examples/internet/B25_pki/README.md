@@ -83,11 +83,11 @@ After creating the Root CA store, we can create a PKI infrastructure.
 
 ```python
 from seedemu.services import CAService
-ca = CAService(caStore)
-ca.setCertDuration("2160h")  # Set the expiration date 
-ca.install('ca-vnode')       # Create a node for CA
-ca.installCACert()           # Install the root CA certficate to all nodes
-# ca.installCACert(Filter(asn=160))  
+ca = CAService()
+caServer: CAServer = ca.install('ca-vnode')  # Create a CA server
+caServer.setCertDuration("2160h")  # Set the expiration date 
+caServer.installCACert()           # Install the root CA certficate to all nodes
+# caServer.installCACert(Filter(asn=160))  
 emu.addLayer(ca)
 ```
 
@@ -101,13 +101,13 @@ issue certificates. The generated root CA certificate and private key
 will be copied to this node, to the corresponding sub-folders inside `/root/.step/`.
 
 We also need to copy all the root CA certificates to all the nodes.
-This is done via `ca.installCACert()`, which by default installs the Root CA certificate to all the nodes in the emulator. If we only want to install the certificate to specific nodes,
+This is done via `caServer.installCACert()`, which by default installs the Root CA certificate to all the nodes in the emulator. If we only want to install the certificate to specific nodes,
 we can use pass a `Filter` argument to this call. 
 
 It should be noted that since the actual filter logic is implemented inside the class that uses the filter,
 not inside the `Filter` class itself, the `Filter` object might perform differently
 in the `CAService` than in other places.
-For example, the `allowBound` filter is not supported in the `CAService`.
+For example, the `allowBound` filter is not supported in the `CAServer`.
 Moreover, inside the `CAService`, the prefix filter is implemented in a portable way that
 supports both IPv4 and IPv6 via IPv4-mapped IPv6 addresses. This might not be the case in other places. 
 
@@ -123,7 +123,7 @@ it will request a certificate from the specified CA server, and use it to serve 
 ```python
 webServer: WebServer = web.install('web-vnode')
 webServer.setServerNames(['example32.com'])
-webServer.useCAService(ca).enableHTTPS()
+webServer.setCAServer(caServer).enableHTTPS()
 ```
 
 Server names are required for the web server to request a certificate from the CA. The ACME client will also use the server names to determine which nginx configuration to use.

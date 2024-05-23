@@ -1,50 +1,70 @@
+# Faucet Server
 
-# Using FaucetService Class
-
-This example demonstrates how to use the FaucetService class. The FaucetService class allows you to create a faucet server that receives HTTP requests and funds a specified amount to a given address. By following this documentation, you will learn how to build a FaucetService and how to interact with it.
+Before sending a transaction to the blockchain, the user's account needs
+to have some fund. In most test nets, a faucet server is provided to
+fund user's accounts after receiving requests. We have implemented
+such a faucet server in our emulator. This example demonstrates how to use it. 
 
 ## Table of Content
 
-- [Build FaucetService](#Build)
-- [Fund account with static method](#1-static-method)
-- [Fund account with curl](#2-dynamic-method---curl)
-- [Advanced Fund account for Developer](#3-dynamic-method---advanced-version-for-developer-python-script)
+- [Create a faucet server](#create-faucet-server)
+- [Fund accounts during the build time](#fund-account-build-time)
+- [Fund accounts during the run time](#fund-account-run-time)
+- [Advanced fund account for Developer](#fund-account-advanced)
 
 
-## Build
-### Create FaucetServer
-When create a faucet server you can specify 4 parameters: `vnode`, `port`, `linked_eth_node`, and `balance`.
-- `vnode`: virtual node name of a created faucet server.
-- `port`: a port number of the faucet server
-- `linked_eth_node`: faucet server require an eth node to link. Set this by a vnode name of an eth node.
-                    (Please make sure the eth node has enabled geth http connection)
-- `balance`: initial balance of faucet account (ETH)
+<a id="create-faucet-server"></a>
+## Create Faucet Server
+
+We first need to add a faucet server to a blockchain using the `createFaucetServer` method.
+We can specify 4 parameters: `vnode`, `port`, `linked_eth_node`, and `balance`.
+- `vnode`: the virtual node name of the faucet server.
+- `port`: a port number, used by the faucet server to set up a web server.
+- `linked_eth_node`: the faucet server needs to link to an eth node, so it can
+  sends out transactions to the blockchain. We just need to provide the name
+  of an existing eth node, but we need to make sure that the eth node
+  has enabled the http connection (otherwise, it cannot accept external requests). 
+- `balance`: set the initial balance (ETH) of the account used by the faucet server.
+  This account will be created during the build time and be added to the genesis block.
 
 ```python
-e5 = blockchain1.createNode("poa-eth5").enableGethHttp()
+e5 = blockchain.createNode("poa-eth5").enableGethHttp()
 
 # Faucet Service
-blockchain1:Blockchain
-# Make sure that eth5 node has enabled geth.
-faucet:FaucetServer = blockchain1.createFaucetServer(vnode='faucet', 
-                                                     port=80, 
-                                                     linked_eth_node='poa-eth5',
-                                                     balance=1000)
+blockchain:Blockchain
+faucet:FaucetServer = blockchain.createFaucetServer(
+           vnode='faucet', 
+           port=80, 
+           linked_eth_node='poa-eth5',
+           balance=1000)
 ```
 
-## Fund account
-### (1) Static Method
-If you know the account address at the build stage, you can fund the account using `FaucetServer::fund` method
+
+## Fund Accounts Using Faucet
+
+<a id="fund-account-build-time"></a>
+### (1) Fund accounts during the build time
+
+During the emulator build time, if we already know the account address,
+we fund the account directly at the build time.
 
 ```python
 faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
 ```
 
-### (2) Dynamic Method - Curl
-In the case you will get to know the account address after running up the container, you can use http api to fund an account. 
-Data can be conveyed in two ways: form and json.
+<a id="fund-account-run-time"></a>
+### (2) Fund accounts during the run time
+
+Very often, we do not know the account addresses during the build time, because
+the accounts are created during the run time. In this case, during the run
+time, the user can send a HTTP request to the faucet server to ask
+the faucet server to fund a specified account. Data in the request
+can be conveyed in two ways: form and json. Here are the examples
+using `curl` to send HTTP requests to the faucet server (we can
+do this from any host). 
+
 ```
-curl -X POST -d ‘address=0x72943017a1fa5f255fc0f06625aec22319fcd5b3&amount=2’ http://10.154.0.71:80/fundme 
+curl -X POST -d "address=0x72943017a1fa5f255fc0f06625aec22319fcd5b3&amount=2" http://10.154.0.71:80/fundme 
 ```
 
 ```
@@ -54,15 +74,21 @@ curl -X POST -H "Content-Type: application/json" -d '{
 }' http://10.154.0.71:80/fundme
 ```
 
-### (3) Dynamic Method - Advanced Version for Developer (python script)
-`FaucetUserService` is an example service utilize the faucetServer.
-If you are creating a service class that creates account dynamically (after running up the container)
-and you want to fund the account, you can refer the `FaucetUserService` to implement your Service class.
 
-#### Build FaucetUserService
-The following code shows how to write emulator build code to create FaucetUserServer.
+## Fund Accounts Using Python
 
-To get the faucetServer url, we need to specify the vnode name of faucet server and port number using `FaucetUserService::setFaucetServerInfo(vnode:str, port:int)` method.
+If you want to create a service class that creates Ethereum accounts
+dynamically (i.e., during the emulator run time),
+you may want to fund the accounts in your service class. 
+This `FaucetUserService` example shows you how to do that.
+
+In this manual, we show how to use our `FaucetUserService`.
+Detailed instructions on how this service is implemented can be found
+in our [developer manual](../../../docs/developer_manual/blockchain/faucet-user-service.md)
+
+To use the faucet, we need to specify the vnode name of the faucet server and the
+port number. The `FaucetUserService` will use this information to set up
+the script to interact with the faucet server. 
 
 ```python
 faucetUserService = FaucetUserService()
@@ -71,159 +97,17 @@ faucetUserService.setFaucetServerInfo(vnode = 'faucet', port=80)
 emu.addBinding(Binding('faucetUser', filter=Filter(asn=164, nodeName='host_0')))
 ```
 
-#### Details on FaucetUserService
-
-##### Fund Script Requirements: 
-1) Check if the faucet server is up
-2) Send request api with an account address and an amount value
+In the example above, we hardcoded the faucet server's name and port number.
+To make code more portable, we can get the faucet server information from
+the blockchain service. 
 
 ```python
-#!/bin/env python3
-
-import time
-import requests
-import json
-from eth_account import Account
-import logging
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Check if the faucet server is running for 600 seconds
-timeout = 600
-start_time = time.time()
-while True:
-    try:
-        response = requests.get("{faucet_url}")
-        if response.status_code == 200:
-            break
-        time.sleep(10)
-        if time.time() - start_time > timeout:
-            logging.info("faucet server connection failed: 600 seconds exhausted.")
-            exit()
-    except Exception as e:
-        pass
-
-def send_fundme_request(account_address):
-	data = {{'address': account_address, 'amount': 10}}
-	logging.info(data)
-	request_url = "{faucet_fund_url}"
-	try:
-		response = requests.post(request_url, headers={{"Content-Type": "application/json"}}, data=json.dumps(data))
-		logging.info(response)
-		if response.status_code == 200:
-			api_response = response.json()
-			message = api_response['message']
-			if message:
-				print(f"Success: {{message}}")
-			else:
-				logging.error("Funds request was successful but the response format is unexpected.")
-		else:
-			api_response = response.json()
-			message = api_response['message']
-			logging.error(f"Failed to request funds from faucet server. Status code: {{response.status_code}} Message: {{message}}")
-			# Send another request
-			logging.info("Sending another request to faucet server.")
-			send_fundme_request(account_address)
-	except Exception as e:
-		logging.error(f"An error occurred: {{str(e)}}")
-		exit()
-
-# Create an account
-user_account = Account.create()
-account_address = user_account.address
-
-# Send /fundme request to faucet server
-send_fundme_request(account_address)
-```
-##### Service Requirements:
-- Install python3 python3-pip package
-- Install required python packages (eth_account and requests)
-- Set fund script and run
-
-```python
-def install(self, node: Node):
-    """!
-    @brief Install the service.
-    """
-    node.appendClassName("FaucetUserService")
-    #Install python3 python3-pip package
-    node.addSoftware('python3 python3-pip')
-    #Install required python packages (eth_account and requests)
-    node.addBuildCommand('pip3 install eth_account==0.5.9 requests')
-    #Set fund script and run
-    node.setFile('/fund.py', FUND_SCRIPT.format(faucet_url=self.__faucet_util.getFacuetUrl(),
-                                                faucet_fund_url=self.__faucet_util.getFaucetFundUrl()))
-    node.appendStartCommand('chmod +x /fund.py')
-    node.appendStartCommand('/fund.py')
+faucet_info = blockchain.getFaucetServerInfo()  # returns a list of dictionary
+faucetUserService.setFaucetServerInfo(faucet_info[0]['name'], faucet_info[0]['port'])
 ```
 
-##### FaucetUtil Requirements:
-In the FaucetUserService, it utilize FaucetUtil class to get the url of the Faucet Server.
-To initialize FaucetUserService, we need to specify the vnode name of faucet server and port number.
-Those information are set using `FaucetUserService::setFaucetServerInfo(vnode:str, port:int)` method.
-
-```
-faucetUserService.setFaucetServerInfo(vnode = 'faucet', port=80)
-```
-
-Once the emulator is rendered, a method call flow is as follow:
-`FaucetUserService::configure()` -> `FaucetUserServer::setFaucetServerInfo()`
-                                 -> `FaucetUserServer::configure()`
-                                 -> `FaucetUtil::configure()`
-
-Those information will be used to configure FaucetUtil instance inside the method `FaucetUserServer::configure` according to the method call flow above.
-
-If you are creating your own Service class utilizing faucet Server, please make sure to follow these code and flow.
-
-```python
-class FaucetUserServer:
-    ...
-    def setFaucetServerInfo(self, vnode: str, port = 80):
-        """
-        @brief set account from key string.
-        
-        @param keyString key string.
-
-        @param isEncrypted indicates if the keyString is encrypted or not.
-
-        @param password password of the key.
-
-        @returns self, for chaining API calls.
-        """
-        
-        self.__faucet_vnode_name = vnode
-        self.__faucet_port = port
-        
-    def configure(self, emulator:Emulator):
-        self.__faucet_util.setFaucetServerInfo(vnode=self.__faucet_vnode_name, port=self.__faucet_port)
-        self.__faucet_util.configure(emulator)
-    ...
-
-class FaucetUserService:
-    ...
-    def setFaucetServerInfo(self, vnode: str, port = 80):
-        """
-        @brief set account from key string.
-        
-        @param keyString key string.
-
-        @param isEncrypted indicates if the keyString is encrypted or not.
-
-        @param password password of the key.
-
-        @returns self, for chaining API calls.
-        """
-        
-        self.__faucet_vnode_name = vnode
-        self.__faucet_port = port
-    
-    def configure(self, emulator: Emulator):
-        super().configure(emulator)
-
-        for (server, node) in self.getTargets():
-            server.setFaucetServerInfo(self.__faucet_vnode_name, self.__faucet_port)
-            server.configure(emulator)
-        return 
-    ...
-```
+After the emulator starts, we can log into the `faucetUser` container.
+We will find a script called `fund.py` in the root folder.
+This script is generated during the build time based on the parameters
+provided. It sends a fund request for a newly created account.
 

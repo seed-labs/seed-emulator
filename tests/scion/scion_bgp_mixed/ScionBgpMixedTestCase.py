@@ -3,8 +3,8 @@
 import time
 import unittest as ut
 
-from tests.scion import ScionTestCase
 
+from tests.scion import ScionTestCase
 
 class ScionBgpMixedTestCase(ScionTestCase):
     """!

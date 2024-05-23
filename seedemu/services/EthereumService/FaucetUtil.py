@@ -205,7 +205,7 @@ if __name__ == '__main__':
     trial = 20
     while trial > 0:
         trial -= 1
-        web3 = connect_to_geth('{rpc_url}', '{consensus}')
+        web3 = connect_to_geth('http://{eth_server_url}:{eth_server_http_port}', '{consensus}')
         if web3 == "":
             time.sleep(10)
         else:

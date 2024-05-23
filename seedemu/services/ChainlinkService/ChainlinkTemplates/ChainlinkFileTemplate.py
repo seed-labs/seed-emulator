@@ -36,7 +36,7 @@ ChainlinkFileTemplate['api'] = """\
 """
 
 ChainlinkFileTemplate['check_init_node'] = """\
-URL="http://{init_node_url}"
+URL="http://{init_node_url}:{init_node_port}/contracts_info?name={contract_name}"
 EXPECTED_STATUS="200"
 while true; do
     STATUS=$(curl -Is "$URL" | head -n 1 | awk '{{print $2}}')
@@ -52,7 +52,7 @@ done
 """
 
 ChainlinkFileTemplate['create_jobs'] = """\
-DIRECTORY="/jobs/"
+DIRECTORY="/chainlink/jobs/"
 ORACLE_ADDRESS_FILE="/deployed_contracts/oracle_contract_address.txt"
 TIMEOUT=1000
 SLEEP_DURATION=10
@@ -88,7 +88,7 @@ if [ ! -d "$DIRECTORY" ]; then
 
     echo "All TOML files have been updated."
 
-chainlink admin login -f /api.txt
+chainlink admin login -f /chainlink/password.txt
 
 if [ ! -d "$DIRECTORY" ]; then
     echo "Error: Directory does not exist."
@@ -173,7 +173,7 @@ if __name__ == '__main__':
 """
 
 ChainlinkFileTemplate['send_flask_request'] = """\
-URL="http://{init_node_url}"
+URL="http://{init_node_url}:{init_node_port}"
 EXPECTED_STATUS="200"
 
 while true; do
@@ -188,9 +188,9 @@ while true; do
     fi
 done
 
-RESPONSE=$(curl -X POST http://{init_node_url}:{flask_server_port}/display_contract_address \\
+RESPONSE=$(curl -X POST http://{init_node_url}:{init_node_port}/register_contract \\
      -H "Content-Type: application/json" \\
-     -d "{{\\"contract_address\\":\\"$(tail -n 1 /deployed_contracts/oracle_contract_address.txt)\\"}}")
+     -d "{{\\"contract_name\\":\\"oracle-{contract_name}\\", \\"contract_address\\":\\"$(tail -n 1 /deployed_contracts/oracle_contract_address.txt)\\"}}")
 
 echo "$RESPONSE"
 """
@@ -200,7 +200,7 @@ ChainlinkFileTemplate['send_get_eth_request'] = """\
 while true; do
     sleep 20
     # Get Ethereum address
-    chainlink admin login -f /api.txt
+    chainlink admin login -f /chainlink/password.txt
     ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
 
     # Check if the address is empty

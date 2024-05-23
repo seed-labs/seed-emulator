@@ -92,7 +92,7 @@ Demonstrates how to install and configure the iperf3 Traffic Generator. iPerf3 i
 
 We can visualize the live traffic generation using the seed emulators' web interface by filtering the traffic with appropriate filters. In our example, iperf traffic generator generats `TCP` traffic. So, we can filter the traffic using the `TCP` filter. Following is the screen recording of the live traffic generation using the seed emulator's web interface.
 
-![iPerf Demo](media/iperf-recording.mov)
+[![iPerf Demo](https://img.youtube.com/vi/tWijqx3WJfQ/0.jpg)](https://www.youtube.com/watch?v=tWijqx3WJfQ)
 
 The traffic generation logs will be stored in the log file you specify when installing the traffic generator. In this example, the logs are in `/root/iperf3_generator.log` file. Following is the screenshot of the iPerf3 traffic generation logs.
 
@@ -106,7 +106,7 @@ generate traffic at network, transport, and application layer. For more informat
 
 We can visualize the live traffic generation using the seed emulators' web interface by filtering the traffic with appropriate filters. In our example, D-ITG traffic generator generats `UDP` traffic. So, we can filter the traffic using the `UDP` filter. Following is the screen recording of the live traffic generation using the seed emulator's web interface.
 
-![D-ITG Demo](media/ditg-recording.mov)
+[![D-ITG Demo](https://img.youtube.com/vi/CeNgkmx8LJo/0.jpg)](https://www.youtube.com/watch?v=CeNgkmx8LJo)
 
 The traffic generation logs will be stored in the log file you specify when installing the traffic generator. In this example, the logs are in `/root/ditg_generator.log` file. Following is the screenshot of the D-ITG traffic generation logs. To view the logs, you need to decode the logs using `ITGDec` utility command which is provided by the D-ITG tool.
 
@@ -120,7 +120,7 @@ For more information, see [Scapy](https://scapy.readthedocs.io/en/latest/) docum
 
 We can visualize the live traffic generation using the seed emulators' web interface by filtering the traffic with appropriate filters. In our example, Scapy traffic generator generats `ICMP` traffic. So, we can filter the traffic using the `ICMP` filter. Following is the screen recording of the live traffic generation using the seed emulator's web interface.
 
-![Scapy Demo](media/scapy-recording.mov)
+[![Scapy Demo](https://img.youtube.com/vi/c_SLp4QUgJY/0.jpg)](https://www.youtube.com/watch?v=c_SLp4QUgJY)
 
 The traffic generation logs will be stored in the log file you specify when installing the traffic generator. For Scapy Generator, there will be one log file for each pair of hosts in the given network. In this example, the prefix of the logs files is `/root/scapy-logs*` . Following are the screenshots of the scapy traffic generation logs.
 
@@ -135,7 +135,8 @@ Demonstrates how to install and configure the Hybrid Traffic Generator. It demos
 
 We can visualize the live traffic generation using the seed emulators' web interface by filtering the traffic with appropriate filters. In our example, Hybrid traffic generator generats both `TCP` and `UDP` traffic. So, we can filter the traffic using the `TCP` and `UDP` filters. Following is the screen recording of the live traffic generation using the seed emulator's web interface.
 
-![Hybrid Demo](media/hybrid-recording.mov)
+
+[![Hybrid Demo](https://img.youtube.com/vi/IrKjQs6IRd8/0.jpg)](https://www.youtube.com/watch?v=IrKjQs6IRd8)
 
 For Hybrid Generator, the logs are in `/root/hybrid_iperf3_generator.log` and `/root/hybrid_ditg_generator.log` files. Following is the screenshot of the hybrid traffic generation logs.
 

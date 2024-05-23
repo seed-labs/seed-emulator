@@ -11,7 +11,7 @@ class TrafficGeneratorTestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        cls.wait_until_all_containers_up(69)
+        cls.wait_until_all_containers_up(67)
         for container in cls.containers:
             if "iperf-receiver-1" in container.name:
                 cls.iperf_receiver_1 = container
@@ -23,10 +23,10 @@ class TrafficGeneratorTestCase(SeedEmuTestCase):
                 cls.ditg_receiver = container
             elif "ditg-generator" in container.name:
                 cls.ditg_generator = container
-            elif "hybrid-receiver" in container.name:
-                cls.hybrid_receiver = container
-            elif "hybrid-generator" in container.name:
-                cls.hybrid_generator = container
+            elif "multi-traffic-receiver" in container.name:
+                cls.multi_traffic_receiver = container
+            elif "multi-traffic-generator" in container.name:
+                cls.multi_traffic_generator = container
             elif "scapy-generator" in container.name:
                 cls.scapy_generator = container
         return
@@ -77,16 +77,16 @@ class TrafficGeneratorTestCase(SeedEmuTestCase):
         exit_code, _ = self.runCommand(self.scapy_generator, "which scapy")
         self.assertTrue(exit_code == 0)
 
-        self.printLog("container : hybrid-receiver")
-        exit_code, _ = self.runCommand(self.hybrid_receiver, "which iperf3")
+        self.printLog("container : multi-traffic-receiver")
+        exit_code, _ = self.runCommand(self.multi_traffic_receiver, "which iperf3")
         self.assertTrue(exit_code == 0)
-        exit_code, _ = self.runCommand(self.hybrid_receiver, "which ITGRecv")
+        exit_code, _ = self.runCommand(self.multi_traffic_receiver, "which ITGRecv")
         self.assertTrue(exit_code == 0)
 
-        self.printLog("container : hybrid-generator")
-        exit_code, _ = self.runCommand(self.hybrid_receiver, "which iperf3")
+        self.printLog("container : multi-traffic-generator")
+        exit_code, _ = self.runCommand(self.multi_traffic_receiver, "which iperf3")
         self.assertTrue(exit_code == 0)
-        exit_code, _ = self.runCommand(self.hybrid_receiver, "which ITGSend")
+        exit_code, _ = self.runCommand(self.multi_traffic_receiver, "which ITGSend")
         self.assertTrue(exit_code == 0)
 
     def test_traffc_targets_file_created(self):
@@ -115,12 +115,12 @@ class TrafficGeneratorTestCase(SeedEmuTestCase):
         self.assertTrue("10.164.0.0/24" in output.decode())
         self.assertTrue("10.170.0.0/24" in output.decode())
 
-        self.printLog("container : hybrid-generator")
+        self.printLog("container : multi-traffic-generator")
         exit_code, output = self.runCommand(
-            self.hybrid_generator, "cat /root/traffic-targets"
+            self.multi_traffic_generator, "cat /root/traffic-targets"
         )
         self.assertTrue(exit_code == 0)
-        self.assertTrue("hybrid-receiver" in output.decode())
+        self.assertTrue("multi-traffic-receiver" in output.decode())
 
     def test_traffic_generator_script_created(self):
         self.printLog("\n-------- traffic generation script creation test --------")
@@ -144,13 +144,14 @@ class TrafficGeneratorTestCase(SeedEmuTestCase):
         )
         self.assertTrue(exit_code == 0)
 
-        self.printLog("container : hybrid-generator")
+
+        self.printLog("container : multi-traffic-generator")
         exit_code, _ = self.runCommand(
-            self.hybrid_generator, "cat /root/traffic_generator_iperf3.sh"
+            self.multi_traffic_generator, "cat /root/traffic_generator_iperf3.sh"
         )
         self.assertTrue(exit_code == 0)
         exit_code, _ = self.runCommand(
-            self.hybrid_generator, "cat /root/traffic_generator_ditg.sh"
+            self.multi_traffic_generator, "cat /root/traffic_generator_ditg.sh"
         )
         self.assertTrue(exit_code == 0)
 
