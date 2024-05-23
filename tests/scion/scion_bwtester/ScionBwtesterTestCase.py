@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import time
-import unittest as 
+import unittest as ut
 from tests.scion import ScionTestCase
 
 class ScionBwtesterTestCase(ScionTestCase):
