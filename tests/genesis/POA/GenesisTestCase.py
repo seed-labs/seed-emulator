@@ -7,7 +7,7 @@ from web3.middleware import geth_poa_middleware
 from seedemu import *
 import time
 import json
-from test import SeedEmuTestCase
+from tests import SeedEmuTestCase
 import requests
 
 
