@@ -1,7 +1,7 @@
 import json
 from typing import List, Tuple, Union
 
-from test.SeedEmuTestCase import SeedEmuTestCase
+from tests.SeedEmuTestCase import SeedEmuTestCase
 
 
 class ScionTestCase(SeedEmuTestCase):

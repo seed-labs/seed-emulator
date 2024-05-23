@@ -9,7 +9,7 @@ from web3.middleware import signing
 from web3.middleware import geth_poa_middleware
 from web3.exceptions import TransactionNotFound
 
-from test import SeedEmuTestCase
+from tests import SeedEmuTestCase
 
 
 class EthereumLayer2TestCase(SeedEmuTestCase):

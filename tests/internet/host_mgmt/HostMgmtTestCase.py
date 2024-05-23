@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 import unittest as ut
-from test import SeedEmuTestCase
+from tests import SeedEmuTestCase
 import re
 
 def get_numbers_from_string(input_string):

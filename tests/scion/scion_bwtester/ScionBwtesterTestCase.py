@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
 import time
-import unittest as ut
-
-from test.scion import ScionTestCase
-
+import unittest as 
+from tests.scion import ScionTestCase
 
 class ScionBwtesterTestCase(ScionTestCase):
     """!

@@ -3,7 +3,7 @@
 
 from typing import Tuple
 import unittest as ut
-from test import SeedEmuTestCase
+from tests import SeedEmuTestCase
 
 
 class TrafficGeneratorTestCase(SeedEmuTestCase):
@@ -143,6 +143,7 @@ class TrafficGeneratorTestCase(SeedEmuTestCase):
             self.scapy_generator, "/root/traffic_generator.py"
         )
         self.assertTrue(exit_code == 0)
+
 
         self.printLog("container : multi-traffic-generator")
         exit_code, _ = self.runCommand(

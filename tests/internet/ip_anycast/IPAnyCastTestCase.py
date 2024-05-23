@@ -4,7 +4,7 @@
 import unittest as ut
 import os
 import time
-from test import SeedEmuTestCase
+from tests import SeedEmuTestCase
 
 
 class IPAnyCastTestCase(SeedEmuTestCase):

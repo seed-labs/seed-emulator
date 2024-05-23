@@ -6,7 +6,7 @@ from .SEEDBlockchain import Wallet
 from web3 import Web3
 from seedemu import *
 import time
-from test import SeedEmuTestCase
+from tests import SeedEmuTestCase
 import requests
 
 

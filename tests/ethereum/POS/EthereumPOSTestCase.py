@@ -7,8 +7,7 @@ from .SEEDBlockchain import Wallet
 from seedemu import *
 import time
 import docker
-from test import SeedEmuTestCase
-
+from tests import SeedEmuTestCase
 class EthereumPOSTestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:

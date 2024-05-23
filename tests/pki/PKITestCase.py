@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 import unittest as ut
-from test import SeedEmuTestCase
+from tests import SeedEmuTestCase
 from typing import List, TYPE_CHECKING
 if TYPE_CHECKING:
     from docker.models.containers import Container
