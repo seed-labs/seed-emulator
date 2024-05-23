@@ -2,7 +2,7 @@ from __future__ import annotations
 from seedemu.core import Node, Service, Server
 from typing import Dict, List
 
-from seedemu.services import CAService
+from .CAService import CAServer
 
 WebServerFileTemplates: Dict[str, str] = {}
 
@@ -75,11 +75,11 @@ class WebServer(Server):
 
         return self
     
-    def useCAService(self, ca: CAService) -> WebServer:
+    def setCAServer(self, ca: CAServer) -> WebServer:
         """!
-        @brief Get certificates from a CA.
+        @brief Get certificates from a particular CA server.
 
-        @param ca CA service.
+        @param ca CA server.
 
         @returns self, for chaining API calls.
         """
