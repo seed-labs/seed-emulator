@@ -39,7 +39,7 @@ The most basic way of getting started with Kubo is to manually install Kubo on a
   5. Add the `KuboService` layer to the emulator.
 
 ### Dynamic Installation
-If you have a large number of nodes that you would like to install Kubo on, you may want to do this more dynamically. This can be done with iteration, and is used in the [Kubo example](../../examples/C05-kubo/README.md).
+If you have a large number of nodes that you would like to install Kubo on, you may want to do this more dynamically. This can be done with iteration, and is used in the [Kubo example](../../examples/internet/B26_ipfs_kubo/README.md).
 
 ## Emulation
 Kubo may be installed on a node within the Emulator, alongside most other components. Once the simulation is running, you can connect through any node running Kubo, and use the Kubo CLI to interact with Kubo (see command reference [here](https://docs.ipfs.tech/reference/kubo/cli/)).
