@@ -32,7 +32,7 @@ def run(dumpfile = None):
     as150 = base.createAutonomousSystem(150)
     as150.createNetwork('net0')
     as150.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
-    for i in range(8):
+    for i in range(9):
         host = as150.createHost('host_{}'.format(i)).joinNetwork('net0')
 
     as151 = base.createAutonomousSystem(151)
@@ -63,6 +63,7 @@ def run(dumpfile = None):
     dns.install('ns-net').addZone('net.')
     dns.install('ns-com').addZone('com.')
     dns.install('ns-seedca-net').addZone('seedCA.net.')
+    dns.install('ns-seedca-com').addZone('seedCA.com.')
     dns.install('ns-example32-com').addZone('example32.com.')
     dns.install('ns-bank32-com').addZone('bank32.com.')
 
@@ -73,6 +74,7 @@ def run(dumpfile = None):
     emu.addBinding(Binding('ns-net', filter=Filter(asn=150), action=Action.FIRST))
     emu.addBinding(Binding('ns-com', filter=Filter(asn=150), action=Action.FIRST))
     emu.addBinding(Binding('ns-seedca-net', filter=Filter(asn=150), action=Action.FIRST))
+    emu.addBinding(Binding('ns-seedca-com', filter=Filter(asn=150), action=Action.FIRST))
     emu.addBinding(Binding('ns-example32-com', filter=Filter(asn=150), action=Action.FIRST))
     emu.addBinding(Binding('ns-bank32-com', filter=Filter(asn=150), action=Action.FIRST))
 

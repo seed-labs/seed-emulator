@@ -56,8 +56,8 @@ class Scion(Layer, Graphable):
     alone do not uniquely identify a SCION AS (see ScionISD layer).
     """
 
-    __links: Dict[Tuple[IA, IA, LinkType], int]
-    __ix_links: Dict[Tuple[int, IA, IA, LinkType], int]
+    __links: Dict[Tuple[IA, IA, str, str, LinkType], int]
+    __ix_links: Dict[Tuple[int, IA, IA, str, str, LinkType], int]
 
     def __init__(self):
         """!
@@ -71,8 +71,9 @@ class Scion(Layer, Graphable):
     def getName(self) -> str:
         return "Scion"
 
+
     def addXcLink(self, a: Union[IA, Tuple[int, int]], b: Union[IA, Tuple[int, int]],
-                  linkType: LinkType, count: int=1) -> 'Scion':
+                  linkType: LinkType, count: int=1, a_router: str="", b_router: str="",) -> 'Scion':
         """!
         @brief Create a direct cross-connect link between to ASes.
 
@@ -80,6 +81,8 @@ class Scion(Layer, Graphable):
         @param b Second AS (ISD and ASN).
         @param linkType Link type from a to b.
         @param count Number of parallel links.
+        @param a_router router of AS a default is ""
+        @param b_router router of AS b default is ""
 
         @throws AssertionError if link already exists or is link to self.
 
@@ -87,15 +90,15 @@ class Scion(Layer, Graphable):
         """
         a, b = IA(*a), IA(*b)
         assert a.asn != b.asn, "Cannot link as{} to itself.".format(a.asn)
-        assert (a, b, linkType) not in self.__links, (
+        assert (a, b, a_router, b_router, linkType) not in self.__links, (
             "Link between as{} and as{} of type {} exists already.".format(a, b, linkType))
 
-        self.__links[(a, b, linkType)] = count
+        self.__links[(a, b, a_router, b_router, linkType)] = count
 
         return self
 
     def addIxLink(self, ix: int, a: Union[IA, Tuple[int, int]], b: Union[IA, Tuple[int, int]],
-                  linkType: LinkType, count: int=1) -> 'Scion':
+                  linkType: LinkType, count: int=1, a_router: str="", b_router: str="") -> 'Scion':
         """!
         @brief Create a private link between two ASes at an IX.
 
@@ -104,6 +107,8 @@ class Scion(Layer, Graphable):
         @param b Second AS (ISD and ASN).
         @param linkType Link type from a to b.
         @param count Number of parallel links.
+        @param a_router router of AS a default is ""
+        @param b_router router of AS b default is ""
 
         @throws AssertionError if link already exists or is link to self.
 
@@ -111,10 +116,10 @@ class Scion(Layer, Graphable):
         """
         a, b = IA(*a), IA(*b)
         assert a.asn != b.asn, "Cannot link as{} to itself.".format(a)
-        assert (a, b, linkType) not in self.__links, (
+        assert (a, b, a_router, b_router, linkType) not in self.__links, (
             "Link between as{} and as{} of type {} at ix{} exists already.".format(a, b, linkType, ix))
 
-        self.__ix_links[(ix, a, b, linkType)] = count
+        self.__ix_links[(ix, a, b, a_router, b_router, linkType)] = count
 
         return self
 
@@ -141,7 +146,7 @@ class Scion(Layer, Graphable):
         reg = emulator.getRegistry()
         scionIsd_layer: ScionIsd = reg.get('seedemu', 'layer', 'ScionIsd')
 
-        for (a, b, rel), count in self.__links.items():
+        for (a, b, a_router, b_router, rel), count in self.__links.items():
             a_shape = 'doublecircle' if scionIsd_layer.isCoreAs(a.isd, a.asn) else 'circle'
             b_shape = 'doublecircle' if scionIsd_layer.isCoreAs(b.isd, b.asn) else 'circle'
 
@@ -166,7 +171,7 @@ class Scion(Layer, Graphable):
                                 'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
                                 style= 'dashed')
 
-        for (ix, a, b, rel), count in self.__ix_links.items():
+        for (ix, a, b, a_router, b_router, rel), count in self.__ix_links.items():
             a_shape = 'doublecircle' if scionIsd_layer.isCoreAs(a.isd, a.asn) else 'circle'
             b_shape = 'doublecircle' if scionIsd_layer.isCoreAs(b.isd, b.asn) else 'circle'
 
@@ -196,16 +201,30 @@ class Scion(Layer, Graphable):
         out += 'ScionLayer:\n'
 
         indent += 4
-        for (ix, a, b, rel), count in self.__ix_links.items():
+        for (ix, a, b, a_router, b_router, rel), count in self.__ix_links.items():
             out += ' ' * indent
-            out += f'IX{ix}: AS{a} -({rel})-> AS{b}'
+            if a_router == "":
+                out += f'IX{ix}: AS{a} -({rel})-> '
+            else:
+                out += f'IX{ix}: AS{a}_{a_router} -({rel})-> '
+            if b_router == "":
+                out += f'AS{b}'
+            else:
+                out += f'AS{b}_{b_router}'
             if count > 1:
                 out += f' ({count} times)'
             out += '\n'
 
-        for (a, b, rel), count in self.__links.items():
+        for (a, b, a_router, b_router, rel), count in self.__links.items():
             out += ' ' * indent
-            out += f'XC: AS{a} -({rel})-> AS{b}'
+            if a_router == "":
+                out += f'XC: AS{a} -({rel})-> '
+            else:
+                out += f'XC: AS{a}_{a_router} -({rel})-> '
+            if b_router == "":
+                out += f'AS{b}'
+            else:
+                out += f'AS{b}_{b_router}'
             if count > 1:
                 out += f' ({count} times)'
             out += '\n'
@@ -215,19 +234,29 @@ class Scion(Layer, Graphable):
     def _configure_links(self, reg: Registry, base_layer: ScionBase) -> None:
         """Configure SCION links with IFIDs, IPs, ports, etc."""
         # cross-connect links
-        for (a, b, rel), count in self.__links.items():
+        for (a, b, a_router, b_router, rel), count in self.__links.items():
             a_reg = ScopedRegistry(str(a.asn), reg)
             b_reg = ScopedRegistry(str(b.asn), reg)
             a_as = base_layer.getAutonomousSystem(a.asn)
             b_as = base_layer.getAutonomousSystem(b.asn)
 
-            try:
-                a_router, b_router = self.__get_xc_routers(a.asn, a_reg, b.asn, b_reg)
-            except AssertionError:
-                assert False, f"cannot find XC to configure link as{a} --> as{b}"
+            if a_router == "" or b_router == "": # if routers are not explicitly specified try to get them
+                try:
+                    a_router, b_router = self.__get_xc_routers(a.asn, a_reg, b.asn, b_reg)
+                except AssertionError:
+                    assert False, f"cannot find XC to configure link as{a} --> as{b}"
+            else: # if routers are explicitly specified, try to get them
+                try:
+                    a_router = a_reg.get('rnode', a_router)
+                except AssertionError:
+                    assert False, f"cannot find router {a_router} in as{a}"
+                try:
+                    b_router = b_reg.get('rnode', b_router)
+                except AssertionError:
+                    assert False, f"cannot find router {b_router} in as{b}"
 
-            a_ifaddr, a_net = a_router.getCrossConnect(b.asn, b_router.getName())
-            b_ifaddr, b_net = b_router.getCrossConnect(a.asn, a_router.getName())
+            a_ifaddr, a_net, _ = a_router.getCrossConnect(b.asn, b_router.getName())
+            b_ifaddr, b_net, _ = b_router.getCrossConnect(a.asn, a_router.getName())
             assert a_net == b_net
             net = reg.get('xc', 'net', a_net)
             a_addr = str(a_ifaddr.ip)
@@ -239,7 +268,7 @@ class Scion(Layer, Graphable):
                                 a_addr, b_addr, net, rel)
 
         # IX links
-        for (ix, a, b, rel), count in self.__ix_links.items():
+        for (ix, a, b, a_router, b_router, rel), count in self.__ix_links.items():
             ix_reg = ScopedRegistry('ix', reg)
             a_reg = ScopedRegistry(str(a.asn), reg)
             b_reg = ScopedRegistry(str(b.asn), reg)
@@ -247,9 +276,14 @@ class Scion(Layer, Graphable):
             b_as = base_layer.getAutonomousSystem(b.asn)
 
             ix_net = ix_reg.get('net', f'ix{ix}')
-            a_routers = a_reg.getByType('rnode')
-            b_routers = b_reg.getByType('rnode')
+            if a_router == "" or b_router == "": # if routers are not explicitly specified get all routers in AS
+                a_routers = a_reg.getByType('rnode')
+                b_routers = b_reg.getByType('rnode')
+            else: # else get the specified routers
+                a_routers = [a_reg.get('rnode', a_router)]
+                b_routers = [b_reg.get('rnode', b_router)]
 
+            # get the routers connected to the IX
             try:
                 a_ixrouter, a_ixif = self.__get_ix_port(a_routers, ix_net)
             except AssertionError:
