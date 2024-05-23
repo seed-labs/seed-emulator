@@ -150,7 +150,7 @@ class Blockchain:
                 faucet_server:FaucetServer = emulator.getServerByVirtualNodeName(linked_faucet_node_name)
                 server.setFaucetPort(faucet_server.getPort())
 
-            elif self.__consensus == ConsensusMechanism.POS and server.isStartMiner():
+            elif self._consensus == ConsensusMechanism.POS and server.isStartMiner():
 
                 ifaces = node.getInterfaces()
                 assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
@@ -468,8 +468,8 @@ class Blockchain:
 
         @returns self, for chaining calls
         """
-        eth = self.__eth_service
-        self.__pending_targets.append(vnode)
+        eth = self._eth_service
+        self._pending_targets.append(vnode)
         return eth.installEthInitAndInfoServer(vnode, self, port, linked_eth_node, linked_faucet_node)
     
     def createFaucetServer(self, vnode:str, port:int, linked_eth_node:str, balance=1000, max_fund_amount=10):
@@ -489,8 +489,8 @@ class Blockchain:
     
     def getFaucetServerInfo(self) -> List[Dict]:
         faucetInfo = []
-        for key, value in self.__eth_service.getPendingTargets().items():
-            if key in self.__pending_targets and isinstance(value, FaucetServer):
+        for key, value in self._eth_service.getPendingTargets().items():
+            if key in self._pending_targets and isinstance(value, FaucetServer):
                 info = {}
                 info['name'] = key
                 info['port'] = value.getPort()
@@ -499,22 +499,22 @@ class Blockchain:
 
     def getFaucetServerNames(self) -> List[str]:
         faucetServerNames = []
-        for key, value in self.__eth_service.getPendingTargets().items():
-            if key in self.__pending_targets and isinstance(value, FaucetServer):
+        for key, value in self._eth_service.getPendingTargets().items():
+            if key in self._pending_targets and isinstance(value, FaucetServer):
                 faucetServerNames.append(key)
         return faucetServerNames
     
     def getEthServerNames(self) -> List[str]:
         ethServerNames = []
-        for key, value in self.__eth_service.getPendingTargets().items():
-            if key in self.__pending_targets and isinstance(value, EthereumServer):
+        for key, value in self._eth_service.getPendingTargets().items():
+            if key in self._pending_targets and isinstance(value, EthereumServer):
                 ethServerNames.append(key)
         return ethServerNames
     
     def getEthServerInfo(self) -> List[Dict]:
         ethInfo = []
-        for key, value in self.__eth_service.getPendingTargets().items():
-            if key in self.__pending_targets and isinstance(value, EthereumServer):
+        for key, value in self._eth_service.getPendingTargets().items():
+            if key in self._pending_targets and isinstance(value, EthereumServer):
                 info = {}
                 info['name'] = key
                 info['geth_http_port'] = value.getGethHttpPort()
@@ -524,15 +524,15 @@ class Blockchain:
     
     def getEthInitInfoServerNames(self) -> List[str]:
         ethInitInfoServerNames = []
-        for key, value in self.__eth_service.getPendingTargets().items():
-            if key in self.__pending_targets and isinstance(value, EthInitAndInfoServer):
+        for key, value in self._eth_service.getPendingTargets().items():
+            if key in self._pending_targets and isinstance(value, EthInitAndInfoServer):
                 ethInitInfoServerNames.append(key)
         return ethInitInfoServerNames
     
     def getEthInitInfoServerInfo(self) -> List[Dict]:
         ethInitInfo = []
-        for key, value in self.__eth_service.getPendingTargets().items():
-            if key in self.__pending_targets and isinstance(value, EthInitAndInfoServer):
+        for key, value in self._eth_service.getPendingTargets().items():
+            if key in self._pending_targets and isinstance(value, EthInitAndInfoServer):
                 info = {}
                 info['name'] = key
                 info['port'] = value.getPort()
