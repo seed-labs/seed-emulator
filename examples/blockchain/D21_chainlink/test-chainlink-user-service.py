@@ -17,9 +17,11 @@ class test_user_contract:
     user_contract_abi: dict
     
     def __init__(self):
-        self.rpc_url = "<RPC_URL>"
-        self.faucet_url = "<FAUCET_URL>"
-        self.user_contract_address = "<USER_CONTRACT_ADDRESS>"
+        # Modify the next three lines based on the actual data
+        self.rpc_url    = "http://10.160.0.72:8545"
+        self.faucet_url = "http://10.160.0.74:80/fundme"
+        self.user_contract_address = "0x7D34979B3D53c29f870180a8F426A4c843b0cF40"
+
         self.web3 = Web3(Web3.HTTPProvider(self.rpc_url))
         self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
         self.test_account = self.web3.eth.account.create()

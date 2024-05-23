@@ -23,15 +23,14 @@ retry_delay = 20
 deployment_queue = Queue()
 deployment_queue.put({{}})
 
-url = "http://{init_node_url}"
+url = "http://{init_node_url}:{init_node_port}/contracts_info?name={contract_name}"
 response = requests.get(url)
-html_content = response.text
-match = re.search(r'<h1>Link Token Contract: (.+?)</h1>', html_content)
+link_address = response.text.strip().replace('"', '')
 
-if match and match.group(1):
-	link_address = Web3.toChecksumAddress(match.group(1))
+if link_address:
+	link_address = Web3.toChecksumAddress(link_address)
 else:
-	logging.error("Failed to extract Link Token contract address from HTML content.")
+	logging.error("Failed to get Link Token contract address.")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
