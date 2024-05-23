@@ -38,6 +38,7 @@ class ScionAutonomousSystem(AutonomousSystem):
     __next_ifid: int                     # Next IFID assigned to a link
     __note: str # optional free form parameter that contains interesting information about AS. This will be included in beacons if it is set
     __generateStaticInfoConfig:  bool
+    __sigs_config: Dict[str, Dict] # data structure to hold configuration for sig nodes
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
@@ -53,7 +54,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__next_ifid = 1
         self.__note = None
         self.__generateStaticInfoConfig = False
-    
+        self.__sigs_config = {}
 
     def registerNodes(self, emulator: Emulator):
         """!
@@ -192,7 +193,19 @@ class ScionAutonomousSystem(AutonomousSystem):
                 "internal_addr": f"{rnode.getLoopbackAddress()}:30042",
                 "interfaces": rnode.getScionInterfaces()
             }
+        
+        # SIGs
+        sigs = {}
+        for name in self.__sigs_config.keys():
+            hostName = self.__sigs_config[name]["node_name"]
+            node = self.getHost(hostName)
+            addr =  node.getInterfaces()[0].getAddress()
+            sigs[name] = {
+                'ctrl_addr': f"{addr}:{self.__sigs_config[name]['ctrl_port']}",
+                'data_addr': f"{addr}:{self.__sigs_config[name]['data_port']}"
+            }
 
+        
         return {
             'attributes': self.getAsAttributes(isd),
             'isd_as': f'{isd}-{self.getAsn()}',
@@ -201,6 +214,7 @@ class ScionAutonomousSystem(AutonomousSystem):
             'discovery_service': control_services,
             'border_routers': border_routers,
             'colibri_service': {},
+            'sigs': sigs,
         }
 
     def createControlService(self, name: str) -> Node:
@@ -231,6 +245,51 @@ class ScionAutonomousSystem(AutonomousSystem):
         @returns Node.
         """
         return self.__control_services[name]
+
+    def _checkPorts(self, ctrl_port: int, data_port: int, probe_port: int, node_name: str) -> bool:
+        for sig_name in self.__sigs_config.keys():
+            if self.__sigs_config[sig_name]["node_name"] == node_name:
+                if self.__sigs_config[sig_name]["ctrl_port"] == ctrl_port or self.__sigs_config[sig_name]["data_port"] == data_port or self.__sigs_config[sig_name]["probe_port"] == probe_port:
+                    return False
+        return True
+
+    def setSigConfig(self, sig_name: str, node_name: str, other_ia: IA, local_net: str, remote_net: str, ctrl_port: int = 30256, data_port: int = 30056, probe_port: int = 30856, debug_level: str = "debug") -> ScionAutonomousSystem:
+        """!
+        @brief Set the configuration for a SIG.
+
+        @param sig_name Name of the SIG.
+        @param other_ia IA of the other AS.
+        """
+
+        assert sig_name not in self.__sigs_config, 'SIG with name {} already has a configuration.'.format(sig_name)
+        assert node_name in self.getHosts(), 'Host with name {} does not exist.'.format(node_name)
+        assert self._checkPorts(ctrl_port, data_port, probe_port, node_name), 'Ports are already in use.'
+
+
+        self.__sigs_config[sig_name] = {
+            "local_net": local_net,
+            "remote_net": remote_net,
+            "ctrl_port": ctrl_port,
+            "data_port": data_port,
+            "probe_port": probe_port,
+            "other_ia": other_ia,
+            "debug_level": debug_level,
+            "node_name": node_name
+        }
+
+        return self
+
+
+    def getSigConfig(self, sig_name: str) -> Dict:
+        """!
+        @brief Get the configuration for a SIG.
+
+        @param sig_name Name of the SIG.
+        @returns Configuration.
+        """
+        assert sig_name in self.__sigs_config, 'SIG with name {} does not have a configuration.'.format(sig_name)
+        return self.__sigs_config[sig_name]
+    
 
     def setNote(self, note: str) -> ScionAutonomousSystem:
         """!

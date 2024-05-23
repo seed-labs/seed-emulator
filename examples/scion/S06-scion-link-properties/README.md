@@ -32,8 +32,8 @@ One can also specify additional information for the Scion-ASes and the border ro
 
 ## Including link properties in beacons
 
-By default, available link properties, Geolocation, Hops and AS-Notes will be included in the `staticInfoConfig.json` file on the control Service nodes. To turn this of one can set the `generateStaticInfoConfig` flag to false as follows:
+By default, available link properties, Geolocation, Hops and AS-Notes will not be included in the `staticInfoConfig.json` file on the control Service nodes. To turn this on one can set the `generateStaticInfoConfig` flag to true as follows:
 
 ```python
-as110.setGenerateStaticInfoConfig(False)
+as110.setGenerateStaticInfoConfig(True)
 ```
