@@ -113,14 +113,10 @@ and node levels.
 
 ```
 # At the AS level
-base.getAutonomousSystem(160).setNameServers(['10.152.0.53'])
-base.getAutonomousSystem(170).setNameServers(['10.152.0.53'])
+global_dns_1.setNameServerOnNodesByAsns(asns=[160, 170])
 
 # At the emulator level
-base.setNameServers(['10.153.0.53'])
-
-# At the node level (not included in the example)
-node.setNameServers(['10.152.0.53'])
+global_dns_2.setNameServerOnAllNodes()
 ```
 
 
