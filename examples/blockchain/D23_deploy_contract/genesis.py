@@ -40,6 +40,7 @@ def run(dumpfile=None):
     # Add the runtime bytecode with the contract address in the genesis block
     blockchain.addCode(contract_address, runtime_bytecode)
     
+    # Set initial storage for the contract
     blockchain.addStorage(contract_address=contract_address, owner_address=contract_address, slot=0, value=1000000)
     
     custom_address = "0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9"
