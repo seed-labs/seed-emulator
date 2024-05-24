@@ -27,3 +27,12 @@ else:
 # Call the contract function
 totalSupply = contract.functions.totalSupply().call()
 print(f'Total supply: {totalSupply}')
+
+# Check the balance of an owner
+owner = '0xA08Ae0519125194cB516d72402a00A76d0126Af8'
+owner_balance = contract.functions.balanceOf(owner).call()
+print(f'Balance of owner {owner}: {owner_balance}')
+
+owner = '0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9'
+owner_balance = contract.functions.balanceOf(owner).call()
+print(f'Balance of owner {owner}: {owner_balance}')
