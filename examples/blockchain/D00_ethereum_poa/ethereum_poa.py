@@ -25,20 +25,10 @@ def run(dumpfile = None, hosts_per_as=3, total_eth_nodes=20, total_accounts_per_
     eth:EthereumService = emu.getLayer('EthereumService')
     blockchain: Blockchain =  eth.getBlockchainByName(eth.getBlockchainNames()[0])
 
-    # Print out blockchain component information
-    print(blockchain.getFaucetServerNames())
-    print(blockchain.getFaucetServerInfo())
-    print(blockchain.getEthServerInfo())
-    print(blockchain.getEthServerNames())
-
-
-    # Bind each node to a randomly selected physical nodes (no filters)
-    faucet_servers = blockchain.getFaucetServerNames()
-    eth_servers    = blockchain.getEthServerNames()
-    for faucet in faucet_servers:
-        emu.addBinding(Binding(faucet))
-    for server in eth_servers:
-        emu.addBinding(Binding(server))
+    # Get all the server names and bind them to physical nodes
+    for _, servers in blockchain.getAllServerNames().items():
+        for server in servers:
+           emu.addBinding(Binding(server))
 
     # Generate output
     if dumpfile is not None:
