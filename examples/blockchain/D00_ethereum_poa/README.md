@@ -1,6 +1,5 @@
 # Ethereum Blockchain (POA)
 
-
 ## Create a blockchain
 
 To create a blockchain, we first create the `EthereumService`, and then
@@ -39,9 +38,18 @@ For detailed account management instructions, see
 [this manual](../../../docs/user_manual/blockchain/accounts.md)
 
 
+## Create Ethereum Nodes
 
-## Create Ethereum nodes
+To create an Ethereum node, we just need to provide a node name (virtual node),
+and use the following API. 
 
+```
+e = blockchain.createNode('node0')
+```
+
+Each node can be configured and customized using the provided APIs. See the
+[`EthereumServer`](../../../seedemu/services/EthereumService/EthereumServer.py)
+class for the supported APIs.
 
 
 
@@ -49,7 +57,6 @@ For detailed account management instructions, see
 
 These APIs are not used in this example, but they might be useful
 to satisfy additional emulation needs.
-
 
 - Set custom `geth` command option: for commonly-used options, we already
   have APIs to set them. However, for options not covered by these APIs,
@@ -66,11 +73,35 @@ to satisfy additional emulation needs.
   ```
 
 
+## Create Faucet and Information Servers
+
+In this example, we also create a faucet server and an init-and-info server.
+These two servers are not used in this example, but they are used 
+by other examples. Their usage can be found in those examples. 
+
+
+## Binding to Physical Nodes
+
+All the virtual nodes need to be bound to physical nodes. We have
+implemented an API called `getAllServerNames` to make it easy to 
+get all the server names, including the ethereum nodes, the faucet
+nodes, and the init-and-info servers. 
+
+```
+for _, servers in blockchain.getAllServerNames().items():
+    for server in servers:
+       emu.addBinding(Binding(server))
+```
+
+In our example, we did not set any filter in the binding, so the binding
+will be random, i.e., each virtual node will be randomly bound to
+a physical node. 
+
+
 ## Supported platforms 
 
-As of 12/12/2023, SEED Emulation Ethereum layer supports AMD platforms and
-partially supports ARM platforms.
-Please see details below.
+As of 5/25/2024, SEED Emulation Ethereum layer supports AMD platforms and
+partially supports ARM platforms. Please see details below.
 
 | Ethereum Consensus | AMD | ARM |
 | ------------------ | --- | --- |
