@@ -1,1 +1,1 @@
-from .GenesisTestCase import GenesisTestCase
+from .GenesisPOATestCase import GenesisPOATestCase

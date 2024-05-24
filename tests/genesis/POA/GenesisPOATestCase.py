@@ -11,7 +11,7 @@ from tests import SeedEmuTestCase
 import requests
 
 
-class GenesisTestCase(SeedEmuTestCase):
+class GenesisPOATestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
@@ -94,12 +94,12 @@ class GenesisTestCase(SeedEmuTestCase):
 
 
 if __name__ == "__main__":
-    test_suite = GenesisTestCase.get_test_suite()
+    test_suite = GenesisPOATestCase.get_test_suite()
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
-    GenesisTestCase.printLog("----------Test Summary----------")
+    GenesisPOATestCase.printLog("----------Test Summary----------")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
-    GenesisTestCase.printLog(
+    GenesisPOATestCase.printLog(
         "Score: {}/{} ({} errors, {} failures)".format(
             num - (errs + fails), num, errs, fails
         )

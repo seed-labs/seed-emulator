@@ -7,6 +7,8 @@ from kubo import KuboTestCase, KuboUtilFuncsTestCase, DottedDictTestCase
 from pki import PKITestCase
 from chainlink import ChainlinkPOATestCase
 from traffic_generator import TrafficGeneratorTestCase
+from ethInitAndInfo import EthInitAndInfoPOATestCase
+from genesis import GenesisPOATestCase
 import unittest
 import os, sys
 
@@ -26,6 +28,8 @@ test_case_list = [
     EthereumPOSTestCase,
     EthereumPOWTestCase,
     ChainlinkPOATestCase,
+    EthInitAndInfoPOATestCase,
+    GenesisPOATestCase,
     ScionBgpMixedTestCase,
     ScionBwtesterTestCase,
     KuboTestCase,
