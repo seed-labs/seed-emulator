@@ -41,8 +41,10 @@ def run(dumpfile=None):
     blockchain.addCode(contract_address, runtime_bytecode)
     
     # Set initial storage for the contract
+    # This will assign the total supply of 1,000,000 tokens to the contract address using the slot 0 which is __balanceOf for the contract
     blockchain.addStorage(contract_address=contract_address, owner_address=contract_address, slot=0, value=1000000)
     
+    # Add the initial balance for the custom address using storage and function slot 0
     custom_address = "0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9"
     blockchain.addStorage(contract_address=contract_address, owner_address=custom_address, slot=0, value=50000)
 
