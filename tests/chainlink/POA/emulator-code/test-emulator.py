@@ -228,16 +228,24 @@ faucet:FaucetServer = blockchain.createFaucetServer(vnode='faucet',
 emu.addBinding(Binding('faucet', filter=Filter(asn=150, nodeName='host_2')))
 emu.getVirtualNode('faucet').setDisplayName('FaucetServer')
 
+eth_init_node:EthInitAndInfoServer = blockchain.createEthInitAndInfoServer(vnode='eth_init_info_node',
+                                                                            port=8080,
+                                                                            linked_eth_node='eth5',
+                                                                            linked_faucet_node='faucet'
+                                                                            )
+
+eth_init_node.deployContractByContent(contract_name=LinkTokenDeploymentTemplate['link_token_name'], 
+                                         abi_content=LinkTokenDeploymentTemplate['link_token_abi'], 
+                                         bin_content=LinkTokenDeploymentTemplate['link_token_bin'])
+eth_init_node.setDisplayName('eth_init_info_node')
+emu.addBinding(Binding('eth_init_info_node', filter = Filter(asn=151, nodeName='host_2')))
+
 # Create the Chainlink Init server
 chainlink = ChainlinkService()
+chainlink.setEthServer('eth5')
+chainlink.setFaucetServer('faucet')
+chainlink.setEthInitInfoServer('eth_init_info_node')
 
-chainlink.setFaucetServer('faucet', 80)
-cnode = 'chainlink_init_server'
-c_init = chainlink.installInitializer(cnode)
-c_init.setLinkedEthNode('eth2')
-service_name = 'Chainlink-Init'
-emu.getVirtualNode(cnode).setDisplayName(service_name)
-emu.addBinding(Binding(cnode, filter = Filter(asn=151, nodeName='host_2')))
 
 c_asns  = [152, 153, 154, 160, 161, 162, 163, 164]
 i = 0
@@ -245,7 +253,6 @@ i = 0
 for asn in c_asns:
     cnode = 'chainlink_server_{}'.format(i)
     c_normal = chainlink.install(cnode)
-    c_normal.setLinkedEthNode('eth{}'.format(i))
     service_name = 'Chainlink-{}'.format(i)
     emu.getVirtualNode(cnode).setDisplayName(service_name)
     emu.addBinding(Binding(cnode, filter = Filter(asn=asn, nodeName='host_2')))
