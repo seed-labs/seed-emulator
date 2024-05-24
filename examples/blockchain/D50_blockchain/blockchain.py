@@ -146,3 +146,8 @@ docker = Docker(etherViewEnabled=True, platform=platform_mapping[platform])
 # If output directory exists and override is set to false, we call exit(1)
 # updateOutputdirectory will not be called
 emu.compile(docker, './output', override=True)
+
+for blockchain_name, server_names in eth.getAllServerNames().items():
+    print("Blockchain Name: "+ blockchain_name)
+    for type, server_list in server_names.items():
+            print("EthNodes: - type: "+ type + " - list: " + str(server_list))

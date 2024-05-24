@@ -176,7 +176,18 @@ class Blockchain:
             if net.getType() == NetworkType.Local:
                 address = iface.getAddress()
                 return address
-            
+    
+    def getAllServerNames(self):
+        server_names = {}
+        pending_targets = self._eth_service.getPendingTargets()
+        for key, value in pending_targets.items():
+            if key in self._pending_targets:
+                server_type = value.__class__.__name__
+                if value.__class__.__name__ not in server_names.keys():
+                    server_names[server_type] = []
+                server_names[server_type].append(key)
+        return server_names
+
     def getBootNodes(self) -> List[str]:
         """!
         @brief Get bootnode IPs.
@@ -588,6 +599,13 @@ class EthereumService(Service):
 
     def getName(self):
         return 'EthereumService'
+    
+    def getAllServerNames(self):
+        server_names = {}
+        for chain_name, blockchain_obj in self.__blockchains.items():
+            server_names[chain_name] = blockchain_obj.getAllServerNames()
+
+        return server_names
 
     def isSave(self):
         return self.__save_state

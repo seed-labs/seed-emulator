@@ -82,7 +82,7 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
 
     print("-----------------------------------------")
     print("Chainlink nodes: " + str(server_nodes))
-    for type, server_list in eth.getAllServerNames().items():
+    for type, server_list in blockchain.getAllServerNames().items():
         print("EthNodes: - type: "+ type + " - list: " + str(server_list))
 
 if __name__ == "__main__":
