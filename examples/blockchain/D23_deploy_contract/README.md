@@ -1,5 +1,17 @@
 # Deploy contract
 
+------------------------------------------------------
+Note: We try to develop a way to deploy contract directly 
+into the genesis block, because we can set the contract
+address. Using this approach, the constructor will not be invoked,
+so we need to explicitly initialize variables that are 
+typically done inside the constructor. 
+However, it seems that calculating where variables are 
+stored is quite complicated, and may not worth the time 
+to do this (we can deploy contracts using another method).
+Therefore, this example is incomplete. 
+------------------------------------------------------
+
 Smart contract deployment has to be done at the run time, instead
 of the build time. In this example, we show how to
 set up the contract deployment at the build time, so when the emulator
