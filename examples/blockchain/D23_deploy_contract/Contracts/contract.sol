@@ -32,12 +32,19 @@ contract Contract is ERC20 {
 
     uint256 private constant __totalSupply = 200000000000000000000000;
 
+    uint256[5] public fixedSizeArray;  // Simple fixed-size array
+    uint256[] public dynamicArray;    // Dynamic array
+
     mapping(address => uint256) private __balanceOf;
 
     mapping(address => mapping(address => uint256)) private __allowances;
 
     constructor() {
         __balanceOf[msg.sender] = __totalSupply;
+    }
+
+    function dynamicArrayLength() public view returns (uint256) {
+        return dynamicArray.length;
     }
 
     function totalSupply() public pure override returns (uint256) {
