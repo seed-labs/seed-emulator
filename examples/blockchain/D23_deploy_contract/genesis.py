@@ -40,13 +40,26 @@ def run(dumpfile=None):
     # Add the runtime bytecode with the contract address in the genesis block
     blockchain.addCode(contract_address, runtime_bytecode)
     
+    # Assigning value in a simple pre-defined array of length 5
+    blockchain.addStorage(contract_address=contract_address, slot=0, value=100, index=0)
+    blockchain.addStorage(contract_address=contract_address, slot=0, value=200, index=1)
+    blockchain.addStorage(contract_address=contract_address, slot=0, value=300, index=2)
+    blockchain.addStorage(contract_address=contract_address, slot=0, value=400, index=3)
+    blockchain.addStorage(contract_address=contract_address, slot=0, value=500, index=4)
+    
+    # Assigning value in a dynamic array
+    blockchain.addStorage(contract_address=contract_address, slot=5, value=3) # Set the pre-defined length of the dynamic array to stage during deployment
+    blockchain.addStorage(contract_address=contract_address, slot=5, value=200, index=0, is_dynamic=True)
+    blockchain.addStorage(contract_address=contract_address, slot=5, value=500, index=1, is_dynamic=True)
+    blockchain.addStorage(contract_address=contract_address, slot=5, value=700, index=2, is_dynamic=True)
+    
     # Set initial storage for the contract
     # This will assign the total supply of 1,000,000 tokens to the contract address using the slot 0 which is __balanceOf for the contract
-    blockchain.addStorage(contract_address=contract_address, owner_address=contract_address, slot=0, value=1000000)
+    blockchain.addStorage(contract_address=contract_address, slot=6, value=1000000, key=contract_address)
     
     # Add the initial balance for the custom address using storage and function slot 0
     custom_address = "0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9"
-    blockchain.addStorage(contract_address=contract_address, owner_address=custom_address, slot=0, value=50000)
+    blockchain.addStorage(contract_address=contract_address, slot=6, value=10000, key=custom_address)
 
     # Generate the emulator files
     if dumpfile is not None:

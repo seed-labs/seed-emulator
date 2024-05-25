@@ -8,25 +8,41 @@ class CustomGenesis(Genesis):
     @brief Genesis manage class
     """
     
-    def calculateStorageSlot(self, address: str, slot: int) -> str:
+    def calculateStorageSlot(self, slot: int, key: str = None, index: int = None, is_dynamic: bool = False) -> str:
         """!
         @brief Calculate the storage slot for a given address and slot number.
 
-        @param address The address to calculate the storage slot for.
-        @param slot The slot number to calculate the storage slot for.
-
+        @param slot int: The slot index for calculating the specific storage location in the contract.
+        @param key str: The key for the storage slot, used for mappings. Default is None.
+        @param index int: The index for the storage slot, used for arrays. Default is None.
+        @param is_dynamic bool: Flag to indicate if the storage slot is for a dynamic array. Default is False.
+        
         @returns The calculated storage slot.
         """
-        address_hex = address[2:].lower().zfill(64)
-        slot_hex = hex(slot)[2:].zfill(64)
-        # Concatenate and hash
-        data = address_hex + slot_hex
-        keccak_hash = keccak.new(digest_bits=256)
-        keccak_hash.update(bytearray.fromhex(data))
-        storage_slot_hex = '0x' + keccak_hash.hexdigest()
-        return storage_slot_hex
+        if key is not None:
+            # For mappings
+            key_hex = key[2:].lower().zfill(64)
+            slot_hex = hex(slot)[2:].zfill(64)
+            data = key_hex + slot_hex
+            hash_obj = keccak.new(digest_bits=256)
+            hash_obj.update(bytearray.fromhex(data))
+            return '0x' + hash_obj.hexdigest()
+        elif index is not None:
+            if is_dynamic:
+                # For dynamic arrays
+                slot_hex = hex(slot)[2:].zfill(64)
+                hash_obj = keccak.new(digest_bits=256)
+                hash_obj.update(bytearray.fromhex(slot_hex))
+                base_location = int(hash_obj.hexdigest(), 16)
+                return hex(base_location + index)[2:].zfill(64)
+            else:
+                # For fixed-size arrays
+                return hex(slot + index)[2:].zfill(64)
+        else:
+            # For simple variables
+            return hex(slot)[2:].zfill(64)
 
-    def addStorage(self, contract_address: str, owner_address: str, slot: int, value: int) -> Genesis:
+    def addStorage(self, contract_address: str, slot: int, value: int, key: str = None, index: int = None, is_dynamic: bool = False) -> Genesis:
         """!
         @brief Adds storage data for a contract in the genesis file.
 
@@ -37,14 +53,16 @@ class CustomGenesis(Genesis):
         in the genesis block to ensure storage is associated with an existing contract.
 
         @param contract_address str: The contract address in the genesis allocation to which storage data will be added.
-        @param owner_address str: The owner address used to calculate the storage slot.
         @param slot int: The slot index for calculating the specific storage location in the contract.
         @param value int: The value to be stored in the calculated storage slot, specified as an integer.
-
+        @param key str: The key for the storage slot, used for mappings. Default is None.
+        @param index int: The index for the storage slot, used for arrays. Default is None.
+        @param is_dynamic bool: Flag to indicate if the storage slot is for a dynamic array. Default is False.
+        
         @returns Genesis: Returns itself to allow for chaining of multiple configuration calls.
         """
 
-        storage_slot_hex = self.calculateStorageSlot(owner_address, slot)
+        storage_slot_hex = self.calculateStorageSlot(slot, key, index, is_dynamic)
         value_hex = hex(value)[2:].zfill(64)
         print(f"Storage slot: {storage_slot_hex}, Value: {value_hex}")
         

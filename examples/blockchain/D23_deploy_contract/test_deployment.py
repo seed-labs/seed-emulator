@@ -66,3 +66,17 @@ account_2_final_balance = contract.functions.balanceOf(account_2).call()
 print("Balance after transaction:")
 print(f'Balance of account {account_1}: {account_1_final_balance}')
 print(f'Balance of account {account_2}: {account_2_final_balance}')
+
+# Check the values of fixedSizeArray
+print("Checking the fixedSizeArray...")
+for i in range(5):  # Since fixedSizeArray has 5 elements
+    value = contract.functions.fixedSizeArray(i).call()
+    print(f"fixedSizeArray[{i}] = {value}")
+
+# Check the values of dynamicArray
+print("Checking the dynamicArray...")
+length = contract.functions.dynamicArrayLength().call()
+print(f"Length of dynamicArray: {length}")
+for i in range(length):
+    value = contract.functions.dynamicArray(i).call()
+    print(f"dynamicArray[{i}] = {value}")
