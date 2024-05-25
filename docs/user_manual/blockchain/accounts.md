@@ -1,12 +1,23 @@
-# Create Pre-funded Accounts
+# Funding Accounts
 
-When we build the emulator, we can create two types of 
-accounts: (1) accounts managed by each Ethereum node,
-and (2) independent accounts (called local accounts).   
+To send transactions, an account needs to have sufficient
+fund. How do we fund accounts in the emulator? 
+When we build the emulator, we create two types of 
+accounts and assign balances to them. 
+  - Accounts created for each Ethereum node
+  - Independent accounts (called local accounts)   
+
 These created accounts and their balances will be 
 added to the genesis block. The genesis block is the initial
 state of a blockchain, so a balance recorded in the genesis
 block is the initial amount of fund available for the account. 
+
+Sometimes accounts are generated during the run time. To
+fund them, we have implemented a faucet service, which can
+transfer part of its own fund to whoever requests for fund. 
+Please see example 
+[D20_ethereum_faucet](../../../examples/blockchain/D20_ethereum_faucet)
+for details. 
 
 
 ## Accounts Created for Ethereum Nodes
@@ -70,11 +81,10 @@ to MetaMask, it will generate the same set of keys.
 ## Add Local Accounts Created by Emulator
 
 We can also add arbitrary accounts to the blockchain. In the following
-example, the specified accounts will be given 9999999 Ethers. This account
+example, the specified accounts will be given 999 Ethers. This account
 balance will be included in the genesis block. 
 
 ```
-blockchain.addLocalAccount(address='0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9',
-                           balance=9999999)
+blockchain.addLocalAccount(address='0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9', balance=999)
 ```
 
