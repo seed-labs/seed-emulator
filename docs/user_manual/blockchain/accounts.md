@@ -15,8 +15,7 @@ block is the initial amount of fund available for the account.
 Sometimes accounts are generated during the run time. To
 fund them, we have implemented a faucet service, which can
 transfer part of its own fund to whoever requests for fund. 
-Please see example 
-[D20_ethereum_faucet](../../../examples/blockchain/D20_ethereum_faucet)
+Please see [this example](../../../examples/blockchain/D20_faucet)
 for details. 
 
 
