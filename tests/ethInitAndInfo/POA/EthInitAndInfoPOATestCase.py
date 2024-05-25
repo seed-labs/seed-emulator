@@ -11,7 +11,7 @@ from tests import SeedEmuTestCase
 import requests
 
 
-class EthInitAndInfoTestCase(SeedEmuTestCase):
+class EthInitAndInfoPOATestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
@@ -284,12 +284,12 @@ class EthInitAndInfoTestCase(SeedEmuTestCase):
 
 
 if __name__ == "__main__":
-    test_suite = EthInitAndInfoTestCase.get_test_suite()
+    test_suite = EthInitAndInfoPOATestCase.get_test_suite()
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
-    EthInitAndInfoTestCase.printLog("----------Test Summary----------")
+    EthInitAndInfoPOATestCase.printLog("----------Test Summary----------")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
-    EthInitAndInfoTestCase.printLog(
+    EthInitAndInfoPOATestCase.printLog(
         "Score: {}/{} ({} errors, {} failures)".format(
             num - (errs + fails), num, errs, fails
         )
