@@ -10,6 +10,7 @@ However, it seems that calculating where variables are
 stored is quite complicated, and may not worth the time 
 to do this (we can deploy contracts using another method).
 Therefore, this example is incomplete. 
+
 ------------------------------------------------------
 
 Smart contract deployment has to be done at the run time, instead
