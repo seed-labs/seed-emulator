@@ -3,22 +3,27 @@
 When we build the emulator, we can create two types of 
 accounts: (1) accounts managed by each Ethereum node,
 and (2) independent accounts (called local accounts).   
-These created accounts and their balances will be added to the genesis block,
-so the balances are recognized by the blockchain. 
+These created accounts and their balances will be 
+added to the genesis block. The genesis block is the initial
+state of a blockchain, so a balance recorded in the genesis
+block is the initial amount of fund available for the account. 
 
 
-## Accounts on Ethereum Nodes
+## Accounts Created for Ethereum Nodes
 
-The emulator uses a default mnemonic phrase to generate the accounts 
-on each Ethereum nodes. The generation is based on the
-BIP-44 specification. The phrase is the following:
+Each Ethereum node needs to have at least one account. 
+The emulator will generate K accounts for each node based on
+the user customization. These accounts will be generated using
+a mnemonic phrase, and the generation is based on the BIP-44 specification. 
+The default mnemonic phrase used in the emulator is the following:
 ```
 great awesome fun seed security lab protect system network prevent attack future
 ```
+
 Users can also replace it with a custom phrase. 
 The following example shows how to get the default mnemonic phrase,
 and how to change the account-generation parameters (the example does 
-not change the phrase). 
+not change the phrase though). 
 
 ```
 # Change the default account balance to 1000
@@ -27,13 +32,13 @@ blockchain.setEmuAccountParameters(mnemonic=mnemonic, balance=1000, \
          total_per_node = total_accounts_per_node)
 ```
 
-
-## Local Accounts 
+## Local Accounts Created by Emulator
 
 The blockchain service will automatically create a number of accounts (with balance)
 based on the default parameters, which can be reset using the `setLocalAccountParameters`
 API. See the following (the mnemonic phrase used in the example is the same
-as the default one). 
+as the default one). Users can recreate these accounts using the same set of 
+parameters. 
 
 ```
 words = "great amazing fun seed lab protect network system security prevent attack future"
@@ -61,4 +66,15 @@ MetaMask also uses this path to generate keys for Ethereum.
 Therefore, if we provide the same mnemonic phrase
 to MetaMask, it will generate the same set of keys. 
 
+
+## Add Local Accounts Created by Emulator
+
+We can also add arbitrary accounts to the blockchain. In the following
+example, the specified accounts will be given 9999999 Ethers. This account
+balance will be included in the genesis block. 
+
+```
+blockchain.addLocalAccount(address='0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9',
+                           balance=9999999)
+```
 
