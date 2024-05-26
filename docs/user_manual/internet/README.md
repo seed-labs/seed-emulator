@@ -1,27 +1,32 @@
 # Internet Emulator: Components and Advanced Features
 
+
 ## Advanced Features 
 
-  - [Connect to the real world](../bgp.md#connect-to-realworld): set up the BGP routing
+  - [Connect to the real world](../bgp.md#connect-to-realworld): Set up the BGP routing
     so the nodes inside the emulator can communicate with the real Internet. 
-  - [Allow outside machines to join the emulation](../../../examples/A03-real-world/)
-  - [Support Apple Silicon machines (arm64)](../docker.md#platform): generate emulator
+  - [Allow outside machines to join the emulation](../../../examples/basic/A03_real_world/):
+    This example shows how the outside machines (physical or virtual) can 
+    join the emulation via a layer-2 VPN.
+  - [Support Apple Silicon machines (arm64)](../docker.md#platform): Generate emulator
     files for Apple Silicon machines. 
-  - [Hybrid Emulation 1: including physical devices](../../../examples/C03-bring-your-own-internet/)
-  - [Hybrid Emulation 2: including virtual devices running on QEMU](../../../examples/)
+  - [Hybrid Emulation 1: including physical devices](../../../examples/internet/B50_bring_your_own_internet/)
+  - Hybrid Emulation 2: including virtual devices running on QEMU: work in progress
 
 
 ## Components
 
-  - [Build DNS Infrastructure](../../../examples/B01-dns-component/) and
-    [Add DNS to Emulator](../../examples/B02-mini-internet-with-dns)  
-  - [IP anycast](../../../examples/B03-ip-anycast/)
-  - [DHCP server](../../../examples/B10-dhcp/)
-  - [Darknet (Tor)](../../../examples/B07-darknet-tor/)
-  - [Botnet](../../../examples/B05-botnet/)
-  - [The Hosts file (add IP-hostname mappings)](../../../examples/B11-etc-hosts/): 
-    inside the emulator, we add ip-hostname mappings to the `/etc/hosts` file. 
-  - [Public Key Infrastructure (PKI)](./ca.md) 
-  - [IPFS (InterPlanetary File System)](../../../examples/C05-kubo)
+  - [Build DNS Infrastructure](../../../examples/internet/B01_dns_component/) and
+    [Add DNS to Emulator](../../../examples/internet/B02_mini_internet_with_dns)  
+  - [IP anycast](../../../examples/internet/B24_ip_anycast/)
+  - [DHCP server](../../../examples/internet/B20_dhcp/)
+  - [Botnet](../../../examples/internet/B22_botnet/)
+  - [Darknet (Tor)](../../../examples/internet/B23_darknet_tor/)
+  - [The Hosts file (add IP-hostname mappings)](../../../examples/internet/B21_etc_hosts/): 
+    This example shows how to add ip-hostname mappings to the `/etc/hosts` file. With this,
+    we can use hostnames instead of IP addresses. 
+  - [Public Key Infrastructure (PKI)](./ca.md): Set up a PKI inside the emulator.  
+  - [IPFS (InterPlanetary File System)](../../../examples/internet/B26_ipfs_kubo):
+    This example shows how to set up an IPFS file system in the emulator. 
   - [IPFS Kubo](./kubo.md)
 
