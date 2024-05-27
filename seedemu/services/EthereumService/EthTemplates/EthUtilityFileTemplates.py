@@ -1,9 +1,9 @@
 
 from typing import Dict
 
-EthInitializerTemplate: Dict[str, str] = {}
+EthUtilityTemplate: Dict[str, str] = {}
 
-EthInitializerTemplate['fund_account']= '''
+EthUtilityTemplate['fund_account']= '''
 #!/bin/env python3
 
 import time
@@ -15,8 +15,9 @@ from eth_account import Account
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-RPC_URL = "http://{rpc_url}:{rpc_port}"
+RPC_URL    = "http://{rpc_url}:{rpc_port}"
 FAUCET_URL = "http://{faucet_url}:{faucet_port}"
+DIR_PREFIX = "{dir_prefix}"
 
 def connectEthNode():
     web3 = Web3(HTTPProvider(RPC_URL))
@@ -42,7 +43,7 @@ def saveAccountAsJson(account):
     }}
 
     # File path where the JSON file will be saved
-    file_path = '/account.json'
+    file_path = DIR_PREFIX + '/account.json'
 
     # Write data to the JSON file
     with open(file_path, 'w') as file:
@@ -126,7 +127,7 @@ if __name__ == "__main__":
 '''
 
 
-EthInitializerTemplate['contract_deploy'] = '''
+EthUtilityTemplate['contract_deploy'] = '''
 #!/bin/env python3
 
 import time
@@ -137,9 +138,11 @@ import json
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-RPC_URL = "http://{rpc_url}:{rpc_port}"
-CHAIN_ID = {chain_id}
-with open('/contracts/contract_file_paths.txt') as contract_path_file:
+RPC_URL    = "http://{rpc_url}:{rpc_port}"
+CHAIN_ID   = {chain_id}
+DIR_PREFIX = "{dir_prefix}"
+
+with open(DIR_PREFIX + '/contracts/contract_file_paths.txt') as contract_path_file:
     CONTRACT_FILE_PATHS = json.load(contract_path_file)
 
 def connectEthNode():
@@ -153,7 +156,7 @@ def connectEthNode():
 
 def readAccountFromJson():
     # File path of the JSON file to be read
-    file_path = '/account.json'
+    file_path = DIR_PREFIX + '/account.json'
 
     # Read data from the JSON file
     with open(file_path, 'r') as file:
@@ -183,20 +186,20 @@ def deployContract(web3, private_key, contract_name, contract_abi, contract_byte
 
     print(f"Contract deployed at address: {{tx_receipt.contractAddress}}")
 
-    directory = '/deployed_contracts'
+    directory = DIR_PREFIX + '/deployed_contracts'
 
     if not os.path.exists(directory):
         os.makedirs(directory)
-        with open('/deployed_contracts/contract_address.txt', 'w') as address_file:
+        with open(DIR_PREFIX + '/deployed_contracts/contract_address.txt', 'w') as address_file:
             contract_address = {{
                 contract_name: tx_receipt.contractAddress
             }}
             json.dump(contract_address, address_file, indent=4)
     else:
-        with open('/deployed_contracts/contract_address.txt', 'r') as address_file:
+        with open(DIR_PREFIX + '/deployed_contracts/contract_address.txt', 'r') as address_file:
             contract_address = json.load(address_file)
         contract[contract_name] = tx_receipt.contractAddress
-        with open('/deployed_contracts/contract_address.txt', 'w') as address_file:
+        with open(DIR_PREFIX + '/deployed_contracts/contract_address.txt', 'w') as address_file:
             json.dump(contract_address, address_file, indent=4)
 
 if __name__ == "__main__":
@@ -212,7 +215,7 @@ if __name__ == "__main__":
                        contract_abi=contract_abi, contract_bytecode=contract_bytecode)
 '''
 
-EthInitializerTemplate['info_server'] = '''\
+EthUtilityTemplate['info_server'] = '''\
 #!/bin/env python3
 
 from flask import Flask, request, jsonify
@@ -223,9 +226,11 @@ import json
 
 app = Flask(__name__)
 
-PORT = {port}
-ADDRESS_FILE_DIRECTORY = '/deployed_contracts'
-ADDRESS_FILE_PATH = '/deployed_contracts/contract_address.txt'
+PORT       = {port}
+DIR_PREFIX = "{dir_prefix}"
+
+ADDRESS_FILE_DIRECTORY = DIR_PREFIX + '/deployed_contracts'
+ADDRESS_FILE_PATH = DIR_PREFIX + '/deployed_contracts/contract_address.txt'
 HTML_FILE_PATH = '/var/www/html/index.html'
 
 @app.route('/')

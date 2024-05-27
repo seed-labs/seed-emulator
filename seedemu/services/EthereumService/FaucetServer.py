@@ -12,6 +12,7 @@ class FaucetServer(Server):
     """!
     @brief The FaucetServer class.
     """
+    DIR_PREFIX = '/faucet'  # Save all the files inside this folder
     
     __blockchain:Blockchain
     __port: int
@@ -150,29 +151,35 @@ class FaucetServer(Server):
         
         node.addBuildCommand('pip3 install flask web3==5.31.1')
         # node.setFile('/var/www/html/index.html', self.__index.format(asn = node.getAsn(), nodeName = node.getName()))
-        node.setFile('/app.py', FaucetServerFileTemplates['faucet_server'].format(max_fund_amount=self.__max_fund_amount,
-                                                                                  chain_id=self.__chain_id,
-                                                                                  eth_server_url = self.__eth_server_url, 
-                                                                                  eth_server_http_port = self.__eth_server_port,
-                                                                                  consensus= self.__consensus.value,
-                                                                                  account_address = self.__account.address, 
-                                                                                  account_key=self.__account.privateKey.hex(),
-                                                                                  port=self.__port))
-        node.appendStartCommand('python3 /app.py &')
+        node.setFile(self.DIR_PREFIX + '/app.py', 
+                     FaucetServerFileTemplates['faucet_server'].format(
+             max_fund_amount=self.__max_fund_amount,
+             chain_id=self.__chain_id,
+             eth_server_url = self.__eth_server_url, 
+             eth_server_http_port = self.__eth_server_port,
+             consensus= self.__consensus.value,
+             account_address = self.__account.address, 
+             account_key=self.__account.privateKey.hex(),
+             port=self.__port))
+        node.appendStartCommand('python3 {}/app.py &'.format(self.DIR_PREFIX))
 
         funds_list = []
         for recipient, amount in self.__fundlist:
-            funds_list.append(FaucetServerFileTemplates['fund_curl'].format(recipient=recipient, 
-                                                                            amount=amount,
-                                                                            address='localhost',
-                                                                            port = self.__port))
+            funds_list.append(FaucetServerFileTemplates['fund_curl'].format(
+                    recipient=recipient, 
+                    amount=amount,
+                    address='localhost',
+                    port = self.__port))
             
-        node.setFile('/fund.sh', FaucetServerFileTemplates['fund_script'].format(address='localhost', 
-                                                                                 max_attempts = self.__max_fund_attempts,
-                                                                                 port=self.__port,
-                                                                                 fund_command=';'.join(funds_list)))
-        node.appendStartCommand('chmod +x /fund.sh')
-        node.appendStartCommand('/fund.sh')
+        node.setFile(self.DIR_PREFIX + '/fund.sh', 
+            FaucetServerFileTemplates['fund_script'].format(
+                    address='localhost', 
+                    max_attempts = self.__max_fund_attempts,
+                    port=self.__port,
+                    fund_command=';'.join(funds_list)))
+
+        node.appendStartCommand('chmod +x {}/fund.sh'.format(self.DIR_PREFIX))
+        node.appendStartCommand('{}/fund.sh'.format(self.DIR_PREFIX))
         
     def print(self, indent: int) -> str:
         out = ' ' * indent

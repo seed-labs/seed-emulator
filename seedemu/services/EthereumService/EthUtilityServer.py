@@ -1,16 +1,18 @@
 from __future__ import annotations
 from seedemu.core import Node, Server
 from seedemu.services.EthereumService import *
-from .EthTemplates import EthInitializerTemplate
+from .EthTemplates import EthUtilityFileTemplates 
 from seedemu.services.EthereumService import *
 import json
 import os
 
 
-class EthInitAndInfoServer(Server):
+class EthUtilityServer(Server):
     """!
-    @brief The FaucetServer class.
+    @brief The EthUtilityServer class.
     """
+
+    DIR_PREFIX = '/utility_server'
     
     __blockchain:Blockchain
     __port: int
@@ -105,8 +107,8 @@ class EthInitAndInfoServer(Server):
             'bin_path': bin_path
         }
         self.__contract_to_deploy_container_path[contract_name] = {
-            'abi_path': f"/contracts/{contract_name}.abi",
-            'bin_path': f"/contracts/{contract_name}.bin"
+            'abi_path': self.DIR_PREFIX + f"/contracts/{contract_name}.abi",
+            'bin_path': self.DIR_PREFIX + f"/contracts/{contract_name}.bin"
         }
     
     def deployContractByContent(self, contract_name, abi_content, bin_content):
@@ -115,8 +117,8 @@ class EthInitAndInfoServer(Server):
             'bin_content': bin_content
         }
         self.__contract_to_deploy_container_path[contract_name] = {
-            'abi_path': f"/contracts/{contract_name}.abi",
-            'bin_path': f"/contracts/{contract_name}.bin"
+            'abi_path': self.DIR_PREFIX + f"/contracts/{contract_name}.abi",
+            'bin_path': self.DIR_PREFIX + f"/contracts/{contract_name}.bin"
         }
     
     def getBlockchain(self):
@@ -126,7 +128,7 @@ class EthInitAndInfoServer(Server):
         """!
         @brief Install the service.
         """
-        node.appendClassName("EthInitAndInfoServer")
+        node.appendClassName("EthUtilityServer")
 
         node.addSoftware('python3 python3-pip')        
         node.addBuildCommand('pip3 install flask web3==5.31.1')
@@ -140,28 +142,36 @@ class EthInitAndInfoServer(Server):
             node.setFile(self.__contract_to_deploy_container_path[contract_name]['abi_path'], value['abi_content'])
             node.setFile(self.__contract_to_deploy_container_path[contract_name]['bin_path'], value['bin_content'])
             
-        node.setFile('/contracts/contract_file_paths.txt', json.dumps(self.__contract_to_deploy_container_path))
-        node.setFile('/fund_account.py', EthInitializerTemplate['fund_account'].format(
-            rpc_url = self.__eth_node_url,
-            rpc_port = self.__eth_node_port,
-            faucet_url = self.__faucet_url,
-            faucet_port = self.__faucet_port
+        node.setFile(self.DIR_PREFIX + '/contracts/contract_file_paths.txt', 
+                     json.dumps(self.__contract_to_deploy_container_path))
+        node.setFile(self.DIR_PREFIX + '/fund_account.py', 
+                     EthUtilityTemplate['fund_account'].format(
+            rpc_url     = self.__eth_node_url,
+            rpc_port    = self.__eth_node_port,
+            faucet_url  = self.__faucet_url,
+            faucet_port = self.__faucet_port,
+            dir_prefix  = self.DIR_PREFIX
         ))
-        node.setFile('/deploy_contract.py', EthInitializerTemplate['contract_deploy'].format(
-            rpc_url = self.__eth_node_url,
-            rpc_port = self.__eth_node_port,
-            chain_id = self.__chain_id
+        node.setFile(self.DIR_PREFIX + '/deploy_contract.py', 
+                     EthUtilityTemplate['contract_deploy'].format(
+            rpc_url    = self.__eth_node_url,
+            rpc_port   = self.__eth_node_port,
+            chain_id   = self.__chain_id,
+            dir_prefix = self.DIR_PREFIX
         ))
 
-        node.setFile('/info_server.py', EthInitializerTemplate['info_server'].format(port=self.__port))
-        node.appendStartCommand('python3 /info_server.py &')
-        node.appendStartCommand('python3 /fund_account.py')
-        node.appendStartCommand('python3 /deploy_contract.py')
-        
+        node.setFile(self.DIR_PREFIX  + '/info_server.py', 
+            EthUtilityTemplate['info_server'].format(
+                     port=self.__port, 
+                     dir_prefix=self.DIR_PREFIX))
+
+        node.appendStartCommand('python3 {}/info_server.py &'.format(self.DIR_PREFIX))
+        node.appendStartCommand('python3 {}/fund_account.py'.format(self.DIR_PREFIX))
+        node.appendStartCommand('python3 {}/deploy_contract.py'.format(self.DIR_PREFIX))
 
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
-        out += 'EthInitializer server object.\n'
+        out += 'EthUtilityServer object.\n'
 
         return out
