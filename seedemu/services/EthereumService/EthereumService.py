@@ -497,6 +497,23 @@ class Blockchain:
         eth = self._eth_service
         self._pending_targets.append(vnode)
         return eth.installFaucet(vnode, self, linked_eth_node, port, balance, max_fund_amount)
+
+
+    def getFaucetServerByName(self, vnode: str) -> FaucetServer:
+        """!
+        @brief Return an instance of the faucet server based on the provided name.
+
+        @param vnode: name of the faucet server
+
+        @returns an instance of FaucetServer
+        """
+
+        pending_targets = self._eth_service.getPendingTargets()
+        if vnode in self._pending_targets: 
+            if isinstance(pending_targets[vnode], FaucetServer):
+               return pending_targets[vnode]
+        return None
+
     
     def getFaucetServerInfo(self) -> List[Dict]:
         faucetInfo = []
@@ -521,7 +538,7 @@ class Blockchain:
             if key in self._pending_targets and isinstance(value, EthereumServer):
                 ethServerNames.append(key)
         return ethServerNames
-    
+
     def getEthServerInfo(self) -> List[Dict]:
         ethInfo = []
         for key, value in self._eth_service.getPendingTargets().items():
@@ -532,7 +549,22 @@ class Blockchain:
                 info['geth_ws_port'] = value.getGethWsPort()
                 ethInfo.append(info)
         return ethInfo
-    
+
+    def getEthInitInfoServerByName(self, vnode: str) -> EthInitInfoServer:
+        """!
+        @brief Return an instance of the Init-Info server based on the provided name.
+
+        @param vnode: name of the server
+ 
+        @returns an instance of EthInitInfoServer
+        """
+
+        pending_targets = self._eth_service.getPendingTargets()
+        if vnode in self._pending_targets: 
+            if isinstance(pending_targets[vnode], EthInitAndInfoServer):
+               return pending_targets[vnode]
+        return None
+
     def getEthInitInfoServerNames(self) -> List[str]:
         ethInitInfoServerNames = []
         for key, value in self._eth_service.getPendingTargets().items():
