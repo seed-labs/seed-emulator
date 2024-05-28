@@ -3,9 +3,8 @@ from seedemu.core import Node, Service, Server
 from seedemu.core.Emulator import Emulator
 from seedemu.core.enums import NetworkType
 from seedemu.services.EthereumService import *
+from .EthTemplates import FaucetServerFileTemplates
 from os import path
-from .FaucetUtil import FaucetServerFileTemplates
-from seedemu.services.EthereumService import *
 
 
 class FaucetServer(Server):
