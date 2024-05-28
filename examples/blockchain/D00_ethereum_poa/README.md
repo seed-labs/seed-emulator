@@ -6,7 +6,7 @@ To create a blockchain, we first create the `EthereumService`, and then
 create a blockchain inside this service. The service supports
 multiple chains.  
 
-```
+```python
 eth = EthereumService()
 blockchain = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.POA)
 ```
@@ -26,7 +26,7 @@ blockchain.setEmuAccountParameters(mnemonic=mnemonic, balance=1000, \
 
 Users can also add arbitrary pre-funded account to the blockchain.
 
-```
+```python
 blockchain.addLocalAccount(address='0xF5406927254d2dA7F7c28A61191e3Ff1f2400fe9',
                            balance=30)
 ```
@@ -43,7 +43,7 @@ For detailed account management instructions, see
 To create an Ethereum node, we just need to provide a node name (virtual node),
 and use the following API. 
 
-```
+```python
 e = blockchain.createNode('node0')
 ```
 
@@ -61,23 +61,31 @@ to satisfy additional emulation needs.
 - Set custom `geth` command option: for commonly-used options, we already
   have APIs to set them. However, for options not covered by these APIs,
   users can use this generic API to set them. 
-  ```
+  ```python
   eth_node.setCustomGethCommandOption("--http --http.addr 0.0.0.0")
   ```
 
 - Use custom `geth` binary file: some users want to run a modified version
   of the `geth` software on a particular node. They can do this
   using the following API.
-  ```
+  ```python
   eth_node.setCustomGeth("./custom_geth_binary")
   ```
 
 
 ## Create Faucet and Information Servers
 
-In this example, we also create a faucet server and an init-and-info server.
+In this example, we also create a faucet server and a utility server.
 These two servers are not used in this example, but they are used 
-by other examples. Their usage can be found in those examples. 
+by other examples. Because many applications require these 
+two servers, they are two essential elements in the SEED 
+blockchain emulator. 
+
+These two servers are not used in this example. The faucet 
+server is used in the example [D20_faucet](../D20_faucet/), while the 
+utility server is used in the example
+[D21_deploy_contract](../D21_deploy_contract) to help deploy
+smart contracts. 
 
 
 ## Binding to Physical Nodes
@@ -87,7 +95,7 @@ implemented an API called `getAllServerNames` to make it easy to
 get all the server names, including the ethereum nodes, the faucet
 nodes, and the init-and-info servers. 
 
-```
+```python
 for _, servers in blockchain.getAllServerNames().items():
     for server in servers:
        emu.addBinding(Binding(server))

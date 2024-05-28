@@ -3,7 +3,9 @@
 Before sending a transaction to the blockchain, the user's account needs
 to have some fund. In most test nets, a faucet server is provided to
 fund user's accounts after receiving requests. We have implemented
-such a faucet server in our emulator. This example demonstrates how to use it. 
+such a faucet server in the SEED blockchain emulator.
+This example demonstrates how to use it. 
+
 
 ## Table of Content
 
@@ -16,8 +18,24 @@ such a faucet server in our emulator. This example demonstrates how to use it.
 <a id="create-faucet-server"></a>
 ## Create Faucet Server
 
-We first need to add a faucet server to a blockchain using the `createFaucetServer` method.
-We can specify 4 parameters: `vnode`, `port`, `linked_eth_node`, and `balance`.
+We first need to add a faucet server to a blockchain. This server
+runs a web server, which can transfer the fund in its own account
+to whoever requests for fund.  This example uses
+a pre-built block component (`D00_ethereum_poa`), which already has a faucet server.
+In the [D00_ethereum_poa](../D00_ethereum_poa/) example, these lines are
+used to create a faucet server
+
+```python
+faucet:FaucetServer = blockchain.createFaucetServer(
+           vnode='faucet',
+           port=80,
+           linked_eth_node='eth5',
+           balance=10000,
+           max_fund_amount=10)
+faucet.setDisplayName('Faucet')
+```
+
+We can specify the following parameters: 
 - `vnode`: the virtual node name of the faucet server.
 - `port`: a port number, used by the faucet server to set up a web server.
 - `linked_eth_node`: the faucet server needs to link to an eth node, so it can
@@ -26,17 +44,17 @@ We can specify 4 parameters: `vnode`, `port`, `linked_eth_node`, and `balance`.
   has enabled the http connection (otherwise, it cannot accept external requests). 
 - `balance`: set the initial balance (ETH) of the account used by the faucet server.
   This account will be created during the build time and be added to the genesis block.
+- `max_fund_amount`: the maximal amount of fund (in Ethers) that can be transferred 
+  in each request.
+
+Because this server is already created in the base component,
+we just need to get an instance of this ojbect:
 
 ```python
-e5 = blockchain.createNode("poa-eth5").enableGethHttp()
-
-# Faucet Service
-blockchain:Blockchain
-faucet:FaucetServer = blockchain.createFaucetServer(
-           vnode='faucet', 
-           port=80, 
-           linked_eth_node='poa-eth5',
-           balance=1000)
+eth         = emu.getLayer('EthereumService')
+blockchain  = eth.getBlockchainByName(eth.getBlockchainNames()[0])
+faucet_name = blockchain.getFaucetServerNames()[0]
+faucet      = blockchain.getFaucetServerByName(faucet_name)
 ```
 
 
@@ -46,7 +64,8 @@ faucet:FaucetServer = blockchain.createFaucetServer(
 ### (1) Fund accounts during the build time
 
 During the emulator build time, if we already know the account address,
-we fund the account directly at the build time.
+we can ask the faucet to fund it, so when the 
+emulator starts, the faucet server will carry out the fund transfer. 
 
 ```python
 faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
@@ -60,7 +79,7 @@ the accounts are created during the run time. In this case, during the run
 time, the user can send a HTTP request to the faucet server to ask
 the faucet server to fund a specified account. Data in the request
 can be conveyed in two ways: form and json. Here are the examples
-using `curl` to send HTTP requests to the faucet server (we can
+that use `curl` to send HTTP requests to the faucet server (we can
 do this from any host). 
 
 ```
