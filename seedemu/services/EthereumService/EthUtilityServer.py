@@ -22,7 +22,7 @@ class EthUtilityServer(Server):
 
     def __init__(self, blockchain:Blockchain, port:int, linked_eth_node:str, linked_faucet_node:str):
         """!
-        @brief FaucetServer constructor.
+        @brief constructor.
         """
         super().__init__()
         self.__blockchain = blockchain
