@@ -19,8 +19,8 @@ ChainID = '{chain_id}'
 
 [[EVM.Nodes]]
 Name = 'SEED Emulator'
-WSURL = 'ws://{rpc_url}:{rpc_ws_port}'
-HTTPURL = 'http://{rpc_url}:{rpc_port}'
+WSURL = 'ws://{rpc_ip}:{rpc_ws_port}'
+HTTPURL = 'http://{rpc_ip}:{rpc_port}'
 """
 
 ChainlinkFileTemplate['secrets'] = """\
@@ -36,13 +36,13 @@ ChainlinkFileTemplate['api'] = """\
 """
 
 ChainlinkFileTemplate['check_init_node'] = """\
-URL="http://{init_node_url}:{init_node_port}/contracts_info?name={contract_name}"
+URL="http://{util_node_ip}:{util_node_port}/contracts_info?name={contract_name}"
 EXPECTED_STATUS="200"
 while true; do
     STATUS=$(curl -Is "$URL" | head -n 1 | awk '{{print $2}}')
     
     if [ "$STATUS" == "$EXPECTED_STATUS" ]; then
-        echo "Link Token contract deployed successfully on the init node!"
+        echo "Link Token contract deployed successfully on the utility node!"
         break
     else
         echo "Waiting for the link token contract to be deployed..."
@@ -173,7 +173,7 @@ if __name__ == '__main__':
 """
 
 ChainlinkFileTemplate['send_flask_request'] = """\
-URL="http://{init_node_url}:{init_node_port}"
+URL="http://{util_node_ip}:{util_node_port}"
 EXPECTED_STATUS="200"
 
 while true; do
@@ -188,9 +188,9 @@ while true; do
     fi
 done
 
-RESPONSE=$(curl -X POST http://{init_node_url}:{init_node_port}/register_contract \\
+RESPONSE=$(curl -X POST http://{util_node_ip}:{util_node_port}/register_contract \\
      -H "Content-Type: application/json" \\
-     -d "{{\\"contract_name\\":\\"oracle-{contract_name}\\", \\"contract_address\\":\\"$(tail -n 1 /deployed_contracts/oracle_contract_address.txt)\\"}}")
+     -d "{{\\"contract_name\\":\\"oracle-{node_name}\\", \\"contract_address\\":\\"$(tail -n 1 /deployed_contracts/oracle_contract_address.txt)\\"}}")
 
 echo "$RESPONSE"
 """
@@ -212,9 +212,9 @@ while true; do
         break
     fi
 done
-FAUCET_SERVER_URL={faucet_server_url}
+FAUCET_SERVER_URL={faucet_server_ip}
 FAUCET_SERVER_PORT={faucet_server_port}
-RPC_URL="http://{rpc_url}:{rpc_port}"
+RPC_URL="http://{rpc_ip}:{rpc_port}"
 AMOUNT=5
 TIME_LIMIT=100
 

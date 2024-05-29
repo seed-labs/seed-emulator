@@ -13,8 +13,8 @@ import re
 import requests
 import json
 
-rpc_url = "http://{rpc_url}:{rpc_port}"
-faucet_url = "http://{faucet_url}:{faucet_port}"
+rpc_url = "http://{rpc_ip}:{rpc_port}"
+faucet_ip = "http://{faucet_ip}:{faucet_port}"
 
 contract_folder = './contracts/'
 # If the deployment od oracle contract fails, the script will retry after this delay in seconds
@@ -23,7 +23,7 @@ retry_delay = 20
 deployment_queue = Queue()
 deployment_queue.put({{}})
 
-url = "http://{init_node_url}:{init_node_port}/contracts_info?name={contract_name}"
+url = "http://{util_node_ip}:{util_node_port}/contracts_info?name={contract_name}"
 response = requests.get(url)
 link_address = response.text.strip().replace('"', '')
 
@@ -48,7 +48,7 @@ timeout = 600
 start_time = time.time()
 while True:
     try:
-        response = requests.get(faucet_url)
+        response = requests.get(faucet_ip)
         if response.status_code == 200:
             logging.info("faucet server connection succeed.")
             break
@@ -65,9 +65,9 @@ while True:
 def send_fundme_request(account_address):
 	data = {{'address': account_address, 'amount': 10}}
 	logging.info(data)
-	request_url = "http://{faucet_url}:{faucet_port}/fundme"
+	request_ip = "http://{faucet_ip}:{faucet_port}/fundme"
 	try:
-		response = requests.post(request_url, headers={{"Content-Type": "application/json"}}, data=json.dumps(data))
+		response = requests.post(request_ip, headers={{"Content-Type": "application/json"}}, data=json.dumps(data))
 		logging.info(response)
 		if response.status_code == 200:
 			api_response = response.json()
