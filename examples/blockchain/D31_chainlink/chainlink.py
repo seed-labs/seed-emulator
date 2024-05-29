@@ -14,41 +14,33 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
 
     # Run and load the pre-built ethereum component; it is used as the base blockchain
     local_dump_path = './blockchain-poa.bin'
-    ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4, total_accounts_per_node=1)
+    #ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4, total_accounts_per_node=1)
     emu.load(local_dump_path)
     
-    # Get the utility server instance
-    # This server will be used to deploy the necessary contract, and provide
-    # contract addresses to the Chainlink servers
+    # Get the blockchain instance; we need to get some information from it
     eth = emu.getLayer('EthereumService')
-    blockchain = eth.getBlockchainByName(eth.getBlockchainNames()[0])
-    util_name  = blockchain.getUtilityServerNames()[0]
-    utility    = blockchain.getUtilityServerByName(util_name)
+    blockchain  = eth.getBlockchainByName(eth.getBlockchainNames()[0])
 
-    # Create the Chainlink service, and set the faucet server. 
-    # Accounts will be created for the Chainlink service, and they
-    # will be funded via the faucet server. 
-    chainlink = ChainlinkService()
-    #chainlink.setEthServer(random.choice(eth_nodes)['name'])
-    #chainlink.setFaucetServer(faucet_info[0]['name'])
-    chainlink.setEthServer('eth5')
-    chainlink.setFaucetServer('faucet')
-    chainlink.setUtilityServer(util_name)
-    
+    # Create the Chainlink service
+    chainlink = ChainlinkService(
+                    eth_server=random.choice(blockchain.getEthServerNames()), 
+                    faucet_server=blockchain.getFaucetServerNames()[0],
+                    utility_server=blockchain.getUtilityServerNames()[0]
+                )   
+
     # Create Chainlink nodes (called server in our code)
-    # We need to provide a blockchain node for this node to send transactions
-    # to the blockchain. 
     for i in range(total_chainlink_nodes):
         chainlink.install('chainlink_node_{}'.format(i)) \
-                .setDisplayName('Chainlink-{}'.format(i))
+                 .setDisplayName('Chainlink-{}'.format(i))
 
     # Add the Chainlink layer
     emu.addLayer(chainlink)
     
-    # Bind each Chainlink node to a physical node (no filters, so random binding)
-    server_nodes = chainlink.getAllServerNames()
-    for server_node in server_nodes['ChainlinkServer']:
+    # Bind each Chainlink node to a physical node (no filters, so bind randomly)
+    server_nodes = chainlink.getAllServerNames()['ChainlinkServer']
+    for server_node in server_nodes:
         emu.addBinding(Binding(server_node))
+
 
     # Generate the emulator files
     if dumpfile is not None:
@@ -64,9 +56,9 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
         emu.compile(docker, './output', override = True)
 
     print("-----------------------------------------")
-    print("Chainlink nodes: " + str(server_nodes))
-    for type, server_list in blockchain.getAllServerNames().items():
-        print("EthNodes: - type: "+ type + " - list: " + str(server_list))
+    print("Blockchain nodes: " + str(blockchain.getAllServerNames()))
+    print("-----------------------------------------")
+    print("Chainlink nodes:  " + str(chainlink.getAllServerNames()))
 
 if __name__ == "__main__":
     run()
