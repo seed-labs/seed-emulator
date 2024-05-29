@@ -14,7 +14,7 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
 
     # Run and load the pre-built ethereum component; it is used as the base blockchain
     local_dump_path = './blockchain-poa.bin'
-    #ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4, total_accounts_per_node=1)
+    ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=4, total_accounts_per_node=1)
     emu.load(local_dump_path)
     
     # Get the blockchain instance; we need to get some information from it
