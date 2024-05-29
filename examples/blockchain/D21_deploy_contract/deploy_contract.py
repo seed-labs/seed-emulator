@@ -20,8 +20,8 @@ def run(dumpfile = None):
     # Get the utility server 
     eth = emu.getLayer('EthereumService')
     blockchain = eth.getBlockchainByName(eth.getBlockchainNames()[0])
-    name       = blockchain.getEthUtilityServerNames()[0]
-    utility    = blockchain.getEthUtilityServerByName(name)
+    name       = blockchain.getUtilityServerNames()[0]
+    utility    = blockchain.getUtilityServerByName(name)
 
     # Deploy contract on the utility server
     # The actual deployment is carried out at the run time. 
