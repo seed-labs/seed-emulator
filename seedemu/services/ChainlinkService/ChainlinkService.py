@@ -203,12 +203,17 @@ class ChainlinkService(Service):
 
     __chain_id:int
 
-    def __init__(self):
+    def __init__(self, eth_server:str='', faucet_server:str='', utility_server:str=''):
         """
         @brief ChainlinkService constructor.
         """
         super().__init__()
         self.addDependency('EthereumService', False, False)
+
+        self.__eth_server_vnode_name  = eth_server
+        self.__faucet_vnode_name      = faucet_server
+        self.__util_server_vnode_name = utility_server
+
 
     def _createServer(self) -> ChainlinkServer:
         self._log('Creating Chainlink server.')
