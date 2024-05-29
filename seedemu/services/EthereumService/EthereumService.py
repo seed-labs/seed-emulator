@@ -550,7 +550,7 @@ class Blockchain:
                 ethInfo.append(info)
         return ethInfo
 
-    def getEthUtilityServerByName(self, vnode: str) -> EthUtilityServer:
+    def getUtilityServerByName(self, vnode: str) -> EthUtilityServer:
         """!
         @brief Return an instance of the utility server based on the provided name.
 
@@ -565,14 +565,14 @@ class Blockchain:
                return pending_targets[vnode]
         return None
 
-    def getEthUtilityServerNames(self) -> List[str]:
+    def getUtilityServerNames(self) -> List[str]:
         ethUtilityServerNames = []
         for key, value in self._eth_service.getPendingTargets().items():
             if key in self._pending_targets and isinstance(value, EthUtilityServer):
                 ethUtilityServerNames.append(key)
         return ethUtilityServerNames
     
-    def getEthUtilityServerInfo(self) -> List[Dict]:
+    def getUtilityServerInfo(self) -> List[Dict]:
         ethUtilityServerInfo = []
         for key, value in self._eth_service.getPendingTargets().items():
             if key in self._pending_targets and isinstance(value, EthUtilityServer):
