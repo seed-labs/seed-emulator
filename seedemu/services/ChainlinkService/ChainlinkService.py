@@ -60,35 +60,62 @@ class ChainlinkServer(Server):
 
         self.__installSoftware(node)
         self.__setConfigurationFiles(node)
-        self.__chainlinkStartCommands(node)
-        node.setFile('/chainlink/send_fund_request.sh', 
-                     ChainlinkFileTemplate['send_get_eth_request'].format(
+        self.__setScriptFiles(node)
+
+        node.appendStartCommand(ChainlinkFileTemplate['start_commands'])
+
+        node.appendStartCommand('bash /chainlink/request_fund.sh')
+        node.appendStartCommand('bash /chainlink/check_utility_server.sh')
+
+        node.appendStartCommand('python3 /chainlink/deploy_oracle_contract.py')
+
+        node.appendStartCommand('bash /chainlink/register_contract.sh')
+        node.appendStartCommand('bash /chainlink/create_chainlink_jobs.sh')
+
+    def __setScriptFiles(self, node:Node):
+        """
+        @brief Install the needed files.
+        """
+
+        # Set the oracle contracts 
+        node.setFile('/chainlink/contracts/oracle_contract.abi', 
+                     OracleContractDeploymentTemplate['oracle_contract_abi'])
+        node.setFile('/chainlink/contracts/oracle_contract.bin', 
+                     OracleContractDeploymentTemplate['oracle_contract_bin'])
+
+        node.setFile('/chainlink/deploy_oracle_contract.py', 
+                     OracleContractDeploymentTemplate['deploy_oracle_contract'].format(
+                        rpc_ip=self.__eth_server_ip,
+                        rpc_port=self.__eth_server_http_port,
+                        util_node_ip=self.__util_server_ip,
+                        util_node_port=self.__util_server_port,
+                        contract_name=LinkTokenFileTemplate['link_contract_name'],
+                        chain_id=self.__chain_id, 
+                        faucet_ip=self.__faucet_server_ip, 
+                        faucet_port=self.__faucet_server_port))
+
+        node.setFile('/chainlink/request_fund.sh', 
+                     ChainlinkFileTemplate['request_fund'].format(
                          faucet_server_ip=self.__faucet_server_ip, 
                          faucet_server_port=self.__faucet_server_port, 
-                         rpc_ip=self.__eth_server_ip, 
-                         rpc_port=self.__eth_server_http_port))
-        node.appendStartCommand('bash /chainlink/send_fund_request.sh')
-        node.setFile('/chainlink/check_init_node.sh', 
-                     ChainlinkFileTemplate['check_init_node'].format(
+                         eth_server_ip=self.__eth_server_ip, 
+                         eth_server_port=self.__eth_server_http_port))
+
+        node.setFile('/chainlink/check_utility_server.sh', 
+                     ChainlinkFileTemplate['check_utility_server'].format(
                          util_node_ip=self.__util_server_ip,
                          util_node_port=self.__util_server_port,
-                         contract_name =LinkTokenDeploymentTemplate['link_token_name']))
-        node.appendStartCommand('bash /chainlink/check_init_node.sh')
+                         contract_name =LinkTokenFileTemplate['link_contract_name']))
 
-        self.__deploy_oracle_contract(node)
-
-        node.setFile('/chainlink/send_flask_request.sh', 
-                     ChainlinkFileTemplate['send_flask_request'].format(
+        node.setFile('/chainlink/register_contract.sh', 
+                     ChainlinkFileTemplate['register_contract'].format(
                            util_node_ip=self.__util_server_ip,
                            util_node_port=self.__util_server_port,
                            node_name=self.__name))
-        node.appendStartCommand('bash /chainlink/send_flask_request.sh')
 
         node.setFile('/chainlink/create_chainlink_jobs.sh', 
                      ChainlinkFileTemplate['create_jobs'])
-        node.appendStartCommand('bash /chainlink/create_chainlink_jobs.sh')
 
-        node.appendStartCommand('tail -f /chainlink/chainlink_logs.txt')
 
     def __installSoftware(self, node:Node):
         """
@@ -117,6 +144,7 @@ class ChainlinkServer(Server):
         node.setFile('/chainlink/jobs/getUint256.toml', ChainlinkJobsTemplate['getUint256'])
         node.setFile('/chainlink/jobs/getBool.toml', ChainlinkJobsTemplate['getBool'])
 
+    # This one is no longer needed, should be deleted 
     def __chainlinkStartCommands(self, node:Node):
         """
         @brief Add start commands.
@@ -127,27 +155,6 @@ su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword
 nohup chainlink node -config /chainlink/config.toml -secrets /chainlink/db_secrets.toml start -api /chainlink/password.txt > /chainlink/chainlink_logs.txt 2>&1 &
 """
         node.appendStartCommand(start_commands)
-
-    def __deploy_oracle_contract(self, node:Node):
-        """
-        @brief Deploy the oracle contract.
-        """
-        node.setFile('/contracts/deploy_oracle_contract.py', 
-                     OracleContractDeploymentTemplate['oracle_contract_deploy'].format(
-                        rpc_ip = self.__eth_server_ip,
-                        rpc_port = self.__eth_server_http_port,
-                        util_node_ip=self.__util_server_ip,
-                        util_node_port=self.__util_server_port,
-                        contract_name = LinkTokenDeploymentTemplate['link_token_name'],
-                        chain_id=self.__chain_id, 
-                        faucet_ip=self.__faucet_server_ip, 
-                        faucet_port=self.__faucet_server_port))
-
-        node.setFile('/contracts/oracle_contract.abi', 
-                     OracleContractDeploymentTemplate['oracle_contract_abi'])
-        node.setFile('/contracts/oracle_contract.bin', 
-                     OracleContractDeploymentTemplate['oracle_contract_bin'])
-        node.appendStartCommand(f'python3 ./contracts/deploy_oracle_contract.py')
 
     def setUsernameAndPassword(self, username: str, password: str):
         """
@@ -297,9 +304,9 @@ class ChainlinkService(Service):
 
         # Use the utility server to deploy the Link contract
         utility.deployContractByContent(
-            contract_name=LinkTokenDeploymentTemplate['link_token_name'],
-            abi_content=LinkTokenDeploymentTemplate['link_token_abi'],
-            bin_content=LinkTokenDeploymentTemplate['link_token_bin'])
+            contract_name=LinkTokenFileTemplate['link_contract_name'],
+            abi_content=LinkTokenFileTemplate['link_contract_abi'],
+            bin_content=LinkTokenFileTemplate['link_contract_bin'])
 
         # Get the setup information (especially the port numbers)
         self.__chain_id             = eth_server.getChainId()

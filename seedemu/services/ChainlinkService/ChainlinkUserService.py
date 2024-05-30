@@ -1,7 +1,8 @@
 from seedemu import *
 from seedemu.core.enums import NetworkType
-from seedemu.services.ChainlinkService.ChainlinkTemplates import ChainlinkUserTemplate, ChainlinkFileTemplate, LinkTokenDeploymentTemplate
+from seedemu.services.ChainlinkService.ChainlinkTemplates import ChainlinkUserTemplate, ChainlinkFileTemplate
  
+
 class ChainlinkUserServer(Server):
     """
     @brief The Chainlink virtual user server.

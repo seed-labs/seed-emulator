@@ -1,5 +1,5 @@
-from .LinkTokenDeploymentTemplate import LinkTokenDeploymentTemplate
-from .OracleContractDeploymentTemplate import OracleContractDeploymentTemplate
-from .ChainlinkFileTemplate import ChainlinkFileTemplate
+from .ChainlinkFileTemplate import ChainlinkFileTemplate, \
+                                   OracleContractDeploymentTemplate, \
+                                   LinkTokenFileTemplate
 from .ChainlinkJobsTemplate import ChainlinkJobsTemplate
 from .ChainlinkUserTemplate import ChainlinkUserTemplate
