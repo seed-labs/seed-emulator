@@ -376,7 +376,7 @@ class Emulator:
             pnode.copySettings(vpnode)
 
         for layerName in self.__layers.db.keys():
-            if layerName is not 'EtcHosts':
+            if layerName != 'EtcHosts':
                 self.__render(layerName, False, True)
         
         # render EtcHost last
