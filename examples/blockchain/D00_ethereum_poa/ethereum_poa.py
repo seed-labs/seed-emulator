@@ -22,13 +22,23 @@ def run(dumpfile = None, hosts_per_as=3, total_eth_nodes=20, total_accounts_per_
     # Merge the two pre-built components
     emu = emuA.merge(emuB, DEFAULT_MERGERS)
 
+    # Check if the size of total_eth_nodes is larger than the size of the total hosts
+    base: Base = emu.getLayer('Base')
+    asns = []
+    for asn in base.getAsns():
+        if len(base.getAutonomousSystem(asn).getHosts()) > 0:
+            asns.append(asn)
+    assert hosts_per_as * len(asns) >= total_eth_nodes, f'the total hosts size({hosts_per_as*len(asns)}) is smaller than the total_eth_nodes({total_eth_nodes}).'
+
     eth:EthereumService = emu.getLayer('EthereumService')
     blockchain: Blockchain =  eth.getBlockchainByName(eth.getBlockchainNames()[0])
 
+    asnCounter = 0
     # Get all the server names and bind them to physical nodes
     for _, servers in blockchain.getAllServerNames().items():
         for server in servers:
-           emu.addBinding(Binding(server))
+           emu.addBinding(Binding(server, filter = Filter(asn = asns[asnCounter%len(asns)], nodeName=f'host_{asnCounter//len(asns)}')))
+           asnCounter += 1
 
     # Generate output
     if dumpfile is not None:
