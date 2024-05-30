@@ -217,6 +217,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __softwares: Set[str]
     __build_commands: List[str]
     __start_commands: List[Tuple[str, bool]]
+    __user_start_commands: List[Tuple[str, bool]]
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
 
@@ -257,6 +258,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__softwares = set()
         self.__build_commands = []
         self.__start_commands = []
+        self.__user_start_commands = []
         self.__ports = []
         self.__privileged = False
         self.__base_system = BaseSystem.DEFAULT
@@ -792,6 +794,40 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__start_commands.append((cmd, fork))
 
         return self
+    
+    def appendUserStartCommand(self, cmd:str, fork:bool=False) -> Node:
+        """!
+        @brief Add new user command to start script.
+
+        This method is intended to be called by user. 
+        The start commands appended by this method will be appended after
+        all commands set by Core (Layer, Service) classes.
+
+        The command should not be a blocking command. If you need to run a
+        blocking command, set fork to true and fork it to the background so
+        that it won't block the execution of other commands.
+
+        @param cmd command to add.
+        @param fork (optional) fork to command to background?
+
+        Use this to add start steps to the node. For example, if using the
+        "docker" compiler, this will be added to start.sh.
+
+        @returns self, for chaining API calls.
+        """
+        
+        self.__user_start_commands.append((cmd, fork))
+
+        return self
+    
+    def getUserStartCommands(self) -> List[Tuple[str, bool]]:
+        """!
+        @brief Get user start commands.
+
+        @returns list of tuples, where the first element is command, and the
+        second element indicates if this command should be forked.
+        """
+        return self.__user_start_commands
 
     def getStartCommands(self) -> List[Tuple[str, bool]]:
         """!
@@ -916,6 +952,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for p in node.getPersistentStorages(): self.addPersistentStorage(p)
         for (c, f) in node.getStartCommands(): self.appendStartCommand(c, f)
+        # for (c, f) in node.getUserStartCommands(): self.appendUserStartCommand(c, f)
         for c in node.getBuildCommands(): self.addBuildCommand(c)
         for s in node.getSoftware(): self.addSoftware(s)
 
@@ -962,6 +999,10 @@ class Node(Printable, Registrable, Configurable, Vertex):
         out += 'Additional Start Commands:\n'
         indent += 4
         for (cmd, fork) in self.__start_commands:
+            out += ' ' * indent
+            out += '{}{}\n'.format(cmd, ' (fork)' if fork else '')
+
+        for (cmd, fork) in self.__user_start_commands:
             out += ' ' * indent
             out += '{}{}\n'.format(cmd, ' (fork)' if fork else '')
         indent -= 4
