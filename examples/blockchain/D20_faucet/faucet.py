@@ -31,7 +31,8 @@ faucetUserService.install('faucetUser').setDisplayName('FaucetUser')
 faucetUserService.setFaucetServerInfo(faucet_info[0]['name'], faucet_info[0]['port'])
 
 # Binding virtual nodes to physical nodes
-emu.addBinding(Binding('faucetUser', filter=Filter(asn = 164, nodeName='host_0')))
+#emu.addBinding(Binding('faucetUser', filter=Filter(asn = 164, nodeName='host_0')))
+emu.addBinding(Binding('faucetUser'))
 
 # Add the layer 
 emu.addLayer(faucetUserService)
