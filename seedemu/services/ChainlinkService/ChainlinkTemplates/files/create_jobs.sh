@@ -1,8 +1,11 @@
 #!/bin/bash
-DIRECTORY="/chainlink/jobs/"
-ORACLE_ADDRESS_FILE="/deployed_contracts/oracle_contract_address.txt"
+DIRECTORY="./jobs/"
+ORACLE_ADDRESS_FILE="./deployed_contracts/oracle_contract_address.txt"
 TIMEOUT=1000
 SLEEP_DURATION=10
+
+# Change the work folder to where the program is
+cd "$(dirname "$0")"
 
 if [ ! -d "$DIRECTORY" ]; then
     echo "Error: Directory $DIRECTORY does not exist."
@@ -35,7 +38,7 @@ if [ ! -d "$DIRECTORY" ]; then
 
     echo "All TOML files have been updated."
 
-chainlink admin login -f /chainlink/password.txt
+chainlink admin login -f ./password.txt
 
 if [ ! -d "$DIRECTORY" ]; then
     echo "Error: Directory does not exist."

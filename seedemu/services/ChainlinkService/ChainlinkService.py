@@ -62,15 +62,24 @@ class ChainlinkServer(Server):
         self.__setConfigurationFiles(node)
         self.__setScriptFiles(node)
 
+        # Step 1: Start the chainlink server 
         node.appendStartCommand(ChainlinkFileTemplate['start_commands'])
-
+       
+        # Step 2: Get the fund for the account created by the chainlink server 
         node.appendStartCommand('bash /chainlink/request_fund.sh')
-        node.appendStartCommand('bash /chainlink/check_utility_server.sh')
 
+        # Step 3: Check whether link contract is already created (needed by chainklink)
+        node.appendStartCommand('bash /chainlink/check_link_contract.sh')
+
+        # Step 4: Deploy the chainlink oracle contract
         node.appendStartCommand('python3 /chainlink/deploy_oracle_contract.py')
 
+        # Step 5: Register the oracle address with the utility server
         node.appendStartCommand('bash /chainlink/register_contract.sh')
+
+        # Step 6: Create chainlink jobs 
         node.appendStartCommand('bash /chainlink/create_chainlink_jobs.sh')
+
 
     def __setScriptFiles(self, node:Node):
         """
@@ -101,8 +110,8 @@ class ChainlinkServer(Server):
                          eth_server_ip=self.__eth_server_ip, 
                          eth_server_port=self.__eth_server_http_port))
 
-        node.setFile('/chainlink/check_utility_server.sh', 
-                     ChainlinkFileTemplate['check_utility_server'].format(
+        node.setFile('/chainlink/check_link_contract.sh', 
+                     ChainlinkFileTemplate['check_link_contract'].format(
                          util_node_ip=self.__util_server_ip,
                          util_node_port=self.__util_server_port,
                          contract_name =LinkTokenFileTemplate['link_contract_name']))

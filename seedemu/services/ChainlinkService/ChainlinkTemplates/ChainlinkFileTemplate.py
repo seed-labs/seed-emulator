@@ -30,7 +30,7 @@ OracleContractDeploymentTemplate: Dict[str, str] = {
 
 # Chainlink script files 
 ChainlinkFileTemplate: Dict[str, str] = {
-    'check_utility_server': get_file_content("files/check_utility_server.sh"), 
+    'check_link_contract':  get_file_content("files/check_link_contract.sh"), 
     'register_contract':    get_file_content("files/register_contract.sh"),
     'create_jobs':          get_file_content("files/create_jobs.sh"),
     'request_fund':         get_file_content("files/request_fund.sh")

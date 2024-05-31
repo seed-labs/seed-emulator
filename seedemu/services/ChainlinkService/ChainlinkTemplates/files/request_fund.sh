@@ -3,12 +3,14 @@
 FAUCET_RPC_URL="http://{faucet_server_ip}:{faucet_server_port}"
 ETH_RPC_URL="http://{eth_server_ip}:{eth_server_port}"
 
+# Change the work folder to where the program is
+cd "$(dirname "$0")"
 
 # Wait for the Chainlink node to be up
 while true; do
     sleep 20
     # Get Ethereum address
-    chainlink admin login -f /chainlink/password.txt
+    chainlink admin login -f ./password.txt
     ETH_ADDRESS=$(chainlink keys eth list | grep 'Address:' | awk '{{print $2}}')
 
     # Check if the address is empty
@@ -79,5 +81,5 @@ while true; do
     sleep 30
 done
 
-mkdir -p /deployed_contracts
-echo $ETH_ADDRESS > /deployed_contracts/auth_sender.txt
+mkdir -p ./deployed_contracts
+echo $ETH_ADDRESS > ./deployed_contracts/auth_sender.txt

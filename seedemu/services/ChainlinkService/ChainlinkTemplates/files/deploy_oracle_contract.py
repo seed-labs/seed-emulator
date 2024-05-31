@@ -11,8 +11,18 @@ import json
 rpc_url = "http://{rpc_ip}:{rpc_port}"
 faucet_ip = "http://{faucet_ip}:{faucet_port}"
 
+# Change the work folder to where the program is
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
+
+logging.basicConfig(level=logging.INFO, 
+            format='%(asctime)s - %(levelname)s - %(message)s')
+
 contract_folder = './contracts/'
-# If the deployment od oracle contract fails, the script will retry after this delay in seconds
+
+# If the deployment of the oracle contract fails, 
+# the script will retry after this number of seconds
 retry_delay = 20
 
 deployment_queue = Queue()
@@ -22,12 +32,12 @@ url = "http://{util_node_ip}:{util_node_port}/contracts_info?name={contract_name
 response = requests.get(url)
 link_address = response.text.strip().replace('"', '')
 
+logging.info("Link contract address: " + link_address)
+
 if link_address:
 	link_address = Web3.toChecksumAddress(link_address)
 else:
 	logging.error("Failed to get Link Token contract address.")
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 web3 = Web3(HTTPProvider(rpc_url))
 if not web3.isConnected():
