@@ -1,7 +1,7 @@
 from __future__ import annotations
 from seedemu.core import Node, Server
 from seedemu.services.EthereumService import *
-from .EthTemplates import EthUtilityFileTemplates 
+from .EthTemplates import EthServerFileTemplates 
 from seedemu.services.EthereumService import *
 import json
 import os
@@ -145,7 +145,7 @@ class EthUtilityServer(Server):
         node.setFile(self.DIR_PREFIX + '/contracts/contract_file_paths.txt', 
                      json.dumps(self.__contract_to_deploy_container_path))
         node.setFile(self.DIR_PREFIX + '/fund_account.py', 
-                     EthUtilityFileTemplates['fund_account'].format(
+                     UtilityServerFileTemplates['fund_account'].format(
             rpc_url     = self.__eth_node_url,
             rpc_port    = self.__eth_node_port,
             faucet_url  = self.__faucet_url,
@@ -153,7 +153,7 @@ class EthUtilityServer(Server):
             dir_prefix  = self.DIR_PREFIX
         ))
         node.setFile(self.DIR_PREFIX + '/deploy_contract.py', 
-                     EthUtilityFileTemplates['deploy_contract'].format(
+                     UtilityServerFileTemplates['deploy_contract'].format(
             rpc_url    = self.__eth_node_url,
             rpc_port   = self.__eth_node_port,
             chain_id   = self.__chain_id,
@@ -161,7 +161,7 @@ class EthUtilityServer(Server):
         ))
 
         node.setFile(self.DIR_PREFIX  + '/info_server.py', 
-            EthUtilityFileTemplates['info_server'].format(
+            UtilityServerFileTemplates['info_server'].format(
                      port=self.__port, 
                      dir_prefix=self.DIR_PREFIX))
 
