@@ -28,6 +28,18 @@ OracleContractDeploymentTemplate: Dict[str, str] = {
     'oracle_contract_bin':    get_file_content("files/contract/oracle_contract.bin")
 }
 
+# Files for user node
+ChainlinkUserTemplate: Dict[str, str] = {
+    'user_contract_abi':       get_file_content("files_user/user_contract.abi"),
+    'user_contract_bin':       get_file_content("files_user/user_contract.bin"),
+    'request_eth_price':       get_file_content("files_user/request_eth_price.py"),
+    'fund_user_contract':      get_file_content("files_user/fund_user_contract.py"),
+    'set_contract_addresses':  get_file_content("files_user/set_contract_addresses.py"),
+    'get_contract_addresses':  get_file_content("files_user/get_contract_addresses.py"),
+    'deploy_user_contract':    get_file_content("files_user/deploy_user_contract.py")
+}
+
+
 # Chainlink script files 
 ChainlinkFileTemplate: Dict[str, str] = {
     'check_link_contract':  get_file_content("files/check_link_contract.sh"), 
@@ -41,7 +53,6 @@ service postgresql restart
 su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\""
 nohup chainlink node -config /chainlink/config.toml -secrets /chainlink/db_secrets.toml start -api /chainlink/password.txt > /chainlink/chainlink_logs.txt 2>&1 &
 """
-
 
 ChainlinkFileTemplate['config'] = """\
 [Log]

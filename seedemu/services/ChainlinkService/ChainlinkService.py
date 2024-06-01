@@ -4,23 +4,17 @@ from seedemu.core.Service import Server
 from seedemu.core.enums import NetworkType
 #from seedemu.services.ChainlinkService.ChainlinkTemplates import *
 from .ChainlinkTemplates import *
+from .ChainlinkBaseServer import *
+from .ChainlinkUserServer import *
 import re
 
-class ChainlinkServer(Server):
+class ChainlinkServer(ChainlinkBaseServer):
     """
     @brief The Chainlink virtual node server.
     """
     __name:str
     __username: str = "seed@example.com"
     __password: str = "blockchainemulator"
-    __eth_server_ip: str
-    __eth_server_ws_port: int
-    __eth_server_http_port: int
-    __util_server_ip: str
-    __util_server_port: int
-    __faucet_server_ip:str
-    __faucet_server_port: int
-    __chain_id: int
 
     def __init__(self):
         """
@@ -28,24 +22,6 @@ class ChainlinkServer(Server):
         """
         super().__init__()
         self._base_system = BaseSystem.SEEDEMU_CHAINLINK
-
-    def _setEthServerInfo(self, eth_server_ip:str, eth_server_http_port:int, eth_server_ws_port:int, chain_id:int):
-        self.__eth_server_ip = eth_server_ip
-        self.__eth_server_http_port = eth_server_http_port
-        self.__eth_server_ws_port = eth_server_ws_port
-        self.__chain_id = chain_id
-        return self
-
-    def _setUtilityServerInfo(self, util_server_ip:str, util_server_port:int):
-        self.__util_server_ip = util_server_ip
-        self.__util_server_port = util_server_port
-        return self
-
-    def _setFaucetServerInfo(self, faucet_server_ip:str, faucet_server_port:int):
-        self.__faucet_server_ip = faucet_server_ip
-        self.__faucet_server_port = faucet_server_port
-        return self
-
 
     def setName(self, name: str):
         """
@@ -94,32 +70,32 @@ class ChainlinkServer(Server):
 
         node.setFile('/chainlink/deploy_oracle_contract.py', 
                      OracleContractDeploymentTemplate['deploy_oracle_contract'].format(
-                        rpc_ip=self.__eth_server_ip,
-                        rpc_port=self.__eth_server_http_port,
-                        util_node_ip=self.__util_server_ip,
-                        util_node_port=self.__util_server_port,
+                        rpc_ip=self._eth_server_ip,
+                        rpc_port=self._eth_server_http_port,
+                        util_node_ip=self._util_server_ip,
+                        util_node_port=self._util_server_port,
                         contract_name=LinkTokenFileTemplate['link_contract_name'],
-                        chain_id=self.__chain_id, 
-                        faucet_ip=self.__faucet_server_ip, 
-                        faucet_port=self.__faucet_server_port))
+                        chain_id=self._chain_id, 
+                        faucet_ip=self._faucet_server_ip, 
+                        faucet_port=self._faucet_server_port))
 
         node.setFile('/chainlink/request_fund.sh', 
                      ChainlinkFileTemplate['request_fund'].format(
-                         faucet_server_ip=self.__faucet_server_ip, 
-                         faucet_server_port=self.__faucet_server_port, 
-                         eth_server_ip=self.__eth_server_ip, 
-                         eth_server_port=self.__eth_server_http_port))
+                         faucet_server_ip=self._faucet_server_ip, 
+                         faucet_server_port=self._faucet_server_port, 
+                         eth_server_ip=self._eth_server_ip, 
+                         eth_server_port=self._eth_server_http_port))
 
         node.setFile('/chainlink/check_link_contract.sh', 
                      ChainlinkFileTemplate['check_link_contract'].format(
-                         util_node_ip=self.__util_server_ip,
-                         util_node_port=self.__util_server_port,
+                         util_node_ip=self._util_server_ip,
+                         util_node_port=self._util_server_port,
                          contract_name =LinkTokenFileTemplate['link_contract_name']))
 
         node.setFile('/chainlink/register_contract.sh', 
                      ChainlinkFileTemplate['register_contract'].format(
-                           util_node_ip=self.__util_server_ip,
-                           util_node_port=self.__util_server_port,
+                           util_node_ip=self._util_server_ip,
+                           util_node_port=self._util_server_port,
                            node_name=self.__name))
 
         node.setFile('/chainlink/create_chainlink_jobs.sh', 
@@ -141,10 +117,10 @@ class ChainlinkServer(Server):
         @brief Set configuration files.
         """
         config_content = ChainlinkFileTemplate['config'].format(
-                             rpc_ip=self.__eth_server_ip, 
-                             chain_id=self.__chain_id, 
-                             rpc_ws_port=self.__eth_server_ws_port, 
-                             rpc_port=self.__eth_server_http_port)
+                             chain_id=self._chain_id, 
+                             rpc_ip=self._eth_server_ip, 
+                             rpc_ws_port=self._eth_server_ws_port, 
+                             rpc_port=self._eth_server_http_port)
         node.setFile('/chainlink/config.toml', config_content)
         node.setFile('/chainlink/db_secrets.toml', ChainlinkFileTemplate['secrets'])
         node.setFile('/chainlink/password.txt', 
@@ -232,8 +208,35 @@ class ChainlinkService(Service):
 
 
     def _createServer(self) -> ChainlinkServer:
+        """!
+        @brief Invoke by the install() method of this service
+        """
+
         self._log('Creating Chainlink server.')
         return ChainlinkServer()
+
+
+    def _createUserServer(self) -> ChainlinkUserServer:
+        """!
+        @brief Invoke by the installUserServer() method of this service
+        """
+
+        self._log('Creating Chainlink user node.')
+        return ChainlinkUserServer()
+
+
+    def installUserServer(self, vnode: str) -> ChainlinkUserServer:
+        """!
+        @brief Create a Chainlink user node 
+        """
+
+        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
+
+        s = self._createUserServer()
+        self._pending_targets[vnode] = s
+
+        return self._pending_targets[vnode]
+ 
 
     def __getIPbyVNodeName(self, emulator:Emulator, vnode:str):
         """
@@ -263,17 +266,20 @@ class ChainlinkService(Service):
         @param node node
         @param server server
         """
-        server:ChainlinkServer = server
-        server._setEthServerInfo(eth_server_ip=self.__eth_server_ip,
-                                 eth_server_http_port=self.__eth_server_http_port,
-                                 eth_server_ws_port=self.__eth_server_ws_port,
-                                 chain_id=self.__chain_id)
+        # There are two types of servers created by this service,
+        # chainlink server and chainlink user node. They are both
+        # subclass of ChainlinkBaseServer 
+        server:ChainlinkBaseServer = server
+        server._setEthServer(eth_server_ip=self.__eth_server_ip,
+                             eth_server_http_port=self.__eth_server_http_port,
+                             eth_server_ws_port=self.__eth_server_ws_port,
+                             chain_id=self.__chain_id)
 
-        server._setUtilityServerInfo(util_server_ip=self.__util_server_ip,
-                                     util_server_port=self.__util_server_port)
+        server._setUtilityServer(util_server_ip=self.__util_server_ip,
+                                 util_server_port=self.__util_server_port)
 
-        server._setFaucetServerInfo(faucet_server_ip=self.__faucet_ip,
-                                    faucet_server_port=self.__faucet_port)
+        server._setFaucetServer(faucet_server_ip=self.__faucet_ip,
+                                faucet_server_port=self.__faucet_port)
 
         return
 
