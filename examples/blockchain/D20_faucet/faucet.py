@@ -16,25 +16,21 @@ emu.load(local_dump_path)
 # Get the faucet server instance
 eth = emu.getLayer('EthereumService')
 blockchain  = eth.getBlockchainByName(eth.getBlockchainNames()[0])
-faucet_info = blockchain.getFaucetServerInfo()
 faucet_name = blockchain.getFaucetServerNames()[0]
 faucet      = blockchain.getFaucetServerByName(faucet_name)
 
-# Funding accounts during the build time
+# Funding accounts during the build time. The actual funding  
+# is carried out after the emulator starts
 faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
 faucet.fund('0x5449ba5c5f185e9694146d60cfe72681e2158499', 5)
-
 
 # Funding accounts during the run time, i.e., after the emulation starts 
 faucetUserService = FaucetUserService()
 faucetUserService.install('faucetUser').setDisplayName('FaucetUser')
-faucetUserService.setFaucetServerInfo(faucet_info[0]['name'], faucet_info[0]['port'])
-
-# Binding virtual nodes to physical nodes
-#emu.addBinding(Binding('faucetUser', filter=Filter(asn = 164, nodeName='host_0')))
+faucet_info = blockchain.getFaucetServerInfo()
+faucetUserService.setFaucetServerInfo(faucet_info[0]['name'], 
+                                      faucet_info[0]['port'])
 emu.addBinding(Binding('faucetUser'))
-
-# Add the layer 
 emu.addLayer(faucetUserService)
 
 
