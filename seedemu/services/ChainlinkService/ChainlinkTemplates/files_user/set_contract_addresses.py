@@ -10,10 +10,10 @@ import os
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-rpc_url = "http://{rpc_url}:{rpc_port}"
-faucet_url = "http://{faucet_url}:{faucet_port}"
+eth_url    = "http://{eth_server_ip}:{eth_server_http_port}"
+faucet_url = "http://{faucet_ip}:{faucet_port}"
 
-web3 = Web3(HTTPProvider(rpc_url))
+web3 = Web3(HTTPProvider(eth_url))
 while not web3.isConnected():
     logging.error("Failed to connect to Ethereum node. Retrying...")
     time.sleep(5)

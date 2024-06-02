@@ -92,17 +92,17 @@ class ChainlinkUserServer(ChainlinkBaseServer):
 
         node.setFile(f'{self.__DIR}/deploy_user_contract.py', 
                 ChainlinkUserTemplate['deploy_user_contract'].format(
-                    rpc_url=self._eth_server_ip, 
-                    rpc_port=self._eth_server_http_port, 
-                    faucet_url=self._faucet_server_ip, 
+                    eth_server_ip=self._eth_server_ip, 
+                    eth_server_http_port=self._eth_server_http_port, 
+                    faucet_ip=self._faucet_server_ip, 
                     faucet_port=self._faucet_server_port, 
                     chain_id=self._chain_id))
 
         node.setFile(f'{self.__DIR}/set_contract_addresses.py', 
                 ChainlinkUserTemplate['set_contract_addresses'].format(
-                    rpc_url=self._eth_server_ip, 
-                    faucet_url=self._faucet_server_ip, 
-                    rpc_port=self._eth_server_http_port, 
+                    eth_server_ip=self._eth_server_ip, 
+                    eth_server_http_port=self._eth_server_http_port, 
+                    faucet_ip=self._faucet_server_ip, 
                     faucet_port=self._faucet_server_port, 
                     chain_id=self._chain_id))
 

@@ -15,6 +15,7 @@ class ChainlinkServer(ChainlinkBaseServer):
     __name:str
     __username: str = "seed@example.com"
     __password: str = "blockchainemulator"
+    __DIR: str = '/chainlink'
 
     def __init__(self):
         """
@@ -38,23 +39,32 @@ class ChainlinkServer(ChainlinkBaseServer):
         self.__setConfigurationFiles(node)
         self.__setScriptFiles(node)
 
-        # Step 1: Start the chainlink server 
+        # Start the Chainlink server 
         node.appendStartCommand(ChainlinkFileTemplate['start_commands'])
        
-        # Step 2: Get the fund for the account created by the chainlink server 
-        node.appendStartCommand('bash /chainlink/request_fund.sh')
+        # All the Chainlink commands are included in this shell script
+        # This way, we can run it in the background, so it does not block
+        # the start command of the container 
+        node.appendStartCommand(f'bash {self.__DIR}/chainlink_setup.sh &') 
 
-        # Step 3: Check whether link contract is already created (needed by chainklink)
-        node.appendStartCommand('bash /chainlink/check_link_contract.sh')
 
-        # Step 4: Deploy the chainlink oracle contract
-        node.appendStartCommand('python3 /chainlink/deploy_oracle_contract.py')
+        # All the following commands are already included in the previous command
+        # So, they are no longer needed. Will delete later.
 
-        # Step 5: Register the oracle address with the utility server
-        node.appendStartCommand('bash /chainlink/register_contract.sh')
+        # Step 1: Get the fund for the account created by the chainlink server 
+        #node.appendStartCommand('bash /chainlink/request_fund.sh')
 
-        # Step 6: Create chainlink jobs 
-        node.appendStartCommand('bash /chainlink/create_chainlink_jobs.sh')
+        # Step 2: Check whether link contract is already created (needed by chainklink)
+        #node.appendStartCommand('bash /chainlink/check_link_contract.sh')
+
+        # Step 3: Deploy the chainlink oracle contract
+        #node.appendStartCommand('python3 /chainlink/deploy_oracle_contract.py')
+
+        # Step 4: Register the oracle address with the utility server
+        #node.appendStartCommand('bash /chainlink/register_contract.sh')
+
+        # Step 5: Create chainlink jobs 
+        #node.appendStartCommand('bash /chainlink/create_chainlink_jobs.sh')
 
 
     def __setScriptFiles(self, node:Node):
@@ -63,12 +73,16 @@ class ChainlinkServer(ChainlinkBaseServer):
         """
 
         # Set the oracle contracts 
-        node.setFile('/chainlink/contracts/oracle_contract.abi', 
+        node.setFile(f'{self.__DIR}/contracts/oracle_contract.abi', 
                      OracleContractDeploymentTemplate['oracle_contract_abi'])
-        node.setFile('/chainlink/contracts/oracle_contract.bin', 
+        node.setFile(f'{self.__DIR}/contracts/oracle_contract.bin', 
                      OracleContractDeploymentTemplate['oracle_contract_bin'])
 
-        node.setFile('/chainlink/deploy_oracle_contract.py', 
+
+        node.setFile(f'{self.__DIR}/chainlink_setup.sh', 
+                     ChainlinkFileTemplate['setup_script'])
+
+        node.setFile(f'{self.__DIR}/deploy_oracle_contract.py', 
                      OracleContractDeploymentTemplate['deploy_oracle_contract'].format(
                         eth_server_ip=self._eth_server_ip,
                         eth_server_http_port=self._eth_server_http_port,
@@ -79,26 +93,26 @@ class ChainlinkServer(ChainlinkBaseServer):
                         faucet_ip=self._faucet_server_ip, 
                         faucet_port=self._faucet_server_port))
 
-        node.setFile('/chainlink/request_fund.sh', 
+        node.setFile(f'{self.__DIR}/request_fund.sh', 
                      ChainlinkFileTemplate['request_fund'].format(
                          faucet_server_ip=self._faucet_server_ip, 
                          faucet_server_port=self._faucet_server_port, 
                          eth_server_ip=self._eth_server_ip, 
                          eth_server_port=self._eth_server_http_port))
 
-        node.setFile('/chainlink/check_link_contract.sh', 
+        node.setFile(f'{self.__DIR}/check_link_contract.sh', 
                      ChainlinkFileTemplate['check_link_contract'].format(
                          util_node_ip=self._util_server_ip,
                          util_node_port=self._util_server_port,
                          contract_name =LinkTokenFileTemplate['link_contract_name']))
 
-        node.setFile('/chainlink/register_contract.sh', 
+        node.setFile(f'{self.__DIR}/register_contract.sh', 
                      ChainlinkFileTemplate['register_contract'].format(
                            util_node_ip=self._util_server_ip,
                            util_node_port=self._util_server_port,
                            node_name=self.__name))
 
-        node.setFile('/chainlink/create_chainlink_jobs.sh', 
+        node.setFile(f'{self.__DIR}/create_chainlink_jobs.sh', 
                      ChainlinkFileTemplate['create_jobs'])
 
 
@@ -121,13 +135,15 @@ class ChainlinkServer(ChainlinkBaseServer):
                              eth_server_ip=self._eth_server_ip, 
                              eth_server_ws_port=self._eth_server_ws_port, 
                              eth_server_http_port=self._eth_server_http_port)
-        node.setFile('/chainlink/config.toml', config_content)
-        node.setFile('/chainlink/db_secrets.toml', ChainlinkFileTemplate['secrets'])
-        node.setFile('/chainlink/password.txt', 
+        node.setFile(f'{self.__DIR}/config.toml', config_content)
+        node.setFile(f'{self.__DIR}/db_secrets.toml', ChainlinkFileTemplate['secrets'])
+        node.setFile(f'{self.__DIR}/password.txt', 
                      ChainlinkFileTemplate['api'].format(
                          username=self.__username, password=self.__password))
-        node.setFile('/chainlink/jobs/getUint256.toml', ChainlinkJobsTemplate['getUint256'])
-        node.setFile('/chainlink/jobs/getBool.toml', ChainlinkJobsTemplate['getBool'])
+        node.setFile(f'{self.__DIR}/jobs/getUint256.toml', 
+                     ChainlinkJobsTemplate['getUint256'])
+        node.setFile(f'{self.__DIR}/jobs/getBool.toml',
+                     ChainlinkJobsTemplate['getBool'])
 
 
     def setUsernameAndPassword(self, username: str, password: str):

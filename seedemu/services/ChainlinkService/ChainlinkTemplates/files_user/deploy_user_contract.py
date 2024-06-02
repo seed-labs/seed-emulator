@@ -8,12 +8,15 @@ import logging
 import json
 import os
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-rpc_url = "http://{rpc_url}:{rpc_port}"
-faucet_url = "http://{faucet_url}:{faucet_port}"
+eth_url    = "http://{eth_server_ip}:{eth_server_http_port}"
+faucet_url = "http://{faucet_ip}:{faucet_port}"
 
-web3 = Web3(HTTPProvider(rpc_url))
+
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
+web3 = Web3(HTTPProvider(eth_url))
 while not web3.isConnected():
     logging.error("Failed to connect to Ethereum node. Retrying...")
     time.sleep(5)
@@ -21,9 +24,9 @@ while not web3.isConnected():
 web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 logging.info("Successfully connected to the Ethereum node.")
 
-user_account = web3.eth.account.create()
+user_account    = web3.eth.account.create()
 account_address = user_account.address
-private_key = user_account.privateKey.hex()
+private_key     = user_account.privateKey.hex()
 
 # Save user account information to a file
 data = {{
@@ -35,81 +38,79 @@ with open('./info/user_account.json', 'w') as f:
     
 logging.info(f"User account address: {{account_address}}")
 
+
 # Check if the faucet server is running for 600 seconds
-timeout = 600
-start_time = time.time()
-while True:
-    try:
-        response = requests.get(faucet_url)
-        if response.status_code == 200:
-            logging.info("faucet server connection succeed.")
-            break
-        logging.info("faucet server connection failed: try again 10 seconds after.")
-        
-        time.sleep(10)
-        if time.time() - start_time > timeout:
-            logging.info("faucet server connection failed: 600 seconds exhausted.")
-            exit()
-    except Exception as e:
-        pass
+def wait_for_faucet_server(timeout=-1)
+    start_time = time.time()
+    while True:
+        try:
+          response = requests.get(faucet_url)
+          if response.status_code == 200:
+              logging.info("faucet server connection succeed.")
+              return 1
+
+          logging.info("faucet server connection failed, retrying ...")
+          time.sleep(10)  # wait for 10 seconds before retrying
+
+          if timeout < 0:  # Wait forever 
+              pass    
+          else:
+             if time.time() - start_time > timeout:
+                logging.info("faucet server connection failed: 600 seconds exhausted.")
+                return 0
+        except Exception as e:
+          pass
 
 def send_fundme_request(account_address):
-	data = {{'address': account_address, 'amount': 10}}
-	logging.info(data)
-	request_url = "http://{faucet_url}:{faucet_port}/fundme"
-	try:
-		response = requests.post(request_url, headers={{"Content-Type": "application/json"}}, data=json.dumps(data))
-		logging.info(response)
-		if response.status_code == 200:
-			api_response = response.json()
-			message = api_response['message']
-			if message:
-				print(f"Success: {{message}}")
-			else:
-				logging.error("Funds request was successful but the response format is unexpected.")
-		else:
-			api_response = response.json()
-			message = api_response['message']
-			logging.error(f"Failed to request funds from faucet server. Status code: {{response.status_code}} Message: {{message}}")
-			# Send another request
-			logging.info("Sending another request to faucet server.")
-			send_fundme_request(account_address)
-	except Exception as e:
-		logging.error(f"An error occurred: {{str(e)}}")
-		exit()
+    data = {{'address': account_address, 'amount': 10}}
+    logging.info(data)
 
-# Send /fundme request to faucet server
-send_fundme_request(account_address)
-timeout = 100
-isAccountFunded = False
-start = time.time()
-while time.time() - start < timeout:
-	balance = web3.eth.get_balance(account_address)
-	if balance > 0:
-		isAccountFunded = True
-		break
-	time.sleep(5)
- 
+    try:
+       response = requests.post(faucet_url + "/fundme",
+                     headers={{"Content-Type": "application/json"}}, 
+                     data=json.dumps(data))
+       logging.info(response)
+       
+       if response.status_code == 200:
+          api_response = response.json()
+          message = api_response['message']
+          if message:
+       	     print(f"Success: {{message}}")
+          else:
+       	     logging.error("Funds request was successful but the response format is unexpected.")
+       else:
+          api_response = response.json()
+          message = api_response['message']
+          logging.error(f"Failed to request funds from faucet server. Status code: {{response.status_code}} Message: {{message}}")
 
-if isAccountFunded:
-	logging.info(f"Account funded: {{account_address}}")
-else:
-	logging.error(f"Failed to fund account: {{account_address}}")
+    except Exception as e:
+	logging.error(f"An error occurred: {{str(e)}}")
 	exit()
 
-with open('./contracts/user_contract.abi', 'r') as abi_file:
-	user_contract_abi = abi_file.read()
-with open('./contracts/user_contract.bin', 'r') as bin_file:
-	user_contract_bin = bin_file.read().strip()
+# Send /fundme request to faucet server
+status = wait_for_faucet_server()
 
-user_contract = web3.eth.contract(abi=user_contract_abi, bytecode=user_contract_bin)
+send_fundme_request(account_address)
 
-# Deploy the user contract
-user_contract_data = user_contract.constructor().buildTransaction({{
-    'from': account_address,
-    'nonce': web3.eth.getTransactionCount(account_address),
-    'gas': 3000000,
-}})['data']
+deploy_contract(abifile='./contracts/user_contract.abi',
+                binfile='./contracts/user_contract.bin')
+
+def deploy_contract(abifile, binfile):
+    with open(abifile, 'r') as abi_file:
+    	user_contract_abi = abi_file.read()
+    with open(binfine, 'r') as bin_file:
+    	user_contract_bin = bin_file.read().strip()
+    
+    user_contract = web3.eth.contract(abi=user_contract_abi, 
+                                      bytecode=user_contract_bin)
+    
+    # Deploy the user contract
+    user_contract_data = user_contract.constructor().buildTransaction({{
+        'from': account_address,
+        'nonce': web3.eth.getTransactionCount(account_address),
+        'gas': 3000000,
+    }})['data']
+
 
 def sendTransaction(recipient, amount, sender_name='', 
             gas=30000, nonce:int=-1, data:str='', 
@@ -145,6 +146,7 @@ def sendRawTransaction(key, transaction:dict, wait=True, verbose=True):
 tx_hash = sendTransaction(None, 0, '', gas=3000000, data=user_contract_data, wait=True, verbose=True)
 contract_address = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=300).contractAddress
 logging.info(f"User contract deployed at address: {{contract_address}}")
+
 
 # Save the contract address to a file
 data = {{'contract_address': contract_address}}

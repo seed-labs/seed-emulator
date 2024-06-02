@@ -81,15 +81,17 @@ def send_fundme_request(account_address):
          if message:
              print(f"Success: {{message}}")
          else:
-             logging.error("Funds request was successful but the response format is unexpected.")
+             logging.error("Funds request was successful, " +
+                           "but the response format is unexpected.")
       else:
-        api_response = response.json()
-        message = api_response['message']
-        logging.error(f"Failed to request funds from faucet server. Status code: {{response.status_code}} Message: {{message}}")
+         api_response = response.json()
+         message = api_response['message']
+         logging.error(f"Failed to request funds from faucet server. " +
+                       f"Status code: {{response.status_code}} Message: {{message}}")
 
-        # Send another request
-        logging.info("Sending another request to faucet server.")
-	send_fundme_request(owner_address)
+         # Send another request
+         logging.info("Sending another request to faucet server.")
+         send_fundme_request(owner_address)
 
     except Exception as e:
         logging.error(f"An error occurred: {{str(e)}}")

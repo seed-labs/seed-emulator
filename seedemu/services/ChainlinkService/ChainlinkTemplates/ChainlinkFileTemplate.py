@@ -42,6 +42,7 @@ ChainlinkUserTemplate: Dict[str, str] = {
 
 # Chainlink script files 
 ChainlinkFileTemplate: Dict[str, str] = {
+    'setup_script':         get_file_content("files/chainlink_setup.sh"), 
     'check_link_contract':  get_file_content("files/check_link_contract.sh"), 
     'register_contract':    get_file_content("files/register_contract.sh"),
     'create_jobs':          get_file_content("files/create_jobs.sh"),
