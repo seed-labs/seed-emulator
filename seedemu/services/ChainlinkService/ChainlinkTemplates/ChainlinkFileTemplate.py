@@ -34,9 +34,9 @@ ChainlinkUserTemplate: Dict[str, str] = {
     'user_contract_bin':       get_file_content("files_user/user_contract.bin"),
     'request_eth_price':       get_file_content("files_user/request_eth_price.py"),
     'fund_user_contract':      get_file_content("files_user/fund_user_contract.py"),
-    'set_contract_addresses':  get_file_content("files_user/set_contract_addresses.py"),
-    'get_contract_addresses':  get_file_content("files_user/get_contract_addresses.py"),
-    'deploy_user_contract':    get_file_content("files_user/deploy_user_contract.py")
+    'get_oracle_addresses':    get_file_content("files_user/get_oracle_addresses.py"),
+    'deploy_user_contract':    get_file_content("files_user/deploy_user_contract.py"),
+    'set_contract_addresses':  get_file_content("files_user/set_contract_addresses.py")
 }
 
 
@@ -47,6 +47,7 @@ ChainlinkFileTemplate: Dict[str, str] = {
     'create_jobs':          get_file_content("files/create_jobs.sh"),
     'request_fund':         get_file_content("files/request_fund.sh")
 }
+
 
 ChainlinkFileTemplate['start_commands'] = """\
 service postgresql restart
@@ -70,8 +71,8 @@ ChainID = '{chain_id}'
 
 [[EVM.Nodes]]
 Name = 'SEED Emulator'
-WSURL = 'ws://{rpc_ip}:{rpc_ws_port}'
-HTTPURL = 'http://{rpc_ip}:{rpc_port}'
+WSURL = 'ws://{eth_server_ip}:{eth_server_ws_port}'
+HTTPURL = 'http://{eth_server_ip}:{eth_server_http_port}'
 """
 
 ChainlinkFileTemplate['secrets'] = """\

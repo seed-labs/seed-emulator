@@ -70,8 +70,8 @@ class ChainlinkServer(ChainlinkBaseServer):
 
         node.setFile('/chainlink/deploy_oracle_contract.py', 
                      OracleContractDeploymentTemplate['deploy_oracle_contract'].format(
-                        rpc_ip=self._eth_server_ip,
-                        rpc_port=self._eth_server_http_port,
+                        eth_server_ip=self._eth_server_ip,
+                        eth_server_http_port=self._eth_server_http_port,
                         util_node_ip=self._util_server_ip,
                         util_node_port=self._util_server_port,
                         contract_name=LinkTokenFileTemplate['link_contract_name'],
@@ -118,9 +118,9 @@ class ChainlinkServer(ChainlinkBaseServer):
         """
         config_content = ChainlinkFileTemplate['config'].format(
                              chain_id=self._chain_id, 
-                             rpc_ip=self._eth_server_ip, 
-                             rpc_ws_port=self._eth_server_ws_port, 
-                             rpc_port=self._eth_server_http_port)
+                             eth_server_ip=self._eth_server_ip, 
+                             eth_server_ws_port=self._eth_server_ws_port, 
+                             eth_server_http_port=self._eth_server_http_port)
         node.setFile('/chainlink/config.toml', config_content)
         node.setFile('/chainlink/db_secrets.toml', ChainlinkFileTemplate['secrets'])
         node.setFile('/chainlink/password.txt', 
@@ -129,17 +129,6 @@ class ChainlinkServer(ChainlinkBaseServer):
         node.setFile('/chainlink/jobs/getUint256.toml', ChainlinkJobsTemplate['getUint256'])
         node.setFile('/chainlink/jobs/getBool.toml', ChainlinkJobsTemplate['getBool'])
 
-    # This one is no longer needed, should be deleted 
-    def __chainlinkStartCommands(self, node:Node):
-        """
-        @brief Add start commands.
-        """
-        start_commands = """
-service postgresql restart
-su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\""
-nohup chainlink node -config /chainlink/config.toml -secrets /chainlink/db_secrets.toml start -api /chainlink/password.txt > /chainlink/chainlink_logs.txt 2>&1 &
-"""
-        node.appendStartCommand(start_commands)
 
     def setUsernameAndPassword(self, username: str, password: str):
         """

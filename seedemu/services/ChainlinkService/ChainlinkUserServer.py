@@ -14,6 +14,9 @@ class ChainlinkUserServer(ChainlinkBaseServer):
     __path: str = "RAW,ETH,USD,PRICE"
     __number_of_normal_servers: int = 1
 
+    __DIR = "/chainlink_user"
+    __chainlink_servers: list
+
     
     def __init__(self): 
         """
@@ -32,23 +35,23 @@ class ChainlinkUserServer(ChainlinkBaseServer):
         self.__setScriptFiles(node)
         
         # Get the Link contract address
-        node.appendStartCommand('bash /chainlink_user/check_link_contract.sh')       
+        node.appendStartCommand(f'bash {self.__DIR}/check_link_contract.sh')       
 
         # Get the Chainlink oracle contract addresses
-        node.appendStartCommand('python3 /chainlink_user/get_contract_addresses.py')
+        node.appendStartCommand(f'python3 {self.__DIR}/get_contract_addresses.py')
 
         # Deploy user contract
-        node.appendStartCommand('python3 ./contracts/deploy_user_contract.py')
+        node.appendStartCommand(f'python3 {self.__DIR}/deploy_user_contract.py')
 
         # Set the LINK token contract address and oracle contract 
         # addresses in the user contract
-        node.appendStartCommand('python3 ./contracts/set_contract_addresses.py')
+        node.appendStartCommand(f'python3 {self.__DIR}/set_contract_addresses.py')
 
         # Invoke the Link token contract to get funding 
-        node.appendStartCommand('python3 ./contracts/fund_user_contract.py')     
+        node.appendStartCommand(f'python3 {self.__DIR}/fund_user_contract.py')     
 
         # Request ETH Price
-        node.appendStartCommand('python3 ./contracts/request_eth_price.py')
+        node.appendStartCommand(f'python3 {self.__DIR}/request_eth_price.py')
     
     def __installSoftware(self, node: Node):
         """
@@ -66,7 +69,7 @@ class ChainlinkUserServer(ChainlinkBaseServer):
         @brief Deploy the user contract.
         """
         # Check if the chainlink init node is up and running
-        node.setFile('/chainlink_user/check_link_contract.sh',
+        node.setFile(f'{self.__DIR}/check_link_contract.sh',
              ChainlinkFileTemplate['check_link_contract'].format(
                     util_node_ip=self._util_server_ip,
                     util_node_port=self._util_server_port,
@@ -74,18 +77,20 @@ class ChainlinkUserServer(ChainlinkBaseServer):
 
 
         # Get the link token and oracle contract addresses
-        node.setFile('/chainlink_user/get_contract_addresses.py', 
-             ChainlinkUserTemplate['get_contract_addresses'].format(
+        node.setFile(f'{self.__DIR}/get_oracle_addresses.py', 
+             ChainlinkUserTemplate['get_oracle_addresses'].format(
                   util_server_ip=self._util_server_ip, 
-                  number_of_normal_servers=self.__number_of_normal_servers))
+                  util_server_port=self._util_server_port, 
+                  oracle_contract_names=self.__chainlink_servers,
+                  link_contract_name=LinkTokenFileTemplate['link_contract_name']))
 
-        node.setFile('./contracts/user_contract.abi', 
+        node.setFile(f'{self.__DIR}/contracts/user_contract.abi', 
                 ChainlinkUserTemplate['user_contract_abi'])
 
-        node.setFile('./contracts/user_contract.bin', 
+        node.setFile(f'{self.__DIR}/contracts/user_contract.bin', 
                 ChainlinkUserTemplate['user_contract_bin'])
 
-        node.setFile('./contracts/deploy_user_contract.py', 
+        node.setFile(f'{self.__DIR}/deploy_user_contract.py', 
                 ChainlinkUserTemplate['deploy_user_contract'].format(
                     rpc_url=self._eth_server_ip, 
                     rpc_port=self._eth_server_http_port, 
@@ -93,7 +98,7 @@ class ChainlinkUserServer(ChainlinkBaseServer):
                     faucet_port=self._faucet_server_port, 
                     chain_id=self._chain_id))
 
-        node.setFile('./contracts/set_contract_addresses.py', 
+        node.setFile(f'{self.__DIR}/set_contract_addresses.py', 
                 ChainlinkUserTemplate['set_contract_addresses'].format(
                     rpc_url=self._eth_server_ip, 
                     faucet_url=self._faucet_server_ip, 
@@ -103,10 +108,10 @@ class ChainlinkUserServer(ChainlinkBaseServer):
 
         # The Link contract abi is needed for funding the user contract with
         # Link tokens 
-        node.setFile('./contracts/link_token.abi', 
+        node.setFile(f'{self.__DIR}/contracts/link_token.abi', 
                 LinkTokenFileTemplate['link_contract_abi'])
 
-        node.setFile('./contracts/fund_user_contract.py', 
+        node.setFile(f'{self.__DIR}/fund_user_contract.py', 
                 ChainlinkUserTemplate['fund_user_contract'].format(
                     chain_id=self._chain_id, 
                     rpc_url=self._eth_server_ip, 
@@ -114,9 +119,7 @@ class ChainlinkUserServer(ChainlinkBaseServer):
                     faucet_url=self._faucet_server_ip, 
                     faucet_port=self._faucet_server_port))
 
-
-        # The ...         
-        node.setFile('./contracts/request_eth_price.py', 
+        node.setFile(f'{self.__DIR}/request_eth_price.py', 
                 ChainlinkUserTemplate['request_eth_price'].format(
                     chain_id=self._chain_id,
                     rpc_url=self._eth_server_ip,
@@ -135,9 +138,16 @@ class ChainlinkUserServer(ChainlinkBaseServer):
         
     def setChainlinkServiceInfo(self, number_of_normal_servers: int):
         """
-        @brief Set the chainlink init node
+        @brief Set the chainlink service info 
         """
         self.__number_of_normal_servers = number_of_normal_servers
+        return self
+
+    def setChainlinkServers(self, servers: list):
+        """
+        @brief Set the chainlink servers info 
+        """
+        self.__chainlink_servers = servers
         return self
 
     
