@@ -24,3 +24,5 @@ FaucetServerFileTemplates['fund_script'] = \
 FaucetServerFileTemplates['faucet_server'] = \
         get_file_content("files_faucet/faucet_server.py")
 
+FaucetServerFileTemplates['fund_user_script'] = \
+        get_file_content("files_faucet/fund_script_for_user.sh")
