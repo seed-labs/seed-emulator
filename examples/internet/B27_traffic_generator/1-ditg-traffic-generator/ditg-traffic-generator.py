@@ -30,7 +30,7 @@ def run(dumpfile=None):
         log_file="/root/ditg_generator.log",
         protocol="UDP",
         duration=120,
-        rate=5000,
+        rate=50,
     ).addReceivers(hosts=["ditg-receiver-1", "ditg-receiver-2"])
 
     # Add hosts to AS-150

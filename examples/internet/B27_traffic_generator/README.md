@@ -239,65 +239,65 @@ D-ITG is a tool capable to produce traffic at packet level accurately replicatin
 
 This example demonstrates how to install and configure the D-ITG (Distributed Internet Traffic Generator). 
 
-The traffic generation logs will be stored in the log file you specify when installing the traffic generator. In this example, the logs are in `/root/ditg_generator.log` file. Following is the screenshot of the D-ITG traffic generation logs. To view the logs, you need to decode the logs using `ITGDec` utility command which is provided by the D-ITG tool.
+The traffic generation logs will be stored in the log file you specify when installing the traffic generator. In this example, the logs are in `/root/ditg_generator.log` file. To view the logs, you need to decode the logs using `ITGDec` utility command which is provided by the D-ITG tool.
 
 ```
-ITGDec /root/ditg_generator.log
+ITGDec /root/ditg_generator.log 
 ITGDec version 2.8.1 (r1023)
 Compile-time options: sctp dccp bursty multiport
 -----------------------------------------------------------
 Flow number: 1
-From 10.150.0.73:57199
-To    10.162.0.73:8999
+From 10.150.0.73:36532
+To    10.170.0.73:8999
 ----------------------------------------------------------
-Total time               =    119.999277 s
-Total packets            =        113655
+Total time               =    119.987494 s
+Total packets            =          1033
 Minimum delay            =      0.000000 s
 Maximum delay            =      0.000000 s
 Average delay            =      0.000000 s
 Average jitter           =      0.000000 s
 Delay standard deviation =      0.000000 s
-Bytes received           =      58191360
-Average bitrate          =   3879.447374 Kbit/s
-Average packet rate      =    947.130706 pkt/s
-Packets dropped          =          3500 (2.99 %)
-Average loss-burst size  =   3500.000000 pkt
+Bytes received           =        528896
+Average bitrate          =     35.263408 Kbit/s
+Average packet rate      =      8.609231 pkt/s
+Packets dropped          =          4182 (80.19 %)
+Average loss-burst size  =   1394.000000 pkt
 ----------------------------------------------------------
 ----------------------------------------------------------
 Flow number: 1
-From 10.150.0.73:55772
-To    10.170.0.73:8999
+From 10.150.0.73:50558
+To    10.162.0.73:8999
 ----------------------------------------------------------
-Total time               =    111.613531 s
-Total packets            =          3592
+Total time               =    102.724312 s
+Total packets            =          4182
 Minimum delay            =      0.000000 s
 Maximum delay            =      0.000000 s
 Average delay            =      0.000000 s
 Average jitter           =      0.000000 s
 Delay standard deviation =      0.000000 s
-Bytes received           =       1839104
-Average bitrate          =    131.819430 Kbit/s
-Average packet rate      =     32.182478 pkt/s
-Packets dropped          =        113655 (96.94 %)
-Average loss-burst size  =  56827.500000 pkt
+Bytes received           =       2141184
+Average bitrate          =    166.751879 Kbit/s
+Average packet rate      =     40.710908 pkt/s
+Packets dropped          =          1000 (19.30 %)
+Average loss-burst size  =    333.333333 pkt
 ----------------------------------------------------------
 
 __________________________________________________________
 ****************  TOTAL RESULTS   ******************
 __________________________________________________________
 Number of flows          =             2
-Total time               =    119.999871 s
-Total packets            =        117247
+Total time               =    119.987494 s
+Total packets            =          5215
 Minimum delay            =      0.000000 s
 Maximum delay            =      0.000000 s
 Average delay            =      0.000000 s
 Average jitter           =      0.000000 s
 Delay standard deviation =      0.000000 s
-Bytes received           =      60030464
-Average bitrate          =   4002.035236 Kbit/s
-Average packet rate      =    977.059384 pkt/s
-Packets dropped          =        117155 (49.98 %)
-Average loss-burst size  =  39051.666667 pkt
+Bytes received           =       2670080
+Average bitrate          =    178.023886 Kbit/s
+Average packet rate      =     43.462863 pkt/s
+Packets dropped          =          5182 (49.84 %)
+Average loss-burst size  =    863.666667 pkt
 Error lines              =             0
 ----------------------------------------------------------
 ```
@@ -306,7 +306,7 @@ Error lines              =             0
 
 Scapy is a python package that enables the user to send, sniff, dissect and forge network packets. This capability allows construction of tools that can probe, scan or attack networks. We can use Scapy to generate custom packets and send them to the network. For more information, see [Scapy](https://scapy.readthedocs.io/en/latest/) documentation.
 
-This example demonstrates how to install and configure the Scapy Traffic Generator. 
+This example demonstrates how to install and configure the Scapy Traffic Generator.
 
 The traffic generation logs will be stored in the log file you specify when installing the traffic generator. For Scapy Generator, there will be one log file for each pair of hosts in the given network. In this example, the prefix of the logs files is `/root/scapy-logs*` .
 
@@ -374,7 +374,7 @@ Packet Sent: 8185
 
 ### 3-multi-traffic-generator
 
-In this example, we demonstrate how to install and configure the multiple traffic generators or receivers on same host. Here, we install both iPerf3 and D-ITG traffic generators on one host and install both iPerf3 and D-ITG receivers on another host. For each traffic generator and reciever, we can specify the log file to store the traffic generation logs. We can also specify any other parameters for the traffic generators and receivers.
+In this example, we demonstrate how to install and configure the multiple traffic generators or receivers on the same host. Here, we install both iPerf3 and D-ITG traffic generators on one host and install both iPerf3 and D-ITG receivers on another host. For each traffic generator and reciever, we can specify the log file to store the traffic generation logs. We can also specify any other parameters for each traffic generator and receiver individually.
 
 For iPerf3 Traffic Generator, the logs are in `/root/iperf3_generator.log` file. For D-ITG Traffic Generator, the logs are in `/root/ditg_generator.log` file. The contents of the log files are shown below.
 
@@ -500,159 +500,3 @@ Error lines              =             0
 You can visualize live traffic generation using the seed emulators' web interface by applying appropriate filters. Since the iperf traffic generator was configured to generate `TCP` traffic, you can filter the traffic using the `TCP` filter. Similarly, you can filter and visualize traffic flows for other traffic generators by using their respective filters.
 
 Avoid using the Internet map for visualizing traffic, as this will generate a significant amount of additional network traffic and could affect the test results.
-
-## An Experiment with D-ITG Traffic Generator
-
-In this experiment, we will limit the bandwidth of the network interface of one receiver and see the impact on the traffic generation of the D-ITG traffic generator.
-
-When the emulation starts, it automatically runs the traffic generator.
-Before limiting the bandwidth of the network interface, we note down the traffic generation logs.
-
-```
-ITGDec ditg_generator.log
-ITGDec version 2.8.1 (r1023)
-Compile-time options: sctp dccp bursty multiport
------------------------------------------------------------
-Flow number: 1
-From 10.150.0.73:47651
-To    10.162.0.73:8999
-----------------------------------------------------------
-Total time               =    119.999879 s
-Total packets            =         16466
-Minimum delay            =      0.000000 s
-Maximum delay            =      0.000000 s
-Average delay            =      0.000000 s
-Average jitter           =      0.000000 s
-Delay standard deviation =      0.000000 s
-Bytes received           =       8430592
-Average bitrate          =    562.040033 Kbit/s
-Average packet rate      =    137.216805 pkt/s
-Packets dropped          =         79081 (82.77 %)
-Average loss-burst size  =   9885.125000 pkt
-----------------------------------------------------------
-----------------------------------------------------------
-Flow number: 1
-From 10.150.0.73:33319
-To    10.170.0.73:8999
-----------------------------------------------------------
-Total time               =    112.670030 s
-Total packets            =         79081
-Minimum delay            =      0.000000 s
-Maximum delay            =      0.000000 s
-Average delay            =      0.000000 s
-Average jitter           =      0.000000 s
-Delay standard deviation =      0.000000 s
-Bytes received           =      40489472
-Average bitrate          =   2874.906273 Kbit/s
-Average packet rate      =    701.881414 pkt/s
-Packets dropped          =         16200 (17.00 %)
-Average loss-burst size  =   2025.000000 pkt
-----------------------------------------------------------
-
-__________________________________________________________
-****************  TOTAL RESULTS   ******************
-__________________________________________________________
-Number of flows          =             2
-Total time               =    119.999879 s
-Total packets            =         95547
-Minimum delay            =      0.000000 s
-Maximum delay            =      0.000000 s
-Average delay            =      0.000000 s
-Average jitter           =      0.000000 s
-Delay standard deviation =      0.000000 s
-Bytes received           =      48920064
-Average bitrate          =   3261.340889 Kbit/s
-Average packet rate      =    796.225803 pkt/s
-Packets dropped          =         95281 (49.93 %)
-Average loss-burst size  =   5955.062500 pkt
-Error lines              =             0
-----------------------------------------------------------
-```
-
-### Limiting the Bandwidth of the Network Interface
-
-First, we identify the network interface name of one of the receivers (ditg-receiver-1: 10.170.0.73).
-
-```
-ip -4 -brief address show
-lo               UNKNOWN        127.0.0.1/8 
-net0@if187       UP             10.170.0.73/24
-```
-
-Now, limit the bandwidth of the network interface using `tc` command.
-
-```
-tc qdisc add dev net0 root netem delay 20ms rate 1024kbit
-tc qdisc show dev net0
-qdisc netem 8002: root refcnt 11 limit 1000 delay 20.0ms rate 1024Kbit
-```
-
-Now we run the D-ITG traffic generator manually.
-```
-/root/traffic_generator_ditg.sh
-```
-
-
-After the traffic generation is complete, we note down the traffic generation logs.
-```
-ITGDec ditg_generator.log 
-ITGDec version 2.8.1 (r1023)
-Compile-time options: sctp dccp bursty multiport
-|----------------------------------------------------------
-Flow number: 1
-From 10.150.0.73:58846
-To    10.170.0.73:8999
-----------------------------------------------------------
-Total time               =    119.999394 s
-Total packets            =        112381
-Minimum delay            =      0.000000 s
-Maximum delay            =      0.000000 s
-Average delay            =      0.000000 s
-Average jitter           =      0.000000 s
-Delay standard deviation =      0.000000 s
-Bytes received           =      57539072
-Average bitrate          =   3835.957505 Kbit/s
-Average packet rate      =    936.513063 pkt/s
-Packets dropped          =             0 (0.00 %)
-Average loss-burst size  =      0.000000 pkt
-----------------------------------------------------------
-----------------------------------------------------------
-Flow number: 1
-From 10.150.0.73:47315
-To    10.162.0.73:8999
-----------------------------------------------------------
-Total time               =      1.136224 s
-Total packets            =          1032
-Minimum delay            =      0.000000 s
-Maximum delay            =      0.000000 s
-Average delay            =      0.000000 s
-Average jitter           =      0.000000 s
-Delay standard deviation =      0.000000 s
-Bytes received           =        528384
-Average bitrate          =   3720.280508 Kbit/s
-Average packet rate      =    908.271608 pkt/s
-Packets dropped          =        112381 (99.09 %)
-Average loss-burst size  = 112381.000000 pkt
-----------------------------------------------------------
-
-__________________________________________________________
-****************  TOTAL RESULTS   ******************
-__________________________________________________________
-Number of flows          =             2
-Total time               =    119.999394 s
-Total packets            =        113413
-Minimum delay            =      0.000000 s
-Maximum delay            =      0.000000 s
-Average delay            =      0.000000 s
-Average jitter           =      0.000000 s
-Delay standard deviation =      0.000000 s
-Bytes received           =      58067456
-Average bitrate          =   3871.183283 Kbit/s
-Average packet rate      =    945.113106 pkt/s
-Packets dropped          =        112381 (49.77 %)
-Average loss-burst size  = 112381.000000 pkt
-Error lines              =             0
-----------------------------------------------------------
-```
-
-We can see that after limiting the bandwidth of the network interface, the traffic generation logs show a significant increase in the number of packets dropped.
