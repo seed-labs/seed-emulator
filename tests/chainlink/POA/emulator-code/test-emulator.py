@@ -246,7 +246,6 @@ chainlink.setEthServer('eth5')
 chainlink.setFaucetServer('faucet')
 chainlink.setEthInitInfoServer('eth_init_info_node')
 
-
 c_asns  = [152, 153, 154, 160, 161, 162, 163, 164]
 i = 0
 # Create Chainlink normal servers

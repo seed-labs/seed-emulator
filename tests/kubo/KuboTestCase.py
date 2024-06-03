@@ -381,7 +381,7 @@ class KuboTestCase(SeedEmuTestCase):
                 self.printLog(f'{self.getCtName(ct)}: ', end='')
             
                 exit_code, output = self.ctCmd(ct, 'ipfs add test.txt', workdir=self.kubo_tmp_dir)
-                self.assertEqual(exit_code, 0)
+                self.assertEqual(exit_code, 0, f'Command failed with output: {output}')
                 
                 # Get CID from output of the ips add <file> command:
                 cid = re.search('added ([a-zA-Z0-9]+) \S+', output.decode().strip())
@@ -400,14 +400,15 @@ class KuboTestCase(SeedEmuTestCase):
         for ct in self.getTestContainers(group='basic'):
             with self.subTest(container=self.getCtName(ct), file_host='file_host' in self.getTestGroups(ct)):
                 self.printLog(f'{self.getCtName(ct)}:')
+                exit_code, _ = self.ctCmd(ct, 'ipfs id')
+                if exit_code != 0: sleep(10)
             
                 # Check that node can access file through IPFS (skip if this node originates the data):
                 for ct_id, file_info in self.kubo_test_files.items():
                     if ct_id != ct.short_id:
                         exit_code, output = self.ctCmd(ct,['ipfs', 'cat', file_info['cid']], demux=True)
-                        
-                        self.assertIsNotNone(output, 'Command not executed successfully on container.')
-                        self.assertIsNotNone(exit_code, 'Command not executed successfully on container.')
+                        self.assertIsNotNone(output, f'Command not executed successfully on container. {output}')
+                        self.assertIsNotNone(exit_code, f'Command not executed successfully on container. {output}')
                         self.assertEqual(exit_code, 0, f'Command not executed successfully on container. {output[0]} {output[1]}')
                         self.assertEqual(output[0].decode().strip(), file_info["contents"], 'Unexpected test file contents.')
                         self.printLog(f'\tipfs cat {file_info["cid"]} [PASS]')
@@ -432,10 +433,10 @@ class KuboTestCase(SeedEmuTestCase):
                     self.printLog(f'{self.getCtName(ct)}: [PASS]')
 
         
-    def test_custom_config(self):
-        self.printLog(f'{" Test Case: test_custom_config ":=^100}')
+    def test_replace_config(self):
+        self.printLog(f'{" Test Case: test_replace_config ":=^100}')
         
-        for ct in self.getTestContainers(group='config'):
+        for ct in self.getTestContainers(group='replace_config'):
             with self.subTest(container=self.getCtName(ct)):
                 # Get actual config from the container:
                 exit_code, output = self.ctCmd(ct, 'cat config', workdir='/root/.ipfs')
@@ -450,6 +451,49 @@ class KuboTestCase(SeedEmuTestCase):
                 self.assertEqual(ct_config, test_config)
 
                 self.printLog(f'{self.getCtName(ct)}: [PASS]')
+                
+    def test_import_config(self):
+        self.printLog(f'{" Test Case: test_import_config ":=^100}')
+        
+        for ct in self.getTestContainers(group='import_config'):
+            with self.subTest(container=self.getCtName(ct)):
+                # Get actual config from the container:
+                exit_code, output = self.ctCmd(ct, 'ipfs config API.HTTPHeaders.Access-Control-Allow-Origin')
+                self.assertEqual(exit_code, 0)
+                ct_config = json.loads(output)
+                test_config = ["*"]
+                    
+                # Ensure that actual and test config are the same:
+                self.assertEqual(ct_config, test_config)
+
+                self.printLog(f'{self.getCtName(ct)}: [PASS]')
+                
+    def test_set_config(self):
+        self.printLog(f'{" Test Case: test_set_config ":=^100}')
+        
+        # Test cases (key, value) pairs:
+        cases = [
+            ('API.HTTPHeaders.Access-Control-Allow-Origin', ["*"]),
+            ('Gateway.ExposeRoutingAPI', True),
+            ('Gateway.RootRedirect', 'ThisIsOnlyATest')
+        ]
+        
+        for ct in self.getTestContainers(group='set_config'):
+            with self.subTest(container=self.getCtName(ct)):
+                for configKey, expectedVal in cases:
+                    # Get actual config from the container:
+                    exit_code, output = self.ctCmd(ct, f'ipfs config {configKey}')
+                    self.assertEqual(exit_code, 0, f'Failed with output: {output}')
+                    try:
+                        ct_config = json.loads(output)
+                    except:
+                        ct_config = output.decode().strip()
+                    
+                    # Ensure that actual and test config are the same:
+                    self.assertEqual(ct_config, expectedVal, f'Failed test case {configKey}')
+
+                self.printLog(f'{self.getCtName(ct)}: [PASS]')
+                
             
     @classmethod
     def get_test_suite(cls):
@@ -463,7 +507,9 @@ class KuboTestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_kubo_add'))
         test_suite.addTest(cls('test_kubo_cat'))
         test_suite.addTest(cls('test_specify_profile'))
-        test_suite.addTest(cls('test_custom_config'))
+        test_suite.addTest(cls('test_replace_config'))
+        test_suite.addTest(cls('test_import_config'))
+        test_suite.addTest(cls('test_set_config'))
         return test_suite
     
 

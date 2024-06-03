@@ -91,7 +91,8 @@ The following includes some technical notes on the implementation, including asp
 
 ### KuboServer
 - `self.setVersion(version:str)` attempts to verify the format of the version string to ensure that it matches the expected format (using RegEx).
-- `self.config` is a public variable so that users are encouraged to directly modify the `DottedDict`, however, we also provide `self.importConfig()` and `self.setConfig()`. Both of these are redundant and could be removed.
+- `self.initConfig` is a public variable so that users are encouraged to directly modify the `DottedDict`, however, we also provide `self.replaceConfig()`.
+- `self.startConfig` is a public variable so that users are encouraged to directly modify the `DottedDict`, however, we also provide `self.importConfig()` and `self.setConfig()`. Both of these are redundant and could be removed.
 
 ### KuboUtils
 - `DottedDict` is a specialized subclass of the built-in Python `dict`. It restricts key values
@@ -103,6 +104,7 @@ The following includes some technical notes on the implementation, including asp
     to merge the contents of another dict-like object into the existing `DottedDict` instance.
     - We implement the `empty()` method to easily identify whether the `DottedDict` instance
     contains any items.
+    - We also implement the `dottedItems()` method which functions similarly to the default `items()` method, but returns a list of key-value pairs where keys are in JSON dot notation and values are the deepest value in the nested dictionary.
     - This is used internally by the `KuboServer` class to store and modify the user-defined
       Kubo configuration file.
 - We also implement a few simple utility functions to get a local IPv4 address from a given

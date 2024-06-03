@@ -38,7 +38,6 @@ traffic_service.install(
     rate=5000,
 ).addReceivers(hosts=["ditg-receiver"])
 traffic_service.install('scapy-generator', TrafficServiceType.SCAPY_GENERATOR, log_file="/root/scapy-logs").addReceivers(hosts=["10.164.0.0/24", "10.170.0.0/24"])
-
 traffic_service.install("multi-traffic-receiver", TrafficServiceType.DITG_RECEIVER)
 traffic_service.install("multi-traffic-receiver", TrafficServiceType.IPERF_RECEIVER)
 traffic_service.install(

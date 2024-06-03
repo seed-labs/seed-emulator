@@ -14,7 +14,7 @@ class DottedDictTestCase(SeedEmuTestCase):
     """
     @classmethod
     def setUpClass(cls) -> None:
-        super().setUpClass(testLogOverwrite=True, online=False)
+        super().setUpClass(testLogOverwrite=False, online=False)
         
         # Initialize some class variables:
         cls.simpleDict = {'a': 1, 'b': 2, 'c': 3, 'd': 4, 'red': True, 'blue': 50}
@@ -382,6 +382,19 @@ class DottedDictTestCase(SeedEmuTestCase):
         self.assertTrue(dd.empty(), 'DottedDict::clear should empty the data structure.')
         self.printLog(f'{f"DottedDict::clear":<50}[PASS]')
         
+    def test_dottedItems(self):
+        self.printLog(f'{" Test Case: test_dottedItems ":=^100}')
+        cases = [
+            (self.simpleDict, [('a', 1), ('b', 2), ('c', 3), ('d', 4), ('red', True), ('blue', 50)]),
+            (self.nestedDict, [('a.b', 2), ('test.1', 2), ('c', 3), ('blue', 'red')]),
+            (self.nestedDictDeep, [('a.b', 2), ('a.c.red', False), ('a.c.orange', True), ('a.c.yellow', False), ('a.c.green', True), ('a.c.blue', True), ('a.c.purple', True), ('a.c.pink', True), ('a.deepest.level1.level2.level3.level4.level5', 'done'), ('simple', True), (' ', False), (',.!', '#')]),
+        ]
+        
+        for test in cases:
+            with self.subTest(case=cases.index(test)):
+                dd = DottedDict(test[0])
+                self.assertListEqual(dd.dottedItems(), test[1])
+                self.printLog(f'{f"DottedDict::dottedItems() #{cases.index(test)}":<50}[PASS]')
                 
     
     @classmethod
@@ -401,12 +414,13 @@ class DottedDictTestCase(SeedEmuTestCase):
         test_suite.addTest(cls('test_copy'))
         test_suite.addTest(cls('test_merge'))
         test_suite.addTest(cls('test_empty'))
+        test_suite.addTest(cls('test_dottedItems'))
         return test_suite
     
 class KuboUtilFuncsTestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        super().setUpClass(testLogOverwrite=True, online=False)
+        super().setUpClass(testLogOverwrite=False, online=False)
         
         # Set up some class variables to use later:
         Faker.seed(time())

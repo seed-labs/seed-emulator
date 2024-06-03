@@ -39,7 +39,7 @@ The most basic way of getting started with Kubo is to manually install Kubo on a
   5. Add the `KuboService` layer to the emulator.
 
 ### Dynamic Installation
-If you have a large number of nodes that you would like to install Kubo on, you may want to do this more dynamically. This can be done with iteration, and is used in the [Kubo example](../../examples/not-ready-examples/27-kubo/README.md).
+If you have a large number of nodes that you would like to install Kubo on, you may want to do this more dynamically. This can be done with iteration, and is used in the [Kubo example](../../examples/internet/B26_ipfs_kubo/README.md).
 
 ## Emulation
 Kubo may be installed on a node within the Emulator, alongside most other components. Once the simulation is running, you can connect through any node running Kubo, and use the Kubo CLI to interact with Kubo (see command reference [here](https://docs.ipfs.tech/reference/kubo/cli/)).
@@ -51,12 +51,15 @@ This section contains usage notes on aspects of the Kubo implementation which ma
 IPFS Kubo automatically generates a configuration file upon initialization. This implements a
 set of default settings, and/or the settings associated with a particular profile (if specified).
 
-The `importConfig()` and `setConfig()` methods of the `KuboServer` allow you to specify
+The `replaceConfig()` method and the public `initConfig` attribute of the `KuboServer` allow you to specify
 your own custom configuration for Kubo. This essentially builds a JSON file from the
 configuration that you specify, and Kubo uses this on initialization instead of generating
 its own configuration file. Please note:
   - If you have specified all necessary sections of the configuration file, the node will function normally.
   - If you have not specified all sections of the configuration file, the node's behavior may be unpredictable.
+
+The `importConfig()` and `setConfig()` methods, and the public `startConfig` attribute of the `KuboServer` allows you to specify your own custom configuration for Kubo which is applied on startup instead of initialization.
+This automatically modifies the Kubo configuration after it has been initialized with either the default configuration values, or a user-defined configuration file (see above). **This is the best way to selectively alter the Kubo configuration of a node.**
 
 If you would like to make modifications to the configuration of a set of nodes after initialization with default values, you may do so using the [IPFS CLI](https://docs.ipfs.tech/reference/kubo/cli/#ipfs-config).
 

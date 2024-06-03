@@ -483,5 +483,4 @@ if __name__ == "__main__":
 
     ChainlinkPOATestCase.printLog("----------Test #%d--------=")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
-
     ChainlinkPOATestCase.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
