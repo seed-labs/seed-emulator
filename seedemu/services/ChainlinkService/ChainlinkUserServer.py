@@ -1,6 +1,7 @@
 from seedemu import *
 from seedemu.core.enums import NetworkType
-from .ChainlinkTemplates import ChainlinkUserTemplate, ChainlinkFileTemplate
+#from .ChainlinkTemplates import ChainlinkUserTemplate, ChainlinkFileTemplate
+from .ChainlinkTemplates import *
 from .ChainlinkBaseServer import *
  
 
@@ -32,26 +33,12 @@ class ChainlinkUserServer(ChainlinkBaseServer):
         """
 
         self.__installSoftware(node)
-        self.__setScriptFiles(node)
+        self.__installLibrary(node)
+        self.__installScriptFiles(node)
         
-        # Get the Link contract address
-        node.appendStartCommand(f'bash {self.__DIR}/check_link_contract.sh')       
+        # This script includes all the commands 
+        node.appendStartCommand(f'bash {self.__DIR}/chainlink_user_setup.sh &')
 
-        # Get the Chainlink oracle contract addresses
-        node.appendStartCommand(f'python3 {self.__DIR}/get_contract_addresses.py')
-
-        # Deploy user contract
-        node.appendStartCommand(f'python3 {self.__DIR}/deploy_user_contract.py')
-
-        # Set the LINK token contract address and oracle contract 
-        # addresses in the user contract
-        node.appendStartCommand(f'python3 {self.__DIR}/set_contract_addresses.py')
-
-        # Invoke the Link token contract to get funding 
-        node.appendStartCommand(f'python3 {self.__DIR}/fund_user_contract.py')     
-
-        # Request ETH Price
-        node.appendStartCommand(f'python3 {self.__DIR}/request_eth_price.py')
     
     def __installSoftware(self, node: Node):
         """
@@ -64,10 +51,28 @@ class ChainlinkUserServer(ChainlinkBaseServer):
         node.addBuildCommand('pip3 install web3==5.31.1')
     
 
-    def __setScriptFiles(self, node: Node):
+    def __installLibrary(self, node: Node):
         """
-        @brief Deploy the user contract.
+        @brief Install the library.
         """
+        node.importFile(hostpath=BlockchainLibrary['ethereum_helper'], 
+                        containerpath=f'{self.__DIR}/EthereumHelper.py')
+        node.importFile(hostpath=BlockchainLibrary['faucet_helper'], 
+                        containerpath=f'{self.__DIR}/FaucetHelper.py')
+        node.importFile(hostpath=BlockchainLibrary['utility_server_helper'], 
+                        containerpath=f'{self.__DIR}/UtilityServerHelper.py')
+
+
+    def __installScriptFiles(self, node: Node):
+        """
+        @brief Install the script files and smart contracts 
+        """
+
+        # Check if the chainlink setup script 
+        node.setFile(f'{self.__DIR}/chainlink_user_setup.sh',
+                     ChainlinkUserTemplate['setup_script'])
+
+
         # Check if the chainlink init node is up and running
         node.setFile(f'{self.__DIR}/check_link_contract.sh',
              ChainlinkFileTemplate['check_link_contract'].format(
@@ -79,7 +84,7 @@ class ChainlinkUserServer(ChainlinkBaseServer):
         # Get the link token and oracle contract addresses
         node.setFile(f'{self.__DIR}/get_oracle_addresses.py', 
              ChainlinkUserTemplate['get_oracle_addresses'].format(
-                  util_server_ip=self._util_server_ip, 
+                  util_server=self._util_server_ip, 
                   util_server_port=self._util_server_port, 
                   oracle_contract_names=self.__chainlink_servers,
                   link_contract_name=LinkTokenFileTemplate['link_contract_name']))
@@ -92,18 +97,18 @@ class ChainlinkUserServer(ChainlinkBaseServer):
 
         node.setFile(f'{self.__DIR}/deploy_user_contract.py', 
                 ChainlinkUserTemplate['deploy_user_contract'].format(
-                    eth_server_ip=self._eth_server_ip, 
+                    eth_server=self._eth_server_ip, 
                     eth_server_http_port=self._eth_server_http_port, 
-                    faucet_ip=self._faucet_server_ip, 
-                    faucet_port=self._faucet_server_port, 
+                    faucet_server=self._faucet_server_ip, 
+                    faucet_server_port=self._faucet_server_port, 
                     chain_id=self._chain_id))
 
         node.setFile(f'{self.__DIR}/set_contract_addresses.py', 
                 ChainlinkUserTemplate['set_contract_addresses'].format(
-                    eth_server_ip=self._eth_server_ip, 
+                    eth_server=self._eth_server_ip, 
                     eth_server_http_port=self._eth_server_http_port, 
-                    faucet_ip=self._faucet_server_ip, 
-                    faucet_port=self._faucet_server_port, 
+                    faucet_server=self._faucet_server_ip, 
+                    faucet_server_port=self._faucet_server_port, 
                     chain_id=self._chain_id))
 
         # The Link contract abi is needed for funding the user contract with
@@ -114,21 +119,20 @@ class ChainlinkUserServer(ChainlinkBaseServer):
         node.setFile(f'{self.__DIR}/fund_user_contract.py', 
                 ChainlinkUserTemplate['fund_user_contract'].format(
                     chain_id=self._chain_id, 
-                    rpc_url=self._eth_server_ip, 
-                    rpc_port=self._eth_server_http_port, 
-                    faucet_url=self._faucet_server_ip, 
-                    faucet_port=self._faucet_server_port))
+                    eth_server=self._eth_server_ip, 
+                    eth_server_http_port=self._eth_server_http_port, 
+                    faucet_server=self._faucet_server_ip, 
+                    faucet_server_port=self._faucet_server_port))
 
         node.setFile(f'{self.__DIR}/request_eth_price.py', 
                 ChainlinkUserTemplate['request_eth_price'].format(
                     chain_id=self._chain_id,
-                    rpc_url=self._eth_server_ip,
-                    rpc_port=self._eth_server_http_port,
-                    faucet_url=self._faucet_server_ip,
-                    faucet_port=self._faucet_server_port,
-                    url=self.__external_url,
-                    path=self.__path,
-                    number_of_normal_servers=self.__number_of_normal_servers))
+                    eth_server=self._eth_server_ip,
+                    eth_server_http_port=self._eth_server_http_port,
+                    faucet_server=self._faucet_server_ip,
+                    faucet_server_port=self._faucet_server_port,
+                    external_url=self.__external_url,
+                    path=self.__path))
 
     def setName(self, name: str):
         """

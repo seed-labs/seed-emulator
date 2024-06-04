@@ -1,5 +1,7 @@
 from .ChainlinkFileTemplate import ChainlinkFileTemplate, \
                                    OracleContractDeploymentTemplate, \
                                    LinkTokenFileTemplate, \
-                                   ChainlinkUserTemplate 
+                                   ChainlinkUserTemplate, \
+                                   BlockchainLibrary
+
 from .ChainlinkJobsTemplate import ChainlinkJobsTemplate

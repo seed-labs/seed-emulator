@@ -12,6 +12,34 @@ def get_file_content(filename):
         return file.read()
 
 
+def get_file_path(filename):
+    """!
+    @brief Get the real path of a file 
+    @return the path
+    """
+    return os.path.dirname(os.path.realpath(__file__)) + "/" + filename
+
+
+# Library files
+BlockchainLibrary: Dict[str, str] = {
+    'ethereum_helper':       get_file_path('library/EthereumHelper.py'),
+    'faucet_helper':         get_file_path('library/FaucetHelper.py'),
+    'utility_server_helper': get_file_path('library/UtilityServerHelper.py')
+}
+
+
+# Files for user node
+ChainlinkUserTemplate: Dict[str, str] = {
+    'setup_script':            get_file_content("files_user/chainlink_user_setup.sh"), 
+    'user_contract_abi':       get_file_content("files_user/user_contract.abi"),
+    'user_contract_bin':       get_file_content("files_user/user_contract.bin"),
+    'request_eth_price':       get_file_content("files_user/request_eth_price.py"),
+    'fund_user_contract':      get_file_content("files_user/fund_user_contract.py"),
+    'get_oracle_addresses':    get_file_content("files_user/get_oracle_addresses.py"),
+    'deploy_user_contract':    get_file_content("files_user/deploy_user_contract.py"),
+    'set_contract_addresses':  get_file_content("files_user/set_contract_addresses.py")
+}
+
 # Link Token Contract files
 # This contract is deployed by the utility server
 LinkTokenFileTemplate: Dict[str, str] = {
@@ -26,17 +54,6 @@ OracleContractDeploymentTemplate: Dict[str, str] = {
     'deploy_oracle_contract': get_file_content("files/deploy_oracle_contract.py"),
     'oracle_contract_abi':    get_file_content("files/contract/oracle_contract.abi"),
     'oracle_contract_bin':    get_file_content("files/contract/oracle_contract.bin")
-}
-
-# Files for user node
-ChainlinkUserTemplate: Dict[str, str] = {
-    'user_contract_abi':       get_file_content("files_user/user_contract.abi"),
-    'user_contract_bin':       get_file_content("files_user/user_contract.bin"),
-    'request_eth_price':       get_file_content("files_user/request_eth_price.py"),
-    'fund_user_contract':      get_file_content("files_user/fund_user_contract.py"),
-    'get_oracle_addresses':    get_file_content("files_user/get_oracle_addresses.py"),
-    'deploy_user_contract':    get_file_content("files_user/deploy_user_contract.py"),
-    'set_contract_addresses':  get_file_content("files_user/set_contract_addresses.py")
 }
 
 
