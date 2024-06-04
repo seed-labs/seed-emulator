@@ -3,8 +3,8 @@
 # Change the work folder to where the program is
 cd "$(dirname "$0")"
 
-bash ./request_fund.sh
-bash ./check_link_contract.sh
+bash    ./get_auth_sender.sh
+python3 ./fund_auth_sender.py
 python3 ./deploy_oracle_contract.py
-bash ./register_contract.sh
-bash ./create_chainlink_jobs.sh
+python3 ./register_contract.py
+bash    ./create_chainlink_jobs.sh
