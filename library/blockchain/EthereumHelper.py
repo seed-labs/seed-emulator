@@ -1,6 +1,8 @@
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
 import logging
+import time 
+from sys import stderr
 
 
 class EthereumHelper:
@@ -21,8 +23,20 @@ class EthereumHelper:
 
         return
     
+    def __log(self, message: str):
+        """!
+        @brief log to stderr.
+
+        @param message message.
+        """
+        print('== EthereumHelper: ' + message, file=stderr)
+
 
     def create_account(self):
+        """!
+        @brief Create an account
+        @return account address and private ke
+        """
 
         account = self._web3.eth.account.create()
         address = account.address
@@ -34,20 +48,40 @@ class EthereumHelper:
     def connect_to_blockchain(self, url:str, isPOA=False, wait=True):
         """!
         @brief Connect to a blockchain node
-
         @param url The URL of the node (e.g., http://10.150.0.71:8545)
         @param isPOA Is the POA used for the consensus protocol (Proof-Of-Authority)?
-
         @returns Return self, for the purpose of API chaining.
         """
 
         self._url = url
-        self._web3 = Web3(Web3.HTTPProvider(url))
-        if isPOA:
-            self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-        assert self._web3.isConnected(), "Connection failed"
+        
+        while True:
+           self._web3 = Web3(Web3.HTTPProvider(url))
+           if isPOA:
+              self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+           if self._web3.isConnected():
+              self.__log("Successfully connected to {}".format(url))
+              break
+           else: 
+              if wait:
+                 self.__log("Failed to connect to {}, retrying ...".format(url))
+                 time.sleep(10)
 
         return self._web3
+
+
+    def wait_for_blocknumber(self, block_number=5):
+        """!
+        @brief Wait for the blockchain to reach the specified block number
+        """
+
+        block_now = self._web3.eth.blockNumber
+        while block_now < block_number:
+            self.__log("Waiting for the block number to reach {} (current: {})".\
+                        format(block_number, block_now))
+            time.sleep(10)
+            block_now = self._web3.eth.blockNumber
 
 
     def deploy_contract(self, contract_file, sender_address, sender_key, 
