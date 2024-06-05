@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 util_server = UtilityServerHelper(util_server_url)
+util_server.wait_for_server_ready()
 
 link_address  = util_server.get_contract_address(link_contract_name)
 

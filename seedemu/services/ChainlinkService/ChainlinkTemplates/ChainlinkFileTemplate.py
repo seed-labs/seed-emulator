@@ -59,11 +59,12 @@ OracleContractDeploymentTemplate: Dict[str, str] = {
 
 # Chainlink script files 
 ChainlinkFileTemplate: Dict[str, str] = {
-    'setup_script':         get_file_content("files/chainlink_setup.sh"), 
-    'check_link_contract':  get_file_content("files/check_link_contract.sh"), 
-    'register_contract':    get_file_content("files/register_contract.sh"),
-    'create_jobs':          get_file_content("files/create_jobs.sh"),
-    'request_fund':         get_file_content("files/request_fund.sh")
+    'setup_script':           get_file_content("files/chainlink_setup.sh"), 
+    'get_auth_sender':        get_file_content("files/get_auth_sender.sh"), 
+    'fund_auth_sender':       get_file_content("files/fund_auth_sender.py"), 
+    'deploy_oracle_contract': get_file_content("files/deploy_oracle_contract.py"),
+    'register_contract':      get_file_content("files/register_contract.py"),
+    'create_jobs':            get_file_content("files/create_jobs.sh")
 }
 
 

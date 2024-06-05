@@ -36,8 +36,10 @@ class ChainlinkServer(ChainlinkBaseServer):
         """
 
         self.__installSoftware(node)
-        self.__setConfigurationFiles(node)
-        self.__setScriptFiles(node)
+        self.__installConfigurationFiles(node)
+        self.__installLibrary(node)
+        self.__installScriptFiles(node)
+
 
         # Start the Chainlink server 
         node.appendStartCommand(ChainlinkFileTemplate['start_commands'])
@@ -48,26 +50,19 @@ class ChainlinkServer(ChainlinkBaseServer):
         node.appendStartCommand(f'bash {self.__DIR}/chainlink_setup.sh &') 
 
 
-        # All the following commands are already included in the previous command
-        # So, they are no longer needed. Will delete later.
-
-        # Step 1: Get the fund for the account created by the chainlink server 
-        #node.appendStartCommand('bash /chainlink/request_fund.sh')
-
-        # Step 2: Check whether link contract is already created (needed by chainklink)
-        #node.appendStartCommand('bash /chainlink/check_link_contract.sh')
-
-        # Step 3: Deploy the chainlink oracle contract
-        #node.appendStartCommand('python3 /chainlink/deploy_oracle_contract.py')
-
-        # Step 4: Register the oracle address with the utility server
-        #node.appendStartCommand('bash /chainlink/register_contract.sh')
-
-        # Step 5: Create chainlink jobs 
-        #node.appendStartCommand('bash /chainlink/create_chainlink_jobs.sh')
+    def __installLibrary(self, node: Node):
+        """
+        @brief Install the library.
+        """
+        node.importFile(hostpath=BlockchainLibrary['ethereum_helper'],
+                        containerpath=f'{self.__DIR}/EthereumHelper.py')
+        node.importFile(hostpath=BlockchainLibrary['faucet_helper'],
+                        containerpath=f'{self.__DIR}/FaucetHelper.py')
+        node.importFile(hostpath=BlockchainLibrary['utility_server_helper'],
+                        containerpath=f'{self.__DIR}/UtilityServerHelper.py')
 
 
-    def __setScriptFiles(self, node:Node):
+    def __installScriptFiles(self, node:Node):
         """
         @brief Install the needed files.
         """
@@ -78,41 +73,36 @@ class ChainlinkServer(ChainlinkBaseServer):
         node.setFile(f'{self.__DIR}/contracts/oracle_contract.bin', 
                      OracleContractDeploymentTemplate['oracle_contract_bin'])
 
-
         node.setFile(f'{self.__DIR}/chainlink_setup.sh', 
                      ChainlinkFileTemplate['setup_script'])
 
+        node.setFile(f'{self.__DIR}/get_auth_sender.sh', 
+                     ChainlinkFileTemplate['get_auth_sender'])
+
+        node.setFile(f'{self.__DIR}/fund_auth_sender.py', 
+                     ChainlinkFileTemplate['fund_auth_sender'].format(
+                         faucet_server=self._faucet_server_ip, 
+                         faucet_server_port=self._faucet_server_port)) 
+
         node.setFile(f'{self.__DIR}/deploy_oracle_contract.py', 
                      OracleContractDeploymentTemplate['deploy_oracle_contract'].format(
-                        eth_server_ip=self._eth_server_ip,
-                        eth_server_http_port=self._eth_server_http_port,
-                        util_node_ip=self._util_server_ip,
-                        util_node_port=self._util_server_port,
-                        contract_name=LinkTokenFileTemplate['link_contract_name'],
                         chain_id=self._chain_id, 
-                        faucet_ip=self._faucet_server_ip, 
-                        faucet_port=self._faucet_server_port))
+                        eth_server=self._eth_server_ip,
+                        eth_server_http_port=self._eth_server_http_port,
+                        util_server=self._util_server_ip,
+                        util_server_port=self._util_server_port,
+                        link_contract_name=LinkTokenFileTemplate['link_contract_name'],
+                        faucet_server=self._faucet_server_ip, 
+                        faucet_server_port=self._faucet_server_port))
 
-        node.setFile(f'{self.__DIR}/request_fund.sh', 
-                     ChainlinkFileTemplate['request_fund'].format(
-                         faucet_server_ip=self._faucet_server_ip, 
-                         faucet_server_port=self._faucet_server_port, 
-                         eth_server_ip=self._eth_server_ip, 
-                         eth_server_port=self._eth_server_http_port))
 
-        node.setFile(f'{self.__DIR}/check_link_contract.sh', 
-                     ChainlinkFileTemplate['check_link_contract'].format(
-                         util_node_ip=self._util_server_ip,
-                         util_node_port=self._util_server_port,
-                         contract_name =LinkTokenFileTemplate['link_contract_name']))
-
-        node.setFile(f'{self.__DIR}/register_contract.sh', 
+        node.setFile(f'{self.__DIR}/register_contract.py', 
                      ChainlinkFileTemplate['register_contract'].format(
-                           util_node_ip=self._util_server_ip,
-                           util_node_port=self._util_server_port,
+                           util_server=self._util_server_ip,
+                           util_server_port=self._util_server_port,
                            node_name=self.__name))
 
-        node.setFile(f'{self.__DIR}/create_chainlink_jobs.sh', 
+        node.setFile(f'{self.__DIR}/create_jobs.sh', 
                      ChainlinkFileTemplate['create_jobs'])
 
 
@@ -126,7 +116,8 @@ class ChainlinkServer(ChainlinkBaseServer):
             node.addSoftware(software)
         node.addBuildCommand('pip3 install web3==5.31.1')
 
-    def __setConfigurationFiles(self, node:Node):
+
+    def __installConfigurationFiles(self, node:Node):
         """
         @brief Set configuration files.
         """

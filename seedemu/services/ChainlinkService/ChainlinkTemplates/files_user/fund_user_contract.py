@@ -5,7 +5,6 @@ from EthereumHelper import EthereumHelper
 
 ###########################################
 eth_url    = "http://{eth_server}:{eth_server_http_port}"
-faucet_url = "http://{faucet_server}:{faucet_server_port}"
 chain_id   = {chain_id}
 ###########################################
 

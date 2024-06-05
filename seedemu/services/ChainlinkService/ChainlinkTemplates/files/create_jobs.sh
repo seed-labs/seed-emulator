@@ -1,6 +1,6 @@
 #!/bin/bash
 DIRECTORY="./jobs/"
-ORACLE_ADDRESS_FILE="./deployed_contracts/oracle_contract_address.txt"
+ORACLE_ADDRESS_FILE="./info/oracle_contract_address.txt"
 TIMEOUT=1000
 SLEEP_DURATION=10
 
