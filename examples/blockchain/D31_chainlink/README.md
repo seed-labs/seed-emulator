@@ -77,15 +77,17 @@ found [here](https://docs.chain.link/chainlink-nodes)
 ## Chainlink User Server 
 
 The Chainlink User Server is an example to demonstrate how to
-use the Chainlink service to request Ethereum price from 
-a real-world server. To do that, a [user contract](./contracts/user_contract.sol) needs to
-be deployed to the blockchain. This contract interacts with the Chainlink
-service to get the latest price of an asset. 
+use the Chainlink service to request external data.
+To do that, a [user contract](./contracts/user_contract.sol) needs to
+be deployed to the blockchain. Users will interact with this 
+contract, which will interact with the Chainlink service to get 
+the data from the outside. 
 
 
 ### Set up the user contract 
 
-Setting up the user contract takes several steps: 
+Setting up the user contract takes several steps. When the user node
+start, these steps will be automatically carried out. 
 
 1. Get LINK token contract address and oracle contract addresses
    from the Ethereum Utility server
@@ -96,8 +98,8 @@ Setting up the user contract takes several steps:
 5. Invoke the `addOracles` function of the user contract to add
    oracle contract addresses in the user contract
 6. Send 1 ETH to the LINK token contract to fund the user account with LINK tokens
-7. Invoke the `transfer` function of the LINK contract to transfer LINK token
-   to the user contract
+7. Invoke the `transfer` function of the LINK contract to transfer 100 LINK tokens
+   from the user account to the user contract account.
 
 
 ### How the process works
@@ -107,14 +109,22 @@ the `requestETHPriceData(api, path)` function in the user contract.
 This will trigger a series of actions: 
 
 - Upon receiving a request, the user contract invokes the LINK contract,
-  which invokes the Chainlink oracle contracts
-- Each oracle contract uses emitted messages to notify its outside counterpart, 
-  i.e., a Chainlink node, which monitors such messages on the blockchain
+  which invokes the Chainlink oracle contracts. The involvement of
+  the LINK contract ensures that the oracle gets paid (with LINK tokens) 
+  - Each oracle gets `x` number of LINK tokens for each job
+  - The LINK contract will deduct `k*x` number of LINK tokens from the 
+    user contract account (`k` is the number of oracles invoked)
+
+- Each oracle contract emits a message to notify its outside counterpart, 
+  i.e., a Chainlink node, which is always monitoring the blockchain
+  for such messages
+
 - Each Chainlink node does the following:
    - Fetch the outside data from the specified `api`
    - Process the data it using the specified `path` 
    - Give the result to the oracle contract, which invokes
      the callback function provided by the user contract
+
 - The user contract processes and save the response; for example, it may
   calculate the average from the data sent back from all the oracles
 - The user eventually uses a local call to get the response  
