@@ -46,6 +46,7 @@ def register_contract():
         return jsonify(contract_info), 200
         
     
+@app.route('/all', methods=['GET'])
 @app.route('/contracts_info', methods=['GET'])
 def get_contract_info():
     contract_name = request.args.get('name')
