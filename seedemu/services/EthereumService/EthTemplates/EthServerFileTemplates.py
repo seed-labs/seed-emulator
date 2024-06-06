@@ -25,7 +25,8 @@ UtilityServerFileTemplates: Dict[str, str] = {
 
 FaucetServerFileTemplates: Dict[str, str] = {
         'faucet_server':   get_file_content("files_faucet/faucet_server.py"),
-        'fund_script':     get_file_content("files_faucet/fund_script.sh"),
+        'fund_accounts':   get_file_content("files_faucet/fund_accounts.sh"),
+        'fundme':          get_file_content("files_faucet/fundme.py"),
         'faucet_url':      "http://{address}:{port}/",
         'faucet_fund_url': "http://{address}:{port}/fundme",
         'fund_curl': "curl -X POST -d 'address={recipient}&amount={amount}' http://{address}:{port}/fundme"

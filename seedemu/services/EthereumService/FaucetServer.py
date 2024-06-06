@@ -42,7 +42,7 @@ class FaucetServer(Server):
         self.__fundlist = []
         self.__consensus = blockchain.getConsensusMechanism()
         self.__max_fund_amount = max_fund_amount
-        self.__max_fund_attempts = 30
+        self.__max_fund_attempts = 999999
     
     def setOwnerPrivateKey(self, keyString: str, isEncrypted = False, password = ""):
         """
@@ -145,11 +145,24 @@ class FaucetServer(Server):
         """
         node.appendClassName("FaucetService")
 
-        # self.__blockchain.addLocalAccount(self.__account.address, balance=self.__balance)
         node.addSoftware('python3 python3-pip')
-        
+        self._installScriptFiles(node)
+
         node.addBuildCommand('pip3 install flask web3==5.31.1')
-        # node.setFile('/var/www/html/index.html', self.__index.format(asn = node.getAsn(), nodeName = node.getName()))
+
+        # Start the faucet server 
+        node.appendStartCommand('python3 {}/app.py &'.format(self.DIR_PREFIX))
+
+        # Run the script to fund all the provided accounts
+        node.appendStartCommand('bash {}/fund_accounts.sh &'.format(self.DIR_PREFIX))
+
+
+    def _installScriptFiles(self, node:Node):
+        """
+        @brief Install the needed files.
+        """
+
+        # Install the faucet server program 
         node.setFile(self.DIR_PREFIX + '/app.py', 
                      FaucetServerFileTemplates['faucet_server'].format(
              max_fund_amount=self.__max_fund_amount,
@@ -160,8 +173,8 @@ class FaucetServer(Server):
              account_address = self.__account.address, 
              account_key=self.__account.privateKey.hex(),
              port=self.__port))
-        node.appendStartCommand('python3 {}/app.py &'.format(self.DIR_PREFIX))
 
+        # Prepare install the fund command 
         funds_list = []
         for recipient, amount in self.__fundlist:
             funds_list.append(FaucetServerFileTemplates['fund_curl'].format(
@@ -170,15 +183,14 @@ class FaucetServer(Server):
                     address='localhost',
                     port = self.__port))
             
-        node.setFile(self.DIR_PREFIX + '/fund.sh', 
-            FaucetServerFileTemplates['fund_script'].format(
+        node.setFile(self.DIR_PREFIX + '/fund_accounts.sh', 
+            FaucetServerFileTemplates['fund_accounts'].format(
                     address='localhost', 
                     max_attempts = self.__max_fund_attempts,
                     port=self.__port,
                     fund_command=';'.join(funds_list)))
 
-        node.appendStartCommand('chmod +x {}/fund.sh'.format(self.DIR_PREFIX))
-        node.appendStartCommand('{}/fund.sh'.format(self.DIR_PREFIX))
+
         
     def print(self, indent: int) -> str:
         out = ' ' * indent
