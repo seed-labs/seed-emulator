@@ -13,9 +13,11 @@ to install these libraries:
 ```
 pip install -e file:/emu_library
 ```
+
 This will create a symlink of the `/emu_library` folder to Python's default module
 search path, so a program can `import` these libraries like importing other
 standard libraries. 
+
 
 ## Dependency
 
@@ -23,5 +25,6 @@ These libraries are used by the following services, so if changes are made, test
 is required:
 
 - `ChainlinkService`
+- `ChainlinkUserService` 
 
 
