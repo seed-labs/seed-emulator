@@ -48,7 +48,7 @@ We can specify the following parameters:
   in each request.
 
 Because this server is already created in the base component,
-we just need to get an instance of this ojbect:
+we just need to get an instance of this object:
 
 ```python
 eth         = emu.getLayer('EthereumService')
