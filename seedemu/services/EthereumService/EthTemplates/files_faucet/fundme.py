@@ -1,8 +1,7 @@
 #!/bin/env python3
 
-import time
+import time, sys, json
 import requests
-import json
 from eth_account import Account
 import logging
 
@@ -57,9 +56,13 @@ def send_fundme_request(account_address):
 		logging.error(f"An error occurred: {{str(e)}}")
 		exit()
 
-# Create an account
-user_account = Account.create()
-account_address = user_account.address
+if len(sys.argv) < 2:
+   # Create a new account
+   user_account = Account.create()
+   account_address = user_account.address
+   print(account_address)
+else:
+   account_address = sys.argv[1]
 
 # Send fundme request to faucet server
 send_fundme_request(account_address)
