@@ -44,6 +44,11 @@ class UtilityServerHelper:
 
 
     def get_contract_address(self, contract_name):
+        """!
+        @brief Get the address of a specified contract name 
+        @param contract_name The name of the contract
+        @returns Return the contract address 
+        """
          url = self._server_url + "/contracts_info?name=" + contract_name
          while (True):
             try:
@@ -63,6 +68,10 @@ class UtilityServerHelper:
          return address
 
     def register_info(self, data):
+        """!
+        @brief Register a contract address with the server
+        @param data JSON format, containing 'contract_name' and 'contract_address'
+        """
          url = self._server_url + "/register_contract"
 
          while (True):
