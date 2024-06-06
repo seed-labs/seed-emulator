@@ -67,10 +67,11 @@ starts, so this API will set up the contract deployment on the Utility server.
 
 
 <a id="interact-with-server"></a>
-## Interact with the Utility server
+## Interact with the Utility server using `curl`
 
-After the emulator starts, we can interact with the Utility server.
-To do that, we first need to get the server's IP address (the 
+After the emulator starts, we can interact with the Utility server
+using the `curl` command. To do that, 
+we first need to get the server's IP address (the 
 port number used in the example is `5000`). 
 
 ```sh
@@ -113,3 +114,11 @@ the `name` argument.
 ```sh
 curl http://10.150.0.71:5000/contracts_info?name=test
 ```
+
+
+## Interact with the Utility server using Python
+
+We can write Python programs to interact with the Utility server.
+A helper class 
+called [UtilityServerHelper.py](../../../library/blockchain/UtilityServerHelper.py) 
+is created to make writing such programs easier. 

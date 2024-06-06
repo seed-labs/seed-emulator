@@ -11,7 +11,8 @@ This example demonstrates how to use it.
 
 - [Create a faucet server](#create-faucet-server)
 - [Fund accounts during the build time](#fund-account-build-time)
-- [Fund accounts during the run time](#fund-account-run-time)
+- [Fund accounts during the run time (using curl)](#fund-account-run-time-curl)
+- [Fund accounts during the run time (using Python)](#fund-account-run-time-python)
 - [Advanced fund account for Developer](#fund-account-advanced)
 
 
@@ -71,8 +72,8 @@ emulator starts, the faucet server will carry out the fund transfer.
 faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
 ```
 
-<a id="fund-account-run-time"></a>
-### (2) Fund accounts during the run time
+<a id="fund-account-run-time-curl"></a>
+### (2) Fund accounts during the run time (using curl)
 
 Very often, we do not know the account addresses during the build time, because
 the accounts are created during the run time. In this case, during the run
@@ -93,8 +94,18 @@ curl -X POST -H "Content-Type: application/json" -d '{
 }' http://10.154.0.71:80/fundme
 ```
 
+<a id="fund-account-run-time-python"></a>
+### (3) Fund accounts during the run time (using Python)
 
-## Fund Accounts Using Python
+We can write Python programs to interact with the Faucet server.
+A helper class
+called [FaucetHelper.py](../../../library/blockchain/FaucetHelper.py)
+is created to make writing such programs easier.
+
+
+
+<a id="fund-account-advanced"></a>
+## Advanced fund account for Developer
 
 If you want to create a service class that creates Ethereum accounts
 dynamically (i.e., during the emulator run time),
