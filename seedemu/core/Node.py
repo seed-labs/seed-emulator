@@ -395,6 +395,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         self.__ports.append((host, node, proto))
 
+        return self
+
     def addPortForwarding(self, host: int, node: int, proto:str = 'tcp') -> Node:
         """!
         @brief Achieves the same as the addPort function.
