@@ -1,44 +1,93 @@
-# EthInitAndInfo Server
+# EthUtilityServer
 
-EthInitAndInfo Server has two roles. First role to deploy a contract when all the containers are up. A contract abi and bin files are given at build time. And the second role of the server to provide contract address. In Ethereum, once a contract is deployed, every contract will be assigned an address. Users need to know the address to interact with the contract. The EthInitAndInfo Server will host a web server for user to register a contract with a tuple of `contract_name` and `contract_address`. Then, user can get the list of contract information or a contract address corresponded with the given contract name.
+The Utility server has two roles. The first role is to help deploy smart contract,
+and the second role is to provide contract addresses to others. In Ethereum, once a
+contract has been deployed, it will be assigned an address. Users need to
+know this address to interact with the contract. The Utility server 
+hosts a web server for others to register contract addresses. 
 
-- [Create an EthInitAndInfo server](#add-ethinitandinfo-server)
+- [Create a Utility server](#create-utility-server)
 - [Deploy a contract](#deploy-contract)
-- [Interact with EthInitAndInfo server](#interact-with-server)
+- [Interact with the Uility server](#interact-with-server)
 
-<a id="add-ethinitandinfo-server"></a>
-## Create EthInitAndInfo Server
+<a id="create-utility-server"></a>
+## Create Utility Server
 
-We first need to add an EthInitAndInfo Server to a blockchain using the `createEthInitAndInfoServer` method. After creating the server, we need to set `linkedEthNode` and `linkedFaucetNode` to connect to the eth node via web3 and send fund api to the faucet node.
+We first need to add a Utility server to a blockchain.
+This example uses a pre-built block component (`D00_ethereum_poa`), 
+which already has a Utility server.
+In the [D00_ethereum_poa](../D00_ethereum_poa/) example, these lines are
+used to create a utility server
+
+
 ```python
-# Create the EthInit server, and set port number of the server, the eth node and faucet server.
-ethInitInfo:EthInitAndInfoServer = blockchain.createEthInitAndInfoServer(vnode='eth_init_info', 
-                                                                             port=5000, 
-                                                                             linked_eth_node=random.choice(eth_nodes),
-                                                                             linked_faucet_node=random.choice(faucet_info))
+util_server:EthUtilityServer = blockchain.createEthUtilityServer(
+           vnode='utility',
+           port=5000,
+           linked_eth_node='eth6',
+           linked_faucet_node='faucet')
 ```
+
+We can specify the following parameters:
+- `vnode`: the virtual node name of the Utility server.
+- `port`: a port number, used by the server to set up a web server.
+- `linked_eth_node`: the faucet server needs to link to an eth node, so it can
+  sends out transactions to the blockchain. We just need to provide the name
+  of an existing eth node, but we need to make sure that the eth node
+  has enabled the http connection (otherwise, it cannot accept external requests).
+- `linked_faucet_node`: the Utility server will create an Ethereum account, which
+  is used to deploy contracts. The Utility server will use the faucet server
+  to find the account. 
+
+Because this server is already created in the base component,
+we just need to get an instance of this object:
+
+```python
+eth        = emu.getLayer('EthereumService')
+blockchain = eth.getBlockchainByName(eth.getBlockchainNames()[0])
+name       = blockchain.getUtilityServerNames()[0]
+utility    = blockchain.getUtilityServerByName(name)
+```
+
 
 <a id="deploy-contract"></a>
 ## Deploy a contract
 
-To deploy a contract using `EthInitAndInfo` server, we need to set `abi` and `bin` file. A path can be both relative and absolute.
+To deploy a contract using the Utility server, 
+we need to set `abi` and `bin` file. A path can be both relative and absolute.
+
 ```python
-ethInitInfo.deployContract(contract_name='test', 
+utility.deployContractByFilePath(contract_name='test',
                         abi_path="./Contracts/contract.abi",
                         bin_path="./Contracts/contract.bin")
 ```
 
-<a id="interact-with-server"></a>
-## Interact with a EthInitAndInfo server
+It should be noted that the contract deployment will happen after the emulator
+starts, so this API will set up the contract deployment on the Utility server. 
 
-### Get ip addr of the eth-init-info node. 
+
+<a id="interact-with-server"></a>
+## Interact with the Utility server using `curl`
+
+After the emulator starts, we can interact with the Utility server
+using the `curl` command. To do that, 
+we first need to get the server's IP address (the 
+port number used in the example is `5000`). 
+
 ```sh
-$ docker ps | grep -i init
-e22e918b4c90   output_hnode_150_host_0                                     "/start.sh"      2 minutes ago   Up 2 minutes                                                 as162h-EthInitAndInfo-10.150.0.71
+$ docker ps | grep -i utility
+e22e918b4c90   output_hnode_150_host_0  ...  as162h-UtilityServer-10.150.0.71
 ```
-In this example, the url of the server is `http://10.150.0.71:5000/`. Please replace it according to your setup.
+
+In this example, the url of the server is `http://10.150.0.71:5000/`. 
+
 
 ### Register a contract
+
+To register a contract with the Utility server, we use a POST request
+to send the contract information (JSON format) 
+to the server's `/register_contract` API. 
+See the following example: 
 
 ```sh
 curl -X POST \
@@ -47,26 +96,29 @@ curl -X POST \
   http://10.150.0.71:5000/register_contract
 ```
 
-- This curl command sends a POST request to `http://10.150.0.71:5000/register_contract` to register a contract.
-- The request body is in JSON format and contains the keys `contract_name` and `contract_address`.
-- Replace `"test999"` with the actual contract name and `"0xc0ffee254729296a45a3885639AC7E10F9d54979"` with the actual contract address you want to register.
+### Get a list of registered contracts
 
-### Get a list of contract_name:contract_address pairs
+We can use the following API to get a list of all the registered contracts. 
 
 ```sh
+curl http://10.150.0.71:5000/all
 curl http://10.150.0.71:5000/contracts_info
 ```
 
-- This curl command sends a GET request to `http://10.150.0.71:5000/contracts_info` to retrieve a list of contract_name:contract_address pairs.
-- It does not require any parameters in the URL.
 
 ### Get a contract address by its name
+
+If we just want to get the address of a particular contract, we can provide
+the `name` argument. 
 
 ```sh
 curl http://10.150.0.71:5000/contracts_info?name=test
 ```
 
-- This curl command sends a GET request to `http://10.150.0.71:5000/contracts_info` with a query parameter `name=test` to retrieve the contract address corresponding to the given contract name ("test" in this example).
-- Replace `"test"` with the actual contract name for which you want to retrieve the contract address.
 
-These commands demonstrate how to register a contract, retrieve a list of registered contracts, and retrieve a specific contract's address by its name using HTTP requests.
+## Interact with the Utility server using Python
+
+We can write Python programs to interact with the Utility server.
+A helper class 
+called [UtilityServerHelper.py](../../../library/blockchain/UtilityServerHelper.py) 
+is created to make writing such programs easier. 

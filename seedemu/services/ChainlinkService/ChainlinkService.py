@@ -4,23 +4,18 @@ from seedemu.core.Service import Server
 from seedemu.core.enums import NetworkType
 #from seedemu.services.ChainlinkService.ChainlinkTemplates import *
 from .ChainlinkTemplates import *
+from .ChainlinkBaseServer import *
+from .ChainlinkUserServer import *
 import re
 
-class ChainlinkServer(Server):
+class ChainlinkServer(ChainlinkBaseServer):
     """
     @brief The Chainlink virtual node server.
     """
     __name:str
     __username: str = "seed@example.com"
     __password: str = "blockchainemulator"
-    __eth_server_ip: str
-    __eth_server_ws_port: int
-    __eth_server_http_port: int
-    __util_server_ip: str
-    __util_server_port: int
-    __faucet_server_ip:str
-    __faucet_server_port: int
-    __chain_id: int
+    __DIR: str = '/chainlink'
 
     def __init__(self):
         """
@@ -28,24 +23,6 @@ class ChainlinkServer(Server):
         """
         super().__init__()
         self._base_system = BaseSystem.SEEDEMU_CHAINLINK
-
-    def _setEthServerInfo(self, eth_server_ip:str, eth_server_http_port:int, eth_server_ws_port:int, chain_id:int):
-        self.__eth_server_ip = eth_server_ip
-        self.__eth_server_http_port = eth_server_http_port
-        self.__eth_server_ws_port = eth_server_ws_port
-        self.__chain_id = chain_id
-        return self
-
-    def _setUtilityServerInfo(self, util_server_ip:str, util_server_port:int):
-        self.__util_server_ip = util_server_ip
-        self.__util_server_port = util_server_port
-        return self
-
-    def _setFaucetServerInfo(self, faucet_server_ip:str, faucet_server_port:int):
-        self.__faucet_server_ip = faucet_server_ip
-        self.__faucet_server_port = faucet_server_port
-        return self
-
 
     def setName(self, name: str):
         """
@@ -59,36 +36,75 @@ class ChainlinkServer(Server):
         """
 
         self.__installSoftware(node)
-        self.__setConfigurationFiles(node)
-        self.__chainlinkStartCommands(node)
-        node.setFile('/chainlink/send_fund_request.sh', 
-                     ChainlinkFileTemplate['send_get_eth_request'].format(
-                         faucet_server_ip=self.__faucet_server_ip, 
-                         faucet_server_port=self.__faucet_server_port, 
-                         rpc_ip=self.__eth_server_ip, 
-                         rpc_port=self.__eth_server_http_port))
-        node.appendStartCommand('bash /chainlink/send_fund_request.sh')
-        node.setFile('/chainlink/check_init_node.sh', 
-                     ChainlinkFileTemplate['check_init_node'].format(
-                         util_node_ip=self.__util_server_ip,
-                         util_node_port=self.__util_server_port,
-                         contract_name =LinkTokenDeploymentTemplate['link_token_name']))
-        node.appendStartCommand('bash /chainlink/check_init_node.sh')
+        self.__installConfigurationFiles(node)
+        self.__installLibrary(node)
+        self.__installScriptFiles(node)
 
-        self.__deploy_oracle_contract(node)
 
-        node.setFile('/chainlink/send_flask_request.sh', 
-                     ChainlinkFileTemplate['send_flask_request'].format(
-                           util_node_ip=self.__util_server_ip,
-                           util_node_port=self.__util_server_port,
+        # Start the Chainlink server 
+        node.appendStartCommand(ChainlinkFileTemplate['start_commands'])
+       
+        # All the Chainlink commands are included in this shell script
+        # This way, we can run it in the background, so it does not block
+        # the start command of the container 
+        node.appendStartCommand(f'bash {self.__DIR}/chainlink_setup.sh &') 
+
+
+    def __installLibrary(self, node: Node):
+        """
+        @brief Install the library.
+        """
+        node.importFile(hostpath=BlockchainLibrary['ethereum_helper'],
+                        containerpath=f'{self.__DIR}/EthereumHelper.py')
+        node.importFile(hostpath=BlockchainLibrary['faucet_helper'],
+                        containerpath=f'{self.__DIR}/FaucetHelper.py')
+        node.importFile(hostpath=BlockchainLibrary['utility_server_helper'],
+                        containerpath=f'{self.__DIR}/UtilityServerHelper.py')
+
+
+    def __installScriptFiles(self, node:Node):
+        """
+        @brief Install the needed files.
+        """
+
+        # Set the oracle contracts 
+        node.setFile(f'{self.__DIR}/contracts/oracle_contract.abi', 
+                     OracleContractDeploymentTemplate['oracle_contract_abi'])
+        node.setFile(f'{self.__DIR}/contracts/oracle_contract.bin', 
+                     OracleContractDeploymentTemplate['oracle_contract_bin'])
+
+        node.setFile(f'{self.__DIR}/chainlink_setup.sh', 
+                     ChainlinkFileTemplate['setup_script'])
+
+        node.setFile(f'{self.__DIR}/get_auth_sender.sh', 
+                     ChainlinkFileTemplate['get_auth_sender'])
+
+        node.setFile(f'{self.__DIR}/fund_auth_sender.py', 
+                     ChainlinkFileTemplate['fund_auth_sender'].format(
+                         faucet_server=self._faucet_server_ip, 
+                         faucet_server_port=self._faucet_server_port)) 
+
+        node.setFile(f'{self.__DIR}/deploy_oracle_contract.py', 
+                     OracleContractDeploymentTemplate['deploy_oracle_contract'].format(
+                        chain_id=self._chain_id, 
+                        eth_server=self._eth_server_ip,
+                        eth_server_http_port=self._eth_server_http_port,
+                        util_server=self._util_server_ip,
+                        util_server_port=self._util_server_port,
+                        link_contract_name=LinkTokenFileTemplate['link_contract_name'],
+                        faucet_server=self._faucet_server_ip, 
+                        faucet_server_port=self._faucet_server_port))
+
+
+        node.setFile(f'{self.__DIR}/register_contract.py', 
+                     ChainlinkFileTemplate['register_contract'].format(
+                           util_server=self._util_server_ip,
+                           util_server_port=self._util_server_port,
                            node_name=self.__name))
-        node.appendStartCommand('bash /chainlink/send_flask_request.sh')
 
-        node.setFile('/chainlink/create_chainlink_jobs.sh', 
+        node.setFile(f'{self.__DIR}/create_jobs.sh', 
                      ChainlinkFileTemplate['create_jobs'])
-        node.appendStartCommand('bash /chainlink/create_chainlink_jobs.sh')
 
-        node.appendStartCommand('tail -f /chainlink/chainlink_logs.txt')
 
     def __installSoftware(self, node:Node):
         """
@@ -100,54 +116,26 @@ class ChainlinkServer(Server):
             node.addSoftware(software)
         node.addBuildCommand('pip3 install web3==5.31.1')
 
-    def __setConfigurationFiles(self, node:Node):
+
+    def __installConfigurationFiles(self, node:Node):
         """
         @brief Set configuration files.
         """
         config_content = ChainlinkFileTemplate['config'].format(
-                             rpc_ip=self.__eth_server_ip, 
-                             chain_id=self.__chain_id, 
-                             rpc_ws_port=self.__eth_server_ws_port, 
-                             rpc_port=self.__eth_server_http_port)
-        node.setFile('/chainlink/config.toml', config_content)
-        node.setFile('/chainlink/db_secrets.toml', ChainlinkFileTemplate['secrets'])
-        node.setFile('/chainlink/password.txt', 
+                             chain_id=self._chain_id, 
+                             eth_server_ip=self._eth_server_ip, 
+                             eth_server_ws_port=self._eth_server_ws_port, 
+                             eth_server_http_port=self._eth_server_http_port)
+        node.setFile(f'{self.__DIR}/config.toml', config_content)
+        node.setFile(f'{self.__DIR}/db_secrets.toml', ChainlinkFileTemplate['secrets'])
+        node.setFile(f'{self.__DIR}/password.txt', 
                      ChainlinkFileTemplate['api'].format(
                          username=self.__username, password=self.__password))
-        node.setFile('/chainlink/jobs/getUint256.toml', ChainlinkJobsTemplate['getUint256'])
-        node.setFile('/chainlink/jobs/getBool.toml', ChainlinkJobsTemplate['getBool'])
+        node.setFile(f'{self.__DIR}/jobs/getUint256.toml', 
+                     ChainlinkJobsTemplate['getUint256'])
+        node.setFile(f'{self.__DIR}/jobs/getBool.toml',
+                     ChainlinkJobsTemplate['getBool'])
 
-    def __chainlinkStartCommands(self, node:Node):
-        """
-        @brief Add start commands.
-        """
-        start_commands = """
-service postgresql restart
-su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD 'mysecretpassword';\\""
-nohup chainlink node -config /chainlink/config.toml -secrets /chainlink/db_secrets.toml start -api /chainlink/password.txt > /chainlink/chainlink_logs.txt 2>&1 &
-"""
-        node.appendStartCommand(start_commands)
-
-    def __deploy_oracle_contract(self, node:Node):
-        """
-        @brief Deploy the oracle contract.
-        """
-        node.setFile('/contracts/deploy_oracle_contract.py', 
-                     OracleContractDeploymentTemplate['oracle_contract_deploy'].format(
-                        rpc_ip = self.__eth_server_ip,
-                        rpc_port = self.__eth_server_http_port,
-                        util_node_ip=self.__util_server_ip,
-                        util_node_port=self.__util_server_port,
-                        contract_name = LinkTokenDeploymentTemplate['link_token_name'],
-                        chain_id=self.__chain_id, 
-                        faucet_ip=self.__faucet_server_ip, 
-                        faucet_port=self.__faucet_server_port))
-
-        node.setFile('/contracts/oracle_contract.abi', 
-                     OracleContractDeploymentTemplate['oracle_contract_abi'])
-        node.setFile('/contracts/oracle_contract.bin', 
-                     OracleContractDeploymentTemplate['oracle_contract_bin'])
-        node.appendStartCommand(f'python3 ./contracts/deploy_oracle_contract.py')
 
     def setUsernameAndPassword(self, username: str, password: str):
         """
@@ -216,8 +204,35 @@ class ChainlinkService(Service):
 
 
     def _createServer(self) -> ChainlinkServer:
+        """!
+        @brief Invoke by the install() method of this service
+        """
+
         self._log('Creating Chainlink server.')
         return ChainlinkServer()
+
+
+    def _createUserServer(self) -> ChainlinkUserServer:
+        """!
+        @brief Invoke by the installUserServer() method of this service
+        """
+
+        self._log('Creating Chainlink user node.')
+        return ChainlinkUserServer()
+
+
+    def installUserServer(self, vnode: str) -> ChainlinkUserServer:
+        """!
+        @brief Create a Chainlink user node 
+        """
+
+        if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
+
+        s = self._createUserServer()
+        self._pending_targets[vnode] = s
+
+        return self._pending_targets[vnode]
+ 
 
     def __getIPbyVNodeName(self, emulator:Emulator, vnode:str):
         """
@@ -247,17 +262,20 @@ class ChainlinkService(Service):
         @param node node
         @param server server
         """
-        server:ChainlinkServer = server
-        server._setEthServerInfo(eth_server_ip=self.__eth_server_ip,
-                                 eth_server_http_port=self.__eth_server_http_port,
-                                 eth_server_ws_port=self.__eth_server_ws_port,
-                                 chain_id=self.__chain_id)
+        # There are two types of servers created by this service,
+        # chainlink server and chainlink user node. They are both
+        # subclass of ChainlinkBaseServer 
+        server:ChainlinkBaseServer = server
+        server._setEthServer(eth_server_ip=self.__eth_server_ip,
+                             eth_server_http_port=self.__eth_server_http_port,
+                             eth_server_ws_port=self.__eth_server_ws_port,
+                             chain_id=self.__chain_id)
 
-        server._setUtilityServerInfo(util_server_ip=self.__util_server_ip,
-                                     util_server_port=self.__util_server_port)
+        server._setUtilityServer(util_server_ip=self.__util_server_ip,
+                                 util_server_port=self.__util_server_port)
 
-        server._setFaucetServerInfo(faucet_server_ip=self.__faucet_ip,
-                                    faucet_server_port=self.__faucet_port)
+        server._setFaucetServer(faucet_server_ip=self.__faucet_ip,
+                                faucet_server_port=self.__faucet_port)
 
         return
 
@@ -297,9 +315,9 @@ class ChainlinkService(Service):
 
         # Use the utility server to deploy the Link contract
         utility.deployContractByContent(
-            contract_name=LinkTokenDeploymentTemplate['link_token_name'],
-            abi_content=LinkTokenDeploymentTemplate['link_token_abi'],
-            bin_content=LinkTokenDeploymentTemplate['link_token_bin'])
+            contract_name=LinkTokenFileTemplate['link_contract_name'],
+            abi_content=LinkTokenFileTemplate['link_contract_abi'],
+            bin_content=LinkTokenFileTemplate['link_contract_bin'])
 
         # Get the setup information (especially the port numbers)
         self.__chain_id             = eth_server.getChainId()

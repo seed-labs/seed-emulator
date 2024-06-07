@@ -1,7 +1,7 @@
 from __future__ import annotations
 from seedemu.core import Node, Server
 from seedemu.services.EthereumService import *
-from .EthTemplates import EthUtilityFileTemplates 
+from .EthTemplates import EthServerFileTemplates 
 from seedemu.services.EthereumService import *
 import json
 import os
@@ -20,7 +20,8 @@ class EthUtilityServer(Server):
     __linked_eth_node:str
     __chain_id: int
 
-    def __init__(self, blockchain:Blockchain, port:int, linked_eth_node:str, linked_faucet_node:str):
+    def __init__(self, blockchain:Blockchain, port:int, linked_eth_node:str, 
+                       linked_faucet_node:str):
         """!
         @brief constructor.
         """
@@ -132,42 +133,57 @@ class EthUtilityServer(Server):
 
         node.addSoftware('python3 python3-pip')        
         node.addBuildCommand('pip3 install flask web3==5.31.1')
+
+        self._installScriptFile(node)
+
+        node.appendStartCommand('python3 {}/utility_server.py &'.format(self.DIR_PREFIX))
+        node.appendStartCommand('bash {}/utility_server_setup.sh &'.format(self.DIR_PREFIX))
+
+
+    def _installScriptFile(self, node: Node):
+        """!
+        @brief Install the script files.
+        """
+
         for contract_name, path in self.__contract_to_deploy.items():
             node.importFile(hostpath=path['abi_path'], 
-                            containerpath=self.__contract_to_deploy_container_path[contract_name]['abi_path'])
+                   containerpath=self.__contract_to_deploy_container_path[contract_name]['abi_path'])
             node.importFile(hostpath=path['bin_path'], 
-                            containerpath=self.__contract_to_deploy_container_path[contract_name]['bin_path'])
+                   containerpath=self.__contract_to_deploy_container_path[contract_name]['bin_path'])
             
         for contract_name, value in self.__contract_to_deploy_content.items():
-            node.setFile(self.__contract_to_deploy_container_path[contract_name]['abi_path'], value['abi_content'])
-            node.setFile(self.__contract_to_deploy_container_path[contract_name]['bin_path'], value['bin_content'])
+            node.setFile(self.__contract_to_deploy_container_path[contract_name]['abi_path'],
+                         value['abi_content'])
+            node.setFile(self.__contract_to_deploy_container_path[contract_name]['bin_path'],
+                         value['bin_content'])
             
         node.setFile(self.DIR_PREFIX + '/contracts/contract_file_paths.txt', 
                      json.dumps(self.__contract_to_deploy_container_path))
+
+        node.setFile(self.DIR_PREFIX + '/utility_server_setup.sh', 
+                     UtilityServerFileTemplates['server_setup'])
+
         node.setFile(self.DIR_PREFIX + '/fund_account.py', 
-                     EthUtilityFileTemplates['fund_account'].format(
+                     UtilityServerFileTemplates['fund_account'].format(
             rpc_url     = self.__eth_node_url,
             rpc_port    = self.__eth_node_port,
             faucet_url  = self.__faucet_url,
             faucet_port = self.__faucet_port,
             dir_prefix  = self.DIR_PREFIX
         ))
+
         node.setFile(self.DIR_PREFIX + '/deploy_contract.py', 
-                     EthUtilityFileTemplates['deploy_contract'].format(
+                     UtilityServerFileTemplates['deploy_contract'].format(
             rpc_url    = self.__eth_node_url,
             rpc_port   = self.__eth_node_port,
             chain_id   = self.__chain_id,
             dir_prefix = self.DIR_PREFIX
         ))
 
-        node.setFile(self.DIR_PREFIX  + '/info_server.py', 
-            EthUtilityFileTemplates['info_server'].format(
+        node.setFile(self.DIR_PREFIX  + '/utility_server.py', 
+            UtilityServerFileTemplates['utility_server'].format(
                      port=self.__port, 
                      dir_prefix=self.DIR_PREFIX))
-
-        node.appendStartCommand('python3 {}/info_server.py &'.format(self.DIR_PREFIX))
-        node.appendStartCommand('python3 {}/fund_account.py'.format(self.DIR_PREFIX))
-        node.appendStartCommand('python3 {}/deploy_contract.py'.format(self.DIR_PREFIX))
 
         
     def print(self, indent: int) -> str:

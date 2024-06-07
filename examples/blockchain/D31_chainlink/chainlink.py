@@ -29,18 +29,26 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
                 )   
 
     # Create Chainlink nodes (called server in our code)
+    server_names = []
     for i in range(total_chainlink_nodes):
         chainlink.install('chainlink_node_{}'.format(i)) \
                  .setDisplayName('Chainlink-{}'.format(i))
+        server_names.append('chainlink_node_{}'.format(i)) 
+
+    # Create a Chainlink user node
+    chainlink.installUserServer('user_server') \
+             .setChainlinkServers(server_names) \
+             .setDisplayName('Chainlink-User')
+
 
     # Add the Chainlink layer
     emu.addLayer(chainlink)
     
     # Bind each Chainlink node to a physical node (no filters, so bind randomly)
-    server_nodes = chainlink.getAllServerNames()['ChainlinkServer']
-    for server_node in server_nodes:
-        emu.addBinding(Binding(server_node))
+    for server in server_names:
+        emu.addBinding(Binding(server))
 
+    emu.addBinding(Binding('user_server'))
 
     # Generate the emulator files
     if dumpfile is not None:

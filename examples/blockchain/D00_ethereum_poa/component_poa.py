@@ -67,13 +67,13 @@ def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2):
                max_fund_amount=10)
     faucet.setDisplayName('Faucet')
 
-    # Create the initialization and information server
-    init:EthUtilityServer = blockchain.createEthUtilityServer(
+    # Create the Utility server 
+    util_server:EthUtilityServer = blockchain.createEthUtilityServer(
                vnode='utility',
                port=5000,
                linked_eth_node='eth6',
                linked_faucet_node='faucet')
-    init.setDisplayName('UtilityServer')
+    util_server.setDisplayName('UtilityServer')
 
     # Add the Ethereum layer
     emu.addLayer(eth)

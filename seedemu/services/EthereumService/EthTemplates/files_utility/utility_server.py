@@ -46,12 +46,14 @@ def register_contract():
         return jsonify(contract_info), 200
         
     
+@app.route('/all', methods=['GET'])
 @app.route('/contracts_info', methods=['GET'])
 def get_contract_info():
     contract_name = request.args.get('name')
 
     if not os.path.exists(ADDRESS_FILE_DIRECTORY):
-        return jsonify({{}}), 200
+        return jsonify({{'error': 'The named contract does not exist'}}), 400
+
     else:
         with open(ADDRESS_FILE_PATH, 'r') as address_file:
             contract_info = json.load(address_file)
