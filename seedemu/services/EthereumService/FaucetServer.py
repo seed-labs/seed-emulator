@@ -138,11 +138,6 @@ class FaucetServer(Server):
     
     def setFundMaxAttempts(self, attempts:int) -> FaucetServer:
         self.__max_fund_attempts = attempts
-
-    def getFundingScript(self):
-        assert len(self.getHostNames()) > 0, 'Host Name is not set to FaucetServer. set at least one host name using Server::addHostName method.'
-        return FaucetServerFileTemplates['fund_user_script'].format(address=self.getHostNames()[0],
-                                                                      port=self.__port)
     
     def install(self, node: Node):
         """!
