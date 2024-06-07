@@ -926,7 +926,7 @@ class Docker(Compiler):
         for (cmd, fork) in node.getStartCommands():
             start_commands += '{}{}\n'.format(cmd, ' &' if fork else '')
 
-        for (cmd, fork) in node.getUserStartCommands():
+        for (cmd, fork) in node.getPostConfigCommands():
             start_commands += '{}{}\n'.format(cmd, ' &' if fork else '')
 
         dockerfile += self._addFile('/start.sh', DockerCompilerFileTemplates['start_script'].format(
