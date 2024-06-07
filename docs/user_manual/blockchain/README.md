@@ -17,3 +17,5 @@
 ## Advanced features 
 
   - [Use Chainlink to get information From outside](../../../examples/blockchain/D31_chainlink)
+
+## [Common Problems](./common_problems.md)
