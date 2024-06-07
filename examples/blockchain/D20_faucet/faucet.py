@@ -19,58 +19,6 @@ blockchain  = eth.getBlockchainByName(eth.getBlockchainNames()[0])
 faucet_name = blockchain.getFaucetServerNames()[0]
 faucet      = blockchain.getFaucetServerByName(faucet_name)
 
-# Funding accounts during the build time
-# faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
-faucet.fund('0x5449ba5c5f185e9694146d60cfe72681e2158499', 5)
-faucet.setDisplayName('faucet')
-faucet.addHostName('faucet.com')
-
-
-# # The following API returns a script (bash or python). 
-# # The script will take the address and amount as command line arguments.
-# # It uses the hostname to refer to the faucet server, instead of the IP
-# fund_script = faucet.getFundingScript()
-# base: Base = emu.getLayer('Base')
-# as152 = base.getAutonomousSystem(152)
-# user_node = as152.createHost('user_node').joinNetwork('net0')
-# # Set python script to create ethereum address
-# user_node.setFile('create_eth.py', '''\
-# from eth_account import Account
-# import os
-
-# # Define the directory and file path
-# fund_queue_dir = '/fund_queue'
-# if not os.path.exists(fund_queue_dir):
-#     os.makedirs(fund_queue_dir)
-
-# file_path = os.path.join(fund_queue_dir, 'test.txt')
-
-# for i in range(3):
-#     # Generate a new Ethereum account
-#     account = Account.create()
-
-#     # Extract the address and private key
-#     address = account.address
-
-#     # Save the address and private key to a file
-#     with open(file_path, 'a') as f:
-#         f.write(f"{address}:10\\n")
-    
-#     with open('test.txt', 'a') as f:
-#         f.write(f"{address}:10\\n")
-
-# print(f"Ethereum address and private key saved to {file_path}")
-# ''')
-# user_node.addSoftware('python3 python3-pip')
-# user_node.addBuildCommand('pip3 install eth-account')
-# user_node.appendUserStartCommand('python3 /create_eth.py')
-# user_node.setFile('fund.sh', fund_script)
-# user_node.setFile('/fund_queue/test2.txt', '0x72943017a1fa5f255fc0f06625aec22319fcd5b3:10')
-# user_node.appendUserStartCommand('chmod +x fund.sh')
-# user_node.appendUserStartCommand('/fund.sh &')
-# user_node.setDisplayName('user_node')
-
-
 # Funding accounts during the build time. The actual funding  
 # is carried out after the emulator starts
 faucet.fund('0x72943017a1fa5f255fc0f06625aec22319fcd5b3', 2)
