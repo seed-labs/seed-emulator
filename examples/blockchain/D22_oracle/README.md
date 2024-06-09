@@ -71,3 +71,36 @@ Price 43
 Price 59
 Price 59
 ```
+
+## The Oracle Contract
+
+The oracle contract in this example is very simple. It mainly has
+the following three functions:
+
+```
+function getPrice() public view returns (uint) {
+    return price;
+}
+
+event UpdatePriceMessage(address indexed _from);
+
+function updatePrice() public payable {
+    emit UpdatePriceMessage(msg.sender);
+}
+
+function setPrice(uint p) public {
+    price = p;
+}
+```
+
+When the user needs to get the most recent price data, 
+it invokes the `updatePrice` function. This will emit
+a `UpdatePriceMessage`, which informs the oracle node
+to go fetch the data. The oracle node then
+writes the price data to the oracle contract by invoking
+`setPrice`. After the data is stored on the blockchain,
+the user can use a local call `getPrice` to read the 
+price value. 
+
+
+
