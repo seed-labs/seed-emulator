@@ -3,6 +3,8 @@
 
 from seedemu import *
 
+DOMAIN = ".net"
+
 def buildBase(total:int):
     base = Base()
     as_ = base.createAutonomousSystem(150)
@@ -11,7 +13,8 @@ def buildBase(total:int):
 
     for i in range(total):
         name = 'node-{}'.format(i)
-        as_.createHost(name).joinNetwork('net0')
+        node = as_.createHost(name)
+        node.joinNetwork('net0')
 
     return base
 
@@ -35,6 +38,7 @@ def buildEthComponent(total:int):
            displayName = displayName + '-BootNode'
 
        e.setDisplayName(displayName%(i))
+       e.addHostName(vnode + DOMAIN) # Add this name to /etc/hosts
 
     # Create the Faucet server
     faucet:FaucetServer = blockchain.createFaucetServer(
@@ -44,6 +48,7 @@ def buildEthComponent(total:int):
                balance=10000,
                max_fund_amount=10)
     faucet.setDisplayName('Faucet')
+    faucet.addHostName('faucet' + DOMAIN) # Add this name to /etc/hosts
     vnodes.append('faucet')
 
     # Create the initialization and information server
@@ -53,6 +58,7 @@ def buildEthComponent(total:int):
                linked_eth_node='eth-0',
                linked_faucet_node='faucet')
     util.setDisplayName('UtilityServer')
+    util.addHostName('utility' + DOMAIN)  # Add this name to /etc/hosts
     vnodes.append('utility')
 
     return eth, vnodes
@@ -67,11 +73,15 @@ def run(dumpfile = None, total_hosts=15, total_eth_nodes=10):
     base        = buildBase(total_hosts)
     eth, vnodes = buildEthComponent(total_eth_nodes)
 
+
+    # Bind to physical nodes
     for vnode in vnodes:
-         emu.addBinding(Binding(vnode, action=Action.FIRST))
+        emu.addBinding(Binding(vnode, filter=Filter(asn=150, nodeName='node*'),
+                       action=Action.FIRST))
 
     emu.addLayer(base)
     emu.addLayer(eth)
+    emu.addLayer(EtcHosts())
 
     # Generate output
     if dumpfile is not None:
