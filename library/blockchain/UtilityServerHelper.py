@@ -49,43 +49,43 @@ class UtilityServerHelper:
         @param contract_name The name of the contract
         @returns Return the contract address 
         """
-         url = self._server_url + "/contracts_info?name=" + contract_name
-         while (True):
-            try:
-                response = requests.get(url)
-                if response and response.status_code == 200:
-                    address = response.text.strip().strip('"')
-                    break
-                else:
-                    logging.warning("Failed to fetch data from server. Retrying...")
-    
-            except Exception as e:
-                    logging.error(f"An error occurred: {e}")
-    
-            # Wait 10 seconds before retrying
-            time.sleep(10)
-    
-         return address
+        url = self._server_url + "/contracts_info?name=" + contract_name
+        while (True):
+           try:
+               response = requests.get(url)
+               if response and response.status_code == 200:
+                   address = response.text.strip().strip('"')
+                   break
+               else:
+                   logging.warning("Failed to fetch data from server. Retrying...")
+   
+           except Exception as e:
+                   logging.error(f"An error occurred: {e}")
+   
+           # Wait 10 seconds before retrying
+           time.sleep(10)
+   
+        return address
 
     def register_info(self, data):
         """!
         @brief Register a contract address with the server
         @param data JSON format, containing 'contract_name' and 'contract_address'
         """
-         url = self._server_url + "/register_contract"
+        url = self._server_url + "/register_contract"
 
-         while (True):
-            try: 
-                response = requests.post(url, json=data)
-                if response and response.status_code == 200:
-                    logging.info("Information registered successfully.")
-                    break
-                else: 
-                   logging.warning("Failed to register information. Retrying...")
-   
-            except Exception as e:
-                  logging.error(f"An error occurred: {e}")
+        while (True):
+           try: 
+               response = requests.post(url, json=data)
+               if response and response.status_code == 200:
+                   logging.info("Information registered successfully.")
+                   break
+               else: 
+                  logging.warning("Failed to register information. Retrying...")
+  
+           except Exception as e:
+                 logging.error(f"An error occurred: {e}")
 
-            # Wait before retrying
-            time.sleep(10)
+           # Wait before retrying
+           time.sleep(10)
 
