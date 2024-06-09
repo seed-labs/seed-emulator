@@ -76,7 +76,7 @@ def run(dumpfile = None, total_hosts=15, total_eth_nodes=10):
 
     # Bind to physical nodes
     for vnode in vnodes:
-        emu.addBinding(Binding(vnode, filter=Filter(asn=150, nodeName='node*'),
+        emu.addBinding(Binding(vnode, filter=Filter(nodeName='node*'),
                        action=Action.FIRST))
 
     emu.addLayer(base)
