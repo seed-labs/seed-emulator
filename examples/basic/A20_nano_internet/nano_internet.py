@@ -128,7 +128,7 @@ emu.addLayer(Ospf())
 # Save it to a component file, so it can be used by other emulators
 
 # This is optional
-emu.dump('base-component.bin')
+emu.dump('base_component.bin')
 
 
 ###############################################################################

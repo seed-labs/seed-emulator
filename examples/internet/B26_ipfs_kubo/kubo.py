@@ -8,9 +8,9 @@ OUTPUTDIR = './output'   # Directory to output compiled emulation
 
 ###############################################################################
 emu = Emulator()
-base_component.run(dumpfile='./base-component.bin')
+base_component.run(dumpfile='./base_component.bin')
 # Load the pre-built components and merge them
-emu.load('./base-component.bin')
+emu.load('./base_component.bin')
 
 ###############################################################################
 
