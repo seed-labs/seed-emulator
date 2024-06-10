@@ -18,10 +18,10 @@ def run(dumpfile = None):
     emuB = Emulator()
 
     # Run, load, and merge the pre-built components
-    hybrid_internet.run(dumpfile='./base-hybrid-component.bin')
-    hybrid_dns_component.run(dumpfile='./hybrid-dns-component.bin')
-    emuA.load('./base-hybrid-component.bin')
-    emuB.load('./hybrid-dns-component.bin')
+    hybrid_internet.run(dumpfile='./base_hybrid_component.bin')
+    hybrid_dns_component.run(dumpfile='./hybrid_dns_component.bin')
+    emuA.load('./base_hybrid_component.bin')
+    emuB.load('./hybrid_dns_component.bin')
     emu = emuA.merge(emuB, DEFAULT_MERGERS)
 
     #####################################################################################
