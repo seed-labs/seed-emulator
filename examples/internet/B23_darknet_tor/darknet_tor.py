@@ -25,7 +25,8 @@ html = """
 """
 
 # Create a web server: we will use Tor to protect this server
-emu.getLayer('WebService').install("webserver")
+web = WebService()
+web.install("webserver")
 emu.getVirtualNode('webserver').setDisplayName('Tor-webserver') \
         .setFile(content=html, path="/var/www/html/hello.html")
 
@@ -80,7 +81,7 @@ emu.addBinding(Binding("webserver", filter=Filter(asn=170), action=Action.NEW))
 
 
 #################################################################
-
+emu.addLayer(web)
 emu.addLayer(tor)
 emu.render()
 emu.compile(Docker(), './output', override=True)
