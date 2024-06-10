@@ -111,7 +111,7 @@ for i in range(0, 4):
     emu.addLayer(dhcp)
 
     # Save it to a component file, so it can be used by other emulators
-    emu.dump('base-component.bin')
+    emu.dump('base_component.bin')
 
     # Uncomment the following if you want to generate the final emulation files
     emu.render()

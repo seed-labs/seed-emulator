@@ -82,7 +82,7 @@ emu.addLayer(Ospf())
 # Rendering: This is where the actual binding happens
 
 emu.render()
-#emu.dump('base-component.bin')
+#emu.dump('base_component.bin')
 
 # Generate the Docker files
 emu.compile(Docker(), './output', override=True)

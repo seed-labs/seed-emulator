@@ -84,7 +84,7 @@ emu.addLayer(web)
 ###############################################################################
 # Save the emulation as a component (can be reused by other emulation)
 
-emu.dump('base-component.bin')
+emu.dump('base_component.bin')
 
 ###############################################################################
 # Generate the docker file

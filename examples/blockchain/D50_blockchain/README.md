@@ -194,7 +194,7 @@ system `AS-151` (letting the emulator code to pick one).
 emuA = Emulator()
 emuB = Emulator()
 
-emuA.load('../B00-mini-internet/base-component.bin')
+emuA.load('../B00-mini-internet/base_component.bin')
 emuB.load('./component-blockchain.bin')
 emu = emuA.merge(emuB, DEFAULT_MERGERS)
 

@@ -38,7 +38,7 @@ The following example demonstrates how to install Traffic Service on a host and 
 ## Load the Mini-Internet Component
 
 ```
-emu.load('../../B00-mini-internet/base-component.bin')
+emu.load('../../B00-mini-internet/base_component.bin')
 ```
 
 ## Install Traffic Generator and Receiver
