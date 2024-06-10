@@ -32,7 +32,6 @@ faucetUserService.setFaucetServerInfo(faucet_info[0]['name'],
                                       faucet_info[0]['port'])
 emu.addBinding(Binding('faucetUser'))
 emu.addLayer(faucetUserService)
-emu.addLayer(EtcHosts())
 
 emu.render()
 
