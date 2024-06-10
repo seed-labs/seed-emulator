@@ -7,10 +7,10 @@ from seedemu.layers import Base
 from seedemu.services import DomainNameService, CAService, CAServer, WebService, WebServer, RootCAStore
 import base_internet_with_dns
 
-base_internet_with_dns.run(dumpfile='./base-internet-dns.bin')
+base_internet_with_dns.run(dumpfile='./base_internet_dns.bin')
 
 emu = Emulator()
-emu.load('./base-internet-dns.bin')
+emu.load('./base_internet_dns.bin')
 
 base: Base = emu.getLayer('Base')
 dns: DomainNameService = emu.getLayer('DomainNameService')
