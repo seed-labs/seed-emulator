@@ -3,7 +3,7 @@
 
 from ipaddress import ip_address
 from seedemu import *
-from examples.internet.C02_hybrid_internet_with_dns import hybrid_internet_with_dns
+from examples.internet.B05_hybrid_internet_with_dns import hybrid_internet_with_dns
 
 hybrid_internet_with_dns.run(dumpfile='./hybrid_base_with_dns.bin')
 
