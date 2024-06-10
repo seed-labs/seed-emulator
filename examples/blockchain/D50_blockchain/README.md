@@ -176,7 +176,7 @@ program generates a Ethereum component, which can be deployed
 to any emulator that satisfy the requirements.
 All the nodes in this layer are virtual nodes, and they are not
 bound to any physical node.
-This component is saved in a file (`component-blockchain.bin`).
+This component is saved in a file (`blockchain_poa.bin`).
 Please refer to the comments in the code to understand
 how the layer is built.
 
@@ -195,7 +195,7 @@ emuA = Emulator()
 emuB = Emulator()
 
 emuA.load('../B00-mini-internet/base_component.bin')
-emuB.load('./component-blockchain.bin')
+emuB.load('./blockchain_poa.bin')
 emu = emuA.merge(emuB, DEFAULT_MERGERS)
 
 emu.addBinding(Binding('eth1', filter = Filter(asn = 151)))

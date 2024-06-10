@@ -128,7 +128,7 @@ emu.addBinding(Binding('poa-eth8', filter = Filter(asn = 163, nodeName='host_0')
 
 # Add the layer and save the component to a file
 emu.addLayer(eth)
-emu.dump('component-blockchain.bin')
+emu.dump('blockchain_poa.bin')
 
 emu.render()
 
