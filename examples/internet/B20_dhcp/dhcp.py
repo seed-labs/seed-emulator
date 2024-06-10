@@ -4,12 +4,12 @@
 from seedemu import *
 from examples.internet.B00_mini_internet import mini_internet
 
-mini_internet.run(dumpfile='./base-internet.bin')
+mini_internet.run(dumpfile='./base_internet.bin')
 
 emu = Emulator()
 
 # Load the pre-built component
-emu.load('./base-internet.bin')
+emu.load('./base_internet.bin')
 
 base:Base = emu.getLayer('Base')
 

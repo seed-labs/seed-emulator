@@ -12,8 +12,8 @@ def run(dumpfile=None):
     emu = Emulator()
 
     # Run and load the pre-built components
-    mini_internet.run(dumpfile='./base-internet.bin')
-    emu.load('./base-internet.bin')
+    mini_internet.run(dumpfile='./base_internet.bin')
+    emu.load('./base_internet.bin')
     
     base = emu.getLayer('Base')
 

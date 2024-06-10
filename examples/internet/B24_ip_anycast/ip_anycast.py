@@ -11,8 +11,8 @@ def run(dumpfile=None):
     emu = Emulator()
 
     # Run the pre-built component; load it into the current emulator
-    mini_internet.run(dumpfile='./base-internet.bin')
-    emu.load('./base-internet.bin')
+    mini_internet.run(dumpfile='./base_internet.bin')
+    emu.load('./base_internet.bin')
     
     base: Base = emu.getLayer('Base')
     ebgp: Ebgp = emu.getLayer('Ebgp')

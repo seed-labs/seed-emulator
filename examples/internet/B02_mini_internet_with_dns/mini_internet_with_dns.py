@@ -17,11 +17,11 @@ def run(dumpfile=None):
     emuB = Emulator()
 
     # Run the pre-built components
-    mini_internet.run(dumpfile='./base-internet.bin')
+    mini_internet.run(dumpfile='./base_internet.bin')
     dns_component.run(dumpfile='./dns-component.bin')
     
     # Load and merge the pre-built components 
-    emuA.load('./base-internet.bin')
+    emuA.load('./base_internet.bin')
     emuB.load('./dns-component.bin')
     emu = emuA.merge(emuB, DEFAULT_MERGERS)
     

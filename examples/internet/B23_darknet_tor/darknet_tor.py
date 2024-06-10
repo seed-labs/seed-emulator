@@ -5,13 +5,13 @@ from seedemu import *
 import random
 from examples.internet.B00_mini_internet import mini_internet
 
-mini_internet.run(dumpfile='./base-internet.bin')
+mini_internet.run(dumpfile='./base_internet.bin')
 
 
 emu = Emulator()
 
 # Load the base layer from the mini Internet example
-emu.load('./base-internet.bin')
+emu.load('./base_internet.bin')
 
 
 #################################################################

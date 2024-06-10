@@ -9,8 +9,8 @@ from examples.internet.B00_mini_internet import mini_internet
 emu = Emulator()
 
 # Run and load the pre-built component
-mini_internet.run(dumpfile='./base-internet.bin')
-emu.load('./base-internet.bin')
+mini_internet.run(dumpfile='./base_internet.bin')
+emu.load('./base_internet.bin')
 
 base: Base = emu.getLayer('Base')
 ebgp: Ebgp = emu.getLayer('Ebgp')

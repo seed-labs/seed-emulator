@@ -7,10 +7,10 @@ from seedemu.layers import Base
 from seedemu.services import CAService, CAServer, WebService, WebServer, RootCAStore
 import base_internet
 
-base_internet.run(dumpfile='./base-internet.bin')
+base_internet.run(dumpfile='./base_internet.bin')
 
 emu = Emulator()
-emu.load('./base-internet.bin')
+emu.load('./base_internet.bin')
 
 base: Base = emu.getLayer('Base')
 

@@ -6,10 +6,10 @@ from seedemu.layers import Base, EtcHosts
 from seedemu.core import Emulator
 from examples.internet.B00_mini_internet import mini_internet
 
-mini_internet.run('base-internet.bin')
+mini_internet.run('base_internet.bin')
 
 emu = Emulator()
-emu.load('base-internet.bin')
+emu.load('base_internet.bin')
 
 etc_hosts = EtcHosts()
 
