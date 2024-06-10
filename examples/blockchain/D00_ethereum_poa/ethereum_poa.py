@@ -4,6 +4,7 @@
 from seedemu import *
 from examples.internet.B03_hybrid_internet import hybrid_internet
 from examples.blockchain.D00_ethereum_poa import component_poa
+import random
 
 def run(dumpfile = None, hosts_per_as=3, total_eth_nodes=20, total_accounts_per_node=2):
 
@@ -22,23 +23,17 @@ def run(dumpfile = None, hosts_per_as=3, total_eth_nodes=20, total_accounts_per_
     # Merge the two pre-built components
     emu = emuA.merge(emuB, DEFAULT_MERGERS)
 
-    # Check if the size of total_eth_nodes is larger than the size of the total hosts
-    base: Base = emu.getLayer('Base')
-    asns = []
-    for asn in base.getAsns():
-        if len(base.getAutonomousSystem(asn).getHosts()) > 0:
-            asns.append(asn)
-    assert hosts_per_as * len(asns) >= total_eth_nodes, f'the total hosts size({hosts_per_as*len(asns)}) is smaller than the total_eth_nodes({total_eth_nodes}).'
-
+    # Binding all the virtual nodes to physical nodes
     eth:EthereumService = emu.getLayer('EthereumService')
     blockchain: Blockchain =  eth.getBlockchainByName(eth.getBlockchainNames()[0])
-
-    asnCounter = 0
-    # Get all the server names and bind them to physical nodes
     for _, servers in blockchain.getAllServerNames().items():
         for server in servers:
-           emu.addBinding(Binding(server, filter = Filter(asn = asns[asnCounter%len(asns)], nodeName=f'host_{asnCounter//len(asns)}')))
-           asnCounter += 1
+            # Bind to the physical nodes starting with "host_" 
+            emu.addBinding(Binding(server, filter = Filter(nodeName="host_*"),
+                           action = Action.FIRST))
+
+    # Add this layer to set the /etc/hosts file on all the nodes
+    emu.addLayer(EtcHosts())  
 
     # Generate output
     if dumpfile is not None:

@@ -43,7 +43,12 @@ A new OP code `PUSH0` was introduced in
 and was included in the Shanghai upgrade. Our Ethereum docker image was
 built before the Shanghai upgrade, so it will not work with
 the upgrade. Before we upgrading our image, we need to use 
-an older EVM version, such as paris. 
+an older EVM version, such as `paris`. 
+
+To compile the smart contract using the command line tool,
+such as `solc`, we also need to use the solidity compiler version 
+`0.8.18` or lower, or the contract deployed to the emulator
+will have problems.
 
 
 ## Step 4: Connect Remix to MetaMask
