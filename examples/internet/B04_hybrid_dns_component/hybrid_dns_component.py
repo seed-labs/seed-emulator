@@ -34,7 +34,7 @@ def run(dumpfile = None):
     if dumpfile is not None:
         emu.dump(dumpfile)
     else:
-        emu.dump('hybrid-dns-component.bin')
+        emu.dump('hybrid_dns_component.bin')
         
 if __name__ == "__main__":
     run()
