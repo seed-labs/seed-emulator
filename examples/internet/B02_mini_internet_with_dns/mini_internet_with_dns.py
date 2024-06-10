@@ -18,11 +18,11 @@ def run(dumpfile=None):
 
     # Run the pre-built components
     mini_internet.run(dumpfile='./base_internet.bin')
-    dns_component.run(dumpfile='./dns-component.bin')
+    dns_component.run(dumpfile='./dns_component.bin')
     
     # Load and merge the pre-built components 
     emuA.load('./base_internet.bin')
-    emuB.load('./dns-component.bin')
+    emuB.load('./dns_component.bin')
     emu = emuA.merge(emuB, DEFAULT_MERGERS)
     
     
