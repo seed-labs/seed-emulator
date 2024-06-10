@@ -12,7 +12,7 @@ def run(dumpfile = None):
 
     # Run and load the pre-built ethereum component; it is used as the base blockchain
     # This component already has already created a utility server
-    local_dump_path = './blockchain-poa.bin'
+    local_dump_path = './blockchain_poa.bin'
     ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=1, 
                      total_eth_nodes=10, total_accounts_per_node=1)
     emu.load(local_dump_path)

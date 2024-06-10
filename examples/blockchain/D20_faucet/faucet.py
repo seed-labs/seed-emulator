@@ -9,7 +9,7 @@ from examples.blockchain.D00_ethereum_poa import ethereum_poa
 emu = Emulator()
 
 # Run and load the pre-built ethereum component; it is used as the base blockchain
-local_dump_path = './blockchain-poa.bin'
+local_dump_path = './blockchain_poa.bin'
 ethereum_poa.run(dumpfile=local_dump_path, total_accounts_per_node=1)
 emu.load(local_dump_path)
 
