@@ -10,10 +10,10 @@ from examples.basic.A01_transit_as import transit_as
 
 ###############################################################################
 # Load the pre-built component from example 01-transit-as
-transit_as.run(dumpfile='./base-component.bin')
+transit_as.run(dumpfile='./base_component.bin')
 
 emu = Emulator()
-emu.load('./base-component.bin')
+emu.load('./base_component.bin')
 
 ###############################################################################
 # Render the emulation
