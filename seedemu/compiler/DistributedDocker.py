@@ -48,7 +48,7 @@ class DistributedDocker(Docker):
         are: {asn}, {role} (r - router, h - host, rs - route server), {name},
         {primaryIp}
         """
-        super().__init__(namingScheme)
+        super().__init__(namingScheme= namingScheme)
 
     def getName(self) -> str:
         return 'DistributedDocker'
