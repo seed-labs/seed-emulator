@@ -10,22 +10,36 @@ from lib.EthereumHelper import EthereumHelper
 # Import global variables related to the emulator
 from emulator_setup import *
 
-CONTRACT = '../contract/SEEDToken20'
+CONTRACT = '../contract/SEEDToken20.abi'
 ##############################################
 
-def is_local_call(func):
-   if func['stateMutability'] == 'view': 
-       return True
-   else
-       return False
 
+def is_local_call(func):
+    """!
+    @brief Check whether the call is a local call or a transaction call
+    """
+    if func['stateMutability'] == 'view': 
+        return True
+    else:
+        return False
+ 
 def convert_to_python_type(solidity_type):
+    """!
+    @brief Convert the solidity type to python type
+    """
+
     if solidity_type == 'address':
         return 'str'
     else: 
         return 'int' 
 
 def get_function_from_abi(func_name, abi):
+    """!
+    @brief Retrieve the specified function from the abi content
+    @param func_name The name of the function
+    @param abi The abi content
+    @return Return the dictionary of the function
+    """
     for item in abi:
        if item['type'] == 'function' and item['name'] == func_name:
           return item
@@ -34,6 +48,12 @@ def get_function_from_abi(func_name, abi):
 
 
 def construct_arg_list(func, argv):
+    """!
+    @brief Construct the argument list based on the function signature
+    @param func The function information from the abi content
+    @param argv The list of argument (in string format)
+    @return Return the argument list 
+    """
 
     assert len(func['inputs']) == len(argv), "Length of argument do not match"
 
@@ -50,14 +70,6 @@ def construct_arg_list(func, argv):
         i += 1
 
     return arg_list
-
-
-def print_balance(contract, address):
-    print("---------------------------------------------")
-    result = contract.functions.totalSupply().call()
-    print("Total Supply: {}".format(result))
-    result = contract.functions.balanceOf(address).call()
-    print("Balance of {}: {}".format(address, result))
 
 
 # Change the work folder to where the program is
@@ -77,11 +89,11 @@ if len(sys.argv) < 2:
 # Get data 
 with open('./info.json', 'r') as f:
     data = json.load(f)   
-account_address   = data['account_address']
-key       = data['private_key']   
-contract_address  = data['contract_address'] 
+account_address  = data['account_address']
+key              = data['private_key']   
+contract_address = data['contract_address'] 
 
-with open(CONTRACT + '.abi', 'r') as f:
+with open(CONTRACT, 'r') as f:
      contract_abi = f.read()
 
 eth  = EthereumHelper(chain_id=chain_id)
@@ -91,22 +103,18 @@ contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 command = sys.argv[1]
 argv    = sys.argv[2:]
 
-#local_call(contract, command, argv)
-#tx_call(contract, command, argv, account_address, account_key)
-
-with open(CONTRACT + '.abi', 'r') as f:
-    abi = json.load(f)
-
 # Get the function information from the abi content (json)
+with open(CONTRACT, 'r') as f:
+    abi = json.load(f)
 func = get_function_from_abi(command, abi)
 
 # Construct the arguments list 
 arg_list = construct_arg_list(func, argv)
 
-# Construct function
+# Construct the function
 contract_func = contract.functions[func['name']](*arg_list)
 
-# Invoke function
+# Invoke the function
 if is_local_call(func): 
     result = contract_func.call()
     print(result)
