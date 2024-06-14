@@ -1,0 +1,22 @@
+#!/bin/env python3
+
+import sys
+from lib.FaucetHelper import FaucetHelper
+from lib.EthereumHelper import EthereumHelper
+
+###############################################################
+# Import global variables related to the emulator
+from emulator_setup import chain_id, eth_url
+###############################################################
+
+if len(sys.argv) < 2: 
+    print("Usage: print_balance <address>")
+    exit()
+
+address = sys.argv[1]
+
+eth = EthereumHelper(chain_id=chain_id)
+web3 = eth.connect_to_blockchain(eth_url, isPOA=True)
+amount = web3.eth.get_balance(address)
+print(web3.fromWei(amount, 'ether'))
+
