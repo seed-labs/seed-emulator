@@ -27,4 +27,5 @@ is required:
 - `ChainlinkService`
 - `ChainlinkUserService` 
 
+We have made a copy to these services. 
 

@@ -24,8 +24,16 @@ with open(CONTRACT + '.abi', 'r') as f:
 arglist = []
 for item in data:
     #print(item)
-    if item['type'] == 'function':
+    type_ = item['type']
 
+    if type_ == 'constructor':
+       print("Name: constructor")
+       print("StateMutability: " + item['stateMutability'])
+       for arg in item['inputs']:
+           s = arg['type'] + " " + arg['name']
+           print("Argument: " + s)
+
+    elif type_ == 'function':
        print("Name: " + item['name'])
        print("StateMutability: " + item['stateMutability'])
 
