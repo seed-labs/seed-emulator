@@ -3,7 +3,7 @@ import subprocess
 from collections import defaultdict
 from os.path import join as pjoin
 from tempfile import TemporaryDirectory
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from seedemu.core import Emulator, Layer, Node, ScionAutonomousSystem
 from seedemu.core.ScionAutonomousSystem import IA
@@ -91,7 +91,7 @@ class ScionIsd(Layer):
         """
         return asn in self.__isd_core[isd]
 
-    def setCertIssuer(self, as_: IA|Tuple[int, int], issuer: int) -> 'ScionIsd':
+    def setCertIssuer(self, as_: Union[IA, Tuple[int, int]], issuer: int) -> 'ScionIsd':
         """!
         @brief Set certificate issuer for a non-core AS. Ignored for core ASes.
 
@@ -102,7 +102,7 @@ class ScionIsd(Layer):
         self.__cert_issuer[IA(*as_)] = issuer
         return self
 
-    def getCertIssuer(self, as_: IA|Tuple[int, int]) -> Optional[Tuple[int, int]]:
+    def getCertIssuer(self, as_: Union[IA, Tuple[int, int]]) -> Optional[Tuple[int, int]]:
         """!
         @brief Get the cert issuer for a SCION AS in a certain ISD.
 

@@ -1,6 +1,10 @@
-# Simple BGP peering
+# Simple Autonomous Systems 
 
-This is the most basic example: peering three autonomous systems (AS150, AS151, and AS152) at an internet exchange. Each autonomous system announces a /24 prefix, and each is running a single web server within the network.
+This is a most basic example. In this example, we create three 
+stub autonomous systems, and then create peering among themselves. 
+Each autonomous system announces a /24 prefix, and each is running a 
+single web server within the network.
+
 
 ## Step 1: Import and create required components
 
