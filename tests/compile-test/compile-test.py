@@ -122,23 +122,19 @@ def printLog(*args, **kwargs):
 
 
 if __name__ == "__main__":
-    options = {}
-    options['times'] = 1  # default sleeping time
-    get_arguments(sys.argv, options)    
     result = []
 
     os.system("rm -rf test_log")
     os.system("mkdir test_log")
     
-    for i in range(options['times']):
-        test_suite = ut.TestSuite()
-        test_suite.addTest(CompileTest('compile_test'))
-        test_suite.addTest(CompileTest('build_test'))
-        
-        res = ut.TextTestRunner(verbosity=2).run(test_suite)
+    test_suite = ut.TestSuite()
+    test_suite.addTest(CompileTest('compile_test'))
+    test_suite.addTest(CompileTest('build_test'))
+    
+    res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
-        succeed = "succeed" if res.wasSuccessful() else "failed"
-        result.append(res)
+    succeed = "succeed" if res.wasSuccessful() else "failed"
+    result.append(res)
 
     os.chdir(os.getcwd())
     
