@@ -114,30 +114,6 @@ class CompileTest(ut.TestCase):
                     assert result.returncode == 0, "docker build failed"
                     os.chdir(path)
             os.chdir(self.init_cwd)
-    
-def get_arguments(argv, mapping):
-    # Remove 1st argument from the list of command line arguments
-    argumentList = argv[1:]
-
-    # Options and long options
-    options = "ht:"
-    long_options = ["help", "times="]
-
-    try:
-        # Parsing argument
-        arguments, values = getopt.getopt(argumentList, options, long_options)
-
-        # checking each argument
-        for arg, value in arguments:
-            if arg in ("-h", "--help"):
-                print ("Usage: test_script.py -t <times>")
-                exit()
-
-            elif arg in ("-t", "--times"):
-                mapping['times'] = int(value)
-
-    except getopt.error as err:
-        print (str(err))
 
 def printLog(*args, **kwargs):
     print(*args, **kwargs)
