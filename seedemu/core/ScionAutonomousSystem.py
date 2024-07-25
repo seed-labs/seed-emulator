@@ -175,7 +175,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         for name, cs in self.__control_services.items():
             ifaces = cs.getInterfaces()
             if len(ifaces) > 0:
-                cs_addr = f"{ifaces[0].getAddress()}:30252"
+                cs_addr = f"{ifaces[0].getAddress()}:30254"
                 control_services[name] = { 'addr': cs_addr }
 
         # Border routers
@@ -184,7 +184,7 @@ class ScionAutonomousSystem(AutonomousSystem):
             rnode: ScionRouter = self.getRouter(router)
 
             border_routers[rnode.getName()] = {
-                "internal_addr": f"{rnode.getLoopbackAddress()}:30042",
+                "internal_addr": f"{rnode.getLoopbackAddress()}:30001",
                 "interfaces": rnode.getScionInterfaces()
             }
 
@@ -195,7 +195,7 @@ class ScionAutonomousSystem(AutonomousSystem):
             'control_service': control_services,
             'discovery_service': control_services,
             'border_routers': border_routers,
-            'colibri_service': {},
+            'dispatched_ports': '31000-32767',
         }
 
     def createControlService(self, name: str) -> Node:
