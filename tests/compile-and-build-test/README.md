@@ -1,6 +1,6 @@
-# compile-test
+# compile-and-build-test
 
-The `compile-test.py` script runs all examples listed in the `test_list` variable and compares the actual outcomes to the expected outcomes. This variable is a dictionary where each entry has the format `{example_path: (list of scripts to run, list of expected outputs)}`. Here are some entries from the `test_list`:
+The `compile-and-build-test.py` script runs all examples listed in the `test_list` variable and compares the actual outcomes to the expected outcomes. This variable is a dictionary where each entry has the format `{example_path: (list of scripts to run, list of expected outputs)}`. Here are some entries from the `test_list`:
 
 ```
 cls.test_list = {
@@ -21,5 +21,5 @@ The script also executes `docker compose build` if any expected outcome includes
 
 ## Usage
 ```python
-./compile-test.py amd|arm
+./compile-and-build-test.py amd|arm
 ```
