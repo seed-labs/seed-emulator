@@ -1,11 +1,11 @@
 #!/bin/env python3
 
-import time, os, logging, sys
+import time, os, json, logging, sys
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware, construct_sign_and_send_raw_middleware
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from solcx import compile_files
+# from solcx import compile_files
 
 CONTRACT_DIR = '/volumes/contract/'
 RPC_URL = f'http://{sys.argv[1]}:8545'
@@ -14,17 +14,25 @@ DEPLOYER_ACC_KEY = '0x213c14e0aefb8738cda0bdccb2aa42d63ca9acfe32d9e666666bb2bce8
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Compile the smart contract:
-compiledContract = compile_files(
-   [os.path.join(CONTRACT_DIR, 'IPFS_Storage.sol')],
-   output_values=['abi', 'bin'],
-   solc_version='0.8.15',
-   evm_version='london',
-   optimize=True,
-   optimize_runs=200
-)
-_, contract_interface = compiledContract.popitem()
-contract_abi = contract_interface['abi']
-contract_bin = contract_interface['bin']
+# compiledContract = compile_files(
+#    [os.path.join(CONTRACT_DIR, 'IPFS_Storage.sol')],
+#    output_values=['abi', 'bin'],
+#    solc_version='0.8.15',
+#    evm_version='london',
+#    optimize=True,
+#    optimize_runs=200
+# )
+# _, contract_interface = compiledContract.popitem()
+# contract_abi = contract_interface['abi']
+# contract_bin = contract_interface['bin']
+
+# Load ABI
+with open(os.path.join(CONTRACT_DIR, 'IPFS_Storage.abi')) as f:
+    contract_abi = json.load(f)
+
+# Load Bin
+with open(os.path.join(CONTRACT_DIR, 'IPFS_Storage.bin')) as f:
+    contract_bin = f.read()
 
 # Connect to the Ethereum RPC API via Web3:
 web3 = Web3(HTTPProvider(RPC_URL))
