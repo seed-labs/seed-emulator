@@ -4,10 +4,28 @@
 from seedemu import *
 from examples.internet.B03_hybrid_internet import hybrid_internet
 from examples.blockchain.D00_ethereum_poa import component_poa
-import random
+import os, sys
 
 def run(dumpfile = None, hosts_per_as=3, total_eth_nodes=20, total_accounts_per_node=2):
+    ###############################################################################
+    # Set the platform information
+    if dumpfile is None:
+        script_name = os.path.basename(__file__)
 
+        if len(sys.argv) == 1:
+            platform = Platform.AMD64
+        elif len(sys.argv) == 2:
+            if sys.argv[1].lower() == 'amd':
+                platform = Platform.AMD64
+            elif sys.argv[1].lower() == 'arm':
+                platform = Platform.ARM64
+            else:
+                print(f"Usage:  {script_name} amd|arm")
+                sys.exit(1)
+        else:
+            print(f"Usage:  {script_name} amd|arm")
+            sys.exit(1)
+            
     # Run and load the pre-built Internet component
     emuA = Emulator()
     hybrid_internet.run(dumpfile='./component_base.bin', hosts_per_as=hosts_per_as)
@@ -40,7 +58,7 @@ def run(dumpfile = None, hosts_per_as=3, total_eth_nodes=20, total_accounts_per_
         emu.dump(dumpfile)
     else:
         emu.render()
-        docker = Docker(etherViewEnabled=True)
+        docker = Docker(etherViewEnabled=True, platform=platform)
         emu.compile(docker, './output', override=True)
 
 if __name__ == "__main__":

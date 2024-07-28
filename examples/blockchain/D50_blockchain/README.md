@@ -171,7 +171,7 @@ e4.setGenesis(CustomGenesisFileContent)
 
 ## B.1 Create the Blockchain Component
 
-We create the Blockchain in `component-blockchain.py`. This
+We create the Blockchain in `component_blockchain.py`. This
 program generates a Ethereum component, which can be deployed
 to any emulator that satisfy the requirements.
 All the nodes in this layer are virtual nodes, and they are not

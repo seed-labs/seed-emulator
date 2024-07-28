@@ -3,8 +3,26 @@
 
 from seedemu import *
 import random
-import os
+import os, sys
 import base_component
+
+###############################################################################
+# Set the platform information
+script_name = os.path.basename(__file__)
+
+if len(sys.argv) == 1:
+    platform = Platform.AMD64
+elif len(sys.argv) == 2:
+    if sys.argv[1].lower() == 'amd':
+        platform = Platform.AMD64
+    elif sys.argv[1].lower() == 'arm':
+        platform = Platform.ARM64
+    else:
+        print(f"Usage:  {script_name} amd|arm")
+        sys.exit(1)
+else:
+    print(f"Usage:  {script_name} amd|arm")
+    sys.exit(1)
 
 ###############################################################################
 OUTPUTDIR = './output'   # Directory to output compiled emulation
@@ -64,7 +82,15 @@ for asn in asns:
 
 ###############################################################################
 # Initialize the KuboService (you may specify additional parameters here):
-ipfs = KuboService(gatewayPort=8081)
+if platform == Platform.AMD64:
+    arch = Architecture.X64
+elif platform == Platform.ARM64:
+    arch = Architecture.ARM64
+else:
+    print("Only AMD64 and ARM64 are supported in current version of SEED.")
+    sys.exit(1)
+
+ipfs = KuboService(gatewayPort=8081, arch=arch)
 
 # Iterate through hosts from base component and install Kubo on them:
 asns  = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
@@ -119,7 +145,7 @@ webHost.appendStartCommand(f'python3 volumes/deployContract.py {getIP(emu.resolv
 webHost.appendStartCommand('cd /volumes/kubo-dapp/ && [ ! -d build ] && npm run build')
 webHost.appendStartCommand('serve -sC /volumes/kubo-dapp/build', fork=True)
 
-docker = Docker(internetMapEnabled=True, etherViewEnabled=True)
+docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=platform)
 
 # Use the "kubo-webhost-image" custom image from local
 docker.addImage(DockerImage('kubo-webhost-image', [], local = True), priority=-1)

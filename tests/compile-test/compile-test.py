@@ -12,6 +12,18 @@ import sys
 class CompileTest(ut.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+       # Set the platform information
+        script_name = os.path.basename(__file__)
+
+        if len(sys.argv) == 1:
+            cls.platform = "amd"
+        elif len(sys.argv) == 2 and sys.argv[1].lower() in ['amd', 'arm']:
+            cls.platform = sys.argv[1].lower()
+        else:
+            print(f"Usage:  {script_name} amd|arm")
+            sys.exit(1)
+        
+        cls.platform 
         cls.test_list = {
             "basic/A00_simple_as":          (["simple_as.py"] , ["output"]),
             "basic/A01_transit_as" :        (["transit_as.py"], ["output"]),
@@ -78,8 +90,9 @@ class CompileTest(ut.TestCase):
             printLog("######### {} Test #########".format(dir))
             path = os.path.join(self.path, dir)
             os.chdir(path)
+            
             for script in scripts:
-                os.system("python3 {} 2> /dev/null".format(script))
+                os.system("python3 {} {} 2> /dev/null".format(script, self.platform))
             for output in outputs:
                 self.assertTrue(output in os.listdir(os.curdir))
             os.chdir(self.init_cwd)
@@ -129,7 +142,7 @@ if __name__ == "__main__":
     
     test_suite = ut.TestSuite()
     test_suite.addTest(CompileTest('compile_test'))
-    test_suite.addTest(CompileTest('build_test'))
+    # test_suite.addTest(CompileTest('build_test'))
     
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 

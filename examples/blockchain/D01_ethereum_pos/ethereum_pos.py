@@ -2,6 +2,25 @@
 # encoding: utf-8
 
 from seedemu import *
+import sys, os
+
+###############################################################################
+# Set the platform information
+script_name = os.path.basename(__file__)
+
+if len(sys.argv) == 1:
+    platform = Platform.AMD64
+elif len(sys.argv) == 2:
+    if sys.argv[1].lower() == 'amd':
+        platform = Platform.AMD64
+    elif sys.argv[1].lower() == 'arm':
+        platform = Platform.ARM64
+    else:
+        print(f"Usage:  {script_name} amd|arm")
+        sys.exit(1)
+else:
+    print(f"Usage:  {script_name} amd|arm")
+    sys.exit(1)
 
 # Create Emulator Base with 10 Stub AS (150-154, 160-164) using Makers utility method.
 # hosts_per_stub_as=3 : create 3 hosts per one stub AS.
@@ -84,6 +103,6 @@ emu.render()
 
 # Enable internetMap
 # Enable etherView
-docker = Docker(internetMapEnabled=True, etherViewEnabled=True)
+docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=platform)
 
 emu.compile(docker, './output', override = True)

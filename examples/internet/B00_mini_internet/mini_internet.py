@@ -1,18 +1,31 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship, Dnssec
-from seedemu.compiler import Docker, Graphviz
-from seedemu.hooks import ResolvConfHook
-from seedemu.core import Emulator, Service, Binding, Filter
-from seedemu.layers import Router
-from seedemu.raps import OpenVpnRemoteAccessProvider
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship
+from seedemu.compiler import Docker, Platform
+from seedemu.core import Emulator
 from seedemu.utilities import Makers
-
-from typing import List, Tuple, Dict
-
+import os, sys
 
 def run(dumpfile=None, hosts_per_as=2): 
+    ###############################################################################
+    # Set the platform information
+    if dumpfile is None:
+        script_name = os.path.basename(__file__)
+
+        if len(sys.argv) == 1:
+            platform = Platform.AMD64
+        elif len(sys.argv) == 2:
+            if sys.argv[1].lower() == 'amd':
+                platform = Platform.AMD64
+            elif sys.argv[1].lower() == 'arm':
+                platform = Platform.ARM64
+            else:
+                print(f"Usage:  {script_name} amd|arm")
+                sys.exit(1)
+        else:
+            print(f"Usage:  {script_name} amd|arm")
+            sys.exit(1)
 
     emu   = Emulator()
     ebgp  = Ebgp()
@@ -119,11 +132,11 @@ def run(dumpfile=None, hosts_per_as=2):
     emu.addLayer(Ospf())
 
     if dumpfile is not None: 
-       # Save it to a file, so it can be used by other emulators
-       emu.dump(dumpfile)
+        # Save it to a file, so it can be used by other emulators
+        emu.dump(dumpfile)
     else: 
-       emu.render()
-       emu.compile(Docker(), './output', override=True)
+        emu.render()
+        emu.compile(Docker(), './output', override=True)
 
 if __name__ == "__main__":
     run()

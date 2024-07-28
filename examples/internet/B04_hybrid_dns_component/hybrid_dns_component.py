@@ -3,7 +3,6 @@
 
 from seedemu import *
 
-
 def run(dumpfile = None):
     emu = Emulator()
 

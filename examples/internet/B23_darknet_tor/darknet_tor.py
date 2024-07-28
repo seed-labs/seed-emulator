@@ -4,9 +4,26 @@
 from seedemu import *
 import random
 from examples.internet.B00_mini_internet import mini_internet
+import os, sys
+
+###############################################################################
+script_name = os.path.basename(__file__)
+
+if len(sys.argv) == 1:
+   platform = Platform.AMD64
+elif len(sys.argv) == 2:
+   if sys.argv[1].lower() == 'amd':
+         platform = Platform.AMD64
+   elif sys.argv[1].lower() == 'arm':
+         platform = Platform.ARM64
+   else:
+         print(f"Usage:  {script_name} amd|arm")
+         sys.exit(1)
+else:
+   print(f"Usage:  {script_name} amd|arm")
+   sys.exit(1)
 
 mini_internet.run(dumpfile='./base_internet.bin')
-
 
 emu = Emulator()
 
@@ -84,4 +101,4 @@ emu.addBinding(Binding("webserver", filter=Filter(asn=170), action=Action.NEW))
 emu.addLayer(web)
 emu.addLayer(tor)
 emu.render()
-emu.compile(Docker(), './output', override=True)
+emu.compile(Docker(platform=platform), './output', override=True)

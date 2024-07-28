@@ -1,9 +1,29 @@
-from seedemu.compiler import Docker
+from seedemu.compiler import Docker, Platform
 from seedemu.core import Binding, Emulator, Filter, Action
 from seedemu.layers import Base, Ebgp, Ibgp, Ospf, Routing, PeerRelationship
 from seedemu.services import DomainNameCachingService, DomainNameService
+import os, sys
 
 def run(dumpfile = None):
+    ###############################################################################
+    # Set the platform information
+    if dumpfile is None:
+        script_name = os.path.basename(__file__)
+
+        if len(sys.argv) == 1:
+            platform = Platform.AMD64
+        elif len(sys.argv) == 2:
+            if sys.argv[1].lower() == 'amd':
+                platform = Platform.AMD64
+            elif sys.argv[1].lower() == 'arm':
+                platform = Platform.ARM64
+            else:
+                print(f"Usage:  {script_name} amd|arm")
+                sys.exit(1)
+        else:
+            print(f"Usage:  {script_name} amd|arm")
+            sys.exit(1)
+
     emu = Emulator()
     base = Base()
     routing = Routing()
@@ -103,7 +123,7 @@ def run(dumpfile = None):
         emu.dump(dumpfile)
     else:
         emu.render()
-        emu.compile(Docker(), './output', override=True)
+        emu.compile(Docker(platform=platform), './output', override=True)
         
 if __name__ == "__main__":
     run()

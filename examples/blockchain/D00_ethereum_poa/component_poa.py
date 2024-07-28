@@ -2,7 +2,6 @@
 # encoding: utf-8
 
 from seedemu import *
-from examples.internet.B03_hybrid_internet import hybrid_internet
 
 DOMAIN = ".net"
 

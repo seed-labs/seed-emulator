@@ -4,11 +4,30 @@
 from seedemu import *
 from seedemu.services.ChainlinkService.ChainlinkTemplates import *
 from examples.blockchain.D00_ethereum_poa import ethereum_poa
-import platform
+import os, sys
 import random
 
 
 def run(dumpfile = None, total_chainlink_nodes = 3):
+    ###############################################################################
+    # Set the platform information
+    if dumpfile is None:
+        script_name = os.path.basename(__file__)
+
+        if len(sys.argv) == 1:
+            platform = Platform.AMD64
+        elif len(sys.argv) == 2:
+            if sys.argv[1].lower() == 'amd':
+                platform = Platform.AMD64
+            elif sys.argv[1].lower() == 'arm':
+                platform = Platform.ARM64
+            else:
+                print(f"Usage:  {script_name} amd|arm")
+                sys.exit(1)
+        else:
+            print(f"Usage:  {script_name} amd|arm")
+            sys.exit(1)
+
     ###############################################################################
     emu = Emulator()
 
@@ -55,12 +74,8 @@ def run(dumpfile = None, total_chainlink_nodes = 3):
         emu.dump(dumpfile)
     else:
         emu.render()
-        if platform.machine() == 'aarch64' or platform.machine() == 'arm64':
-            current_platform = Platform.ARM64
-        else:
-            current_platform = Platform.AMD64
 
-        docker = Docker(etherViewEnabled=True, platform=current_platform)
+        docker = Docker(etherViewEnabled=True, platform=platform)
         emu.compile(docker, './output', override = True)
 
     print("-----------------------------------------")
