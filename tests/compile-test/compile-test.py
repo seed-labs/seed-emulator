@@ -142,7 +142,7 @@ if __name__ == "__main__":
     
     test_suite = ut.TestSuite()
     test_suite.addTest(CompileTest('compile_test'))
-    # test_suite.addTest(CompileTest('build_test'))
+    test_suite.addTest(CompileTest('build_test'))
     
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
