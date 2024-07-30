@@ -110,7 +110,7 @@ class CompileTest(ut.TestCase):
             path = os.path.join(self.path, dir)
             os.chdir(path)
             for script in scripts:
-                os.system("python3 {} 2> /dev/null".format(script))
+                os.system("python3 {} {}2> /dev/null".format(script))
             for output in outputs:
                 if os.path.isdir(output) and "docker-compose.yml" in os.listdir(output):
                     os.chdir(os.path.join(path, output)) 
