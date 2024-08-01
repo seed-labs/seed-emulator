@@ -4,8 +4,8 @@
 from seedemu import *
 from examples.blockchain.D00_ethereum_poa import ethereum_poa
 from seedemu.services.EthereumService import *
-from examples.blockchain.D23_deploy_contract.lib.services.EthereumService.EthUtil import CustomGenesis
-from examples.blockchain.D23_deploy_contract.lib.services.EthereumService.EthereumService import CustomBlockchain
+from experiments.blockchain.D23_deploy_contract.lib.services.EthereumService.EthUtil import CustomGenesis
+from experiments.blockchain.D23_deploy_contract.lib.services.EthereumService.EthereumService import CustomBlockchain
 import platform
 from web3 import Web3
 import random
