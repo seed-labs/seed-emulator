@@ -110,19 +110,19 @@ class CompileTest(ut.TestCase):
             path = os.path.join(self.path, dir)
             os.chdir(path)
             for script in scripts:
-                os.system("python3 {} {}2> /dev/null".format(script))
+                os.system("python3 {} {} 2> /dev/null".format(script, self.platform))
             for output in outputs:
                 if os.path.isdir(output) and "docker-compose.yml" in os.listdir(output):
-                    os.chdir(os.path.join(path, output)) 
+                    os.chdir(os.path.join(path, output))
                     print(path)
                     print(output)
-                    f = open(log_file, 'w')
-                    if(docker_compose_version == 1):
-                        result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f)
-                    else:
-                        result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f)
+                    with open(log_file, 'a') as f:
+                        f.write('########### {} Test ##############\n'.format(dir))
+                        if(docker_compose_version == 1):
+                            result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f)
+                        else:
+                            result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f)
 
-                    f.close()
                     os.system("echo 'y' | docker system prune > /dev/null")
                     assert result.returncode == 0, "docker build failed"
                     os.chdir(path)
