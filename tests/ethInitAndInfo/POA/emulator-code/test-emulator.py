@@ -23,7 +23,7 @@ def run(dumpfile = None):
     eth_nodes   = blockchain.getEthServerNames()
     
     # Create the EthInit server, and set the eth node and faucet server.
-    ethInitInfo:EthInitAndInfoServer = blockchain.createEthInitAndInfoServer(vnode='eth_init_info', 
+    ethInitInfo:EthInitAndInfoServer = blockchain.createEthUtilityServer(vnode='eth_init_info', 
                                                                              port=5000, 
                                                                              linked_eth_node=random.choice(eth_nodes),
                                                                              linked_faucet_node=random.choice(faucet_info))
