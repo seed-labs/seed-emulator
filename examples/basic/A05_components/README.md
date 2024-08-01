@@ -14,7 +14,7 @@ merging will be conducted if needed.
 
 ```python
 emu = Emulator()
-emu.load('../01-transit-as/base-component.bin')
+emu.load('../01-transit-as/base_component.bin')
 ```
 
 ## Getting the Layer Reference

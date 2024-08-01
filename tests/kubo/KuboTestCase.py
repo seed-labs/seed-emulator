@@ -400,7 +400,6 @@ class KuboTestCase(SeedEmuTestCase):
         for ct in self.getTestContainers(group='basic'):
             with self.subTest(container=self.getCtName(ct), file_host='file_host' in self.getTestGroups(ct)):
                 self.printLog(f'{self.getCtName(ct)}:')
-                
                 exit_code, _ = self.ctCmd(ct, 'ipfs id')
                 if exit_code != 0: sleep(10)
             
@@ -408,7 +407,6 @@ class KuboTestCase(SeedEmuTestCase):
                 for ct_id, file_info in self.kubo_test_files.items():
                     if ct_id != ct.short_id:
                         exit_code, output = self.ctCmd(ct,['ipfs', 'cat', file_info['cid']], demux=True)
-                        
                         self.assertIsNotNone(output, f'Command not executed successfully on container. {output}')
                         self.assertIsNotNone(exit_code, f'Command not executed successfully on container. {output}')
                         self.assertEqual(exit_code, 0, f'Command not executed successfully on container. {output[0]} {output[1]}')
@@ -495,6 +493,7 @@ class KuboTestCase(SeedEmuTestCase):
                     self.assertEqual(ct_config, expectedVal, f'Failed test case {configKey}')
 
                 self.printLog(f'{self.getCtName(ct)}: [PASS]')
+                
             
     @classmethod
     def get_test_suite(cls):

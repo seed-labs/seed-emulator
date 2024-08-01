@@ -8,7 +8,7 @@ from seedemu.compiler import Docker
 emu = Emulator()
 
 # load the pre-built component
-emu.load('../B00-mini-internet/base-component.bin')
+emu.load('../B00-mini-internet/base_component.bin')
 
 # create services for botnet controller and client
 bot = BotnetService()

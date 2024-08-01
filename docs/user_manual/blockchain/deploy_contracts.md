@@ -9,6 +9,4 @@ What we need is to set up the deployment on some nodes,
 so when the emulator starts, the contract can be deployed 
 automatically. This document shows how to do this.
 
-Will wait until we finish the initialization server before
-starting to write this document. 
 

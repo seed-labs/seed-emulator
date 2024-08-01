@@ -1,16 +1,36 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from seedemu.compiler import Docker
+from seedemu.compiler import Docker, Platform
 from seedemu.core import Binding, Emulator, Filter, Action
 from seedemu.layers import Base
 from seedemu.services import DomainNameService, CAService, CAServer, WebService, WebServer, RootCAStore
 import base_internet_with_dns
+import os, sys
 
-base_internet_with_dns.run(dumpfile='./base-internet-dns.bin')
+###############################################################################
+# Set the platform information
+script_name = os.path.basename(__file__)
+
+if len(sys.argv) == 1:
+    platform = Platform.AMD64
+elif len(sys.argv) == 2:
+    if sys.argv[1].lower() == 'amd':
+        platform = Platform.AMD64
+    elif sys.argv[1].lower() == 'arm':
+        platform = Platform.ARM64
+    else:
+        print(f"Usage:  {script_name} amd|arm")
+        sys.exit(1)
+else:
+    print(f"Usage:  {script_name} amd|arm")
+    sys.exit(1)
+
+
+base_internet_with_dns.run(dumpfile='./base_internet_dns.bin')
 
 emu = Emulator()
-emu.load('./base-internet-dns.bin')
+emu.load('./base_internet_dns.bin')
 
 base: Base = emu.getLayer('Base')
 dns: DomainNameService = emu.getLayer('DomainNameService')
@@ -63,4 +83,4 @@ emu.addLayer(ca)
 emu.addLayer(web)
 
 emu.render()
-emu.compile(Docker(), './output', override=True)
+emu.compile(Docker(platform=platform), './output', override=True)

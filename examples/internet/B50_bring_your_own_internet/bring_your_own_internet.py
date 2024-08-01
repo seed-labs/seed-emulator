@@ -3,8 +3,27 @@
 
 from ipaddress import ip_address
 from seedemu import *
-from examples.internet.C02_hybrid_internet_with_dns import hybrid_internet_with_dns
+from examples.internet.B05_hybrid_internet_with_dns import hybrid_internet_with_dns
+import os, sys
 
+###############################################################################
+# Set the platform information
+script_name = os.path.basename(__file__)
+
+if len(sys.argv) == 1:
+    platform = Platform.AMD64
+elif len(sys.argv) == 2:
+    if sys.argv[1].lower() == 'amd':
+        platform = Platform.AMD64
+    elif sys.argv[1].lower() == 'arm':
+        platform = Platform.ARM64
+    else:
+        print(f"Usage:  {script_name} amd|arm")
+        sys.exit(1)
+else:
+    print(f"Usage:  {script_name} amd|arm")
+    sys.exit(1)
+        
 hybrid_internet_with_dns.run(dumpfile='./hybrid_base_with_dns.bin')
 
 emu = Emulator()
@@ -54,4 +73,4 @@ emu.addLayer(dhcp)
 emu.render()
 
 # Compile the emulation
-emu.compile(Docker(internetMapEnabled = True), './output', override=True)
+emu.compile(Docker(internetMapEnabled = True, platform=platform), './output', override=True)

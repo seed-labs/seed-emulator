@@ -382,7 +382,6 @@ class DottedDictTestCase(SeedEmuTestCase):
         self.assertTrue(dd.empty(), 'DottedDict::clear should empty the data structure.')
         self.printLog(f'{f"DottedDict::clear":<50}[PASS]')
         
-    
     def test_dottedItems(self):
         self.printLog(f'{" Test Case: test_dottedItems ":=^100}')
         cases = [

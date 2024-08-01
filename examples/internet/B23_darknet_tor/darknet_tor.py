@@ -4,14 +4,31 @@
 from seedemu import *
 import random
 from examples.internet.B00_mini_internet import mini_internet
+import os, sys
 
-mini_internet.run(dumpfile='./base-internet.bin')
+###############################################################################
+script_name = os.path.basename(__file__)
 
+if len(sys.argv) == 1:
+   platform = Platform.AMD64
+elif len(sys.argv) == 2:
+   if sys.argv[1].lower() == 'amd':
+         platform = Platform.AMD64
+   elif sys.argv[1].lower() == 'arm':
+         platform = Platform.ARM64
+   else:
+         print(f"Usage:  {script_name} amd|arm")
+         sys.exit(1)
+else:
+   print(f"Usage:  {script_name} amd|arm")
+   sys.exit(1)
+
+mini_internet.run(dumpfile='./base_internet.bin')
 
 emu = Emulator()
 
 # Load the base layer from the mini Internet example
-emu.load('./base-internet.bin')
+emu.load('./base_internet.bin')
 
 
 #################################################################
@@ -25,7 +42,8 @@ html = """
 """
 
 # Create a web server: we will use Tor to protect this server
-emu.getLayer('WebService').install("webserver")
+web = WebService()
+web.install("webserver")
 emu.getVirtualNode('webserver').setDisplayName('Tor-webserver') \
         .setFile(content=html, path="/var/www/html/hello.html")
 
@@ -80,7 +98,7 @@ emu.addBinding(Binding("webserver", filter=Filter(asn=170), action=Action.NEW))
 
 
 #################################################################
-
+emu.addLayer(web)
 emu.addLayer(tor)
 emu.render()
-emu.compile(Docker(), './output', override=True)
+emu.compile(Docker(platform=platform), './output', override=True)

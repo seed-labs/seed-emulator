@@ -10,11 +10,14 @@ This document provides a portal to those examples.
   - [Internet exchange](./internet_exchange.md)
   - [BGP routers and Peering](./bgp.md) 
   - [Routing](./routing.md) 
-  - [Node and its customization](./node.md)
-  - [Component and Binding](./component.md) 
-  - [Compilation](./compiler.md) 
-  - [Visualization](./visualization.md)
-  - [Docker image](./docker.md)
+  - [Node customization](./node.md): install software, add startup command, 
+           assign hostname, etc.
+  - [Component and Binding](./component.md): bind virtual nodes in component 
+           to physical nodes, filters  
+  - [Compilation](./compiler.md): generate emulation files (docker files)
+  - [Visualization](./visualization.md): visualize the emulated Internet
+  - [Docker image](./docker.md): generate images for AMD and ARM platforms, 
+           use custom images 
 
 ## [Internet Emulator: Components and Advanced Features](./internet/README.md)
 

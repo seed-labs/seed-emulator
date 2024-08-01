@@ -144,7 +144,6 @@ class TrafficGeneratorTestCase(SeedEmuTestCase):
         )
         self.assertTrue(exit_code == 0)
 
-
         self.printLog("container : multi-traffic-generator")
         exit_code, _ = self.runCommand(
             self.multi_traffic_generator, "cat /root/traffic_generator_iperf3.sh"

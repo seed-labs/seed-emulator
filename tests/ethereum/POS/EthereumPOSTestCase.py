@@ -8,6 +8,7 @@ from seedemu import *
 import time
 import docker
 from tests import SeedEmuTestCase
+
 class EthereumPOSTestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:

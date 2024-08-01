@@ -16,11 +16,14 @@ class Server(Printable):
     """
     __class_names: list
     __display_name: str
+    __host_names: list
+
     _base_system: BaseSystem
     def __init__(self):
         super().__init__()
         self.__class_names = []
         self.__display_name = ''
+        self.__host_names = []
         self._base_system = BaseSystem.DEFAULT
 
     def install(self, node: Node):
@@ -81,6 +84,12 @@ class Server(Printable):
     
     def getDisplayName(self) -> str:
         return self.__display_name
+    
+    def addHostName(self, hname:str):
+        self.__host_names.append(hname)
+
+    def getHostNames(self):
+        return self.__host_names
 
 class Service(Layer):
     """!
@@ -200,6 +209,8 @@ class Service(Layer):
                 node.appendClassName(className)
             if server.getDisplayName() != '':
                 node.setDisplayName(server.getDisplayName())
+            for hostName in server.getHostNames():
+                node.addHostName(hostName)
         
     def getConflicts(self) -> List[str]:
         """!

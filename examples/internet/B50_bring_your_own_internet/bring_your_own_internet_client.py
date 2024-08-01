@@ -2,8 +2,27 @@
 # encoding: utf-8
 
 from seedemu import *
+import os, sys
 
 for i in range(0, 4):
+    ###############################################################################
+    # Set the platform information
+    script_name = os.path.basename(__file__)
+
+    if len(sys.argv) == 1:
+        platform = Platform.AMD64
+    elif len(sys.argv) == 2:
+        if sys.argv[1].lower() == 'amd':
+            platform = Platform.AMD64
+        elif sys.argv[1].lower() == 'arm':
+            platform = Platform.ARM64
+        else:
+            print(f"Usage:  {script_name} amd|arm")
+            sys.exit(1)
+    else:
+        print(f"Usage:  {script_name} amd|arm")
+        sys.exit(1)
+
     ###############################################################################
     emu     = Emulator()
     base    = Base()
@@ -111,10 +130,10 @@ for i in range(0, 4):
     emu.addLayer(dhcp)
 
     # Save it to a component file, so it can be used by other emulators
-    emu.dump('base-component.bin')
+    emu.dump('base_component.bin')
 
     # Uncomment the following if you want to generate the final emulation files
     emu.render()
     #print(dns.getZone('.').getRecords())
-    emu.compile(Docker(), './output_'+str(i), override=True)
+    emu.compile(Docker(platform=platform), './output_'+str(i), override=True)
 

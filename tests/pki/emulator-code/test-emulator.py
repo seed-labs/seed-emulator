@@ -33,7 +33,6 @@ as2.createNetwork('net0')
 as2.createRouter('r1').joinNetwork('net0').joinNetwork('ix100')
 as2.createRouter('r2').joinNetwork('net0').joinNetwork('ix101')
 
-
 caStore1 = RootCAStore(caDomain='ca1.internal')
 caStore2 = RootCAStore(caDomain='ca2.internal')
 

@@ -3,26 +3,44 @@
 
 from seedemu.core import Emulator, Binding, Filter, Action
 from seedemu.mergers import DEFAULT_MERGERS
-from seedemu.compiler import Docker
-from seedemu.services import DomainNameService, DomainNameCachingService
+from seedemu.compiler import Docker, Platform
+from seedemu.services import DomainNameCachingService
 from seedemu.services.DomainNameCachingService import DomainNameCachingServer
 from seedemu.layers import Base
 from examples.internet.B00_mini_internet import mini_internet
 from examples.internet.B01_dns_component import dns_component
-
+import os, sys
 
 def run(dumpfile=None):
+	###############################################################################
+    # Set the platform information
+    if dumpfile is None:
+        script_name = os.path.basename(__file__)
+
+        if len(sys.argv) == 1:
+            platform = Platform.AMD64
+        elif len(sys.argv) == 2:
+            if sys.argv[1].lower() == 'amd':
+                platform = Platform.AMD64
+            elif sys.argv[1].lower() == 'arm':
+                platform = Platform.ARM64
+            else:
+                print(f"Usage:  {script_name} amd|arm")
+                sys.exit(1)
+        else:
+            print(f"Usage:  {script_name} amd|arm")
+            sys.exit(1)
 
     emuA = Emulator()
     emuB = Emulator()
 
     # Run the pre-built components
-    mini_internet.run(dumpfile='./base-internet.bin')
-    dns_component.run(dumpfile='./dns-component.bin')
+    mini_internet.run(dumpfile='./base_internet.bin')
+    dns_component.run(dumpfile='./dns_component.bin')
     
     # Load and merge the pre-built components 
-    emuA.load('./base-internet.bin')
-    emuB.load('./dns-component.bin')
+    emuA.load('./base_internet.bin')
+    emuB.load('./dns_component.bin')
     emu = emuA.merge(emuB, DEFAULT_MERGERS)
     
     
@@ -78,7 +96,7 @@ def run(dumpfile=None):
     else:
        # Rendering compilation 
        emu.render()
-       emu.compile(Docker(), './output', override=True)
+       emu.compile(Docker(platform=platform), './output', override=True)
 
 if __name__ == "__main__":
     run()
