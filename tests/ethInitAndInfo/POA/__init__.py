@@ -1,1 +1,1 @@
-from .EthInitAndInfoTestCase import EthInitAndInfoTestCase
+from .EthInitAndInfoPOATestCase import EthInitAndInfoPOATestCase

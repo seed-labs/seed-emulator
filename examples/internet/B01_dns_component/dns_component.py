@@ -53,7 +53,7 @@ def run(dumpfile = None):
     if dumpfile is not None:
         emu.dump(dumpfile)
     else:
-        emu.dump('dns-component.bin')
+        emu.dump('dns_component.bin')
         
 if __name__ == "__main__":
     run()

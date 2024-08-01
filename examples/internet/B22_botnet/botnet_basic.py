@@ -4,15 +4,34 @@
 import random
 from seedemu.core import Emulator, Binding, Filter, Action
 from seedemu.services import BotnetService, BotnetClientService
-from seedemu.compiler import Docker
+from seedemu.compiler import Docker, Platform
 from examples.internet.B00_mini_internet import mini_internet
+import os, sys
 
-mini_internet.run(dumpfile='./base-internet.bin')
+###############################################################################
+# Set the platform information
+script_name = os.path.basename(__file__)
+
+if len(sys.argv) == 1:
+    platform = Platform.AMD64
+elif len(sys.argv) == 2:
+    if sys.argv[1].lower() == 'amd':
+        platform = Platform.AMD64
+    elif sys.argv[1].lower() == 'arm':
+        platform = Platform.ARM64
+    else:
+        print(f"Usage:  {script_name} amd|arm")
+        sys.exit(1)
+else:
+    print(f"Usage:  {script_name} amd|arm")
+    sys.exit(1)
+
+mini_internet.run(dumpfile='./base_internet.bin')
 
 emu = Emulator()
 
 # Load the pre-built component
-emu.load('./base-internet.bin')
+emu.load('./base_internet.bin')
 
 ###############################################################################
 # Build a botnet
@@ -64,4 +83,4 @@ emu.addLayer(bot)
 emu.addLayer(botClient)
 
 emu.render()
-emu.compile(Docker(), './output', override=True)
+emu.compile(Docker(platform=platform), './output', override=True)

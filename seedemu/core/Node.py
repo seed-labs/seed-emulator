@@ -217,6 +217,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __softwares: Set[str]
     __build_commands: List[str]
     __start_commands: List[Tuple[str, bool]]
+    __post_config_commands: List[Tuple[str, bool]]
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
 
@@ -257,6 +258,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__softwares = set()
         self.__build_commands = []
         self.__start_commands = []
+        self.__post_config_commands = []
         self.__ports = []
         self.__privileged = False
         self.__base_system = BaseSystem.DEFAULT
@@ -775,7 +777,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         return self
 
-    def appendStartCommand(self, cmd: str, fork: bool = False) -> Node:
+    def appendStartCommand(self, cmd: str, fork: bool = False, isPostConfigCommand = False) -> Node:
         """!
         @brief Add new command to start script.
 
@@ -785,15 +787,28 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @param cmd command to add.
         @param fork (optional) fork to command to background?
+        @param isPostConfigCommand indicates that the command is executed after the basic configuration.
 
         Use this to add start steps to the node. For example, if using the
         "docker" compiler, this will be added to start.sh.
 
         @returns self, for chaining API calls.
         """
-        self.__start_commands.append((cmd, fork))
+        if isPostConfigCommand:
+            self.__post_config_commands.append((cmd, fork))
+        else:
+            self.__start_commands.append((cmd, fork))
 
         return self
+    
+    def getPostConfigCommands(self) -> List[Tuple[str, bool]]:
+        """!
+        @brief Get user start commands.
+
+        @returns list of tuples, where the first element is command, and the
+        second element indicates if this command should be forked.
+        """
+        return self.__post_config_commands
 
     def getStartCommands(self) -> List[Tuple[str, bool]]:
         """!
@@ -918,6 +933,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for p in node.getPersistentStorages(): self.addPersistentStorage(p)
         for (c, f) in node.getStartCommands(): self.appendStartCommand(c, f)
+        # for (c, f) in node.getUserStartCommands(): self.appendUserStartCommand(c, f)
         for c in node.getBuildCommands(): self.addBuildCommand(c)
         for s in node.getSoftware(): self.addSoftware(s)
 
@@ -964,6 +980,10 @@ class Node(Printable, Registrable, Configurable, Vertex):
         out += 'Additional Start Commands:\n'
         indent += 4
         for (cmd, fork) in self.__start_commands:
+            out += ' ' * indent
+            out += '{}{}\n'.format(cmd, ' (fork)' if fork else '')
+
+        for (cmd, fork) in self.__post_config_commands:
             out += ' ' * indent
             out += '{}{}\n'.format(cmd, ' (fork)' if fork else '')
         indent -= 4

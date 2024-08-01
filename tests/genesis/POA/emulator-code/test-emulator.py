@@ -4,6 +4,8 @@
 from seedemu import *
 from examples.blockchain.D00_ethereum_poa import ethereum_poa
 from seedemu.services.EthereumService import *
+from examples.blockchain.D23_deploy_contract.lib.services.EthereumService.EthUtil import CustomGenesis
+from examples.blockchain.D23_deploy_contract.lib.services.EthereumService.EthereumService import CustomBlockchain
 import platform
 from web3 import Web3
 import random
@@ -17,9 +19,9 @@ def run(dumpfile=None):
     local_dump_path = "./blockchain-poa.bin"
     ethereum_poa.run(
         dumpfile=local_dump_path,
-        hosts_per_as=3,
+        hosts_per_as=1,
         total_eth_nodes=10,
-        total_accounts_per_node=2,
+        total_accounts_per_node=1,
     )
     emu.load(local_dump_path)
 
@@ -27,6 +29,7 @@ def run(dumpfile=None):
     eth: EthereumService = emu.getLayer("EthereumService")
     blockchain: Blockchain = eth.getBlockchainByName(eth.getBlockchainNames()[0])
     eth_nodes   = blockchain.getEthServerNames()
+    blockchain.__class__ = CustomBlockchain
 
     with open("./Contracts/Contract.bin-runtime", "r") as f:
         runtime_bytecode = Web3.toHex(hexstr=f.read().strip())
@@ -38,6 +41,14 @@ def run(dumpfile=None):
 
     # Add the runtime bytecode with the contract address in the genesis block
     blockchain.addCode(contract_address, runtime_bytecode)
+    
+    # Set initial storage for the contract
+    # This will assign the total supply of 1,000,000 tokens to the contract address using the slot 0 which is __balanceOf for the contract
+    blockchain.addStorage(contract_address=contract_address, owner_address=contract_address, slot=0, value=1000000)
+    
+    # Add the initial balance for the custom address using storage and function slot 0
+    custom_address = "0x2e2e3a61daC1A2056d9304F79C168cD16aAa88e9"
+    blockchain.addStorage(contract_address=contract_address, owner_address=custom_address, slot=0, value=50000)
 
     # Generate the emulator files
     if dumpfile is not None:

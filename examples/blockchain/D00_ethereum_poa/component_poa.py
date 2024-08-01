@@ -2,7 +2,8 @@
 # encoding: utf-8
 
 from seedemu import *
-from examples.internet.B03_hybrid_internet import hybrid_internet
+
+DOMAIN = ".net"
 
 def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2): 
     # Create the Ethereum layer
@@ -45,6 +46,7 @@ def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2):
        e.enableGethHttp()    # Enable HTTP on all nodes
        e.enableGethWs()      # Enable WebSocket on all nodes
        e.unlockAccounts()
+       e.addHostName(vnode + DOMAIN)  # Add this name to /etc/hosts
 
        displayName = 'Ethereum-POA-%.2d'
        if i%2  == 0:
@@ -66,6 +68,16 @@ def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2):
                balance=10000,
                max_fund_amount=10)
     faucet.setDisplayName('Faucet')
+    faucet.addHostName('faucet' + DOMAIN)  # Add this name to /etc/hosts
+
+    # Create the Utility server 
+    util_server:EthUtilityServer = blockchain.createEthUtilityServer(
+               vnode='utility',
+               port=5000,
+               linked_eth_node='eth6',
+               linked_faucet_node='faucet')
+    util_server.setDisplayName('UtilityServer')
+    util_server.addHostName('utility' + DOMAIN)  # Add this name to /etc/hosts
 
     # Add the Ethereum layer
     emu.addLayer(eth)

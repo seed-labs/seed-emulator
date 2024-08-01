@@ -20,7 +20,7 @@ In this example, we will create a new host with custom host name on top of the m
 ## Load the Mini-Internet Component
 
 ```
-emu.load('../B00-mini-internet/base-component.bin')
+emu.load('../B00-mini-internet/base_component.bin')
 ```
 
 ## Create a New Host with Custom Hostname

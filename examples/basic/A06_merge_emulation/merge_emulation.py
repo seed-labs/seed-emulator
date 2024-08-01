@@ -4,8 +4,26 @@
 from seedemu.core import Emulator
 from seedemu.mergers import DEFAULT_MERGERS
 from seedemu.layers import Base, Routing, Ebgp
-from seedemu.compiler import Docker
+from seedemu.compiler import Docker, Platform
+import os, sys
 
+###############################################################################
+# Set the platform information
+script_name = os.path.basename(__file__)
+
+if len(sys.argv) == 1:
+    platform = Platform.AMD64
+elif len(sys.argv) == 2:
+    if sys.argv[1].lower() == 'amd':
+        platform = Platform.AMD64
+    elif sys.argv[1].lower() == 'arm':
+        platform = Platform.ARM64
+    else:
+        print(f"Usage:  {script_name} amd|arm")
+        sys.exit(1)
+else:
+    print(f"Usage:  {script_name} amd|arm")
+    sys.exit(1)
 
 ###############################################################################
 # Create Emulation A
@@ -67,5 +85,5 @@ emu_merged = emuA.merge(emuB, DEFAULT_MERGERS)
 # Generate the final emulation files
 
 emu_merged.render()
-emu_merged.compile(Docker(), './output', override=True)
+emu_merged.compile(Docker(platform=platform), './output', override=True)
 

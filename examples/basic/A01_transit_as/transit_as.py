@@ -2,8 +2,28 @@
 # encoding: utf-8
 
 from seedemu import *
+import sys, os
 
 def run(dumpfile = None):
+    ###############################################################################
+    # Set the platform information
+    if dumpfile is None:
+        script_name = os.path.basename(__file__)
+
+        if len(sys.argv) == 1:
+            platform = Platform.AMD64
+        elif len(sys.argv) == 2:
+            if sys.argv[1].lower() == 'amd':
+                platform = Platform.AMD64
+            elif sys.argv[1].lower() == 'arm':
+                platform = Platform.ARM64
+            else:
+                print(f"Usage:  {script_name} amd|arm")
+                sys.exit(1)
+        else:
+            print(f"Usage:  {script_name} amd|arm")
+            sys.exit(1)
+
     ###############################################################################
     # Create the base layer
     base  = Base()
@@ -95,8 +115,8 @@ def run(dumpfile = None):
         emu.render()
 
         ###############################################################################
-        # Final step: Generate the docker files 
-        docker = Docker(internetMapEnabled=True, platform=Platform.AMD64)
+        # Final step: Generate the docker files
+        docker = Docker(internetMapEnabled=True, platform=platform)
         emu.compile(docker, './output', override = True)
 
 if __name__ == "__main__":

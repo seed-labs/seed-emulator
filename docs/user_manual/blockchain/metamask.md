@@ -61,7 +61,7 @@ Unless otherwise specified by the lab description, the
 default mnemonic phrase used by the SEED emulator is the following:
 
 ```
-gentle always fun glass foster produce north tail security list example gain
+great amazing fun seed lab protect network system security prevent attack future
 ```
 
 To add these existing accounts to our MetaMask wallet, 

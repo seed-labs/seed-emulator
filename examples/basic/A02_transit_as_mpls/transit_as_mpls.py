@@ -4,7 +4,26 @@
 from seedemu.layers import Base, Routing, Ebgp, PeerRelationship, Mpls
 from seedemu.services import WebService
 from seedemu.core import Emulator, Binding, Filter
-from seedemu.compiler import Docker
+from seedemu.compiler import Docker, Platform
+import sys, os
+
+###############################################################################
+# Set the platform information
+script_name = os.path.basename(__file__)
+
+if len(sys.argv) == 1:
+    platform = Platform.AMD64
+elif len(sys.argv) == 2:
+    if sys.argv[1].lower() == 'amd':
+        platform = Platform.AMD64
+    elif sys.argv[1].lower() == 'arm':
+        platform = Platform.ARM64
+    else:
+        print(f"Usage:  {script_name} amd|arm")
+        sys.exit(1)
+else:
+    print(f"Usage:  {script_name} amd|arm")
+    sys.exit(1)
 
 emu = Emulator()
 
@@ -84,4 +103,4 @@ emu.render()
 
 ###############################################################################
 
-emu.compile(Docker(), './output', override=True)
+emu.compile(Docker(platform=platform), './output', override=True)

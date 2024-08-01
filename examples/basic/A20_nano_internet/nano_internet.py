@@ -2,8 +2,25 @@
 # encoding: utf-8
 
 from seedemu import *
-import os
+import os, sys
 
+###############################################################################
+# Set the platform information
+script_name = os.path.basename(__file__)
+
+if len(sys.argv) == 1:
+    platform = Platform.AMD64
+elif len(sys.argv) == 2:
+    if sys.argv[1].lower() == 'amd':
+        platform = Platform.AMD64
+    elif sys.argv[1].lower() == 'arm':
+        platform = Platform.ARM64
+    else:
+        print(f"Usage:  {script_name} amd|arm")
+        sys.exit(1)
+else:
+    print(f"Usage:  {script_name} amd|arm")
+    sys.exit(1)
 
 # Create the Emulator 
 emu = Emulator()
@@ -128,7 +145,7 @@ emu.addLayer(Ospf())
 # Save it to a component file, so it can be used by other emulators
 
 # This is optional
-emu.dump('base-component.bin')
+emu.dump('base_component.bin')
 
 
 ###############################################################################
@@ -144,7 +161,7 @@ emu.getBindingFor('web02').setDisplayName('Web-2')
 ###############################################################################
 # Compilation
 
-docker = Docker()
+docker = Docker(platform=platform)
 
 # Use the "handsonsecurity/seed-ubuntu:small" custom image from dockerhub
 docker.addImage(DockerImage('handsonsecurity/seed-ubuntu:small', [], local = False), priority=-1)
@@ -152,7 +169,7 @@ docker.setImageOverride(as152.getHost('host1'), 'handsonsecurity/seed-ubuntu:sma
 
 # Use the "seed-ubuntu-large" custom image from local
 docker.addImage(DockerImage('seed-ubuntu-large', [], local = True), priority=-1)
-docker.setImageOverride(as152.getHost('host2'), 'seed-ubuntu-large')
+docker.setImageOverride(as152.getHost('host2'), 'seedemu-multiarch')
 
 # Generate the Docker files
 emu.compile(docker, './output', override=True)
@@ -160,7 +177,7 @@ emu.compile(docker, './output', override=True)
 # Copy the base container image to the output folder
 # the base container image should be located under the ouput folder to add it as custom image.
 script_dir = os.path.dirname(os.path.abspath(__file__))
-image_dir = os.path.join(script_dir, 'seed-ubuntu-large')
+image_dir = os.path.join(script_dir, 'seedemu-multiarch')
 output_dir = os.path.join(script_dir, 'output')
 command = 'cp -r "{image_dir}" "{output_dir}"'.format(image_dir=image_dir, output_dir=output_dir)
 os.system(command)

@@ -10,7 +10,7 @@ It uses the [mini-internet](../../B00-mini-internet/README.md) topology and conf
 
 2. Load the pre-built emulation from the [mini-internet example](../06-mini-internet/README.md) as the base layer for this emulation.
     ```python
-    emu.load('./base-component.bin')
+    emu.load('./base_component.bin')
     ```
     This works because we have a slightly modified version of the mini-internet Python script
     which dumps the emulation to a binary file, rather than compiling it for Docker (see the
