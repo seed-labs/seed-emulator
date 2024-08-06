@@ -234,9 +234,9 @@ eth_init_node:EthUtilityServer = blockchain.createEthUtilityServer(vnode='eth_in
                                                                             linked_faucet_node='faucet'
                                                                             )
 
-eth_init_node.deployContractByContent(contract_name=LinkTokenDeploymentTemplate['link_token_name'], 
-                                         abi_content=LinkTokenDeploymentTemplate['link_token_abi'], 
-                                         bin_content=LinkTokenDeploymentTemplate['link_token_bin'])
+eth_init_node.deployContractByContent(contract_name=LinkTokenFileTemplate['link_token_name'], 
+                                         abi_content=LinkTokenFileTemplate['link_token_abi'], 
+                                         bin_content=LinkTokenFileTemplate['link_token_bin'])
 eth_init_node.setDisplayName('eth_init_info_node')
 emu.addBinding(Binding('eth_init_info_node', filter = Filter(asn=151, nodeName='host_2')))
 
