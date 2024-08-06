@@ -228,7 +228,7 @@ faucet:FaucetServer = blockchain.createFaucetServer(vnode='faucet',
 emu.addBinding(Binding('faucet', filter=Filter(asn=150, nodeName='host_2')))
 emu.getVirtualNode('faucet').setDisplayName('FaucetServer')
 
-eth_init_node:EthInitAndInfoServer = blockchain.createEthUtilityServer(vnode='eth_init_info_node',
+eth_init_node:EthUtilityServer = blockchain.createEthUtilityServer(vnode='eth_init_info_node',
                                                                             port=8080,
                                                                             linked_eth_node='eth5',
                                                                             linked_faucet_node='faucet'
