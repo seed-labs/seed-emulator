@@ -11,7 +11,7 @@ from tests import SeedEmuTestCase
 import requests
 
 
-class EthInitAndInfoPOATestCase(SeedEmuTestCase):
+class EthUtilityPOATestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
@@ -51,7 +51,7 @@ class EthInitAndInfoPOATestCase(SeedEmuTestCase):
 
     # Test if the server is up
     def test_init_info_server_connection(self):
-        self.printLog("--------Starting EthInitAndInfo Server Connection Test--------")
+        self.printLog("--------Starting EthUtility Server Connection Test--------")
         url = f"http://{self.eth_init_node}:{self.eth_init_node_port}"
         i = 1
         start_time = time.time()
@@ -284,12 +284,12 @@ class EthInitAndInfoPOATestCase(SeedEmuTestCase):
 
 
 if __name__ == "__main__":
-    test_suite = EthInitAndInfoPOATestCase.get_test_suite()
+    test_suite = EthUtilityPOATestCase.get_test_suite()
     res = ut.TextTestRunner(verbosity=2).run(test_suite)
 
-    EthInitAndInfoPOATestCase.printLog("----------Test Summary----------")
+    EthUtilityPOATestCase.printLog("----------Test Summary----------")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
-    EthInitAndInfoPOATestCase.printLog(
+    EthUtilityPOATestCase.printLog(
         "Score: {}/{} ({} errors, {} failures)".format(
             num - (errs + fails), num, errs, fails
         )

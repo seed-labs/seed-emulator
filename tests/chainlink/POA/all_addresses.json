@@ -1,0 +1,17 @@
+[
+    {
+        "url": "http://10.163.0.74:6688",
+        "chainlink_node_address": "0x263499149CF486F6584119612560F602C53b8E3c",
+        "contract_address": "0x0869B77cd2abc1293FDb6E47E137aECec5Bff763"
+    },
+    {
+        "url": "http://10.162.0.71:6688",
+        "chainlink_node_address": "0x0c2f8969Bd66670468b01bb4e9a2fDfCA180fa0e",
+        "contract_address": "0x7c1b3f3Bf5756f660B131FcF76060291C5E59Bae"
+    },
+    {
+        "url": "http://10.171.0.72:6688",
+        "chainlink_node_address": "0x8EF0754c526EA1BfEDC17eCd7cfF83a034F2fEb2",
+        "contract_address": "0x0515978F41f42591442f2FdD2aFa719A11BDcdeD"
+    }
+]

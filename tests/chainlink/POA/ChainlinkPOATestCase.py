@@ -15,10 +15,11 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        cls.asns = [152, 153, 154, 160, 161, 162, 163, 164]
+        utility_ip, faucet_ip, chainlink_ip = cls.get_chainlink_info()
         cls.rpc_url = 'http://10.150.0.71:8545'
-        cls.faucet_url = 'http://10.150.0.73:80/fundme'
-        cls.init_url = 'http://10.151.0.73:80'
+        cls.faucet_url = f'http://{faucet_ip}/fundme'
+        cls.init_url = f'http://{utility_ip}:5000'
+        cls.chainlink_urls = chainlink_ip
         cls.job_id = "7599d3c8f31e4ce78ad2b790cbcfc673"
         cls.url = "https://min-api.cryptocompare.com/data/pricemultifull?fsyms=ETH&tsyms=USD"
         cls.path = "RAW,ETH,USD,PRICE"
@@ -26,6 +27,12 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         for name in ['Alice', 'Bob', 'Charlie', 'David', 'Eve']:
             cls.wallet1.createAccount(name)
         return
+    
+    @classmethod
+    def get_chainlink_info(cls):
+        with open("./chainlink_info.json") as f:
+            data = json.load(f)
+        return data["utility"], data["faucet"], data["chainlink"]
     
     def __load_chainlink_data(self):
         try:
@@ -70,20 +77,25 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
             start_time = time.time()
             elapsed_time = 0
             oracle_contracts = []
-            expected_number_of_oracles = len(self.asns)
+            expected_number_of_oracles = 3
             link_token_address = ""
 
             while elapsed_time < 1000 and len(oracle_contracts) != expected_number_of_oracles:
-                response = requests.get(url)
+                response = requests.get(url+'/all')
                 if response.status_code == 200:
-                    html_content = response.text
-                    oracle_contracts = re.findall(r'<h1>Oracle Contract Address: (.+?)</h1>', html_content)
+                    # html_content = response.json()
+                    # oracles_count = sum(1 for key in response.json() if 'oracle' in key)
+                    oracle_contracts = [value for key, value in response.json().items() if 'oracle' in key]
+                    print(oracle_contracts)
+                    # oracle_contracts = re.findall(r'<h1>Oracle Contract Address: (.+?)</h1>', html_content)
                     self.printLog(f"Checking for oracle contracts, found: {len(oracle_contracts)}")
 
                     if not link_token_address:
-                        match = re.search(r'<h1>Link Token Contract: (.+?)</h1>', html_content)
-                        if match and match.group(1):
-                            link_token_address = match.group(1)
+                        if 'link_token_contract' in response.json().keys():
+                            link_token_address = response.json()['link_token_contract']
+                        # match = re.search(r'<h1>Link Token Contract: (.+?)</h1>', html_content)
+                        # if match and match.group(1):
+                        #     link_token_address = match.group(1)
                             self.printLog(f"Found Link Token address: {link_token_address}")
                 time.sleep(10)
                 elapsed_time = time.time() - start_time
@@ -127,11 +139,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         raise Exception(f"Server at {url} did not come up within {timeout} seconds.") 
     
     def test_chainlink_node_health(self):
-        if not self.asns:
-            self.printLog("No ASNs provided for testing Chainlink node health.")
-            return
-
-        urls = [f'http://10.{i}.0.73:6688' for i in self.asns]
+        urls = [f'http://{chainlink_url}:6688' for chainlink_url in self.chainlink_urls]
         self.printLog("\n-----------Testing chainlink normal nodes health-----------")
         failed_nodes = []
         for url in urls:
@@ -185,7 +193,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         return all_passing
     
     def __get_oracle_chainlink_relationships(self, urls):
-        credentials = {'email': 'seed@seed.com', 'password': 'Seed@emulator123'}
+        credentials = {'email': 'seed@example.com', 'password': 'blockchainemulator'}
         headers = {'Content-Type': 'application/json'}
         all_addresses = []
 
@@ -452,7 +460,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         
         # 8. Wait for responses to be received
         responses_count = 0
-        while responses_count < len(self.asns):
+        while responses_count < len(self.chainlink_urls):
             responses_count = user_contract.functions.responsesCount().call()
             self.printLog(f"Awaiting responses... Responses count: {responses_count}")
             time.sleep(5)
@@ -462,7 +470,7 @@ class ChainlinkPOATestCase(SeedEmuTestCase):
         self.printLog(f"Responses count: {responses_count}")
         self.printLog(f"Average price: {average_price}")
 
-        self.assertEqual(responses_count, len(self.asns), "Responses count is not equal")
+        self.assertEqual(responses_count, len(self.chainlink_urls), "Responses count is not equal")
         self.assertNotEqual(average_price, 0, "Average price is zero")
 
     @classmethod

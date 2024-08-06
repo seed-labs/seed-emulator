@@ -13,7 +13,7 @@ def run(dumpfile = None):
 
     # Run and load the pre-built ethereum component; it is used as the base blockchain
     local_dump_path = './blockchain-poa.bin'
-    ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=1, total_eth_nodes=10, total_accounts_per_node=1)
+    ethereum_poa.run(dumpfile=local_dump_path, hosts_per_as=2, total_eth_nodes=10, total_accounts_per_node=1)
     emu.load(local_dump_path)
     
     # Get the blockchain and faucet information

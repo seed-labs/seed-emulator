@@ -12,9 +12,8 @@ emu = Makers.makeEmulatorBaseWith5StubASAndHosts(2)
 
 #############################
 # Ensure that this can be tested on multiple platforms:
-if os.environ.get('platform', 'amd') == 'arm':
-    # ipfs:KuboService = KuboService(arch=Architecture.ARM64)
-    ipfs:KuboService = KuboService()
+if os.environ.get('platform') == 'arm':
+    ipfs:KuboService = KuboService(arch=Architecture.ARM64)
     docker = Docker(platform=Platform.ARM64)
 else:
     ipfs:KuboService = KuboService()

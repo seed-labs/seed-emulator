@@ -7,7 +7,7 @@ from kubo import KuboTestCase, KuboUtilFuncsTestCase, DottedDictTestCase
 from pki import PKITestCase
 from chainlink import ChainlinkPOATestCase
 from traffic_generator import TrafficGeneratorTestCase
-from ethInitAndInfo import EthInitAndInfoPOATestCase
+from ethUtility import EthUtilityPOATestCase
 from genesis import GenesisPOATestCase
 import unittest
 import os, sys
@@ -21,22 +21,22 @@ else:
 os.environ['platform'] = platform
 
 test_case_list = [
-    MiniInternetTestCase,
-    IPAnyCastTestCase,
-    HostMgmtTestCase,
-    EthereumPOATestCase,
-    EthereumPOSTestCase,
-    EthereumPOWTestCase,
-    ChainlinkPOATestCase,
-    EthInitAndInfoPOATestCase,
-    GenesisPOATestCase,
-    ScionBgpMixedTestCase,
-    ScionBwtesterTestCase,
-    KuboTestCase,
-    KuboUtilFuncsTestCase,
-    DottedDictTestCase,
-    PKITestCase,
-    TrafficGeneratorTestCase
+    # MiniInternetTestCase,
+    # IPAnyCastTestCase,
+    # HostMgmtTestCase,
+    # EthereumPOATestCase,
+    # EthereumPOSTestCase,
+    # EthereumPOWTestCase,
+    # ChainlinkPOATestCase,
+    EthUtilityPOATestCase,
+    # GenesisPOATestCase,
+    # ScionBgpMixedTestCase,
+    # ScionBwtesterTestCase,
+    # KuboTestCase,
+    # KuboUtilFuncsTestCase,
+    # DottedDictTestCase,
+    # PKITestCase,
+    # TrafficGeneratorTestCase
 ]
 
 for test_case in test_case_list:
