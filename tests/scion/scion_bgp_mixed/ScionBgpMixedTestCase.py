@@ -13,8 +13,8 @@ class ScionBgpMixedTestCase(ScionTestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         cls.wait_until_all_containers_up(22)
-        cls.printLog("Wait 10 seconds for beaconing")
-        time.sleep(10)
+        cls.printLog("Wait 60 seconds for beaconing")
+        time.sleep(60)
 
     def setUp(self):
         super().setUp()
