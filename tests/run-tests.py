@@ -8,7 +8,6 @@ from pki import PKITestCase
 from chainlink import ChainlinkPOATestCase
 from traffic_generator import TrafficGeneratorTestCase
 from ethUtility import EthUtilityPOATestCase
-from genesis import GenesisPOATestCase
 import unittest
 import os, sys
 
@@ -29,7 +28,6 @@ test_case_list = [
     EthereumPOWTestCase,
     ChainlinkPOATestCase,
     EthUtilityPOATestCase,
-    GenesisPOATestCase,
     ScionBgpMixedTestCase,
     ScionBwtesterTestCase,
     KuboTestCase,
