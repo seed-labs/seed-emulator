@@ -26,6 +26,7 @@ class ScionBwtesterTestCase(ScionTestCase):
 
     def bwtester_conn_test(self, container, server: str) -> bool:
         ec, output = container.exec_run(f"scion-bwtestclient -s {server}:40002")
+        self.printLog(f"CMD: scion-bwtestclient -s {server}:40002")
         self.printLog(output.decode())
         return ec == 0
 

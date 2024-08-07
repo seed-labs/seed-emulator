@@ -26,6 +26,7 @@ class ScionTestCase(SeedEmuTestCase):
         """
 
         exit_code, _ = container.exec_run(f"scion ping {dst} -c {count} --sequence='{pred}'")
+        self.printLog(f"CMD: scion ping {dst} -c {count} --sequence='{pred}'")
         if exit_code == 0:
             self.printLog(f"scion ping test {dst} succeeded")
             return True
@@ -51,7 +52,8 @@ class ScionTestCase(SeedEmuTestCase):
         exit_code, output = container.exec_run(
             f"scion showpaths {dst} --format json --sequence='{pred}'")
         assert 0 <= exit_code < 2, "got unexpected exit code from 'scion showpaths'"
-
+        
+        self.printLog(f"CMD: scion showpaths {dst} --format json --sequence='{pred}'")
         paths = json.loads(output).get('paths', [])
 
         if exit_code == 0:
