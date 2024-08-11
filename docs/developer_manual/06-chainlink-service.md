@@ -66,8 +66,8 @@ Enter the IP address of the Chainlink node followed by the port number 6688 in t
 ### Configuration
 - The interface is secured with a default username and password which can be changed during the initial setup.
 - **Default Credentials**:
-  - **Username**: `seed@seed.com`
-  - **Password**: `Seed@emulator123`
+  - **Username**: `seed@example.com`
+  - **Password**: `blockchainemulator`
 
 ## Technical Implementation:
 
