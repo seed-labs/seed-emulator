@@ -1,70 +1,35 @@
 from typing import Dict
+import os
 
-EthServerFileTemplates: Dict[str, str] = {}
+def get_file_content(filename):
+    """!
+    @brief Get the content of a file
+    @param filename the file name (relative path)
+    @return the content of the file
+    """
+    real_filename = os.path.dirname(os.path.realpath(__file__)) + "/" + filename
+    with open(real_filename, "r") as file:
+        return file.read()
 
-# bootstrapper: get enode urls from other eth nodes.
-EthServerFileTemplates['bootstrapper'] = '''\
-#!/bin/bash
-while read -r node; do {
-    let count=0
-    ok=true
-    until curl -sHf http://$node/eth-enode-url > /dev/null; do {
-        echo "eth: node $node not ready, waiting..."
-        sleep 3
-        let count++
-        [ $count -gt 60 ] && {
-            echo "eth: node $node failed too many times, skipping."
-            ok=false
-            break
-        }
-    }; done
-    ($ok) && while true; do {
-        echo "`curl -s http://$node/eth-enode-url`," >> /tmp/eth-node-urls
-        ENODE_URL=`cat /tmp/eth-node-urls | cut -d ',' -f 1`
-        if [[ $ENODE_URL = enode* ]]; then
-            break
-        fi
-    }; done
-}; done < /tmp/eth-nodes
-'''
 
-EthServerFileTemplates['beacon_bootstrapper'] = '''\
-#!/bin/bash
-while read -r node; do {{
-    let count=0
-    ok=true
-    validator=false
-    until curl --http0.9 -sHf http://$node/testnet > /dev/null; do {{
-        echo "eth: beacon-setup node $node not ready, waiting..."
-        sleep 10
-        let count++
-        [ $count -gt 60 ] && {{
-            echo "eth: connection to beacon-setup node $node failed too many times, skipping."
-            ok=false
-            break
-        }}
-    }}; done
-    ($ok) && {{
-        validator={is_validator}
-        bootnode={is_bootnode}
-        ($validator) && {{
-            curl --http0.9 -s http://$node/eth-{eth_id} > /tmp/eth.tar.gz
-            tar -xzvf /tmp/eth.tar.gz -C /tmp
-        }}
-        ($bootnode) && {{
-            curl --http0.9 -s http://$node/bootnode > /tmp/bootnode.tar.gz
-            tar -xzvf /tmp/bootnode.tar.gz -C /tmp
-        }}
-        curl --http0.9 -s http://$node/testnet > /tmp/testnet.tar.gz
-        tar -xzvf /tmp/testnet.tar.gz -C /tmp
-        {bootnode_start_command}
-        {bc_start_command}
-        {wallet_create_command}
-        {validator_create_command}
-        {validator_deposit_sh}
-        {vc_start_command}
-    }}
-}}; done < /tmp/beacon-setup-node
-'''
+EthServerFileTemplates: Dict[str, str] = {
+        'bootstrapper':        get_file_content("files_ethereum/bootstrapper.sh"),
+        'beacon_bootstrapper': get_file_content("files_ethereum/beacon_bootstrapper.sh")
+}
 
+UtilityServerFileTemplates: Dict[str, str] = {
+        'fund_account':    get_file_content("files_utility/fund_account.py"),
+        'deploy_contract': get_file_content("files_utility/deploy_contract.py"),
+        'utility_server':  get_file_content("files_utility/utility_server.py"),
+        'server_setup':    get_file_content("files_utility/utility_server_setup.py")
+}
+
+FaucetServerFileTemplates: Dict[str, str] = {
+        'faucet_server':   get_file_content("files_faucet/faucet_server.py"),
+        'fund_accounts':   get_file_content("files_faucet/fund_accounts.sh"),
+        'fundme':          get_file_content("files_faucet/fundme.py"),
+        'faucet_url':      "http://{address}:{port}/",
+        'faucet_fund_url': "http://{address}:{port}/fundme",
+        'fund_curl': "curl -X POST -d 'address={recipient}&amount={amount}' http://{address}:{port}/fundme"
+}
 

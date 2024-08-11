@@ -87,6 +87,19 @@ emu.addBinding(Binding('webnode0', filter = Filter(nodeName = 'node0', asn = 150
 emu.addBinding(Binding('webnode1', filter = Filter(asn = 151)))
 ```
 
+If multiple candidates match the filter, which one is selected depends on
+the `action` parameter:
+  - `Action.RANDOM` (default): selects a random node from the list
+  - `Action.FIRST`: uses the first node from the list
+  - `Action.LAST`: uses the last node from the list
+  - `Action.NEW`: create a new node for the binding
+
+Here is an example:
+
+```python
+emu.addBinding(Binding('webnode1', filter = Filter(asn = 151), action = Action.NEW))
+```
+
 After binding a virtual node to a physical node, if you would like to 
 give the physical node a more meaningful name (for the visualization purpose),
 you can set its display name.
@@ -151,6 +164,7 @@ def __init__(self, source, action = Action.RANDOM, filter = Filter()):
   - `RANDOM` (default): selects a random node from the list
   - `FIRST`: uses the first node from the list
   - `LAST`: uses the last node from the list
+  - `NEW`: create a new node 
 
 - `filter` points to a filter object, which consists of rules for the binding.
   It defaults to an empty filter without any rule, i.e., 

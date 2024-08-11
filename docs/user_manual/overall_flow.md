@@ -158,8 +158,11 @@ emu.compile(docker, './output', override = True)
 ```
 
 The `internetMapEnabled` flag indicates whether the 
-visualization app (the Internet Map app) should be included in the 
-generated files. The `platform` option indicates which platform
+visualization app (the Internet Map app, running inside an independent container) 
+should be included in the generated 
+files (the default value is `True`, i.e., the map will
+be automatically included if this flag is not specified). 
+The `platform` option indicates which platform
 we are generating the emulation for, AMD64 or ARM64 (for Apple Silicon
 Machines, i.e., M1/M2 chips). 
 More features on docker and compiler can be 

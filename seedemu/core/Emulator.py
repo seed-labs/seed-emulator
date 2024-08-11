@@ -376,7 +376,12 @@ class Emulator:
             pnode.copySettings(vpnode)
 
         for layerName in self.__layers.db.keys():
-            self.__render(layerName, False, True)
+            if layerName != 'EtcHosts':
+                self.__render(layerName, False, True)
+        
+        # render EtcHost last
+        if 'EtcHosts' in self.__layers.db.keys():
+            self.__render('EtcHosts', False, True)
 
         # FIXME
         for (name, (layer, _)) in self.__layers.db.items():
