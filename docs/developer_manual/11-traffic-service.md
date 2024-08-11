@@ -10,7 +10,7 @@ The following includes some technical notes on the implementation, including asp
 
 ### TrafficService
 
-Based on the `service_type` parameter, the `TrafficService.install` method creates an instance of the appropriate traffic server. The traffic server can be an instance of either a `TrafficGenerator` or a `TrafficReceiver`. If a new traffic server is added, the `TrafficService.install` method should be updated to create an instance of the new traffic server.
+Based on the `service_type` parameter, the `TrafficService.install` method creates an instance of the appropriate traffic server and associates it with the given virtual node. If multiple traffic servers are insalled on the same virtual node, then the traffic servers are merged together. The traffic server can be an instance of either a `TrafficGenerator` or a `TrafficReceiver`. If a new traffic server is implemented, then the `TrafficService.install` method should be updated to create an instance of the new traffic server.
 
 ### TrafficGenerator
 
@@ -30,6 +30,8 @@ If a new traffic generator is added, it should be a subclass of the `TrafficGene
 - `addReceivers`: Adds traffic receiver host addresses to a traffic generator so that the traffic generator can send traffic to the specified hosts. We can specify the list of receiver hosts for the traffic generator using the `hosts` parameter.
 - `install`: Installs the traffic generator application on the host. It creates `/root/traffic-targets` file on the host to store the list of receiver hosts. Any subclass of the `TrafficGenerator` class should implement the `install` method to install necessary packages for the traffic generator application.
 
+- `extend`: Extends the traffic generator with another traffic generator. This method is used to merge multiple traffic generators together.
+
 - `start`: Starts the traffic generation process on the host.
 
 ## Traffic Receiver
@@ -43,3 +45,5 @@ The `TrafficReceiver` class is the base class for all traffic receivers. Any new
   - `name`: The virtual node name for the traffic receiver. It is used to configure the custom domain name for the underlying host.
   - `log_file`: The log file where the traffic receiver logs will be stored.
 - `install`: Installs the traffic receiver application on the host.  Any subclass of the `TrafficReceiver` class should implement the `install` method to install necessary packages for the traffic receiver application.
+
+- `extend`: Extends the traffic receiver with another traffic receiver. This method is used to merge multiple traffic receivers together.

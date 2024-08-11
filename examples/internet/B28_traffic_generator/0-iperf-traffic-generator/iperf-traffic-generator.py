@@ -48,9 +48,8 @@ def run(dumpfile=None):
         TrafficServiceType.IPERF_GENERATOR,
         log_file="/root/iperf3_generator.log",
         protocol="TCP",
-        duration=600,
-        rate=0,
-        extra_options="--debug",
+        duration=60,
+        rate=0
     ).addReceivers(hosts=["iperf-receiver-1", "iperf-receiver-2"])
 
 
