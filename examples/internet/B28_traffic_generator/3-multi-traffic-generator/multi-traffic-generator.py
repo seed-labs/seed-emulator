@@ -47,16 +47,16 @@ def run(dumpfile=None):
         TrafficServiceType.DITG_GENERATOR,
         log_file="/root/ditg_generator.log",
         protocol="UDP",
-        duration=120,
-        rate=5000,
+        duration=60,
+        rate=3000,
     ).addReceivers(hosts=["multi-traffic-receiver"])
     traffic_service.install(
         "multi-traffic-generator",
         TrafficServiceType.IPERF_GENERATOR,
         log_file="/root/iperf3_generator.log",
         protocol="TCP",
-        duration=600,
-        rate=0,
+        duration=60,
+        rate=3000,
     ).addReceivers(hosts=["multi-traffic-receiver"])
 
 

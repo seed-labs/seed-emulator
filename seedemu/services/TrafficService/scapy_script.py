@@ -41,7 +41,7 @@ def generate_traffic(source, destination, duration, log_file_name):
     t_end = time.time() + duration
     packet_sent = 0
     while time.time() < t_end:
-        send(IP(src=source, dst=destination) / ICMP())
+        send(IP(src=source, dst=destination) / ICMP(), verbose=False)
         packet_sent += 1
         with open(log_file_name, "w") as log_file:
             log_file.write(f"Sending traffic from {source} to {destination}\n")
