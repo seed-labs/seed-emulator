@@ -119,12 +119,16 @@ DockerCompilerFileTemplates['depends_on'] = """\
             - {dependsOn}
 """
 
+DockerCompilerFileTemplates['dependency'] = """\
+            {dep_name}:
+                condition:  {dep_condi}
+"""
+
 DockerCompilerFileTemplates['compose_service'] = """\
     {nodeId}:
         build: ./{nodeId}
         container_name: {nodeName}
-        depends_on:
-            - {dependsOn}
+{dependencies}
         cap_add:
             - ALL
         sysctls:
@@ -802,7 +806,59 @@ class Docker(Compiler):
         copyfile(hostpath, staged_path)
         return 'COPY {} {}\n'.format(staged_path, path)
 
-    def _compileNode(self, node: Node) -> str:
+
+    def computeNodeName(self, node ):
+        """
+        @brief given a node, compute its final container name, as it will be known in the docker-compose file
+        """
+        name = self.__naming_scheme.format(
+            asn = node.getAsn(),
+            role = self._nodeRoleToString(node.getRole()),
+            name = node.getName(),
+            displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
+            primaryIp = node.getInterfaces()[0].getAddress()
+        )
+
+        return sub(r'[^a-zA-Z0-9_.-]', '_', name)
+
+    def realNodeName(self, node):
+        """
+        @brief computes the sub directory names inside the output folder
+         
+        why is it distinct from computeNodeName() ?!
+        """
+        (scope, type, _) = node.getRegistryInfo()
+        prefix = self._contextToPrefix(scope, type)
+        return '{}{}'.format(prefix, node.getName())
+    
+    def realNetName(self,net):
+          """
+          @brief computes name  of a network as it will be known in the docker-compose file
+          """
+          (netscope, _, _) = net.getRegistryInfo()
+          net_prefix = self._contextToPrefix(netscope, 'net')
+          if net.getType() == NetworkType.Bridge: net_prefix = ''
+          return '{}{}'.format(net_prefix, net.getName())
+    
+    def startUpDependencies(self, node, registry):
+        """
+        @brief returns a list of container names , that need to start before 'node'
+        i.e. a scion host(node) depends on border-routers and control-services in its AS
+        """
+        
+        dependency_container: List[Tuple[str,str]] = [] # (container-name,condition)
+        (scope,type,name) = node.getRegistryInfo()
+        if type == 'hnode':
+          for router in  registry.getByType(scope,'rnode'):
+            dependency_container.append( (self.realNodeName(router),'service_started') )
+
+          for service in registry.getByType(scope,'csnode'):
+            dependency_container.append( (self.realNodeName(service),'service_started') )
+
+        return dependency_container
+
+
+    def _compileNode(self, node: Node, registry ) -> str: # add registry here as param, in order for a node to find its dependencies
         """!
         @brief Compile a single node. Will create folder for node and the
         dockerfile.
@@ -811,18 +867,14 @@ class Docker(Compiler):
 
         @returns docker-compose service string.
         """
-        (scope, type, _) = node.getRegistryInfo()
-        prefix = self._contextToPrefix(scope, type)
-        real_nodename = '{}{}'.format(prefix, node.getName())
+        real_nodename = self.realNodeName(node)
         node_nets = ''
         dummy_addr_map = ''
 
         for iface in node.getInterfaces():
             net = iface.getNet()
-            (netscope, _, _) = net.getRegistryInfo()
-            net_prefix = self._contextToPrefix(netscope, 'net')
-            if net.getType() == NetworkType.Bridge: net_prefix = ''
-            real_netname = '{}{}'.format(net_prefix, net.getName())
+      
+            real_netname = self.realNetName(net)
             address = iface.getAddress()
 
             if self.__self_managed_network and net.getType() != NetworkType.Bridge:
@@ -891,6 +943,8 @@ class Docker(Compiler):
                 volumeList = lst
             )
 
+        name = self.computeNodeName(node)
+
         dockerfile = DockerCompilerFileTemplates['dockerfile']
         mkdir(real_nodename)
         chdir(real_nodename)
@@ -951,21 +1005,18 @@ class Docker(Compiler):
         print(dockerfile, file=open('Dockerfile', 'w'))
 
         chdir('..')
+        deps = self.startUpDependencies(node,registry)
 
-        name = self.__naming_scheme.format(
-            asn = node.getAsn(),
-            role = self._nodeRoleToString(node.getRole()),
-            name = node.getName(),
-            displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
-            primaryIp = node.getInterfaces()[0].getAddress()
-        )
+        # this is required to support ARM and docker-compose v2 
+        (image, _) = self._selectImageFor(node)        
+        deps.append((md5(image.getName().encode('utf-8')).hexdigest(), 'service_started'))
 
-        name = sub(r'[^a-zA-Z0-9_.-]', '_', name)
 
         return DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
-            nodeName = name,
-            dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
+            nodeName = name,            
+            dependencies = ( "        depends_on:\n" if len(deps) >0 else '' )+ '\n'.join( map( lambda x: DockerCompilerFileTemplates['dependency'].format(dep_name=x[0], dep_condi=x[1]),
+                                           deps ) ),
             networks = node_nets,
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
@@ -981,18 +1032,15 @@ class Docker(Compiler):
 
         @returns docker-compose network string.
         """
-        (scope, _, _) = net.getRegistryInfo()
         if self.__self_managed_network and net.getType() != NetworkType.Bridge:
             pfx = next(self.__dummy_network_pool)
             net.setAttribute('dummy_prefix', pfx)
             net.setAttribute('dummy_prefix_index', 2)
             self._log('self-managed network: using dummy prefix {}'.format(pfx))
 
-        net_prefix = self._contextToPrefix(scope, 'net')
-        if net.getType() == NetworkType.Bridge: net_prefix = ''
-
+        
         return DockerCompilerFileTemplates['compose_network'].format(
-            netId = '{}{}'.format(net_prefix, net.getName()),
+            netId = self.realNetName(net),
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
             mtu = net.getMtu(),
             labelList = self._getNetMeta(net)
@@ -1048,23 +1096,23 @@ class Docker(Compiler):
         for ((scope, type, name), obj) in registry.getAll().items():
             if type == 'rnode':
                 self._log('compiling router node {} for as{}...'.format(name, scope))
-                self.__services += self._compileNode(obj)
+                self.__services += self._compileNode(obj,registry)
 
             if type == 'csnode':
                 self._log('compiling control service node {} for as{}...'.format(name, scope))
-                self.__services += self._compileNode(obj)
+                self.__services += self._compileNode(obj,registry)
 
             if type == 'hnode':
                 self._log('compiling host node {} for as{}...'.format(name, scope))
-                self.__services += self._compileNode(obj)
+                self.__services += self._compileNode(obj,registry)
 
             if type == 'rs':
                 self._log('compiling rs node for {}...'.format(name))
-                self.__services += self._compileNode(obj)
+                self.__services += self._compileNode(obj,registry)
 
             if type == 'snode':
                 self._log('compiling service node {}...'.format(name))
-                self.__services += self._compileNode(obj)
+                self.__services += self._compileNode(obj,registry)
 
         if self.__internet_map_enabled:
             self._log('enabling seedemu-internet-map...')
