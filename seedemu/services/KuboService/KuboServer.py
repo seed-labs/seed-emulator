@@ -3,7 +3,6 @@ from seedemu.core import Node, Server, Service, BaseSystem
 from seedemu.services.KuboService.KuboEnums import Architecture, Distribution
 from seedemu.services.KuboService.KuboUtils import DottedDict, getIP
 from typing import Any, Collection
-from typing_extensions import Self
 import json, re
 
 DEFAULT_KUBO_VERSION = 'v0.27.0'
