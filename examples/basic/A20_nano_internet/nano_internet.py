@@ -167,8 +167,8 @@ docker = Docker(platform=platform)
 docker.addImage(DockerImage('handsonsecurity/seed-ubuntu:small', [], local = False), priority=-1)
 docker.setImageOverride(as152.getHost('host1'), 'handsonsecurity/seed-ubuntu:small')
 
-# Use the "seed-ubuntu-large" custom image from local
-docker.addImage(DockerImage('seed-ubuntu-large', [], local = True), priority=-1)
+# Use the "seedemu-multiarch" custom image from local
+docker.addImage(DockerImage('seedemu-multiarch', [], local = True), priority=-1)
 docker.setImageOverride(as152.getHost('host2'), 'seedemu-multiarch')
 
 # Generate the Docker files
