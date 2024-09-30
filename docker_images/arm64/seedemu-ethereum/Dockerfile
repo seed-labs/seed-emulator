@@ -15,7 +15,7 @@ RUN make install
 RUN make install-lcli
 WORKDIR /
 
-FROM handsonsecurity/seedemu-multiarch-base:buildx-latest
+FROM handsonsecurity/seedemu-multiarch-base
 
 RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common python3 python3-pip
 RUN pip install web3
