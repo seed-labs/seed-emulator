@@ -4,6 +4,6 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        image: handsonsecurity/seedemu-multiarch-base:buildx-latest
+        image: handsonsecurity/seedemu-multiarch-base:22.04
 
 
