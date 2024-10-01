@@ -26,7 +26,7 @@ class DottedDict(dict):
         elif isinstance(src, Mapping):
             newMapping = {}
             for key, value in src.items():
-                if type(value) == dict:
+                if type(value) is dict:
                     newMapping[key] = DottedDict(value)
                 else:
                     newMapping[key] = value
@@ -35,7 +35,7 @@ class DottedDict(dict):
         else:
             newIterable = []
             for key, value in src:
-                if type(value) == dict:
+                if type(value) is dict:
                     newIterable.append((key, DottedDict(value)))
                 else:
                     newIterable.append((key, value))
