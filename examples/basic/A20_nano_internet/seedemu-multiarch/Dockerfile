@@ -1,1 +1,1 @@
-FROM handsonsecurity/seedemu-multiarch-base
+FROM handsonsecurity/seedemu-multiarch-base:buildx-latest
