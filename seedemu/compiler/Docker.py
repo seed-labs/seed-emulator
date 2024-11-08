@@ -329,7 +329,7 @@ class Docker(Compiler):
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
-        internetMapEnabled: bool = False,
+        internetMapEnabled: bool = True,
         internetMapPort: int = 8080,
         etherViewEnabled: bool = False,
         etherViewPort: int = 5000,
@@ -924,6 +924,9 @@ class Docker(Compiler):
             dockerfile += self._addFile('/root/.zshrc.pre', DockerCompilerFileTemplates['zshrc_pre'])
 
         for (cmd, fork) in node.getStartCommands():
+            start_commands += '{}{}\n'.format(cmd, ' &' if fork else '')
+
+        for (cmd, fork) in node.getPostConfigCommands():
             start_commands += '{}{}\n'.format(cmd, ' &' if fork else '')
 
         dockerfile += self._addFile('/start.sh', DockerCompilerFileTemplates['start_script'].format(

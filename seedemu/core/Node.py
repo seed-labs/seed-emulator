@@ -8,7 +8,7 @@ from .Configurable import Configurable
 from .enums import NetworkType
 from .Visualization import Vertex
 from ipaddress import IPv4Address, IPv4Interface
-from typing import List, Dict, Set, Tuple
+from typing import List, Dict, Set, Tuple, Optional
 from string import ascii_letters
 from random import choice
 from .BaseSystem import BaseSystem
@@ -217,17 +217,23 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __softwares: Set[str]
     __build_commands: List[str]
     __start_commands: List[Tuple[str, bool]]
+    __post_config_commands: List[Tuple[str, bool]]
     __ports: List[Tuple[int, int, str]]
     __privileged: bool
 
     __configured: bool
     __pending_nets: List[Tuple[str, str]]
-    __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str]]
+
+    # Dict of (peername, peerasn) -> (localaddr, netname, netProperties) -- netProperties = (latency, bandwidth, packetDrop, MTU)
+    __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str, Tuple[int,int,float,int]]]
 
     __shared_folders: Dict[str, str]
     __persistent_storages: List[str]
 
     __name_servers: List[str]
+
+    __geo: Tuple[float,float,str] # (Latitude,Longitude,Address) -- optional parameter that contains the geographical location of the Node
+    __note: str # optional parameter that contains a note about the Node
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -252,6 +258,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__softwares = set()
         self.__build_commands = []
         self.__start_commands = []
+        self.__post_config_commands = []
         self.__ports = []
         self.__privileged = False
         self.__base_system = BaseSystem.DEFAULT
@@ -263,10 +270,14 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__shared_folders = {}
         self.__persistent_storages = []
 
-        # for soft in DEFAULT_SOFTWARE:
-        #     self.__softwares.add(soft)
+        for soft in DEFAULT_SOFTWARE:
+            self.__softwares.add(soft)
 
         self.__name_servers = []
+        self.__host_names = [f"{self.__scope}-{self.__name}"]
+
+        self.__geo = None
+        self.__note = None
 
     def configure(self, emulator: Emulator):
         """!
@@ -280,6 +291,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         assert not self.__configured, 'Node already configured.'
         assert not self.__asn == 0, 'Virtual physical node must not be used in render/configure'
 
+        self.__configured = True
         reg = emulator.getRegistry()
 
         for (netname, address) in self.__pending_nets:
@@ -307,19 +319,21 @@ class Node(Printable, Registrable, Configurable, Vertex):
             elif reg.has(str(peerasn), 'hnode', peername): peer = reg.get(str(peerasn), 'hnode', peername)
             else: assert False, 'as{}/{}: cannot xc to node as{}/{}: no such node'.format(self.getAsn(), self.getName(), peerasn, peername)
 
-            (peeraddr, netname) = peer.getCrossConnect(self.getAsn(), self.getName())
-            (localaddr, _) = self.__xcs[(peername, peerasn)]
+            (peeraddr, netname, (peerLatency, peerBandwidth, peerPacketDrop, peerMTU)) = peer.getCrossConnect(self.getAsn(), self.getName())
+            (localaddr, _, (latency, bandwidth, packetDrop, mtu)) = self.__xcs[(peername, peerasn)]
             assert localaddr.network == peeraddr.network, 'as{}/{}: cannot xc to node as{}/{}: {}.net != {}.net'.format(self.getAsn(), self.getName(), peerasn, peername, localaddr, peeraddr)
-
+            assert (peerLatency == latency and peerBandwidth == bandwidth and peerPacketDrop == packetDrop and peerMTU == mtu), 'as{}/{}: cannot xc to node as{}/{}: because link properties (({},{},{},{}) -- ({},{},{},{})) dont match'.format(self.getAsn(), self.getName(), peerasn, peername, latency, bandwidth, packetDrop, mtu, peerLatency, peerBandwidth, peerPacketDrop, peerMTU)
+            
             if netname != None:
                 self.__joinNetwork(reg.get('xc', 'net', netname), str(localaddr.ip))
-                self.__xcs[(peername, peerasn)] = (localaddr, netname)
+                self.__xcs[(peername, peerasn)] = (localaddr, netname, (latency, bandwidth, packetDrop,mtu))
             else:
                 # netname = 'as{}.{}_as{}.{}'.format(self.getAsn(), self.getName(), peerasn, peername)
                 netname = ''.join(choice(ascii_letters) for i in range(10))
                 net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False) # TODO: XC nets w/ direct flag?
+                net.setDefaultLinkProperties(latency, bandwidth, packetDrop).setMtu(mtu) # Set link properties
                 self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
-                self.__xcs[(peername, peerasn)] = (localaddr, netname)
+                self.__xcs[(peername, peerasn)] = (localaddr, netname, (latency, bandwidth, packetDrop, mtu))
 
         if len(self.__name_servers) == 0:
             return
@@ -345,6 +359,22 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         return self
 
+    def getHostNames(self) -> str:
+        """!
+        @brief Get all host names for this node.
+        @returns node host names.
+        """
+        return self.__host_names
+
+    def addHostName(self, name: str) -> Node:
+        """!
+        @brief Add a new host name to this node.
+        @param name new host name.
+        @returns self, for chaining API calls.
+        """
+        self.__host_names.append(name)
+        return self
+
     def getNameServers(self) -> List[str]:
         """!
         @brief get configured recursive name servers on this node.
@@ -366,6 +396,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns self, for chaining API calls.
         """
         self.__ports.append((host, node, proto))
+
+        return self
 
     def addPortForwarding(self, host: int, node: int, proto:str = 'tcp') -> Node:
         """!
@@ -499,34 +531,37 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         return self
 
-    def crossConnect(self, peerasn: int, peername: str, address: str) -> Node:
+    def crossConnect(self, peerasn: int, peername: str, address: str, latency: int=0, bandwidth: int=0, packetDrop: float=0, MTU: int=1500) -> Node:
         """!
         @brief create new p2p cross-connect connection to a remote node.
         @param peername node name of the peer node.
         @param peerasn asn of the peer node.
         @param address address to use on the interface in CIDR notation. Must
         be within the same subnet.
+        @param latency latency the cross connect network will have
+        @param bandwidth bandwidth the cross connect network will have
+        @param packetDrop packet drop the cross connect network will have
 
         @returns self, for chaining API calls.
         """
         assert not self.__asn == 0, 'This API is only available on a real physical node.'
         assert peername != self.getName() or peerasn != self.getName(), 'cannot XC to self.'
-        self.__xcs[(peername, peerasn)] = (IPv4Interface(address), None)
+        self.__xcs[(peername, peerasn)] = (IPv4Interface(address), None, (latency,bandwidth,packetDrop,MTU))
 
-    def getCrossConnect(self, peerasn: int, peername: str) -> Tuple[IPv4Interface, str]:
+    def getCrossConnect(self, peerasn: int, peername: str) -> Tuple[IPv4Interface, str, Tuple[int, int, float, int]]:
         """!
         @brief retrieve IP address for the given peer.
         @param peername node name of the peer node.
         @param peerasn asn of the peer node.
 
         @returns tuple of IP address and XC network name. XC network name will
-        be None if the network has not yet been created.
+        be None if the network has not yet been created. And Tuple with network link properties.
         """
         assert not self.__asn == 0, 'This API is only available on a real physical node.'
         assert (peername, peerasn) in self.__xcs, 'as{}/{} is not in the XC list.'.format(peerasn, peername)
         return self.__xcs[(peername, peerasn)]
 
-    def getCrossConnects(self) -> Dict[Tuple[str, int], Tuple[IPv4Interface, str]]:
+    def getCrossConnects(self) -> Dict[Tuple[str, int], Tuple[IPv4Interface, str, Tuple[int, int, float]]]:
         """!
         @brief get all cross connects on this node.
 
@@ -742,7 +777,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         return self
 
-    def appendStartCommand(self, cmd: str, fork: bool = False) -> Node:
+    def appendStartCommand(self, cmd: str, fork: bool = False, isPostConfigCommand = False) -> Node:
         """!
         @brief Add new command to start script.
 
@@ -752,15 +787,28 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         @param cmd command to add.
         @param fork (optional) fork to command to background?
+        @param isPostConfigCommand indicates that the command is executed after the basic configuration.
 
         Use this to add start steps to the node. For example, if using the
         "docker" compiler, this will be added to start.sh.
 
         @returns self, for chaining API calls.
         """
-        self.__start_commands.append((cmd, fork))
+        if isPostConfigCommand:
+            self.__post_config_commands.append((cmd, fork))
+        else:
+            self.__start_commands.append((cmd, fork))
 
         return self
+    
+    def getPostConfigCommands(self) -> List[Tuple[str, bool]]:
+        """!
+        @brief Get user start commands.
+
+        @returns list of tuples, where the first element is command, and the
+        second element indicates if this command should be forked.
+        """
+        return self.__post_config_commands
 
     def getStartCommands(self) -> List[Tuple[str, bool]]:
         """!
@@ -823,6 +871,46 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns list of persistent storage folder.
         """
         return self.__persistent_storages
+    
+    def setGeo(self, Lat: float, Long: float, Address: str="") -> Node:
+        """!
+        @brief Set geographical location of the Node
+
+        @param Lat Latitude
+        @param Long Longitude
+        @param Address Address
+
+        @returns self, for chaining API calls.
+        """
+        self.__geo = (Lat, Long, Address)
+        return self
+    
+    def getGeo(self) -> Optional[Tuple[float,float,str]]:
+        """!
+        @brief Get geographical location of the Node
+
+        @returns Tuple (Latitude, Longitude, Address)
+        """
+        return self.__geo
+    
+    def setNote(self, note: str) -> Node:
+        """!
+        @brief Set a note about the Node
+
+        @param note Note
+
+        @returns self, for chaining API calls.
+        """
+        self.__note = note
+        return self
+    
+    def getNote(self) -> Optional[str]:
+        """!
+        @brief Get a note about the Node
+
+        @returns Note
+        """
+        return self.__note
 
     def copySettings(self, node: Node):
         """!
@@ -845,6 +933,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for p in node.getPersistentStorages(): self.addPersistentStorage(p)
         for (c, f) in node.getStartCommands(): self.appendStartCommand(c, f)
+        # for (c, f) in node.getUserStartCommands(): self.appendUserStartCommand(c, f)
         for c in node.getBuildCommands(): self.addBuildCommand(c)
         for s in node.getSoftware(): self.addSoftware(s)
 
@@ -891,6 +980,10 @@ class Node(Printable, Registrable, Configurable, Vertex):
         out += 'Additional Start Commands:\n'
         indent += 4
         for (cmd, fork) in self.__start_commands:
+            out += ' ' * indent
+            out += '{}{}\n'.format(cmd, ' (fork)' if fork else '')
+
+        for (cmd, fork) in self.__post_config_commands:
             out += ' ' * indent
             out += '{}{}\n'.format(cmd, ' (fork)' if fork else '')
         indent -= 4

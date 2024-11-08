@@ -1,5 +1,0 @@
-eth_account==0.5.9
-requests==2.22.0
-eth-rlp<0.3
-web3==5.31.1
-docker==4.1.0

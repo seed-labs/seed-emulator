@@ -1,11 +1,10 @@
 from __future__ import annotations
 from .EthEnum import ConsensusMechanism
-from typing import Dict, List
+from typing import List
 import json
 from datetime import datetime, timezone
 from os import path
 from .EthTemplates import GenesisFileTemplates
-from web3 import Web3
 from sys import stderr
 from time import time
 
@@ -14,14 +13,16 @@ class Genesis():
     @brief Genesis manage class
     """
 
-    __genesis:dict
-    __consensusMechanism:ConsensusMechanism
-    
-    def __init__(self, consensus:ConsensusMechanism):
-        self.__consensusMechanism = consensus
-        self.__genesis = json.loads(GenesisFileTemplates[self.__consensusMechanism.value])
-        self.__genesis["timestamp"] = hex(int((time())))
+    _genesis:dict
+    _consensusMechanism:ConsensusMechanism
 
+    def __init__(self, consensus:ConsensusMechanism):
+        from web3 import Web3
+        self._Web3 = Web3
+        self._consensusMechanism = consensus
+        self._genesis = json.loads(GenesisFileTemplates[self._consensusMechanism.value])
+        self._genesis["timestamp"] = hex(int((time())))
+        
 
     def setGenesis(self, customGenesis:str):
         """!
@@ -31,7 +32,7 @@ class Genesis():
 
         @returns self, for chaining calls.
         """
-        self.__genesis = json.loads(customGenesis)
+        self._genesis = json.loads(customGenesis)
 
         return self
 
@@ -41,7 +42,23 @@ class Genesis():
         
         returns genesis.
         """
-        return json.dumps(self.__genesis)
+        return json.dumps(self._genesis)
+
+    def addCode(self, address: str, code: str) -> Genesis:
+        """!
+        @brief add code to genesis file.
+
+        @param address address to add code.
+        @param code code to add.
+
+        @returns self, for chaining calls.
+        """
+        if self._genesis["alloc"][address[2:]] is not None:
+            self._genesis["alloc"][address[2:]]["code"] = code
+        else:
+            self._genesis["alloc"][address[2:]] = {"code": code}
+
+        return self
 
     def addAccounts(self, accounts:List[AccountStructure]) -> Genesis:
         """!
@@ -56,7 +73,7 @@ class Genesis():
             balance = account.balance
 
             assert balance >= 0, "Genesis::addAccounts: balance cannot have a negative value. Requested Balance Value : {}".format(account.getBalance())
-            self.__genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
+            self._genesis["alloc"][address[2:]] = {"balance":"{}".format(balance)}
 
         return self
 
@@ -72,8 +89,8 @@ class Genesis():
         """
 
         assert balance >= 0, "Genesis::allocateBalance: balance cannot have a negative value. Requested Balance Value : {}".format(balance)
-        checksum_address = Web3.toChecksumAddress(address)
-        self.__genesis["alloc"][checksum_address[2:]] = {"balance":"{}".format(balance)}
+        checksum_address = self._Web3.toChecksumAddress(address)
+        self._genesis["alloc"][checksum_address[2:]] = {"balance":"{}".format(balance)}
 
         return self
 
@@ -90,14 +107,14 @@ class Genesis():
         @returns self, for chaining API calls. 
         """
 
-        assert self.__consensusMechanism == ConsensusMechanism.POA, 'setSigner method supported only in POA consensus.'
+        assert self._consensusMechanism == ConsensusMechanism.POA, 'setSigner method supported only in POA consensus.'
 
         signerAddresses = ''
 
         for account in accounts:
             signerAddresses = signerAddresses + account.address[2:]
-        
-        self.__genesis["extraData"] = GenesisFileTemplates['POA_extra_data'].format(signer_addresses=signerAddresses)
+
+        self._genesis["extraData"] = GenesisFileTemplates['POA_extra_data'].format(signer_addresses=signerAddresses)
 
         return self
 
@@ -110,7 +127,7 @@ class Genesis():
         @returns self, for chaining API calls
         """
 
-        self.__genesis["gasLimit"] = hex(gasLimit) 
+        self._genesis["gasLimit"] = hex(gasLimit) 
 
         return self
 
@@ -121,7 +138,7 @@ class Genesis():
         @returns self, for chaining API calls
         """
 
-        self.__genesis["config"]["chainId"] = chainId
+        self._genesis["config"]["chainId"] = chainId
 
         return self
 
@@ -171,6 +188,27 @@ class EthAccount():
         return AccountStructure(account.address, balance, keystore_filename, keystore_content, password)
 
     @staticmethod
+    def importAccountFromKey(key:str, balance: int):
+        """
+        @brief Call this api to import an account from key.
+
+        @param key key hex string of an account to import.
+        @param balance The balance to allocate to the account.
+
+        @returns self, for chaining API calls.
+        """
+        from eth_account import Account
+
+        account = Account.from_key(key)
+
+        keystore_content = json.dumps(EthAccount.__encryptAccount(account=account, password="admin"))
+
+        datastr = datetime.now(timezone.utc).isoformat().replace("+00:00", "000Z").replace(":","-")
+        keystore_filename = "UTC--"+datastr+"--"+account.address
+        
+        return AccountStructure(account.address, balance, keystore_filename, keystore_content, "admin")
+    
+    @staticmethod
     def __encryptAccount(account, password:str):
         from eth_account import Account
         while True:
@@ -181,6 +219,7 @@ class EthAccount():
     @staticmethod
     def createEmulatorAccountFromMnemonic(id:int, mnemonic:str, balance:int, index:int, password:str):
         from eth_account import Account
+        from web3 import Web3
         Account.enable_unaudited_hdwallet_features()
 
         EthAccount._log('creating node_{} emulator account {} from mnemonic...'.format(id, index))
@@ -206,6 +245,7 @@ class EthAccount():
     @staticmethod
     def createLocalAccountFromMnemonic(mnemonic:str, balance:int, index:int):
         from eth_account import Account
+        from web3 import Web3
         Account.enable_unaudited_hdwallet_features()
 
         EthAccount._log('creating local account {} from mnemonic...'.format(index))
@@ -230,7 +270,7 @@ class EthAccount():
         @brief Log to stderr.
         """
         print("==== EthAccount: {}".format(message), file=stderr)
-        
+
 
 class SmartContract():
 

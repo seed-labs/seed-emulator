@@ -70,6 +70,15 @@ class InternetExchange(Printable, Configurable):
         @returns RS node.
         """
         return self.__rs
+    
+    def getNetwork(self) -> Network:
+        """!
+        @brief Get the network of Internet Exchange.
+
+        @returns Network.
+        """
+
+        return self.__net
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

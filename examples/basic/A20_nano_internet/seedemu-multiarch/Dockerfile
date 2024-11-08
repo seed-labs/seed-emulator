@@ -1,0 +1,1 @@
+FROM handsonsecurity/seedemu-multiarch-base:buildx-latest

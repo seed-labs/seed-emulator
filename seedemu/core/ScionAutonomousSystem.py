@@ -36,6 +36,8 @@ class ScionAutonomousSystem(AutonomousSystem):
     __beaconing_intervals: Tuple[Optional[str], Optional[str], Optional[str]]
     __beaconing_policy: Dict[str, Dict]
     __next_ifid: int                     # Next IFID assigned to a link
+    __note: str # optional free form parameter that contains interesting information about AS. This will be included in beacons if it is set
+    __generateStaticInfoConfig:  bool
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
@@ -49,6 +51,9 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__beaconing_intervals = (None, None, None)
         self.__beaconing_policy = {}
         self.__next_ifid = 1
+        self.__note = None
+        self.__generateStaticInfoConfig = False
+    
 
     def registerNodes(self, emulator: Emulator):
         """!
@@ -226,6 +231,42 @@ class ScionAutonomousSystem(AutonomousSystem):
         @returns Node.
         """
         return self.__control_services[name]
+
+    def setNote(self, note: str) -> ScionAutonomousSystem:
+        """!
+        @brief Set a note for the AS.
+
+        @param note Note.
+        @returns self
+        """
+        self.__note = note
+        return self 
+
+    def getNote(self) -> Optional[str]:
+        """!
+        @brief Get the note for the AS.
+
+        @returns Note or None if no note is set.
+        """
+        return self.__note
+
+    def setGenerateStaticInfoConfig(self, generateStaticInfoConfig: bool) -> ScionAutonomousSystem:
+        """!
+        @brief Set the generateStaticInfoConfig flag.
+
+        @param generateStaticInfoConfig Flag.
+        @returns self
+        """
+        self.__generateStaticInfoConfig = generateStaticInfoConfig
+        return self
+
+    def getGenerateStaticInfoConfig(self) -> bool:
+        """!
+        @brief Get the generateStaticInfoConfig flag.
+
+        @returns Flag.
+        """
+        return self.__generateStaticInfoConfig
 
     def _doCreateGraphs(self, emulator: Emulator):
         """!

@@ -32,12 +32,14 @@ To run the emulator, you need to install `docker`, `docker-compose`,
 and `python3`.
 
 
-### Set up the environment variable 
+### Set up the project
 
-To run the emulator code, you need to add this folder to the `PYTHONPATH` 
-environment variable. This can be done by running `source development.env` 
+To run the emulator code, we can do one of the followings:
+
+- Run `pip install -e file:.` inside the project's root directory. It will install the project ( file:. current path ) in editable mode. It creates a symlink of current folder to python's default search path.
+
+- Add this folder to the `PYTHONPATH` environment variable. This can be done by running `source development.env` 
 inside the project's root directory.
-
 
 ### Set up the proxy (not needed if you don't have an issue)
 
