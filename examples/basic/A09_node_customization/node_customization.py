@@ -48,7 +48,8 @@ node.addBuildCommand("curl http://example.com")
 
 # Create a file on the node; file content come from hostpath
 # Dockerfile: COPY 0a1fa965b6af40555d9b54e6693b2af1 /myprog.py
-node.importFile(hostpath="/tmp/myprog.py",
+
+node.importFile(hostpath=os.getcwd() + "/myprog.py",
                 containerpath="/myprog.py")
 
 # Create a file on the node; file content is the provided string
@@ -66,3 +67,4 @@ node.appendStartCommand("python3 /myprog.py", fork=True)
 
 emu.render()
 emu.compile(Docker(platform=platform), './output', override=True)
+
