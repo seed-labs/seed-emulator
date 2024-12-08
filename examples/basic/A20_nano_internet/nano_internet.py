@@ -164,8 +164,13 @@ emu.getBindingFor('web02').setDisplayName('Web-2')
 docker = Docker(platform=platform)
 
 # Use the "handsonsecurity/seed-ubuntu:small" custom image from dockerhub
-docker.addImage(DockerImage('handsonsecurity/seed-ubuntu:small', [], local = False), priority=-1)
-docker.setImageOverride(as152.getHost('host1'), 'handsonsecurity/seed-ubuntu:small')
+if platform == Platform.ARM64:
+    imagename = 'handsonsecurity/seed-ubuntu:small-arm'
+else: 
+    imagename = 'handsonsecurity/seed-ubuntu:small'
+
+docker.addImage(DockerImage(imagename, [], local = False), priority=-1)
+docker.setImageOverride(as152.getHost('host1'), imagename)
 
 # Use the "seedemu-multiarch" custom image from local
 docker.addImage(DockerImage('seedemu-multiarch', [], local = True), priority=-1)
