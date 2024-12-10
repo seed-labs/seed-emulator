@@ -289,7 +289,7 @@ class GlobalRoutePlanner(object):
         This function finds the shortest path connecting origin and destination
         using A* search with distance heuristic.
         origin      :   carla.Location object of start position
-        destination :   carla.Location object of of end position
+        destination :   carla.Location object of end position
         return      :   path as list of node ids (as int) of the graph self._graph
         connecting origin and destination
         """
