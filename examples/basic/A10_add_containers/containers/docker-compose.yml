@@ -1,0 +1,37 @@
+version: "3.4"
+services:
+
+    hnode_new_host0:
+        build: ./new_host0
+        container_name: new-host0-10.151.0.99
+
+        cap_add:
+            - ALL
+        privileged: true
+
+        networks:
+            output_net_151_net0:
+                ipv4_address: 10.151.0.99
+
+
+    hnode_new_host1:
+        build: ./new_host1
+        container_name: new-host1-10.152.0.99
+
+        cap_add:
+            - ALL
+        privileged: true
+
+        networks:
+            output_net_152_net0:
+                ipv4_address: 10.152.0.99
+
+
+networks:
+
+    output_net_151_net0:
+      external: true
+
+    output_net_152_net0:
+      external: true
+

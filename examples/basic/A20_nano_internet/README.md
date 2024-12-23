@@ -17,4 +17,12 @@ features are demonstrated in this example:
 - Compilation
 
 
+## Note for ARM machine 
+
+It should be noted that in the example, we used 
+a custom image called `handsonsecurity/seed-ubuntu:small` (for AMD)
+and `handsonsecurity/seed-ubuntu:small-arm` (for ARM).
+If you use Apple silicon machines, you need to run this example
+using the `arm` argument (`./nano_internet.py arm`);
+otherwise the AMD image will be used, which can cause problems. 
 
