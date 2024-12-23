@@ -43,17 +43,18 @@ connection = "/cache/{name}.beacon.db"
 _Templates["dispatcher"] = """\
 [dispatcher]
 id = "dispatcher"
+local_udp_forwarding = true
 
+[dispatcher.service_addresses]
+"{isd_as},CS" = "{ip}:30254"
+"{isd_as},DS" = "{ip}:30254"
 """
 
 _CommandTemplates: Dict[str, str] = {}
 
 _CommandTemplates["br"] = "scion-border-router --config /etc/scion/{name}.toml >> /var/log/scion-border-router.log 2>&1"
 
-_CommandTemplates["cs"] = """\
-bash -c 'until [ -e /run/shm/dispatcher/default.sock ]; do sleep 1; done;\
-scion-control-service --config /etc/scion/{name}.toml >> /var/log/scion-control-service.log 2>&1'\
-"""
+_CommandTemplates["cs"] = "scion-control-service --config /etc/scion/{name}.toml >> /var/log/scion-control-service.log 2>&1"
 
 _CommandTemplates["disp"] = "scion-dispatcher --config /etc/scion/dispatcher.toml >> /var/log/scion-dispatcher.log 2>&1"
 
@@ -134,7 +135,7 @@ class ScionRouting(Routing):
         for ((scope, type, name), obj) in reg.getAll().items():
             if type in ['rnode', 'csnode', 'hnode']:
                 node: Node = obj
-                asn = obj.getAsn()
+                asn = obj.getAsn()                
                 as_: ScionAutonomousSystem = base_layer.getAutonomousSystem(asn)
                 isds = isd_layer.getAsIsds(asn)
                 assert len(isds) == 1, f"AS {asn} must be a member of exactly one ISD"
@@ -147,12 +148,14 @@ class ScionRouting(Routing):
 
             if type == 'rnode':
                 rnode: ScionRouter = obj
-                self.__provision_router_config(rnode)
+                self.__provision_router_config(rnode)                
             elif type == 'csnode':
                 csnode: Node = obj
                 self._provision_cs_config(csnode, as_)
-                if as_.getGenerateStaticInfoConfig():
-                    self._provision_staticInfo_config(csnode, as_) # provision staticInfoConfig.json
+                self.__provision_dispatcher_config(csnode, isds[0][0], as_)
+            elif type == 'hnode':
+                hnode: Node = obj
+                self.__provision_dispatcher_config(hnode, isds[0][0], as_)
 
     @staticmethod
     def __provision_base_config(node: Node):
@@ -164,8 +167,28 @@ class ScionRouting(Routing):
             _Templates["general"].format(name="sd1") +
             _Templates["trust_db"].format(name="sd1") +
             _Templates["path_db"].format(name="sd1"))
+    
+    @staticmethod
+    def __provision_dispatcher_config(node: Node, isd: int, as_: ScionAutonomousSystem):
+        """Set dispatcher configuration on host and cs nodes."""
 
-        node.setFile("/etc/scion/dispatcher.toml", _Templates["dispatcher"])
+        isd_as = f"{isd}-{as_.getAsn()}"
+        
+        ip = None
+        ifaces = node.getInterfaces()
+        if len(ifaces) < 1:
+            raise ValueError(f"Node {node.getName()} has no interfaces")
+        net = ifaces[0].getNet()                    
+        control_services = as_.getControlServices()
+        for cs in control_services:
+            cs_iface = as_.getControlService(cs).getInterfaces()[0]
+            if cs_iface.getNet() == net:
+                ip = cs_iface.getAddress()
+                break        
+        if ip is None:
+            raise ValueError(f"Node {node.getName()} has no interface in the control service network")
+        
+        node.setFile("/etc/scion/dispatcher.toml", _Templates["dispatcher"].format(isd_as=isd_as, ip=ip))
 
     @staticmethod
     def __provision_router_config(router: ScionRouter):
