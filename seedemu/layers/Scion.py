@@ -188,19 +188,14 @@ class ScionBuildConfig():
         """
         method to build all scion binaries and ouput to .scion_build_output based on the configuration mode
         """
-        SCION_RELEASE_TEMPLATE = f"""FROM alpine 
-        RUN apk add --no-cache wget tar
-        WORKDIR /app
-        RUN wget -qO- {self.release_location} | tar xvz -C /app
-        """
-        SCION_BUILD_TEMPLATE = f"""FROM golang:1.22-alpine 
-        RUN apk add --no-cache git
-        RUN {self.__generateGitCloneString(self.git_repo_url,self.checkout)}
-        RUN cd scion && go mod tidy && CGO_ENABLED=0 go build -o bin ./router/... ./control/... ./dispatcher/... ./daemon/... ./scion/... ./scion-pki/... ./gateway/...
-        """
         if self.mode == "release":
             if not self.__is_local_path(self.release_location):
                 if not os.path.isdir(f".scion_build_output/scion_binaries_{self.version}"):
+                    SCION_RELEASE_TEMPLATE = f"""FROM alpine 
+                    RUN apk add --no-cache wget tar
+                    WORKDIR /app
+                    RUN wget -qO- {self.release_location} | tar xvz -C /app
+                    """
                     dockerfile = BuildtimeDockerFile(SCION_RELEASE_TEMPLATE)
                     container = BuildtimeDockerImage(f"scion-release-fetch-container_{self.version}").build(dockerfile).container()
                     current_dir = os.getcwd()
@@ -217,6 +212,11 @@ class ScionBuildConfig():
                 return self.release_location 
         else:
             if not os.path.isdir(f".scion_build_output/scion_binaries_{self.checkout}"):
+                SCION_BUILD_TEMPLATE = f"""FROM golang:1.22-alpine 
+                RUN apk add --no-cache git
+                RUN {self.__generateGitCloneString(self.git_repo_url,self.checkout)}
+                RUN cd scion && go mod tidy && CGO_ENABLED=0 go build -o bin ./router/... ./control/... ./dispatcher/... ./daemon/... ./scion/... ./scion-pki/... ./gateway/...
+                """
                 dockerfile = BuildtimeDockerFile(SCION_BUILD_TEMPLATE)
                 container = BuildtimeDockerImage(f"scion-build-container-{self.checkout}").build(dockerfile).container()
                 current_dir = os.getcwd()
