@@ -377,11 +377,9 @@ class ScionRouting(Routing):
         """Install SCION packages on the node."""
         scion_layer: Scion = emulator.getLayer(layerName="Scion")
         buildConfiguration: ScionBuildConfig = scion_layer.getBuildConfiguration()
-        tmp_dir = buildConfiguration.generateBuild()
-        # list all the binaries in the directory with binaries
-        binaries = [f for f in os.listdir(tmp_dir) if os.path.isfile(os.path.join(tmp_dir, f))]
-        for binary in binaries:
-            node.importFile(f"{tmp_dir}/{binary}",f"/bin/{binary}")
+        build_dir = buildConfiguration.generateBuild()
+        node.addSharedFolder("/bin/scion/", build_dir)
+        node.addBuildCommand("export PATH=$PATH:/bin/scion/")
 
         node.addSoftware("apt-transport-https")
         node.addSoftware("ca-certificates")
