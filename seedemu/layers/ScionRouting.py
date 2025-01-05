@@ -12,7 +12,7 @@ import inspect
 from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, Network, Router, BaseOption, OptionMode, Layer
 from seedemu.core.enums import NetworkType
 from seedemu.layers import Routing, ScionBase, ScionIsd
-from seedemu.layers.Scion import Scion
+from seedemu.layers.Scion import Scion, ScionBuildConfig
 from seedemu.core.ScionAutonomousSystem import IA
 
 valid_keys = {
@@ -321,6 +321,7 @@ class ScionRouting(Routing):
         else:
             super().configure(emulator)
         reg = emulator.getRegistry()
+
         for ((scope, type, name), obj) in reg.getAll().items():
 
             if type not in ['hnode', 'csnode', 'brdnode']: continue
@@ -334,7 +335,7 @@ class ScionRouting(Routing):
                     rnode.__class__ = ScionRouter
                     rnode.initScionRouter()
 
-                self.__install_scion(rnode)
+                self.__install_scion(emulator, rnode)
                 br_log = (
                     ">> /var/log/scion-border-router.log 2>&1"
                     if nologrotate
@@ -355,7 +356,7 @@ class ScionRouting(Routing):
 
             elif type == 'csnode':
                 csnode: Node = obj
-                self.__install_scion(csnode)
+                self.__install_scion(emulator,csnode)
                 self.__append_scion_command(csnode)
                 name = csnode.getName()
                 ctrl_log = (">> /var/log/scion-control-service.log 2>&1"
@@ -369,20 +370,19 @@ class ScionRouting(Routing):
 
             elif type == "hnode":
                 hnode: Node = obj
-                self.__install_scion(hnode)
+                self.__install_scion(emulator,hnode)
                 self.__append_scion_command(hnode)
 
-    def __install_scion(self, node: Node):  # TODO: delegate to ScionBuildConfig
+    def __install_scion(self, emulator: Emulator, node: Node):
         """Install SCION packages on the node."""
-        node.addBuildCommand(
-            'echo "deb [trusted=yes] https://packages.netsec.inf.ethz.ch/debian all main"'
-            " > /etc/apt/sources.list.d/scionlab.list"
-        )
-        node.addBuildCommand(
-            "apt-get update && apt-get install -y"
-            " scion-border-router scion-control-service scion-daemon scion-dispatcher scion-tools"
-            " scion-apps-bwtester"
-        )
+        scion_layer: Scion = emulator.getLayer(layerName="Scion")
+        buildConfiguration: ScionBuildConfig = scion_layer.getBuildConfiguration()
+        tmp_dir = buildConfiguration.generateBuild()
+        # list all the binaries in the directory with binaries
+        binaries = [f for f in os.listdir(tmp_dir) if os.path.isfile(os.path.join(tmp_dir, f))]
+        for binary in binaries:
+            node.importFile(f"{tmp_dir}/{binary}",f"/bin/{binary}")
+
         node.addSoftware("apt-transport-https")
         node.addSoftware("ca-certificates")
         if node.getOption("rotate_logs").value == "true":

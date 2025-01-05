@@ -1,12 +1,21 @@
 from __future__ import annotations
+import requests
+import logging
+import os
+import re
+from urllib.parse import urlparse
 from enum import Enum
 from typing import Dict, Tuple, Union, Any, Set
 
+from sys import version
 from seedemu.core import (Emulator, Interface, Layer, Network, Registry,
                           Router, ScionAutonomousSystem, ScionRouter,
                           ScopedRegistry, Graphable)
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import ScionBase, ScionIsd
+import shutil
+import tempfile
+from seedemu.utilities.BuildtimeDocker import BuildtimeDockerFile, BuildtimeDockerImage, sh
 
 
 class LinkType(Enum):
@@ -53,6 +62,174 @@ class LinkType(Enum):
                 assert not core_as, 'Logic error:  Core ASes must only provide transit to customers, not receive it!'
                 return "PARENT"
 
+class ScionBuildConfig():
+    """!
+    @brief This class validates and builds scion from a configuration
+
+    checks the mode property and either downloads the binaries and builds it from source
+    Also supports local absolute directory file path to use instead in release mode
+    """
+    mode: str
+    release_location: str
+    git_repo_url: str
+    checkout: str
+    version: str
+
+    def __init__(self):
+        self.mode = "release"
+        self.release_location = "https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz"
+        self.version = "v0.12.0"
+
+    def setBuildConfiguration(self, config: Dict[str,str]):
+        self.__validateBuildConfiguration(config)
+        self.mode = config["mode"]
+        if self.mode == "release":
+            self.release_location = config["releaseLocation"]
+            self.version = config["version"]
+        else:
+            self.git_repo_url = config["gitRepoUrl"]
+            self.checkout = config["checkout"]
+
+    def __validateBuildConfiguration(self, config: Dict[str,str]):
+        """
+        validate build configuration dict by checking all the required keys and url validity
+        """
+        if "mode" not in config:
+            raise KeyError("No SCION build configuration provided.")
+        if config["mode"] not in ["release", "build"]: 
+            raise ValueError("Only two SCION build modes accepted. 'release'|'build'")
+        if config["mode"] == "release":
+            if "releaseLocation" not in config:
+                raise KeyError("releaseLocation must be set for the mode 'release'")
+            self.__validateReleaseLocation(config["releaseLocation"])
+            if "version" not in config:
+                raise KeyError("version must be set for the mode 'release'")
+        if config["mode"] == "build":
+            if "gitRepoUrl" not in config:
+                raise KeyError("gitRepoUrl must be set for the mode 'build'")
+            if "checkout" not in config:
+                raise KeyError("'checkout' must be set for the mode 'build'")
+            self.__validateGitURL(config["gitRepoUrl"])
+
+    def __validateReleaseLocation(self, path: str):
+        """
+        check if the local path exists or the url is valid and reachable 
+        """
+        if (path) and self.__is_local_path(path):
+            if not os.path.exists(path):
+                raise ValueError("SCION local binary location is not valid.")
+            if not os.path.isabs(path):
+                raise ValueError("Absolute path required for the folder containing binaries")
+        elif self.__is_http_url(path):
+            try:
+                response = requests.head(path, allow_redirects=True, timeout=5)
+                if not response.status_code < 400:
+                    raise Exception(f"SCION release url is valid but not reachable")
+            except requests.RequestException as e:
+                logging.error(e)
+                raise Exception(f"SCION release url is valid but not reachable")
+        else:
+            raise ValueError("Release location is Neither a valid HTTP URL nor a local path")
+
+    def __is_http_url(self, url: str) -> bool:
+        try:
+            result = urlparse(url)
+            return result.scheme in ("http", "https") and bool(result.netloc)
+        except ValueError:
+            return False
+
+    def __is_local_path(self, path: str) -> bool:
+        # A local path shouldn't be a URL but should exist in the filesystem
+        return not self.__is_http_url(path)
+
+    def __validateGitURL(self, url: str) : 
+        # Ensure the URL ends with .git for Git repositories
+        if not url.endswith(".git"):
+            raise ValueError("URL does not look like a Git repository (missing .git)")
+        # Check the Git info/refs endpoint
+        git_service_url = f"{url}/info/refs?service=git-upload-pack"
+        try:
+            response = requests.get(git_service_url, timeout=10)
+            if not (response.status_code == 200 and "git-upload-pack" in response.text):
+                raise ValueError("SCION build repository not found (404)")
+        except requests.RequestException as e:
+                logging.error(e)
+                raise ValueError(f"Invalid SCION build repository")
+
+    def __classifyGitCheckout(self, checkout: str) -> str:
+        # Check if it's a commit (40 characters, hexadecimal)
+        if re.match(r'^[0-9a-fA-F]{40}$', checkout):
+            return "commit"
+        # Check if it's a tag (can be any string, usually without slashes and more descriptive)
+        if re.match(r'^[\w.-]+$', checkout):
+            return "tag"
+        # Check if it's a branch (can include slashes, dashes, or numbers)
+        if re.match(r'^[\w/.-]+$', checkout):
+            return "branch"
+        
+        return "unknown"
+
+    def __generateGitCloneString(self, repo_url: str, checkout: str):
+        """
+        Generates a Git clone string for the specified reference (branch, tag, or commit).
+        """
+        checkout_type = self.__classifyGitCheckout(checkout)
+        if checkout_type == "branch":
+            return f"git clone -b {checkout} {repo_url} scion"
+        elif checkout_type == "tag":
+            return f"git clone --branch {checkout} {repo_url} scion"
+        elif checkout_type == "commit":
+            # Clone first, then checkout the commit
+            return f"git clone {repo_url} scion && cd scion && git checkout {checkout}"
+        else:
+            raise ValueError("Invalid reference type. Must be 'branch', 'tag', or 'commit'.")
+
+    def generateBuild(self) -> str :
+        """
+        method to build all scion binaries and ouput to .scion_build_output based on the configuration mode
+        """
+        SCION_RELEASE_TEMPLATE = f"""FROM alpine 
+        RUN apk add --no-cache wget tar
+        WORKDIR /app
+        RUN wget -qO- {self.release_location} | tar xvz -C /app
+        """
+        SCION_BUILD_TEMPLATE = f"""FROM golang:1.22-alpine 
+        RUN apk add --no-cache git
+        RUN {self.__generateGitCloneString(self.git_repo_url,self.checkout)}
+        RUN cd scion && go mod tidy && CGO_ENABLED=0 go build -o bin ./router/... ./control/... ./dispatcher/... ./daemon/... ./scion/... ./scion-pki/... ./gateway/...
+        """
+        if self.mode == "release":
+            if not self.__is_local_path(self.release_location):
+                if not os.path.isdir(f".scion_build_output/scion_binaries_{self.version}"):
+                    dockerfile = BuildtimeDockerFile(SCION_RELEASE_TEMPLATE)
+                    container = BuildtimeDockerImage(f"scion-release-fetch-container_{self.version}").build(dockerfile).container()
+                    current_dir = os.getcwd()
+                    output_dir = os.path.join(current_dir, f".scion_build_output/scion_binaries_{self.version}")
+                    container.entrypoint("sh").mountVolume(output_dir, "/build").run(
+                       "-c \"cp -r /app/* /build\""
+                    )
+                    return output_dir
+
+                else:
+                    output_dir = os.path.join(os.getcwd(), f".scion_build_output/scion_binaries_{self.version}")
+                    return output_dir
+            else:
+                return self.release_location 
+        else:
+            if not os.path.isdir(f".scion_build_output/scion_binaries_{self.checkout}"):
+                dockerfile = BuildtimeDockerFile(SCION_BUILD_TEMPLATE)
+                container = BuildtimeDockerImage(f"scion-build-container-{self.checkout}").build(dockerfile).container()
+                current_dir = os.getcwd()
+                output_dir = os.path.join(current_dir, f".scion_build_output/scion_binaries_{self.checkout}")
+                container.entrypoint("sh").mountVolume(output_dir, "/build").run(
+                   "-c \"cp -r scion/bin/* /build\""
+                )
+                return output_dir
+
+            else:
+                output_dir = os.path.join(os.getcwd(), f".scion_build_output/scion_binaries_{self.checkout}")
+                return output_dir
+
 
 class Scion(Layer, Graphable):
     """!
@@ -65,6 +242,8 @@ class Scion(Layer, Graphable):
     __links: Dict[Tuple[IA, IA, str, str, LinkType], int]
     __ix_links: Dict[Tuple[int, IA, IA, str, str, LinkType], Dict[str,Any] ]
     __if_ids_by_as = {} # Dict[IA, Set[int]]
+    __default_build_config : ScionBuildConfig 
+
     def __init__(self):
         """!
         @brief SCION layer constructor.
@@ -72,6 +251,7 @@ class Scion(Layer, Graphable):
         super().__init__()
         self.__links = {}
         self.__ix_links = {}
+        self.__default_build_config = ScionBuildConfig()
         self.addDependency('ScionIsd', False, False)
 
     def getName(self) -> str:
@@ -139,6 +319,11 @@ class Scion(Layer, Graphable):
         Scion.__if_ids_by_as[ia] = ifs
         return last+1
         
+    def getBuildConfiguration(self) -> ScionBuildConfig:
+        return self.__default_build_config
+
+    def setBuildConfiguration(self, buildConfig: Dict[str,str]):
+        self.__default_build_config.setBuildConfiguration(buildConfig)
 
     def addXcLink(self, a: Union[IA, Tuple[int, int]], b: Union[IA, Tuple[int, int]],
                   linkType: LinkType, count: int=1, a_router: str="", b_router: str="",) -> 'Scion':
