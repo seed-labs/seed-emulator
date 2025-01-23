@@ -56,9 +56,11 @@ class Network(Printable, Registrable, Vertex):
 
         self.__connected_nodes = []
 
-        self.__assigners[NodeRole.Router] = self.__aac.getOffsetAssigner(NodeRole.Router)
-        self.__assigners[NodeRole.Host] = self.__aac.getOffsetAssigner(NodeRole.Host)
-
+        ahost =  self.__aac.getOffsetAssigner(NodeRole.Host)
+        arouter = self.__aac.getOffsetAssigner(NodeRole.Router)
+        self.__assigners[ NodeRole.BorderRouter ] = arouter
+        self.__assigners[ NodeRole.Router ] = arouter
+        self.__assigners[ NodeRole.Host ] = ahost
         self.__d_latency = 0
         self.__d_bandwidth = 0
         self.__d_drop = 0

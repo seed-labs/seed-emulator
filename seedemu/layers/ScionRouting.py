@@ -81,7 +81,8 @@ class ScionRouting(Routing):
 
         reg = emulator.getRegistry()
         for ((scope, type, name), obj) in reg.getAll().items():
-            if type == 'rnode':
+            # SCION inter-domain routing affects only border-routers
+            if type == 'brdnode':
                 rnode: ScionRouter = obj
                 if not issubclass(rnode.__class__, ScionRouter):
                     rnode.__class__ = ScionRouter
@@ -133,7 +134,7 @@ class ScionRouting(Routing):
 
         reg = emulator.getRegistry()
         for ((scope, type, name), obj) in reg.getAll().items():
-            if type in ['rnode', 'csnode', 'hnode']:
+            if type in ['brdnode', 'csnode', 'hnode']:
                 node: Node = obj
                 asn = obj.getAsn()                
                 as_: ScionAutonomousSystem = base_layer.getAutonomousSystem(asn)
@@ -146,7 +147,7 @@ class ScionRouting(Routing):
 
                 self.__provision_base_config(node)
 
-            if type == 'rnode':
+            if type == 'brdnode':
                 rnode: ScionRouter = obj
                 self.__provision_router_config(rnode)                
             elif type == 'csnode':
