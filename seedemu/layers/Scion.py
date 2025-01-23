@@ -303,10 +303,10 @@ class Scion(Layer, Graphable):
     @staticmethod
     def __get_xc_routers(a: int, a_reg: ScopedRegistry, b: int, b_reg: ScopedRegistry) -> Tuple[Router, Router]:
         """Find routers responsible for a cross-connect link between a and b."""
-        for router in a_reg.getByType('rnode'):
+        for router in a_reg.getByType('brdnode'):
             for peer, asn in router.getCrossConnects().keys():
-                if asn == b and b_reg.has('rnode', peer):
-                    return (router, b_reg.get('rnode', peer))
+                if asn == b and b_reg.has('brdnode', peer):
+                    return (router, b_reg.get('brdnode', peer))
         assert False
 
     @staticmethod

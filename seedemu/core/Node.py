@@ -305,6 +305,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
             if not hit and reg.has("ix", "net", netname):
                 hit = True
                 self.__joinNetwork(reg.get("ix", "net", netname), address)
+                if issubclass(self.__class__, Router):
+                    self.setBorderRouter(True)
 
             if not hit and reg.has("seedemu", "net", netname):
                 hit = True
@@ -316,6 +318,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
             peer: Node = None
 
             if reg.has(str(peerasn), 'rnode', peername): peer = reg.get(str(peerasn), 'rnode', peername)
+            elif reg.has(str(peerasn),'brdnode',peername): peer = reg.get(str(peerasn),'brdnode', peername)
             elif reg.has(str(peerasn), 'hnode', peername): peer = reg.get(str(peerasn), 'hnode', peername)
             else: assert False, 'as{}/{}: cannot xc to node as{}/{}: no such node'.format(self.getAsn(), self.getName(), peerasn, peername)
 
@@ -333,7 +336,10 @@ class Node(Printable, Registrable, Configurable, Vertex):
                 net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False) # TODO: XC nets w/ direct flag?
                 net.setDefaultLinkProperties(latency, bandwidth, packetDrop).setMtu(mtu) # Set link properties
                 self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
+
                 self.__xcs[(peername, peerasn)] = (localaddr, netname, (latency, bandwidth, packetDrop, mtu))
+            if issubclass(self.__class__, Router):
+                    self.setBorderRouter(True)
 
         if len(self.__name_servers) == 0:
             return
@@ -1020,6 +1026,21 @@ class Router(Node):
     """
 
     __loopback_address: str
+    __is_border_router: bool
+
+    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
+        self.__is_border_router = False
+        super().__init__( name,role,asn,scope)
+        
+    def getRole(self) -> NodeRole:
+        return NodeRole.BorderRouter if self.__is_border_router else super().getRole()
+ 
+    def setBorderRouter(self, is_border_router=True):
+        self.__is_border_router = is_border_router
+        return
+ 
+    def isBorderRouter(self):
+        return self.__is_border_router
 
     def setLoopbackAddress(self, address: str):
         """!
