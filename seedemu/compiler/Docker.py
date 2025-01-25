@@ -690,6 +690,11 @@ class Docker(Compiler):
                 key = 'role',
                 value = 'Router'
             )
+        if type == 'brdnode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'BorderRouter'
+            )
 
         if type == 'csnode':
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(

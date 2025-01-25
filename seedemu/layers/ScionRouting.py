@@ -224,8 +224,8 @@ class ScionRouting(Routing):
         """
         gets the name of the border router that the ScionInterface is connected to
         """
-        # find name of this br
-        for br in as_.getRouters():
+        # find name of this brd
+        for br in as_.getBorderRouters():
             if interface in as_.getRouter(br).getScionInterfaces():
                 return br
 
@@ -256,7 +256,7 @@ class ScionRouting(Routing):
             }
 
         # iterate through all border routers to find latency to all interfaces
-        for br_str in as_.getRouters():
+        for br_str in as_.getBorderRouters():
             br = as_.getRouter(br_str)
             scion_ifs = br.getScionInterfaces()
             # find latency to all interfaces except itself
