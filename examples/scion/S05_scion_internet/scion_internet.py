@@ -56,14 +56,14 @@ base.createIsolationDomain(1)
 # Internet Exchanges
 # We use "Internet Exchanges" as internal networks of the subdivided ASes in
 # order to reduce the number of networks Docker has to create.
-base.createInternetExchange(5)  # Tier-1 ISP
-base.createInternetExchange(7)  # Tier-1 ISP
-base.createInternetExchange(10) # Large IXP
-base.createInternetExchange(11) # Large IXP
-base.createInternetExchange(12) # Small IXP
-base.createInternetExchange(17) # Small access network
-base.createInternetExchange(18) # Large access network
-base.createInternetExchange(20) # Large content provider
+base.createInternetExchange(5, create_rs=False)  # Tier-1 ISP
+base.createInternetExchange(7, create_rs=False)  # Tier-1 ISP
+base.createInternetExchange(10, create_rs=False) # Large IXP
+base.createInternetExchange(11, create_rs=False) # Large IXP
+base.createInternetExchange(12, create_rs=False) # Small IXP
+base.createInternetExchange(17, create_rs=False) # Small access network
+base.createInternetExchange(18, create_rs=False) # Large access network
+base.createInternetExchange(20, create_rs=False) # Large content provider
 
 # Tier-1 ISP as50-53
 br = create_as(1, 50, is_core=True)[1].joinNetwork('ix5')
