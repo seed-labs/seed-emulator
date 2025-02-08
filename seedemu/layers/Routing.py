@@ -117,6 +117,7 @@ class Routing(Layer):
                 rnode.appendStartCommand('ip li add dummy0 type dummy')
                 rnode.appendStartCommand('ip li set dummy0 up')
                 rnode.appendStartCommand('ip addr add {}/32 dev dummy0'.format(lbaddr))
+                rnode.setLabel('loopback_addr', lbaddr)
                 rnode.setLoopbackAddress(lbaddr)
                 self.__loopback_pos += 1
 
