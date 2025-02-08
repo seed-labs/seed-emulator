@@ -23,7 +23,7 @@ class ScionBgpMixedTestCase(ScionTestCase):
         for cntr in self.containers:
             if "cs" in cntr.name:
                 asn, _, ip = cntr.name.split('-')
-                asn = asn.lstrip('as').rstrip('h')
+                asn = asn.removeprefix('as').removesuffix('h').removesuffix('cs')
                 if int(asn) < 160:
                     ia = f"1-{asn}"
                 else:
