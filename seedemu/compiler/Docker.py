@@ -1,11 +1,12 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler, BaseSystem
+from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
 from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
+from functools import cmp_to_key
 from os import mkdir, chdir
 from re import sub
 from ipaddress import IPv4Network, IPv4Address
@@ -136,6 +137,8 @@ DockerCompilerFileTemplates['compose_service'] = """\
 {networks}{ports}{volumes}
         labels:
 {labelList}
+        environment:
+        {environment}
 """
 
 DockerCompilerFileTemplates['compose_label_meta'] = """\
@@ -319,7 +322,8 @@ class Docker(Compiler):
     __disable_images: bool
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
-
+    __config: List[ Tuple[BaseOption , Scope] ] # all encountered Options for .env file
+    __option_handling: OptionHandling # strategy how to deal with Options
     __basesystem_dockerimage_mapping: dict
 
     def __init__(
@@ -333,7 +337,8 @@ class Docker(Compiler):
         internetMapPort: int = 8080,
         etherViewEnabled: bool = False,
         etherViewPort: int = 5000,
-        clientHideServiceNet: bool = True
+        clientHideServiceNet: bool = True,
+        option_handling: OptionHandling = OptionHandling.CREATE_SEPARATE_ENV_FILE
     ):
         """!
         @brief Docker compiler constructor.
@@ -368,6 +373,7 @@ class Docker(Compiler):
         @param clientHideServiceNet (optional) hide service network for the
         client map by not adding metadata on the net. Default to True.
         """
+        self.__option_handling = option_handling
         self.__networks = ""
         self.__services = ""
         self.__naming_scheme = namingScheme
@@ -387,7 +393,7 @@ class Docker(Compiler):
         self.__disable_images = False
         self._used_images = set()
         self.__image_per_node_list = {}
-
+        self.__config = [] # variables for '.env' file alongside 'docker-compose.yml'
         self.__platform = platform
 
         self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
@@ -398,6 +404,8 @@ class Docker(Compiler):
                 priority = 1
             self.addImage(image, priority=priority)
 
+    def optionHandlingCapabilities(self) -> OptionHandling:
+        return OptionHandling.DIRECT_DOCKER_COMPOSE | OptionHandling.CREATE_SEPARATE_ENV_FILE
 
     def getName(self) -> str:
         return "Docker"
@@ -949,6 +957,7 @@ class Docker(Compiler):
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
 
+        for cmd in node.getDockerCommands(): dockerfile += '{}\n'.format(cmd)
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
         start_commands = ''
@@ -1009,16 +1018,108 @@ class Docker(Compiler):
 
         chdir('..')
 
+        name = self._getComposeNodeName(node)
         return DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
-            nodeName = self._getComposeNodeName(node),
+            nodeName = name,
             dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
             networks = node_nets,
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = self._getComposeServicePortList(node),
             labelList = self._getNodeMeta(node),
-            volumes = self._getComposeNodeVolumes(node)
+            volumes = self._getComposeNodeVolumes(node),
+            environment= "    - CONTAINER_NAME={}\n            ".format(name) + self._computeNodeEnvironment(node)
         )
+
+    def _computeNodeEnvironment(self, node: Node) -> str:
+        """!
+        @brief computes the environment section
+          of the docker-compose service for the given node
+        """
+
+        # just copy all nodes scoped runtime opts into a  list (tuple(opt, scope))
+        # and sort the list ascending by scope (specific to more general )
+        #  Then uniqueify the list  -> whats left is the .env file's content...
+        # minimal without duplicates
+
+        def unique_partial_order_snd(elements):
+            unique_list = []
+
+            for elem in elements:
+                #if not any(elem == existing or existing < elem or elem < existing for existing in unique_list):
+                if not any((elem[1] == existing[1]) and (elem[0].name == existing[0].name) for existing in unique_list):
+                    unique_list.append(elem)
+
+            return unique_list
+
+
+        def cmp_snd(a, b):
+            """Custom comparator for sorting based on the second tuple element."""
+            try:
+                if a[1] < b[1]:
+                    return -1
+                elif a[1] > b[1]:
+                    return 1
+                else:
+                    return 0
+            except TypeError:
+                return 0
+
+        scopts = node.getScopedRuntimeOptions()
+
+        if self.__option_handling == OptionHandling.DIRECT_DOCKER_COMPOSE:
+            keyval_list = map(lambda x: f'- {x.name.upper()}={x.value}', [ o for o,s in scopts] )
+            return '\n            '.join(keyval_list)
+        elif self.__option_handling == OptionHandling.CREATE_SEPARATE_ENV_FILE:
+
+            self.__config.extend(scopts)
+
+            res= sorted( self.__config, key=cmp_to_key(cmp_snd) )
+            #remember encountered variables for .env file generation later..
+            self.__config = unique_partial_order_snd(res)
+            keyval_list = map(lambda x: f'- {x[0].name.upper()}=${{{ self._sndary_key(x[0],x[1])}}}',  scopts )
+            return '\n            '.join(keyval_list)
+
+    def _sndary_key(self, o: BaseOption, s: Scope )   -> str:
+        base = o.name.upper()
+        match s.tier:
+            case ScopeTier.Global:
+                match s.type:
+                    case ScopeType.ANY:
+                        return base
+                    case ScopeType.BRDNODE:
+                        return f'{base}_BRDNODE'
+                    case ScopeType.HNODE:
+                        return f'{base}_HNODE'
+                    case ScopeType.CSNODE:
+                        return f'{base}_CSNODE'
+                    case ScopeType.RSNODE:
+                        return f'{base}_RSNODE'
+                    case ScopeType.RNODE:
+                        return f'{base}_RNODE'
+                    case _:
+                        #TODO: combination (ORed) Flags not yet implemented
+                        raise NotImplementedError
+            case ScopeTier.AS:
+                match s.type:
+                    case ScopeType.ANY:
+                        return f'{base}_{s.asn}'
+                    case ScopeType.BRDNODE:
+                        return f'{base}_{s.asn}_BRDNODE'
+                    case ScopeType.HNODE:
+                        return f'{base}_{s.asn}_HNODE'
+                    case ScopeType.CSNODE:
+                        return f'{base}_{s.asn}_CSNODE'
+                    case ScopeType.RSNODE:
+                        return f'{base}_{s.asn}_RSNODE'
+                    case ScopeType.RNODE:
+                        return f'{base}_{s.asn}_RNODE'
+                    case _:
+                        # combination (ORed) Flags not yet implemented
+                        #TODO: How should we call CSNODE|HNODE or BRDNODE|RSNODE|RNODE ?!
+                        raise NotImplementedError
+            case ScopeTier.Node:
+                return f'{base}_{s.asn}_{s.node.upper()}' # maybe add type here
 
     def _compileNet(self, net: Network) -> str:
         """!
@@ -1037,11 +1138,34 @@ class Docker(Compiler):
 
         return DockerCompilerFileTemplates['compose_network'].format(
             netId = self._getRealNetName(net),
-            name=f"br-{self._getRealNetName(net)}",
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
             mtu = net.getMtu(),
             labelList = self._getNetMeta(net)
         )
+
+    def generateEnvFile(self, scope: Scope, dir_prefix: str = '/'):
+        """!
+           @brief   generates the '.env' file that accompanies any 'docker-compose.yml' file
+           @param scope  filter ENV variables by scope (i.e. ASN).
+                This is required i.e. by DistributedDocker compiler which generates a separate .env file per AS,
+                which contains only the relevant subset of all variables.
+        """
+
+        prefix=dir_prefix
+        if dir_prefix != '' and not dir_prefix.endswith('/'):
+            prefix += '/'
+
+        vars = []
+        for o,s in self.__config:
+            try:
+                if s < scope:
+                    sndkey = self._sndary_key(o,s)
+                    val = o.value
+                    vars.append( f'{sndkey}={val}')
+            except:
+                pass
+
+        print( '\n'.join(vars) ,file=open(f'{prefix}.env','w'))
 
     def _makeDummies(self) -> str:
         """!
@@ -1142,3 +1266,5 @@ class Docker(Compiler):
             networks = self.__networks,
             dummies = local_images + self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))
+
+        self.generateEnvFile(Scope(ScopeTier.Global),'')

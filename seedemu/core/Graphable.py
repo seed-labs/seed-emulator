@@ -271,6 +271,7 @@ class Graphable(Registrable):
         """!
         @brief Graphable constructor.
         """
+        super().__init__()
         self.__graphs = {}
         self.__graphs_created = False
 
