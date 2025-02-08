@@ -2,8 +2,7 @@ import json
 from typing import List, Tuple, Union
 
 from tests.SeedEmuTestCase import SeedEmuTestCase
-
-
+from .tools.scion_output_checker import ScionOutputChecker
 class ScionTestCase(SeedEmuTestCase):
     """!
     @brief Extends SeedEmuTestCase with SCION-specific tests.
@@ -11,6 +10,14 @@ class ScionTestCase(SeedEmuTestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
+
+    @classmethod
+    def check_emulation_files(cls):
+        """!
+        SCION compiler output contains a lot of static hardcoded configuration
+        that ought to be consistent if the simulation is supposed to run.
+        """
+        ScionOutputChecker( cls.output_dir ).do_checks()
 
     def scion_ping_test(self, container, dst: str, count: int = 1, pred: str = "0*") -> bool:
         """!

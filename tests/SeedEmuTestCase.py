@@ -66,6 +66,7 @@ class SeedEmuTestCase(ut.TestCase):
 
         if cls.online_testing:
             cls.gen_emulation_files()
+            cls.check_emulation_files()
             cls.build_emulator()
             cls.up_emulator()
 
@@ -101,6 +102,15 @@ class SeedEmuTestCase(ut.TestCase):
         os.chdir(cls.init_dir)
         assert result.returncode == 0, "emulation files generation failed"
         cls.printLog("gen_emulation_files: succeed")
+
+    @classmethod
+    def check_emulation_files(cls):
+        """!
+        pre-build hook to check if emulator compile output is valid.
+        There's no point in building a misconfigured simulation which won't run.
+        So this method provides a quick-out fast fail.
+        """
+        pass
 
     @classmethod
     def build_emulator(cls):
