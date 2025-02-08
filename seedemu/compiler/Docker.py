@@ -264,7 +264,7 @@ DockerCompilerFileTemplates['local_image'] = """\
 #     def getSoftware(self) -> Set[str]:
 #         """!
 #         @brief get set of software installed on this image.
-        
+
 #         @return set.
 #         """
 #         return self.__software
@@ -274,7 +274,7 @@ DockerCompilerFileTemplates['local_image'] = """\
 #         @return directory name.
 #         """
 #         return self.__dirName
-    
+
 #     def isLocal(self) -> bool:
 #         """!
 #         @brief returns True if this image is local.
@@ -282,7 +282,7 @@ DockerCompilerFileTemplates['local_image'] = """\
 #         @return True if this image is local.
 #         """
 #         return self.__local
-    
+
 #     def addSoftwares(self, software) -> DockerImage:
 #         """!
 #         @brief add softwares to this image.
@@ -391,13 +391,13 @@ class Docker(Compiler):
         self.__platform = platform
 
         self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
-        
+
         for name, image in self.__basesystem_dockerimage_mapping.items():
             priority = 0
             if name == BaseSystem.DEFAULT:
                 priority = 1
             self.addImage(image, priority=priority)
-        
+
 
     def getName(self) -> str:
         return "Docker"
@@ -575,12 +575,12 @@ class Docker(Compiler):
             self._log('force-image configured, using image: {}'.format(image.getName()))
 
             return (image, nodeSoft - image.getSoftware())
-            
-        #Maintain a table : Virtual Image Name - Actual Image Name 
+
+        #Maintain a table : Virtual Image Name - Actual Image Name
         image = self.__basesystem_dockerimage_mapping[node.getBaseSystem()]
 
         return (image, nodeSoft - image.getSoftware())
-        
+
         # candidates: List[Tuple[DockerImage, int]] = []
         # minMissing = len(nodeSoft)
         # for (image, prio) in self.__images.values():
@@ -589,9 +589,9 @@ class Docker(Compiler):
         #     if missing < minMissing:
         #         candidates = []
         #         minMissing = missing
-        #     if missing <= minMissing: 
+        #     if missing <= minMissing:
         #         candidates.append((image, prio))
-        
+
         # assert len(candidates) > 0, '_electImageFor ended w/ no images?'
 
         # (selected, maxPrio) = candidates[0]
@@ -809,9 +809,10 @@ class Docker(Compiler):
         return 'COPY {} {}\n'.format(staged_path, path)
 
 
-    def computeComposeNodeName(self, node ):
-        """
-        @brief given a node, compute its final container_name, as it will be known in the docker-compose file
+    def _getComposeNodeName(self, node: Node) -> str:
+        """!
+        @brief Given a node, compute its final container_name, as it will be
+        known in the docker-compose file.
         """
         name = self.__naming_scheme.format(
             asn = node.getAsn(),
@@ -823,26 +824,26 @@ class Docker(Compiler):
 
         return sub(r'[^a-zA-Z0-9_.-]', '_', name)
 
-    def realNodeName(self, node):
-        """
-        @brief computes the sub directory names inside the output folder
+    def _getRealNodeName(self, node: Node) -> str:
+        """!
+        @brief Computes the sub directory names inside the output folder.
         """
         (scope, type, _) = node.getRegistryInfo()
         prefix = self._contextToPrefix(scope, type)
         return '{}{}'.format(prefix, node.getName())
-    
-    def realNetName(self,net):
-          """
-          @brief computes name  of a network as it will be known in the docker-compose file
+
+    def _getRealNetName(self, net: Network):
+          """!
+          @brief Computes name  of a network as it will be known in the docker-compose file.
           """
           (netscope, _, _) = net.getRegistryInfo()
           net_prefix = self._contextToPrefix(netscope, 'net')
           if net.getType() == NetworkType.Bridge: net_prefix = ''
           return '{}{}'.format(net_prefix, net.getName())
-    
-    def getComposeServicePortList(self, node ) -> str:
-        """
-        @brief computes the 'ports:' section of the service in docker-compose.yml
+
+    def _getComposeServicePortList(self, node: Node) -> str:
+        """!
+        @brief Computes the 'ports:' section of the service in docker-compose.yml.
         """
         _ports = node.getPorts()
         ports = ''
@@ -858,15 +859,15 @@ class Docker(Compiler):
                 portList = lst
             )
         return ports
-    
-    def computeComposeNodeNets(self, node ) -> str:
-        
+
+    def _getComposeNodeNets(self, node: Node) -> str:
+
         node_nets = ''
         dummy_addr_map = ''
 
         for iface in node.getInterfaces():
             net = iface.getNet()
-            real_netname = self.realNetName(net)
+            real_netname = self._getRealNetName(net)
             address = iface.getAddress()
 
             if self.__self_managed_network and net.getType() != NetworkType.Bridge:
@@ -899,7 +900,7 @@ class Docker(Compiler):
             )
         return node_nets, dummy_addr_map
 
-    def computeComposeNodeVolumes(self, node ) -> str:
+    def _getComposeNodeVolumes(self, node: Node) -> str:
         _volumes = node.getSharedFolders()
         storages = node.getPersistentStorages()
 
@@ -923,10 +924,10 @@ class Docker(Compiler):
                 volumeList = lst
             )
         return volumes
-    
-    def computeDockerfile(self,node)->str:
-        """
-        @brief returns dockerfile contents for node 
+
+    def _computeDockerfile(self, node: Node) -> str:
+        """!
+        @brief Returns dockerfile contents for node.
         """
         dockerfile = DockerCompilerFileTemplates['dockerfile']
 
@@ -993,28 +994,29 @@ class Docker(Compiler):
 
         @returns docker-compose service string.
         """
-        real_nodename = self.realNodeName(node)
-        node_nets, dummy_addr_map = self.computeComposeNodeNets(node)
-        if self.__self_managed_network: node.setFile( '/dummy_addr_map.txt', dummy_addr_map )
-        
+        real_nodename = self._getRealNodeName(node)
+        node_nets, dummy_addr_map = self._getComposeNodeNets(node)
+        if self.__self_managed_network:
+            node.setFile('/dummy_addr_map.txt', dummy_addr_map)
+
         mkdir(real_nodename)
         chdir(real_nodename)
 
         image,_ = self._selectImageFor(node)
-        dockerfile = self.computeDockerfile(node)
+        dockerfile = self._computeDockerfile(node)
         print(dockerfile, file=open('Dockerfile', 'w'))
 
         chdir('..')
 
         return DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
-            nodeName = self.computeComposeNodeName(node),
+            nodeName = self._getComposeNodeName(node),
             dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
             networks = node_nets,
             # privileged = 'true' if node.isPrivileged() else 'false',
-            ports = self.getComposeServicePortList(node),
+            ports = self._getComposeServicePortList(node),
             labelList = self._getNodeMeta(node),
-            volumes = self.computeComposeNodeVolumes(node)
+            volumes = self._getComposeNodeVolumes(node)
         )
 
     def _compileNet(self, net: Network) -> str:
@@ -1031,10 +1033,10 @@ class Docker(Compiler):
             net.setAttribute('dummy_prefix_index', 2)
             self._log('self-managed network: using dummy prefix {}'.format(pfx))
 
-        
+
         return DockerCompilerFileTemplates['compose_network'].format(
-            netId = self.realNetName(net),
-            name=f"br-{self.realNetName(net)}",
+            netId = self._getRealNetName(net),
+            name=f"br-{self._getRealNetName(net)}",
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
             mtu = net.getMtu(),
             labelList = self._getNetMeta(net)
