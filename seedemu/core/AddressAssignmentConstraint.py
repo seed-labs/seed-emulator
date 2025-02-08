@@ -165,7 +165,7 @@ class AddressAssignmentConstraint(Printable):
         @throws ValueError if try to get assigner of IX interface.
         """
 
-        if NodeRole.Host == type:
+        if NodeRole.Host == type or NodeRole.ControlService == type:
             return Assigner(self.__hostStart, self.__hostEnd, self.__hostStep)
         if NodeRole.Router == type or type == NodeRole.BorderRouter:
             return Assigner(self.__routerStart, self.__routerEnd, self.__routerStep)
