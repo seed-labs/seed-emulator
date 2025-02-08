@@ -10,7 +10,7 @@ from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import ScionBase
 
 
-class ScionIsd(Layer):
+class ScionIsd(Layer): # could be made a Customizable as well ..
     """!
     @brief SCION AS to ISD relationship layer.
 

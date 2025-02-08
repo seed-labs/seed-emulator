@@ -1,8 +1,24 @@
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Registry
+from enum import IntFlag
 from os import mkdir, chdir, getcwd, path
 from shutil import rmtree
 from sys import stderr, exit
+
+class OptionHandling(IntFlag):
+    """! different ways a compiler can deal with Options
+    ( and ENV variables for containers )"""
+    # only hardcoding of option values in node config files (OptionMode.BUILD_TIME)
+    # any changes of Options thus require image re-compile (except config files are mounted as shared volume)
+    UNSUPPORTED = 0
+    # options are mapped to container ENV variables (OptionMode.RUN_TIME)
+    #  ('environment:' section of each service in docker-compose.yml contains KEY: VALUE pairs)
+    DIRECT_DOCKER_COMPOSE = 1
+    # options are mapped to container ENV variables (OptionMode.RUN_TIME)
+    #  ('environment:' section of each service in docker-compose.yml contains KEY: SNDARY_KEY pairs
+    # and the SNDARY_KEY: ACTUAL_VALUE pairs are placed in a separate '.env' file alongside docker-compose.yml )
+    # This is simply more overseeable.
+    CREATE_SEPARATE_ENV_FILE = 2
 
 class Compiler:
     """!
@@ -10,6 +26,11 @@ class Compiler:
 
     Compiler takes the rendered result and compiles them to working emulators.
     """
+
+    def optionHandlingCapabilities(self) -> OptionHandling:
+        """!@brief returns the capabilities of this compiler
+           regarding (DynamicConfigurable-) Option handling"""
+        return OptionHandling.UNSUPPORTED
 
     def _doCompile(self, emulator: Emulator):
         """!
@@ -31,7 +52,7 @@ class Compiler:
         """
         raise NotImplementedError('getName not implemented.')
 
-    def compile(self, emulator: Emulator, output: str, override: bool = False):
+    def compile(self, emulator: Emulator, output: str, override: bool = False): # add OptionHandling parameter here ?!
         """!
         @brief Compile the simulation.
 

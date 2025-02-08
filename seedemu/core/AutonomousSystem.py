@@ -5,8 +5,10 @@ from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from .enums import NetworkType, NodeRole
 from .Node import Node, Router
+from .Scope import ScopeTier, Scope
 from .Emulator import Emulator
 from .Configurable import Configurable
+from .Customizable import Customizable
 from .Node import RealWorldRouter
 from ipaddress import IPv4Network
 from typing import Dict, List
@@ -14,7 +16,7 @@ import requests
 
 RIS_PREFIXLIST_URL = 'https://stat.ripe.net/data/announced-prefixes/data.json'
 
-class AutonomousSystem(Printable, Graphable, Configurable):
+class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
     """!
     @brief AutonomousSystem class.
 
@@ -26,7 +28,6 @@ class AutonomousSystem(Printable, Graphable, Configurable):
     __routers: Dict[str, Node]
     __hosts: Dict[str, Node]
     __nets: Dict[str, Network]
-
     __name_servers: List[str]
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
@@ -43,6 +44,8 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         self.__asn = asn
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
         self.__name_servers = []
+
+
 
     def setNameServers(self, servers: List[str]) -> AutonomousSystem:
         """!
@@ -114,6 +117,21 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         for (key, val) in self.__nets.items(): reg.register(str(self.__asn), 'net', key, val)
         for (key, val) in self.__hosts.items(): reg.register(str(self.__asn), 'hnode', key, val)
         for (key, val) in self.__routers.items(): reg.register(str(self.__asn), 'rnode', key, val)
+
+    def inheritOptions(self, emulator: Emulator):
+        """! trickle down any overrides the user might have done on AS level """
+        # since global defaults are set on node level rather than AS level by the DynamicConfigurable impl
+        # this causes no redundant setting of the same options/defaults
+        reg = emulator.getRegistry()
+        all_nodes = [ obj for (scope,typ,name),obj  in reg.getAll( ).items()
+                      if scope==str(self.getAsn()) and typ in ['rnode','hnode','csnode','rsnode'] ]
+        for n in all_nodes:
+            self.handDown(n)
+    
+    def scope(self)-> Scope:
+        """return a scope specific to this AS"""
+        return Scope(ScopeTier.AS, as_id=self.getAsn())    
+
 
     def configure(self, emulator: Emulator):
         """!

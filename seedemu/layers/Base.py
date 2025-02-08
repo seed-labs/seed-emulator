@@ -1,5 +1,5 @@
 from __future__ import annotations
-from seedemu.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Emulator, Layer
+from seedemu.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Emulator, Layer,ScopeTier
 from typing import Dict, List
 
 BaseFileTemplates: Dict[str, str] = {}
@@ -54,6 +54,25 @@ class Base(Layer, Graphable):
 
     def getName(self) -> str:
         return "Base"
+    
+    # the base layer is the wrong place for this, since subsequent layers
+    # might add further features to ASes
+    '''
+    def applyFeaturesToNodes(self, _as: AutonomousSystem, emulator: Emulator):
+        """!
+        """
+        #@note 'use_envsubst' is a special feature which can be set, to turn all the variables that are set at AS scope
+        #   into runtime variables(the default is false -> hardcoded buildtime only variables ).
+        #useenvsubst='use_envsubst' in _as.getFeatures()
+        reg = emulator.getRegistry()
+        all_nodes = [ obj for (scope,typ,name),obj  in reg.getAll( ) if scope==str(_as.getAsn()) and typ in ['rnode','hnode','csnode','rsnode'] ]
+
+        for k,v in self.getFeatures():
+           for node in all_nodes:
+                node.setCustomEnv2(k,v,scope=ScopeTier.AS,
+                                    use_envsubst=_as.useEnvsubst(k) or node.getCustomEnv('use_envsubst')=='true')
+        pass
+    '''
 
     def configure(self, emulator: Emulator):
         self._log('registering nodes...')
@@ -62,6 +81,8 @@ class Base(Layer, Graphable):
                 asobj.setNameServers(self.__name_servers)
 
             asobj.registerNodes(emulator)
+            asobj.inheritOptions(emulator)
+            
 
         self._log('setting up internet exchanges...')
         for ix in self.__ixes.values(): ix.configure(emulator)

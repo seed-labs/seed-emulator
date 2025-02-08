@@ -127,6 +127,34 @@ In the configure stage, layers should register the data that other layers might 
 
 The configure stage is especially useful if a layer wants to make changes to another layer but still requires the other layer to have configured the emulator first. Currently, this is used in the `ReverseDomainName` and `CymruIpOrigin` service, both of which create a new zone in the `DomainName` service. They do so in the configure stage, as `DomainName` compiles the `Zone` data structure to zone files in the render stage, and additional zone added after the render stage won't be included in the final output. 
 
+#### Customizing layers and Entities (option system)
+
+SEED has a rich option system which allows for fine grained overrides of global default settings. 
+
+Its workings are basically as follows:
+
+
+ Options can be anything from boolean flags to numerical configuration parameters and are best thought of as just a strong type for key-value pairs (where the value is mutable, but the key isn't). Moreover each option carries with it the notion of supported modes. That is, whether it can be changed only at compile/build-time (because its value gets baked into the container image i.e. as a config file entry ) and any reconfiguration requires a re-compile and image rebuild or whether its existence extends into the runtime (i.e. as a container ENV variable ) and its reconfiguration requires a mere container restart. Some options i.e. Feature Flags might require the installation of additional software on the target node(the `Customizable`) for their implementation and thus will be strickly limited to build-time.
+
+
+Layers inherit `DynamicConfigurable` and can thus return a set of supported options (`getAvailableOptions()`).
+Configurables are the only place to retrieve options, as they cannot just be constructed by the users arbitrarily (i.e. Layers are only considering their own set of options with known predefined keys/names and ignore any unknowns i.e. from other Layers ).
+
+ The counterpart of configurables are `Customizables`, objects that can be configured by options. The API of Customizables allows the setting and querying of options at a certain `Scope`(which can i.e. be Global, on AS level, by NodeType like 'All-Routers', or even specific to an individual Node ). If unspecified the scope for both option setters and getters will default to the scope that is most specific (narrow) to the respective Customizable (i.e. AS or Node). This distinctive Scope value can be obtained from any Customizable through the identically named getter function( i.e. for an AutonomousSystem AS150 `scope()` will return `Scope(ScopeTier.AS, as_id=150, node_type=ScopeType.ANY)` ). As a rule of thumb, `Scope`s are technical and users shouldn't have to deal with them during 'daily buisiness' because all methods provide sensible defaults. But do not shy away though.
+
+Some Customizables are aggregates and own other Customizables (i.e. ASes are a collection of Nodes) to whom they can inherit their options (parent to child) with the `handDown()` method. 
+
+ The base class impl of `DynamicConfigurable` calls the `prepare()` hook just before its configuration (`configure` call) in which its sets all its available options on all the Nodes in the emulation as global defaults. If a node already has more specific overrides for an option ( i.e. because it inherited its local ASes settings that deviate from the global default or the user explicitly changed the option on this particular node) this will be a NoOp (more specific settings preceede). The Base layer (which is configured very first) makes sure that all options which might have been overridden on AS level by the user are inherited down to the resident nodes of that AS.
+
+The resulting state of option settings after the `prepare` call will be the basis for node configuration in the subsequent `configure` step.
+As a result of this it should be avoided to create new nodes during configuration(they'd sidestep/slip customization).
+
+###### Options Guidelines and Best Practices
+
+If you ever catch yourself adding configuration getters/setters to your layer (i.e. `setLoglevel()`) what you should be doing instead (rather than bloating the interface of your class) is to just add an option `LOGLEVEL` and pass sensible default values to the constructor of your layer. 
+
+A good way to provide access to your layer's options is i.e. a factory method which returns an error, when asked for options with an unknown key.
+
 ## Graphing
 
 Serval classes of the emulator offer graphing options to convert the topologies to graphs. These classes are:
