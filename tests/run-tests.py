@@ -3,6 +3,7 @@
 from internet import IPAnyCastTestCase, MiniInternetTestCase, HostMgmtTestCase
 from ethereum import EthereumPOATestCase, EthereumPOSTestCase, EthereumPOWTestCase
 from scion import ScionBgpMixedTestCase, ScionBwtesterTestCase
+from options import SEEDEmuOptionSystemTestCase
 from kubo import KuboTestCase, KuboUtilFuncsTestCase, DottedDictTestCase
 from pki import PKITestCase
 from chainlink import ChainlinkPOATestCase
@@ -30,6 +31,7 @@ test_case_list = [
     EthUtilityPOATestCase,
     ScionBgpMixedTestCase,
     ScionBwtesterTestCase,
+    SEEDEmuOptionSystemTestCase,
     KuboTestCase,
     KuboUtilFuncsTestCase,
     DottedDictTestCase,

@@ -8,7 +8,7 @@ from .AutonomousSystem import AutonomousSystem
 from .Emulator import Emulator
 from .enums import NodeRole
 from .Node import Node, ScionRouter
-
+from .Scope import Scope,ScopeTier,ScopeType
 
 class IA(NamedTuple):
     """!
@@ -32,7 +32,7 @@ class ScionAutonomousSystem(AutonomousSystem):
     __attributes: Dict[int, Set]         # Set of AS attributes per ISD
     __mtu: Optional[int]                 # Minimum MTU in the AS's internal networks
     __control_services: Dict[str, Node]
-    # Origination, propagation, and registration intervals
+    # Origination, propagation, and registration intervals # TODO: those are clearly all Options ...
     __beaconing_intervals: Tuple[Optional[str], Optional[str], Optional[str]]
     __beaconing_policy: Dict[str, Dict]
     __note: str # optional free form parameter that contains interesting information about AS. This will be included in beacons if it is set
@@ -52,6 +52,8 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__note = None
         self.__generateStaticInfoConfig = False
     
+    def scope(self)-> Scope:
+        return Scope(ScopeTier.AS, as_id=self.getAsn())
 
     def registerNodes(self, emulator: Emulator):
         """!
@@ -60,7 +62,8 @@ class ScionAutonomousSystem(AutonomousSystem):
         super().registerNodes(emulator)
         reg = emulator.getRegistry()
         asn = str(self.getAsn())
-        for (key, val) in self.__control_services.items(): reg.register(asn, 'csnode', key, val)
+        for (key, val) in self.__control_services.items(): reg.register(asn, 'csnode', key, val)        
+
 
     def configure(self, emulator: Emulator):
         """!

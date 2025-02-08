@@ -4,7 +4,7 @@ from typing import Optional
 from .Printable import Printable
 
 
-class IsolationDomain(Printable):
+class IsolationDomain(Printable): #TODO: make Customizable
     """!
     @brief SCION isolation domain.
     """
