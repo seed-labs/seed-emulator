@@ -8,12 +8,14 @@ from .AutonomousSystem import AutonomousSystem
 from .Emulator import Emulator
 from .enums import NodeRole
 from .Node import Node, ScionRouter
-from .Scope import Scope,ScopeTier,ScopeType
+from .Scope import Scope, ScopeTier, ScopeType
+
 
 class IA(NamedTuple):
     """!
     @brief ISD-ASN identifier for a SCION AS.
     """
+
     isd: int
     asn: int
 
@@ -29,8 +31,8 @@ class ScionAutonomousSystem(AutonomousSystem):
     """
 
     __keys: Optional[Tuple[str, str]]
-    __attributes: Dict[int, Set]         # Set of AS attributes per ISD
-    __mtu: Optional[int]                 # Minimum MTU in the AS's internal networks
+    __attributes: Dict[int, Set]  # Set of AS attributes per ISD
+    __mtu: Optional[int]  # Minimum MTU in the AS's internal networks
     __control_services: Dict[str, Node]
     # Origination, propagation, and registration intervals # TODO: those are clearly all Options ...
     __beaconing_intervals: Tuple[Optional[str], Optional[str], Optional[str]]
@@ -51,8 +53,8 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__beaconing_policy = {}
         self.__note = None
         self.__generateStaticInfoConfig = False
-    
-    def scope(self)-> Scope:
+
+    def scope(self) -> Scope:
         return Scope(ScopeTier.AS, as_id=self.getAsn())
 
     def registerNodes(self, emulator: Emulator):
@@ -62,8 +64,8 @@ class ScionAutonomousSystem(AutonomousSystem):
         super().registerNodes(emulator)
         reg = emulator.getRegistry()
         asn = str(self.getAsn())
-        for (key, val) in self.__control_services.items(): reg.register(asn, 'csnode', key, val)        
-
+        for key, val in self.__control_services.items():
+            reg.register(asn, "csnode", key, val)
 
     def configure(self, emulator: Emulator):
         """!
@@ -78,12 +80,15 @@ class ScionAutonomousSystem(AutonomousSystem):
 
         # Set MTU to the smallest MTU of all AS-internal networks
         reg = emulator.getRegistry()
-        self.__mtu = min(net.getMtu() for net in reg.getByType(str(self.getAsn()), 'net'))
+        self.__mtu = min(
+            net.getMtu() for net in reg.getByType(str(self.getAsn()), "net")
+        )
 
         # Create secret keys
         self.__keys = (
             base64.b64encode(os.urandom(16)).decode(),
-            base64.b64encode(os.urandom(16)).decode())
+            base64.b64encode(os.urandom(16)).decode(),
+        )
 
 
     def getSecretKeys(self) -> Tuple[str, str]:
@@ -93,7 +98,9 @@ class ScionAutonomousSystem(AutonomousSystem):
         assert self.__keys is not None, "AS is not configured yet"
         return self.__keys
 
-    def setAsAttributes(self, isd: int, attributes: Iterable[str]) -> ScionAutonomousSystem:
+    def setAsAttributes(
+        self, isd: int, attributes: Iterable[str]
+    ) -> ScionAutonomousSystem:
         """!
         @brief Set an AS's attributes. Called during configuration.
 
@@ -113,11 +120,12 @@ class ScionAutonomousSystem(AutonomousSystem):
         """
         return list(self.__attributes[isd])
 
-    def setBeaconingIntervals(self,
+    def setBeaconingIntervals(
+        self,
         origination: Optional[str] = None,
         propagation: Optional[str] = None,
-        registration: Optional[str] = None
-        ) -> ScionAutonomousSystem:
+        registration: Optional[str] = None,
+    ) -> ScionAutonomousSystem:
         """!
         @brief Set the beaconing intervals. Intervals are specified as string of a positive decimal
         integer followed by one of the units y, w, d, h, m, s, us, or ns. Setting an interval to
@@ -128,7 +136,9 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__beaconing_intervals = (origination, propagation, registration)
         return self
 
-    def getBeaconingIntervals(self) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    def getBeaconingIntervals(
+        self,
+    ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         """!
         @brief Get the beaconing intervals.
 
@@ -136,7 +146,9 @@ class ScionAutonomousSystem(AutonomousSystem):
         """
         return self.__beaconing_intervals
 
-    def setBeaconPolicy(self, type: str, policy: Optional[Dict]) -> ScionAutonomousSystem:
+    def setBeaconPolicy(
+        self, type: str, policy: Optional[Dict]
+    ) -> ScionAutonomousSystem:
         """!
         @brief Set the beaconing policy of the AS.
 
@@ -144,7 +156,12 @@ class ScionAutonomousSystem(AutonomousSystem):
         @param policy Policy. Setting a policy to None clears it.
         @returns self
         """
-        types = ["propagation", "core_registration", "up_registration", "down_registration"]
+        types = [
+            "propagation",
+            "core_registration",
+            "up_registration",
+            "down_registration",
+        ]
         assert type in types, "Unknown policy type"
         self.__beaconing_policy[type] = policy
         return self
@@ -156,7 +173,12 @@ class ScionAutonomousSystem(AutonomousSystem):
         @param type One of "propagation", "core_registration", "up_registration", "down_registration".
         @returns Policy or None if no policy of the requested type is set.
         """
-        types = ["propagation", "core_registration", "up_registration", "down_registration"]
+        types = [
+            "propagation",
+            "core_registration",
+            "up_registration",
+            "down_registration",
+        ]
         assert type in types, "Unknown policy type"
         return self.__beaconing_policy.get(type)
 
@@ -175,16 +197,16 @@ class ScionAutonomousSystem(AutonomousSystem):
             ifaces = cs.getInterfaces()
             if len(ifaces) > 0:
                 cs_addr = f"{ifaces[0].getAddress()}:30254"
-                control_services[name] = { 'addr': cs_addr }
+                control_services[name] = {"addr": cs_addr}
 
         # Border routers
         border_routers = {}
         for router in self.getBorderRouters():
-            rnode: ScionRouter = self.getRouter( router.getName() )
+            rnode: ScionRouter = self.getRouter(router.getName())
 
             localIP = rnode.getLocalIPAddress()
             listen_addr = localIP if localIP else rnode.getLoopbackAddress()
-            #UDP address on which the router receives SCION packets 
+            #UDP address on which the router receives SCION packets
             # from sibling routers and end hosts in this AS.
             border_routers[rnode.getName()] = {
                 "internal_addr": f"{listen_addr}:30042",
@@ -192,13 +214,13 @@ class ScionAutonomousSystem(AutonomousSystem):
             }
 
         return {
-            'attributes': self.getAsAttributes(isd),
-            'isd_as': f'{isd}-{self.getAsn()}',
-            'mtu': self.__mtu,
-            'control_service': control_services,
-            'discovery_service': control_services,
-            'border_routers': border_routers,
-            'dispatched_ports': '31000-32767',
+            "attributes": self.getAsAttributes(isd),
+            "isd_as": f"{isd}-{self.getAsn()}",
+            "mtu": self.__mtu,
+            "control_service": control_services,
+            "discovery_service": control_services,
+            "border_routers": border_routers,
+            "dispatched_ports": "31000-32767",
         }
 
     def createControlService(self, name: str) -> Node:
@@ -208,8 +230,12 @@ class ScionAutonomousSystem(AutonomousSystem):
         @param name name of the new node.
         @returns Node.
         """
-        assert name not in self.__control_services, 'Control service with name {} already exists.'.format(name)
-        self.__control_services[name] = Node(name, NodeRole.ControlService, self.getAsn())
+        assert (
+            name not in self.__control_services
+        ), "Control service with name {} already exists.".format(name)
+        self.__control_services[name] = Node(
+            name, NodeRole.ControlService, self.getAsn()
+        )
 
         return self.__control_services[name]
 
@@ -238,7 +264,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         @returns self
         """
         self.__note = note
-        return self 
+        return self
 
     def getNote(self) -> Optional[str]:
         """!
@@ -248,7 +274,9 @@ class ScionAutonomousSystem(AutonomousSystem):
         """
         return self.__note
 
-    def setGenerateStaticInfoConfig(self, generateStaticInfoConfig: bool) -> ScionAutonomousSystem:
+    def setGenerateStaticInfoConfig(
+        self, generateStaticInfoConfig: bool
+    ) -> ScionAutonomousSystem:
         """!
         @brief Set the generateStaticInfoConfig flag.
 
@@ -272,14 +300,14 @@ class ScionAutonomousSystem(AutonomousSystem):
         """
         super()._doCreateGraphs(emulator)
         asn = self.getAsn()
-        l2graph = self.getGraph('AS{}: Layer 2 Connections'.format(asn))
+        l2graph = self.getGraph("AS{}: Layer 2 Connections".format(asn))
         for obj in self.__control_services.values():
             router: Node = obj
-            rtrname = 'CS: {}'.format(router.getName(), group = 'AS{}'.format(asn))
-            l2graph.addVertex(rtrname, group = 'AS{}'.format(asn))
+            rtrname = "CS: {}".format(router.getName(), group="AS{}".format(asn))
+            l2graph.addVertex(rtrname, group="AS{}".format(asn))
             for iface in router.getInterfaces():
                 net = iface.getNet()
-                netname = 'Network: {}'.format(net.getName())
+                netname = "Network: {}".format(net.getName())
                 l2graph.addEdge(rtrname, netname)
 
     def print(self, indent: int) -> str:
@@ -288,8 +316,8 @@ class ScionAutonomousSystem(AutonomousSystem):
         """
         out = super().print(indent)
 
-        out += ' ' * indent
-        out += 'SCION Control Services:\n'
+        out += " " * indent
+        out += "SCION Control Services:\n"
 
         for node in self.__control_services.values():
             out += node.print(indent + 4)

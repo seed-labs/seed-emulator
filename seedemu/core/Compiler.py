@@ -5,9 +5,11 @@ from os import mkdir, chdir, getcwd, path
 from shutil import rmtree
 from sys import stderr, exit
 
+
 class OptionHandling(IntFlag):
     """! different ways a compiler can deal with Options
     ( and ENV variables for containers )"""
+
     # only hardcoding of option values in node config files (OptionMode.BUILD_TIME)
     # any changes of Options thus require image re-compile (except config files are mounted as shared volume)
     UNSUPPORTED = 0
@@ -19,6 +21,7 @@ class OptionHandling(IntFlag):
     # and the SNDARY_KEY: ACTUAL_VALUE pairs are placed in a separate '.env' file alongside docker-compose.yml )
     # This is simply more overseeable.
     CREATE_SEPARATE_ENV_FILE = 2
+
 
 class Compiler:
     """!

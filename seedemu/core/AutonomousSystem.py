@@ -45,8 +45,6 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
         self.__name_servers = []
 
-
-
     def setNameServers(self, servers: List[str]) -> AutonomousSystem:
         """!
         @brief set recursive name servers to use on nodes in this AS. Overwrites
@@ -119,19 +117,22 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         for (key, val) in self.__routers.items(): reg.register(str(self.__asn), 'rnode', key, val)
 
     def inheritOptions(self, emulator: Emulator):
-        """! trickle down any overrides the user might have done on AS level """
+        """! trickle down any overrides the user might have done on AS level"""
         # since global defaults are set on node level rather than AS level by the DynamicConfigurable impl
         # this causes no redundant setting of the same options/defaults
         reg = emulator.getRegistry()
-        all_nodes = [ obj for (scope,typ,name),obj  in reg.getAll( ).items()
-                      if scope==str(self.getAsn()) and typ in ['rnode','hnode','csnode','rsnode'] ]
+        all_nodes = [
+            obj
+            for (scope, typ, name), obj in reg.getAll().items()
+            if scope == str(self.getAsn())
+            and typ in ["rnode", "hnode", "csnode", "rsnode"]
+        ]
         for n in all_nodes:
             self.handDown(n)
-    
+
     def scope(self)-> Scope:
         """return a scope specific to this AS"""
         return Scope(ScopeTier.AS, as_id=self.getAsn())    
-
 
     def configure(self, emulator: Emulator):
         """!

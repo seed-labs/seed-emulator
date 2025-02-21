@@ -119,7 +119,6 @@ class DistributedDocker(Docker):
 
                 self._used_images = set()
           
-                self._addEnvVar('COMPOSE_PROJECT_NAME',f'sim_{scope}',scope)
                 if scope != 'ix':
                     self.generateEnvFile(scope, f'./{scope}')
 

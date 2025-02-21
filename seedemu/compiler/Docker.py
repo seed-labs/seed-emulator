@@ -22,7 +22,7 @@ DockerCompilerFileTemplates: Dict[str, str] = {}
 DockerCompilerFileTemplates['dockerfile'] = """\
 ARG DEBIAN_FRONTEND=noninteractive
 """
-#RUN echo 'exec zsh' > /root/.bashrc
+# RUN echo 'exec zsh' > /root/.bashrc
 
 DockerCompilerFileTemplates['start_script'] = """\
 #!/bin/bash
@@ -540,11 +540,9 @@ class Docker(Compiler):
 
                     node.getAttribute('__soft_install_tiers').append(currentTier)
 
-
                 if len(currentTier) > 0:
                     self._log('the following software has been grouped together in step {}: {} since they are referenced by {} nodes.'.format(step, currentTier, len(currentTierNodes)))
                     step += 1
-
 
     def _selectImageFor(self, node: Node) -> Tuple[DockerImage, Set[str]]:
         """!
@@ -584,7 +582,7 @@ class Docker(Compiler):
 
             return (image, nodeSoft - image.getSoftware())
 
-        #Maintain a table : Virtual Image Name - Actual Image Name
+        # Maintain a table : Virtual Image Name - Actual Image Name
         image = self.__basesystem_dockerimage_mapping[node.getBaseSystem()]
 
         return (image, nodeSoft - image.getSoftware())
@@ -610,7 +608,6 @@ class Docker(Compiler):
         #         selected = candidate
 
         # return (selected, nodeSoft - selected.getSoftware())
-
 
     def _getNetMeta(self, net: Network) -> str:
         """!
@@ -817,7 +814,6 @@ class Docker(Compiler):
         copyfile(hostpath, staged_path)
         return 'COPY {} {}\n'.format(staged_path, path)
 
-
     def _getComposeNodeName(self, node: Node) -> str:
         """!
         @brief Given a node, compute its final container_name, as it will be
@@ -842,13 +838,13 @@ class Docker(Compiler):
         return '{}{}'.format(prefix, node.getName())
 
     def _getRealNetName(self, net: Network):
-          """!
+        """!
           @brief Computes name  of a network as it will be known in the docker-compose file.
           """
-          (netscope, _, _) = net.getRegistryInfo()
-          net_prefix = self._contextToPrefix(netscope, 'net')
-          if net.getType() == NetworkType.Bridge: net_prefix = ''
-          return '{}{}'.format(net_prefix, net.getName())
+        (netscope, _, _) = net.getRegistryInfo()
+        net_prefix = self._contextToPrefix(netscope, 'net')
+        if net.getType() == NetworkType.Bridge: net_prefix = ''
+        return '{}{}'.format(net_prefix, net.getName())
 
     def _getComposeServicePortList(self, node: Node) -> str:
         """!
@@ -952,8 +948,8 @@ class Docker(Compiler):
                 if len(softList) == 0: continue
                 dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(softList)))
 
-        #included in the seedemu-base dockerImage.
-        #dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
+        # included in the seedemu-base dockerImage.
+        # dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
 
@@ -1046,7 +1042,6 @@ class Docker(Compiler):
             unique_list = []
 
             for elem in elements:
-                #if not any(elem == existing or existing < elem or elem < existing for existing in unique_list):
                 if not any((elem[1] == existing[1]) and (elem[0].name == existing[0].name) for existing in unique_list):
                     unique_list.append(elem)
 
@@ -1068,19 +1063,24 @@ class Docker(Compiler):
         scopts = node.getScopedRuntimeOptions()
 
         if self.__option_handling == OptionHandling.DIRECT_DOCKER_COMPOSE:
-            keyval_list = map(lambda x: f'- {x.name.upper()}={x.value}', [ o for o,s in scopts] )
-            return '\n            '.join(keyval_list)
+            keyval_list = map(
+                lambda x: f"- {x.name.upper()}={x.value}", [o for o, s in scopts]
+            )
+            return "\n            ".join(keyval_list)
         elif self.__option_handling == OptionHandling.CREATE_SEPARATE_ENV_FILE:
 
             self.__config.extend(scopts)
 
-            res= sorted( self.__config, key=cmp_to_key(cmp_snd) )
-            #remember encountered variables for .env file generation later..
+            res = sorted(self.__config, key=cmp_to_key(cmp_snd))
+            # remember encountered variables for .env file generation later..
             self.__config = unique_partial_order_snd(res)
-            keyval_list = map(lambda x: f'- {x[0].name.upper()}=${{{ self._sndary_key(x[0],x[1])}}}',  scopts )
-            return '\n            '.join(keyval_list)
+            keyval_list = map(
+                lambda x: f"- {x[0].name.upper()}=${{{ self._sndary_key(x[0],x[1])}}}",
+                scopts,
+            )
+            return "\n            ".join(keyval_list)
 
-    def _sndary_key(self, o: BaseOption, s: Scope )   -> str:
+    def _sndary_key(self, o: BaseOption, s: Scope) -> str:
         base = o.name.upper()
         match s.tier:
             case ScopeTier.Global:
@@ -1088,38 +1088,38 @@ class Docker(Compiler):
                     case ScopeType.ANY:
                         return base
                     case ScopeType.BRDNODE:
-                        return f'{base}_BRDNODE'
+                        return f"{base}_BRDNODE"
                     case ScopeType.HNODE:
-                        return f'{base}_HNODE'
+                        return f"{base}_HNODE"
                     case ScopeType.CSNODE:
-                        return f'{base}_CSNODE'
+                        return f"{base}_CSNODE"
                     case ScopeType.RSNODE:
-                        return f'{base}_RSNODE'
+                        return f"{base}_RSNODE"
                     case ScopeType.RNODE:
-                        return f'{base}_RNODE'
+                        return f"{base}_RNODE"
                     case _:
-                        #TODO: combination (ORed) Flags not yet implemented
+                        # TODO: combination (ORed) Flags not yet implemented
                         raise NotImplementedError
             case ScopeTier.AS:
                 match s.type:
                     case ScopeType.ANY:
-                        return f'{base}_{s.asn}'
+                        return f"{base}_{s.asn}"
                     case ScopeType.BRDNODE:
-                        return f'{base}_{s.asn}_BRDNODE'
+                        return f"{base}_{s.asn}_BRDNODE"
                     case ScopeType.HNODE:
-                        return f'{base}_{s.asn}_HNODE'
+                        return f"{base}_{s.asn}_HNODE"
                     case ScopeType.CSNODE:
-                        return f'{base}_{s.asn}_CSNODE'
+                        return f"{base}_{s.asn}_CSNODE"
                     case ScopeType.RSNODE:
-                        return f'{base}_{s.asn}_RSNODE'
+                        return f"{base}_{s.asn}_RSNODE"
                     case ScopeType.RNODE:
-                        return f'{base}_{s.asn}_RNODE'
+                        return f"{base}_{s.asn}_RNODE"
                     case _:
                         # combination (ORed) Flags not yet implemented
-                        #TODO: How should we call CSNODE|HNODE or BRDNODE|RSNODE|RNODE ?!
+                        # TODO: How should we call CSNODE|HNODE or BRDNODE|RSNODE|RNODE ?!
                         raise NotImplementedError
             case ScopeTier.Node:
-                return f'{base}_{s.asn}_{s.node.upper()}' # maybe add type here
+                return f"{base}_{s.asn}_{s.node.upper()}"  # maybe add type here
 
     def _compileNet(self, net: Network) -> str:
         """!
@@ -1134,7 +1134,6 @@ class Docker(Compiler):
             net.setAttribute('dummy_prefix', pfx)
             net.setAttribute('dummy_prefix_index', 2)
             self._log('self-managed network: using dummy prefix {}'.format(pfx))
-
 
         return DockerCompilerFileTemplates['compose_network'].format(
             netId = self._getRealNetName(net),
