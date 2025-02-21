@@ -35,7 +35,6 @@ class ScionAutonomousSystem(AutonomousSystem):
     # Origination, propagation, and registration intervals
     __beaconing_intervals: Tuple[Optional[str], Optional[str], Optional[str]]
     __beaconing_policy: Dict[str, Dict]
-    __next_ifid: int                     # Next IFID assigned to a link
     __note: str # optional free form parameter that contains interesting information about AS. This will be included in beacons if it is set
     __generateStaticInfoConfig:  bool
 
@@ -50,7 +49,6 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__mtu = None
         self.__beaconing_intervals = (None, None, None)
         self.__beaconing_policy = {}
-        self.__next_ifid = 1
         self.__note = None
         self.__generateStaticInfoConfig = False
     
@@ -84,13 +82,6 @@ class ScionAutonomousSystem(AutonomousSystem):
             base64.b64encode(os.urandom(16)).decode(),
             base64.b64encode(os.urandom(16)).decode())
 
-    def getNextIfid(self) -> int:
-        """!
-        @brief Get next unused IFID. Called during configuration.
-        """
-        ifid = self.__next_ifid
-        self.__next_ifid += 1
-        return ifid
 
     def getSecretKeys(self) -> Tuple[str, str]:
         """!
@@ -188,8 +179,12 @@ class ScionAutonomousSystem(AutonomousSystem):
         for router in self.getBorderRouters():
             rnode: ScionRouter = self.getRouter( router.getName() )
 
+            localIP = rnode.getLocalIPAddress()
+            listen_addr = localIP if localIP else rnode.getLoopbackAddress()
+            #UDP address on which the router receives SCION packets 
+            # from sibling routers and end hosts in this AS.
             border_routers[rnode.getName()] = {
-                "internal_addr": f"{rnode.getLoopbackAddress()}:30001",
+                "internal_addr": f"{listen_addr}:30042",
                 "interfaces": rnode.getScionInterfaces()
             }
 
