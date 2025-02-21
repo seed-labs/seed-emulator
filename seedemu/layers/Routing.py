@@ -53,8 +53,8 @@ class Routing(Layer):
     protocols to use later and as router id.
     """
 
-    __loopback_assigner: IPv4Network
-    __loopback_pos: int
+    _loopback_assigner: IPv4Network
+    _loopback_pos: int
 
     def __init__(self, loopback_range: str = '10.0.0.0/16'):
         """!
@@ -64,14 +64,14 @@ class Routing(Layer):
         IP addresses.
         """
         super().__init__()
-        self.__loopback_assigner = IPv4Network(loopback_range)
-        self.__loopback_pos = 1
+        self._loopback_assigner = IPv4Network(loopback_range)
+        self._loopback_pos = 1
         self.addDependency('Base', False, False)
 
     def getName(self) -> str:
         return "Routing"
 
-    def __installBird(self, node: Node):
+    def _installBird(self, node: Node):
         """!
         @brief Install bird on node, and handle the bug.
         """
@@ -84,35 +84,57 @@ class Routing(Layer):
         if not BaseSystem.doesAContainB(base,BaseSystem.SEEDEMU_ROUTER) and base !=BaseSystem.SEEDEMU_ROUTER:
             node.setBaseSystem(BaseSystem.SEEDEMU_ROUTER)
 
+    def _configure_rs(self, rs_node: Node):
+        rs_node.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
+        rs_node.appendStartCommand('bird -d', True)
+        self._log("Bootstrapping bird.conf for RS {}...".format(rs_node.getName()))
+
+        rs_ifaces = rs_node.getInterfaces()
+        assert len(rs_ifaces) == 1, "rs node {} has != 1 interfaces".format(rs_node.getName())
+
+        rs_iface = rs_ifaces[0]
+
+        if not issubclass(rs_node.__class__, Router):
+            rs_node.__class__ = Router
+            rs_node.setBorderRouter(True)
+        rs_node.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rs_bird"].format(
+                    routerId = rs_iface.getAddress()
+        ))
+
+    def _configure_bird_router(self, rnode: Router):
+        ifaces = ''
+        has_localnet = False
+        for iface in rnode.getInterfaces():
+            net = iface.getNet()
+            if net.isDirect():
+                has_localnet = True
+                ifaces += RoutingFileTemplates["rnode_bird_direct_interface"].format(
+                    interfaceName = net.getName()
+                )
+        rnode.setFile("/etc/bird/bird.conf",
+            RoutingFileTemplates["rnode_bird"].format(
+              routerId = rnode.getLoopbackAddress()))
+        rnode.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
+        rnode.appendStartCommand('bird -d', True)
+        if has_localnet:
+            rnode.addProtocol('direct', 'local_nets',
+                              RoutingFileTemplates['rnode_bird_direct'].format(interfaces = ifaces))
+
     def configure(self, emulator: Emulator):
         reg = emulator.getRegistry()
         for ((scope, type, name), obj) in reg.getAll().items():
             if type == 'rs':
                 rs_node: Node = obj
-                self.__installBird(rs_node)
-                rs_node.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
-                rs_node.appendStartCommand('bird -d', True)
-                self._log("Bootstrapping bird.conf for RS {}...".format(name))
-
-                rs_ifaces = rs_node.getInterfaces()
-                assert len(rs_ifaces) == 1, "rs node {} has != 1 interfaces".format(rs_node.getName())
-
-                rs_iface = rs_ifaces[0]
-
-                if not issubclass(rs_node.__class__, Router):
-                    rs_node.__class__ = Router
-                    rs_node.setBorderRouter(True)
-                rs_node.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rs_bird"].format(
-                    routerId = rs_iface.getAddress()
-                ))
-
+                self._installBird(rs_node)
+                self._configure_rs(rs_node)
             if type == 'rnode':
                 rnode: Router = obj
                 if not issubclass(rnode.__class__, Router): rnode.__class__ = Router
 
                 self._log("Setting up loopback interface for AS{} Router {}...".format(scope, name))
 
-                lbaddr = self.__loopback_assigner[self.__loopback_pos]
+                if rnode.getLoopbackAddress() == None:
+                    lbaddr = self._loopback_assigner[self._loopback_pos]
 
                 rnode.appendStartCommand('ip li add dummy0 type dummy')
                 rnode.appendStartCommand('ip li set dummy0 up')
@@ -123,30 +145,12 @@ class Routing(Layer):
 
                 self._log("Bootstrapping bird.conf for AS{} Router {}...".format(scope, name))
 
-                self.__installBird(rnode)
+                self._installBird(rnode)
 
                 r_ifaces = rnode.getInterfaces()
                 assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rnode.getAsn(), rnode.getName())
 
-                ifaces = ''
-                has_localnet = False
-
-                for iface in r_ifaces:
-                    net = iface.getNet()
-                    if net.isDirect():
-                        has_localnet = True
-                        ifaces += RoutingFileTemplates["rnode_bird_direct_interface"].format(
-                            interfaceName = net.getName()
-                        )
-
-                rnode.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rnode_bird"].format(
-                    routerId = rnode.getLoopbackAddress()
-                ))
-
-                rnode.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
-                rnode.appendStartCommand('bird -d', True)
-
-                if has_localnet: rnode.addProtocol('direct', 'local_nets', RoutingFileTemplates['rnode_bird_direct'].format(interfaces = ifaces))
+                self._configure_bird_router(rnode)
 
     def render(self, emulator: Emulator):
         reg = emulator.getRegistry()

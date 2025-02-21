@@ -1,4 +1,5 @@
 eth_account==0.5.9
+geopy==2.4.1
 requests==2.22.0
 eth-rlp<0.3
 web3==5.31.1
