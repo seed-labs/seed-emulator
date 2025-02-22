@@ -7,6 +7,7 @@ from typing import List
 from geopy.distance import geodesic
 
 import yaml
+import inspect
 
 from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, Network, Router, Scope, ScopeTier, BaseOption, OptionMode, Layer
 from seedemu.core.enums import NetworkType
@@ -127,34 +128,35 @@ class ScionRouting(Routing):
                                'daemon': 'sciond' }
     _static_routing: bool = True # this might become an Option
     # global defaults
-    _serve_metrics: bool = False
-    _rotate_logs: bool = False
-    _use_envsubst: bool = True
-    _disable_bfd: bool = True
-    _loglevel: str = 'error'
-    _experimental_scmp: bool = False
-    _appropriate_digest: bool = True
+    _serve_metrics: BaseOption = None
+    _rotate_logs: BaseOption = None
+    _use_envsubst: BaseOption = None
+    _disable_bfd: BaseOption = None
+    _loglevel: BaseOption = None
+    _experimental_scmp: BaseOption = None
+    _appropriate_digest: BaseOption = None
 
     # TODO: change the signature or add overload Dict[ScopeType, List[BaseOption]]
     # so that not all options are set on all nodes (who might not need it for anything i.e. Host the DisableBFD option)
+    # >> Maybe include 'NodeType that the option applies to' into the Option itself
     def getAvailableOptions(self):
-        return [ScionRouting.Option.disable_bfd(),
-                ScionRouting.Option.serve_metrics(),
-                ScionRouting.Option.rotate_logs(),
-                ScionRouting.Option.appropriate_digest(),
-                ScionRouting.Option.experimental_scmp(),
-                ScionRouting.Option.loglevel(),
-                ScionRouting.Option.use_envsubst()]
+        return [ScionRouting._disable_bfd,
+                ScionRouting._serve_metrics,
+                ScionRouting._rotate_logs,
+                ScionRouting._appropriate_digest,
+                ScionRouting._experimental_scmp,
+                ScionRouting._loglevel,
+                ScionRouting._use_envsubst]
 
     def __init__(self, loopback_range: str = '10.0.0.0/16',
                  static_routing: bool = True,
-                 rotate_logs: bool = False,
-                 disable_bfd: bool = True,
-                 use_envsubst:bool = True,
-                 loglevel: str = 'debug',
-                 experimental_scmp: bool = False,
-                 appropriate_digest: bool = True,
-                 serve_metrics: bool = False ):
+                 rotate_logs: BaseOption = None,
+                 disable_bfd: BaseOption = None,
+                 use_envsubst: BaseOption = None,
+                 loglevel: BaseOption = None,
+                 experimental_scmp: BaseOption = None,
+                 appropriate_digest: BaseOption = None,
+                 serve_metrics: BaseOption = None ):
         """!
         @param static_routing install and configure BIRD routing daemon only on routers
                 which are connected to more than one local-net (actual intra-domain routers).
@@ -172,14 +174,30 @@ class ScionRouting(Routing):
         @param serve_metrics enable collection of Prometheus metrics by SCION distributables
         """
         super().__init__(loopback_range)
+        args = inspect.signature(ScionRouting.__init__).parameters.keys()
+        vals = locals()
+        assert not any([ vals[name].name != name for name in args
+                        if (vals[name] is not None) and
+                        name not in ['self', 'static_routing', 'loopback_range'] ]), 'option-parameter mismatch!'
         ScionRouting._static_routing = static_routing
-        ScionRouting._use_envsubst = use_envsubst
-        ScionRouting._serve_metrics = serve_metrics
-        ScionRouting._experimental_scmp = experimental_scmp
-        ScionRouting._appropriate_digest = appropriate_digest
-        ScionRouting._disable_bfd = disable_bfd
-        ScionRouting._rotate_logs = rotate_logs
-        ScionRouting._loglevel= loglevel
+        # set the global default options here if not overriden by user
+        ScionRouting._use_envsubst = (use_envsubst if use_envsubst != None
+                                      else ScionRouting.Option('use_envsubst', 'true', OptionMode.BUILD_TIME))
+        ScionRouting._serve_metrics = (serve_metrics if serve_metrics != None
+                                       else ScionRouting.Option('serve_metrics', 'false', OptionMode.BUILD_TIME))
+        ScionRouting._experimental_scmp = (experimental_scmp if experimental_scmp != None else
+                                           ScionRouting.Option('experimental_scmp', 'false', OptionMode.BUILD_TIME))
+        ScionRouting._appropriate_digest = (appropriate_digest if appropriate_digest != None else
+                                            ScionRouting.Option('appropriate_digest', 'true', OptionMode.BUILD_TIME))
+        ScionRouting._disable_bfd = (disable_bfd if disable_bfd != None else
+                                      ScionRouting.Option('disable_bfd', 'true', OptionMode.BUILD_TIME))
+        ScionRouting._rotate_logs = (rotate_logs if rotate_logs != None else
+                                     ScionRouting.Option('rotate_logs', 'false', OptionMode.BUILD_TIME))
+        ScionRouting._loglevel = (loglevel if loglevel != None else
+                                  ScionRouting.Option('loglevel', 'error', OptionMode.BUILD_TIME))
+        pass
+
+
 
     @staticmethod
     def _resolveFlag( flag: str , node: Node = None) -> str:
@@ -714,14 +732,17 @@ class ScionRouting(Routing):
         SERVE_METRICS = 'serve_metrics'
         APPROPRIATE_DIGEST = 'appropriate_digest'
 
-        def __init__(self, key, value, mode: OptionMode = OptionMode.BUILD_TIME):
+        def __init__(self, key, value, mode: OptionMode = None):
             import inspect
             caller_frame = inspect.stack()[1]
             caller_name = caller_frame.function
-            assert caller_name in valid_keys or caller_name == 'getAvailableOptions', 'constructor of ScionRouting.Option is private'
+            assert caller_name in valid_keys or caller_name in [ 'getAvailableOptions', '__init__'], 'constructor of ScionRouting.Option is private'
             self._key = key
+            default = ScionRouting.Option.default(key)
             if value == None:
-                value = ScionRouting.Option.defaultValue(caller_name)
+                value = default.value
+            if mode == None:
+                mode = default.mode
             self._mutable_value = value  # Separate mutable storage
             self._mutable_mode = None
             if mode != OptionMode.BUILD_TIME:
@@ -754,13 +775,13 @@ class ScionRouting(Routing):
         @staticmethod
         def defaultValue( key: str ) -> str:
             match key.upper():
-                case "ROTATE_LOGS": return str(ScionRouting._rotate_logs).lower()
-                case "APPROPRIATE_DIGEST": return str(ScionRouting._appropriate_digest).lower()
-                case "DISABLE_BFD": return str(ScionRouting._disable_bfd).lower()
-                case "EXPERIMENTAL_SCMP": return str(ScionRouting._experimental_scmp).lower()
+                case "ROTATE_LOGS": return ScionRouting._rotate_logs
+                case "APPROPRIATE_DIGEST": return ScionRouting._appropriate_digest
+                case "DISABLE_BFD": return ScionRouting._disable_bfd
+                case "EXPERIMENTAL_SCMP": return ScionRouting._experimental_scmp
                 case "LOGLEVEL": return ScionRouting._loglevel
-                case "SERVE_METRICS": return str(ScionRouting._serve_metrics).lower()
-                case "USE_ENVSUBST": return str(ScionRouting._use_envsubst).lower()
+                case "SERVE_METRICS": return ScionRouting._serve_metrics
+                case "USE_ENVSUBST": return ScionRouting._use_envsubst
                 case _:
                     assert False , f'unknown option for ScionRouting Layer: {key}'
 

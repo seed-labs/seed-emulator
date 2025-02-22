@@ -10,7 +10,8 @@ from seedemu.layers.Scion import LinkType as ScLinkType
 emu = Emulator()
 base = ScionBase()
 # change global defaults here .. .
-routing = ScionRouting(loglevel='error')
+routing = ScionRouting(loglevel=ScionRouting.Option.loglevel('error', mode=OptionMode.RUN_TIME))
+o = ScionRouting.Option('loglevel','trace', OptionMode.RUN_TIME)
 ospf = Ospf()
 scion_isd = ScionIsd()
 scion = Scion()
