@@ -5,7 +5,7 @@ class OptionMode(Flag):
     RUN_TIME = auto() # i.e. envsubst (required only docker compose stop/start )
     
 
-
+# TODO: make option values typed ! i.e if option is 'bool' and you try to set it to a 'str' value -> exception
 class BaseOption:
     """! a base class for KEY-VALUE pairs representing Settings,Parameters or Feature Flags
     """

@@ -16,7 +16,7 @@ from seedemu.layers.Scion import LinkType as ScLinkType
 emu = Emulator()
 base = ScionBase()
 # change global defaults here .. .
-routing = ScionRouting(loglevel='error')
+routing = ScionRouting(loglevel=ScionRouting.Option.loglevel('error', mode=OptionMode.RUN_TIME))
 ospf = Ospf()
 scion_isd = ScionIsd()
 scion = Scion()
@@ -26,7 +26,7 @@ ebgp = Ebgp()
 
 In addition to the SCION layers we instantiate the `Ibgp` and `Ebgp` layers for BGP as well as `Ospf` for AS-internal routing.
 Note that the ScionRouting layer accepts global default values for options as constructor parameters.
- We use it here to decrease the loglevel from 'debug' to 'error' for all SCION distributables in the whole emulation if not overriden elsewhere.
+ We use it here to decrease the loglevel from 'debug' to 'error' for all SCION distributables in the whole emulation if not overriden elsewhere. Also we change the mode for `LOGLEVEL` from `BUILD_TIME`(default) to `RUN_TIME` in the same statement.
 ## Step 2: Create isolation domains and internet exchanges
 
 ```python
@@ -92,8 +92,10 @@ This section overrides some global defaults:
 As a result the following `.env` file will be generated next to the `docker-compose.yml` containing all instantiated `RUN_TIME` options:
 ```
 LOGLEVEL_150_BR0=debug
+DISABLE_BFD_150_BRDNODE=true
 SERVE_METRICS_150_BR1=true
-DISABLE_BFD_150=true
+LOGLEVEL_150=info
+LOGLEVEL=error
 ```
 These variables are referenced from the `docker-compose.yml` file:
 
@@ -111,7 +113,7 @@ These variables are referenced from the `docker-compose.yml` file:
             - SERVE_METRICS=${SERVE_METRICS_150_BR1}
             - DISABLE_BFD=${DISABLE_BFD_150_BRDNODE}
 
-    brdnode_150_br3:
+    brdnode_150_br2|3:
         ...
         environment:
             - LOGLEVEL=${LOGLEVEL_150}
@@ -120,6 +122,11 @@ These variables are referenced from the `docker-compose.yml` file:
         ...
         environment:
             - LOGLEVEL=${LOGLEVEL_150}
+
+      brdnode_151_br0:
+        ...
+        environment:
+            - LOGLEVEL=${LOGLEVEL}
 ```
 Note that each service has in its `environment:` section (only) the runtime variables that apply to it (that is: match its ASN, NodeType or NodeIdentity).
 
