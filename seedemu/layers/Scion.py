@@ -10,13 +10,14 @@ from typing import Dict, Tuple, Union, Any, Set
 from sys import version
 from seedemu.core import (Emulator, Interface, Layer, Network, Registry,
                           Router, ScionAutonomousSystem, ScionRouter,
-                          ScopedRegistry, Graphable)
+                          ScopedRegistry, Graphable, Node)
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import ScionBase, ScionIsd
 import shutil
 import tempfile
 from seedemu.utilities.BuildtimeDocker import BuildtimeDockerFile, BuildtimeDockerImage, sh
-
+from enum import Enum
+from dataclasses import dataclass
 
 class LinkType(Enum):
     """!
@@ -62,54 +63,187 @@ class LinkType(Enum):
                 assert not core_as, 'Logic error:  Core ASes must only provide transit to customers, not receive it!'
                 return "PARENT"
 
-class ScionBuildConfig():
-    """!
-    @brief This class validates and builds scion from a configuration
 
-    checks the mode property and either downloads the binaries and builds it from source
-    Also supports local absolute directory file path to use instead in release mode
+
+@dataclass
+class CheckoutSpecification():#SetupSpecification
     """
-    mode: str
+    Identifies a specific SCION release version or RepoCheckout
+    """
+    mode: str # 'release' or 'build'
     release_location: str
+    version: str
     git_repo_url: str
     checkout: str
-    version: str
+    
+    # TODO do some more logic >> version and release_location must not be specified independently
+    def __init__(self,
+                  mode: str = None,
+                  release_location: str = None,
+                  version: str = None,
+                  git_repo_url: str = None,
+                  checkout: str = None
+                  ):
+        if not mode:        self.mode = "release"
+        else: self.mode = mode
+        if not release_location:
+            self.release_location = "https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz"
+        else: self.release_location = release_location
+        if not version:
+            self.version = "v0.12.0"
+        else: self.version = version
+        # "mode": "build",
+        if not git_repo_url:
+            self.git_repo_url = "https://github.com/scionproto/scion.git"
+        else: self.git_repo_url = git_repo_url
+        if not checkout:
+            self.checkout = "v0.12.0" # could be tag, branch or commit (ex "efbbd5835f33ab52389976d4b69d68fa7c087230")
+        else: self.checkout = checkout
+
+
+# InstallationPlan, InstallPolicy
+class SetupSpecification(Enum):
+    """! @brief describes how exactly the SCION distributables
+      shall be installed i.e. either from ubuntu-packages or local checkout and build
+    """
+
+    PACKAGES = "UbuntuPackage"
+    LOCAL_BUILD = "Compile from sources" #CheckoutSpecification
+
+    def __call__(self, *args, **kwargs) -> SetupSpecification:#Union[str, CheckoutSpecification]:
+        """
+        Overloads `()` to return the appropriate object based on the enum variant.
+        """
+        if self == SetupSpecification.PACKAGES:
+            return self # "Ubuntu ETHZ .deb package installation"
+        elif self == SetupSpecification.LOCAL_BUILD:
+            if type(args[0]) == CheckoutSpecification:
+                self.checkout_spec = args[0]
+            else:
+                self.checkout_spec = CheckoutSpecification(*args, **kwargs)
+            return self
+        else:
+            raise TypeError(f"Invalid SetupSpecification variant: {self}")
+
+    def describe(method):
+        match method:
+            case SetupSpecification.PACKAGES:
+                return "Installed via Ubuntu ETHZ .deb package"
+            case SetupSpecification.LOCAL_BUILD:
+                return "Local build from source"
+
+# TODO: add the notion of provided capabilities to SetupSpecification
+# some features(options) of the ScionRouting layer
+#  might require a special checkout on the node (>> conditional options )
+# Currently we are unable to detect inadequate checkouts/setups
+# for a given set of options on a node at build time(the emulation will just not work).
+class ScionBuilder():
+    """!
+    @brief A strategy object who knows how to install 
+    the SCION distributables on a Node as instructed by a specification.
+
+    This neatly separates installation and configuration of the SCION stack.
+    The former is the ScionBuilder's job, whereas the latter is up to the ScionRouting layer,
+    which delegates installatation to the builder.
+    The builder is stateless and all configuration state resides on nodes in form of options.
+    Checks the mode property and either downloads the binaries and builds it from source
+    Also supports local absolute directory file path to use instead in release mode
+    """
+
 
     def __init__(self):
-        self.mode = "release"
-        self.release_location = "https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz"
-        self.version = "v0.12.0"
+        pass
 
-    def setBuildConfiguration(self, config: Dict[str,str]):
-        self.__validateBuildConfiguration(config)
-        self.mode = config["mode"]
-        if self.mode == "release":
-            self.release_location = config["releaseLocation"]
-            self.version = config["version"]
-        else:
-            self.git_repo_url = config["gitRepoUrl"]
-            self.checkout = config["checkout"]
+    def installSCION(self, node: Node):
+        """!
+        Installs the right SCION stack distributables on the given node based on its role.
 
-    def __validateBuildConfiguration(self, config: Dict[str,str]):
+        The install is performed as instructed by the nodes SetupSpec option
+        """
+        spec = node.getOption('setup_spec')
+        assert spec != None, 'implementation error - all nodes are supposed to have a SetupSpecification set by ScionRoutingLayer'
+
+        match s:=spec.value:
+            case SetupSpecification.LOCAL_BUILD:
+                self.__installFromBuild(node, s.checkout_spec)
+
+            case SetupSpecification.PACKAGES:
+                self._installFromDebPackage(node)
+
+    def nameOfCmd(self, cmd, node: Node) -> str:
+        spec = node.getOption('setup_spec')
+        assert spec != None, 'implementation error - all nodes are supposed to have a SetupSpecification set by ScionRoutingLayer'
+        assert cmd in ['router', 'control', 'dispatcher', 'daemon'], f'unknown SCION distributable {cmd}'
+        match spec.value:
+            case SetupSpecification.PACKAGES:                 
+                return {'router': 'scion-border-router',
+                        'control': 'scion-control-service',
+                        'dispatcher': 'scion-dispatcher',
+                        'daemon': 'sciond' }[cmd]
+            case SetupSpecification.LOCAL_BUILD:
+                return cmd
+
+    def _installFromDebPackage(self, node: Node): # TODO: don't install  all distributables on all nodes i.e. no BR for hosts etc.
+        """Install SCION packages on the node."""
+        node.addBuildCommand(
+            'echo "deb [trusted=yes] https://packages.netsec.inf.ethz.ch/debian all main"'
+            " > /etc/apt/sources.list.d/scionlab.list"
+        )
+        node.addBuildCommand(
+            "apt-get update && apt-get install -y"
+            " scion-border-router scion-control-service scion-daemon scion-dispatcher scion-tools"
+            " scion-apps-bwtester"
+        )
+        node.addSoftware("apt-transport-https")
+        node.addSoftware("ca-certificates") # by whom are these required exactly ?! only the deb-packages ?!
+        self.installHelpers(node)
+
+    def __installFromBuild(self, node: Node, s: CheckoutSpecification):
+        """
+        validates the specification and if its sensible 
+        does checkout, build and mount into node as volume
+        """
+        self.__validateBuildConfiguration(s)
+        build_dir = self.__generateBuild(s)
+        path_to_binaries = "/bin/scion/" # path in container TODO move to CheckoutSpec ?!
+        node.addSharedFolder(path_to_binaries, build_dir)
+        #node.addBuildCommand("export PATH=$PATH:/bin/scion/") # FIXME
+        node.addDockerCommand(f'ENV PATH={path_to_binaries}:$PATH ')
+        self.installHelpers(node)
+
+    def installHelpers(self, node: Node):
+        #node.addSoftware("apt-transport-https")
+        #node.addSoftware("ca-certificates") # by whom are these required exactly ?! only the deb-packages ?!
+
+        if node.getOption("rotate_logs").value == "true":
+            node.addSoftware("apache2-utils")  # for rotatelogs
+        # TODO actually i had to check if there's any option on this node
+        # which has OptionMode.RUN_TIME set
+        if node.getOption("use_envsubst").value == "true":  # for envsubst
+            node.addSoftware("gettext")
+
+
+
+    def __validateBuildConfiguration(self, config: CheckoutSpecification):
         """
         validate build configuration dict by checking all the required keys and url validity
         """
-        if "mode" not in config:
+        if not config.mode:
             raise KeyError("No SCION build configuration provided.")
-        if config["mode"] not in ["release", "build"]: 
+        if config.mode not in ["release", "build"]: 
             raise ValueError("Only two SCION build modes accepted. 'release'|'build'")
-        if config["mode"] == "release":
-            if "releaseLocation" not in config:
+        if config.mode == "release":
+            if not config.release_location:
                 raise KeyError("releaseLocation must be set for the mode 'release'")
-            self.__validateReleaseLocation(config["releaseLocation"])
-            if "version" not in config:
+            self.__validateReleaseLocation(config.release_location)
+            if not config.version:
                 raise KeyError("version must be set for the mode 'release'")
-        if config["mode"] == "build":
-            if "gitRepoUrl" not in config:
+        if config.mode == "build":
+            if not config.git_repo_url:
                 raise KeyError("gitRepoUrl must be set for the mode 'build'")
-            if "checkout" not in config:
+            if not config.checkout:
                 raise KeyError("'checkout' must be set for the mode 'build'")
-            self.__validateGitURL(config["gitRepoUrl"])
+            self.__validateGitURL(config.git_repo_url)
 
     def __validateReleaseLocation(self, path: str):
         """
@@ -169,7 +303,7 @@ class ScionBuildConfig():
         
         return "unknown"
 
-    def __generateGitCloneString(self, repo_url: str, checkout: str):
+    def __generateGitCloneString(self, repo_url: str, checkout: str) -> str:
         """
         Generates a Git clone string for the specified reference (branch, tag, or commit).
         """
@@ -184,50 +318,50 @@ class ScionBuildConfig():
         else:
             raise ValueError("Invalid reference type. Must be 'branch', 'tag', or 'commit'.")
 
-    def generateBuild(self) -> str :
+    def __generateBuild(self, spec: CheckoutSpecification) -> str :
         """
-        method to build all scion binaries and ouput to .scion_build_output based on the configuration mode
+        method to build all SCION binaries and output to .scion_build_output based on the configuration mode
         """
-        if self.mode == "release":
-            if not self.__is_local_path(self.release_location):
-                if not os.path.isdir(f".scion_build_output/scion_binaries_{self.version}"):
+        if spec.mode == "release":
+            if not self.__is_local_path(spec.release_location):
+                if not os.path.isdir(f".scion_build_output/scion_binaries_{spec.version}"):
                     SCION_RELEASE_TEMPLATE = f"""FROM alpine 
                     RUN apk add --no-cache wget tar
                     WORKDIR /app
-                    RUN wget -qO- {self.release_location} | tar xvz -C /app
+                    RUN wget -qO- {spec.release_location} | tar xvz -C /app
                     """
                     dockerfile = BuildtimeDockerFile(SCION_RELEASE_TEMPLATE)
-                    container = BuildtimeDockerImage(f"scion-release-fetch-container_{self.version}").build(dockerfile).container()
+                    container = BuildtimeDockerImage(f"scion-release-fetch-container_{spec.version}").build(dockerfile).container()
                     current_dir = os.getcwd()
-                    output_dir = os.path.join(current_dir, f".scion_build_output/scion_binaries_{self.version}")
+                    output_dir = os.path.join(current_dir, f".scion_build_output/scion_binaries_{spec.version}")
                     container.entrypoint("sh").mountVolume(output_dir, "/build").run(
                        "-c \"cp -r /app/* /build\""
                     )
                     return output_dir
 
                 else:
-                    output_dir = os.path.join(os.getcwd(), f".scion_build_output/scion_binaries_{self.version}")
+                    output_dir = os.path.join(os.getcwd(), f".scion_build_output/scion_binaries_{spec.version}")
                     return output_dir
             else:
-                return self.release_location 
+                return spec.release_location 
         else:
-            if not os.path.isdir(f".scion_build_output/scion_binaries_{self.checkout}"):
+            if not os.path.isdir(f".scion_build_output/scion_binaries_{spec.checkout}"):
                 SCION_BUILD_TEMPLATE = f"""FROM golang:1.22-alpine 
                 RUN apk add --no-cache git
-                RUN {self.__generateGitCloneString(self.git_repo_url,self.checkout)}
+                RUN {self.__generateGitCloneString(spec.git_repo_url, spec.checkout)}
                 RUN cd scion && go mod tidy && CGO_ENABLED=0 go build -o bin ./router/... ./control/... ./dispatcher/... ./daemon/... ./scion/... ./scion-pki/... ./gateway/...
                 """
                 dockerfile = BuildtimeDockerFile(SCION_BUILD_TEMPLATE)
-                container = BuildtimeDockerImage(f"scion-build-container-{self.checkout}").build(dockerfile).container()
+                container = BuildtimeDockerImage(f"scion-build-container-{spec.checkout}").build(dockerfile).container()
                 current_dir = os.getcwd()
-                output_dir = os.path.join(current_dir, f".scion_build_output/scion_binaries_{self.checkout}")
+                output_dir = os.path.join(current_dir, f".scion_build_output/scion_binaries_{spec.checkout}")
                 container.entrypoint("sh").mountVolume(output_dir, "/build").run(
                    "-c \"cp -r scion/bin/* /build\""
                 )
                 return output_dir
 
             else:
-                output_dir = os.path.join(os.getcwd(), f".scion_build_output/scion_binaries_{self.checkout}")
+                output_dir = os.path.join(os.getcwd(), f".scion_build_output/scion_binaries_{spec.checkout}")
                 return output_dir
 
 
@@ -242,7 +376,6 @@ class Scion(Layer, Graphable):
     __links: Dict[Tuple[IA, IA, str, str, LinkType], int]
     __ix_links: Dict[Tuple[int, IA, IA, str, str, LinkType], Dict[str,Any] ]
     __if_ids_by_as = {} # Dict[IA, Set[int]]
-    __default_build_config : ScionBuildConfig 
 
     def __init__(self):
         """!
@@ -251,7 +384,6 @@ class Scion(Layer, Graphable):
         super().__init__()
         self.__links = {}
         self.__ix_links = {}
-        self.__default_build_config = ScionBuildConfig()
         self.addDependency('ScionIsd', False, False)
 
     def getName(self) -> str:
@@ -318,12 +450,6 @@ class Scion(Layer, Graphable):
         ifs.add(last+1)
         Scion.__if_ids_by_as[ia] = ifs
         return last+1
-        
-    def getBuildConfiguration(self) -> ScionBuildConfig:
-        return self.__default_build_config
-
-    def setBuildConfiguration(self, buildConfig: Dict[str,str]):
-        self.__default_build_config.setBuildConfiguration(buildConfig)
 
     def addXcLink(self, a: Union[IA, Tuple[int, int]], b: Union[IA, Tuple[int, int]],
                   linkType: LinkType, count: int=1, a_router: str="", b_router: str="",) -> 'Scion':

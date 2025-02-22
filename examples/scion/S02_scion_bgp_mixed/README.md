@@ -5,18 +5,29 @@ Moreover it serves as a demo of how to use the option system.
 
 ## Step 1: Create layers
 
-```python
-from seedemu.compiler import Docker, Graphviz
-from seedemu.core import Emulator, OptionMode
+```pythonfrom seedemu.compiler import Docker, Graphviz
+from seedemu.core import Emulator, OptionMode, Scope, ScopeTier, ScopeType
 from seedemu.layers import (
-    ScionBase, ScionRouting, ScionIsd, Scion, Ospf, Ibgp, Ebgp, PeerRelationship)
+    ScionBase, ScionRouting, ScionIsd, Scion, Ospf, Ibgp, Ebgp, PeerRelationship,
+    SetupSpecification, CheckoutSpecification)
 from seedemu.layers.Scion import LinkType as ScLinkType
 
 # Initialize
 emu = Emulator()
 base = ScionBase()
 # change global defaults here .. .
-routing = ScionRouting(loglevel=ScionRouting.Option.loglevel('error', mode=OptionMode.RUN_TIME))
+loglvl = ScionRouting.Option.loglevel('error', mode=OptionMode.RUN_TIME)
+
+spec = SetupSpecification.LOCAL_BUILD(
+        CheckoutSpecification(
+            mode = "build",
+            git_repo_url = "https://github.com/scionproto/scion.git",
+            checkout = "v0.12.0" # could be tag, branch or commit-hash
+        ))
+opt_spec = ScionRouting.Option.setup_spec(spec)
+routing = ScionRouting(loglevel=loglvl, setup_spec=opt_spec)
+
+# o = ScionRouting.Option('loglevel','trace', OptionMode.RUN_TIME)
 ospf = Ospf()
 scion_isd = ScionIsd()
 scion = Scion()
@@ -27,6 +38,8 @@ ebgp = Ebgp()
 In addition to the SCION layers we instantiate the `Ibgp` and `Ebgp` layers for BGP as well as `Ospf` for AS-internal routing.
 Note that the ScionRouting layer accepts global default values for options as constructor parameters.
  We use it here to decrease the loglevel from 'debug' to 'error' for all SCION distributables in the whole emulation if not overriden elsewhere. Also we change the mode for `LOGLEVEL` from `BUILD_TIME`(default) to `RUN_TIME` in the same statement.
+ Lastly we specify (as a global default for all nodes) that we want to use a local build of the `v0.12.0` SCION stack, rather than the 'official' `.deb` packages (`SetupSpecification.PACKAGES`). The SetupSpec is just an ordinary option and be overriden for ASes or individual nodes just like any other.
+
 ## Step 2: Create isolation domains and internet exchanges
 
 ```python
