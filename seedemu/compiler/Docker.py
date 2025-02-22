@@ -1157,13 +1157,13 @@ class Docker(Compiler):
         vars = []
         for o,s in self.__config:
             try:
-                if s < scope:
+                if s < scope or s == scope:
                     sndkey = self._sndary_key(o,s)
                     val = o.value
                     vars.append( f'{sndkey}={val}')
             except:
                 pass
-
+        assert len(vars)==len(self.__config), 'implementation error'
         print( '\n'.join(vars) ,file=open(f'{prefix}.env','w'))
 
     def _makeDummies(self) -> str:
