@@ -22,7 +22,6 @@ spec = SetupSpecification.LOCAL_BUILD(
 opt_spec = ScionRouting.Option.setup_spec(spec)
 routing = ScionRouting(loglevel=loglvl, setup_spec=opt_spec)
 
-# o = ScionRouting.Option('loglevel','trace', OptionMode.RUN_TIME)
 ospf = Ospf()
 scion_isd = ScionIsd()
 scion = Scion()
