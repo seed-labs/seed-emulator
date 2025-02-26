@@ -1,4 +1,5 @@
 **/output/*
+**/.scion_build_output/*
 **/eth-states*/*
 **/test_log*/*
 **/__pycache__/*

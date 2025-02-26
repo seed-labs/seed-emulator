@@ -8,5 +8,5 @@ from .Mpls import Mpls
 from .ScionBase import ScionBase
 from .ScionRouting import ScionRouting
 from .ScionIsd import ScionIsd
-from .Scion import Scion
+from .Scion import Scion, SetupSpecification, CheckoutSpecification
 from .EtcHosts import EtcHosts
