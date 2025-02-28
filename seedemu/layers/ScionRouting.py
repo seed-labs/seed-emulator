@@ -9,33 +9,118 @@ from geopy.distance import geodesic
 import yaml
 import inspect
 
-from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, Network, Router, Scope, ScopeTier, BaseOption, OptionMode, Layer
+from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, Network, Router, BaseOption, BaseOptionGroup, OptionMode, Layer, Option
 from seedemu.core.enums import NetworkType
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import Routing, ScionBase, ScionIsd
 from seedemu.layers.Scion import Scion, ScionBuilder, SetupSpecification, CheckoutSpecification
 from seedemu.core.ScionAutonomousSystem import IA
 
-valid_keys = {
-    "rotate_logs",
-    "appropriate_digest",
-    "disable_bfd",
-    "experimental_scmp",
-    "loglevel",
-    "serve_metrics",
-    "setup_spec",
-    "use_envsubst",
-}
-supported_modes = {
-        'ROTATE_LOGS': OptionMode.BUILD_TIME,
-        'USE_ENVSUBST': OptionMode.BUILD_TIME,
-        'EXPERIMENTAL_SCMP': OptionMode.BUILD_TIME | OptionMode.RUN_TIME,
-        'DISABLE_BFD': OptionMode.BUILD_TIME | OptionMode.RUN_TIME,
-        'LOGLEVEL': OptionMode.BUILD_TIME | OptionMode.RUN_TIME,
-        'SERVE_METRICS': OptionMode.BUILD_TIME | OptionMode.RUN_TIME,
-        'APPROPRIATE_DIGEST': OptionMode.BUILD_TIME | OptionMode.RUN_TIME,
-        'SETUP_SPEC': OptionMode.BUILD_TIME
-    }
+
+class ScionStackOpts(BaseOptionGroup):
+# NOTE: the classname is dynamically changed to just 'scion' so the
+# nested option names don't become too lengthy...
+
+    # TODO: add CS tracing
+    # TODO: add dispatchable port range
+    # make installation of test-tools optional (bwtester etc.)
+
+    class ROTATE_LOGS(Option):
+        """prevent excessive growth of log files for longer running simulations
+        by rotating log files """
+        value_type = str
+        @classmethod
+        def supportedModes(cls) -> OptionMode:
+            return OptionMode.BUILD_TIME
+        @classmethod
+        def default(cls):
+            return "false"
+
+    class APPROPRIATE_DIGEST(Option):
+        """ Enables the CA module to sign issued certificates
+           with the appropriate digest algorithm instead of always using ECDSAWithSHA512."""
+        value_type = str
+        @classmethod
+        def supportedModes() -> OptionMode:
+            return OptionMode.BUILD_TIME | OptionMode.RUN_TIME
+        @classmethod
+        def default(cls):
+            return "true"
+
+    class DISABLE_BFD(Option):
+        """Bidirectional Forwarding Detection (BFD) is a network protocol that is used to detect faults
+          between two forwarding engines connected by a link.[ RFC 5880, RFC 5881]
+          In SCION, BFD is used to determine the liveness of the link
+          between two border routers and trigger SCMP error messages."""
+        value_type = str
+        @classmethod
+        def supportedModes(self) -> OptionMode:
+            return  OptionMode.BUILD_TIME | OptionMode.RUN_TIME
+        @classmethod
+        def default(cls):
+            return "true"
+
+    class EXPERIMENTAL_SCMP(Option):
+        """Enable the DRKey-based authentication of SCMPs in the router,
+          which is experimental and currently incomplete.
+          When enabled, the router inserts the SCION Packet Authenticator Option(SPAO) for SCMP messages.
+          For now, the MAC is computed based on a dummy key, and consequently is not practically useful."""
+        value_type = str
+        @classmethod
+        def supportedModes(cls) -> OptionMode:
+            return OptionMode.BUILD_TIME | OptionMode.RUN_TIME
+        @classmethod
+        def default(cls):
+            return "false"
+
+    class LOGLEVEL(Option): # TODO allow different values per distributable
+        """loglevel of the SCION distributables"""
+        value_type = str
+        @classmethod
+        def supportedModes(cls) -> OptionMode:
+            return OptionMode.BUILD_TIME | OptionMode.RUN_TIME
+        @classmethod
+        def default(cls):
+            return "error"
+
+    class SERVE_METRICS(Option): # TODO allow setting per distributable
+        """enable collection of Prometheus metrics by SCION distributables"""
+        value_type = str
+        @classmethod
+        def supportedModes(cls) -> OptionMode:
+            return OptionMode.BUILD_TIME | OptionMode.RUN_TIME
+        @classmethod
+        def default(cls):
+            return "false"
+
+    # FIXME: what to do about this ?! actually it can be derived from OptionModes of all available options
+    # If any of them has RUN_TIME mode -> this implies USE_ENVSUBST==True
+    class USE_ENVSUBST(Option):
+        """wheter to pipe the config files of SCION distributables
+        through envsubst before passing to application.
+        This allows for dynamic configuration / substitution of ENV variables in the config.
+        """
+        value_type = str
+        @classmethod
+        def supportedModes(cls) -> OptionMode:
+            return OptionMode.BUILD_TIME
+        @classmethod
+        def default(cls):
+            return "true"
+
+    class SETUP_SPEC(Option):
+        """ which SCION stack to deploy in the simulation """
+        value_type = SetupSpecification
+        @classmethod
+        def supportedModes(cls) -> OptionMode:
+            return OptionMode.BUILD_TIME
+        @classmethod
+        def default(cls):
+            return SetupSpecification.LOCAL_BUILD(CheckoutSpecification())
+
+
+# -------------------------------------------------------------------
+
 _Templates: Dict[str, str] = {}
 
 _Templates["general"] = """\
@@ -129,28 +214,15 @@ class ScionRouting(Routing):
     # which depend on the dispatcher socket
     __default_builder: ScionBuilder
     _static_routing: bool = True # this might become an Option
-    # global defaults
-    _serve_metrics: BaseOption = None
-    _rotate_logs: BaseOption = None
-    _use_envsubst: BaseOption = None
-    _disable_bfd: BaseOption = None
-    _loglevel: BaseOption = None
-    _experimental_scmp: BaseOption = None
-    _appropriate_digest: BaseOption = None
-    _setup_spec: BaseOption = None
 
     # TODO: change the signature or add overload Dict[ScopeType, List[BaseOption]]
     # so that not all options are set on all nodes (who might not need it for anything i.e. Host the DisableBFD option)
     # >> Maybe include 'NodeType that the option applies to' into the Option itself
     def getAvailableOptions(self):
-        return [ScionRouting._disable_bfd,
-                ScionRouting._serve_metrics,
-                ScionRouting._rotate_logs,
-                ScionRouting._appropriate_digest,
-                ScionRouting._experimental_scmp,
-                ScionRouting._loglevel,
-                ScionRouting._use_envsubst,
-                ScionRouting._setup_spec ]
+        from seedemu.core.OptionRegistry import OptionRegistry
+        opt_keys = [ o.name for o in ScionStackOpts().components()]
+        opt = [OptionRegistry().getOption(o, prefix='scion') for o in opt_keys]
+        return opt
 
     def __init__(self, loopback_range: str = '10.0.0.0/16',
                  static_routing: bool = True,
@@ -177,38 +249,30 @@ class ScionRouting(Routing):
           In SCION, BFD is used to determine the liveness of the link between two border routers and trigger SCMP error messages.
         @param loglevel LogLevel of SCION distributables
         @param serve_metrics enable collection of Prometheus metrics by SCION distributables
+        @param setup_spec which SCION stack to deploy in the simulation
         """
+        from seedemu.core.OptionRegistry import OptionRegistry
         super().__init__(loopback_range)
         self.__default_builder = ScionBuilder()
         args = inspect.signature(ScionRouting.__init__).parameters.keys()
         vals = locals()
-        assert not any([ vals[name].name != name for name in args
+        option_names = [name for name in args
                         if (vals[name] is not None) and
-                        name not in ['self', 'static_routing', 'loopback_range'] ]), 'option-parameter mismatch!'
+                        name not in ['self', 'static_routing', 'loopback_range'] ]
+        assert not any([ vals[name].name != name for name in option_names]), 'option-parameter mismatch!'
         ScionRouting._static_routing = static_routing
-        # set the global default options here if not overriden by user
-        ScionRouting._use_envsubst = (use_envsubst if use_envsubst != None
-                                      else ScionRouting.Option('use_envsubst', 'true', OptionMode.BUILD_TIME))
-        ScionRouting._serve_metrics = (serve_metrics if serve_metrics != None
-                                       else ScionRouting.Option('serve_metrics', 'false', OptionMode.BUILD_TIME))
-        ScionRouting._experimental_scmp = (experimental_scmp if experimental_scmp != None else
-                                           ScionRouting.Option('experimental_scmp', 'false', OptionMode.BUILD_TIME))
-        ScionRouting._appropriate_digest = (appropriate_digest if appropriate_digest != None else
-                                            ScionRouting.Option('appropriate_digest', 'true', OptionMode.BUILD_TIME))
-        ScionRouting._disable_bfd = (disable_bfd if disable_bfd != None else
-                                      ScionRouting.Option('disable_bfd', 'true', OptionMode.BUILD_TIME))
-        ScionRouting._rotate_logs = (rotate_logs if rotate_logs != None else
-                                     ScionRouting.Option('rotate_logs', 'false', OptionMode.BUILD_TIME))
-        ScionRouting._loglevel = (loglevel if loglevel != None else
-                                  ScionRouting.Option('loglevel', 'error', OptionMode.BUILD_TIME))
-        ScionRouting._setup_spec = (setup_spec if setup_spec != None else
-                                    ScionRouting.Option('setup_spec',
-                                                        SetupSpecification.LOCAL_BUILD(CheckoutSpecification()),
-                                                        OptionMode.BUILD_TIME )
-                                    )
 
+        # let user override the global default options
 
-
+        for n in option_names:
+        # Replace the 'defaults' class methods dynamically
+            v = vals[n]
+            opt_cls = type(v)
+            # Capture 'new_value' as default argument (forces a snapshot of the current value)
+            opt_cls.default = classmethod(lambda cls, new_value=v.value: new_value)
+            opt_cls.defaultMode = classmethod(lambda cls, newmode=v.mode: newmode)
+            prefix = getattr(opt_cls, '__prefix') if hasattr(opt_cls, '__prefix') else None
+            OptionRegistry().register(opt_cls, prefix)
 
     @staticmethod
     def _resolveFlag( flag: str , node: Node = None) -> str:
@@ -220,8 +284,8 @@ class ScionRouting(Routing):
               (it may return '${VAR}' placeholders if 'use_envsubst' is true)
         """
 
-        if flag not in valid_keys:
-            raise ValueError( f"invalid argument - flag {flag} unknown to SCION")
+        #if flag not in valid_keys:
+        #    raise ValueError( f"invalid argument - flag {flag} unknown to SCION")
 
         #TODO: maybe add toLowerTOML(default_val: str) -> str checks here
         # since user can input any garbage as input i.e. "'False'"(capitalized str) or "False" (bool)
@@ -715,97 +779,3 @@ class ScionRouting(Routing):
             cs_config += _Templates["metrics"].format(node.getLocalIPAddress(), 30452)
         cs_config += "\n".join(beaconing)
         node.setFile(os.path.join("/etc/scion/", name + ".toml"), cs_config)
-
-    class Option(BaseOption):
-        # TODO: add CS tracing
-        # TODO: add dispatchable port range
-        # make installation of test-tools optional (bwtester etc.)
-        ROTATE_LOGS = "rotate_logs"
-        USE_ENVSUBST = "use_envsubst"
-        EXPERIMENTAL_SCMP = 'experimental_scmp'
-        DISABLE_BFD = 'disable_bfd'
-        LOGLEVEL = 'loglevel'
-        SERVE_METRICS = 'serve_metrics'
-        APPROPRIATE_DIGEST = 'appropriate_digest'
-
-        def __init__(self, key, value, mode: OptionMode = None):
-            import inspect
-            caller_frame = inspect.stack()[1]
-            caller_name = caller_frame.function
-            assert caller_name in valid_keys or caller_name in [ 'getAvailableOptions', '__init__'], 'constructor of ScionRouting.Option is private'
-            self._key = key
-            default = ScionRouting.Option.default(key)
-            if value == None:
-                value = default.value
-            if mode == None:
-                mode = default.mode
-            self._mutable_value = value  # Separate mutable storage
-            self._mutable_mode = None
-            if mode != OptionMode.BUILD_TIME:
-                assert mode in self.supportedModes(), f'unsupported mode for option {key.upper()}'
-            self._mutable_mode = mode
-
-        @property
-        def name(self) -> str:
-            return self._key
-
-        @property
-        def value(self) -> str:
-            return self._mutable_value
-
-        @value.setter
-        def value(self, new_value: str):
-            """Allow updating the value attribute."""
-            self._mutable_value = new_value
-
-        @property
-        def mode(self):
-            return self._mutable_mode
-        @mode.setter
-        def mode(self, new_mode):
-            self._mutable_mode = new_mode
-
-        def supportedModes(self) -> OptionMode:
-            return self._mutable_mode if self._mutable_mode != None else  supported_modes[self._key.upper()]
-
-        @staticmethod
-        def defaultValue( key: str ) -> str:
-            match key.upper():
-                case "ROTATE_LOGS": return ScionRouting._rotate_logs
-                case "APPROPRIATE_DIGEST": return ScionRouting._appropriate_digest
-                case "DISABLE_BFD": return ScionRouting._disable_bfd
-                case "EXPERIMENTAL_SCMP": return ScionRouting._experimental_scmp
-                case "LOGLEVEL": return ScionRouting._loglevel
-                case "SERVE_METRICS": return ScionRouting._serve_metrics
-                case "USE_ENVSUBST": return ScionRouting._use_envsubst
-                case "SETUP_SPEC": return ScionRouting._setup_spec
-                case _:
-                    assert False , f'unknown option for ScionRouting Layer: {key}'
-
-        @classmethod
-        def disable_bfd(cls, value: str = None, mode: OptionMode = OptionMode.BUILD_TIME) -> 'Option':
-            return cls('disable_bfd', value, mode)
-        @classmethod
-        def loglevel(cls, value: str = None, mode: OptionMode = OptionMode.BUILD_TIME) -> 'Option':
-            return cls('loglevel', value, mode)
-        @classmethod
-        def serve_metrics(cls, value: str = None, mode: OptionMode = OptionMode.BUILD_TIME) -> 'Option':
-            return cls('serve_metrics', value, mode)
-        @classmethod
-        def appropriate_digest(cls, value: str = None, mode: OptionMode = OptionMode.BUILD_TIME) -> 'Option':
-            return cls('appropriate_digest', value, mode)
-        @classmethod
-        def experimental_scmp(cls, value: str = None, mode: OptionMode = OptionMode.BUILD_TIME) -> 'Option':
-            return cls('experimental_scmp', value, mode)
-        @classmethod
-        def rotate_logs(cls, value: str = None, mode: OptionMode = OptionMode.BUILD_TIME) -> 'Option':
-            return cls('rotate_logs', value, mode)
-        @classmethod
-        def use_envsubst(cls, value: str = None, mode: OptionMode = OptionMode.BUILD_TIME) -> 'Option':
-            return cls('use_envsubst', value, mode)
-        @classmethod
-        def setup_spec(cls, value: SetupSpecification = None, mode: OptionMode = OptionMode.BUILD_TIME) -> 'Option':
-            return cls('setup_spec', value, mode)
-
-        def __repr__(self):
-            return f"Option(key={self._key}, value={self._mutable_value})"

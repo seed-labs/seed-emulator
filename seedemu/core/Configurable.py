@@ -63,6 +63,7 @@ class DynamicConfigurable(Configurable):
                       if typ in ['rnode','hnode','csnode','rsnode'] ]
         for n in all_nodes:
             for o in self.getAvailableOptions():
+                assert o, 'implementation error'
                 n.setOption(o, Scope(ScopeTier.Global))
         
     
