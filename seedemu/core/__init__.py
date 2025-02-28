@@ -22,4 +22,5 @@ from .RemoteAccessProvider import RemoteAccessProvider
 from .Compiler import Compiler, OptionHandling
 from .BaseSystem import BaseSystem
 from .Scope import *
-from .Option import BaseOption,OptionMode
+from .Option import BaseOption, OptionMode, Option, BaseComponent, BaseOptionGroup, AutoRegister, OptionGroupMeta
+from .OptionRegistry import OptionRegistry

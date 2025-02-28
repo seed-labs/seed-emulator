@@ -5,18 +5,18 @@ Moreover it serves as a demo of how to use the option system.
 
 ## Step 1: Create layers
 
-```pythonfrom seedemu.compiler import Docker, Graphviz
-from seedemu.core import Emulator, OptionMode, Scope, ScopeTier, ScopeType
+```python
+from seedemu.compiler import Docker, Graphviz
+from seedemu.core import Emulator, OptionMode, Scope, ScopeTier, ScopeType, OptionRegistry
 from seedemu.layers import (
     ScionBase, ScionRouting, ScionIsd, Scion, Ospf, Ibgp, Ebgp, PeerRelationship,
     SetupSpecification, CheckoutSpecification)
 from seedemu.layers.Scion import LinkType as ScLinkType
-
 # Initialize
 emu = Emulator()
 base = ScionBase()
 # change global defaults here .. .
-loglvl = ScionRouting.Option.loglevel('error', mode=OptionMode.RUN_TIME)
+loglvl = OptionRegistry().scion_loglevel('error', mode=OptionMode.RUN_TIME)
 
 spec = SetupSpecification.LOCAL_BUILD(
         CheckoutSpecification(
@@ -24,7 +24,7 @@ spec = SetupSpecification.LOCAL_BUILD(
             git_repo_url = "https://github.com/scionproto/scion.git",
             checkout = "v0.12.0" # could be tag, branch or commit-hash
         ))
-opt_spec = ScionRouting.Option.setup_spec(spec)
+opt_spec = OptionRegistry().scion_setup_spec(spec)
 routing = ScionRouting(loglevel=loglvl, setup_spec=opt_spec)
 
 ospf = Ospf()
@@ -84,14 +84,17 @@ AS 150 contains four internal network connected in a ring topology by the four b
 
 #### Step 3.1.1:   Option Settings for ISD-AS 1-150
 ```python
+
 # override global default for AS150
-as150.setOption(ScionRouting.Option.disable_bfd(mode = OptionMode.RUN_TIME),
+as150.setOption(OptionRegistry().scion_loglevel('info', OptionMode.RUN_TIME))
+as150.setOption(OptionRegistry().scion_disable_bfd(mode = OptionMode.RUN_TIME),
                 Scope(ScopeTier.AS,
                       as_id=as150.getAsn(),
                       node_type=ScopeType.BRDNODE))
+
 # override AS settings for individual nodes
-as150_br0.setOption(ScionRouting.Option.loglevel('debug', OptionMode.RUN_TIME))
-as150_br1.setOption(ScionRouting.Option.serve_metrics('true', OptionMode.RUN_TIME))
+as150_br0.setOption(OptionRegistry().scion_loglevel('debug', OptionMode.RUN_TIME))
+as150_br1.setOption(OptionRegistry().scion_serve_metrics('true', OptionMode.RUN_TIME))
 as150_br1.addPortForwarding(30442, 30442)
 ```
 This section overrides some global defaults:
