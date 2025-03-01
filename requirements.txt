@@ -1,5 +1,5 @@
 eth_account==0.5.9
-requests==2.22.0
 eth-rlp<0.3
-web3==5.31.1
 PyYAML==6.0.1
+requests==2.22.0
+web3==5.31.1
