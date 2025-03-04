@@ -8,16 +8,17 @@ from pki import PKITestCase
 from chainlink import ChainlinkPOATestCase
 from traffic_generator import TrafficGeneratorTestCase
 from ethUtility import EthUtilityPOATestCase
+import argparse
 import unittest
-import os, sys
+import os
 
-if len(sys.argv) == 1:
-    platform = "amd"
-else:
-    platform = sys.argv[1]
+parser = argparse.ArgumentParser()
+parser.add_argument("platform", nargs='?', default="amd")
+parser.add_argument("--ci", action='store_true', help="Run limited set of tests")
+args = parser.parse_args()
 
 # Set an environment variable
-os.environ['platform'] = platform
+os.environ['platform'] = args.platform
 
 test_case_list = [
     MiniInternetTestCase,
@@ -36,6 +37,14 @@ test_case_list = [
     PKITestCase,
     TrafficGeneratorTestCase
 ]
+
+if args.ci:
+    test_case_list = [
+        ScionBgpMixedTestCase,
+        ScionBwtesterTestCase,
+        DottedDictTestCase,
+        TrafficGeneratorTestCase
+    ]
 
 for test_case in test_case_list:
     test_suite = test_case.get_test_suite()
