@@ -157,7 +157,7 @@ class Scion(Layer, Graphable):
         @returns self
         """
         a, b = IA(*a), IA(*b)
-        assert a.asn != b.asn, "Cannot link as{} to itself.".format(a.asn)
+        assert a.asn != b.asn, "Cannot link as{} to itself.".format(a)
         assert (a, b, a_router, b_router, linkType) not in self.__links, (
             "Link between as{} and as{} of type {} exists already.".format(a, b, linkType))
 
