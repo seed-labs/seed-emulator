@@ -216,7 +216,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
         assert name not in self.__routers, 'Router with name {} already exists.'.format(name)
 
-        router: RealWorldRouter = Node(name, NodeRole.Router, self.__asn)
+        router: RealWorldRouter = Router(name, NodeRole.Router, self.__asn)
         router.__class__ = RealWorldRouter
         router.initRealWorld(hideHops)
 

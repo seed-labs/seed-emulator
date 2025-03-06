@@ -120,10 +120,11 @@ class ScionRouting(Routing):
                 self._log("Setting up loopback interface for AS{} Router {}...".format(scope, name))
 
                 lbaddr = self._loopback_assigner[self._loopback_pos]
-
+                # TODO: refactor LoopbackAddrAssignment into its own method on 'Routing' layer
                 rnode.appendStartCommand('ip li add dummy0 type dummy')
                 rnode.appendStartCommand('ip li set dummy0 up')
                 rnode.appendStartCommand('ip addr add {}/32 dev dummy0'.format(lbaddr))
+                rnode.setLabel('loopback_addr', lbaddr)
                 rnode.setLoopbackAddress(lbaddr)
                 self._loopback_pos += 1
 

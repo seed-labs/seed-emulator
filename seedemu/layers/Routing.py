@@ -141,7 +141,7 @@ class Routing(Layer):
                 rnode.appendStartCommand('ip addr add {}/32 dev dummy0'.format(lbaddr))
                 rnode.setLabel('loopback_addr', lbaddr)
                 rnode.setLoopbackAddress(lbaddr)
-                self.__loopback_pos += 1
+                self._loopback_pos += 1
 
                 self._log("Bootstrapping bird.conf for AS{} Router {}...".format(scope, name))
 

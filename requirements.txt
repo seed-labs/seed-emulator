@@ -1,5 +1,6 @@
 aiohappyeyeballs==2.4.6
 aiohttp==3.11.13
+geopy==2.4.1
 aiosignal==1.3.2
 async-timeout==5.0.1
 attrs==25.1.0
