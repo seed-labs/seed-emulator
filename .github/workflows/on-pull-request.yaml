@@ -1,0 +1,108 @@
+name: Check Pull Request
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  compile-examples:
+    name: Compile Examples
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the source repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'pip'
+          cache-dependency-path: "**/*requirements.txt"
+      - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+      - name: Get scion-pki
+        run: |
+          curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
+          mkdir bin
+          tar -C bin -xzf scion_0.12.0_amd64_linux.tar.gz scion-pki
+      - name: Compile Examples
+        run: |
+          source development.env
+          export PATH=$PATH:$PWD/bin
+          tests/compile-and-build-test/compile-test.py
+
+  run-tests:
+    name: Run Tests
+    needs: compile-examples # Only run heavy tests if quick compile test succeeds
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the source repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'pip'
+          cache-dependency-path: "**/*requirements.txt"
+      - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+      - name: Get scion-pki
+        run: |
+          curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
+          mkdir bin
+          tar -C bin -xzf scion_0.12.0_amd64_linux.tar.gz scion-pki
+      - name: Run tests
+        run: |
+          source development.env
+          export PATH=$PATH:$PWD/bin
+          tests/run-tests.py --ci
+      - name: Archive test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test_result
+          path: |
+            tests/test_result.txt
+            tests/**/test_log
+      - name: Check for errors
+        shell: bash
+        run: set +e; grep -E "^score" tests/test_result.txt | grep -Eq '[1-9][0-9]* errors|[1-9][0-9]* failures'; test $? -eq 1
+
+  build-examples:
+    name: Build Examples
+    needs: compile-examples # Only run heavy tests if quick compile test succeeds
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the source repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'pip'
+          cache-dependency-path: "**/*requirements.txt"
+      - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+      - name: Get scion-pki
+        run: |
+          curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
+          mkdir bin
+          tar -C bin -xzf scion_0.12.0_amd64_linux.tar.gz scion-pki
+      - name: Build Examples
+        run: |
+          source development.env
+          export PATH=$PATH:$PWD/bin
+          cd tests/compile-and-build-test
+          ./compile-and-build-test.py
+      - name: Archive test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test_log
+          path: |
+            tests/compile-and-build-test/test_log/build_log.txt
+            tests/compile-and-build-test/test_log/log.txt
+      - name: Check for errors
+        shell: bash
+        run: set +e; grep -E "^score" tests/compile-and-build-test/test_log/log.txt | grep -Eq '[1-9][0-9]* errors|[1-9][0-9]* failures'; test $? -eq 1

@@ -20,7 +20,7 @@ server in each IX enabling full multilateral peering.
 
 ```bash
 ./bgp-internet.py
-cd bgp
+cd output/bgp
 docker-compose build
 docker-compose up -d
 ```
@@ -47,7 +47,7 @@ provider and access networks of different sizes.
 
 ```bash
 ./scion-internet.py
-cd scion
+cd output/scion
 docker-compose build
 docker compose up -d # use docker compose v2 (no hyphen)
 ```

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 from ipaddress import IPv4Network
 from seedemu.compiler import Docker
 from seedemu.core import Emulator
@@ -296,4 +297,5 @@ emu.addLayer(scion)
 emu.render()
 
 # Compilation
-emu.compile(Docker(), './scion')
+os.makedirs('./output', exist_ok=True)
+emu.compile(Docker(), './output/scion')

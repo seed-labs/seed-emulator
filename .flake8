@@ -8,6 +8,9 @@ ignore =
     # disable warnings that conflict with Black
     E203
     E701
+    W503
+    # at least two space before in-line comment
+    E261
 
 exclude =
     .git
