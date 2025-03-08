@@ -335,7 +335,7 @@ class Ebgp(Layer, Graphable):
             assert len(rs_ifs) == 1, '??? ix{} rs has {} interfaces.'.format(ix, len(rs_ifs))
             rs_if = rs_ifs[0]
 
-            p_rnodes: List[Router] = p_reg.getByType('rnode')
+            p_rnodes: List[Router] = p_reg.getByType('brdnode')
             p_ixnode: Router = None
             p_ixif: Interface = None
             for node in p_rnodes:
@@ -363,15 +363,15 @@ class Ebgp(Layer, Graphable):
 
             hit = False
 
-            for node in a_reg.getByType('rnode'):
+            for node in a_reg.getByType('brdnode'):
                 router: Router = node
                 for (peername, peerasn), (localaddr, _, _) in router.getCrossConnects().items():
                     if peerasn != b: continue
-                    if not b_reg.has('rnode', peername): continue
+                    if not b_reg.has('brdnode', peername): continue
 
                     hit = True
                     a_router = node
-                    b_router = b_reg.get('rnode', peername)
+                    b_router = b_reg.get('brdnode', peername)
 
                     a_addr = str(localaddr.ip)
                     (b_ifaddr, _, _) = b_router.getCrossConnect(a, a_router.getName())
