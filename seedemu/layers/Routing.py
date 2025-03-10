@@ -80,7 +80,9 @@ class Routing(Layer):
         node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
         node.addSoftware('bird2')
 
-        node.setBaseSystem(BaseSystem.SEEDEMU_ROUTER)
+        base = node.getBaseSystem()
+        if not BaseSystem.doesAContainB(base,BaseSystem.SEEDEMU_ROUTER) and base !=BaseSystem.SEEDEMU_ROUTER:
+            node.setBaseSystem(BaseSystem.SEEDEMU_ROUTER)
 
     def configure(self, emulator: Emulator):
         reg = emulator.getRegistry()

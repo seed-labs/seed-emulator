@@ -21,11 +21,11 @@ base.createIsolationDomain(1)
 base.createIsolationDomain(2)
 
 # Internet Exchanges
-base.createInternetExchange(100)
-base.createInternetExchange(101)
-base.createInternetExchange(102)
-base.createInternetExchange(103)
-base.createInternetExchange(104)
+base.createInternetExchange(100, create_rs=False)
+base.createInternetExchange(101, create_rs=False)
+base.createInternetExchange(102, create_rs=False)
+base.createInternetExchange(103, create_rs=False)
+base.createInternetExchange(104, create_rs=False)
 
 # Core AS 1-150
 as150 = base.createAutonomousSystem(150)
