@@ -153,6 +153,8 @@ class ScionRouting(Routing):
             elif type == 'csnode':
                 csnode: Node = obj
                 self._provision_cs_config(csnode, as_)
+                if as_.getGenerateStaticInfoConfig():
+                    self._provision_staticInfo_config(csnode, as_) # provision staticInfoConfig.json
                 self.__provision_dispatcher_config(csnode, isds[0][0], as_)
             elif type == 'hnode':
                 hnode: Node = obj
