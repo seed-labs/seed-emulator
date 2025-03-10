@@ -690,6 +690,11 @@ class Docker(Compiler):
                 key = 'role',
                 value = 'Router'
             )
+        if type == 'brdnode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'BorderRouter'
+            )
 
         if type == 'csnode':
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
@@ -761,6 +766,7 @@ class Docker(Compiler):
         if role == NodeRole.Host: return 'h'
         if role == NodeRole.Router: return 'r'
         if role == NodeRole.RouteServer: return 'rs'
+        if role == NodeRole.BorderRouter: return 'brd'
         assert False, 'unknown node role {}'.format(role)
 
     def _contextToPrefix(self, scope: str, type: str) -> str:
