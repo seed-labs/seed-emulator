@@ -44,18 +44,18 @@ ix105.getPeeringLan().setDisplayName('Huston-105')
 
 
 ###############################################################################
-# Create Transit Autonomous Systems 
+# Create Transit Autonomous Systems
 
 ## Tier 1 ASes
-Makers.makeTransitAs(base, 2, [100, 101, 102, 105], 
-       [(100, 101), (101, 102), (100, 105)] 
+Makers.makeTransitAs(base, 2, [100, 101, 102, 105],
+       [(100, 101), (101, 102), (100, 105)]
 )
 
-Makers.makeTransitAs(base, 3, [100, 103, 104, 105], 
+Makers.makeTransitAs(base, 3, [100, 103, 104, 105],
        [(100, 103), (100, 105), (103, 105), (103, 104)]
 )
 
-Makers.makeTransitAs(base, 4, [100, 102, 104], 
+Makers.makeTransitAs(base, 4, [100, 102, 104],
        [(100, 104), (102, 104)]
 )
 
@@ -65,7 +65,7 @@ Makers.makeTransitAs(base, 12, [101, 104], [(101, 104)])
 
 
 ###############################################################################
-# Create single-homed stub ASes. "None" means create a host only 
+# Create single-homed stub ASes. "None" means create a host only
 
 Makers.makeStubAs(emu, base, 150, 100, [web, None])
 Makers.makeStubAs(emu, base, 151, 100, [web, None])
@@ -86,7 +86,7 @@ Makers.makeStubAs(emu, base, 170, 105, [web, None])
 Makers.makeStubAs(emu, base, 171, 105, [None])
 
 
-# Add a host with customized IP address to AS-154 
+# Add a host with customized IP address to AS-154
 as154 = base.getAutonomousSystem(154)
 as154.createHost('host_2').joinNetwork('net0', address = '10.154.0.129')
 
@@ -103,21 +103,21 @@ as152.getNetwork('net0').enableRemoteAccess(ovpn)
 
 
 ###############################################################################
-# Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
-# which means each AS will only export its customers and their own prefixes. 
+# Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer,
+# which means each AS will only export its customers and their own prefixes.
 # We will use this peering relationship to peer all the ASes in an IX.
-# None of them will provide transit service for others. 
+# None of them will provide transit service for others.
 
 ebgp.addRsPeers(100, [2, 3, 4])
 ebgp.addRsPeers(102, [2, 4])
 ebgp.addRsPeers(104, [3, 4])
 ebgp.addRsPeers(105, [2, 3])
 
-# To buy transit services from another autonomous system, 
-# we will use private peering  
+# To buy transit services from another autonomous system,
+# we will use private peering
 
 ebgp.addPrivatePeerings(100, [2],  [150, 151], PeerRelationship.Provider)
-ebgp.addPrivatePeerings(100, [3],  [150], PeerRelationship.Provider)
+ebgp.addPrivatePeerings(100, [3,4],  [150], PeerRelationship.Provider)
 
 ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
 ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)

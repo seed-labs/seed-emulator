@@ -6,6 +6,7 @@ RoutingFileTemplates: Dict[str, str] = {}
 
 RoutingFileTemplates["rs_bird"] = """\
 router id {routerId};
+ipv4 table t_direct;
 protocol device {{
 }}
 """

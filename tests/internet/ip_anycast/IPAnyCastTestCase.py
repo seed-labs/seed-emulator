@@ -15,12 +15,12 @@ class IPAnyCastTestCase(SeedEmuTestCase):
         for container in cls.containers:
             if "10.150.0.71" in container.name:
                 cls.source_host = container
-            if "as180r-router0" in container.name:
+            if "as180brd-router0" in container.name:
                 cls.router0_180 = container
-            if "as180r-router1" in container.name:
+            if "as180brd-router1" in container.name:
                 cls.router1_180 = container
-        return 
-        
+        return
+
     @classmethod
     def tearDownClass(cls) -> None:
         '''
@@ -28,14 +28,14 @@ class IPAnyCastTestCase(SeedEmuTestCase):
         For this test case, it will down the containers and remove the networks of this test case
         '''
         os.system("/bin/bash ./emulator-code/down.sh 2> /dev/null")
-        
+
         return super().tearDownClass()
-    
+
     def test_ip_anycast(self):
         self.printLog("\n-------- Test ip anycast --------")
         ip = "10.180.0.100"
         self.assertTrue(self.ping_test(self.source_host, ip, 0))
-        
+
 
     def test_ip_anycast_router0(self):
         self.printLog("\n-------- Test router0 --------")
@@ -84,7 +84,7 @@ class IPAnyCastTestCase(SeedEmuTestCase):
         self.printLog("ping test expected result : success")
         self.assertTrue(self.ping_test(self.source_host, ip, 0))
 
-    
+
 
     @classmethod
     def get_test_suite(cls):
@@ -102,4 +102,4 @@ if __name__ == "__main__":
     IPAnyCastTestCase.printLog("==========Test=========")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
     IPAnyCastTestCase.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
-        
+
