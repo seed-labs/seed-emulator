@@ -21,7 +21,7 @@ class ScionBwtesterTestCase(ScionTestCase):
         for cntr in self.containers:
             if "bwtest" in cntr.name:
                 asn, _, ip = cntr.name.split('-')
-                asn = asn.lstrip('as').rstrip('h')
+                asn = asn.removeprefix('as').removesuffix('h').removesuffix('cs')
                 self.bwtesters[f"1-{asn}"] = (ip, cntr)
 
     def bwtester_conn_test(self, container, server: str) -> bool:

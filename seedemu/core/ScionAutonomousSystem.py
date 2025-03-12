@@ -211,7 +211,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         @returns Node.
         """
         assert name not in self.__control_services, 'Control service with name {} already exists.'.format(name)
-        self.__control_services[name] = Node(name, NodeRole.Host, self.getAsn())
+        self.__control_services[name] = Node(name, NodeRole.ControlService, self.getAsn())
 
         return self.__control_services[name]
 

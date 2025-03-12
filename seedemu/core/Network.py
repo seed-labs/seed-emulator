@@ -61,6 +61,8 @@ class Network(Printable, Registrable, Vertex):
         self.__assigners[ NodeRole.BorderRouter ] = arouter
         self.__assigners[ NodeRole.Router ] = arouter
         self.__assigners[ NodeRole.Host ] = ahost
+        self.__assigners[ NodeRole.ControlService ] = ahost
+
         self.__d_latency = 0
         self.__d_bandwidth = 0
         self.__d_drop = 0
