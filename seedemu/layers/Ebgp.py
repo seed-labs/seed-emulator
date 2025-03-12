@@ -83,7 +83,8 @@ class Ebgp(Layer, Graphable):
 
         # for both nodes
         for node in [nodeA, nodeB]:
-            if node.getRole() == NodeRole.RouteServer:
+            if node.getRegistryInfo()[1] == 'rs':
+                # getRole() would be BorderRouter not RouteServer here
                 rsNode = node
                 continue
 
