@@ -68,7 +68,7 @@ class OptionRegistry(metaclass=SingletonMeta):
         if prefix != None:
             name = prefix + '_' + name
 
-        return cls.create_option(name, args, kwargs)
+        return cls.create_option(name, *args, **kwargs)
 
 
     @classmethod
