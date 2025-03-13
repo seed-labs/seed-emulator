@@ -15,9 +15,9 @@ class IPAnyCastTestCase(SeedEmuTestCase):
         for container in cls.containers:
             if "10.150.0.71" in container.name:
                 cls.source_host = container
-            if "as180r-router0" in container.name:
+            if "as180brd-router0" in container.name:
                 cls.router0_180 = container
-            if "as180r-router1" in container.name:
+            if "as180brd-router1" in container.name:
                 cls.router1_180 = container
         return 
         

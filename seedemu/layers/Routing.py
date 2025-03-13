@@ -6,6 +6,7 @@ RoutingFileTemplates: Dict[str, str] = {}
 
 RoutingFileTemplates["rs_bird"] = """\
 router id {routerId};
+ipv4 table t_direct;
 protocol device {{
 }}
 """
@@ -94,11 +95,10 @@ class Routing(Layer):
 
         rs_iface = rs_ifaces[0]
 
-        if not issubclass(rs_node.__class__, Router):
-            rs_node.__class__ = Router
-            rs_node.setBorderRouter(True)
+        assert issubclass(rs_node.__class__, Router)
+        rs_node.setBorderRouter(True)
         rs_node.setFile("/etc/bird/bird.conf", RoutingFileTemplates["rs_bird"].format(
-                    routerId = rs_iface.getAddress()
+            routerId = rs_iface.getAddress()
         ))
 
     def _configure_bird_router(self, rnode: Router):
@@ -129,7 +129,7 @@ class Routing(Layer):
                 self._configure_rs(rs_node)
             if type == 'rnode':
                 rnode: Router = obj
-                if not issubclass(rnode.__class__, Router): rnode.__class__ = Router
+                assert issubclass(rnode.__class__, Router)
 
                 self._log("Setting up loopback interface for AS{} Router {}...".format(scope, name))
 
