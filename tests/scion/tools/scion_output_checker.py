@@ -1,7 +1,7 @@
 import os
 import json
 import yaml
-import sys
+from typing import Optional
 from seedemu.core.enums import NodeRole
 
 class ScionOutputChecker:
@@ -23,18 +23,18 @@ class ScionOutputChecker:
     def check_brdnode(self, node_name, curr_node_json_data ):
 
         local_ia = curr_node_json_data['isd_as']
-        local_asn=local_ia.split('-')[1]
+        local_asn = local_ia.split('-')[1]
         folder = f'brdnode_{local_asn}_{node_name}'
         # also the service name of the node in docker-compose.yml
-        assert folder in self._services, 'SEED output naming scheme violation'
+        assert folder in self._services, f'SEED output naming scheme violation: {folder}'
 
         brd = curr_node_json_data['border_routers'][node_name]
-        internal_addr = brd['internal_addr']
+        internal_addr = brd['internal_addr'] # address on local network 'net0'
         interfaces = brd['interfaces']
 
         brd_service = self._services[folder]
         brd_nets = brd_service['networks'] # networks joined by this service
-
+        hits = {} # map interfaces from .json to networks from .yml
         for i, (id, intf) in enumerate(interfaces.items()):
             underlay = intf['underlay']
             remote_ia = intf['isd_as']
@@ -43,31 +43,68 @@ class ScionOutputChecker:
             local_key = 'local' if 'local' in underlay else 'public'
             local_ip = underlay[local_key].split(':')[0] #.rstrip(':50000')
             remote_ip = underlay['remote'].split(':')[0]
-
+            found_net = False
+            # find the net for the given interface
             for  (name, net) in brd_nets.items():
+                ip = net['ipv4_address']
+                # TODO: account for more than one local net i.e. 'net1'
                 if name.endswith('net0'): # local network within AS
-                        ip = net['ipv4_address']
+
                         #net_name = name.lstrip('net_').rstrip('_net0')
-                        net_name = name.split('_')[1]
-                        assert net_name == local_asn, f'border router must belong to a single AS only: {net_name} {local_asn} [{name}]'
+                        asn_name = name.split('_')[1]
+                        assert asn_name == local_asn, f'border router must belong to a single AS only: {asn_name} {local_asn} [{name}]'
                         router_internal_ip = internal_addr.split(':')[0] #.rstrip(':30042')
                         is_loopback= 'org.seedsecuritylabs.seedemu.meta.loopback_addr' in brd_service['labels']
-                        assert ip==router_internal_ip or is_loopback, f'contradiction between topology.json and docker-compose.yml detected for BR({node_name}) internal address: {name} AS {local_asn} expected: {router_internal_ip} actual: {ip}'
-                if name.startswith('net_ix'):
-                        ip = net['ipv4_address']
-                        net_name = name.split('_')[-1].lstrip('ix')
-                        assert ip == local_ip, f'contradiction between topology.json and docker-compose.yml detected: {name} net: {net_name} docker: {ip} topo.json: {local_ip}'
-                        # check that remote-border-router has 'name' under 'networks'
-                        # and within this network in fact has assigned the IP 'remote_ip'
-                        remote_router_name = f'brdnode_{remote_asn}_router{net_name}'
-                        remote_router = self._services[remote_router_name]
-                        assert name in (remote_nets:=remote_router['networks']) , f'remote border router unreachable - IX: {net_name} from: {local_ia} to: {remote_ia}'
-                        remote_net = remote_nets[name]
-                        assert remote_net['ipv4_address'] == remote_ip  , f'contradiction between topology.json and docker-compose.yml detected for remote BR: {name} AS {remote_asn} router{net_name}'
-                        pass
-                pass
-            pass
+                        if ip==router_internal_ip or is_loopback:
+                            hits[id] = name
+                            # in this case there is no remote BR to check
+                            found_net = True
+                            break
+                elif name.startswith('net_ix'): # internet exchange network
 
+                        net_name = name.split('_')[-1].lstrip('ix')
+                        if ip == local_ip:
+                            hits[id] = name
+                            found_net = True
+                            # check that remote-border-router has 'name' under 'networks'
+                            # and within this network in fact has assigned the IP 'remote_ip'
+                            if not self._search_br(name, remote_ip):
+                                raise AssertionError(f'remote BR of BR {folder} on IF {id} ({name}) doesn\'t exitst in docker-compose.yml (probably wrong remote address in topology.json)')
+
+
+                            break
+                elif name.startswith('net_xc'): # cross connect network
+                    if ip == local_ip:
+                        hits[id] = name
+                        found_net = True
+                        # assert that there exists a node who has the 'remote' address on one of its networks,
+                        # and the name of this network is 'name' (as expected)
+
+                        if not self._search_br(name, remote_ip):
+                            raise AssertionError( f'remote BR of BR {folder} on IF {id} ({name}) doesn\'t exitst in docker-compose.yml (probably wrong remote address in topology.json)')
+
+
+                        break
+                else: # must be service network 000_svc
+                    # but service network doesn't show up in topology.json
+                    pass
+            assert found_net, f'no network in docker-compose.yml for BR {node_name} IF {id} in topology.json file'
+
+        assert len(hits) == len(interfaces), 'mismatch between topology.json and docker-compose.yml'
+
+    def _search_br(self, name: str, remote_ip ) -> Optional[str]:
+        """
+        @brief looks up a router in the docker-compose.yml file,
+            with the given IP on the given network
+        @param name name of the network
+        @param remote_ip IP address on the given network of the router in question
+        """
+        # nodes that are also on the the same network
+        remote_br_candidates = [ (sname, svc)  for sname, svc in self._services.items() if 'networks' in svc and name in svc['networks'] ]
+
+        remote_br = [ sname for (sname, svc) in remote_br_candidates if svc['networks'][name]['ipv4_address'] == remote_ip]
+        assert len(remote_br) <= 1, 'there canno\'t be more than one router on the same net ({name}) with the same address {remote_ip}'
+        return remote_br[0] if len(remote_br) > 0 else None
 
     def do_checks(self):
         """!
@@ -148,12 +185,12 @@ def parse_docker_compose_yaml(dir='.',file_path='docker-compose.yml'):
         except Exception as e:
             print(f"Error reading docker-compose.yml {file_path}: {e}")
     else:
-        print(f"{file_path} does not exist.")
+        raise FileNotFoundError(f"{full_path} does not exist.")
 
 
 
 if __name__ == "__main__":
 
-    sn = ScionOutputChecker(out_dir=sys.argv[1])
+    sn = ScionOutputChecker('/home/lucas/repos/seed-emulator/output')
 
     sn.do_checks()
