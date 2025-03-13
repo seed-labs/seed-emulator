@@ -120,7 +120,7 @@ class DistributedDocker(Docker):
                 self._used_images = set()
 
                 if scope != 'ix':
-                    self.generateEnvFile(scope, f'./{scope}')
+                    self.generateEnvFile(scope, '')
 
             chdir('..')
 
