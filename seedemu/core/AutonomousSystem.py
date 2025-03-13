@@ -4,7 +4,7 @@ from .Printable import Printable
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from .enums import NetworkType, NodeRole
-from .Node import Node,Router
+from .Node import Node, Router
 from .Emulator import Emulator
 from .Configurable import Configurable
 from .Node import RealWorldRouter
@@ -16,7 +16,7 @@ RIS_PREFIXLIST_URL = 'https://stat.ripe.net/data/announced-prefixes/data.json'
 
 class AutonomousSystem(Printable, Graphable, Configurable):
     """!
-    @brief AutonomousSystem class. 
+    @brief AutonomousSystem class.
 
     This class represents an autonomous system.
     """
@@ -80,10 +80,10 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         })
 
         assert rslt.status_code == 200, 'RIPEstat API returned non-200'
-        
+
         json = rslt.json()
         assert json['status'] == 'ok', 'RIPEstat API returned not-OK'
- 
+
         return [p['prefix'] for p in json['data']['prefixes'] if ':' not in p['prefix']]
 
     def registerNodes(self, emulator: Emulator):
@@ -96,7 +96,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
 
         reg = emulator.getRegistry()
-            
+
         for val in list(self.__nets.values()):
             net: Network = val
             if net.getRemoteAccessProvider() != None:
@@ -126,9 +126,9 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         for host in self.__hosts.values():
             if len(host.getNameServers()) == 0:
                 host.setNameServers(self.__name_servers)
-            
+
             host.configure(emulator)
-        
+
         for name, router in self.__routers.items():
             if len(router.getNameServers()) == 0:
                 router.setNameServers(self.__name_servers)
@@ -144,7 +144,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns asn.
         """
         return self.__asn
-    
+
     def createNetwork(self, name: str, prefix: str = "auto", direct: bool = True, aac: AddressAssignmentConstraint = None) -> Network:
         """!
         @brief Create a new network.
@@ -202,7 +202,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """!
         @brief Create a real-world router node.
 
-        A real-world router nodes are connect to a special service network, 
+        A real-world router nodes are connect to a special service network,
         and can route traffic from the emulation to the real world.
 
         @param name name of the new node.
@@ -216,7 +216,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
         assert name not in self.__routers, 'Router with name {} already exists.'.format(name)
 
-        router: RealWorldRouter = Node(name, NodeRole.Router, self.__asn)
+        router: RealWorldRouter = Router(name, NodeRole.Router, self.__asn)
         router.__class__ = RealWorldRouter
         router.initRealWorld(hideHops)
 
@@ -237,7 +237,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns list of routers.
         """
         return list(self.__routers.keys())
-    
+
     def getBorderRouters(self)->List[str]:
         """
         @brief return the subset of all routers that participate in inter-domain routing
@@ -288,7 +288,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
 
         l2graph = self._addGraph('AS{}: Layer 2 Connections'.format(self.__asn), False)
-        
+
         for obj in self.__nets.values():
             net: Network = obj
             l2graph.addVertex('Network: {}'.format(net.getName()), shape = 'rectangle', group = 'AS{}'.format(self.__asn))
@@ -318,11 +318,11 @@ class AutonomousSystem(Printable, Graphable, Configurable):
                 l2graph.addEdge(rtrname, netname)
 
         # todo: better xc graphs?
-        
+
     def print(self, indent: int) -> str:
         """!
         @brief print AS details (nets, hosts, routers).
-        
+
         @param indent indent.
 
         @returns printable string.

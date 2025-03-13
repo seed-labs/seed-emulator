@@ -9,16 +9,119 @@ from .Emulator import Emulator
 from .enums import NodeRole
 from .Node import Node, ScionRouter
 
+class ScionASN:
+    """!
+    @brief: ASN identifier for a SCION AS.
+    """
+    asn: int
+    BGP_ASN_BITS = 32
+    MAX_BGP_ASN = (1 << BGP_ASN_BITS) - 1
+    GROUP_BITS = 16
+    GROUP_MAX_VALUE = (1 << GROUP_BITS) - 1
 
-class IA(NamedTuple):
+    def __init__(self, asn):
+        """!
+        @brief Constructor for SCION AS
+
+        @param asn The SCION ASN that should be handled.
+        """
+        self.asn = asn
+
+    def getAsn(self) -> int:
+        """!
+        @brief Return ASN as integer.
+
+        @returns ASN as integer
+        """
+        return self.asn
+
+    def __split(self):
+        """!
+        @brief Splits ASN into 16 bit groups.
+
+        @returns 3-tuple of ASN grouped into 16 bit blocks
+        """
+        return (self.asn >> 2 * self.GROUP_BITS) & self.GROUP_MAX_VALUE, \
+               (self.asn >> self.GROUP_BITS) & self.GROUP_MAX_VALUE, \
+               (self.asn) & self.GROUP_MAX_VALUE
+
+    def getFileStr(self) -> str:
+        """!
+        @brief Return ASN as snake case string for file access.
+
+        @returns ASN as string
+        """
+        if self.asn <= self.MAX_BGP_ASN:
+            # BGP style ASN
+            return str(self.asn)
+        else:
+            # SCION style hexadecimal ASN in three groups
+            return "%x_%x_%x" % (self.__split())
+
+    def __str__(self) -> str:
+        """!
+        @brief Return ASN string in colon-hex-format.
+
+        @returns ASN as string.
+        """
+        if self.asn <= self.MAX_BGP_ASN:
+            # BGP style ASN
+            return str(self.asn)
+        else:
+            # SCION style hexadecimal ASN in three groups
+            return "%x:%x:%x" % (self.__split())
+
+
+class IA:
     """!
     @brief ISD-ASN identifier for a SCION AS.
     """
     isd: int
     asn: int
+    asn_object: ScionASN
 
-    def __str__(self):
-        return f"{self.isd}-{self.asn}"
+    def __init__(self, isd: int, asn):
+        """!
+        @brief Return ASN as integer.
+
+        @param isd ISD part of the identifier
+        @param asn ASN part of the identifier as integer or ScionASN object
+        """
+        self.isd = isd
+        if type(asn) is int:
+            self.asn = asn
+            self.asn_object = ScionASN(asn)
+        elif type(asn) is ScionASN:
+            self.asn_object = asn
+            self.asn = self.asn_object.getAsn()
+
+    def __str__(self) -> str:
+        """!
+        @brief Return ASN as string in colon-hex-format.
+
+        @returns ASN as string.
+        """
+        return f"{self.isd}-{self.asn_object}"
+
+    def __hash__(self) -> int:
+        """!
+        @brief Allows using IA as key for dicts etc.
+
+        @returns hash value.
+        """
+        return (self.isd, self.asn).__hash__()
+
+    def __eq__(self, other) -> bool:
+        """!
+        @brief Enable comparison of IA with tupels and other IA instances.
+
+        @returns True or False, depending on the equality of ISD and ASN.
+        """
+        if isinstance(other, Tuple):
+            return (self.isd == other[0]) and (self.asn == other[1])
+        elif isinstance(other, IA):
+            return (self.isd == other.isd) and (self.asn == other.asn)
+        return False
 
 
 class ScionAutonomousSystem(AutonomousSystem):
@@ -28,6 +131,7 @@ class ScionAutonomousSystem(AutonomousSystem):
     This class represents an autonomous system with support for SCION.
     """
 
+    __scion_asn: ScionASN
     __keys: Optional[Tuple[str, str]]
     __attributes: Dict[int, Set]         # Set of AS attributes per ISD
     __mtu: Optional[int]                 # Minimum MTU in the AS's internal networks
@@ -35,7 +139,6 @@ class ScionAutonomousSystem(AutonomousSystem):
     # Origination, propagation, and registration intervals
     __beaconing_intervals: Tuple[Optional[str], Optional[str], Optional[str]]
     __beaconing_policy: Dict[str, Dict]
-    __next_ifid: int                     # Next IFID assigned to a link
     __note: str # optional free form parameter that contains interesting information about AS. This will be included in beacons if it is set
     __generateStaticInfoConfig:  bool
 
@@ -44,13 +147,13 @@ class ScionAutonomousSystem(AutonomousSystem):
         @copydoc AutonomousSystem
         """
         super().__init__(asn, subnetTemplate)
+        self.__scion_asn = ScionASN(asn)
         self.__control_services = {}
         self.__keys = None
         self.__attributes = defaultdict(set)
         self.__mtu = None
         self.__beaconing_intervals = (None, None, None)
         self.__beaconing_policy = {}
-        self.__next_ifid = 1
         self.__note = None
         self.__generateStaticInfoConfig = False
     
@@ -84,13 +187,6 @@ class ScionAutonomousSystem(AutonomousSystem):
             base64.b64encode(os.urandom(16)).decode(),
             base64.b64encode(os.urandom(16)).decode())
 
-    def getNextIfid(self) -> int:
-        """!
-        @brief Get next unused IFID. Called during configuration.
-        """
-        ifid = self.__next_ifid
-        self.__next_ifid += 1
-        return ifid
 
     def getSecretKeys(self) -> Tuple[str, str]:
         """!
@@ -188,14 +284,18 @@ class ScionAutonomousSystem(AutonomousSystem):
         for router in self.getBorderRouters():
             rnode: ScionRouter = self.getRouter( router.getName() )
 
+            localIP = rnode.getLocalIPAddress()
+            listen_addr = localIP if localIP else rnode.getLoopbackAddress()
+            #UDP address on which the router receives SCION packets 
+            # from sibling routers and end hosts in this AS.
             border_routers[rnode.getName()] = {
-                "internal_addr": f"{rnode.getLoopbackAddress()}:30001",
+                "internal_addr": f"{listen_addr}:30042",
                 "interfaces": rnode.getScionInterfaces()
             }
 
         return {
             'attributes': self.getAsAttributes(isd),
-            'isd_as': f'{isd}-{self.getAsn()}',
+            'isd_as': f'{IA(isd, self.getScionAsn())}',
             'mtu': self.__mtu,
             'control_service': control_services,
             'discovery_service': control_services,
@@ -268,16 +368,19 @@ class ScionAutonomousSystem(AutonomousSystem):
         """
         return self.__generateStaticInfoConfig
 
+    def getScionAsn(self):
+        return self.__scion_asn
+
     def _doCreateGraphs(self, emulator: Emulator):
         """!
         @copydoc AutonomousSystem._doCreateGraphs()
         """
         super()._doCreateGraphs(emulator)
-        asn = self.getAsn()
-        l2graph = self.getGraph('AS{}: Layer 2 Connections'.format(asn))
+        asn = self.getScionAsn()
+        l2graph = self.getGraph('AS{}: Layer 2 Connections'.format(asn.getAsn()))
         for obj in self.__control_services.values():
             router: Node = obj
-            rtrname = 'CS: {}'.format(router.getName(), group = 'AS{}'.format(asn))
+            rtrname = 'CS: {}'.format(router.getName(), group = 'AS{}'.format(asn.getAsn()))
             l2graph.addVertex(rtrname, group = 'AS{}'.format(asn))
             for iface in router.getInterfaces():
                 net = iface.getNet()

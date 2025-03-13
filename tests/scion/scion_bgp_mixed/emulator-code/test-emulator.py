@@ -9,7 +9,8 @@ from seedemu.layers.Scion import LinkType as ScLinkType
 # Initialize
 emu = Emulator()
 base = ScionBase()
-routing = ScionRouting()
+# install BIRD rt daemon on all Rnodes
+routing = ScionRouting(static_routing=False)
 ospf = Ospf()
 scion_isd = ScionIsd()
 scion = Scion()

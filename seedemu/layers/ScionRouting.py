@@ -3,12 +3,17 @@ import json
 import os.path
 from typing import Dict, Tuple
 from ipaddress import IPv4Address
+from typing import List
+from geopy.distance import geodesic
 
 import yaml
 
-from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, Network
+from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, Network, Router
 from seedemu.core.enums import NetworkType
+from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import Routing, ScionBase, ScionIsd
+from seedemu.layers.Scion import Scion
+from seedemu.core.ScionAutonomousSystem import IA
 
 
 _Templates: Dict[str, str] = {}
@@ -72,13 +77,80 @@ class ScionRouting(Routing):
     During layer configuration Router nodes are replaced with ScionRouters which
     add methods for configuring SCION border router interfaces.
     """
+    _static_routing: bool = True # this might become an Option
+
+    def __init__(self, loopback_range: str = '10.0.0.0/16',
+                 static_routing: bool = True):
+        """
+        @param static_routing install and configure BIRD routing daemon only on routers
+                which are connected to more than one local-net (actual intra-domain routers).
+                Can be disabled to have BIRD on all routers, required or not.
+        """
+        super().__init__(loopback_range)
+
+        ScionRouting._static_routing = static_routing
+
+    def configure_base(self, emulator: Emulator) -> List[Router]:
+        """
+            returns list of routers which need routing daemon installed,
+            because it is connected to more than one local-net
+        """
+
+        actual_routers = []
+
+        reg = emulator.getRegistry()
+        has_bgp = False
+        try:
+            _ = emulator.getLayer('Ebgp')
+            has_bgp = True
+        except:
+            pass
+        for ((scope, type, name), obj) in reg.getAll().items():
+            
+            if type == 'rs' :
+                if not has_bgp:
+                    raise RuntimeError('SCION has no concept of Route Servers.')
+                else:
+                    self._installBird(obj)
+                    self._configure_rs(obj)
+            if type == 'rnode':
+                rnode: Router = obj
+                if not issubclass(rnode.__class__, Router): rnode.__class__ = Router
+
+                assert rnode.getLoopbackAddress() == None
+                self._log("Setting up loopback interface for AS{} Router {}...".format(scope, name))
+
+                lbaddr = self._loopback_assigner[self._loopback_pos]
+                # TODO: refactor LoopbackAddrAssignment into its own method on 'Routing' layer
+                rnode.appendStartCommand('ip li add dummy0 type dummy')
+                rnode.appendStartCommand('ip li set dummy0 up')
+                rnode.appendStartCommand('ip addr add {}/32 dev dummy0'.format(lbaddr))
+                rnode.setLabel('loopback_addr', lbaddr)
+                rnode.setLoopbackAddress(lbaddr)
+                self._loopback_pos += 1
+
+                r_ifaces = rnode.getInterfaces()
+                assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rnode.getAsn(), rnode.getName())
+                localnet_count =   list([ ifn.getNet().isDirect() for ifn in r_ifaces ]).count(True)
+                if localnet_count > 1:
+                    actual_routers.append(rnode)
+        
+        return actual_routers
+                
+
 
     def configure(self, emulator: Emulator):
         """!
         @brief Install SCION on router, control service and host nodes.
         """
-        super().configure(emulator)
-
+        if ScionRouting._static_routing:
+            # install BIRD routing daemon only where necessary
+            bird_routers = self.configure_base(emulator)
+            for br in bird_routers:
+                self._installBird(br)
+                self._configure_bird_router(br)
+        else:
+            super().configure(emulator)
         reg = emulator.getRegistry()
         for ((scope, type, name), obj) in reg.getAll().items():
             # SCION inter-domain routing affects only border-routers
@@ -139,17 +211,17 @@ class ScionRouting(Routing):
                 asn = obj.getAsn()                
                 as_: ScionAutonomousSystem = base_layer.getAutonomousSystem(asn)
                 isds = isd_layer.getAsIsds(asn)
-                assert len(isds) == 1, f"AS {asn} must be a member of exactly one ISD"
+                assert len(isds) == 1, f"AS {hex(asn)} must be a member of exactly one ISD"
 
                 # Install AS topology file
                 as_topology = as_.getTopology(isds[0][0])
                 node.setFile("/etc/scion/topology.json", json.dumps(as_topology, indent=2))
 
-                self.__provision_base_config(node)
+                self._provision_base_config(node, as_)
 
             if type == 'brdnode':
                 rnode: ScionRouter = obj
-                self.__provision_router_config(rnode)                
+                self._provision_router_config(rnode, as_)
             elif type == 'csnode':
                 csnode: Node = obj
                 self._provision_cs_config(csnode, as_)
@@ -160,8 +232,7 @@ class ScionRouting(Routing):
                 hnode: Node = obj
                 self.__provision_dispatcher_config(hnode, isds[0][0], as_)
 
-    @staticmethod
-    def __provision_base_config(node: Node):
+    def _provision_base_config(self, node: Node, _as: 'AutonomousSystem'):
         """Set configuration for sciond and dispatcher."""
 
         node.addBuildCommand("mkdir -p /cache")
@@ -175,7 +246,7 @@ class ScionRouting(Routing):
     def __provision_dispatcher_config(node: Node, isd: int, as_: ScionAutonomousSystem):
         """Set dispatcher configuration on host and cs nodes."""
 
-        isd_as = f"{isd}-{as_.getAsn()}"
+        isd_as = f"{IA(isd, as_.getScionAsn())}"
         
         ip = None
         ifaces = node.getInterfaces()
@@ -194,7 +265,7 @@ class ScionRouting(Routing):
         node.setFile("/etc/scion/dispatcher.toml", _Templates["dispatcher"].format(isd_as=isd_as, ip=ip))
 
     @staticmethod
-    def __provision_router_config(router: ScionRouter):
+    def _provision_router_config(router: ScionRouter, _as: 'AutonomousSystem'):
         """Set border router configuration on router nodes."""
 
         name = router.getName()
@@ -247,10 +318,12 @@ class ScionRouting(Routing):
             "Hops": {},
             "Geo": {},
         }
+        def hasGeo(as_ , br_name: str) -> bool:
+            return as_.getRouter(br_name).getGeo() != None
 
         # get Geo information for this interface if it exists
-        if as_.getRouter(this_br_name).getGeo():
-            (lat,long,address) = as_.getRouter(this_br_name).getGeo()
+        if (br:=as_.getRouter(this_br_name)).getGeo():
+            (lat,long,address) = br.getGeo()
             ifs["Geo"] = {
                 "Latitude": lat,
                 "Longitude": long,
@@ -274,12 +347,17 @@ class ScionRouting(Routing):
                     else:
                         net = ScionRouting._get_networks_from_router(this_br_name, br_str, as_) # get network between the two routers (Assume any two routers in AS are connected through a network)
                         (latency, bandwidth, packetDrop) = net.getDefaultLinkProperties()
-                        mtu = net.getMtu()
-                        ifs["Latency"][str(other_if)] =  f"{latency}ms"
+                        if latency == 0 and hasGeo(as_, this_br_name) and hasGeo(as_, br_str):
+                            # compute lightspeed latency estimation from geodesic distance
+                            (lat_1,long_1,_)= as_.getRouter(this_br_name).getGeo()
+                            (lat_2,long_2,_)= as_.getRouter(br_str).getGeo()
+
+                            latency = ( geodesic( (lat_1, long_1), (lat_2, long_2) ).km *1000 /299792458) *1000 # [ms]
+                        ifs["Latency"][str(other_if)] =  f"{round(latency*1000)}us"
                         if bandwidth != 0: # if bandwidth is not 0, add it
                             ifs["Bandwidth"][str(other_if)] =  int(bandwidth/1000) # convert bps to kbps
                         ifs["packetDrop"][str(other_if)] =  f"{packetDrop}"
-                        ifs["MTU"][str(other_if)] =  f"{mtu}"
+                        ifs["MTU"][str(other_if)] =  f"{net.getMtu()}"
                         ifs["Hops"][str(other_if)] =  1 # NOTE: if interface is on different router, hops is 1 since we assume all routers are connected through a network
         
         
@@ -292,8 +370,8 @@ class ScionRouting(Routing):
         """
         this_br_name = ScionRouting._get_BR_from_interface(interface, as_)
         this_br = as_.getRouter(this_br_name)
-
-        if_addr = this_br.getScionInterface(interface)['underlay']["public"].split(':')[0]
+        interface = this_br.getScionInterface(interface)
+        if_addr = interface['underlay']["local"].split(':')[0]
 
         xcs = this_br.getCrossConnects()
 
@@ -310,7 +388,7 @@ class ScionRouting(Routing):
         this_br_name = ScionRouting._get_BR_from_interface(interface, as_)
         this_br = as_.getRouter(this_br_name)
 
-        if_addr = IPv4Address(this_br.getScionInterface(interface)['underlay']["public"].split(':')[0])
+        if_addr = IPv4Address(this_br.getScionInterface(interface)['underlay']["local"].split(':')[0])
         
         # get a list of all ix networks this Border Router is attached to
         ixs = [ifa.getNet() for ifa in this_br.getInterfaces() if ifa.getNet().getType() == NetworkType.InternetExchange]
@@ -340,7 +418,7 @@ class ScionRouting(Routing):
         }
 
         # iterate through all ScionInterfaces in AS
-        for interface in range(1,as_._ScionAutonomousSystem__next_ifid):
+        for interface in Scion.getIfIds(IA(1, as_.getAsn())):
 
             ifs = ScionRouting._get_internal_link_properties(interface, as_)
             xc_linkprops = ScionRouting._get_xc_link_properties(interface, as_)
@@ -351,15 +429,23 @@ class ScionRouting(Routing):
             
 
             # Add Latency
+            if not staticInfo["Latency"] or str(interface) not in staticInfo["Latency"]: # if no latencies have been added yet empty dict
+                staticInfo["Latency"][str(interface)] = {}
+
             if lat != 0: # if latency is not 0, add it
-                if not staticInfo["Latency"]: # if no latencies have been added yet empty dict
-                    staticInfo["Latency"][str(interface)] = {}
-                staticInfo["Latency"][str(interface)]["Inter"] = str(lat)+"ms"
+                us = round(lat * 1000 )
+                staticInfo["Latency"][str(interface)]["Inter"] = str(us)+"us"
+
             for _if in ifs["Latency"]: # add intra latency
-                if ifs["Latency"][_if] != "0ms": # omit 0ms latency
-                    if not staticInfo["Latency"][str(interface)]["Intra"]: # if no intra latencies have been added yet empty dict
+                # don't omit 0ms latency, otherwise it won't be included in PCBs
+                    if "Intra" not in staticInfo["Latency"][str(interface)]: # if no intra latencies have been added yet empty dict
                         staticInfo["Latency"][str(interface)]["Intra"] = {}
-                    staticInfo["Latency"][str(interface)]["Intra"][str(_if)] = ifs["Latency"][_if]
+
+                    dur = ifs["Latency"][_if]
+                    if '.' not in dur:
+                        staticInfo["Latency"][str(interface)]["Intra"][str(_if)] = dur
+                    else:
+                        raise ValueError("scion distributables can't parse floating point durations: pkg/private/util/duration.go")
             
             
             

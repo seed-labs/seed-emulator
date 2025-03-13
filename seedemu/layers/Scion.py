@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple, Union, Any, Set
 
 from seedemu.core import (Emulator, Interface, Layer, Network, Registry,
                           Router, ScionAutonomousSystem, ScionRouter,
@@ -36,15 +36,21 @@ class LinkType(Enum):
             return "PEER"
         assert False, "invalid scion link type"
 
-    def to_json(self, a_to_b: bool) -> str:
+    def to_json(self, core_as: bool, is_parent: bool) -> str:
+        """
+        a core AS has to have 'CHILD' as its 'link_to' attribute value,
+        for all interfaces!!
+        The child AS on the other end of the link will have 'PARENT'
+        """
         if self.value == "Core":
             return "CORE"
         elif self.value == "Peer":
             return "PEER"
         elif self.value == "Transit":
-            if a_to_b:
+            if is_parent:
                 return "CHILD"
             else:
+                assert not core_as, 'Logic error:  Core ASes must only provide transit to customers, not receive it!'
                 return "PARENT"
 
 
@@ -57,8 +63,8 @@ class Scion(Layer, Graphable):
     """
 
     __links: Dict[Tuple[IA, IA, str, str, LinkType], int]
-    __ix_links: Dict[Tuple[int, IA, IA, str, str, LinkType], int]
-
+    __ix_links: Dict[Tuple[int, IA, IA, str, str, LinkType], Dict[str,Any] ]
+    __if_ids_by_as = {} # Dict[IA, Set[int]]
     def __init__(self):
         """!
         @brief SCION layer constructor.
@@ -71,6 +77,68 @@ class Scion(Layer, Graphable):
     def getName(self) -> str:
         return "Scion"
 
+    @staticmethod
+    def _setIfId(ia: IA, ifid: int):
+        """!@brief allocate the given IFID for the given AS.
+            Returns wheter or not this assignment was unique
+            or the ID already occupied by another Interface.
+        """
+        ifs = Scion.getIfIds(ia)
+        v = ifid in ifs
+        ifs.add(ifid)    
+        Scion.__if_ids_by_as[ia] = ifs
+        return v
+
+    @staticmethod
+    def getIfIds(ia: IA) -> Set[int]:
+        ifs = set()
+        keys = Scion.__if_ids_by_as.keys()
+        if ia in keys:
+            ifs = Scion.__if_ids_by_as[ia]
+        return ifs
+
+    @staticmethod
+    def peekNextIfId(ia: IA) -> int:
+        """! @brief get the next free IFID, but don't allocate it yet.
+        @note subsequent calls return the same, if not interleaved with getNextIfId() or _setIfId()
+        """
+        ifs = Scion.getIfIds(ia)        
+        if not ifs:
+            return 0
+    
+        last = Scion._fst_free_id(ifs)
+        return last+1
+    
+    @staticmethod
+    def _fst_free_id(ifs: Set[int]) -> int:
+        """ find the first(lowest) available free IFID number"""
+        last = -1
+        for i in ifs:
+            if i-last > 1:
+                return last+1
+            else:
+                last=i
+        return last
+
+    @staticmethod
+    def getNextIfId(ia: IA) -> int:
+        """ allocate the next free IFID 
+            if call returned X, a subsequent call will return X+1 (or higher)
+        """
+        ifs = Scion.getIfIds(ia)      
+        if not ifs:
+            ifs.add(1)
+            ifs.add(0)
+            Scion.__if_ids_by_as[ia] = ifs
+
+            return 1
+    
+        last = Scion._fst_free_id(ifs)
+
+        ifs.add(last+1)
+        Scion.__if_ids_by_as[ia] = ifs
+        return last+1
+        
 
     def addXcLink(self, a: Union[IA, Tuple[int, int]], b: Union[IA, Tuple[int, int]],
                   linkType: LinkType, count: int=1, a_router: str="", b_router: str="",) -> 'Scion':
@@ -89,7 +157,7 @@ class Scion(Layer, Graphable):
         @returns self
         """
         a, b = IA(*a), IA(*b)
-        assert a.asn != b.asn, "Cannot link as{} to itself.".format(a.asn)
+        assert a.asn != b.asn, "Cannot link as{} to itself.".format(a)
         assert (a, b, a_router, b_router, linkType) not in self.__links, (
             "Link between as{} and as{} of type {} exists already.".format(a, b, linkType))
 
@@ -97,15 +165,17 @@ class Scion(Layer, Graphable):
 
         return self
 
+# additional arguments in 'kwargs':
+# i.e. a_IF_ID and b_IF_ID if known (i.e. by a DataProvider)
     def addIxLink(self, ix: int, a: Union[IA, Tuple[int, int]], b: Union[IA, Tuple[int, int]],
-                  linkType: LinkType, count: int=1, a_router: str="", b_router: str="") -> 'Scion':
+                  linkType: LinkType, count: int=1, a_router: str="", b_router: str="", **kwargs) -> 'Scion':
         """!
         @brief Create a private link between two ASes at an IX.
 
         @param ix IXP id.
         @param a First AS (ISD and ASN).
         @param b Second AS (ISD and ASN).
-        @param linkType Link type from a to b.
+        @param linkType Link type from a to b. In case of Transit: A is parent
         @param count Number of parallel links.
         @param a_router router of AS a default is ""
         @param b_router router of AS b default is ""
@@ -119,7 +189,22 @@ class Scion(Layer, Graphable):
         assert (a, b, a_router, b_router, linkType) not in self.__links, (
             "Link between as{} and as{} of type {} at ix{} exists already.".format(a, b, linkType, ix))
 
-        self.__ix_links[(ix, a, b, a_router, b_router, linkType)] = count
+        key = (ix, a, b, a_router, b_router, linkType)
+
+        ids = []
+        if 'if_ids' in kwargs:
+            ids = kwargs['if_ids']
+            assert not Scion._setIfId(a, ids[0]), f'Interface ID {ids[0]} not unique for IA {a}'
+            assert not Scion._setIfId(b, ids[1]), f'Interface ID {ids[1]} not unique for IA {b}'           
+        else: # auto assign next free IFIDs
+            ids = (Scion.getNextIfId(a), Scion.getNextIfId(b))
+            
+        if key in self.__ix_links.keys():
+            self.__ix_links[key]['count'] += count           
+        else:
+            self.__ix_links[key] = {'count': count , 'if_ids': set()}
+        
+        self.__ix_links[key]['if_ids'].add(ids)
 
         return self
 
@@ -171,7 +256,10 @@ class Scion(Layer, Graphable):
                                 'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
                                 style= 'dashed')
 
-        for (ix, a, b, a_router, b_router, rel), count in self.__ix_links.items():
+        for (ix, a, b, a_router, b_router, rel), d in self.__ix_links.items():
+            count = d['count']
+            ifids = d['if_ids']
+            assert count == len(ifids)
             a_shape = 'doublecircle' if scionIsd_layer.isCoreAs(a.isd, a.asn) else 'circle'
             b_shape = 'doublecircle' if scionIsd_layer.isCoreAs(b.isd, b.asn) else 'circle'
 
@@ -181,27 +269,33 @@ class Scion(Layer, Graphable):
                 graph.addVertex('AS{}'.format(b.asn), 'ISD{}'.format(b.isd), b_shape)
 
             if rel == LinkType.Core:
-                for _ in range(count):
+                for ids in ifids:
                     graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn),
                                 'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
-                                label='IX{}'.format(ix), style= 'bold')
-            if rel == LinkType.Transit:
-                for _ in range(count):
+                                label='IX{}'.format(ix), style= 'bold',
+                                alabel=f'#{ids[0]}',blabel=f'#{ids[1]}')
+            elif rel == LinkType.Transit:
+                for ids in ifids:
                     graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn),
                                 'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
-                                label='IX{}'.format(ix), alabel='P', blabel='C')
-            if rel == LinkType.Peer:
-                for _ in range(count):
+                                label='IX{}'.format(ix),
+                                alabel=f'P #{ids[0]}', blabel=f'C #{ids[1]}')
+            elif rel == LinkType.Peer:
+                for ids in ifids:
                     graph.addEdge('AS{}'.format(a.asn), 'AS{}'.format(b.asn),
                                 'ISD{}'.format(a.isd), 'ISD{}'.format(b.isd),
-                                'IX{}'.format(ix), style= 'dashed')
+                                'IX{}'.format(ix), style= 'dashed',
+                                alabel=f'#{ids[0]}',blabel=f'#{ids[1]}')
+            else:
+                assert False, f'Invalid LinkType: {rel}'
 
     def print(self, indent: int = 0) -> str:
         out = ' ' * indent
         out += 'ScionLayer:\n'
 
         indent += 4
-        for (ix, a, b, a_router, b_router, rel), count in self.__ix_links.items():
+        for (ix, a, b, a_router, b_router, rel), d in self.__ix_links.items():
+            count = d['count']
             out += ' ' * indent
             if a_router == "":
                 out += f'IX{ix}: AS{a} -({rel})-> '
@@ -268,7 +362,8 @@ class Scion(Layer, Graphable):
                                 a_addr, b_addr, net, rel)
 
         # IX links
-        for (ix, a, b, a_router, b_router, rel), count in self.__ix_links.items():
+        for (ix, a, b, a_router, b_router, rel), d in self.__ix_links.items():
+            count = d['count']
             ix_reg = ScopedRegistry('ix', reg)
             a_reg = ScopedRegistry(str(a.asn), reg)
             b_reg = ScopedRegistry(str(b.asn), reg)
@@ -292,11 +387,19 @@ class Scion(Layer, Graphable):
                 b_ixrouter, b_ixif = self.__get_ix_port(b_routers, ix_net)
             except AssertionError:
                 assert False, f"cannot resolve scion peering: as{a} not in ix{ix}"
-
-            for _ in range(count):
+            if 'if_ids' in d:
                 self._log(f"add scion IX link: {a_ixif.getAddress()} AS{a} -({rel})->"
                         f"{b_ixif.getAddress()} AS{b}")
-                self.__create_link(a_ixrouter, b_ixrouter, a, b, a_as, b_as,
+                for ids in d['if_ids']:
+                    self.__create_link(a_ixrouter, b_ixrouter, a, b, a_as, b_as,
+                                str(a_ixif.getAddress()), str(b_ixif.getAddress()),
+                                ix_net, rel, if_ids = ids)
+            else:
+                for _ in range(count):
+                    self._log(f"add scion IX link: {a_ixif.getAddress()} AS{a} -({rel})->"
+                        f"{b_ixif.getAddress()} AS{b}")   
+                
+                    self.__create_link(a_ixrouter, b_ixrouter, a, b, a_as, b_as,
                                 str(a_ixif.getAddress()), str(b_ixif.getAddress()),
                                 ix_net, rel)
 
@@ -326,32 +429,53 @@ class Scion(Layer, Graphable):
                      a_ia: IA, b_ia: IA,
                      a_as: ScionAutonomousSystem, b_as: ScionAutonomousSystem,
                      a_addr: str, b_addr: str,
-                     net: Network, rel: LinkType):
-        """Create a link between SCION BRs a and b."""
-        a_ifid = a_as.getNextIfid()
-        b_ifid = b_as.getNextIfid()
+                     net: Network,
+                     rel: LinkType,
+                     if_ids=None ):
+        """Create a link between SCION BRs a and b.
+        In case of LinkType Transit: A is parent of B
+        """
+        
+        a_ifid = -1
+        b_ifid = -1
+
+        if if_ids:
+            a_ifid = if_ids[0]
+            b_ifid = if_ids[1]
+        else:
+            a_ifid = Scion.getNextIfId(a_ia)
+            b_ifid = Scion.getNextIfId(b_ia)
+
         a_port = a_router.getNextPort()
         b_port = b_router.getNextPort()
 
+        a_core = 'core' in a_as.getAsAttributes(a_ia.isd) 
+        b_core = 'core' in b_as.getAsAttributes(b_ia.isd)
+
+        if a_core and b_core:
+            assert rel == LinkType.Core, f'Between Core ASes there can only be Core Links! {a_ia} -- {b_ia}'
+
         a_iface = {
             "underlay": {
-                "public": f"{a_addr}:{a_port}",
+                "local": f"{a_addr}:{a_port}",
                 "remote": f"{b_addr}:{b_port}",
             },
             "isd_as": str(b_ia),
-            "link_to": rel.to_json(a_to_b=True),
+            "link_to": rel.to_json(a_core, True),
             "mtu": net.getMtu(),
         }
+        # TODO: additional settings according to config of 'as_a'
 
         b_iface = {
             "underlay": {
-                "public": f"{b_addr}:{b_port}",
+                "local": f"{b_addr}:{b_port}",
                 "remote": f"{a_addr}:{a_port}",
             },
             "isd_as": str(a_ia),
-            "link_to": rel.to_json(a_to_b=False),
+            "link_to": rel.to_json(b_core, False),
             "mtu": net.getMtu(),
         }
+        # TODO: additional settings according to config of 'as_b'
 
         # XXX(benthor): Remote interface id could probably be added
         # regardless of LinkType but might then undermine SCION's
@@ -363,9 +487,9 @@ class Scion(Layer, Graphable):
         # supported in upstream SCION.
         if rel == LinkType.Peer:
             self._log("WARNING: As of February 2023 SCION peering links are not supported in upstream SCION")
-            a_iface["remote_interface_id"] = b_ifid
-            b_iface["remote_interface_id"] = a_ifid
+            a_iface["remote_interface_id"] = int(b_ifid)
+            b_iface["remote_interface_id"] = int(a_ifid)
 
         # Create interfaces in BRs
-        a_router.addScionInterface(a_ifid, a_iface)
-        b_router.addScionInterface(b_ifid, b_iface)
+        a_router.addScionInterface(int(a_ifid), a_iface)
+        b_router.addScionInterface(int(b_ifid), b_iface)
