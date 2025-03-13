@@ -5,7 +5,7 @@ import unittest as ut
 from tests import SeedEmuTestCase
 
 class MiniInternetTestCase(SeedEmuTestCase):
-    
+
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
@@ -14,8 +14,8 @@ class MiniInternetTestCase(SeedEmuTestCase):
             if "10.150.0.71" in container.name:
                 cls.source_host = container
                 break
-        return 
-        
+        return
+
     def test_internet_connection(self):
         asns = [151, 152, 153, 154, 160, 161, 162, 163, 164, 170, 171]
         for asn in asns:
@@ -34,11 +34,10 @@ class MiniInternetTestCase(SeedEmuTestCase):
         self.printLog("real world as 11872")
         self.printLog("check real world ip : 128.230.18.63")
         # 128.230.18.63 - ip of syr.edu
-        self.assertTrue(self.ping_test(self.source_host, "128.230.18.63"))
+        self.assertTrue(self.http_get_test(self.source_host, "128.230.18.63", 301))
 
     def test_vpn(self):
         return
-    
 
     @classmethod
     def get_test_suite(cls):
@@ -55,4 +54,3 @@ if __name__ == "__main__":
     MiniInternetTestCase.printLog("==========Test=========")
     num, errs, fails = res.testsRun, len(res.errors), len(res.failures)
     MiniInternetTestCase.printLog("score: %d of %d (%d errors, %d failures)" % (num - (errs+fails), num, errs, fails))
-    

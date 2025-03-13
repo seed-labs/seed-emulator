@@ -19,15 +19,15 @@ class SeedEmuTestCase(ut.TestCase):
     container_count_after_up_container: int
     docker_compose_version:int
     online_testing:bool
-    
+
     @classmethod
     def setUpClass(cls, testLogOverwrite:bool=False, online:bool=True) -> None:
         '''!
-        @brief A classmethod to construct the some thing before 
-        this test case is started. For this test case, it will create 
-        a test_log directory, create emulation files, build containers 
+        @brief A classmethod to construct the some thing before
+        this test case is started. For this test case, it will create
+        a test_log directory, create emulation files, build containers
         and up containers.
-        
+
         Parameters
         ----------
         testLogOverwrite : bool, optional
@@ -71,7 +71,7 @@ class SeedEmuTestCase(ut.TestCase):
             cls.up_emulator()
 
         return
-        
+
     @classmethod
     def tearDownClass(cls) -> None:
         '''
@@ -82,16 +82,16 @@ class SeedEmuTestCase(ut.TestCase):
             cls.down_emulator()
 
         return super().tearDownClass()
-    
+
     @classmethod
     def gen_emulation_files(cls):
         """!
         @brief generate emulation files.
         """
         cls.printLog("Generating Emulation Files...")
-        
+
         os.chdir(cls.emulator_code_dir)
-        
+
         log_file = os.path.join(cls.init_dir, cls.test_log, "compile_log")
         f = open(log_file, 'w')
         if os.path.exists(cls.output_dir):
@@ -119,7 +119,7 @@ class SeedEmuTestCase(ut.TestCase):
         """
         cls.printLog("Building Docker Containers...")
         os.chdir(os.path.join(cls.emulator_code_dir, cls.output_dir))
-        
+
         log_file = os.path.join(cls.init_dir, cls.test_log, "build_log")
         f = open(log_file, 'w')
         if(cls.docker_compose_version == 1):
@@ -186,15 +186,15 @@ class SeedEmuTestCase(ut.TestCase):
     @classmethod
     def wait_until_all_containers_up(cls, total_containers:int) -> None:
         """!
-        @brief wait until all containers up before running a testcase. 
+        @brief wait until all containers up before running a testcase.
 
-        @param total_containers a expected total container counts 
+        @param total_containers a expected total container counts
         """
         current_time = time.time()
         while True:
             cls.printLog("--------------------------------------------------")
             cls.printLog("------ Waiting until all containers up : {} ------".format(total_containers))
-            
+
             cls.containers = cls.client.containers.list()
 
             cur_container_count = len(cls.containers) - cls.container_count_before_up_container
@@ -209,7 +209,7 @@ class SeedEmuTestCase(ut.TestCase):
                 return False
             time.sleep(10)
 
-    @classmethod    
+    @classmethod
     def ping_test(cls, container, ip, expected_exit_code=0):
         """!
         @brief test ping 3 times
@@ -225,7 +225,29 @@ class SeedEmuTestCase(ut.TestCase):
         if exit_code == 0: cls.printLog("ping test {} Succeed".format(ip))
         else: cls.printLog("ping test {} Failed".format(ip))
         return exit_code == expected_exit_code
-    
+
+    @classmethod
+    def http_get_test(cls, container, dst, expected_status_code:int = 200) -> bool:
+        """!
+        @brief Send an HTTP GET request with curl.
+
+        @param container Container to send the request
+        @param dst Request destination
+
+        @returns True if the HTTP status code of the response is `expected_status_code`.
+        """
+        ec, output = container.exec_run(f"curl -so /dev/null -w '%{{http_code}}' {dst}")
+        if ec != 0:
+            cls.printLog(f"http GET {dst} test failed: {output.decode()}")
+            return False
+        http_status = int(output.decode())
+        if http_status != expected_status_code:
+            cls.printLog(f"http GET test {dst} failed with HTTP status {http_status}"
+                         f", expected {expected_status_code}")
+            return False
+        cls.printLog(f"http GET {dst} test succeeded")
+        return True
+
     @classmethod
     def get_test_suite(cls):
         """!
@@ -244,7 +266,7 @@ class SeedEmuTestCase(ut.TestCase):
         '''
 
         raise NotImplementedError('getTestSuite not implemented')
-        
+
     @classmethod
     def printLog(cls, *args, **kwargs):
         """!

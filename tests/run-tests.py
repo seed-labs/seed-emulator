@@ -41,6 +41,9 @@ test_case_list = [
 
 if args.ci:
     test_case_list = [
+        MiniInternetTestCase,
+        IPAnyCastTestCase,
+        HostMgmtTestCase,
         ScionBgpMixedTestCase,
         ScionBwtesterTestCase,
         DottedDictTestCase,
