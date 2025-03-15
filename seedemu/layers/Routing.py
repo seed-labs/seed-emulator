@@ -121,6 +121,7 @@ class Routing(Layer):
                               RoutingFileTemplates['rnode_bird_direct'].format(interfaces = ifaces))
 
     def configure(self, emulator: Emulator):
+        super().configure(emulator)
         reg = emulator.getRegistry()
         for ((scope, type, name), obj) in reg.getAll().items():
             if type == 'rs':

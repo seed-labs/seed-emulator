@@ -1,19 +1,32 @@
 # SCION and BGP Coexistence
 
 SCION can operate independently from but alongside BGP. This example demonstrates a more complex topology with both SCION and BGP routing.
+Moreover it serves as a demo of how to use the option system.
 
 ## Step 1: Create layers
 
 ```python
 from seedemu.compiler import Docker, Graphviz
-from seedemu.core import Emulator
+from seedemu.core import Emulator, OptionMode, Scope, ScopeTier, ScopeType, OptionRegistry
 from seedemu.layers import (
-    ScionBase, ScionRouting, ScionIsd, Scion, Ospf, Ibgp, Ebgp, PeerRelationship)
+    ScionBase, ScionRouting, ScionIsd, Scion, Ospf, Ibgp, Ebgp, PeerRelationship,
+    SetupSpecification, CheckoutSpecification)
 from seedemu.layers.Scion import LinkType as ScLinkType
-
+# Initialize
 emu = Emulator()
 base = ScionBase()
-routing = ScionRouting()
+# change global defaults here .. .
+loglvl = OptionRegistry().scion_loglevel('error', mode=OptionMode.RUN_TIME)
+
+spec = SetupSpecification.LOCAL_BUILD(
+        CheckoutSpecification(
+            mode = "build",
+            git_repo_url = "https://github.com/scionproto/scion.git",
+            checkout = "v0.12.0" # could be tag, branch or commit-hash
+        ))
+opt_spec = OptionRegistry().scion_setup_spec(spec)
+routing = ScionRouting(loglevel=loglvl, setup_spec=opt_spec)
+
 ospf = Ospf()
 scion_isd = ScionIsd()
 scion = Scion()
@@ -22,6 +35,9 @@ ebgp = Ebgp()
 ```
 
 In addition to the SCION layers we instantiate the `Ibgp` and `Ebgp` layers for BGP as well as `Ospf` for AS-internal routing.
+Note that the ScionRouting layer accepts global default values for options as constructor parameters.
+ We use it here to decrease the loglevel from 'debug' to 'error' for all SCION distributables in the whole emulation if not overriden elsewhere. Also we change the mode for `LOGLEVEL` from `BUILD_TIME`(default) to `RUN_TIME` in the same statement.
+ Lastly we specify (as a global default for all nodes) that we want to use a local build of the `v0.12.0` SCION stack, rather than the 'official' `.deb` packages (`SetupSpecification.PACKAGES`). The SetupSpec is just an ordinary option and be overriden for ASes or individual nodes just like any other.
 
 ## Step 2: Create isolation domains and internet exchanges
 
@@ -40,7 +56,8 @@ We have two ISDs and four internet exchanges this time.
 
 ## Step 3: Create autonomous systems
 
-The topology we create contains the two core ASes 150 and 160. AS 150 is in ISD 1 and AS 160 is in ISD 2. ISD 1 has three additional non-core ASes. In ISD 2 we have one non-core AS.
+The topology we create contains the two core ASes 150 and 160. AS 150 is in ISD 1 and AS 160 is in ISD 2.
+ ISD 1 has three additional non-core ASes. In ISD 2 we have one non-core AS.
 
 ### Step 3.1: Core AS of ISD 1
 
@@ -64,6 +81,69 @@ as150_br3.joinNetwork('net3').joinNetwork('net0').joinNetwork('ix103')
 ```
 
 AS 150 contains four internal network connected in a ring topology by the four border routers br0, br1, br2, and br3. There are two control services cs1 and cs2. We will use br0 to connect to the core of ISD 2 (i.e., AS 160) and the other border routers to connect to customer/child ASes 151, 152, and 153.
+
+#### Step 3.1.1:   Option Settings for ISD-AS 1-150
+```python
+
+# override global default for AS150
+as150.setOption(OptionRegistry().scion_loglevel('info', OptionMode.RUN_TIME))
+as150.setOption(OptionRegistry().scion_disable_bfd(mode = OptionMode.RUN_TIME),
+                Scope(ScopeTier.AS,
+                      as_id=as150.getAsn(),
+                      node_type=ScopeType.BRDNODE))
+
+# override AS settings for individual nodes
+as150_br0.setOption(OptionRegistry().scion_loglevel('debug', OptionMode.RUN_TIME))
+as150_br1.setOption(OptionRegistry().scion_serve_metrics('true', OptionMode.RUN_TIME))
+as150_br1.addPortForwarding(30442, 30442)
+```
+This section overrides some global defaults:
+- DISABLE_BFD option is changed from default BUILD_TIME to RUNTIME_MODE (the value is left at the default: 'true') on all SCION border routers of AS150
+- LOGLEVEL is increased from global default 'error' to 'debug' only for node '150_br0' and the mode set to RUN_TIME
+- SERVE_METRICS option is enabled on node '150_br1'.
+    This node will serve collected Prometheus metrics of the SCION border router distributable on port 30442.
+    If this behaviour is no longer desired it can turned of at RUN_TIME again, without re-compile  and container rebuild
+
+As a result the following `.env` file will be generated next to the `docker-compose.yml` containing all instantiated `RUN_TIME` options:
+```
+LOGLEVEL_150_BR0=debug
+DISABLE_BFD_150_BRDNODE=true
+SERVE_METRICS_150_BR1=true
+LOGLEVEL_150=info
+LOGLEVEL=error
+```
+These variables are referenced from the `docker-compose.yml` file:
+
+```
+    brdnode_150_br0:
+        ...
+        environment:
+            - LOGLEVEL=${LOGLEVEL_150_BR0}
+            - DISABLE_BFD=${DISABLE_BFD_150_BRDNODE}
+
+    brdnode_150_br1:
+        ...
+        environment:
+            - LOGLEVEL=${LOGLEVEL_150}
+            - SERVE_METRICS=${SERVE_METRICS_150_BR1}
+            - DISABLE_BFD=${DISABLE_BFD_150_BRDNODE}
+
+    brdnode_150_br2|3:
+        ...
+        environment:
+            - LOGLEVEL=${LOGLEVEL_150}
+            - DISABLE_BFD=${DISABLE_BFD_150_BRDNODE}
+    csnode_150_cs1:
+        ...
+        environment:
+            - LOGLEVEL=${LOGLEVEL_150}
+
+      brdnode_151_br0:
+        ...
+        environment:
+            - LOGLEVEL=${LOGLEVEL}
+```
+Note that each service has in its `environment:` section (only) the runtime variables that apply to it (that is: match its ASN, NodeType or NodeIdentity).
 
 ### Step 3.2 Non-Core ASes of ISD 1
 
