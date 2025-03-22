@@ -1,4 +1,4 @@
-# Distributed Docker Compiler is not maintained 
+# Distributed Docker Compiler is not maintained
 
 from .Docker import Docker, DockerCompilerFileTemplates
 from seedemu.core import Emulator, ScopedRegistry, Node, Network
@@ -35,9 +35,9 @@ class DistributedDocker(Docker):
     DistributedDocker is one of the compiler driver. It compiles the lab to
     docker containers. This compiler will generate one set of containers with
     their docker-compose.yml for each AS, enable you to run the emulator
-    distributed. 
+    distributed.
 
-    This works by making every IX network overlay network. 
+    This works by making every IX network overlay network.
     """
 
     def __init__(self, namingScheme: str = "as{asn}{role}-{name}-{primaryIp}"):
@@ -119,7 +119,8 @@ class DistributedDocker(Docker):
 
                 self._used_images = set()
 
-                print('COMPOSE_PROJECT_NAME=sim_{}'.format(scope), file=open('.env', 'w'))
+                if scope != 'ix':
+                    self.generateEnvFile(scope, '')
 
             chdir('..')
 

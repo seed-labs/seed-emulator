@@ -8,7 +8,7 @@ from .Binding import Binding
 from typing import Dict, List, Set, Tuple
 from .BaseSystem import BaseSystem
 
-class Server(Printable):
+class Server(Printable): #TODO: make Customizable
     """!
     @brief Server class.
 
@@ -91,7 +91,7 @@ class Server(Printable):
     def getHostNames(self):
         return self.__host_names
 
-class Service(Layer):
+class Service(Layer):#TODO: add availableOptions()
     """!
     @brief Service base class.
 

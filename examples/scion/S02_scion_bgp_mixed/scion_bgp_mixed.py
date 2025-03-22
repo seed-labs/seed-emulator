@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
 
 from seedemu.compiler import Docker, Graphviz
-from seedemu.core import Emulator
+from seedemu.core import Emulator, OptionMode, Scope, ScopeTier, ScopeType, OptionRegistry
 from seedemu.layers import (
-    ScionBase, ScionRouting, ScionIsd, Scion, Ospf, Ibgp, Ebgp, PeerRelationship)
+    ScionBase, ScionRouting, ScionIsd, Scion, Ospf, Ibgp, Ebgp, PeerRelationship,
+    SetupSpecification, CheckoutSpecification)
 from seedemu.layers.Scion import LinkType as ScLinkType
-
 # Initialize
 emu = Emulator()
 base = ScionBase()
-routing = ScionRouting()
+# change global defaults here .. .
+loglvl = OptionRegistry().scion_loglevel('error', mode=OptionMode.RUN_TIME)
+
+spec = SetupSpecification.LOCAL_BUILD(
+        CheckoutSpecification(
+            mode = "build",
+            git_repo_url = "https://github.com/scionproto/scion.git",
+            checkout = "v0.12.0" # could be tag, branch or commit-hash
+        ))
+opt_spec = OptionRegistry().scion_setup_spec(spec)
+routing = ScionRouting(loglevel=loglvl, setup_spec=opt_spec)
+
 ospf = Ospf()
 scion_isd = ScionIsd()
 scion = Scion()
@@ -46,6 +57,18 @@ as150_br0.joinNetwork('net0').joinNetwork('net1').joinNetwork('ix100')
 as150_br1.joinNetwork('net1').joinNetwork('net2').joinNetwork('ix101')
 as150_br2.joinNetwork('net2').joinNetwork('net3').joinNetwork('ix102')
 as150_br3.joinNetwork('net3').joinNetwork('net0').joinNetwork('ix103')
+
+# override global default for AS150
+as150.setOption(OptionRegistry().scion_loglevel('info', OptionMode.RUN_TIME))
+as150.setOption(OptionRegistry().scion_disable_bfd(mode = OptionMode.RUN_TIME),
+                Scope(ScopeTier.AS,
+                      as_id=as150.getAsn(),
+                      node_type=ScopeType.BRDNODE))
+
+# override AS settings for individual nodes
+as150_br0.setOption(OptionRegistry().scion_loglevel('debug', OptionMode.RUN_TIME))
+as150_br1.setOption(OptionRegistry().scion_serve_metrics('true', OptionMode.RUN_TIME))
+as150_br1.addPortForwarding(30442, 30442)
 
 # Non-core ASes in ISD 1
 asn_ix = {

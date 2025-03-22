@@ -3,14 +3,14 @@ from __future__ import annotations
 from .Printable import Printable
 from .Registry import Registrable
 from .Emulator import Emulator
-from .Configurable import Configurable
+from .Configurable import DynamicConfigurable
 from .Merger import Mergeable
 
 from sys import stderr
 from typing import Set, Dict, Tuple
 
 
-class Layer(Printable, Registrable, Configurable, Mergeable):
+class Layer(Printable, Registrable, DynamicConfigurable, Mergeable):
     """!
     @brief The layer interface.
     """

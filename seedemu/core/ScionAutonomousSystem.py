@@ -8,6 +8,7 @@ from .AutonomousSystem import AutonomousSystem
 from .Emulator import Emulator
 from .enums import NodeRole
 from .Node import Node, ScionRouter
+from .Scope import Scope, ScopeTier
 
 class ScionASN:
     """!
@@ -136,7 +137,7 @@ class ScionAutonomousSystem(AutonomousSystem):
     __attributes: Dict[int, Set]         # Set of AS attributes per ISD
     __mtu: Optional[int]                 # Minimum MTU in the AS's internal networks
     __control_services: Dict[str, Node]
-    # Origination, propagation, and registration intervals
+    # Origination, propagation, and registration intervals # TODO: those are clearly all Options ...
     __beaconing_intervals: Tuple[Optional[str], Optional[str], Optional[str]]
     __beaconing_policy: Dict[str, Dict]
     __note: str # optional free form parameter that contains interesting information about AS. This will be included in beacons if it is set
@@ -156,7 +157,9 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__beaconing_policy = {}
         self.__note = None
         self.__generateStaticInfoConfig = False
-    
+
+    def scope(self)-> Scope:
+        return Scope(ScopeTier.AS, as_id=self.getAsn())
 
     def registerNodes(self, emulator: Emulator):
         """!
@@ -166,6 +169,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         reg = emulator.getRegistry()
         asn = str(self.getAsn())
         for (key, val) in self.__control_services.items(): reg.register(asn, 'csnode', key, val)
+
 
     def configure(self, emulator: Emulator):
         """!
@@ -286,7 +290,7 @@ class ScionAutonomousSystem(AutonomousSystem):
 
             localIP = rnode.getLocalIPAddress()
             listen_addr = localIP if localIP else rnode.getLoopbackAddress()
-            #UDP address on which the router receives SCION packets 
+            #UDP address on which the router receives SCION packets
             # from sibling routers and end hosts in this AS.
             border_routers[rnode.getName()] = {
                 "internal_addr": f"{listen_addr}:30042",
@@ -340,7 +344,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         @returns self
         """
         self.__note = note
-        return self 
+        return self
 
     def getNote(self) -> Optional[str]:
         """!
