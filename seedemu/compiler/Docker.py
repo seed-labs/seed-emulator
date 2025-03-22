@@ -1,6 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling
+from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
@@ -12,7 +12,7 @@ from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
-
+from yaml import dump
 
 SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-multiarch-map:buildx-latest'
 SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:buildx-latest'
@@ -104,6 +104,7 @@ services:
 {services}
 networks:
 {networks}
+{volumes}
 """
 
 DockerCompilerFileTemplates['compose_dummy'] = """\
@@ -157,16 +158,6 @@ DockerCompilerFileTemplates['compose_port'] = """\
 DockerCompilerFileTemplates['compose_volumes'] = """\
         volumes:
 {volumeList}
-"""
-
-DockerCompilerFileTemplates['compose_volume'] = """\
-            - type: bind
-              source: {hostPath}
-              target: {nodePath}
-"""
-
-DockerCompilerFileTemplates['compose_storage'] = """\
-            - {nodePath}
 """
 
 DockerCompilerFileTemplates['compose_service_network'] = """\
@@ -394,6 +385,13 @@ class Docker(Compiler):
         self._used_images = set()
         self.__image_per_node_list = {}
         self.__config = [] # variables for '.env' file alongside 'docker-compose.yml'
+
+        self.__volumes_dedup = (
+            []
+        )  # unforunately set(()) failed to automatically deduplicate
+        self.__vol_names = []
+        super().__init__()
+
         self.__platform = platform
 
         self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
@@ -403,6 +401,24 @@ class Docker(Compiler):
             if name == BaseSystem.DEFAULT:
                 priority = 1
             self.addImage(image, priority=priority)
+
+    def _addVolume(self, vol: BaseVolume):
+        """! @brief add a docker volume/bind mount/or tmpfs
+
+        Remember them for later, to generate the top lvl 'volumes:' section of docker-compose.yml
+        """
+        # if vol.type() == 'volume': # then it is a named-volume
+        key = vol.asDict()["source"]
+        if key not in self.__vol_names:
+            self.__volumes_dedup.append(vol)
+            self.__vol_names.append(key)
+        return self
+
+    def _getVolumes(self) -> List[BaseVolume]:
+        """! @brief get all docker volumes/mounts that must appear
+            in docker-compose.yml top-level  'volumes:' section
+        """
+        return self.__volumes_dedup
 
     def optionHandlingCapabilities(self) -> OptionHandling:
         return OptionHandling.DIRECT_DOCKER_COMPOSE | OptionHandling.CREATE_SEPARATE_ENV_FILE
@@ -910,28 +926,23 @@ class Docker(Compiler):
         return node_nets, dummy_addr_map
 
     def _getComposeNodeVolumes(self, node: Node) -> str:
-        _volumes = node.getSharedFolders()
-        storages = node.getPersistentStorages()
+        """ compute the docker-compose 'volumes:' section for this service(emulation node)"""
 
         volumes = ''
+        # svcvols = map( lambda vol: ServiceLvlVolume(vol), node.getCustomVolumes() )
+        svcvols = list (set(node.getDockerVolumes() ))
+        for v in svcvols:
+            v.mode = 'service'
+        yamlvols = '\n'.join(map( lambda line: '        ' + line ,dump( svcvols ).split('\n') ) )
 
-        if len(_volumes) > 0 or len(storages) > 0:
-            lst = ''
+        volumes +='        volumes:\n' + yamlvols if len(node.getDockerVolumes()) > 0 else   ''
 
-            for (nodePath, hostPath) in _volumes.items():
-                lst += DockerCompilerFileTemplates['compose_volume'].format(
-                    hostPath = hostPath,
-                    nodePath = nodePath
-                )
 
-            for path in storages:
-                lst += DockerCompilerFileTemplates['compose_storage'].format(
-                    nodePath = path
-                )
+        # the top-level docker-compose volumes section is rendered at a later stage ..
+        # Remember encountered volumes until then
+        for v in node.getDockerVolumes():
+            self._addVolume(v)
 
-            volumes = DockerCompilerFileTemplates['compose_volumes'].format(
-                volumeList = lst
-            )
         return volumes
 
     def _computeDockerfile(self, node: Node) -> str:
@@ -1260,11 +1271,41 @@ class Docker(Compiler):
                 dirName = image.getDirName()
             )
 
+        toplevelvolumes = self._computeComposeTopLvlVolumes()
+
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(
             services = self.__services,
             networks = self.__networks,
+            volumes = toplevelvolumes,
             dummies = local_images + self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))
 
         self.generateEnvFile(Scope(ScopeTier.Global),'')
+
+    def _computeComposeTopLvlVolumes(self) -> str:
+        """!@brief render the 'volumes:' section of the docker-compose.yml file
+        It contains named volumes but not bind-mounts.
+        """
+        toplevelvolumes = ''
+        if len(topvols := self._getVolumes()) > 0:
+            hit = False
+            #topvols = set(map( lambda vol: TopLvlVolume(vol), pool.getVolumes() ))
+
+            for v in  topvols:
+                v.mode = 'toplevel'
+
+            #toplevelvolumes += '\n'.join(map( lambda line: '        ' + line ,dump( topvols ).split('\n') ) )
+
+            # sharedFolders/bind mounts do not belong in the top-level volumes section
+            for v in [vv  for  vv in topvols if vv.asDict()['type'] == 'volume' ]:
+                hit = True
+                toplevelvolumes += '  {}:\n'.format(v.asDict()['source']) # why not 'name'
+                lines = dump( v ).rstrip('\n').split('\n')
+                toplevelvolumes += '\n'.join( map( lambda x: '        '
+                                                  if x[0] != 0 else '        ' + x[1]
+                                                  if x[1] != ''else '' , enumerate(lines ) ) )
+                toplevelvolumes += '\n'
+
+            if hit: toplevelvolumes = 'volumes:\n' + toplevelvolumes
+        return toplevelvolumes

@@ -1,4 +1,6 @@
 from __future__ import annotations
+import random
+import string
 from .Printable import Printable
 from .Network import Network
 from .enums import NodeRole
@@ -6,6 +8,7 @@ from .Scope import *
 from .Registry import Registrable
 from .Emulator import Emulator
 from .Customizable import Customizable
+from .Volume import BaseVolume
 from .Configurable import Configurable
 from .enums import NetworkType
 from .Visualization import Vertex
@@ -230,8 +233,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
     # Dict of (peername, peerasn) -> (localaddr, netname, netProperties) -- netProperties = (latency, bandwidth, packetDrop, MTU)
     __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str, Tuple[int,int,float,int]]]
 
-    __shared_folders: Dict[str, str]
-    __persistent_storages: List[str]
+    __custom_vols: List[BaseVolume]
     __name_servers: List[str]
 
     __geo: Tuple[float,float,str] # (Latitude,Longitude,Address) -- optional parameter that contains the geographical location of the Node
@@ -270,8 +272,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         self.__xcs = {}
         self.__configured = False
 
-        self.__shared_folders = {}
-        self.__persistent_storages = []
+        self.__custom_vols = []
 
         for soft in DEFAULT_SOFTWARE:
             self.__softwares.add(soft)
@@ -383,6 +384,17 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         self.__name_servers = servers
 
         return self
+
+    def addDockerVolume(self, vol: BaseVolume ):
+        """!@brief adds the docker volume to this node's container
+            It can be a shared folder, named docker volume or tmpfs
+        """
+        self.__custom_vols.append(vol )
+        return self
+
+    def getDockerVolumes(self):
+        """!@brief retrieve any volumes mounted on this node's container"""
+        return self.__custom_vols
 
     # TODO: if a separate .env file is created, or the values are given directly in the docker-compose.yml 'environment' section
     # could be a setting of the Docker compiler
@@ -891,29 +903,22 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         """
         return self.__interfaces
 
-    def addSharedFolder(self, nodePath: str, hostPath: str) -> Node:
+    def addSharedFolder(self, nodePath: str, hostPath: str, **kwargs) -> Node:
         """!
         @@brief Add a new shared folder between the node and host.
 
         @param nodePath path to the folder inside the container.
         @param hostPath path to the folder on the emulator host node.
+        @param kwargs any other docker volume options i.e. 'readonly'
 
         @returns self, for chaining API calls.
         """
-        self.__shared_folders[nodePath] = hostPath
+        # bind mounts are never named!
+        self.__custom_vols.append(  BaseVolume(source=hostPath, target=nodePath, type='bind', **kwargs) )
 
         return self
 
-    def getSharedFolders(self) -> Dict[str, str]:
-        """!
-        @brief Get shared folders between the node and host.
-
-        @returns dict, where key is the path in container and value is path on
-        host.
-        """
-        return self.__shared_folders
-
-    def addPersistentStorage(self, path: str) -> Node:
+    def addPersistentStorage(self, path: str, name: str=None, **kwargs) -> Node:
         """!
         @brief Add persistent storage to node.
 
@@ -921,20 +926,20 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         directory where data will be persistent.
 
         @param path path to put the persistent storage folder in the container.
+        @param name if specified a named-volume is created.
+            By specifying the same name on multiple nodes
+            the volume is effectively shared between those containers.
+        @param kwargs any other docker volume options i.e. 'readonly'
 
         @returns self, for chaining API calls.
         """
-        self.__persistent_storages.append(path)
+
+        if name == None: # generate random name for anonymus volume
+            name = ''.join(random.choice(string.ascii_lowercase) for i in range(6))
+
+        self.__custom_vols.append(  BaseVolume(target=path, type='volume', name=name, source=name, **kwargs) )
 
         return self
-
-    def getPersistentStorages(self) -> List[str]:
-        """!
-        @brief Get persistent storage folders on the node.
-
-        @returns list of persistent storage folder.
-        """
-        return self.__persistent_storages
 
     def setGeo(self, Lat: float, Long: float, Address: str="") -> Node:
         """!
@@ -995,7 +1000,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         # if node.getBaseSystem() != None : self.setBaseSystem(node.getClasses())
 
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
-        for p in node.getPersistentStorages(): self.addPersistentStorage(p)
+        for v in node.getDockerVolumes(): self.addDockerVolume(v)
         for (c, f) in node.getStartCommands(): self.appendStartCommand(c, f)
         # for (c, f) in node.getUserStartCommands(): self.appendUserStartCommand(c, f)
         for c in node.getBuildCommands(): self.addBuildCommand(c)
