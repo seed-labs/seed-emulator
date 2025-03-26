@@ -13,7 +13,7 @@ from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, Net
 from seedemu.core.enums import NetworkType
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import Routing, ScionBase, ScionIsd
-from seedemu.layers.Scion import Scion, ScionBuilder, SetupSpecification, CheckoutSpecification
+from seedemu.layers.Scion import Scion, ScionBuilder, SetupSpecification, CheckoutSpecification, ScionConfigMode, handleScionConfFile
 from seedemu.core.ScionAutonomousSystem import IA
 
 
@@ -220,9 +220,9 @@ class ScionRouting(Routing):
     # >> Maybe include 'NodeType that the option applies to' into the Option itself
     def getAvailableOptions(self):
         from seedemu.core.OptionRegistry import OptionRegistry
-        opt_keys = [ o.name for o in ScionStackOpts().components()]
-        opt = [OptionRegistry().getOption(o, prefix='scion') for o in opt_keys]
-        return opt
+        opt_keys = [ o.name for o in ScionStackOpts().components()] + ['etc_config_vol']
+        return [OptionRegistry().getOption(o, prefix='scion') for o in opt_keys]
+
 
     def __init__(self, loopback_range: str = '10.0.0.0/16',
                  static_routing: bool = True,
@@ -233,7 +233,8 @@ class ScionRouting(Routing):
                  experimental_scmp: BaseOption = None,
                  appropriate_digest: BaseOption = None,
                  serve_metrics: BaseOption = None,
-                 setup_spec: BaseOption = None ):
+                 setup_spec: BaseOption = None,
+                 etc_config_vol: BaseOption = None ):
         """!
         @param static_routing install and configure BIRD routing daemon only on routers
                 which are connected to more than one local-net (actual intra-domain routers).
@@ -259,7 +260,7 @@ class ScionRouting(Routing):
         option_names = [name for name in args
                         if (vals[name] is not None) and
                         name not in ['self', 'static_routing', 'loopback_range'] ]
-        assert not any([ vals[name].name != name for name in option_names]), 'option-parameter mismatch!'
+        assert not any([ vals[name].name != name and not vals[name].name.endswith(name) for name in option_names]), 'option-parameter mismatch!'
         ScionRouting._static_routing = static_routing
 
         # let user override the global default options
@@ -355,7 +356,7 @@ class ScionRouting(Routing):
         @brief Install SCION on router, control service and host nodes.
         """
         if ScionRouting._static_routing:
-            Layer.configure(self,emulator)
+            Layer.configure(self, emulator)
             # install BIRD routing daemon only where necessary
             bird_routers = self.configure_base(emulator)
             for br in bird_routers:
@@ -414,6 +415,18 @@ class ScionRouting(Routing):
                 self.__install_scion(hnode)
                 self.__append_scion_command(hnode)
 
+            if (cfg_vol := obj.getOption('scion_etc_config_vol')) != None:
+                node: Node = obj
+                match cfg_vol.value:
+                    # case ScionConfigMode.BAKED_IN:
+                    case ScionConfigMode.SHARED_FOLDER:
+                        current_dir = os.getcwd()
+                        node.addSharedFolder('/etc/scion',
+                                              os.path.join(current_dir, f'.shared/{node.getAsn()}/{node.getName()}/etcscion'))
+                    case ScionConfigMode.NAMED_VOLUME:
+                        node.addPersistentStorage('/etc/scion',
+                                                   f'etcscion_{node.getAsn()}-{node.getName()}')
+
     def __install_scion(self, node: Node):
         """Install SCION stack on the node."""
 
@@ -459,8 +472,9 @@ class ScionRouting(Routing):
 
                 # Install AS topology file
                 as_topology = as_.getTopology(isds[0][0])
-                node.setFile("/etc/scion/topology.json", json.dumps(as_topology, indent=2))
+                topo = json.dumps(as_topology, indent=2)
 
+                handleScionConfFile(node, 'topology.json', topo)
                 self._provision_base_config(node)
 
             if type == 'brdnode':
@@ -490,7 +504,7 @@ class ScionRouting(Routing):
         if node.getOption('serve_metrics').value=='true':
             sciond_conf += _Templates["metrics"].format(node.getLocalIPAddress(), 30455)
         # No [features] for daemon
-        node.setFile("/etc/scion/sciond.toml", sciond_conf)
+        handleScionConfFile(node, 'sciond.toml', sciond_conf)
 
     @staticmethod
     def __provision_dispatcher_config(node: Node, isd: int, as_: ScionAutonomousSystem):
@@ -515,7 +529,7 @@ class ScionRouting(Routing):
         dispatcher_conf = _Templates["dispatcher"].format(isd_as=isd_as, ip=ip)
         if node.getOption('serve_metrics').value == 'true':
             dispatcher_conf += _Templates["metrics"].format(node.getLocalIPAddress(), 30441)
-        node.setFile("/etc/scion/dispatcher.toml", dispatcher_conf )
+        handleScionConfFile(node, 'dispatcher.toml', dispatcher_conf)
 
     @staticmethod
     def _provision_router_config(router: ScionRouter):
@@ -537,7 +551,7 @@ class ScionRouting(Routing):
         if router.getOption('serve_metrics').value == 'true' and (local_ip:=router.getLocalIPAddress()) != None:
             config_content += _Templates["metrics"].format(local_ip, 30442)
 
-        router.setFile(os.path.join("/etc/scion/", name + ".toml"), config_content)
+        handleScionConfFile(router, name + ".toml", config_content)
 
     @staticmethod
     def _get_networks_from_router(router1 : str, router2 : str, as_ : ScionAutonomousSystem) -> list[Network]:
@@ -740,8 +754,8 @@ class ScionRouting(Routing):
         if as_.getNote():
             staticInfo["Note"] = as_.getNote()
 
-        # Set file
-        node.setFile("/etc/scion/staticInfoConfig.json", json.dumps(staticInfo, indent=2))
+        handleScionConfFile(node, 'staticInfoConfig.json',
+                                    json.dumps(staticInfo, indent=2))
 
     @staticmethod
     def _provision_cs_config(node: Node, as_: ScionAutonomousSystem):
@@ -759,9 +773,10 @@ class ScionRouting(Routing):
         for type in ["propagation", "core_registration", "up_registration", "down_registration"]:
             policy = as_.getBeaconingPolicy(type)
             if policy is not None:
-                file_name = f"/etc/scion/{type}_policy.yaml"
-                node.setFile(file_name, yaml.dump(policy, indent=2))
-                beaconing.append(f'{type} = "{file_name}"')
+                file_name = f"{type}_policy.yaml"
+                handleScionConfFile(node, file_name,
+                                            yaml.dump(policy, indent=2) )
+                beaconing.append(f'{type} = "/etc/scion/{file_name}"')
 
         # Concatenate configuration sections
         name = node.getName()
@@ -778,4 +793,4 @@ class ScionRouting(Routing):
         if node.getOption('serve_metrics').value == 'true':
             cs_config += _Templates["metrics"].format(node.getLocalIPAddress(), 30452)
         cs_config += "\n".join(beaconing)
-        node.setFile(os.path.join("/etc/scion/", name + ".toml"), cs_config)
+        handleScionConfFile(node, name + '.toml', cs_config)

@@ -8,6 +8,7 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 from seedemu.core import Emulator, Layer, Node, ScionAutonomousSystem
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import ScionBase
+from seedemu.layers.Scion import handleScionConfFile
 
 
 class ScionIsd(Layer): # could be made a Customizable as well ..
@@ -202,10 +203,10 @@ class ScionIsd(Layer): # could be made a Customizable as well ..
         return path
 
     def __provision_crypto(self, as_: ScionAutonomousSystem, isd: int, is_core: bool, node: Node, tempdir: str):
-        basedir = "/etc/scion"
+
         asn = as_.getScionAsn()
 
-        def copyFile(src, dst):
+        def copyFile(src: str, filename: str, subdir: str = None):
             # Tempdir will be gone when imports are resolved, therefore we must use setFile
             with open(src, 'rt', encoding='utf8') as file:
                 content = file.read()
@@ -215,30 +216,33 @@ class ScionIsd(Layer): # could be made a Customizable as well ..
                 # that is later added again.
                 if content.endswith('\n'):
                     content = content[:-1]
-            node.setFile(dst, content)
+            handleScionConfFile(node, filename, content, subdir)
 
-        def myImport(name):
-            copyFile(pjoin(tempdir, f"AS{asn.getFileStr()}", "crypto", name), pjoin(basedir, "crypto", name))
+        def myImport(name, subdir: str):
+            path = pjoin("crypto", subdir)
+            copyFile(pjoin(tempdir, f"AS{asn.getFileStr()}", path, name),
+                     name, path)
 
         if is_core:
             for kind in ["sensitive", "regular"]:
-                myImport(pjoin("voting", f"ISD{isd}-AS{asn.getFileStr()}.{kind}.crt"))
-                myImport(pjoin("voting", f"{kind}-voting.key"))
-                myImport(pjoin("voting", f"{kind}.tmpl"))
+                myImport(f"ISD{isd}-AS{asn.getFileStr()}.{kind}.crt", "voting")
+                myImport(f"{kind}-voting.key", "voting")
+                myImport(f"{kind}.tmpl", "voting")
             for kind in ["root", "ca"]:
-                myImport(pjoin("ca", f"ISD{isd}-AS{asn.getFileStr()}.{kind}.crt"))
-                myImport(pjoin("ca", f"cp-{kind}.key"))
-                myImport(pjoin("ca", f"cp-{kind}.tmpl"))
-        myImport(pjoin("as", f"ISD{isd}-AS{asn.getFileStr()}.pem"))
-        myImport(pjoin("as", "cp-as.key"))
-        myImport(pjoin("as", "cp-as.tmpl"))
+                myImport(f"ISD{isd}-AS{asn.getFileStr()}.{kind}.crt", "ca")
+                myImport(f"cp-{kind}.key", "ca")
+                myImport(f"cp-{kind}.tmpl", "ca")
+        myImport(f"ISD{isd}-AS{asn.getFileStr()}.pem", "as")
+        myImport("cp-as.key", "as")
+        myImport("cp-as.tmpl", "as")
 
         #XXX(benthor): trcs need to be known for other isds as well
         for isd in self.__isd_core.keys():
             trcname = f"ISD{isd}-B1-S1.trc"
-            copyFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(basedir, "certs", trcname))
+            copyFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname),
+                       trcname, 'certs')
 
         # Master keys are generated only once per AS
         key0, key1 = as_.getSecretKeys()
-        node.setFile(pjoin(basedir, "keys", "master0.key"), key0)
-        node.setFile(pjoin(basedir, "keys", "master1.key"), key1)
+        handleScionConfFile(node, 'master0.key', key0, 'keys')
+        handleScionConfFile(node, 'master1.key', key1, 'keys')

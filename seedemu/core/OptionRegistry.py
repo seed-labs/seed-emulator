@@ -47,7 +47,7 @@ class OptionRegistry(metaclass=SingletonMeta):
         """Creates an option instance if it's registered."""
         option_cls = cls._options.get(name)
         if not option_cls:
-            raise ValueError(f"Option '{name}' is not registered.")
+            raise ValueError(f'Option "{name}" is not registered.')
         # Instantiate with given arguments
         return option_cls(*args[1:], **kwargs)
 

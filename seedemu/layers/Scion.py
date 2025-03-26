@@ -10,7 +10,8 @@ from typing import Dict, Tuple, Union, Any, Set
 from sys import version
 from seedemu.core import (Emulator, Interface, Layer, Network, Registry,
                           Router, ScionAutonomousSystem, ScionRouter,
-                          ScopedRegistry, Graphable, Node)
+                          ScopedRegistry, Graphable, Node,
+                            Option, AutoRegister, OptionMode)
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import ScionBase, ScionIsd
 import shutil
@@ -63,6 +64,56 @@ class LinkType(Enum):
                 assert not core_as, 'Logic error:  Core ASes must only provide transit to customers, not receive it!'
                 return "PARENT"
 
+class ScionConfigMode(Enum):
+    """how shall the /etc/scion config dir contents be handled:"""
+
+    # statically include config in docker image (ship together)
+    # this is fine, if no reconfiguration is required or the images
+    # must be self contained i.e. for docker swarm deployment
+    BAKED_IN = 0
+    # mount shared folder from host into /etc/scion path of node
+    # this saves considerable image build time and eases reconfiguration
+    SHARED_FOLDER = 1
+    # create named volumes for each container
+    NAMED_VOLUME = 2
+    # TODO all hosts of an AS could in theory share the same volume/bind-mount..
+    # PER_AS_SHARING # this would only be possible for keys/crypto but not config files
+
+# NOTE this option is used by ScionRouting and ScionIsd layers
+# and can be specified in ScionRouting constructor
+class SCION_ETC_CONFIG_VOL(Option, AutoRegister):
+        """ this option controls the policy
+        where to put all the SCION related files on the host.
+        """
+        value_type = ScionConfigMode
+        @classmethod
+        def supportedModes(cls) -> OptionMode:
+            return OptionMode.BUILD_TIME
+        @classmethod
+        def default(cls):
+            return ScionConfigMode.BAKED_IN
+
+
+def handleScionConfFile( node, filename: str, filecontent: str, subdir: str = None):
+    """ wrapper around 'Node::setFile' for /etc/scion config files
+    @param subdir sub path relative to /etc/scion
+    """
+    if (opt := node.getOption('scion_etc_config_vol')) != None:
+                suffix = f'/{subdir}' if subdir != None else ''
+                match opt.value:
+                    case ScionConfigMode.SHARED_FOLDER:
+                        current_dir = os.getcwd()
+                        path = os.path.join(current_dir,
+                                             f'.shared/{node.getAsn()}/{node.getName()}/etcscion{suffix}')
+                        os.makedirs(path, exist_ok=True)
+                        with open(os.path.join(path, filename), "w") as file:
+                            file.write(filecontent)
+                    case _:
+                    #case ScionConfigMode.BAKED_IN:
+                        node.setFile(f"/etc/scion{suffix}/{filename}", filecontent)
+                    #case ScionConfigMode.NAMED_VOLUME: will be populated on fst mount
+    else:
+        assert False, 'implementation error - lacking global default for option'
 
 
 @dataclass
@@ -155,10 +206,11 @@ class ScionBuilder():
         pass
 
     def installSCION(self, node: Node):
-        """!
+        """!@brief install required SCION distributables
+            (network stack) on the given node
         Installs the right SCION stack distributables on the given node based on its role.
-
-        The install is performed as instructed by the nodes SetupSpec option
+        But doesn't configure them ( /etc/scion config dir is untouched by it)
+        The install is performed as instructed by the nodes SetupSpec option.
         """
         spec = node.getOption('setup_spec')
         assert spec != None, 'implementation error - all nodes are supposed to have a SetupSpecification set by ScionRoutingLayer'
