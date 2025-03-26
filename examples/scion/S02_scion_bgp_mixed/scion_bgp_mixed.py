@@ -5,7 +5,8 @@ from seedemu.core import Emulator, OptionMode, Scope, ScopeTier, ScopeType, Opti
 from seedemu.layers import (
     ScionBase, ScionRouting, ScionIsd, Scion, Ospf, Ibgp, Ebgp, PeerRelationship,
     SetupSpecification, CheckoutSpecification)
-from seedemu.layers.Scion import LinkType as ScLinkType
+from seedemu.layers.Scion import LinkType as ScLinkType, ScionConfigMode
+
 # Initialize
 emu = Emulator()
 base = ScionBase()
@@ -19,7 +20,8 @@ spec = SetupSpecification.LOCAL_BUILD(
             checkout = "v0.12.0" # could be tag, branch or commit-hash
         ))
 opt_spec = OptionRegistry().scion_setup_spec(spec)
-routing = ScionRouting(loglevel=loglvl, setup_spec=opt_spec)
+etc_cfg = OptionRegistry().scion_etc_config_vol(ScionConfigMode.SHARED_FOLDER)
+routing = ScionRouting(loglevel=loglvl, setup_spec=opt_spec, etc_config_vol=etc_cfg)
 
 ospf = Ospf()
 scion_isd = ScionIsd()

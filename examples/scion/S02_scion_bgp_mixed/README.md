@@ -25,7 +25,8 @@ spec = SetupSpecification.LOCAL_BUILD(
             checkout = "v0.12.0" # could be tag, branch or commit-hash
         ))
 opt_spec = OptionRegistry().scion_setup_spec(spec)
-routing = ScionRouting(loglevel=loglvl, setup_spec=opt_spec)
+etc_cfg = OptionRegistry().scion_etc_config_vol(ScionConfigMode.SHARED_FOLDER)
+routing = ScionRouting(loglevel=loglvl, setup_spec=opt_spec, etc_config_vol=etc_cfg)
 
 ospf = Ospf()
 scion_isd = ScionIsd()
@@ -37,6 +38,8 @@ ebgp = Ebgp()
 In addition to the SCION layers we instantiate the `Ibgp` and `Ebgp` layers for BGP as well as `Ospf` for AS-internal routing.
 Note that the ScionRouting layer accepts global default values for options as constructor parameters.
  We use it here to decrease the loglevel from 'debug' to 'error' for all SCION distributables in the whole emulation if not overriden elsewhere. Also we change the mode for `LOGLEVEL` from `BUILD_TIME`(default) to `RUN_TIME` in the same statement.
+ Moreover, the SCION related configuration of nodes shall not be baked into their docker images for this example,
+  but bind-mounted from a shared folder on the host instead, to facilitate re-configuration of the SCION stack between simulation runs(without image recompile).
  Lastly we specify (as a global default for all nodes) that we want to use a local build of the `v0.12.0` SCION stack, rather than the 'official' `.deb` packages (`SetupSpecification.PACKAGES`). The SetupSpec is just an ordinary option and be overriden for ASes or individual nodes just like any other.
 
 ## Step 2: Create isolation domains and internet exchanges

@@ -1,3 +1,4 @@
+**/.shared/*
 **/output/*
 **/.scion_build_output/*
 **/eth-states*/*
