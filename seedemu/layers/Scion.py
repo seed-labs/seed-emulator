@@ -9,7 +9,7 @@ from typing import Dict, Tuple, Union, Any, Set
 
 from sys import version
 from seedemu.core import (Emulator, Interface, Layer, Network, Registry,
-                          Router, ScionAutonomousSystem, ScionRouter,
+                          Router, ScionAutonomousSystem, ScionRouterMixin,
                           ScopedRegistry, Graphable, Node,
                             Option, AutoRegister, OptionMode)
 from seedemu.core.ScionAutonomousSystem import IA
@@ -794,7 +794,7 @@ class Scion(Layer, Graphable):
             assert False
 
     def __create_link(self,
-                     a_router: ScionRouter, b_router: ScionRouter,
+                     a_router: ScionRouterMixin, b_router: ScionRouterMixin,
                      a_ia: IA, b_ia: IA,
                      a_as: ScionAutonomousSystem, b_as: ScionAutonomousSystem,
                      a_addr: str, b_addr: str,

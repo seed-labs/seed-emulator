@@ -396,17 +396,6 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         """!@brief retrieve any volumes mounted on this node's container"""
         return self.__custom_vols
 
-    # TODO: if a separate .env file is created, or the values are given directly in the docker-compose.yml 'environment' section
-    # could be a setting of the Docker compiler
-    # def setCustomEnv(self, key: str, actual_value: str, scope: ScopeTier=ScopeTier.Node, use_envsubst: bool=False):
-
-
-    #def _setBuildTimeEnv(self, var: str, value: str, scope: ScopeTier):
-
-    #def getCustomRuntimeEnv(self) -> Dict[str,Dict[Scope,Tuple[str,str|None]]]:
-    #    """!      @brief return this nodes runtime ENV variables for use with envsubst        """
-    #    return self.__custom_env
-
     def getHostNames(self) -> str:
         """!
         @brief Get all host names for this node.
@@ -1076,8 +1065,6 @@ protocol pipe {{
 
 RouterFileTemplates['rw_configure_script'] = '''\
 #!/bin/bash
-gw="`ip rou show default | cut -d' ' -f3`"
-sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
 '''
 
 class Router(Node):
@@ -1187,7 +1174,7 @@ class Router(Node):
 
         return self
 
-class RealWorldRouter(Router):
+class RealWorldRouterMixin():
     """!
     @brief RealWorldRouter class.
 
@@ -1211,7 +1198,7 @@ class RealWorldRouter(Router):
         self.__hide_hops = hideHops
         self.addSoftware('iptables')
 
-    def addRealWorldRoute(self, prefix: str) -> RealWorldRouter:
+    def addRealWorldRoute(self, prefix: str) -> 'RealWorldRouter':
         """!
         @brief Add real world route.
 
@@ -1234,7 +1221,10 @@ class RealWorldRouter(Router):
         """
         return self.__realworld_routes
 
-    def seal(self):
+    # called in RoutingLayer::render() - That is AFTER ::configure() :)
+    # where its been decided if this node has to run BIRD routing daemon 
+    # because it is connected to more than one local(direct) network
+    def seal(self, svc_net: Network):
         """!
         @brief seal the realworld router.
 
@@ -1245,11 +1235,10 @@ class RealWorldRouter(Router):
         self.__sealed = True
         if len(self.__realworld_routes) == 0: return
         self.setFile('/rw_configure_script', RouterFileTemplates['rw_configure_script'])
-        self.insertStartCommand(0, '/rw_configure_script')
-        self.insertStartCommand(0, 'chmod +x /rw_configure_script')
-        self.addTable('t_rw')
-        statics = '\n    ipv4 { table t_rw; import all; };\n    route ' + ' via !__default_gw__!;\n    route '.join(self.__realworld_routes)
-        statics += ' via !__default_gw__!;\n'
+        # position 0-1 is '/interface_setup' (and chmod +x)
+        self.insertStartCommand(2, '/rw_configure_script')
+        self.insertStartCommand(2, 'chmod +x /rw_configure_script')
+        
         for prefix in self.__realworld_routes:
             # nat matched only
             self.appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -j MASQUERADE\n'.format(prefix))
@@ -1258,13 +1247,32 @@ class RealWorldRouter(Router):
                 # remove realworld hops
                 self.appendFile('/rw_configure_script', 'iptables -t mangle -A POSTROUTING -d {} -j TTL --ttl-set 64\n'.format(prefix))
 
-        self.addProtocol('static', 'real_world', statics)
-        self.addTablePipe('t_rw', 't_bgp', exportFilter = 'filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; }')
-        # self.addTablePipe('t_rw', 't_ospf') # TODO
+        # not all Routers run a dynamic routing daemon(BIRD) ...
+        # some might run SCION BR instead
+        if 'bird2' in self.getSoftware():
+            # if this check is too dirty/hacky, we could use Attributes like in: "if hasattr(self, '__sealed'):" but this is still hacky
+            self.appendFile('/rw_configure_script', )
+            fill_placeholder = """\
+            gw="`ip rou show default | cut -d' ' -f3`"
+            sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
+            """
+            self.appendFile('/rw_configure_script', fill_placeholder)
 
+            self.addTable('t_rw')
+            statics = '\n    ipv4 { table t_rw; import all; };\n    route ' + ' via !__default_gw__!;\n    route '.join(self.__realworld_routes)
+            statics += ' via !__default_gw__!;\n'
+            self.addProtocol('static', 'real_world', statics)
+            self.addTablePipe('t_rw', 't_bgp', exportFilter = 'filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; }')
+            # self.addTablePipe('t_rw', 't_ospf') # TODO
+        else:
+            # everything that is not destined to a prefix in the simulation must be for the 'real world'
+            host_gw = svc_net.getPrefix().network_address + 1
+            # apparently rw_configure_script is executed even before the interface setup script -> 000_svc is unknown
+            self.appendFile('/rw_configure_script', 'ip route add default via {} dev {}'.format(host_gw, svc_net.getName()))
+            #self.appendStartCommand('ip route add default via {} dev {}'.format(host_gw, svc_net.getName()))
 
     def print(self, indent: int) -> str:
-        out = super(RealWorldRouter, self).print(indent)
+        out = super().print(indent)
         indent += 4
 
         out += ' ' * indent
@@ -1278,8 +1286,15 @@ class RealWorldRouter(Router):
 
         return out
 
+def promote_to_real_world_router(node: Node, hideHops: bool):
+    """Dynamically inject RealWorldRouterMixin into a Node instance"""
 
-class ScionRouter(Router):
+    if not isinstance(node, RealWorldRouterMixin):  # Prevent double-mixing
+        node.__class__ = type("RealWorldRouter", (RealWorldRouterMixin, node.__class__), {})
+        node.initRealWorld(hideHops)  # Manually call initialization logic
+    return node
+
+class ScionRouterMixin():
     """!
     @brief Extends Router nodes for SCION routing.
 
@@ -1289,10 +1304,11 @@ class ScionRouter(Router):
 
     __interfaces: Dict[int, Dict]  # IFID to interface
     __next_port: int               # Next free UDP port
-
-    def __init__(self):
-        super().__init__()
-        self.initScionRouter()
+    
+    # Never been used anyway
+    #def __init__(self):
+    #   super().__init__()
+    #   self.initScionRouter()
 
     def initScionRouter(self):
         self.__interfaces = {}
@@ -1332,3 +1348,19 @@ class ScionRouter(Router):
         port = self.__next_port
         self.__next_port += 1
         return port
+
+    def print(self, indent: int) -> str:
+        """mostly for debug """
+        out = super().print(indent)
+        indent += 4
+
+        out += ' ' * indent
+        out += 'SCION border router'
+        return out
+    
+def promote_to_scion_router(node: Node):
+    """Dynamically inject ScionRouterMixin into a Node instance"""
+    if not isinstance(node, ScionRouterMixin):  # Prevent double-mixing
+        node.__class__ = type("ScionRouter", (ScionRouterMixin, node.__class__), {})
+        node.initScionRouter()  # Manually call initialization logic
+    return node

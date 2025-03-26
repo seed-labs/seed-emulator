@@ -4,7 +4,7 @@ from .ScionAutonomousSystem import ScionAutonomousSystem
 from .IsolationDomain import IsolationDomain
 from .InternetExchange import InternetExchange
 from .Network import Network
-from .Node import Node, File, Interface, Router, RealWorldRouter, ScionRouter
+from .Node import Node, File, Interface, Router, RealWorldRouterMixin, ScionRouterMixin, promote_to_real_world_router, promote_to_scion_router
 from .Printable import Printable
 from .Registry import Registry, ScopedRegistry, Registrable
 from .Graphable import Graphable, Graph, Vertex, Edge
@@ -19,6 +19,7 @@ from .Binding import Binding, Action
 from .Filter import Filter
 from .Component import Component
 from .RemoteAccessProvider import RemoteAccessProvider
+from .ExternalConnectivityProvider import ExternalConnectivityProvider
 from .Compiler import Compiler, OptionHandling
 from .BaseSystem import BaseSystem
 from .Scope import *

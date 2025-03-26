@@ -1,6 +1,7 @@
 from __future__ import annotations
 from ipaddress import IPv4Network, IPv4Address
 from .RemoteAccessProvider import RemoteAccessProvider
+from .ExternalConnectivityProvider import ExternalConnectivityProvider
 from .Printable import Printable
 from .enums import NetworkType, NodeRole
 from .Registry import Registrable
@@ -31,7 +32,9 @@ class Network(Printable, Registrable, Vertex):
 
     __direct: bool
 
+    # these two should be aggregated into a single instance of a common base class ?!
     __rap: RemoteAccessProvider
+    __ecp: ExternalConnectivityProvider
 
     def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None, direct: bool = False):
         """!
@@ -72,6 +75,7 @@ class Network(Printable, Registrable, Vertex):
         self.__direct = direct
 
         self.__rap = None
+        self.__ecp = None
 
     def isDirect(self) -> bool:
         """!
@@ -196,11 +200,11 @@ class Network(Printable, Registrable, Vertex):
         self.__assigners[NodeRole.Host] = self.__aac.getOffsetAssigner(NodeRole.Host)
 
         return self
-        
+
     def setDhcpIpRange(self, dhcpStart:int, dhcpEnd: int):
         """!
         @brief Set IP Range for DHCP Server to use
-        
+
         @param dhcpStart start address offset of dhcp clients.
         @param dhcpEnd end address offset of dhcp clients.
         """
@@ -209,7 +213,7 @@ class Network(Printable, Registrable, Vertex):
 
 
     def setRouterIpRange(self, routerStart:int, routerEnd:int, routerStep: int):
-        
+
         """!
         @brief Set IP Range for router nodes
 
@@ -217,7 +221,7 @@ class Network(Printable, Registrable, Vertex):
         @param routerEnd end address offset of router nodes.
         @param routerStep end step of router address.
         """
-        
+
         self.__aac.setRouterIpRange(routerStart, routerEnd, routerStep)
         self.__assigners[NodeRole.Router] = self.__aac.getOffsetAssigner(NodeRole.Router)
         return self
@@ -260,13 +264,23 @@ class Network(Printable, Registrable, Vertex):
     def enableRemoteAccess(self, provider: RemoteAccessProvider) -> Network:
         """!
         @brief enable remote access on this network.
-
+                (from outside into the simulation)
         @param provider remote access provider to use.
 
         @returns self, for chaining API calls.
         """
         assert self.__type == NetworkType.Local, 'remote access can only be enabled on local networks.'
         self.__rap = provider
+
+        return self
+
+    def enableExternalConnectivity(self, provider: ExternalConnectivityProvider) -> Network:
+        """
+        @brief enable nodes on this emulated network to connect to the 'real' Internet
+                (from inside the simulation to the outside)
+        """
+        assert self.__type == NetworkType.Local, 'external connectivity can only be enabled on local networks.'
+        self.__ecp = provider
 
         return self
 
@@ -287,6 +301,9 @@ class Network(Printable, Registrable, Vertex):
         @returns RAP, or None.
         """
         return self.__rap
+
+    def getExternalConnectivityProvider(self) -> ExternalConnectivityProvider:
+        return self.__ecp
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
