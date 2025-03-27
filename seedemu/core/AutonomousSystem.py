@@ -9,7 +9,7 @@ from .Scope import ScopeTier, Scope
 from .Emulator import Emulator
 from .Configurable import Configurable
 from .Customizable import Customizable
-from .Node import promote_to_real_world_router, RealWorldRouterMixin
+from .Node import promote_to_real_world_router
 from ipaddress import IPv4Network
 from typing import Dict, List
 import requests
@@ -116,7 +116,7 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
             #if (p:=net.getExternalConnectivityProvider()) != None:
             #    p.configureExternalLink(emulator, net, localNet of brNode , emulator.getServiceNet() )
 
-        if any([issubclass(r.__class__, RealWorldRouterMixin) for r in list(self.__routers.values())]):
+        if any([r.hasExtension('RealWorldRouter') for r in list(self.__routers.values())]):
             _ = emulator.getServiceNetwork() # this will construct and register Svc Net with registry
 
         for (key, val) in self.__nets.items(): reg.register(str(self.__asn), 'net', key, val)
@@ -239,7 +239,7 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         """
         assert name not in self.__routers, 'Router with name {} already exists.'.format(name)
 
-        router: RealWorldRouterMixin = Router(name, NodeRole.Router, self.__asn)
+        router = Router(name, NodeRole.Router, self.__asn)
         router = promote_to_real_world_router(router, hideHops)
 
         if prefixes == None:

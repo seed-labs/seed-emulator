@@ -7,7 +7,7 @@ from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
 from .AutonomousSystem import AutonomousSystem
 from .Emulator import Emulator
 from .enums import NodeRole
-from .Node import Node, ScionRouterMixin
+from .Node import Node
 from .Scope import Scope, ScopeTier
 
 class ScionASN:
@@ -170,7 +170,6 @@ class ScionAutonomousSystem(AutonomousSystem):
         # this is fine, since the ScionRouter will be 'mixed-in' in later in the ::configure() step,
         # if the router is actually found to be a border router
         return super().createRealWorldRouter(name, hideHops, prefixes)
-
     def registerNodes(self, emulator: Emulator):
         """!
         @copydoc AutonomousSystem.registerNodes()
@@ -296,7 +295,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         # Border routers
         border_routers = {}
         for router in self.getBorderRouters():
-            rnode: ScionRouterMixin = self.getRouter(router.getName())
+            rnode = self.getRouter(router.getName())
 
             localIP = rnode.getLocalIPAddress()
             listen_addr = localIP if localIP else rnode.getLoopbackAddress()

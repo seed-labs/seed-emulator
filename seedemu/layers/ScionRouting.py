@@ -10,7 +10,7 @@ import yaml
 import inspect
 
 from seedemu.core import ( Emulator, Node, ScionAutonomousSystem,
-                          ScionRouterMixin, promote_to_scion_router,
+                          promote_to_scion_router,
                           Network, Router, BaseOption, OptionMode, Layer,
                           BaseOptionGroup, Option)
 from seedemu.core.enums import NetworkType
@@ -380,8 +380,8 @@ class ScionRouting(Routing):
 
             # SCION inter-domain routing affects only border-routers
             if type == "brdnode":
-                rnode: ScionRouterMixin = obj
-                if not issubclass(rnode.__class__, ScionRouterMixin):
+                rnode = obj
+                if not rnode.hasExtension('ScionRouter'):
                     rnode = promote_to_scion_router(rnode)
 
                 self.__install_scion(rnode)
@@ -483,8 +483,7 @@ class ScionRouting(Routing):
                 self._provision_base_config(node)
 
             if type == "brdnode":
-                rnode: ScionRouterMixin = obj
-                self._provision_router_config(rnode)
+                self._provision_router_config(obj)
             elif type == 'csnode':
                 csnode: Node = obj
                 self._provision_cs_config(csnode, as_)
@@ -537,7 +536,7 @@ class ScionRouting(Routing):
         handleScionConfFile(node, 'dispatcher.toml', dispatcher_conf)
 
     @staticmethod
-    def _provision_router_config(router: ScionRouterMixin):
+    def _provision_router_config(router: 'ScionRouter'):
         """Set border router configuration on router nodes."""
 
         name = router.getName()

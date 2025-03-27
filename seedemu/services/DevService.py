@@ -21,7 +21,6 @@ echo "development container started on: $HOSTNAME $CONTAINER_NAME"
 ServerTemplates['repo'] = """
 RUN git clone {repourl} -b {branch} {dir}
 """
-
 ServerTemplates['build'] = """
 
 RUN [ ! -d /home/root ] && mkdir -p /home/root
@@ -69,7 +68,6 @@ class DevServer(Server):
         self.__repos.append( (url,path,branch,mode) )
 
         return self
-
     def __init__(self,service, id: int):
         """!
         @brief constructor.
@@ -130,7 +128,6 @@ class DevServer(Server):
 
             # this should share the installed extensions among all DevServers
             node.addPersistentStorage('/root/.vscode-server', 'vscodeserver')
-
         node.appendStartCommand(ServerTemplates['command'])
         node.appendClassName("DevServer")
 
@@ -181,7 +178,6 @@ class ContainerDevelopmentService(Service):
     def gitUser(self) -> str:
         """ return the name of the Git user """
         return self.__gituname
-
     def gitMail(self) -> str:
         """return the email address of the Git User"""
         return self.__gitmail
@@ -229,7 +225,6 @@ class ContainerDevelopmentService(Service):
 
         pnode.addPersistentStorage('/root/.ssh', 'sshkeys') # not /home/root/ . . ?!
         pnode.addPersistentStorage('/root/.config/git', 'gitconf')
-
         # initialize the git config volume
         # --global -> /root/.gitconfig
         pnode.addDockerCommand('RUN mkdir -p /root/.config/git/')
@@ -249,7 +244,6 @@ class ContainerDevelopmentService(Service):
             node.appendStartCommand('ssh-add /root/.ssh/id_ed25519')
             node.addPersistentStorage('/root/.ssh', 'sshkeys')
             node.addPersistentStorage('/root/.config/git', 'gitconf')
-
     def _configureRealWorldAccess(self, emulator: Emulator):
         """ in order to able to git-push any changes made on the build/dev-container checkouts
             the nodes with a DevServer installation need external 'RealWorld' connectivity
@@ -260,12 +254,10 @@ class ContainerDevelopmentService(Service):
         for vnode in self.getPendingTargets().keys():
             pnode = emulator.getBindingFor(vnode) # or resolvVnode(vnode) ?!
 
-
             # a router with DevService installed on it -> (is its own gateway to service net / real world)
             if pnode.getRole() == NodeRole.Router or pnode.getRole() == NodeRole.BorderRouter:
                 pnode = promote_to_real_world_router(pnode, False)
                 # continue
-
 
             allnets_of_pnode: Set[Network] = set() # note: hosts can be in at most one local-net (have single interface)
             for inf in pnode.getInterfaces():
@@ -296,7 +288,6 @@ class ContainerDevelopmentService(Service):
         self._configureRealWorldAccess(emulator)
 
         super().configure(emulator)
-
     def getName(self) -> str:
         return 'ContainerDevelopmentService'
 

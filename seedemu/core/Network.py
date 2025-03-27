@@ -305,6 +305,9 @@ class Network(Printable, Registrable, Vertex):
     def getExternalConnectivityProvider(self) -> ExternalConnectivityProvider:
         return self.__ecp
 
+    def getExternalConnectivityProvider(self) -> ExternalConnectivityProvider:
+        return self.__ecp
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'Network {} ({}):\n'.format(self.__name, self.__type)

@@ -1,5 +1,5 @@
 from seedemu.core import (ScopedRegistry, Node, Interface, Network, Emulator,
-                          Layer, Router, RealWorldRouterMixin, BaseSystem,
+                          Layer, Router, BaseSystem,
                           promote_to_real_world_router)
 from seedemu.core.enums import NetworkType
 from typing import List, Dict
@@ -163,7 +163,7 @@ class Routing(Layer):
         hit: bool = False
         for ((scope, type, name), obj) in reg.getAll().items():
             # make sure that on each externaly connected net (those with at least one host who requested it)
-            #  (I):  there is at least one RealWorldRouter 
+            #  (I):  there is at least one RealWorldRouter
             #  (II): the RWR is the default gateway of the requesters on this net
             if type == 'net' and obj.getType() == NetworkType.Local:
                 if (p := obj.getExternalConnectivityProvider() ):
@@ -172,7 +172,9 @@ class Routing(Layer):
                    for r in rwr_candidates:
                        r = promote_to_real_world_router(r, False)
                        route = obj.getPrefix()
-                       r.addRealWorldRoute(route)
+                       # only for hosts on THIS network ('route') the RWA is provided
+                       r.addRealWorldRoute('0.0.0.0/1', str(route))
+                       r.addRealWorldRoute('128.0.0.0/1', str(route))
                    for h, gw in new_gateway_constraints.items():
                        assert h not in gateway_constraints, 'multihomed host ?!'
                        gateway_constraints[h] = gw
@@ -186,8 +188,8 @@ class Routing(Layer):
 
             if type == 'rnode':
                 rnode: Router = obj
-                if issubclass(rnode.__class__, RealWorldRouterMixin): # could also be ScionRouter which needs RealWorldAccess
-                    
+                if rnode.hasExtension('RealWorldRouter'): # could also be ScionRouter which needs RealWorldAccess
+
                     # this is an exception - Only for service net (not part of simulation)
                     rnode._Node__joinNetwork(svc_net)
                     [l, b, d] = svc_net.getDefaultLinkProperties()
@@ -210,7 +212,7 @@ class Routing(Layer):
                 else:
                     cur_scope = ScopedRegistry(scope, reg)
                     candidates = cur_scope.getByType('rnode')
-                
+
 
                 for router in candidates:
                     if rif != None: break
