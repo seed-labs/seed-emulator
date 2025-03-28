@@ -45,7 +45,7 @@ docker images. However, there are many docker hub proxies that
 you can use. Please follow [these instructions](./docs/user_manual/dockerhub_proxy.md)
 to set up the docker hub proxies.
 
-However, sometimes the docker hub proxies are not working. In this case, we recommend you to build the docker images locally in your docker hub. 
+However, sometimes the docker hub proxies are not working or working incredibly slow. In this case, we recommend you to build the docker images locally in your docker hub. 
 
 Please follow [these instructions](./docker_images/README.md) to build the docker images locally.
 
