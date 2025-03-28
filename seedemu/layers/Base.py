@@ -97,7 +97,7 @@ class Base(Layer, Graphable):
                 continue
 
             node: Node = obj
-
+            # Note: service network interface might be added later ... 
             ifinfo = ''
             for iface in node.getInterfaces():
                 net = iface.getNet()

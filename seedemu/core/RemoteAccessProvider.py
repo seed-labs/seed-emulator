@@ -1,6 +1,8 @@
 from __future__ import annotations
 from sys import stderr
 
+# TODO: better find a common base class with ExtnalConnectivityProvider
+# and unify the interface i.e. only 'configure()' rather than 'configureRemoteAccess()|configureExternalConnectivity()'
 class RemoteAccessProvider(object):
     """!
     @brief Implements logic for provide remote access to emulated network.

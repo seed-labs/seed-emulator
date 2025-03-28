@@ -64,6 +64,8 @@ class BaseVolume(YAMLMultiObject):
         # bind: {propagation:  , selinux: , create_host_path: }
         self._data["read_only"] = False
         # volume: {nocopy: bool }
+        #self._data['nocopy'] = False
+        self._data['volume'] = dict()
 
         # Volumes top-level elements
         self._data["driver"] = None  # str
@@ -144,12 +146,17 @@ def basevol_representer(dumper, data: BaseVolume):
                 data.asDict().clean_dict()          
         )
     elif data.mode == "service":
-        return dumper.represent_dict(
-            filter(
+        kvs = {}
+        match data.asDict()['type']:
+            case 'bind':
+                kvs = filter(
                 lambda kv: kv[0] in ["type", "source", "target", "read_only"],
-                data.asDict().clean_dict().items(),
-            )
-        )
+                data.asDict().clean_dict().items() )
+            case 'volume':
+                kvs = filter(
+                lambda kv: kv[0] in ["type", "source", "target", "read_only", "volume"],
+                data.asDict().clean_dict().items() )
+        return dumper.represent_dict(kvs)
     elif data.mode == "toplevel":
         return dumper.represent_dict(
             filter(

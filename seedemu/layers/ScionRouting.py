@@ -9,7 +9,10 @@ from geopy.distance import geodesic
 import yaml
 import inspect
 
-from seedemu.core import Emulator, Node, ScionAutonomousSystem, ScionRouter, Network, Router, BaseOption, BaseOptionGroup, OptionMode, Layer, Option
+from seedemu.core import ( Emulator, Node, ScionAutonomousSystem,
+                          promote_to_scion_router,
+                          Network, Router, BaseOption, OptionMode, Layer,
+                          BaseOptionGroup, Option)
 from seedemu.core.enums import NetworkType
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import Routing, ScionBase, ScionIsd
@@ -305,9 +308,12 @@ class ScionRouting(Routing):
 
 
     def configure_base(self, emulator: Emulator) -> List[Router]:
-        """
+        """!@brief merely sets the loopback address of the routers,
+            but doesn't install the BIRD routing daemon (because its unneeded)
+
             returns list of routers which need routing daemon installed,
-            because it is connected to more than one local-net
+            because it is connected to more than one local-net.
+
         """
 
         actual_routers = []
@@ -373,11 +379,10 @@ class ScionRouting(Routing):
             useenvsubst = obj.getOption('use_envsubst').value == 'true'
 
             # SCION inter-domain routing affects only border-routers
-            if type == 'brdnode':
-                rnode: ScionRouter = obj
-                if not issubclass(rnode.__class__, ScionRouter):
-                    rnode.__class__ = ScionRouter
-                    rnode.initScionRouter()
+            if type == "brdnode":
+                rnode = obj
+                if not rnode.hasExtension('ScionRouter'):
+                    rnode = promote_to_scion_router(rnode)
 
                 self.__install_scion(rnode)
                 br_log = (">> /var/log/scion-border-router.log 2>&1"
@@ -477,9 +482,8 @@ class ScionRouting(Routing):
                 handleScionConfFile(node, 'topology.json', topo)
                 self._provision_base_config(node)
 
-            if type == 'brdnode':
-                rnode: ScionRouter = obj
-                self._provision_router_config(rnode)
+            if type == "brdnode":
+                self._provision_router_config(obj)
             elif type == 'csnode':
                 csnode: Node = obj
                 self._provision_cs_config(csnode, as_)
@@ -532,7 +536,7 @@ class ScionRouting(Routing):
         handleScionConfFile(node, 'dispatcher.toml', dispatcher_conf)
 
     @staticmethod
-    def _provision_router_config(router: ScionRouter):
+    def _provision_router_config(router: 'ScionRouter'):
         """Set border router configuration on router nodes."""
 
         name = router.getName()

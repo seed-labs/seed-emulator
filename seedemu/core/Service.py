@@ -33,7 +33,7 @@ class Server(Printable): #TODO: make Customizable
         @param node node.
         """
         raise NotImplementedError('install not implemented')
-    
+
     def setBaseSystem(self, base_system: BaseSystem) -> Server:
         """!
         @brief Set a base_system of a server.
@@ -43,7 +43,7 @@ class Server(Printable): #TODO: make Customizable
         @returns self, for chaining API calls.
         """
         self._base_system = base_system
-    
+
     def getBaseSystem(self) -> BaseSystem:
         """!
         @brief Get configured base system on this server.
@@ -54,11 +54,11 @@ class Server(Printable): #TODO: make Customizable
 
     def getClassNames(self):
         return self.__class_names
-    
+
     def appendClassName(self, class_name:str):
         """!
         @brief Append Class Name
-        The method called by User. 
+        The method called by User.
 
         @param class_name class name.
 
@@ -68,7 +68,7 @@ class Server(Printable): #TODO: make Customizable
         self.__class_names.append(class_name)
 
         return self
-        
+
     def setDisplayName(self, name:str) -> Server:
         """!
         @breif set display name
@@ -81,10 +81,10 @@ class Server(Printable): #TODO: make Customizable
         self.__display_name = name
 
         return self
-    
+
     def getDisplayName(self) -> str:
         return self.__display_name
-    
+
     def addHostName(self, hname:str):
         self.__host_names.append(hname)
 
@@ -99,7 +99,7 @@ class Service(Layer):#TODO: add availableOptions()
     """
 
     _pending_targets: Dict[str, Server]
-    
+
     __targets: Set[Tuple[Server, Node]]
 
     def __init__(self):
@@ -125,7 +125,7 @@ class Service(Layer):#TODO: add availableOptions()
 
     def _doSetClassNames(self, node:Node, server:Server) -> Node:
         """!
-        @brief set the class names on node. 
+        @brief set the class names on node.
 
         @param node node.
         @param server server.
@@ -139,7 +139,7 @@ class Service(Layer):#TODO: add availableOptions()
 
         This is currently used by the DNS layer to configure NS and gules
         records before the actual installation.
-        
+
         @param node node
         @param server server
         """
@@ -153,7 +153,6 @@ class Service(Layer):#TODO: add availableOptions()
 
         @throws AssertionError if node is not host node.
         """
-        assert node.getRole() == NodeRole.Host, 'node as{}/{} is not a host node'.format(node.getAsn(), node.getName())
         servicesdb: Dict = node.getAttribute('services', {})
 
         for (name, service_info) in servicesdb.items():
@@ -168,7 +167,7 @@ class Service(Layer):#TODO: add availableOptions()
             }
 
         node.setBaseSystem(server.getBaseSystem())
-        
+
         self._doConfigure(node, server)
         self.__targets.add((server, node))
 
@@ -181,7 +180,7 @@ class Service(Layer):#TODO: add availableOptions()
         new_dict = {}
         for k, v in self._pending_targets.items():
             new_dict[prefix + k] = v
-        
+
         self._pending_targets = new_dict
 
     def install(self, vnode: str) -> Server:
@@ -201,7 +200,7 @@ class Service(Layer):#TODO: add availableOptions()
             self._log('looking for binding for {}...'.format(vnode))
             self.__configureServer(server, pnode)
             self._log('configure: bound {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
-    
+
     def render(self, emulator: Emulator):
         for (server, node) in self.__targets:
             self._doInstall(node, server)
@@ -211,7 +210,7 @@ class Service(Layer):#TODO: add availableOptions()
                 node.setDisplayName(server.getDisplayName())
             for hostName in server.getHostNames():
                 node.addHostName(hostName)
-        
+
     def getConflicts(self) -> List[str]:
         """!
         @brief Get a list of conflicting services.
@@ -242,11 +241,11 @@ class Service(Layer):#TODO: add availableOptions()
         @brief Get a set of pending vnode to install the service on.
         """
         return self._pending_targets
-    
+
     def getAllServerNames(self):
         """
         @brief Get the list of dictionary that stores vnode name and type of the servers.
-        
+
         @return The list dictionary of the servers.
         """
         server_names = {}

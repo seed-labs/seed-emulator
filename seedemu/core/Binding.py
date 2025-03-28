@@ -230,7 +230,7 @@ class Binding(Printable):
         candidates: List[Node] = []
 
         for (scope, type, name), obj in registry.getAll().items():
-            if type != 'hnode': continue
+            if type not in ['hnode', 'rnode', 'csnode']: continue
             node: Node = obj
             filter = self.filter
 
