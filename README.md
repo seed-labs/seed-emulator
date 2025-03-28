@@ -34,12 +34,8 @@ and `python3`.
 
 ### Set up the project
 
-To run the emulator code, we can do one of the followings:
-
-- Run `pip install -e file:.` inside the project's root directory. It will install the project ( file:. current path ) in editable mode. It creates a symlink of current folder to python's default search path.
-
-- Add this folder to the `PYTHONPATH` environment variable. This can be done by running `source development.env` 
-inside the project's root directory.
+To run the emulator code, we can add this folder to the `PYTHONPATH` environment variable. Running `source development.env` 
+inside the project's root directory can temporarily run our code but will lose its effect when you restart your shell. We do recommend to permanently add the project's root directory to the `PYTHONPATH` environment variable.
 
 ### Set up the proxy (not needed if you don't have an issue)
 
@@ -47,8 +43,13 @@ The emulator needs to fetch docker images from the Docker Hub.
 If you are in Mainland China, you may not be able to directly get the 
 docker images. However, there are many docker hub proxies that 
 you can use. Please follow [these instructions](./docs/user_manual/dockerhub_proxy.md)
-to set up the docker hub proxies. If you do not have such an issue,
-please skip this step. 
+to set up the docker hub proxies.
+
+However, sometimes the docker hub proxies are not working or working incredibly slow. In this case, we recommend you to build the docker images locally in your docker hub. 
+
+Please follow [these instructions](./docker_images/README.md) to build the docker images locally.
+
+If you do not have such an issue, please skip this step. 
 
 
 ### Run Examples
