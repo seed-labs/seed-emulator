@@ -46,6 +46,10 @@ sudo systemctl enable --now docker
 # Optionally give any user administrative privileges to docker:
 sudo usermod -aG docker $USERID
 
+sudo gpasswd -a $USERID docker
+
+sudo newgrp docker
+
 sudo groupadd docker
 
 #======================================sudo
