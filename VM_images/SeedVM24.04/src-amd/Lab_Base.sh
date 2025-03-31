@@ -43,16 +43,13 @@ sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plug
 # Start docker and enable it to start after the system reboot:
 sudo systemctl enable --now docker
 
-# Optionally give any user administrative privileges to docker:
-sudo usermod -aG docker $USERID
+sudo groupadd docker
 
 sudo gpasswd -a $USERID docker
 
 sudo newgrp docker
 
-sudo groupadd docker
-
-#======================================sudo
+#======================================
 echo "====================================="
 echo "Installing Wireshark ..."
 
@@ -91,11 +88,3 @@ echo "Cleaning up ..."
 # Clean up the apt cache
 sudo apt clean
 sudo rm -rf /var/lib/apt/lists/*
-
-
-#======================================
-echo "***************************************"
-echo "If you want to be able to SSH into the seed account, you need to set up public keys."
-echo "You can find the instruction in the manual."
-echo "***************************************"
-source ~/.bashrc
