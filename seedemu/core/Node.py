@@ -396,17 +396,6 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         """!@brief retrieve any volumes mounted on this node's container"""
         return self.__custom_vols
 
-    # TODO: if a separate .env file is created, or the values are given directly in the docker-compose.yml 'environment' section
-    # could be a setting of the Docker compiler
-    # def setCustomEnv(self, key: str, actual_value: str, scope: ScopeTier=ScopeTier.Node, use_envsubst: bool=False):
-
-
-    #def _setBuildTimeEnv(self, var: str, value: str, scope: ScopeTier):
-
-    #def getCustomRuntimeEnv(self) -> Dict[str,Dict[Scope,Tuple[str,str|None]]]:
-    #    """!      @brief return this nodes runtime ENV variables for use with envsubst        """
-    #    return self.__custom_env
-
     def getHostNames(self) -> str:
         """!
         @brief Get all host names for this node.
@@ -1076,8 +1065,6 @@ protocol pipe {{
 
 RouterFileTemplates['rw_configure_script'] = '''\
 #!/bin/bash
-gw="`ip rou show default | cut -d' ' -f3`"
-sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
 '''
 
 class Router(Node):
@@ -1091,10 +1078,30 @@ class Router(Node):
     __loopback_address: str
     __is_border_router: bool
 
+    __extensions: Dict[str, RouterExtension]
+
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         self.__is_border_router = False
         self.__loopback_address = None
+        self.__extensions = {}
         super().__init__( name,role,asn,scope)
+
+    def hasExtension(self, name: str) -> bool:
+        return name in self.__extensions
+
+    def installExtension(self, extn: RouterExtension):
+        if not extn.name() in self.__extensions:
+            extn.set_node(self)
+            self.__extensions[extn.name()] = extn
+
+    def __getattr__(self, name):
+        if '__' in name:
+            raise AttributeError(f"Router object has no attribute '{name}' nor any matching extension")
+        # delegate to extension
+        for _, e in self.__extensions.items():
+            if hasattr(e, name): return getattr(e, name)
+
+        raise AttributeError(f"Router object has no attribute '{name}' nor any matching extension")
 
     def getRole(self) -> NodeRole:
         return NodeRole.BorderRouter if self.__is_border_router else super().getRole()
@@ -1187,7 +1194,25 @@ class Router(Node):
 
         return self
 
-class RealWorldRouter(Router):
+class RouterExtension():
+    """!@brief Extensions are arbitrary additions to a Routers interface
+        (and class members) similar to Golang composition
+    """
+    _node: 'Node'
+
+    def __init__(self):
+        self._node = None
+
+    def set_node(self, node: 'Node'):
+        self._node = node
+
+    def get_node(self) -> 'Node':
+        return self._node
+
+    def name(self) -> str:
+        pass
+
+class RealWorldRouter(RouterExtension):
     """!
     @brief RealWorldRouter class.
 
@@ -1197,9 +1222,12 @@ class RealWorldRouter(Router):
     @todo real world access.
     """
 
-    __realworld_routes: List[str]
+    __realworld_routes: List[Tuple[str, Optional[List[str]]]]
     __sealed: bool
     __hide_hops: bool
+
+    def name(self) -> str:
+        return 'RealWorldRouter'
 
     def initRealWorld(self, hideHops: bool):
         """!
@@ -1209,22 +1237,22 @@ class RealWorldRouter(Router):
         self.__realworld_routes = []
         self.__sealed = False
         self.__hide_hops = hideHops
-        self.addSoftware('iptables')
+        self.get_node().addSoftware('iptables')
 
-    def addRealWorldRoute(self, prefix: str) -> RealWorldRouter:
+    def addRealWorldRoute(self, prefix: str, route_clientele: str = None) -> 'Node':
         """!
         @brief Add real world route.
 
-        @param prefix prefix.
-
+        @param prefix prefix i.e. ['0.0.0.0/1', '128.0.0.0/1'] for the 'real' real whole world global internet
+        @param route_clientele the network/s who shall be able to route to the given 'real world' prefix
         @throws AssertionError if sealed.
 
         @returns self, for chaining API calls.
         """
         assert not self.__sealed, 'Node sealed.'
-        self.__realworld_routes.append(prefix)
+        self.__realworld_routes.append( (prefix, route_clientele) )
 
-        return self
+        return self.get_node()
 
     def getRealWorldRoutes(self) -> List[str]:
         """!
@@ -1232,9 +1260,12 @@ class RealWorldRouter(Router):
 
         @returns list of prefixes.
         """
-        return self.__realworld_routes
+        return [r for (r, _) in self.__realworld_routes]
 
-    def seal(self):
+    # called in RoutingLayer::render() - That is AFTER ::configure() :)
+    # where its been decided if this node has to run BIRD routing daemon
+    # because it is connected to more than one local(direct) network
+    def seal(self, svc_net: Network):
         """!
         @brief seal the realworld router.
 
@@ -1244,27 +1275,52 @@ class RealWorldRouter(Router):
         if self.__sealed: return
         self.__sealed = True
         if len(self.__realworld_routes) == 0: return
-        self.setFile('/rw_configure_script', RouterFileTemplates['rw_configure_script'])
-        self.insertStartCommand(0, '/rw_configure_script')
-        self.insertStartCommand(0, 'chmod +x /rw_configure_script')
-        self.addTable('t_rw')
-        statics = '\n    ipv4 { table t_rw; import all; };\n    route ' + ' via !__default_gw__!;\n    route '.join(self.__realworld_routes)
-        statics += ' via !__default_gw__!;\n'
-        for prefix in self.__realworld_routes:
+        self.get_node().setFile('/rw_configure_script', RouterFileTemplates['rw_configure_script'])
+        # position 0-1 is '/interface_setup' (and chmod +x)
+        self.get_node().insertStartCommand(0, '/rw_configure_script')
+        self.get_node().insertStartCommand(0, 'chmod +x /rw_configure_script')
+
+        for prefix, route_clientele in self.__realworld_routes:
+            if route_clientele != None:
+                if isinstance(route_clientele, list):
+                    for src in route_clientele:
+                        self.get_node().appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -s {} -j MASQUERADE\n'.format(prefix, src))
+                else:
+                    self.get_node().appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -s {} -j MASQUERADE\n'.format(prefix, route_clientele))
             # nat matched only
-            self.appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -j MASQUERADE\n'.format(prefix))
+            else:
+                self.get_node().appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -j MASQUERADE\n'.format(prefix))
 
             if self.__hide_hops:
                 # remove realworld hops
-                self.appendFile('/rw_configure_script', 'iptables -t mangle -A POSTROUTING -d {} -j TTL --ttl-set 64\n'.format(prefix))
+                self.get_node().appendFile('/rw_configure_script', 'iptables -t mangle -A POSTROUTING -d {} -j TTL --ttl-set 64\n'.format(prefix))
 
-        self.addProtocol('static', 'real_world', statics)
-        self.addTablePipe('t_rw', 't_bgp', exportFilter = 'filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; }')
-        # self.addTablePipe('t_rw', 't_ospf') # TODO
+        # not all Routers run a dynamic routing daemon(BIRD) ...
+        # some might run SCION BR instead
+        if 'bird2' in self.get_node().getSoftware():
+            # if this check is too dirty/hacky, we could use Attributes like in: "if hasattr(self, '__sealed'):" but this is still hacky
+            fill_placeholder = """\
+            gw="`ip rou show default | cut -d' ' -f3`"
+            sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
+            """
+            self.get_node().appendFile('/rw_configure_script', fill_placeholder)
 
+            self.get_node().addTable('t_rw')
+            statics = '\n    ipv4 { table t_rw; import all; };\n    route ' + ' via !__default_gw__!;\n    route '.join(self.getRealWorldRoutes())
+            statics += ' via !__default_gw__!;\n'
+            self.get_node().addProtocol('static', 'real_world', statics)
+            self.get_node().addTablePipe('t_rw', 't_bgp', exportFilter = 'filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; }')
+            # self.addTablePipe('t_rw', 't_ospf') # TODO
+        else:
+            # everything that is not destined to a prefix in the simulation must be for the 'real world'
+            host_gw = svc_net.getPrefix().network_address + 1
+            # apparently rw_configure_script is executed even before the interface setup script -> 000_svc is unknown
+            self.get_node().appendFile('/rw_configure_script', 'ip route add default via {} dev {}'.format(host_gw, svc_net.getName()))
+            #self.appendStartCommand('ip route add default via {} dev {}'.format(host_gw, svc_net.getName()))
 
+    '''
     def print(self, indent: int) -> str:
-        out = super(RealWorldRouter, self).print(indent)
+        out = super().print(indent)
         indent += 4
 
         out += ' ' * indent
@@ -1277,9 +1333,19 @@ class RealWorldRouter(Router):
 
 
         return out
+    '''
 
+def promote_to_real_world_router(node: Node, hideHops: bool):
+    """!@brief Dynamically inject RealWorldRouterMixin into a Node instance
+                to augment it by RealWorld routing capabilities
+    """
+    extn = RealWorldRouter()
 
-class ScionRouter(Router):
+    node.installExtension(extn)
+    extn.initRealWorld(hideHops)
+    return node
+
+class ScionRouter(RouterExtension):
     """!
     @brief Extends Router nodes for SCION routing.
 
@@ -1289,10 +1355,12 @@ class ScionRouter(Router):
 
     __interfaces: Dict[int, Dict]  # IFID to interface
     __next_port: int               # Next free UDP port
-
-    def __init__(self):
-        super().__init__()
-        self.initScionRouter()
+    def name(self) -> str:
+        return 'ScionRouter'
+    # Never been used anyway
+    #def __init__(self):
+    #   super().__init__()
+    #   self.initScionRouter()
 
     def initScionRouter(self):
         self.__interfaces = {}
@@ -1332,3 +1400,22 @@ class ScionRouter(Router):
         port = self.__next_port
         self.__next_port += 1
         return port
+
+    def print(self, indent: int) -> str:
+        """mostly for debug """
+        out = self.get_node().print(indent)
+        indent += 4
+
+        out += ' ' * indent
+        out += 'SCION border router'
+        return out
+
+def promote_to_scion_router(node: Node):
+    """!@brief Dynamically inject ScionRouterMixin into a Node instance"""
+
+    if not node.hasExtension('ScionRouter'):# Prevent double-mixing
+        extn = ScionRouter()
+        extn.initScionRouter()
+        node.installExtension(extn)
+    return node
+

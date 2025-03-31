@@ -1,5 +1,6 @@
 from __future__ import annotations
 from seedemu.core.enums import NetworkType, NodeRole
+from .ExternalConnectivityProvider import ExternalConnectivityProvider
 from .Merger import Mergeable, Merger
 from .Registry import Registry, Registrable, Printable
 from .Network import Network
@@ -76,7 +77,7 @@ class Emulator:
     """!
     @brief The Emulator class.
 
-    Emulator class is the entry point for emulations. 
+    Emulator class is the entry point for emulations.
     """
 
     __registry: Registry
@@ -88,11 +89,12 @@ class Emulator:
 
     __service_net: Network
     __service_net_prefix: str
+    __ecp: ExternalConnectivityProvider
 
     def __init__(self, serviceNetworkPrefix: str = '192.168.66.0/24'):
         """!
         @brief Construct a new emulation.
-        
+
         @param serviceNetworkPrefix (optional) service network prefix for this
         emulator. A service network is a network that does not take part in the
         emulation, and provide access between the emulation nodes and the host
@@ -109,15 +111,17 @@ class Emulator:
         self.__registry.register('seedemu', 'dict', 'layersdb', self.__layers)
         self.__registry.register('seedemu', 'list', 'bindingdb', self.__bindings)
 
-        self.__service_net_prefix = '192.168.160.0/23'
+        self.__service_net_prefix = serviceNetworkPrefix
         self.__service_net = None
+        self.__ecp = ExternalConnectivityProvider()
+
 
     def __render(self, layerName, optional: bool, configure: bool):
         """!
         @brief Render a layer.
-        
+
         @param layerName name of layer.
-        @throws AssertionError if dependencies unmet 
+        @throws AssertionError if dependencies unmet
         """
         verb = 'configure' if configure else 'render'
 
@@ -144,7 +148,7 @@ class Emulator:
         hooks: List[core.Hook] = []
         for hook in self.__registry.getByType('seedemu', 'hook'):
             if hook.getTargetLayer() == layerName: hooks.append(hook)
-        
+
         if configure:
             self.__log('invoking pre-configure hooks for {}...'.format(layerName))
             for hook in hooks: hook.preconfigure(self)
@@ -159,10 +163,10 @@ class Emulator:
             layer.render(self)
             self.__log('invoking post-render hooks for {}...'.format(layerName))
             for hook in hooks: hook.postrender(self)
-        
+
         self.__log('done: {}'.format(layerName))
         self.__layers.db[layerName] = (layer, True)
-    
+
     def __loadDependencies(self, deps: Dict[str, Set[Tuple[str, bool]]]):
         """!
         @brief Load dependencies list.
@@ -257,10 +261,10 @@ class Emulator:
         @returns list of layers.
         """
         return self.__registry.getByType('seedemu', 'layer')
-    
+
     def getServerByVirtualNodeName(self, vnodeName: str) -> core.Server:
         """!
-        @brief Get server by virtual node name. 
+        @brief Get server by virtual node name.
 
         Note that vnodeName is created and mapped with server in service layer.
 
@@ -273,7 +277,7 @@ class Emulator:
                 if vnode == vnodeName:
                     return server
         return None
-    
+
     def resolvVnode(self, vnode: str) -> core.Node:
         """!
         @brief resolve physical node for the given virtual node.
@@ -300,7 +304,7 @@ class Emulator:
         "resolve" to the physical node using this function.
 
         This is meant to be used by services to find the physical node to
-        install their servers on and should not be used for any other purpose. 
+        install their servers on and should not be used for any other purpose.
         if you try to resolve some arbitrary vnode names to physical node,
         use the resolveVnode function instead.
 
@@ -330,12 +334,19 @@ class Emulator:
 
         return self.__service_net
 
+    def getExternalConnectivityProvider(self) -> ExternalConnectivityProvider:
+        """!@brief return the emulators External'RealWorld'ConnectivityProvider
+        """
+        # if we already own the service network, its only fair,
+        # we also provide the means to use it properly. . .
+        return self.__ecp
+
     def render(self) -> Emulator:
         """!
         @brief Render to emulation.
 
-        @throws AssertionError if dependencies unmet 
-        
+        @throws AssertionError if dependencies unmet
+
         @returns self, for chaining API calls.
         """
         assert not self.__rendered, 'already rendered.'
@@ -378,7 +389,7 @@ class Emulator:
         for layerName in self.__layers.db.keys():
             if layerName != 'EtcHosts':
                 self.__render(layerName, False, True)
-        
+
         # render EtcHost last
         if 'EtcHosts' in self.__layers.db.keys():
             self.__render('EtcHosts', False, True)
@@ -408,7 +419,7 @@ class Emulator:
         compiler.compile(self, output, override)
 
         return self
-    
+
     def updateOutputDirectory(self, compiler: core.Compiler, callbacks: list) -> Emulator:
         """!
         @brief update the output directory in a flexible way. Each service might need to update it in a different way
@@ -419,7 +430,7 @@ class Emulator:
         for func in callbacks:
             func(compiler)
 
-    def getRegistry(self) -> Registry: 
+    def getRegistry(self) -> Registry:
         """!
         @brief Get the Registry.
 
@@ -510,7 +521,7 @@ class Emulator:
                 if merger.getTargetType() != typename: continue
                 new_layers[typename] = merger.doMerge(new_layers[typename], l)
                 merged = True
-            
+
             assert merged, 'abort: no merger found for {}'.format(typename)
 
         new_sim = Emulator()
@@ -518,7 +529,7 @@ class Emulator:
 
         for binding in self.getBindings(): new_sim.addBinding(binding)
         for binding in other.getBindings(): new_sim.addBinding(binding)
-        
+
         for hook in self.getRegistry().getByType('seedemu', 'hook'): new_sim.addHook(hook)
         for hook in other.getRegistry().getByType('seedemu', 'hook'): new_sim.addHook(hook)
 

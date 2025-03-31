@@ -1,4 +1,7 @@
-from seedemu.core import ScopedRegistry, Node, Interface, Network, Emulator, Layer, Router, RealWorldRouter, BaseSystem
+from seedemu.core import (ScopedRegistry, Node, Interface, Network, Emulator,
+                          Layer, Router, BaseSystem,
+                          promote_to_real_world_router)
+from seedemu.core.enums import NetworkType
 from typing import List, Dict
 from ipaddress import IPv4Network
 
@@ -155,15 +158,46 @@ class Routing(Layer):
 
     def render(self, emulator: Emulator):
         reg = emulator.getRegistry()
+
+        gateway_constraints = {}
+        hit: bool = False
+        for ((scope, type, name), obj) in reg.getAll().items():
+            # make sure that on each externaly connected net (those with at least one host who requested it)
+            #  (I):  there is at least one RealWorldRouter
+            #  (II): the RWR is the default gateway of the requesters on this net
+            if type == 'net' and obj.getType() == NetworkType.Local:
+                if (p := obj.getExternalConnectivityProvider() ):
+                   hit |= True
+                   rwr_candidates, new_gateway_constraints = p.resolveRWA( emulator, obj)
+                   for r in rwr_candidates:
+                       r = promote_to_real_world_router(r, False)
+                       route = obj.getPrefix()
+                       # only for hosts on THIS network ('route') the RWA is provided
+                       r.addRealWorldRoute('0.0.0.0/1', str(route))
+                       r.addRealWorldRoute('128.0.0.0/1', str(route))
+                   for h, gw in new_gateway_constraints.items():
+                       assert h not in gateway_constraints, 'multihomed host ?!'
+                       gateway_constraints[h] = gw
+                   pass
+        # don't create it unnecessary
+        svc_net = emulator.getServiceNetwork() if hit or (reg.has('seedemu', 'net', '000_svc')) else None
+
         for ((scope, type, name), obj) in reg.getAll().items():
             if type == 'rs' or type == 'rnode':
                 assert issubclass(obj.__class__, Router), 'routing: render: adding new RS/Router after routing layer configured is not currently supported.'
 
             if type == 'rnode':
                 rnode: Router = obj
-                if issubclass(rnode.__class__, RealWorldRouter):
+                if rnode.hasExtension('RealWorldRouter'): # could also be ScionRouter which needs RealWorldAccess
+
+                    # this is an exception - Only for service net (not part of simulation)
+                    rnode._Node__joinNetwork(svc_net)
+                    [l, b, d] = svc_net.getDefaultLinkProperties()
+                    rnode.appendFile('/ifinfo.txt',
+                                     '{}:{}:{}:{}:{}\n'.format(svc_net.getName(), svc_net.getPrefix(), l, b, d))
+
                     self._log("Sealing real-world router as{}/{}...".format(rnode.getAsn(), rnode.getName()))
-                    rnode.seal()
+                    rnode.seal(svc_net)
 
             if type in ['hnode', 'csnode']:
                 hnode: Node = obj
@@ -172,9 +206,15 @@ class Routing(Layer):
                 hif = hifaces[0]
                 hnet: Network = hif.getNet()
                 rif: Interface = None
+                candidates = []
+                if hnode in gateway_constraints:
+                    candidates.append(gateway_constraints[hnode])
+                else:
+                    cur_scope = ScopedRegistry(scope, reg)
+                    candidates = cur_scope.getByType('rnode')
 
-                cur_scope = ScopedRegistry(scope, reg)
-                for router in cur_scope.getByType('rnode'):
+
+                for router in candidates:
                     if rif != None: break
                     for riface in router.getInterfaces():
                         if riface.getNet() == hnet:
