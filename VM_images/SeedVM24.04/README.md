@@ -4,6 +4,8 @@
 
 Simply create a brand new and clean Ubuntu 24.04 virtual machine.
 
+We recommand you to set the disk volume at least 128GB, 2 CPU cores and 4G memory.
+
 ***
 
 ## 2. Execute the setup script
