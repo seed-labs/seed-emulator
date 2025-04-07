@@ -1,6 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume
+from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
@@ -28,7 +28,7 @@ DockerCompilerFileTemplates['start_script'] = """\
 #!/bin/bash
 {startCommands}
 echo "ready! run 'docker exec -it $HOSTNAME /bin/zsh' to attach to this node" >&2
-for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 0 > "$f"; done
+{buildtime_sysctl}
 tail -f /dev/null
 """
 
@@ -129,10 +129,7 @@ DockerCompilerFileTemplates['compose_service'] = """\
             - {dependsOn}
         cap_add:
             - ALL
-        sysctls:
-            - net.ipv4.ip_forward=1
-            - net.ipv4.conf.default.rp_filter=0
-            - net.ipv4.conf.all.rp_filter=0
+{sysctls}
         privileged: true
         networks:
 {networks}{ports}{volumes}
@@ -140,6 +137,11 @@ DockerCompilerFileTemplates['compose_service'] = """\
 {labelList}
         environment:
         {environment}
+"""
+
+DockerCompilerFileTemplates['compose_sysctl'] =  """
+        sysctls:
+
 """
 
 DockerCompilerFileTemplates['compose_label_meta'] = """\
@@ -986,7 +988,8 @@ class Docker(Compiler):
             start_commands += '{}{}\n'.format(cmd, ' &' if fork else '')
 
         dockerfile += self._addFile('/start.sh', DockerCompilerFileTemplates['start_script'].format(
-            startCommands = start_commands
+            startCommands = start_commands,
+            buildtime_sysctl=self._getNodeBuildtimeSysctl(node)
         ))
 
         dockerfile += self._addFile('/seedemu_sniffer', DockerCompilerFileTemplates['seedemu_sniffer'])
@@ -1005,6 +1008,41 @@ class Docker(Compiler):
 
         dockerfile += 'CMD ["/start.sh"]\n'
         return dockerfile
+    
+    def _getNodeBuildtimeSysctl(self, node: Node) -> str:
+        """!@brief get sysctl-flag settings for /start.sh script
+            @note   if a sysctl-option is in BUILD_TIME mode, it will go to /start.sh
+                otherwise if mode is RUNTIME the flag will be set in docker-compose.yml
+                (except for custom named interfaces such as 'net0' which would still go to /start.sh
+                because they simply don't exist yet once the container starts up 
+                and /interface_setup hasn't been called yet )
+        """
+        set_flags = []
+        rp_opt = node.getOption('sysctl_netipv4_conf_rp_filter')
+        for k, v in rp_opt.value.items():
+            # custom interfaces are always BUILD_TIME
+            if k not in ['all', 'default']:
+                rp_filter = f'echo {int(v)} > /proc/sys/net/ipv4/conf/{k}/rp_filter'
+                set_flags.append(rp_filter)
+            elif rp_opt.mode == OptionMode.BUILD_TIME:
+                # flags for 'all' and 'default' interfaces
+                # could be set in docker-compose.yml already if OptionMode is RUNTIME
+                rp_filter = f'echo {int(v)} > /proc/sys/net/ipv4/conf/{k}/rp_filter'
+                set_flags.append(rp_filter)
+
+
+        
+        if opts := node.getScopedOptions(prefix='sysctl'):
+            for o, _ in opts:
+                if o.mode != OptionMode.BUILD_TIME:
+                    # then its already set in docker-compose.yml
+                    continue
+                if o.fullname() == 'sysctl_netipv4_conf_rp_filter': continue
+                for s in repr(o).split('\n'):
+                   set_flags.append(f'sysctl -w {s.strip()}') 
+                
+
+        return '\n'.join(set_flags)
 
     def _compileNode(self, node: Node ) -> str:
         """!
@@ -1035,12 +1073,39 @@ class Docker(Compiler):
             nodeName = name,
             dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
             networks = node_nets,
+            sysctls = self._getNodeSysctls(node),
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = self._getComposeServicePortList(node),
             labelList = self._getNodeMeta(node),
             volumes = self._getComposeNodeVolumes(node),
             environment= "    - CONTAINER_NAME={}\n            ".format(name) + self._computeNodeEnvironment(node)
         )
+
+    def _getNodeSysctls(self, node: Node) -> str:
+        """!@brief compute the 'sysctl:' section of the node's service 
+                    in docker-compose.yml file
+            @note sysctl flags which are set in the docker-compose.yml file
+                can be changed, without having to recompile any images and
+                thus correspond to OptionMode.RUN_TIME
+        """
+        opt_keyvals = [] # 'repr' of all sysctl options set on this node i.e. : '- net.ipv4.ip_forwarding = 0'
+        #TODO: check if option mode is runtime
+        # if not the setting of this option should go to the /start.sh script (BUILD_TIME)
+        # Also interfaces other than 'all'|'default' cant go in the docker-compose.yml file
+        # because they only exist under this name once the /interface_setup script has run
+        # and renamed them to their final/expected names i.e. 'net0'
+        if opts := node.getScopedOptions(prefix='sysctl'):
+            for o, _ in opts:
+                if o.mode == OptionMode.RUN_TIME:
+                    if (val := o.repr_runtime()) != None:
+                        for s in val.split('\n'):
+                            opt_keyvals.append(f'- {s.strip()}')
+                    else:
+                        opt_keyvals.append(repr(o))
+        if len(opt_keyvals) > 0:
+            return DockerCompilerFileTemplates['compose_sysctl'] + '           ' + '\n           '.join( opt_keyvals )
+        else:
+            return ''
 
     def _computeNodeEnvironment(self, node: Node) -> str:
         """!

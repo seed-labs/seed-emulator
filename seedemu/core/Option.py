@@ -39,9 +39,14 @@ class BaseComponent(): # metaclass=OptionGroupMeta
         """!@brief prefix of the 'composite' (aggregate of multiple options)
         """
         if hasattr(cls, '__prefix'):
-            return cls.__prefix
+           # return cls.__prefix
+           return cls.__dict__['__prefix']
         else:
             return None
+
+    @classmethod
+    def fullname(cls) -> str:
+        return f'{cls.prefix()}_{cls.getName()}'
 
     @ClassProperty
     def name(cls) -> str:
@@ -54,6 +59,20 @@ class BaseComponent(): # metaclass=OptionGroupMeta
     @classmethod
     def components(cls) -> Optional[List['BaseComponent']]:
         return None
+
+    @classmethod
+    def components_recursive(cls, prefix: str = None) -> Optional[List['BaseComponent']]:
+        """
+        !@brief flattens child components recursively
+        """
+        opts = []
+
+        for c in cls.components():
+            if c.components() == None:
+                opts.append(c)
+            else:
+                opts.extend(c.components_recursive(prefix = f'{cls.getName()}_{c.getName()}'))
+        return opts
 
 class OptionMode(Flag):
     """!@brief characteristics of an option,
@@ -73,13 +92,15 @@ class OptionGroupMeta(type): # or BaseComponentMeta ..
 
         if name.lower() == 'scionstackopts':
             name = 'scion'
+        if name.lower() == 'sysctlopts':
+            name = 'sysctl'
 
         from .OptionRegistry import OptionRegistry
 
         new_cls = super().__new__(cls, name, bases, class_dict)
         # if (cls == OptionGroupMeta): return new_cls
         qname = class_dict['__qualname__']
-        if name in ['Option','BaseOption', 'BaseOptionGroup']: return new_cls
+        if name in ['Option', 'BaseOption', 'BaseOptionGroup']: return new_cls
         if BaseComponent in bases or any([ issubclass(b, BaseComponent) for b in bases]):
             new_cls._children = {}
 
@@ -163,6 +184,12 @@ class Option(BaseOption):
 
     def __repr__(self):
         return f"Option(key={self.name()}, value={self._mutable_value})"
+    
+    def repr_runtime(self) -> str:
+        return None
+    
+    def repr_build_time(self) -> str:
+        return None
 
     @classmethod
     def getType(cls) -> Type:

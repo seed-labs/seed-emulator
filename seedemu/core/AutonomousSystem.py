@@ -129,7 +129,7 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         # this causes no redundant setting of the same options/defaults
         reg = emulator.getRegistry()
         all_nodes = [ obj for (scope,typ,name),obj  in reg.getAll( ).items()
-                      if scope==str(self.getAsn()) and typ in ['rnode','hnode','csnode','rsnode'] ]
+                      if scope==str(self.getAsn()) and typ in ['rnode','hnode','csnode','rsnode','rs'] ]
         for n in all_nodes:
             self.handDown(n)
 
