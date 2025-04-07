@@ -1,7 +1,7 @@
 from __future__ import annotations
-from seedemu.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Emulator, Layer,ScopeTier
+from seedemu.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Emulator, Layer
 from typing import Dict, List
-
+from seedemu.options.Sysctl import SysctlOpts
 BaseFileTemplates: Dict[str, str] = {}
 
 BaseFileTemplates["interface_setup_script"] = """\
@@ -33,6 +33,7 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
 }; done
 """
 
+
 class Base(Layer, Graphable):
     """!
     @brief The base layer.
@@ -42,6 +43,11 @@ class Base(Layer, Graphable):
     __ixes: Dict[int, InternetExchange]
 
     __name_servers: List[str]
+
+    def getAvailableOptions(self):
+        from seedemu.core.OptionRegistry import OptionRegistry
+        opt_keys = [ o.fullname() for o in SysctlOpts().components_recursive()]
+        return [OptionRegistry().getOption(o) for o in opt_keys]
 
     def __init__(self):
         """!
@@ -75,6 +81,7 @@ class Base(Layer, Graphable):
     '''
 
     def configure(self, emulator: Emulator):
+        
         self._log('registering nodes...')
         for asobj in self.__ases.values():
             if len(asobj.getNameServers()) == 0:
@@ -89,6 +96,7 @@ class Base(Layer, Graphable):
 
         self._log('setting up autonomous systems...')
         for asobj in self.__ases.values(): asobj.configure(emulator)
+        super().configure(emulator)
 
     def render(self, emulator: Emulator) -> None:
         for ((scope, type, name), obj) in emulator.getRegistry().getAll().items():

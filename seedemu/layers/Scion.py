@@ -212,7 +212,7 @@ class ScionBuilder():
         But doesn't configure them ( /etc/scion config dir is untouched by it)
         The install is performed as instructed by the nodes SetupSpec option.
         """
-        spec = node.getOption('setup_spec')
+        spec = node.getOption('setup_spec', prefix='scion')
         assert spec != None, 'implementation error - all nodes are supposed to have a SetupSpecification set by ScionRoutingLayer'
 
         match s:=spec.value:
@@ -227,7 +227,7 @@ class ScionBuilder():
                 self._installFromDebPackage(node)
 
     def nameOfCmd(self, cmd, node: Node) -> str:
-        spec = node.getOption('setup_spec')
+        spec = node.getOption('setup_spec', prefix='scion')
         assert spec != None, 'implementation error - all nodes are supposed to have a SetupSpecification set by ScionRoutingLayer'
         assert cmd in ['router', 'control', 'dispatcher', 'daemon'], f'unknown SCION distributable {cmd}'
         match spec.value:
@@ -273,11 +273,11 @@ class ScionBuilder():
         #node.addSoftware("apt-transport-https")
         #node.addSoftware("ca-certificates") # by whom are these required exactly ?! only the deb-packages ?!
 
-        if node.getOption("rotate_logs").value == "true":
+        if node.getOption("rotate_logs", prefix='scion').value == "true":
             node.addSoftware("apache2-utils")  # for rotatelogs
         # TODO actually i had to check if there's any option on this node
         # which has OptionMode.RUN_TIME set
-        if node.getOption("use_envsubst").value == "true":  # for envsubst
+        if node.getOption("use_envsubst", prefix='scion').value == "true":  # for envsubst
             node.addSoftware("gettext")
 
 

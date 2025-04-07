@@ -23,30 +23,44 @@ class Customizable(object):
         else: return self._scope
             
 
-    def getScopedOption(self, key: str, scope: Scope = None) -> Optional[Tuple[BaseOption, Scope]]:
+    def getScopedOption(self, key: str, scope: Scope = None, prefix: str = None) -> Optional[Tuple[BaseOption, Scope]]:
         """! @brief retrieves an option along with the most specific Scope in which it was set.
         """
         if not scope:  scope = self.scope()
-        
-        if key not in self._config: return None
+
+        keys = [key]
+
+        if key == '*':
+            keys = self._config.keys()
+        elif key not in self._config:
+            if prefix!=None and (k:=f'{prefix}_{key}') in self._config:
+                key = k
+            else:
+                return None
         
         # fetch the most specific option setting to the requested scope
         for ps in filter(None, Customizable._possible_scopes(scope)):
-            for (opt,s ) in self._config[key]:            
-                try:
-                    # scope has equality-relation on all elements
-                    if s==ps: # exact match for this specific scope
-                        return opt, s
-                    elif ps< s: # but this might not be implemented.. and throw
-                        # return fst test scope that is included in a setting
-                        return opt,s
+            for k in keys:
+                if prefix != None and key != '*': k = prefix + '_' + k
+                elif prefix != None and key == '*':
+                    if not k.startswith(prefix):  continue
+               
 
-                except :
-                    pass
+                for (opt, s) in self._config[k]:            
+                    try:
+                        # scope has equality-relation on all elements
+                        if s == ps: # exact match for this specific scope
+                            return opt, s
+                        elif ps < s: # but this might not be implemented.. and throw
+                            # return fst test scope that is included in a setting
+                            return opt, s
+
+                    except :
+                        pass
             
         return None
 
-    def getOption(self, key: str, scope: Scope = None ) -> Optional[BaseOption]:
+    def getOption(self, key: str, scope: Scope = None, prefix: str = None ) -> Optional[BaseOption]:
         """!@brief Retrieves an option(if set) based on the precedence rules (scoping).
                 If not specified the option value for the scope most specific to 'this' customizable 
                 will be returned.
@@ -55,7 +69,7 @@ class Customizable(object):
             @note actually each layer that provides options should at least provide global defaults.
             So None will be rare if layer implementation is correct and inherits all settings to all nodes.
         """
-        optn = self.getScopedOption(key, scope)
+        optn = self.getScopedOption(key, scope, prefix)
         if optn:
             return optn[0]
         else:
@@ -83,10 +97,10 @@ class Customizable(object):
         """
         return [ self.getOption(k, scope) for k in self._getKeys() ]
     
-    def getScopedOptions(self, scope: Scope = None )  -> List[Tuple[BaseOption,Scope]]:
+    def getScopedOptions(self, scope: Scope = None, prefix: str = None )  -> List[Tuple[BaseOption,Scope]]:
         """! @brief return all options included by the given scope.
         """
-        return [ self.getScopedOption(k, scope) for k in self._getKeys() ]    
+        return [ self.getScopedOption(k, scope) for k in self._getKeys() if (prefix != None and k.startswith(prefix)) or prefix==None ]    
     
     # this method confines all the scope-related uglyness and spares us to expose get/setOptions() methods
     def handDown(self, child: 'Customizable'):
@@ -114,8 +128,14 @@ class Customizable(object):
 
         if not scope:  scope = self.scope()
 
-        if not op.name in self._config: # fst encounter of this option -> no conflict EASY 
-            self._config[op.name] = [(op,scope)]
+        opname = op.name
+        # TODO: replace with op.fullname()
+        if (p:=op.prefix()) != None:
+                opname = f'{p}_{opname}'
+
+        if not opname in self._config: # fst encounter of this option -> no conflict EASY 
+            
+            self._config[opname] = [(op,scope)]
             return
         else: # conflict / or override for another scope
 
@@ -146,14 +166,14 @@ class Customizable(object):
 
 
             # settings for this scope already exist
-            if (i:=find_index( [s for _,s in self._config[op.name]], scope)) !=-1:
+            if (i:=find_index( [s for _,s in self._config[opname]], scope)) !=-1:
                 # update the option value (change of mind)
-                self._config[op.name][i] = (op,scope)
+                self._config[opname][i] = (op,scope)
             else: # add the setting for the new scope
-                self._config[op.name].append((op,scope))
-                res= sorted(self._config[op.name], key=cmp_to_key(cmp_snd) )
+                self._config[opname].append((op,scope))
+                res= sorted(self._config[opname], key=cmp_to_key(cmp_snd) )
                             # key=cmp_to_key(Scope.collate),reverse=True)
-                self._config[op.name]  = res
+                self._config[opname]  = res
             
 
     def getRuntimeOptions(self, scope: Scope = None) -> List[BaseOption]:

@@ -294,10 +294,10 @@ class ScionRouting(Routing):
         #TODO: maybe add toLowerTOML(default_val: str) -> str checks here
         # since user can input any garbage as input i.e. "'False'"(capitalized str) or "False" (bool)
         # when constructing the option, that is not valid toml expected by SCION distributables
-        if node.getOption('use_envsubst').value == 'true' and node.getOption(flag).mode == OptionMode.RUN_TIME:
-            return f'${{{node.getOption(flag).name.upper()}}}'
+        if node.getOption('use_envsubst', prefix='scion').value == 'true' and node.getOption(flag, prefix='scion').mode == OptionMode.RUN_TIME:
+            return f"${{{node.getOption(flag, prefix='scion').name.upper()}}}"
         else:
-            return node.getOption(flag).value
+            return node.getOption(flag, prefix='scion').value
 
     def _nameOfCmd(self, cmd: str, node: Node):
         """!
@@ -375,8 +375,8 @@ class ScionRouting(Routing):
         for ((scope, type, name), obj) in reg.getAll().items():
 
             if type not in ['hnode', 'csnode', 'brdnode']: continue
-            nologrotate = obj.getOption('rotate_logs').value == "false"
-            useenvsubst = obj.getOption('use_envsubst').value == 'true'
+            nologrotate = obj.getOption('rotate_logs', prefix='scion').value == "false"
+            useenvsubst = obj.getOption('use_envsubst', prefix='scion').value == 'true'
 
             # SCION inter-domain routing affects only border-routers
             if type == "brdnode":
@@ -442,8 +442,8 @@ class ScionRouting(Routing):
 
     def __append_scion_command(self, node: Node):
         """Append commands for starting the SCION host stack on the node."""
-        nologrotate = node.getOption('rotate_logs').value == "false"
-        useenvsubst = node.getOption('use_envsubst').value == 'true'
+        nologrotate = node.getOption('rotate_logs', prefix='scion').value == "false"
+        useenvsubst = node.getOption('use_envsubst', prefix='scion').value == 'true'
 
         disp_log = (">> /var/log/scion-dispatcher.log 2>&1"
                      if nologrotate
@@ -505,7 +505,7 @@ class ScionRouting(Routing):
                                          loglevel=lvl)
         +             _Templates["trust_db"].format(name="sd1")
         +             _Templates["path_db"].format(name="sd1"))
-        if node.getOption('serve_metrics').value=='true':
+        if node.getOption('serve_metrics', prefix='scion').value=='true':
             sciond_conf += _Templates["metrics"].format(node.getLocalIPAddress(), 30455)
         # No [features] for daemon
         handleScionConfFile(node, 'sciond.toml', sciond_conf)
@@ -531,7 +531,7 @@ class ScionRouting(Routing):
             raise ValueError(f"Node {node.getName()} has no interface in the control service network")
 
         dispatcher_conf = _Templates["dispatcher"].format(isd_as=isd_as, ip=ip)
-        if node.getOption('serve_metrics').value == 'true':
+        if node.getOption('serve_metrics', prefix='scion').value == 'true':
             dispatcher_conf += _Templates["metrics"].format(node.getLocalIPAddress(), 30441)
         handleScionConfFile(node, 'dispatcher.toml', dispatcher_conf)
 
@@ -552,7 +552,7 @@ class ScionRouting(Routing):
             config_content += _Templates['features'].format('\n'.join(_kvals_features) )
 
 
-        if router.getOption('serve_metrics').value == 'true' and (local_ip:=router.getLocalIPAddress()) != None:
+        if router.getOption('serve_metrics', prefix='scion').value == 'true' and (local_ip:=router.getLocalIPAddress()) != None:
             config_content += _Templates["metrics"].format(local_ip, 30442)
 
         handleScionConfFile(router, name + ".toml", config_content)
@@ -794,7 +794,7 @@ class ScionRouting(Routing):
         +  _Templates["path_db"].format(name=name)
         +  _Templates['features'].format('\n'.join(_features))
         )
-        if node.getOption('serve_metrics').value == 'true':
+        if node.getOption('serve_metrics', prefix='scion').value == 'true':
             cs_config += _Templates["metrics"].format(node.getLocalIPAddress(), 30452)
         cs_config += "\n".join(beaconing)
         handleScionConfFile(node, name + '.toml', cs_config)
