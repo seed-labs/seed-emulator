@@ -60,10 +60,11 @@ class DynamicConfigurable(Configurable):
         # set options on nodes directly
         reg = emulator.getRegistry()
         all_nodes = [ obj for (scope,typ,name),obj  in reg.getAll( ).items() 
-                      if typ in ['rnode','hnode','csnode','rsnode'] ]
+                      if typ in ['rnode','hnode','csnode','rsnode', 'rs'] ] #FIXME: remove redundancy between rs & rsnode
         for n in all_nodes:
             for o in self.getAvailableOptions():
                 assert o, 'implementation error'
+                # TODO: if o has __prefix attribute add prefix  argument to setOption()
                 n.setOption(o, Scope(ScopeTier.Global))
         
     
