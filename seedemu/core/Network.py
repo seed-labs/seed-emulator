@@ -8,6 +8,7 @@ from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
 from .Visualization import Vertex
 from .Customizable import Customizable
+from .Scope import Scope,NetScope, NetScopeTier, NetScopeType
 from typing import Dict, Tuple, List
 
 class Network(Printable, Registrable, Vertex, Customizable):
@@ -31,7 +32,7 @@ class Network(Printable, Registrable, Vertex, Customizable):
     __rap: RemoteAccessProvider
     __ecp: ExternalConnectivityProvider
 
-    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None, direct: bool = False):
+    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None, direct: bool = False, scope: str = None):
         """!
         @brief Network constructor.
 
@@ -51,6 +52,7 @@ class Network(Printable, Registrable, Vertex, Customizable):
         self.__prefix = prefix
         self.__aac = aac if aac != None else AddressAssignmentConstraint()
         self.__assigners = {}
+        self.__scope = scope
 
         self.__connected_nodes = []
 
@@ -66,6 +68,13 @@ class Network(Printable, Registrable, Vertex, Customizable):
         self.__rap = None
         self.__ecp = None
 
+    def scope(self)-> Scope:
+        """return a Scope that is specific to this Network"""
+        return NetScope(tier=NetScopeTier.Individual,
+                        net_type=NetScopeType.from_net(self),
+                        scope_id=int(self.__scope),
+                        net_id=self.getName())
+    
     def isDirect(self) -> bool:
         """!
         @brief test if this network is direct network. A direct network will be

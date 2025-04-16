@@ -120,15 +120,18 @@ class Interface(Printable):
         """
         self.__address = None
         self.__network = net
-        (l, b, d) = net.getDefaultLinkProperties()
-        self.__latency = l
-        self.__bandwidth = b
-        self.__drop = d
+        
+        #(l, b, d) = net.getDefaultLinkProperties()
+        self.__latency = 0
+        self.__bandwidth = 0
+        self.__drop = 0
+        
 
     def setLinkProperties(self, latency: int = 0, bandwidth: int = 0, packetDrop: float = 0) -> Interface:
         """!
         @brief Set link properties.
 
+        @note if not overriden the default link properties of the network are used
         @param latency (optional) latency to add to the link in ms, default 0.
         @param bandwidth (optional) egress bandwidth of the link in bps, 0 for unlimited, default 0.
         @param packetDrop (optional) link packet drop as percentage, 0 for unlimited, default 0.
@@ -152,7 +155,11 @@ class Interface(Printable):
 
         @returns tuple (latency, bandwidth, packet drop)
         """
-        return (self.__latency, self.__bandwidth, self.__drop)
+        #return (self.__latency, self.__bandwidth, self.__drop)
+        (l, b, d) = self.__network.getDefaultLinkProperties()
+        return (self.__latency if self.__latency>0 else l,
+                self.__bandwidth if self.__bandwidth>0 else b,
+                self.__drop if self.__drop>0 else d,)
 
     def getNet(self) -> Network:
         """!
@@ -285,8 +292,8 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
 
 
     def scope(self)-> Scope:
-        return Scope(ScopeTier.Node,
-                     node_type=ScopeType.from_node(self),
+        return Scope(NodeScopeTier.Node,
+                     node_type=NodeScopeType.from_node(self),
                      node_id=self.getName(),
                      as_id=self.getAsn())
 

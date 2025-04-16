@@ -55,7 +55,7 @@ class DynamicConfigurable(Configurable):
             Override this method in your Layer if you want more targeted
             setting of Options i.e. only on border-routers or hosts etc..
         """
-        from .Scope import Scope, ScopeTier
+        from .Scope import Scope, NodeScopeTier
              
         # set options on nodes directly
         reg = emulator.getRegistry()
@@ -65,7 +65,7 @@ class DynamicConfigurable(Configurable):
             for o in self.getAvailableOptions():
                 assert o, 'implementation error'
                 # TODO: if o has __prefix attribute add prefix  argument to setOption()
-                n.setOption(o, Scope(ScopeTier.Global))
+                n.setOption(o, Scope(NodeScopeTier.Global))
         
     
     def configure(self, emulator: Emulator):

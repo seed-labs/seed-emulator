@@ -1,7 +1,8 @@
 from __future__ import annotations
-from seedemu.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Emulator, Layer
+from seedemu.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Emulator, Layer, NetScope, NetScopeTier
 from typing import Dict, List
 from seedemu.options.Sysctl import SysctlOpts
+from seedemu.options.Net import NetOpts
 BaseFileTemplates: Dict[str, str] = {}
 
 BaseFileTemplates["interface_setup_script"] = """\
@@ -45,9 +46,19 @@ class Base(Layer, Graphable):
     __name_servers: List[str]
 
     def getAvailableOptions(self):
+        """options that should be installed on all Nodes in the emulation"""
         from seedemu.core.OptionRegistry import OptionRegistry
-        opt_keys = [ o.fullname() for o in SysctlOpts().components_recursive()]
+        opt_groups = [SysctlOpts()] # , NetOpts()
+        opt_keys = [ o.fullname() for og in opt_groups for o in og.components_recursive()]
         return [OptionRegistry().getOption(o) for o in opt_keys]
+    
+    def getNetOptions(self):
+        """options that should be installed on all Networks in the emulation"""
+        from seedemu.core.OptionRegistry import OptionRegistry
+        opt_groups = [ NetOpts()]
+        opt_keys = [ o.fullname() for og in opt_groups for o in og.components_recursive()]
+        return [OptionRegistry().getOption(o) for o in opt_keys]
+    
 
     def __init__(self):
         """!
@@ -81,6 +92,7 @@ class Base(Layer, Graphable):
     '''
 
     def configure(self, emulator: Emulator):
+
         
         self._log('registering nodes...')
         for asobj in self.__ases.values():
@@ -89,13 +101,18 @@ class Base(Layer, Graphable):
 
             asobj.registerNodes(emulator)
             asobj.inheritOptions(emulator)
-            
-
         self._log('setting up internet exchanges...')
         for ix in self.__ixes.values(): ix.configure(emulator)
+        # now all Networks are registered ..
+        nets = [ n for (scope,typ,name), n in emulator.getRegistry().getAll().items() if typ=='net']
+        # set defaults for NetOptions like Bandwidth, Mtu etc. ...
+        for n in nets:
+            for o in self.getNetOptions():
+                n.setOption(o, NetScope(NetScopeTier.Global))    
 
         self._log('setting up autonomous systems...')
         for asobj in self.__ases.values(): asobj.configure(emulator)
+
         super().configure(emulator)
 
     def render(self, emulator: Emulator) -> None:

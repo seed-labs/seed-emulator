@@ -19,7 +19,7 @@ class Customizable(object):
     def scope(self)-> Scope:
         """!@brief returns a scope that includes only this very customizable instance ,nothing else"""
         # it's only natural for a customizable to know its place in the hierarchy
-        if not self._scope: return Scope(ScopeTier.Global) # maybe introduce a ScopeTier.NONE for this...
+        if not self._scope: return Scope(NodeScopeTier.Global) # maybe introduce a ScopeTier.NONE for this...
         else: return self._scope
             
 
@@ -77,13 +77,13 @@ class Customizable(object):
 
     def _possible_scopes(scope: Scope) -> List[Scope]:
         possible_scopes = [
-            Scope(ScopeTier.Node, scope._node_type, 
+            Scope(NodeScopeTier.Node, scope._node_type, 
                   as_id=scope.asn, node_id=scope._node_id) if scope._node_id and scope._as_id and scope._node_type else None,   # Node-specific + type
-            Scope(ScopeTier.Node,node_id=scope._node_id, as_id=scope._as_id) if scope._node_id and scope._as_id else None,   # Node-specific
-            Scope(ScopeTier.AS, scope._node_type, as_id=scope._as_id) if scope._as_id and scope._node_type else None,   # AS & Type
-            Scope(ScopeTier.AS, ScopeType.ANY, as_id=scope._as_id) if scope._as_id else None,    # AS-wide
-            Scope(ScopeTier.Global, scope._node_type),   # Global & Type
-            Scope(ScopeTier.Global)                     # Global (fallback)
+            Scope(NodeScopeTier.Node,node_id=scope._node_id, as_id=scope._as_id) if scope._node_id and scope._as_id else None,   # Node-specific
+            Scope(NodeScopeTier.AS, scope._node_type, as_id=scope._as_id) if scope._as_id and scope._node_type else None,   # AS & Type
+            Scope(NodeScopeTier.AS, NodeScopeType.ANY, as_id=scope._as_id) if scope._as_id else None,    # AS-wide
+            Scope(NodeScopeTier.Global, scope._node_type),   # Global & Type
+            Scope(NodeScopeTier.Global)                     # Global (fallback)
         ]
         return possible_scopes
 

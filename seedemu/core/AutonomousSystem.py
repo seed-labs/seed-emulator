@@ -5,7 +5,7 @@ from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from .enums import NetworkType, NodeRole
 from .Node import Node, Router
-from .Scope import ScopeTier, Scope
+from .Scope import NodeScopeTier, Scope
 from .Emulator import Emulator
 from .Configurable import Configurable
 from .Customizable import Customizable
@@ -133,9 +133,13 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         for n in all_nodes:
             self.handDown(n)
 
+        all_nets=[obj for(scope,typ,name),obj in reg.getAll().items() if scope==str(self.getAsn()) and typ=='net']
+        for n in all_nets:
+            self.handDown(n) # TODO: this also installs  NodeOptions on the Net... which is no harm, but unnecessary
+
     def scope(self)-> Scope:
         """return a scope specific to this AS"""
-        return Scope(ScopeTier.AS, as_id=self.getAsn())
+        return Scope(NodeScopeTier.AS, as_id=self.getAsn())
 
 
     def configure(self, emulator: Emulator):
@@ -188,7 +192,7 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
 
         network = IPv4Network(prefix) if prefix != "auto" else self.__subnets.pop(0)
         assert name not in self.__nets, 'Network with name {} already exist.'.format(name)
-        self.__nets[name] = Network(name, NetworkType.Local, network, aac, direct)
+        self.__nets[name] = Network(name, NetworkType.Local, network, aac, direct, scope=str(self.__asn))
 
         return self.__nets[name]
 

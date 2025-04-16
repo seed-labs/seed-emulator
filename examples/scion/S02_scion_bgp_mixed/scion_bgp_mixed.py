@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from seedemu.compiler import Docker, Graphviz
-from seedemu.core import Emulator, OptionMode, Scope, ScopeTier, ScopeType, OptionRegistry
+from seedemu.core import Emulator, OptionMode, Scope, NodeScopeTier, NodeScopeType, OptionRegistry
 from seedemu.layers import (
     ScionBase, ScionRouting, ScionIsd, Scion, Ospf, Ibgp, Ebgp, PeerRelationship,
     SetupSpecification, CheckoutSpecification)
@@ -63,9 +63,9 @@ as150_br3.joinNetwork('net3').joinNetwork('net0').joinNetwork('ix103')
 # override global default for AS150
 as150.setOption(OptionRegistry().scion_loglevel('info', OptionMode.RUN_TIME))
 as150.setOption(OptionRegistry().scion_disable_bfd(mode = OptionMode.RUN_TIME),
-                Scope(ScopeTier.AS,
+                Scope(NodeScopeTier.AS,
                       as_id=as150.getAsn(),
-                      node_type=ScopeType.BRDNODE))
+                      node_type=NodeScopeType.BRDNODE))
 
 # override AS settings for individual nodes
 as150_br0.setOption(OptionRegistry().scion_loglevel('debug', OptionMode.RUN_TIME))
