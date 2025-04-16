@@ -2,7 +2,7 @@ from typing import List
 from functools import cmp_to_key
 from typing import Optional, Dict, Tuple
 from seedemu.core.Scope import *
-from seedemu.core.Option import BaseOption, OptionMode
+from seedemu.core.Option import BaseOption, OptionMode, OptionDomain
 
 class Customizable(object):
 
@@ -16,17 +16,22 @@ class Customizable(object):
         self._config = {}
         self._scope = None
     
-    def scope(self)-> Scope:
-        """!@brief returns a scope that includes only this very customizable instance ,nothing else"""
+    def scope(self, domain: OptionDomain = None)-> Scope:
+        """!@brief returns a scope that includes only this very customizable instance ,nothing else
+        @param domain depending on what you need the scope object for
+                (i.e. for which kind of Option you want to specify the scope for)
+                you might need a different kind of scope
+        """
         # it's only natural for a customizable to know its place in the hierarchy
-        if not self._scope: return Scope(NodeScopeTier.Global) # maybe introduce a ScopeTier.NONE for this...
+        if not self._scope: return NodeScope(NodeScopeTier.Global) # maybe introduce a ScopeTier.NONE for this...
         else: return self._scope
             
 
     def getScopedOption(self, key: str, scope: Scope = None, prefix: str = None) -> Optional[Tuple[BaseOption, Scope]]:
         """! @brief retrieves an option along with the most specific Scope in which it was set.
         """
-        if not scope:  scope = self.scope()
+        from seedemu.core.OptionRegistry import OptionRegistry
+        if not scope:  scope = self.scope(domain=OptionRegistry().getDomain(key, prefix))
 
         keys = [key]
 
@@ -76,15 +81,32 @@ class Customizable(object):
             return None
 
     def _possible_scopes(scope: Scope) -> List[Scope]:
-        possible_scopes = [
-            Scope(NodeScopeTier.Node, scope._node_type, 
-                  as_id=scope.asn, node_id=scope._node_id) if scope._node_id and scope._as_id and scope._node_type else None,   # Node-specific + type
-            Scope(NodeScopeTier.Node,node_id=scope._node_id, as_id=scope._as_id) if scope._node_id and scope._as_id else None,   # Node-specific
-            Scope(NodeScopeTier.AS, scope._node_type, as_id=scope._as_id) if scope._as_id and scope._node_type else None,   # AS & Type
-            Scope(NodeScopeTier.AS, NodeScopeType.ANY, as_id=scope._as_id) if scope._as_id else None,    # AS-wide
-            Scope(NodeScopeTier.Global, scope._node_type),   # Global & Type
-            Scope(NodeScopeTier.Global)                     # Global (fallback)
-        ]
+        if isinstance(scope, NodeScope):
+            possible_scopes = [
+                NodeScope(NodeScopeTier.Node, scope._node_type, 
+                      as_id=scope.asn, node_id=scope._node_id) if scope._node_id and scope._as_id and scope._node_type else None,   # Node-specific + type
+                NodeScope(NodeScopeTier.Node,node_id=scope._node_id, as_id=scope._as_id) if scope._node_id and scope._as_id else None,   # Node-specific
+                NodeScope(NodeScopeTier.AS, scope._node_type, as_id=scope._as_id) if scope._as_id and scope._node_type else None,   # AS & Type
+                NodeScope(NodeScopeTier.AS, NodeScopeType.ANY, as_id=scope._as_id) if scope._as_id else None,    # AS-wide
+                NodeScope(NodeScopeTier.Global, scope._node_type),   # Global & Type
+                NodeScope(NodeScopeTier.Global)                     # Global (fallback)
+            ]
+        if isinstance(scope, NetScope):
+            possible_scopes = [
+                NetScope(NetScopeTier.Individual,net_type=scope.type, scope_id=scope.scope, net_id=scope.net ) 
+                if scope.scope and scope.net and scope.type else None, # Net specific + type
+                NetScope(NetScopeTier.Individual, scope_id=scope.scope, net_id=scope.net ) 
+                if scope.scope and scope.net else None, # Net specific
+
+                NetScope(NetScopeTier.Scoped, scope.type, scope_id=scope.scope) 
+                if scope.scope and scope.type else None,   # scope & Type
+                NetScope(NetScopeTier.Scoped, NetScopeType.ANY, scope_id=scope.scope)
+                if scope.scope else None,    # scope-wide
+
+                NetScope(NetScopeTier.Global, net_type=scope.type),
+                NetScope(NetScopeTier.Global)
+            ]
+
         return possible_scopes
 
     def _getKeys(self) -> List[str]:
@@ -108,15 +130,29 @@ class Customizable(object):
             i.e. ASes are a collection of Nodes.
             This methods performs the inheritance of options from parent to child.
         """
-        
-        try: # scopes could be incomparable
-            assert self.scope()>child.scope(), 'logic error - cannot inherit options from more general scopes'
-        except :
-            pass
+        from .Network import Network
+        from .Node import Node
+        dom = OptionDomain.NET if type(child)== Network else OptionDomain.NODE
+        s1=self.scope(dom)
+        s2=child.scope(dom)
+
+       
+        assert not s1 < s2, 'logic error - cannot inherit options from more general scopes'
 
         for k, val in self._config.items():
             for (op, s) in val:
-                child.setOption(op, s)
+                if self.valid_down(op,child):
+                    child.setOption(op, s)
+
+    @staticmethod
+    def valid_down(op, child):
+            from .Network import Network
+            from .Node import Node
+            # enforce option-domains only at the lowest granularity (customizable hierarchy): Nodes and Networks
+            # Any aggregates of higher levels i.e. ASes, ISDs (that don't inherit neither Node nor Network)
+            #  can have Options of mixed domains
+            return not ((op.optiondomain() == OptionDomain.NET and issubclass(type(child), Node)) or 
+                        (issubclass( type(child), Network) and op.optiondomain()==OptionDomain.NODE ) )
 
     def setOption(self, op: BaseOption, scope: Scope = None ):
         """! @brief set option within the given scope.
@@ -125,6 +161,8 @@ class Customizable(object):
         # TODO should we add a check here, that scope is of same or higher Tier ?!
         # Everything else would be counterintuitive i.e. setting individual node overrides through the 
         # API of the AS , rather than the respective node's itself
+
+        assert self.valid_down(op, self), 'input error'
 
         if not scope:  scope = self.scope()
 

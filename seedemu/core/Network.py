@@ -10,6 +10,7 @@ from .Visualization import Vertex
 from .Customizable import Customizable
 from .Scope import Scope,NetScope, NetScopeTier, NetScopeType
 from typing import Dict, Tuple, List
+from .OptionUtil import OptionDomain
 
 class Network(Printable, Registrable, Vertex, Customizable):
     """!
@@ -68,10 +69,19 @@ class Network(Printable, Registrable, Vertex, Customizable):
         self.__rap = None
         self.__ecp = None
 
-    def scope(self)-> Scope:
+    def scope(self, domain: OptionDomain = None)-> Scope:
         """return a Scope that is specific to this Network"""
-        return NetScope(tier=NetScopeTier.Individual,
-                        net_type=NetScopeType.from_net(self),
+
+        assert domain in [OptionDomain.NET, None], 'input error'
+        match (nt:=NetScopeType.from_net(self)):
+            case NetScopeType.XC:
+                return NetScope(tier=NetScopeTier.Individual,
+                        net_type=nt,
+                        scope_id=0, # scope of XC nets is None otherwise
+                        net_id=self.getName())
+            case _:
+                return NetScope(tier=NetScopeTier.Individual,
+                        net_type=nt,
                         scope_id=int(self.__scope),
                         net_id=self.getName())
     

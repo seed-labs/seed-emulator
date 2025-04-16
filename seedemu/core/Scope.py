@@ -1,6 +1,7 @@
 from enum import Enum, IntEnum
 from typing import Tuple, Optional
 from abc import ABC, abstractmethod
+from .OptionUtil import OptionDomain
 
 # could be replaced by @total_order
 class ComparableEnum(Enum):
@@ -75,6 +76,10 @@ class NodeScopeType(ScopeType):
 
 
 class Scope(ABC):
+    @abstractmethod
+    def domain(self) -> OptionDomain:
+        pass
+
     @property
     @abstractmethod
     def tier(self) -> ScopeTier:
@@ -119,7 +124,11 @@ class Scope(ABC):
         return 0  # Fallback: Treat as equal or use another sorting logic
 
 
-class NodeScope:
+# TODO create EmuScope (EmulationScope) that is domain agnostic and can be compared with Node&NetScope
+#       for DockerCompiler::generateEnvFile()
+#       It would do the comparison solely on 'scope' (that is ASN) and ignore type
+
+class NodeScope(Scope):
     """!
     @brief strong type for the hierarchical scope of configuration settings.
             i.e. ''(global/simulation wide), '150' (AS level) or '150_brdnode_br0' (individual node  override)
@@ -127,6 +136,8 @@ class NodeScope:
         Scopes implement <> comparison to readily determine when options are overriden by more specific scopes.
         However they do not form a total order (i.e. ScopeTypes like rnode, hnode within the same AS or Globally cannot be compared )
         Also Scope does not cater for multihomed ASes where nodes can be in more than one AS at the same time.
+    @details A NodeScope object can define or specify the scope (or extension) of a NodeOption.
+             This scope can encompass the following registry types/items: 'hnode', 'rnode', 'csnode', 'brdnode', 'rsnode'
     """
     
     # NOTE ISD scope could be added here
@@ -165,6 +176,10 @@ class NodeScope:
         """Allows Scope instances to be used as dictionary keys."""
         return hash((self.tier, self.node_type, self.node_id, self.as_id))
     '''
+    
+    def domain(self) -> OptionDomain:
+        return OptionDomain.NODE
+
     @property
     def tier(self) -> NodeScopeTier:
         return self._tier
@@ -564,19 +579,14 @@ class NetScopeType(ScopeType):
                 return NetScopeType.BRIDGE
 
 
-class NetScope:
+class NetScope(Scope):
     """!
     @brief strong type for the hierarchical scope of configuration settings.
    
-    @note Scopes are immutable after construction and serve as a multi-level key or index into a set of options.
-        Scopes implement <> comparison to readily determine when options are overriden by more specific scopes.
-        However they do not form a total order (i.e. ScopeTypes like rnode, hnode within the same AS or Globally cannot be compared )
-        Also Scope does not cater for multihomed ASes where nodes can be in more than one AS at the same time.
+    @details A NetScope object can define or specify the scope (or extension) of a NetOption.
+             This scope can encompass the following registry types/items: 'net'
     """
-    
-    # NOTE ISD scope could be added here
 
-  
     def __init__(self,
                   tier: NetScopeTier,
                   net_type: NetScopeType = NetScopeType.ANY,
@@ -592,7 +602,7 @@ class NetScope:
         if tier==NetScopeTier.Global:
             assert net_id==None, 'invalid input'
             assert scope_id==None, 'invalid input'
-        if tier==NetScopeTier.Node:
+        if tier==NetScopeTier.Individual:
             assert net_id!=None, 'invalid input'
             assert scope_id!=None, 'invalid input'
 
@@ -605,6 +615,10 @@ class NetScope:
         """Allows Scope instances to be used as dictionary keys."""
         return hash((self.tier, self.node_type, self.node_id, self.as_id))
     '''
+
+    def domain(self) -> OptionDomain:
+        return OptionDomain.NET
+
     @property
     def tier(self) -> NetScopeTier:
         return self._tier
@@ -631,7 +645,8 @@ class NetScope:
         """ returns a two bools indicating wheter the scopes are:
           lt/gt comparable or identical"""
 
-        if not isinstance(other, NetScope): return (False, False)
+        if not isinstance(other, NetScope):            
+            return (False, False)
 
         same_type = True if self.type == other.type else False
         common_type = self.type & other.type
@@ -672,7 +687,7 @@ class NetScope:
                 case NetScopeTier.Global:
                     # other.tier must be AS or Node
                     match other.tier:
-                        case NetScopeTier.AS:
+                        case NetScopeTier.Scoped:
                             if same_type:
                                 # other AS scope is subset of self
                                 return True, False
@@ -682,7 +697,7 @@ class NetScope:
                             else:
                                 # types conflict and prevent inclusion
                                 return False, False
-                        case NetScopeTier.Node:
+                        case NetScopeTier.Individual:
                             if same_type:
                                 return True, False
                             elif otherTypeInSelf: 
@@ -690,7 +705,7 @@ class NetScope:
                             else:
                                 return False, False
                     
-                case NetScopeTier.AS:
+                case NetScopeTier.Scoped:
                     
                     match  other.tier:
                         case NetScopeTier.Global:
@@ -701,7 +716,7 @@ class NetScope:
                             else:
                                 # both scopes make statements about different types of scopes
                                 return False, False
-                        case NetScopeTier.Node:
+                        case NetScopeTier.Individual:
                             if same_scope:
                                 if same_type:
                                     return True, False
@@ -712,10 +727,10 @@ class NetScope:
                             else:
                                 return False, False
                     
-                case NetScopeTier.Node:
+                case NetScopeTier.Individual:
 
                     match other.tier:
-                        case NetScopeTier.AS:
+                        case NetScopeTier.Scoped:
                             if same_scope:
                                 if same_type:
                                     return True, False
@@ -810,13 +825,13 @@ class NetScope:
                             else:
                                 return False
                     
-                case NetScopeTier.AS:
+                case NetScopeTier.Scoped:
                     
                     match  other.tier:
                         case NetScopeTier.Global:
                             
                                 return False
-                        case NetScopeTier.Node:
+                        case NetScopeTier.Individual:
                             if same_asn:
                                 if same_type:
                                     return True
@@ -827,7 +842,7 @@ class NetScope:
                             else:
                                 return False
                     
-                case NetScopeTier.Node:
+                case NetScopeTier.Individual:
 
                     match other.tier:
                         case NetScopeTier.Scoped:                            

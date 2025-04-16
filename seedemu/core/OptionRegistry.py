@@ -1,4 +1,4 @@
-from typing import Dict, Type
+from typing import Dict, Type, Optional
 
 
 class SingletonMeta(type):
@@ -50,6 +50,14 @@ class OptionRegistry(metaclass=SingletonMeta):
             raise ValueError(f'Option "{name}" is not registered.')
         # Instantiate with given arguments
         return option_cls(*args[1:], **kwargs)
+
+    @classmethod
+    def getDomain(cls, key: str, prefix: str = None) -> Optional['OptionDomain']:
+        o = cls.getType(key, prefix)
+        if o:
+            return o.optiondomain()
+        else:
+            return None
 
 
     @classmethod

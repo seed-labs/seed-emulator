@@ -5,7 +5,8 @@ from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from .enums import NetworkType, NodeRole
 from .Node import Node, Router
-from .Scope import NodeScopeTier, Scope
+from .Scope import NodeScopeTier, Scope, NodeScope, NetScope, NetScopeTier
+from .Option import OptionDomain
 from .Emulator import Emulator
 from .Configurable import Configurable
 from .Customizable import Customizable
@@ -137,9 +138,13 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         for n in all_nets:
             self.handDown(n) # TODO: this also installs  NodeOptions on the Net... which is no harm, but unnecessary
 
-    def scope(self)-> Scope:
+    def scope(self, domain: OptionDomain = None)-> Scope:
         """return a scope specific to this AS"""
-        return Scope(NodeScopeTier.AS, as_id=self.getAsn())
+        match domain:
+            case OptionDomain.NODE:
+                return NodeScope(NodeScopeTier.AS, as_id=self.getAsn())
+            case OptionDomain.NET:
+                return NetScope(NetScopeTier.Scoped, scope_id=self.getAsn())
 
 
     def configure(self, emulator: Emulator):

@@ -8,6 +8,7 @@ from .Scope import *
 from .Registry import Registrable
 from .Emulator import Emulator
 from .Customizable import Customizable
+from .OptionUtil import OptionDomain
 from .Volume import BaseVolume
 from .Configurable import Configurable
 from .enums import NetworkType
@@ -291,8 +292,9 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         self.__note = None
 
 
-    def scope(self)-> Scope:
-        return Scope(NodeScopeTier.Node,
+    def scope(self, domain: OptionDomain = None)-> Scope:
+        assert domain in [OptionDomain.NODE, None], 'input error'
+        return NodeScope(NodeScopeTier.Node,
                      node_type=NodeScopeType.from_node(self),
                      node_id=self.getName(),
                      as_id=self.getAsn())
@@ -360,6 +362,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
             else:
                 # netname = 'as{}.{}_as{}.{}'.format(self.getAsn(), self.getName(), peerasn, peername)
                 netname = ''.join(choice(ascii_letters) for i in range(10))
+                # TOODO scope of XC nets ?! pair of both ASes .. ?!
                 net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False) # TODO: XC nets w/ direct flag?
                 net.setDefaultLinkProperties(latency, bandwidth, packetDrop).setMtu(mtu) # Set link properties
                 self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))

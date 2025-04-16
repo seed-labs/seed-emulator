@@ -1,6 +1,5 @@
-from enum import Flag, auto
 from typing import List, Optional, Type, Any
-
+from .OptionUtil import *
 
 
 class AutoRegister():
@@ -74,17 +73,6 @@ class BaseComponent(): # metaclass=OptionGroupMeta
                 opts.extend(c.components_recursive(prefix = f'{cls.getName()}_{c.getName()}'))
         return opts
 
-class OptionMode(Flag):
-    """!@brief characteristics of an option,
-        during which time it might be changed or set
-    """
-    # static/hardcoded (require re-compile + image-rebuild to change)
-    BUILD_TIME = auto()
-    # i.e. envsubst (require only docker compose stop/start )
-    RUN_TIME = auto()
-
-
-
 class OptionGroupMeta(type): # or BaseComponentMeta ..
     """Metaclass to auto-register nested options within a group."""
 
@@ -112,6 +100,7 @@ class OptionGroupMeta(type): # or BaseComponentMeta ..
                     # prefixed_name = f"{name}_{attr_value.name()}"
                     # better call new_cls.add() # here
                     new_cls._children[attr_value.name] = attr_value
+                    attr_value.domain = new_cls.optiondomain()
             # don't register nested options twice (but only once as child of the parent 'composite')
             if '.' not in qname or qname.startswith('SEEDEmuOptionSystemTestCase'):
                 OptionRegistry().register(new_cls)
@@ -120,6 +109,17 @@ class OptionGroupMeta(type): # or BaseComponentMeta ..
 # Actually duplicated with 'Option'
 class BaseOption(BaseComponent, metaclass=OptionGroupMeta):
     """! a base class for KEY-VALUE pairs representing Settings, Parameters or Feature Flags"""
+
+    domain: OptionDomain = None # set by the parent option container
+
+    @property
+    def domain(self) -> OptionDomain:
+        # if domain not specified by parent container,
+        # user must implement optiondomain()
+        if (d:= self.__class__.domain) != None:
+            return d
+        else:
+            return self.optiondomain()
 
     def __eq__(self, other):
         if not other: return False
@@ -139,10 +139,15 @@ class BaseOption(BaseComponent, metaclass=OptionGroupMeta):
         """Should allow setting a new value."""
         pass
 
+    @classmethod
+    def optiondomain(cls) -> OptionDomain:
+       return cls.domain
+
     @property
     def mode(self)->OptionMode:
         """Should return the mode of the option."""
         pass
+
     @mode.setter
     def mode(self, new_mode: OptionMode):
         pass
@@ -161,6 +166,7 @@ class Option(BaseOption):
     """
     # Immutable class variable to be defined in subclasses
     value_type: Type[Any]
+    
 
     def __init__(self, value: Optional[Any] = None, mode: OptionMode = None):
         cls = self.__class__
@@ -229,6 +235,8 @@ class Option(BaseOption):
         assert new_value != None, 'Logic Error - option value cannot be None!'
         self._mutable_value = new_value
 
+    
+
     @property
     def mode(self):
         if (mode := self._mutable_mode) != None:
@@ -246,6 +254,12 @@ class Option(BaseOption):
             and its allowed values
         """
         return cls.__doc__ or "No documentation available."
+    
+    @classmethod
+    def domain(cls) -> OptionDomain:
+        """ the types of entities that a given Option 
+        can apply or refer to"""
+        return OptionDomain.NODE
 
 
 #class ScopedOption:
@@ -257,6 +271,7 @@ class Option(BaseOption):
 
 class BaseOptionGroup(BaseComponent , metaclass=OptionGroupMeta):
     _children = {}
+    domain: OptionDomain = None
 
 
     def describe(self) -> str:
@@ -276,3 +291,7 @@ class BaseOptionGroup(BaseComponent , metaclass=OptionGroupMeta):
     @classmethod
     def components(cls):
         return [v for _, v in cls._children.items()]
+    
+    @classmethod
+    def optiondomain(cls) -> OptionDomain:
+        return cls.domain

@@ -1,7 +1,8 @@
-from seedemu.core import BaseOptionGroup, Option, OptionMode
+from seedemu.core import BaseOptionGroup, Option, OptionMode, OptionDomain
 
 
 class NetOpts(BaseOptionGroup):
+    domain = OptionDomain.NET
 
     class Mtu(Option):
         """!@ Maximum Transmission Unit of a Network in [byte]

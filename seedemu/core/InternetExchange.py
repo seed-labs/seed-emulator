@@ -36,7 +36,7 @@ class InternetExchange(Printable, Configurable):
         network = IPv4Network(prefix) if prefix != "auto" else IPv4Network("10.{}.0.0/24".format(self.__id))
 
         self.__name = 'ix{}'.format(str(self.__id))
-        self.__net = Network(self.__name, NetworkType.InternetExchange, network, aac, False)
+        self.__net = Network(self.__name, NetworkType.InternetExchange, network, aac, False, scope=str(id))
 
         if create_rs:
             self.__rs = Router(self.__name, NodeRole.RouteServer, self.__id)      

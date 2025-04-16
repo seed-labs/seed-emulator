@@ -1,6 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, NodeScopeType, NodeScopeTier, OptionHandling, BaseVolume, OptionMode
+from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, NodeScope, NodeScopeType, NodeScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
@@ -1346,7 +1346,7 @@ class Docker(Compiler):
             dummies = local_images + self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))
 
-        self.generateEnvFile(Scope(NodeScopeTier.Global),'')
+        self.generateEnvFile(NodeScope(NodeScopeTier.Global),'')
 
     def _computeComposeTopLvlVolumes(self) -> str:
         """!@brief render the 'volumes:' section of the docker-compose.yml file
