@@ -94,7 +94,8 @@ def run(dumpfile=None, hosts_per_as=2):
     o = OptionRegistry().sysctl_netipv4_conf_rp_filter({'all': False, 'default': False, 'net0': False}, mode = OptionMode.RUN_TIME)
     new_host.setOption(o)
 
-
+    o = OptionRegistry().sysctl_netipv4_udp_rmem_min(5000, mode = OptionMode.RUN_TIME)
+    new_host.setOption(o)
     
     ###############################################################################
     # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
