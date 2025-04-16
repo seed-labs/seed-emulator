@@ -9,7 +9,7 @@ from typing import List
 from ipaddress import IPv4Network, IPv4Address
 from sys import stderr
 import re, random, string
-from .Scope import Scope, NodeScopeTier
+from .Scope import NodeScope, NodeScopeTier
 
 class Action(Enum):
     """!
@@ -181,7 +181,7 @@ class Binding(Printable):
         # 'host' didnt exist back when Base::configure() installed
         #  the global default sysctl options on all nodes
         for o in base.getAvailableOptions():
-            host.setOption(o, Scope(NodeScopeTier.Global))
+            host.setOption(o, NodeScope(NodeScopeTier.Global))
 
         # set name servers
         host.setNameServers(asObject.getNameServers())

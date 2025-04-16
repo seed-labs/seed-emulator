@@ -330,7 +330,7 @@ class Emulator:
         @returns service network.
         """
         if self.__service_net == None:
-            self.__service_net = self.__registry.register('seedemu', 'net', '000_svc', Network('000_svc', NetworkType.Bridge, IPv4Network(self.__service_net_prefix), direct = False))
+            self.__service_net = self.__registry.register('seedemu', 'net', '000_svc', Network('000_svc', NetworkType.Bridge, IPv4Network(self.__service_net_prefix), direct = False, scope='-1'))
 
         return self.__service_net
 

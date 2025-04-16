@@ -363,7 +363,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
                 # netname = 'as{}.{}_as{}.{}'.format(self.getAsn(), self.getName(), peerasn, peername)
                 netname = ''.join(choice(ascii_letters) for i in range(10))
                 # TOODO scope of XC nets ?! pair of both ASes .. ?!
-                net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False) # TODO: XC nets w/ direct flag?
+                net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False, scope='0') # TODO: XC nets w/ direct flag?
                 net.setDefaultLinkProperties(latency, bandwidth, packetDrop).setMtu(mtu) # Set link properties
                 self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
 

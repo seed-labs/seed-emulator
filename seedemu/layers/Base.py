@@ -60,7 +60,7 @@ class Base(Layer, Graphable):
         return [OptionRegistry().getOption(o) for o in opt_keys]
     
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """!
         @brief Base layer constructor.
         """
@@ -68,6 +68,16 @@ class Base(Layer, Graphable):
         self.__ases = {}
         self.__ixes = {}
         self.__name_servers = []
+        from seedemu.core import OptionRegistry
+        for k,v in kwargs.items():
+        # Replace the 'defaults' class methods dynamically
+      
+            opt_cls = type(v)
+            # Capture 'new_value' as default argument (forces a snapshot of the current value)
+            opt_cls.default = classmethod(lambda cls, new_value=v.value: new_value)
+            opt_cls.defaultMode = classmethod(lambda cls, newmode=v.mode: newmode)
+            prefix = getattr(opt_cls, '__prefix') if hasattr(opt_cls, '__prefix') else None
+            OptionRegistry().register(opt_cls, prefix)
 
     def getName(self) -> str:
         return "Base"

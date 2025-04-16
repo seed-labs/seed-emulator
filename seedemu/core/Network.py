@@ -117,7 +117,7 @@ class Network(Printable, Registrable, Vertex, Customizable):
 
         @returns self, for chaining API calls.
         """
-        from OptionRegistry import OptionRegistry
+        from .OptionRegistry import OptionRegistry
         self.setOption( OptionRegistry().net_mtu(mtu) )
 
         return self
