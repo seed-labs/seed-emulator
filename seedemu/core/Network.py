@@ -7,9 +7,10 @@ from .enums import NetworkType, NodeRole
 from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
 from .Visualization import Vertex
+from .Customizable import Customizable
 from typing import Dict, Tuple, List
 
-class Network(Printable, Registrable, Vertex):
+class Network(Printable, Registrable, Vertex, Customizable):
     """!
     @brief The network class.
 
@@ -23,12 +24,6 @@ class Network(Printable, Registrable, Vertex):
     __assigners: Dict[NodeRole, Assigner]
 
     __connected_nodes: List['Node']
-
-    __d_latency: int       # in ms
-    __d_bandwidth: int     # in bps
-    __d_drop: float        # percentage
-
-    __mtu: int
 
     __direct: bool
 
@@ -65,12 +60,6 @@ class Network(Printable, Registrable, Vertex):
         self.__assigners[ NodeRole.Router ] = arouter
         self.__assigners[ NodeRole.Host ] = ahost
         self.__assigners[ NodeRole.ControlService ] = ahost
-
-        self.__d_latency = 0
-        self.__d_bandwidth = 0
-        self.__d_drop = 0
-
-        self.__mtu = 1500
 
         self.__direct = direct
 
@@ -109,7 +98,8 @@ class Network(Printable, Registrable, Vertex):
 
         @returns self, for chaining API calls.
         """
-        self.__mtu = mtu
+        from OptionRegistry import OptionRegistry
+        self.setOption( OptionRegistry().net_mtu(mtu) )
 
         return self
 
@@ -119,7 +109,7 @@ class Network(Printable, Registrable, Vertex):
 
         @returns mtu.
         """
-        return self.__mtu
+        return self.getOption('mtu', prefix='net').value
 
     def setDefaultLinkProperties(self, latency: int = 0, bandwidth: int = 0, packetDrop: float = 0) -> Network:
         """!
@@ -135,11 +125,13 @@ class Network(Printable, Registrable, Vertex):
         assert latency >= 0, 'invalid latency'
         assert bandwidth >= 0, 'invalid bandwidth'
         assert packetDrop >= 0 and packetDrop <= 100, 'invalid packet drop'
-
-        self.__d_latency = latency
-        self.__d_bandwidth = bandwidth
-        self.__d_drop = packetDrop
-
+        from OptionRegistry import OptionRegistry
+        if latency > 0:
+            self.setOption(OptionRegistry().net_latency(latency))
+        if bandwidth > 0:
+            self.setOption(OptionRegistry().net_bandwidth(bandwidth))
+        if packetDrop > 0:
+            self.setOption(OptionRegistry().net_packetloss(packetDrop))
         return self
 
     def setType(self, newType: NetworkType) -> Network:
@@ -161,7 +153,9 @@ class Network(Printable, Registrable, Vertex):
 
         @returns tuple (latency, bandwidth, packet drop)
         """
-        return (self.__d_latency, self.__d_bandwidth, self.__d_drop)
+        return (self.getOption('latency', prefix='net').value,
+                self.getOption('bandwidth', prefix='net').value,
+                self.getOption('packetloss', prefix='net').value)
 
     def getName(self) -> str:
         """!

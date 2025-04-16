@@ -94,6 +94,8 @@ class OptionGroupMeta(type): # or BaseComponentMeta ..
             name = 'scion'
         if name.lower() == 'sysctlopts':
             name = 'sysctl'
+        if name.lower() == 'netopts':
+            name = 'net'
 
         from .OptionRegistry import OptionRegistry
 
