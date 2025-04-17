@@ -12,7 +12,7 @@ import inspect
 from seedemu.core import ( Emulator, Node, ScionAutonomousSystem,
                           promote_to_scion_router,
                           Network, Router, BaseOption, OptionMode, Layer,
-                          BaseOptionGroup, Option)
+                          BaseOptionGroup, Option, OptionDomain)
 from seedemu.core.enums import NetworkType
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import Routing, ScionBase, ScionIsd
@@ -27,7 +27,7 @@ class ScionStackOpts(BaseOptionGroup):
     # TODO: add CS tracing
     # TODO: add dispatchable port range
     # make installation of test-tools optional (bwtester etc.)
-
+    domain: OptionDomain = OptionDomain.NODE
     class ROTATE_LOGS(Option):
         """prevent excessive growth of log files for longer running simulations
         by rotating log files """
