@@ -292,7 +292,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         self.__note = None
 
 
-    def scope(self, domain: OptionDomain = None)-> Scope:
+    def scope(self, domain: OptionDomain = None)-> NodeScope:
         assert domain in [OptionDomain.NODE, None], 'input error'
         return NodeScope(NodeScopeTier.Node,
                      node_type=NodeScopeType.from_node(self),

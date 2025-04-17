@@ -8,7 +8,7 @@ from .AutonomousSystem import AutonomousSystem
 from .Emulator import Emulator
 from .enums import NodeRole
 from .Node import Node
-from .Scope import Scope, NodeScopeTier
+from .Scope import NodeScope, NodeScopeTier
 from .OptionUtil import OptionDomain
 
 class ScionASN:
@@ -159,7 +159,7 @@ class ScionAutonomousSystem(AutonomousSystem):
         self.__note = None
         self.__generateStaticInfoConfig = False
 
-    def scope(self, domain: OptionDomain = None)-> Scope:
+    def scope(self, domain: OptionDomain = None)-> NodeScope:
         return super().scope(domain)
 
     def createRealWorldRouter(self, name: str, hideHops: bool = True, prefixes: List[str] = None) -> Node:

@@ -8,7 +8,7 @@ from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
 from .Visualization import Vertex
 from .Customizable import Customizable
-from .Scope import Scope,NetScope, NetScopeTier, NetScopeType
+from .Scope import NodeScope,NetScope, NetScopeTier, NetScopeType
 from typing import Dict, Tuple, List
 from .OptionUtil import OptionDomain
 
@@ -69,7 +69,7 @@ class Network(Printable, Registrable, Vertex, Customizable):
         self.__rap = None
         self.__ecp = None
 
-    def scope(self, domain: OptionDomain = None)-> Scope:
+    def scope(self, domain: OptionDomain = None)-> NodeScope:
         """return a Scope that is specific to this Network"""
 
         assert domain in [OptionDomain.NET, None], 'input error'
@@ -144,7 +144,7 @@ class Network(Printable, Registrable, Vertex, Customizable):
         assert latency >= 0, 'invalid latency'
         assert bandwidth >= 0, 'invalid bandwidth'
         assert packetDrop >= 0 and packetDrop <= 100, 'invalid packet drop'
-        from OptionRegistry import OptionRegistry
+        from .OptionRegistry import OptionRegistry
         if latency > 0:
             self.setOption(OptionRegistry().net_latency(latency))
         if bandwidth > 0:

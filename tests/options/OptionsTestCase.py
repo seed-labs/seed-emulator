@@ -4,7 +4,10 @@
 import unittest as ut
 import os
 from seedemu.core import (
-    Scope,
+    NodeScope,
+    NetScope,
+    NetScopeTier,
+    NetScopeType,
     NodeScopeTier,
     NodeScopeType,
     BaseOption,
@@ -37,54 +40,76 @@ class SEEDEmuOptionSystemTestCase(SeedEmuTestCase):
         """currently there are just no integration tests for options"""
         pass
 
+    def test_netscope(self):
+        cmpr =  NetScope.collate
+        self.assertTrue( NetScope(NetScopeTier.Global) > NetScope(NetScopeTier.Scoped, scope_id=150), 'global scope is superset of AS scopes')
+        self.assertTrue( NetScope(NetScopeTier.Scoped, scope_id=150) < NetScope(NetScopeTier.Global) , 'AS scopes are subset of global scope')
 
-    def test_scope(self):
-        """!@brief tests proper inclusion/exclusion, intersection and union of Scopes"""
-        cmpr =  Scope.collate
-
-        self.assertTrue( Scope(NodeScopeTier.Global) > Scope(NodeScopeTier.AS, as_id=150), 'global scope is superset of AS scopes')
-        self.assertTrue( Scope(NodeScopeTier.AS, as_id=150) < Scope(NodeScopeTier.Global) , 'AS scopes are subset of global scope')
-
-        self.assertTrue( cmpr(Scope(NodeScopeTier.AS, as_id=150),
-                              Scope(NodeScopeTier.AS, as_id=160))==0, 'disjoint AS scopes')
-        self.assertTrue( cmpr(Scope(NodeScopeTier.Node, as_id=150, node_id='br0'),
-                              Scope(NodeScopeTier.Node, as_id=160, node_id='br0'))==0,
-                              'disjoint Nodes scopes different ASes')
-        self.assertTrue( cmpr(Scope(NodeScopeTier.Node, as_id=150, node_id='br0'),
-                              Scope(NodeScopeTier.Node, as_id=150, node_id='br1'))==0,
-                              'disjoint Nodes scopes same AS')
-        self.assertTrue( cmpr(Scope(NodeScopeTier.AS, as_id=150,node_type=NodeScopeType.HNODE),
-                              Scope(NodeScopeTier.AS, as_id=150,node_type=NodeScopeType.BRDNODE))==0,
+        self.assertTrue( cmpr(NetScope(NetScopeTier.Scoped, scope_id=150),
+                              NetScope(NetScopeTier.Scoped, scope_id=160))==0, 'disjoint AS scopes')
+        self.assertTrue( cmpr(NetScope(NetScopeTier.Individual, scope_id=150, net_id='br0'),
+                              NetScope(NetScopeTier.Individual, scope_id=160, net_id='br0'))==0,
+                              'disjoint Net scopes different Scopes')
+        self.assertTrue( cmpr(NetScope(NetScopeTier.Individual, scope_id=150, net_id='br0'),
+                              NetScope(NetScopeTier.Individual, scope_id=150, net_id='br1'))==0,
+                              'disjoint Net scopes same AS')
+        self.assertTrue( cmpr(NetScope(NetScopeTier.Scoped, scope_id=150,net_type=NetScopeType.IX),
+                              NetScope(NetScopeTier.Scoped, scope_id=150,net_type=NetScopeType.BRIDGE))==0,
                               'disjoint Types scopes at AS level')
-        self.assertTrue( cmpr(Scope(NodeScopeTier.AS, as_id=150,node_type=NodeScopeType.HNODE),
-                              Scope(NodeScopeTier.AS, as_id=160,node_type=NodeScopeType.BRDNODE))==0,
+        self.assertTrue( cmpr(NetScope(NetScopeTier.Scoped, scope_id=150,net_type=NetScopeType.LOCAL),
+                              NetScope(NetScopeTier.Scoped, scope_id=160,net_type=NetScopeType.XC))==0,
                               'disjoint Types as well as ASes')
-        self.assertTrue( cmpr(Scope(NodeScopeTier.Global,node_type=NodeScopeType.HNODE),
-                              Scope(NodeScopeTier.Global,node_type=NodeScopeType.BRDNODE))==0,
+        self.assertTrue( cmpr(NetScope(NetScopeTier.Global,net_type=NetScopeType.LOCAL),
+                              NetScope(NetScopeTier.Global,net_type=NetScopeType.IX))==0,
                               'disjoint Types scopes at global level')
 
-        self.assertTrue ( Scope(NodeScopeTier.AS, as_id=150) >
-                          Scope(NodeScopeTier.Node, as_id=150, node_id='brd0', node_type=NodeScopeType.BRDNODE),
+    def test_scope(self):
+        """!@brief tests proper inclusion/exclusion, intersection and union of NodeScopes"""
+        cmpr =  NodeScope.collate
+
+        self.assertTrue( NodeScope(NodeScopeTier.Global) > NodeScope(NodeScopeTier.AS, as_id=150), 'global scope is superset of AS scopes')
+        self.assertTrue( NodeScope(NodeScopeTier.AS, as_id=150) < NodeScope(NodeScopeTier.Global) , 'AS scopes are subset of global scope')
+
+        self.assertTrue( cmpr(NodeScope(NodeScopeTier.AS, as_id=150),
+                              NodeScope(NodeScopeTier.AS, as_id=160))==0, 'disjoint AS scopes')
+        self.assertTrue( cmpr(NodeScope(NodeScopeTier.Node, as_id=150, node_id='br0'),
+                              NodeScope(NodeScopeTier.Node, as_id=160, node_id='br0'))==0,
+                              'disjoint Nodes scopes different ASes')
+        self.assertTrue( cmpr(NodeScope(NodeScopeTier.Node, as_id=150, node_id='br0'),
+                              NodeScope(NodeScopeTier.Node, as_id=150, node_id='br1'))==0,
+                              'disjoint Nodes scopes same AS')
+        self.assertTrue( cmpr(NodeScope(NodeScopeTier.AS, as_id=150,node_type=NodeScopeType.HNODE),
+                              NodeScope(NodeScopeTier.AS, as_id=150,node_type=NodeScopeType.BRDNODE))==0,
+                              'disjoint Types scopes at AS level')
+        self.assertTrue( cmpr(NodeScope(NodeScopeTier.AS, as_id=150,node_type=NodeScopeType.HNODE),
+                              NodeScope(NodeScopeTier.AS, as_id=160,node_type=NodeScopeType.BRDNODE))==0,
+                              'disjoint Types as well as ASes')
+        self.assertTrue( cmpr(NodeScope(NodeScopeTier.Global,node_type=NodeScopeType.HNODE),
+                              NodeScope(NodeScopeTier.Global,node_type=NodeScopeType.BRDNODE))==0,
+                              'disjoint Types scopes at global level')
+
+        self.assertTrue ( NodeScope(NodeScopeTier.AS, as_id=150) >
+                          NodeScope(NodeScopeTier.Node, as_id=150, node_id='brd0', node_type=NodeScopeType.BRDNODE),
                         'node scope is subset of AS scope')
 
-        self.assertTrue( not ( Scope(NodeScopeTier.AS, as_id=150) <
-                              Scope(NodeScopeTier.Node, as_id=150, node_id='brd0', node_type=NodeScopeType.BRDNODE)))
+        self.assertTrue( not ( NodeScope(NodeScopeTier.AS, as_id=150) <
+                              NodeScope(NodeScopeTier.Node, as_id=150, node_id='brd0', node_type=NodeScopeType.BRDNODE)))
 
 
-        self.assertTrue( Scope(NodeScopeTier.AS, as_id=160) ==
-                         Scope(NodeScopeTier.AS, as_id=160) , 'identical AS scope')
-        self.assertTrue( Scope(NodeScopeTier.AS, as_id=160, node_type=NodeScopeType.ANY) ==
-                         Scope(NodeScopeTier.AS, as_id=160) , 'identical AS scope')
-        self.assertTrue( Scope(NodeScopeTier.AS, as_id=160, node_type=NodeScopeType.ANY) >
-                         Scope(NodeScopeTier.AS, as_id=160, node_type=NodeScopeType.BRDNODE), 'ANY includes all types')
-        self.assertTrue( Scope(NodeScopeTier.AS, as_id=150) !=
-                         Scope(NodeScopeTier.AS, as_id=160) , 'not identical scope')
-        self.assertTrue( Scope(NodeScopeTier.Node, as_id=150,node_id='brd0') ==
-                         Scope(NodeScopeTier.Node, as_id=150,node_id='brd0',node_type=NodeScopeType.BRDNODE),
+        self.assertTrue( NodeScope(NodeScopeTier.AS, as_id=160) ==
+                         NodeScope(NodeScopeTier.AS, as_id=160) , 'identical AS scope')
+        self.assertTrue( NodeScope(NodeScopeTier.AS, as_id=160, node_type=NodeScopeType.ANY) ==
+                         NodeScope(NodeScopeTier.AS, as_id=160) , 'identical AS scope')
+        self.assertTrue( NodeScope(NodeScopeTier.AS, as_id=160, node_type=NodeScopeType.ANY) >
+                         NodeScope(NodeScopeTier.AS, as_id=160, node_type=NodeScopeType.BRDNODE), 'ANY includes all types')
+        self.assertTrue( NodeScope(NodeScopeTier.AS, as_id=150) !=
+                         NodeScope(NodeScopeTier.AS, as_id=160) , 'not identical scope')
+        self.assertTrue( NodeScope(NodeScopeTier.Node, as_id=150,node_id='brd0') ==
+                         NodeScope(NodeScopeTier.Node, as_id=150,node_id='brd0',node_type=NodeScopeType.BRDNODE),
                          'same node but with extra type info')
-        self.assertTrue( Scope(NodeScopeTier.Global) > Scope(NodeScopeTier.Node, as_id=150, node_id='brd0'))
-        self.assertTrue( not (Scope(NodeScopeTier.Global, NodeScopeType.HNODE) >
-                              Scope(NodeScopeTier.Node, as_id=150, node_id='brd0', node_type=NodeScopeType.BRDNODE) ),
+        self.assertTrue( NodeScope(NodeScopeTier.Global) > NodeScope(NodeScopeTier.Node, as_id=150, node_id='brd0'))
+        self.assertTrue( not (NodeScope(NodeScopeTier.Global, NodeScopeType.HNODE) >
+                              NodeScope(NodeScopeTier.Node, as_id=150, node_id='brd0', node_type=NodeScopeType.BRDNODE) ),
                          'node unaffected by global type')
 
     def test_customizable(self):
@@ -165,10 +190,10 @@ class SEEDEmuOptionSystemTestCase(SeedEmuTestCase):
         config = Customizable()
 
         # Define scopes
-        global_scope = Scope(NodeScopeTier. Global)
-        global_router_scope = Scope(NodeScopeTier. Global, NodeScopeType.RNODE)
-        as_router_scope = Scope(NodeScopeTier.AS, NodeScopeType.RNODE, as_id=42)
-        node_scope = Scope(NodeScopeTier.Node, NodeScopeType.RNODE, node_id="A", as_id=42)
+        global_scope = NodeScope(NodeScopeTier. Global)
+        global_router_scope = NodeScope(NodeScopeTier. Global, NodeScopeType.RNODE)
+        as_router_scope = NodeScope(NodeScopeTier.AS, NodeScopeType.RNODE, as_id=42)
+        node_scope = NodeScope(NodeScopeTier.Node, NodeScopeType.RNODE, node_id="A", as_id=42)
 
         config.setOption( _Option.custom("max_bandwidth", 100), global_scope)
         config.setOption( _Option.custom("max_bandwidth", 200), global_router_scope)
@@ -176,11 +201,11 @@ class SEEDEmuOptionSystemTestCase(SeedEmuTestCase):
         config.setOption( _Option.custom("max_bandwidth", 500), node_scope)
 
         # Retrieve values using a Scope object
-        self.assertTrue( (opt:=config.getOption("max_bandwidth", Scope(NodeScopeTier.Node, NodeScopeType.RNODE, node_id="A",as_id=42)))   != None and opt.value==500)# 500 (Node-specific)
-        self.assertTrue( (opt:=config.getOption("max_bandwidth", Scope(NodeScopeTier.Node, NodeScopeType.HNODE, node_id="C", as_id=42)))  != None and opt.value==100)# 100 (Global fallback)
-        self.assertTrue( (opt:=config.getOption("max_bandwidth", Scope(NodeScopeTier.Node, NodeScopeType.RNODE, node_id="D", as_id=99)))  != None and opt.value==200)# 200 (Global & Type)
-        self.assertTrue( (opt:=config.getOption("max_bandwidth", Scope(NodeScopeTier.Node, NodeScopeType.HNODE, node_id="E", as_id=99)))  != None and opt.value==100)# 100 (Global-wide)
-        self.assertTrue( (opt:=config.getOption("max_bandwidth", Scope(NodeScopeTier.Node, NodeScopeType.RNODE, node_id="B", as_id=42))) != None and opt.value==400)# 400 (AS & Type)
+        self.assertTrue( (opt:=config.getOption("max_bandwidth", NodeScope(NodeScopeTier.Node, NodeScopeType.RNODE, node_id="A",as_id=42)))   != None and opt.value==500)# 500 (Node-specific)
+        self.assertTrue( (opt:=config.getOption("max_bandwidth", NodeScope(NodeScopeTier.Node, NodeScopeType.HNODE, node_id="C", as_id=42)))  != None and opt.value==100)# 100 (Global fallback)
+        self.assertTrue( (opt:=config.getOption("max_bandwidth", NodeScope(NodeScopeTier.Node, NodeScopeType.RNODE, node_id="D", as_id=99)))  != None and opt.value==200)# 200 (Global & Type)
+        self.assertTrue( (opt:=config.getOption("max_bandwidth", NodeScope(NodeScopeTier.Node, NodeScopeType.HNODE, node_id="E", as_id=99)))  != None and opt.value==100)# 100 (Global-wide)
+        self.assertTrue( (opt:=config.getOption("max_bandwidth", NodeScope(NodeScopeTier.Node, NodeScopeType.RNODE, node_id="B", as_id=42))) != None and opt.value==400)# 400 (AS & Type)
 
         child_config = Customizable()
         child_config._scope = node_scope
@@ -195,6 +220,7 @@ class SEEDEmuOptionSystemTestCase(SeedEmuTestCase):
     def get_test_suite(cls):
         test_suite = ut.TestSuite()
         test_suite.addTest(SEEDEmuOptionSystemTestCase('test_scope'))
+        test_suite.addTest(SEEDEmuOptionSystemTestCase('test_netscope'))
         test_suite.addTest(SEEDEmuOptionSystemTestCase('test_customizable'))
 
         return test_suite

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, NodeScope, NodeScopeType, NodeScopeTier, OptionHandling, BaseVolume, OptionMode
+from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, NodeScope, NodeScope, NodeScopeType, NodeScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
@@ -315,7 +315,7 @@ class Docker(Compiler):
     __disable_images: bool
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
-    __config: List[ Tuple[BaseOption , Scope] ] # all encountered Options for .env file
+    __config: List[ Tuple[BaseOption , NodeScope] ] # all encountered Options for .env file
     __option_handling: OptionHandling # strategy how to deal with Options
     __basesystem_dockerimage_mapping: dict
 
@@ -1156,7 +1156,7 @@ class Docker(Compiler):
             keyval_list = map(lambda x: f'- {x[0].name.upper()}=${{{ self._sndary_key(x[0],x[1])}}}',  scopts )
             return '\n            '.join(keyval_list)
 
-    def _sndary_key(self, o: BaseOption, s: Scope )   -> str:
+    def _sndary_key(self, o: BaseOption, s: NodeScope )   -> str:
         base = o.name.upper()
         match s.tier:
             case NodeScopeTier.Global:
@@ -1219,7 +1219,7 @@ class Docker(Compiler):
             labelList = self._getNetMeta(net)
         )
 
-    def generateEnvFile(self, scope: Scope, dir_prefix: str = '/'):
+    def generateEnvFile(self, scope: NodeScope, dir_prefix: str = '/'):
         """!
            @brief   generates the '.env' file that accompanies any 'docker-compose.yml' file
            @param scope  filter ENV variables by scope (i.e. ASN).
