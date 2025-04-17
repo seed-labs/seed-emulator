@@ -365,7 +365,16 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
                 # TOODO scope of XC nets ?! pair of both ASes .. ?!
                 net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False, scope='0') # TODO: XC nets w/ direct flag?
                 net.setDefaultLinkProperties(latency, bandwidth, packetDrop).setMtu(mtu) # Set link properties
-                self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
+                obj = reg.register('xc', 'net', netname, net)
+                # pass any NetworkOptions down to the new XcNet
+                base = emulator.getLayer('Base')
+                parent_as = base.getAutonomousSystem(self.getAsn())
+                parent_as.handDown(obj)
+                for o in base.getNetOptions():
+                    obj.setOption(o, NetScope(NetScopeTier.Global))
+
+
+                self.__joinNetwork(obj, str(localaddr.ip))
 
                 self.__xcs[(peername, peerasn)] = (localaddr, netname, (latency, bandwidth, packetDrop, mtu))
             if issubclass(self.__class__, Router):

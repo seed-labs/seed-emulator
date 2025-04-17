@@ -113,17 +113,20 @@ class Base(Layer, Graphable):
             asobj.inheritOptions(emulator)
         self._log('setting up internet exchanges...')
         for ix in self.__ixes.values(): ix.configure(emulator)
-        # now all Networks are registered ..
+        # now all Networks are registered ..(exchept XCs which are only created in the process of Node::configure() )
         nets = [ n for (scope,typ,name), n in emulator.getRegistry().getAll().items() if typ=='net']
         # set defaults for NetOptions like Bandwidth, Mtu etc. ...
         for n in nets:
             for o in self.getNetOptions():
                 n.setOption(o, NetScope(NetScopeTier.Global))    
 
+        super().configure(emulator)
+
         self._log('setting up autonomous systems...')
         for asobj in self.__ases.values(): asobj.configure(emulator)
+        # this calls Node::configure() in turn and instantiates and registers XC networks
 
-        super().configure(emulator)
+        #super().configure(emulator)
 
     def render(self, emulator: Emulator) -> None:
         for ((scope, type, name), obj) in emulator.getRegistry().getAll().items():
