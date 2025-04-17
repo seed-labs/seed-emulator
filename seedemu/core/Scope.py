@@ -75,7 +75,7 @@ class NodeScopeType(ScopeType):
 
 
 
-class NodeScope(ABC):
+class Scope(ABC):
     @abstractmethod
     def domain(self) -> OptionDomain:
         pass
@@ -90,29 +90,29 @@ class NodeScope(ABC):
     def type(self)-> ScopeType:
         pass
 
-    def __eq__(self, other: 'NodeScope') -> bool:
+    def __eq__(self, other: 'Scope') -> bool:
         """Compares two Scope objects for equality."""
-        assert isinstance(other, NodeScope)
+        assert isinstance(other, Scope)
         _, eq2= self._comparable(other)
         return eq2
     
     @abstractmethod
-    def _comparable(self, other: 'NodeScope') -> Tuple[bool,bool]:
+    def _comparable(self, other: 'Scope') -> Tuple[bool,bool]:
         pass
 
     @abstractmethod
-    def __lt__(self, other: 'NodeScope'):
+    def __lt__(self, other: 'Scope'):
         pass
     @abstractmethod
-    def __gt__(self, other: 'NodeScope'):
+    def __gt__(self, other: 'Scope'):
         pass
 
     @abstractmethod
-    def _intersection(self, other: 'NodeScope') -> 'NodeScope':
+    def _intersection(self, other: 'Scope') -> 'Scope':
         pass
     # for use with functools.cmp_to_key( Scope.collate )
     @staticmethod
-    def collate(a: 'NodeScope', b: 'NodeScope') -> int:
+    def collate(a: 'Scope', b: 'Scope') -> int:
         #c,_= a._comparable(b)
         try:
             if a < b:
@@ -128,7 +128,7 @@ class NodeScope(ABC):
 #       for DockerCompiler::generateEnvFile()
 #       It would do the comparison solely on 'scope' (that is ASN) and ignore type
 
-class NodeScope(NodeScope):
+class NodeScope(Scope):
     """!
     @brief strong type for the hierarchical scope of configuration settings.
             i.e. ''(global/simulation wide), '150' (AS level) or '150_brdnode_br0' (individual node  override)
@@ -202,7 +202,7 @@ class NodeScope(NodeScope):
         """
         pass
 
-    def _comparable(self, other: NodeScope) -> Tuple[bool,bool]:
+    def _comparable(self, other: 'NodeScope') -> Tuple[bool,bool]:
         """ returns a two bools indicating wheter the scopes are:
           lt/gt comparable or identical"""
 
@@ -313,7 +313,7 @@ class NodeScope(NodeScope):
 
 
 
-    def __gt__(self, other: NodeScope):        
+    def __gt__(self, other: 'NodeScope'):        
         """!@brief defines scope hierarchy comparison i.e. broader more general(less specific) > more specific).
             i.e. LHS supserset RHS
         """
@@ -425,7 +425,7 @@ class NodeScope(NodeScope):
             return bool(self._node_id) and not bool(other._node_id)  # Node scope is most specific
         return False
 
-    def __lt__(self, other: NodeScope):
+    def __lt__(self, other: 'NodeScope'):
         """!@brie fDefines scope hierarchy comparison (more specific < broader).
             i.e. LHS subset RHS
         """
@@ -579,7 +579,7 @@ class NetScopeType(ScopeType):
                 return NetScopeType.BRIDGE
 
 
-class NetScope(NodeScope):
+class NetScope(Scope):
     """!
     @brief strong type for the hierarchical scope of configuration settings.
    
@@ -635,13 +635,13 @@ class NetScope(NodeScope):
     def scope(self) -> Optional[int]:
         return self._scope_id
 
-    def _intersection(self, other: 'NodeScope') -> 'NodeScope':
+    def _intersection(self, other: 'NetScope') -> 'NodeScope':
         """!
         @brief return a new scope which represents the intersection of both scopes
         """
         pass
 
-    def _comparable(self, other: NodeScope) -> Tuple[bool,bool]:
+    def _comparable(self, other: 'NetScope') -> Tuple[bool,bool]:
         """ returns a two bools indicating wheter the scopes are:
           lt/gt comparable or identical"""
 
@@ -753,7 +753,7 @@ class NetScope(NodeScope):
 
 
 
-    def __gt__(self, other: NodeScope):        
+    def __gt__(self, other: 'NetScope'):        
         """!@brief defines scope hierarchy comparison i.e. broader more general(less specific) > more specific).
             i.e. LHS supserset RHS
         """
@@ -852,7 +852,7 @@ class NetScope(NodeScope):
                             return False        
        
 
-    def __lt__(self, other: NodeScope):
+    def __lt__(self, other: 'NetScope'):
         """!@brie fDefines scope hierarchy comparison (more specific < broader).
             i.e. LHS subset RHS
         """

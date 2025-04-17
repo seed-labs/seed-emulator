@@ -9,14 +9,14 @@ class Customizable(object):
     """!
     @brief something that can be configured by Options
     """
-    _config: Dict[str,Tuple[BaseOption,NodeScope]]
+    _config: Dict[str,Tuple[BaseOption,Scope]]
 
     def __init__(self):  # scope param. actually only for debug/tests  , scope: Scope = None        
         super().__init__()
         self._config = {}
         self._scope = None
     
-    def scope(self, domain: OptionDomain = None)-> NodeScope:
+    def scope(self, domain: OptionDomain = None)-> Scope:
         """!@brief returns a scope that includes only this very customizable instance ,nothing else
         @param domain depending on what you need the scope object for
                 (i.e. for which kind of Option you want to specify the scope for)
@@ -27,7 +27,7 @@ class Customizable(object):
         else: return self._scope
             
 
-    def getScopedOption(self, key: str, scope: NodeScope = None, prefix: str = None) -> Optional[Tuple[BaseOption, NodeScope]]:
+    def getScopedOption(self, key: str, scope: Scope = None, prefix: str = None) -> Optional[Tuple[BaseOption, Scope]]:
         """! @brief retrieves an option along with the most specific Scope in which it was set.
         """
         from seedemu.core.OptionRegistry import OptionRegistry
@@ -65,7 +65,7 @@ class Customizable(object):
             
         return None
 
-    def getOption(self, key: str, scope: NodeScope = None, prefix: str = None ) -> Optional[BaseOption]:
+    def getOption(self, key: str, scope: Scope = None, prefix: str = None ) -> Optional[BaseOption]:
         """!@brief Retrieves an option(if set) based on the precedence rules (scoping).
                 If not specified the option value for the scope most specific to 'this' customizable 
                 will be returned.
@@ -80,7 +80,7 @@ class Customizable(object):
         else:
             return None
 
-    def _possible_scopes(scope: NodeScope) -> List[NodeScope]:
+    def _possible_scopes(scope: Scope) -> List[Scope]:
         if isinstance(scope, NodeScope):
             possible_scopes = [
                 NodeScope(NodeScopeTier.Node, scope._node_type, 
@@ -114,12 +114,12 @@ class Customizable(object):
         return list( self._config.keys())
         
     # Tuple[ BaseOption, Scope ]  or List[ScopedOption] where ScopedOption is just a wrapper around Tuple[BaseOption, Scope]
-    def getOptions(self, scope: NodeScope = None )  -> List[BaseOption]:
+    def getOptions(self, scope: Scope = None )  -> List[BaseOption]:
         """! @brief return all options included by the given scope.
         """
         return [ self.getOption(k, scope) for k in self._getKeys() ]
     
-    def getScopedOptions(self, scope: NodeScope = None, prefix: str = None )  -> List[Tuple[BaseOption,NodeScope]]:
+    def getScopedOptions(self, scope: Scope = None, prefix: str = None )  -> List[Tuple[BaseOption,Scope]]:
         """! @brief return all options included by the given scope.
         """
         return [ self.getScopedOption(k, scope) for k in self._getKeys() if (prefix != None and k.startswith(prefix)) or prefix==None ]    
@@ -154,7 +154,7 @@ class Customizable(object):
             return not ((op.optiondomain() == OptionDomain.NET and issubclass(type(child), Node)) or 
                         (issubclass( type(child), Network) and op.optiondomain()==OptionDomain.NODE ) )
 
-    def setOption(self, op: BaseOption, scope: NodeScope = None ):
+    def setOption(self, op: BaseOption, scope: Scope = None ):
         """! @brief set option within the given scope.
             If unspecified the option will be overridden only for "this" Customizable i.e. AS
         """
@@ -214,9 +214,9 @@ class Customizable(object):
                 self._config[opname]  = res
             
 
-    def getRuntimeOptions(self, scope: NodeScope = None) -> List[BaseOption]:
+    def getRuntimeOptions(self, scope: Scope = None) -> List[BaseOption]:
         return [ o for o in self.getOptions(scope) if o.mode==OptionMode.RUN_TIME]
     
-    def getScopedRuntimeOptions(self, scope: NodeScope = None) -> List[Tuple[BaseOption,NodeScope]]:
+    def getScopedRuntimeOptions(self, scope: Scope = None) -> List[Tuple[BaseOption,Scope]]:
         scopts = self.getScopedOptions(scope)
         return [ (o,s) for o,s in scopts if o.mode==OptionMode.RUN_TIME]
