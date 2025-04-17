@@ -1,11 +1,14 @@
-from seedemu.core import BaseOptionGroup, Option, OptionMode
+from seedemu.core import BaseOptionGroup, Option, OptionMode, OptionDomain
 
 
 class SysctlOpts(BaseOptionGroup):
 # NOTE: the classname is dynamically changed to just 'sysctl' so the
 # nested option names don't become too lengthy...
 
+    domain = OptionDomain.NODE
+
     class NetIpv4(BaseOptionGroup):
+        domain = OptionDomain.NODE
 
         class IP_FORWARD(Option):
             """net.ipv4.ip_forward flag"""
@@ -46,7 +49,7 @@ class SysctlOpts(BaseOptionGroup):
             # all..sets a value for all interfaces
             # 'interface' .. changes special settings per interface 
             # (where "interface" is the name of your network interface)
-
+            domain = OptionDomain.NODE
             class RP_FILTER(Option):
                 value_type = dict
 

@@ -4,7 +4,7 @@
 from seedemu.layers import Base, Routing, Ebgp
 from seedemu.services import WebService
 from seedemu.compiler import Docker, Platform
-from seedemu.core import Emulator, Binding, Filter
+from seedemu.core import Emulator, Binding, Filter, OptionRegistry
 import sys, os
 
 def run(dumpfile = None):
@@ -29,7 +29,9 @@ def run(dumpfile = None):
 
     # Initialize the emulator and layers
     emu     = Emulator()
-    base    = Base()
+    # set global defaults..
+    base    = Base(bandwidth=OptionRegistry().net_bandwidth(10000000),# 10 Mbit/s on all links
+                    mtu=OptionRegistry().net_mtu(9000)) # use JumboFrames 
     routing = Routing()
     ebgp    = Ebgp()
     web     = WebService()
@@ -43,6 +45,7 @@ def run(dumpfile = None):
 
     # Create an autonomous system 
     as150 = base.createAutonomousSystem(150)
+    as150.setOption(OptionRegistry().net_mtu(1500))
 
     # Create a network 
     as150.createNetwork('net0')
