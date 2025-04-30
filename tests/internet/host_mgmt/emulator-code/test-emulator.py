@@ -6,7 +6,7 @@ from seedemu.layers import Base, EtcHosts
 from seedemu.core import Emulator
 
 emu = Emulator()
-etc_hosts = EtcHosts()
+etc_hosts = EtcHosts(only_hosts=False)
 
 # Load the pre-built mini-internet component
 emu.load('../../mini_internet/emulator-code/base-component.bin')
