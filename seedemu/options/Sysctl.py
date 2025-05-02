@@ -12,7 +12,7 @@ class SysctlOpts(BaseOptionGroup):
             value_type = bool
             @classmethod
             def supportedModes(cls) -> OptionMode:
-                """!@brief 'ip_forward' sysctl flag can be changed in the 'sysctl:' section 
+                """!@brief 'ip_forward' sysctl flag can be changed in the 'sysctl:' section
                     of the node's service definition in docker-compose.yml file.
                     This does not require an image rebuild.
                 """
@@ -22,7 +22,7 @@ class SysctlOpts(BaseOptionGroup):
                 return True
             def __repr__(self):
                 return f"net.ipv4.{self.getName().lower()}={'1' if self._mutable_value else '0'}"
-            
+
         class Conf(BaseOptionGroup):
             """
             net.ipv4.conf.* flags
@@ -42,9 +42,9 @@ class SysctlOpts(BaseOptionGroup):
 
             """
 
-            # /conf/[all|default|interface]/{rp_filter,log_martians, ..} 
+            # /conf/[all|default|interface]/{rp_filter,log_martians, ..}
             # all..sets a value for all interfaces
-            # 'interface' .. changes special settings per interface 
+            # 'interface' .. changes special settings per interface
             # (where "interface" is the name of your network interface)
 
             class RP_FILTER(Option):
@@ -58,17 +58,17 @@ class SysctlOpts(BaseOptionGroup):
 
                     """
                     return OptionMode.BUILD_TIME|OptionMode.RUN_TIME
-                
+
                 def all(self) -> bool:
                     return self._mutable_value.get('all', False)
-                
+
                 def default(self) -> bool:
                     return self._mutable_value.get('default', False)
-                
+
                 @classmethod
                 def default(cls):
                     return {'all': False, 'default': False}
-                
+
                 def __repr__(self):
                     vals = []
                     for _if, val in self._mutable_value.items():
@@ -81,22 +81,23 @@ class SysctlOpts(BaseOptionGroup):
                       if _if not in ['all', 'default']:
                         vals.append( f"net.ipv4.conf.{_if}.{self.getName().lower()}={'1' if  val else '0'}" )
                     return '\n           '.join(vals)
-                
+
                 def repr_runtime(self):
                     vals = []
                     for _if, val in self._mutable_value.items():
                       if _if in ['all', 'default']:
                         vals.append( f"net.ipv4.conf.{_if}.{self.getName().lower()}={'1' if  val else '0'}" )
                     return '\n           '.join(vals)
-                
+
             #value_type =  bool for some 'int' for others
 
         class Udp(BaseOptionGroup):
-
+            '''
+            #NOTE must be set on docker-host
             class mem(Option):      # rename  total_mem or global_mem  ?!
                 """!@brief Number of pages allowed for queueing by all UDP sockets.
                 udp_mem - vector of 3 INTEGERs: min, pressure, max
-                	
+
                 	min: Below this number of pages UDP is not bothered about its
                     	memory appetite. When amount of memory allocated by UDP exceeds
                     	this number, UDP starts to moderate memory usage.
@@ -118,12 +119,12 @@ class SysctlOpts(BaseOptionGroup):
                     return self.__repr__()
                 def repr_build_time(self):
                     return self.__repr__()
-
+            '''
 
             class rmem_min(Option):
                 """!@brief Minimal size of receive buffer used by UDP sockets in moderation.
                 udp_rmem_min - INTEGER
-                	
+
                 	Each UDP socket is able to use the size for receiving data, even if
                 	total pages of UDP sockets exceed udp_mem pressure. The unit is byte.
                 	Default: 4K
@@ -144,7 +145,7 @@ class SysctlOpts(BaseOptionGroup):
 
             class wmem_min(Option):
                 """!@brief Minimal size of send buffer used by UDP sockets in moderation.
-                udp_wmem_min - INTEGER                	
+                udp_wmem_min - INTEGER
                 	Each UDP socket is able to use the size for sending data, even if
                 	total pages of UDP sockets exceed udp_mem pressure. The unit is byte.
                 	Default: 4K
@@ -162,9 +163,10 @@ class SysctlOpts(BaseOptionGroup):
                     return self.__repr__()
                 def repr_build_time(self):
                     return self.__repr__()
-    
-    class Tcp(BaseOptionGroup):
 
+    class Tcp(BaseOptionGroup):
+        '''
+        #NOTE must be set on docker-host
         class mem(Option):
             """
             tcp_mem - vector of 3 INTEGERs: min, pressure, max
@@ -193,7 +195,8 @@ class SysctlOpts(BaseOptionGroup):
             def repr_runtime(self):
                 return self.__repr__()
             def repr_build_time(self):
-                return self.__repr__()       
+                return self.__repr__()
+        '''
         class rmem(Option):
             """
             tcp_rmem - vector of 3 INTEGERs: min, default, max
@@ -224,8 +227,8 @@ class SysctlOpts(BaseOptionGroup):
                 # (4096, 87380,)
                 return (4096, 131072, 6291456)# again my laptop's values
             def __repr__(self):
-                   return f"net.ipv4.tcp_rmem={self.value[0]} {self.value[1]} {self.value[2]}"
-  
+                   return f'net.ipv4.tcp_rmem="{self.value[0]} {self.value[1]} {self.value[2]}"'
+
         class wmem(Option):
             """
             tcp_wmem - vector of 3 INTEGERs: min, default, max
@@ -253,5 +256,5 @@ class SysctlOpts(BaseOptionGroup):
             def default(cls):
                 return (4096, 16384, 4194304)
             def __repr__(self):
-                   return f"net.ipv4.tcp_wmem={self.value[0]} {self.value[1]} {self.value[2]}"
-        
+                   return f'net.ipv4.tcp_wmem="{self.value[0]} {self.value[1]} {self.value[2]}"'
+

@@ -1008,13 +1008,13 @@ class Docker(Compiler):
 
         dockerfile += 'CMD ["/start.sh"]\n'
         return dockerfile
-    
+
     def _getNodeBuildtimeSysctl(self, node: Node) -> str:
         """!@brief get sysctl-flag settings for /start.sh script
             @note   if a sysctl-option is in BUILD_TIME mode, it will go to /start.sh
                 otherwise if mode is RUNTIME the flag will be set in docker-compose.yml
                 (except for custom named interfaces such as 'net0' which would still go to /start.sh
-                because they simply don't exist yet once the container starts up 
+                because they simply don't exist yet once the container starts up
                 and /interface_setup hasn't been called yet )
         """
         set_flags = []
@@ -1031,7 +1031,7 @@ class Docker(Compiler):
                 set_flags.append(rp_filter)
 
 
-        
+
         if opts := node.getScopedOptions(prefix='sysctl'):
             for o, _ in opts:
                 if o.mode != OptionMode.BUILD_TIME:
@@ -1039,8 +1039,8 @@ class Docker(Compiler):
                     continue
                 if o.fullname() == 'sysctl_netipv4_conf_rp_filter': continue
                 for s in repr(o).split('\n'):
-                   set_flags.append(f'sysctl -w {s.strip()}') 
-                
+                   set_flags.append(f'sysctl -w {s.strip()} > /dev/null 2>&1')
+
 
         return '\n'.join(set_flags)
 
@@ -1082,7 +1082,7 @@ class Docker(Compiler):
         )
 
     def _getNodeSysctls(self, node: Node) -> str:
-        """!@brief compute the 'sysctl:' section of the node's service 
+        """!@brief compute the 'sysctl:' section of the node's service
                     in docker-compose.yml file
             @note sysctl flags which are set in the docker-compose.yml file
                 can be changed, without having to recompile any images and
