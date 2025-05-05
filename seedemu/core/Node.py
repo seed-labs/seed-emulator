@@ -8,6 +8,7 @@ from .Scope import *
 from .Registry import Registrable
 from .Emulator import Emulator
 from .Customizable import Customizable
+from .OptionUtil import OptionDomain
 from .Volume import BaseVolume
 from .Configurable import Configurable
 from .enums import NetworkType
@@ -120,15 +121,18 @@ class Interface(Printable):
         """
         self.__address = None
         self.__network = net
-        (l, b, d) = net.getDefaultLinkProperties()
-        self.__latency = l
-        self.__bandwidth = b
-        self.__drop = d
+        
+        #(l, b, d) = net.getDefaultLinkProperties()
+        self.__latency = 0
+        self.__bandwidth = 0
+        self.__drop = 0
+        
 
     def setLinkProperties(self, latency: int = 0, bandwidth: int = 0, packetDrop: float = 0) -> Interface:
         """!
         @brief Set link properties.
 
+        @note if not overriden the default link properties of the network are used
         @param latency (optional) latency to add to the link in ms, default 0.
         @param bandwidth (optional) egress bandwidth of the link in bps, 0 for unlimited, default 0.
         @param packetDrop (optional) link packet drop as percentage, 0 for unlimited, default 0.
@@ -152,7 +156,11 @@ class Interface(Printable):
 
         @returns tuple (latency, bandwidth, packet drop)
         """
-        return (self.__latency, self.__bandwidth, self.__drop)
+        #return (self.__latency, self.__bandwidth, self.__drop)
+        (l, b, d) = self.__network.getDefaultLinkProperties()
+        return (self.__latency if self.__latency>0 else l,
+                self.__bandwidth if self.__bandwidth>0 else b,
+                self.__drop if self.__drop>0 else d,)
 
     def getNet(self) -> Network:
         """!
@@ -284,9 +292,10 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         self.__note = None
 
 
-    def scope(self)-> Scope:
-        return Scope(ScopeTier.Node,
-                     node_type=ScopeType.from_node(self),
+    def scope(self, domain: OptionDomain = None)-> NodeScope:
+        assert domain in [OptionDomain.NODE, None], 'input error'
+        return NodeScope(NodeScopeTier.Node,
+                     node_type=NodeScopeType.from_node(self),
                      node_id=self.getName(),
                      as_id=self.getAsn())
 
@@ -353,9 +362,19 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
             else:
                 # netname = 'as{}.{}_as{}.{}'.format(self.getAsn(), self.getName(), peerasn, peername)
                 netname = ''.join(choice(ascii_letters) for i in range(10))
-                net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False) # TODO: XC nets w/ direct flag?
+                # TOODO scope of XC nets ?! pair of both ASes .. ?!
+                net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False, scope='0') # TODO: XC nets w/ direct flag?
                 net.setDefaultLinkProperties(latency, bandwidth, packetDrop).setMtu(mtu) # Set link properties
-                self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
+                obj = reg.register('xc', 'net', netname, net)
+                # pass any NetworkOptions down to the new XcNet
+                base = emulator.getLayer('Base')
+                parent_as = base.getAutonomousSystem(self.getAsn())
+                parent_as.handDown(obj)
+                for o in base.getNetOptions():
+                    obj.setOption(o, NetScope(NetScopeTier.Global))
+
+
+                self.__joinNetwork(obj, str(localaddr.ip))
 
                 self.__xcs[(peername, peerasn)] = (localaddr, netname, (latency, bandwidth, packetDrop, mtu))
             if issubclass(self.__class__, Router):

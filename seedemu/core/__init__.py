@@ -24,5 +24,6 @@ from .Compiler import Compiler, OptionHandling
 from .BaseSystem import BaseSystem
 from .Scope import *
 from .Option import BaseOption, OptionMode, Option, BaseComponent, BaseOptionGroup, AutoRegister, OptionGroupMeta
+from .OptionUtil import OptionDomain
 from .OptionRegistry import OptionRegistry
 from .Volume import BaseVolume, ServiceLvlVolume, TopLvlVolume

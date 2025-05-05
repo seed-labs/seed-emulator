@@ -11,7 +11,7 @@ from sys import version
 from seedemu.core import (Emulator, Interface, Layer, Network, Registry,
                           Router, ScionAutonomousSystem,
                           ScopedRegistry, Graphable, Node,
-                            Option, AutoRegister, OptionMode)
+                            Option, OptionDomain, AutoRegister, OptionMode)
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import ScionBase, ScionIsd
 import shutil
@@ -86,6 +86,7 @@ class SCION_ETC_CONFIG_VOL(Option, AutoRegister):
         where to put all the SCION related files on the host.
         """
         value_type = ScionConfigMode
+        domain: OptionDomain = OptionDomain.NODE
         @classmethod
         def supportedModes(cls) -> OptionMode:
             return OptionMode.BUILD_TIME
