@@ -9,5 +9,4 @@ from .ScionBase import ScionBase
 from .ScionRouting import ScionRouting
 from .ScionIsd import ScionIsd
 from .Scion import Scion, SetupSpecification, CheckoutSpecification
-from .ScionSIGService import ScionSIGService
 from .EtcHosts import EtcHosts
