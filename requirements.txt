@@ -37,13 +37,13 @@ pycryptodome==3.21.0
 python-dateutil==2.9.0.post0
 PyYAML==6.0.2
 referencing==0.36.2
-requests==2.22.0
+requests==2.32.3
 rlp==2.0.1
 rpds-py==0.23.1
 six==1.17.0
 toolz==1.0.0
 typing_extensions==4.12.2
-urllib3==1.25.11
+urllib3==1.26.20
 varint==1.0.2
 web3==5.31.1
 websocket-client==1.8.0
