@@ -15,7 +15,7 @@ ROUTER_IMAGE   = DockerImage(name='handsonsecurity/seedemu-multiarch-router:buil
                                 software=['bird2'],
                                 subset=BASE_IMAGE)
 
-ETHEREUM_IMAGE = DockerImage(name='handsonsecurity/seedemu-ethereum',
+ETHEREUM_IMAGE = DockerImage(name='handsonsecurity/seedemu-ethereum:2025',
                                 software=['software-properties-common', 'python3', 'python3-pip'],
                                 subset=BASE_IMAGE)
 

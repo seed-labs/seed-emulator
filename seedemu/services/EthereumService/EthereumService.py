@@ -51,11 +51,12 @@ class Blockchain:
         self._eth_service = service
         self._consensus = consensus
         self._chain_name = chainName
-        self._genesis = Genesis(ConsensusMechanism.POA) if self._consensus == ConsensusMechanism.POS else Genesis(self._consensus)
+        # self._genesis = Genesis(ConsensusMechanism.POA) if self._consensus == ConsensusMechanism.POS else Genesis(self._consensus)
+        self._genesis = Genesis(self._consensus)
         self._boot_node_addresses = []
-        self._miner_node_address = []
+        # self._miner_node_address = []
         self._joined_accounts = []
-        self._joined_signer_accounts = []
+        # self._joined_signer_accounts = []
         self._validator_ids = []
         self._beacon_setup_node_address = ''
         self._pending_targets = []
@@ -89,12 +90,12 @@ class Blockchain:
         
         if server.isBootNode():
             self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self._consensus.value))
-            self._boot_node_addresses.append(addr)
+            self._boot_node_addresses.append(str(ifaces[0].getAddress()))
         
         if self._consensus == ConsensusMechanism.POS:
-            if server.isStartMiner():
-                self._log('adding as{}/{} as consensus-{} miner...'.format(node.getAsn(), node.getName(), self._consensus.value))
-                self._miner_node_address.append(str(ifaces[0].getAddress())) 
+            # if server.isStartMiner():
+            #     self._log('adding as{}/{} as consensus-{} miner...'.format(node.getAsn(), node.getName(), self._consensus.value))
+            #     self._miner_node_address.append(str(ifaces[0].getAddress())) 
             if server.isBeaconSetupNode():
                 self._beacon_setup_node_address = '{}:{}'.format(ifaces[0].getAddress(), server.getBeaconSetupHttpPort())
 
@@ -105,13 +106,13 @@ class Blockchain:
             if self._consensus == ConsensusMechanism.POS and server.isValidatorAtRunning():
                 accounts[0].balance = 33 * EthUnit.ETHER.value
             self._joined_accounts.extend(accounts)
-            if self._consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] and server.isStartMiner():
-                self._joined_signer_accounts.append(accounts[0])
+            # if self._consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] and server.isStartMiner():
+            #     self._joined_signer_accounts.append(accounts[0])
 
         if self._consensus == ConsensusMechanism.POS and server.isValidatorAtGenesis():
             self._validator_ids.append(str(server.getId()))
         
-        server._generateGethStartCommand()
+        server._generateGethStartCommand(str(ifaces[0].getAddress()))
 
         if self._eth_service.isSave():
             save_path = self._eth_service.getSavePath()
@@ -155,15 +156,15 @@ class Blockchain:
                 ifaces = node.getInterfaces()
                 assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
                 addr = str(ifaces[0].getAddress())
-                miner_ip = self._miner_node_address[0]
-                if addr == miner_ip:
-                    validator_count = len(self.getValidatorIds())
-                    index = self._joined_accounts.index(server._getAccounts()[0])
-                    self._joined_accounts[index].balance = 32*pow(10,18)*(validator_count+2)
+                # miner_ip = self._miner_node_address[0]
+                # if addr == miner_ip:
+                #     validator_count = len(self.getValidatorIds())
+                #     index = self._joined_accounts.index(server._getAccounts()[0])
+                #     self._joined_accounts[index].balance = 32*pow(10,18)*(validator_count+2)
         
         self._genesis.addAccounts(self.getAllAccounts())
         
-        if self._consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] :
+        if self._consensus in [ConsensusMechanism.POA] :
             self._genesis.setSigner(self.getAllSignerAccounts())
     
     def __getIpByVnodeName(self, emulator, nodename:str) -> str:

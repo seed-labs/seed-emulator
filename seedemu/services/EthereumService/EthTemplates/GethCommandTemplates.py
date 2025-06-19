@@ -9,28 +9,31 @@ geth --datadir {datadir} --identity="NODE_{node_id}" --networkid={chain_id} --sy
 {option[http]}\
 {option[ws]}\
 {option[pos]}\
-{option[unlock]}\
-                            {option[mine]}'''
+{option[bootnode-start]}\
+'''
 
 
 GethCommandTemplates['mine'] = '''\
  --miner.etherbase "{coinbase}" --mine --miner.threads={num_of_threads}'''
 
-GethCommandTemplates['unlock'] = '''\
- --unlock "{accounts}" --password "/tmp/eth-password"'''
+# GethCommandTemplates['unlock'] = '''\
+#  --unlock "{accounts}" --password "/tmp/eth-password"'''
 
 GethCommandTemplates['http'] = '''\
- --http --http.addr 0.0.0.0 --http.port {gethHttpPort} --http.corsdomain "*" --http.api web3,eth,debug,personal,net,clique,engine,admin,txpool'''
+ --http --http.addr 0.0.0.0 --http.port {gethHttpPort} --http.corsdomain "*" --http.api web3,eth,debug,net,engine,admin,txpool'''
 
 GethCommandTemplates['ws'] = '''\
  --ws --ws.addr 0.0.0.0 --ws.port {gethWsPort} --ws.origins "*" --ws.api web3,eth,debug,personal,net,clique,engine,admin,txpool'''
 
 GethCommandTemplates['pos'] = '''\
- --authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.vhosts "*" --authrpc.jwtsecret /tmp/jwt.hex --override.terminaltotaldifficulty {difficulty}'''
+ --authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.vhosts "*" --authrpc.jwtsecret /tmp/jwt.hex'''
 
 GethCommandTemplates['nodiscover'] = '''\
  --nodiscover'''
 
 GethCommandTemplates['bootnodes'] = '''\
  --bootnodes "$(cat /tmp/eth-node-urls)"'''
+
+GethCommandTemplates['bootnode-start'] = '''\
+ -nodekey {datadir}/geth/bootkey --nat extip:{ip_address}'''
 
