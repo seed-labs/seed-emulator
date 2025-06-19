@@ -607,22 +607,34 @@ class PoSServer(PoAServer):
         validator_create_command = ""
         validator_deposit_sh = ""
 
+        if not self._is_bootnode:
+            node.setFile('/tmp/fetch_bn_enr', EthServerFileTemplates['fetch_bn_enr'])
+            node.appendStartCommand('chmod +x /tmp/fetch_bn_enr')
+            node.appendStartCommand('/tmp/fetch_bn_enr')
+
         # if self._is_bootnode:
         #     bootnode_start_command = LIGHTHOUSE_BOOTNODE_CMD.format(ip_address=addr)
         if self.__is_beacon_validator_at_running:
             node.setFile('/tmp/seed.pass', 'seedseedseed')
             wallet_create_command = LIGHTHOUSE_WALLET_CREATE_CMD.format(eth_id=self.getId())
             validator_create_command = LIGHTHOUSE_VALIDATOR_CREATE_CMD.format(eth_id=self.getId()) 
-            node.setFile('/tmp/deposit.sh', VALIDATOR_DEPOSIT_SH.format(eth_id=self.getId()))
-            node.appendStartCommand('chmod +x /tmp/deposit.sh')
+
+            if len(self._accounts) > 0:
+                print(self._accounts[0].keystore_filename)
+                node.setFile('/tmp/deposit.py', VALIDATOR_DEPOSIT_PY.format(keystore_filename=self._accounts[0].keystore_filename))
             if not self.__is_manual_deposit_for_validator:
-                validator_deposit_sh = "/tmp/deposit.sh"
-        if self.__is_beacon_validator_at_genesis or self.__is_beacon_validator_at_running:
+                validator_deposit_sh = "sleep 2 && python3 /tmp/deposit.py"
+
+            # node.appendStartCommand('chmod +x /tmp/deposit.sh')
+            # if not self.__is_manual_deposit_for_validator:
+            #     validator_deposit_sh = "/tmp/deposit.sh"
+        if self.__is_beacon_validator_at_genesis or self.__is_beacon_validator_at_running:     
             vc_start_command = LIGHTHOUSE_VC_CMD.format(ip_address=addr, acct_address=self._accounts[0].address)
             
         node.setFile('/tmp/beacon-setup-node', beacon_setup_node)
         node.setFile('/tmp/beacon-bootstrapper', EthServerFileTemplates['beacon_bootstrapper'].format( 
-                                is_validator="true" if self.__is_beacon_validator_at_genesis else "false",
+                                is_validator_at_genesis="true" if self.__is_beacon_validator_at_genesis else "false",
+                                is_validator_at_running="true" if self.__is_beacon_validator_at_running else "false",
                                 bc_start_command=bc_start_command,
                                 vc_start_command=vc_start_command,
                                 wallet_create_command=wallet_create_command,
