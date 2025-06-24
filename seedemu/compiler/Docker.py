@@ -1,6 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
+from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, NodeScope, NodeScope, NodeScopeType, NodeScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
@@ -315,7 +315,7 @@ class Docker(Compiler):
     __disable_images: bool
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
-    __config: List[ Tuple[BaseOption , Scope] ] # all encountered Options for .env file
+    __config: List[ Tuple[BaseOption , NodeScope] ] # all encountered Options for .env file
     __option_handling: OptionHandling # strategy how to deal with Options
     __basesystem_dockerimage_mapping: dict
 
@@ -1156,45 +1156,45 @@ class Docker(Compiler):
             keyval_list = map(lambda x: f'- {x[0].name.upper()}=${{{ self._sndary_key(x[0],x[1])}}}',  scopts )
             return '\n            '.join(keyval_list)
 
-    def _sndary_key(self, o: BaseOption, s: Scope )   -> str:
+    def _sndary_key(self, o: BaseOption, s: NodeScope )   -> str:
         base = o.name.upper()
         match s.tier:
-            case ScopeTier.Global:
+            case NodeScopeTier.Global:
                 match s.type:
-                    case ScopeType.ANY:
+                    case NodeScopeType.ANY:
                         return base
-                    case ScopeType.BRDNODE:
+                    case NodeScopeType.BRDNODE:
                         return f'{base}_BRDNODE'
-                    case ScopeType.HNODE:
+                    case NodeScopeType.HNODE:
                         return f'{base}_HNODE'
-                    case ScopeType.CSNODE:
+                    case NodeScopeType.CSNODE:
                         return f'{base}_CSNODE'
-                    case ScopeType.RSNODE:
+                    case NodeScopeType.RSNODE:
                         return f'{base}_RSNODE'
-                    case ScopeType.RNODE:
+                    case NodeScopeType.RNODE:
                         return f'{base}_RNODE'
                     case _:
                         #TODO: combination (ORed) Flags not yet implemented
                         raise NotImplementedError
-            case ScopeTier.AS:
+            case NodeScopeTier.AS:
                 match s.type:
-                    case ScopeType.ANY:
+                    case NodeScopeType.ANY:
                         return f'{base}_{s.asn}'
-                    case ScopeType.BRDNODE:
+                    case NodeScopeType.BRDNODE:
                         return f'{base}_{s.asn}_BRDNODE'
-                    case ScopeType.HNODE:
+                    case NodeScopeType.HNODE:
                         return f'{base}_{s.asn}_HNODE'
-                    case ScopeType.CSNODE:
+                    case NodeScopeType.CSNODE:
                         return f'{base}_{s.asn}_CSNODE'
-                    case ScopeType.RSNODE:
+                    case NodeScopeType.RSNODE:
                         return f'{base}_{s.asn}_RSNODE'
-                    case ScopeType.RNODE:
+                    case NodeScopeType.RNODE:
                         return f'{base}_{s.asn}_RNODE'
                     case _:
                         # combination (ORed) Flags not yet implemented
                         #TODO: How should we call CSNODE|HNODE or BRDNODE|RSNODE|RNODE ?!
                         raise NotImplementedError
-            case ScopeTier.Node:
+            case NodeScopeTier.Node:
                 return f'{base}_{s.asn}_{s.node.upper()}' # maybe add type here
 
     def _compileNet(self, net: Network) -> str:
@@ -1219,7 +1219,7 @@ class Docker(Compiler):
             labelList = self._getNetMeta(net)
         )
 
-    def generateEnvFile(self, scope: Scope, dir_prefix: str = '/'):
+    def generateEnvFile(self, scope: NodeScope, dir_prefix: str = '/'):
         """!
            @brief   generates the '.env' file that accompanies any 'docker-compose.yml' file
            @param scope  filter ENV variables by scope (i.e. ASN).
@@ -1346,7 +1346,7 @@ class Docker(Compiler):
             dummies = local_images + self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))
 
-        self.generateEnvFile(Scope(ScopeTier.Global),'')
+        self.generateEnvFile(NodeScope(NodeScopeTier.Global),'')
 
     def _computeComposeTopLvlVolumes(self) -> str:
         """!@brief render the 'volumes:' section of the docker-compose.yml file
