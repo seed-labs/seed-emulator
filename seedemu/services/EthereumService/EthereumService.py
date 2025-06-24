@@ -148,18 +148,7 @@ class Blockchain:
                 server.setFaucetUrl(self.__getIpByVnodeName(emulator, linked_faucet_node_name))
                 faucet_server:FaucetServer = emulator.getServerByVirtualNodeName(linked_faucet_node_name)
                 server.setFaucetPort(faucet_server.getPort())
-
-            elif self._consensus == ConsensusMechanism.POA and server.isStartMiner():
-
-                ifaces = node.getInterfaces()
-                assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
-                addr = str(ifaces[0].getAddress())
-                miner_ip = self._miner_node_address[0]
-                if addr == miner_ip:
-                    validator_count = len(self.getValidatorIds())
-                    index = self._joined_accounts.index(server._getAccounts()[0])
-                    self._joined_accounts[index].balance = 32*pow(10,18)*(validator_count+2)
-        
+  
         self._genesis.addAccounts(self.getAllAccounts())
         
         if self._consensus in [ConsensusMechanism.POA] :
