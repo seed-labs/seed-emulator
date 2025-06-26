@@ -621,6 +621,7 @@ class PoSServer(EthereumServer):
             if len(self._accounts) > 0:
                 print(self._accounts[0].keystore_filename)
                 node.setFile('/tmp/deposit.py', VALIDATOR_DEPOSIT_PY.format(keystore_filename=self._accounts[0].keystore_filename))
+            
             if not self.__is_manual_deposit_for_validator:
                 validator_deposit_sh = "sleep 2 && python3 /tmp/deposit.py"
 
@@ -632,10 +633,9 @@ class PoSServer(EthereumServer):
             
         node.setFile('/tmp/beacon-setup-node', beacon_setup_node)
         
-        # get current node validator id index
+        # get current node validator index if it's validator at genesis.
         validatorIds = self._blockchain.getValidatorIds()
         validator_idx = -1
-
         if self.isValidatorAtGenesis():
             # only get validator id if current node is validator at genesis.
             for i, v in enumerate(validatorIds):
@@ -761,14 +761,16 @@ class BeaconSetupServer():
         validator_ids = blockchain.getValidatorIds()
         validator_counts = len(validator_ids)
 
+        assert validator_counts > 0, "BeaconSetupServer::install: At least one node should be set as validator at genesis."
+
         # [remove] bootnode_ip = blockchain.getBootNodes()[0].split(":")[0]
         
         #node.addBuildCommand('apt-get update && apt-get install -y --no-install-recommends software-properties-common python3 python3-pip')
         #node.addBuildCommand('pip install web3')
         # [remove] node.appendStartCommand('lcli generate-bootnode-enr --ip {} --udp-port 30305 --tcp-port 30305 --genesis-fork-version 0x42424242 --output-dir /local-testnet/bootnode'.format(bootnode_ip))
-        node.setFile("/tmp/config.yaml", BEACON_GENESIS.format(chain_id=blockchain.getChainId(), 
-                                                                    target_committee_size=blockchain.getTargetCommitteeSize(), 
-                                                                    target_aggregator_per_committee = blockchain.getTargetAggregatorPerCommittee()))
+        node.setFile("/tmp/config.yaml", BEACON_GENESIS.format(chain_id=blockchain.getChainId(),
+                                                                    target_committee_size=blockchain.getTargetCommitteeSize(),
+                                                                    target_aggregator_per_committee=blockchain.getTargetAggregatorPerCommittee()))
         # [remove] node.setFile("/tmp/validator-ids", "\n".join(validator_ids))
         self.__genesis = blockchain.getGenesis()
 
