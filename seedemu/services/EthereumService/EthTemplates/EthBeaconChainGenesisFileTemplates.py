@@ -216,7 +216,7 @@ httpd.serve_forever()
 '''
 
 BEACON_MNEMONIC_YAML = '''\
-- mnemonic: "giant issue aisle success illegal bike spike question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy very lucky have athlete"  # a 24 word BIP 39 mnemonic
+- mnemonic: "{validator_mnemonic}"  # a 24 word BIP 39 mnemonic
   count: {validator_count} # amount of validators
 '''
 

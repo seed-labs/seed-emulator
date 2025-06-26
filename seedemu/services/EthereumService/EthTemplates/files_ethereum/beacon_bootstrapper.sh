@@ -27,7 +27,7 @@ while read -r node; do {{
         }}
 
         ($validatorAtGenesis) && {{
-            eth2-val-tools keystores --source-mnemonic "giant issue aisle success illegal bike spike question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy very lucky have athlete" --source-max 4 --source-min 0 --out-loc "/tmp/vc/assigned_data" 
+            eth2-val-tools keystores --source-mnemonic "{validator_mnemonic}" --source-max {validator_key_end} --source-min {validator_key_start} --out-loc "/tmp/vc/assigned_data" 
             mkdir /tmp/vc/local-testnet/testnet/validators
             cp -r /tmp/vc/assigned_data/keys/* /tmp/vc/local-testnet/testnet/validators/
             cp -r /tmp/vc/assigned_data/secrets /tmp/vc/local-testnet/testnet/

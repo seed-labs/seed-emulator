@@ -583,6 +583,7 @@ class PoSServer(EthereumServer):
         self.__is_beacon_validator_at_running = False
         self.__is_manual_deposit_for_validator = False
         self.__beacon_peer_counts = 5
+        self.__validator_mnemonic = "giant issue aisle success illegal bike spike question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy very lucky have athlete"
 
     def _generateGethStartCommand(self, addr:str):
         self._geth_options['pos'] = GethCommandTemplates['pos']
@@ -630,9 +631,28 @@ class PoSServer(EthereumServer):
             vc_start_command = LIGHTHOUSE_VC_CMD.format(ip_address=addr, acct_address=self._accounts[0].address)
             
         node.setFile('/tmp/beacon-setup-node', beacon_setup_node)
+        
+        # get current node validator id index
+        validatorIds = self._blockchain.getValidatorIds()
+        validator_idx = -1
+
+        if self.isValidatorAtGenesis():
+            # only get validator id if current node is validator at genesis.
+            for i, v in enumerate(validatorIds):
+                if int(v) == self._id:
+                    validator_idx = i
+                    break 
+            assert validator_idx >= 0, "EthereumServer::__install_beacon: validator id should be set at genesis."
+            validator_idx = int(validator_idx)
+            # this validator idx will be used to create validator keys properly. 
+            # Each validator at genesis node has 4 keys which were set at Genesis
+
         node.setFile('/tmp/beacon-bootstrapper', EthServerFileTemplates['beacon_bootstrapper'].format( 
                                 is_validator_at_genesis="true" if self.__is_beacon_validator_at_genesis else "false",
                                 is_validator_at_running="true" if self.__is_beacon_validator_at_running else "false",
+                                validator_mnemonic=self.__validator_mnemonic,
+                                validator_key_start= validator_idx * 4,
+                                validator_key_end= (validator_idx + 1) * 4,
                                 bc_start_command=bc_start_command,
                                 vc_start_command=vc_start_command,
                                 wallet_create_command=wallet_create_command,
@@ -648,7 +668,7 @@ class PoSServer(EthereumServer):
     def install(self, node: Node, eth: EthereumService):
         if self.__is_beacon_setup_node:
             beacon_setup_node = BeaconSetupServer()
-            beacon_setup_node.install(node, self._blockchain)
+            beacon_setup_node.install(self, node, self._blockchain)
             return 
         
         if self.__is_beacon_validator_at_genesis:
@@ -672,6 +692,19 @@ class PoSServer(EthereumServer):
     def enablePOSValidatorAtRunning(self, is_manual:bool=False):
         self.__is_beacon_validator_at_running = True
         self.__is_manual_deposit_for_validator = is_manual
+        return self
+
+    def getValidatorMnemonic(self):
+        return self.__validator_mnemonic
+
+    def setValidatorMnemonic(self, mnemonic:str):
+        """!
+        @brief Set the validator mnemonic for the beacon setup node.
+        This mnemonic will be used to generate validator keys at genesis and running.
+        
+        @param mnemonic The mnemonic to set.
+        """
+        self.__validator_mnemonic = mnemonic
         return self
 
     def isBeaconSetupNode(self):
@@ -699,6 +732,9 @@ class PoSServer(EthereumServer):
     def setBeaconSetupHttpPort(self, port:int):
         self.__beacon_setup_http_port = port
         return self
+
+
+
 class BeaconSetupServer():
 
     """!
@@ -717,7 +753,7 @@ class BeaconSetupServer():
         self.__beacon_setup_http_port = 8090
         self.__consensus_mechanism = consensus
 
-    def install(self, node: Node, blockchain: Blockchain):
+    def install(self, server:PoSServer, node: Node, blockchain: Blockchain):
         """!
         @brief Install the service.
         """
@@ -737,7 +773,7 @@ class BeaconSetupServer():
         self.__genesis = blockchain.getGenesis()
 
         node.setFile('/tmp/eth1-genesis.json', self.__genesis.getGenesis())
-        node.setFile("/tmp/mnemonic.yaml", BEACON_MNEMONIC_YAML.format(validator_count = validator_counts))
+        node.setFile("/tmp/mnemonic.yaml", BEACON_MNEMONIC_YAML.format(validator_count = validator_counts, validator_mnemonic=server.getValidatorMnemonic()))
         node.appendStartCommand('mkdir /local-testnet/testnet')
         # [remove] node.appendStartCommand('bootnode_enr=`cat /local-testnet/bootnode/enr.dat`')
         # [remove] node.appendStartCommand('echo "- $bootnode_enr" > /local-testnet/testnet/boot_enr.yaml')
