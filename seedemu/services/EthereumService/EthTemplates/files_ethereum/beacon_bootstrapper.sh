@@ -14,24 +14,50 @@ while read -r node; do {{
         }}
     }}; done
     ($ok) && {{
-        validator={is_validator}
-        bootnode={is_bootnode}
-        ($validator) && {{
-            curl --http0.9 -s http://$node/eth-{eth_id} > /tmp/eth.tar.gz
-            tar -xzvf /tmp/eth.tar.gz -C /tmp
-        }}
-        ($bootnode) && {{
-            curl --http0.9 -s http://$node/bootnode > /tmp/bootnode.tar.gz
-            tar -xzvf /tmp/bootnode.tar.gz -C /tmp
-        }}
+        validatorAtGenesis={is_validator_at_genesis}
+        validatorAtRunning={is_validator_at_running}
+
         curl --http0.9 -s http://$node/testnet > /tmp/testnet.tar.gz
-        tar -xzvf /tmp/testnet.tar.gz -C /tmp
-        {bootnode_start_command}
+        mkdir /tmp/bn
+        tar -xzvf /tmp/testnet.tar.gz -C /tmp/bn
+
+        ($validatorAtGenesis || $validatorAtRunning) && {{
+            mkdir /tmp/vc
+            tar -xzvf /tmp/testnet.tar.gz -C /tmp/vc
+        }}
+
+        ($validatorAtGenesis) && {{
+            eth2-val-tools keystores --source-mnemonic "{validator_mnemonic}" --source-max {validator_key_end} --source-min {validator_key_start} --out-loc "/tmp/vc/assigned_data" 
+            mkdir /tmp/vc/local-testnet/testnet/validators
+            cp -r /tmp/vc/assigned_data/keys/* /tmp/vc/local-testnet/testnet/validators/
+            cp -r /tmp/vc/assigned_data/secrets /tmp/vc/local-testnet/testnet/
+        }}
+
+        
+        
+        echo "[beacon_client] starting lighthouse beacon client"
         {bc_start_command}
+
+        ($validatorAtRunning) && {{
+        echo "creating validator wallet and deposit"
         {wallet_create_command}
         {validator_create_command}
         {validator_deposit_sh}
+
+        }}
+
+        # while loop till bc client is ready
+        while ! curl --http0.9 -sHf http://{ip_address}:8000 > /dev/null; do
+            echo "eth: local beacon node not ready, waiting..."
+            sleep 3
+        done
+
+
+        ($validatorAtGenesis || $validatorAtRunning) && {{
+        echo "[validator client] starting lighthouse validator client"
         {vc_start_command}
+        }}
+        
     }}
 }}; done < /tmp/beacon-setup-node
 
