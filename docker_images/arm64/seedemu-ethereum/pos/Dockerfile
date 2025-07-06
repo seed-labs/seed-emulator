@@ -44,7 +44,7 @@ RUN go install github.com/ethereum/go-ethereum/cmd/bootnode@v1.10.26
 
 # Final image    
 
-FROM handsonsecurity/seedemu-base
+FROM handsonsecurity/seedemu-multiarch-base:buildx-latest
 
 RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common python3 python3-pip
 RUN pip install web3
