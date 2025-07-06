@@ -36,6 +36,4 @@ GethCommandTemplates['nodiscover'] = '''\
 GethCommandTemplates['bootnodes'] = '''\
  --bootnodes "$(cat /tmp/eth-node-urls)"'''
 
-GethCommandTemplates['bootnode-start'] = '''\
- -nodekey {datadir}/geth/bootkey --nat extip:{ip_address}'''
 
