@@ -94,14 +94,12 @@ class EthereumServer(Server):
         """
         if self._no_discover:
             self._geth_options['finding_peers'] = GethCommandTemplates['nodiscover']
-        elif not self._is_bootnode:
+        else:
             self._geth_options['finding_peers'] = GethCommandTemplates['bootnodes']
         if self._enable_http:
             self._geth_options['http'] = GethCommandTemplates['http'].format(gethHttpPort=self._geth_http_port, extra_apis="" if self._consensus_mechanism.POS else ",personal,clique")
         if self._enable_ws:
             self._geth_options['ws'] = GethCommandTemplates['ws'].format(gethWsPort=self._geth_ws_port, extra_apis="" if self._consensus_mechanism.POS else ",personal,clique")
-        if self._is_bootnode:
-            self._geth_options['bootnode-start'] = GethCommandTemplates['bootnode-start'].format(datadir=self._data_dir, ip_address=addr)
         if self._custom_geth_command_option:
             self._geth_options['custom'] = self._custom_geth_command_option
         if self._unlock_accounts:
@@ -109,7 +107,7 @@ class EthereumServer(Server):
             for account in self._accounts:
                 accounts.append(account.address)
             self._geth_options['unlock'] = GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
-        self._geth_start_command = GethCommandTemplates['base'].format(node_id=self._id, chain_id=self._blockchain.getChainId(), datadir=self._data_dir, syncmode=self._syncmode.value, snapshot=self._snapshot, allow_insecure_unlock="" if self._consensus_mechanism == ConsensusMechanism.POS else "--allow-insecure-unlock" , option=self._geth_options)
+        self._geth_start_command = GethCommandTemplates['base'].format(node_id=self._id, chain_id=self._blockchain.getChainId(), datadir=self._data_dir, syncmode=self._syncmode.value, snapshot=self._snapshot, allow_insecure_unlock="" if self._consensus_mechanism == ConsensusMechanism.POS else "--allow-insecure-unlock", option=self._geth_options)
         
     def install(self, node: Node, eth: EthereumService):
         """!
@@ -165,12 +163,7 @@ class EthereumServer(Server):
         for account in self._accounts:
             node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename))
 
-        if self._is_bootnode and self._consensus_mechanism == ConsensusMechanism.POS:
-            # generate enode url. other nodes will access this to bootstrap the network.
-            node.appendStartCommand('[ ! -e "/root/.ethereum/geth/bootkey" ] && devp2p key generate /root/.ethereum/geth/bootkey')
-            node.appendStartCommand('devp2p key to-enode --ip {} --tcp 30303 --udp 30303 /root/.ethereum/geth/bootkey > /tmp/eth-enode-url'.format(addr))      
-            node.appendStartCommand('python3 -m http.server {} -d /tmp'.format(self._bootnode_http_port), True)
-        elif self._consensus_mechanism in [ConsensusMechanism.POA, ConsensusMechanism.POW]:
+        if self._is_bootnode:
             # generate enode url. other nodes will access this to bootstrap the network.
             node.appendStartCommand('[ ! -e "/root/.ethereum/geth/bootkey" ] && bootnode -genkey /root/.ethereum/geth/bootkey')
             node.appendStartCommand('echo "enode://$(bootnode -nodekey /root/.ethereum/geth/bootkey -writeaddress)@{}:30301" > /tmp/eth-enode-url'.format(addr))
@@ -181,7 +174,7 @@ class EthereumServer(Server):
 
         # get other nodes IP for the bootstrapper.
         bootnodes = self._blockchain.getBootNodes()[:]
-        if len(bootnodes) > 0 and not self.isBootNode():
+        if len(bootnodes) > 0:
             node.setFile('/tmp/eth-nodes', '\n'.join(bootnodes))
             
             node.setFile('/tmp/eth-bootstrapper', EthServerFileTemplates['bootstrapper'])
