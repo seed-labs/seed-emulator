@@ -7,7 +7,7 @@ export interface EmulatorNode {
                 MacAddress: string
             }
         }
-    
+
     };
     meta: {
         emulatorInfo: {
@@ -38,8 +38,17 @@ export interface EmulatorNetwork {
     }
 };
 
+export interface InstallType {
+    Id: string,
+    meta: {
+        baseInfo: {
+            name: string,
+        }
+    }
+}
+
 export interface BgpPeer {
     name: string;
     protocolState: string;
     bgpState: string;
-};
+}
