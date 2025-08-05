@@ -24,6 +24,10 @@ export class SessionManager implements LogProducer {
         [id: string]: Session
     };
 
+    private _submitEventSessions: {
+        [id: string]: Session
+    };
+
     private _docker: dockerode;
 
     private _newSessionCallback: (nodeId: string, session: Session) => void;
@@ -37,6 +41,7 @@ export class SessionManager implements LogProducer {
      */
     constructor(docker: dockerode, namespace: String = '') {
         this._sessions = {};
+        this._submitEventSessions = {};
         this._docker = docker;
         this._logger = new Logger({ name: `${namespace}SessionManager` });
     }
@@ -131,6 +136,59 @@ export class SessionManager implements LogProducer {
             hijack: true
         };
         this._logger.trace('starting exec object with options:', startOpt);    
+        var stream = await exec.start(startOpt);
+
+        this._logger.info(`started session for container ${id}.`);
+
+        this._sessions[fullId] = {
+            stream, exec
+        };
+
+        if (this._newSessionCallback) {
+            this._newSessionCallback(fullId, this._sessions[fullId]);
+        }
+
+        return this._sessions[fullId];
+    }
+
+    async getSessionSubmitEvent(id: string, command: string[] = ['bash']): Promise<Session> {
+        this._logger.info(`getting container ${id}...`);
+
+        var fullId = await this._getContainerRealId(id);
+        this._logger.trace(`${id}'s full id: ${fullId}.`)
+
+        var container = this._docker.getContainer(fullId);
+
+        if (this._sessions[fullId]) {
+            var session = this._sessions[fullId];
+            this._logger.debug(`found existing session for ${id}, try re-attach...`);
+            var stream = session.stream;
+            if (stream.writable) {
+                this._logger.info(`attached to existing session for ${id}.`);
+                return session;
+            }
+            this._logger.info(`existing session for ${id} is invalid, creating new session.`);
+        }
+
+        this._logger.trace(`getting container ${id}...`);
+
+        var execOpt = {
+            AttachStdin: true,
+            AttachStdout: true,
+            AttachStderr: true,
+            Tty: true,
+            Cmd: command
+        };
+        this._logger.trace('spawning exec object with options:', execOpt);
+        var exec = await container.exec(execOpt);
+
+        var startOpt = {
+            Tty: true,
+            Detach: false,
+            stdin: true,
+            hijack: true
+        };
+        this._logger.trace('starting exec object with options:', startOpt);
         var stream = await exec.start(startOpt);
 
         this._logger.info(`started session for container ${id}.`);
