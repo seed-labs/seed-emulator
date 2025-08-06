@@ -7,4 +7,13 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:
-            - 8080:8080
+            - 8083:8080
+        networks:
+            - output_net_150_net0
+        cap_add:
+            - ALL
+        privileged: true
+
+networks:
+    output_net_150_net0:
+        external: true
