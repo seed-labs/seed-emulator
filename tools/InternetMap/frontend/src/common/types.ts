@@ -7,7 +7,6 @@ export interface EmulatorNode {
                 MacAddress: string
             }
         }
-
     };
     meta: {
         emulatorInfo: {
@@ -20,6 +19,9 @@ export interface EmulatorNode {
             role: string,
             description?: string,
             displayname?: string
+        };
+        relation?: {
+            parent: Set<string>,
         };
     };
 };
@@ -34,7 +36,10 @@ export interface EmulatorNetwork {
             prefix: string,
             description?: string,
             displayname?: string
-        }
+        },
+        relation?: {
+            parent: Set<string>,
+        },
     }
 };
 
