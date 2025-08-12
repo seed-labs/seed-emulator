@@ -4,7 +4,7 @@ import {bpfCompletionTree} from '../common/bpf';
 import {Completion} from '../common/completion';
 import {EmulatorNetwork, EmulatorNode} from '../common/types';
 import {WindowManager} from '../common/window-manager';
-import {DataSource, NodesType, EdgesType, Vertex, Edge} from './datasource';
+import {DataSource, NodesType, EdgesType, Vertex} from './datasource';
 
 /**
  * map UI element bindings.
@@ -1381,6 +1381,67 @@ export class MapUi {
         this._infoPlateElement.classList.remove('loading');
     }
 
+    private _expandNode(nodeId: string) {
+        const children = this._nodes.get({
+            filter: item => item.object.meta.relation.parent.size === 1 && [...item.object.meta.relation.parent][0] === nodeId
+        });
+
+        const updates = children.map(child => ({
+            id: child.id,
+            hidden: false,
+        }));
+
+        this._nodes.update(updates);
+        this._nodes.update({id: nodeId, collapsed: false});
+
+        children.forEach(child => {
+            if (!child.collapsed) {
+                this._expandNode(child.id);
+            }
+        });
+    }
+
+    private _collapseNode(nodeId: string) {
+        const descendants = this._getAllDescendants(nodeId);
+
+        // 隐藏所有后代节点
+        const updates = descendants.map(desc => ({
+            id: desc.id,
+            hidden: true,
+        }));
+
+        this._nodes.update(updates);
+        this._nodes.update({id: nodeId, collapsed: true});
+    }
+
+    private _getAllDescendants(nodeId: string) {
+        let descendants = [];
+        const stack = [nodeId];
+
+        while (stack.length > 0) {
+            const currentId = stack.pop();
+            const children = this._nodes.get({
+                filter: item => item.object.meta.relation.parent.size === 1 && [...item.object.meta.relation.parent][0] === currentId
+            });
+
+            children.forEach(child => {
+                descendants.push(child);
+                stack.push(child.id);
+            });
+        }
+
+        let other = new Set<string>();
+        this._nodes.get().forEach(item => {
+            if (!descendants.find(d => d.id === item.id)) {
+                item.object.meta.relation.parent.forEach(i => other.add(i))
+            }
+        })
+
+        descendants = descendants.filter(item => !other.has(item.id))
+
+        return descendants;
+    }
+
     /**
      * map mac addresses to networks.
      */
@@ -1993,6 +2054,19 @@ export class MapUi {
             }
 
             this._updateInfoPlateWith(ev.nodes[0]);
+        });
+
+        this._graph.on('doubleClick', (ev) => {
+            if (ev.nodes.length <= 0) {
+                return;
+            }
+            const nodeId = ev.nodes[0];
+            const node = this._nodes.get(nodeId);
+            if (node['collapsed']) {
+                this._expandNode(nodeId);
+            } else {
+                this._collapseNode(nodeId);
+            }
         });
 
         // this._graph.on("dragStart", () => {
