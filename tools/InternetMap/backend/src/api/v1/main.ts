@@ -20,7 +20,7 @@ async function readJsonFile(filePath: string) {
         const data = await fs.readFile(filePath, 'utf-8');
         return JSON.parse(data);
     } catch (err) {
-        console.error(`读取文件 ${fs.realpath(filePath)} 失败:`, err);
+        console.error(`read file ${fs.realpath(filePath)} failed:`, err);
         throw err;
     }
 }
@@ -225,6 +225,7 @@ router.post('/container/:id/net', express.json(), async function (req, res, next
 
 router.post('/container/:id/vis/set', express.json(), async function (req, res, next) {
     let id = req.params.id;
+    let action = req.query.action;
 
     var candidates = (await docker.listContainers())
         .filter(c => c.Id.startsWith(id));
@@ -238,12 +239,37 @@ router.post('/container/:id/vis/set', express.json(), async function (req, res, 
         return;
     }
 
+    let option = {
+        id,
+        static: {},
+        dynamic: {},
+        action
+    }
+    switch (action) {
+        case 'flash':
+            option.static = req.body.static || {borderWidth: 1};
+            option.dynamic = req.body.dynamic || {borderWidth: 4};
+            break
+        case 'highlight':
+            option.static = req.body.static || {
+                color: {
+                    highlight: {
+                        border: '#2B7CE9',
+                        background: '#D2E5FF'
+                    },
+                }
+            };
+            break
+        default:
+            option = {...option, ...req.body}
+    }
+
     var deadSockets: WebSocket[] = [];
 
     visSubscribers.forEach(socket => {
         if (socket.readyState == 1) {
             socket.send(JSON.stringify({
-                source: id, data: JSON.stringify(req.body)
+                source: id, data: JSON.stringify(option)
             }));
         }
 

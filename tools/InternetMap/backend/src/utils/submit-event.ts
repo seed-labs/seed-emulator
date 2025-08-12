@@ -5,7 +5,6 @@ import * as os from 'os';
 import * as path from 'path';
 import fs from 'fs';
 import tar from 'tar-fs';
-import stream from 'stream';
 
 export class SubmitEvent implements LogProducer {
     private _logger: Logger;
@@ -17,98 +16,58 @@ export class SubmitEvent implements LogProducer {
     }
 
     /**
-     * 从当前容器复制文件到目标容器
-     * @param sourcePath 源路径（当前容器内绝对路径）
-     * @param targetContainerId 目标容器ID
-     * @param targetPath 目标路径（目标容器内绝对路径）
+     * Copy files from the current container to the target container
+     * @param sourcePath
+     * @param targetContainerId
+     * @param targetPath
      */
     async copyToContainerFromCurrentContainer(
         sourcePath: string,
         targetContainerId: string,
         targetPath: string
     ): Promise<void> {
-        // 获取容器对象
         const targetContainer = this._docker.getContainer(targetContainerId);
         try {
-            // 2. 检查文件夹是否存在
             if (!fs.existsSync(sourcePath)) {
-                this._logger.error(`源容器文件夹 ${sourcePath} 不存在`);
+                this._logger.error(`source path ${sourcePath} does not exist`);
                 return
             }
-            // 3. 创建tar流
+            // create tar stream
             const uploadStream = tar.pack(sourcePath);
-            // 上传到目标容器
+            // upload
             await targetContainer.putArchive(uploadStream, {
                 path: targetPath,
                 noOverwriteDirNonDir: false
             });
         } catch (error) {
-            this._logger.error('复制过程中出错:', error);
+            this._logger.error('copy failed:', error);
             throw error
         }
     }
 
     /**
-     * 将文件或文件夹从主机复制到容器
-     * @param {string} containerId - 目标容器ID或名称
-     * @param {string} hostPath - 主机上的文件/文件夹路径
-     * @param {string} containerPath - 容器内的目标路径
-     * @returns {Promise<void>}
-     */
-    async copyToContainerFromHost(
-        hostPath: string,
-        containerId: string,
-        containerPath: string,
-    ) {
-        try {
-            // 1. 获取容器实例
-            const container = this._docker.getContainer(containerId);
-            // 2. 检查文件夹是否存在
-            if (!fs.existsSync(hostPath)) {
-                this._logger.error(`主机文件夹 ${hostPath} 不存在`);
-                return
-            }
-            // 3. 创建tar流
-            const tarStream = tar.pack(hostPath);
-            // 4. 上传到容器
-            await container.putArchive(tarStream, {
-                path: containerPath,
-                noOverwriteDirNonDir: false
-            });
-        } catch (error) {
-            this._logger.error('复制文件夹到容器失败:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * 删除容器中的指定文件
-     * @param containerId 容器ID或名称
-     * @param filePaths 容器内要删除的文件路径
+     * Delete the specified file in the container
+     * @param containerId
+     * @param filePaths The file path to be deleted within the container
      */
     async delFileInContainer(containerId: string, filePaths: string[]): Promise<void> {
         try {
-            // 获取容器对象
             const container = this._docker.getContainer(containerId);
-            // 执行删除命令 (使用 rm -f 强制删除)
+            // execute the deletion command (use rm -f to force deletion)
             const exec = await container.exec({
                 Cmd: ['rm', '-f', ...filePaths],
                 AttachStdout: true,
                 AttachStderr: true
             });
-
-            // 启动执行
+            // start execution
             const stream = await exec.start({hijack: true, stdin: false});
-
-            // 处理输出结果
+            // process the output result
             await new Promise((resolve, reject) => {
                 this._docker.modem.demuxStream(stream, process.stdout, process.stderr);
-
                 stream.on('end', () => resolve(undefined));
                 stream.on('error', (err) => reject(err));
             });
-
-            // 检查执行结果
+            // check the execution result
             const inspectResult = await exec.inspect();
             if (inspectResult.ExitCode !== 0) {
                 throw new Error(`Failed to delete file, exit code: ${inspectResult.ExitCode}`);
@@ -142,19 +101,17 @@ export class SubmitEvent implements LogProducer {
         let ret = true;
 
         this._logger.debug(`submit event install on ${nodes}...`);
-        // 创建临时文件夹
+        // create a temporary folder
         const tempDir = path.join(os.tmpdir(), 'submit-event');
         await fs.promises.mkdir(tempDir, {recursive: true});
-
-        // 3. 读取指定文件
+        // read the file
         const sourceFilePath = '../module/submit_event.sh'
         if (!fs.existsSync(sourceFilePath)) {
-            this._logger.info(`${fs.realpathSync(sourceFilePath)} 文件不存在`);
+            this._logger.info(`File ${fs.realpathSync(sourceFilePath)} does not exist`);
             return
         }
         const fileContent = fs.readFileSync(sourceFilePath, 'utf8');
-
-        // 4. 修改地址 ip+port
+        // modify the address (ip+port)
         let modifiedContent = fileContent.replace('ADDRESS', address);
 
         try {
@@ -162,14 +119,13 @@ export class SubmitEvent implements LogProducer {
                 async node => {
                     const tempNodeDir = path.join(tempDir, node);
                     await fs.promises.mkdir(tempNodeDir, {recursive: true});
-                    const tempFilePath1 = path.join(tempNodeDir, 'option.json');
+                    // const tempFilePath1 = path.join(tempNodeDir, 'option.json');
                     const tempFilePath2 = path.join(tempNodeDir, 'submit_event.sh');
-                    // 写入vis 配置模板文件
-                    fs.writeFileSync(tempFilePath1, JSON.stringify({id: node, interval: 300, static: {}, dynamic: {}}));
-                    // 写入vis 脚本文件
+                    // write to the configuration template file
+                    // fs.writeFileSync(tempFilePath1, JSON.stringify({id: node, interval: 300, static: {}, dynamic: {}}));
+                    // write to the vis script file
                     const _modifiedContent = modifiedContent.replace('ID', node);
                     fs.writeFileSync(tempFilePath2, _modifiedContent);
-                    // await this.copyToContainerFromHost(tempNodeDir, node, '/')
                     await this.copyToContainerFromCurrentContainer(tempNodeDir, node, '/');
                 }
             ));
@@ -189,7 +145,8 @@ export class SubmitEvent implements LogProducer {
         try {
             await Promise.all(nodes.map(
                 async node => {
-                    await this.delFileInContainer(node, ['/option.json', '/submit_event.sh']);
+                    // await this.delFileInContainer(node, ['/option.json', '/submit_event.sh']);
+                    await this.delFileInContainer(node, ['/submit_event.sh']);
                 }
             ));
         } catch (error) {
