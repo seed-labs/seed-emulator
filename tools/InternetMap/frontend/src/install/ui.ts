@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import {InstallType} from '../common/types';
 import {WindowManager} from '../common/window-manager';
-import {ApiRespond} from "../map2/datasource";
+import {ApiRespond} from "../map/datasource";
 
 export class IndexUi {
     private _installTable: DataTables.Api;

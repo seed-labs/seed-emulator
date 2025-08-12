@@ -6,7 +6,6 @@ let config = {
         install: './src/install/install.ts',
         console: './src/console/console.ts',
         map: './src/map/map.ts',
-        map2: './src/map2/map2.ts'
     },
     module: {
         rules: [

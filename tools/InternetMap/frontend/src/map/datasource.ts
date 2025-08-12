@@ -1,7 +1,8 @@
+import { DataSet } from 'vis-data';
 import { EdgeOptions, NodeOptions } from 'vis-network';
 import { BgpPeer, EmulatorNetwork, EmulatorNode } from '../common/types';
 
-export type DataEvent = 'packet' | 'dead';
+export type DataEvent = 'packet' | 'dead' | 'vis';
 
 export interface Vertex extends NodeOptions {
     id: string;
@@ -19,6 +20,9 @@ export interface Edge extends EdgeOptions {
     label?: string;
 }
 
+export type NodesType = DataSet<Vertex, 'id'>
+export type EdgesType = DataSet<Edge, 'id'>
+
 export interface ApiRespond<ResultType> {
     ok: boolean;
     result: ResultType;
@@ -35,12 +39,14 @@ export class DataSource {
 
     private _wsProtocol: string;
     private _socket: WebSocket;
+    private _socketVis: WebSocket;
 
     private _connected: boolean;
 
     private _packetEventHandler: (nodeId: string) => void;
     private _errorHandler: (error: any) => void;
 
+    private _visEventHandler: (params: any) => void;
     /**
      * construct new data provider.
      * 
@@ -136,6 +142,28 @@ export class DataSource {
                 this._errorHandler(ev);
             }
         });
+        // vis set ws
+        this._socketVis = new WebSocket(`${this._wsProtocol}://${location.host}${this._apiBase}/container/vis/set`);
+        this._socketVis.addEventListener('message', (ev) => {
+            let msg = ev.data.toString();
+
+            let object = JSON.parse(msg);
+            if (this._visEventHandler) {
+                this._visEventHandler(object);
+            }
+        });
+
+        this._socketVis.addEventListener('error', (ev) => {
+            if (this._errorHandler) {
+                this._errorHandler(ev);
+            }
+        });
+
+        this._socketVis.addEventListener('close', (ev) => {
+            if (this._errorHandler) {
+                this._errorHandler(ev);
+            }
+        });
 
         this._connected = true;
     }
@@ -146,6 +174,22 @@ export class DataSource {
     disconnect() {
         this._connected = false;
         this._socket.close();
+        this._socketVis.close();
+    }
+
+    getNodeInfoById(nodeId) {
+        return this._nodes.find(n => n.Id === nodeId);
+    }
+
+    getNodeInfoByIP(ip) {
+        return this._nodes.find(node => {
+            const net = node.NetworkSettings.Networks;
+            for (const key of Object.keys(net)) {
+                if (net[key]['IPAddress'] === ip) {
+                    return true
+                }
+            }
+        });
     }
 
     /**
@@ -221,6 +265,9 @@ export class DataSource {
                 break;
             case 'dead':
                 this._errorHandler = callback;
+                break
+            case 'vis':
+                this._visEventHandler = callback;
         }
     }
 
