@@ -1,6 +1,6 @@
-import { DataSet } from 'vis-data';
-import { EdgeOptions, NodeOptions } from 'vis-network';
-import { BgpPeer, EmulatorNetwork, EmulatorNode } from '../common/types';
+import {DataSet} from 'vis-data';
+import {EdgeOptions, NodeOptions} from 'vis-network';
+import {BgpPeer, EmulatorNetwork, EmulatorNode} from '../common/types';
 
 export type DataEvent = 'packet' | 'dead' | 'vis';
 
@@ -11,6 +11,7 @@ export interface Vertex extends NodeOptions {
     shape?: string;
     type: 'node' | 'network';
     object: EmulatorNode | EmulatorNetwork;
+    collapsed: boolean,
 }
 
 export interface Edge extends EdgeOptions {
@@ -47,9 +48,10 @@ export class DataSource {
     private _errorHandler: (error: any) => void;
 
     private _visEventHandler: (params: any) => void;
+
     /**
      * construct new data provider.
-     * 
+     *
      * @param apiBase api base url.
      * @param wsProtocol websocket protocol (ws/wss), default to ws.
      */
@@ -63,7 +65,7 @@ export class DataSource {
 
     /**
      * load data from api.
-     * 
+     *
      * @param method http method.
      * @param url target url.
      * @param body (optional) request body.
@@ -90,7 +92,7 @@ export class DataSource {
                 }
 
                 var res = JSON.parse(xhr.response);
-                
+
                 if (res.ok) {
                     resolve(res);
                 } else {
@@ -120,6 +122,13 @@ export class DataSource {
         if (this._connected) {
             return;
         }
+
+        this._nets.forEach(net => {
+            net.meta.relation = {parent: new Set<string>()}
+        })
+        this._nodes.forEach(node => {
+            node.meta.relation = {parent: new Set<string>()};
+        })
 
         this._socket = new WebSocket(`${this._wsProtocol}://${location.host}${this._apiBase}/sniff`);
         this._socket.addEventListener('message', (ev) => {
@@ -194,7 +203,7 @@ export class DataSource {
 
     /**
      * get current sniff filter expression.
-     * 
+     *
      * @returns filter expression.
      */
     async getSniffFilter(): Promise<string> {
@@ -203,17 +212,17 @@ export class DataSource {
 
     /**
      * set sniff filter expression.
-     * 
+     *
      * @param filter filter expression.
      * @returns updated filter expression.
      */
     async setSniffFilter(filter: string): Promise<string> {
-        return (await this._load<FilterRespond>('POST', `${this._apiBase}/sniff`, JSON.stringify({ filter }))).result.currentFilter;
+        return (await this._load<FilterRespond>('POST', `${this._apiBase}/sniff`, JSON.stringify({filter}))).result.currentFilter;
     }
 
     /**
      * get list of bgp peers of the given node.
-     * 
+     *
      * @param node node id. must be node with router role.
      * @returns list of peers.
      */
@@ -223,18 +232,18 @@ export class DataSource {
 
     /**
      * set bgp peer state.
-     * 
+     *
      * @param node node id. must be node with router role.
      * @param peer peer name.
      * @param up protocol state, true = up, false = down.
      */
     async setBgpPeers(node: string, peer: string, up: boolean) {
-        await this._load('POST', `${this._apiBase}/container/${node}/bgp/${peer}`, JSON.stringify({ status: up }));
+        await this._load('POST', `${this._apiBase}/container/${node}/bgp/${peer}`, JSON.stringify({status: up}));
     }
 
     /**
      * get network state of the given node.
-     * 
+     *
      * @param node node id.
      * @returns true if up, false if down.
      */
@@ -244,22 +253,22 @@ export class DataSource {
 
     /**
      * set network state of the given node.
-     * 
+     *
      * @param node node id.
      * @param up true if up, false if down.
      */
     async setNetworkStatus(node: string, up: boolean) {
-        await this._load('POST', `${this._apiBase}/container/${node}/net`, JSON.stringify({ status: up }));
+        await this._load('POST', `${this._apiBase}/container/${node}/net`, JSON.stringify({status: up}));
     }
 
     /**
      * event handler register.
-     * 
+     *
      * @param eventName event to listen.
      * @param callback callback.
      */
     on(eventName: DataEvent, callback?: (data: any) => void) {
-        switch(eventName) {
+        switch (eventName) {
             case 'packet':
                 this._packetEventHandler = callback;
                 break;
@@ -292,6 +301,22 @@ export class DataSource {
                     to: net.NetworkID,
                     label
                 });
+
+                const nodeInfo = node.meta.emulatorInfo;
+                if (['Router', 'BorderRouter'].includes(nodeInfo.role)) {
+                    for (const item of this._nets) {
+                        if (item.Id === net.NetworkID) {
+                            if (item.meta.emulatorInfo.type === 'global') {
+                                node.meta.relation.parent.add(item.Id);
+                            } else {
+                                item.meta.relation.parent.add(node.Id);
+                            }
+                            break;
+                        }
+                    }
+                } else {
+                    node.meta.relation.parent.add(net.NetworkID);
+                }
             })
         })
 
@@ -308,7 +333,8 @@ export class DataSource {
                 label: netInfo.displayname ?? `${netInfo.scope}/${netInfo.name}`,
                 type: 'network',
                 shape: netInfo.type == 'global' ? 'star' : 'diamond',
-                object: net
+                object: net,
+                collapsed: false,
             };
 
             if (netInfo.type == 'local') {
@@ -325,7 +351,8 @@ export class DataSource {
                 label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
                 type: 'node',
                 shape: ['Router', 'BorderRouter'].includes(nodeInfo.role) ? 'dot' : 'hexagon',
-                object: node
+                object: node,
+                collapsed: false,
             };
 
             if (nodeInfo.role != 'Route Server') {
