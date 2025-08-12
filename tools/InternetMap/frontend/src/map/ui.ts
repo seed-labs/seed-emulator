@@ -1,19 +1,19 @@
-import { DataSet } from 'vis-data';
-import { Network } from 'vis-network';
-import { bpfCompletionTree } from '../common/bpf';
-import { Completion } from '../common/completion';
-import { EmulatorNetwork, EmulatorNode } from '../common/types';
-import { WindowManager } from '../common/window-manager';
-import { DataSource, Edge, Vertex } from './datasource';
+import {DataSet} from 'vis-data';
+import {Network, NodeOptions} from 'vis-network';
+import {bpfCompletionTree} from '../common/bpf';
+import {Completion} from '../common/completion';
+import {EmulatorNetwork, EmulatorNode} from '../common/types';
+import {WindowManager} from '../common/window-manager';
+import {DataSource, NodesType, EdgesType, Vertex, Edge} from './datasource';
 
 /**
  * map UI element bindings.
  */
 export interface MapUiConfiguration {
     datasource: DataSource, // data provider
-    mapElementId: string, // element id of the map 
+    mapElementId: string, // element id of the map
     infoPlateElementId: string, // element id of the info plate
-    filterInputElementId: string, // element id of the filter/search text input 
+    filterInputElementId: string, // element id of the filter/search text input
     filterWrapElementId: string, // element id of the filter/search text input wrapper
     logBodyElementId: string, // element id of the log body (the tbody)
     logPanelElementId: string, // element id of the log panel
@@ -39,7 +39,7 @@ export interface MapUiConfiguration {
         forwardButtonElementId: string, // element id of forward button
         seekBarElementId: string, // element id of seek bar
         intervalElementId: string, // element id of interval input
-        statusElementId: string // element id of status 
+        statusElementId: string // element id of status
     },
     windowManager: { // console window manager
         desktopElementId: string, // elementid for desktop
@@ -60,6 +60,47 @@ interface PlaylistItem {
     nodes: string[],
     at: number
 };
+
+const staticDefault = {borderWidth: 1}
+const dynamicDefault = {borderWidth: 4}
+const arrowStop = {
+    to: {enabled: false},
+    from: {enabled: false}
+};
+const arrowTo = {
+    to: {enabled: true},
+    from: {enabled: false}
+};
+
+const arrowFrom = {
+    to: {enabled: false},
+    from: {enabled: true}
+};
+
+const arrowBothWay = {
+    to: {enabled: true},
+    from: {enabled: true}
+};
+
+const extractRequestMacAddresses = (text: string): string[] => {
+    const regex = /(?:In|Out)\s+([0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){5}).*?ICMP echo request/g;
+    const matches: string[] = [];
+    let match = [];
+    while ((match = regex.exec(text)) !== null) {
+        matches.push(match[1]);
+    }
+    return matches;
+}
+
+const extractReplyMacAddresses = (text: string): string[] => {
+    const regex = /(?:In|Out)\s+([0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){5}).*?ICMP echo reply/g;
+    const matches: string[] = [];
+    let match = [];
+    while ((match = regex.exec(text)) !== null) {
+        matches.push(match[1]);
+    }
+    return matches;
+}
 
 /**
  * map UI controller.
@@ -96,8 +137,8 @@ export class MapUi {
 
     private _datasource: DataSource;
 
-    private _nodes: DataSet<Vertex, 'id'>;
-    private _edges: DataSet<Edge, 'id'>;
+    private _nodes: NodesType;
+    private _edges: EdgesType;
     private _graph: Network;
 
     /** list of log elements to be rendered to log body */
@@ -107,17 +148,28 @@ export class MapUi {
     private _flashQueue: Set<string>;
     /** set of vertex ids scheduled for un-flash */
     private _flashingNodes: Set<string>;
-    
+    // vis
+    private _visSetQueue: Set<string>;
+    private _flashVisQueue: Set<string>;
+    private _flashingVisNodes: Set<string>;
+    private _tFlashNodeMapping: { [key: string]: Set<string> };
+    private _visFlashNodeMapping: { [key: string]: Set<string> };
+    private _tVisFlashNodeMapping: { [key: string]: Set<string> };
+    private _visArrowMapping: { [key: string]: Set<string> };
+    private _tVisArrowMapping: { [key: string]: Set<string> };
+
     private _logPrinter: number;
     private _flasher: number;
+    private _flasherVis: { [key: string]: number };
 
     private _macMapping: { [mac: string]: string };
+    private _macContainerIDMapping: { [mac: string]: string };
 
     private _filterMode: FilterMode;
 
     /** set of vertex ids for nodes/nets currently being highlighted by search  */
     private _searchHighlightNodes: Set<string>;
-    
+
     private _lastSearchTerm: string;
 
     /** window manager for consoles.  */
@@ -148,9 +200,13 @@ export class MapUi {
     private _replayPos: number;
     private _seeking: boolean;
 
+    private _firstIntervalStartTime: number
+    private _intervalDefault: number
+    private _flashVisStyleMapping: { [key: string]: { [key: string]: number | NodeOptions } }
+
     /**
      * Build a new map UI controller.
-     * 
+     *
      * @param config element bindings.
      */
     constructor(config: MapUiConfiguration) {
@@ -184,6 +240,9 @@ export class MapUi {
         this._interval = document.getElementById(config.replayControls.intervalElementId) as HTMLInputElement;
         this._replayStatusText = document.getElementById(config.replayControls.statusElementId);
 
+        this._intervalDefault = 500;
+        this._flashVisStyleMapping = {};
+
         this._logMinimized = true;
 
         this._replayStatus = 'stopped';
@@ -198,10 +257,20 @@ export class MapUi {
 
         this._flashQueue = new Set<string>();
         this._flashingNodes = new Set<string>();
+        this._flashVisQueue = new Set<string>();
+        this._flashingVisNodes = new Set<string>();
+        this._flasherVis = {};
+        this._visSetQueue = new Set<string>();
+        this._tFlashNodeMapping = {src: new Set<string>(), dst: new Set<string>()};
+        this._visFlashNodeMapping = {src: new Set<string>(), dst: new Set<string>()};
+        this._tVisFlashNodeMapping = {src: new Set<string>(), dst: new Set<string>()};
+        this._visArrowMapping = {to: new Set<string>(), from: new Set<string>(), both: new Set<string>()};
+        this._tVisArrowMapping = {to: new Set<string>(), from: new Set<string>(), both: new Set<string>()};
 
         this._searchHighlightNodes = new Set<string>();
 
         this._macMapping = {};
+        this._macContainerIDMapping = {};
 
         this._filterMode = 'filter';
         this._lastSearchTerm = '';
@@ -261,7 +330,7 @@ export class MapUi {
 
                 return false;
             }
-    
+
             if (event.key == 'ArrowDown') {
                 this._moveSuggestionSelection('down');
                 this._ignoreKeyUp = true;
@@ -282,7 +351,7 @@ export class MapUi {
             if ((event.key == 'Enter' || event.key == 'Tab') && this._suggestionsSelection != -1) {
                 (this._suggestions.children[this._suggestionsSelection] as HTMLElement).click();
                 this._ignoreKeyUp = true;
-                
+
                 return false;
             }
 
@@ -313,7 +382,7 @@ export class MapUi {
         this._filterInput.onclick = () => {
             this._updateFilterSuggestions(this._filterInput.value);
         };
-        
+
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
             if (shown) {
                 this._logPanel.classList.add('bump');
@@ -328,7 +397,7 @@ export class MapUi {
                 window.location.reload();
             }
         });
-        
+
         this._datasource.on('packet', (data) => {
             // bad data?
             if (!data.source || !data.data) {
@@ -353,23 +422,89 @@ export class MapUi {
                     if (this._nodes.get(nodeId) === null) {
                         return;
                     }
-                    
                     this._flashQueue.add(nodeId);
+                    // this._flashVisQueue.add(nodeId);
                 }
             });
+
+            let netNodeRequest = new Set();
+            let netNodeReply = new Set();
+            extractRequestMacAddresses(data.data).forEach(mac => {
+                netNodeRequest.add(this._macMapping[mac]);
+            })
+            extractReplyMacAddresses(data.data).forEach(mac => {
+                netNodeReply.add(this._macMapping[mac]);
+            })
+            const IPs = data.data.match(/([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) > ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}): ICMP echo request/);
+            const IPsReply = data.data.match(/([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) > ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}): ICMP echo reply/);
 
             // at least one mac address matching a net is found, flash the node.
             // note: when no matching net is found, the "packet" may not be a
             // packet, but output from tcpdump.
             if (flashed.size > 0) {
-                this._flashQueue.add(data.source);
+                const nodeId = data.source;
+                if (this._visSetQueue.has(nodeId)) {
+                    this._flashVisQueue.add(nodeId);
+                    if (IPs) {
+                        this._visFlashNodeMapping.src.add(this._datasource.getNodeInfoByIP(IPs[1]).Id);
+                    }
+                } else {
+                    this._flashQueue.add(nodeId);
+                }
+                let src: string, dst: string;
+                if (IPs) {
+                    src = this._datasource.getNodeInfoByIP(IPs[1]).Id;
+                    dst = this._datasource.getNodeInfoByIP(IPs[2]).Id;
+                } else if (IPsReply) {
+                    src = this._datasource.getNodeInfoByIP(IPsReply[2]).Id;
+                    dst = this._datasource.getNodeInfoByIP(IPsReply[1]).Id;
+                }
+                if (netNodeRequest.size > 0) {
+                    let tEdge = this._findEdgeId2(nodeId, [...netNodeRequest][0]);
+                    if (src === nodeId) {
+                        this._visArrowMapping.to.add(tEdge);
+                    } else {
+                        this._visArrowMapping.from.add(tEdge);
+                    }
+                }
+                if (netNodeRequest.size > 1) {
+                    this._visArrowMapping.to.add(this._findEdgeId2(nodeId, [...netNodeRequest][1]))
+                }
+
+                if (netNodeReply.size > 0) {
+                    let tEdge = this._findEdgeId2(nodeId, [...netNodeReply][0]);
+                    if (dst === nodeId) {
+                        if (this._visArrowMapping.from.has(tEdge)) {
+                            this._visArrowMapping.from.delete(tEdge);
+                            this._visArrowMapping.both.add(tEdge);
+                        } else {
+                            this._visArrowMapping.to.add(tEdge);
+                        }
+                    } else {
+                        if (this._visArrowMapping.to.has(tEdge)) {
+                            this._visArrowMapping.to.delete(tEdge);
+                            this._visArrowMapping.both.add(tEdge);
+                        } else {
+                            this._visArrowMapping.from.add(tEdge);
+                        }
+                    }
+                }
+                if (netNodeReply.size > 1) {
+                    let tEdge = this._findEdgeId2(nodeId, [...netNodeReply][1]);
+                    if (this._visArrowMapping.from.has(tEdge)) {
+                        this._visArrowMapping.from.delete(tEdge);
+                        this._visArrowMapping.both.add(tEdge);
+                    } else {
+                        this._visArrowMapping.to.add(tEdge)
+                    }
+                }
             }
 
             let now = new Date();
             let lines: string[] = data.data.split('\r\n').filter(line => line !== '');
 
             if (lines.length > 0 && this._recording) {
-                this._events.push({ lines: lines, source: data.source });
+                this._events.push({lines: lines, source: data.source});
             }
 
             // tcpdump output: "listening on xxx", meaning tcpdump is running
@@ -379,9 +514,9 @@ export class MapUi {
                 this._filterWrap.classList.remove('error');
             }
 
-            // tcpdump output: "error", meaning tcpdump don't like the last 
+            // tcpdump output: "error", meaning tcpdump don't like the last
             // expression
-            if (data.data.includes('error')) { 
+            if (data.data.includes('error')) {
                 this._filterInput.classList.add('error');
                 this._filterWrap.classList.add('error');
             }
@@ -401,7 +536,7 @@ export class MapUi {
             let td2 = document.createElement('td');
 
             td0.innerText = timeString;
-            
+
             let a = document.createElement('a');
 
             a.href = '#';
@@ -420,21 +555,73 @@ export class MapUi {
 
             this._logQueue.push(tr);
         });
+
+        this._datasource.on('vis', (data) => {
+            // bad data?
+            if (!data.source || !data.data) {
+                return;
+            }
+            if (!this._nodes) {
+                return;
+            }
+            const _data = JSON.parse(data.data);
+            const nodeId = data.source;
+            if (nodeId in this._flasherVis) {
+                window.clearInterval(this._flasherVis[nodeId]);
+            }
+
+            const currentTime = new Date().getTime();
+            const offset = currentTime - this._firstIntervalStartTime;
+            const adjustedDelay = this._intervalDefault - (offset % this._intervalDefault);
+            window.setTimeout(() => {
+                this._flasherVis[nodeId] = window.setInterval(() => {
+                    this._flashVisNodes(
+                        nodeId, _data.interval, _data.static, _data.dynamic, _data.action
+                    )
+                }, this._intervalDefault);
+            }, adjustedDelay)
+        });
     }
 
     /**
      * get a random color.
-     * 
+     *
      * @returns hsl color string.
      */
     private _randomColor(): string {
         return `hsl(${Math.random() * 360}, 100%, 75%)`;
     }
-    
+
+    /**
+     * Find all edge ids that meet the from condition
+     * **/
+    private _findEdgeIds(fromNode) {
+        const allEdges = this._edges.get();
+        const edgeIds = new Array<string>();
+        allEdges.forEach(edge => {
+            // if (edge.from === fromNode && (this._flashingNodes.has(edge.to) || this._flashingVisNodes.has(edge.to))) {
+            if (edge.from === fromNode) {
+                edgeIds.push(edge.id);
+            }
+        });
+        return edgeIds ? edgeIds : null;
+    }
+
+    private _findEdgeId2(fromNode, toNode) {
+        const allEdges = this._edges.get();
+        let edgeId = null;
+        allEdges.forEach(edge => {
+            if (edge.from === fromNode && edge.to === toNode) {
+                edgeId = edge.id;
+            }
+        });
+        return edgeId;
+    }
+
     /**
      * update highlighed nodes on the map. will auto un-highligh previously
      * highlighted nodes.
-     * 
+     *
      * @param highlights set of vertex ids to highlight.
      */
     private _updateSearchHighlights(highlights: Set<string>) {
@@ -465,13 +652,13 @@ export class MapUi {
 
         newHighlights.forEach(n => {
             updateRequest.push({
-                id: n, borderWidth: 4
+                id: n, ...dynamicDefault
             });
         });
 
         unHighlighted.forEach(n => {
             updateRequest.push({
-                id: n, borderWidth: 1
+                id: n, ...staticDefault
             });
         });
 
@@ -494,6 +681,12 @@ export class MapUi {
 
         this._flashingNodes = new Set(this._flashQueue);
         this._flashQueue.clear();
+        this._tVisArrowMapping.from = new Set(this._visArrowMapping.from);
+        this._tVisArrowMapping.to = new Set(this._visArrowMapping.to);
+        this._tVisArrowMapping.both = new Set(this._visArrowMapping.both);
+        this._visArrowMapping.from.clear();
+        this._visArrowMapping.to.clear();
+        this._visArrowMapping.both.clear();
 
         if (this._filterMode == 'node-search') {
             // in node search mode, don't flash.
@@ -503,34 +696,188 @@ export class MapUi {
 
         let updateRequest = Array.from(this._flashingNodes).map(nodeId => {
             return {
-                id: nodeId, borderWidth: 4
+                id: nodeId, ...dynamicDefault
+            }
+        });
+        let updateFromRequestEdge = Array.from(this._tVisArrowMapping.from).map(nodeId => {
+            return {
+                id: nodeId,
+                arrows: arrowFrom
+            }
+        });
+        let updateToRequestEdge = Array.from(this._tVisArrowMapping.to).map(nodeId => {
+            return {
+                id: nodeId,
+                arrows: arrowTo
             }
         });
 
+        let updateBothEdge = Array.from(this._tVisArrowMapping.both).map(nodeId => {
+            return {
+                id: nodeId,
+                arrows: arrowBothWay
+            }
+        });
+
+        this._edges.update(updateFromRequestEdge);
+        this._edges.update(updateToRequestEdge);
+        this._edges.update(updateBothEdge);
         this._nodes.update(updateRequest);
 
         // schedule un-flash
         window.setTimeout(() => {
             let updateRequest = Array.from(this._flashingNodes).map(nodeId => {
                 return {
-                    id: nodeId, borderWidth: 1
+                    id: nodeId, ...staticDefault
+                }
+            });
+            let updateRequestEdge = Array.from(new Set([...this._tVisArrowMapping.from, ...this._tVisArrowMapping.to, ...this._tVisArrowMapping.both])).map(nodeId => {
+                return {
+                    id: nodeId,
+                    arrows: arrowStop
                 }
             });
 
             this._nodes.update(updateRequest);
+            this._edges.update(updateRequestEdge)
             this._flashingNodes.clear();
+            this._tFlashNodeMapping.src.clear();
+            this._tFlashNodeMapping.dst.clear();
         }, 300);
     }
 
+    private _flashVisNodes(
+        nodeId: string,
+        interval: number = 300,
+        _static: {} = staticDefault,
+        dynamic: {} = dynamicDefault,
+        action: string
+    ) {
+        // during replay, do not flash nodes - they are controlled by the replayer.
+        if (this._replayStatus !== 'stopped') {
+            return;
+        }
+
+        let shape: string;
+        if (this._nodes.get(nodeId)?.type === 'node') {
+            const nodeInfo = this._datasource.getNodeInfoById(nodeId);
+            shape = ['Router', 'BorderRouter'].includes(nodeInfo.meta.emulatorInfo.role) ? 'dot' : 'hexagon';
+        }
+
+        if (Object.keys(_static).length === 0) {
+            _static = staticDefault
+        }
+        if (!_static.hasOwnProperty('shape')) {
+            _static['shape'] = shape
+        }
+        if (Object.keys(dynamic).length === 0) {
+            dynamic = dynamicDefault
+        }
+
+        switch (action) {
+            case 'flash':
+                return this._flashVisNodesFlashKeep(nodeId, _static, dynamic, interval);
+            case 'highlight':
+                return this._flashVisNodesHighlight(nodeId, _static);
+            default:
+                break
+        }
+
+        if (this._flashingVisNodes.size != 0 && !this._flashingVisNodes.has(nodeId)) {
+            // some nodes still flashing; wait for next time
+            return;
+        }
+
+        if (this._filterMode == 'node-search') {
+            // in node search mode, don't flash.
+            this._flashingVisNodes.clear();
+            return;
+        }
+
+        this._visSetQueue.add(nodeId)
+        let updateEdgeIds = new Set<string>();
+        this._findEdgeIds(nodeId).forEach(edgeId => updateEdgeIds.add(edgeId));
+        this._nodes.update({
+            id: nodeId, ..._static
+        });
+        let updateRequestEdge = Array.from(updateEdgeIds).map(nodeId => {
+            return {
+                id: nodeId,
+                arrows: arrowStop
+            }
+        });
+        this._edges.update(updateRequestEdge)
+
+        this._flashVisStyleMapping[nodeId] = {
+            interval,
+            'static': _static as NodeOptions,
+            'dynamic': dynamic as NodeOptions,
+        }
+
+        if (interval > 0) {
+            // schedule un-flash
+            window.setTimeout(() => {
+                this._flashingVisNodes = new Set(this._flashVisQueue);
+                this._flashVisQueue.delete(nodeId);
+                if (!this._flashingVisNodes.has(nodeId)) {
+                    return
+                }
+
+                this._tVisFlashNodeMapping.src = new Set(this._visFlashNodeMapping.src);
+                this._visFlashNodeMapping.src.delete(nodeId);
+
+                this._findEdgeIds(nodeId).forEach(edgeId => updateEdgeIds.add(edgeId));
+                let updateRequestEdge = Array.from(updateEdgeIds).map(edgeId => {
+                    if (this._tVisFlashNodeMapping.src.has(nodeId)) {
+                        return {
+                            id: edgeId,
+                            arrows: arrowTo
+                        }
+                    } else {
+                        return {
+                            id: edgeId,
+                            arrows: arrowFrom
+                        }
+                    }
+                });
+
+                this._nodes.update({
+                    id: nodeId, ...dynamic
+                });
+                this._edges.update(updateRequestEdge)
+
+                this._flashingVisNodes.clear();
+                this._tVisFlashNodeMapping.src.clear();
+            }, interval);
+        }
+    }
+
+    private _flashVisNodesFlashKeep(nodeId: string, _static: {}, dynamic: {}, interval: number) {
+        this._nodes.update({
+            id: nodeId, ..._static
+        });
+        window.setTimeout(() => {
+            this._nodes.update({
+                id: nodeId, ...dynamic
+            });
+        }, interval);
+    }
+
+    private _flashVisNodesHighlight(nodeId: string, highLight: {}) {
+        this._nodes.update({
+            id: nodeId, ...highLight
+        });
+    }
+
     private async _focusNode(id: string) {
-        this._graph.focus(id, { animation: true });
+        this._graph.focus(id, {animation: true});
         this._graph.selectNodes([id]);
         this._updateInfoPlateWith(id);
     }
 
     /**
      * update mode to filter or search.
-     * 
+     *
      * @param mode new filter mode.
      */
     private async _setFilterMode(mode: FilterMode) {
@@ -562,7 +909,7 @@ export class MapUi {
 
     /**
      * find net or nodes search term.
-     * 
+     *
      * @param term search term.
      * @returns list of stuffs matching the term.
      */
@@ -600,7 +947,7 @@ export class MapUi {
 
     /**
      * move filter/search suggestions selection.
-     * 
+     *
      * @param selection move direction.
      */
     private _moveSuggestionSelection(selection: SuggestionSelectionAction) {
@@ -667,7 +1014,7 @@ export class MapUi {
 
     /**
      * update filter/search suggestions.
-     * 
+     *
      * @param term current search/filter term.
      */
     private _updateFilterSuggestions(term: string) {
@@ -675,10 +1022,10 @@ export class MapUi {
 
         if (this._filterMode == 'filter') {
             this._bpfCompletion.getCompletion(term).forEach(comp => {
-                
+
                 let item = document.createElement('div');
                 item.className = 'suggestion';
-    
+
                 var title = comp.fulltext;
                 var fillText = comp.partialword;
 
@@ -706,11 +1053,11 @@ export class MapUi {
                 let name = document.createElement('span');
                 name.className = 'name';
                 name.innerText = title;
-    
+
                 let details = document.createElement('span');
                 details.className = 'details';
                 details.innerText = comp.description;
-    
+
                 item.appendChild(name);
                 item.appendChild(details);
                 item.onclick = () => {
@@ -729,58 +1076,58 @@ export class MapUi {
             if (term != '') {
                 let defaultItem = document.createElement('div');
                 defaultItem.className = 'suggestion';
-    
+
                 let defaultName = document.createElement('span');
                 defaultName.className = 'name';
                 defaultName.innerText = term;
-    
+
                 let defailtDetails = document.createElement('span');
                 defailtDetails.className = 'details';
                 defailtDetails.innerText = 'Press enter to show all matches on the map...';
-    
+
                 defaultItem.onclick = () => {
                     this._moveSuggestionSelection('clear');
                     this._filterUpdateHandler(undefined, true);
                 };
-    
+
                 defaultItem.appendChild(defaultName);
                 defaultItem.appendChild(defailtDetails);
-    
+
                 this._suggestions.appendChild(defaultItem);
             }
-    
+
             vertices.forEach(vertex => {
                 var itemName = vertex.label;
                 var itemDetails = '';
-    
+
                 if (vertex.type == 'node') {
                     let node = vertex.object as EmulatorNode;
-    
+
                     itemDetails = node.meta.emulatorInfo.nets.map(net => net.address).join(', ');
                     itemName = `${node.meta.emulatorInfo.role}: ${itemName}`;
                 }
-    
+
                 if (vertex.type == 'network') {
                     let net = vertex.object as EmulatorNetwork;
-    
+
                     itemDetails = net.meta.emulatorInfo.prefix;
                     itemName = `${net.meta.emulatorInfo.type == 'global' ? 'Exchange' : 'Network'}: ${itemName}`;
                 }
-    
+
                 let item = document.createElement('div');
                 item.className = 'suggestion';
-    
+
                 let name = document.createElement('span');
                 name.className = 'name';
                 name.innerText = itemName;
-    
+
                 let details = document.createElement('span');
                 details.className = 'details';
                 details.innerText = itemDetails;
-    
+
                 item.appendChild(name);
                 item.appendChild(details);
-    
+
                 item.onclick = () => {
                     this._focusNode(vertex.id);
                     let set = new Set<string>();
@@ -789,7 +1136,7 @@ export class MapUi {
                     this._suggestions.innerText = '';
                     this._moveSuggestionSelection('clear');
                 };
-    
+
                 this._suggestions.appendChild(item);
             });
         }
@@ -798,7 +1145,7 @@ export class MapUi {
 
     /**
      * commit a filter search.
-     * 
+     *
      * @param event if triggerd by keydown/keyup event, the event.
      * @param forced if not triggerd by keydown/keyup event, set to true.
      */
@@ -831,7 +1178,7 @@ export class MapUi {
 
     /**
      * create an infoplate label/text field.
-     * 
+     *
      * @param label label for the pair.
      * @param text text for the pair.
      * @returns div element of the pair.
@@ -855,7 +1202,7 @@ export class MapUi {
 
     /**
      * update infoplate with node.
-     * 
+     *
      * @param nodeId node id for any vertex (can be node or net).
      */
     private async _updateInfoPlateWith(nodeId: string) {
@@ -891,7 +1238,7 @@ export class MapUi {
 
         if (vertex.type == 'node') {
             let node = vertex.object as EmulatorNode;
-            title.innerText = `${ ['Router', 'BorderRouter'].includes(node.meta.emulatorInfo.role) ? 'Router' : 'Host'}: ${vertex.label}`;
+            title.innerText = `${['Router', 'BorderRouter'].includes(node.meta.emulatorInfo.role) ? 'Router' : 'Host'}: ${vertex.label}`;
 
             if (node.meta.emulatorInfo.description) {
                 let div = document.createElement('div');
@@ -952,7 +1299,7 @@ export class MapUi {
                     peerStatus.innerText = peer.protocolState != 'down' ? peer.bgpState : 'Disabled';
 
                     let peerAction = document.createElement('a');
-            
+
                     peerAction.href = '#';
                     peerAction.classList.add('inline-action-link');
                     peerAction.innerText = peer.protocolState != 'down' ? 'Disable' : 'Enable';
@@ -984,7 +1331,7 @@ export class MapUi {
             actions.appendChild(actionTitle);
 
             let consoleLink = document.createElement('a');
-            
+
             consoleLink.href = '#';
             consoleLink.innerText = 'Launch console';
             consoleLink.classList.add('action-link');
@@ -995,7 +1342,7 @@ export class MapUi {
 
             let netToggle = document.createElement('a');
             let netState = await this._datasource.getNetworkStatus(node.Id);
-            
+
             netToggle.href = '#';
             netToggle.innerText = netState ? 'Disconnect' : 'Re-connect';
             netToggle.onclick = async () => {
@@ -1014,7 +1361,7 @@ export class MapUi {
             netToggle.classList.add('action-link');
 
             let reloadLink = document.createElement('a');
-            
+
             reloadLink.href = '#';
             reloadLink.innerText = 'Refresh';
             reloadLink.classList.add('action-link');
@@ -1048,6 +1395,7 @@ export class MapUi {
             Object.keys(node.NetworkSettings.Networks).forEach(key => {
                 let net = node.NetworkSettings.Networks[key];
                 this._macMapping[net.MacAddress] = net.NetworkID;
+                this._macContainerIDMapping[net.MacAddress] = node.Id;
             });
         });
     }
@@ -1095,11 +1443,12 @@ export class MapUi {
         // un-flash nodes.
         let unflashRequest = Array.from(this._flashingNodes).map(nodeId => {
             return {
-                id: nodeId, borderWidth: 1
+                id: nodeId, ...staticDefault
             }
         });
         this._nodes.update(unflashRequest);
         this._flashingNodes.clear();
+        this._flashingVisNodes.clear();
         this._updateReplayControls();
         this._replayStatusText.innerText = 'Replay stopped.';
     }
@@ -1125,7 +1474,7 @@ export class MapUi {
 
         this._doReplay(true);
     }
-    
+
     /**
      * toggle recording.
      */
@@ -1148,7 +1497,7 @@ export class MapUi {
         }
     }
 
-    private _buildPlayList() : PlaylistItem[] {
+    private _buildPlayList(): PlaylistItem[] {
         let refDate = new Date();
 
         let playlist: PlaylistItem[] = [];
@@ -1156,13 +1505,13 @@ export class MapUi {
         this._events.forEach(e => {
             e.lines.forEach(line => {
                 let time = line.split(' ')[0];
-                let [ h, m, _s ] = time.split(':');
-                
+                let [h, m, _s] = time.split(':');
+
                 if (!h || !m || !_s) {
                     return;
                 }
 
-                let [ s, ms ] = _s.split('.');
+                let [s, ms] = _s.split('.');
 
                 let nodes: string[] = [e.source];
                 let added: Set<string> = new Set();
@@ -1173,20 +1522,20 @@ export class MapUi {
                         added.add(mac);
 
                         let nodeId = this._macMapping[mac];
-    
+
                         if (this._nodes.get(nodeId) === null) {
                             return;
                         }
-                        
+
                         nodes.push(nodeId);
                     }
                 });
 
-                playlist.push({ nodes: nodes, at: date.valueOf() });
+                playlist.push({nodes: nodes, at: date.valueOf()});
             });
 
         });
-        
+
         return playlist.sort((a, b) => a.at - b.at);
     }
 
@@ -1242,19 +1591,32 @@ export class MapUi {
 
         // un-flash nodes.
         let unflashRequest = Array.from(this._flashingNodes).map(nodeId => {
+            let style;
+            if (this._flashVisStyleMapping.hasOwnProperty(nodeId)) {
+                style = this._flashVisStyleMapping[nodeId].static;
+            } else {
+                style = staticDefault;
+            }
             return {
-                id: nodeId, borderWidth: 1
+                id: nodeId, ...style
             }
         });
         this._nodes.update(unflashRequest);
         this._flashingNodes.clear();
-    
+        this._flashingVisNodes.clear();
+
         // flash nodes from this event.
         let current = this._playlist[this._replayPos];
         current.nodes.forEach(node => this._flashingNodes.add(node));
         let flashRequest = Array.from(this._flashingNodes).map(nodeId => {
+            let style;
+            if (this._flashVisStyleMapping.hasOwnProperty(nodeId)) {
+                style = this._flashVisStyleMapping[nodeId].dynamic;
+            } else {
+                style = dynamicDefault;
+            }
             return {
-                id: nodeId, borderWidth: 4
+                id: nodeId, ...style
             }
         });
         this._nodes.update(flashRequest);
@@ -1287,11 +1649,13 @@ export class MapUi {
             if (scroll && this._logAutoscroll.checked && !this._logDisable.checked) {
                 this._logView.scrollTop = this._logView.scrollHeight;
             }
-        }, 500);
+        }, this._intervalDefault);
+
 
         this._flasher = window.setInterval(() => {
             this._flashNodes();
-        }, 500);
+        }, this._intervalDefault);
+        this._firstIntervalStartTime = new Date().getTime();
     }
 
     /**
@@ -1301,6 +1665,12 @@ export class MapUi {
         this._datasource.disconnect();
         window.clearInterval(this._logPrinter);
         window.clearInterval(this._flasher);
+        Object.keys(this._flasherVis).forEach(key => {
+            window.clearInterval(this._flasherVis[key])
+        })
+        this._flasherVis = {}
+        this._flashVisQueue.clear()
+        this._flashingVisNodes.clear()
     }
 
     /**
@@ -1321,22 +1691,315 @@ export class MapUi {
             }
         });
 
+        let interaction = {
+            hover: true
+        };
+        let locales = {
+            en: {
+                edit: 'Edit',
+                del: 'Delete selected',
+                back: 'Back',
+                addNode: 'Add Node',
+                addEdge: 'Add Edge',
+                editNode: 'Edit Node',
+                editEdge: 'Edit Edge',
+                addDescription: 'Click in an empty space to place a new node.',
+                edgeDescription: 'Click on a node and drag the edge to another node to connect them.',
+                editEdgeDescription: 'Click on the control points and drag them to a node to connect to it.',
+                createEdgeError: 'Cannot link edges to a cluster.',
+                deleteClusterError: 'Clusters cannot be deleted.',
+                editClusterError: 'Clusters cannot be edited.'
+            }
+        };
+        let configure = {
+            enabled: true,
+            filter: 'nodes,edges',
+            // container: undefined,
+            showButton: true
+        }
+        let edges = {
+            arrows: {
+                to: {
+                    enabled: false,
+                    // imageHeight: undefined,
+                    // imageWidth: undefined,
+                    scaleFactor: 1,
+                    // src: undefined,
+                    type: "arrow"
+                },
+                middle: {
+                    enabled: false,
+                    // imageHeight: 32,
+                    // imageWidth: 32,
+                    scaleFactor: 1,
+                    // src: "https://visjs.org/images/visjs_logo.png",
+                    // type: "image"
+                    type: "arrow"
+                },
+                from: {
+                    enabled: false,
+                    // imageHeight: undefined,
+                    // imageWidth: undefined,
+                    scaleFactor: 1,
+                    // src: undefined,
+                    type: "arrow"
+                }
+            },
+            endPointOffset: {
+                from: 0,
+                to: 0
+            },
+            arrowStrikethrough: true,
+            chosen: true,
+            color: {
+                color: '#848484',
+                highlight: '#848484',
+                hover: '#848484',
+                inherit: 'from',
+                opacity: 1.0
+            },
+            dashes: false,
+            font: {
+                color: '#343434',
+                size: 14, // px
+                face: 'arial',
+                background: 'none',
+                strokeWidth: 2, // px
+                strokeColor: '#ffffff',
+                align: 'horizontal',
+                multi: false,
+                vadjust: 0,
+                bold: {
+                    color: '#343434',
+                    size: 14, // px
+                    face: 'arial',
+                    vadjust: 0,
+                    mod: 'bold'
+                },
+                ital: {
+                    color: '#343434',
+                    size: 14, // px
+                    face: 'arial',
+                    vadjust: 0,
+                    mod: 'italic',
+                },
+                boldital: {
+                    color: '#343434',
+                    size: 14, // px
+                    face: 'arial',
+                    vadjust: 0,
+                    mod: 'bold italic'
+                },
+                mono: {
+                    color: '#343434',
+                    size: 15, // px
+                    face: 'courier new',
+                    vadjust: 2,
+                    mod: ''
+                }
+            },
+            hidden: false,
+            hoverWidth: 1.5,
+            // label: undefined,
+            labelHighlightBold: true,
+            // length: undefined,
+            physics: true,
+            scaling: {
+                min: 1,
+                max: 15,
+                label: {
+                    enabled: true,
+                    min: 14,
+                    max: 30,
+                    maxVisible: 30,
+                    drawThreshold: 5
+                },
+                customScalingFunction: function (min, max, total, value) {
+                    if (max === min) {
+                        return 0.5;
+                    } else {
+                        var scale = 1 / (max - min);
+                        return Math.max(0, (value - min) * scale);
+                    }
+                }
+            },
+            selectionWidth: 1,
+            selfReference: {
+                size: 20,
+                angle: Math.PI / 4,
+                renderBehindTheNode: true
+            },
+            shadow: {
+                enabled: false,
+                color: 'rgba(0,0,0,0.5)',
+                size: 10,
+                x: 5,
+                y: 5
+            },
+            smooth: {
+                enabled: true,
+                type: "dynamic",
+                roundness: 0.5
+            },
+            // title: undefined,
+            // value: undefined,
+            width: 1,
+            widthConstraint: false
+        }
+        let nodes = {
+            borderWidth: 1,
+            borderWidthSelected: 2,
+            // brokenImage: undefined,
+            chosen: true,
+            color: {
+                border: '#2B7CE9',
+                background: '#97C2FC',
+                highlight: {
+                    border: '#2B7CE9',
+                    background: '#D2E5FF'
+                },
+                hover: {
+                    border: '#2B7CE9',
+                    background: '#D2E5FF'
+                }
+            },
+            opacity: 1,
+            fixed: {
+                x: false,
+                y: false
+            },
+            font: {
+                color: '#343434',
+                size: 14, // px
+                face: 'arial',
+                background: 'none',
+                strokeWidth: 0, // px
+                strokeColor: '#ffffff',
+                align: 'center',
+                multi: false,
+                vadjust: 0,
+                bold: {
+                    color: '#343434',
+                    size: 14, // px
+                    face: 'arial',
+                    vadjust: 0,
+                    mod: 'bold'
+                },
+                ital: {
+                    color: '#343434',
+                    size: 14, // px
+                    face: 'arial',
+                    vadjust: 0,
+                    mod: 'italic',
+                },
+                boldital: {
+                    color: '#343434',
+                    size: 14, // px
+                    face: 'arial',
+                    vadjust: 0,
+                    mod: 'bold italic'
+                },
+                mono: {
+                    color: '#343434',
+                    size: 15, // px
+                    face: 'courier new',
+                    vadjust: 2,
+                    mod: ''
+                }
+            },
+            // group: undefined,
+            heightConstraint: false,
+            hidden: false,
+            icon: {
+                face: 'FontAwesome',
+                // code: undefined,
+                // weight: undefined,
+                size: 50,  //50,
+                color: '#2B7CE9'
+            },
+            // image: undefined,
+            imagePadding: {
+                left: 0,
+                top: 0,
+                bottom: 0,
+                right: 0
+            },
+            // label: undefined,
+            labelHighlightBold: true,
+            // level: undefined,
+            mass: 1,
+            physics: true,
+            scaling: {
+                min: 10,
+                max: 30,
+                label: {
+                    enabled: false,
+                    min: 14,
+                    max: 30,
+                    maxVisible: 30,
+                    drawThreshold: 5
+                },
+                customScalingFunction: function (min, max, total, value) {
+                    if (max === min) {
+                        return 0.5;
+                    } else {
+                        let scale = 1 / (max - min);
+                        return Math.max(0, (value - min) * scale);
+                    }
+                }
+            },
+            shadow: {
+                enabled: false,
+                color: 'rgba(0,0,0,0.5)',
+                size: 10,
+                x: 5,
+                y: 5
+            },
+            shape: 'ellipse',
+            shapeProperties: {
+                borderDashes: false, // only for borders
+                borderRadius: 6,     // only for box shape
+                interpolation: false,  // only for image and circularImage shapes
+                useImageSize: false,  // only for image and circularImage shapes
+                useBorderWithImage: false,  // only for image shape
+                coordinateOrigin: 'center'  // only for image and circularImage shapes
+            },
+            size: 25,
+            // title: undefined,
+            // value: undefined,
+            widthConstraint: false,
+            // x: undefined,
+            // y: undefined
+        }
+
         this._graph = new Network(this._mapElement, {
             nodes: this._nodes,
             edges: this._edges
         }, {
-            groups
+            groups,
+            interaction,
+            locales,
+            configure,
+            nodes,
+            edges,
         });
 
         this._graph.on('click', (ev) => {
             this._suggestions.innerText = '';
             this._moveSuggestionSelection('clear');
-            
+
             if (ev.nodes.length <= 0) {
                 return;
             }
 
-            this._updateInfoPlateWith(ev.nodes[0]);            
+            this._updateInfoPlateWith(ev.nodes[0]);
         });
+
+        // this._graph.on("dragStart", () => {
+        //     this._graph.setOptions({physics: false});
+        // });
+        // this._graph.on("dragEnd", () => {
+        //     this._graph.setOptions({physics: false});
+        // });
     }
 }
