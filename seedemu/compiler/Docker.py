@@ -182,6 +182,7 @@ DockerCompilerFileTemplates['compose_network'] = """\
 {labelList}
 """
 
+# The following is used for attaching the Map to the docker's default network
 DockerCompilerFileTemplates['seedemu_internet_map'] = """\
     seedemu-internet-client:
         image: {clientImage}
@@ -190,6 +191,27 @@ DockerCompilerFileTemplates['seedemu_internet_map'] = """\
             - /var/run/docker.sock:/var/run/docker.sock
         ports:
             - {clientPort}:8080/tcp
+"""
+
+# The following is used for attaching the Map to an existing network inside the emulator;
+# the network entry will be added later
+DockerCompilerFileTemplates['seedemu_internet_map_with_net'] = """\
+    seedemu-internet-client_with_net:
+        image: {clientImage}
+        container_name: seedemu_internet_map_with_net
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        privileged: true
+"""
+
+DockerCompilerFileTemplates['port_forwarding_entry'] = """\
+        ports:
+            - {port_forwarding_field}
+"""
+
+DockerCompilerFileTemplates['network_entry'] = """\
+        networks:
+             {network_name_field}:
 """
 
 DockerCompilerFileTemplates['seedemu_ether_view'] = """\
@@ -297,13 +319,17 @@ class Docker(Compiler):
     """
 
     __services: str
+    __custom_services: str
+
     __networks: str
     __naming_scheme: str
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
 
+
     __internet_map_enabled: bool
     __internet_map_port: int
+
 
     __ether_view_enabled: bool
     __ether_view_port: int
@@ -369,6 +395,7 @@ class Docker(Compiler):
         self.__option_handling = option_handling
         self.__networks = ""
         self.__services = ""
+        self.__custom_services = ""
         self.__naming_scheme = namingScheme
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
@@ -1311,6 +1338,7 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
+        # Add the Internet Map contaienr to docker's default network
         if self.__internet_map_enabled:
             self._log('enabling seedemu-internet-map...')
 
@@ -1318,7 +1346,10 @@ class Docker(Compiler):
                 clientImage = SEEDEMU_INTERNET_MAP_IMAGE,
                 clientPort = self.__internet_map_port
             )
+            self.__services += '\n'
 
+
+        # Add the Ether View contaienr to docker's default network
         if self.__ether_view_enabled:
             self._log('enabling seedemu-ether-view...')
 
@@ -1326,6 +1357,12 @@ class Docker(Compiler):
                 clientImage = SEEDEMU_ETHER_VIEW_IMAGE,
                 clientPort = self.__ether_view_port
             )
+            self.__services += '\n'
+
+
+        # Add custom entries (typically added through Docker::attachCustomContainer APIs)
+        self.__services += self.__custom_services
+
 
         local_images = ''
 
@@ -1374,3 +1411,59 @@ class Docker(Compiler):
 
             if hit: toplevelvolumes = 'volumes:\n' + toplevelvolumes
         return toplevelvolumes
+
+    def attachInternetMap(self, asn:int = -1, net:str = '', port_forwarding:str = '') -> Docker:
+        """!
+        @brief add the pre-built Map container to the emulator (the entry should not
+            include any network entry, as the network entry will be added here)
+        
+        @param asn the autonomous system number of the network. -1 means no network
+            information is provided, so the container will be attached to the default
+            network provided by the docker
+        @param net the name of the network that this container is attached to.
+
+        @returns self, for chaining API calls.
+        """
+
+        self._log('attaching the Internet Map container to {}:{}'.format(asn, net))
+        self.attachCustomerContainer(DockerCompilerFileTemplates['seedemu_internet_map_with_net'].format(
+                clientImage = SEEDEMU_INTERNET_MAP_IMAGE), asn, net, port_forwarding)
+        return self
+
+
+    def attachCustomerContainer(self, compose_entry:str, asn:int = -1, net:str = '', 
+                                port_forwarding: str= '') -> Docker:
+        """!
+        @brief add an pre-built container image to the emulator (the entry should not
+            include any network entry, as the network entry will be added here)
+
+        @param entry the docker compose entry (without the network entry)
+        @param asn the autonomous system number of the network. -1 means no network
+            information is provided, so the container will be attached to the default
+            network provided by the docker
+        @param net the name of the network that this container is attached to.
+
+        @returns self, for chaining API calls.
+        """
+
+        self.__custom_services += compose_entry
+
+        if port_forwarding != '':
+            self.__custom_services += DockerCompilerFileTemplates['port_forwarding_entry'].format(
+                port_forwarding_field = port_forwarding
+        )
+
+        if asn < 0:  # Do not set the network entry; will use the default docker network
+            self.__custom_services += '\n'
+            return self
+
+        net_prefix = self._contextToPrefix(asn, 'net')
+        real_netname = '{}{}'.format(net_prefix, net)
+
+        self.__custom_services += DockerCompilerFileTemplates['network_entry'].format(
+                network_name_field = real_netname
+        )
+        self.__custom_services += '\n'
+        
+        return self
+
