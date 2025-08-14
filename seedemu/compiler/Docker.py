@@ -188,6 +188,7 @@ DockerCompilerFileTemplates['seedemu_internet_map'] = """\
         container_name: seedemu_internet_map
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
+        privileged: true
 """
 
 DockerCompilerFileTemplates['port_forwarding_entry'] = """\
