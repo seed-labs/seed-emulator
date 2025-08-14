@@ -4,33 +4,33 @@ on:
   pull_request:
     branches:
       - master
-    workflow_dispatch:
-      inputs:
-        run-quick-tests:
-          description: "Run quick tests"
-          type: boolean
-          required: false
-          default: "false"
-        run-basic-tests:
-          description: "Run basic tests"
-          type: boolean
-          required: false
-          default: "true"
-        run-internet-tests:
-          description: "Run internet tests"
-          type: boolean
-          required: false
-          default: "true"
-        run-blockchain-tests:
-          description: "Run blockchain tests"
-          type: boolean
-          required: false
-          default: "false"
-        run-scion-tests:
-          description: "Run SCION tests"
-          type: boolean
-          required: false
-          default: "true"
+  workflow_dispatch:
+    inputs:
+      run-quick-tests:
+        description: "Run quick tests"
+        type: boolean
+        required: false
+        default: "false"
+      run-basic-tests:
+        description: "Run basic tests"
+        type: boolean
+        required: false
+        default: "true"
+      run-internet-tests:
+        description: "Run internet tests"
+        type: boolean
+        required: false
+        default: "true"
+      run-blockchain-tests:
+        description: "Run blockchain tests"
+        type: boolean
+        required: false
+        default: "false"
+      run-scion-tests:
+        description: "Run SCION tests"
+        type: boolean
+        required: false
+        default: "true"
 
 
 jobs:
@@ -72,7 +72,7 @@ jobs:
           if [ "${{ github.event.inputs.run-scion-tests }}" == "true" ]; then
             CMD+=" --scion"
           fi
-          python CMD
+          python $CMD
 
   run-tests:
     name: Run Tests
@@ -116,7 +116,7 @@ jobs:
           if [ "${{ github.event.inputs.run-scion-tests }}" == "true" ]; then
             CMD+=" --scion"
           fi
-          python CMD
+          python $CMD
       - name: Archive test results
         uses: actions/upload-artifact@v4
         with:
@@ -171,7 +171,7 @@ jobs:
           if [ "${{ github.event.inputs.run-scion-tests }}" == "true" ]; then
             CMD+=" --scion"
           fi
-          python CMD
+          python $CMD
       - name: Archive test results
         uses: actions/upload-artifact@v4
         with:
