@@ -11,6 +11,7 @@ const mapUi = new MapUi({
     datasource,
     mapElementId: 'map',
     infoPlateElementId: 'info-plate',
+    infoPanelElementId: 'info-plate-panel',
     filterInputElementId: 'filter',
     filterWrapElementId: 'filter-wrap',
     logPanelElementId: 'log-panel',
@@ -24,11 +25,18 @@ const mapUi = new MapUi({
         minimizeToggleElementId: 'log-panel-toggle',
         minimizeChevronElementId: 'log-toggle-chevron'
     },
+    settingWrapElementId: 'setting-wrap',
+    settingControls: {
+        fixedCheckboxElementId: 'setting-fixed',
+        hideCheckboxElementId: 'setting-hidden',
+        minimizeToggleElementId: 'setting-panel-toggle',
+    },
     filterControls: {
         filterModeTabElementId: 'tab-filter-mode',
         nodeSearchModeTabElementId: 'tab-node-search-mode',
         suggestionsElementId: 'filter-suggestions'
     },
+    replayPanelElementId: 'replay-panel',
     replayControls: {
         recordButtonElementId: 'replay-record',
         replayButtonElementId: 'replay-replay',

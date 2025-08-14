@@ -15,17 +15,9 @@ What's working:
     - disconnect/reconnect nodes from emulation.
     - enable/disable bgp peers.
     - customize the style of the node.
+    - expand / collapse nodes
+    - drag fixed
 
-
-In order for the simulator container to access the seedemu-client container via http requests, the network of the seedemu-client container needs to be modified.
-How to modify:
-
-1. list all the networks of the current emulator container.(e.g., `docker network list`)
-2. select a 15x network starting with the project name.(e.g., `internet-nano_net_151_net0`)
-3. modify the network in the docker-compose.yml
-4. after the container starts, add other simulator networks to the routing table.(e.g., `ip route add 10.152.0.0/24 via 10.151.0.254 dev eth0`)
-
-How to use:
 
 1. start the emulation as you normally would. (e.g., `docker-compose up`)
 2. do `docker-compose build && docker-compose up` in this folder.

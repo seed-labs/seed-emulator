@@ -117,18 +117,40 @@ html, body, .map-area, .map {
     display: none;
 }
 
-.replay-panel {
+.setting-wrap {
+    padding: 0 2px;
+}
+
+.setting-wrap.minimized {
+    display: none;
+}
+
+.setting-panel {
     top: 85px;
+    right: 10px;
+    width: 300px;
+}
+
+.replay-panel {
+    top: 135px;
     right: 10px;
     width: 300px;
     height: 133px;
 }
 
+.replay-panel.bump {
+    top: 110px;
+}
+
 .info-plate-panel {
     font-family: 'Courier New', Courier, monospace;
-    top: 225px;
+    top: 275px;
     right: 10px;
     min-width: 300px;
+}
+
+.info-plate-panel.bump {
+    top: 250px;
 }
 
 .info-plate, .replay-plate {
