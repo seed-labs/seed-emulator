@@ -182,27 +182,12 @@ DockerCompilerFileTemplates['compose_network'] = """\
 {labelList}
 """
 
-# The following is used for attaching the Map to the docker's default network
 DockerCompilerFileTemplates['seedemu_internet_map'] = """\
     seedemu-internet-client:
         image: {clientImage}
         container_name: seedemu_internet_map
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
-"""
-#        ports:
-#            - {clientPort}:8080/tcp
-
-
-# The following is used for attaching the Map to an existing network inside the emulator;
-# the network entry will be added later
-DockerCompilerFileTemplates['seedemu_internet_map_with_net'] = """\
-    seedemu-internet-client_with_net:
-        image: {clientImage}
-        container_name: seedemu_internet_map_with_net
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-        privileged: true
 """
 
 DockerCompilerFileTemplates['port_forwarding_entry'] = """\
