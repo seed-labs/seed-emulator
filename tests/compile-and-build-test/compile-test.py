@@ -5,19 +5,32 @@ import subprocess
 import sys
 import os
 import shutil
+import argparse
 from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--basic", action="store_true", help="Run basic tests")
+parser.add_argument("--internet", action="store_true", help="Run internet tests")
+parser.add_argument("--blockchain", action="store_true", help="Run blockchain tests")
+parser.add_argument("--scion", action="store_true", help="Run SCION tests")
+args = parser.parse_args()
 
 """
 Compiles examples in examples/ and outputs the number of examples that fail to
 compile.
 """
 
-examples_dirs = [
-    Path("examples/basic"),
-    Path("examples/blockchain"),
-    Path("examples/internet"),
-    Path("examples/scion"),
-]
+examples_dirs = []
+
+if args.basic:
+    examples_dirs.append(Path("examples/basic"))
+if args.internet:
+    examples_dirs.append(Path("examples/internet"))
+if args.blockchain:
+    examples_dirs.append(Path("examples/blockchain"))
+if args.scion:
+    examples_dirs.append(Path("examples/scion"))
+
 
 
 def glob_examples(dir: Path):

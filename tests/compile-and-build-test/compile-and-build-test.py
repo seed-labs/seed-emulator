@@ -5,9 +5,16 @@ import unittest as ut
 from seedemu import *
 import shutil
 import os, subprocess
+import argparse
 import getopt
 import sys
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--basic", action="store_true", help="Run basic tests")
+parser.add_argument("--internet", action="store_true", help="Run internet tests")
+parser.add_argument("--blockchain", action="store_true", help="Run blockchain tests")
+parser.add_argument("--scion", action="store_true", help="Run SCION tests")
+args = parser.parse_args()
 
 class CompileTest(ut.TestCase):
     @classmethod
@@ -24,7 +31,7 @@ class CompileTest(ut.TestCase):
             sys.exit(1)
 
         cls.platform
-        cls.test_list = {
+        basic_test_list = {
             "basic/A00_simple_as":                      (["simple_as.py"] , ["output"]),
             "basic/A01_transit_as" :                    (["transit_as.py"], ["output"]),
             "basic/A02_transit_as_mpls" :               (["transit_as_mpls.py"], ["output"]),
@@ -38,6 +45,8 @@ class CompileTest(ut.TestCase):
             "basic/A10_add_containers" :                (["add_containers.py"], ["output"]),
             #"basic/A20_nano_internet" :                 (["nano_internet.py"], ["output", "base_component.bin"]),
             "basic/A21_shadow_internet" :               (["shadow_internet.py"], ["output"]),
+        }
+        internet_test_list = {
             "internet/B00_mini_internet" :              (["mini_internet.py"], ["output"]),
             "internet/B01_dns_component" :              (["dns_component.py"], ["dns_component.bin"]),
             "internet/B02_mini_internet_with_dns" :     (["mini_internet_with_dns.py"], ["output", "base_internet.bin", "dns_component.bin"]),
@@ -58,19 +67,33 @@ class CompileTest(ut.TestCase):
             "internet/B28_traffic_generator/3-multi-traffic-generator": (["multi-traffic-generator.py"], ["output", "base_internet.bin"]),
             "internet/B50_bring_your_own_internet":     (["bring_your_own_internet.py", "bring_your_own_internet_client.py"], ["output", "output_0", "output_1", "output_2", "output_3", 'base_component.bin', 'base_hybrid_component.bin', 'hybrid_base_with_dns.bin', 'hybrid_dns_component.bin']),
             "internet/B51_bgp_prefix_hijacking":        (["bgp_prefix_hijacking.py"], ["output", 'base_internet.bin']),
-            #"blockchain/D00_ethereum_poa" :             (["ethereum_poa.py"], ["output", "component_base.bin", "component_poa.bin"]),
-            #"blockchain/D01_ethereum_pos" :             (["ethereum_pos.py"], ["output"]),
-            #"blockchain/D05_ethereum_small" :           (["ethereum_small.py"], ["output"]),
-            #"blockchain/D20_faucet" :                   (["faucet.py"], ["output", "component_base.bin", "component_poa.bin", "blockchain_poa.bin"]),
-            #"blockchain/D21_deploy_contract" :          (["deploy_contract.py"], ["output", "component_base.bin", "component_poa.bin", "blockchain_poa.bin"]),
-            #"blockchain/D22_oracle" :                   (["simple_oracle.py"], ["output", "ethereum-small.bin"]),
-            #"blockchain/D31_chainlink" :                (["chainlink.py"], ["output", "component_base.bin", "component_poa.bin", "blockchain_poa.bin"]),
-            #"blockchain/D50_blockchain" :               (["blockchain.py"], ["output", "blockchain_poa.bin"]),
+        }
+        blockchain_test_list = {
+            "blockchain/D00_ethereum_poa" :             (["ethereum_poa.py"], ["output", "component_base.bin", "component_poa.bin"]),
+            "blockchain/D01_ethereum_pos" :             (["ethereum_pos.py"], ["output"]),
+            "blockchain/D05_ethereum_small" :           (["ethereum_small.py"], ["output"]),
+            "blockchain/D20_faucet" :                   (["faucet.py"], ["output", "component_base.bin", "component_poa.bin", "blockchain_poa.bin"]),
+            "blockchain/D21_deploy_contract" :          (["deploy_contract.py"], ["output", "component_base.bin", "component_poa.bin", "blockchain_poa.bin"]),
+            "blockchain/D22_oracle" :                   (["simple_oracle.py"], ["output", "ethereum-small.bin"]),
+            "blockchain/D31_chainlink" :                (["chainlink.py"], ["output", "component_base.bin", "component_poa.bin", "blockchain_poa.bin"]),
+            "blockchain/D50_blockchain" :               (["blockchain.py"], ["output", "blockchain_poa.bin"]),
+        }
+        scion_test_list = {
             "scion/S01_scion":                          (["scion.py"], ["output"]),
             "scion/S02_scion_bgp_mixed":                (["scion_bgp_mixed.py"], ["output"]),
             "scion/S03_bandwidth_tester":               (["bandwidth_tester.py"], ["output"]),
             "scion/S04_docker_api":                     (["docker_api.py"], ["output"]),
         }
+        cls.test_list = {
+        }
+        if args.basic:
+            cls.test_list.update(basic_test_list)
+        if args.internet:
+            cls.test_list.update(internet_test_list)
+        if args.blockchain:
+            cls.test_list.update(blockchain_test_list)
+        if args.scion:
+            cls.test_list.update(scion_test_list)
         # This is my path
         cls.init_cwd = os.getcwd()
 

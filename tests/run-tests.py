@@ -22,24 +22,45 @@ args = parser.parse_args()
 os.environ['platform'] = args.platform
 
 test_case_list = [
-    MiniInternetTestCase,
-    IPAnyCastTestCase,
-    HostMgmtTestCase,
+]
+
+blockchain_tests = [
     EthereumPOATestCase,
     EthereumPOSTestCase,
     EthereumPOWTestCase,
     ChainlinkPOATestCase,
-    EthUtilityPOATestCase,
+    EthUtilityPOATestCase
+]
+
+scion_tests = [
     ScionLargeASNTestCase,
     ScionBgpMixedTestCase,
-    ScionBwtesterTestCase,
+    ScionBwtesterTestCase
+]
+
+basic_tests = [
+    MiniInternetTestCase,
     SEEDEmuOptionSystemTestCase,
+        ]
+
+internet_tests = [
     KuboTestCase,
     KuboUtilFuncsTestCase,
-    DottedDictTestCase,
+    IPAnyCastTestCase,
+    HostMgmtTestCase,
     PKITestCase,
+    DottedDictTestCase,
     TrafficGeneratorTestCase
-]
+        ]
+
+if args.basic:
+    test_case_list.extend(basic_tests)
+if args.internet:
+    test_case_list.extend(internet_tests)
+if args.blockchain:
+    test_case_list.extend(blockchain_tests)
+if args.scion:
+    test_case_list.extend(scion_tests)
 
 if args.ci:
     test_case_list = [
