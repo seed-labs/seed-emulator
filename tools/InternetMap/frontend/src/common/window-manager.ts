@@ -393,6 +393,8 @@ export class WindowManager {
 
     /** taskbar element */
     private _taskbar: HTMLDivElement;
+    /** setting bar element */
+    private _settingBar: HTMLDivElement;
 
     /** zindex for the last window */
     private _zindex: number;
@@ -404,6 +406,7 @@ export class WindowManager {
     private _activeWindowId: string;
 
     private _taskBarChangeEventHandler: (shown: boolean) => void;
+    private _settingBarChangeEventHandler: (shown: boolean) => void;
 
     /**
      * create window manager.

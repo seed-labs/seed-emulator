@@ -13,6 +13,8 @@ export interface MapUiConfiguration {
     datasource: DataSource, // data provider
     mapElementId: string, // element id of the map
     infoPlateElementId: string, // element id of the info plate
+    infoPanelElementId: string, // element id of the info panel
+    replayPanelElementId: string, // element id of the replay panel
     filterInputElementId: string, // element id of the filter/search text input
     filterWrapElementId: string, // element id of the filter/search text input wrapper
     logBodyElementId: string, // element id of the log body (the tbody)
@@ -25,6 +27,12 @@ export interface MapUiConfiguration {
         disableCheckboxElementId: string, // element id of log disable checkbox
         minimizeToggleElementId: string, // element id of log minimize/unminimize toggle
         minimizeChevronElementId: string // element id of the chevron icon of the log minimize/unminimize toggle
+    },
+    settingWrapElementId: string, // element id of the log wrap (hidden when minimized)
+    settingControls: { // controls for log
+        fixedCheckboxElementId: string, // element id of autoscroll checkbox
+        hideCheckboxElementId: string, // element id of log disable checkbox
+        minimizeToggleElementId: string, // element id of log minimize/unminimize toggle
     },
     filterControls: { // filter controls
         filterModeTabElementId: string, // element id of tab for setting mode to filter
@@ -60,6 +68,8 @@ interface PlaylistItem {
     nodes: string[],
     at: number
 };
+
+const count = 10;
 
 const staticDefault = {borderWidth: 1}
 const dynamicDefault = {borderWidth: 4}
@@ -102,6 +112,14 @@ const extractReplyMacAddresses = (text: string): string[] => {
     return matches;
 }
 
+const haveSameKeys = (obj1: {}, obj2: {}): boolean => {
+    const keys1 = new Set(Object.keys(obj1));
+    const keys2 = new Set(Object.keys(obj2));
+
+    return keys1.size === keys2.size &&
+        [...keys1].every(key => keys2.has(key));
+}
+
 /**
  * map UI controller.
  */
@@ -110,6 +128,15 @@ export class MapUi {
     private _infoPlateElement: HTMLElement;
     private _filterInput: HTMLInputElement;
     private _filterWrap: HTMLElement;
+
+    private _settingWrap: HTMLElement;
+    private _settingFixed: HTMLInputElement;
+    private _settingHide: HTMLInputElement;
+
+    private _settingToggle: HTMLElement;
+
+    private _replayPanel: HTMLElement;
+    private _infoPanel: HTMLElement;
 
     private _logPanel: HTMLElement;
     private _logView: HTMLElement;
@@ -148,6 +175,7 @@ export class MapUi {
     private _flashQueue: Set<string>;
     /** set of vertex ids scheduled for un-flash */
     private _flashingNodes: Set<string>;
+
     // vis
     private _visSetQueue: Set<string>;
     private _flashVisQueue: Set<string>;
@@ -191,6 +219,7 @@ export class MapUi {
     private _ignoreKeyUp: boolean;
 
     private _logMinimized: boolean;
+    private _settingMinimized: boolean;
 
     private _events: Event[];
     private _playlist: PlaylistItem[];
@@ -215,6 +244,14 @@ export class MapUi {
         this._infoPlateElement = document.getElementById(config.infoPlateElementId);
         this._filterInput = document.getElementById(config.filterInputElementId) as HTMLInputElement;
         this._filterWrap = document.getElementById(config.filterWrapElementId);
+
+        this._settingWrap = document.getElementById(config.settingWrapElementId);
+        this._settingFixed = document.getElementById(config.settingControls.fixedCheckboxElementId) as HTMLInputElement;
+        this._settingHide = document.getElementById(config.settingControls.hideCheckboxElementId) as HTMLInputElement;
+        this._settingToggle = document.getElementById(config.settingControls.minimizeToggleElementId);
+
+        this._replayPanel = document.getElementById(config.replayPanelElementId);
+        this._infoPanel = document.getElementById(config.infoPanelElementId);
 
         this._logPanel = document.getElementById(config.logPanelElementId);
         this._logView = document.getElementById(config.logViewportElementId);
@@ -244,6 +281,7 @@ export class MapUi {
         this._flashVisStyleMapping = {};
 
         this._logMinimized = true;
+        this._settingMinimized = true;
 
         this._replayStatus = 'stopped';
         this._events = [];
@@ -323,6 +361,20 @@ export class MapUi {
             this._logMinimized = !this._logMinimized;
         };
 
+        this._settingToggle.onclick = () => {
+            if (this._settingMinimized) {
+                this._settingWrap.classList.remove('minimized');
+                this._replayPanel.classList.remove('bump');
+                this._infoPanel.classList.remove('bump');
+            } else {
+                this._settingWrap.classList.add('minimized');
+                this._replayPanel.classList.add('bump');
+                this._infoPanel.classList.add('bump');
+            }
+
+            this._settingMinimized = !this._settingMinimized;
+        };
+
         this._filterInput.onkeydown = (event) => {
             if (event.key == 'ArrowUp') {
                 this._moveSuggestionSelection('up');
@@ -383,6 +435,14 @@ export class MapUi {
             this._updateFilterSuggestions(this._filterInput.value);
         };
 
+        this._settingFixed.onclick = () => {
+            let option = {physics: true}
+            if (this._settingFixed.checked) {
+                option = {physics: false}
+            }
+            this._graph.setOptions(option);
+        }
+
         this._windowManager.on('taskbarchanges', (shown: boolean) => {
             if (shown) {
                 this._logPanel.classList.add('bump');
@@ -423,7 +483,6 @@ export class MapUi {
                         return;
                     }
                     this._flashQueue.add(nodeId);
-                    // this._flashVisQueue.add(nodeId);
                 }
             });
 
@@ -731,13 +790,13 @@ export class MapUi {
                     id: nodeId, ...staticDefault
                 }
             });
+
             let updateRequestEdge = Array.from(new Set([...this._tVisArrowMapping.from, ...this._tVisArrowMapping.to, ...this._tVisArrowMapping.both])).map(nodeId => {
                 return {
                     id: nodeId,
                     arrows: arrowStop
                 }
             });
-
             this._nodes.update(updateRequest);
             this._edges.update(updateRequestEdge)
             this._flashingNodes.clear();
@@ -2068,12 +2127,5 @@ export class MapUi {
                 this._collapseNode(nodeId);
             }
         });
-
-        // this._graph.on("dragStart", () => {
-        //     this._graph.setOptions({physics: false});
-        // });
-        // this._graph.on("dragEnd", () => {
-        //     this._graph.setOptions({physics: false});
-        // });
     }
 }
