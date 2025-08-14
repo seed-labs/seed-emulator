@@ -5,7 +5,7 @@ from __future__ import annotations
 from seedemu.core import Node, Service, Server, Emulator
 from typing import Dict
 
-BYOB_VERSION='3924dd6aea6d0421397cdf35f692933b340bfccf'
+BYOB_VERSION = 'b4946908b8a3691f75a7e15ffe6883ef509afc91'
 
 BotnetServerFileTemplates: Dict[str, str] = {}
 
@@ -48,48 +48,37 @@ cd /tmp/byob/byob
 python3 server.py --port {}
 '''
 
-BotnetServerFileTemplates['server_patch'] = '''\
-diff --git a/byob/core/util.py b/byob/core/util.py
-index eca72d4..96160c6 100644
---- a/byob/core/util.py
-+++ b/byob/core/util.py
-@@ -76,6 +76,7 @@ def public_ip():
-     Return public IP address of host machine
+BotnetServerFileTemplates['requirements_override'] = '''\
+# py-cryptonight
+# git+https://github.com/jtgrassie/pyrx.git#egg=pyrx
 
-     """
-+    return local_ip()
-     import sys
-     if sys.version_info[0] > 2:
-         from urllib.request import urlopen
-@@ -143,6 +144,7 @@ def geolocation():
-     """
-     Return latitude/longitude of host machine (tuple)
-     """
-+    return ("0", "0")
-     import sys
-     import json
-     if sys.version_info[0] > 2:
-diff --git a/byob/modules/util.py b/byob/modules/util.py
-index 5c5958a..ea1c9d4 100644
---- a/byob/modules/util.py
-+++ b/byob/modules/util.py
-@@ -76,6 +76,7 @@ def public_ip():
-     Return public IP address of host machine
+mss==5.0.0;python_version>'3'
+WMI==1.4.9;python_version>'3'
+numpy;python_version>'3'
+pyxhook==1.0.0;python_version>'3'
+twilio==6.35.4;python_version>'3'
+colorama==0.4.3;python_version>'3'
+requests==2.22.0;python_version>'3'
+PyInstaller;python_version>'3'
+pycryptodome==3.9.6;python_version>'3'
+pycrypto==2.6.1;python_version>'3'
 
-     """
-+    return local_ip()
-     import sys
-     if sys.version_info[0] > 2:
-         from urllib.request import urlopen
-@@ -143,6 +144,7 @@ def geolocation():
-     """
-     Return latitude/longitude of host machine (tuple)
-     """
-+    return ("0", "0")
-     import sys
-     import json
-     if sys.version_info[0] > 2:
+mss==3.3.0;python_version<'3'
+WMI==1.4.9;python_version<'3'
+numpy==1.15.2;python_version<'3'
+pyxhook==1.0.0;python_version<'3'
+twilio==6.14.0;python_version<'3'
+colorama==0.3.9;python_version<'3'
+requests==2.20.0;python_version<'3'
+PyInstaller==3.6;python_version<'3'
+pycryptodomex==3.8.1;python_version<'3'
+
+opencv-python==3.4.3.18;python_version<'3'
+
+pyHook==1.5.1;sys.platform=='win32'
+pypiwin32==223;sys.platform=='win32'
 '''
+
 
 class BotnetServer(Server):
     """!
@@ -156,11 +145,37 @@ class BotnetServer(Server):
         node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') 
         node.addBuildCommand('git clone https://github.com/malwaredllc/byob.git /tmp/byob/')
         node.addBuildCommand('git -C /tmp/byob/ checkout {}'.format(BYOB_VERSION)) # server_patch is tested only for this commit
+        
+        # override requirements
+        node.addBuildCommand("mkdir -p /tmp/byob/byob")
+        node.addBuildCommand(
+            "cat > /tmp/byob/byob/requirements.txt <<'EOF'\n"
+            + BotnetServerFileTemplates['requirements_override'] +
+            "\nEOF"
+        )
         node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
 
-        # patch byob - removes external request for getting IP location, which won't work if "real" internet is not connected.
-        node.setFile('/tmp/byob.patch', BotnetServerFileTemplates['server_patch'])
-        node.appendStartCommand('git -C /tmp/byob/ apply /tmp/byob.patch')
+        # use regex rewrite the function body of public_ip()/geolocation()
+        node.addBuildCommand(
+            "python3 - <<'PY'\n"
+            "import re, pathlib\n"
+            "root = pathlib.Path('/tmp/byob')\n"
+            "targets = ['byob/core/util.py','byob/modules/util.py']\n"
+            "for rel in targets:\n"
+            "    p = root / rel\n"
+            "    s = p.read_text(encoding='utf-8')\n"
+            "    s = re.sub(r'def\\s+public_ip\\s*\\(\\)\\s*:[\\s\\S]*?(?=\\n\\s*def\\s|\\Z)',\n"
+            "               'def public_ip():\\n"
+            "    \"\"\"Return public IP address of host machine\"\"\"\\n"
+            "    return local_ip()\\n\\n', s)\n"
+            "    s = re.sub(r'def\\s+geolocation\\s*\\(\\)\\s*:[\\s\\S]*?(?=\\n\\s*def\\s|\\Z)',\n"
+            "               'def geolocation():\\n"
+            "    \"\"\"Return latitude/longitude of host machine (tuple)\"\"\"\\n"
+            "    return (\"0\", \"0\")\\n\\n', s)\n"
+            "    p.write_text(s, encoding='utf-8')\n"
+            "print('byob util.py patched (version-agnostic)')\n"
+            "PY"
+        )
 
         # add the init script to server
         node.setFile('/tmp/byob_server_init_script', BotnetServerFileTemplates['server_init_script'])
@@ -254,7 +269,12 @@ class BotnetClientServer(Server):
 
         # get byob dependencies.
         node.addSoftware('python3 git cmake python3-dev gcc g++ make python3-pip') 
-        node.addBuildCommand('curl https://raw.githubusercontent.com/malwaredllc/byob/{}/byob/requirements.txt > /tmp/byob-requirements.txt'.format(BYOB_VERSION))
+        
+        node.addBuildCommand(
+            "cat > /tmp/byob-requirements.txt <<'EOF'\n"
+            + BotnetServerFileTemplates['requirements_override'] +
+            "\nEOF"
+        )
         node.addBuildCommand('pip3 install -r /tmp/byob-requirements.txt')
 
         fork = False

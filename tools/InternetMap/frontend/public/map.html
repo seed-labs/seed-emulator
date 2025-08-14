@@ -20,7 +20,18 @@
             </div>
             <div class="suggestions" id="filter-suggestions"></div>
         </div>
-        <div class="panel replay-panel">
+        <div class="panel setting-panel">
+            <div class="panel-title clickable" id="setting-panel-toggle">
+                <i class="bi bi-gear" id="setting-toggle-chevron"></i>
+            </div>
+            <div class="setting-wrap wrap minimized" id="setting-wrap">
+                <div class="setting-controls">
+                    <input type="checkbox" id="setting-fixed"/>
+                    <label for="setting-fixed" >drag fixed</label>
+                </div>
+            </div>
+        </div>
+        <div class="panel replay-panel bump" id="replay-panel">
             <div class="panel-title">Replay</div>
             <div class="replay-plate-wrap wrap">
                 <div class="replay-plate" id="replay-plate">
@@ -42,7 +53,7 @@
                 </div>
             </div>
         </div>
-        <div class="panel info-plate-panel">
+        <div class="panel info-plate-panel bump" id="info-plate-panel">
             <div class="panel-title">Details</div>
             <div class="info-plate-wrap wrap">
                 <div class="info-plate" id="info-plate">
