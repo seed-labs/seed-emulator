@@ -189,9 +189,10 @@ DockerCompilerFileTemplates['seedemu_internet_map'] = """\
         container_name: seedemu_internet_map
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
-        ports:
-            - {clientPort}:8080/tcp
 """
+#        ports:
+#            - {clientPort}:8080/tcp
+
 
 # The following is used for attaching the Map to an existing network inside the emulator;
 # the network entry will be added later
@@ -1338,15 +1339,12 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
-        # Add the Internet Map contaienr to docker's default network
+        # Add the Internet Map contaienr to the emulator
         if self.__internet_map_enabled:
             self._log('enabling seedemu-internet-map...')
 
-            self.__services += DockerCompilerFileTemplates['seedemu_internet_map'].format(
-                clientImage = SEEDEMU_INTERNET_MAP_IMAGE,
-                clientPort = self.__internet_map_port
-            )
-            self.__services += '\n'
+            # Attach the Map container to the default network
+            self.attachInternetMap(port_forwarding="{}:8080/tcp".format(self.__internet_map_port))
 
 
         # Add the Ether View contaienr to docker's default network
@@ -1426,7 +1424,11 @@ class Docker(Compiler):
         """
 
         self._log('attaching the Internet Map container to {}:{}'.format(asn, net))
-        self.attachCustomerContainer(DockerCompilerFileTemplates['seedemu_internet_map_with_net'].format(
+
+        # avoid attaching another copy of the MAP (to the default network)
+        self.__internet_map_enabled = False 
+
+        self.attachCustomerContainer(DockerCompilerFileTemplates['seedemu_internet_map'].format(
                 clientImage = SEEDEMU_INTERNET_MAP_IMAGE), asn, net, port_forwarding)
         return self
 
@@ -1455,15 +1457,14 @@ class Docker(Compiler):
 
         if asn < 0:  # Do not set the network entry; will use the default docker network
             self.__custom_services += '\n'
-            return self
+        else: 
+            net_prefix = self._contextToPrefix(asn, 'net')
+            real_netname = '{}{}'.format(net_prefix, net)
 
-        net_prefix = self._contextToPrefix(asn, 'net')
-        real_netname = '{}{}'.format(net_prefix, net)
+            self.__custom_services += DockerCompilerFileTemplates['network_entry'].format(
+                 network_name_field = real_netname
+            )
+            self.__custom_services += '\n'
 
-        self.__custom_services += DockerCompilerFileTemplates['network_entry'].format(
-                network_name_field = real_netname
-        )
-        self.__custom_services += '\n'
-        
         return self
 

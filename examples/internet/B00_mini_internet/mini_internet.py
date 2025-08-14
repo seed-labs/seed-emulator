@@ -147,8 +147,8 @@ def run(dumpfile=None, hosts_per_as=2):
 
         # Attach the Internet Map container to the emulator
         docker = Docker(platform=platform)
-        docker.attachInternetMap(asn=153, net='net0', port_forwarding='8081:8080/tcp')
-        emu.compile(Docker(), './output', override=True)
+        docker.attachInternetMap(asn=153, net='net0', port_forwarding='8080:8080/tcp')
+        emu.compile(docker, './output', override=True)
 
 if __name__ == "__main__":
     run()
