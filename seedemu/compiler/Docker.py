@@ -1425,7 +1425,8 @@ class Docker(Compiler):
 
         self._log('attaching the Internet Map container to {}:{}'.format(asn, net))
 
-        # avoid attaching another copy of the MAP (to the default network)
+        # If this is not set to False, Docker compiler will attach another copy of the MAP
+        # container to the default network. This is to avoid that.
         self.__internet_map_enabled = False 
 
         self.attachCustomerContainer(DockerCompilerFileTemplates['seedemu_internet_map'].format(
