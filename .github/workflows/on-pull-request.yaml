@@ -39,6 +39,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'true' }}
+      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
+      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
+      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
+      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'true' }}
     steps:
       - name: Check out the source repository
         uses: actions/checkout@v4
@@ -50,7 +56,7 @@ jobs:
           cache-dependency-path: "**/*requirements.txt"
       - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
       - name: Get scion-pki
-        if: ${{ github.event.inputs.run-scion-tests == 'true' }}
+        if: ${{ env.SCION_TESTS == 'true' }}
         run: |
           curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
           mkdir bin
@@ -60,16 +66,16 @@ jobs:
           source development.env
           export PATH=$PATH:$PWD/bin
           CMD="tests/compile-and-build-test/compile-test.py"
-          if [ "${{ github.event.inputs.run-basic-tests }}" == "true" ]; then
+          if [ "$BASIC_TESTS" == "true" ]; then
             CMD+=" --basic"
           fi
-          if [ "${{ github.event.inputs.run-internet-tests }}" == "true" ]; then
+          if [ "$INTERNET_TESTS" == "true" ]; then
             CMD+=" --internet"
           fi
-          if [ "${{ github.event.inputs.run-blockchain-tests }}" == "true" ]; then
+          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
             CMD+=" --blockchain"
           fi
-          if [ "${{ github.event.inputs.run-scion-tests }}" == "true" ]; then
+          if [ "$SCION_TESTS" == "true" ]; then
             CMD+=" --scion"
           fi
           python $CMD
@@ -80,6 +86,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'true' }}
+      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
+      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
+      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
+      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'true' }}
     steps:
       - name: Check out the source repository
         uses: actions/checkout@v4
@@ -91,7 +103,7 @@ jobs:
           cache-dependency-path: "**/*requirements.txt"
       - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
       - name: Get scion-pki
-        if: ${{ github.event.inputs.run-scion-tests == 'true' }}
+        if: ${{ env.SCION_TESTS == 'true' }}
         run: |
           curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
           mkdir bin
@@ -101,19 +113,19 @@ jobs:
           source development.env
           export PATH=$PATH:$PWD/bin
           CMD="tests/run-tests.py"
-          if [ "${{ github.event.inputs.run-quick-tests }}" == "true" ]; then
+          if [ "$QUICK_TESTS" == "true" ]; then
             CMD+=" --ci"
           fi
-          if [ "${{ github.event.inputs.run-basic-tests }}" == "true" ]; then
+          if [ "$BASIC_TESTS" == "true" ]; then
             CMD+=" --basic"
           fi
-          if [ "${{ github.event.inputs.run-internet-tests }}" == "true" ]; then
+          if [ "$INTERNET_TESTS" == "true" ]; then
             CMD+=" --internet"
           fi
-          if [ "${{ github.event.inputs.run-blockchain-tests }}" == "true" ]; then
+          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
             CMD+=" --blockchain"
           fi
-          if [ "${{ github.event.inputs.run-scion-tests }}" == "true" ]; then
+          if [ "$SCION_TESTS" == "true" ]; then
             CMD+=" --scion"
           fi
           python $CMD
@@ -156,19 +168,16 @@ jobs:
           export PATH=$PATH:$PWD/bin
           cd tests/compile-and-build-test
           CMD="tests/compile-and-build-test/build-test.py"
-          if [ "${{ github.event.inputs.run-quick-tests }}" == "true" ]; then
-            CMD+=" --quick"
-          fi
-          if [ "${{ github.event.inputs.run-basic-tests }}" == "true" ]; then
+          if [ "$BASIC_TESTS" == "true" ]; then
             CMD+=" --basic"
           fi
-          if [ "${{ github.event.inputs.run-internet-tests }}" == "true" ]; then
+          if [ "$INTERNET_TESTS" == "true" ]; then
             CMD+=" --internet"
           fi
-          if [ "${{ github.event.inputs.run-blockchain-tests }}" == "true" ]; then
+          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
             CMD+=" --blockchain"
           fi
-          if [ "${{ github.event.inputs.run-scion-tests }}" == "true" ]; then
+          if [ "$SCION_TESTS" == "true" ]; then
             CMD+=" --scion"
           fi
           python $CMD
