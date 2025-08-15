@@ -16,6 +16,10 @@ import os
 parser = argparse.ArgumentParser()
 parser.add_argument("platform", nargs='?', default="amd")
 parser.add_argument("--ci", action='store_true', help="Run limited set of tests")
+parser.add_argument("--basic", action="store_true", help="Run basic tests")
+parser.add_argument("--internet", action="store_true", help="Run internet tests")
+parser.add_argument("--blockchain", action="store_true", help="Run blockchain tests")
+parser.add_argument("--scion", action="store_true", help="Run SCION tests")
 args = parser.parse_args()
 
 # Set an environment variable
