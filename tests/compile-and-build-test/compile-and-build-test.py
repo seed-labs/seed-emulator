@@ -22,13 +22,10 @@ class CompileTest(ut.TestCase):
        # Set the platform information
         script_name = os.path.basename(__file__)
 
-        if len(sys.argv) == 1:
-            cls.platform = "amd"
-        elif len(sys.argv) == 2 and sys.argv[1].lower() in ['amd', 'arm']:
+        if len(sys.argv) > 1 and sys.argv[1].lower() in ['amd', 'arm']:
             cls.platform = sys.argv[1].lower()
         else:
-            print(f"Usage:  {script_name} amd|arm")
-            sys.exit(1)
+            cls.platform = "amd"
 
         cls.platform
         basic_test_list = {
