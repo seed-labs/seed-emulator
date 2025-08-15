@@ -137,7 +137,7 @@ class CompileTest(ut.TestCase):
                 docker_compose_version = 1
         
         # Temp Fix for Docker BuildKit
-        # Disable BuildKit to avoid issues with Docker Compose v1
+        # Disable BuildKit to avoid issues with Docker Compose v2
         env = os.environ.copy()
         env['DOCKER_BUILDKIT'] = '0'
 
