@@ -7,27 +7,27 @@ on:
   workflow_dispatch:
     inputs:
       run-quick-tests:
-        description: "Run quick tests"
+        description: "Run quick tests | ignores other options for testing (they still apply for compile/build)"
         type: boolean
         required: false
         default: "false"
       run-basic-tests:
-        description: "Run basic tests"
+        description: "Run basic tests | Compile and builds all the basic examples - Runs basic tests"
         type: boolean
         required: false
         default: "true"
       run-internet-tests:
-        description: "Run internet tests"
+        description: "Run internet tests | Compile and builds all the internet examples - Runs internet tests"
         type: boolean
         required: false
         default: "true"
       run-blockchain-tests:
-        description: "Run blockchain tests"
+        description: "Run blockchain tests | Compile and builds all the blockchain examples - Runs blockchain tests"
         type: boolean
         required: false
         default: "false"
       run-scion-tests:
-        description: "Run SCION tests"
+        description: "Run SCION tests | Compile and builds all the SCION examples - Runs SCION tests"
         type: boolean
         required: false
         default: "true"
