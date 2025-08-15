@@ -135,6 +135,12 @@ class CompileTest(ut.TestCase):
                 docker_compose_version = 2
             else:
                 docker_compose_version = 1
+        
+        # Temp Fix for Docker BuildKit
+        # Disable BuildKit to avoid issues with Docker Compose v1
+        env = os.environ.copy()
+        env['DOCKER_BUILDKIT'] = '0'
+
         for dir, (scripts, outputs) in self.test_list.items():
             path = os.path.join(self.path, dir)
             os.chdir(path)
@@ -148,9 +154,9 @@ class CompileTest(ut.TestCase):
                     with open(log_file, 'a') as f:
                         f.write('########### {} Test ##############\n'.format(dir))
                         if(docker_compose_version == 1):
-                            result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f)
+                            result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f, env=env)
                         else:
-                            result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f)
+                            result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f, env=env)
 
                     os.system("echo 'y' | docker system prune > /dev/null")
                     assert result.returncode == 0, "docker build failed"
