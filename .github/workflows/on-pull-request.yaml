@@ -65,7 +65,7 @@ jobs:
         run: |
           source development.env
           export PATH=$PATH:$PWD/bin
-          CMD="tests/compile-and-build-test/compile-and-build-test.py"
+          CMD="tests/compile-and-build-test/compile-test.py"
           if [ "$BASIC_TESTS" == "true" ]; then
             CMD+=" --basic"
           fi
