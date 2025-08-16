@@ -6,7 +6,7 @@ on:
 jobs:
   repo-sync:
     env:
-      SSH_PRIVATE_KEY: ${{ secrets.GITEE_PRIVATE_KEY }}
+      SSH_PRIVATE_KEY: ${{ secrets.GITEE_SSH_KEY }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
