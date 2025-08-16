@@ -1,0 +1,25 @@
+name: sync2gitee
+on:
+  push:
+    branches:
+      - master
+jobs:
+  repo-sync:
+    env:
+      SSH_PRIVATE_KEY: ${{ secrets.GITEE_PRIVATE_KEY }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          
+      - name: Configure Git
+        run: |
+           git config --global --add safe.directory /github/workspace           
+
+      - name: sync github -> gitee
+        uses: wearerequired/git-mirror-action@master
+        if: env.SSH_PRIVATE_KEY
+        with:
+          source-repo: "git@github.com:${{ github.repository }}.git"
+          destination-repo: "git@gitee.com:seedlab/seed-emulator.git"
