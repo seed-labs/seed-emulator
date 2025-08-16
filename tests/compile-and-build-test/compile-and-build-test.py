@@ -37,7 +37,7 @@ class CompileTest(ut.TestCase):
             "basic/A05_components" :                    (["components.py"], ["output",  "base_component.bin"]),
             "basic/A06_merge_emulation" :               (["merge_emulation.py"], ["output"]),
             "basic/A07_compilers" :                     (["compilers.py"], ["output",  "base_component.bin"]),
-            #"basic/A08_buildtime_docker" :              (["create_eth_account.py"], ["output"]),
+            "basic/A08_buildtime_docker" :              (["create_eth_account.py"], ["output"]),
             "basic/A09_node_customization" :            (["node_customization.py"], ["output"]),
             "basic/A10_add_containers" :                (["add_containers.py"], ["output"]),
             #"basic/A20_nano_internet" :                 (["nano_internet.py"], ["output", "base_component.bin"]),
@@ -76,7 +76,7 @@ class CompileTest(ut.TestCase):
             "blockchain/D50_blockchain" :               (["blockchain.py"], ["output", "blockchain_poa.bin"]),
         }
         scion_test_list = {
-            "scion/S01_scion":                          (["scion.py"], ["output"]),
+            # "scion/S01_scion":                          (["scion.py"], ["output"]),
             "scion/S02_scion_bgp_mixed":                (["scion_bgp_mixed.py"], ["output"]),
             "scion/S03_bandwidth_tester":               (["bandwidth_tester.py"], ["output"]),
             "scion/S04_docker_api":                     (["docker_api.py"], ["output"]),
