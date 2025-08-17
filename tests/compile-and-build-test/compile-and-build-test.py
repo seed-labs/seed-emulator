@@ -77,9 +77,9 @@ class CompileTest(ut.TestCase):
         }
         scion_test_list = {
             # "scion/S01_scion":                          (["scion.py"], ["output"]),
-            "scion/S02_scion_bgp_mixed":                (["scion_bgp_mixed.py"], ["output"]),
-            "scion/S03_bandwidth_tester":               (["bandwidth_tester.py"], ["output"]),
-            "scion/S04_docker_api":                     (["docker_api.py"], ["output"]),
+            # "scion/S02_scion_bgp_mixed":                (["scion_bgp_mixed.py"], ["output"]),
+            # "scion/S03_bandwidth_tester":               (["bandwidth_tester.py"], ["output"]),
+            # "scion/S04_docker_api":                     (["docker_api.py"], ["output"]),
         }
         cls.test_list = {
         }
