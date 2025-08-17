@@ -4,6 +4,34 @@ on:
   pull_request:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      run-quick-tests:
+        description: "Run quick tests | ignores other options for testing (they still apply for compile/build)"
+        type: boolean
+        required: false
+        default: "false"
+      run-basic-tests:
+        description: "Run basic tests | Compile and builds all the basic examples - Runs basic tests"
+        type: boolean
+        required: false
+        default: "true"
+      run-internet-tests:
+        description: "Run internet tests | Compile and builds all the internet examples - Runs internet tests"
+        type: boolean
+        required: false
+        default: "true"
+      run-blockchain-tests:
+        description: "Run blockchain tests | Compile and builds all the blockchain examples - Runs blockchain tests"
+        type: boolean
+        required: false
+        default: "false"
+      run-scion-tests:
+        description: "Run SCION tests | Compile and builds all the SCION examples - Runs SCION tests"
+        type: boolean
+        required: false
+        default: "true"
+
 
 jobs:
   compile-examples:
@@ -11,6 +39,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'true' }}
+      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
+      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
+      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
+      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'true' }}
     steps:
       - name: Check out the source repository
         uses: actions/checkout@v4
@@ -22,6 +56,7 @@ jobs:
           cache-dependency-path: "**/*requirements.txt"
       - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
       - name: Get scion-pki
+        if: ${{ env.SCION_TESTS == 'true' }}
         run: |
           curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
           mkdir bin
@@ -30,7 +65,20 @@ jobs:
         run: |
           source development.env
           export PATH=$PATH:$PWD/bin
-          tests/compile-and-build-test/compile-test.py
+          CMD="tests/compile-and-build-test/compile-test.py"
+          if [ "$BASIC_TESTS" == "true" ]; then
+            CMD+=" --basic"
+          fi
+          if [ "$INTERNET_TESTS" == "true" ]; then
+            CMD+=" --internet"
+          fi
+          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
+            CMD+=" --blockchain"
+          fi
+          if [ "$SCION_TESTS" == "true" ]; then
+            CMD+=" --scion"
+          fi
+          python $CMD
 
   run-tests:
     name: Run Tests
@@ -38,6 +86,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'true' }}
+      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
+      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
+      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
+      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'true' }}
     steps:
       - name: Check out the source repository
         uses: actions/checkout@v4
@@ -49,6 +103,7 @@ jobs:
           cache-dependency-path: "**/*requirements.txt"
       - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
       - name: Get scion-pki
+        if: ${{ env.SCION_TESTS == 'true' }}
         run: |
           curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
           mkdir bin
@@ -57,7 +112,23 @@ jobs:
         run: |
           source development.env
           export PATH=$PATH:$PWD/bin
-          tests/run-tests.py --ci
+          CMD="tests/run-tests.py"
+          if [ "$QUICK_TESTS" == "true" ]; then
+            CMD+=" --ci"
+          fi
+          if [ "$BASIC_TESTS" == "true" ]; then
+            CMD+=" --basic"
+          fi
+          if [ "$INTERNET_TESTS" == "true" ]; then
+            CMD+=" --internet"
+          fi
+          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
+            CMD+=" --blockchain"
+          fi
+          if [ "$SCION_TESTS" == "true" ]; then
+            CMD+=" --scion"
+          fi
+          python $CMD
       - name: Archive test results
         uses: actions/upload-artifact@v4
         with:
@@ -75,6 +146,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'true' }}
+      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
+      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
+      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
+      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'true' }}
     steps:
       - name: Check out the source repository
         uses: actions/checkout@v4
@@ -86,6 +163,7 @@ jobs:
           cache-dependency-path: "**/*requirements.txt"
       - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
       - name: Get scion-pki
+        if: ${{ github.event.inputs.run-scion-tests == 'true' }}
         run: |
           curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
           mkdir bin
@@ -95,7 +173,20 @@ jobs:
           source development.env
           export PATH=$PATH:$PWD/bin
           cd tests/compile-and-build-test
-          ./compile-and-build-test.py
+          CMD="compile-and-build-test.py"
+          if [ "$BASIC_TESTS" == "true" ]; then
+            CMD+=" --basic"
+          fi
+          if [ "$INTERNET_TESTS" == "true" ]; then
+            CMD+=" --internet"
+          fi
+          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
+            CMD+=" --blockchain"
+          fi
+          if [ "$SCION_TESTS" == "true" ]; then
+            CMD+=" --scion"
+          fi
+          python $CMD
       - name: Archive test results
         uses: actions/upload-artifact@v4
         with:

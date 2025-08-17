@@ -122,10 +122,16 @@ class SeedEmuTestCase(ut.TestCase):
 
         log_file = os.path.join(cls.init_dir, cls.test_log, "build_log")
         f = open(log_file, 'w')
+
+        # Temp Fix for Docker BuildKit
+        # Disable BuildKit to avoid issues with Docker Compose v2
+        env = os.environ.copy()
+        env['DOCKER_BUILDKIT'] = '0'
+        
         if(cls.docker_compose_version == 1):
             result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f)
         else:
-            result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f)
+            result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f, env=env)
 
         f.close()
         os.system("echo 'y' | docker system prune > /dev/null")
