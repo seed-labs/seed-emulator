@@ -48,6 +48,7 @@ for dir in examples_dirs:
 
 failed = []
 
+
 for example in examples:
     print(f"=== Run {example} ===")
     output = example.parent / "output"
@@ -59,6 +60,7 @@ for example in examples:
         env={
             "PYTHONPATH": str(Path(".").absolute()),
             "PATH": ":".join([os.environ.get("PATH"), str(Path("./bin").absolute())]),
+            "DOCKER_BUILDKIT": "0",
         },
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
