@@ -109,7 +109,6 @@ def run(dumpfile = None):
 
         # Attach the Internet Map container to the emulator
         docker = Docker(platform=platform) 
-        docker.attachInternetMap(asn=150, net='net0', port_forwarding='8080:8080/tcp')
 
         ###############################################################################
         # Compilation
