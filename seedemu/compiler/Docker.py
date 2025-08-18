@@ -188,8 +188,18 @@ DockerCompilerFileTemplates['seedemu_internet_map'] = """\
         container_name: seedemu_internet_map
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
+        privileged: true
+"""
+
+DockerCompilerFileTemplates['port_forwarding_entry'] = """\
         ports:
-            - {clientPort}:8080/tcp
+            - {port_forwarding_field}
+"""
+
+DockerCompilerFileTemplates['network_entry'] = """\
+        networks:
+             {network_name_field}:
+                    {ipv4_address_field}
 """
 
 DockerCompilerFileTemplates['seedemu_ether_view'] = """\
@@ -297,13 +307,17 @@ class Docker(Compiler):
     """
 
     __services: str
+    __custom_services: str
+
     __networks: str
     __naming_scheme: str
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
 
+
     __internet_map_enabled: bool
     __internet_map_port: int
+
 
     __ether_view_enabled: bool
     __ether_view_port: int
@@ -369,6 +383,7 @@ class Docker(Compiler):
         self.__option_handling = option_handling
         self.__networks = ""
         self.__services = ""
+        self.__custom_services = ""
         self.__naming_scheme = namingScheme
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
@@ -1311,14 +1326,15 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
+        # Add the Internet Map contaienr to the emulator
         if self.__internet_map_enabled:
             self._log('enabling seedemu-internet-map...')
 
-            self.__services += DockerCompilerFileTemplates['seedemu_internet_map'].format(
-                clientImage = SEEDEMU_INTERNET_MAP_IMAGE,
-                clientPort = self.__internet_map_port
-            )
+            # Attach the Map container to the default network
+            self.attachInternetMap(port_forwarding="{}:8080/tcp".format(self.__internet_map_port))
 
+
+        # Add the Ether View contaienr to docker's default network
         if self.__ether_view_enabled:
             self._log('enabling seedemu-ether-view...')
 
@@ -1326,6 +1342,12 @@ class Docker(Compiler):
                 clientImage = SEEDEMU_ETHER_VIEW_IMAGE,
                 clientPort = self.__ether_view_port
             )
+            self.__services += '\n'
+
+
+        # Add custom entries (typically added through Docker::attachCustomContainer APIs)
+        self.__services += self.__custom_services
+
 
         local_images = ''
 
@@ -1374,3 +1396,80 @@ class Docker(Compiler):
 
             if hit: toplevelvolumes = 'volumes:\n' + toplevelvolumes
         return toplevelvolumes
+
+    def attachInternetMap(self, asn:int = -1, net:str = '', ip_address: str='', 
+                                port_forwarding:str = '') -> Docker:
+        """!
+        @brief add the pre-built Map container to the emulator (the entry should not
+            include any network entry, as the network entry will be added here)
+        
+        @param asn the autonomous system number of the network. -1 means no network
+            information is provided, so the container will be attached to the default
+            network provided by the docker
+        @param net the name of the network that this container is attached to.
+        @param ip_address the IP address set for this container. If no IP address is provided,
+            docker will provide one when building the image.
+        @param port_fowarding the port forwarding field. 
+
+        @returns self, for chaining API calls.
+        """
+
+        self._log('attaching the Internet Map container to {}:{}'.format(asn, net))
+
+        # If this is not set to False, Docker compiler will attach another copy of the MAP
+        # container to the default network. This is to avoid that.
+        self.__internet_map_enabled = False 
+
+        self.attachCustomContainer(DockerCompilerFileTemplates['seedemu_internet_map'].format(
+                clientImage = SEEDEMU_INTERNET_MAP_IMAGE), asn=asn, net=net, ip_address=ip_address, 
+                port_forwarding=port_forwarding)
+        return self
+
+
+    def attachCustomContainer(self, compose_entry:str, asn:int = -1, net:str = '', 
+                                ip_address: str='', port_forwarding: str= '') -> Docker:
+        """!
+        @brief add an pre-built container image to the emulator (the entry should not
+            include any network entry, as the network entry will be added here)
+
+        @param entry the docker compose entry (without the network entry)
+        @param asn the autonomous system number of the network. -1 means no network
+            information is provided, so the container will be attached to the default
+            network provided by the docker
+        @param net the name of the network that this container is attached to.
+        @param ip_address the IP address set for this container. If no IP address is provided,
+            docker will provide one when building the image.
+        @param port_fowarding the port forwarding field. 
+
+        @returns self, for chaining API calls.
+        """
+
+        self._log('attaching an existing container to {}:{}'.format(asn, net))
+
+        self.__custom_services += compose_entry
+
+        if port_forwarding != '':
+            self.__custom_services += DockerCompilerFileTemplates['port_forwarding_entry'].format(
+                port_forwarding_field = port_forwarding
+        )
+
+        if asn < 0:  # Do not set the network entry; will use the default docker network
+            self.__custom_services += '\n'
+        else: 
+            net_prefix = self._contextToPrefix(asn, 'net')
+            real_netname = '{}{}'.format(net_prefix, net)
+
+            # Construct the IP address field (leave it empty if IP address is not provided)
+            if ip_address == '':  
+                ipv4_address_entry = ''
+            else:
+                ipv4_address_entry = 'ipv4_address: {}'.format(ip_address)
+           
+            self.__custom_services += DockerCompilerFileTemplates['network_entry'].format(
+                 network_name_field = real_netname,
+                 ipv4_address_field   = ipv4_address_entry
+            )
+            self.__custom_services += '\n'
+
+        return self
+

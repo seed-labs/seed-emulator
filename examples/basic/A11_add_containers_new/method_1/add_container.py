@@ -7,6 +7,19 @@ from seedemu.compiler import Docker, Platform
 from seedemu.core import Emulator, Binding, Filter
 import sys, os
 
+DOCKER_COMPOSE_ENTRY = """\
+    seedemu-busybox:
+        image: busybox:latest
+        container_name: seedemu_busybox
+        privileged: true
+        command: /bin/sh -c "
+                   ip route del default  &&
+                   ip route add default via 10.150.0.254 &&
+                   tail -f /dev/null
+                 "
+"""
+
+
 def run(dumpfile = None):
     ###############################################################################
     # Set the platform information
@@ -107,8 +120,18 @@ def run(dumpfile = None):
     else:
         emu.render()
 
-        # Attach the Internet Map container to the emulator
         docker = Docker(platform=platform) 
+
+        # Attach an existing container to the emulator
+        docker.attachCustomContainer(compose_entry = DOCKER_COMPOSE_ENTRY, 
+                       asn=150, net='net0', ip_address='10.150.0.80',
+                       port_forwarding="9090:80/tcp")
+
+        # Attach the Internet Map container to the emulator
+        # This API actually calls `attachCustomContainer` 
+        docker.attachInternetMap(asn=151, net='net0', ip_address='10.151.0.90',
+                       port_forwarding='8080:8080/tcp')
+
 
         ###############################################################################
         # Compilation

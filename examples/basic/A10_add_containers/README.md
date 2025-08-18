@@ -1,5 +1,8 @@
 # Add existing containers
 
+Note: this method is the older approach; we have introduced a new approach (listed
+in another example).
+
 In some cases, we already have a group of existing containers, 
 we would like to add them to the emulator. How do we do this? 
 In this example, the existing containers are put inside the
