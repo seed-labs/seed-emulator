@@ -13,7 +13,7 @@ is to tell the compiler that we want to attach an existing container to
 a network inside the emulator. The compiler will then generate the corresponding
 entry inside the `docker-compose.yml` file.
 
-See [this example](./method1/README.md) for details.
+See [this example](./method_1/README.md) for details.
 
 
 ## Method 2
@@ -23,4 +23,4 @@ Using this method, we first start the emulator, and then start the additional co
 from the existing images. We attach these containers to the networks created by the emulator.
 This way, the new containers becomes part of the emultion.
 
-See [this example](./method2/README.md) for details.
+See [this example](./method_2/README.md) for details.
