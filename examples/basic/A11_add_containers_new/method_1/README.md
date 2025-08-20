@@ -4,10 +4,12 @@
 
 ## Adding an existing container
 
-We have implemented an API called `attachCustomer` in the `Docker` compiler class. 
+We have implemented an API called `attachCustomContainer` in the `Docker` compiler class. 
 It allows us to add a pre-constructed docker compose entry to the `docker-compose.yml`
-file. The network and the port-forwarding field of this entry can be 
-dynamically constructed through the `asn`, `net`, `ip_address`, and `port-forwarding` arguements. 
+file. The network field of this entry can be dynamically constructed through the `asn`, `net`, 
+`ip_address` arguements. The API also allow users to provide port-forwarding and 
+environment-variables arguements. 
+
 
 ```
 DOCKER_COMPOSE_ENTRY = """\
@@ -25,7 +27,8 @@ DOCKER_COMPOSE_ENTRY = """\
 docker = Docker(platform=platform)
 docker.attachCustomContainer(compose_entry = DOCKER_COMPOSE_ENTRY,
                  asn=150, net='net0', ip_address='10.150.0.80',
-                 port_forwarding="9090:80/tcp")
+                 port_forwarding="9090:80/tcp", env=['a=1', 'b=2'])
+
 emu.compile(docker, './output', override=True)
 ```
 
@@ -53,7 +56,8 @@ the emulator, and they can be added in such a way.
 
 ```
 docker.attachInternetMap(asn=150, net='net0', ip_address='10.150.0.90',
-                  port_forwarding='8080:8080/tcp')
+                  port_forwarding='8080:8080/tcp', env=['a=1', 'b=2'])
+
 ```
 
 
