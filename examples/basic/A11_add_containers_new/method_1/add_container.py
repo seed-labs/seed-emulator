@@ -125,12 +125,12 @@ def run(dumpfile = None):
         # Attach an existing container to the emulator
         docker.attachCustomContainer(compose_entry = DOCKER_COMPOSE_ENTRY, 
                        asn=150, net='net0', ip_address='10.150.0.80',
-                       port_forwarding="9090:80/tcp")
+                       port_forwarding="9090:80/tcp", env=['a=1', 'b=2'])
 
         # Attach the Internet Map container to the emulator
         # This API actually calls `attachCustomContainer` 
         docker.attachInternetMap(asn=151, net='net0', ip_address='10.151.0.90',
-                       port_forwarding='8080:8080/tcp')
+                       port_forwarding='8080:8080/tcp', env=['a=1', 'b=2'])
 
 
         ###############################################################################

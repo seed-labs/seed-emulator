@@ -196,6 +196,10 @@ DockerCompilerFileTemplates['port_forwarding_entry'] = """\
             - {port_forwarding_field}
 """
 
+DockerCompilerFileTemplates['environment_variable_entry'] = """\
+        environment:
+"""
+
 DockerCompilerFileTemplates['network_entry'] = """\
         networks:
              {network_name_field}:
@@ -1398,7 +1402,7 @@ class Docker(Compiler):
         return toplevelvolumes
 
     def attachInternetMap(self, asn:int = -1, net:str = '', ip_address: str='', 
-                                port_forwarding:str = '') -> Docker:
+                          port_forwarding:str = '', env:list=[]) -> Docker:
         """!
         @brief add the pre-built Map container to the emulator (the entry should not
             include any network entry, as the network entry will be added here)
@@ -1410,6 +1414,7 @@ class Docker(Compiler):
         @param ip_address the IP address set for this container. If no IP address is provided,
             docker will provide one when building the image.
         @param port_fowarding the port forwarding field. 
+        @param env the list of the environment variables. 
 
         @returns self, for chaining API calls.
         """
@@ -1422,12 +1427,13 @@ class Docker(Compiler):
 
         self.attachCustomContainer(DockerCompilerFileTemplates['seedemu_internet_map'].format(
                 clientImage = SEEDEMU_INTERNET_MAP_IMAGE), asn=asn, net=net, ip_address=ip_address, 
-                port_forwarding=port_forwarding)
+                port_forwarding=port_forwarding, env=env)
         return self
 
 
     def attachCustomContainer(self, compose_entry:str, asn:int = -1, net:str = '', 
-                                ip_address: str='', port_forwarding: str= '') -> Docker:
+                                ip_address: str='', port_forwarding: str= '',
+                                env: list=[]) -> Docker:
         """!
         @brief add an pre-built container image to the emulator (the entry should not
             include any network entry, as the network entry will be added here)
@@ -1440,6 +1446,7 @@ class Docker(Compiler):
         @param ip_address the IP address set for this container. If no IP address is provided,
             docker will provide one when building the image.
         @param port_fowarding the port forwarding field. 
+        @param env the list of the environment variables. 
 
         @returns self, for chaining API calls.
         """
@@ -1452,6 +1459,15 @@ class Docker(Compiler):
             self.__custom_services += DockerCompilerFileTemplates['port_forwarding_entry'].format(
                 port_forwarding_field = port_forwarding
         )
+
+        if env:
+            self.__custom_services += DockerCompilerFileTemplates['environment_variable_entry']
+
+            field_name = DockerCompilerFileTemplates['environment_variable_entry']
+            # count how many leading spaces this field name has (for alignment purpose)
+            leading_spaces = len(field_name) - len(field_name.lstrip()) 
+            for e in env:
+                self.__custom_services += '{}- {}\n'.format(' '*(leading_spaces + 4), e)
 
         if asn < 0:  # Do not set the network entry; will use the default docker network
             self.__custom_services += '\n'
