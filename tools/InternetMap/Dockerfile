@@ -1,5 +1,4 @@
 FROM node:14
-RUN npm config set registry https://registry.npmmirror.com
 COPY start.sh /
 WORKDIR /usr/src/app
 COPY . .
