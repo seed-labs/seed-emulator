@@ -1401,9 +1401,9 @@ class Docker(Compiler):
             if hit: toplevelvolumes = 'volumes:\n' + toplevelvolumes
         return toplevelvolumes
 
-        def attachInternetMap(self, asn: int = -1, net: str = '', ip_address: str = '',
-                          port_forwarding: str = '', env: list = [],
-                          show_on_map=False, node_name='seedemu_internet_map') -> Docker:
+    def attachInternetMap(self, asn: int = -1, net: str = '', ip_address: str = '',
+                      port_forwarding: str = '', env: list = [],
+                      show_on_map=False, node_name='seedemu_internet_map') -> Docker:
         """!
         @brief add the pre-built Map container to the emulator (the entry should not
             include any network entry, as the network entry will be added here)
