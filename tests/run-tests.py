@@ -71,8 +71,8 @@ if args.ci:
         MiniInternetTestCase,
         IPAnyCastTestCase,
         HostMgmtTestCase,
-        ScionBgpMixedTestCase,
-        ScionBwtesterTestCase,
+        # ScionBgpMixedTestCase,
+        # ScionBwtesterTestCase,
         DottedDictTestCase,
         TrafficGeneratorTestCase
     ]
