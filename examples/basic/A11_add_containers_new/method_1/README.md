@@ -4,10 +4,12 @@
 
 ## Adding an existing container
 
-We have implemented an API called `attachCustomer` in the `Docker` compiler class. 
+We have implemented an API called `attachCustomContainer` in the `Docker` compiler class. 
 It allows us to add a pre-constructed docker compose entry to the `docker-compose.yml`
-file. The network and the port-forwarding field of this entry can be 
-dynamically constructed through the `asn`, `net`, `ip_address`, and `port-forwarding` arguements. 
+file. The network field of this entry can be dynamically constructed through the `asn`, `net`, 
+`ip_address` arguements. The API also allow users to provide port-forwarding and 
+environment-variables arguements. 
+
 
 ```
 DOCKER_COMPOSE_ENTRY = """\
@@ -25,7 +27,8 @@ DOCKER_COMPOSE_ENTRY = """\
 docker = Docker(platform=platform)
 docker.attachCustomContainer(compose_entry = DOCKER_COMPOSE_ENTRY,
                  asn=150, net='net0', ip_address='10.150.0.80',
-                 port_forwarding="9090:80/tcp")
+                 port_forwarding="9090:80/tcp", env=['a=1', 'b=2'])
+
 emu.compile(docker, './output', override=True)
 ```
 
@@ -53,7 +56,8 @@ the emulator, and they can be added in such a way.
 
 ```
 docker.attachInternetMap(asn=150, net='net0', ip_address='10.150.0.90',
-                  port_forwarding='8080:8080/tcp')
+                  port_forwarding='8080:8080/tcp', env=['a=1', 'b=2'])
+
 ```
 
 
@@ -72,14 +76,22 @@ ip rou del default 2> /dev/null
 ip route add default via 10.150.0.254 dev eth0
 ```
 
-If the container uses DHCP, typically, the default route will be provided by the DHCP server.
 
+## Adding an existing container and show it on the map
+
+In contrast to `Adding an existing container`, only the node_name and show_on_map parameters are added to the attachCustomContainer api
+
+```python
+
+docker.attachCustomContainer(compose_entry = DOCKER_COMPOSE_ENTRY, 
+                       asn=150, net='net0', ip_address='10.150.0.80',
+                       port_forwarding="9090:80/tcp", node_name='seedemu-busybox', show_on_map=True)
+```
 
 ## Notes
 
-It should be noted that for the added containers to show up on the Internet Map tool,
-they should provide the required meta data and have some required software installed.
-In this example, these are not done, so they will not show up on the Map. 
+In this example, the custom container can be displayed on the map,
+but it cannot be operated on like other containers.
 We will resolve this issue in the future. 
 
 

@@ -17,6 +17,7 @@ export interface EmulatorNode {
             asn: number,
             name: string,
             role: string,
+            custom?: string,
             description?: string,
             displayname?: string
         };
