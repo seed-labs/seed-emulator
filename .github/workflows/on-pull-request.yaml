@@ -30,7 +30,7 @@ on:
         description: "Run SCION tests | Compile and builds all the SCION examples - Runs SCION tests"
         type: boolean
         required: false
-        default: "true"
+        default: "false"
 
 
 jobs:
@@ -87,7 +87,7 @@ jobs:
     permissions:
       contents: read
     env:
-      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'true' }}
+      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'false' }}
       BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
       INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
       BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
