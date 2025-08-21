@@ -1401,23 +1401,20 @@ class Docker(Compiler):
             if hit: toplevelvolumes = 'volumes:\n' + toplevelvolumes
         return toplevelvolumes
 
-        def attachInternetMap(self, asn: int = -1, net: str = '', ip_address: str = '',
-                          port_forwarding: str = '', env: list = [],
-                          show_on_map=False, node_name='seedemu_internet_map') -> Docker:
+    def attachInternetMap(self, asn:int = -1, net:str = '', ip_address: str='', 
+                          port_forwarding:str = '', env:list=[]) -> Docker:
         """!
         @brief add the pre-built Map container to the emulator (the entry should not
             include any network entry, as the network entry will be added here)
-
+        
         @param asn the autonomous system number of the network. -1 means no network
             information is provided, so the container will be attached to the default
             network provided by the docker
         @param net the name of the network that this container is attached to.
         @param ip_address the IP address set for this container. If no IP address is provided,
             docker will provide one when building the image.
-        @param port_forwarding the port forwarding field.
-        @param env the list of the environment variables.
-        @param show_on_map it is show on the map.
-        @param node_name.
+        @param port_fowarding the port forwarding field. 
+        @param env the list of the environment variables. 
 
         @returns self, for chaining API calls.
         """
@@ -1426,16 +1423,17 @@ class Docker(Compiler):
 
         # If this is not set to False, Docker compiler will attach another copy of the MAP
         # container to the default network. This is to avoid that.
-        self.__internet_map_enabled = False
+        self.__internet_map_enabled = False 
 
         self.attachCustomContainer(DockerCompilerFileTemplates['seedemu_internet_map'].format(
-            clientImage=SEEDEMU_INTERNET_MAP_IMAGE), asn=asn, net=net, ip_address=ip_address,
-            port_forwarding=port_forwarding, env=env, show_on_map=show_on_map, node_name=node_name)
+                clientImage = SEEDEMU_INTERNET_MAP_IMAGE), asn=asn, net=net, ip_address=ip_address, 
+                port_forwarding=port_forwarding, env=env)
         return self
 
-    def attachCustomContainer(self, compose_entry: str, asn: int = -1, net: str = '',
-                              ip_address: str = '', port_forwarding: str = '', env: list = [],
-                              show_on_map=False, node_name: str = 'unnamed') -> Docker:
+
+    def attachCustomContainer(self, compose_entry:str, asn:int = -1, net:str = '', 
+                                ip_address: str='', port_forwarding: str= '',
+                                env: list=[]) -> Docker:
         """!
         @brief add an pre-built container image to the emulator (the entry should not
             include any network entry, as the network entry will be added here)
@@ -1447,11 +1445,8 @@ class Docker(Compiler):
         @param net the name of the network that this container is attached to.
         @param ip_address the IP address set for this container. If no IP address is provided,
             docker will provide one when building the image.
-        @param port_forwarding the port forwarding field.
-
-        @param env the list of the environment variables.
-        @param show_on_map it is show on the map.
-        @param node_name.
+        @param port_fowarding the port forwarding field. 
+        @param env the list of the environment variables. 
 
         @returns self, for chaining API calls.
         """
@@ -1462,80 +1457,35 @@ class Docker(Compiler):
 
         if port_forwarding != '':
             self.__custom_services += DockerCompilerFileTemplates['port_forwarding_entry'].format(
-                port_forwarding_field=port_forwarding
-            )
+                port_forwarding_field = port_forwarding
+        )
 
         if env:
             self.__custom_services += DockerCompilerFileTemplates['environment_variable_entry']
 
             field_name = DockerCompilerFileTemplates['environment_variable_entry']
             # count how many leading spaces this field name has (for alignment purpose)
-            leading_spaces = len(field_name) - len(field_name.lstrip())
+            leading_spaces = len(field_name) - len(field_name.lstrip()) 
             for e in env:
-                self.__custom_services += '{}- {}\n'.format(' ' * (leading_spaces + 4), e)
+                self.__custom_services += '{}- {}\n'.format(' '*(leading_spaces + 4), e)
 
         if asn < 0:  # Do not set the network entry; will use the default docker network
             self.__custom_services += '\n'
-        else:
+        else: 
             net_prefix = self._contextToPrefix(asn, 'net')
             real_netname = '{}{}'.format(net_prefix, net)
 
             # Construct the IP address field (leave it empty if IP address is not provided)
-            if ip_address == '':
+            if ip_address == '':  
                 ipv4_address_entry = ''
             else:
                 ipv4_address_entry = 'ipv4_address: {}'.format(ip_address)
-
+           
             self.__custom_services += DockerCompilerFileTemplates['network_entry'].format(
-                network_name_field=real_netname,
-                ipv4_address_field=ipv4_address_entry
+                 network_name_field = real_netname,
+                 ipv4_address_field   = ipv4_address_entry
             )
-            self.__custom_services += '\n'
-
-        if show_on_map:
-            self.__custom_services += DockerCompilerFileTemplates['custom_compose_label_meta'].format(labelList=self._getCustomNodeMeta(
-                asn, node_name, net, ip_address
-            ))
             self.__custom_services += '\n'
 
         return self
 
-    def _getCustomNodeMeta(self, asn: int = -1, node_name: str = '', net: str = '', ip_address: str = '', ) -> str:
-        """!
-        @brief get custom node metadata labels.
-
-        @returns metadata labels string.
-        """
-        labels = ''
-
-        if asn > -1:
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key='asn',
-                value=asn
-            )
-        if node_name:
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key='nodename',
-                value=node_name
-            )
-
-        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-            key='role',
-            value='Host'
-        )
-        if net:
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key='net.0.name',
-                value=net
-            )
-        if ip_address:
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key='net.0.address',
-                value=ip_address
-            )
-        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-            key='custom',
-            value='custom'
-        )
-
-        return labels
