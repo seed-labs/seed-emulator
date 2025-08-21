@@ -206,6 +206,11 @@ DockerCompilerFileTemplates['network_entry'] = """\
                     {ipv4_address_field}
 """
 
+DockerCompilerFileTemplates['custom_compose_label_meta'] = """\
+        labels:
+{labelList}
+"""
+
 DockerCompilerFileTemplates['seedemu_ether_view'] = """\
     seedemu-ether-client:
         image: {clientImage}
