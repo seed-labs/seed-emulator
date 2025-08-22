@@ -12,6 +12,7 @@ export interface SeedEmulatorNode extends VertexMeta {
     name?: string;
     role?: string;
     asn?: number;
+    custom?: string;
     nets: {
         name?: string;
         address?: string;
@@ -75,6 +76,7 @@ export class Emulator {
             }
             if (key === 'displayname') node.displayname = value;
             if (key === 'description') node.description = value;
+            if (key === 'custom') node.custom = value;
         });
 
         return node;

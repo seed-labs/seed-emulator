@@ -12,6 +12,7 @@ export interface Vertex extends NodeOptions {
     type: 'node' | 'network';
     object: EmulatorNode | EmulatorNetwork;
     collapsed: boolean,
+    custom?: string,
 }
 
 export interface Edge extends EdgeOptions {
@@ -353,6 +354,7 @@ export class DataSource {
                 shape: ['Router', 'BorderRouter'].includes(nodeInfo.role) ? 'dot' : 'hexagon',
                 object: node,
                 collapsed: false,
+                custom: node.meta.emulatorInfo.custom
             };
 
             if (nodeInfo.role != 'Route Server') {
