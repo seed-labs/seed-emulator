@@ -9,6 +9,7 @@ from typing import List
 from ipaddress import IPv4Network, IPv4Address
 from sys import stderr
 import re, random, string
+from .Scope import Scope, ScopeTier
 
 class Action(Enum):
     """!
@@ -175,6 +176,12 @@ class Binding(Printable):
 
         # create the host in as
         host = asObject.createHost(nodeName)
+        # inherit AS level option overrides...
+        asObject.handDown(host)
+        # 'host' didnt exist back when Base::configure() installed
+        #  the global default sysctl options on all nodes
+        for o in base.getAvailableOptions():
+            host.setOption(o, Scope(ScopeTier.Global))
 
         # set name servers
         host.setNameServers(asObject.getNameServers())
@@ -186,8 +193,8 @@ class Binding(Printable):
         reg.register(str(asn), 'hnode', nodeName, host)
 
         # configure - usually this is done by AS in configure stage, since we have passed that point, we need to do it ourself.
+        # >> here at the latest,  any relevant options must be set on the node or they wont be considered
         host.configure(emulator)
-
         return host
 
 
@@ -230,7 +237,7 @@ class Binding(Printable):
         candidates: List[Node] = []
 
         for (scope, type, name), obj in registry.getAll().items():
-            if type != 'hnode': continue
+            if type not in ['hnode', 'rnode', 'csnode']: continue
             node: Node = obj
             filter = self.filter
 

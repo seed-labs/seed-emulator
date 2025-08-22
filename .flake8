@@ -1,0 +1,26 @@
+[flake8]
+# maximum recommended by PEP 8 is 99
+max-line-length = 99
+# maximum recommended by PEP 8 is 72
+max-doc-length = 80
+
+ignore =
+    # disable warnings that conflict with Black
+    E203
+    E701
+    W503
+    # at least two space before in-line comment
+    E261
+
+exclude =
+    .git
+    .venv
+    client
+    docker_images
+    docs
+    __pycache__
+    output
+
+per-file-ignores =
+    # Ignore unused star imports in __init__ files
+    __init__.py:F401,F403

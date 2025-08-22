@@ -1,7 +1,7 @@
 from __future__ import annotations
 from seedemu.core import AutonomousSystem, InternetExchange, AddressAssignmentConstraint, Node, Graphable, Emulator, Layer
 from typing import Dict, List
-
+from seedemu.options.Sysctl import SysctlOpts
 BaseFileTemplates: Dict[str, str] = {}
 
 BaseFileTemplates["interface_setup_script"] = """\
@@ -33,6 +33,7 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
 }; done
 """
 
+
 class Base(Layer, Graphable):
     """!
     @brief The base layer.
@@ -42,6 +43,11 @@ class Base(Layer, Graphable):
     __ixes: Dict[int, InternetExchange]
 
     __name_servers: List[str]
+
+    def getAvailableOptions(self):
+        from seedemu.core.OptionRegistry import OptionRegistry
+        opt_keys = [ o.fullname() for o in SysctlOpts().components_recursive()]
+        return [OptionRegistry().getOption(o) for o in opt_keys]
 
     def __init__(self):
         """!
@@ -54,20 +60,43 @@ class Base(Layer, Graphable):
 
     def getName(self) -> str:
         return "Base"
+    
+    # the base layer is the wrong place for this, since subsequent layers
+    # might add further features to ASes
+    '''
+    def applyFeaturesToNodes(self, _as: AutonomousSystem, emulator: Emulator):
+        """!
+        """
+        #@note 'use_envsubst' is a special feature which can be set, to turn all the variables that are set at AS scope
+        #   into runtime variables(the default is false -> hardcoded buildtime only variables ).
+        #useenvsubst='use_envsubst' in _as.getFeatures()
+        reg = emulator.getRegistry()
+        all_nodes = [ obj for (scope,typ,name),obj  in reg.getAll( ) if scope==str(_as.getAsn()) and typ in ['rnode','hnode','csnode','rsnode'] ]
+
+        for k,v in self.getFeatures():
+           for node in all_nodes:
+                node.setCustomEnv2(k,v,scope=ScopeTier.AS,
+                                    use_envsubst=_as.useEnvsubst(k) or node.getCustomEnv('use_envsubst')=='true')
+        pass
+    '''
 
     def configure(self, emulator: Emulator):
+        
         self._log('registering nodes...')
         for asobj in self.__ases.values():
             if len(asobj.getNameServers()) == 0:
                 asobj.setNameServers(self.__name_servers)
 
             asobj.registerNodes(emulator)
+            asobj.inheritOptions(emulator)
+            
 
         self._log('setting up internet exchanges...')
         for ix in self.__ixes.values(): ix.configure(emulator)
 
         self._log('setting up autonomous systems...')
         for asobj in self.__ases.values(): asobj.configure(emulator)
+        super().configure(emulator)
 
     def render(self, emulator: Emulator) -> None:
         for ((scope, type, name), obj) in emulator.getRegistry().getAll().items():
@@ -76,7 +105,7 @@ class Base(Layer, Graphable):
                 continue
 
             node: Node = obj
-
+            # Note: service network interface might be added later ... 
             ifinfo = ''
             for iface in node.getInterfaces():
                 net = iface.getNet()
@@ -141,7 +170,7 @@ class Base(Layer, Graphable):
         asn = asObject.getAsn()
         self.__ases[asn] = asObject
 
-    def createInternetExchange(self, asn: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None) -> InternetExchange:
+    def createInternetExchange(self, asn: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None, create_rs=True) -> InternetExchange:
         """!
         @brief Create a new InternetExchange.
 
@@ -152,7 +181,7 @@ class Base(Layer, Graphable):
         @throws AssertionError if IX exists.
         """
         assert asn not in self.__ixes, "ix{} already exist.".format(asn)
-        self.__ixes[asn] = InternetExchange(asn, prefix, aac)
+        self.__ixes[asn] = InternetExchange(asn, prefix, aac, create_rs)
         return self.__ixes[asn]
 
     def getInternetExchange(self, asn: int) -> InternetExchange:

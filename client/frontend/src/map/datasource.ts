@@ -277,7 +277,7 @@ export class DataSource {
                 id: node.Id,
                 label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
                 type: 'node',
-                shape: nodeInfo.role == 'Router' ? 'dot' : 'hexagon',
+                shape: ['Router', 'BorderRouter'].includes(nodeInfo.role) ? 'dot' : 'hexagon',
                 object: node
             };
 

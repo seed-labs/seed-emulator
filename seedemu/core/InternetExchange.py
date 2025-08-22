@@ -1,6 +1,6 @@
 from .Printable import Printable
 from .enums import NetworkType, NodeRole
-from .Node import Node
+from .Node import Node,Router
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from .Emulator import Emulator
@@ -19,13 +19,15 @@ class InternetExchange(Printable, Configurable):
     __rs: Node
     __name: str
 
-    def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None):
+    def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None, create_rs = True):
         """!
         @brief InternetExchange constructor.
 
         @param id ID (ASN) for the IX.
         @param prefix (optional) prefix to use as peering LAN.
         @param aac (option) AddressAssignmentConstraint to use.
+        @param create_rs (optional) create route server node for the IX or not.
+          ( route servers are only relevant for BGP, thus the default is True. But RSes can be disabled for SCION)
         """
 
         self.__id = id
@@ -34,18 +36,21 @@ class InternetExchange(Printable, Configurable):
         network = IPv4Network(prefix) if prefix != "auto" else IPv4Network("10.{}.0.0/24".format(self.__id))
 
         self.__name = 'ix{}'.format(str(self.__id))
-        self.__rs = Node(self.__name, NodeRole.RouteServer, self.__id)
         self.__net = Network(self.__name, NetworkType.InternetExchange, network, aac, False)
 
-        self.__rs.joinNetwork(self.__name)
+        if create_rs:
+            self.__rs = Router(self.__name, NodeRole.RouteServer, self.__id)      
+            self.__rs.joinNetwork(self.__name)
+        else:
+            self.__rs = None
 
     def configure(self, emulator: Emulator):
         reg = emulator.getRegistry()
 
         reg.register('ix', 'net', self.__name, self.__net)
-        reg.register('ix', 'rs', self.__name, self.__rs)
-
-        self.__rs.configure(emulator)
+        if self.__rs != None:
+            reg.register('ix', 'rs', self.__name, self.__rs)
+            self.__rs.configure(emulator)
 
     def getId(self) -> int:
         """!

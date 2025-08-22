@@ -16,7 +16,7 @@ scion = Scion()
 base.createIsolationDomain(1)
 
 # Internet Exchange
-base.createInternetExchange(100)
+base.createInternetExchange(100, create_rs=False)
 
 # AS-150
 as150 = base.createAutonomousSystem(150)

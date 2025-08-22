@@ -8,9 +8,10 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 from seedemu.core import Emulator, Layer, Node, ScionAutonomousSystem
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import ScionBase
+from seedemu.layers.Scion import handleScionConfFile
 
 
-class ScionIsd(Layer):
+class ScionIsd(Layer): # could be made a Customizable as well ..
     """!
     @brief SCION AS to ISD relationship layer.
 
@@ -140,7 +141,8 @@ class ScionIsd(Layer):
                     asn = node.getAsn()
                     as_: ScionAutonomousSystem = base_layer.getAutonomousSystem(asn)
                     isds = self.getAsIsds(asn)
-                    assert len(isds) == 1, f"AS {asn} must be a member of exactly one ISD"
+
+                    assert len(isds) == 1, f"AS {hex(asn) if asn>65536 else asn} must be a member of exactly one ISD"
                     self.__provision_crypto(as_, *isds[0], node, tempdir)
 
     def print(self, indent: int = 0) -> str:
@@ -184,25 +186,27 @@ class ScionIsd(Layer):
                 as_: ScionAutonomousSystem = base_layer.getAutonomousSystem(asn)
                 isds = self.getAsIsds(asn)
                 isd, is_core = isds[0]
-                assert len(isds) == 1, f"AS {asn} must be a member of exactly one ISD"
+                assert len(isds) == 1, f"AS {strAsn} must be a member of exactly one ISD"
+                ia = IA(isd, asn)
 
-                f.write(f'  "{isd}-{asn}": ')
+                f.write(f'  "{ia}": ')
                 attributes = [f"'{attrib}': true" for attrib in as_.getAsAttributes(isd)]
                 if not is_core:
-                    assert (isd, asn) in self.__cert_issuer, f"non-core AS{asn} does not have a cert issuer in ISD{isd}"
+                    assert (isd, asn) in self.__cert_issuer, f"non-core AS{ia} does not have a cert issuer in ISD{isd}"
                     issuer = self.__cert_issuer[(isd, asn)]
+                    ia = IA(isd, issuer)
                     assert issuer in self.__isd_core[isd] and asn in self.__isd_members[isd]
-                    attributes.append(f"'cert_issuer': {isd}-{issuer}")
+                    attributes.append(f"'cert_issuer': {ia}")
 
                 f.write("{{{}}}\n".format(", ".join(attributes)))
 
         return path
 
     def __provision_crypto(self, as_: ScionAutonomousSystem, isd: int, is_core: bool, node: Node, tempdir: str):
-        basedir = "/etc/scion"
-        asn = as_.getAsn()
 
-        def copyFile(src, dst):
+        asn = as_.getScionAsn()
+
+        def copyFile(src: str, filename: str, subdir: str = None):
             # Tempdir will be gone when imports are resolved, therefore we must use setFile
             with open(src, 'rt', encoding='utf8') as file:
                 content = file.read()
@@ -212,30 +216,33 @@ class ScionIsd(Layer):
                 # that is later added again.
                 if content.endswith('\n'):
                     content = content[:-1]
-            node.setFile(dst, content)
+            handleScionConfFile(node, filename, content, subdir)
 
-        def myImport(name):
-            copyFile(pjoin(tempdir, f"AS{asn}", "crypto", name), pjoin(basedir, "crypto", name))
+        def myImport(name, subdir: str):
+            path = pjoin("crypto", subdir)
+            copyFile(pjoin(tempdir, f"AS{asn.getFileStr()}", path, name),
+                     name, path)
 
         if is_core:
             for kind in ["sensitive", "regular"]:
-                myImport(pjoin("voting", f"ISD{isd}-AS{asn}.{kind}.crt"))
-                myImport(pjoin("voting", f"{kind}-voting.key"))
-                myImport(pjoin("voting", f"{kind}.tmpl"))
+                myImport(f"ISD{isd}-AS{asn.getFileStr()}.{kind}.crt", "voting")
+                myImport(f"{kind}-voting.key", "voting")
+                myImport(f"{kind}.tmpl", "voting")
             for kind in ["root", "ca"]:
-                myImport(pjoin("ca", f"ISD{isd}-AS{asn}.{kind}.crt"))
-                myImport(pjoin("ca", f"cp-{kind}.key"))
-                myImport(pjoin("ca", f"cp-{kind}.tmpl"))
-        myImport(pjoin("as", f"ISD{isd}-AS{asn}.pem"))
-        myImport(pjoin("as", "cp-as.key"))
-        myImport(pjoin("as", "cp-as.tmpl"))
+                myImport(f"ISD{isd}-AS{asn.getFileStr()}.{kind}.crt", "ca")
+                myImport(f"cp-{kind}.key", "ca")
+                myImport(f"cp-{kind}.tmpl", "ca")
+        myImport(f"ISD{isd}-AS{asn.getFileStr()}.pem", "as")
+        myImport("cp-as.key", "as")
+        myImport("cp-as.tmpl", "as")
 
         #XXX(benthor): trcs need to be known for other isds as well
         for isd in self.__isd_core.keys():
             trcname = f"ISD{isd}-B1-S1.trc"
-            copyFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname), pjoin(basedir, "certs", trcname))
+            copyFile(pjoin(tempdir, f"ISD{isd}", "trcs", trcname),
+                       trcname, 'certs')
 
         # Master keys are generated only once per AS
         key0, key1 = as_.getSecretKeys()
-        node.setFile(pjoin(basedir, "keys", "master0.key"), key0)
-        node.setFile(pjoin(basedir, "keys", "master1.key"), key1)
+        handleScionConfFile(node, 'master0.key', key0, 'keys')
+        handleScionConfFile(node, 'master1.key', key1, 'keys')

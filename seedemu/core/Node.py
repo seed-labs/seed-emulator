@@ -1,9 +1,14 @@
 from __future__ import annotations
+import random
+import string
 from .Printable import Printable
 from .Network import Network
 from .enums import NodeRole
+from .Scope import *
 from .Registry import Registrable
 from .Emulator import Emulator
+from .Customizable import Customizable
+from .Volume import BaseVolume
 from .Configurable import Configurable
 from .enums import NetworkType
 from .Visualization import Vertex
@@ -197,7 +202,7 @@ class Interface(Printable):
 
         return out
 
-class Node(Printable, Registrable, Configurable, Vertex):
+class Node(Printable, Registrable, Configurable, Vertex, Customizable):
     """!
     @brief Node base class.
 
@@ -217,6 +222,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     __softwares: Set[str]
     __build_commands: List[str]
     __build_commands_at_end: List[str]
+    __docker_cmds: List[str]
     __start_commands: List[Tuple[str, bool]]
     __post_config_commands: List[Tuple[str, bool]]
     __ports: List[Tuple[int, int, str]]
@@ -228,9 +234,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
     # Dict of (peername, peerasn) -> (localaddr, netname, netProperties) -- netProperties = (latency, bandwidth, packetDrop, MTU)
     __xcs: Dict[Tuple[str, int], Tuple[IPv4Interface, str, Tuple[int,int,float,int]]]
 
-    __shared_folders: Dict[str, str]
-    __persistent_storages: List[str]
-
+    __custom_vols: List[BaseVolume]
     __name_servers: List[str]
 
     __geo: Tuple[float,float,str] # (Latitude,Longitude,Address) -- optional parameter that contains the geographical location of the Node
@@ -259,6 +263,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__softwares = set()
         self.__build_commands = []
         self.__build_commands_at_end = []
+        self.__docker_cmds = []
         self.__start_commands = []
         self.__post_config_commands = []
         self.__ports = []
@@ -269,8 +274,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         self.__xcs = {}
         self.__configured = False
 
-        self.__shared_folders = {}
-        self.__persistent_storages = []
+        self.__custom_vols = []
 
         for soft in DEFAULT_SOFTWARE:
             self.__softwares.add(soft)
@@ -280,6 +284,22 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         self.__geo = None
         self.__note = None
+
+
+    def scope(self)-> Scope:
+        return Scope(ScopeTier.Node,
+                     node_type=ScopeType.from_node(self),
+                     node_id=self.getName(),
+                     as_id=self.getAsn())
+
+    def handDown(self, other: Customizable):
+        """!@brief nodes are atomic (not further decomposable)"""
+        raise NotImplementedError
+    # maybe add method 'requiresEnvsubst()' here that checks if there is an option set,
+    # which has OptionMode.RUN_TIME
+
+
+
 
     def configure(self, emulator: Emulator):
         """!
@@ -307,6 +327,8 @@ class Node(Printable, Registrable, Configurable, Vertex):
             if not hit and reg.has("ix", "net", netname):
                 hit = True
                 self.__joinNetwork(reg.get("ix", "net", netname), address)
+                if issubclass(self.__class__, Router):
+                    self.setBorderRouter(True)
 
             if not hit and reg.has("seedemu", "net", netname):
                 hit = True
@@ -318,6 +340,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
             peer: Node = None
 
             if reg.has(str(peerasn), 'rnode', peername): peer = reg.get(str(peerasn), 'rnode', peername)
+            elif reg.has(str(peerasn),'brdnode',peername): peer = reg.get(str(peerasn),'brdnode', peername)
             elif reg.has(str(peerasn), 'hnode', peername): peer = reg.get(str(peerasn), 'hnode', peername)
             else: assert False, 'as{}/{}: cannot xc to node as{}/{}: no such node'.format(self.getAsn(), self.getName(), peerasn, peername)
 
@@ -325,7 +348,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
             (localaddr, _, (latency, bandwidth, packetDrop, mtu)) = self.__xcs[(peername, peerasn)]
             assert localaddr.network == peeraddr.network, 'as{}/{}: cannot xc to node as{}/{}: {}.net != {}.net'.format(self.getAsn(), self.getName(), peerasn, peername, localaddr, peeraddr)
             assert (peerLatency == latency and peerBandwidth == bandwidth and peerPacketDrop == packetDrop and peerMTU == mtu), 'as{}/{}: cannot xc to node as{}/{}: because link properties (({},{},{},{}) -- ({},{},{},{})) dont match'.format(self.getAsn(), self.getName(), peerasn, peername, latency, bandwidth, packetDrop, mtu, peerLatency, peerBandwidth, peerPacketDrop, peerMTU)
-            
+
             if netname != None:
                 self.__joinNetwork(reg.get('xc', 'net', netname), str(localaddr.ip))
                 self.__xcs[(peername, peerasn)] = (localaddr, netname, (latency, bandwidth, packetDrop,mtu))
@@ -335,7 +358,10 @@ class Node(Printable, Registrable, Configurable, Vertex):
                 net = Network(netname, NetworkType.CrossConnect, localaddr.network, direct = False) # TODO: XC nets w/ direct flag?
                 net.setDefaultLinkProperties(latency, bandwidth, packetDrop).setMtu(mtu) # Set link properties
                 self.__joinNetwork(reg.register('xc', 'net', netname, net), str(localaddr.ip))
+
                 self.__xcs[(peername, peerasn)] = (localaddr, netname, (latency, bandwidth, packetDrop, mtu))
+            if issubclass(self.__class__, Router):
+                    self.setBorderRouter(True)
 
         if len(self.__name_servers) == 0:
             return
@@ -361,6 +387,17 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         return self
 
+    def addDockerVolume(self, vol: BaseVolume ):
+        """!@brief adds the docker volume to this node's container
+            It can be a shared folder, named docker volume or tmpfs
+        """
+        self.__custom_vols.append(vol )
+        return self
+
+    def getDockerVolumes(self):
+        """!@brief retrieve any volumes mounted on this node's container"""
+        return self.__custom_vols
+
     def getHostNames(self) -> str:
         """!
         @brief Get all host names for this node.
@@ -376,6 +413,18 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         self.__host_names.append(name)
         return self
+
+    def getLocalIPAddress(self) -> Optional[str]:
+        """!
+        @brief Get the IP address of the local interface for this node.
+            Returns None if node has joined either no local-net or more than one.
+        """
+        has_single_localnet = list([ ifn.getNet().isDirect() for ifn in self.getInterfaces() ]).count(True) == 1
+        if not has_single_localnet: return None
+        for iface in self.getInterfaces():
+            if iface.getNet().getType() == NetworkType.Local:
+                return iface.getAddress()
+        return None
 
     def getNameServers(self) -> List[str]:
         """!
@@ -750,6 +799,22 @@ class Node(Printable, Registrable, Configurable, Vertex):
 
         return self
 
+    def addDockerCommand(self, cmd: str) -> Node:
+        """!
+        @brief Add new docker command to build step (possibly of kind other than RUN).
+                Unlike the ones added with addBuildCommands these commands wont be prefixed with RUN,
+                but are assumed to be valid Docker Commands by themselves.
+        @note don't use this method to ADD or COPY !! See setFile(), appendFile(), importFile() for this
+        """
+        self.__docker_cmds.append(cmd)
+        return self
+
+    def getDockerCommands(self)-> List[str]:
+        """!
+        @brief retrieve any custom directives for the node's Dockerfile
+        """
+        return self.__docker_cmds
+
     def getBuildCommands(self) -> List[str]:
         """!
         @brief Get build commands.
@@ -830,7 +895,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
             self.__start_commands.append((cmd, fork))
 
         return self
-    
+
     def getPostConfigCommands(self) -> List[Tuple[str, bool]]:
         """!
         @brief Get user start commands.
@@ -857,29 +922,22 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         return self.__interfaces
 
-    def addSharedFolder(self, nodePath: str, hostPath: str) -> Node:
+    def addSharedFolder(self, nodePath: str, hostPath: str, **kwargs) -> Node:
         """!
         @@brief Add a new shared folder between the node and host.
 
         @param nodePath path to the folder inside the container.
         @param hostPath path to the folder on the emulator host node.
+        @param kwargs any other docker volume options i.e. 'readonly'
 
         @returns self, for chaining API calls.
         """
-        self.__shared_folders[nodePath] = hostPath
+        # bind mounts are never named!
+        self.__custom_vols.append(  BaseVolume(source=hostPath, target=nodePath, type='bind', **kwargs) )
 
         return self
 
-    def getSharedFolders(self) -> Dict[str, str]:
-        """!
-        @brief Get shared folders between the node and host.
-
-        @returns dict, where key is the path in container and value is path on
-        host.
-        """
-        return self.__shared_folders
-
-    def addPersistentStorage(self, path: str) -> Node:
+    def addPersistentStorage(self, path: str, name: str=None, **kwargs) -> Node:
         """!
         @brief Add persistent storage to node.
 
@@ -887,21 +945,21 @@ class Node(Printable, Registrable, Configurable, Vertex):
         directory where data will be persistent.
 
         @param path path to put the persistent storage folder in the container.
+        @param name if specified a named-volume is created.
+            By specifying the same name on multiple nodes
+            the volume is effectively shared between those containers.
+        @param kwargs any other docker volume options i.e. 'readonly'
 
         @returns self, for chaining API calls.
         """
-        self.__persistent_storages.append(path)
+
+        if name == None: # generate random name for anonymus volume
+            name = ''.join(random.choice(string.ascii_lowercase) for i in range(6))
+
+        self.__custom_vols.append(  BaseVolume(target=path, type='volume', name=name, source=name, **kwargs) )
 
         return self
 
-    def getPersistentStorages(self) -> List[str]:
-        """!
-        @brief Get persistent storage folders on the node.
-
-        @returns list of persistent storage folder.
-        """
-        return self.__persistent_storages
-    
     def setGeo(self, Lat: float, Long: float, Address: str="") -> Node:
         """!
         @brief Set geographical location of the Node
@@ -914,7 +972,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         self.__geo = (Lat, Long, Address)
         return self
-    
+
     def getGeo(self) -> Optional[Tuple[float,float,str]]:
         """!
         @brief Get geographical location of the Node
@@ -922,7 +980,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         @returns Tuple (Latitude, Longitude, Address)
         """
         return self.__geo
-    
+
     def setNote(self, note: str) -> Node:
         """!
         @brief Set a note about the Node
@@ -933,7 +991,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         """
         self.__note = note
         return self
-    
+
     def getNote(self) -> Optional[str]:
         """!
         @brief Get a note about the Node
@@ -961,7 +1019,7 @@ class Node(Printable, Registrable, Configurable, Vertex):
         # if node.getBaseSystem() != None : self.setBaseSystem(node.getClasses())
 
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
-        for p in node.getPersistentStorages(): self.addPersistentStorage(p)
+        for v in node.getDockerVolumes(): self.addDockerVolume(v)
         for (c, f) in node.getStartCommands(): self.appendStartCommand(c, f)
         # for (c, f) in node.getUserStartCommands(): self.appendUserStartCommand(c, f)
         for c in node.getBuildCommands(): self.addBuildCommand(c)
@@ -1040,8 +1098,6 @@ protocol pipe {{
 
 RouterFileTemplates['rw_configure_script'] = '''\
 #!/bin/bash
-gw="`ip rou show default | cut -d' ' -f3`"
-sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
 '''
 
 class Router(Node):
@@ -1053,6 +1109,42 @@ class Router(Node):
     """
 
     __loopback_address: str
+    __is_border_router: bool
+
+    __extensions: Dict[str, RouterExtension]
+
+    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
+        self.__is_border_router = False
+        self.__loopback_address = None
+        self.__extensions = {}
+        super().__init__( name,role,asn,scope)
+
+    def hasExtension(self, name: str) -> bool:
+        return name in self.__extensions
+
+    def installExtension(self, extn: RouterExtension):
+        if not extn.name() in self.__extensions:
+            extn.set_node(self)
+            self.__extensions[extn.name()] = extn
+
+    def __getattr__(self, name):
+        if '__' in name:
+            raise AttributeError(f"Router object has no attribute '{name}' nor any matching extension")
+        # delegate to extension
+        for _, e in self.__extensions.items():
+            if hasattr(e, name): return getattr(e, name)
+
+        raise AttributeError(f"Router object has no attribute '{name}' nor any matching extension")
+
+    def getRole(self) -> NodeRole:
+        return NodeRole.BorderRouter if self.__is_border_router else super().getRole()
+
+    def setBorderRouter(self, is_border_router=True):
+        self.__is_border_router = is_border_router
+        return
+
+    def isBorderRouter(self):
+        return self.__is_border_router
 
     def setLoopbackAddress(self, address: str):
         """!
@@ -1135,7 +1227,25 @@ class Router(Node):
 
         return self
 
-class RealWorldRouter(Router):
+class RouterExtension():
+    """!@brief Extensions are arbitrary additions to a Routers interface
+        (and class members) similar to Golang composition
+    """
+    _node: 'Node'
+
+    def __init__(self):
+        self._node = None
+
+    def set_node(self, node: 'Node'):
+        self._node = node
+
+    def get_node(self) -> 'Node':
+        return self._node
+
+    def name(self) -> str:
+        pass
+
+class RealWorldRouter(RouterExtension):
     """!
     @brief RealWorldRouter class.
 
@@ -1145,9 +1255,12 @@ class RealWorldRouter(Router):
     @todo real world access.
     """
 
-    __realworld_routes: List[str]
+    __realworld_routes: List[Tuple[str, Optional[List[str]]]]
     __sealed: bool
     __hide_hops: bool
+
+    def name(self) -> str:
+        return 'RealWorldRouter'
 
     def initRealWorld(self, hideHops: bool):
         """!
@@ -1157,22 +1270,22 @@ class RealWorldRouter(Router):
         self.__realworld_routes = []
         self.__sealed = False
         self.__hide_hops = hideHops
-        self.addSoftware('iptables')
+        self.get_node().addSoftware('iptables')
 
-    def addRealWorldRoute(self, prefix: str) -> RealWorldRouter:
+    def addRealWorldRoute(self, prefix: str, route_clientele: str = None) -> 'Node':
         """!
         @brief Add real world route.
 
-        @param prefix prefix.
-
+        @param prefix prefix i.e. ['0.0.0.0/1', '128.0.0.0/1'] for the 'real' real whole world global internet
+        @param route_clientele the network/s who shall be able to route to the given 'real world' prefix
         @throws AssertionError if sealed.
 
         @returns self, for chaining API calls.
         """
         assert not self.__sealed, 'Node sealed.'
-        self.__realworld_routes.append(prefix)
+        self.__realworld_routes.append( (prefix, route_clientele) )
 
-        return self
+        return self.get_node()
 
     def getRealWorldRoutes(self) -> List[str]:
         """!
@@ -1180,9 +1293,12 @@ class RealWorldRouter(Router):
 
         @returns list of prefixes.
         """
-        return self.__realworld_routes
+        return [r for (r, _) in self.__realworld_routes]
 
-    def seal(self):
+    # called in RoutingLayer::render() - That is AFTER ::configure() :)
+    # where its been decided if this node has to run BIRD routing daemon
+    # because it is connected to more than one local(direct) network
+    def seal(self, svc_net: Network):
         """!
         @brief seal the realworld router.
 
@@ -1192,27 +1308,52 @@ class RealWorldRouter(Router):
         if self.__sealed: return
         self.__sealed = True
         if len(self.__realworld_routes) == 0: return
-        self.setFile('/rw_configure_script', RouterFileTemplates['rw_configure_script'])
-        self.insertStartCommand(0, '/rw_configure_script')
-        self.insertStartCommand(0, 'chmod +x /rw_configure_script')
-        self.addTable('t_rw')
-        statics = '\n    ipv4 { table t_rw; import all; };\n    route ' + ' via !__default_gw__!;\n    route '.join(self.__realworld_routes)
-        statics += ' via !__default_gw__!;\n'
-        for prefix in self.__realworld_routes:
+        self.get_node().setFile('/rw_configure_script', RouterFileTemplates['rw_configure_script'])
+        # position 0-1 is '/interface_setup' (and chmod +x)
+        self.get_node().insertStartCommand(0, '/rw_configure_script')
+        self.get_node().insertStartCommand(0, 'chmod +x /rw_configure_script')
+
+        for prefix, route_clientele in self.__realworld_routes:
+            if route_clientele != None:
+                if isinstance(route_clientele, list):
+                    for src in route_clientele:
+                        self.get_node().appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -s {} -j MASQUERADE\n'.format(prefix, src))
+                else:
+                    self.get_node().appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -s {} -j MASQUERADE\n'.format(prefix, route_clientele))
             # nat matched only
-            self.appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -j MASQUERADE\n'.format(prefix))
+            else:
+                self.get_node().appendFile('/rw_configure_script', 'iptables -t nat -A POSTROUTING -d {} -j MASQUERADE\n'.format(prefix))
 
             if self.__hide_hops:
                 # remove realworld hops
-                self.appendFile('/rw_configure_script', 'iptables -t mangle -A POSTROUTING -d {} -j TTL --ttl-set 64\n'.format(prefix))
+                self.get_node().appendFile('/rw_configure_script', 'iptables -t mangle -A POSTROUTING -d {} -j TTL --ttl-set 64\n'.format(prefix))
 
-        self.addProtocol('static', 'real_world', statics)
-        self.addTablePipe('t_rw', 't_bgp', exportFilter = 'filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; }')
-        # self.addTablePipe('t_rw', 't_ospf') # TODO
+        # not all Routers run a dynamic routing daemon(BIRD) ...
+        # some might run SCION BR instead
+        if 'bird2' in self.get_node().getSoftware():
+            # if this check is too dirty/hacky, we could use Attributes like in: "if hasattr(self, '__sealed'):" but this is still hacky
+            fill_placeholder = """\
+            gw="`ip rou show default | cut -d' ' -f3`"
+            sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
+            """
+            self.get_node().appendFile('/rw_configure_script', fill_placeholder)
 
+            self.get_node().addTable('t_rw')
+            statics = '\n    ipv4 { table t_rw; import all; };\n    route ' + ' via !__default_gw__!;\n    route '.join(self.getRealWorldRoutes())
+            statics += ' via !__default_gw__!;\n'
+            self.get_node().addProtocol('static', 'real_world', statics)
+            self.get_node().addTablePipe('t_rw', 't_bgp', exportFilter = 'filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; }')
+            # self.addTablePipe('t_rw', 't_ospf') # TODO
+        else:
+            # everything that is not destined to a prefix in the simulation must be for the 'real world'
+            host_gw = svc_net.getPrefix().network_address + 1
+            # apparently rw_configure_script is executed even before the interface setup script -> 000_svc is unknown
+            self.get_node().appendFile('/rw_configure_script', 'ip route add default via {} dev {}'.format(host_gw, svc_net.getName()))
+            #self.appendStartCommand('ip route add default via {} dev {}'.format(host_gw, svc_net.getName()))
 
+    '''
     def print(self, indent: int) -> str:
-        out = super(RealWorldRouter, self).print(indent)
+        out = super().print(indent)
         indent += 4
 
         out += ' ' * indent
@@ -1225,9 +1366,19 @@ class RealWorldRouter(Router):
 
 
         return out
+    '''
 
+def promote_to_real_world_router(node: Node, hideHops: bool):
+    """!@brief Dynamically inject RealWorldRouterMixin into a Node instance
+                to augment it by RealWorld routing capabilities
+    """
+    extn = RealWorldRouter()
 
-class ScionRouter(Router):
+    node.installExtension(extn)
+    extn.initRealWorld(hideHops)
+    return node
+
+class ScionRouter(RouterExtension):
     """!
     @brief Extends Router nodes for SCION routing.
 
@@ -1237,10 +1388,12 @@ class ScionRouter(Router):
 
     __interfaces: Dict[int, Dict]  # IFID to interface
     __next_port: int               # Next free UDP port
-
-    def __init__(self):
-        super().__init__()
-        self.initScionRouter()
+    def name(self) -> str:
+        return 'ScionRouter'
+    # Never been used anyway
+    #def __init__(self):
+    #   super().__init__()
+    #   self.initScionRouter()
 
     def initScionRouter(self):
         self.__interfaces = {}
@@ -1280,3 +1433,22 @@ class ScionRouter(Router):
         port = self.__next_port
         self.__next_port += 1
         return port
+
+    def print(self, indent: int) -> str:
+        """mostly for debug """
+        out = self.get_node().print(indent)
+        indent += 4
+
+        out += ' ' * indent
+        out += 'SCION border router'
+        return out
+
+def promote_to_scion_router(node: Node):
+    """!@brief Dynamically inject ScionRouterMixin into a Node instance"""
+
+    if not node.hasExtension('ScionRouter'):# Prevent double-mixing
+        extn = ScionRouter()
+        extn.initScionRouter()
+        node.installExtension(extn)
+    return node
+

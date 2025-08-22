@@ -83,7 +83,7 @@ class BuildtimeDockerContainer:
     def workdir(self, workdir: str):
         self.__workdir = workdir
         return self
-    
+
     def user(self, user: str):
         self.__user = user
         return self
@@ -93,7 +93,7 @@ class BuildtimeDockerContainer:
         return self
 
     def run(self, command: str = None):
-        run_command = "docker run -it --rm"
+        run_command = "docker run --rm"
         if self.__user:
             run_command += f" --user {self.__user}"
         if self.__workdir:
@@ -110,6 +110,6 @@ class BuildtimeDockerContainer:
         code = sh(run_command)
         if code != 0:
             raise Exception("Failed to run docker container:\n" + run_command)
-        
+
         for source, _ in self.__volumes:
-            sh(f"docker run -it --rm {source}:/tmp alpine:latest chown -R {os.getuid()}:{os.getgid()} /tmp")
+            sh(f"docker run --rm {source}:/tmp alpine:latest chown -R {os.getuid()}:{os.getgid()} /tmp")

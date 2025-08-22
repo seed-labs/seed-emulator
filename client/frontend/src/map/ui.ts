@@ -891,7 +891,7 @@ export class MapUi {
 
         if (vertex.type == 'node') {
             let node = vertex.object as EmulatorNode;
-            title.innerText = `${node.meta.emulatorInfo.role == 'Router' ? 'Router' : 'Host'}: ${vertex.label}`;
+            title.innerText = `${ ['Router', 'BorderRouter'].includes(node.meta.emulatorInfo.role) ? 'Router' : 'Host'}: ${vertex.label}`;
 
             if (node.meta.emulatorInfo.description) {
                 let div = document.createElement('div');
@@ -921,7 +921,7 @@ export class MapUi {
 
             infoPlate.appendChild(ipAddresses);
 
-            if (node.meta.emulatorInfo.role == 'Router' || node.meta.emulatorInfo.role == 'Route Server') {
+            if (['Router', 'Route Server', 'BorderRouter'].includes(node.meta.emulatorInfo.role)) {
                 let bgpDetails = document.createElement('div');
                 bgpDetails.classList.add('section');
 

@@ -1,11 +1,12 @@
-# Distributed Docker Compiler is not maintained 
+# Distributed Docker Compiler is not maintained
 
 from .Docker import Docker, DockerCompilerFileTemplates
-from seedemu.core import Emulator, ScopedRegistry, Node, Network
+from seedemu.core import Emulator, ScopedRegistry, Node, Network, BaseVolume
 from seedemu.core.enums import NodeRole
 from typing import Dict
 from hashlib import md5
 from os import mkdir, chdir, rmdir
+from yaml import dump
 
 DistributedDockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -35,9 +36,9 @@ class DistributedDocker(Docker):
     DistributedDocker is one of the compiler driver. It compiles the lab to
     docker containers. This compiler will generate one set of containers with
     their docker-compose.yml for each AS, enable you to run the emulator
-    distributed. 
+    distributed.
 
-    This works by making every IX network overlay network. 
+    This works by making every IX network overlay network.
     """
 
     def __init__(self, namingScheme: str = "as{asn}{role}-{name}-{primaryIp}"):
@@ -70,6 +71,28 @@ class DistributedDocker(Docker):
 
     def _doCompile(self, emulator: Emulator):
         registry = emulator.getRegistry()
+
+        self._groupSoftware(emulator)
+
+        toplevelvolumes = '' 
+        if len(topvols := self._getVolumes()) > 0:
+            toplevelvolumes += 'volumes:\n'
+            #topvols = set(map( lambda vol: TopLvlVolume(vol), pool.getVolumes() ))
+
+            for v in  topvols:
+                v.mode = 'toplevel'
+
+            #toplevelvolumes += '\n'.join(map( lambda line: '        ' + line ,dump( topvols ).split('\n') ) ) 
+
+            # sharedFolders/bind mounts do not belong in the top-level volumes section
+            for v in [vv  for  vv in topvols if vv.asDict()['type'] == 'volume' ]: 
+                toplevelvolumes += '  {}:\n'.format(v.asDict()['source']) # why not 'name'
+                lines = dump( v ).rstrip('\n').split('\n')
+                toplevelvolumes += '\n'.join( map( lambda x: '        ' if x[0] != 0 
+                                                else '        ' + x[1] if x[1] != ''
+                                                else '', enumerate(lines ) ) )
+                toplevelvolumes += '\n'
+
         scopes = set()
         for (scope, _, _) in registry.getAll().keys(): scopes.add(scope)
 
@@ -114,12 +137,14 @@ class DistributedDocker(Docker):
                 print(DockerCompilerFileTemplates['compose'].format(
                     services = services,
                     networks = networks,
+                    volumes = toplevelvolumes,
                     dummies = self._makeDummies()
                 ), file=open('docker-compose.yml', 'w'))
 
                 self._used_images = set()
 
-                print('COMPOSE_PROJECT_NAME=sim_{}'.format(scope), file=open('.env', 'w'))
+                if scope != 'ix':
+                    self.generateEnvFile(scope, '')
 
             chdir('..')
 

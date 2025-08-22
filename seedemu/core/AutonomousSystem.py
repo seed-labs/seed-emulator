@@ -4,19 +4,21 @@ from .Printable import Printable
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from .enums import NetworkType, NodeRole
-from .Node import Node
+from .Node import Node, Router
+from .Scope import ScopeTier, Scope
 from .Emulator import Emulator
 from .Configurable import Configurable
-from .Node import RealWorldRouter
+from .Customizable import Customizable
+from .Node import promote_to_real_world_router
 from ipaddress import IPv4Network
 from typing import Dict, List
 import requests
 
 RIS_PREFIXLIST_URL = 'https://stat.ripe.net/data/announced-prefixes/data.json'
 
-class AutonomousSystem(Printable, Graphable, Configurable):
+class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
     """!
-    @brief AutonomousSystem class. 
+    @brief AutonomousSystem class.
 
     This class represents an autonomous system.
     """
@@ -26,7 +28,6 @@ class AutonomousSystem(Printable, Graphable, Configurable):
     __routers: Dict[str, Node]
     __hosts: Dict[str, Node]
     __nets: Dict[str, Network]
-
     __name_servers: List[str]
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
@@ -43,6 +44,8 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         self.__asn = asn
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
         self.__name_servers = []
+
+
 
     def setNameServers(self, servers: List[str]) -> AutonomousSystem:
         """!
@@ -80,10 +83,10 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         })
 
         assert rslt.status_code == 200, 'RIPEstat API returned non-200'
-        
+
         json = rslt.json()
         assert json['status'] == 'ok', 'RIPEstat API returned not-OK'
- 
+
         return [p['prefix'] for p in json['data']['prefixes'] if ':' not in p['prefix']]
 
     def registerNodes(self, emulator: Emulator):
@@ -96,9 +99,11 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
 
         reg = emulator.getRegistry()
-            
+
         for val in list(self.__nets.values()):
             net: Network = val
+            # Rap creates a new node for the provider and thus has to be set up
+            # before node registration
             if net.getRemoteAccessProvider() != None:
                 rap = net.getRemoteAccessProvider()
 
@@ -106,14 +111,32 @@ class AutonomousSystem(Printable, Graphable, Configurable):
                 brNet = emulator.getServiceNetwork()
 
                 rap.configureRemoteAccess(emulator, net, brNode, brNet)
+            # .. whereas RealWorldConnectivity doesn't, so it can be moved to a later point
+            #  (after the services[which might require real-world-access] have been configured)
+            #if (p:=net.getExternalConnectivityProvider()) != None:
+            #    p.configureExternalLink(emulator, net, localNet of brNode , emulator.getServiceNet() )
 
-        for router in list(self.__routers.values()):
-            if issubclass(router.__class__, RealWorldRouter):
-                router.joinNetwork(emulator.getServiceNetwork().getName())
+        if any([r.hasExtension('RealWorldRouter') for r in list(self.__routers.values())]):
+            _ = emulator.getServiceNetwork() # this will construct and register Svc Net with registry
 
         for (key, val) in self.__nets.items(): reg.register(str(self.__asn), 'net', key, val)
         for (key, val) in self.__hosts.items(): reg.register(str(self.__asn), 'hnode', key, val)
         for (key, val) in self.__routers.items(): reg.register(str(self.__asn), 'rnode', key, val)
+
+    def inheritOptions(self, emulator: Emulator):
+        """! trickle down any overrides the user might have done on AS level """
+        # since global defaults are set on node level rather than AS level by the DynamicConfigurable impl
+        # this causes no redundant setting of the same options/defaults
+        reg = emulator.getRegistry()
+        all_nodes = [ obj for (scope,typ,name),obj  in reg.getAll( ).items()
+                      if scope==str(self.getAsn()) and typ in ['rnode','hnode','csnode','rsnode','rs'] ]
+        for n in all_nodes:
+            self.handDown(n)
+
+    def scope(self)-> Scope:
+        """return a scope specific to this AS"""
+        return Scope(ScopeTier.AS, as_id=self.getAsn())
+
 
     def configure(self, emulator: Emulator):
         """!
@@ -126,14 +149,16 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         for host in self.__hosts.values():
             if len(host.getNameServers()) == 0:
                 host.setNameServers(self.__name_servers)
-            
+
             host.configure(emulator)
-        
-        for router in self.__routers.values():
+
+        for name, router in self.__routers.items():
             if len(router.getNameServers()) == 0:
                 router.setNameServers(self.__name_servers)
 
             router.configure(emulator)
+            if router.isBorderRouter():
+                emulator.getRegistry().register( str(self.__asn), 'brdnode', name, router )
 
     def getAsn(self) -> int:
         """!
@@ -142,7 +167,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns asn.
         """
         return self.__asn
-    
+
     def createNetwork(self, name: str, prefix: str = "auto", direct: bool = True, aac: AddressAssignmentConstraint = None) -> Network:
         """!
         @brief Create a new network.
@@ -192,7 +217,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns Node.
         """
         assert name not in self.__routers, 'Router with name {} already exists.'.format(name)
-        self.__routers[name] = Node(name, NodeRole.Router, self.__asn)
+        self.__routers[name] = Router(name, NodeRole.Router, self.__asn)
 
         return self.__routers[name]
 
@@ -200,7 +225,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """!
         @brief Create a real-world router node.
 
-        A real-world router nodes are connect to a special service network, 
+        A real-world router nodes are connect to a special service network,
         and can route traffic from the emulation to the real world.
 
         @param name name of the new node.
@@ -214,9 +239,8 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
         assert name not in self.__routers, 'Router with name {} already exists.'.format(name)
 
-        router: RealWorldRouter = Node(name, NodeRole.Router, self.__asn)
-        router.__class__ = RealWorldRouter
-        router.initRealWorld(hideHops)
+        router = Router(name, NodeRole.Router, self.__asn)
+        router = promote_to_real_world_router(router, hideHops)
 
         if prefixes == None:
             prefixes = self.getPrefixList()
@@ -235,6 +259,12 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         @returns list of routers.
         """
         return list(self.__routers.keys())
+
+    def getBorderRouters(self)->List[str]:
+        """
+        @brief return the subset of all routers that participate in inter-domain routing
+        """
+        return [router for name, router in self.__routers.items() if router.isBorderRouter() ]
 
     def getRouter(self, name: str) -> Node:
         """!
@@ -280,7 +310,7 @@ class AutonomousSystem(Printable, Graphable, Configurable):
         """
 
         l2graph = self._addGraph('AS{}: Layer 2 Connections'.format(self.__asn), False)
-        
+
         for obj in self.__nets.values():
             net: Network = obj
             l2graph.addVertex('Network: {}'.format(net.getName()), shape = 'rectangle', group = 'AS{}'.format(self.__asn))
@@ -310,11 +340,11 @@ class AutonomousSystem(Printable, Graphable, Configurable):
                 l2graph.addEdge(rtrname, netname)
 
         # todo: better xc graphs?
-        
+
     def print(self, indent: int) -> str:
         """!
         @brief print AS details (nets, hosts, routers).
-        
+
         @param indent indent.
 
         @returns printable string.

@@ -87,7 +87,15 @@ def run(dumpfile=None, hosts_per_as=2):
     
     # An example to show how to add a host with customized IP address
     as154 = base.getAutonomousSystem(154)
-    as154.createHost('host_new').joinNetwork('net0', address = '10.154.0.129')
+    new_host = as154.createHost('host_new').joinNetwork('net0', address = '10.154.0.129')
+    from seedemu.core import OptionRegistry, OptionMode
+
+   
+    o = OptionRegistry().sysctl_netipv4_conf_rp_filter({'all': False, 'default': False, 'net0': False}, mode = OptionMode.RUN_TIME)
+    new_host.setOption(o)
+
+    o = OptionRegistry().sysctl_netipv4_udp_rmem_min(5000, mode = OptionMode.RUN_TIME)
+    new_host.setOption(o)
     
     ###############################################################################
     # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
@@ -136,7 +144,10 @@ def run(dumpfile=None, hosts_per_as=2):
         emu.dump(dumpfile)
     else: 
         emu.render()
-        emu.compile(Docker(), './output', override=True)
+
+        # Attach the Internet Map container to the emulator
+        docker = Docker(platform=platform)
+        emu.compile(docker, './output', override=True)
 
 if __name__ == "__main__":
     run()
