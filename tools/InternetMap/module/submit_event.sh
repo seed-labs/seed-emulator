@@ -27,3 +27,4 @@ if [ -f ${OPTION_FILE} ]; then
 else
     curl -X POST ${URL}
 fi
+
