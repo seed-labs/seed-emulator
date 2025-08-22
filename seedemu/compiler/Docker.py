@@ -1025,6 +1025,11 @@ class Docker(Compiler):
         for (cpath, hpath) in node.getImportedFiles().items():
             dockerfile += self._importFile(cpath, hpath)
 
+        # These commands are added by node.addBuildCommandAtEnd()
+        # These RUN commands are placed at the end, after all the files
+        #      are copied (COPY commands).
+        for cmd in node.getBuildCommandsAtEnd(): dockerfile += 'RUN {}\n'.format(cmd)
+
         dockerfile += 'CMD ["/start.sh"]\n'
         return dockerfile
 
