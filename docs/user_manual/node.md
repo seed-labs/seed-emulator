@@ -36,19 +36,32 @@ node.addSoftware("python3")
 
 Some of the software may have to be installed using some ad hoc
 commands, like `curl`, `wget`, etc. We can add the installation commands
-using the `addBuildCommand()` API. 
+using the `addBuildCommand()` and `addBuildCommandAtEnd()` APIs. 
 
 ```python
 node.addBuildCommand("curl http://example.com")
+node.addBuildCommandAtEnd("unzip file.zip")
 ```
 
-This API will lead to the addition of a
-`RUN` command in Dockerfile. When the container is built, the command
+These APIs will lead to the addition of a
+`RUN` command in Dockerfile. When the container is built, the specified command
 will be executed. 
 
 ```
 RUN curl http://example.com
+... omitted ...
+RUN unzip file.zip
 ```
+
+If we also invoke `importFile()` API, the file COPY command caused by 
+this API is actually placed after the RUN command caused by
+the `addBuildCommand()` API. Therefore, if we need to use 
+the imported file in the RUN command, we will not be able to do that.
+Because of this problem, we added a new API called 
+`addBuildCommandAtEnd()`. It will add a RUN command 
+towards the end of the `Dockerfile`, after all the 
+COPY command. 
+
 
 ## Import and create file 
 

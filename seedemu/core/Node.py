@@ -221,6 +221,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
     __imported_files: Dict[str, str]
     __softwares: Set[str]
     __build_commands: List[str]
+    __build_commands_at_end: List[str]
     __docker_cmds: List[str]
     __start_commands: List[Tuple[str, bool]]
     __post_config_commands: List[Tuple[str, bool]]
@@ -261,6 +262,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
         self.__build_commands = []
+        self.__build_commands_at_end = []
         self.__docker_cmds = []
         self.__start_commands = []
         self.__post_config_commands = []
@@ -821,6 +823,34 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         """
         return self.__build_commands
 
+    def addBuildCommandAtEnd(self, cmd: str) -> Node:
+        """!
+        @brief Add new command to build step. These commands will be 
+               placed towards the end of the Dockerfile. Initially,
+               we didn't have this API, and all the RUN commands
+               were placed before COPY. This order caused some problems,
+               because sometimes, the RUN command depends on the files
+               from the COPY command.
+
+        Use this to add build steps to the node. For example, if using the
+        "docker" compiler, this will be added as a "RUN" line in Dockerfile.
+
+        @param cmd command to add.
+
+        @returns self, for chaining API calls.
+        """
+        self.__build_commands_at_end.append(cmd)
+
+        return self
+
+    def getBuildCommandsAtEnd(self) -> List[str]:
+        """!
+        @brief Get build commands
+
+        @returns list of commands.
+        """
+        return self.__build_commands_at_end
+
     def insertStartCommand(self, index: int, cmd: str, fork: bool = False) -> Node:
         """!
         @brief Add new command to start script.
@@ -1030,6 +1060,9 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         out += 'Additional Build Commands:\n'
         indent += 4
         for cmd in self.__build_commands:
+            out += ' ' * indent
+            out += '{}\n'.format(cmd)
+        for cmd in self.__build_commands_at_end:
             out += ' ' * indent
             out += '{}\n'.format(cmd)
         indent -= 4
