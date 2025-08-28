@@ -308,6 +308,21 @@ class Network(Printable, Registrable, Vertex):
     def getExternalConnectivityProvider(self) -> ExternalConnectivityProvider:
         return self.__ecp
 
+    def getDefaultRouters(self) -> List[IPv4Address]:
+        """!
+        @brief Get default routers for this network.
+
+        @returns list of default routers.
+        """
+        routers = []
+        for __node in self.getAssociations():
+            if __node.getRole() == NodeRole.BorderRouter:
+                for __interface in __node.getInterfaces():
+                    if __interface.getNet() == self:
+                        routers.append(__interface.getAddress())
+        
+        return routers
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'Network {} ({}):\n'.format(self.__name, self.__type)
