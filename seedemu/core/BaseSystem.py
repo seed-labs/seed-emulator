@@ -13,6 +13,7 @@ class BaseSystem(Enum):
     UBUNTU_20_04        = 'ubuntu20.04'
     SEEDEMU_BASE        = 'seedemu-base'
     SEEDEMU_ROUTER      = 'seedemu-router'
+    SEEDEMU_ETHEREUM    = 'seedemu-ethereum'
     SEEDEMU_ETHEREUM_LEGACY    = 'seedemu-ethereum-legacy'
     SEEDEMU_ETHEREUM_POS       = 'seedemu-ethereum-pos'
     SEEDEMU_OP_STACK    = 'seedemu-op-stack'
@@ -26,6 +27,7 @@ class BaseSystem(Enum):
                 UBUNTU_20_04: [],
                 SEEDEMU_BASE: [UBUNTU_20_04],
                 SEEDEMU_ROUTER: [UBUNTU_20_04, SEEDEMU_BASE],
+                SEEDEMU_ETHEREUM: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_ETHEREUM_LEGACY: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_ETHEREUM_POS: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_OP_STACK: [UBUNTU_20_04, SEEDEMU_BASE],
