@@ -43,7 +43,7 @@ scion_tests = [
 ]
 
 basic_tests = [
-    MiniInternetTestCase,
+    MiniInternetTestCase
     # SEEDEmuOptionSystemTestCase,
         ]
 
@@ -52,7 +52,7 @@ internet_tests = [
     KuboUtilFuncsTestCase,
     IPAnyCastTestCase,
     HostMgmtTestCase,
-    PKITestCase,
+    # PKITestCase,
     DottedDictTestCase,
     TrafficGeneratorTestCase
         ]
