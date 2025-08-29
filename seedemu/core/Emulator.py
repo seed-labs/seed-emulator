@@ -7,7 +7,7 @@ from .Network import Network
 from seedemu import core
 from typing import Dict, Set, Tuple, List
 from sys import prefix, stderr
-from ipaddress import IPv4Network
+from ipaddress import IPv4Address, IPv4Network
 import pickle
 
 class BindingDatabase(Registrable, Printable):
@@ -571,3 +571,23 @@ class Emulator:
             self.__bindings = self.__registry.get('seedemu', 'list', 'bindingdb')
 
         return self
+
+    def getDefaultRouterByAsnAndNetwork(self, asn: int, network: str) -> IPv4Address:
+        """!
+        @brief get the default router for the given AS and network.
+        @param asn AS number.
+        @param network network name.
+        @return IPv4Address of the default router.
+        """
+        base:Base = self.getLayer('Base')
+        return base.getAutonomousSystem(asn).getNetwork(network).getDefaultRouter()
+
+    def hasDHCPServiceByAsnAndNetwork(self, asn: int, network: str) -> bool:
+        """!
+        @brief check if the given AS has a DHCP service for the given network.
+        @param asn AS number.
+        @param network network name.
+        @return True if the AS has a DHCP service for the given network.
+        """
+        base:Base = self.getLayer('Base')
+        return base.getAutonomousSystem(asn).getNetwork(network).hasDHCPService()

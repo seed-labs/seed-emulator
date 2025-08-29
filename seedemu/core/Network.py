@@ -308,6 +308,38 @@ class Network(Printable, Registrable, Vertex):
     def getExternalConnectivityProvider(self) -> ExternalConnectivityProvider:
         return self.__ecp
 
+    def getDefaultRouter(self) -> IPv4Address:
+        """!
+        @brief Get default router for this network.
+
+        @returns default router.
+        """
+        for __node in self.getAssociations():
+            if __node.getRole() == NodeRole.BorderRouter:
+                for __interface in __node.getInterfaces():
+                    if __interface.getNet() == self:
+                        return __interface.getAddress()
+
+        for __node in self.getAssociations():
+            if __node.getRole() == NodeRole.Router:
+                for __interface in __node.getInterfaces():
+                    if __interface.getNet() == self:
+                        return __interface.getAddress()
+
+        return None
+
+    def hasDHCPService(self) -> bool:
+        """!
+        @brief Check if this network has DHCP service.
+
+        @returns true if has DHCP service, false otherwise.
+        """
+        for __node in self.getAssociations():
+            if "dhcp" in __node.getName() or "DHCP" in __node.getName():
+                return True
+        return False
+
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'Network {} ({}):\n'.format(self.__name, self.__type)
