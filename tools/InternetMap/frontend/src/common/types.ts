@@ -25,7 +25,7 @@ export interface EmulatorNode {
             parent: Set<string>,
         };
     };
-};
+}
 
 export interface EmulatorNetwork {
     Id: string;
@@ -42,15 +42,16 @@ export interface EmulatorNetwork {
             parent: Set<string>,
         },
     }
-};
+}
 
-export interface InstallType {
-    Id: string,
-    meta: {
-        baseInfo: {
-            name: string,
-        }
-    }
+export interface IPlugin {
+    id: string;
+    name: string;
+    version: string;
+    entryPoint: string;
+    description?: string;
+    activate?: () => void;
+    deactivate?: () => void;
 }
 
 export interface BgpPeer {

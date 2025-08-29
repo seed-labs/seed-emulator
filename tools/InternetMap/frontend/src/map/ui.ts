@@ -112,14 +112,6 @@ const extractReplyMacAddresses = (text: string): string[] => {
     return matches;
 }
 
-const haveSameKeys = (obj1: {}, obj2: {}): boolean => {
-    const keys1 = new Set(Object.keys(obj1));
-    const keys2 = new Set(Object.keys(obj2));
-
-    return keys1.size === keys2.size &&
-        [...keys1].every(key => keys2.has(key));
-}
-
 /**
  * map UI controller.
  */
@@ -629,16 +621,22 @@ export class MapUi {
                 window.clearInterval(this._flasherVis[nodeId]);
             }
 
-            const currentTime = new Date().getTime();
-            const offset = currentTime - this._firstIntervalStartTime;
-            const adjustedDelay = this._intervalDefault - (offset % this._intervalDefault);
-            window.setTimeout(() => {
-                this._flasherVis[nodeId] = window.setInterval(() => {
-                    this._flashVisNodes(
-                        nodeId, _data.interval, _data.static, _data.dynamic, _data.action
-                    )
-                }, this._intervalDefault);
-            }, adjustedDelay)
+            if (_data.action === 'flashOnce') {
+                this._flashVisNodes(
+                    nodeId, _data.interval, _data.static, _data.dynamic, _data.action
+                )
+            } else {
+                const currentTime = new Date().getTime();
+                const offset = currentTime - this._firstIntervalStartTime;
+                const adjustedDelay = this._intervalDefault - (offset % this._intervalDefault);
+                window.setTimeout(() => {
+                    this._flasherVis[nodeId] = window.setInterval(() => {
+                        this._flashVisNodes(
+                            nodeId, _data.interval, _data.static, _data.dynamic, _data.action
+                        )
+                    }, this._intervalDefault);
+                }, adjustedDelay)
+            }
         });
     }
 
@@ -834,8 +832,9 @@ export class MapUi {
         }
 
         switch (action) {
+            case 'flashOnce':
             case 'flash':
-                return this._flashVisNodesFlashKeep(nodeId, _static, dynamic, interval);
+                return this._flashVisNodesFlash(nodeId, _static, dynamic, interval);
             case 'highlight':
                 return this._flashVisNodesHighlight(nodeId, _static);
             default:
@@ -911,7 +910,7 @@ export class MapUi {
         }
     }
 
-    private _flashVisNodesFlashKeep(nodeId: string, _static: {}, dynamic: {}, interval: number) {
+    private _flashVisNodesFlash(nodeId: string, _static: {}, dynamic: {}, interval: number) {
         this._nodes.update({
             id: nodeId, ..._static
         });
