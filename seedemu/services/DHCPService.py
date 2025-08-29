@@ -81,6 +81,7 @@ class DHCPServer(Server):
         """
 
         node.addSoftware('isc-dhcp-server')
+        node.appendClassName("DHCPService")
 
         ifaces = self.__node.getInterfaces()
         assert len(ifaces) > 0, 'node {} has no interfaces'.format(node.getName())
