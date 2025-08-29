@@ -328,6 +328,18 @@ class Network(Printable, Registrable, Vertex):
 
         return None
 
+    def hasDHCPService(self) -> bool:
+        """!
+        @brief Check if this network has DHCP service.
+
+        @returns true if has DHCP service, false otherwise.
+        """
+        for __node in self.getAssociations():
+            if "dhcp" in __node.getName() or "DHCP" in __node.getName():
+                return True
+        return False
+
+
     def print(self, indent: int) -> str:
         out = ' ' * indent
         out += 'Network {} ({}):\n'.format(self.__name, self.__type)

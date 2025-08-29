@@ -581,3 +581,13 @@ class Emulator:
         """
         base:Base = self.getLayer('Base')
         return base.getAutonomousSystem(asn).getNetwork(network).getDefaultRouter()
+
+    def hasDHCPServiceByAsnAndNetwork(self, asn: int, network: str) -> bool:
+        """!
+        @brief check if the given AS has a DHCP service for the given network.
+        @param asn AS number.
+        @param network network name.
+        @return True if the AS has a DHCP service for the given network.
+        """
+        base:Base = self.getLayer('Base')
+        return base.getAutonomousSystem(asn).getNetwork(network).hasDHCPService()
