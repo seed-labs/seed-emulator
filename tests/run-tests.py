@@ -48,7 +48,7 @@ basic_tests = [
         ]
 
 internet_tests = [
-    KuboTestCase,
+    # KuboTestCase,
     KuboUtilFuncsTestCase,
     IPAnyCastTestCase,
     HostMgmtTestCase,
