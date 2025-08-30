@@ -579,6 +579,7 @@ class Emulator:
         @param network network name.
         @return IPv4Address of the default router.
         """
+        assert self.__rendered, 'emulator is not rendered.'
         base:Base = self.getLayer('Base')
         return base.getAutonomousSystem(asn).getNetwork(network).getDefaultRouter()
 
@@ -589,5 +590,6 @@ class Emulator:
         @param network network name.
         @return True if the AS has a DHCP service for the given network.
         """
+        assert self.__rendered, 'emulator is not rendered.'
         base:Base = self.getLayer('Base')
         return base.getAutonomousSystem(asn).getNetwork(network).hasDHCPService()

@@ -335,7 +335,8 @@ class Network(Printable, Registrable, Vertex):
         @returns true if has DHCP service, false otherwise.
         """
         for __node in self.getAssociations():
-            if "dhcp" in __node.getName() or "DHCP" in __node.getName():
+            __services = __node.getClasses()
+            if "DHCPService" in __services:
                 return True
         return False
 
