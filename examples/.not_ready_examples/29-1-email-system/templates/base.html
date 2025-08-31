@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SEED邮件系统 - 真实版{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .provider-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        .provider-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .ix-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .topology-card {
+            border-left: 4px solid;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-running { background-color: #28a745; }
+        .status-stopped { background-color: #dc3545; }
+        .code-block {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+<style>
+/* 加载动画 */
+.loading {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 10px;
+    }
+    
+    .card {
+        margin-bottom: 15px;
+    }
+    
+    .btn {
+        margin-bottom: 5px;
+    }
+}
+
+/* 暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+    .bg-light {
+        background-color: #343a40 !important;
+        color: #fff;
+    }
+    
+    .card {
+        background-color: #495057;
+        border-color: #6c757d;
+    }
+    
+    .text-muted {
+        color: #adb5bd !important;
+    }
+}
+</style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark gradient-bg">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-envelope-open-text"></i> SEED邮件系统 - 真实版
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="/">首页</a>
+                    <a class="nav-link" href="/network_topology">网络拓扑</a>
+                    <a class="nav-link" href="/dns_system">DNS测试</a>
+                    <a class="nav-link" href="/project_overview">项目概述</a>
+                    <a class="nav-link" href="http://localhost:8080/map.html" target="_blank">可视化地图</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-network-wired"></i> SEED邮件系统 - 真实版</h6>
+                    <p class="small mb-0">基于SEED-Emulator的真实邮件服务商仿真平台</p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small>
+                        <i class="fas fa-code"></i> 技术栈：SEED-Emulator + Flask + Docker<br>
+                        <i class="fas fa-globe"></i> 支持：DNS系统、多ISP、国际互联
+                    </small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 通用JavaScript函数 -->
+    <script>
+        // 显示警告消息
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            // 5秒后自动消失
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('已复制到剪贴板', 'success');
+            }).catch(() => {
+                showAlert('复制失败', 'danger');
+            });
+        }
+
+        // 格式化时间戳
+        function formatTimestamp(timestamp) {
+            return new Date(timestamp).toLocaleString('zh-CN');
+        }
+
+        // 实时更新状态
+        function updateSystemStatus() {
+            fetch('/api/system_status')
+                .then(response => response.json())
+                .then(data => {
+                    // 更新页面上的状态信息
+                    const statusElements = document.querySelectorAll('[data-status-update]');
+                    statusElements.forEach(element => {
+                        const field = element.getAttribute('data-status-update');
+                        if (data[field] !== undefined) {
+                            element.textContent = data[field];
+                        }
+                    });
+                })
+                .catch(error => console.log('状态更新失败:', error));
+        }
+
+        // 页面加载完成后启动状态更新
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSystemStatus();
+            setInterval(updateSystemStatus, 30000); // 每30秒更新一次
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+<script>
+// 通用工具函数
+class SeedUtils {
+    static showLoading() {
+        const loading = document.querySelector('.loading');
+        if (loading) loading.style.display = 'block';
+    }
+    
+    static hideLoading() {
+        const loading = document.querySelector('.loading');
+        if (loading) loading.style.display = 'none';
+    }
+    
+    static showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close ms-2" onclick="this.parentElement.remove()"></button>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 5000);
+    }
+    
+    static makeAjaxRequest(url, method = 'GET', data = null) {
+        this.showLoading();
+        
+        const options = {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        };
+        
+        if (data) {
+            options.body = JSON.stringify(data);
+        }
+        
+        return fetch(url, options)
+            .then(response => {
+                this.hideLoading();
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .catch(error => {
+                this.hideLoading();
+                this.showToast('请求失败: ' + error.message, 'danger');
+                throw error;
+            });
+    }
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 添加加载动画HTML
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'loading';
+    loadingDiv.innerHTML = '<div class="spinner"></div>';
+    document.body.appendChild(loadingDiv);
+    
+    // 自动表单验证
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const inputs = form.querySelectorAll('input[required], textarea[required]');
+            let valid = true;
+            
+            inputs.forEach(input => {
+                if (!input.value.trim()) {
+                    input.classList.add('is-invalid');
+                    valid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+            
+            if (!valid) {
+                e.preventDefault();
+                SeedUtils.showToast('请填写所有必填字段', 'warning');
+            }
+        });
+    });
+});
+</script>
+</body>
+</html>

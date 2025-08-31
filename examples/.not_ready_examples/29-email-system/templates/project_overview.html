@@ -1,0 +1,859 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- 项目标题 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h1 class="display-4"><i class="fas fa-envelope"></i> SEED邮件系统</h1>
+                    <p class="lead">基于SEED-Emulator的完整邮件安全实验平台</p>
+                    <small class="text-light">项目设计思路 | API使用 | 测试方案 | 代码结构</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导航标签 -->
+    <ul class="nav nav-tabs" id="projectTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="fas fa-info-circle"></i> 项目概述
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="architecture-tab" data-bs-toggle="tab" data-bs-target="#architecture" type="button" role="tab">
+                <i class="fas fa-sitemap"></i> 技术架构
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="seedemu-tab" data-bs-toggle="tab" data-bs-target="#seedemu" type="button" role="tab">
+                <i class="fas fa-cogs"></i> SEED-Emulator
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="api-tab" data-bs-toggle="tab" data-bs-target="#api" type="button" role="tab">
+                <i class="fas fa-code"></i> API使用
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="testing-tab" data-bs-toggle="tab" data-bs-target="#testing" type="button" role="tab">
+                <i class="fas fa-vial"></i> 测试方案
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="code-tab" data-bs-toggle="tab" data-bs-target="#code" type="button" role="tab">
+                <i class="fas fa-file-code"></i> 代码结构
+            </button>
+        </li>
+    </ul>
+
+    <!-- 标签内容 -->
+    <div class="tab-content" id="projectTabsContent">
+        
+        <!-- 项目概述 -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-lightbulb"></i> 项目设计思路</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>📧 核心理念</h6>
+                            <p>SEED邮件系统旨在通过<strong>渐进式复杂度</strong>和<strong>真实环境模拟</strong>，为网络安全教育提供完整的邮件安全实验平台。</p>
+                            
+                            <h6>🎯 设计目标</h6>
+                            <ul>
+                                <li><strong>教学友好</strong>：从基础到高级的递进式学习路径</li>
+                                <li><strong>真实仿真</strong>：精确模拟真实互联网邮件基础设施</li>
+                                <li><strong>技术前沿</strong>：集成AI技术，探索智能攻防</li>
+                                <li><strong>完整生态</strong>：覆盖邮件系统的所有安全环节</li>
+                            </ul>
+
+                            <h6>🏗️ 三层架构设计</h6>
+                            <div class="alert alert-info">
+                                <strong>29-email-system</strong>：基础版，快速入门和核心功能验证<br>
+                                <strong>29-1-email-system</strong>：真实版，复杂网络拓扑和真实服务商模拟<br>
+                                <strong>30-phishing-ai-system</strong>：AI版，智能攻防和高级安全实验
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-pie"></i> 技术特色</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <span class="badge bg-primary">SEED-Emulator</span>
+                                <small class="text-muted d-block">网络仿真框架</small>
+                            </div>
+                            <div class="mb-3">
+                                <span class="badge bg-success">Docker-Mailserver</span>
+                                <small class="text-muted d-block">生产级邮件服务</small>
+                            </div>
+                            <div class="mb-3">
+                                <span class="badge bg-warning">Flask + Bootstrap</span>
+                                <small class="text-muted d-block">现代Web界面</small>
+                            </div>
+                            <div class="mb-3">
+                                <span class="badge bg-danger">Gophish + AI</span>
+                                <small class="text-muted d-block">智能钓鱼平台</small>
+                            </div>
+                            <div class="mb-3">
+                                <span class="badge bg-info">Ollama + Qwen2</span>
+                                <small class="text-muted d-block">本地大语言模型</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5><i class="fas fa-users"></i> 目标用户</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-graduation-cap text-primary"></i> 网络安全专业学生</li>
+                                <li><i class="fas fa-chalkboard-teacher text-success"></i> 安全课程教师</li>
+                                <li><i class="fas fa-search text-warning"></i> 安全研究人员</li>
+                                <li><i class="fas fa-building text-info"></i> 企业安全培训</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 技术架构 -->
+        <div class="tab-pane fade" id="architecture" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-sitemap"></i> 系统架构图</h5>
+                        </div>
+                        <div class="card-body">
+                            <pre class="bg-light p-3 rounded">
+┌─────────────────────────────────────────────────────────────┐
+│                    SEED邮件系统架构                          │
+├─────────────────────────────────────────────────────────────┤
+│  Web层    │ Flask Web界面 + Bootstrap + JavaScript           │
+├─────────────────────────────────────────────────────────────┤
+│  应用层    │ 邮件管理 + 账户管理 + 网络测试 + AI服务          │
+├─────────────────────────────────────────────────────────────┤
+│  服务层    │ Docker-Mailserver + Roundcube + Gophish + AI    │
+├─────────────────────────────────────────────────────────────┤
+│  网络层    │ SEED-Emulator (BGP/OSPF/DNS/路由仿真)          │
+├─────────────────────────────────────────────────────────────┤
+│  容器层    │ Docker + Docker Compose + 网络命名空间          │
+├─────────────────────────────────────────────────────────────┤
+│  基础层    │ Linux + ARM64/AMD64 + Python 3.11+             │
+└─────────────────────────────────────────────────────────────┘
+                            </pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-layer-group"></i> 模块化设计</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🔧 核心模块</h6>
+                            <ul>
+                                <li><strong>网络仿真模块</strong>：基于SEED-Emulator的AS和路由</li>
+                                <li><strong>邮件服务模块</strong>：Docker-Mailserver集成</li>
+                                <li><strong>Web管理模块</strong>：Flask应用和RESTful API</li>
+                                <li><strong>测试工具模块</strong>：网络连通性和邮件功能测试</li>
+                            </ul>
+
+                            <h6>🎛️ 扩展模块</h6>
+                            <ul>
+                                <li><strong>Roundcube集成</strong>：完整webmail客户端</li>
+                                <li><strong>AI服务模块</strong>：Ollama + 多模态检测</li>
+                                <li><strong>钓鱼平台模块</strong>：Gophish + 攻击场景</li>
+                                <li><strong>监控分析模块</strong>：实时状态和性能监控</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-cog"></i> 技术栈详情</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr><td><strong>框架</strong></td><td>SEED-Emulator 1.x</td></tr>
+                                    <tr><td><strong>容器</strong></td><td>Docker + Docker Compose</td></tr>
+                                    <tr><td><strong>邮件</strong></td><td>docker-mailserver + Postfix</td></tr>
+                                    <tr><td><strong>Web前端</strong></td><td>Bootstrap 5 + jQuery</td></tr>
+                                    <tr><td><strong>Web后端</strong></td><td>Flask + Jinja2</td></tr>
+                                    <tr><td><strong>数据库</strong></td><td>SQLite (Roundcube)</td></tr>
+                                    <tr><td><strong>AI模型</strong></td><td>Ollama + Qwen2-7B</td></tr>
+                                    <tr><td><strong>钓鱼</strong></td><td>Gophish + Templates</td></tr>
+                                    <tr><td><strong>监控</strong></td><td>Docker API + 自定义监控</td></tr>
+                                    <tr><td><strong>网络</strong></td><td>BGP + OSPF + DNS</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEED-Emulator使用 -->
+        <div class="tab-pane fade" id="seedemu" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-cogs"></i> 如何利用SEED-Emulator构建邮件系统</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🏗️ 基础网络构建</h6>
+                            <pre><code class="language-python"># 1. 创建基础仿真器
+emu = Emulator()
+
+# 2. 创建基础层和路由层
+base = Base()
+routing = Routing()
+ebgp = Ebgp()
+
+# 3. 创建自治系统(AS)
+base.createAutonomousSystem(150)  # 邮件服务商AS
+base.createAutonomousSystem(160)  # 用户AS
+base.createAutonomousSystem(2)    # ISP AS
+
+# 4. 创建路由器和主机
+base.createRouter('router0').joinNetwork('net0')
+base.createHost('mailserver').joinNetwork('net0').addSoftware('docker-mailserver')
+
+# 5. 设置BGP对等关系
+ebgp.addRsPeers(100, [2, 150, 160])
+ebgp.addPrivatePeering(100, 2, 150, abrel=PeerRelationship.Provider)</code></pre>
+
+                            <h6>📧 邮件服务集成</h6>
+                            <pre><code class="language-python"># 邮件服务器配置
+def create_mail_server(asn, name, domain):
+    # 创建邮件服务器主机
+    server = base.createHost(f'mailserver-{name}')
+    server.joinNetwork('net0', address=f'10.{asn}.0.10')
+    
+    # 添加邮件服务软件
+    server.addSoftware('docker-mailserver')
+    server.addPortMapping(25, 25)    # SMTP
+    server.addPortMapping(143, 143)  # IMAP
+    server.addPortMapping(993, 993)  # IMAPS
+    
+    # 设置环境变量
+    server.setDisplayName(f'Mail Server ({domain})')
+    
+    return server
+
+# 创建多个邮件服务器
+mail_150 = create_mail_server(150, 'seedemail', 'seedemail.net')
+mail_151 = create_mail_server(151, 'corporate', 'corporate.local')</code></pre>
+
+                            <h6>🌐 DNS系统集成</h6>
+                            <pre><code class="language-python"># DNS层配置 (29-1项目)
+dns = DomainNameService()
+
+# 创建DNS服务器
+dns.install('dns-root').addZone('.').setMaster()
+dns.install('dns-com').addZone('com').setMaster()
+
+# 添加邮件域名记录
+dns.addRecord('seedemail.net', RecordType.A, '10.150.0.10')
+dns.addRecord('seedemail.net', RecordType.MX, 'mail.seedemail.net', preference=10)
+dns.addRecord('mail.seedemail.net', RecordType.A, '10.150.0.10')</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-puzzle-piece"></i> 关键SEED-Emulator概念</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl>
+                                <dt>Autonomous System (AS)</dt>
+                                <dd>独立的网络域，代表ISP或大型组织</dd>
+                                
+                                <dt>Internet Exchange (IX)</dt>
+                                <dd>AS之间的交换点，实现BGP对等</dd>
+                                
+                                <dt>Virtual Node</dt>
+                                <dd>可绑定到物理节点的虚拟网络实体</dd>
+                                
+                                <dt>Service Binding</dt>
+                                <dd>将服务(如邮件服务)绑定到特定节点</dd>
+                                
+                                <dt>Layer System</dt>
+                                <dd>分层架构，支持Base、Routing、Ebgp等层</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-rocket"></i> 复用和扩展指南</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🔄 复用现有代码</h6>
+                            <ul>
+                                <li>复制29项目作为基础模板</li>
+                                <li>修改AS号和IP地址段</li>
+                                <li>调整邮件服务器数量和域名</li>
+                                <li>添加自定义服务和软件</li>
+                            </ul>
+
+                            <h6>⚡ 快速扩展</h6>
+                            <ul>
+                                <li><strong>添加新AS</strong>：<code>base.createAutonomousSystem(新AS号)</code></li>
+                                <li><strong>新邮件域</strong>：复制邮件服务器创建逻辑</li>
+                                <li><strong>集成新服务</strong>：使用<code>addSoftware()</code>方法</li>
+                                <li><strong>自定义拓扑</strong>：调整IX和BGP关系</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API使用 -->
+        <div class="tab-pane fade" id="api" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-code"></i> Web API使用说明</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>📡 RESTful API端点</h6>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>端点</th>
+                                            <th>方法</th>
+                                            <th>功能</th>
+                                            <th>参数</th>
+                                            <th>返回</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>/api/status</code></td>
+                                            <td>GET</td>
+                                            <td>获取系统状态</td>
+                                            <td>无</td>
+                                            <td>JSON状态信息</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/create_account</code></td>
+                                            <td>POST</td>
+                                            <td>创建邮件账户</td>
+                                            <td>email, password</td>
+                                            <td>创建结果</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/delete_account</code></td>
+                                            <td>POST</td>
+                                            <td>删除邮件账户</td>
+                                            <td>email</td>
+                                            <td>删除结果</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/send_email</code></td>
+                                            <td>POST</td>
+                                            <td>发送测试邮件</td>
+                                            <td>from, to, subject, body</td>
+                                            <td>发送结果</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/test_connectivity</code></td>
+                                            <td>POST</td>
+                                            <td>测试网络连通性</td>
+                                            <td>target</td>
+                                            <td>ping结果</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/start_roundcube</code></td>
+                                            <td>POST</td>
+                                            <td>启动Roundcube</td>
+                                            <td>无</td>
+                                            <td>启动状态</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h6>💻 API使用示例</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>创建邮件账户</h6>
+                                    <pre><code class="language-bash"># curl示例
+curl -X POST http://localhost:5000/create_account \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@seedemail.net", "password": "test123"}'
+
+# Python示例
+import requests
+response = requests.post('http://localhost:5000/create_account', 
+    json={'email': 'test@seedemail.net', 'password': 'test123'})
+print(response.json())</code></pre>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>发送测试邮件</h6>
+                                    <pre><code class="language-bash"># curl示例
+curl -X POST http://localhost:5000/send_email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from_email": "alice@seedemail.net",
+    "to_email": "bob@seedemail.net", 
+    "subject": "测试邮件",
+    "body": "这是API发送的测试邮件"
+  }'</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-plug"></i> 集成开发</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🔗 Python SDK示例</h6>
+                            <pre><code class="language-python">class SeedEmailAPI:
+    def __init__(self, base_url='http://localhost:5000'):
+        self.base_url = base_url
+    
+    def create_account(self, email, password):
+        response = requests.post(f'{self.base_url}/create_account',
+            json={'email': email, 'password': password})
+        return response.json()
+    
+    def send_email(self, from_email, to_email, subject, body):
+        response = requests.post(f'{self.base_url}/send_email',
+            json={
+                'from_email': from_email,
+                'to_email': to_email,
+                'subject': subject,
+                'body': body
+            })
+        return response.json()
+
+# 使用示例
+api = SeedEmailAPI()
+api.create_account('user@test.com', 'password')
+api.send_email('user@test.com', 'admin@test.com', 'Hello', 'Test message')</code></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-terminal"></i> 命令行工具</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🛠️ 内置管理命令</h6>
+                            <pre><code class="language-bash"># 系统状态
+seed-status
+
+# 项目管理
+seed-29          # 启动29项目
+seed-29-1        # 启动29-1项目
+seed-30          # 启动30项目
+
+# 测试工具
+./test_integration.sh 29
+./quick_start.sh 29 test
+
+# 清理工具
+./force_cleanup.sh force
+seed-emergency-stop</code></pre>
+
+                            <h6>🔧 Docker API集成</h6>
+                            <pre><code class="language-python"># 容器管理
+import docker
+client = docker.from_env()
+
+# 获取邮件容器
+containers = client.containers.list(
+    filters={'name': 'mail-'})
+
+# 执行容器命令
+result = containers[0].exec_run(
+    'setup email list')
+print(result.output.decode())</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 测试方案 -->
+        <div class="tab-pane fade" id="testing" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-vial"></i> 邮件系统测试方案</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>🔧 基础功能测试</h6>
+                                    <ul>
+                                        <li><strong>邮件发送</strong>：SMTP协议测试</li>
+                                        <li><strong>邮件接收</strong>：IMAP/POP3测试</li>
+                                        <li><strong>账户管理</strong>：创建/删除账户</li>
+                                        <li><strong>域名解析</strong>：MX记录查询</li>
+                                        <li><strong>端口连通</strong>：25/143/993端口</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>🌐 网络连通测试</h6>
+                                    <ul>
+                                        <li><strong>AS间路由</strong>：BGP路由表验证</li>
+                                        <li><strong>跨域通信</strong>：不同AS间邮件</li>
+                                        <li><strong>DNS解析</strong>：域名到IP映射</li>
+                                        <li><strong>网络延迟</strong>：ping/traceroute</li>
+                                        <li><strong>负载均衡</strong>：多路径测试</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>🛡️ 安全性测试</h6>
+                                    <ul>
+                                        <li><strong>认证测试</strong>：密码验证机制</li>
+                                        <li><strong>加密传输</strong>：TLS/SSL连接</li>
+                                        <li><strong>访问控制</strong>：权限验证</li>
+                                        <li><strong>日志审计</strong>：操作记录分析</li>
+                                        <li><strong>异常检测</strong>：攻击识别</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-fish"></i> 钓鱼测试意义和方案</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🎯 测试意义</h6>
+                            <ul>
+                                <li><strong>安全意识培养</strong>：通过实际攻击体验提升防范意识</li>
+                                <li><strong>检测能力验证</strong>：测试现有安全工具的有效性</li>
+                                <li><strong>响应流程演练</strong>：模拟真实攻击的应急响应</li>
+                                <li><strong>员工培训评估</strong>：量化安全培训效果</li>
+                            </ul>
+
+                            <h6>📋 测试方案</h6>
+                            <div class="alert alert-warning">
+                                <strong>场景1：QQ邮箱安全验证</strong><br>
+                                模拟QQ邮箱安全中心发送的账户异常通知，诱导用户点击恶意链接验证身份
+                            </div>
+                            <div class="alert alert-info">
+                                <strong>场景2：企业IT通知</strong><br>
+                                伪装企业IT部门发送系统维护通知，要求员工备份重要数据到指定位置
+                            </div>
+                            <div class="alert alert-success">
+                                <strong>场景3：供应链攻击</strong><br>
+                                模拟合作伙伴发送的商务邮件，包含恶意附件或链接
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-robot"></i> AI集成可行性</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🧠 AI技术应用</h6>
+                            <ul>
+                                <li><strong>智能邮件生成</strong>：基于LLM的个性化钓鱼邮件</li>
+                                <li><strong>多模态检测</strong>：文本+图像+行为综合分析</li>
+                                <li><strong>自适应攻击</strong>：根据目标特征调整攻击策略</li>
+                                <li><strong>实时防护</strong>：基于AI的邮件威胁检测</li>
+                            </ul>
+
+                            <h6>⚙️ 技术实现</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <tr><td><strong>大语言模型</strong></td><td>Ollama + Qwen2-7B</td></tr>
+                                        <tr><td><strong>文本分析</strong></td><td>NLP + 情感分析</td></tr>
+                                        <tr><td><strong>图像识别</strong></td><td>CV + OCR检测</td></tr>
+                                        <tr><td><strong>行为分析</strong></td><td>ML + 异常检测</td></tr>
+                                        <tr><td><strong>决策引擎</strong></td><td>规则+AI混合决策</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h6>📈 可行性评估</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar bg-success" style="width: 90%">技术成熟度 90%</div>
+                            </div>
+                            <div class="progress mb-2">
+                                <div class="progress-bar bg-info" style="width: 85%">实现难度 85%</div>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-warning" style="width: 95%">教育价值 95%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 代码结构 -->
+        <div class="tab-pane fade" id="code" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-folder-tree"></i> 项目结构</h5>
+                        </div>
+                        <div class="card-body">
+                            <pre class="small"><code>SEED-Email-System/
+├── 29-email-system/                 # 基础版
+│   ├── email_simple.py             # 主要仿真脚本
+│   ├── webmail_server.py           # Web服务器
+│   ├── setup_accounts.py           # 账户预设脚本
+│   ├── templates/                  # HTML模板
+│   │   ├── base.html
+│   │   ├── index.html
+│   │   ├── server_detail.html
+│   │   └── project_overview.html
+│   ├── static/                     # 静态资源
+│   │   ├── css/
+│   │   └── js/
+│   ├── output/                     # 生成的容器文件
+│   └── README.md
+│
+├── 29-1-email-system/              # 真实版
+│   ├── email_realistic.py          # 复杂网络仿真
+│   ├── test_network.py             # 网络测试工具
+│   ├── phishing_integration.py     # 钓鱼集成脚本
+│   └── output/
+│
+├── 30-phishing-ai-system/          # AI版
+│   ├── phishing_ai_system.py       # AI钓鱼系统
+│   ├── start_phishing_ai.sh        # 启动脚本
+│   ├── ai_models/                  # AI模型配置
+│   ├── phishing_templates/         # 钓鱼模板
+│   ├── web_interface/              # AI控制台
+│   └── scripts/
+│
+├── quick_start.sh                  # 快速启动工具
+├── force_cleanup.sh               # 强力清理工具
+├── test_integration.sh            # 集成测试工具
+├── docker_aliases.sh              # Docker别名
+└── DEMO_GUIDE.md                  # 演示指南</code></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-code-branch"></i> 核心代码模块</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🎯 email_simple.py (核心)</h6>
+                            <pre><code class="language-python"># 主要功能模块
+class EmailSystemBuilder:
+    def create_autonomous_systems(self):
+        # 创建AS和网络拓扑
+        
+    def setup_mail_servers(self):
+        # 配置邮件服务器
+        
+    def configure_routing(self):
+        # 设置BGP路由
+        
+    def attach_services(self):
+        # 绑定Docker服务</code></pre>
+
+                            <h6>🌐 webmail_server.py (Web层)</h6>
+                            <pre><code class="language-python"># Flask路由
+@app.route('/create_account')
+def create_account():
+    # 邮件账户创建
+    
+@app.route('/send_email') 
+def send_email():
+    # 邮件发送测试
+    
+@app.route('/api/status')
+def api_status():
+    # 系统状态API</code></pre>
+
+                            <h6>⚙️ 关键配置</h6>
+                            <pre><code class="language-python"># 邮件服务器配置
+MAIL_SERVERS = [
+    {
+        'name': 'seedemail.net',
+        'container': 'mail-150-seedemail',
+        'internal_ip': '10.150.0.10',
+        'smtp_port': 2525,
+        'imap_port': 1430,
+    }
+]</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-cogs"></i> 关键代码展示</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>SEED-Emulator网络创建</h6>
+                                    <pre><code class="language-python">def create_basic_topology():
+    base = Base()
+    
+    # 创建AS
+    as150 = base.createAutonomousSystem(150)
+    as150.createNetwork('net0')
+    
+    # 创建路由器
+    as150.createRouter('router0').joinNetwork('net0')
+    
+    # 创建邮件服务器主机
+    mailserver = as150.createHost('mailserver')
+    mailserver.joinNetwork('net0', address='10.150.0.10')
+    
+    return base</code></pre>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Docker服务绑定</h6>
+                                    <pre><code class="language-python">def bind_mail_service():
+    # 绑定docker-mailserver
+    docker = DockerCompiler()
+    
+    # 邮件服务器容器
+    mailserver_image = docker.addImage(
+        'mailserver/docker-mailserver:latest'
+    )
+    
+    # 绑定到虚拟节点
+    emu.addBinding(Binding(
+        'mail-150-seedemail',
+        filter=Filter(asn=150, nodeName='mailserver'),
+        action=Action.FIRST
+    ))
+    
+    return docker</code></pre>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Web API实现</h6>
+                                    <pre><code class="language-python">@app.route('/api/system_info')
+def system_info():
+    # 获取系统状态
+    containers = docker.containers.list()
+    mail_containers = [c for c in containers 
+                      if 'mail-' in c.name]
+    
+    status = {
+        'mail_servers': len(mail_containers),
+        'total_containers': len(containers),
+        'uptime': get_uptime(),
+        'version': '1.0.0'
+    }
+    
+    return jsonify(status)</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页面底部信息 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <p class="mb-0">
+                        <i class="fas fa-graduation-cap text-primary"></i>
+                        <strong>SEED邮件系统</strong> - 基于SEED-Emulator的完整邮件安全实验平台
+                        <br>
+                        <small class="text-muted">
+                            技术栈：SEED-Emulator + Docker + Flask + Bootstrap + AI | 
+                            支持：ARM64/AMD64 | 
+                            版本：v1.0.0
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 页面初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 代码高亮初始化 (如果有)
+    if (typeof hljs !== 'undefined') {
+        hljs.highlightAll();
+    }
+    
+    // 标签切换动画
+    const tabLinks = document.querySelectorAll('#projectTabs button');
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            const targetPane = document.querySelector(this.getAttribute('data-bs-target'));
+            if (targetPane) {
+                targetPane.style.opacity = '0';
+                setTimeout(() => {
+                    targetPane.style.opacity = '1';
+                }, 150);
+            }
+        });
+    });
+    
+    // 刷新系统状态
+    refreshSystemStatus();
+});
+
+function refreshSystemStatus() {
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            // 更新状态指示器
+            console.log('System status updated:', data);
+        })
+        .catch(error => console.error('Status update failed:', error));
+}
+</script>
+{% endblock %}

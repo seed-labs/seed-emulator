@@ -1,0 +1,725 @@
+{% extends "base.html" %}
+
+{% block title %}战略控制台 - SEED高级钓鱼系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 text-danger cyber-text">
+                <i class="fas fa-crosshairs"></i> 战略攻击控制台
+            </h1>
+            <p class="text-muted">31-advanced-phishing-system | AI驱动 | 深度渗透 | 高级对抗</p>
+        </div>
+        <div>
+            <span class="badge badge-pill threat-level-critical">威胁等级: {{ threat_intel.threat_level }}</span>
+            <button class="btn btn-cyber ms-2" onclick="refreshDashboard()">
+                <i class="fas fa-sync-alt"></i> 刷新
+            </button>
+        </div>
+    </div>
+
+    <!-- 关键威胁指标 -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100 text-center">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-crosshairs fa-3x text-danger"></i>
+                    </div>
+                    <h3 class="text-danger">{{ system_metrics.total_campaigns }}</h3>
+                    <p class="card-text">总攻击活动</p>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up"></i> 成功率 {{ (system_metrics.successful_attacks / system_metrics.total_campaigns * 100) | round(1) }}%
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100 text-center">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-mask fa-3x text-warning"></i>
+                    </div>
+                    <h3 class="text-warning">{{ system_metrics.evasion_success }}%</h3>
+                    <p class="card-text">规避成功率</p>
+                    <small class="text-info">
+                        <i class="fas fa-shield-alt"></i> 检测率 {{ system_metrics.detection_rate }}%
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100 text-center">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-robot fa-3x text-info"></i>
+                    </div>
+                    <h3 class="text-info">{{ system_metrics.ai_accuracy }}%</h3>
+                    <p class="card-text">AI模型精度</p>
+                    <small class="text-success">
+                        <i class="fas fa-brain"></i> 深度学习强化
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100 text-center">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-users fa-3x text-success"></i>
+                    </div>
+                    <h3 class="text-success">{{ system_metrics.active_targets }}</h3>
+                    <p class="card-text">活跃目标</p>
+                    <small class="text-warning">
+                        <i class="fas fa-bullseye"></i> 高价值目标 {{ (system_metrics.active_targets * 0.23) | round | int }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI引擎状态 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-dark border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-brain"></i> AI引擎实时状态
+                        <span class="badge ai-badge float-end">多模型协同</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for model_name, model_status in ai_status.items() %}
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-secondary">
+                                <div class="card-body text-center">
+                                    <div class="mb-2">
+                                        {% if model_name == 'primary_llm' %}
+                                            <i class="fas fa-comments fa-2x text-primary"></i>
+                                            <h6 class="mt-2">主LLM引擎</h6>
+                                        {% elif model_name == 'threat_intelligence' %}
+                                            <i class="fas fa-search fa-2x text-warning"></i>
+                                            <h6 class="mt-2">威胁情报AI</h6>
+                                        {% elif model_name == 'evasion_engine' %}
+                                            <i class="fas fa-user-ninja fa-2x text-danger"></i>
+                                            <h6 class="mt-2">规避引擎</h6>
+                                        {% elif model_name == 'deep_detector' %}
+                                            <i class="fas fa-shield-alt fa-2x text-success"></i>
+                                            <h6 class="mt-2">深度检测器</h6>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <span class="status-indicator status-{{ 'active' if model_status.status == 'online' else 'offline' }}"></span>
+                                        <small>{{ model_status.status | upper }}</small>
+                                    </div>
+                                    
+                                    <div class="progress-cyber">
+                                        <div class="progress-bar" style="width: {{ model_status.load }}%"></div>
+                                    </div>
+                                    <small class="text-muted">负载: {{ model_status.load }}%</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 活跃攻击活动 -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card bg-dark border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-fire"></i> 活跃攻击活动
+                        <button class="btn btn-sm btn-dark float-end" onclick="location.href='/campaigns'">
+                            查看全部
+                        </button>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if campaigns %}
+                    {% for campaign_id, campaign in campaigns.items() %}
+                    <div class="threat-card {{ campaign.threat_level.lower() }} mb-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-crosshairs text-danger"></i>
+                                        {{ campaign.name }}
+                                        {% if campaign.ai_enhanced %}
+                                        <span class="badge ai-badge ms-2">AI增强</span>
+                                        {% endif %}
+                                    </h6>
+                                    <p class="card-text">
+                                        <span class="badge bg-{{ 'success' if campaign.status == 'active' else 'secondary' if campaign.status == 'planning' else 'warning' }}">
+                                            {{ campaign.status | upper }}
+                                        </span>
+                                        <span class="badge bg-{{ 'danger' if campaign.threat_level == 'CRITICAL' else 'warning' if campaign.threat_level == 'HIGH' else 'info' }}">
+                                            {{ campaign.threat_level }}
+                                        </span>
+                                    </p>
+                                    <small class="text-muted">
+                                        类型: {{ campaign.type }} | 
+                                        目标: {{ campaign.target_count }} | 
+                                        成功: {{ campaign.success_count }} |
+                                        归因: {{ campaign.attribution }}
+                                    </small>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <div class="mb-2">
+                                        <div class="progress-cyber">
+                                            <div class="progress-bar" style="width: {{ (campaign.stages_completed / campaign.total_stages * 100) | round }}%"></div>
+                                        </div>
+                                        <small>进度: {{ campaign.stages_completed }}/{{ campaign.total_stages }}</small>
+                                    </div>
+                                    
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-info" onclick="location.href='/campaign/{{ campaign.id }}'">
+                                            <i class="fas fa-eye"></i> 详情
+                                        </button>
+                                        {% if campaign.status == 'active' %}
+                                        <button class="btn btn-sm btn-outline-warning" onclick="pauseCampaign('{{ campaign.id }}')">
+                                            <i class="fas fa-pause"></i> 暂停
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 攻击链进度 -->
+                            <div class="mt-3">
+                                <div class="attack-chain">
+                                    {% set stages = ['侦察', '初始访问', '执行', '持久化', '权限提升', '横向移动', '数据收集'] %}
+                                    {% for stage_index in range(7) %}
+                                    <div class="attack-stage {{ 'stage-completed' if stage_index < campaign.stages_completed else 'stage-active' if stage_index == campaign.stages_completed else 'stage-pending' }}">
+                                        {{ stage_index + 1 }}
+                                    </div>
+                                    {% if stage_index < 6 %}
+                                    <div class="stage-connector {{ 'completed' if stage_index < campaign.stages_completed else '' }}"></div>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <div class="row">
+                                    {% for stage in stages %}
+                                    <div class="col text-center">
+                                        <small class="text-muted">{{ stage }}</small>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- 规避技术 -->
+                            {% if campaign.evasion_techniques %}
+                            <div class="mt-2">
+                                <small class="text-info">
+                                    <i class="fas fa-mask"></i> 规避技术: 
+                                    {% for technique in campaign.evasion_techniques %}
+                                    <span class="badge bg-info me-1">{{ technique }}</span>
+                                    {% endfor %}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-crosshairs fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">暂无活跃攻击活动</h5>
+                        <p class="text-muted">创建新的高级攻击活动开始您的渗透测试</p>
+                        <button class="btn btn-cyber" onclick="location.href='/campaigns'">
+                            <i class="fas fa-plus"></i> 创建攻击活动
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 威胁情报面板 -->
+        <div class="col-lg-4">
+            <div class="card bg-dark border-info mb-3">
+                <div class="card-header bg-info text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-search"></i> 威胁情报
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-warning">活跃APT组织</h6>
+                        {% for apt in threat_intel.apt_groups %}
+                        <span class="badge bg-danger me-1 mb-1">{{ apt }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-warning">最新TTP</h6>
+                        {% for ttp in threat_intel.latest_ttp %}
+                        <div class="mb-1">
+                            <code class="text-info">{{ ttp }}</code>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div>
+                        <h6 class="text-warning">趋势攻击</h6>
+                        {% for attack in threat_intel.trending_attacks %}
+                        <div class="mb-1">
+                            <small class="text-light">• {{ attack }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 快速操作 -->
+            <div class="card bg-dark border-success">
+                <div class="card-header bg-success text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt"></i> 快速操作
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-danger" onclick="location.href='/attack_designer'">
+                            <i class="fas fa-project-diagram"></i> 设计攻击链
+                        </button>
+                        <button class="btn btn-warning" onclick="showAIGenerator()">
+                            <i class="fas fa-robot"></i> AI内容生成
+                        </button>
+                        <button class="btn btn-info" onclick="location.href='/evasion_lab'">
+                            <i class="fas fa-mask"></i> 规避技术测试
+                        </button>
+                        <button class="btn btn-success" onclick="location.href='/threat_analytics'">
+                            <i class="fas fa-chart-line"></i> 威胁分析报告
+                        </button>
+                    </div>
+                    
+                    <hr class="border-secondary">
+                    
+                    <div class="mb-3">
+                        <h6 class="text-warning">系统控制</h6>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-secondary btn-sm" onclick="exportThreatIntel()">
+                                <i class="fas fa-download"></i> 导出威胁情报
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm" data-action="dangerous" data-confirm="停止所有活跃攻击活动">
+                                <i class="fas fa-stop"></i> 紧急停止
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" data-action="dangerous" data-confirm="清除所有攻击痕迹和日志">
+                                <i class="fas fa-eraser"></i> 清除痕迹
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 实时监控图表 -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card bg-dark border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-area"></i> 攻击成功率趋势
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="attackSuccessChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card bg-dark border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-shield-alt"></i> 检测vs规避对抗
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="detectionEvasionChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI生成器模态框 -->
+<div class="modal fade modal-dark" id="aiGeneratorModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-danger">
+                <h5 class="modal-title">
+                    <i class="fas fa-robot text-danger"></i> AI内容生成器
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="aiGeneratorForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">内容类型</label>
+                                <select class="form-select" name="content_type">
+                                    <option value="email">钓鱼邮件</option>
+                                    <option value="webpage">虚假网页</option>
+                                    <option value="document">恶意文档</option>
+                                    <option value="social">社交媒体</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">规避等级</label>
+                                <input type="range" class="form-range" name="evasion_level" min="0" max="1" step="0.1" value="0.7">
+                                <small class="text-muted">越高越难被检测</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">生成提示</label>
+                        <textarea class="form-control" name="prompt" rows="4" placeholder="描述您要生成的钓鱼内容，如：模拟银行安全通知邮件，要求用户验证账户信息..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">目标画像 (可选)</label>
+                        <input type="text" class="form-control" name="target_name" placeholder="目标姓名">
+                        <input type="text" class="form-control mt-2" name="target_position" placeholder="职位">
+                        <input type="text" class="form-control mt-2" name="target_company" placeholder="公司">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-danger">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-cyber" onclick="generateAIContent()">
+                    <i class="fas fa-brain"></i> 生成内容
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI生成结果模态框 -->
+<div class="modal fade modal-dark" id="aiResultModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header border-success">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle text-success"></i> AI生成结果
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="mb-3">
+                            <label class="form-label">生成的内容</label>
+                            <div class="hacker-console" id="generatedContent" style="min-height: 300px; white-space: pre-wrap;"></div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="mb-3">
+                            <h6 class="text-warning">分析结果</h6>
+                            <div id="analysisResult"></div>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-info">应用的规避技术</h6>
+                            <div id="evasionTechniques"></div>
+                        </div>
+                        <div>
+                            <h6 class="text-danger">检测概率</h6>
+                            <div class="progress-cyber">
+                                <div class="progress-bar" id="detectionProbabilityBar"></div>
+                            </div>
+                            <small id="detectionProbabilityText"></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-success">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-success" onclick="saveGeneratedContent()">
+                    <i class="fas fa-save"></i> 保存内容
+                </button>
+                <button type="button" class="btn btn-warning" onclick="testEvasion()">
+                    <i class="fas fa-vial"></i> 测试规避
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 自动刷新间隔
+window.autoRefreshInterval = 30000; // 30秒
+
+// 页面数据
+let attackSuccessChart, detectionEvasionChart;
+
+// 初始化图表
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+});
+
+function initializeCharts() {
+    // 攻击成功率趋势图
+    const attackCtx = document.getElementById('attackSuccessChart').getContext('2d');
+    attackSuccessChart = new Chart(attackCtx, {
+        type: 'line',
+        data: {
+            labels: ['1h前', '45m前', '30m前', '15m前', '现在'],
+            datasets: [{
+                label: '成功率',
+                data: [72, 78, 85, 83, 87],
+                borderColor: '#ff416c',
+                backgroundColor: 'rgba(255, 65, 108, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#ffffff' }
+                }
+            },
+            scales: {
+                x: { 
+                    ticks: { color: '#ffffff' },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                },
+                y: { 
+                    ticks: { color: '#ffffff' },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                }
+            }
+        }
+    });
+
+    // 检测vs规避对抗图
+    const detectionCtx = document.getElementById('detectionEvasionChart').getContext('2d');
+    detectionEvasionChart = new Chart(detectionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['成功规避', '被检测', '未知状态'],
+            datasets: [{
+                data: [87.7, 12.3, 0],
+                backgroundColor: ['#198754', '#dc3545', '#6c757d'],
+                borderWidth: 2,
+                borderColor: '#000000'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#ffffff' }
+                }
+            }
+        }
+    });
+}
+
+// 刷新仪表板
+function refreshDashboard() {
+    showToast('正在刷新数据...', 'info');
+    
+    // 模拟数据更新
+    setTimeout(() => {
+        // 更新图表数据
+        const newSuccessData = attackSuccessChart.data.datasets[0].data;
+        newSuccessData.shift();
+        newSuccessData.push(Math.floor(Math.random() * 20) + 80);
+        attackSuccessChart.update();
+        
+        showToast('数据更新完成', 'success');
+    }, 1000);
+}
+
+// 显示AI生成器
+function showAIGenerator() {
+    const modal = new bootstrap.Modal(document.getElementById('aiGeneratorModal'));
+    modal.show();
+}
+
+// 生成AI内容
+function generateAIContent() {
+    const form = document.getElementById('aiGeneratorForm');
+    const formData = new FormData(form);
+    
+    const data = {
+        prompt: formData.get('prompt'),
+        type: formData.get('content_type'),
+        evasion_level: parseFloat(formData.get('evasion_level')),
+        target_profile: {
+            name: formData.get('target_name'),
+            position: formData.get('target_position'),
+            company: formData.get('target_company')
+        }
+    };
+    
+    if (!data.prompt.trim()) {
+        showToast('请输入生成提示', 'warning');
+        return;
+    }
+    
+    // 关闭生成器模态框
+    bootstrap.Modal.getInstance(document.getElementById('aiGeneratorModal')).hide();
+    
+    showToast('AI正在生成内容，请稍候...', 'info');
+    
+    fetch('/api/ai_generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            displayGeneratedContent(result);
+        } else {
+            showToast('内容生成失败', 'error');
+        }
+    })
+    .catch(error => {
+        showToast('生成请求失败: ' + error.message, 'error');
+    });
+}
+
+// 显示生成的内容
+function displayGeneratedContent(result) {
+    // 填充内容
+    document.getElementById('generatedContent').textContent = result.content;
+    
+    // 填充分析结果
+    const analysisDiv = document.getElementById('analysisResult');
+    analysisDiv.innerHTML = `
+        <div class="mb-2">
+            <span class="badge bg-info">生成时间: ${result.generation_time}s</span>
+        </div>
+        <div class="mb-2">
+            <span class="badge bg-success">质量评分: A+</span>
+        </div>
+        <div>
+            <span class="badge bg-warning">可信度: 极高</span>
+        </div>
+    `;
+    
+    // 填充规避技术
+    const evasionDiv = document.getElementById('evasionTechniques');
+    evasionDiv.innerHTML = result.evasion_techniques_applied.map(tech => 
+        `<span class="badge bg-danger me-1 mb-1">${tech}</span>`
+    ).join('');
+    
+    // 填充检测概率
+    const detectionProb = (result.detection_probability * 100).toFixed(1);
+    document.getElementById('detectionProbabilityBar').style.width = `${detectionProb}%`;
+    document.getElementById('detectionProbabilityText').textContent = `检测概率: ${detectionProb}%`;
+    
+    // 显示结果模态框
+    const modal = new bootstrap.Modal(document.getElementById('aiResultModal'));
+    modal.show();
+    
+    showToast('AI内容生成完成', 'success');
+}
+
+// 暂停活动
+function pauseCampaign(campaignId) {
+    confirmDangerousAction(`暂停攻击活动 ${campaignId}`, () => {
+        showToast('攻击活动已暂停', 'warning');
+        // 实际的暂停逻辑
+    });
+}
+
+// 导出威胁情报
+function exportThreatIntel() {
+    showToast('正在导出威胁情报...', 'info');
+    
+    // 模拟导出
+    setTimeout(() => {
+        const data = {
+            export_time: new Date().toISOString(),
+            threat_level: '{{ threat_intel.threat_level }}',
+            apt_groups: {{ threat_intel.apt_groups | tojson }},
+            latest_ttp: {{ threat_intel.latest_ttp | tojson }},
+            trending_attacks: {{ threat_intel.trending_attacks | tojson }}
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `threat_intel_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showToast('威胁情报导出完成', 'success');
+    }, 2000);
+}
+
+// 保存生成的内容
+function saveGeneratedContent() {
+    const content = document.getElementById('generatedContent').textContent;
+    
+    // 模拟保存
+    showToast('内容已保存到模板库', 'success');
+}
+
+// 测试规避效果
+function testEvasion() {
+    const content = document.getElementById('generatedContent').textContent;
+    
+    showToast('正在测试规避效果...', 'info');
+    
+    fetch('/api/evasion_test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            content: content,
+            technique: 'polymorphic'
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        showToast(`规避测试完成，成功率: ${(result.success_rate * 100).toFixed(1)}%`, 'success');
+    })
+    .catch(error => {
+        showToast('规避测试失败: ' + error.message, 'error');
+    });
+}
+
+// 定期刷新数据
+window.refreshData = function() {
+    // 静默更新数据
+    fetch('/api/system_status')
+    .then(response => response.json())
+    .then(data => {
+        // 更新系统指标
+        document.getElementById('cpu-usage').textContent = `${data.system.cpu_usage}%`;
+        document.getElementById('memory-usage').textContent = `${data.system.memory_usage}%`;
+        document.getElementById('gpu-usage').textContent = `${data.system.gpu_usage}%`;
+    })
+    .catch(error => {
+        console.log('数据刷新失败:', error);
+    });
+};
+</script>
+{% endblock %}

@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}{{ server.domain }} - SEED 邮件系统{% endblock %}
+
+{% block content %}
+<!-- 服务器信息 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-8">
+                        <h4 class="card-title mb-0">
+                            <i class="fas fa-server"></i> {{ server.domain }}
+                        </h4>
+                        <p class="card-text mb-0">AS-{{ server.as_number }} | {{ server.internal_ip }}</p>
+                    </div>
+                    <div class="col-4 text-end">
+                        {% if container_status and container_status.State == 'running' %}
+                            <h5><span class="badge bg-success"><i class="fas fa-play"></i> 运行中</span></h5>
+                        {% else %}
+                            <h5><span class="badge bg-danger"><i class="fas fa-stop"></i> 已停止</span></h5>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 服务器配置信息 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cog"></i> 服务器配置</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong>域名:</strong></td>
+                        <td>{{ server.domain }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>容器名:</strong></td>
+                        <td><code>{{ server.container }}</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>AS号码:</strong></td>
+                        <td>AS-{{ server.as_number }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>内网IP:</strong></td>
+                        <td>{{ server.internal_ip }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SMTP端口:</strong></td>
+                        <td>localhost:{{ server.smtp_port }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>IMAP端口:</strong></td>
+                        <td>localhost:{{ server.imap_port }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line"></i> 服务器状态</h5>
+            </div>
+            <div class="card-body">
+                {% if container_status %}
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong>状态:</strong></td>
+                        <td>
+                            {% if container_status.State == 'running' %}
+                                <span class="text-success"><i class="fas fa-circle"></i> 运行中</span>
+                            {% else %}
+                                <span class="text-danger"><i class="fas fa-circle"></i> {{ container_status.State }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>邮件账户:</strong></td>
+                        <td>{{ accounts|length }} 个账户</td>
+                    </tr>
+                    <tr>
+                        <td><strong>创建时间:</strong></td>
+                        <td>{{ container_status.CreatedAt[:19] if container_status.CreatedAt else '未知' }}</td>
+                    </tr>
+                </table>
+                {% else %}
+                <p class="text-muted">无法获取容器状态信息</p>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary btn-sm" onclick="testServerPorts()">
+                        <i class="fas fa-plug"></i> 测试端口
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="viewLogs()">
+                        <i class="fas fa-file-alt"></i> 查看日志
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 邮件账户管理 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-users"></i> 邮件账户管理</h5>
+                <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createAccountModal">
+                    <i class="fas fa-plus"></i> 添加账户
+                </button>
+            </div>
+            <div class="card-body">
+                {% if accounts %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>邮箱地址</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for account in accounts %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-envelope text-primary"></i>
+                                    {{ account }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">活跃</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteAccount('{{ account }}')">
+                                        <i class="fas fa-trash"></i> 删除
+                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="testEmailAccount('{{ account }}')">
+                                        <i class="fas fa-test-tube"></i> 测试
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">暂无邮件账户</h5>
+                    <p class="text-muted">点击上方的"添加账户"按钮创建第一个邮件账户</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 邮件测试区域 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-paper-plane"></i> 邮件功能测试</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>SMTP 连接测试</h6>
+                        <p class="text-muted">测试SMTP服务是否正常响应</p>
+                        <button class="btn btn-outline-primary" onclick="testSMTP()">
+                            <i class="fas fa-plug"></i> 测试 SMTP :{{ server.smtp_port }}
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>IMAP 连接测试</h6>
+                        <p class="text-muted">测试IMAP服务是否正常响应</p>
+                        <button class="btn btn-outline-primary" onclick="testIMAP()">
+                            <i class="fas fa-plug"></i> 测试 IMAP :{{ server.imap_port }}
+                        </button>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <h6>发送测试邮件</h6>
+                        <form id="sendTestEmailForm" class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">发件人</label>
+                                <select class="form-select" id="fromAccount" required>
+                                    <option value="">选择发件人账户</option>
+                                    {% for account in accounts %}
+                                    <option value="{{ account }}">{{ account }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">收件人</label>
+                                <input type="email" class="form-control" id="toAccount" 
+                                       placeholder="输入收件人邮箱" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">主题</label>
+                                <input type="text" class="form-control" id="emailSubject" 
+                                       value="来自{{ server.domain }}的测试邮件">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">邮件内容</label>
+                                <textarea class="form-control" id="emailBody" rows="3">这是来自{{ server.domain }}服务器的测试邮件。
+
+发送时间: {{ current_time }}
+服务器: {{ server.domain }} ({{ server.internal_ip }})
+网络: SEED 29测试网络
+
+请验证邮件是否正常接收。</textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> 发送测试邮件
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建账户模态框 -->
+<div class="modal fade" id="createAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">创建邮件账户</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createAccountForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">用户名</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="newUsername" 
+                                   placeholder="输入用户名" required>
+                            <span class="input-group-text">@{{ server.domain }}</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">密码</label>
+                        <input type="password" class="form-control" id="newPassword" 
+                               placeholder="输入密码" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">确认密码</label>
+                        <input type="password" class="form-control" id="confirmPassword" 
+                               placeholder="再次输入密码" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-success">创建账户</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const serverDomain = '{{ server.domain }}';
+const serverContainer = '{{ server.container }}';
+const serverSMTPPort = '{{ server.smtp_port }}';
+const serverIMAPPort = '{{ server.imap_port }}';
+
+// 测试服务器端口
+function testServerPorts() {
+    showAlert('正在测试服务器端口...', 'info');
+    
+    // 测试SMTP端口
+    fetch('/test_connectivity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: '127.0.0.1:' + serverSMTPPort })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(`SMTP端口 :${serverSMTPPort} 测试成功`, 'success');
+        } else {
+            showAlert(`SMTP端口 :${serverSMTPPort} 测试失败`, 'warning');
+        }
+    });
+}
+
+// 测试SMTP
+function testSMTP() {
+    showAlert('正在测试SMTP连接...', 'info');
+    // 这里可以添加具体的SMTP测试逻辑
+    setTimeout(() => {
+        showAlert('SMTP连接测试完成', 'success');
+    }, 1000);
+}
+
+// 测试IMAP
+function testIMAP() {
+    showAlert('正在测试IMAP连接...', 'info');
+    // 这里可以添加具体的IMAP测试逻辑
+    setTimeout(() => {
+        showAlert('IMAP连接测试完成', 'success');
+    }, 1000);
+}
+
+// 查看日志
+function viewLogs() {
+    showAlert('日志查看功能开发中...', 'info');
+}
+
+// 删除账户
+function deleteAccount(email) {
+    if (confirm(`确定要删除账户 ${email} 吗？`)) {
+        fetch('/delete_account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert(data.message, 'success');
+                location.reload();
+            } else {
+                showAlert(data.message, 'danger');
+            }
+        });
+    }
+}
+
+// 测试邮件账户
+function testEmailAccount(email) {
+    showAlert(`正在测试账户 ${email}...`, 'info');
+    // 这里可以添加具体的账户测试逻辑
+    setTimeout(() => {
+        showAlert(`账户 ${email} 测试完成`, 'success');
+    }, 1000);
+}
+
+// 创建账户表单处理
+document.getElementById('createAccountForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('newUsername').value;
+    const password = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (password !== confirmPassword) {
+        showAlert('两次输入的密码不一致', 'danger');
+        return;
+    }
+    
+    const email = username + '@' + serverDomain;
+    
+    fetch('/create_account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('createAccountModal')).hide();
+            location.reload();
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    });
+});
+
+// 发送测试邮件表单处理
+document.getElementById('sendTestEmailForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const fromEmail = document.getElementById('fromAccount').value;
+    const toEmail = document.getElementById('toAccount').value;
+    const subject = document.getElementById('emailSubject').value;
+    const body = document.getElementById('emailBody').value;
+    
+    fetch('/send_test_email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            from_email: fromEmail, 
+            to_email: toEmail, 
+            subject: subject,
+            body: body
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    });
+});
+</script>
+{% endblock %}

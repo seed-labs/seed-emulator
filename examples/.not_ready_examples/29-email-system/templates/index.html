@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- 系统状态概览 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-8">
+                        <h4 class="card-title mb-0">
+                            <i class="fas fa-server"></i> SEED 邮件系统状态概览
+                        </h4>
+                        <p class="card-text mb-0">29-email-system 测试网络环境</p>
+                    </div>
+                    <div class="col-4 text-end">
+                        <h2 class="mb-0">{{ system_info.running_containers }}/{{ system_info.total_containers }}</h2>
+                        <small>容器运行中</small>
+                    
+                    <div class="col-md-4">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0">📧 Roundcube Webmail</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">完整的Web邮件客户端</p>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-info" onclick="startRoundcube()">启动 Roundcube</button>
+                                    <a href="http://localhost:8080/webmail/" target="_blank" class="btn btn-outline-info">
+                                        访问 Webmail
+                                    </a>
+                                    <button class="btn btn-outline-secondary" onclick="stopRoundcube()">停止服务</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <i class="fas fa-envelope fa-2x text-success mb-2"></i>
+                <h5 class="card-title">{{ system_info.mail_servers }}</h5>
+                <p class="card-text">邮件服务器</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <i class="fas fa-network-wired fa-2x text-primary mb-2"></i>
+                <h5 class="card-title">{{ system_info.total_containers }}</h5>
+                <p class="card-text">网络节点</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <i class="fas fa-globe fa-2x text-warning mb-2"></i>
+                <h5 class="card-title">3</h5>
+                <p class="card-text">邮件域名</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                <h5 class="card-title">{{ system_info.timestamp.split(' ')[1][:5] }}</h5>
+                <p class="card-text">最后更新</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 邮件服务器列表 -->
+<div class="row">
+    <div class="col-12">
+        <h3 class="mb-3"><i class="fas fa-mail-bulk"></i> 邮件服务器管理</h3>
+    </div>
+</div>
+
+<div class="row">
+    {% for server in mail_servers %}
+    <div class="col-md-4 mb-4">
+        <div class="card server-card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-envelope-square"></i> {{ server.domain }}
+                </h5>
+                {% set container_info = containers|selectattr('Name', 'contains', server.container)|first %}
+                {% if container_info %}
+                    {% if container_info.State == 'running' %}
+                        <span class="badge bg-success">运行中</span>
+                    {% else %}
+                        <span class="badge bg-danger">已停止</span>
+                    {% endif %}
+                {% else %}
+                    <span class="badge bg-secondary">未知</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-6">
+                        <small class="text-muted">AS号码</small>
+                        <div class="fw-bold">AS-{{ server.as_number }}</div>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">内网IP</small>
+                        <div class="fw-bold">{{ server.internal_ip }}</div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <small class="text-muted">SMTP端口</small>
+                        <div class="fw-bold">:{{ server.smtp_port }}</div>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">IMAP端口</small>
+                        <div class="fw-bold">:{{ server.imap_port }}</div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('server_detail', server_name=server.name) }}" 
+                       class="btn btn-seed btn-sm">
+                        <i class="fas fa-cog"></i> 管理服务器
+                    </a>
+                    <button class="btn btn-outline-primary btn-sm" 
+                            onclick="testServerConnection('{{ server.internal_ip }}', '{{ server.name }}')">
+                        <i class="fas fa-wifi"></i> 测试连接
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 快速操作区域 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-tools"></i> 快速操作</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>创建邮件账户</h6>
+                        <form id="createAccountForm">
+                            <div class="row g-2">
+                                <div class="col-5">
+                                    <input type="text" class="form-control" id="newEmail" 
+                                           placeholder="username" required>
+                                </div>
+                                <div class="col-1 text-center">@</div>
+                                <div class="col-4">
+                                    <select class="form-select" id="emailDomain" required>
+                                        {% for server in mail_servers %}
+                                        <option value="{{ server.domain }}">{{ server.domain }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <input type="password" class="form-control" id="newPassword" 
+                                           placeholder="密码" required>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fas fa-user-plus"></i> 创建账户
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>发送测试邮件</h6>
+                        <form id="sendEmailForm">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <input type="email" class="form-control" id="fromEmail" 
+                                           placeholder="发件人邮箱" required>
+                                </div>
+                                <div class="col-6">
+                                    <input type="email" class="form-control" id="toEmail" 
+                                           placeholder="收件人邮箱" required>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <input type="text" class="form-control" id="emailSubject" 
+                                           placeholder="邮件主题" value="SEED测试邮件">
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-paper-plane"></i> 发送测试邮件
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统信息 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> 系统信息</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>网络架构</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-exchange-alt text-primary"></i> 1个Internet Exchange (IX-100)</li>
+                            <li><i class="fas fa-building text-success"></i> 1个Transit AS (AS-2)</li>
+                            <li><i class="fas fa-envelope text-warning"></i> 3个邮件提供商 (AS-150/151/152)</li>
+                            <li><i class="fas fa-users text-info"></i> 2个客户网络 (AS-160/161)</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>技术栈</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fab fa-docker text-primary"></i> Docker + docker-compose</li>
+                            <li><i class="fas fa-network-wired text-success"></i> SEED Emulator Framework</li>
+                            <li><i class="fas fa-envelope text-warning"></i> docker-mailserver</li>
+                            <li><i class="fas fa-route text-info"></i> BGP/OSPF路由协议</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <h6>外部访问端口</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>服务器</th>
+                                        <th>SMTP</th>
+                                        <th>IMAP</th>
+                                        <th>测试命令</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for server in mail_servers %}
+                                    <tr>
+                                        <td>{{ server.domain }}</td>
+                                        <td><code>localhost:{{ server.smtp_port }}</code></td>
+                                        <td><code>localhost:{{ server.imap_port }}</code></td>
+                                        <td><code>nc localhost {{ server.smtp_port }}</code></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 测试服务器连接
+function testServerConnection(ip, name) {
+    fetch('/test_connectivity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: ip })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(`${name} (${ip}) 连接测试成功!`, 'success');
+        } else {
+            showAlert(`${name} (${ip}) 连接测试失败: ${data.error}`, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('连接测试请求失败', 'danger');
+    });
+}
+
+// 创建账户表单处理
+document.getElementById('createAccountForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('newEmail').value;
+    const domain = document.getElementById('emailDomain').value;
+    const password = document.getElementById('newPassword').value;
+    const email = username + '@' + domain;
+    
+    fetch('/create_account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            this.reset();
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('账户创建请求失败', 'danger');
+    });
+});
+
+// 发送邮件表单处理
+document.getElementById('sendEmailForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const fromEmail = document.getElementById('fromEmail').value;
+    const toEmail = document.getElementById('toEmail').value;
+    const subject = document.getElementById('emailSubject').value;
+    
+    fetch('/send_test_email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            from_email: fromEmail, 
+            to_email: toEmail, 
+            subject: subject,
+            body: '这是来自SEED邮件系统29测试网络的测试邮件。\n\n发送时间: ' + new Date().toLocaleString()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('邮件发送请求失败', 'danger');
+    });
+});
+
+    
+    // Roundcube控制函数
+    function startRoundcube() {
+        fetch('/start_roundcube', {method: 'POST'})
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert(data.message, 'success');
+                setTimeout(() => {
+                    window.open('http://localhost:8080/webmail/', '_blank');
+                }, 2000);
+            } else {
+                showAlert(data.message, 'danger');
+            }
+        })
+        .catch(error => showAlert('请求失败: ' + error, 'danger'));
+    }
+    
+    function stopRoundcube() {
+        if (confirm('确定要停止Roundcube服务吗？')) {
+            fetch('/stop_roundcube', {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                showAlert(data.message, data.success ? 'success' : 'danger');
+            })
+            .catch(error => showAlert('请求失败: ' + error, 'danger'));
+        }
+    }</script>
+{% endblock %}

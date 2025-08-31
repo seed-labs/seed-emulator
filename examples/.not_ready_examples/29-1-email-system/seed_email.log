@@ -1,0 +1,5 @@
+2025-08-31 16:38:58,062 INFO: SEED邮件系统启动 [in /home/parallels/seed-email-system/examples/.not_ready_examples/29-1-email-system/webmail_server.py:379]
+2025-08-31 16:38:58,169 INFO: SEED邮件系统启动 [in /home/parallels/seed-email-system/examples/.not_ready_examples/29-1-email-system/webmail_server.py:379]
+2025-08-31 16:39:00,779 ERROR: 未处理的异常: name 'render_template' is not defined [in /home/parallels/seed-email-system/examples/.not_ready_examples/29-1-email-system/webmail_server.py:355]
+2025-08-31 16:39:08,093 ERROR: 未处理的异常: name 'render_template' is not defined [in /home/parallels/seed-email-system/examples/.not_ready_examples/29-1-email-system/webmail_server.py:355]
+2025-08-31 16:42:13,765 ERROR: 未处理的异常: name 'render_template' is not defined [in /home/parallels/seed-email-system/examples/.not_ready_examples/29-1-email-system/webmail_server.py:355]

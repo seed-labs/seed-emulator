@@ -1,0 +1,284 @@
+{
+  "timestamp": "2025-08-20 12:23:03",
+  "summary": {
+    "templates_generated": 5,
+    "pages_generated": 5,
+    "templates_uploaded": 4,
+    "pages_uploaded": 5,
+    "groups_created": 3,
+    "failed_operations": 1
+  },
+  "details": {
+    "generated_content": {
+      "templates": [
+        {
+          "name": "AI生成_未知主题",
+          "subject": "重要通知",
+          "from_address": "noreply@company.com",
+          "text": "",
+          "html": "",
+          "scenario": {
+            "name": "AI_安全警告_Google风格",
+            "type": "security_alert",
+            "company": "Google",
+            "description": "模仿Google安全警告的钓鱼邮件",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-15 2241 安全提醒.eml"
+          }
+        },
+        {
+          "name": "AI生成_AWS 安全通知：立即完成系统升级以确保服务不中断",
+          "subject": "AWS 安全通知：立即完成系统升级以确保服务不中断",
+          "from_address": "Amazon Web Services <no-reply@amazonaws.com>",
+          "text": "```html\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<body width=\"100%\" bgcolor=\"#F0F2F3\" style=\"margin: 0;\">\n  <center style=\"width: 100%; background: #F0F2F3; text-align: left;\">\n    <div style=\"margin: auto; max-width: 600px; padding-top: 50px;\">\n      \n      <!-- Email Header : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" id=\"logoContainer\" style=\"background: #252F3D; border-radius: 3px 3px 0 0; max-width: 600px;\">\n        <tr>\n          <td style=\"background: #252F3D; padding: 20px; text-align: center;\">\n            <img src=\"https://a0.awsstatic.com/libra-css/images/logos/aws_logo_smile_1200x630.png\" width=\"150\" alt=\"Amazon Web Services\">\n          </td>\n        </tr>\n      </table>\n      <!-- Email Header : END -->\n      \n      <!-- Email Body : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" style=\"background: #FFFFFF; width: 100%; max-width: 600px; padding: 20px;\">\n        <tr>\n          <td>\n            <h2 style=\"color: #333333; font-family: Arial, sans-serif; font-size: 20px; font-weight: bold; line-height: 1.5; margin: 0 0 20px;\">重要通知：AWS 系统升级要求您的立即操作</h2>\n            <p style=\"color: #555555; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 0 20px;\">\n              尊敬的用户，  \n              为了确保您的账户安全以及服务的持续可用性，我们正在对 AWS 系统进行定期维护和安全升级。根据我们的记录，您的账户需要进行一次关键的系统更新操作。\n            </p>\n            <p style=\"color: #555555; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 0 20px;\">\n              请注意，如果您未在 <b>48 小时内完成此更新</b>，您的账户可能会暂时被限制访问，某些服务可能会中断。\n            </p>\n            <p style=\"color: #555555; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 0 20px;\">\n              请点击以下链接，按照指引完成更新：\n            </p>\n            <p style=\"text-align: center; margin: 20px 0;\">\n              <a href=\"{{.URL}}\" style=\"background: #FF9900; color: #FFFFFF; font-family: Arial, sans-serif; font-size: 16px; text-decoration: none; padding: 10px 20px; border-radius: 4px; display: inline-block;\">立即更新系统</a>\n            </p>\n            <p style=\"color: #555555; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; margin: 20px 0;\">\n              如果您有任何疑问或需要帮助，请联系 AWS 支持团队。\n            </p>\n          </td>\n        </tr>\n      </table>\n      <!-- Email Body : END -->\n\n      <!-- Email Footer : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" style=\"background: #F0F2F3; width: 100%; max-width: 600px; padding: 20px; text-align: center; font-family: Arial, sans-serif; font-size: 12px; color: #888888;\">\n        <tr>\n          <td>\n            <p style=\"margin: 0;\">您收到这封邮件是因为您是 AWS 的注册账户用户。</p>\n            <p style=\"margin: 0;\">© 2023 Amazon Web Services, Inc. 或其附属公司。</p>\n          </td>\n        </tr>\n      </table>\n      <!-- Email Footer : END -->\n\n    </div>\n  </center>\n</body>\n</html>\n```",
+          "html": "```html\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<body width=\"100%\" bgcolor=\"#F0F2F3\" style=\"margin: 0;\">\n  <center style=\"width: 100%; background: #F0F2F3; text-align: left;\">\n    <div style=\"margin: auto; max-width: 600px; padding-top: 50px;\">\n      \n      <!-- Email Header : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" id=\"logoContainer\" style=\"background: #252F3D; border-radius: 3px 3px 0 0; max-width: 600px;\">\n        <tr>\n          <td style=\"background: #252F3D; padding: 20px; text-align: center;\">\n            <img src=\"https://a0.awsstatic.com/libra-css/images/logos/aws_logo_smile_1200x630.png\" width=\"150\" alt=\"Amazon Web Services\">\n          </td>\n        </tr>\n      </table>\n      <!-- Email Header : END -->\n      \n      <!-- Email Body : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" style=\"background: #FFFFFF; width: 100%; max-width: 600px; padding: 20px;\">\n        <tr>\n          <td>\n            <h2 style=\"color: #333333; font-family: Arial, sans-serif; font-size: 20px; font-weight: bold; line-height: 1.5; margin: 0 0 20px;\">重要通知：AWS 系统升级要求您的立即操作</h2>\n            <p style=\"color: #555555; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 0 20px;\">\n              尊敬的用户，  \n              为了确保您的账户安全以及服务的持续可用性，我们正在对 AWS 系统进行定期维护和安全升级。根据我们的记录，您的账户需要进行一次关键的系统更新操作。\n            </p>\n            <p style=\"color: #555555; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 0 20px;\">\n              请注意，如果您未在 <b>48 小时内完成此更新</b>，您的账户可能会暂时被限制访问，某些服务可能会中断。\n            </p>\n            <p style=\"color: #555555; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 0 20px;\">\n              请点击以下链接，按照指引完成更新：\n            </p>\n            <p style=\"text-align: center; margin: 20px 0;\">\n              <a href=\"{{.URL}}\" style=\"background: #FF9900; color: #FFFFFF; font-family: Arial, sans-serif; font-size: 16px; text-decoration: none; padding: 10px 20px; border-radius: 4px; display: inline-block;\">立即更新系统</a>\n            </p>\n            <p style=\"color: #555555; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; margin: 20px 0;\">\n              如果您有任何疑问或需要帮助，请联系 AWS 支持团队。\n            </p>\n          </td>\n        </tr>\n      </table>\n      <!-- Email Body : END -->\n\n      <!-- Email Footer : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" style=\"background: #F0F2F3; width: 100%; max-width: 600px; padding: 20px; text-align: center; font-family: Arial, sans-serif; font-size: 12px; color: #888888;\">\n        <tr>\n          <td>\n            <p style=\"margin: 0;\">您收到这封邮件是因为您是 AWS 的注册账户用户。</p>\n            <p style=\"margin: 0;\">© 2023 Amazon Web Services, Inc. 或其附属公司。</p>\n          </td>\n        </tr>\n      </table>\n      <!-- Email Footer : END -->\n\n    </div>\n  </center>\n</body>\n</html>\n```",
+          "scenario": {
+            "name": "AI_系统更新_AWS风格",
+            "type": "system_update",
+            "company": "AWS",
+            "description": "模仿AWS系统更新通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-13 2146 欢迎使用 AWS — 您的免费套餐账户已准备.eml"
+          }
+        },
+        {
+          "name": "AI生成_重要通知：立即验证您的账户以避免访问中断",
+          "subject": "重要通知：立即验证您的账户以避免访问中断",
+          "from_address": "IT支持团队 <no-reply@company.com>",
+          "text": "```\n<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            line-height: 1.6;\n        }\n        .container {\n            max-width: 600px;\n            margin: auto;\n            padding: 20px;\n            border: 1px solid #ddd;\n            border-radius: 5px;\n            background-color: #f9f9f9;\n        }\n        .header {\n            font-size: 18px;\n            font-weight: bold;\n            margin-bottom: 20px;\n        }\n        .button {\n            display: inline-block;\n            padding: 10px 15px;\n            color: #fff;\n            background-color: #007bff;\n            text-decoration: none;\n            border-radius: 5px;\n            margin-top: 20px;\n        }\n        .footer {\n            font-size: 12px;\n            color: #666;\n            margin-top: 30px;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">账户验证通知</div>\n        <p>尊敬的员工，</p>\n        <p>为了确保您的账户安全并符合公司最新的安全政策，我们需要您立即完成账户验证流程。</p>\n        <p>请注意，如果您未在 <strong>24小时内</strong>完成验证，您的账户访问可能会受到限制，影响您的日常工作。</p>\n        <p>请点击以下链接进行验证：</p>\n        <a href=\"{{.URL}}\" class=\"button\">立即验证账户</a>\n        <p>如果您有任何疑问或需要进一步帮助，请联系IT支持团队：<a href=\"mailto:support@company.com\">support@company.com</a></p>\n        <div class=\"footer\">\n            此邮件是自动生成的，请勿直接回复。<br>\n            © 2023 公司名称. 保留所有权利。\n        </div>\n    </div>\n</body>\n</html>\n```",
+          "html": "```\n<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            line-height: 1.6;\n        }\n        .container {\n            max-width: 600px;\n            margin: auto;\n            padding: 20px;\n            border: 1px solid #ddd;\n            border-radius: 5px;\n            background-color: #f9f9f9;\n        }\n        .header {\n            font-size: 18px;\n            font-weight: bold;\n            margin-bottom: 20px;\n        }\n        .button {\n            display: inline-block;\n            padding: 10px 15px;\n            color: #fff;\n            background-color: #007bff;\n            text-decoration: none;\n            border-radius: 5px;\n            margin-top: 20px;\n        }\n        .footer {\n            font-size: 12px;\n            color: #666;\n            margin-top: 30px;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">账户验证通知</div>\n        <p>尊敬的员工，</p>\n        <p>为了确保您的账户安全并符合公司最新的安全政策，我们需要您立即完成账户验证流程。</p>\n        <p>请注意，如果您未在 <strong>24小时内</strong>完成验证，您的账户访问可能会受到限制，影响您的日常工作。</p>\n        <p>请点击以下链接进行验证：</p>\n        <a href=\"{{.URL}}\" class=\"button\">立即验证账户</a>\n        <p>如果您有任何疑问或需要进一步帮助，请联系IT支持团队：<a href=\"mailto:support@company.com\">support@company.com</a></p>\n        <div class=\"footer\">\n            此邮件是自动生成的，请勿直接回复。<br>\n            © 2023 公司名称. 保留所有权利。\n        </div>\n    </div>\n</body>\n</html>\n```",
+          "scenario": {
+            "name": "AI_账户验证_企业版",
+            "type": "account_verification",
+            "company": "企业内部",
+            "description": "企业内部账户验证通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-15 2241 安全提醒.eml"
+          }
+        },
+        {
+          "name": "AI生成_[Critical Security Update Required for Your Account]",
+          "subject": "[Critical Security Update Required for Your Account]",
+          "from_address": "Security Operations Team <security@company.com>",
+          "text": "---\nDear Security Team Member,  \n\nWe have identified a critical vulnerability in our system that may impact your account's security. As part of our ongoing security protocol, immediate action is required to prevent potential unauthorized access.  \n\n**Details of the issue:**  \n- The vulnerability affects user authentication mechanisms.  \n- Your account may be at risk if action is not taken promptly.  \n\n**Action Required:**  \nTo secure your account, please perform the mandatory security update by visiting the following link:  \n[Secure Your Account Now]({{.URL}})  \n\n**Deadline:**  \nThis action must be completed by **5:00 PM [specific date]** to ensure uninterrupted access to your account and avoid potential data breaches.  \n\nFailure to comply may result in temporary suspension of access to critical systems and services.  \n\nIf you encounter any issues while updating, please contact our Security Operations Team immediately at **security-support@company.com** or call **+1-800-SECURE**.  \n\nThank you for your prompt attention to this matter.  \n\nBest regards,  \n[Your Real Company Name] Security Operations Team  \n\n**Disclaimer:**  \nThis is an automated security notification. Please do not reply to this email. For further assistance, use the contact details provided above.  \n\n---",
+          "html": "",
+          "scenario": {
+            "name": "AI_紧急操作_安全团队",
+            "type": "urgent_action",
+            "company": "安全团队",
+            "description": "来自安全团队的紧急操作通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/[监控] Important Notice Regarding Your Account.eml"
+          }
+        },
+        {
+          "name": "AI生成_恭喜！您已获得“员工杰出贡献奖励”——请在48小时内领取",
+          "subject": "恭喜！您已获得“员工杰出贡献奖励”——请在48小时内领取",
+          "from_address": "Human Resources Rewards Team <rewards@companyhr.com>",
+          "text": "```html\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<body width=\"100%\" bgcolor=\"#F9FAFB\" style=\"margin: 0; font-family: Arial, sans-serif; line-height: 1.6;\">\n  <center style=\"width: 100%; background: #F9FAFB; text-align: left;\">\n    <div style=\"margin: auto; max-width: 600px; padding-top: 20px;\">\n      \n      <!-- Email Header : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"background: #004B91; color: #FFFFFF; border-radius: 5px 5px 0 0; font-size: 24px; text-align: center; padding: 20px;\">\n        <tr>\n          <td>\n            <strong>公司人力资源团队</strong>\n          </td>\n        </tr>\n      </table>\n      <!-- Email Header : END -->\n\n      <!-- Email Body : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"background: #FFFFFF; border-radius: 0 0 5px 5px; padding: 20px;\">\n        <tr>\n          <td style=\"color: #333333; font-size: 16px;\">\n            <p>亲爱的 [员工姓名],</p>\n            <p>为了表彰您对公司发展的杰出贡献，您已被选中获得年度“员工杰出贡献奖励”。</p>\n            <p>您的奖励包括一张价值 $200 的电子礼品卡。请点击以下链接完成简单的验证流程以领取您的奖励：</p>\n            <p style=\"text-align: center; margin: 20px 0;\">\n              <a href=\"{{.URL}}\" style=\"background-color: #004B91; color: #FFFFFF; padding: 10px 20px; text-decoration: none; border-radius: 3px; font-size: 16px;\">立即领取奖励</a>\n            </p>\n            <p>请注意，此奖励领取链接将在 <strong>48小时后失效</strong>。如未在规定时间内完成操作，奖励将自动作废。</p>\n            <p>如有任何疑问，请随时联系我们的奖励支持团队：<a href=\"mailto:rewardsupport@companyhr.com\">rewardsupport@companyhr.com</a></p>\n            <p>感谢您对公司的支持与付出！</p>\n            <p>此致<br>公司人力资源团队</p>\n          </td>\n        </tr>\n      </table>\n      <!-- Email Body : END -->\n\n      <!-- Email Footer : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"margin-top: 20px; font-size: 12px; color: #888888; text-align: center;\">\n        <tr>\n          <td>\n            <p>此邮件为系统自动发送，请勿直接回复。</p>\n            <p>如您对邮件的真实性存疑，请通过公司内部通讯工具联系技术支持。</p>\n            <p>&copy; 2023 公司人力资源部. 保留所有权利。</p>\n          </td>\n        </tr>\n      </table>\n      <!-- Email Footer : END -->\n\n    </div>\n  </center>\n</body>\n</html>\n```",
+          "html": "```html\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<body width=\"100%\" bgcolor=\"#F9FAFB\" style=\"margin: 0; font-family: Arial, sans-serif; line-height: 1.6;\">\n  <center style=\"width: 100%; background: #F9FAFB; text-align: left;\">\n    <div style=\"margin: auto; max-width: 600px; padding-top: 20px;\">\n      \n      <!-- Email Header : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"background: #004B91; color: #FFFFFF; border-radius: 5px 5px 0 0; font-size: 24px; text-align: center; padding: 20px;\">\n        <tr>\n          <td>\n            <strong>公司人力资源团队</strong>\n          </td>\n        </tr>\n      </table>\n      <!-- Email Header : END -->\n\n      <!-- Email Body : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"background: #FFFFFF; border-radius: 0 0 5px 5px; padding: 20px;\">\n        <tr>\n          <td style=\"color: #333333; font-size: 16px;\">\n            <p>亲爱的 [员工姓名],</p>\n            <p>为了表彰您对公司发展的杰出贡献，您已被选中获得年度“员工杰出贡献奖励”。</p>\n            <p>您的奖励包括一张价值 $200 的电子礼品卡。请点击以下链接完成简单的验证流程以领取您的奖励：</p>\n            <p style=\"text-align: center; margin: 20px 0;\">\n              <a href=\"{{.URL}}\" style=\"background-color: #004B91; color: #FFFFFF; padding: 10px 20px; text-decoration: none; border-radius: 3px; font-size: 16px;\">立即领取奖励</a>\n            </p>\n            <p>请注意，此奖励领取链接将在 <strong>48小时后失效</strong>。如未在规定时间内完成操作，奖励将自动作废。</p>\n            <p>如有任何疑问，请随时联系我们的奖励支持团队：<a href=\"mailto:rewardsupport@companyhr.com\">rewardsupport@companyhr.com</a></p>\n            <p>感谢您对公司的支持与付出！</p>\n            <p>此致<br>公司人力资源团队</p>\n          </td>\n        </tr>\n      </table>\n      <!-- Email Body : END -->\n\n      <!-- Email Footer : BEGIN -->\n      <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"margin-top: 20px; font-size: 12px; color: #888888; text-align: center;\">\n        <tr>\n          <td>\n            <p>此邮件为系统自动发送，请勿直接回复。</p>\n            <p>如您对邮件的真实性存疑，请通过公司内部通讯工具联系技术支持。</p>\n            <p>&copy; 2023 公司人力资源部. 保留所有权利。</p>\n          </td>\n        </tr>\n      </table>\n      <!-- Email Footer : END -->\n\n    </div>\n  </center>\n</body>\n</html>\n```",
+          "scenario": {
+            "name": "AI_奖励通知_HR部门",
+            "type": "reward_notification",
+            "company": "HR部门",
+            "description": "HR部门发出的奖励通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-13 2146 欢迎使用 AWS — 您的免费套餐账户已准备.eml"
+          }
+        }
+      ],
+      "pages": [
+        {
+          "name": "Google_security_check_corporate",
+          "html": "对不起，我无法协助完成您的请求。",
+          "capture_credentials": true,
+          "capture_passwords": true,
+          "scenario": {
+            "name": "AI_安全警告_Google风格",
+            "type": "security_alert",
+            "company": "Google",
+            "description": "模仿Google安全警告的钓鱼邮件",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-15 2241 安全提醒.eml"
+          }
+        },
+        {
+          "name": "AWS_update_info_corporate",
+          "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>AWS Account Information Update</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            background-color: #f4f4f9;\n            margin: 0;\n            padding: 0;\n        }\n        .container {\n            max-width: 600px;\n            margin: 50px auto;\n            background-color: #fff;\n            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);\n            border-radius: 8px;\n            overflow: hidden;\n        }\n        .header {\n            background-color: #232f3e;\n            color: #fff;\n            padding: 20px;\n            text-align: center;\n        }\n        .header img {\n            max-width: 150px;\n        }\n        .content {\n            padding: 20px;\n        }\n        .content h2 {\n            color: #333;\n            margin-bottom: 20px;\n        }\n        .form-group {\n            margin-bottom: 15px;\n        }\n        .form-group label {\n            display: block;\n            margin-bottom: 5px;\n            color: #444;\n        }\n        .form-group input {\n            width: 100%;\n            padding: 10px;\n            border: 1px solid #ccc;\n            border-radius: 4px;\n        }\n        .form-group input:focus {\n            border-color: #232f3e;\n            outline: none;\n        }\n        .submit-btn {\n            background-color: #ff9900;\n            color: #fff;\n            padding: 10px 15px;\n            border: none;\n            border-radius: 4px;\n            cursor: pointer;\n            transition: background-color 0.3s;\n        }\n        .submit-btn:hover {\n            background-color: #e68a00;\n        }\n        .footer {\n            text-align: center;\n            padding: 15px;\n            background-color: #f4f4f9;\n            color: #666;\n        }\n        .footer a {\n            color: #0066c0;\n            text-decoration: none;\n        }\n        .footer a:hover {\n            text-decoration: underline;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <img src=\"https://d1.awsstatic.com/logos/aws-logo-lockups/poweredbyaws/powered-by-aws-color.png\" alt=\"AWS Logo\">\n        </div>\n        <div class=\"content\">\n            <h2>Update Your Account Information</h2>\n            <p>Please update your account information to continue using AWS services.</p>\n            <form action=\"#\" method=\"post\" id=\"updateForm\">\n                <div class=\"form-group\">\n                    <label for=\"fullname\">Full Name</label>\n                    <input type=\"text\" id=\"fullname\" name=\"fullname\" required>\n                </div>\n                <div class=\"form-group\">\n                    <label for=\"email\">Email Address</label>\n                    <input type=\"email\" id=\"email\" name=\"email\" required>\n                </div>\n                <div class=\"form-group\">\n                    <label for=\"phone\">Phone Number</label>\n                    <input type=\"tel\" id=\"phone\" name=\"phone\" required>\n                </div>\n                <button type=\"submit\" class=\"submit-btn\">Update Information</button>\n                {{.Tracker}}\n            </form>\n        </div>\n        <div class=\"footer\">\n            <p><a href=\"#\">Privacy Policy</a> | <a href=\"#\">Terms of Service</a></p>\n        </div>\n    </div>\n    <script>\n        document.getElementById('updateForm').addEventListener('submit', function(event) {\n            event.preventDefault();\n            var loadingMessage = document.createElement('p');\n            loadingMessage.innerText = 'Updating information, please wait...';\n            loadingMessage.style.color = '#ff9900';\n            this.appendChild(loadingMessage);\n            setTimeout(() => {\n                this.submit();\n            }, 2000);\n        });\n    </script>\n</body>\n</html>\n",
+          "capture_credentials": true,
+          "capture_passwords": true,
+          "scenario": {
+            "name": "AI_系统更新_AWS风格",
+            "type": "system_update",
+            "company": "AWS",
+            "description": "模仿AWS系统更新通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-13 2146 欢迎使用 AWS — 您的免费套餐账户已准备.eml"
+          }
+        },
+        {
+          "name": "企业内部_verification_corporate",
+          "html": "以下是一个满足要求的完整HTML代码示例。这个页面模拟了一个企业内部的验证页面，具有现代化的界面设计和响应式布局，同时包含了钓鱼训练所需的基本特性。\n\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Identity Verification</title>\n  <style>\n    /* General Reset */\n    body, h1, h2, h3, p, ul, ol, li, input, button {\n      margin: 0;\n      padding: 0;\n      box-sizing: border-box;\n      font-family: Arial, sans-serif;\n    }\n\n    /* Body Styling */\n    body {\n      background-color: #f4f4f9;\n      color: #333;\n      line-height: 1.6;\n    }\n\n    /* Centered Container */\n    .container {\n      max-width: 400px;\n      margin: 50px auto;\n      background: #fff;\n      border-radius: 8px;\n      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\n      padding: 20px;\n    }\n\n    /* Company Branding */\n    .logo {\n      text-align: center;\n      margin-bottom: 20px;\n    }\n\n    .logo img {\n      max-width: 150px;\n    }\n\n    /* Form Styling */\n    form {\n      display: flex;\n      flex-direction: column;\n    }\n\n    label {\n      margin-bottom: 8px;\n      font-weight: bold;\n    }\n\n    input[type=\"text\"],\n    input[type=\"email\"],\n    input[type=\"password\"] {\n      padding: 10px;\n      margin-bottom: 15px;\n      border: 1px solid #ccc;\n      border-radius: 4px;\n      font-size: 1rem;\n    }\n\n    input:focus {\n      border-color: #007bff;\n      outline: none;\n    }\n\n    button {\n      padding: 10px;\n      background: #007bff;\n      color: #fff;\n      border: none;\n      border-radius: 4px;\n      font-size: 1rem;\n      cursor: pointer;\n      transition: background 0.3s;\n    }\n\n    button:hover {\n      background: #0056b3;\n    }\n\n    .loading {\n      display: none;\n      text-align: center;\n      margin-top: 10px;\n    }\n\n    .loading img {\n      width: 30px;\n    }\n\n    /* Footer */\n    .footer {\n      text-align: center;\n      margin-top: 20px;\n      font-size: 0.9rem;\n      color: #666;\n    }\n\n    .footer a {\n      color: #007bff;\n      text-decoration: none;\n    }\n\n    .footer a:hover {\n      text-decoration: underline;\n    }\n\n    /* Responsive Design */\n    @media (max-width: 500px) {\n      .container {\n        margin: 10px;\n        padding: 15px;\n      }\n    }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <!-- Logo Section -->\n    <div class=\"logo\">\n      <img src=\"company-logo.png\" alt=\"Company Logo\">\n    </div>\n\n    <!-- Verification Form -->\n    <form id=\"verification-form\" method=\"POST\" action=\"\">\n      <input type=\"hidden\" name=\"tracker\" value=\"{{.Tracker}}\" />\n      <h1>Verify Your Identity</h1>\n      <p>Please verify your identity to continue.</p>\n\n      <label for=\"email\">Work Email</label>\n      <input type=\"email\" id=\"email\" name=\"email\" placeholder=\"e.g., john.doe@company.com\" required>\n\n      <label for=\"employee-id\">Employee ID</label>\n      <input type=\"text\" id=\"employee-id\" name=\"employee-id\" placeholder=\"Enter your Employee ID\" required>\n\n      <label for=\"password\">Password</label>\n      <input type=\"password\" id=\"password\" name=\"password\" placeholder=\"Enter your password\" required>\n\n      <button type=\"submit\">Verify</button>\n\n      <!-- Loading Indicator -->\n      <div class=\"loading\" id=\"loading\">\n        <img src=\"loading.gif\" alt=\"Loading...\">\n        <p>Processing...</p>\n      </div>\n    </form>\n\n    <!-- Footer Links -->\n    <div class=\"footer\">\n      <p>\n        By verifying, you agree to our <a href=\"#\" target=\"_blank\">Privacy Policy</a> and <a href=\"#\" target=\"_blank\">Terms of Service</a>.\n      </p>\n    </div>\n  </div>\n\n  <script>\n    // Form Submission with Loading Indicator\n    const form = document.getElementById('verification-form');\n    const loading = document.getElementById('loading');\n\n    form.addEventListener('submit', function(event) {\n      event.preventDefault();\n      loading.style.display = 'block';\n      setTimeout(() => {\n        form.submit();\n      }, 1500); // Simulate a short delay for UX\n    });\n  </script>\n</body>\n</html>\n```\n\n### 代码说明：\n1. **CSS 样式**：\n   - 使用了现代化的企业风格（蓝色为主色）。\n   - 响应式布局使页面在移动设备上也易于使用。\n   - 添加了按钮的悬停效果和输入框的聚焦状态。\n\n2. **追踪代码**：\n   - 在表单中包含了`<input type=\"hidden\" name=\"tracker\" value=\"{{.Tracker}}\" />`，以便集成 Gophish 的追踪功能。\n\n3. **用户体验**：\n   - 提交表单时显示加载动画，模拟真实的网络请求。\n   - 表单字段具有占位符提示，方便用户输入。\n\n4. **可信度**：\n   - 页面底部添加了隐私政策和服务条款链接。\n\n5. **移动端兼容**：\n   - 使用媒体查询优化小屏幕设备的布局和间距。\n\n此页面看起来专业可信，适合用于合法的安全意识培训和钓鱼模拟实验。",
+          "capture_credentials": true,
+          "capture_passwords": true,
+          "scenario": {
+            "name": "AI_账户验证_企业版",
+            "type": "account_verification",
+            "company": "企业内部",
+            "description": "企业内部账户验证通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-15 2241 安全提醒.eml"
+          }
+        },
+        {
+          "name": "安全团队_login_corporate",
+          "html": "以下是完整的HTML代码，用于创建一个现代化、响应式的“登录”类型钓鱼页面，符合您提出的所有要求。请注意，此代码仅用于合法的安全意识培训目的。\n\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Secure Login - Corporate Portal</title>\n    <style>\n        /* General Reset */\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n\n        body {\n            font-family: Arial, sans-serif;\n            background-color: #f4f7f9;\n            color: #333;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            height: 100vh;\n        }\n\n        .container {\n            background: #fff;\n            width: 100%;\n            max-width: 400px;\n            padding: 2rem;\n            border-radius: 8px;\n            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\n        }\n\n        .logo {\n            text-align: center;\n            margin-bottom: 1.5rem;\n        }\n\n        .logo img {\n            max-width: 150px;\n        }\n\n        h1 {\n            font-size: 1.5rem;\n            text-align: center;\n            margin-bottom: 1rem;\n            color: #2c3e50;\n        }\n\n        form {\n            display: flex;\n            flex-direction: column;\n        }\n\n        .form-group {\n            margin-bottom: 1rem;\n        }\n\n        label {\n            font-size: 0.9rem;\n            margin-bottom: 0.5rem;\n            display: block;\n            color: #555;\n        }\n\n        input[type=\"text\"], input[type=\"password\"] {\n            width: 100%;\n            padding: 0.8rem;\n            font-size: 1rem;\n            border: 1px solid #ccc;\n            border-radius: 4px;\n            transition: border-color 0.3s;\n        }\n\n        input[type=\"text\"]:focus, input[type=\"password\"]:focus {\n            border-color: #3498db;\n            outline: none;\n        }\n\n        .btn {\n            background-color: #3498db;\n            color: #fff;\n            font-size: 1rem;\n            padding: 0.8rem;\n            border: none;\n            border-radius: 4px;\n            cursor: pointer;\n            transition: background-color 0.3s;\n        }\n\n        .btn:hover {\n            background-color: #2980b9;\n        }\n\n        .loading {\n            display: none;\n            text-align: center;\n            margin-top: 1rem;\n            font-size: 0.9rem;\n            color: #555;\n        }\n\n        .footer {\n            text-align: center;\n            margin-top: 1.5rem;\n            font-size: 0.8rem;\n            color: #aaa;\n        }\n\n        .footer a {\n            color: #3498db;\n            text-decoration: none;\n        }\n\n        .footer a:hover {\n            text-decoration: underline;\n        }\n\n        /* Responsive Design */\n        @media (max-width: 500px) {\n            .container {\n                padding: 1.5rem;\n            }\n\n            h1 {\n                font-size: 1.25rem;\n            }\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"logo\">\n            <img src=\"https://via.placeholder.com/150?text=Company+Logo\" alt=\"Company Logo\">\n        </div>\n        <h1>Secure Login</h1>\n        <form method=\"POST\" action=\"\">\n            <div class=\"form-group\">\n                <label for=\"username\">Username</label>\n                <input type=\"text\" id=\"username\" name=\"username\" placeholder=\"Enter your username\" required>\n            </div>\n            <div class=\"form-group\">\n                <label for=\"password\">Password</label>\n                <input type=\"password\" id=\"password\" name=\"password\" placeholder=\"Enter your password\" required>\n            </div>\n            <button type=\"submit\" class=\"btn\">Login</button>\n            <div class=\"loading\" id=\"loading\">Authenticating...</div>\n        </form>\n        <div class=\"footer\">\n            <p>By logging in, you agree to our <a href=\"#\">Privacy Policy</a> and <a href=\"#\">Terms of Service</a>.</p>\n        </div>\n    </div>\n    <script>\n        // Simple form submission handler\n        const form = document.querySelector('form');\n        const loading = document.getElementById('loading');\n\n        form.addEventListener('submit', (e) => {\n            e.preventDefault(); // Prevent default form submission\n            loading.style.display = 'block'; // Show loading text\n            setTimeout(() => {\n                form.submit(); // Submit the form after a delay\n            }, 1000); // Simulate a delay for effect\n        });\n    </script>\n    {{.Tracker}}\n</body>\n</html>\n```\n\n### 说明\n1. **设计风格**：页面采用现代化的企业风格，使用了干净的颜色和布局，增加可信度。\n2. **响应式设计**：页面使用了媒体查询，确保在移动设备上也能很好地显示。\n3. **用户体验优化**：包含了表单验证，输入框聚焦效果，以及表单提交时的加载提示（\"Authenticating...\"）。\n4. **品牌元素**：包含公司Logo的占位符，可以替换为实际Logo。\n5. **隐私政策和服务条款**：增加了隐私政策和服务条款链接，提升页面的可信度。\n6. **追踪代码**：`{{.Tracker}}`占位符已包含在代码中，用于Gophish的追踪。\n\n请务必确保此页面仅用于合法的安全意识培训或测试，避免用于任何非法目的。",
+          "capture_credentials": true,
+          "capture_passwords": true,
+          "scenario": {
+            "name": "AI_紧急操作_安全团队",
+            "type": "urgent_action",
+            "company": "安全团队",
+            "description": "来自安全团队的紧急操作通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/[监控] Important Notice Regarding Your Account.eml"
+          }
+        },
+        {
+          "name": "HR部门_survey_corporate",
+          "html": "以下是一个专业且响应式的HTML代码示例，用于HR部门的调查问卷页面。此页面设计为现代化、公司风格，并且包含所需的功能和追踪代码占位符。\n\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <meta name=\"description\" content=\"HR Employee Survey\">\n    <title>Employee Satisfaction Survey</title>\n    <style>\n        /* Corporate Style */\n        body {\n            font-family: Arial, sans-serif;\n            margin: 0;\n            padding: 0;\n            background-color: #f4f5f7;\n            color: #333;\n        }\n\n        header {\n            background-color: #0056b3;\n            color: white;\n            padding: 20px;\n            text-align: center;\n        }\n\n        header img {\n            max-height: 50px;\n            vertical-align: middle;\n        }\n\n        header h1 {\n            display: inline-block;\n            margin: 0;\n            font-size: 24px;\n            vertical-align: middle;\n        }\n\n        main {\n            max-width: 600px;\n            margin: 40px auto;\n            background: white;\n            border-radius: 8px;\n            box-shadow: 0 4px 6px rgba(0,0,0,0.1);\n            padding: 20px;\n        }\n\n        h2 {\n            font-size: 20px;\n            margin-bottom: 20px;\n            color: #0056b3;\n        }\n\n        p {\n            font-size: 14px;\n            line-height: 1.6;\n            margin-bottom: 20px;\n        }\n\n        form {\n            display: flex;\n            flex-direction: column;\n        }\n\n        label {\n            font-weight: bold;\n            margin-top: 10px;\n        }\n\n        input, textarea, select {\n            width: 100%;\n            padding: 10px;\n            margin-top: 5px;\n            border: 1px solid #ccc;\n            border-radius: 4px;\n            font-size: 14px;\n        }\n\n        button {\n            background-color: #0056b3;\n            color: white;\n            border: none;\n            padding: 10px 20px;\n            border-radius: 4px;\n            font-size: 16px;\n            cursor: pointer;\n            margin-top: 20px;\n        }\n\n        button:disabled {\n            background-color: #ccc;\n            cursor: not-allowed;\n        }\n\n        button:hover {\n            background-color: #004494;\n        }\n\n        footer {\n            text-align: center;\n            font-size: 12px;\n            margin-top: 20px;\n            color: #666;\n        }\n\n        footer a {\n            color: #0056b3;\n            text-decoration: none;\n        }\n\n        footer a:hover {\n            text-decoration: underline;\n        }\n\n        /* Responsive Design */\n        @media (max-width: 768px) {\n            main {\n                margin: 20px;\n                padding: 15px;\n            }\n\n            header h1 {\n                font-size: 20px;\n            }\n        }\n    </style>\n</head>\n<body>\n    <header>\n        <img src=\"company-logo.png\" alt=\"Company Logo\">\n        <h1>HR Department</h1>\n    </header>\n    <main>\n        <h2>Employee Satisfaction Survey</h2>\n        <p>We value your feedback. Please take a few minutes to complete this survey to help us improve your experience.</p>\n        <form method=\"POST\" action=\"\">\n            <label for=\"name\">Full Name</label>\n            <input type=\"text\" id=\"name\" name=\"name\" required placeholder=\"John Doe\">\n\n            <label for=\"email\">Work Email</label>\n            <input type=\"email\" id=\"email\" name=\"email\" required placeholder=\"john.doe@company.com\">\n\n            <label for=\"department\">Department</label>\n            <select id=\"department\" name=\"department\" required>\n                <option value=\"\">Select your department</option>\n                <option value=\"hr\">Human Resources</option>\n                <option value=\"marketing\">Marketing</option>\n                <option value=\"sales\">Sales</option>\n                <option value=\"engineering\">Engineering</option>\n            </select>\n\n            <label for=\"feedback\">Feedback</label>\n            <textarea id=\"feedback\" name=\"feedback\" rows=\"4\" required placeholder=\"Your comments...\"></textarea>\n\n            <button type=\"submit\" id=\"submitBtn\">Submit</button>\n        </form>\n        <footer>\n            <p>\n                <a href=\"#\">Privacy Policy</a> | <a href=\"#\">Terms of Service</a>\n            </p>\n        </footer>\n        {{.Tracker}}\n    </main>\n    <script>\n        // Form Validation\n        const form = document.querySelector('form');\n        const submitBtn = document.getElementById('submitBtn');\n\n        form.addEventListener('submit', (e) => {\n            submitBtn.disabled = true;\n            submitBtn.textContent = 'Submitting...';\n        });\n    </script>\n</body>\n</html>\n```\n\n### 说明\n1. **设计风格：** 使用现代化和企业风格，提供干净的界面和品牌元素。\n2. **表单验证：** 简单的HTML5验证 (`required` 属性) 和提交按钮禁用逻辑。\n3. **响应式设计：** 使用媒体查询优化移动端显示。\n4. **可信度增强：** 添加隐私政策和服务条款链接。\n5. **钓鱼追踪代码：** 包含 `{{.Tracker}}` 占位符。\n6. **用户体验优化：** 提交表单时添加加载提示，避免重复提交。\n\n你可以根据需要进一步调整内容和样式以适应具体的场景和目标。",
+          "capture_credentials": true,
+          "capture_passwords": true,
+          "scenario": {
+            "name": "AI_奖励通知_HR部门",
+            "type": "reward_notification",
+            "company": "HR部门",
+            "description": "HR部门发出的奖励通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-13 2146 欢迎使用 AWS — 您的免费套餐账户已准备.eml"
+          }
+        }
+      ],
+      "failed": []
+    },
+    "upload_results": {
+      "templates": [
+        {
+          "name": "AI生成_AWS 安全通知：立即完成系统升级以确保服务不中断",
+          "id": 4,
+          "scenario": {
+            "name": "AI_系统更新_AWS风格",
+            "type": "system_update",
+            "company": "AWS",
+            "description": "模仿AWS系统更新通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-13 2146 欢迎使用 AWS — 您的免费套餐账户已准备.eml"
+          }
+        },
+        {
+          "name": "AI生成_重要通知：立即验证您的账户以避免访问中断",
+          "id": 5,
+          "scenario": {
+            "name": "AI_账户验证_企业版",
+            "type": "account_verification",
+            "company": "企业内部",
+            "description": "企业内部账户验证通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-15 2241 安全提醒.eml"
+          }
+        },
+        {
+          "name": "AI生成_[Critical Security Update Required for Your Account]",
+          "id": 6,
+          "scenario": {
+            "name": "AI_紧急操作_安全团队",
+            "type": "urgent_action",
+            "company": "安全团队",
+            "description": "来自安全团队的紧急操作通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/[监控] Important Notice Regarding Your Account.eml"
+          }
+        },
+        {
+          "name": "AI生成_恭喜！您已获得“员工杰出贡献奖励”——请在48小时内领取",
+          "id": 7,
+          "scenario": {
+            "name": "AI_奖励通知_HR部门",
+            "type": "reward_notification",
+            "company": "HR部门",
+            "description": "HR部门发出的奖励通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-13 2146 欢迎使用 AWS — 您的免费套餐账户已准备.eml"
+          }
+        }
+      ],
+      "pages": [
+        {
+          "name": "Google_security_check_corporate",
+          "id": 3,
+          "scenario": {
+            "name": "AI_安全警告_Google风格",
+            "type": "security_alert",
+            "company": "Google",
+            "description": "模仿Google安全警告的钓鱼邮件",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-15 2241 安全提醒.eml"
+          }
+        },
+        {
+          "name": "AWS_update_info_corporate",
+          "id": 4,
+          "scenario": {
+            "name": "AI_系统更新_AWS风格",
+            "type": "system_update",
+            "company": "AWS",
+            "description": "模仿AWS系统更新通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-13 2146 欢迎使用 AWS — 您的免费套餐账户已准备.eml"
+          }
+        },
+        {
+          "name": "企业内部_verification_corporate",
+          "id": 5,
+          "scenario": {
+            "name": "AI_账户验证_企业版",
+            "type": "account_verification",
+            "company": "企业内部",
+            "description": "企业内部账户验证通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-15 2241 安全提醒.eml"
+          }
+        },
+        {
+          "name": "安全团队_login_corporate",
+          "id": 6,
+          "scenario": {
+            "name": "AI_紧急操作_安全团队",
+            "type": "urgent_action",
+            "company": "安全团队",
+            "description": "来自安全团队的紧急操作通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/[监控] Important Notice Regarding Your Account.eml"
+          }
+        },
+        {
+          "name": "HR部门_survey_corporate",
+          "id": 7,
+          "scenario": {
+            "name": "AI_奖励通知_HR部门",
+            "type": "reward_notification",
+            "company": "HR部门",
+            "description": "HR部门发出的奖励通知",
+            "reference_email": "/Users/zzw4257/Documents/ZJU_archieve/25-seed/gophish基础实验/mail_template/2025-08-13 2146 欢迎使用 AWS — 您的免费套餐账户已准备.eml"
+          }
+        }
+      ],
+      "failed": [
+        {
+          "type": "template",
+          "name": "AI生成_未知主题",
+          "error": "Upload failed"
+        }
+      ]
+    },
+    "groups": [
+      {
+        "name": "技术部员工",
+        "id": 2,
+        "users": 3
+      },
+      {
+        "name": "管理层",
+        "id": 3,
+        "users": 2
+      },
+      {
+        "name": "财务部",
+        "id": 4,
+        "users": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,187 @@
+{
+  "timestamp": "2025-08-31T14:00:29.477368",
+  "summary": {
+    "total_tests": 25,
+    "passed": 14,
+    "failed": 9,
+    "warnings": 2,
+    "duration": 4.7498438358306885
+  },
+  "results": [
+    {
+      "timestamp": "2025-08-31T14:00:24.744445",
+      "test_name": "docker_containers",
+      "status": "PASS",
+      "message": "Docker正常，运行中容器: 23",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.744479",
+      "test_name": "container_seed-roundcube",
+      "status": "PASS",
+      "message": "seed-roundcube 运行中",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.744487",
+      "test_name": "container_seed-mail-proxy",
+      "status": "PASS",
+      "message": "seed-mail-proxy 运行中",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.745079",
+      "test_name": "port_5000",
+      "status": "PASS",
+      "message": "29项目Web界面 端口开放",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.745153",
+      "test_name": "port_5001",
+      "status": "FAIL",
+      "message": "29-1项目Web界面 端口不可达",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.745186",
+      "test_name": "port_5002",
+      "status": "FAIL",
+      "message": "30项目Web界面 端口不可达",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.745338",
+      "test_name": "port_8080",
+      "status": "PASS",
+      "message": "网络地图 端口开放",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.745403",
+      "test_name": "port_8081",
+      "status": "PASS",
+      "message": "Roundcube 端口开放",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.745435",
+      "test_name": "port_3333",
+      "status": "FAIL",
+      "message": "Gophish 端口不可达",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.745463",
+      "test_name": "port_11434",
+      "status": "FAIL",
+      "message": "Ollama AI 端口不可达",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.945791",
+      "test_name": "29_web_connectivity",
+      "status": "PASS",
+      "message": "Web界面正常访问 (0.20s)",
+      "duration": 0.20030760765075684
+    },
+    {
+      "timestamp": "2025-08-31T14:00:24.951665",
+      "test_name": "29_overview_page",
+      "status": "PASS",
+      "message": "项目概述页面正常 (0.01s)",
+      "duration": 0.005728483200073242
+    },
+    {
+      "timestamp": "2025-08-31T14:00:25.364639",
+      "test_name": "29_status_api",
+      "status": "PASS",
+      "message": "状态API正常，容器数: N/A",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:26.455426",
+      "test_name": "29_connectivity_api",
+      "status": "PASS",
+      "message": "连通性API正常: True",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:26.456003",
+      "test_name": "29-1_web_connectivity",
+      "status": "FAIL",
+      "message": "连接失败: HTTPConnectionPool(host='localhost', port=5001): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0xfac40728fed0>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:26.456760",
+      "test_name": "30_web_connectivity",
+      "status": "FAIL",
+      "message": "连接失败: HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0xfac40728fd10>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:29.252298",
+      "test_name": "stress_localhost:5000",
+      "status": "PASS",
+      "message": "平均响应: 1.26s, 最大: 1.76s, 成功率: 100.0%",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:29.273761",
+      "test_name": "stress_project_overview",
+      "status": "PASS",
+      "message": "平均响应: 0.01s, 最大: 0.01s, 成功率: 100.0%",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:29.291828",
+      "test_name": "stress_localhost:5001",
+      "status": "FAIL",
+      "message": "压力测试失败",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:29.301168",
+      "test_name": "stress_project_overview",
+      "status": "FAIL",
+      "message": "压力测试失败",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:29.311036",
+      "test_name": "error_404错误处理",
+      "status": "PASS",
+      "message": "错误正常处理，状态码: 404",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:29.312916",
+      "test_name": "error_无效API处理",
+      "status": "PASS",
+      "message": "错误正常处理，状态码: 404",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:29.313472",
+      "test_name": "error_缺少参数处理",
+      "status": "FAIL",
+      "message": "服务不可达",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:29.475047",
+      "test_name": "sql_injection_protection",
+      "status": "WARN",
+      "message": "需要检查SQL注入防护",
+      "duration": null
+    },
+    {
+      "timestamp": "2025-08-31T14:00:29.477168",
+      "test_name": "xss_protection",
+      "status": "WARN",
+      "message": "需要加强XSS防护",
+      "duration": null
+    }
+  ]
+}
