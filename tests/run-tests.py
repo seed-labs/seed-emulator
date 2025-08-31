@@ -52,7 +52,7 @@ internet_tests = [
     KuboUtilFuncsTestCase,
     IPAnyCastTestCase,
     HostMgmtTestCase,
-    # PKITestCase,
+    PKITestCase,
     DottedDictTestCase,
     TrafficGeneratorTestCase
         ]
