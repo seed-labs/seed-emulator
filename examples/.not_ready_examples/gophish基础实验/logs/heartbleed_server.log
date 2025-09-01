@@ -1,0 +1,20 @@
+🚨 Heartbleed漏洞仿真服务器启动在端口 5003
+访问 http://localhost:5003 测试Heartbleed漏洞
+点击'执行Heartbleed测试'按钮查看内存泄露
+ * Serving Flask app 'heartbleed_server'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5003
+ * Running on http://10.211.55.10:5003
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 531-024-556
+127.0.0.1 - - [01/Sep/2025 20:57:53] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [01/Sep/2025 21:02:34] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [01/Sep/2025 21:02:40] "[33mPOST /test_heartbleed HTTP/1.1[0m" 404 -
+127.0.0.1 - - [01/Sep/2025 21:02:46] "[31m[1mPOST / HTTP/1.1[0m" 405 -
+127.0.0.1 - - [01/Sep/2025 21:03:07] "POST /test_ssl HTTP/1.1" 200 -
+127.0.0.1 - - [01/Sep/2025 21:10:52] "POST /test_ssl HTTP/1.1" 200 -
+127.0.0.1 - - [01/Sep/2025 21:11:49] "POST /test_ssl HTTP/1.1" 200 -

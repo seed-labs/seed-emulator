@@ -15,3 +15,13 @@
 {"timestamp": "2025-08-20T13:13:56.211771", "type": "HEARTBLEED", "details": "Heartbleed攻击模拟: 127.0.0.1 - 服务器: localhost:4433", "severity": "CRITICAL"}
 {"timestamp": "2025-08-20T13:13:56.514461", "type": "HEARTBLEED", "details": "Heartbleed攻击模拟: 127.0.0.1 - 服务器: localhost:4433", "severity": "CRITICAL"}
 {"timestamp": "2025-08-20T14:38:02.330824", "type": "HEARTBLEED", "details": "Heartbleed攻击模拟: 127.0.0.1 - 服务器: localhost:4433", "severity": "CRITICAL"}
+{"timestamp": "2025-09-01T21:01:53.920781", "type": "XSS", "details": "XSS攻击检测: 127.0.0.1 - <script>alert('XSS攻击成功！')</script>", "severity": "HIGH"}
+{"timestamp": "2025-09-01T21:02:16.628848", "type": "SQL_INJECTION", "details": "SQL注入错误: 127.0.0.1 - near \"' OR '\": syntax error", "severity": "CRITICAL"}
+{"timestamp": "2025-09-01T21:02:28.536518", "type": "SQL_INJECTION", "details": "SQL注入错误: 127.0.0.1 - unrecognized token: \"' UNION SELECT * FROM employees--\"", "severity": "CRITICAL"}
+{"timestamp": "2025-09-01T21:03:07.056935", "type": "HEARTBLEED", "details": "Heartbleed攻击模拟: 127.0.0.1 - 服务器: localhost:4433", "severity": "CRITICAL"}
+{"timestamp": "2025-09-01T21:10:24.821936", "type": "XSS", "details": "XSS攻击检测: 127.0.0.1 - <script>alert('实验#3 XSS攻击成功！')</script>", "severity": "HIGH"}
+{"timestamp": "2025-09-01T21:10:38.671980", "type": "SQL_INJECTION", "details": "SQL注入错误: 127.0.0.1 - near \"' OR '\": syntax error", "severity": "CRITICAL"}
+{"timestamp": "2025-09-01T21:10:52.364249", "type": "HEARTBLEED", "details": "Heartbleed攻击模拟: 127.0.0.1 - 服务器: localhost:4433", "severity": "CRITICAL"}
+{"timestamp": "2025-09-01T21:11:35.989708", "type": "XSS", "details": "XSS攻击检测: 127.0.0.1 - <script>document.location='http://localhost:5888?xss=success'</script>", "severity": "HIGH"}
+{"timestamp": "2025-09-01T21:11:42.759448", "type": "SQL_INJECTION", "details": "SQL注入错误: 127.0.0.1 - unrecognized token: \"' UNION SELECT * FROM employees--\"", "severity": "CRITICAL"}
+{"timestamp": "2025-09-01T21:11:49.913602", "type": "HEARTBLEED", "details": "Heartbleed攻击模拟: 127.0.0.1 - 服务器: localhost:4433", "severity": "CRITICAL"}

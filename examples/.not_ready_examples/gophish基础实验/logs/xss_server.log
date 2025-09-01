@@ -1,0 +1,7 @@
+🚨 XSS漏洞服务器启动在端口 5001
+访问 http://localhost:5001 测试XSS漏洞
+尝试在反馈中输入: <script>alert('XSS攻击成功！')</script>
+ * Serving Flask app 'xss_server'
+ * Debug mode: on
+Address already in use
+Port 5001 is in use by another program. Either identify and stop that program, or start the server with a different port.
