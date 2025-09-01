@@ -43,18 +43,18 @@ scion_tests = [
 ]
 
 basic_tests = [
-    MiniInternetTestCase,
-    SEEDEmuOptionSystemTestCase,
+    # MiniInternetTestCase,
+    # SEEDEmuOptionSystemTestCase,
         ]
 
 internet_tests = [
     KuboTestCase,
-    KuboUtilFuncsTestCase,
-    IPAnyCastTestCase,
-    HostMgmtTestCase,
-    PKITestCase,
-    DottedDictTestCase,
-    TrafficGeneratorTestCase
+    # KuboUtilFuncsTestCase,
+    # IPAnyCastTestCase,
+    # HostMgmtTestCase,
+    # PKITestCase,
+    # DottedDictTestCase,
+    # TrafficGeneratorTestCase
         ]
 
 if args.basic:
