@@ -7,14 +7,16 @@ from seedemu.compiler import Docker, Platform
 from seedemu.core import Emulator, Binding, Filter
 import sys, os
 
+# Note: the indent of the {name} field needs to match with the rest service entries
+# in the docker-compose.yml file. 
 DOCKER_COMPOSE_ENTRY = """\
-    seedemu-busybox:
+    {name}:
         image: busybox:latest
-        container_name: seedemu_busybox
+        container_name: {name}
         privileged: true
         command: /bin/sh -c "
                    ip route del default  &&
-                   ip route add default via 10.150.0.254 &&
+                   ip route add default via {default_route} &&
                    tail -f /dev/null
                  "
 """
@@ -123,9 +125,18 @@ def run(dumpfile = None):
         docker = Docker(platform=platform) 
 
         # Attach an existing container to the emulator
-        docker.attachCustomContainer(compose_entry = DOCKER_COMPOSE_ENTRY, 
-                       asn=150, net='net0', ip_address='10.150.0.80',
-                       port_forwarding="9090:80/tcp", env=['a=1', 'b=2'])
+        docker.attachCustomContainer(
+                compose_entry = DOCKER_COMPOSE_ENTRY.format(name="busybox", default_route="10.150.0.254"), 
+                asn=150, net='net0', ip_address='10.150.0.80',
+                port_forwarding="9090:80/tcp", env=['a=1', 'b=2'])
+
+        # Attach an existing container to the emulator (make it visiable on the
+        # Internet Map (i.e., adding meta data to the docker compse entry)
+        docker.attachCustomContainer(
+                compose_entry = DOCKER_COMPOSE_ENTRY.format(name="busybox2", default_route="10.150.0.254"), 
+                asn=150, net='net0', ip_address='10.150.0.81',
+                port_forwarding="9091:80/tcp", 
+                node_name='busybox2', show_on_map=True)
 
         # Attach the Internet Map container to the emulator
         # This API actually calls `attachCustomContainer` 
