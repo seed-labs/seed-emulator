@@ -101,6 +101,7 @@ app.secret_key = 'seed-email-test-29'
 # 邮件服务器配置
 MAIL_SERVERS = [
     {
+        'id': 'seedemail',
         'name': 'seedemail.net',
         'container': 'mail-150-seedemail',
         'domain': 'seedemail.net',
@@ -110,8 +111,9 @@ MAIL_SERVERS = [
         'as_number': '150'
     },
     {
+        'id': 'corporate',
         'name': 'corporate.local',
-        'container': 'mail-151-corporate', 
+        'container': 'mail-151-corporate',
         'domain': 'corporate.local',
         'smtp_port': '2526',
         'imap_port': '1431',
@@ -119,9 +121,10 @@ MAIL_SERVERS = [
         'as_number': '151'
     },
     {
+        'id': 'smallbiz',
         'name': 'smallbiz.org',
         'container': 'mail-152-smallbiz',
-        'domain': 'smallbiz.org', 
+        'domain': 'smallbiz.org',
         'smtp_port': '2527',
         'imap_port': '1432',
         'internal_ip': '10.152.0.10',
@@ -279,39 +282,6 @@ def test_connectivity():
         'error': error,
         'target': target
     })
-
-@require_valid_input
-@app.route('/send_test_email', methods=['POST'])
-def send_test_email():
-    """发送测试邮件"""
-    data = request.get_json()
-    from_email = data.get('from_email')
-    to_email = data.get('to_email') 
-    subject = data.get('subject', 'SEED测试邮件')
-    body = data.get('body', '这是来自SEED邮件系统的测试邮件')
-    
-    if not from_email or not to_email:
-        return jsonify({'success': False, 'message': '发件人和收件人不能为空'})
-    
-    # 确定SMTP服务器
-    from_domain = from_email.split('@')[-1]
-    server = next((s for s in MAIL_SERVERS if s['domain'] == from_domain), None)
-    if not server:
-        return jsonify({'success': False, 'message': f'不支持的发件域名: {from_domain}'})
-    
-    # 使用swaks发送测试邮件 (如果容器内有安装)
-    cmd = f'''docker exec {server["container"]} sh -c "
-        echo 'Subject: {subject}
-        
-        {body}' | sendmail {to_email}
-    " '''
-    
-    success, output, error = run_command(cmd)
-    
-    if success:
-        return jsonify({'success': True, 'message': f'测试邮件已发送: {from_email} -> {to_email}'})
-    else:
-        return jsonify({'success': False, 'message': f'发送失败: {error}'})
 
 @app.route('/api/status')
 def api_status():
@@ -506,6 +476,363 @@ def check_database_status():
     """检查数据库状态"""
     # 这里可以添加数据库连接检查
     return True
+
+@app.route('/email_test')
+def email_test():
+    """邮件发信测试页面"""
+    return render_template('email_test.html', mail_servers=MAIL_SERVERS)
+
+@app.route('/api/check_user', methods=['POST'])
+def check_user():
+    """检查用户账户是否存在"""
+    data = request.get_json()
+    email = data.get('email', '').strip()
+    server_id = data.get('server_id')
+
+    if not email or not server_id:
+        return jsonify({'success': False, 'message': '请提供邮箱地址和服务器ID'})
+
+    # 查找对应的邮件服务器
+    server = next((s for s in MAIL_SERVERS if s['id'] == server_id), None)
+    if not server:
+        return jsonify({'success': False, 'message': '无效的服务器ID'})
+
+    # 检查邮箱格式
+    if '@' not in email:
+        return jsonify({'success': False, 'message': '邮箱格式不正确'})
+
+    local_part, domain = email.split('@')
+    if domain != server['domain']:
+        return jsonify({'success': False, 'message': f'邮箱域名不匹配，应为@{server["domain"]}'})
+
+    # 检查用户是否在服务器中存在
+    try:
+        # 使用docker命令检查用户是否存在
+        cmd = f"docker exec {server['container']} setup email list"
+        success, output, error = run_command(cmd)
+
+        if success:
+            # 解析用户列表
+            users = []
+            for line in output.split('\n'):
+                if line.strip() and '*' in line:
+                    user_email = line.split('*')[-1].split('(')[0].strip()
+                    if user_email:
+                        users.append(user_email)
+
+            if email in users:
+                return jsonify({
+                    'success': True,
+                    'message': f'用户 {email} 存在于 {server["name"]} 服务器',
+                    'user_exists': True,
+                    'server_name': server['name'],
+                    'server_domain': server['domain']
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': f'用户 {email} 不存在于 {server["name"]} 服务器',
+                    'user_exists': False,
+                    'available_users': users,
+                    'server_name': server['name']
+                })
+        else:
+            return jsonify({'success': False, 'message': f'无法连接到邮件服务器: {error}'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'检查用户时出错: {str(e)}'})
+
+@app.route('/api/send_test_email', methods=['POST'])
+def send_test_email():
+    """发送测试邮件"""
+    data = request.get_json()
+    from_email = data.get('from_email', '').strip()
+    to_email = data.get('to_email', '').strip()
+    subject = data.get('subject', 'SEED邮件系统测试邮件').strip()
+    body = data.get('body', '这是一封来自SEED邮件系统的测试邮件。').strip()
+    template_type = data.get('template', 'plain')  # plain, html, phishing
+
+    if not from_email or not to_email:
+        return jsonify({'success': False, 'message': '发件人和收件人邮箱不能为空'})
+
+    # 确定发件人所在的服务器
+    from_server = None
+    for server in MAIL_SERVERS:
+        if from_email.endswith(f'@{server["domain"]}'):
+            from_server = server
+            break
+
+    if not from_server:
+        return jsonify({'success': False, 'message': '无法确定发件人所在的邮件服务器'})
+
+    # 根据模板类型生成邮件内容
+    if template_type == 'html':
+        # HTML邮件模板
+        email_content = f"""From: {from_email}
+To: {to_email}
+Subject: {subject}
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{subject}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #2c3e50;">{subject}</h2>
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            {body.replace(chr(10), '<br>')}
+        </div>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 12px; color: #666;">
+            此邮件由 SEED 邮件系统发送<br>
+            发送时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        </p>
+    </div>
+</body>
+</html>"""
+    elif template_type == 'phishing':
+        # 钓鱼邮件模板（基于真实的MetaMask安全提醒模板）
+        html_content = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{subject}</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+            color: #333;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            background: linear-gradient(135deg, #6f42c1, #e83e8c);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }}
+        .logo {{
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }}
+        .tagline {{
+            font-size: 14px;
+            opacity: 0.9;
+        }}
+        .content {{
+            padding: 40px 30px;
+        }}
+        .alert {{
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }}
+        .alert-title {{
+            color: #856404;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }}
+        .button {{
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            transition: background-color 0.3s;
+        }}
+        .button:hover {{
+            background: #0056b3;
+        }}
+        .footer {{
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #dee2e6;
+        }}
+        .security-notice {{
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔐 账户安全中心</div>
+            <div class="tagline">保护您的数字资产安全</div>
+        </div>
+
+        <div class="content">
+            <h2 style="color: #2c3e50; margin-bottom: 20px;">{subject}</h2>
+
+            <div class="alert">
+                <div class="alert-title">⚠️ 重要安全通知</div>
+                <p>我们检测到您的账户可能存在安全风险。为了保护您的资产安全，请立即采取以下措施：</p>
+            </div>
+
+            <p>尊敬的用户：</p>
+
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                {body.replace(chr(10), '</p><p>').replace(chr(13), '')}
+            </div>
+
+            <p><strong>请注意：</strong> 如果您不及时处理，您的账户可能会受到影响。</p>
+
+            <div style="text-align: center;">
+                <a href="#" class="button">立即处理</a>
+            </div>
+
+            <div class="security-notice">
+                <strong>安全提示：</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>请勿点击可疑链接</li>
+                    <li>定期更新密码</li>
+                    <li>启用双因素认证</li>
+                </ul>
+            </div>
+
+            <p>如果您有任何疑问，请通过官方网站联系我们。</p>
+
+            <p style="color: #666; font-size: 14px;">
+                此邮件由系统安全监控自动发送<br>
+                如果您认为这是一封错误邮件，请忽略此消息
+            </p>
+        </div>
+
+        <div class="footer">
+            <p><strong>SEED 安全系统</strong></p>
+            <p>网络安全实验室 | 浙江大学</p>
+            <p>© 2024 SEED Lab. All rights reserved.</p>
+            <p style="margin-top: 10px; font-size: 11px;">
+                发送时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+            </p>
+        </div>
+    </div>
+</body>
+</html>"""
+
+        email_content = f"""From: {from_email}
+To: {to_email}
+Subject: {subject}
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="===============1574101848=="
+X-Mailer: SEED Security System
+Date: {datetime.now().strftime('%a, %d %b %Y %H:%M:%S %z')}
+
+--===============1574101848==
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+{subject}
+
+重要安全通知：
+
+{body}
+
+请立即处理相关安全事宜。
+
+--
+此邮件来自 SEED 安全监控系统
+请勿回复此邮件
+
+--===============1574101848==
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+{html_content}
+
+--===============1574101848==--"""
+    else:
+        # 纯文本邮件
+        email_content = f"""From: {from_email}
+To: {to_email}
+Subject: {subject}
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+{body}
+
+--
+SEED 邮件系统
+发送时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"""
+
+    # 使用sendmail发送邮件
+    try:
+        # 创建临时邮件文件
+        import tempfile
+        import os
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.eml', delete=False) as f:
+            f.write(email_content)
+            temp_file = f.name
+
+        # 使用sendmail发送
+        cmd = f"cat {temp_file} | docker exec -i {from_server['container']} sendmail {to_email}"
+
+        success, output, error = run_command(cmd)
+
+        # 清理临时文件
+        os.unlink(temp_file)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'邮件发送成功！从 {from_email} 发送到 {to_email}',
+                'details': {
+                    'from': from_email,
+                    'to': to_email,
+                    'subject': subject,
+                    'template': template_type,
+                    'server': from_server['container'],
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'output': output
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': f'邮件发送失败: {error}',
+                'details': {
+                    'error_output': error,
+                    'command': cmd,
+                    'email_content': email_content[:500] + '...' if len(email_content) > 500 else email_content
+                }
+            })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'发送邮件时出错: {str(e)}'})
+
+@app.route('/api/get_mail_servers')
+def get_mail_servers():
+    """获取邮件服务器列表"""
+    return jsonify({'servers': MAIL_SERVERS})
 
 if __name__ == '__main__':
     # 记录启动时间

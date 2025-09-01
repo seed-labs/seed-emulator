@@ -81,11 +81,119 @@ def configure_dns_system(emu):
     return None
 
 def configure_mail_servers(emu):
-    """配置邮件服务器 (暂时简化，在30版本中增强)"""
-    
-    # 暂时跳过复杂的邮件服务器配置
-    # 在30版本中会有完整的邮件服务器和钓鱼功能
-    print("📧 邮件服务器配置已简化，在30版本中将完全实现")
+    """配置邮件服务器"""
+
+    print("📧 配置邮件服务器...")
+
+    # 邮件服务器配置
+    mail_servers = [
+        {
+            'name': 'mail-qq-tencent',
+            'hostname': 'mail',
+            'domain': 'qq.com',
+            'asn': 200,
+            'network': 'net0',
+            'ip': '10.200.0.10',
+            'smtp_port': '2200',
+            'imap_port': '1400'
+        },
+        {
+            'name': 'mail-163-netease',
+            'hostname': 'mail',
+            'domain': '163.com',
+            'asn': 201,
+            'network': 'net0',
+            'ip': '10.201.0.10',
+            'smtp_port': '2201',
+            'imap_port': '1401'
+        },
+        {
+            'name': 'mail-gmail-google',
+            'hostname': 'mail',
+            'domain': 'gmail.com',
+            'asn': 202,
+            'network': 'net0',
+            'ip': '10.202.0.10',
+            'smtp_port': '2202',
+            'imap_port': '1402'
+        },
+        {
+            'name': 'mail-outlook-microsoft',
+            'hostname': 'mail',
+            'domain': 'outlook.com',
+            'asn': 203,
+            'network': 'net0',
+            'ip': '10.203.0.10',
+            'smtp_port': '2203',
+            'imap_port': '1403'
+        },
+        {
+            'name': 'mail-company-aliyun',
+            'hostname': 'mail',
+            'domain': 'company.cn',
+            'asn': 204,
+            'network': 'net0',
+            'ip': '10.204.0.10',
+            'smtp_port': '2204',
+            'imap_port': '1404'
+        },
+        {
+            'name': 'mail-startup-selfhosted',
+            'hostname': 'mail',
+            'domain': 'startup.net',
+            'asn': 205,
+            'network': 'net0',
+            'ip': '10.205.0.10',
+            'smtp_port': '2205',
+            'imap_port': '1405'
+        }
+    ]
+
+    # Docker Compose配置模板
+    MAILSERVER_COMPOSE_TEMPLATE = """\
+    {name}:
+        image: mailserver/docker-mailserver:edge
+        platform: linux/{platform}
+        container_name: {name}
+        hostname: {hostname}
+        domainname: {domain}
+        restart: unless-stopped
+        privileged: true
+        environment:
+            - OVERRIDE_HOSTNAME={hostname}.{domain}
+            - PERMIT_DOCKER=connected-networks
+            - ONE_DIR=1
+            - ENABLE_CLAMAV=0
+            - ENABLE_FAIL2BAN=0
+            - ENABLE_POSTGREY=0
+            - DMS_DEBUG=1
+        volumes:
+            - ./{name}-data/mail-data/:/var/mail/
+            - ./{name}-data/mail-state/:/var/mail-state/
+            - ./{name}-data/mail-logs/:/var/log/mail/
+            - ./{name}-data/config/:/tmp/docker-mailserver/
+            - /etc/localtime:/etc/localtime:ro
+        ports:
+            - "{smtp_port}:25"
+            - "{imap_port}:143"
+        cap_add:
+            - NET_ADMIN
+            - SYS_PTRACE
+        command: >
+            sh -c "
+            echo 'Starting mailserver setup...' &&
+            sleep 10 &&
+            supervisord -c /etc/supervisor/supervisord.conf
+            "
+"""
+
+    # 获取平台信息
+    platform_str = "arm64" if "arm" in sys.argv[1] else "amd64"
+
+    print(f"🐳 配置平台: {platform_str}")
+
+    # 这里将在run函数中添加到Docker编译器
+    return mail_servers, MAILSERVER_COMPOSE_TEMPLATE, platform_str
 
 def configure_internet_map(emu):
     """配置Internet Map可视化 (暂时简化)"""
@@ -118,23 +226,43 @@ def run(platform="arm"):
     emu.addLayer(ospf)
     
     print("📧 配置邮件服务器...")
-    configure_mail_servers(emu)
-    
+    mail_servers, MAILSERVER_COMPOSE_TEMPLATE, platform_str = configure_mail_servers(emu)
+
     print("🌍 DNS系统已简化...")
     configure_dns_system(emu)
-    
+
     print("📊 配置网络可视化...")
     configure_internet_map(emu)
-    
+
     print("🐳 渲染和编译...")
     emu.render()
-    
+
     # 根据平台设置
     if platform.lower() == "amd":
         docker = Docker(platform=Platform.AMD64)
     else:
         docker = Docker(platform=Platform.ARM64)
-        
+
+    # 添加邮件服务器到Docker配置
+    for mail in mail_servers:
+        compose_entry = MAILSERVER_COMPOSE_TEMPLATE.format(
+            name=mail['name'],
+            platform=platform_str,
+            hostname=mail['hostname'],
+            domain=mail['domain'],
+            smtp_port=mail['smtp_port'],
+            imap_port=mail['imap_port']
+        )
+
+        docker.attachCustomContainer(
+            compose_entry=compose_entry,
+            asn=mail['asn'],
+            net=mail['network'],
+            ip_address=mail['ip'],
+            node_name=mail['name'],
+            show_on_map=True
+        )
+
     emu.compile(docker, "./output")
     
     print(f"""

@@ -155,7 +155,7 @@ def log_attack(attack_type, details):
 
 if __name__ == '__main__':
     init_db()
-    print("🚨 XSS漏洞服务器启动在端口 5001")
-    print("访问 http://localhost:5001 测试XSS漏洞")
+    print("🚨 XSS漏洞服务器启动在端口 5004")
+    print("访问 http://localhost:5004 测试XSS漏洞")
     print("尝试在反馈中输入: <script>alert('XSS攻击成功！')</script>")
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5004, debug=True)

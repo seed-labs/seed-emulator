@@ -4,11 +4,11 @@ SEED邮件系统 - 真实版Web管理界面 (29-1-email-system)
 提供真实邮件服务商管理和DNS系统测试功能
 """
 
-from flask import Flask
+from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
 try:
     from flask_caching import Cache
 except ImportError:
-    Cache = None, render_template, jsonify, request, redirect
+    Cache = None
 import subprocess
 import json
 import os
@@ -421,6 +421,164 @@ def check_database_status():
     """检查数据库状态"""
     # 这里可以添加数据库连接检查
     return True
+
+@app.route('/email_test')
+def email_test():
+    """邮件发信测试页面"""
+    return render_template('email_test_29_1.html', mail_providers=REAL_MAIL_PROVIDERS)
+
+@app.route('/api/check_user', methods=['POST'])
+def check_user():
+    """检查用户账户是否存在"""
+    data = request.get_json()
+    email = data.get('email', '').strip()
+    provider_asn = data.get('provider_asn')
+
+    if not email or not provider_asn:
+        return jsonify({'success': False, 'message': '请提供邮箱地址和服务商ASN'})
+
+    # 查找对应的邮件服务商
+    provider = next((p for p in REAL_MAIL_PROVIDERS if p['as_number'] == provider_asn), None)
+    if not provider:
+        return jsonify({'success': False, 'message': '无效的服务商ASN'})
+
+    # 检查邮箱格式
+    if '@' not in email:
+        return jsonify({'success': False, 'message': '邮箱格式不正确'})
+
+    local_part, domain = email.split('@')
+    if domain != provider['domain']:
+        return jsonify({'success': False, 'message': f'邮箱域名不匹配，应为@{provider["domain"]}'})
+
+    # 检查用户是否在服务器中存在
+    try:
+        # 根据域名构造容器名称
+        if provider['domain'] == 'qq.com':
+            container_name = 'mail-qq-tencent'
+        elif provider['domain'] == '163.com':
+            container_name = 'mail-163-netease'
+        elif provider['domain'] == 'gmail.com':
+            container_name = 'mail-gmail-google'
+        elif provider['domain'] == 'outlook.com':
+            container_name = 'mail-outlook-microsoft'
+        elif provider['domain'] == 'company.cn':
+            container_name = 'mail-company-aliyun'
+        elif provider['domain'] == 'startup.net':
+            container_name = 'mail-startup-selfhosted'
+        else:
+            return jsonify({'success': False, 'message': f'不支持的域名: {provider["domain"]}'})
+
+        # 使用docker命令检查用户是否存在
+        cmd = f"docker exec {container_name} setup email list"
+        success, output, error = run_command(cmd)
+
+        if success:
+            # 解析用户列表
+            users = []
+            for line in output.split('\n'):
+                if line.strip() and '*' in line:
+                    user_email = line.split('*')[-1].split('(')[0].strip()
+                    if user_email:
+                        users.append(user_email)
+
+            if email in users:
+                return jsonify({
+                    'success': True,
+                    'message': f'用户 {email} 存在于 {provider["name"]} 服务器',
+                    'user_exists': True,
+                    'provider': provider
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': f'用户 {email} 不存在于 {provider["name"]} 服务器',
+                    'user_exists': False,
+                    'available_users': users
+                })
+        else:
+            return jsonify({'success': False, 'message': f'无法连接到邮件服务器: {error}'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'检查用户时出错: {str(e)}'})
+
+@app.route('/api/send_test_email', methods=['POST'])
+def send_test_email():
+    """发送测试邮件"""
+    data = request.get_json()
+    from_email = data.get('from_email', '').strip()
+    to_email = data.get('to_email', '').strip()
+    subject = data.get('subject', 'SEED真实邮件系统测试邮件').strip()
+    body = data.get('body', '这是一封来自SEED真实邮件系统的测试邮件。').strip()
+
+    if not from_email or not to_email:
+        return jsonify({'success': False, 'message': '发件人和收件人邮箱不能为空'})
+
+    # 确定发件人所在的服务器
+    from_provider = None
+    for provider in REAL_MAIL_PROVIDERS:
+        if from_email.endswith(f'@{provider["domain"]}'):
+            from_provider = provider
+            break
+
+    if not from_provider:
+        return jsonify({'success': False, 'message': '无法确定发件人所在的邮件服务器'})
+
+    # 根据域名构造容器名称
+    if from_provider['domain'] == 'qq.com':
+        container_name = 'mail-qq-tencent'
+    elif from_provider['domain'] == '163.com':
+        container_name = 'mail-163-netease'
+    elif from_provider['domain'] == 'gmail.com':
+        container_name = 'mail-gmail-google'
+    elif from_provider['domain'] == 'outlook.com':
+        container_name = 'mail-outlook-microsoft'
+    elif from_provider['domain'] == 'company.cn':
+        container_name = 'mail-company-aliyun'
+    elif from_provider['domain'] == 'startup.net':
+        container_name = 'mail-startup-selfhosted'
+    else:
+        return jsonify({'success': False, 'message': f'不支持的域名: {from_provider["domain"]}'})
+
+    # 使用sendmail发送测试邮件
+    try:
+        cmd = f"""echo "Subject: {subject}
+From: {from_email}
+To: {to_email}
+
+{body}" | docker exec -i {container_name} sendmail {to_email}"""
+
+        success, output, error = run_command(cmd)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'邮件发送成功！从 {from_email} 发送到 {to_email}',
+                'details': {
+                    'from': from_email,
+                    'to': to_email,
+                    'subject': subject,
+                    'server': container_name,
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'output': output
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': f'邮件发送失败: {error}',
+                'details': {
+                    'error_output': error,
+                    'command': cmd
+                }
+            })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'发送邮件时出错: {str(e)}'})
+
+@app.route('/api/get_mail_providers')
+def get_mail_providers():
+    """获取邮件服务商列表"""
+    return jsonify({'providers': REAL_MAIL_PROVIDERS})
 
 if __name__ == '__main__':
     # 记录启动时间
