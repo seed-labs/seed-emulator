@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SEED钓鱼AI系统{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        .gradient-bg-dark {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .gradient-bg-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+        .campaign-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        .campaign-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-active { background-color: #28a745; animation: pulse 2s infinite; }
+        .status-paused { background-color: #ffc107; }
+        .status-completed { background-color: #6c757d; }
+        .status-draft { background-color: #17a2b8; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .ai-badge {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200px 0; }
+            100% { background-position: 200px 0; }
+        }
+        
+        .metric-card {
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: scale(1.02);
+        }
+        
+        .danger-zone {
+            border: 2px dashed #dc3545;
+            background-color: #fff5f5;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .ai-panel {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .phishing-template {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .phishing-template:hover {
+            border-color: #fd7e14;
+            box-shadow: 0 4px 15px rgba(253, 126, 20, 0.2);
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark gradient-bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-fish"></i> SEED钓鱼AI系统
+                <span class="badge ai-badge ms-2">AI驱动</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link" href="/"><i class="fas fa-tachometer-alt"></i> 控制台</a>
+                    <a class="nav-link" href="/campaigns"><i class="fas fa-bullseye"></i> 钓鱼活动</a>
+                    <a class="nav-link" href="/ai_console"><i class="fas fa-robot"></i> AI控制台</a>
+                    <a class="nav-link" href="/targets"><i class="fas fa-users"></i> 目标管理</a>
+                    <a class="nav-link" href="/analytics"><i class="fas fa-chart-line"></i> 分析报告</a>
+                    <a class="nav-link" href="/templates"><i class="fas fa-envelope-open-text"></i> 模板库</a>
+                </div>
+                <div class="navbar-nav">
+                    <a class="nav-link" href="/project_overview"><i class="fas fa-info-circle"></i> 项目概述</a>
+                    <a class="nav-link" href="http://localhost:8080/map.html" target="_blank">
+                        <i class="fas fa-map"></i> 网络地图
+                    </a>
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="systemDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog"></i> 系统
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/system_status"><i class="fas fa-heartbeat"></i> 系统状态</a></li>
+                            <li><a class="dropdown-item" href="/settings"><i class="fas fa-cogs"></i> 设置</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="/emergency_stop"><i class="fas fa-stop-circle"></i> 紧急停止</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 警告横幅 -->
+    <div class="alert alert-warning alert-dismissible fade show mb-0" role="alert">
+        <div class="container-fluid">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>⚠️ 实验环境警告：</strong> 
+            此系统仅用于教育和安全研究目的。所有钓鱼活动仅在SEED仿真环境中进行，严禁用于非法用途。
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </div>
+
+    <!-- 主要内容 -->
+    <main class="py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-fish"></i> SEED钓鱼AI系统</h6>
+                    <p class="small mb-0">基于SEED-Emulator的智能钓鱼攻防实验平台</p>
+                    <small class="text-muted">集成Gophish + Ollama + 多模态AI检测</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="mb-2">
+                        <span class="badge bg-primary me-1">Gophish</span>
+                        <span class="badge bg-success me-1">Ollama</span>
+                        <span class="badge bg-warning me-1">AI检测</span>
+                        <span class="badge bg-info me-1">行为分析</span>
+                    </div>
+                    <small>
+                        <i class="fas fa-code"></i> 30-phishing-ai-system<br>
+                        <i class="fas fa-shield-alt"></i> 仅供安全研究使用
+                    </small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 通用JavaScript函数 -->
+    <script>
+        // 显示警告消息
+        function showAlert(message, type = 'info', timeout = 5000) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 350px; max-width: 500px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            // 自动消失
+            if (timeout > 0) {
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, timeout);
+            }
+        }
+
+        // 显示确认对话框
+        function confirmAction(message, callback) {
+            if (confirm(message)) {
+                callback();
+            }
+        }
+
+        // 格式化数字
+        function formatNumber(num) {
+            return new Intl.NumberFormat('zh-CN').format(num);
+        }
+
+        // 格式化百分比
+        function formatPercent(num) {
+            return (num * 100).toFixed(1) + '%';
+        }
+
+        // 实时更新时间戳
+        function updateTimestamps() {
+            const elements = document.querySelectorAll('[data-timestamp]');
+            elements.forEach(element => {
+                const timestamp = parseInt(element.getAttribute('data-timestamp'));
+                const now = Date.now();
+                const diff = now - timestamp;
+                
+                if (diff < 60000) {
+                    element.textContent = '刚刚';
+                } else if (diff < 3600000) {
+                    element.textContent = Math.floor(diff / 60000) + '分钟前';
+                } else if (diff < 86400000) {
+                    element.textContent = Math.floor(diff / 3600000) + '小时前';
+                } else {
+                    element.textContent = Math.floor(diff / 86400000) + '天前';
+                }
+            });
+        }
+
+        // AI状态监控
+        function checkAIStatus() {
+            fetch('/api/ai_status')
+                .then(response => response.json())
+                .then(data => {
+                    // 更新AI服务状态指示器
+                    updateServiceStatus('ollama', data.ollama);
+                    updateServiceStatus('detector', data.detector);
+                    updateServiceStatus('analyzer', data.analyzer);
+                })
+                .catch(error => console.log('AI状态检查失败:', error));
+        }
+
+        function updateServiceStatus(service, status) {
+            const indicator = document.getElementById(`${service}-status`);
+            if (indicator) {
+                indicator.className = `status-dot ${status ? 'status-active' : 'status-paused'}`;
+                indicator.title = `${service}: ${status ? '在线' : '离线'}`;
+            }
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 启动定时更新
+            updateTimestamps();
+            setInterval(updateTimestamps, 30000);
+            
+            // 启动AI状态监控
+            checkAIStatus();
+            setInterval(checkAIStatus, 60000);
+            
+            // 为危险操作添加确认
+            const dangerButtons = document.querySelectorAll('.btn-danger[data-confirm]');
+            dangerButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    const message = this.getAttribute('data-confirm');
+                    if (!confirm(message)) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

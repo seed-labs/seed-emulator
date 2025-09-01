@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}错误 {{ error_code }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white text-center">
+                    <h4><i class="fas fa-exclamation-triangle"></i> 错误 {{ error_code }}</h4>
+                </div>
+                <div class="card-body text-center">
+                    <h5 class="card-title">{{ error_message }}</h5>
+                    <p class="card-text">
+                        {% if error_code == 404 %}
+                        抱歉，您访问的页面不存在。
+                        {% elif error_code == 500 %}
+                        服务器遇到了问题，我们正在努力修复。
+                        {% else %}
+                        系统遇到了未知错误。
+                        {% endif %}
+                    </p>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="/" class="btn btn-primary">
+                            <i class="fas fa-home"></i> 返回首页
+                        </a>
+                        <button class="btn btn-secondary" onclick="history.back()">
+                            <i class="fas fa-arrow-left"></i> 返回上页
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

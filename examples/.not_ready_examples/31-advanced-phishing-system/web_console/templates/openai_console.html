@@ -1,0 +1,728 @@
+{% extends "base.html" %}
+
+{% block title %}OpenAI控制台 - SEED高级钓鱼系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 text-info cyber-text">
+                <i class="fas fa-brain"></i> OpenAI AI控制台
+            </h1>
+            <p class="text-muted">集成GPT-4/Claude等先进AI模型的钓鱼攻防平台</p>
+        </div>
+        <div>
+            <span class="badge badge-pill bg-info">AI驱动</span>
+            <button class="btn btn-info ms-2" onclick="refreshAIStatus()">
+                <i class="fas fa-sync-alt"></i> 刷新状态
+            </button>
+        </div>
+    </div>
+
+    <!-- OpenAI服务状态 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-dark border-info">
+                <div class="card-header bg-info text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-server"></i> OpenAI服务状态
+                        <span id="openai-status-badge" class="badge bg-secondary float-end">检查中...</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="openai-status-content">
+                        <!-- 动态加载状态信息 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 可用模型展示 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-dark border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-robot"></i> 可用AI模型
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="models-grid">
+                        <!-- 动态加载模型信息 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 内容生成器 -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card bg-dark border-success">
+                <div class="card-header bg-success text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-pen-fancy"></i> AI内容生成器
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="contentGeneratorForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">选择AI模型</label>
+                                    <select class="form-select" id="model-select" name="model">
+                                        <option value="gpt-4o">GPT-4o (推荐)</option>
+                                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                        <option value="claude-3-opus">Claude 3 Opus</option>
+                                        <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">创造性</label>
+                                    <input type="range" class="form-range" id="temperature-slider" name="temperature"
+                                           min="0" max="1" step="0.1" value="0.7">
+                                    <small class="text-muted text-center d-block" id="temperature-value">0.7</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">最大长度</label>
+                                    <input type="number" class="form-control" id="max-tokens" name="max_tokens"
+                                           value="1000" min="100" max="4000">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">生成提示</label>
+                            <textarea class="form-control hacker-console" id="prompt-input" name="prompt"
+                                      rows="6" placeholder="描述您想要生成的钓鱼内容...
+
+示例：
+生成一封针对企业IT管理员的钓鱼邮件，要求他们点击链接验证系统安全设置。邮件需要看起来像来自公司IT部门的正式通知。
+
+目标信息：
+- 职位：IT管理员
+- 公司：ABC科技有限公司
+- 姓名：张三"></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <button type="button" class="btn btn-outline-info" onclick="loadTemplate('corporate')">
+                                    <i class="fas fa-building"></i> 企业模板
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" onclick="loadTemplate('executive')">
+                                    <i class="fas fa-user-tie"></i> 高管模板
+                                </button>
+                                <button type="button" class="btn btn-outline-success" onclick="loadTemplate('personal')">
+                                    <i class="fas fa-user-friends"></i> 个人模板
+                                </button>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-secondary" onclick="clearPrompt()">
+                                    <i class="fas fa-trash"></i> 清空
+                                </button>
+                                <button type="button" class="btn btn-cyber" onclick="generateContent()">
+                                    <i class="fas fa-magic"></i> 生成内容
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 威胁分析器 -->
+        <div class="col-lg-4">
+            <div class="card bg-dark border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-search"></i> AI威胁分析器
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="threatAnalyzerForm">
+                        <div class="mb-3">
+                            <label class="form-label">分析类型</label>
+                            <select class="form-select" id="analysis-type" name="type">
+                                <option value="threat">钓鱼威胁检测</option>
+                                <option value="sentiment">情感分析</option>
+                                <option value="psychology">心理影响评估</option>
+                                <option value="effectiveness">有效性评估</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">待分析内容</label>
+                            <textarea class="form-control hacker-console" id="analysis-input" name="content"
+                                      rows="8" placeholder="输入要分析的邮件内容或钓鱼文本...
+
+示例：
+紧急通知：您的账户存在安全风险，请立即点击以下链接验证身份。
+http://secure-bank-login.com/verify
+
+此邮件来自银行安全部门，请勿向他人透露。"></textarea>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-warning" onclick="analyzeContent()">
+                                <i class="fas fa-microscope"></i> 开始分析
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 生成结果显示 -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card bg-dark border-success">
+                <div class="card-header bg-success text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-alt"></i> 生成结果
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="generation-result" class="hacker-console" style="min-height: 300px;">
+                        <div class="text-center text-muted" style="padding-top: 120px;">
+                            <i class="fas fa-robot fa-3x mb-3"></i>
+                            <p>等待AI生成内容...</p>
+                            <small>使用上方表单开始生成</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card bg-dark border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar"></i> 分析结果
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="analysis-result" class="hacker-console" style="min-height: 300px;">
+                        <div class="text-center text-muted" style="padding-top: 120px;">
+                            <i class="fas fa-chart-line fa-3x mb-3"></i>
+                            <p>等待AI分析结果...</p>
+                            <small>使用右侧表单开始分析</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 使用统计 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-dark border-info">
+                <div class="card-header bg-info text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i> AI使用统计
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3">
+                            <div class="metric-card h-100">
+                                <i class="fas fa-brain fa-2x text-info mb-2"></i>
+                                <h4 class="text-info" id="total-requests">0</h4>
+                                <p class="card-text">总请求数</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="metric-card h-100">
+                                <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                                <h4 class="text-warning" id="avg-response-time">0s</h4>
+                                <p class="card-text">平均响应时间</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="metric-card h-100">
+                                <i class="fas fa-coins fa-2x text-success mb-2"></i>
+                                <h4 class="text-success" id="tokens-used">0</h4>
+                                <p class="card-text">Token使用量</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="metric-card h-100">
+                                <i class="fas fa-trophy fa-2x text-primary mb-2"></i>
+                                <h4 class="text-primary" id="success-rate">0%</h4>
+                                <p class="card-text">成功率</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 模型详情模态框 -->
+<div class="modal fade modal-dark" id="modelDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-primary">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle text-primary"></i> 模型详细信息
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="model-detail-content">
+                <!-- 动态加载模型详情 -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 全局变量
+let currentStats = {
+    totalRequests: 0,
+    avgResponseTime: 0,
+    tokensUsed: 0,
+    successRate: 0
+};
+
+// 页面加载完成后的初始化
+document.addEventListener('DOMContentLoaded', function() {
+    loadOpenAIStatus();
+    loadAvailableModels();
+    updateTemperatureDisplay();
+    loadUsageStats();
+
+    // 温度滑块变化监听
+    document.getElementById('temperature-slider').addEventListener('input', updateTemperatureDisplay);
+});
+
+// 加载OpenAI服务状态
+function loadOpenAIStatus() {
+    fetch('/api/openai_status')
+    .then(response => response.json())
+    .then(data => {
+        updateOpenAIStatus(data);
+    })
+    .catch(error => {
+        console.error('加载OpenAI状态失败:', error);
+        showToast('加载OpenAI状态失败', 'error');
+    });
+}
+
+// 更新OpenAI状态显示
+function updateOpenAIStatus(data) {
+    const statusBadge = document.getElementById('openai-status-badge');
+    const statusContent = document.getElementById('openai-status-content');
+
+    if (data.available && data.status === 'online') {
+        statusBadge.className = 'badge bg-success float-end';
+        statusBadge.textContent = '在线';
+    } else {
+        statusBadge.className = 'badge bg-danger float-end';
+        statusBadge.textContent = '离线';
+    }
+
+    statusContent.innerHTML = `
+        <div class="col-md-4">
+            <div class="text-center">
+                <i class="fas fa-server fa-2x ${data.status === 'online' ? 'text-success' : 'text-danger'} mb-2"></i>
+                <h6>服务状态</h6>
+                <p class="mb-0">${data.status === 'online' ? '正常运行' : '服务不可用'}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="text-center">
+                <i class="fas fa-link fa-2x text-info mb-2"></i>
+                <h6>API端点</h6>
+                <p class="mb-0 text-break">${data.base_url}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="text-center">
+                <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                <h6>最后测试</h6>
+                <p class="mb-0">${formatTimestamp(data.last_test)}</p>
+            </div>
+        </div>
+    `;
+}
+
+// 加载可用模型
+function loadAvailableModels() {
+    fetch('/api/openai_models')
+    .then(response => response.json())
+    .then(data => {
+        displayModels(data.models, data.recommended);
+    })
+    .catch(error => {
+        console.error('加载模型列表失败:', error);
+        showToast('加载模型列表失败', 'error');
+    });
+}
+
+// 显示模型列表
+function displayModels(models, recommended) {
+    const modelsGrid = document.getElementById('models-grid');
+
+    modelsGrid.innerHTML = models.map(model => `
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card bg-secondary model-card ${model.id === recommended ? 'border-primary' : ''}" onclick="showModelDetail('${model.id}')">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title text-white">${model.name}</h6>
+                        ${model.id === recommended ? '<span class="badge bg-primary">推荐</span>' : ''}
+                    </div>
+                    <p class="card-text text-muted small">${model.description}</p>
+                    <div class="mb-2">
+                        <small class="text-info">
+                            <i class="fas fa-database"></i> 上下文: ${model.context_window.toLocaleString()} tokens
+                        </small>
+                    </div>
+                    <div class="mb-2">
+                        <strong class="text-success">优势:</strong>
+                        <div class="small">
+                            ${model.strengths.map(strength => `<span class="badge bg-success me-1 mb-1">${strength}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div>
+                        <strong class="text-warning">适用场景:</strong>
+                        <div class="small">
+                            ${model.use_cases.map(use => `<span class="badge bg-warning me-1 mb-1">${use}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 显示模型详情
+function showModelDetail(modelId) {
+    fetch('/api/openai_models')
+    .then(response => response.json())
+    .then(data => {
+        const model = data.models.find(m => m.id === modelId);
+        if (model) {
+            const modal = new bootstrap.Modal(document.getElementById('modelDetailModal'));
+            const content = document.getElementById('model-detail-content');
+
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-8">
+                        <h4 class="text-primary">${model.name}</h4>
+                        <p class="lead">${model.description}</p>
+
+                        <h6 class="mt-4">技术规格</h6>
+                        <table class="table table-dark">
+                            <tr>
+                                <td><strong>模型ID:</strong></td>
+                                <td>${model.id}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>上下文窗口:</strong></td>
+                                <td>${model.context_window.toLocaleString()} tokens</td>
+                            </tr>
+                            <tr>
+                                <td><strong>擅长领域:</strong></td>
+                                <td>${model.strengths.join(', ')}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>推荐用途:</strong></td>
+                                <td>${model.use_cases.join(', ')}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <i class="fas fa-robot fa-4x text-primary mb-3"></i>
+                            <h6>性能指标</h6>
+                            <div class="mb-2">
+                                <span class="badge bg-success">高准确性</span>
+                            </div>
+                            <div class="mb-2">
+                                <span class="badge bg-info">快速响应</span>
+                            </div>
+                            <div class="mb-2">
+                                <span class="badge bg-warning">创意生成</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            modal.show();
+        }
+    });
+}
+
+// 更新温度显示
+function updateTemperatureDisplay() {
+    const slider = document.getElementById('temperature-slider');
+    const display = document.getElementById('temperature-value');
+    display.textContent = slider.value;
+}
+
+// 生成内容
+function generateContent() {
+    const form = document.getElementById('contentGeneratorForm');
+    const formData = new FormData(form);
+
+    const data = {
+        prompt: formData.get('prompt'),
+        model: formData.get('model'),
+        temperature: parseFloat(formData.get('temperature')),
+        max_tokens: parseInt(formData.get('max_tokens'))
+    };
+
+    if (!data.prompt.trim()) {
+        showToast('请输入生成提示', 'warning');
+        return;
+    }
+
+    const resultDiv = document.getElementById('generation-result');
+    resultDiv.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">生成中...</span>
+            </div>
+            <p class="mt-2">AI正在生成内容...</p>
+        </div>
+    `;
+
+    fetch('/api/openai_generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success mb-3">
+                    <strong>生成成功!</strong> 使用 ${result.model} 模型，耗时 ${result.processing_time}s
+                </div>
+                <div class="p-3 bg-dark text-light rounded">
+                    ${result.content.replace(/\n/g, '<br>')}
+                </div>
+                <div class="mt-3 small text-muted">
+                    <i class="fas fa-info-circle"></i> Token使用: ${result.tokens_used} |
+                    温度: ${result.temperature} |
+                    模型: ${result.model}
+                </div>
+            `;
+            updateStats('generation', result);
+            showToast('内容生成成功', 'success');
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>生成失败:</strong> ${result.error}
+                </div>
+            `;
+            showToast('内容生成失败', 'error');
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>请求失败:</strong> ${error.message}
+            </div>
+        `;
+        showToast('生成请求失败', 'error');
+    });
+}
+
+// 分析内容
+function analyzeContent() {
+    const form = document.getElementById('threatAnalyzerForm');
+    const formData = new FormData(form);
+
+    const data = {
+        content: formData.get('content'),
+        type: formData.get('type')
+    };
+
+    if (!data.content.trim()) {
+        showToast('请输入要分析的内容', 'warning');
+        return;
+    }
+
+    const resultDiv = document.getElementById('analysis-result');
+    resultDiv.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-warning" role="status">
+                <span class="visually-hidden">分析中...</span>
+            </div>
+            <p class="mt-2">AI正在分析内容...</p>
+        </div>
+    `;
+
+    fetch('/api/openai_analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-${getRiskColor(result.risk_level)} mb-3">
+                    <strong>分析完成!</strong> 风险等级: ${result.risk_level} | 置信度: ${(result.confidence * 100).toFixed(1)}%
+                </div>
+                <div class="p-3 bg-dark text-light rounded">
+                    ${result.analysis.replace(/\n/g, '<br>')}
+                </div>
+                <div class="mt-3">
+                    <strong class="text-danger">威胁指标:</strong>
+                    <div class="mt-2">
+                        ${result.indicators.map(indicator => `<span class="badge bg-danger me-1 mb-1">${indicator}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <strong class="text-success">建议措施:</strong>
+                    <div class="mt-2">
+                        ${result.recommendations.map(rec => `<span class="badge bg-success me-1 mb-1">${rec}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+            updateStats('analysis', result);
+            showToast('威胁分析完成', 'success');
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>分析失败:</strong> ${result.error}
+                </div>
+            `;
+            showToast('威胁分析失败', 'error');
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>请求失败:</strong> ${error.message}
+            </div>
+        `;
+        showToast('分析请求失败', 'error');
+    });
+}
+
+// 获取风险等级颜色
+function getRiskColor(riskLevel) {
+    switch (riskLevel.toLowerCase()) {
+        case 'high': case 'critical': return 'danger';
+        case 'medium': return 'warning';
+        case 'low': return 'success';
+        default: return 'info';
+    }
+}
+
+// 加载模板
+function loadTemplate(type) {
+    const templates = {
+        corporate: `生成一封针对企业员工的钓鱼邮件，要求员工点击链接验证账户信息。
+
+目标员工信息:
+- 姓名: 张三
+- 职位: IT管理员
+- 公司: ABC科技有限公司
+- 部门: 信息技术部
+
+要求:
+1. 使用正式的企业邮件风格
+2. 包含合理的紧急性和重要性
+3. 添加可信的公司细节
+4. 避免明显的钓鱼特征
+5. 包含适当的问候和签名`,
+
+        executive: `生成一封针对高管的紧急通知邮件，要求立即处理重要事务。
+
+目标高管信息:
+- 姓名: 李总
+- 职位: CEO
+- 公司: XYZ集团
+
+要求:
+1. 使用高管邮件的正式语气
+2. 强调紧急性和重要性
+3. 包含具体的行动要求
+4. 使用专业的企业术语
+5. 提供合理的联系方式`,
+
+        personal: `生成一封看似来自朋友或家人的个人邮件。
+
+目标个人信息:
+- 姓名: 小明
+- 关系: 朋友
+
+要求:
+1. 使用亲切的个人语气
+2. 包含个人化的细节
+3. 提及共同的经历或兴趣
+4. 自然地引导点击链接
+5. 避免商业化特征`
+    };
+
+    document.getElementById('prompt-input').value = templates[type] || '';
+    showToast(`已加载${type === 'corporate' ? '企业' : type === 'executive' ? '高管' : '个人'}模板`, 'info');
+}
+
+// 清空提示
+function clearPrompt() {
+    document.getElementById('prompt-input').value = '';
+    showToast('已清空输入', 'info');
+}
+
+// 更新统计信息
+function updateStats(type, result) {
+    currentStats.totalRequests++;
+
+    if (type === 'generation') {
+        currentStats.avgResponseTime = (currentStats.avgResponseTime + result.processing_time) / 2;
+        currentStats.tokensUsed += result.tokens_used;
+        currentStats.successRate = 85; // 模拟成功率
+    } else if (type === 'analysis') {
+        currentStats.successRate = (result.confidence * 100);
+    }
+
+    updateStatsDisplay();
+}
+
+// 更新统计显示
+function updateStatsDisplay() {
+    document.getElementById('total-requests').textContent = currentStats.totalRequests;
+    document.getElementById('avg-response-time').textContent = `${currentStats.avgResponseTime.toFixed(1)}s`;
+    document.getElementById('tokens-used').textContent = currentStats.tokensUsed.toLocaleString();
+    document.getElementById('success-rate').textContent = `${currentStats.successRate.toFixed(1)}%`;
+}
+
+// 加载使用统计
+function loadUsageStats() {
+    // 模拟加载统计数据
+    currentStats = {
+        totalRequests: 47,
+        avgResponseTime: 2.3,
+        tokensUsed: 12547,
+        successRate: 92.5
+    };
+    updateStatsDisplay();
+}
+
+// 刷新AI状态
+function refreshAIStatus() {
+    showToast('正在刷新AI状态...', 'info');
+    loadOpenAIStatus();
+    loadAvailableModels();
+    setTimeout(() => showToast('AI状态刷新完成', 'success'), 1000);
+}
+</script>
+{% endblock %}

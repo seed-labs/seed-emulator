@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+
+{% block title %}控制台 - SEED钓鱼AI系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 系统概览 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card gradient-bg-danger text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="card-title mb-0">
+                                <i class="fas fa-fish"></i> SEED钓鱼AI系统控制台
+                            </h4>
+                            <p class="card-text mb-0">
+                                30-phishing-ai-system | AI驱动的智能钓鱼攻防平台
+                                <span class="badge bg-warning text-dark ms-2">实验环境</span>
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="d-flex justify-content-end align-items-center">
+                                <div class="me-3">
+                                    <small>AI服务状态:</small><br>
+                                    <span id="ollama-status" class="status-dot status-active" title="Ollama AI"></span>
+                                    <span id="detector-status" class="status-dot status-active" title="钓鱼检测"></span>
+                                    <span id="analyzer-status" class="status-dot status-active" title="行为分析"></span>
+                                </div>
+                                <div>
+                                    <h3 class="mb-0">{{ system_stats.active_campaigns or 0 }}</h3>
+                                    <small>活跃攻击</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关键指标 -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-bullseye fa-2x text-primary mb-2"></i>
+                    <h4 class="card-title">{{ system_stats.total_campaigns or 0 }}</h4>
+                    <p class="card-text">钓鱼活动</p>
+                    <small class="text-muted">{{ system_stats.active_campaigns or 0 }}个进行中</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x text-success mb-2"></i>
+                    <h4 class="card-title">{{ system_stats.total_targets or 0 }}</h4>
+                    <p class="card-text">目标用户</p>
+                    <small class="text-muted">{{ system_stats.successful_targets or 0 }}个已上钩</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-envelope fa-2x text-warning mb-2"></i>
+                    <h4 class="card-title">{{ system_stats.emails_sent or 0 }}</h4>
+                    <p class="card-text">邮件发送</p>
+                    <small class="text-muted">{{ system_stats.emails_opened or 0 }}个已打开</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-robot fa-2x text-info mb-2"></i>
+                    <h4 class="card-title">{{ system_stats.ai_detections or 0 }}</h4>
+                    <p class="card-text">AI检测</p>
+                    <small class="text-muted">{{ system_stats.ai_accuracy or 0 }}%准确率</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 活跃钓鱼活动 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-fire"></i> 活跃钓鱼活动</h5>
+                    <a href="/campaigns/create" class="btn btn-danger btn-sm">
+                        <i class="fas fa-plus"></i> 创建新活动
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if active_campaigns %}
+                    <div class="row">
+                        {% for campaign in active_campaigns %}
+                        <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="card campaign-card border-{{ 'success' if campaign.ai_enhanced else 'secondary' }}" 
+                                 onclick="location.href='/campaigns/{{ campaign.id }}'">
+                                <div class="card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">{{ campaign.name }}</h6>
+                                        {% if campaign.ai_enhanced %}
+                                        <span class="badge ai-badge">AI增强</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="status-dot status-{{ campaign.status }}"></span>
+                                        <small class="text-muted">{{ campaign.status | title }}</small>
+                                    </div>
+                                    <p class="card-text">
+                                        <strong>类型:</strong> {{ campaign.type }}<br>
+                                        <strong>目标:</strong> {{ campaign.targets_count }}人<br>
+                                        <strong>成功率:</strong> {{ (campaign.success_count / campaign.targets_count * 100) | round(1) if campaign.targets_count > 0 else 0 }}%
+                                    </p>
+                                    <div class="progress" style="height: 5px;">
+                                        <div class="progress-bar bg-{{ 'danger' if campaign.success_count > 0 else 'secondary' }}" 
+                                             style="width: {{ (campaign.success_count / campaign.targets_count * 100) if campaign.targets_count > 0 else 0 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-fish fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">暂无活跃的钓鱼活动</h5>
+                        <p class="text-muted">创建新的钓鱼活动开始您的安全测试</p>
+                        <a href="/campaigns/create" class="btn btn-danger">
+                            <i class="fas fa-plus"></i> 创建第一个活动
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI服务状态和快速操作 -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-robot"></i> AI服务监控</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="ai-panel text-center">
+                                <i class="fas fa-brain fa-2x text-primary mb-2"></i>
+                                <h6>Ollama AI</h6>
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <span class="status-dot status-active"></span>
+                                    <small>运行中</small>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">模型: Qwen2-7B</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="ai-panel text-center">
+                                <i class="fas fa-shield-alt fa-2x text-success mb-2"></i>
+                                <h6>钓鱼检测</h6>
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <span class="status-dot status-active"></span>
+                                    <small>运行中</small>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">准确率: 95.2%</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="ai-panel text-center">
+                                <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
+                                <h6>行为分析</h6>
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <span class="status-dot status-active"></span>
+                                    <small>运行中</small>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">实时监控</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>快速AI测试</h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <textarea class="form-control" id="aiTestInput" rows="2" 
+                                          placeholder="输入邮件内容进行AI钓鱼检测测试..."></textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100 h-100" onclick="testAIDetection()">
+                                    <i class="fas fa-robot"></i> AI检测测试
+                                </button>
+                            </div>
+                        </div>
+                        <div id="aiTestResult" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tools"></i> 快速操作</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="/campaigns/create" class="btn btn-danger">
+                            <i class="fas fa-bullseye"></i> 创建钓鱼活动
+                        </a>
+                        <a href="/templates" class="btn btn-warning">
+                            <i class="fas fa-envelope-open-text"></i> 邮件模板库
+                        </a>
+                        <a href="/targets/import" class="btn btn-info">
+                            <i class="fas fa-upload"></i> 导入目标用户
+                        </a>
+                        <a href="/ai_console" class="btn btn-primary">
+                            <i class="fas fa-robot"></i> AI控制台
+                        </a>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="text-muted">系统管理</h6>
+                    <div class="d-grid gap-2">
+                        <a href="/analytics" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-chart-bar"></i> 查看分析报告
+                        </a>
+                        <a href="/system_status" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-heartbeat"></i> 系统状态
+                        </a>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="exportData()">
+                            <i class="fas fa-download"></i> 导出数据
+                        </button>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="danger-zone">
+                        <h6 class="text-danger mb-2">
+                            <i class="fas fa-exclamation-triangle"></i> 危险操作
+                        </h6>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-danger btn-sm" onclick="stopAllCampaigns()" 
+                                    data-confirm="确定要停止所有钓鱼活动吗？">
+                                <i class="fas fa-stop"></i> 停止所有活动
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="emergencyCleanup()" 
+                                    data-confirm="这将删除所有数据并重置系统，确定继续吗？">
+                                <i class="fas fa-trash"></i> 紧急清理
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// AI检测测试
+function testAIDetection() {
+    const input = document.getElementById('aiTestInput').value;
+    const resultDiv = document.getElementById('aiTestResult');
+    
+    if (!input.trim()) {
+        showAlert('请输入要测试的邮件内容', 'warning');
+        return;
+    }
+    
+    resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> AI检测中...';
+    
+    fetch('/api/test_ai_detection', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({content: input})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const riskLevel = data.risk_score > 0.7 ? 'danger' : data.risk_score > 0.4 ? 'warning' : 'success';
+            resultDiv.innerHTML = `
+                <div class="alert alert-${riskLevel}">
+                    <strong>检测结果:</strong> ${data.is_phishing ? '疑似钓鱼邮件' : '正常邮件'}<br>
+                    <strong>风险评分:</strong> ${(data.risk_score * 100).toFixed(1)}%<br>
+                    <strong>AI置信度:</strong> ${(data.confidence * 100).toFixed(1)}%
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = '<div class="alert alert-danger">AI检测失败</div>';
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<div class="alert alert-danger">检测失败</div>';
+        showAlert('AI检测失败: ' + error, 'danger');
+    });
+}
+
+// 停止所有活动
+function stopAllCampaigns() {
+    fetch('/api/stop_all_campaigns', {method: 'POST'})
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('已停止所有钓鱼活动', 'success');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showAlert('操作失败: ' + data.message, 'danger');
+        }
+    })
+    .catch(error => showAlert('操作失败: ' + error, 'danger'));
+}
+
+// 紧急清理
+function emergencyCleanup() {
+    fetch('/api/emergency_cleanup', {method: 'POST'})
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('系统清理完成，正在重启...', 'success');
+            setTimeout(() => location.reload(), 3000);
+        } else {
+            showAlert('清理失败: ' + data.message, 'danger');
+        }
+    })
+    .catch(error => showAlert('清理失败: ' + error, 'danger'));
+}
+
+// 导出数据
+function exportData() {
+    showAlert('正在准备导出数据...', 'info');
+    
+    fetch('/api/export_data')
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `seed_phishing_data_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        showAlert('数据导出成功', 'success');
+    })
+    .catch(error => showAlert('导出失败: ' + error, 'danger'));
+}
+
+// 实时更新统计数据
+function updateStats() {
+    fetch('/api/dashboard_stats')
+    .then(response => response.json())
+    .then(data => {
+        // 更新页面上的统计数据
+        const statElements = document.querySelectorAll('[data-stat]');
+        statElements.forEach(element => {
+            const statName = element.getAttribute('data-stat');
+            if (data[statName] !== undefined) {
+                element.textContent = formatNumber(data[statName]);
+            }
+        });
+    })
+    .catch(error => console.log('统计更新失败:', error));
+}
+
+// 页面初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 启动统计数据实时更新
+    updateStats();
+    setInterval(updateStats, 30000);
+});
+</script>
+{% endblock %}

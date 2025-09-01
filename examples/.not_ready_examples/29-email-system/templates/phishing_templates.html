@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账户安全提醒 - MetaMask</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #6f42c1, #e83e8c);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .tagline {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .alert {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .alert-title {
+            color: #856404;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .button {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #dee2e6;
+        }
+        .security-notice {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔐 MetaMask</div>
+            <div class="tagline">Web3 钱包安全解决方案</div>
+        </div>
+
+        <div class="content">
+            <h2 style="color: #2c3e50; margin-bottom: 20px;">账户安全提醒</h2>
+
+            <div class="alert">
+                <div class="alert-title">⚠️ 重要安全通知</div>
+                <p>我们检测到您的 MetaMask 账户可能存在安全风险。为了保护您的数字资产安全，请立即采取以下措施：</p>
+            </div>
+
+            <p>尊敬的 MetaMask 用户：</p>
+
+            <p>我们的安全系统检测到您的账户可能受到潜在威胁。为了确保您的数字资产安全，我们需要您验证账户信息。</p>
+
+            <p><strong>请注意：</strong> 如果您不及时验证，您的账户可能会被临时冻结。</p>
+
+            <div style="text-align: center;">
+                <a href="#" class="button">立即验证账户</a>
+            </div>
+
+            <div class="security-notice">
+                <strong>安全提示：</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>请勿与任何人分享您的私钥或助记词</li>
+                    <li>定期更新您的安全设置</li>
+                    <li>使用强密码保护您的账户</li>
+                </ul>
+            </div>
+
+            <p>如果您有任何疑问，请通过官方网站联系我们的支持团队。</p>
+
+            <p>感谢您选择 MetaMask！</p>
+
+            <p style="color: #666; font-size: 14px;">
+                此邮件由 MetaMask 安全系统自动发送<br>
+                如果您认为这是一封错误邮件，请忽略此消息
+            </p>
+        </div>
+
+        <div class="footer">
+            <p><strong>MetaMask Inc.</strong></p>
+            <p>1000 Block Street, San Francisco, CA 94103</p>
+            <p>© 2024 MetaMask. All rights reserved.</p>
+            <p style="margin-top: 10px; font-size: 11px;">
+                此邮件发送至：{{ recipient_email }}<br>
+                发送时间：{{ send_time }}
+            </p>
+        </div>
+    </div>
+</body>
+</html>

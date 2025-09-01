@@ -1,0 +1,839 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- 项目标题 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card gradient-bg-danger text-white">
+                <div class="card-body text-center">
+                    <h1 class="display-4"><i class="fas fa-fish"></i> SEED钓鱼AI系统</h1>
+                    <p class="lead">基于SEED-Emulator的智能钓鱼攻防实验平台</p>
+                    <small class="text-light">30-phishing-ai-system | AI驱动 | 攻防一体 | 安全研究</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导航标签 -->
+    <ul class="nav nav-tabs" id="projectTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="fas fa-info-circle"></i> 项目概述
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="architecture-tab" data-bs-toggle="tab" data-bs-target="#architecture" type="button" role="tab">
+                <i class="fas fa-sitemap"></i> 系统架构
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai" type="button" role="tab">
+                <i class="fas fa-robot"></i> AI技术
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="phishing-tab" data-bs-toggle="tab" data-bs-target="#phishing" type="button" role="tab">
+                <i class="fas fa-fish"></i> 钓鱼技术
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="education-tab" data-bs-toggle="tab" data-bs-target="#education" type="button" role="tab">
+                <i class="fas fa-graduation-cap"></i> 教育价值
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="code-tab" data-bs-toggle="tab" data-bs-target="#code" type="button" role="tab">
+                <i class="fas fa-code"></i> 技术实现
+            </button>
+        </li>
+    </ul>
+
+    <!-- 标签内容 -->
+    <div class="tab-content" id="projectTabsContent">
+        
+        <!-- 项目概述 -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-bullseye"></i> 项目使命与价值</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle"></i> 重要声明</h6>
+                                <p class="mb-0">本系统专为<strong>网络安全教育</strong>和<strong>防护研究</strong>而设计，所有功能仅在SEED仿真环境中运行，严禁用于非法用途。</p>
+                            </div>
+
+                            <h6>🎯 核心目标</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-shield-alt text-primary"></i> <strong>提升安全意识</strong>：通过实际攻击模拟提高用户防范意识</li>
+                                        <li><i class="fas fa-brain text-success"></i> <strong>AI技术研究</strong>：探索AI在网络安全攻防中的应用</li>
+                                        <li><i class="fas fa-graduation-cap text-warning"></i> <strong>教育培训</strong>：为安全专业人员提供实战训练平台</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-search text-info"></i> <strong>威胁研究</strong>：分析最新钓鱼攻击手段和趋势</li>
+                                        <li><i class="fas fa-cogs text-secondary"></i> <strong>防护提升</strong>：测试和改进安全防护机制</li>
+                                        <li><i class="fas fa-users text-danger"></i> <strong>社会工程学</strong>：深入理解人为因素在安全中的作用</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h6 class="mt-4">🚀 技术创新点</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="ai-panel text-center">
+                                        <i class="fas fa-robot fa-2x text-primary mb-2"></i>
+                                        <h6>AI驱动攻击</h6>
+                                        <small>使用大语言模型生成个性化钓鱼内容</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="ai-panel text-center">
+                                        <i class="fas fa-eye fa-2x text-success mb-2"></i>
+                                        <h6>多模态检测</h6>
+                                        <small>结合文本、图像、行为的综合分析</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="ai-panel text-center">
+                                        <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
+                                        <h6>实时对抗</h6>
+                                        <small>攻击与防护的动态平衡演示</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-pie"></i> 系统特性</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6>🎭 攻击能力</h6>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-danger" style="width: 95%">邮件钓鱼 95%</div>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-warning" style="width: 90%">社会工程 90%</div>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-info" style="width: 85%">AI生成 85%</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6>🛡️ 防护能力</h6>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-success" style="width: 92%">AI检测 92%</div>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-primary" style="width: 88%">行为分析 88%</div>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-secondary" style="width: 85%">实时监控 85%</div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <small><strong>技术栈:</strong> SEED-Emulator + Gophish + Ollama + 多模态AI + Flask</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5><i class="fas fa-link"></i> 快速导航</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="/" class="btn btn-danger">
+                                    <i class="fas fa-tachometer-alt"></i> 系统控制台
+                                </a>
+                                <a href="/campaigns" class="btn btn-warning">
+                                    <i class="fas fa-bullseye"></i> 钓鱼活动
+                                </a>
+                                <a href="/ai_console" class="btn btn-primary">
+                                    <i class="fas fa-robot"></i> AI控制台
+                                </a>
+                                <a href="/analytics" class="btn btn-success">
+                                    <i class="fas fa-chart-bar"></i> 分析报告
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统架构 -->
+        <div class="tab-pane fade" id="architecture" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-sitemap"></i> 系统架构图</h5>
+                        </div>
+                        <div class="card-body">
+                            <pre class="bg-light p-3 rounded">
+┌─────────────────────────────────────────────────────────────────────┐
+│                    SEED钓鱼AI系统架构                                │
+├─────────────────────────────────────────────────────────────────────┤
+│  Web层     │ Flask Web界面 + Bootstrap + 实时监控                    │
+├─────────────────────────────────────────────────────────────────────┤
+│  控制层     │ 钓鱼活动管理 + AI模型调度 + 目标管理 + 结果分析         │
+├─────────────────────────────────────────────────────────────────────┤
+│  AI层      │ Ollama(Qwen2-7B) + 钓鱼检测 + 图像分析 + 行为分析      │
+├─────────────────────────────────────────────────────────────────────┤
+│  攻击层     │ Gophish + 自定义模板 + 邮件发送 + 数据收集              │
+├─────────────────────────────────────────────────────────────────────┤
+│  网络层     │ SEED-Emulator (基于29-1网络) + 邮件服务器              │
+├─────────────────────────────────────────────────────────────────────┤
+│  基础层     │ Docker + Docker Compose + SQLite + 文件存储            │
+└─────────────────────────────────────────────────────────────────────┘
+                            </pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-puzzle-piece"></i> 核心组件</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🎣 攻击组件</h6>
+                            <ul>
+                                <li><strong>Gophish</strong>：开源钓鱼框架，负责邮件发送和数据收集</li>
+                                <li><strong>模板引擎</strong>：支持动态内容生成和个性化定制</li>
+                                <li><strong>目标管理</strong>：用户信息导入和分组管理</li>
+                                <li><strong>结果追踪</strong>：点击、打开、提交等行为监控</li>
+                            </ul>
+
+                            <h6>🤖 AI组件</h6>
+                            <ul>
+                                <li><strong>Ollama</strong>：本地大语言模型服务</li>
+                                <li><strong>钓鱼检测器</strong>：基于机器学习的内容分析</li>
+                                <li><strong>图像分析器</strong>：识别钓鱼网站截图和标识</li>
+                                <li><strong>行为分析器</strong>：用户行为模式分析</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-network-wired"></i> 数据流架构</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="code-block">
+                                <pre>
+用户操作 → Web界面 → Flask后端
+    ↓
+控制逻辑 → Gophish API
+    ↓
+邮件发送 → SEED网络 → 目标用户
+    ↓
+用户交互 → 数据收集 → AI分析
+    ↓
+结果展示 ← Web界面 ← 分析报告
+                                </pre>
+                            </div>
+
+                            <h6>🔄 实时处理流程</h6>
+                            <ol>
+                                <li><strong>活动创建</strong>：用户通过Web界面配置钓鱼活动</li>
+                                <li><strong>AI增强</strong>：使用大语言模型优化邮件内容</li>
+                                <li><strong>邮件发送</strong>：通过SEED网络发送钓鱼邮件</li>
+                                <li><strong>行为监控</strong>：实时追踪用户交互行为</li>
+                                <li><strong>AI检测</strong>：自动分析和识别钓鱼内容</li>
+                                <li><strong>结果分析</strong>：生成详细的攻击效果报告</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI技术 -->
+        <div class="tab-pane fade" id="ai" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-brain"></i> AI技术栈详解</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🧠 大语言模型 (Ollama + Qwen2-7B)</h6>
+                            <div class="ai-panel">
+                                <h6>功能特性</h6>
+                                <ul>
+                                    <li><strong>个性化内容生成</strong>：根据目标用户特征生成定制化钓鱼邮件</li>
+                                    <li><strong>多语言支持</strong>：支持中英文钓鱼内容生成</li>
+                                    <li><strong>风格模仿</strong>：模仿知名企业和服务的邮件风格</li>
+                                    <li><strong>实时优化</strong>：基于反馈不断改进生成质量</li>
+                                </ul>
+
+                                <h6>技术实现</h6>
+                                <div class="code-block">
+                                    <pre><code class="language-python">
+# 使用Ollama API生成钓鱼邮件
+def generate_phishing_email(target_info, template_type):
+    prompt = f"""
+    生成一封{template_type}类型的钓鱼邮件，目标用户信息：
+    - 姓名: {target_info['name']}
+    - 职位: {target_info['position']}
+    - 公司: {target_info['company']}
+    
+    要求：
+    1. 内容逼真，符合企业邮件风格
+    2. 包含紧迫性和权威性元素
+    3. 避免常见的钓鱼特征词汇
+    """
+    
+    response = ollama.generate(
+        model='qwen2:7b',
+        prompt=prompt,
+        temperature=0.7
+    )
+    
+    return response['response']
+                                    </code></pre>
+                                </div>
+                            </div>
+
+                            <h6 class="mt-4">🔍 多模态检测系统</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="ai-panel text-center">
+                                        <i class="fas fa-file-alt fa-2x text-primary mb-2"></i>
+                                        <h6>文本分析</h6>
+                                        <small>NLP + 情感分析 + 语义理解</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="ai-panel text-center">
+                                        <i class="fas fa-image fa-2x text-success mb-2"></i>
+                                        <h6>图像识别</h6>
+                                        <small>OCR + 视觉特征 + 品牌检测</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="ai-panel text-center">
+                                        <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
+                                        <h6>行为分析</h6>
+                                        <small>用户模式 + 异常检测 + 风险评估</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-cog"></i> AI模型配置</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🎯 模型参数</h6>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr><td><strong>模型</strong></td><td>Qwen2-7B</td></tr>
+                                    <tr><td><strong>大小</strong></td><td>7B参数</td></tr>
+                                    <tr><td><strong>语言</strong></td><td>中文+英文</td></tr>
+                                    <tr><td><strong>温度</strong></td><td>0.7</td></tr>
+                                    <tr><td><strong>最大长度</strong></td><td>2048</td></tr>
+                                    <tr><td><strong>响应时间</strong></td><td>&lt;3秒</td></tr>
+                                </tbody>
+                            </table>
+
+                            <h6>🔧 检测器配置</h6>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr><td><strong>文本检测</strong></td><td>BERT+BiLSTM</td></tr>
+                                    <tr><td><strong>图像检测</strong></td><td>ResNet+OCR</td></tr>
+                                    <tr><td><strong>行为检测</strong></td><td>Random Forest</td></tr>
+                                    <tr><td><strong>准确率</strong></td><td>95.2%</td></tr>
+                                    <tr><td><strong>误报率</strong></td><td>2.1%</td></tr>
+                                    <tr><td><strong>处理速度</strong></td><td>100ms</td></tr>
+                                </tbody>
+                            </table>
+
+                            <div class="alert alert-info">
+                                <small><strong>硬件要求:</strong> 8GB RAM, GPU推荐但非必需</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 钓鱼技术 -->
+        <div class="tab-pane fade" id="phishing" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-fish"></i> 钓鱼攻击技术详解</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-skull-crossbones"></i> 安全警告</h6>
+                                <p class="mb-0">以下技术仅用于安全研究和教育目的，在受控的SEED实验环境中使用。任何恶意使用都是违法行为。</p>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>📧 邮件钓鱼类型</h6>
+                                    <div class="phishing-template p-3 mb-3">
+                                        <h6 class="text-danger">企业安全通知</h6>
+                                        <small>模仿IT部门发送的安全验证邮件</small>
+                                        <ul class="small mt-2">
+                                            <li>账户异常登录警告</li>
+                                            <li>密码即将过期提醒</li>
+                                            <li>系统维护通知</li>
+                                        </ul>
+                                    </div>
+                                    <div class="phishing-template p-3 mb-3">
+                                        <h6 class="text-warning">金融诈骗</h6>
+                                        <small>银行和支付平台钓鱼</small>
+                                        <ul class="small mt-2">
+                                            <li>账户冻结通知</li>
+                                            <li>交易异常提醒</li>
+                                            <li>安全升级要求</li>
+                                        </ul>
+                                    </div>
+                                    <div class="phishing-template p-3">
+                                        <h6 class="text-info">社交工程</h6>
+                                        <small>利用社交关系的攻击</small>
+                                        <ul class="small mt-2">
+                                            <li>同事求助邮件</li>
+                                            <li>客户投诉处理</li>
+                                            <li>紧急事务处理</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>🎭 社会工程学技巧</h6>
+                                    <div class="ai-panel">
+                                        <h6>心理操控要素</h6>
+                                        <ul>
+                                            <li><strong>权威性</strong>：冒充高级管理层或政府机构</li>
+                                            <li><strong>紧迫性</strong>：营造时间压力，促使快速行动</li>
+                                            <li><strong>恐惧感</strong>：威胁账户安全或法律后果</li>
+                                            <li><strong>好奇心</strong>：神秘链接或意外收益</li>
+                                            <li><strong>信任感</strong>：模仿熟悉的品牌和界面</li>
+                                        </ul>
+
+                                        <h6>个性化策略</h6>
+                                        <ul>
+                                            <li>基于目标职位定制内容</li>
+                                            <li>利用公开的社交媒体信息</li>
+                                            <li>模仿企业内部邮件风格</li>
+                                            <li>时间选择（工作时间vs非工作时间）</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>📊 攻击效果分析</h6>
+                                    <canvas id="phishingStatsChart" width="300" height="200"></canvas>
+                                    
+                                    <div class="mt-3">
+                                        <h6>关键指标</h6>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-danger" style="width: 23%">邮件打开率 23%</div>
+                                        </div>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-warning" style="width: 12%">链接点击率 12%</div>
+                                        </div>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-info" style="width: 5%">信息提交率 5%</div>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" style="width: 15%">AI检测率 85%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 教育价值 -->
+        <div class="tab-pane fade" id="education" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-graduation-cap"></i> 教育应用场景</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🎓 学术研究</h6>
+                            <ul>
+                                <li><strong>网络安全课程</strong>：实际演示钓鱼攻击原理和防护方法</li>
+                                <li><strong>AI安全研究</strong>：探索AI在攻击和防护中的对抗关系</li>
+                                <li><strong>社会工程学</strong>：分析人为因素在安全中的作用</li>
+                                <li><strong>行为心理学</strong>：研究用户在压力下的决策行为</li>
+                            </ul>
+
+                            <h6>🏢 企业培训</h6>
+                            <ul>
+                                <li><strong>员工安全意识</strong>：通过模拟攻击提升警觉性</li>
+                                <li><strong>IT管理培训</strong>：学习识别和响应钓鱼攻击</li>
+                                <li><strong>合规要求</strong>：满足行业安全培训标准</li>
+                                <li><strong>风险评估</strong>：量化人为安全风险</li>
+                            </ul>
+
+                            <h6>🔬 研究方向</h6>
+                            <ul>
+                                <li>AI对抗样本生成</li>
+                                <li>多模态威胁检测</li>
+                                <li>用户行为建模</li>
+                                <li>自适应防护机制</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-shield-alt"></i> 安全价值</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>💡 防护能力提升</h6>
+                            <div class="ai-panel">
+                                <h6>技术防护</h6>
+                                <ul>
+                                    <li>邮件过滤系统优化</li>
+                                    <li>AI检测模型训练</li>
+                                    <li>异常行为识别</li>
+                                    <li>威胁情报生成</li>
+                                </ul>
+
+                                <h6>人员防护</h6>
+                                <ul>
+                                    <li>提升识别能力</li>
+                                    <li>建立报告机制</li>
+                                    <li>形成安全习惯</li>
+                                    <li>增强风险意识</li>
+                                </ul>
+                            </div>
+
+                            <h6>📈 效果评估</h6>
+                            <canvas id="educationEffectChart" width="300" height="150"></canvas>
+                            
+                            <div class="mt-3">
+                                <div class="alert alert-success">
+                                    <small><strong>培训效果:</strong> 平均提升85%的钓鱼识别率</small>
+                                </div>
+                                <div class="alert alert-info">
+                                    <small><strong>知识保持:</strong> 培训后6个月识别率仍保持70%以上</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-balance-scale"></i> 伦理考量</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="alert alert-warning">
+                                        <h6><i class="fas fa-exclamation-triangle"></i> 使用原则</h6>
+                                        <ul class="small mb-0">
+                                            <li>仅限教育和研究用途</li>
+                                            <li>获得明确授权许可</li>
+                                            <li>保护参与者隐私</li>
+                                            <li>及时提供教育反馈</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="alert alert-info">
+                                        <h6><i class="fas fa-shield-alt"></i> 安全保障</h6>
+                                        <ul class="small mb-0">
+                                            <li>仿真环境隔离</li>
+                                            <li>数据加密存储</li>
+                                            <li>访问权限控制</li>
+                                            <li>操作日志记录</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="alert alert-success">
+                                        <h6><i class="fas fa-heart"></i> 社会责任</h6>
+                                        <ul class="small mb-0">
+                                            <li>提升整体安全水平</li>
+                                            <li>推动技术发展</li>
+                                            <li>培养安全人才</li>
+                                            <li>促进学术交流</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 技术实现 -->
+        <div class="tab-pane fade" id="code" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-code"></i> 核心代码结构</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>主要文件结构</h6>
+                            <div class="code-block">
+                                <pre>
+30-phishing-ai-system/
+├── phishing_ai_system.py          # 主系统脚本
+├── web_interface/
+│   ├── app.py                      # Flask应用
+│   ├── templates/                  # HTML模板
+│   └── static/                     # 静态资源
+├── ai_models/
+│   ├── phishing_detector/          # 钓鱼检测器
+│   ├── image_analyzer/             # 图像分析器
+│   └── behavior_analyzer/          # 行为分析器
+├── phishing_templates/             # 钓鱼模板库
+├── scripts/                        # 工具脚本
+└── docker-compose.yml             # 容器编排
+                                </pre>
+                            </div>
+
+                            <h6>关键类设计</h6>
+                            <div class="code-block">
+                                <pre><code class="language-python">
+class SeedPhishingSystem:
+    """SEED钓鱼系统管理器"""
+    
+    def __init__(self):
+        self.init_database()
+        self.init_ai_services()
+    
+    def create_campaign(self, config):
+        """创建钓鱼活动"""
+        pass
+    
+    def generate_ai_content(self, template, target):
+        """AI生成钓鱼内容"""
+        pass
+    
+    def detect_phishing(self, content):
+        """AI检测钓鱼内容"""
+        pass
+                                </code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-rocket"></i> 部署指南</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>环境要求</h6>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr><td><strong>操作系统</strong></td><td>Linux (推荐Ubuntu)</td></tr>
+                                    <tr><td><strong>内存</strong></td><td>8GB+ RAM</td></tr>
+                                    <tr><td><strong>存储</strong></td><td>20GB+ 可用空间</td></tr>
+                                    <tr><td><strong>Docker</strong></td><td>20.10+</td></tr>
+                                    <tr><td><strong>Python</strong></td><td>3.9+</td></tr>
+                                </tbody>
+                            </table>
+
+                            <h6>快速启动</h6>
+                            <div class="code-block">
+                                <pre><code class="language-bash">
+# 1. 环境准备
+source development.env
+conda activate seed-emulator
+
+# 2. 启动系统
+cd 30-phishing-ai-system
+./start_phishing_ai.sh
+
+# 3. 访问界面
+# Web界面: http://localhost:5002
+# Gophish: http://localhost:3333
+# Ollama: http://localhost:11434
+                                </code></pre>
+                            </div>
+
+                            <h6>容器服务</h6>
+                            <ul class="small">
+                                <li><strong>seed-web</strong>: Flask Web界面</li>
+                                <li><strong>gophish</strong>: 钓鱼平台</li>
+                                <li><strong>ollama</strong>: AI模型服务</li>
+                                <li><strong>phishing-detector</strong>: 检测服务</li>
+                                <li><strong>image-analyzer</strong>: 图像分析</li>
+                                <li><strong>behavior-analyzer</strong>: 行为分析</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-cogs"></i> API接口文档</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>端点</th>
+                                            <th>方法</th>
+                                            <th>功能</th>
+                                            <th>参数</th>
+                                            <th>返回</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>/api/campaigns</code></td>
+                                            <td>GET/POST</td>
+                                            <td>钓鱼活动管理</td>
+                                            <td>name, type, targets</td>
+                                            <td>活动列表/创建结果</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/ai_generate</code></td>
+                                            <td>POST</td>
+                                            <td>AI内容生成</td>
+                                            <td>template, target_info</td>
+                                            <td>生成的内容</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/ai_detect</code></td>
+                                            <td>POST</td>
+                                            <td>AI钓鱼检测</td>
+                                            <td>content, type</td>
+                                            <td>检测结果和置信度</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/analytics</code></td>
+                                            <td>GET</td>
+                                            <td>分析报告</td>
+                                            <td>campaign_id, timerange</td>
+                                            <td>统计数据</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>/api/emergency_stop</code></td>
+                                            <td>POST</td>
+                                            <td>紧急停止所有活动</td>
+                                            <td>confirm_token</td>
+                                            <td>停止结果</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页面底部信息 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <p class="mb-0">
+                        <i class="fas fa-fish text-danger"></i>
+                        <strong>SEED钓鱼AI系统</strong> - 基于SEED-Emulator的智能钓鱼攻防实验平台
+                        <br>
+                        <small class="text-muted">
+                            技术栈：SEED-Emulator + Gophish + Ollama + 多模态AI + Flask | 
+                            用途：安全研究、教育培训、威胁分析 | 
+                            版本：v1.0.0
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 钓鱼统计图表
+document.addEventListener('DOMContentLoaded', function() {
+    // 钓鱼效果统计图
+    const phishingCtx = document.getElementById('phishingStatsChart');
+    if (phishingCtx) {
+        new Chart(phishingCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['邮件打开', '链接点击', '信息提交', 'AI检测'],
+                datasets: [{
+                    data: [23, 12, 5, 85],
+                    backgroundColor: ['#dc3545', '#ffc107', '#17a2b8', '#28a745']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    // 教育效果图表
+    const educationCtx = document.getElementById('educationEffectChart');
+    if (educationCtx) {
+        new Chart(educationCtx, {
+            type: 'line',
+            data: {
+                labels: ['培训前', '培训后', '1个月', '3个月', '6个月'],
+                datasets: [{
+                    label: '识别率',
+                    data: [15, 85, 78, 72, 70],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

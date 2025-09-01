@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEED邮件系统综合总览 - 4257</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .cyber-text {
+            background: linear-gradient(45deg, #00ff88, #0088ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+
+        .dark-bg {
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-online {
+            color: #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        .status-offline {
+            color: #ff4444;
+        }
+
+        .status-unknown {
+            color: #ffaa00;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .project-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        .code-preview {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        .tech-badge {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+        }
+
+        .tab-content {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="dark-bg">
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark glass-card mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand cyber-text" href="#">
+                <i class="fas fa-server"></i> SEED邮件系统综合总览
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">
+                            <i class="fas fa-home"></i> 总览
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="guide-tab" data-bs-toggle="tab" data-bs-target="#guide" type="button" role="tab" aria-controls="guide" aria-selected="false">
+                            <i class="fas fa-book"></i> 实践指南
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tech-tab" data-bs-toggle="tab" data-bs-target="#tech" type="button" role="tab" aria-controls="tech" aria-selected="false">
+                            <i class="fas fa-cogs"></i> 技术总结
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="code-tab" data-bs-toggle="tab" data-bs-target="#code" type="button" role="tab" aria-controls="code" aria-selected="false">
+                            <i class="fas fa-code"></i> 代码结构
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="design-tab" data-bs-toggle="tab" data-bs-target="#design" type="button" role="tab" aria-controls="design" aria-selected="false">
+                            <i class="fas fa-brain"></i> 设计思路
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="issues-tab" data-bs-toggle="tab" data-bs-target="#issues" type="button" role="tab" aria-controls="issues" aria-selected="false">
+                            <i class="fas fa-exclamation-triangle"></i> 问题&测试
+                        </button>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <button class="btn btn-outline-info me-2" onclick="refreshStatus()">
+                        <i class="fas fa-sync-alt"></i> 刷新状态
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="stopAllProjects()">
+                        <i class="fas fa-stop"></i> 停止全部
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <!-- 主要内容区域 -->
+        <div class="tab-content">
+            <!-- 总览标签页 -->
+            <div class="tab-pane fade show active" id="overview">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card glass-card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h4 class="mb-0">
+                                    <i class="fas fa-chart-line"></i> 系统状态总览
+                                    <span class="badge bg-success float-end" id="system-status">在线</span>
+                                </h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="row" id="status-overview">
+                                    <!-- 动态加载状态信息 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 项目卡片 -->
+                <div class="row">
+                    {% for project_id, project in projects.items() %}
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="card glass-card project-card h-100" onclick="showProjectDetails('{{ project_id }}')">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-project-diagram"></i> {{ project.name }}
+                                    <span class="badge bg-success float-end">{{ project.status }}</span>
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">{{ project.description }}</p>
+                                <div class="mb-3">
+                                    <small class="text-muted">端口: {{ project.port }}</small>
+                                </div>
+                                <div class="mb-3">
+                                    <h6>核心功能:</h6>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for feature in project.features %}
+                                        <span class="badge tech-badge">{{ feature }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="mt-auto">
+                                    <div class="btn-group w-100">
+                                        <button class="btn btn-success btn-sm" onclick="startProject('{{ project_id }}')">
+                                            <i class="fas fa-play"></i> 启动
+                                        </button>
+                                        <button class="btn btn-primary btn-sm" onclick="viewProject('{{ project_id }}')">
+                                            <i class="fas fa-eye"></i> 查看
+                                        </button>
+                                        <button class="btn btn-warning btn-sm" onclick="testProject('{{ project_id }}')">
+                                            <i class="fas fa-flask"></i> 测试
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- 快速操作面板 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card glass-card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-bolt"></i> 快速操作面板
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-md-3 mb-3">
+                                        <button class="btn btn-success btn-lg w-100" onclick="startAllProjects()">
+                                            <i class="fas fa-play-circle fa-2x mb-2"></i><br>
+                                            启动全部项目
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <button class="btn btn-danger btn-lg w-100" onclick="stopAllProjects()">
+                                            <i class="fas fa-stop-circle fa-2x mb-2"></i><br>
+                                            停止全部项目
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <button class="btn btn-info btn-lg w-100" onclick="runAllTests()">
+                                            <i class="fas fa-flask fa-2x mb-2"></i><br>
+                                            运行全部测试
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <button class="btn btn-secondary btn-lg w-100" onclick="cleanupSystem()">
+                                            <i class="fas fa-broom fa-2x mb-2"></i><br>
+                                            系统清理
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 实践指南标签页 -->
+            <div class="tab-pane fade" id="guide">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card glass-card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h4 class="mb-0">
+                                    <i class="fas fa-book-open"></i> 快速开始指南
+                                </h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="accordion" id="guideAccordion">
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#step1">
+                                                <strong>1. 环境准备</strong>
+                                            </button>
+                                        </h2>
+                                        <div id="step1" class="accordion-collapse collapse show" data-bs-parent="#guideAccordion">
+                                            <div class="accordion-body">
+                                                <pre class="code-preview"># 激活SEED环境
+cd /home/parallels/seed-email-system
+source development.env
+conda activate seed-emulator
+
+# 加载Docker别名
+cd examples/.not_ready_examples
+source docker_aliases.sh
+
+# 查看帮助
+seed-help</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step2">
+                                                <strong>2. 项目启动</strong>
+                                            </button>
+                                        </h2>
+                                        <div id="step2" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+                                            <div class="accordion-body">
+                                                <pre class="code-preview"># 29基础版 - 快速体验
+seed-29
+
+# 29-1真实版 - 生产环境仿真
+seed-29-1
+
+# 30 AI版 - 智能钓鱼
+seed-30
+
+# 31高级版 - APT攻击模拟
+seed-31</pre>
+                                                <div class="alert alert-info">
+                                                    <strong>💡 提示:</strong> 每个项目都有独立的端口和功能，可以同时运行多个项目进行对比测试。
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step3">
+                                                <strong>3. 功能测试</strong>
+                                            </button>
+                                        </h2>
+                                        <div id="step3" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+                                            <div class="accordion-body">
+                                                <pre class="code-preview"># 发送测试邮件
+seed-mail-send
+
+# 检查系统状态
+seed-status
+
+# 运行自动化测试
+python3 comprehensive_test.py
+
+# OpenAI集成测试
+python3 demo_openai_integration.py</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step4">
+                                                <strong>4. 调试与维护</strong>
+                                            </button>
+                                        </h2>
+                                        <div id="step4" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+                                            <div class="accordion-body">
+                                                <pre class="code-preview"># 检查端口占用
+seed-check-ports
+
+# 强力清理系统
+seed-force-cleanup
+
+# 紧急停止
+seed-emergency-stop
+
+# 查看容器日志
+dclogf</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card glass-card mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-check-circle"></i> 最佳实践
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled">
+                                    <li class="mb-3">
+                                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                                        <strong>渐进式学习:</strong> 从29基础版开始，逐步深入
+                                    </li>
+                                    <li class="mb-3">
+                                        <i class="fas fa-clock text-info me-2"></i>
+                                        <strong>合理规划:</strong> 每个项目启动需要2-5分钟
+                                    </li>
+                                    <li class="mb-3">
+                                        <i class="fas fa-memory text-primary me-2"></i>
+                                        <strong>资源管理:</strong> 注意Docker容器资源占用
+                                    </li>
+                                    <li class="mb-3">
+                                        <i class="fas fa-shield-alt text-danger me-2"></i>
+                                        <strong>安全第一:</strong> 仅用于教育和研究目的
+                                    </li>
+                                    <li class="mb-3">
+                                        <i class="fas fa-save text-secondary me-2"></i>
+                                        <strong>定期备份:</strong> 保存重要的配置和数据
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="card glass-card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-exclamation-triangle"></i> 注意事项
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-danger">
+                                    <strong>⚠️ 重要提醒:</strong>
+                                </div>
+                                <ul class="text-muted small">
+                                    <li>31项目包含高级攻击技术，谨慎使用</li>
+                                    <li>OpenAI API需要有效密钥和网络访问</li>
+                                    <li>Docker容器可能消耗大量系统资源</li>
+                                    <li>定期清理容器避免磁盘空间不足</li>
+                                    <li>测试邮件请使用内部网络环境</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 技术总结标签页 -->
+            <div class="tab-pane fade" id="tech">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card glass-card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h4 class="mb-0">
+                                    <i class="fas fa-cogs"></i> 技术架构总览
+                                </h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-lg-6">
+                                        <h5>核心技术栈</h5>
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <h6>基础设施</h6>
+                                                <ul class="list-unstyled">
+                                                    <li><i class="fab fa-docker text-info"></i> Docker</li>
+                                                    <li><i class="fas fa-network-wired text-primary"></i> SEED-Emulator</li>
+                                                    <li><i class="fas fa-server text-secondary"></i> Flask</li>
+                                                    <li><i class="fas fa-database text-warning"></i> PostgreSQL</li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-6">
+                                                <h6>AI集成</h6>
+                                                <ul class="list-unstyled">
+                                                    <li><i class="fas fa-brain text-success"></i> OpenAI GPT-4</li>
+                                                    <li><i class="fas fa-robot text-info"></i> Ollama</li>
+                                                    <li><i class="fas fa-fish text-warning"></i> Gophish</li>
+                                                    <li><i class="fas fa-shield-alt text-danger"></i> AI检测引擎</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <h5>项目演进路线</h5>
+                                        <div class="timeline">
+                                            <div class="timeline-item">
+                                                <div class="timeline-marker bg-success"></div>
+                                                <div class="timeline-content">
+                                                    <h6>29基础版</h6>
+                                                    <p>Docker Mailserver + 基础Web界面</p>
+                                                    <small class="text-muted">核心功能实现</small>
+                                                </div>
+                                            </div>
+                                            <div class="timeline-item">
+                                                <div class="timeline-marker bg-info"></div>
+                                                <div class="timeline-content">
+                                                    <h6>29-1真实版</h6>
+                                                    <p>多提供商仿真 + 高级网络拓扑</p>
+                                                    <small class="text-muted">生产环境模拟</small>
+                                                </div>
+                                            </div>
+                                            <div class="timeline-item">
+                                                <div class="timeline-marker bg-warning"></div>
+                                                <div class="timeline-content">
+                                                    <h6>30 AI版</h6>
+                                                    <p>AI钓鱼 + 自动化攻击</p>
+                                                    <small class="text-muted">智能化升级</small>
+                                                </div>
+                                            </div>
+                                            <div class="timeline-item">
+                                                <div class="timeline-marker bg-danger"></div>
+                                                <div class="timeline-content">
+                                                    <h6>31高级版</h6>
+                                                    <p>APT模拟 + OpenAI集成</p>
+                                                    <small class="text-muted">终极攻击平台</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 技术细节 -->
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card glass-card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-code-branch"></i> 关键技术实现
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="accordion" id="techAccordion">
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#tech1">
+                                                SEED-Emulator网络构建
+                                            </button>
+                                        </h2>
+                                        <div id="tech1" class="accordion-collapse collapse show" data-bs-parent="#techAccordion">
+                                            <div class="accordion-body">
+                                                <pre class="code-preview"># email_simple.py - 基础网络构建
+from seedemu import *
+
+emu = Emulator()
+base = Base()
+routing = Routing()
+ebgp = Ebgp()
+
+# 创建互联网交换点
+ix100 = base.createInternetExchange(100)
+ix101 = base.createInternetExchange(101)
+
+# 创建AS和网络
+as150 = base.createAutonomousSystem(150)
+as151 = base.createAutonomousSystem(151)
+
+# 配置BGP路由
+ebgp.addPrivatePeering(100, 150, 151, abRelationship=Relationship.Unfiltered)
+ebgp.addPrivatePeering(101, 150, 151, abRelationship=Relationship.Unfiltered)</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tech2">
+                                                Docker容器编排
+                                            </button>
+                                        </h2>
+                                        <div id="tech2" class="accordion-collapse collapse" data-bs-parent="#techAccordion">
+                                            <div class="accordion-body">
+                                                <pre class="code-preview"># docker-compose.yml 配置
+version: '3.8'
+services:
+  mailserver:
+    image: mailserver/docker-mailserver:edge
+    container_name: seed-mail-1
+    hostname: mail.seed.edu
+    ports:
+      - "2525:25"    # SMTP
+      - "1430:143"   # IMAP
+      - "5870:587"   # SMTP提交
+      - "9930:993"   # IMAPS
+    volumes:
+      - ./mail-data:/var/mail
+      - ./config:/tmp/docker-mailserver
+    environment:
+      - ENABLE_SPAMASSASSIN=1
+      - ENABLE_CLAMAV=1</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tech3">
+                                                OpenAI集成实现
+                                            </button>
+                                        </h2>
+                                        <div id="tech3" class="accordion-collapse collapse" data-bs-parent="#techAccordion">
+                                            <div class="accordion-body">
+                                                <pre class="code-preview"># OpenAI客户端初始化
+from openai import OpenAI
+
+class AdvancedPhishingSystem:
+    def __init__(self):
+        load_dotenv()
+        api_key = os.getenv('OPENAI_API_KEY')
+        base_url = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
+
+        self.openai_client = OpenAI(
+            api_key=api_key,
+            base_url=base_url
+        )
+
+    async def generate_phishing_content(self, target_profile, campaign_type):
+        prompt = self._build_phishing_prompt(target_profile, campaign_type)
+
+        if self.openai_client:
+            content = await self.openai_generate(prompt, model_type="content")
+            evasion_result = await self.apply_evasion_techniques(content, target_profile)
+            return evasion_result</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tech4">
+                                                威胁检测算法
+                                            </button>
+                                        </h2>
+                                        <div id="tech4" class="accordion-collapse collapse" data-bs-parent="#techAccordion">
+                                            <div class="accordion-body">
+                                                <pre class="code-preview"># 多模态威胁检测
+async def detect_phishing_threat(self, content: str, metadata: Dict = None) -> Dict:
+    prompt = f"""
+分析以下内容是否为钓鱼攻击：
+{content}
+
+请从以下方面分析：
+1. 钓鱼特征识别
+2. 风险等级评估
+3. 可疑元素识别
+4. 检测置信度
+5. 建议的防护措施
+"""
+
+    if self.openai_client:
+        analysis = await self.openai_generate(prompt, model_type="threat")
+    else:
+        analysis = self._basic_phishing_detection(content)
+
+    return {
+        "is_phishing": self._extract_phishing_decision(analysis),
+        "confidence": self._extract_confidence_score(analysis),
+        "risk_level": self._extract_risk_level(analysis),
+        "indicators": self._extract_threat_indicators(analysis),
+        "recommendations": self._extract_security_recommendations(analysis)
+    }</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card glass-card mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-chart-bar"></i> 性能指标
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-6 mb-3">
+                                        <div class="metric-card">
+                                            <i class="fas fa-clock text-info fa-2x mb-2"></i>
+                                            <h4 class="text-info">2-3秒</h4>
+                                            <p class="card-text small">AI响应时间</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <div class="metric-card">
+                                            <i class="fas fa-brain text-success fa-2x mb-2"></i>
+                                            <h4 class="text-success">95%+</h4>
+                                            <p class="card-text small">内容质量</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <div class="metric-card">
+                                            <i class="fas fa-shield-alt text-warning fa-2x mb-2"></i>
+                                            <h4 class="text-warning">92%</h4>
+                                            <p class="card-text small">检测准确率</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <div class="metric-card">
+                                            <i class="fas fa-server text-primary fa-2x mb-2"></i>
+                                            <h4 class="text-primary">99.5%</h4>
+                                            <p class="card-text small">系统可用率</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card glass-card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-tools"></i> 开发工具
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fab fa-python text-primary me-2"></i>
+                                        <strong>Python 3.11</strong>
+                                        <br><small>主要开发语言</small>
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fab fa-docker text-info me-2"></i>
+                                        <strong>Docker</strong>
+                                        <br><small>容器化部署</small>
+                                    </li>
+                                    <li class="fas fa-network-wired text-success me-2"></li>
+                                    <strong>SEED-Emulator</strong>
+                                    <br><small>网络仿真框架</small>
+                                    <li class="mb-2">
+                                        <i class="fas fa-brain text-warning me-2"></i>
+                                        <strong>OpenAI API</strong>
+                                        <br><small>AI能力集成</small>
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fab fa-bootstrap text-purple me-2"></i>
+                                        <strong>Bootstrap 5</strong>
+                                        <br><small>前端UI框架</small>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 其他标签页占位 -->
+            <div class="tab-pane fade" id="code">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card glass-card">
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-code fa-4x text-muted mb-4"></i>
+                                <h4 class="text-muted">代码结构浏览器</h4>
+                                <p class="text-muted">选择左侧项目查看详细代码结构</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="design">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card glass-card">
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-brain fa-4x text-muted mb-4"></i>
+                                <h4 class="text-muted">设计思路与架构</h4>
+                                <p class="text-muted">查看项目的设计理念和技术架构</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="issues">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card glass-card">
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-exclamation-triangle fa-4x text-muted mb-4"></i>
+                                <h4 class="text-muted">问题诊断与测试</h4>
+                                <p class="text-muted">系统问题排查和测试结果</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 项目详情模态框 -->
+    <div class="modal fade modal-dark" id="projectModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header border-primary">
+                    <h5 class="modal-title">
+                        <i class="fas fa-info-circle text-primary"></i> 项目详细信息
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="project-details">
+                    <!-- 动态加载项目详情 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- 自定义JavaScript -->
+    <script>
+        // 全局变量
+        let currentStatus = {};
+        let refreshInterval;
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSystemStatus();
+            startAutoRefresh();
+
+            // 标签页切换事件监听（使用Bootstrap的标准事件）
+            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function (e) {
+                    const target = e.target.getAttribute('data-bs-target').substring(1);
+                    loadTabContent(target);
+                    console.log(`Switched to tab: ${target}`);
+                });
+            });
+        });
+
+        // 加载系统状态
+        function loadSystemStatus() {
+            fetch('/api/system_status')
+            .then(response => response.json())
+            .then(data => {
+                updateStatusDisplay(data);
+                currentStatus = data;
+            })
+            .catch(error => {
+                console.error('加载状态失败:', error);
+                showToast('加载系统状态失败', 'error');
+            });
+        }
+
+        // 更新状态显示
+        function updateStatusDisplay(data) {
+            const statusOverview = document.getElementById('status-overview');
+
+            let html = '';
+
+            // Docker状态
+            html += `
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-secondary h-100">
+                        <div class="card-body text-center">
+                            <i class="fab fa-docker fa-2x ${data.docker.running ? 'text-success' : 'text-danger'} mb-2"></i>
+                            <h6>Docker状态</h6>
+                            <p class="mb-1">${data.docker.running ? '运行中' : '未运行'}</p>
+                            <small class="text-muted">${data.docker.containers}个容器</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 项目状态
+            Object.entries(data.projects).forEach(([projectId, status]) => {
+                const statusClass = status === 'online' ? 'text-success' : status === 'offline' ? 'text-danger' : 'text-warning';
+                const statusText = status === 'online' ? '在线' : status === 'offline' ? '离线' : '未知';
+
+                html += `
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-secondary h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-server fa-2x ${statusClass} mb-2"></i>
+                                <h6>${projectId.toUpperCase()}</h6>
+                                <p class="mb-1 ${statusClass}">${statusText}</p>
+                                <small class="text-muted">端口: ${window.PROJECTS_INFO ? window.PROJECTS_INFO[projectId].port : 'N/A'}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            statusOverview.innerHTML = html;
+        }
+
+        // 启动项目
+        function startProject(projectId) {
+            event.stopPropagation();
+
+            if (confirm(`确定要启动项目 ${projectId} 吗？`)) {
+                showToast(`正在启动项目 ${projectId}...`, 'info');
+
+                fetch(`/api/start_project/${projectId}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showToast('项目启动成功', 'success');
+                        setTimeout(() => loadSystemStatus(), 2000);
+                    } else {
+                        showToast('项目启动失败: ' + result.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('启动请求失败', 'error');
+                });
+            }
+        }
+
+        // 停止所有项目
+        function stopAllProjects() {
+            if (confirm('确定要停止所有项目吗？')) {
+                showToast('正在停止所有项目...', 'info');
+
+                fetch('/api/stop_all')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showToast('项目停止成功', 'success');
+                        setTimeout(() => loadSystemStatus(), 2000);
+                    } else {
+                        showToast('项目停止失败', 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('停止请求失败', 'error');
+                });
+            }
+        }
+
+        // 系统清理
+        function cleanupSystem() {
+            if (confirm('确定要清理系统吗？这将停止并删除所有容器。')) {
+                showToast('正在清理系统...', 'info');
+
+                fetch('/api/cleanup')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showToast('系统清理成功', 'success');
+                        setTimeout(() => loadSystemStatus(), 3000);
+                    } else {
+                        showToast('系统清理失败', 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('清理请求失败', 'error');
+                });
+            }
+        }
+
+        // 显示项目详情
+        function showProjectDetails(projectId) {
+            const modal = new bootstrap.Modal(document.getElementById('projectModal'));
+            const detailsDiv = document.getElementById('project-details');
+
+            detailsDiv.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">加载中...</span></div></div>';
+
+            fetch(`/api/project_info/${projectId}`)
+            .then(response => response.json())
+            .then(data => {
+                let html = `
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h4 class="text-primary">${data.info.name}</h4>
+                            <p class="lead">${data.info.description}</p>
+
+                            <div class="mb-4">
+                                <h6>技术栈:</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    ${data.info.tech_stack.map(tech => `<span class="badge bg-info">${tech}</span>`).join('')}
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h6>核心功能:</h6>
+                                <ul>
+                                    ${data.info.features.map(feature => `<li>${feature}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="mb-3">
+                                    <span class="badge bg-${data.info.status.includes('完成') ? 'success' : 'warning'} fs-6">${data.info.status}</span>
+                                </div>
+                                <div class="mb-3">
+                                    <i class="fas fa-server fa-3x text-primary mb-3"></i>
+                                    <h6>端口: ${data.info.port}</h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <h5>项目结构</h5>
+                            <div class="code-preview" style="max-height: 300px; overflow-y: auto;">
+                                ${generateFileTree(data.structure)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                detailsDiv.innerHTML = html;
+                modal.show();
+            })
+            .catch(error => {
+                detailsDiv.innerHTML = '<div class="alert alert-danger">加载项目详情失败</div>';
+                console.error('加载项目详情失败:', error);
+            });
+        }
+
+        // 生成文件树
+        function generateFileTree(structure) {
+            let html = '';
+            const grouped = {};
+
+            structure.forEach(file => {
+                const ext = file.extension || 'folder';
+                if (!grouped[ext]) grouped[ext] = [];
+                grouped[ext].push(file);
+            });
+
+            Object.keys(grouped).sort().forEach(ext => {
+                if (ext === 'py') html += `<div class="text-info"><strong>📄 Python文件:</strong></div>`;
+                else if (ext === 'yml' || ext === 'yaml') html += `<div class="text-warning"><strong>⚙️ 配置文件:</strong></div>`;
+                else if (ext === 'md') html += `<div class="text-primary"><strong>📖 文档文件:</strong></div>`;
+                else html += `<div class="text-muted"><strong>📁 其他文件:</strong></div>`;
+
+                grouped[ext].forEach(file => {
+                    const size = file.size ? `${(file.size / 1024).toFixed(1)}KB` : '';
+                    html += `  ${file.path} ${size ? `(${size})` : ''}<br>`;
+                });
+                html += '<br>';
+            });
+
+            return html || '暂无文件结构信息';
+        }
+
+        // 自动刷新
+        function startAutoRefresh() {
+            refreshInterval = setInterval(() => {
+                loadSystemStatus();
+            }, 10000); // 每10秒刷新一次
+        }
+
+        // 停止自动刷新
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        }
+
+        // 刷新状态
+        function refreshStatus() {
+            showToast('正在刷新状态...', 'info');
+            loadSystemStatus();
+        }
+
+        // 显示Toast消息
+        function showToast(message, type = 'info') {
+            // 创建简单的Toast实现
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close float-end" onclick="this.parentElement.remove()"></button>
+            `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 3000);
+        }
+
+        // 加载标签页内容
+        function loadTabContent(tabId) {
+            console.log(`Loading tab content: ${tabId}`);
+
+            // 根据标签页ID执行相应的初始化
+            switch(tabId) {
+                case 'overview':
+                    // 总览页面的初始化
+                    loadSystemStatus();
+                    break;
+                case 'guide':
+                    // 实践指南页面初始化
+                    console.log('Guide tab loaded');
+                    break;
+                case 'tech':
+                    // 技术总结页面初始化
+                    console.log('Tech tab loaded');
+                    break;
+                case 'code':
+                    // 代码结构页面初始化
+                    console.log('Code tab loaded');
+                    break;
+                case 'design':
+                    // 设计思路页面初始化
+                    console.log('Design tab loaded');
+                    break;
+                case 'issues':
+                    // 问题&测试页面初始化
+                    console.log('Issues tab loaded');
+                    break;
+                default:
+                    console.log(`Unknown tab: ${tabId}`);
+            }
+
+            // 添加淡入动画
+            const tabElement = document.getElementById(tabId);
+            if (tabElement) {
+                tabElement.style.opacity = '0';
+                setTimeout(() => {
+                    tabElement.style.transition = 'opacity 0.3s ease-in';
+                    tabElement.style.opacity = '1';
+                }, 50);
+            }
+        }
+
+        // 其他功能函数
+        function viewProject(projectId) {
+            showProjectDetails(projectId);
+        }
+
+        function testProject(projectId) {
+            event.stopPropagation();
+            showToast(`正在测试项目 ${projectId}...`, 'info');
+
+            fetch(`/api/run_test/${projectId}`)
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showToast('测试启动成功', 'success');
+                } else {
+                    showToast('测试启动失败', 'error');
+                }
+            });
+        }
+
+        function startAllProjects() {
+            if (confirm('确定要启动所有项目吗？')) {
+                showToast('正在启动所有项目...', 'info');
+                // 这里可以实现批量启动逻辑
+            }
+        }
+
+        function runAllTests() {
+            if (confirm('确定要运行所有项目的测试吗？')) {
+                showToast('正在运行所有测试...', 'info');
+                // 这里可以实现批量测试逻辑
+            }
+        }
+
+        // 初始化项目信息
+        window.PROJECTS_INFO = {{ projects|tojson }};
+    </script>
+</body>
+</html>

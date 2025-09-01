@@ -1,0 +1,40 @@
+networks:
+  seed-mail-network:
+    external: true
+    name: output_default
+services:
+  nginx-proxy:
+    container_name: seed-mail-proxy
+    depends_on:
+    - roundcube
+    image: nginx:alpine
+    networks:
+    - seed-mail-network
+    ports:
+    - 8081:80
+    volumes:
+    - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  roundcube:
+    container_name: seed-roundcube
+    environment:
+      ROUNDCUBEMAIL_DB_TYPE: sqlite
+      ROUNDCUBEMAIL_DEFAULT_HOST: ssl://mail.seedemail.net
+      ROUNDCUBEMAIL_DEFAULT_PORT: '993'
+      ROUNDCUBEMAIL_PLUGINS: archive,zipdownload,managesieve
+      ROUNDCUBEMAIL_SKIN: elastic
+      ROUNDCUBEMAIL_SMTP_PORT: '587'
+      ROUNDCUBEMAIL_SMTP_SERVER: tls://mail.seedemail.net
+      ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: 5M
+    image: roundcube/roundcubemail:latest
+    networks:
+    - seed-mail-network
+    ports:
+    - 8000:80
+    restart: unless-stopped
+    volumes:
+    - ./roundcube-data:/var/www/html
+    - ./roundcube-db:/var/roundcube/db
+version: '3.8'
+volumes:
+  roundcube-data: {}
+  roundcube-db: {}

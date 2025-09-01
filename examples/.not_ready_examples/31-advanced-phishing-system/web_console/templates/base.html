@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SEED高级钓鱼系统{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #dc3545;
+            --secondary-color: #6c757d;
+            --dark-color: #212529;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --success-color: #198754;
+            --info-color: #0dcaf0;
+        }
+        
+        .gradient-bg-dark {
+            background: linear-gradient(135deg, #000000 0%, #434343 100%);
+        }
+        
+        .gradient-bg-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+        }
+        
+        .gradient-bg-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .cyber-bg {
+            background: linear-gradient(45deg, #000000, #1a1a1a, #000000);
+            background-size: 400% 400%;
+            animation: cyberPulse 10s ease-in-out infinite;
+        }
+        
+        @keyframes cyberPulse {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .threat-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .threat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(220, 53, 69, 0.3);
+        }
+        
+        .threat-card.critical {
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 100%);
+        }
+        
+        .threat-card.high {
+            border-left-color: #fd7e14;
+            background: linear-gradient(135deg, rgba(253, 126, 20, 0.1) 0%, rgba(253, 126, 20, 0.05) 100%);
+        }
+        
+        .threat-card.medium {
+            border-left-color: #ffc107;
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%);
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            position: relative;
+        }
+        
+        .status-active {
+            background-color: #198754;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-warning {
+            background-color: #ffc107;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-critical {
+            background-color: #dc3545;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-offline {
+            background-color: #6c757d;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+        }
+        
+        .ai-badge {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            animation: shimmer 3s infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200px 0; }
+            100% { background-position: 200px 0; }
+        }
+        
+        .attack-chain {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            position: relative;
+        }
+        
+        .attack-stage {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 15px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .stage-completed {
+            background-color: #198754;
+        }
+        
+        .stage-active {
+            background-color: #fd7e14;
+            animation: pulse 2s infinite;
+        }
+        
+        .stage-pending {
+            background-color: #6c757d;
+        }
+        
+        .stage-connector {
+            height: 2px;
+            background-color: #dee2e6;
+            flex-grow: 1;
+            margin-right: 15px;
+            position: relative;
+        }
+        
+        .stage-connector.completed {
+            background-color: #198754;
+        }
+        
+        .cyber-text {
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .hacker-console {
+            background-color: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        
+        .threat-level-critical {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            color: white;
+            animation: threatBlink 1s infinite;
+        }
+        
+        @keyframes threatBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.7; }
+        }
+        
+        .sidebar {
+            background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%);
+            min-height: 100vh;
+        }
+        
+        .sidebar .nav-link {
+            color: #ffffff;
+            padding: 15px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+            transform: translateX(5px);
+        }
+        
+        .sidebar .nav-link.active {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .progress-cyber {
+            height: 8px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #333, #555);
+            overflow: hidden;
+        }
+        
+        .progress-cyber .progress-bar {
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+            animation: progressFlow 2s ease-in-out infinite;
+        }
+        
+        @keyframes progressFlow {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        
+        .modal-dark {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        .modal-dark .modal-content {
+            background-color: #1a1a1a;
+            color: white;
+            border: 1px solid #dc3545;
+        }
+        
+        .btn-cyber {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            border: none;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-cyber:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(255, 65, 108, 0.4);
+            color: white;
+        }
+        
+        .alert-cyber {
+            background: linear-gradient(135deg, rgba(220, 53, 69, 0.9) 0%, rgba(255, 75, 43, 0.9) 100%);
+            border: none;
+            color: white;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-dark text-light">
+    <!-- 侧边导航栏 -->
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-danger">
+                            <i class="fas fa-skull-crossbones"></i> SEED
+                        </h4>
+                        <small class="text-muted">高级钓鱼系统</small>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {{ 'active' if request.endpoint == 'dashboard' }}" href="/">
+                                <i class="fas fa-tachometer-alt"></i> 战略控制台
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ 'active' if request.endpoint == 'campaigns' }}" href="/campaigns">
+                                <i class="fas fa-crosshairs"></i> 攻击活动
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ 'active' if request.endpoint == 'ai_console' }}" href="/ai_console">
+                                <i class="fas fa-robot"></i> AI引擎
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/openai_console">
+                                <i class="fas fa-brain"></i> OpenAI控制台
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/openai_config">
+                                <i class="fas fa-cog"></i> 配置管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ 'active' if request.endpoint == 'attack_designer' }}" href="/attack_designer">
+                                <i class="fas fa-project-diagram"></i> 攻击设计器
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ 'active' if request.endpoint == 'evasion_lab' }}" href="/evasion_lab">
+                                <i class="fas fa-mask"></i> 规避实验室
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ 'active' if request.endpoint == 'threat_analytics' }}" href="/threat_analytics">
+                                <i class="fas fa-chart-line"></i> 威胁分析
+                            </a>
+                        </li>
+                        
+                        <hr class="text-muted">
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="http://localhost:8080/map.html" target="_blank">
+                                <i class="fas fa-map"></i> 网络地图
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/project_overview">
+                                <i class="fas fa-info-circle"></i> 项目概述
+                            </a>
+                        </li>
+                        
+                        <hr class="text-muted">
+                        
+                        <li class="nav-item">
+                            <a class="nav-link text-warning" href="/logout">
+                                <i class="fas fa-sign-out-alt"></i> 安全退出
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <!-- 系统状态 -->
+                    <div class="mt-4 p-3 bg-dark rounded">
+                        <h6 class="text-muted">系统状态</h6>
+                        <div class="mb-2">
+                            <span class="status-indicator status-active"></span>
+                            <small>AI引擎在线</small>
+                        </div>
+                        <div class="mb-2">
+                            <span class="status-indicator status-active"></span>
+                            <small>攻击框架就绪</small>
+                        </div>
+                        <div class="mb-2">
+                            <span class="status-indicator status-warning"></span>
+                            <small>检测系统警告</small>
+                        </div>
+                        <div class="progress-cyber mt-2">
+                            <div class="progress-bar" style="width: 78%"></div>
+                        </div>
+                        <small class="text-muted">系统负载: 78%</small>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- 主内容区域 -->
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <!-- 顶部警告横幅 -->
+                <div class="alert alert-cyber alert-dismissible fade show mt-3" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>⚠️ 高级攻击系统警告</strong> 
+                    此系统包含极其危险的攻击工具和技术。仅限授权安全研究人员在受控环境中使用。
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                
+                <!-- 页面内容 -->
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 全局JavaScript -->
+    <script>
+        // Socket.IO连接
+        const socket = io();
+        
+        socket.on('connect', function() {
+            console.log('WebSocket连接成功');
+            showToast('实时连接已建立', 'success');
+        });
+        
+        socket.on('system_update', function(data) {
+            updateSystemMetrics(data);
+        });
+        
+        socket.on('threat_alert', function(data) {
+            showThreatAlert(data);
+        });
+        
+        // 通用工具函数
+        function showToast(message, type = 'info', timeout = 5000) {
+            const toastContainer = getOrCreateToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-${getToastIcon(type)}"></i> ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: timeout });
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+        
+        function getToastIcon(type) {
+            const icons = {
+                'success': 'check-circle',
+                'error': 'exclamation-triangle',
+                'warning': 'exclamation-triangle',
+                'info': 'info-circle'
+            };
+            return icons[type] || 'info-circle';
+        }
+        
+        function getOrCreateToastContainer() {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+            return container;
+        }
+        
+        function showThreatAlert(data) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+            alertDiv.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 400px; max-width: 500px;';
+            alertDiv.innerHTML = `
+                <h5><i class="fas fa-skull-crossbones"></i> 威胁警报</h5>
+                <strong>威胁类型:</strong> ${data.threat_type}<br>
+                <strong>威胁等级:</strong> <span class="badge bg-danger">${data.threat_level}</span><br>
+                <strong>描述:</strong> ${data.description}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 10000);
+        }
+        
+        function updateSystemMetrics(data) {
+            // 更新系统指标显示
+            const cpuElement = document.getElementById('cpu-usage');
+            const memoryElement = document.getElementById('memory-usage');
+            const gpuElement = document.getElementById('gpu-usage');
+            
+            if (cpuElement) cpuElement.textContent = `${data.system_load.cpu.toFixed(1)}%`;
+            if (memoryElement) memoryElement.textContent = `${data.system_load.memory.toFixed(1)}%`;
+            if (gpuElement) gpuElement.textContent = `${data.system_load.gpu.toFixed(1)}%`;
+        }
+        
+        function confirmDangerousAction(message, callback) {
+            if (confirm(`⚠️ 危险操作确认\n\n${message}\n\n此操作可能造成严重后果，确定要继续吗？`)) {
+                if (confirm('请再次确认：您完全理解此操作的风险，并承担相应责任？')) {
+                    callback();
+                }
+            }
+        }
+        
+        function formatTimestamp(timestamp) {
+            return new Date(timestamp).toLocaleString('zh-CN');
+        }
+        
+        function formatDuration(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m ${secs}s`;
+            } else if (minutes > 0) {
+                return `${minutes}m ${secs}s`;
+            } else {
+                return `${secs}s`;
+            }
+        }
+        
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化工具提示
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // 为危险按钮添加确认
+            const dangerButtons = document.querySelectorAll('.btn-danger[data-action="dangerous"]');
+            dangerButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const action = this.getAttribute('data-confirm') || '执行此危险操作';
+                    confirmDangerousAction(action, () => {
+                        // 执行实际操作
+                        const href = this.getAttribute('href');
+                        const onclick = this.getAttribute('onclick');
+                        if (href) window.location.href = href;
+                        if (onclick) eval(onclick);
+                    });
+                });
+            });
+            
+            // 自动刷新功能
+            if (window.autoRefreshInterval) {
+                setInterval(() => {
+                    if (typeof window.refreshData === 'function') {
+                        window.refreshData();
+                    }
+                }, window.autoRefreshInterval);
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
