@@ -1,2 +1,0 @@
-ALTER TABLE "users" ALTER COLUMN "preferences" DROP NOT NULL;
-ALTER TABLE "users" ALTER COLUMN "preferences" SET DEFAULT NULL;

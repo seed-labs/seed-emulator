@@ -77,3 +77,14 @@ config.local.*
 
 # Docker volumes
 mail-*-data/
+
+# RoundCube Webmail directory (entire directory)
+**/roundcube-data/
+
+# SQL files
+*.sql
+
+# Additional database files
+**/*.db
+**/*.sqlite
+**/*.sqlite3
