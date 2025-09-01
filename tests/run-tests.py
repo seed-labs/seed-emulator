@@ -43,8 +43,8 @@ scion_tests = [
 ]
 
 basic_tests = [
-    # MiniInternetTestCase,
-    # SEEDEmuOptionSystemTestCase,
+    MiniInternetTestCase,
+    SEEDEmuOptionSystemTestCase,
         ]
 
 internet_tests = [
