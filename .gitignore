@@ -31,3 +31,49 @@ project-words.txt
 .venv
 **/.obsidian/**
 test_result.txt
+
+# SEED邮件系统专用忽略规则
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+**/roundcube-db/*.db
+**/employees.db
+**/feedback.db
+
+# Log files
+*.log
+logs/
+**/logs/*.log
+**/logs/**/*.log
+attack*.log
+dashboard*.log
+heartbleed*.log
+sqli*.log
+xss*.log
+seed_email.log
+webmail.log
+
+# Output directories
+**/output/
+*.output/
+*_output/
+
+# Test files
+**/test_*.txt
+**/test_*.json
+**/test_*.html
+
+# Configuration files that may contain sensitive data
+config.local.*
+*.local
+.env.local
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Docker volumes
+mail-*-data/
