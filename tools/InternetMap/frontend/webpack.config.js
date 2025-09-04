@@ -1,9 +1,11 @@
 const path = require('path');
+const webpack = require('webpack');
 
 let config = {
     entry: {
         index: './src/index/index.ts',
-        install: './src/install/install.ts',
+        dashboard: './src/dashboard/dashboard.ts',
+        plugin: './src/plugin/plugin.ts',
         console: './src/console/console.ts',
         map: './src/map/map.ts',
     },

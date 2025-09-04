@@ -52,9 +52,10 @@ html, body, .map-area, .map {
 }
 
 .filter {
+    outline: none;
     font-size: 1.3em;
     line-height: 2.4rem;
-    width: 100%;
+    width: 95%;
     border: none;
     padding-left: 1rem;
     padding-right: 1rem;

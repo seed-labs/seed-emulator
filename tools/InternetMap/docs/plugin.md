@@ -1,3 +1,24 @@
+## plugin.html
+
+Plugin installation page.
+
+Plugins are implemented through the Docker API and operate independently of the core "client" functionality. They enable extended custom functionality.
+
+For example, the submit_event plugin allows customization of host node styles on the map.
+
+Simply install the corresponding plugin for your required functionality.
+
+Currently, only the submit_event plugin is available. More plugins will be added in the future.
+
+![plugin.png](assets/plugin.png)
+
+### submit_event plugin
+
+Support customizing the display style of nodes in the map and execute it on the emulator container.
+
+Click `install` to install the corresponding plugin for each emulator container.
+
+The `submit_event.sh` script will be generated in the root directory of the emulator container
 
 - submit_event.sh
   - params
@@ -9,7 +30,7 @@
     - `-f, --file`, option json file path, default: /option.json
       - custom style configuration file
   - usage
-    - `bash /submit_event.sh -a flash --file /option.json`
+    - Execute on the emulator container, `bash /submit_event.sh -a flash --file /option.json`
   
 - Custom style configuration file
     ```python
@@ -33,4 +54,6 @@
         "size": 50
     }
     ```
-For usage examples, please refer to `tools/InternetMap/example/submit_event`
+  Please see https://visjs.github.io/vis-network/docs/network/nodes.html# more detailed explanation.
+
+For usage examples, please refer to [tools/InternetMap/example/submit_event](../../../tools/InternetMap/example/submit_event/REMDME.md)

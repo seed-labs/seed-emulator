@@ -1,62 +1,86 @@
+## map.html
+
+The network topology diagram illustrates the interconnection relationships between nodes and networks, along with auxiliary features including filtering, search, settings, replay, and logging capabilities.
+
+- [filter](#filter)
+- [search](#search)
+- [setting](#setting)
+  - [service](#service)
+  - [drag fixed](#drag-fixed)
+- [replay](#replay)
+- [operate the container](#operate-the-container)
+- [data packet log echo](#data-packet-log-echo)
+
+![map.png](assets/map.png)
+
 ### filter
 
-Set packet capture filtering conditions.
-The input parameters will be used as the parameters of tcpdump to set the packet capture and filtering conditions of tcpdump.
-1. input valid packet capture conditions
-2. when the mouse cursor is in the "filter" input box, press the Enter key to send data and trigger packet capture
-3. The node that catches the data packet will flash
-4. The specific content of the data packet will be reflected in the `data packet log echo`
+Configure packet capture filtering conditions - this serves as the primary functionality.
+Input parameters will be utilized as tcpdump parameters to set packet capture and filtering conditions. 
+
+1. Input valid packet capture conditions
+2. When the cursor is positioned in the "Filter" input field, press the "Enter" key or click the "Submit" button to submit data and initiate packet capture 
+3. Nodes capturing data packets will flash visually 
+4. Specific packet contents will be displayed in the Packet Log Echo section
+
+![filter.png](assets/filter.png)
 
 ### search
 
-Search for nodes and networks that meet the conditions, such as ip, name, label, etc. The found nodes will be highlighted.
+Search for nodes and networks that meet the conditions, such as ip, name, label, etc. The found nodes will be highlighted. The operation method is similar to that of `filter`.
 
-![search.png](./assets/search.png)
+![search.png](assets/search.png)
 
 ### setting
 
-Optional settings.
+#### service
+
+There may be simulators containing various "Services". To better display them, this function is provided.
+
+When there is an emulator containing "service", the "service" option will appear in the "setting". Check the specific service, and the border of the corresponding emulator in the "map" will be highlighted (the color is random, and the color of the same type of "service" is the same). Uncheck it to restore the original style.
+
+As shown in the figure, when "WebService" is selected, the border of this type of container is highlighted.
+
+![service.png](assets/service.png)
 
 #### drag fixed
 
-After dragging the topology graph with the mouse, will the graph remain in its current position? Check it to indicate yes, and check it not to indicate no
+Determines whether the topology diagram remains in its current position after being dragged with the mouse.
 
-![drag_fixed.png](./assets/drag_fixed.png)
+Checked: Diagram maintains its position after dragging
+
+Unchecked: Diagram does not maintain position after dragging
+
+![drag_fixed.png](assets/drag_fixed.png)
 
 ### replay
 
-To better record the display of data packets on the map page, 
-
-the `Replay` function is provided, which can reproduce the recorded data packet transmission process and specify the display rate. 
-
-It supports fast-forward and rewind functions.
+To better document and display packet transmission on the map interface, the `Replay` function is provided.  This feature recreates recorded packet transmission processes at specified display rates and supports fast-forward and rewind functionality.
 
 - `Dot` button: start recording
-- `Triangle button`: start / pause replay
-- `Square` button: stop replay
-- `Left arrow` button: step backward
-- `Right arrow` button: step frontward
-- `event interval`: replay rate
+- `Triangle` button: Start/Pause replay
+- `Square` button: Stop replay
+- `Left` arrow button: Step backward
+- `Right` arrow button: Step forward
+- `Event interval`: Adjust replay rate
 
-![replay.png](./assets/replay.png)
+![replay.png](assets/replay.png)
 
 ### operate the container
 
-![operation.png](./assets/operation.png)
+![operation.png](assets/operation.png)
 
-Clicking "Start Console" will open the container terminal, 
+Clicking "Start Console" opens the container terminal, allowing direct access to container operations without executing Docker commands, providing a more convenient user experience.
 
-allowing you to enter the container for operations without executing docker commands, which is more convenient
+![terminal.png](assets/terminal.png)
 
-![terminal.png](./assets/terminal.png)
+For security reasons, the environment variable "console" is provided. When it is "false", access to the console is prohibited. please refer to [example/internet/B07_internet_map_unable_console](../../../examples/internet/B07_internet_map_unable_console/README.md)
 
 ### data packet log echo
 
-The content of the captured data packets that conform to "filter" will all be displayed in "Log", making it convenient to view the specific content of the data packets.
+All captured packets matching the "Filter" conditions will be displayed in the "Log" section, facilitating detailed inspection of packet contents. This section can be collapsed when not needed.
 
-When not needed, they can be folded up.
-
-![log.png](./assets/log.png)
+![log.png](assets/log.png)
 
 Note on the map:
 
