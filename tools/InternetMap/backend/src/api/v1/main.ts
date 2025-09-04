@@ -7,7 +7,6 @@ import {SubmitEvent} from '../../utils/submit-event';
 import {PluginManager} from '../../utils/plugin-manager';
 import WebSocket from 'ws';
 import {Controller} from '../../utils/controller';
-import {promises as fs} from 'fs';
 
 const router = express.Router();
 const docker = new dockerode();
@@ -46,6 +45,16 @@ sniffer.getLoggers().forEach(logger => logger.setSettings({
 controller.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'warn'
 }));
+
+router.get('/env.js', (req, res, next) => {
+  const envVarsForFrontend = {
+    CONSOLE: process.env.CONSOLE,
+  };
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(`window.__ENV__ = ${JSON.stringify(envVarsForFrontend)}`);
+
+  next();
+});
 
 router.get('/network', async function (req, res, next) {
     var networks = await docker.listNetworks();
@@ -280,6 +289,9 @@ router.post('/container/vis/set', express.json(), async function (req, res, next
 
 router.ws('/console/:id', async function (ws, req, next) {
     try {
+        if (process.env.CONSOLE === 'false') {
+            throw Error('CONSOLE is not enabled');
+        }
         await socketHandler.handleSession(ws, req.params.id);
     } catch (e) {
         if (ws.readyState == 1) {

@@ -1,6 +1,6 @@
 **Please start the emulator and map container in `examples/internet/B06_internet_map` first**
 
-1. visit [http://localhost:8080/install.html](http://localhost:8080/install.html), click "install" on the "submit_event" line to install "submit_event".
+1. visit [http://localhost:8080/plugin.html](http://localhost:8080/plugin.html), click "install" on the "submit_event" line to install "submit_event".
 2. enter any host container, (e.g., `docker exec -it as150h-host_1-10.150.0.72 bash`)
 3. execute the submit_event.sh script in the container
    - `bash /submit_event.sh -a flash`, the container will flash.
