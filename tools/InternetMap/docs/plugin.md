@@ -1,3 +1,19 @@
+## plugin.html
+
+Plugin installation page.
+
+Plugins are implemented through the Docker API and operate independently of the core "client" functionality. They enable extended custom functionality.
+
+For example, the submit_event plugin allows customization of host node styles on the map.
+
+Simply install the corresponding plugin for your required functionality.
+
+Currently, only the submit_event plugin is available. More plugins will be added in the future.
+
+For specific usage instructions, [please refer to this document](docs/plugin.md)
+
+![plugin.png](assets/plugin.png)
+
 ### submit_event plugin
 
 Support customizing the display style of nodes in the map and execute it on the emulator container.

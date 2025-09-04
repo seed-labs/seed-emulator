@@ -1,33 +1,68 @@
-seedemu-client
----
+# internet-map
 
-This is a work-in-progress prototype of the seedemu client. 
+This is a work-in-progress prototype of the internet-map. 
 
 What's working:
 
-- listing nodes in the emulation.
-- attaching to nodes in the emulation.
-- search nodes with their ASN, node name, or IP address.
-- map:
-    - show topology on the map.
-    - search and highlight nodes on the map.
-    - animate packet flows with BPF expression.
-    - disconnect/reconnect nodes from emulation.
-    - enable/disable bgp peers.
-    - customize the style of the node.
-    - expand / collapse nodes
-    - drag fixed
+- [index](#indexhtml):
+  - Home page
+- [map](#maphtml):
+  - Display topology on the map 
+  - Search and highlight nodes on the map 
+  - Animate packet flows using BPF expressions 
+  - Disconnect/reconnect nodes from emulation 
+  - Enable/disable BGP peers 
+  - Customize node styles 
+  - Expand/collapse nodes 
+  - Drag-to-fix node positions
+- [dashboard](#dashboardhtml):
+  - List nodes in the emulation 
+  - Access nodes in the emulation 
+  - Search nodes by ASN, node name, or IP address
+- [plugin](#pluginhtml)
+  - Plugin installation page
 
-
+How to use:
 1. start the emulation as you normally would. (e.g., `docker-compose up`)
 2. do `docker-compose build && docker-compose up` in this folder.
-3. visit [http://localhost:8080/](http://localhost:8080/) for list, and [http://localhost:8080/map.html](http://localhost:8080/map.html) for map.
-4. [http://localhost:8080/install.html](http://localhost:8080/install.html) for install, click "install" on the "submit_event" line to install submit_event.
-5. after installing submit_event, submit_event.sh will be generated under the "/" path of each emulator container. Execute "bash submit_event.sh" to display the custom style (the style is only valid for the current page, and the original default style will be restored after the page is refreshed).
-6. bash /submit_event.sh, parameters are optional. For details, please refer to the `UserManual.md`
+3. there are mainly the following pages
+   1. visit [http://localhost:8080/](http://localhost:8080/) or [http://localhost:8080/index.html](http://localhost:8080/index.html) for home page
+   2. visit [http://localhost:8080/map.html](http://localhost:8080/map.html) for map.
+   3. visit [http://localhost:8080/plugin.html](http://localhost:8080/plugin.html) for install plugin.
+   4. visit [http://localhost:8080/dashboard.html](http://localhost:8080/dashboard.html) for list.
 
-Alternatively, set `clientEnabled = True` when using `Docker` compiler. Note that `seedemu-client` allows unauthenticated console access to all nodes, which can potentially allow root access to your emulator host. Only run `seedemu-client` on trusted networks.
+Alternatively, set `clientEnabled = True` when using `Docker` compiler. Note that `internet-map` allows unauthenticated console access to all nodes, which can potentially allow root access to your emulator host. Only run `internet-map` on trusted networks.
+At the same time, configuration options are provided to prohibit Internet-map from accessing the console of the node. For details, please refer to `example/internet/B07_internet_map_unable_console`
 
-Note on the map:
+## index.html
+Home page, default page
 
-- try not to click on any nodes or start packet capture on the map until the emulation is fully started (i.e., all containers are created).
+![index.png](docs/assets/index.png)
+
+## map.html
+
+The network topology diagram displays interconnection relationships between nodes and networks, along with auxiliary functions including filtering, search, settings, replay, and logging. For a detailed introduction, [please refer to this document](./docs/map.md)
+
+![map.png](docs/assets/map.png)
+
+## dashboard.html
+
+`seedemu dashboard`, displays current emulator nodes and networks
+
+![dashboard.png](docs/assets/dashboard.png)
+
+## plugin.html
+
+Plugin installation page.
+
+Plugins are implemented through the Docker API and operate independently of the core "client" functionality. They enable extended custom functionality.
+
+For example, the submit_event plugin allows customization of host node styles on the map.
+
+Simply install the corresponding plugin for your required functionality.
+
+Currently, only the submit_event plugin is available. More plugins will be added in the future.
+
+For specific usage instructions, [please refer to this document](docs/plugin.md)
+
+![plugin.png](docs/assets/plugin.png)
