@@ -1,13 +1,11 @@
-# internet-map
+# InternetMap
 
-This is a work-in-progress prototype of the internet-map. 
-
-What's working:
+This is a visualization tool that we developed for the Internet emulator. 
 
 - [index](#indexhtml):
   - Home page
 - [map](#maphtml):
-  - Display topology on the map 
+  - Display topology of the network
   - Search and highlight nodes on the map 
   - Animate packet flows using BPF expressions 
   - Disconnect/reconnect nodes from emulation 
@@ -23,13 +21,15 @@ What's working:
   - Plugin installation page
 
 How to use:
-1. start the emulation as you normally would. (e.g., `docker-compose up`)
-2. do `docker-compose build && docker-compose up` in this folder.
-3. there are mainly the following pages
-   1. visit [http://localhost:8080/](http://localhost:8080/) or [http://localhost:8080/index.html](http://localhost:8080/index.html) for home page
-   2. visit [http://localhost:8080/map.html](http://localhost:8080/map.html) for map.
-   3. visit [http://localhost:8080/plugin.html](http://localhost:8080/plugin.html) for install plugin.
-   4. visit [http://localhost:8080/dashboard.html](http://localhost:8080/dashboard.html) for list.
+1. Start the emulation as you normally would. (e.g., `docker-compose up`)
+2. Run `docker-compose build && docker-compose up` in this folder.
+3. This tool has the following pages:
+   1. Home page: [http://localhost:8080/](http://localhost:8080/) or [http://localhost:8080/index.html](http://localhost:8080/index.html) 
+   2. The Map page: [http://localhost:8080/map.html](http://localhost:8080/map.html)
+   3. Dashboard: [http://localhost:8080/dashboard.html](http://localhost:8080/dashboard.html)
+   4. Plugin pag: [http://localhost:8080/plugin.html](http://localhost:8080/plugin.html)
+
+
 
 Alternatively, set `clientEnabled = True` when using `Docker` compiler. Note that `internet-map` allows unauthenticated console access to all nodes, which can potentially allow root access to your emulator host. Only run `internet-map` on trusted networks.
 At the same time, configuration options are provided to prohibit Internet-map from accessing the console of the node. For details, please refer to [example/internet/B07_internet_map_unable_console](../../examples/internet/B07_internet_map_unable_console/README.md)
