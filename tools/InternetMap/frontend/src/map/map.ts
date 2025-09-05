@@ -12,6 +12,7 @@ const mapUi = new MapUi({
     mapElementId: 'map',
     infoPlateElementId: 'info-plate',
     infoPanelElementId: 'info-plate-panel',
+    filterCommitElementId: 'filter-commit',
     filterInputElementId: 'filter',
     filterWrapElementId: 'filter-wrap',
     logPanelElementId: 'log-panel',
@@ -27,6 +28,7 @@ const mapUi = new MapUi({
     },
     settingWrapElementId: 'setting-wrap',
     settingControls: {
+        settingControlsElementId: 'setting-controls',
         fixedCheckboxElementId: 'setting-fixed',
         hideCheckboxElementId: 'setting-hidden',
         minimizeToggleElementId: 'setting-panel-toggle',

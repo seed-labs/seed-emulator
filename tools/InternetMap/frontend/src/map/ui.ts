@@ -1,10 +1,21 @@
+import $ from 'jquery';
 import {DataSet} from 'vis-data';
 import {Network, NodeOptions} from 'vis-network';
 import {bpfCompletionTree} from '../common/bpf';
 import {Completion} from '../common/completion';
 import {EmulatorNetwork, EmulatorNode} from '../common/types';
 import {WindowManager} from '../common/window-manager';
-import {DataSource, NodesType, EdgesType, Vertex} from './datasource';
+import {DataSource, NodesType, EdgesType, Vertex, META_CLASS} from './datasource';
+
+declare global {
+    interface Window {
+        __ENV__: {
+            CONSOLE: string;
+        };
+    }
+}
+
+const CONSOLE = window.__ENV__.CONSOLE;
 
 /**
  * map UI element bindings.
@@ -15,6 +26,7 @@ export interface MapUiConfiguration {
     infoPlateElementId: string, // element id of the info plate
     infoPanelElementId: string, // element id of the info panel
     replayPanelElementId: string, // element id of the replay panel
+    filterCommitElementId: string, // element id of the commit filter/search text
     filterInputElementId: string, // element id of the filter/search text input
     filterWrapElementId: string, // element id of the filter/search text input wrapper
     logBodyElementId: string, // element id of the log body (the tbody)
@@ -30,6 +42,7 @@ export interface MapUiConfiguration {
     },
     settingWrapElementId: string, // element id of the log wrap (hidden when minimized)
     settingControls: { // controls for log
+        settingControlsElementId: string, // element id of settingControls
         fixedCheckboxElementId: string, // element id of autoscroll checkbox
         hideCheckboxElementId: string, // element id of log disable checkbox
         minimizeToggleElementId: string, // element id of log minimize/unminimize toggle
@@ -58,6 +71,8 @@ export interface MapUiConfiguration {
 type FilterMode = 'node-search' | 'filter';
 
 type SuggestionSelectionAction = 'up' | 'down' | 'clear';
+
+const serviceColors = ["black", "blue", "green", "red", "yellow", "orange"]
 
 interface Event {
     lines: string[],
@@ -118,10 +133,12 @@ const extractReplyMacAddresses = (text: string): string[] => {
 export class MapUi {
     private _mapElement: HTMLElement;
     private _infoPlateElement: HTMLElement;
+    private _filterCommit: HTMLButtonElement;
     private _filterInput: HTMLInputElement;
     private _filterWrap: HTMLElement;
 
     private _settingWrap: HTMLElement;
+    private _settingControls: HTMLElement;
     private _settingFixed: HTMLInputElement;
     private _settingHide: HTMLInputElement;
 
@@ -234,10 +251,12 @@ export class MapUi {
         this._datasource = config.datasource;
         this._mapElement = document.getElementById(config.mapElementId);
         this._infoPlateElement = document.getElementById(config.infoPlateElementId);
+        this._filterCommit = document.getElementById(config.filterCommitElementId) as HTMLButtonElement;
         this._filterInput = document.getElementById(config.filterInputElementId) as HTMLInputElement;
         this._filterWrap = document.getElementById(config.filterWrapElementId);
 
         this._settingWrap = document.getElementById(config.settingWrapElementId);
+        this._settingControls = document.getElementById(config.settingControls.settingControlsElementId);
         this._settingFixed = document.getElementById(config.settingControls.fixedCheckboxElementId) as HTMLInputElement;
         this._settingHide = document.getElementById(config.settingControls.hideCheckboxElementId) as HTMLInputElement;
         this._settingToggle = document.getElementById(config.settingControls.minimizeToggleElementId);
@@ -356,12 +375,18 @@ export class MapUi {
         this._settingToggle.onclick = () => {
             if (this._settingMinimized) {
                 this._settingWrap.classList.remove('minimized');
-                this._replayPanel.classList.remove('bump');
-                this._infoPanel.classList.remove('bump');
+                const height = $(this._settingWrap).outerHeight(true);
+                const top1 = $(this._replayPanel).css('top');
+                const top2 = $(this._infoPanel).css('top');
+                $(this._replayPanel).css('top', `${parseFloat(top1) + height}px`);
+                $(this._infoPanel).css('top', `${parseFloat(top2) + height}px`);
             } else {
+                const height = $(this._settingWrap).outerHeight(true);
+                const top1 = $(this._replayPanel).css('top');
+                const top2 = $(this._infoPanel).css('top');
+                $(this._replayPanel).css('top', `${parseFloat(top1) - height}px`);
+                $(this._infoPanel).css('top', `${parseFloat(top2) - height}px`);
                 this._settingWrap.classList.add('minimized');
-                this._replayPanel.classList.add('bump');
-                this._infoPanel.classList.add('bump');
             }
 
             this._settingMinimized = !this._settingMinimized;
@@ -425,6 +450,24 @@ export class MapUi {
 
         this._filterInput.onclick = () => {
             this._updateFilterSuggestions(this._filterInput.value);
+        };
+
+        this._filterCommit.onclick = async () => {
+            let term = this._filterInput.value;
+            this._suggestions.innerText = '';
+
+            if (this._filterMode == 'filter') {
+                this._filterInput.value = await this._datasource.setSniffFilter(term);
+            }
+
+            if (this._filterMode == 'node-search') {
+                let hits = new Set<string>();
+                this._lastSearchTerm = term;
+
+                this._findNodes(term).forEach(node => hits.add(node.id));
+
+                this._updateSearchHighlights(hits);
+            }
         };
 
         this._settingFixed.onclick = () => {
@@ -1325,7 +1368,7 @@ export class MapUi {
             });
 
             infoPlate.appendChild(ipAddresses);
-            if (vertex.custom !== 'custom') {
+            if (vertex.custom !== 'custom' && CONSOLE !== 'false') {
                 if (['Router', 'Route Server', 'BorderRouter'].includes(node.meta.emulatorInfo.role)) {
                     let bgpDetails = document.createElement('div');
                     bgpDetails.classList.add('section');
@@ -1752,6 +1795,7 @@ export class MapUi {
     async start() {
         await this._datasource.connect();
         this.redraw();
+        this.initSetting()
         this._mapMacAddresses();
 
         if (this._filterMode == 'filter') {
@@ -1793,6 +1837,63 @@ export class MapUi {
         this._flashingVisNodes.clear()
     }
 
+    initSetting() {
+        const nodes = this._nodes;
+        const updateServiceStyle = this.updateServiceStyle;
+        if (this._datasource.services.size === 0) {
+            return
+        }
+        const $labelService = $('<label>', {
+            'class': 'fw-bold mt-1',
+            'text': 'service: '
+        });
+        let $divFlex = $('<div>', {
+            'class': 'd-flex flex-wrap gap-3'
+        });
+
+        for (const [index, service] of this._datasource.services.entries()) {
+            let $divCheck = $('<div>', {
+                'class': 'form-check',
+            });
+            const $input = $('<input>', {
+                'id': service,
+                'type': 'checkbox'
+            }).on('click', function () {
+                let style = {};
+                if ($(this).prop('checked')) {
+                    style = {
+                        borderWidth: 4,
+                        color: {
+                            border: serviceColors[index]
+                        },
+                    }
+                } else {
+                    style = {
+                        borderWidth: 1,
+                        color: {
+                            border: "#000"
+                        },
+                    }
+                }
+                updateServiceStyle(nodes, service, style);
+            });
+            const $label = $('<label>', {
+                'for': service,
+                'text': service,
+                'css': {
+                    'padding-left': '5px'
+                }
+            });
+
+            $divCheck.append($input);
+            $divCheck.append($label);
+            $divFlex.append($divCheck);
+        }
+
+        $(this._settingControls).prepend($divFlex);
+        $(this._settingControls).prepend($labelService);
+    }
+
     /**
      * redraw map.
      */
@@ -1800,7 +1901,7 @@ export class MapUi {
         this._edges = new DataSet(this._datasource.edges);
         this._nodes = new DataSet(this._datasource.vertices);
 
-        var groups = {};
+        let groups = {};
 
         this._datasource.groups.forEach(group => {
             groups[group] = {
@@ -1811,297 +1912,11 @@ export class MapUi {
             }
         });
 
-        let interaction = {
-            hover: true
-        };
-        let locales = {
-            en: {
-                edit: 'Edit',
-                del: 'Delete selected',
-                back: 'Back',
-                addNode: 'Add Node',
-                addEdge: 'Add Edge',
-                editNode: 'Edit Node',
-                editEdge: 'Edit Edge',
-                addDescription: 'Click in an empty space to place a new node.',
-                edgeDescription: 'Click on a node and drag the edge to another node to connect them.',
-                editEdgeDescription: 'Click on the control points and drag them to a node to connect to it.',
-                createEdgeError: 'Cannot link edges to a cluster.',
-                deleteClusterError: 'Clusters cannot be deleted.',
-                editClusterError: 'Clusters cannot be edited.'
-            }
-        };
-        let configure = {
-            enabled: true,
-            filter: 'nodes,edges',
-            // container: undefined,
-            showButton: true
-        }
-        let edges = {
-            arrows: {
-                to: {
-                    enabled: false,
-                    // imageHeight: undefined,
-                    // imageWidth: undefined,
-                    scaleFactor: 1,
-                    // src: undefined,
-                    type: "arrow"
-                },
-                middle: {
-                    enabled: false,
-                    // imageHeight: 32,
-                    // imageWidth: 32,
-                    scaleFactor: 1,
-                    // src: "https://visjs.org/images/visjs_logo.png",
-                    // type: "image"
-                    type: "arrow"
-                },
-                from: {
-                    enabled: false,
-                    // imageHeight: undefined,
-                    // imageWidth: undefined,
-                    scaleFactor: 1,
-                    // src: undefined,
-                    type: "arrow"
-                }
-            },
-            endPointOffset: {
-                from: 0,
-                to: 0
-            },
-            arrowStrikethrough: true,
-            chosen: true,
-            color: {
-                color: '#848484',
-                highlight: '#848484',
-                hover: '#848484',
-                inherit: 'from',
-                opacity: 1.0
-            },
-            dashes: false,
-            font: {
-                color: '#343434',
-                size: 14, // px
-                face: 'arial',
-                background: 'none',
-                strokeWidth: 2, // px
-                strokeColor: '#ffffff',
-                align: 'horizontal',
-                multi: false,
-                vadjust: 0,
-                bold: {
-                    color: '#343434',
-                    size: 14, // px
-                    face: 'arial',
-                    vadjust: 0,
-                    mod: 'bold'
-                },
-                ital: {
-                    color: '#343434',
-                    size: 14, // px
-                    face: 'arial',
-                    vadjust: 0,
-                    mod: 'italic',
-                },
-                boldital: {
-                    color: '#343434',
-                    size: 14, // px
-                    face: 'arial',
-                    vadjust: 0,
-                    mod: 'bold italic'
-                },
-                mono: {
-                    color: '#343434',
-                    size: 15, // px
-                    face: 'courier new',
-                    vadjust: 2,
-                    mod: ''
-                }
-            },
-            hidden: false,
-            hoverWidth: 1.5,
-            // label: undefined,
-            labelHighlightBold: true,
-            // length: undefined,
-            physics: true,
-            scaling: {
-                min: 1,
-                max: 15,
-                label: {
-                    enabled: true,
-                    min: 14,
-                    max: 30,
-                    maxVisible: 30,
-                    drawThreshold: 5
-                },
-                customScalingFunction: function (min, max, total, value) {
-                    if (max === min) {
-                        return 0.5;
-                    } else {
-                        var scale = 1 / (max - min);
-                        return Math.max(0, (value - min) * scale);
-                    }
-                }
-            },
-            selectionWidth: 1,
-            selfReference: {
-                size: 20,
-                angle: Math.PI / 4,
-                renderBehindTheNode: true
-            },
-            shadow: {
-                enabled: false,
-                color: 'rgba(0,0,0,0.5)',
-                size: 10,
-                x: 5,
-                y: 5
-            },
-            smooth: {
-                enabled: true,
-                type: "dynamic",
-                roundness: 0.5
-            },
-            // title: undefined,
-            // value: undefined,
-            width: 1,
-            widthConstraint: false
-        }
-        let nodes = {
-            borderWidth: 1,
-            borderWidthSelected: 2,
-            // brokenImage: undefined,
-            chosen: true,
-            color: {
-                border: '#2B7CE9',
-                background: '#97C2FC',
-                highlight: {
-                    border: '#2B7CE9',
-                    background: '#D2E5FF'
-                },
-                hover: {
-                    border: '#2B7CE9',
-                    background: '#D2E5FF'
-                }
-            },
-            opacity: 1,
-            fixed: {
-                x: false,
-                y: false
-            },
-            font: {
-                color: '#343434',
-                size: 14, // px
-                face: 'arial',
-                background: 'none',
-                strokeWidth: 0, // px
-                strokeColor: '#ffffff',
-                align: 'center',
-                multi: false,
-                vadjust: 0,
-                bold: {
-                    color: '#343434',
-                    size: 14, // px
-                    face: 'arial',
-                    vadjust: 0,
-                    mod: 'bold'
-                },
-                ital: {
-                    color: '#343434',
-                    size: 14, // px
-                    face: 'arial',
-                    vadjust: 0,
-                    mod: 'italic',
-                },
-                boldital: {
-                    color: '#343434',
-                    size: 14, // px
-                    face: 'arial',
-                    vadjust: 0,
-                    mod: 'bold italic'
-                },
-                mono: {
-                    color: '#343434',
-                    size: 15, // px
-                    face: 'courier new',
-                    vadjust: 2,
-                    mod: ''
-                }
-            },
-            // group: undefined,
-            heightConstraint: false,
-            hidden: false,
-            icon: {
-                face: 'FontAwesome',
-                // code: undefined,
-                // weight: undefined,
-                size: 50,  //50,
-                color: '#2B7CE9'
-            },
-            // image: undefined,
-            imagePadding: {
-                left: 0,
-                top: 0,
-                bottom: 0,
-                right: 0
-            },
-            // label: undefined,
-            labelHighlightBold: true,
-            // level: undefined,
-            mass: 1,
-            physics: true,
-            scaling: {
-                min: 10,
-                max: 30,
-                label: {
-                    enabled: false,
-                    min: 14,
-                    max: 30,
-                    maxVisible: 30,
-                    drawThreshold: 5
-                },
-                customScalingFunction: function (min, max, total, value) {
-                    if (max === min) {
-                        return 0.5;
-                    } else {
-                        let scale = 1 / (max - min);
-                        return Math.max(0, (value - min) * scale);
-                    }
-                }
-            },
-            shadow: {
-                enabled: false,
-                color: 'rgba(0,0,0,0.5)',
-                size: 10,
-                x: 5,
-                y: 5
-            },
-            shape: 'ellipse',
-            shapeProperties: {
-                borderDashes: false, // only for borders
-                borderRadius: 6,     // only for box shape
-                interpolation: false,  // only for image and circularImage shapes
-                useImageSize: false,  // only for image and circularImage shapes
-                useBorderWithImage: false,  // only for image shape
-                coordinateOrigin: 'center'  // only for image and circularImage shapes
-            },
-            size: 25,
-            // title: undefined,
-            // value: undefined,
-            widthConstraint: false,
-            // x: undefined,
-            // y: undefined
-        }
-
         this._graph = new Network(this._mapElement, {
             nodes: this._nodes,
             edges: this._edges
         }, {
-            groups,
-            interaction,
-            locales,
-            configure,
-            nodes,
-            edges,
+            groups
         });
 
         this._graph.on('click', (ev) => {
@@ -2123,9 +1938,32 @@ export class MapUi {
             const node = this._nodes.get(nodeId);
             if (node['collapsed']) {
                 this._expandNode(nodeId);
+                this._nodes.update({
+                    id: nodeId,
+                    borderWidth: 1
+                });
             } else {
                 this._collapseNode(nodeId);
+                this._nodes.update({
+                    id: nodeId,
+                    borderWidth: 3
+                });
             }
         });
+    }
+
+    updateServiceStyle(nodes:NodesType, service: string, style: {}) {
+        const children = nodes.get({
+            filter: item => META_CLASS in item.object['Labels'] && item.object['Labels'][META_CLASS] !== '' && JSON.parse(item.object['Labels'][META_CLASS]).includes(service)
+        });
+        if (children.length === 0) {
+            return
+        }
+        const updates = children.map(child => ({
+            id: child.id,
+            ...style,
+        }));
+
+        nodes.update(updates);
     }
 }

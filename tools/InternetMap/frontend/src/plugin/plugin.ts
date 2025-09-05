@@ -9,3 +9,14 @@ import 'datatables.net';
 import 'datatables.net-bs4';
 import 'datatables.net-select';
 import 'datatables.net-select-bs4';
+
+import {IndexUi} from './ui';
+
+var ui = new IndexUi({
+    installListElementId: 'install-list',
+    desktopElementId: 'console-area',
+    taskbarElementId: 'taskbar'
+});
+
+ui.loadInstalls('/api/v1/install');
+ui.loadUninstalls('/api/v1/uninstall');

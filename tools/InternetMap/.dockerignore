@@ -1,1 +1,4 @@
 **/node_modules/
+example
+docs
+*.md
