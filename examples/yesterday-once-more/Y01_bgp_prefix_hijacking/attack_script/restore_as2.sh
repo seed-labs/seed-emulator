@@ -1,7 +1,7 @@
 #!/bin/bash 
-
-
+  
 name="as2brd-r105"
-postfix="fixproblem"
+postfix="original"
 
 source ./upload.sh
+

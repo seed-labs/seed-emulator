@@ -1,7 +1,7 @@
 #!/bin/bash 
-
-
+  
 name="as153brd"
-postfix="fightback"
+postfix="original"
 
 source ./upload.sh
+
