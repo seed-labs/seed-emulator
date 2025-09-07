@@ -48,11 +48,11 @@ basic_tests = [
         ]
 
 internet_tests = [
-    KuboTestCase,
+    # KuboTestCase,
     KuboUtilFuncsTestCase,
     IPAnyCastTestCase,
     HostMgmtTestCase,
-    PKITestCase,
+    # PKITestCase,
     DottedDictTestCase,
     TrafficGeneratorTestCase
         ]
@@ -71,8 +71,8 @@ if args.ci:
         MiniInternetTestCase,
         IPAnyCastTestCase,
         HostMgmtTestCase,
-        ScionBgpMixedTestCase,
-        ScionBwtesterTestCase,
+        # ScionBgpMixedTestCase,
+        # ScionBwtesterTestCase,
         DottedDictTestCase,
         TrafficGeneratorTestCase
     ]

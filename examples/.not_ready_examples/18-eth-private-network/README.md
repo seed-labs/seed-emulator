@@ -39,7 +39,7 @@ e2.setBootNode(True)
 
 Note the step above is optional. If you do not set any node as boot node, all nodes in the emulation will be each other's boot nodes, which may impact performance if you have a large number of nodes.
 
-To let other nodes know the enode URL of the current node, the boot node hosts a text file with a simple HTTP server containing the URL. By default, it runs on port `8088`. If you have run some other services on the node on that port, you change change the bootnode http server port with `setBootNodeHttpPort`:
+To let other nodes know the enode URL of the current node, the boot node hosts a text file with a simple HTTP server containing the URL. By default, it runs on port `8088`. If you have run some other services on the node on that port, you change the bootnode http server port with `setBootNodeHttpPort`:
 
 ```python3
 # optionally, set boot node http server port

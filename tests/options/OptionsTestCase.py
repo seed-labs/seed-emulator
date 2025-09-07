@@ -9,10 +9,11 @@ from seedemu.core import (
     ScopeType,
     BaseOption,
     OptionMode,
+    OptionGroupMeta,
     Customizable,
 )
 from tests import SeedEmuTestCase
-from enum import Enum
+from enum import Enum, EnumMeta
 
 
 class SEEDEmuOptionSystemTestCase(SeedEmuTestCase):
@@ -90,7 +91,11 @@ class SEEDEmuOptionSystemTestCase(SeedEmuTestCase):
     def test_customizable(self):
         """!@brief test setting and retrieval of associated options
         """
-        class _Option(BaseOption,Enum):
+
+        class _OptionMeta(OptionGroupMeta, EnumMeta):
+            pass
+
+        class _Option(BaseOption,Enum,metaclass=_OptionMeta):
             """!@brief dummy option impl"""
             ROTATE_LOGS = "rotate_logs"
             USE_ENVSUBST = "use_envsubst"
