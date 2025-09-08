@@ -44,6 +44,13 @@ as199.createRouter('router0').joinNetwork('net0').joinNetwork('ix105')
 ebgp.addPrivatePeerings(105, [2],  [199], PeerRelationship.Provider)
 
 
+# Create a real-world router, attach it to ix-101 and peer with AS-2
+as77777 = base.createAutonomousSystem(77777)
+as77777.createRealWorldRouter(name='real-world', prefixes=['0.0.0.0/1', '128.0.0.0/1'])\
+       .joinNetwork('ix101', address = '10.101.0.177')
+ebgp.addPrivatePeerings(101, [2],  [77777], PeerRelationship.Provider)
+
+
 ###############################################
 emu.render()
 emu.compile(Docker(platform=platform), './output', override=True)
