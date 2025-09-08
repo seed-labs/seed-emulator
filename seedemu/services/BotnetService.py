@@ -172,7 +172,7 @@ class BotnetServer(Server):
 
         node.setFile('/tmp/byob_patch.py', BotnetServerFileTemplates['byob_patch_py'])
         node.appendStartCommand('chmod +x /tmp/byob_patch.py')
-        node.appendStartCommand('python3 /tmp/byob_patch.py')  # 先补丁
+        node.appendStartCommand('python3 /tmp/byob_patch.py')  # patch
 
 
         # add the init script to server
