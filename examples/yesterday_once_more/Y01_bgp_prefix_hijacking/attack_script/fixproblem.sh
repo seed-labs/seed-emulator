@@ -1,7 +1,7 @@
 #!/bin/bash 
 
 
-name="as2brd-r105"
+name="as3r-r103"
 postfix="fixproblem"
 
 source ./upload.sh
