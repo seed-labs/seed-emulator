@@ -6,6 +6,7 @@ import * as path from 'path';
 import fs from 'fs';
 import tar from 'tar-fs';
 
+const PLUGINS_BASE_DIR = '/map-plugins';
 export class SubmitEvent implements LogProducer {
     private _logger: Logger;
     private _docker: dockerode;
@@ -32,6 +33,34 @@ export class SubmitEvent implements LogProducer {
                 this._logger.error(`source path ${sourcePath} does not exist`);
                 return
             }
+            try {
+                // create targetPath
+                const exec = await targetContainer.exec({
+                    Cmd: ['mkdir', '-p', targetPath],
+                    AttachStdout: true,
+                    AttachStderr: true
+                });
+
+                const stream = await exec.start({});
+                await new Promise((resolve, reject) => {
+                    let output = '';
+                    stream.on('data', (chunk) => {
+                        output += chunk.toString();
+                    });
+                    stream.on('end', resolve);
+                    stream.on('error', reject);
+                });
+
+                const inspect = await exec.inspect();
+                if (inspect.ExitCode !== 0) {
+                    throw new Error(`Failed to create directory: ${targetPath}`);
+                }
+
+            } catch (error) {
+                this._logger.error(`Failed to create target directory ${targetPath}:`, error);
+                throw error;
+            }
+
             // create tar stream
             const uploadStream = tar.pack(sourcePath);
             // upload
@@ -136,7 +165,7 @@ export class SubmitEvent implements LogProducer {
                     await fs.promises.mkdir(tempNodeDir, {recursive: true});
                     const tempFilePath = path.join(tempNodeDir, 'submit_event.sh');
                     fs.writeFileSync(tempFilePath, modifiedContent);
-                    await this.copyToContainerFromCurrentContainer(tempNodeDir, node, '/');
+                    await this.copyToContainerFromCurrentContainer(tempNodeDir, node, PLUGINS_BASE_DIR);
                 }
             ));
         } catch (error) {
@@ -153,7 +182,7 @@ export class SubmitEvent implements LogProducer {
         let paths: string[] = [];
         switch (plugin) {
             case 'submit_event':
-                paths = ['/submit_event.sh']
+                paths = [`${PLUGINS_BASE_DIR}/submit_event.sh`]
                 break
             default:
                 break
@@ -165,7 +194,6 @@ export class SubmitEvent implements LogProducer {
             this._logger.debug(`${plugin} uninstall ...`);
             await Promise.all(nodes.map(
                 async node => {
-                    // await this.delFileInContainer(node, ['/option.json', '/submit_event.sh']);
                     await this.delFileInContainer(node, paths);
                 }
             ));

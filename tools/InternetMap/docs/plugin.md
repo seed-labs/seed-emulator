@@ -18,14 +18,14 @@ Here is now to use the script:
 
 - `submit_event.sh`
   - params
-    - `-a, --action`, `flash|flashOnce|highlight`, default: `highlight`
+    - `-a, --action`, `flash|flashOnce|highlight`, default: `highlight` (**Required parameters**)
       - `flash`, the container node on the Map will be constantly flashing 
       - `flashOnce`, the container node will flash only once
       - `highlight`, the container node will be highlighted 
     - `-s, --style`, custom style file (optional), providing custom styles for the action. Without the style file, actions will use the default styles
   - usage example
-    - Execute this script inside an emulator container, `bash /submit_event.sh -a flash --style /option.json`
-  
+    - Execute this script inside an emulator container, `bash /map-plugins/submit_event.sh -a flash --style /option.json`
+
 - Custom style file
     ```python
     {
@@ -35,7 +35,7 @@ Here is now to use the script:
       "flash": {  # both fields can be null, using the default setting
              "static":  { ... },  
              "dynamic": { ... },
-             "duration": N  # The durating (seconds) between two flashes (only meaningful for the constantly flashing option)
+             "duration": N  # The duration between two flashes (in milliseconds), default 300ms (only meaningful for the continuous flashing option)
         }
     }
     ```
@@ -51,4 +51,4 @@ Here is now to use the script:
     }
     ```
 
-For usage examples, please refer to [tools/InternetMap/example/submit_event](../example/submit_event/REMDME.md)
+For usage examples, please refer to [examples/internet/B06_internet_map](../../../examples/internet/B06_internet_map/README.md) `submit_event plugin`

@@ -237,28 +237,22 @@ router.post('/container/vis/set', express.json(), async function (req, res, next
     }
     let option = {
         id: candidates[0].Id,
-        static: {},
-        dynamic: {},
+        static: {borderWidth: 1},
+        dynamic: {borderWidth: 4},
         action
     }
     switch (action) {
         case 'flash':
         case 'flashOnce':
-            option.static = req.body.static || {borderWidth: 1};
-            option.dynamic = req.body.dynamic || {borderWidth: 4};
+            option = {...option, ...req.body['flash']};
             break
         case 'highlight':
-            option.static = req.body.static || {
-                color: {
-                    highlight: {
-                        border: '#2B7CE9',
-                        background: '#D2E5FF'
-                    },
-                }
-            };
+            option.static = (!req.body['highlight'] || Object.keys(req.body['highlight']).length === 0) ? {borderWidth: 4} : req.body['highlight'];
             break
         default:
-            option = {...option, ...req.body}
+            option.static = {borderWidth: 1};
+            option.dynamic = {borderWidth: 4};
+            break
     }
 
     var deadSockets: WebSocket[] = [];
