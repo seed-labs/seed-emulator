@@ -7,6 +7,7 @@ from seedemu.layers import Base, Ebgp, PeerRelationship
 from examples.internet.B00_mini_internet import mini_internet
 import os, sys
 
+
 ###############################################################################
 # Set the platform information
 script_name = os.path.basename(__file__)
@@ -40,7 +41,7 @@ as199.createNetwork('net0')
 as199.createHost('host-0').joinNetwork('net0')
 
 # Attach it to ix-105 and peer with AS-2
-as199.createRouter('router0').joinNetwork('net0').joinNetwork('ix105')
+as199.createRouter('attacker-bgp').joinNetwork('net0').joinNetwork('ix105')
 ebgp.addPrivatePeerings(105, [2],  [199], PeerRelationship.Provider)
 
 
@@ -53,4 +54,5 @@ ebgp.addPrivatePeerings(101, [2],  [77777], PeerRelationship.Provider)
 
 ###############################################
 emu.render()
-emu.compile(Docker(platform=platform), './output', override=True)
+emu.compile(Docker(platform=platform), './output1', override=True)
+

@@ -1,4 +1,4 @@
-router id 10.0.0.28;
+router id 10.0.0.25;
 ipv4 table t_direct;
 protocol device {
 }
@@ -18,10 +18,10 @@ protocol direct local_nets {
     interface "net0";
 
 }
-define LOCAL_COMM = (199, 0, 0);
-define CUSTOMER_COMM = (199, 1, 0);
-define PEER_COMM = (199, 2, 0);
-define PROVIDER_COMM = (199, 3, 0);
+define LOCAL_COMM = (153, 0, 0);
+define CUSTOMER_COMM = (153, 1, 0);
+define PEER_COMM = (153, 2, 0);
+define PROVIDER_COMM = (153, 3, 0);
 ipv4 table t_bgp;
 protocol pipe {
     table t_bgp;
@@ -35,7 +35,7 @@ protocol pipe {
     import none;
     export filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; };
 }
-protocol bgp u_as2 {
+protocol bgp u_as12 {
     ipv4 {
         table t_bgp;
         import filter {
@@ -46,8 +46,8 @@ protocol bgp u_as2 {
         export where bgp_large_community ~ [LOCAL_COMM, CUSTOMER_COMM];
         next hop self;
     };
-    local 10.105.0.199 as 199;
-    neighbor 10.105.0.2 as 2;
+    local 10.101.0.153 as 153;
+    neighbor 10.101.0.12 as 12;
 }
 ipv4 table t_ospf;
 protocol ospf ospf1 {
@@ -58,7 +58,7 @@ protocol ospf ospf1 {
     };
     area 0 {
         interface "dummy0" { stub; };
-        interface "ix105" { stub; };
+        interface "ix101" { stub; };
         interface "net0" { hello 1; dead count 2; };
 
     };
@@ -70,3 +70,23 @@ protocol pipe {
     export all;
 }
 
+#########################################
+# Added for BGP Attack
+# Fight back
+#########################################
+
+protocol static {
+  ipv4 { table t_bgp; };
+  route 10.153.0.0/26 via "net0" {
+           bgp_large_community.add(LOCAL_COMM);
+  };
+  route 10.153.0.64/26 via "net0" {
+           bgp_large_community.add(LOCAL_COMM);
+  };
+  route 10.153.0.128/26 via "net0" {
+           bgp_large_community.add(LOCAL_COMM);
+  };
+  route 10.153.0.192/26 via "net0" {
+           bgp_large_community.add(LOCAL_COMM);
+  };
+}
