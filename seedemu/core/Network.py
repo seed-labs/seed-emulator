@@ -63,6 +63,7 @@ class Network(Printable, Registrable, Vertex):
         arouter = self.__aac.getOffsetAssigner(NodeRole.Router)
         self.__assigners[ NodeRole.BorderRouter ] = arouter
         self.__assigners[ NodeRole.Router ] = arouter
+        self.__assigners[ NodeRole.OpenVpnRouter ] = arouter
         self.__assigners[ NodeRole.Host ] = ahost
         self.__assigners[ NodeRole.ControlService ] = ahost
 
@@ -224,6 +225,7 @@ class Network(Printable, Registrable, Vertex):
 
         self.__aac.setRouterIpRange(routerStart, routerEnd, routerStep)
         self.__assigners[NodeRole.Router] = self.__aac.getOffsetAssigner(NodeRole.Router)
+        self.__assigners[NodeRole.OpenVpnRouter] = self.__aac.getOffsetAssigner(NodeRole.OpenVpnRouter)
         return self
 
     def getDhcpIpRange(self) -> list:
