@@ -281,6 +281,48 @@ router.post('/container/vis/set', express.json(), async function (req, res, next
     next();
 });
 
+router.post('/vm', express.json(), async function (req, res, next) {
+    if (VMSubscriber == null) {
+        res.json({
+            ok: false,
+            result: 'VMSubscriber is null'
+        });
+        next();
+        return;
+    }
+
+    if (!req.body['networkName'] || !req.body['nodename'] || !req.body['ip']) {
+        res.json({
+            ok: false,
+            result: 'the [networkName & nodename & ip] parameter must be provided, and neither can be empty'
+        });
+        next();
+        return;
+    }
+
+    if (VMSubscriber.readyState == WebSocket.OPEN) {
+        let data = {
+            role: 'Host',
+            custom: 'custom',
+            ...req.body
+        };
+        VMSubscriber.send(JSON.stringify(data));
+    } else {
+        res.json({
+            ok: false,
+            result: 'VMSubscriber is close'
+        });
+        next();
+        return;
+    }
+
+    res.json({
+        ok: true
+    });
+
+    next();
+});
+
 router.ws('/console/:id', async function (ws, req, next) {
     try {
         if (process.env.CONSOLE === 'false') {
@@ -299,7 +341,8 @@ router.ws('/console/:id', async function (ws, req, next) {
 
 var snifferSubscribers: WebSocket[] = [];
 var currentSnifferFilter: string = '';
-var visSubscribers: WebSocket[] = [];
+let visSubscribers: WebSocket[] = [];
+let VMSubscriber: WebSocket = null;
 
 router.post('/sniff', express.json(), async function (req, res, next) {
     sniffer.setListener((nodeId, data) => {
@@ -352,6 +395,14 @@ router.ws('/sniff', async function (ws, req, next) {
 
 router.ws('/container/vis/set', async function (ws, req, next) {
     visSubscribers.push(ws);
+    next();
+});
+
+router.ws('/vm', async function (ws, req, next) {
+    if (VMSubscriber?.readyState === WebSocket.OPEN) {
+        VMSubscriber.close();
+    }
+    VMSubscriber = ws;
     next();
 });
 
