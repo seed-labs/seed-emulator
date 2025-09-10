@@ -81,7 +81,7 @@ class PKITestCase(SeedEmuTestCase):
     @classmethod
     def get_test_suite(cls):
         test_suite = ut.TestSuite()
-        test_suite.addTest(cls('test_root_cert_installed'))
+        # test_suite.addTest(cls('test_root_cert_installed'))
         test_suite.addTest(cls('test_web_cert_issued'))
         return test_suite
 

@@ -198,7 +198,7 @@ class Mpls(Layer, Graphable):
         for iface in node.getInterfaces():
             net = iface.getNet()
             if net.getType() == NetworkType.InternetExchange: continue
-            if not (True in (node.getRole() == NodeRole.Router for node in net.getAssociations())): continue
+            if not (True in (node.getRole() == NodeRole.Router or node.getRole() == NodeRole.OpenVpnRouter for node in net.getAssociations())): continue
             ospf_ifaces += MplsFileTemplates['frr_config_ospf_iface'].format(interface = net.getName())
             ldp_ifaces += MplsFileTemplates['frr_config_ldp_iface'].format(interface = net.getName())
             mpls_iface_list.append(net.getName())
