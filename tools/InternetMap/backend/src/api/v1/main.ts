@@ -282,15 +282,6 @@ router.post('/container/vis/set', express.json(), async function (req, res, next
 });
 
 router.post('/vm', express.json(), async function (req, res, next) {
-    if (VMSubscriber == null) {
-        res.json({
-            ok: false,
-            result: 'VMSubscriber is null'
-        });
-        next();
-        return;
-    }
-
     if (!req.body['networkName'] || !req.body['nodename'] || !req.body['ip']) {
         res.json({
             ok: false,
@@ -300,21 +291,24 @@ router.post('/vm', express.json(), async function (req, res, next) {
         return;
     }
 
-    if (VMSubscriber.readyState == WebSocket.OPEN) {
-        let data = {
-            role: 'Host',
-            custom: 'custom',
-            ...req.body
-        };
-        VMSubscriber.send(JSON.stringify(data));
-    } else {
-        res.json({
-            ok: false,
-            result: 'VMSubscriber is close'
-        });
-        next();
-        return;
-    }
+    let deadSockets: WebSocket[] = [];
+    let data = {
+        role: 'Host',
+        custom: 'custom',
+        ...req.body
+    };
+
+    VMSubscribers.forEach(socket => {
+        if (socket.readyState == 1) {
+            socket.send(JSON.stringify(data));
+        }
+
+        if (socket.readyState > 1) {
+            deadSockets.push(socket);
+        }
+    });
+
+    deadSockets.forEach(socket => VMSubscribers.splice(VMSubscribers.indexOf(socket), 1));
 
     res.json({
         ok: true
@@ -342,7 +336,7 @@ router.ws('/console/:id', async function (ws, req, next) {
 var snifferSubscribers: WebSocket[] = [];
 var currentSnifferFilter: string = '';
 let visSubscribers: WebSocket[] = [];
-let VMSubscriber: WebSocket = null;
+let VMSubscribers: WebSocket[] = [];
 
 router.post('/sniff', express.json(), async function (req, res, next) {
     sniffer.setListener((nodeId, data) => {
@@ -399,10 +393,7 @@ router.ws('/container/vis/set', async function (ws, req, next) {
 });
 
 router.ws('/vm', async function (ws, req, next) {
-    if (VMSubscriber?.readyState === WebSocket.OPEN) {
-        VMSubscriber.close();
-    }
-    VMSubscriber = ws;
+    VMSubscribers.push(ws);
     next();
 });
 
