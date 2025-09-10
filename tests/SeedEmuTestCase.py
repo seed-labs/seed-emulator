@@ -129,7 +129,7 @@ class SeedEmuTestCase(ut.TestCase):
         env['DOCKER_BUILDKIT'] = '0'
         
         if(cls.docker_compose_version == 1):
-            result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f)
+            result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f, env=env)
         else:
             result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f, env=env)
 
@@ -146,9 +146,9 @@ class SeedEmuTestCase(ut.TestCase):
         """
         os.chdir(os.path.join(cls.emulator_code_dir, cls.output_dir))
         if(cls.docker_compose_version == 1):
-            os.system("docker-compose up > ../../test_log/containers_log &")
+            os.system("DOCKER_BUILDKIT=0 docker-compose up > ../../test_log/containers_log &")
         else:
-            os.system("docker compose up > ../../test_log/containers_log &")
+            os.system("DOCKER_BUILDKIT=0 docker compose up > ../../test_log/containers_log &")
         os.chdir(cls.init_dir)
 
     @classmethod

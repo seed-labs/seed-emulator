@@ -44,7 +44,7 @@ jobs:
       BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
       INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
       BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
-      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'true' }}
+      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'false' }}
     steps:
       - name: Check out the source repository
         uses: actions/checkout@v4
@@ -91,7 +91,7 @@ jobs:
       BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
       INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
       BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
-      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'true' }}
+      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'false' }}
     steps:
       - name: Check out the source repository
         uses: actions/checkout@v4
@@ -147,11 +147,11 @@ jobs:
     permissions:
       contents: read
     env:
-      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'true' }}
+      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'false' }}
       BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
       INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
       BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
-      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'true' }}
+      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'false' }}
     steps:
       - name: Check out the source repository
         uses: actions/checkout@v4

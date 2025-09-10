@@ -221,6 +221,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
     __imported_files: Dict[str, str]
     __softwares: Set[str]
     __build_commands: List[str]
+    __build_commands_at_end: List[str]
     __docker_cmds: List[str]
     __start_commands: List[Tuple[str, bool]]
     __post_config_commands: List[Tuple[str, bool]]
@@ -261,6 +262,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         self.__scope = scope if scope != None else str(asn)
         self.__softwares = set()
         self.__build_commands = []
+        self.__build_commands_at_end = []
         self.__docker_cmds = []
         self.__start_commands = []
         self.__post_config_commands = []
@@ -821,6 +823,34 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         """
         return self.__build_commands
 
+    def addBuildCommandAtEnd(self, cmd: str) -> Node:
+        """!
+        @brief Add new command to build step. These commands will be 
+               placed towards the end of the Dockerfile. Initially,
+               we didn't have this API, and all the RUN commands
+               were placed before COPY. This order caused some problems,
+               because sometimes, the RUN command depends on the files
+               from the COPY command.
+
+        Use this to add build steps to the node. For example, if using the
+        "docker" compiler, this will be added as a "RUN" line in Dockerfile.
+
+        @param cmd command to add.
+
+        @returns self, for chaining API calls.
+        """
+        self.__build_commands_at_end.append(cmd)
+
+        return self
+
+    def getBuildCommandsAtEnd(self) -> List[str]:
+        """!
+        @brief Get build commands
+
+        @returns list of commands.
+        """
+        return self.__build_commands_at_end
+
     def insertStartCommand(self, index: int, cmd: str, fork: bool = False) -> Node:
         """!
         @brief Add new command to start script.
@@ -1032,6 +1062,9 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         for cmd in self.__build_commands:
             out += ' ' * indent
             out += '{}\n'.format(cmd)
+        for cmd in self.__build_commands_at_end:
+            out += ' ' * indent
+            out += '{}\n'.format(cmd)
         indent -= 4
 
         out += ' ' * indent
@@ -1066,6 +1099,30 @@ protocol pipe {{
 RouterFileTemplates['rw_configure_script'] = '''\
 #!/bin/bash
 '''
+
+fill_placeholder = """\
+gw="`ip rou show default | cut -d' ' -f3`"
+if [ -z "$gw" ]; then
+
+    #line=$(<"/ifinfo.txt")
+    line=$(grep '^000_svc:' "/ifinfo.txt")
+    if [ -z "$line" ]; then
+        echo "Error: Could not find 000_svc in /ifinfo.txt" >&2
+        exit 1
+    fi
+    ip_portion=$(echo "$line" | cut -d':' -f2)
+    ip_only=$(echo "$ip_portion" | cut -d'/' -f1)
+    docker_host="${ip_only%.*}.1"
+    if [ -z "$docker_host"]; then
+        echo "Error: Could not determine the default route required to configure BIRD." >&2
+        exit 1;
+    else
+        gw="$docker_host";
+    fi
+fi
+sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
+exit 0
+"""
 
 class Router(Node):
     """!
@@ -1277,8 +1334,8 @@ class RealWorldRouter(RouterExtension):
         if len(self.__realworld_routes) == 0: return
         self.get_node().setFile('/rw_configure_script', RouterFileTemplates['rw_configure_script'])
         # position 0-1 is '/interface_setup' (and chmod +x)
-        self.get_node().insertStartCommand(0, '/rw_configure_script')
-        self.get_node().insertStartCommand(0, 'chmod +x /rw_configure_script')
+        self.get_node().insertStartCommand(2, 'if ! /rw_configure_script; then echo "rw_configure failed"; exit 1; fi')
+        self.get_node().insertStartCommand(2, 'chmod +x /rw_configure_script')
 
         for prefix, route_clientele in self.__realworld_routes:
             if route_clientele != None:
@@ -1299,10 +1356,7 @@ class RealWorldRouter(RouterExtension):
         # some might run SCION BR instead
         if 'bird2' in self.get_node().getSoftware():
             # if this check is too dirty/hacky, we could use Attributes like in: "if hasattr(self, '__sealed'):" but this is still hacky
-            fill_placeholder = """\
-            gw="`ip rou show default | cut -d' ' -f3`"
-            sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
-            """
+        
             self.get_node().appendFile('/rw_configure_script', fill_placeholder)
 
             self.get_node().addTable('t_rw')
