@@ -58,7 +58,7 @@ numpy;python_version>'3'
 pyxhook==1.0.0;python_version>'3'
 twilio==6.35.4;python_version>'3'
 colorama==0.4.3;python_version>'3'
-requests==2.22.0;python_version>'3'
+requests;python_version>'3'
 PyInstaller;python_version>'3'
 pycryptodome==3.9.6;python_version>'3'
 pycrypto==2.6.1;python_version>'3'
@@ -69,7 +69,7 @@ numpy==1.15.2;python_version<'3'
 pyxhook==1.0.0;python_version<'3'
 twilio==6.14.0;python_version<'3'
 colorama==0.3.9;python_version<'3'
-requests==2.20.0;python_version<'3'
+requests;python_version<'3'
 PyInstaller==3.6;python_version<'3'
 pycryptodomex==3.8.1;python_version<'3'
 
@@ -77,6 +77,21 @@ opencv-python==3.4.3.18;python_version<'3'
 
 pyHook==1.5.1;sys.platform=='win32'
 pypiwin32==223;sys.platform=='win32'
+'''
+
+BotnetServerFileTemplates['byob_patch_py'] = '''\
+#!/usr/bin/env python3
+import re, pathlib
+root = pathlib.Path('/tmp/byob')
+targets = ['byob/core/util.py','byob/modules/util.py']
+for rel in targets:
+    p = root / rel
+    s = p.read_text(encoding='utf-8')
+    s = re.sub(r'def\s+public_ip\s*\(\)\s*:[\s\S]*?(?=\\n\s*def\s|\\Z)',
+               'def public_ip():\\n    """Return public IP address of host machine"""\\n    return local_ip()\\n\\n', s)
+    s = re.sub(r'def\s+geolocation\s*\(\)\s*:[\s\S]*?(?=\\n\s*def\s|\\Z)',
+               'def geolocation():\\n    """Return latitude/longitude of host machine (tuple)"""\\n    return ("0", "0")\\n\\n', s)
+    p.write_text(s, encoding='utf-8')
 '''
 
 
@@ -155,27 +170,10 @@ class BotnetServer(Server):
         )
         node.addBuildCommand('pip3 install -r /tmp/byob/byob/requirements.txt')
 
-        # use regex rewrite the function body of public_ip()/geolocation()
-        node.addBuildCommand(
-            "python3 - <<'PY'\n"
-            "import re, pathlib\n"
-            "root = pathlib.Path('/tmp/byob')\n"
-            "targets = ['byob/core/util.py','byob/modules/util.py']\n"
-            "for rel in targets:\n"
-            "    p = root / rel\n"
-            "    s = p.read_text(encoding='utf-8')\n"
-            "    s = re.sub(r'def\\s+public_ip\\s*\\(\\)\\s*:[\\s\\S]*?(?=\\n\\s*def\\s|\\Z)',\n"
-            "               'def public_ip():\\n"
-            "    \"\"\"Return public IP address of host machine\"\"\"\\n"
-            "    return local_ip()\\n\\n', s)\n"
-            "    s = re.sub(r'def\\s+geolocation\\s*\\(\\)\\s*:[\\s\\S]*?(?=\\n\\s*def\\s|\\Z)',\n"
-            "               'def geolocation():\\n"
-            "    \"\"\"Return latitude/longitude of host machine (tuple)\"\"\"\\n"
-            "    return (\"0\", \"0\")\\n\\n', s)\n"
-            "    p.write_text(s, encoding='utf-8')\n"
-            "print('byob util.py patched (version-agnostic)')\n"
-            "PY"
-        )
+        node.setFile('/tmp/byob_patch.py', BotnetServerFileTemplates['byob_patch_py'])
+        node.appendStartCommand('chmod +x /tmp/byob_patch.py')
+        node.appendStartCommand('python3 /tmp/byob_patch.py')  # patch
+
 
         # add the init script to server
         node.setFile('/tmp/byob_server_init_script', BotnetServerFileTemplates['server_init_script'])
