@@ -12,25 +12,25 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean
 
 # Install Go manually
-RUN curl -OL https://go.dev/dl/go${GOLANG_VERSION}.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf go${GOLANG_VERSION}.linux-amd64.tar.gz && \
-    rm go${GOLANG_VERSION}.linux-amd64.tar.gz
+RUN curl -OL https://go.dev/dl/go${GOLANG_VERSION}.linux-arm64.tar.gz && \
+    tar -C /usr/local -xzf go${GOLANG_VERSION}.linux-arm64.tar.gz && \
+    rm go${GOLANG_VERSION}.linux-arm64.tar.gz
 
 RUN go version  # Just to confirm installation
 
 
-# Intalling eth-beacon-genesis and eth2-val-tools
+# Installing eth-beacon-genesis and eth2-val-tools
 RUN git clone https://github.com/ethpandaops/eth-beacon-genesis.git  \
     && cd eth-beacon-genesis && git checkout 703e97aaa244eec4b077f974e01d02449e1ba2ba && make \
     && go install github.com/protolambda/eth2-val-tools@0d6d1ddb36479e73d7d876b29ac2d10ab3988e85
 
 # Downloading geth 
-RUN wget https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.15.11-36b2371c.tar.gz \
-    && tar -xzf geth-linux-amd64-1.15.11-36b2371c.tar.gz 
+RUN wget https://gethstore.blob.core.windows.net/builds/geth-linux-arm64-1.15.11-36b2371c.tar.gz \
+    && tar -xzf geth-linux-arm64-1.15.11-36b2371c.tar.gz 
 
 # Downloading lighthouse
-RUN wget https://github.com/sigp/lighthouse/releases/download/v7.0.1/lighthouse-v7.0.1-x86_64-unknown-linux-gnu.tar.gz \
-    && tar -xzf lighthouse-v7.0.1-x86_64-unknown-linux-gnu.tar.gz
+RUN wget https://github.com/sigp/lighthouse/releases/download/v7.0.1/lighthouse-v7.0.1-aarch64-unknown-linux-gnu.tar.gz \
+    && tar -xzf lighthouse-v7.0.1-aarch64-unknown-linux-gnu.tar.gz
 
 
 FROM golang:1.18 AS builder2
@@ -44,14 +44,14 @@ RUN go install github.com/ethereum/go-ethereum/cmd/bootnode@v1.10.26
 
 # Final image    
 
-FROM handsonsecurity/seedemu-multiarch-base:buildx-latest
+FROM handsonsecurity/seedemu-base
 
 RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common python3 python3-pip
 RUN pip install web3
 
 COPY --from=builder1 /eth-beacon-genesis/bin/eth-beacon-genesis /usr/local/bin/eth-beacon-genesis
 COPY --from=builder1 /root/go/bin/eth2-val-tools /usr/local/bin/eth2-val-tools
-COPY --from=builder1 /geth-linux-amd64-1.15.11-36b2371c/geth /usr/local/bin/geth
+COPY --from=builder1 /geth-linux-arm64-1.15.11-36b2371c/geth /usr/local/bin/geth
 COPY --from=builder1 /lighthouse /usr/local/bin/lighthouse
 
 COPY --from=builder2 /go/bin/bootnode /usr/local/bin/bootnode
