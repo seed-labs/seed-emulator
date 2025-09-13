@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
+from seedemu.layers import Base, Routing, Ebgp
+from seedemu.services import WebService
+from seedemu.compiler import Docker, Platform
+from seedemu.core import Emulator, Binding, Filter
+import sys, os
+
+# Note: the indent of the {name} field needs to match with the rest service entries
+# in the docker-compose.yml file. 
+DOCKER_COMPOSE_ENTRY = """\
+    {name}:
+        image: busybox:latest
+        container_name: {name}
+        privileged: true
+        command: /bin/sh -c "
+                   ip route del default  &&
+                   ip route add default via {default_route} &&
+                   tail -f /dev/null
+                 "
+"""
+
+
+def run(dumpfile = None):
+    ###############################################################################
+    # Set the platform information
+    if dumpfile is None:
+        script_name = os.path.basename(__file__)
+
+        if len(sys.argv) == 1:
+            platform = Platform.AMD64
+        elif len(sys.argv) == 2:
+            if sys.argv[1].lower() == 'amd':
+                platform = Platform.AMD64
+            elif sys.argv[1].lower() == 'arm':
+                platform = Platform.ARM64
+            else:
+                print(f"Usage:  {script_name} amd|arm")
+                sys.exit(1)
+        else:
+            print(f"Usage:  {script_name} amd|arm")
+            sys.exit(1)
+
+    # Initialize the emulator and layers
+    emu     = Emulator()
+    base    = Base()
+    routing = Routing()
+    ebgp    = Ebgp()
+    web     = WebService()
+
+    ###############################################################################
+    # Create an Internet Exchange
+    base.createInternetExchange(100)
+
+    ###############################################################################
+    # Create and set up AS-150
+
+    # Create an autonomous system 
+    as150 = base.createAutonomousSystem(150)
+
+    # Create a network 
+    as150.createNetwork('net0')
+
+    # Create a router and connect it to two networks
+    as150.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
+
+    # Create a host called web and connect it to a network
+    as150.createHost('web').joinNetwork('net0')
+
+    # Create a web service on virtual node, give it a name
+    # This will install the web service on this virtual node
+    web.install('web150')
+
+    # Bind the virtual node to a physical node 
+    emu.addBinding(Binding('web150', filter = Filter(nodeName = 'web', asn = 150)))
+
+
+    ###############################################################################
+    # Create and set up AS-151
+    # It is similar to what is done to AS-150
+
+    as151 = base.createAutonomousSystem(151)
+    as151.createNetwork('net0')
+    as151.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
+
+    as151.createHost('web').joinNetwork('net0')
+    web.install('web151')
+    emu.addBinding(Binding('web151', filter = Filter(nodeName = 'web', asn = 151)))
+
+    ###############################################################################
+    # Create and set up AS-152
+    # It is similar to what is done to AS-150
+
+    as152 = base.createAutonomousSystem(152)
+    as152.createNetwork('net0')
+    as152.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
+
+    as152.createHost('web').joinNetwork('net0')
+    web.install('web152')
+    emu.addBinding(Binding('web152', filter = Filter(nodeName = 'web', asn = 152)))
+
+
+    ###############################################################################
+    # Peering these ASes at Internet Exchange IX-100
+
+    ebgp.addRsPeer(100, 150)
+    ebgp.addRsPeer(100, 151)
+    ebgp.addRsPeer(100, 152)
+
+
+    ###############################################################################
+    # Rendering 
+
+    emu.addLayer(base)
+    emu.addLayer(routing)
+    emu.addLayer(ebgp)
+    emu.addLayer(web)
+
+    if dumpfile is not None:
+        emu.dump(dumpfile)
+    else:
+        emu.render()
+
+        docker = Docker(platform=platform) 
+
+        # Attach an existing container to the emulator
+        docker.attachCustomContainer(
+                compose_entry = DOCKER_COMPOSE_ENTRY.format(name="busybox", default_route="10.150.0.254"), 
+                asn=150, net='net0', ip_address='10.150.0.80',
+                port_forwarding="9090:80/tcp", env=['a=1', 'b=2'])
+
+        # Attach an existing container to the emulator (make it visiable on the
+        # Internet Map (i.e., adding meta data to the docker compse entry)
+        docker.attachCustomContainer(
+                compose_entry = DOCKER_COMPOSE_ENTRY.format(name="busybox2", default_route="10.150.0.254"), 
+                asn=150, net='net0', ip_address='10.150.0.81',
+                port_forwarding="9091:80/tcp", 
+                node_name='busybox2', show_on_map=True)
+
+        # Attach the Internet Map container to the emulator
+        # This API actually calls `attachCustomContainer` 
+        docker.attachInternetMap(asn=151, net='net0', ip_address='10.151.0.90',
+                       port_forwarding='8080:8080/tcp', env=['a=1', 'b=2'])
+
+
+        ###############################################################################
+        # Compilation
+        emu.compile(docker, './output', override=True)
+
+if __name__ == '__main__':
+    run()
