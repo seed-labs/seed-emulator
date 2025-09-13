@@ -25,7 +25,7 @@ else:
 # Create Emulator Base with 10 Stub AS (150-154, 160-164) using Makers utility method.
 # hosts_per_stub_as=3 : create 3 hosts per one stub AS.
 # It will create hosts(physical node) named `host_{}`.format(counter), counter starts from 0. 
-hosts_per_stub_as = 3
+hosts_per_stub_as = 1
 emu = Makers.makeEmulatorBaseWith10StubASAndHosts(hosts_per_stub_as = hosts_per_stub_as)
 
 # Create the Ethereum layer
@@ -59,26 +59,23 @@ for asn in asns:
         if asn == 150 and id == 0:
                 e.setBeaconSetupNode()
 
-        # Set host in asn 150 with id 1 (ip : 10.150.0.72) as BootNode. 
+        # Set host in asn 151 with id 0 (ip : 10.151.0.71) as BootNode. 
         # This node will serve as a BootNode in both execution layer (geth) and consensus layer (lighthouse).
-        if asn == 150 and id == 1:
+        if asn == 151 and id == 0:
                 e.setBootNode(True)
 
         # Set hosts in asn 152 and 162 with id 0 and 1 as validator node. 
         # Validator is added by deposit 32 Ethereum and is activated in realtime after the Merge.
         # isManual=True : deposit 32 Ethereum by manual. 
         #                 Other than deposit part, create validator key and running a validator node is done by codes.  
-        if asn in [151]:
-            if id == 0:
-                e.enablePOSValidatorAtRunning()
-            if id == 1:
-                e.enablePOSValidatorAtRunning(is_manual=True)
+        if asn in [152]:
+            e.enablePOSValidatorAtRunning()
         
-        # Set hosts in asn 152, 153, 154, and 160 as validator node.
+        # Set hosts in asn 153, 154, and 160 as validator node.
         # These validators are activated by default from genesis status.
         # Before the Merge, when the consensus in this blockchain is still POA, 
         # these hosts will be the signer nodes.
-        if asn in [152,153,154,160,161,162,163,164]:
+        if asn in [153,153,154,160,161,162,163,164]:
             e.enablePOSValidatorAtGenesis()
 
         # Customizing the display names (for visualiztion purpose)
