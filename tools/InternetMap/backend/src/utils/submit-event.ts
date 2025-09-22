@@ -6,6 +6,7 @@ import * as path from 'path';
 import fs from 'fs';
 import tar from 'tar-fs';
 
+const PLUGINS_BASE_DIR = '/map-plugins';
 export class SubmitEvent implements LogProducer {
     private _logger: Logger;
     private _docker: dockerode;
@@ -32,6 +33,34 @@ export class SubmitEvent implements LogProducer {
                 this._logger.error(`source path ${sourcePath} does not exist`);
                 return
             }
+            try {
+                // create targetPath
+                const exec = await targetContainer.exec({
+                    Cmd: ['mkdir', '-p', targetPath],
+                    AttachStdout: true,
+                    AttachStderr: true
+                });
+
+                const stream = await exec.start({});
+                await new Promise((resolve, reject) => {
+                    let output = '';
+                    stream.on('data', (chunk) => {
+                        output += chunk.toString();
+                    });
+                    stream.on('end', resolve);
+                    stream.on('error', reject);
+                });
+
+                const inspect = await exec.inspect();
+                if (inspect.ExitCode !== 0) {
+                    throw new Error(`Failed to create directory: ${targetPath}`);
+                }
+
+            } catch (error) {
+                this._logger.error(`Failed to create target directory ${targetPath}:`, error);
+                throw error;
+            }
+
             // create tar stream
             const uploadStream = tar.pack(sourcePath);
             // upload
@@ -51,11 +80,14 @@ export class SubmitEvent implements LogProducer {
      * @param filePaths The file path to be deleted within the container
      */
     async delFileInContainer(containerId: string, filePaths: string[]): Promise<void> {
+        this.execCmdInContainer(containerId, ['rm', '-f', ...filePaths]).then()
+    }
+
+    async execCmdInContainer(containerId: string, cmd: string[]): Promise<void> {
         try {
             const container = this._docker.getContainer(containerId);
-            // execute the deletion command (use rm -f to force deletion)
             const exec = await container.exec({
-                Cmd: ['rm', '-f', ...filePaths],
+                Cmd: cmd,
                 AttachStdout: true,
                 AttachStderr: true
             });
@@ -70,24 +102,24 @@ export class SubmitEvent implements LogProducer {
             // check the execution result
             const inspectResult = await exec.inspect();
             if (inspectResult.ExitCode !== 0) {
-                throw new Error(`Failed to delete file, exit code: ${inspectResult.ExitCode}`);
+                throw new Error(`Failed to exec cmd: (${cmd}), exit code: ${inspectResult.ExitCode}`);
             }
 
-            this._logger.info(`containerId: ${containerId} Successfully deleted file: ${filePaths}`);
+            this._logger.info(`containerId: ${containerId} Successfully exec cmd: (${cmd})`);
         } catch (error) {
-            this._logger.error('Error deleting file:', error);
+            this._logger.error(`Error exec cmd: (${cmd}), error: ${error}`);
             throw error;
         }
     }
 
-    async submitEvent(address: string, nodes: string[], type: 'install' | 'uninstall'): Promise<any> {
+    async submitEvent(address: string, nodes: string[], type: 'install' | 'uninstall', plugin: string): Promise<any> {
         let ret = false;
         switch (type) {
             case 'install':
-                ret = await this._install(address, nodes);
+                ret = await this._install(address, nodes, plugin);
                 break
             case 'uninstall':
-                ret = await this._uninstall(address, nodes);
+                ret = await this._uninstall(nodes, plugin);
                 break
             default:
                 this._logger.debug(`submit event type error: ${type}`);
@@ -97,15 +129,27 @@ export class SubmitEvent implements LogProducer {
         return ret;
     }
 
-    async _install(address: string, nodes: string[]) {
+    async _install(address: string, nodes: string[], plugin: string) {
+        let ret = false;
+        switch (plugin) {
+            case 'submit_event':
+                ret = await this._installSubmitEvent(address, nodes)
+                break
+            default:
+                break
+        }
+        return ret
+    }
+
+    async _installSubmitEvent(address: string, nodes: string[]) {
         let ret = true;
 
-        this._logger.debug(`submit event install on ${nodes}...`);
+        this._logger.debug(`submit event install ...`);
         // create a temporary folder
         const tempDir = path.join(os.tmpdir(), 'submit-event');
         await fs.promises.mkdir(tempDir, {recursive: true});
         // read the file
-        const sourceFilePath = '../module/submit_event.sh'
+        const sourceFilePath = '../plugin/submit_event/submit_event.sh'
         if (!fs.existsSync(sourceFilePath)) {
             this._logger.info(`File ${fs.realpathSync(sourceFilePath)} does not exist`);
             return
@@ -119,18 +163,13 @@ export class SubmitEvent implements LogProducer {
                 async node => {
                     const tempNodeDir = path.join(tempDir, node);
                     await fs.promises.mkdir(tempNodeDir, {recursive: true});
-                    // const tempFilePath1 = path.join(tempNodeDir, 'option.json');
-                    const tempFilePath2 = path.join(tempNodeDir, 'submit_event.sh');
-                    // write to the configuration template file
-                    // fs.writeFileSync(tempFilePath1, JSON.stringify({id: node, interval: 300, static: {}, dynamic: {}}));
-                    // write to the vis script file
-                    const _modifiedContent = modifiedContent.replace('ID', node);
-                    fs.writeFileSync(tempFilePath2, _modifiedContent);
-                    await this.copyToContainerFromCurrentContainer(tempNodeDir, node, '/');
+                    const tempFilePath = path.join(tempNodeDir, 'submit_event.sh');
+                    fs.writeFileSync(tempFilePath, modifiedContent);
+                    await this.copyToContainerFromCurrentContainer(tempNodeDir, node, PLUGINS_BASE_DIR);
                 }
             ));
         } catch (error) {
-            this._logger.error('Error submit event install: ', error);
+            this._logger.error('submit event install failed: ', error);
             ret = false
         } finally {
             await fs.promises.rm(tempDir, {recursive: true, force: true});
@@ -138,22 +177,32 @@ export class SubmitEvent implements LogProducer {
         return ret;
     }
 
-    async _uninstall(address: string, nodes: string[]) {
+    async _uninstall(nodes: string[], plugin: string) {
         let ret = true;
-        this._logger.debug(`submit event uninstall on ${nodes}...`);
-
+        let paths: string[] = [];
+        switch (plugin) {
+            case 'submit_event':
+                paths = [`${PLUGINS_BASE_DIR}/submit_event.sh`]
+                break
+            default:
+                break
+        }
+        if (paths.length === 0) {
+            return ret
+        }
         try {
+            this._logger.debug(`${plugin} uninstall ...`);
             await Promise.all(nodes.map(
                 async node => {
-                    // await this.delFileInContainer(node, ['/option.json', '/submit_event.sh']);
-                    await this.delFileInContainer(node, ['/submit_event.sh']);
+                    await this.delFileInContainer(node, paths);
                 }
             ));
         } catch (error) {
-            this._logger.error('Error submit event uninstall: ', error);
+            this._logger.error(`${plugin} uninstall failed: ${error}`);
             ret = false
         }
-        return ret;
+
+        return ret
     }
 
     getLoggers(): Logger[] {

@@ -2,6 +2,8 @@ import {DataSet} from 'vis-data';
 import {EdgeOptions, NodeOptions} from 'vis-network';
 import {BgpPeer, EmulatorNetwork, EmulatorNode} from '../common/types';
 
+export const META_CLASS = 'org.seedsecuritylabs.seedemu.meta.class';
+
 export type DataEvent = 'packet' | 'dead' | 'vis';
 
 export interface Vertex extends NodeOptions {
@@ -35,11 +37,12 @@ export interface FilterRespond {
 }
 
 export class DataSource {
-    private _apiBase: string;
+    public services: Set<string>;
+    private readonly _apiBase: string;
     private _nodes: EmulatorNode[];
     private _nets: EmulatorNetwork[];
 
-    private _wsProtocol: string;
+    private readonly _wsProtocol: string;
     private _socket: WebSocket;
     private _socketVis: WebSocket;
 
@@ -59,6 +62,7 @@ export class DataSource {
     constructor(apiBase: string, wsProtocol: string = 'ws') {
         this._apiBase = apiBase;
         this._wsProtocol = wsProtocol;
+        this.services = new Set<string>();
         this._nodes = [];
         this._nets = [];
         this._connected = false;
@@ -126,9 +130,21 @@ export class DataSource {
 
         this._nets.forEach(net => {
             net.meta.relation = {parent: new Set<string>()}
+            if (META_CLASS in net['Labels'] && net['Labels'][META_CLASS] !== '') {
+                let services = JSON.parse(net['Labels'][META_CLASS]);
+                for (const service of services) {
+                    this.services.add(service);
+                }
+            }
         })
         this._nodes.forEach(node => {
             node.meta.relation = {parent: new Set<string>()};
+            if (META_CLASS in node['Labels'] && node['Labels'][META_CLASS] !== '') {
+                let services = JSON.parse(node['Labels'][META_CLASS]);
+                for (const service of services) {
+                    this.services.add(service);
+                }
+            }
         })
 
         this._socket = new WebSocket(`${this._wsProtocol}://${location.host}${this._apiBase}/sniff`);

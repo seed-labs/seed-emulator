@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import {InstallType} from '../common/types';
+import {IPlugin} from '../common/types';
 import {WindowManager} from '../common/window-manager';
 import {ApiRespond} from "../map/datasource";
 
@@ -150,8 +150,8 @@ export class IndexUi {
         toolbar.appendChild(btnGroupSelects);
     }
 
-    private _createInstallRow(installObj: InstallType) {
-        var obj = installObj.meta.baseInfo;
+    private _createInstallRow(installObj: IPlugin) {
+        var obj = installObj;
 
         var tr = document.createElement('tr');
 
@@ -163,9 +163,8 @@ export class IndexUi {
 
         td1.innerText = obj.name;
 
-        var console = this._wm.createWindow.bind(this._wm);
-        var id = installObj.Id.substr(0, 12);
-        var title = `install ${obj.name}`;
+        var id = installObj.id.substr(0, 12);
+        var title = `${obj.name}`;
         let _loadV2 = this._loadV2
         let _installUrl = this._installUrl
         let _uninstallUrl = this._uninstallUrl
