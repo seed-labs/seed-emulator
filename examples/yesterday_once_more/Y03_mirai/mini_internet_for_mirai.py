@@ -10,26 +10,23 @@ MIRAI_CREDS = [
     ("admin", "admin"),   ("root", "888888")
 ]
 
-def makeVictim(emu: Emulator, base: Base, victim_asn: int):
+def makeVictim(emu: Emulator, base: Base,web: WebService, victim_asn: int):
     # set victim to 10.170.0.99
     victim_as = base.getAutonomousSystem(victim_asn)
-    victim_server = victim_as.createHost('host_victim').joinNetwork('net0',address='10.170.0.99')
-    
-    # import index.html
-    victim_server.appendStartCommand('mkdir -p /var/www/html', fork=True)
+    victim_server = victim_as.createHost('victim').joinNetwork('net0',address='10.170.0.99')
+    web.install('web170')
+    emu.addBinding(Binding('web170', filter=Filter(nodeName='victim', asn=170)))
+
     current_dir = os.getcwd()
 
     # large image
     victim_server.importFile(hostpath=f"{current_dir}/misc/index.html", containerpath="/var/www/html/index.html")
-    victim_server.importFile(hostpath=f"{current_dir}/misc/large_image.png", containerpath="/var/www/html/large_image.png")
-    victim_server.appendStartCommand('python3 -m http.server 80 --directory /var/www/html', fork=True)
+    victim_server.importFile(hostpath=f"{current_dir}/misc/image.png", containerpath="/var/www/html/image.png")
+    victim_server.importFile(hostpath=f"{current_dir}/misc/video.mp4", containerpath="/var/www/html/video.mp4")
     
     # web setting
     victim_server.appendStartCommand('tc qdisc replace dev net0 root tbf rate 10mbit burst 32kbit latency 400ms', fork=True )
-    # victim_server.appendStartCommand('sysctl -w net.ipv4.tcp_syncookies=0', fork=True)
-    # victim_server.appendStartCommand('sysctl -w net.core.somaxconn=128', fork=True)
-
-    victim_server.addPortForwarding(445,80)
+    victim_server.addPortForwarding(8888,80)
     print(f"Victim server created in AS {victim_asn} and serving a website.")
 
 
@@ -56,6 +53,7 @@ def run(dumpfile=None, hosts_per_as=8):
     emu   = Emulator()
     ebgp  = Ebgp()
     base  = Base()
+    web   = WebService()
     
     ###############################################################################
     # Create internet exchanges
@@ -111,7 +109,7 @@ def run(dumpfile=None, hosts_per_as=8):
     Makers.makeStubAsWithHosts(emu, base, 170, 105, hosts_per_as)
     Makers.makeStubAsWithHosts(emu, base, 171, 105, hosts_per_as)
     
-    makeVictim(emu, base, victim_asn=170)
+    makeVictim(emu, base,web, victim_asn=170)
 
     ###############################################################################
     # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
@@ -154,6 +152,7 @@ def run(dumpfile=None, hosts_per_as=8):
     emu.addLayer(ebgp) 
     emu.addLayer(Ibgp())
     emu.addLayer(Ospf())
+    emu.addLayer(web)
 
     ###############################################################################
     # Mirai settings 
