@@ -1,4 +1,4 @@
-router id 10.0.0.28;
+router id 10.0.0.53;
 ipv4 table t_direct;
 protocol device {
 }
@@ -35,7 +35,7 @@ protocol pipe {
     import none;
     export filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; };
 }
-protocol bgp u_as2 {
+protocol bgp u_as11 {
     ipv4 {
         table t_bgp;
         import filter {
@@ -47,7 +47,7 @@ protocol bgp u_as2 {
         next hop self;
     };
     local 10.105.0.199 as 199;
-    neighbor 10.105.0.2 as 2;
+    neighbor 10.105.0.11 as 11;
 }
 ipv4 table t_ospf;
 protocol ospf ospf1 {

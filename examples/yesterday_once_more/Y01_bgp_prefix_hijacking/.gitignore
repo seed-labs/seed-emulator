@@ -1,2 +1,4 @@
 output*
 .env
+*.log
+*.log.lock

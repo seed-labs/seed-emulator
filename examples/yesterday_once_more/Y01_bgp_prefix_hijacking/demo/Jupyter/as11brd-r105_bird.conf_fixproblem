@@ -1,4 +1,4 @@
-router id 10.0.0.4;
+router id 10.0.0.16;
 ipv4 table t_direct;
 protocol device {
 }
@@ -15,13 +15,13 @@ protocol direct local_nets {
         import all;
     };
 
-    interface "net_100_105";
+    interface "net_102_105";
 
 }
-define LOCAL_COMM = (2, 0, 0);
-define CUSTOMER_COMM = (2, 1, 0);
-define PEER_COMM = (2, 2, 0);
-define PROVIDER_COMM = (2, 3, 0);
+define LOCAL_COMM = (11, 0, 0);
+define CUSTOMER_COMM = (11, 1, 0);
+define PEER_COMM = (11, 2, 0);
+define PROVIDER_COMM = (11, 3, 0);
 ipv4 table t_bgp;
 protocol pipe {
     table t_bgp;
@@ -35,21 +35,22 @@ protocol pipe {
     import none;
     export filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; };
 }
-protocol bgp p_rs105 {
+protocol bgp c_as199 {
     ipv4 {
         table t_bgp;
         import filter {
-            bgp_large_community.add(PEER_COMM);
-            bgp_local_pref = 20;
+            bgp_large_community.add(CUSTOMER_COMM);
+            bgp_local_pref = 30;
+            if (net != 10.199.0.0/24) then reject;  # Added to fix the problem
             accept;
         };
-        export where bgp_large_community ~ [LOCAL_COMM, CUSTOMER_COMM];
+        export all;
         next hop self;
     };
-    local 10.105.0.2 as 2;
-    neighbor 10.105.0.105 as 105;
+    local 10.105.0.11 as 11;
+    neighbor 10.105.0.199 as 199;
 }
-protocol bgp c_as199 {
+protocol bgp c_as165 {
     ipv4 {
         table t_bgp;
         import filter {
@@ -60,8 +61,22 @@ protocol bgp c_as199 {
         export all;
         next hop self;
     };
-    local 10.105.0.2 as 2;
-    neighbor 10.105.0.199 as 199;
+    local 10.105.0.11 as 11;
+    neighbor 10.105.0.165 as 165;
+}
+protocol bgp c_as166 {
+    ipv4 {
+        table t_bgp;
+        import filter {
+            bgp_large_community.add(CUSTOMER_COMM);
+            bgp_local_pref = 30;
+            accept;
+        };
+        export all;
+        next hop self;
+    };
+    local 10.105.0.11 as 11;
+    neighbor 10.105.0.166 as 166;
 }
 ipv4 table t_ospf;
 protocol ospf ospf1 {
@@ -73,7 +88,7 @@ protocol ospf ospf1 {
     area 0 {
         interface "dummy0" { stub; };
         interface "ix105" { stub; };
-        interface "net_100_105" { hello 1; dead count 2; };
+        interface "net_102_105" { hello 1; dead count 2; };
 
     };
 }
@@ -90,27 +105,7 @@ protocol bgp ibgp1 {
         export all;
         igp table t_ospf;
     };
-    local 10.0.0.4 as 2;
-    neighbor 10.0.0.1 as 2;
-}
-protocol bgp ibgp2 {
-    ipv4 {
-        table t_bgp;
-        import all;
-        export all;
-        igp table t_ospf;
-    };
-    local 10.0.0.4 as 2;
-    neighbor 10.0.0.2 as 2;
-}
-protocol bgp ibgp3 {
-    ipv4 {
-        table t_bgp;
-        import all;
-        export all;
-        igp table t_ospf;
-    };
-    local 10.0.0.4 as 2;
-    neighbor 10.0.0.3 as 2;
+    local 10.0.0.16 as 11;
+    neighbor 10.0.0.15 as 11;
 }
 

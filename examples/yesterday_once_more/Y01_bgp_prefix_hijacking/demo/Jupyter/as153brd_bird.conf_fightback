@@ -1,4 +1,4 @@
-router id 10.0.0.19;
+router id 10.0.0.25;
 ipv4 table t_direct;
 protocol device {
 }

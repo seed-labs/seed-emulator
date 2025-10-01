@@ -28,6 +28,8 @@ DOCKER_BUILDKIT=0 docker compose build
 docker compose up
 ```
 
+4. Start the Jupyter notebook server by referring to `Jupyter/README.md` and follow the instructions in the Jupyter notebook `Jupyter/bgp_attack_cn.ipynb` or `Jupyter/bgp_attack.ipynb` to replay the attack.
+
 ***
 
 #### (Optional) Use your own VM to display the victim's screen

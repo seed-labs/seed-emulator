@@ -4,6 +4,7 @@
 from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship
 from seedemu.compiler import Docker, Platform
 from seedemu.core import Emulator
+from seedemu.raps import OpenVpnRemoteAccessProvider
 from seedemu.utilities import Makers
 import os, sys
 
@@ -137,8 +138,8 @@ def run(dumpfile=None, hosts_per_as=2):
     as199.createRouter('attacker-bgp').joinNetwork('net0').joinNetwork('ix105')
     ebgp.addPrivatePeerings(105, [11],  [199], PeerRelationship.Provider)
 
-    as153 = base.getAutonomousSystem(153)
-    as153.getNetwork("net0").enableRemoteAccess(ovpn)
+    as174 = base.getAutonomousSystem(174)
+    as174.getNetwork("net0").enableRemoteAccess(ovpn)
     
     ###############################################################################
     # Peering via RS (route server). The default peering mode for RS is PeerRelationship.Peer, 
