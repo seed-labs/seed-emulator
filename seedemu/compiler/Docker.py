@@ -815,6 +815,7 @@ class Docker(Compiler):
         """
         if role == NodeRole.Host: return 'h'
         if role == NodeRole.Router: return 'r'
+        if role == NodeRole.OpenVpnRouter: return 'r'
         if role == NodeRole.ControlService: return 'cs'
         if role == NodeRole.RouteServer: return 'rs'
         if role == NodeRole.BorderRouter: return 'brd'

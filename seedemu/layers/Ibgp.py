@@ -57,7 +57,7 @@ class Ibgp(Layer, Graphable):
 
             for neigh in neighs:
                 role = neigh.getRole()
-                if role != NodeRole.Router and role != NodeRole.BorderRouter: 
+                if role != NodeRole.Router and role != NodeRole.BorderRouter and role != NodeRole.OpenVpnRouter: 
                     continue
                 
                 self.__dfs(neigh, visited, net.getName())
