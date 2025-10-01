@@ -14,7 +14,7 @@ pip install -r requirements.txt
 2. Import relevant classes by adding PYTHONPATH to .bashrc:
 
 ```bash
-echo 'export PYTHONPATH="/path_of_current_folder/Modules:$PYTHONPATH"' >> ~/.bashrc
+echo "export PYTHONPATH=\"$(pwd)/Modules:\$PYTHONPATH\"" >> ~/.bashrc
 ```
 
 3. Create a .env file by referring to .env_template and fill in the necessary information:
