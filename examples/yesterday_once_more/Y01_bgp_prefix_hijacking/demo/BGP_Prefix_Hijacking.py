@@ -200,7 +200,7 @@ def run(dumpfile=None, hosts_per_as=2):
         emu.render()
 
         # Attach the Internet Map container to the emulator
-        docker = Docker(platform=platform, internetMapEnabled=False)
+        docker = Docker(platform=platform)
         emu.compile(docker, './output', override=True)
 
 if __name__ == "__main__":

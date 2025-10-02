@@ -42,15 +42,7 @@ python ./large_internet.py
 python ./BGP_Prefix_Hijacking.py
 ```
 
-3. Start the InternetMap:
-
-```bash
-cd InternetMap
-DOCKER_BUILDKIT=0 docker compose build
-docker compose up
-```
-
-4. Start the emulator network:
+3. Start the emulator network:
 
 ```bash
 cd output
@@ -58,14 +50,14 @@ DOCKER_BUILDKIT=0 docker compose build
 docker compose up
 ```
 
-5. After the network is successfully launched, start the VMs:
+4. After the network is successfully launched, start the VMs:
 
 ```bash
 cd output_vm
 ./vm_buildup.sh
 ```
 
-6. Start the Jupyter notebook server by referring to `Jupyter/README.md` and follow the instructions in the Jupyter notebook `Jupyter/bgp_attack_cn.ipynb` or `Jupyter/bgp_attack.ipynb` to replay the attack.
+5. Start the Jupyter notebook server by referring to `Jupyter/README.md` and follow the instructions in the Jupyter notebook `Jupyter/bgp_attack_cn.ipynb` or `Jupyter/bgp_attack.ipynb` to replay the attack.
 
 ***
 
@@ -80,14 +72,7 @@ cd output_vm
 ./vm_down.sh
 ```
 
-2. Stop and destroy the InternetMap:
-
-```bash
-cd InternetMap
-docker compose down
-```
-
-3. Stop and destroy the emulator network:
+2. Stop and destroy the emulator network:
 
 ```bash
 cd output   

@@ -1,6 +1,0 @@
-{
-    "id": "1",
-    "name": "submit_event",
-    "version": "1.0.0",
-    "entryPoint": "/submit_event.sh"
-}

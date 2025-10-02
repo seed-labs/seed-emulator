@@ -31,7 +31,7 @@ as153.getNetwork("net0").enableRemoteAccess(ovpn)
 
 emu.render()
 
-docker = Docker(platform=platform, internetMapEnabled=False)
+docker = Docker(platform=platform)
 emu.compile(docker, './output', override=True)
 
 # === Configuration ===
