@@ -348,26 +348,6 @@ def run():
         "nodename": f"VM{NEW_VMID}",
         "ip": VPN_IP
     }
-    
-    template = (
-        "nohup bash -c 'while true; do "
-        "echo \"{json_data}\" | "
-        "curl -X POST -H \"Content-Type: application/json\" -d @- http://{remote_ip}:8080/api/v1/vm "
-        "> /dev/null 2>&1; sleep 1; done' &"
-    )
-    final_command = template.format(
-        json_data=json.dumps(payload_dict).replace('"', '\\"'),
-        remote_ip=REMOTE_IP
-    )
-    
-    print('Final_Command: ', final_command)
-
-    try:
-        process = subprocess.Popen(final_command, shell=True)
-        print(json.dumps({"success": True, "output": "Attaching to Map started"}, indent=4))
-    except Exception as e:
-        print(json.dumps({"success": False, "error": "Fail to start attaching to map", "detail": str(e)}, indent=4))
-        sys.exit(1)
 
 if __name__ == "__main__":
     run()
