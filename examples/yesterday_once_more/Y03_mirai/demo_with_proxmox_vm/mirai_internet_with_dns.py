@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from seedemu.core import Emulator, Binding, Filter, Action
-from seedemu.mergers import DEFAULT_MERGERS
-from seedemu.compiler import Docker, Platform, DockerImage
-from seedemu.services import DomainNameCachingService
-from seedemu.services.DomainNameCachingService import DomainNameCachingServer
-from seedemu.layers import Base
-from examples.yesterday_once_more.Y03_mirai import mini_internet_for_mirai
-from examples.yesterday_once_more.Y03_mirai import dns_component
+# from seedemu.core import Emulator, Binding, Filter, Action
+# from seedemu.mergers import DEFAULT_MERGERS
+# from seedemu.compiler import Docker, Platform, DockerImage
+# from seedemu.services import DomainNameCachingService
+# from seedemu.services.DomainNameCachingService import DomainNameCachingServer
+# from seedemu.layers import Base
+from seedemu import *
+from examples.yesterday_once_more.Y03_mirai.demo_with_proxmox_vm import mini_internet_for_mirai
+from examples.yesterday_once_more.Y03_mirai.demo_with_proxmox_vm import dns_component
+from proxmox import Proxmox
+from dotenv import load_dotenv
 import os, sys
 
 def run(dumpfile=None):
@@ -42,6 +45,8 @@ def run(dumpfile=None):
     emuA.load('./base_internet.bin')
     emuB.load('./dns_component.bin')
     emu = emuA.merge(emuB, DEFAULT_MERGERS)
+
+    ovpn = OpenVpnRemoteAccessProvider()
     
     
     #####################################################################################
@@ -61,7 +66,7 @@ def run(dumpfile=None):
     emu.addBinding(Binding('a-com-server', filter=Filter(asn=151, nodeName='com-a')))
 
     current_dir = os.getcwd()
-    COMA.importFile(hostpath=f"{current_dir}/scripts/add_dns_record.sh", containerpath="/tmp/add_dns_record.sh")
+    COMA.importFile(hostpath=f"{current_dir}/../scripts/add_dns_record.sh", containerpath="/tmp/add_dns_record.sh")
     COMA.appendStartCommand("cd /tmp && chmod +x ./add_dns_record.sh")
     
     #####################################################################################
@@ -107,7 +112,18 @@ def run(dumpfile=None):
             docker.setImageOverride(host, 'mirai-base')
        
        emu.compile(docker, './output', override=True)
-       os.system('cp -r container_files/mirai-base ./output')
+       os.system('cp -r ../container_files/mirai-base ./output')
+
+    # === VM Configuration ===
+    load_dotenv()
+    PVE_HOST = os.getenv('PVE_HOST')
+    API_TOKEN_ID = os.getenv('API_TOKEN_ID')
+    API_TOKEN_SECRET = os.getenv('API_TOKEN_SECRET')
+    NODE = os.getenv('NODE')
+
+    pm = Proxmox(PVE_HOST, API_TOKEN_ID, API_TOKEN_SECRET, NODE)
+    pm.createVM(154, "129").joinNetwork('net0', base)
+    pm.compile('./output_vm')
 
 if __name__ == "__main__":
     run()

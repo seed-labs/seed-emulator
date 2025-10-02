@@ -20,9 +20,9 @@ def makeVictim(emu: Emulator, base: Base,web: WebService, victim_asn: int):
     current_dir = os.getcwd()
 
     # large image
-    victim_server.importFile(hostpath=f"{current_dir}/misc/index.html", containerpath="/var/www/html/index.html")
-    victim_server.importFile(hostpath=f"{current_dir}/misc/image.png", containerpath="/var/www/html/image.png")
-    victim_server.importFile(hostpath=f"{current_dir}/misc/video.mp4", containerpath="/var/www/html/video.mp4")
+    victim_server.importFile(hostpath=f"{current_dir}/../misc/index.html", containerpath="/var/www/html/index.html")
+    victim_server.importFile(hostpath=f"{current_dir}/../misc/image.png", containerpath="/var/www/html/image.png")
+    victim_server.importFile(hostpath=f"{current_dir}/../misc/video.mp4", containerpath="/var/www/html/video.mp4")
     
     # web setting
     victim_server.appendStartCommand('tc qdisc replace dev net0 root tbf rate 10mbit burst 32kbit latency 400ms', fork=True )
@@ -54,6 +54,7 @@ def run(dumpfile=None, hosts_per_as=8):
     ebgp  = Ebgp()
     base  = Base()
     web   = WebService()
+    ovpn  = OpenVpnRemoteAccessProvider()
     
     ###############################################################################
     # Create internet exchanges
@@ -189,11 +190,13 @@ def run(dumpfile=None, hosts_per_as=8):
     
     C2.appendStartCommand('mkdir -p /var/www/html && cd /var/www/html', fork=True)
     current_dir = os.getcwd()
-    C2.importFile(hostpath=f"{current_dir}/mirai.py", containerpath="/var/www/html/mirai.py")
+    C2.importFile(hostpath=f"{current_dir}/../scripts/mirai.py", containerpath="/var/www/html/mirai.py")
     C2.appendStartCommand('chmod +x mirai.py',fork=True)
     C2.appendStartCommand('python3 -m http.server 80 --directory /var/www/html', fork=True)  # start C2 server(for mirai.py download purpose)
     C2.addSoftware('telnetd')
     C2.addSoftware('telnet')
+
+    VPN = base.getAutonomousSystem(154).getNetwork('net0').enableRemoteAccess(ovpn)
     
     if dumpfile is not None: 
         # Save it to a file, so it can be used by other emulators
