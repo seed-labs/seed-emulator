@@ -39,8 +39,12 @@ docker = Docker(platform=platform)
 # Attach the Internet Map container to the emulator
 # This API actually calls `attachCustomContainer`
 docker.attachInternetMap(
-    asn=151, net='net0', ip_address='10.151.0.90',
+    asn=151, net='net0', ip_address='10.151.0.90', node_name='access_node',
     port_forwarding='8080:8080/tcp', env=['DEFAULT_ROUTE=10.151.0.254']
+)
+
+docker.attachInternetMap(
+    node_name='no_access_node', port_forwarding='8081:8080/tcp', env=['CONSOLE=false']
 )
 # Compil the emulation
 emu.compile(docker, './output', override=True)

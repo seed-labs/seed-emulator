@@ -1,62 +1,78 @@
-seedemu-client
----
+# InternetMap
 
-This is a work-in-progress prototype of the seedemu client. 
+This is a visualization tool that we developed for the Internet emulator. 
 
-What's working:
+## Features supported
 
-- listing nodes in the emulation.
-- attaching to nodes in the emulation.
-- search nodes with their ASN, node name, or IP address.
-- map:
-    - show topology on the map.
-    - search and highlight nodes on the map.
-    - animate packet flows with BPF expression.
-    - disconnect/reconnect nodes from emulation.
-    - enable/disable bgp peers.
-    - customize the style of the node.
-    - expand / collapse nodes
-    - drag fixed
+Currently, the tool supports the following features:
+
+- [index](#indexhtml):
+  - Home page
+- [map](#maphtml):
+  - Display topology of the network
+  - Search and highlight nodes on the map 
+  - Animate packet flows using BPF expressions 
+  - Disconnect/reconnect nodes from emulation 
+  - Enable/disable BGP peers 
+  - Customize node styles 
+  - Expand/collapse nodes 
+  - Drag-to-fix node positions
+- [dashboard](#dashboardhtml):
+  - List nodes in the emulation 
+  - Access nodes in the emulation 
+  - Search nodes by ASN, node name, or IP address
+- [plugin](#pluginhtml)
+  - Plugin installation page
 
 
-1. start the emulation as you normally would. (e.g., `docker-compose up`)
-2. do `docker-compose build && docker-compose up` in this folder.
-3. visit [http://localhost:8080/](http://localhost:8080/) for list, and [http://localhost:8080/map.html](http://localhost:8080/map.html) for map.
-4. [http://localhost:8080/install.html](http://localhost:8080/install.html) for install, click "install" on the "submit_event" line to install submit_event.
-5. after installing submit_event, option.json and submit_event.sh will be generated under the "/" path of each emulator container. Please modify the corresponding style in Option.json according to the description of option in the example. Execute "bash submit_event.sh" to display the custom style (the style is only valid for the current page, and the original default style will be restored after the page is refreshed).
-6. bash /submit_event.sh, parameters are optional,  flash / highlight, or none
-  - flash, the container where it is located is flashing
-  - highlight, highlight the container where it is located
-  - without parameters, execute the custom style settings in option.json
+## How to use this tool
 
-```python
-# option.json
-# static styles and dynamic styles alternate to create a flickering effect
-{
-  # The hash long ID of the current simulator container
-  "id": "f777419811d191a317fedfbeacc0645b80de2f2c22f8e3a0ca6715acf7589cd6",
-  # the style displayed when the topology diagram does not flicker
-  "static": {}, 
-  # the style displayed when the topology diagram flickers
-  "dynamic": {},
-  "interval": 300 # the period for switching between static and dynamic styles, it is recommended not to modify
-}
-```
+### Start the tool during the runtime
 
-```js
-// static field description example  (same as dynamic)
-// Please see https://visjs.github.io/vis-network/docs/network/nodes.html# more detailed explanation
-{
-    "borderWidth": 1,
-    "color": {
-        "background": "blue"
-    },
-    "size": 50
-}
-```
+The Internet Map runs inside an independent container. We can use the `docker-compose.yml` file inside this folder to bring up the container. 
 
-Alternatively, set `clientEnabled = True` when using `Docker` compiler. Note that `seedemu-client` allows unauthenticated console access to all nodes, which can potentially allow root access to your emulator host. Only run `seedemu-client` on trusted networks.
 
-Note on the map:
+1. Start the emulation as you normally would. (e.g., `docker-compose up`)
+2. Run `docker-compose build && docker-compose up` in this folder to build and start the Internet Map container.
+3. Once the container is up, access the tool using the the following pages:
+   1. Home page: [http://localhost:8080/](http://localhost:8080/) or [http://localhost:8080/index.html](http://localhost:8080/index.html) 
+   2. The Map page: [http://localhost:8080/map.html](http://localhost:8080/map.html)
+   3. Dashboard: [http://localhost:8080/dashboard.html](http://localhost:8080/dashboard.html)
+   4. Plugin pag: [http://localhost:8080/plugin.html](http://localhost:8080/plugin.html)
 
-- try not to click on any nodes or start packet capture on the map until the emulation is fully started (i.e., all containers are created).
+
+### Start the tool during the runtime
+
+Alternatively, the Internet Map container can be directly included in the emulator when we build the emulator. Just set `clientEnabled = True` when using `Docker` compiler (the default value is `True`, so by default, the Internet Map is already included in the emulator). 
+
+
+### The security issue
+
+Note that the Internet Map allows unauthenticated console access to all nodes, which can potentially allow root access to your emulator host. Only run this tool on trusted networks. If you only want to use the Internet Map to visualize the network, without providing the node access, you can disable the access. For details, please refer to [example/internet/B07_internet_map_unable_console](../../examples/internet/B07_internet_map_unable_console/README.md).
+
+
+## Pages 
+
+### index.html
+
+Home page, the entry point. 
+
+![index.png](docs/assets/index.png)
+
+### map.html
+
+The network topology diagram displays interconnection relationships between nodes and networks, along with auxiliary functions including filtering, search, settings, replay, and logging. For detailed introductions, [please refer to this document](./docs/map.md).
+
+![map.png](docs/assets/map.png)
+
+### dashboard.html
+
+Displays the emulator nodes and networks.
+
+![dashboard.png](docs/assets/dashboard.png)
+
+### plugin.html
+
+Plugin installation page: installing additional tools inside the emulator. For detailed instructions, [please refer to this document](docs/plugin.md).
+
+![plugin.png](docs/assets/plugin.png)

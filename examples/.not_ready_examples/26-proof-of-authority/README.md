@@ -31,7 +31,7 @@
 ## Creating prefunded accounts
 
 ## component-blockchain.py output
-- After configuring your network, the output of this file should should be similar to the picture below
+- After configuring your network, the output of this file should be similar to the picture below
 
 ![Component output](images/component-blockchain-output.png)
 

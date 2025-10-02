@@ -183,9 +183,9 @@ DockerCompilerFileTemplates['compose_network'] = """\
 """
 
 DockerCompilerFileTemplates['seedemu_internet_map'] = """\
-    seedemu-internet-client:
+    {serviceName}:
         image: {clientImage}
-        container_name: seedemu_internet_map
+        container_name: {containerName}
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         privileged: true
@@ -815,6 +815,7 @@ class Docker(Compiler):
         """
         if role == NodeRole.Host: return 'h'
         if role == NodeRole.Router: return 'r'
+        if role == NodeRole.OpenVpnRouter: return 'r'
         if role == NodeRole.ControlService: return 'cs'
         if role == NodeRole.RouteServer: return 'rs'
         if role == NodeRole.BorderRouter: return 'brd'
@@ -1438,9 +1439,15 @@ class Docker(Compiler):
         # container to the default network. This is to avoid that.
         self.__internet_map_enabled = False
 
-        self.attachCustomContainer(DockerCompilerFileTemplates['seedemu_internet_map'].format(
-            clientImage=SEEDEMU_INTERNET_MAP_IMAGE), asn=asn, net=net, ip_address=ip_address,
-            port_forwarding=port_forwarding, env=env, show_on_map=show_on_map, node_name=node_name)
+        self.attachCustomContainer(
+            DockerCompilerFileTemplates['seedemu_internet_map'].format(
+                serviceName=node_name,
+                clientImage=SEEDEMU_INTERNET_MAP_IMAGE,
+                containerName=node_name,
+            ),
+            asn=asn, net=net, ip_address=ip_address, port_forwarding=port_forwarding, env=env, show_on_map=show_on_map,
+            node_name=node_name
+        )
         return self
 
     def attachCustomContainer(self, compose_entry: str, asn: int = -1, net: str = '',
