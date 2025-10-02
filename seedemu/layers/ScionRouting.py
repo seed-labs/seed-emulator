@@ -119,7 +119,7 @@ class ScionStackOpts(BaseOptionGroup):
             return OptionMode.BUILD_TIME
         @classmethod
         def default(cls):
-            return SetupSpecification.LOCAL_BUILD(CheckoutSpecification())
+            return SetupSpecification.PACKAGES(CheckoutSpecification())
 
 
 # -------------------------------------------------------------------
@@ -329,7 +329,7 @@ class ScionRouting(Routing):
 
             if type == 'rs' :
                 if not has_bgp:
-                    raise RuntimeError('SCION has no concept of Route Servers.')
+                   continue
                 else:
                     self._installBird(obj)
                     self._configure_rs(obj)
