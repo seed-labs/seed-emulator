@@ -27,8 +27,7 @@ docker compose up
 #### (Optional) Use your own VM to display the victim's screen
 
 1. Start your own VM using Virtualbox/VMware/Parallels/...
-2. Copy the `Link_Ovpn` folder to your VM
-3. Link your VM to the emulator network by following the instructions in `Link_Ovpn/README.md`
+2. Link your VM to the emulator network by following the instructions in `misc/openvpn-remote-access/README.md`
 
 ***
 
