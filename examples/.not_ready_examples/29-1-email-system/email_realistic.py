@@ -6,7 +6,11 @@ SEED 邮件系统 - 真实版本 (29-1-email-system)
 
 import sys
 import os
-from seedemu import *
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship
+from seedemu.services import DomainNameService, DomainNameCachingService
+from seedemu.compiler import Docker, Platform
+from seedemu.core import Emulator, Binding, Filter, Action
+from seedemu.utilities import Makers
 
 def create_realistic_network(emu):
     """创建更真实的网络拓扑"""
@@ -58,8 +62,8 @@ def create_realistic_network(emu):
     Makers.makeStubAsWithHosts(emu, base, 205, 100, 2)  # 北京IX
     
     # 创建客户端网络 (使用较小AS号)
-    # AS-150: 北京用户
-    Makers.makeStubAsWithHosts(emu, base, 150, 100, 4)
+    # AS-150: 北京用户（同时部署DNS基础设施 - 需要更多主机）
+    Makers.makeStubAsWithHosts(emu, base, 150, 100, 7)  # 增加主机数以部署DNS服务器
     
     # AS-151: 上海用户  
     Makers.makeStubAsWithHosts(emu, base, 151, 101, 4)
@@ -72,13 +76,129 @@ def create_realistic_network(emu):
     
     return base
 
-def configure_dns_system(emu):
-    """配置简化的DNS系统"""
+def configure_bgp_peering(ebgp):
+    """配置BGP对等关系 - 关键！"""
     
-    # 暂时跳过复杂的DNS配置，在29-1版本中专注于邮件系统
-    # DNS可以在30版本中进一步增强
-    print("🔧 DNS系统配置已简化，专注于邮件功能")
-    return None
+    print("🔗 配置BGP对等关系...")
+    
+    # ISP之间的对等（在IX上）
+    # AS-2, AS-3, AS-4通过Route Server对等
+    ebgp.addRsPeers(100, [2, 3, 4])  # Beijing-IX
+    ebgp.addRsPeers(101, [2, 3])     # Shanghai-IX  
+    ebgp.addRsPeers(102, [2, 4])     # Guangzhou-IX
+    ebgp.addRsPeers(103, [2])        # Global-IX
+    
+    # ISP为邮件服务商提供Transit服务（Provider关系）
+    ebgp.addPrivatePeerings(102, [2], [200], PeerRelationship.Provider)  # QQ - 电信
+    ebgp.addPrivatePeerings(101, [2], [201], PeerRelationship.Provider)  # 163 - 电信
+    ebgp.addPrivatePeerings(103, [2], [202], PeerRelationship.Provider)  # Gmail - 电信
+    ebgp.addPrivatePeerings(103, [2], [203], PeerRelationship.Provider)  # Outlook - 电信
+    ebgp.addPrivatePeerings(101, [3], [204], PeerRelationship.Provider)  # 企业 - 联通
+    ebgp.addPrivatePeerings(100, [2], [205], PeerRelationship.Provider)  # 自建 - 电信
+    
+    # ISP为客户网络提供Transit服务
+    ebgp.addPrivatePeerings(100, [2, 3], [150], PeerRelationship.Provider)  # 北京用户 - 电信+联通
+    ebgp.addPrivatePeerings(101, [2], [151], PeerRelationship.Provider)     # 上海用户 - 电信
+    ebgp.addPrivatePeerings(102, [4], [152], PeerRelationship.Provider)     # 广州用户 - 移动
+    ebgp.addPrivatePeerings(100, [2], [153], PeerRelationship.Provider)     # 企业用户 - 电信
+    
+    print("✅ BGP对等配置完成")
+    print("   - ISP互联: AS-2, AS-3, AS-4 通过RS对等")
+    print("   - 邮件服务商: 6个AS通过ISP接入")
+    print("   - 客户网络: 4个AS通过ISP接入")
+
+def configure_dns_system(emu, base):
+    """配置完整的DNS系统 - 29-1核心特性"""
+    
+    print("🌍 配置真实DNS系统...")
+    
+    # 创建DNS服务层
+    dns = DomainNameService()
+    
+    # 1. 创建Root DNS Servers（根域名服务器）
+    dns.install('a-root-server').addZone('.').setMaster()
+    dns.install('b-root-server').addZone('.')
+    
+    # 2. 创建TLD DNS Servers（顶级域名服务器）
+    dns.install('ns-com').addZone('com.')      # .com TLD
+    dns.install('ns-net').addZone('net.')      # .net TLD
+    dns.install('ns-cn').addZone('cn.')        # .cn TLD (中国)
+    
+    # 3. 为每个邮件服务商创建域名服务器
+    # QQ邮箱 (qq.com)
+    dns.install('ns-qq-com').addZone('qq.com.')
+    dns.getZone('qq.com.').addRecord('@ A 10.200.0.10')
+    dns.getZone('qq.com.').addRecord('@ MX 10 mail.qq.com.')
+    dns.getZone('qq.com.').addRecord('mail A 10.200.0.10')
+    
+    # 163邮箱 (163.com)
+    dns.install('ns-163-com').addZone('163.com.')
+    dns.getZone('163.com.').addRecord('@ A 10.201.0.10')
+    dns.getZone('163.com.').addRecord('@ MX 10 mail.163.com.')
+    dns.getZone('163.com.').addRecord('mail A 10.201.0.10')
+    
+    # Gmail (gmail.com)
+    dns.install('ns-gmail-com').addZone('gmail.com.')
+    dns.getZone('gmail.com.').addRecord('@ A 10.202.0.10')
+    dns.getZone('gmail.com.').addRecord('@ MX 10 mail.gmail.com.')
+    dns.getZone('gmail.com.').addRecord('mail A 10.202.0.10')
+    
+    # Outlook (outlook.com)
+    dns.install('ns-outlook-com').addZone('outlook.com.')
+    dns.getZone('outlook.com.').addRecord('@ A 10.203.0.10')
+    dns.getZone('outlook.com.').addRecord('@ MX 10 mail.outlook.com.')
+    dns.getZone('outlook.com.').addRecord('mail A 10.203.0.10')
+    
+    # 企业邮箱 (company.cn)
+    dns.install('ns-company-cn').addZone('company.cn.')
+    dns.getZone('company.cn.').addRecord('@ A 10.204.0.10')
+    dns.getZone('company.cn.').addRecord('@ MX 10 mail.company.cn.')
+    dns.getZone('company.cn.').addRecord('mail A 10.204.0.10')
+    
+    # 自建邮箱 (startup.net)
+    dns.install('ns-startup-net').addZone('startup.net.')
+    dns.getZone('startup.net.').addRecord('@ A 10.205.0.10')
+    dns.getZone('startup.net.').addRecord('@ MX 10 mail.startup.net.')
+    dns.getZone('startup.net.').addRecord('mail A 10.205.0.10')
+    
+    # 4. 绑定DNS服务器到物理节点
+    # Root和TLD服务器部署在AS-150（北京用户网络，集中管理）
+    emu.addBinding(Binding('a-root-server', filter=Filter(asn=150), action=Action.FIRST))
+    emu.addBinding(Binding('b-root-server', filter=Filter(asn=150), action=Action.FIRST))
+    emu.addBinding(Binding('ns-com', filter=Filter(asn=150), action=Action.FIRST))
+    emu.addBinding(Binding('ns-net', filter=Filter(asn=150), action=Action.FIRST))
+    emu.addBinding(Binding('ns-cn', filter=Filter(asn=150), action=Action.FIRST))
+    
+    # 每个邮件服务商的DNS服务器部署在各自的AS中
+    emu.addBinding(Binding('ns-qq-com', filter=Filter(asn=200), action=Action.FIRST))
+    emu.addBinding(Binding('ns-163-com', filter=Filter(asn=201), action=Action.FIRST))
+    emu.addBinding(Binding('ns-gmail-com', filter=Filter(asn=202), action=Action.FIRST))
+    emu.addBinding(Binding('ns-outlook-com', filter=Filter(asn=203), action=Action.FIRST))
+    emu.addBinding(Binding('ns-company-cn', filter=Filter(asn=204), action=Action.FIRST))
+    emu.addBinding(Binding('ns-startup-net', filter=Filter(asn=205), action=Action.FIRST))
+    
+    # 5. 创建本地DNS缓存服务器
+    ldns = DomainNameCachingService()
+    ldns.install('global-dns-cache')
+    
+    # 在AS-150中创建专门的DNS缓存主机
+    as150 = base.getAutonomousSystem(150)
+    as150.createHost('dns-cache').joinNetwork('net0', address='10.150.0.53')
+    
+    # 绑定DNS缓存服务器
+    emu.addBinding(Binding('global-dns-cache', filter=Filter(asn=150, nodeName='dns-cache')))
+    
+    # 6. 设置所有节点使用这个local DNS
+    base.setNameServers(['10.150.0.53'])
+    
+    print("✅ DNS系统配置完成:")
+    print("   - Root DNS Servers: a-root-server, b-root-server")
+    print("   - TLD Servers: .com, .net, .cn")
+    print("   - 邮件域DNS: qq.com, 163.com, gmail.com, outlook.com, company.cn, startup.net")
+    print("   - MX记录: 已为所有邮件域配置")
+    print("   - Local DNS Cache: 10.150.0.53 (AS-150 dns-cache)")
+    
+    return dns, ldns
 
 def configure_mail_servers(emu):
     """配置邮件服务器"""
@@ -94,6 +214,7 @@ def configure_mail_servers(emu):
             'asn': 200,
             'network': 'net0',
             'ip': '10.200.0.10',
+            'gateway': '10.200.0.254',
             'smtp_port': '2200',
             'imap_port': '1400'
         },
@@ -104,6 +225,7 @@ def configure_mail_servers(emu):
             'asn': 201,
             'network': 'net0',
             'ip': '10.201.0.10',
+            'gateway': '10.201.0.254',
             'smtp_port': '2201',
             'imap_port': '1401'
         },
@@ -114,6 +236,7 @@ def configure_mail_servers(emu):
             'asn': 202,
             'network': 'net0',
             'ip': '10.202.0.10',
+            'gateway': '10.202.0.254',
             'smtp_port': '2202',
             'imap_port': '1402'
         },
@@ -124,6 +247,7 @@ def configure_mail_servers(emu):
             'asn': 203,
             'network': 'net0',
             'ip': '10.203.0.10',
+            'gateway': '10.203.0.254',
             'smtp_port': '2203',
             'imap_port': '1403'
         },
@@ -134,6 +258,7 @@ def configure_mail_servers(emu):
             'asn': 204,
             'network': 'net0',
             'ip': '10.204.0.10',
+            'gateway': '10.204.0.254',
             'smtp_port': '2204',
             'imap_port': '1404'
         },
@@ -144,6 +269,7 @@ def configure_mail_servers(emu):
             'asn': 205,
             'network': 'net0',
             'ip': '10.205.0.10',
+            'gateway': '10.205.0.254',
             'smtp_port': '2205',
             'imap_port': '1405'
         }
@@ -159,6 +285,21 @@ def configure_mail_servers(emu):
         domainname: {domain}
         restart: unless-stopped
         privileged: true
+        dns:
+            - 10.150.0.53
+        extra_hosts:
+            - "mail.qq.com:10.200.0.10"
+            - "qq.com:10.200.0.10"
+            - "mail.163.com:10.201.0.10"
+            - "163.com:10.201.0.10"
+            - "mail.gmail.com:10.202.0.10"
+            - "gmail.com:10.202.0.10"
+            - "mail.outlook.com:10.203.0.10"
+            - "outlook.com:10.203.0.10"
+            - "mail.company.cn:10.204.0.10"
+            - "company.cn:10.204.0.10"
+            - "mail.startup.net:10.205.0.10"
+            - "startup.net:10.205.0.10"
         environment:
             - OVERRIDE_HOSTNAME={hostname}.{domain}
             - PERMIT_DOCKER=connected-networks
@@ -182,6 +323,12 @@ def configure_mail_servers(emu):
         command: >
             sh -c "
             echo 'Starting mailserver setup...' &&
+            echo 'Fixing network gateway...' &&
+            ip route del default 2>/dev/null || true &&
+            ip route add default via {gateway} dev eth0 &&
+            echo 'Configuring Postfix for cross-domain mail...' &&
+            postconf -e 'relayhost =' &&
+            postconf -e 'smtp_host_lookup = native' &&
             sleep 10 &&
             supervisord -c /etc/supervisor/supervisord.conf
             "
@@ -216,8 +363,12 @@ def run(platform="arm"):
     routing = Routing()
     emu.addLayer(routing)
     
-    bgp = Ebgp()
-    emu.addLayer(bgp)
+    ebgp = Ebgp()
+    
+    # 配置BGP对等关系（关键！）
+    configure_bgp_peering(ebgp)
+    
+    emu.addLayer(ebgp)
     
     ibgp = Ibgp()
     emu.addLayer(ibgp)
@@ -228,8 +379,12 @@ def run(platform="arm"):
     print("📧 配置邮件服务器...")
     mail_servers, MAILSERVER_COMPOSE_TEMPLATE, platform_str = configure_mail_servers(emu)
 
-    print("🌍 DNS系统已简化...")
-    configure_dns_system(emu)
+    print("🌍 配置DNS系统...")
+    dns, ldns = configure_dns_system(emu, base)
+    
+    # 添加DNS层到emulator
+    emu.addLayer(dns)
+    emu.addLayer(ldns)
 
     print("📊 配置网络可视化...")
     configure_internet_map(emu)
@@ -250,6 +405,7 @@ def run(platform="arm"):
             platform=platform_str,
             hostname=mail['hostname'],
             domain=mail['domain'],
+            gateway=mail['gateway'],
             smtp_port=mail['smtp_port'],
             imap_port=mail['imap_port']
         )
@@ -258,12 +414,10 @@ def run(platform="arm"):
             compose_entry=compose_entry,
             asn=mail['asn'],
             net=mail['network'],
-            ip_address=mail['ip'],
-            node_name=mail['name'],
-            show_on_map=True
+            ip_address=mail['ip']
         )
 
-    emu.compile(docker, "./output")
+    emu.compile(docker, "./output", override=True)
     
     print(f"""
 ======================================================================
@@ -334,10 +488,13 @@ SEED 真实邮件系统 (29-1) 创建完成!
    cd output/
    docker-compose up -d
 
-🔧 DNS功能:
-   - 完整的DNS层次结构
-   - MX记录自动配置
-   - 真实域名解析
+🔧 DNS功能 (29-1核心特性):
+   - ✅ Root DNS: a-root-server, b-root-server
+   - ✅ TLD DNS: .com, .net, .cn
+   - ✅ 邮件域DNS: qq.com, 163.com, gmail.com, outlook.com, company.cn, startup.net
+   - ✅ MX记录: 所有邮件域已配置MX记录
+   - ✅ Local DNS Cache: 10.150.0.53 (AS-150 dns-cache)
+   - 📝 DNS测试: docker exec as150h-dns-cache nslookup qq.com
 
 📋 创建测试账户示例:
    docker exec -it mail-qq-tencent setup email add user@qq.com

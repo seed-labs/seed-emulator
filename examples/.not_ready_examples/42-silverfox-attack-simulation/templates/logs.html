@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}日志查看 - 银狐木马攻击仿真复现实验{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-alt me-2"></i>仿真日志查看器
+                </h5>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshLogs()">
+                        <i class="fas fa-sync-alt me-1"></i>刷新
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearLogs()">
+                        <i class="fas fa-trash me-1"></i>清空
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="exportLogs()">
+                        <i class="fas fa-download me-1"></i>导出
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- 日志过滤器 -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <select class="form-select" id="logLevelFilter">
+                            <option value="all">所有级别</option>
+                            <option value="INFO">信息</option>
+                            <option value="WARNING">警告</option>
+                            <option value="ERROR">错误</option>
+                            <option value="SUCCESS">成功</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="logStageFilter">
+                            <option value="all">所有阶段</option>
+                            <option value="initial_access">初始访问</option>
+                            <option value="execution">代码执行</option>
+                            <option value="discovery">内网侦察</option>
+                            <option value="planning">攻击规划</option>
+                            <option value="lateral_movement">横向移动</option>
+                            <option value="collection">数据收集</option>
+                            <option value="exfiltration">数据外泄</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" id="logSearch" placeholder="搜索日志内容...">
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="autoScroll">
+                            <label class="form-check-label" for="autoScroll">
+                                自动滚动
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 日志显示区域 -->
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry" data-level="INFO" data-stage="system">
+                        <span class="log-time">[2024-01-15 10:00:00]</span>
+                        <span class="log-level log-info">INFO</span>
+                        <span class="log-stage">[system]</span>
+                        <span class="log-message">银狐木马攻击仿真系统启动</span>
+                    </div>
+
+                    {% for log in logs %}
+                    <div class="log-entry" data-level="{{ log.level }}" data-stage="{{ log.stage }}">
+                        <span class="log-time">[{{ log.timestamp }}]</span>
+                        <span class="log-level log-{{ log.level.lower() }}">{{ log.level }}</span>
+                        <span class="log-stage">[{{ log.stage }}]</span>
+                        <span class="log-message">{{ log.message }}</span>
+                    </div>
+                    {% endfor %}
+
+                    <!-- 更多示例日志 -->
+                    <div class="log-entry" data-level="SUCCESS" data-stage="initial_access">
+                        <span class="log-time">[2024-01-15 10:00:05]</span>
+                        <span class="log-level log-success">SUCCESS</span>
+                        <span class="log-stage">[initial_access]</span>
+                        <span class="log-message">钓鱼邮件成功发送至目标邮箱 admin@company.com</span>
+                    </div>
+
+                    <div class="log-entry" data-level="INFO" data-stage="execution">
+                        <span class="log-time">[2024-01-15 10:00:15]</span>
+                        <span class="log-level log-info">INFO</span>
+                        <span class="log-stage">[execution]</span>
+                        <span class="log-message">恶意Chrome安装程序已下载并执行</span>
+                    </div>
+
+                    <div class="log-entry" data-level="WARNING" data-stage="discovery">
+                        <span class="log-time">[2024-01-15 10:00:30]</span>
+                        <span class="log-level log-warning">WARNING</span>
+                        <span class="log-stage">[discovery]</span>
+                        <span class="log-message">检测到网络扫描活动，可能触发安全告警</span>
+                    </div>
+
+                    <div class="log-entry" data-level="SUCCESS" data-stage="lateral_movement">
+                        <span class="log-time">[2024-01-15 10:01:00]</span>
+                        <span class="log-level log-success">SUCCESS</span>
+                        <span class="log-stage">[lateral_movement]</span>
+                        <span class="log-message">成功利用SMB漏洞入侵内网服务器 192.168.1.100</span>
+                    </div>
+
+                    <div class="log-entry" data-level="INFO" data-stage="collection">
+                        <span class="log-time">[2024-01-15 10:01:30]</span>
+                        <span class="log-level log-info">INFO</span>
+                        <span class="log-stage">[collection]</span>
+                        <span class="log-message">收集到数据库凭据和用户数据，共计 2.3GB</span>
+                    </div>
+
+                    <div class="log-entry" data-level="SUCCESS" data-stage="exfiltration">
+                        <span class="log-time">[2024-01-15 10:02:00]</span>
+                        <span class="log-level log-success">SUCCESS</span>
+                        <span class="log-stage">[exfiltration]</span>
+                        <span class="log-message">数据已通过DNS隧道成功外泄至C2服务器</span>
+                    </div>
+
+                    <div class="log-entry" data-level="ERROR" data-stage="system">
+                        <span class="log-time">[2024-01-15 10:02:30]</span>
+                        <span class="log-level log-error">ERROR</span>
+                        <span class="log-stage">[system]</span>
+                        <span class="log-message">检测到异常网络流量，仿真系统自动终止以确保安全</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 日志统计 -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>日志级别统计
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="logLevelChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>攻击阶段统计
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="logStageChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.log-container {
+    max-height: 600px;
+    overflow-y: auto;
+    background-color: #1e1e1e;
+    color: #f8f9fa;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #343a40;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    padding: 2px 0;
+    border-left: 3px solid transparent;
+}
+
+.log-entry[data-level="INFO"] {
+    border-left-color: #17a2b8;
+}
+
+.log-entry[data-level="WARNING"] {
+    border-left-color: #ffc107;
+}
+
+.log-entry[data-level="ERROR"] {
+    border-left-color: #dc3545;
+}
+
+.log-entry[data-level="SUCCESS"] {
+    border-left-color: #28a745;
+}
+
+.log-time {
+    color: #6c757d;
+    margin-right: 10px;
+}
+
+.log-level {
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-right: 10px;
+    display: inline-block;
+    min-width: 60px;
+    text-align: center;
+}
+
+.log-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.log-warning {
+    background-color: #ffc107;
+    color: black;
+}
+
+.log-error {
+    background-color: #dc3545;
+    color: white;
+}
+
+.log-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.log-stage {
+    color: #ffc107;
+    margin-right: 10px;
+}
+
+.log-message {
+    color: #f8f9fa;
+}
+
+.card-tools {
+    display: flex;
+    gap: 5px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 日志过滤功能
+    function filterLogs() {
+        const levelFilter = document.getElementById('logLevelFilter').value;
+        const stageFilter = document.getElementById('logStageFilter').value;
+        const searchTerm = document.getElementById('logSearch').value.toLowerCase();
+
+        const logEntries = document.querySelectorAll('.log-entry');
+
+        logEntries.forEach(entry => {
+            const level = entry.dataset.level;
+            const stage = entry.dataset.stage;
+            const message = entry.querySelector('.log-message').textContent.toLowerCase();
+
+            const levelMatch = levelFilter === 'all' || level === levelFilter;
+            const stageMatch = stageFilter === 'all' || stage === stageFilter;
+            const searchMatch = searchTerm === '' || message.includes(searchTerm);
+
+            if (levelMatch && stageMatch && searchMatch) {
+                entry.style.display = 'block';
+            } else {
+                entry.style.display = 'none';
+            }
+        });
+    }
+
+    // 绑定过滤器事件
+    document.getElementById('logLevelFilter').addEventListener('change', filterLogs);
+    document.getElementById('logStageFilter').addEventListener('change', filterLogs);
+    document.getElementById('logSearch').addEventListener('input', filterLogs);
+
+    // 自动滚动到底部
+    function scrollToBottom() {
+        if (document.getElementById('autoScroll').checked) {
+            const container = document.getElementById('logContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    // 刷新日志
+    function refreshLogs() {
+        // 模拟刷新日志的AJAX请求
+        console.log('刷新日志...');
+        // 这里可以添加实际的AJAX请求来获取最新日志
+        scrollToBottom();
+    }
+
+    // 清空日志
+    function clearLogs() {
+        if (confirm('确定要清空所有日志吗？')) {
+            document.getElementById('logContainer').innerHTML = '';
+        }
+    }
+
+    // 导出日志
+    function exportLogs() {
+        const logEntries = document.querySelectorAll('.log-entry:not([style*="display: none"])');
+        let logText = '';
+
+        logEntries.forEach(entry => {
+            const time = entry.querySelector('.log-time').textContent;
+            const level = entry.querySelector('.log-level').textContent;
+            const stage = entry.querySelector('.log-stage').textContent;
+            const message = entry.querySelector('.log-message').textContent;
+            logText += `${time} ${level} ${stage} ${message}\n`;
+        });
+
+        const blob = new Blob([logText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'silverfox_simulation_logs.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // 初始化自动滚动
+    scrollToBottom();
+
+    // 日志级别统计图表
+    const logLevelCtx = document.getElementById('logLevelChart').getContext('2d');
+    const logLevelChart = new Chart(logLevelCtx, {
+        type: 'pie',
+        data: {
+            labels: ['信息', '警告', '错误', '成功'],
+            datasets: [{
+                data: [45, 15, 5, 35],
+                backgroundColor: ['#17a2b8', '#ffc107', '#dc3545', '#28a745'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // 攻击阶段统计图表
+    const logStageCtx = document.getElementById('logStageChart').getContext('2d');
+    const logStageChart = new Chart(logStageCtx, {
+        type: 'bar',
+        data: {
+            labels: ['初始访问', '代码执行', '内网侦察', '攻击规划', '横向移动', '数据收集', '数据外泄'],
+            datasets: [{
+                label: '日志数量',
+                data: [12, 8, 15, 6, 10, 7, 5],
+                backgroundColor: '#667eea',
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

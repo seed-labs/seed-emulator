@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}集成仪表盘 - 57 综合安全评估实验{% endblock %}
+{% block head_extra %}
+<style>
+  .metric-card {
+    backdrop-filter: blur(8px);
+  }
+</style>
+{% endblock %}
+{% block content %}
+<h2 class="mb-4">集成状态仪表盘</h2>
+<div class="row g-4">
+  {% for service in services %}
+  <div class="col-12 col-lg-6">
+    <div class="card metric-card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="card-title">{{ service.display_name }}</h5>
+            <p class="text-muted small mb-2">{{ service.description }}</p>
+          </div>
+          <span class="status-pill status-{{ service.status }}">{{ service.status_label }}</span>
+        </div>
+        <ul class="list-unstyled mb-0">
+          <li><strong>地址：</strong>{{ service.address }}</li>
+          <li><strong>端口：</strong>{{ service.port }}</li>
+          {% if service.extra %}
+          <li><strong>提示：</strong>{{ service.extra }}</li>
+          {% endif %}
+          {% if service.container_status %}
+          <li><strong>容器状态：</strong>{{ service.container_status }}</li>
+          {% endif %}
+          {% if service.health_message %}
+          <li><strong>健康检查：</strong>{{ service.health_message }}</li>
+          {% endif %}
+        </ul>
+        {% if service.actions %}
+        <div class="mt-3">
+          {% for action in service.actions %}
+            <a class="btn btn-sm btn-outline-info me-2" href="{{ action.href }}" target="{{ '_blank' if action.external else '_self' }}">
+              {{ action.label }}
+            </a>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if external_details %}
+<hr class="my-5">
+<h3 class="mb-3">工具细节</h3>
+<div class="accordion" id="toolDetails">
+  {% for section in external_details %}
+  <div class="accordion-item bg-transparent border border-secondary mb-3">
+    <h2 class="accordion-header" id="heading-{{ loop.index }}">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="false" aria-controls="collapse-{{ loop.index }}">
+        {{ section.title }}
+      </button>
+    </h2>
+    <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#toolDetails">
+      <div class="accordion-body">
+        {% if section.entries %}
+        <ul class="mb-0">
+          {% for item in section.entries %}
+          <li><code>{{ item['name'] }}</code> — {{ item['status'] }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted mb-0">暂无数据，确认服务是否已启动。</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

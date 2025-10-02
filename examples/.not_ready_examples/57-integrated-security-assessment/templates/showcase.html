@@ -1,0 +1,414 @@
+{% extends 'base.html' %}
+{% block title %}教学展示 - 57 综合安全评估实验{% endblock %}
+{% block head_extra %}
+<style>
+  .hero {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.25), rgba(14, 165, 233, 0.15));
+    border-radius: 1.5rem;
+    padding: 3rem 2rem;
+    box-shadow: 0 20px 70px rgba(15, 23, 42, 0.45);
+  }
+  .timeline {
+    border-left: 2px solid rgba(59, 130, 246, 0.4);
+    margin-left: 1rem;
+    padding-left: 2rem;
+  }
+  .timeline-step {
+    position: relative;
+    margin-bottom: 2rem;
+  }
+  .timeline-step::before {
+    content: "";
+    position: absolute;
+    left: -2.35rem;
+    top: 0.35rem;
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.2);
+  }
+  .badge-soft {
+    background: rgba(125, 211, 252, 0.15);
+    border: 1px solid rgba(125, 211, 252, 0.35);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .status-card {
+    border-left: 3px solid transparent;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .status-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(56, 189, 248, 0.6);
+  }
+  .guide-step {
+    border-radius: 1rem;
+    background: rgba(17, 36, 69, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    padding: 1.5rem;
+    height: 100%;
+  }
+  .future-card {
+    border-radius: 1.25rem;
+    background: rgba(15, 118, 110, 0.1);
+    border: 1px solid rgba(45, 212, 191, 0.18);
+  }
+  .pedagogy-timeline {
+    border-left: 2px dashed rgba(34, 197, 94, 0.4);
+    margin-left: 1rem;
+    padding-left: 2rem;
+  }
+  .assessment-table th,
+  .assessment-table td {
+    vertical-align: top;
+    border-color: rgba(148, 163, 184, 0.2);
+  }
+  .insight-card {
+    border-radius: 1rem;
+    background: rgba(30, 64, 175, 0.18);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    padding: 1.75rem;
+    height: 100%;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero mb-5 text-center text-lg-start">
+  <div class="row align-items-center g-4">
+    <div class="col-lg-7">
+      <h1 class="display-5 fw-bold">从底层网络到真实攻击链的教学展示</h1>
+      <p class="lead text-light mt-3">
+        结合 29 → 57 实验序列、真实攻防工具链与自动化脚本，帮助学生理解邮件安全与攻防演练的全貌。
+      </p>
+      <div class="d-flex flex-column flex-md-row gap-3 mt-4">
+        <a class="btn btn-info btn-lg" href="#timeline">查看实验脉络</a>
+        <a class="btn btn-outline-light btn-lg" href="#gophish">Gophish 实战指南</a>
+        <a class="btn btn-outline-info btn-lg" href="#pedagogy">教学设计</a>
+        <a class="btn btn-outline-light btn-lg" href="#future">未来拓展</a>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card status-card h-100">
+        <div class="card-body">
+          <h5 class="card-title d-flex justify-content-between align-items-center mb-3">
+            运行态势快照
+            <span class="badge badge-soft">实时</span>
+          </h5>
+          <p class="text-muted mb-4">以下状态来自 IntegrationMonitor，可在课堂中实时刷新展示。</p>
+          <div class="list-group list-group-flush">
+            {% for svc in services %}
+            <div class="list-group-item bg-transparent text-start">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ svc.display_name }}</strong>
+                  <div class="small text-muted">{{ svc.description }}</div>
+                </div>
+                <span class="status-pill {{ 'status-' + svc.status }}">{{ svc.status_label }}</span>
+              </div>
+              <div class="small text-muted mt-1">{{ svc.address }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mb-5" id="foundation">
+  <h2 class="mb-4">教学基石：三层能力面</h2>
+  <div class="row g-4">
+    {% for layer in foundation_layers %}
+    <div class="col-12 col-lg-4">
+      <div class="card h-100 status-card">
+        <div class="card-body">
+          <h5 class="card-title">{{ layer.title }}</h5>
+          <ul class="mt-3 mb-0">
+            {% for point in layer.points %}
+            <li class="mb-2">{{ point }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mb-5" id="timeline">
+  <h2 class="mb-4">实验脉络：29 → 57 的完整攻防故事</h2>
+  <div class="timeline">
+    {% for exp in experiment_timeline %}
+    <div class="timeline-step">
+      <div class="card bg-transparent border-0">
+        <div class="card-body px-0">
+          <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+            <span class="badge badge-soft">Lab {{ exp.id }}</span>
+            <h4 class="mb-0">{{ exp.name }}</h4>
+            <span class="text-info">{{ exp.focus }}</span>
+          </div>
+          <ul class="mb-0">
+            {% for highlight in exp.teaching %}
+            <li class="mb-2">{{ highlight }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mb-5" id="toolchain">
+  <h2 class="mb-4">真实工具链联动</h2>
+  <div class="row g-4">
+    {% for tool in toolchain %}
+    <div class="col-12 col-lg-6">
+      <div class="card h-100 status-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <h4 class="mb-0">{{ tool.name }}</h4>
+            <a class="btn btn-sm btn-outline-info" href="{{ tool.link }}" target="_blank">项目主页</a>
+          </div>
+          <p class="text-muted">{{ tool.summary }}</p>
+          <ul class="mb-0">
+            {% for highlight in tool.highlights %}
+            <li class="mb-2">{{ highlight }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mb-5" id="gophish">
+  <h2 class="mb-4">Gophish 实战教学指南</h2>
+  <p class="text-muted">以下流程可直接嵌入课堂，结合 29/30/57 实验形成钓鱼 → 检测 → 响应的闭环。</p>
+  <div class="row g-4">
+    {% for step in gophish_guide %}
+    <div class="col-12 col-lg-6">
+      <div class="guide-step">
+        <h4 class="mb-3">{{ loop.index }}. {{ step.title }}</h4>
+        <p>{{ step.details }}</p>
+        <p class="text-info small mb-0"><strong>提示：</strong>{{ step.tips }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mb-5" id="operations">
+  <h2 class="mb-4">现场演示建议</h2>
+  <div class="row g-4">
+    <div class="col-12 col-lg-4">
+      <div class="card h-100 status-card">
+        <div class="card-body">
+          <h5 class="card-title">准备阶段</h5>
+          <ul class="mb-0">
+            <li>执行 <code>cleanup_seed_env.sh --full</code> 清理遗留容器与网络。</li>
+            <li>使用 <code>run_demo_57.sh start</code> 拉起邮件、情报与攻防栈。</li>
+            <li>通过本页面或仪表盘确认所有服务为 <span class="status-pill status-running">运行中</span>。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card h-100 status-card">
+        <div class="card-body">
+          <h5 class="card-title">课堂演示</h5>
+          <ul class="mb-0">
+            <li>在浏览器演示 Gophish 投递，实时刷新 API 状态。</li>
+            <li>切换到 30 实验 AI 检测界面，展示模型判定结果。</li>
+            <li>结合 OpenBAS 或 PentestAgent 展示攻击者视角的推进。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card h-100 status-card">
+        <div class="card-body">
+          <h5 class="card-title">复盘与扩展</h5>
+          <ul class="mb-0">
+            <li>导出日志与报告，对照 42 实验的威胁狩猎练习。</li>
+            <li>布置 PentestAgent 规划文件，让学生复现攻击链。</li>
+            <li>总结安全基线与自动化改进空间，引出未来方向。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mb-5" id="pedagogy">
+  <h2 class="mb-4">教学设计蓝图</h2>
+  <div class="row g-4">
+    <div class="col-12 col-xl-7">
+      <div class="card h-100 status-card">
+        <div class="card-body">
+          <h5 class="card-title">课堂节奏</h5>
+          <div class="pedagogy-timeline mt-3">
+            {% for stage in pedagogy_blueprint %}
+            <div class="timeline-step">
+              <div class="card bg-transparent border-0">
+                <div class="card-body px-0">
+                  <h4 class="mb-2">{{ stage.phase }}</h4>
+                  <p class="text-muted">{{ stage.facilitation }}</p>
+                  <ul class="mb-0">
+                    {% for objective in stage.objectives %}
+                    <li class="mb-2">{{ objective }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-xl-5">
+      <div class="card h-100 status-card">
+        <div class="card-body">
+          <h5 class="card-title">教学要点提示</h5>
+          <ul class="mb-0">
+            <li class="mb-2">结合真实舆情/新闻导入，强化风险认知。</li>
+            <li class="mb-2">红蓝对抗与情报组交叉评价，促进跨学科沟通。</li>
+            <li class="mb-2">课堂数据留存，用于课程改进与科研分析。</li>
+            <li class="mb-2">设置翻转课堂任务，鼓励学生自行设计钓鱼防御策略。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mb-5" id="cases">
+  <h2 class="mb-4">典型攻防案例对标</h2>
+  <div class="row g-4">
+    {% for case in case_studies %}
+    <div class="col-12 col-lg-4">
+      <div class="card h-100 status-card">
+        <div class="card-body d-flex flex-column">
+          <h4 class="card-title">{{ case.title }}</h4>
+          <ul class="mt-3">
+            {% for insight in case.insights %}
+            <li class="mb-2">{{ insight }}</li>
+            {% endfor %}
+          </ul>
+          <div class="mt-auto pt-3">
+            <a class="btn btn-sm btn-outline-info" href="{{ case.link }}" target="_blank">延伸阅读</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mb-5" id="assessment">
+  <h2 class="mb-4">评估指标与 Rubric</h2>
+  <div class="card status-card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-dark table-striped assessment-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col" style="width: 20%;">维度</th>
+              <th scope="col" style="width: 45%;">观测指标</th>
+              <th scope="col" style="width: 35%;">评价层级</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in assessment_rubric %}
+            <tr>
+              <th scope="row">{{ item.dimension }}</th>
+              <td>
+                <ul class="mb-0">
+                  {% for indicator in item.indicators %}
+                  <li class="mb-1">{{ indicator }}</li>
+                  {% endfor %}
+                </ul>
+              </td>
+              <td>
+                {% for scale in item.scales %}
+                <span class="badge bg-info bg-opacity-25 border border-info text-info me-1" style="font-size:0.85rem;">{{ scale }}</span>
+                {% endfor %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mb-5" id="insights">
+  <h2 class="mb-4">安全洞察与思考</h2>
+  <div class="row g-4">
+    {% for insight in insight_cards %}
+    <div class="col-12 col-lg-4">
+      <div class="insight-card h-100">
+        <h4 class="mb-3">{{ insight.headline }}</h4>
+        <p class="mb-0">{{ insight.detail }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mb-5" id="future">
+  <h2 class="mb-4">未来拓展方向</h2>
+  <div class="row g-4">
+    {% for track in future_tracks %}
+    <div class="col-12 col-lg-4">
+      <div class="future-card h-100 p-4">
+        <h4>{{ track.title }}</h4>
+        <p class="text-muted">{{ track.focus }}</p>
+        <ul class="mb-0">
+          {% for action in track.actions %}
+          <li class="mb-2">{{ action }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mb-5" id="resources">
+  <h2 class="mb-4">更多资源</h2>
+  <div class="row g-4">
+    <div class="col-12 col-lg-6">
+      <div class="card h-100 status-card">
+        <div class="card-body">
+          <h5 class="card-title">官方文档与配置</h5>
+          <ul class="mb-0">
+            <li><a href="/docs/ARCHITECTURE.md" target="_blank">ARCHITECTURE.md</a></li>
+            <li><a href="/docs/MIGRATION_FROM_42.md" target="_blank">MIGRATION_FROM_42.md</a></li>
+            <li><a href="/config/seed_network_overlay.yaml" target="_blank">seed_network_overlay.yaml</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="card h-100 status-card">
+        <div class="card-body">
+          <h5 class="card-title">推荐阅读</h5>
+          <ul class="mb-0">
+            <li><a href="https://github.com/redcanaryco/atomic-red-team" target="_blank">Atomic Red Team</a> - 复现 ATT&CK 技术的脚本集合。</li>
+            <li><a href="https://github.com/cisagov/realisticinsiderthreat" target="_blank">CISA Aurora Demos</a> - 浏览器侧演练示范。</li>
+            <li><a href="https://github.com/mitre/purple-sharp" target="_blank">PurpleSharp</a> - 蓝队检测验证工具。</li>
+            <li><a href="https://attack.mitre.org/" target="_blank">MITRE ATT&CK Navigator</a> - 规划攻防路径的权威矩阵。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

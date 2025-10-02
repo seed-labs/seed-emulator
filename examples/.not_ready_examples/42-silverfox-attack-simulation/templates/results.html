@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}结果分析 - 银狐木马攻击仿真复现实验{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>仿真结果分析
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- 攻击成功率 -->
+                    <div class="col-md-3 mb-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-trophy fa-2x text-success mb-2"></i>
+                                <div class="metric-value text-success" id="success-rate">{{ results.attack_success_rate }}%</div>
+                                <div class="metric-label">攻击成功率</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 被入侵目标 -->
+                    <div class="col-md-3 mb-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-server fa-2x text-danger mb-2"></i>
+                                <div class="metric-value text-danger" id="compromised-targets">{{ results.targets_compromised }}</div>
+                                <div class="metric-label">被入侵目标</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 数据外泄 -->
+                    <div class="col-md-3 mb-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-download fa-2x text-warning mb-2"></i>
+                                <div class="metric-value text-warning" id="exfiltrated-data">{{ results.data_exfiltrated }}</div>
+                                <div class="metric-label">数据外泄次数</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 检测规避率 -->
+                    <div class="col-md-3 mb-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-shield-alt fa-2x text-info mb-2"></i>
+                                <div class="metric-value text-info" id="evasion-rate">{{ results.detection_evasion_rate }}%</div>
+                                <div class="metric-label">检测规避率</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 结果图表 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>攻击效果分析
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="attackChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>时间线分析
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="timelineChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 详细结果表格 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-table me-2"></i>详细结果统计
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>指标</th>
+                                <th>数值</th>
+                                <th>状态</th>
+                                <th>说明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>攻击成功率</td>
+                                <td>{{ results.attack_success_rate }}%</td>
+                                <td>
+                                    {% if results.attack_success_rate >= 80 %}
+                                        <span class="badge bg-success">优秀</span>
+                                    {% elif results.attack_success_rate >= 60 %}
+                                        <span class="badge bg-warning">良好</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">需改进</span>
+                                    {% endif %}
+                                </td>
+                                <td>整体攻击链成功执行率</td>
+                            </tr>
+                            <tr>
+                                <td>入侵目标数</td>
+                                <td>{{ results.targets_compromised }}</td>
+                                <td>
+                                    {% if results.targets_compromised >= 3 %}
+                                        <span class="badge bg-danger">高风险</span>
+                                    {% elif results.targets_compromised >= 1 %}
+                                        <span class="badge bg-warning">中风险</span>
+                                    {% else %}
+                                        <span class="badge bg-success">低风险</span>
+                                    {% endif %}
+                                </td>
+                                <td>成功入侵的网络主机数量</td>
+                            </tr>
+                            <tr>
+                                <td>数据外泄次数</td>
+                                <td>{{ results.data_exfiltrated }}</td>
+                                <td>
+                                    {% if results.data_exfiltrated > 0 %}
+                                        <span class="badge bg-danger">已发生</span>
+                                    {% else %}
+                                        <span class="badge bg-success">未发生</span>
+                                    {% endif %}
+                                </td>
+                                <td>敏感数据被窃取的次数</td>
+                            </tr>
+                            <tr>
+                                <td>检测规避率</td>
+                                <td>{{ results.detection_evasion_rate }}%</td>
+                                <td>
+                                    {% if results.detection_evasion_rate >= 70 %}
+                                        <span class="badge bg-danger">高隐蔽</span>
+                                    {% elif results.detection_evasion_rate >= 40 %}
+                                        <span class="badge bg-warning">中隐蔽</span>
+                                    {% else %}
+                                        <span class="badge bg-success">低隐蔽</span>
+                                    {% endif %}
+                                </td>
+                                <td>攻击行为躲避检测的能力</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 安全建议 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>安全建议
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-success">✅ 建议采取的防护措施</h6>
+                        <ul class="list-unstyled">
+                            {% if results.attack_success_rate > 50 %}
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                加强邮件安全过滤和用户培训
+                            </li>
+                            {% endif %}
+                            {% if results.targets_compromised > 0 %}
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                实施网络分段和访问控制
+                            </li>
+                            {% endif %}
+                            {% if results.data_exfiltrated > 0 %}
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                部署数据丢失防护(DLP)系统
+                            </li>
+                            {% endif %}
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                定期安全评估和渗透测试
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-warning">⚠️ 风险评估</h6>
+                        <div class="alert alert-warning">
+                            <strong>当前风险等级:</strong>
+                            {% if results.attack_success_rate > 70 and results.targets_compromised > 2 %}
+                                <span class="badge bg-danger">高风险</span>
+                                <p class="mt-2 mb-0">系统存在严重安全漏洞，建议立即采取全面的安全加固措施。</p>
+                            {% elif results.attack_success_rate > 40 or results.targets_compromised > 0 %}
+                                <span class="badge bg-warning">中风险</span>
+                                <p class="mt-2 mb-0">系统存在一定安全风险，需要加强关键环节的防护。</p>
+                            {% else %}
+                                <span class="badge bg-success">低风险</span>
+                                <p class="mt-2 mb-0">系统安全状况良好，但仍需保持警惕和持续监控。</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 攻击效果图表
+    const attackCtx = document.getElementById('attackChart').getContext('2d');
+    const attackChart = new Chart(attackCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['成功入侵', '检测规避', '失败'],
+            datasets: [{
+                data: [
+                    {{ results.attack_success_rate }},
+                    {{ results.detection_evasion_rate }},
+                    100 - {{ results.attack_success_rate }} - {{ results.detection_evasion_rate }}
+                ],
+                backgroundColor: ['#dc3545', '#ffc107', '#6c757d'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // 时间线图表 (模拟数据)
+    const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+    const timelineChart = new Chart(timelineCtx, {
+        type: 'line',
+        data: {
+            labels: ['初始访问', '代码执行', '内网侦察', '攻击规划', '横向移动', '数据窃取'],
+            datasets: [{
+                label: '成功率 (%)',
+                data: [85, 75, 60, 70, {{ results.attack_success_rate }}, {{ results.detection_evasion_rate }}],
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

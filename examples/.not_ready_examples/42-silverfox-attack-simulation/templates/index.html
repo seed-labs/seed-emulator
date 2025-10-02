@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}银狐木马攻击仿真复现实验 - 首页{% endblock %}
+
+{% block content %}
+<div class="hero-section text-center mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body p-5">
+                    <i class="fas fa-shield-virus fa-5x text-primary mb-4"></i>
+                    <h1 class="display-4 fw-bold mb-4">银狐木马攻击仿真复现实验</h1>
+                    <p class="lead mb-4">
+                        基于SEED-Emulator网络仿真环境，完整复现"银狐"木马攻击链，
+                        从初始钓鱼邮件到内网渗透的全过程演示。
+                    </p>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="/dashboard" class="btn btn-primary btn-lg me-md-2">
+                            <i class="fas fa-play me-2"></i>开始仿真
+                        </a>
+                        <a href="/overview" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-chart-pie me-2"></i>系统总览
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 功能特性 -->
+<div class="row mb-5">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 stage-card">
+            <div class="card-body text-center">
+                <i class="fas fa-envelope fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">钓鱼邮件仿真</h5>
+                <p class="card-text">
+                    集成Gophish平台，模拟真实的钓鱼邮件攻击，
+                    包括Chrome浏览器更新诱饵和IT系统升级通知。
+                </p>
+                <span class="badge bg-primary">Gophish集成</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 stage-card">
+            <div class="card-body text-center">
+                <i class="fas fa-network-wired fa-3x text-success mb-3"></i>
+                <h5 class="card-title">内网渗透演示</h5>
+                <p class="card-text">
+                    Docker容器化的内网环境，真实演示横向移动、
+                    权限提升和数据窃取的完整攻击链。
+                </p>
+                <span class="badge bg-success">真实环境</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 stage-card">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">实时监控分析</h5>
+                <p class="card-text">
+                    实时监控攻击进度，自动生成分析报告，
+                    提供可视化的攻击路径和结果展示。
+                </p>
+                <span class="badge bg-warning">智能分析</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 攻击链阶段 -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-sitemap me-2"></i>攻击链阶段概览
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2 mb-3">
+                        <div class="text-center">
+                            <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                <i class="fas fa-envelope text-white fa-lg"></i>
+                            </div>
+                            <h6 class="mt-2 mb-1">初始访问</h6>
+                            <small class="text-muted">钓鱼邮件</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="text-center">
+                            <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                <i class="fas fa-cogs text-white fa-lg"></i>
+                            </div>
+                            <h6 class="mt-2 mb-1">代码执行</h6>
+                            <small class="text-muted">载荷投递</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="text-center">
+                            <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                <i class="fas fa-search text-white fa-lg"></i>
+                            </div>
+                            <h6 class="mt-2 mb-1">内网侦察</h6>
+                            <small class="text-muted">信息收集</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="text-center">
+                            <div class="bg-warning rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                <i class="fas fa-route text-white fa-lg"></i>
+                            </div>
+                            <h6 class="mt-2 mb-1">攻击规划</h6>
+                            <small class="text-muted">路径生成</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="text-center">
+                            <div class="bg-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                <i class="fas fa-arrows-alt text-white fa-lg"></i>
+                            </div>
+                            <h6 class="mt-2 mb-1">横向移动</h6>
+                            <small class="text-muted">权限提升</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="text-center">
+                            <div class="bg-dark rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                <i class="fas fa-download text-white fa-lg"></i>
+                            </div>
+                            <h6 class="mt-2 mb-1">数据窃取</h6>
+                            <small class="text-muted">影响评估</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统集成 -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plug me-2"></i>集成系统服务
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-primary">
+                            <div class="card-body text-center">
+                                <i class="fas fa-mail-bulk fa-2x text-primary mb-2"></i>
+                                <h6>基础邮件系统</h6>
+                                <p class="small text-muted mb-2">SEED 29项目</p>
+                                <a href="http://localhost:5000" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    访问 :5000
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-success">
+                            <div class="card-body text-center">
+                                <i class="fas fa-globe fa-2x text-success mb-2"></i>
+                                <h6>真实网络邮件</h6>
+                                <p class="small text-muted mb-2">SEED 29-1项目</p>
+                                <a href="http://localhost:5001" target="_blank" class="btn btn-sm btn-outline-success">
+                                    访问 :5001
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-info">
+                            <div class="card-body text-center">
+                                <i class="fas fa-robot fa-2x text-info mb-2"></i>
+                                <h6>AI钓鱼检测</h6>
+                                <p class="small text-muted mb-2">SEED 30项目</p>
+                                <a href="http://localhost:5002" target="_blank" class="btn btn-sm btn-outline-info">
+                                    访问 :5002
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-warning">
+                            <div class="card-body text-center">
+                                <i class="fas fa-fish fa-2x text-warning mb-2"></i>
+                                <h6>Gophish平台</h6>
+                                <p class="small text-muted mb-2">钓鱼邮件管理</p>
+                                <a href="http://localhost:3333" target="_blank" class="btn btn-sm btn-outline-warning">
+                                    访问 :3333
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快速操作 -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-play-circle me-2"></i>快速开始
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    选择适合的模式开始您的银狐木马攻击仿真实验：
+                </p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="startTestMode()">
+                        <i class="fas fa-vial me-2"></i>环境外测试模式
+                    </button>
+                    <button class="btn btn-primary" onclick="startFullSimulation()">
+                        <i class="fas fa-rocket me-2"></i>完整仿真模式
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>使用说明
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        建议先运行环境外测试验证配置
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        确保相关SEED系统服务已启动
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        实验过程中可实时查看日志和结果
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        仅限教学研究使用，请勿用于非法用途
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function startTestMode() {
+        const result = await apiCall('/api/start_simulation', 'POST', { test_mode: true });
+        if (result && result.success) {
+            showToast('环境外测试已启动', 'success');
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1000);
+        } else {
+            showToast(result ? result.message : '启动失败', 'danger');
+        }
+    }
+    
+    async function startFullSimulation() {
+        const result = await apiCall('/api/start_simulation', 'POST', { test_mode: false });
+        if (result && result.success) {
+            showToast('完整仿真已启动', 'success');
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1000);
+        } else {
+            showToast(result ? result.message : '启动失败', 'danger');
+        }
+    }
+</script>
+{% endblock %}

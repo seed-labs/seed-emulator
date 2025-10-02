@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}57 综合安全评估实验 - 概览{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-12 col-xl-8">
+    <div class="card h-100">
+      <div class="card-body">
+        <h4 class="card-title mb-3">实验简介</h4>
+        <p>57 号综合安全评估实验面向真实攻防演练场景，直接使用 Gophish、PentestAgent、OpenBAS 等外部工具来驱动 Seed-Emulator 网络中的攻防流程。</p>
+        <p>本控制台提供对关键工具状态的快速查看、网络拓扑速览以及文档入口。</p>
+        <ul>
+          <li>拉取外部工具：<code>./scripts/prepare_external_tools.sh</code></li>
+          <li>启动管理界面：<code>python web_interface.py</code></li>
+          <li>默认端口：管理 4257 / Gophish 3333 / OpenBAS 8443</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-xl-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">快速链接</h5>
+        <div class="d-grid gap-2">
+          <a class="btn btn-outline-info" href="{{ url_for('dashboard') }}">查看集成状态</a>
+          <a class="btn btn-outline-info" href="{{ url_for('overview') }}">网络拓扑草案</a>
+          <a class="btn btn-outline-info" href="{{ url_for('docs') }}">迁移与架构文档</a>
+          <a class="btn btn-outline-light" href="https://github.com/gophish/gophish" target="_blank" rel="noopener">Gophish 官方仓库</a>
+          <a class="btn btn-outline-light" href="https://github.com/nbshenxm/pentest-agent" target="_blank" rel="noopener">PentestAgent 项目</a>
+          <a class="btn btn-outline-light" href="https://github.com/OpenAEV-Platform/openaev" target="_blank" rel="noopener">OpenBAS 平台</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

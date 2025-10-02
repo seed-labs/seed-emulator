@@ -358,6 +358,52 @@ def stop_roundcube():
     except Exception as e:
         return jsonify({'success': False, 'message': f'停止错误: {str(e)}'})
 
+@app.route('/api/roundcube_status')
+def roundcube_status():
+    """检查Roundcube运行状态"""
+    try:
+        # 检查Roundcube容器是否运行
+        success, output, error = run_command('docker ps --format "{{.Names}}\t{{.Status}}" | grep roundcube')
+        
+        if success and output:
+            containers = []
+            for line in output.strip().split('\n'):
+                if line:
+                    parts = line.split('\t')
+                    containers.append({
+                        'name': parts[0],
+                        'status': parts[1] if len(parts) > 1 else 'unknown'
+                    })
+            
+            # 检查Web界面是否可访问
+            import urllib.request
+            try:
+                urllib.request.urlopen('http://localhost:8081', timeout=2)
+                web_accessible = True
+            except:
+                web_accessible = False
+            
+            return jsonify({
+                'success': True,
+                'running': True,
+                'containers': containers,
+                'web_accessible': web_accessible,
+                'url': 'http://localhost:8081'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'running': False,
+                'containers': [],
+                'web_accessible': False
+            })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
 @app.route('/project_overview')
 def project_overview():
     """项目概述页面"""

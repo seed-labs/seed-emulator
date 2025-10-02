@@ -1,0 +1,176 @@
+# 网络仿真环境配置
+simulation_network:
+  name: "silverfox_simulation_network"
+  subnet: "192.168.10.0/24"
+  gateway: "192.168.10.1"
+  dns_server: "192.168.10.2"
+  
+  # Docker网络配置
+  docker_network:
+    name: "silverfox_net"
+    driver: "bridge"
+    enable_ipv6: false
+    internal: false
+    
+# 容器配置
+containers:
+  victim_workstation:
+    image: "ubuntu:20.04"
+    hostname: "victim-workstation"
+    ip_address: "192.168.10.10"
+    ports:
+      - "2210:22"   # SSH
+      - "8010:80"   # HTTP
+    volumes:
+      - "./docker/victim_workstation:/opt/setup"
+      - "./payloads:/tmp/payloads"
+    environment:
+      - "TARGET_TYPE=workstation"
+      - "SIMULATION_MODE=true"
+    command: "/opt/setup/start_services.sh"
+    
+  file_server:
+    image: "ubuntu:20.04"
+    hostname: "file-server"
+    ip_address: "192.168.10.20"
+    ports:
+      - "2220:22"   # SSH
+      - "4450:445"  # SMB
+      - "2120:21"   # FTP
+    volumes:
+      - "./docker/file_server:/opt/setup"
+      - "./docker/shared_files:/srv/files"
+    environment:
+      - "TARGET_TYPE=file_server"
+      - "SIMULATION_MODE=true"
+    command: "/opt/setup/start_services.sh"
+    
+  mail_server:
+    image: "ubuntu:20.04"
+    hostname: "mail-server"
+    ip_address: "192.168.10.30"
+    ports:
+      - "2230:22"   # SSH
+      - "2530:25"   # SMTP
+      - "1430:143"  # IMAP
+    volumes:
+      - "./docker/mail_server:/opt/setup"
+      - "./docker/mail_data:/var/mail"
+    environment:
+      - "TARGET_TYPE=mail_server"
+      - "SIMULATION_MODE=true"
+    command: "/opt/setup/start_services.sh"
+    
+  web_server:
+    image: "ubuntu:20.04"
+    hostname: "web-server"
+    ip_address: "192.168.10.40"
+    ports:
+      - "2240:22"   # SSH
+      - "8040:80"   # HTTP
+      - "4440:443"  # HTTPS
+    volumes:
+      - "./docker/web_server:/opt/setup"
+      - "./docker/web_content:/var/www/html"
+    environment:
+      - "TARGET_TYPE=web_server"
+      - "SIMULATION_MODE=true"
+    command: "/opt/setup/start_services.sh"
+    
+  database_server:
+    image: "ubuntu:20.04"
+    hostname: "database-server"
+    ip_address: "192.168.10.50"
+    ports:
+      - "2250:22"   # SSH
+      - "3360:3306" # MySQL
+      - "5442:5432" # PostgreSQL
+    volumes:
+      - "./docker/database_server:/opt/setup"
+      - "./docker/database_data:/var/lib/mysql"
+    environment:
+      - "TARGET_TYPE=database_server"
+      - "SIMULATION_MODE=true"
+      - "MYSQL_ROOT_PASSWORD=password"
+    command: "/opt/setup/start_services.sh"
+
+# SEED邮件系统集成
+seed_integration:
+  base_system: "../29-1-email-system"
+  email_domains:
+    - "seedemail.net"
+    - "company.local" 
+    - "corp.internal"
+  
+  # DNS解析配置
+  dns_records:
+    - name: "chrome-update.com"
+      type: "A"
+      value: "192.168.10.10"
+    - name: "security-update.net"
+      type: "A" 
+      value: "192.168.10.10"
+    - name: "it-portal.company.local"
+      type: "A"
+      value: "192.168.10.40"
+
+# 网络流量配置
+traffic_simulation:
+  # 正常流量模拟
+  normal_traffic:
+    enabled: true
+    patterns:
+      - source: "192.168.10.10"
+        destination: "192.168.10.20"
+        protocol: "SMB"
+        frequency: "every_5_minutes"
+      - source: "192.168.10.10"
+        destination: "192.168.10.30"
+        protocol: "SMTP"
+        frequency: "every_15_minutes"
+        
+  # 攻击流量模拟
+  attack_traffic:
+    enabled: true
+    patterns:
+      - name: "initial_beacon"
+        source: "192.168.10.10"
+        destination: "external_c2"
+        protocol: "HTTP"
+        pattern: "POST /beacon"
+        frequency: "every_30_seconds"
+      - name: "lateral_movement"
+        source: "192.168.10.10"
+        destinations: ["192.168.10.20", "192.168.10.30", "192.168.10.40", "192.168.10.50"]
+        protocol: "SSH"
+        pattern: "brute_force"
+        frequency: "progressive"
+
+# 监控配置
+monitoring:
+  network_capture:
+    enabled: true
+    interface: "silverfox_net"
+    output_format: "pcap"
+    output_file: "results/network_capture.pcap"
+    
+  log_aggregation:
+    enabled: true
+    syslog_server: "192.168.10.2"
+    log_formats: ["json", "syslog"]
+    
+  real_time_alerts:
+    enabled: true
+    alert_rules:
+      - name: "suspicious_network_scan"
+        condition: "multiple_port_attempts"
+        threshold: 10
+        timeframe: "60_seconds"
+      - name: "credential_brute_force"
+        condition: "ssh_failed_attempts"
+        threshold: 5
+        timeframe: "30_seconds"
+      - name: "data_exfiltration"
+        condition: "large_outbound_transfer"
+        threshold: "10MB"
+        timeframe: "5_minutes"

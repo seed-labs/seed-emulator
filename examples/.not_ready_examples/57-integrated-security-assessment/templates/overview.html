@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}网络拓扑草案 - 57 综合安全评估实验{% endblock %}
+{% block content %}
+<h2 class="mb-4">Seed-Emulator 网络叠加拓扑</h2>
+<p class="text-muted">以下内容来自 <code>config/seed_network_overlay.yaml</code>，用于描述外部工具与现有 Seed 邮件系统的连接方式。</p>
+<div class="card">
+  <div class="card-body">
+    {% if overlay %}
+      <pre class="text-light">{{ overlay }}</pre>
+    {% else %}
+      <p class="text-muted mb-0">未找到配置文件，请确认 <code>config/seed_network_overlay.yaml</code> 是否存在。</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

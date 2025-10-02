@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}文档中心 - 57 综合安全评估实验{% endblock %}
+{% block content %}
+<h2 class="mb-4">文档中心</h2>
+<p class="text-muted">快速查阅本实验的架构说明、迁移指南与外部工具参考。</p>
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">架构与网络</h5>
+        <ul class="mb-0">
+          <li><a href="/docs/ARCHITECTURE.md" target="_blank">ARCHITECTURE.md</a></li>
+          <li><a href="/docs/MIGRATION_FROM_42.md" target="_blank">MIGRATION_FROM_42.md</a></li>
+          <li><a href="/config/seed_network_overlay.yaml" target="_blank">seed_network_overlay.yaml</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">外部项目</h5>
+        <ul class="mb-0">
+          <li><a href="https://github.com/gophish/gophish" target="_blank">Gophish</a></li>
+          <li><a href="https://github.com/nbshenxm/pentest-agent" target="_blank">PentestAgent</a></li>
+          <li><a href="https://github.com/OpenAEV-Platform/openaev" target="_blank">OpenBAS</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

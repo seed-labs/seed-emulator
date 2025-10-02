@@ -59,6 +59,15 @@ MAILSERVER_COMPOSE_TEMPLATE = """\
         command: >
             sh -c "
             echo 'Starting mailserver setup...' &&
+            echo 'Fixing network gateway...' &&
+            ip route del default 2>/dev/null || true &&
+            ip route add default via {gateway} dev eth0 &&
+            echo 'Configuring Postfix transport for cross-domain mail...' &&
+            echo 'seedemail.net smtp:[10.150.0.10]:25' >> /etc/postfix/transport &&
+            echo 'corporate.local smtp:[10.151.0.10]:25' >> /etc/postfix/transport &&
+            echo 'smallbiz.org smtp:[10.152.0.10]:25' >> /etc/postfix/transport &&
+            postmap /etc/postfix/transport &&
+            postconf -e 'transport_maps = hash:/etc/postfix/transport' &&
             sleep 10 &&
             supervisord -c /etc/supervisor/supervisord.conf
             "
@@ -169,6 +178,7 @@ def run(dumpfile=None):
                 'asn': 150,
                 'network': 'net0',
                 'ip': '10.150.0.10',
+                'gateway': '10.150.0.254',
                 'ports': {'smtp': '2525', 'submission': '5870', 'imap': '1430', 'imaps': '9930'}
             },
             {
@@ -178,6 +188,7 @@ def run(dumpfile=None):
                 'asn': 151,
                 'network': 'net0', 
                 'ip': '10.151.0.10',
+                'gateway': '10.151.0.254',
                 'ports': {'smtp': '2526', 'submission': '5871', 'imap': '1431', 'imaps': '9931'}
             },
             {
@@ -186,7 +197,8 @@ def run(dumpfile=None):
                 'domain': 'smallbiz.org',
                 'asn': 152,
                 'network': 'net0',
-                'ip': '10.152.0.10', 
+                'ip': '10.152.0.10',
+                'gateway': '10.152.0.254',
                 'ports': {'smtp': '2527', 'submission': '5872', 'imap': '1432', 'imaps': '9932'}
             }
         ]
@@ -198,6 +210,7 @@ def run(dumpfile=None):
                 platform=platform_str,
                 hostname=mail['hostname'],
                 domain=mail['domain'],
+                gateway=mail['gateway'],
                 smtp_port=mail['ports']['smtp'],
                 submission_port=mail['ports']['submission'],
                 imap_port=mail['ports']['imap'],
@@ -208,9 +221,7 @@ def run(dumpfile=None):
                 compose_entry=compose_entry,
                 asn=mail['asn'],
                 net=mail['network'],
-                ip_address=mail['ip'],
-                node_name=mail['name'],
-                show_on_map=True
+                ip_address=mail['ip']
             )
         
         # Add Internet Map for visualization

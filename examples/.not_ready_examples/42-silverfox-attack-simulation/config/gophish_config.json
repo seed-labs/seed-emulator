@@ -1,0 +1,85 @@
+{
+  "gophish": {
+    "admin_server": {
+      "listen_url": "0.0.0.0:3333",
+      "use_tls": true,
+      "cert_path": "gophish_admin.crt",
+      "key_path": "gophish_admin.key"
+    },
+    "phishing_server": {
+      "listen_url": "0.0.0.0:8080",
+      "use_tls": false
+    },
+    "db_name": "sqlite3",
+    "db_path": "gophish.db",
+    "migrations_prefix": "db/db_",
+    "contact_address": "",
+    "logging": {
+      "filename": "results/logs/gophish.log",
+      "level": "INFO"
+    }
+  },
+  "smtp_profiles": [
+    {
+      "name": "SEED Mail Server (QQ)",
+      "host": "mail-qq-tencent",
+      "port": 25,
+      "username": "admin@seedemail.net",
+      "password": "password",
+      "from_address": "security@qq.com",
+      "ignore_cert_errors": true
+    },
+    {
+      "name": "SEED Mail Server (163)",
+      "host": "mail-163-netease",
+      "port": 25,
+      "username": "admin@seedemail.net",
+      "password": "password",
+      "from_address": "security@163.com",
+      "ignore_cert_errors": true
+    }
+  ],
+  "email_templates": [
+    {
+      "name": "Chrome 浏览器安全更新",
+      "subject": "🔒 紧急：您的Chrome浏览器需要立即安全更新",
+      "html_template": "templates/phishing_templates/chrome_security_update.html",
+      "text_template": "templates/phishing_templates/chrome_security_update.txt"
+    },
+    {
+      "name": "IT部门系统升级通知",
+      "subject": "【IT通知】系统安全升级 - 需要您的配合",
+      "html_template": "templates/phishing_templates/it_system_upgrade.html",
+      "text_template": "templates/phishing_templates/it_system_upgrade.txt"
+    }
+  ],
+  "landing_pages": [
+    {
+      "name": "Chrome下载页面",
+      "html_template": "templates/landing_pages/chrome_download.html",
+      "redirect_url": "https://www.google.cn/chrome/",
+      "capture_credentials": false,
+      "capture_data": true
+    },
+    {
+      "name": "IT系统登录页面", 
+      "html_template": "templates/landing_pages/it_system_login.html",
+      "redirect_url": "http://localhost:5001",
+      "capture_credentials": true,
+      "capture_data": true
+    }
+  ],
+  "campaigns": [
+    {
+      "name": "银狐木马Chrome更新钓鱼活动",
+      "template": "Chrome 浏览器安全更新",
+      "page": "Chrome下载页面",
+      "smtp": "SEED Mail Server (QQ)",
+      "url": "http://localhost:8080/chrome-update",
+      "launch_date": "immediate",
+      "send_by_date": "2025-12-31T23:59:59Z",
+      "track_clicks": true,
+      "track_data": true
+    }
+  ]
+}

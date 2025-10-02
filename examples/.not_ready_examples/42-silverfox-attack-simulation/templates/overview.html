@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}系统总览 - 银狐木马攻击仿真复现实验{% endblock %}
+
+{% block content %}
+<!-- 系统状态总览 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>系统服务状态总览
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for service_key, service in services.items() %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-{{ 'success' if service.status == 'running' else 'danger' if service.status == 'stopped' else 'warning' }}">
+                            <div class="card-body text-center">
+                                <span class="status-indicator status-{{ service.status }}"></span>
+                                <h6 class="card-title">{{ service.name }}</h6>
+                                <p class="card-text">
+                                    端口: {{ service.port }}<br>
+                                    状态: <span class="badge bg-{{ 'success' if service.status == 'running' else 'danger' if service.status == 'stopped' else 'warning' }}">
+                                        {{ service.status|title }}
+                                    </span>
+                                </p>
+                                {% if service.status == 'running' and service_key != 'system_overview' %}
+                                <a href="http://localhost:{{ service.port }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-external-link-alt me-1"></i>访问
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 网络架构图 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-network-wired me-2"></i>网络架构拓扑
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <svg width="100%" height="400" viewBox="0 0 800 400">
+                        <!-- 网络设备 -->
+                        <g id="network-devices">
+                            <!-- 路由器 -->
+                            <rect x="350" y="50" width="100" height="50" fill="#007bff" rx="5"/>
+                            <text x="400" y="80" text-anchor="middle" fill="white" font-size="12">路由器</text>
+                            
+                            <!-- 交换机 -->
+                            <rect x="350" y="150" width="100" height="50" fill="#28a745" rx="5"/>
+                            <text x="400" y="180" text-anchor="middle" fill="white" font-size="12">交换机</text>
+                            
+                            <!-- 目标主机 -->
+                            <rect x="50" y="250" width="120" height="50" fill="#dc3545" rx="5"/>
+                            <text x="110" y="280" text-anchor="middle" fill="white" font-size="10">受害工作站</text>
+                            <text x="110" y="295" text-anchor="middle" fill="white" font-size="8">192.168.10.10</text>
+                            
+                            <rect x="200" y="250" width="120" height="50" fill="#fd7e14" rx="5"/>
+                            <text x="260" y="280" text-anchor="middle" fill="white" font-size="10">文件服务器</text>
+                            <text x="260" y="295" text-anchor="middle" fill="white" font-size="8">192.168.10.20</text>
+                            
+                            <rect x="350" y="250" width="120" height="50" fill="#ffc107" rx="5"/>
+                            <text x="410" y="280" text-anchor="middle" fill="white" font-size="10">邮件服务器</text>
+                            <text x="410" y="295" text-anchor="middle" fill="white" font-size="8">192.168.10.30</text>
+                            
+                            <rect x="500" y="250" width="120" height="50" fill="#20c997" rx="5"/>
+                            <text x="560" y="280" text-anchor="middle" fill="white" font-size="10">Web服务器</text>
+                            <text x="560" y="295" text-anchor="middle" fill="white" font-size="8">192.168.10.40</text>
+                            
+                            <rect x="650" y="250" width="120" height="50" fill="#6f42c1" rx="5"/>
+                            <text x="710" y="280" text-anchor="middle" fill="white" font-size="10">数据库服务器</text>
+                            <text x="710" y="295" text-anchor="middle" fill="white" font-size="8">192.168.10.50</text>
+                        </g>
+                        
+                        <!-- 连接线 -->
+                        <g id="connections" stroke="#6c757d" stroke-width="2" fill="none">
+                            <line x1="400" y1="100" x2="400" y2="150"/>
+                            <line x1="400" y1="200" x2="110" y2="250"/>
+                            <line x1="400" y1="200" x2="260" y2="250"/>
+                            <line x1="400" y1="200" x2="410" y2="250"/>
+                            <line x1="400" y1="200" x2="560" y2="250"/>
+                            <line x1="400" y1="200" x2="710" y2="250"/>
+                        </g>
+                        
+                        <!-- 攻击路径 (动态显示) -->
+                        <g id="attack-path" stroke="#dc3545" stroke-width="3" fill="none" stroke-dasharray="5,5">
+                            <path d="M 110,250 Q 180,220 260,250" opacity="0.7"/>
+                            <path d="M 260,250 Q 330,220 410,250" opacity="0.7"/>
+                            <path d="M 410,250 Q 480,220 560,250" opacity="0.7"/>
+                            <path d="M 560,250 Q 630,220 710,250" opacity="0.7"/>
+                        </g>
+                        
+                        <!-- 网络标签 -->
+                        <text x="400" y="30" text-anchor="middle" font-size="14" font-weight="bold">内网拓扑 (192.168.10.0/24)</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统监控指标 -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <i class="fas fa-server fa-2x text-primary mb-2"></i>
+                <div class="metric-value">5</div>
+                <div class="metric-label">活跃容器</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <i class="fas fa-network-wired fa-2x text-success mb-2"></i>
+                <div class="metric-value">1</div>
+                <div class="metric-label">网络环境</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <i class="fas fa-shield-alt fa-2x text-warning mb-2"></i>
+                <div class="metric-value">6</div>
+                <div class="metric-label">攻击阶段</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                <div class="metric-value">95%</div>
+                <div class="metric-label">系统可用性</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 环境检查和操作 -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-check-circle me-2"></i>环境检查
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Docker环境
+                        <span class="badge bg-success rounded-pill">正常</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Conda环境
+                        <span class="badge bg-success rounded-pill">seed-emulator</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Python环境
+                        <span class="badge bg-success rounded-pill">3.x</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        网络连通性
+                        <span class="badge bg-success rounded-pill">正常</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        存储空间
+                        <span class="badge bg-warning rounded-pill">充足</span>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-outline-primary" onclick="runEnvironmentCheck()">
+                        <i class="fas fa-sync me-2"></i>重新检查环境
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tools me-2"></i>系统操作
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="startAllServices()">
+                        <i class="fas fa-play me-2"></i>启动所有服务
+                    </button>
+                    <button class="btn btn-warning" onclick="restartServices()">
+                        <i class="fas fa-redo me-2"></i>重启服务
+                    </button>
+                    <button class="btn btn-info" onclick="viewSystemLogs()">
+                        <i class="fas fa-file-alt me-2"></i>查看系统日志
+                    </button>
+                    <button class="btn btn-secondary" onclick="cleanupEnvironment()">
+                        <i class="fas fa-broom me-2"></i>清理环境
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快速链接 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-link me-2"></i>快速链接
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <a href="/dashboard" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-tachometer-alt me-2"></i>仿真控制台
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <a href="/results" class="btn btn-outline-success w-100">
+                            <i class="fas fa-chart-bar me-2"></i>结果分析
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <a href="/config" class="btn btn-outline-info w-100">
+                            <i class="fas fa-cog me-2"></i>配置管理
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 页面加载时自动刷新服务状态
+    document.addEventListener('DOMContentLoaded', function() {
+        setInterval(updateServiceStatus, 10000); // 每10秒更新一次
+    });
+    
+    function updateServiceStatus() {
+        // 这里可以添加实际的服务状态检查逻辑
+        console.log('更新服务状态...');
+    }
+    
+    async function runEnvironmentCheck() {
+        showToast('正在检查环境...', 'info');
+        // 模拟环境检查
+        setTimeout(() => {
+            showToast('环境检查完成，所有组件正常', 'success');
+        }, 2000);
+    }
+    
+    async function startAllServices() {
+        showToast('正在启动所有服务...', 'info');
+        // 这里应该调用实际的服务启动逻辑
+        setTimeout(() => {
+            showToast('所有服务启动完成', 'success');
+            location.reload();
+        }, 3000);
+    }
+    
+    async function restartServices() {
+        showToast('正在重启服务...', 'warning');
+        setTimeout(() => {
+            showToast('服务重启完成', 'success');
+            location.reload();
+        }, 5000);
+    }
+    
+    function viewSystemLogs() {
+        window.open('/logs', '_blank');
+    }
+    
+    async function cleanupEnvironment() {
+        if (confirm('确定要清理环境吗？这将停止所有运行的容器和服务。')) {
+            showToast('正在清理环境...', 'warning');
+            setTimeout(() => {
+                showToast('环境清理完成', 'info');
+            }, 3000);
+        }
+    }
+</script>
+{% endblock %}

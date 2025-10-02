@@ -1,0 +1,455 @@
+{
+  "timestamp": "20250924_190750",
+  "simulation_status": {
+    "running": true,
+    "current_stage": "横向移动与权限提升",
+    "stages_completed": 4,
+    "total_stages": 6,
+    "start_time": "2025-09-24T19:07:38.865038",
+    "errors": [
+      "初始访问与立足点建立: 发送钓鱼邮件 执行失败",
+      "内网侦察: 网络发现扫描 执行失败"
+    ],
+    "logs": [
+      {
+        "timestamp": "2025-09-24T19:07:38.866449",
+        "level": "INFO",
+        "message": "开始执行阶段: 初始访问与立足点建立"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:38.866459",
+        "level": "INFO",
+        "message": "  执行动作: 启动钓鱼邮件服务器"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:39.870605",
+        "level": "SUCCESS",
+        "message": "  启动钓鱼邮件服务器 - 成功"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:39.870635",
+        "level": "INFO",
+        "message": "  执行动作: 发送钓鱼邮件"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:40.873477",
+        "level": "ERROR",
+        "message": "  发送钓鱼邮件 - 失败"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:40.873508",
+        "level": "INFO",
+        "message": "  执行动作: 启动恶意载荷服务器"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:41.875684",
+        "level": "SUCCESS",
+        "message": "  启动恶意载荷服务器 - 成功"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:41.875715",
+        "level": "SUCCESS",
+        "message": "阶段完成: 初始访问与立足点建立"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:41.875744",
+        "level": "INFO",
+        "message": "开始执行阶段: 代码执行与持久化"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:41.875751",
+        "level": "INFO",
+        "message": "  执行动作: 模拟恶意载荷执行"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:42.878822",
+        "level": "SUCCESS",
+        "message": "  模拟恶意载荷执行 - 成功"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:42.878884",
+        "level": "INFO",
+        "message": "  执行动作: 建立持久化后门"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:43.879183",
+        "level": "SUCCESS",
+        "message": "  建立持久化后门 - 成功"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:43.879210",
+        "level": "SUCCESS",
+        "message": "阶段完成: 代码执行与持久化"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:43.879261",
+        "level": "INFO",
+        "message": "开始执行阶段: 内网侦察"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:43.879267",
+        "level": "INFO",
+        "message": "  执行动作: 网络发现扫描"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:44.879498",
+        "level": "ERROR",
+        "message": "  网络发现扫描 - 失败"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:44.879568",
+        "level": "INFO",
+        "message": "  执行动作: 主机信息枚举"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:45.884327",
+        "level": "SUCCESS",
+        "message": "  主机信息枚举 - 成功"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:45.884413",
+        "level": "INFO",
+        "message": "  执行动作: 服务和漏洞检测"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:46.888992",
+        "level": "SUCCESS",
+        "message": "  服务和漏洞检测 - 成功"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:46.889021",
+        "level": "SUCCESS",
+        "message": "阶段完成: 内网侦察"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:46.889091",
+        "level": "INFO",
+        "message": "开始执行阶段: 攻击规划"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:46.889097",
+        "level": "INFO",
+        "message": "  执行动作: 漏洞分析与优先级排序"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:47.891139",
+        "level": "SUCCESS",
+        "message": "  漏洞分析与优先级排序 - 成功"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:47.891195",
+        "level": "INFO",
+        "message": "  执行动作: 攻击路径生成"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:48.896528",
+        "level": "SUCCESS",
+        "message": "  攻击路径生成 - 成功"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:48.896617",
+        "level": "SUCCESS",
+        "message": "阶段完成: 攻击规划"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:48.896692",
+        "level": "INFO",
+        "message": "开始执行阶段: 横向移动与权限提升"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:48.896707",
+        "level": "INFO",
+        "message": "  执行动作: 凭据收集"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:49.900973",
+        "level": "SUCCESS",
+        "message": "  凭据收集 - 成功"
+      },
+      {
+        "timestamp": "2025-09-24T19:07:49.901010",
+        "level": "INFO",
+        "message": "  执行动作: 权限提升"
+      }
+    ]
+  },
+  "simulation_results": {
+    "attack_success_rate": 20,
+    "targets_compromised": 0,
+    "data_exfiltrated": 0,
+    "detection_evasion_rate": 60
+  },
+  "configuration": {
+    "name": "SilverFoxAttackChain",
+    "description": "银狐木马攻击链完整复现仿真",
+    "version": "1.0",
+    "port": 4257,
+    "stages": [
+      {
+        "name": "initial_access",
+        "display_name": "初始访问与立足点建立",
+        "description": "通过钓鱼邮件诱导用户下载伪装的Chrome浏览器安装包",
+        "duration_estimate": 10,
+        "actions": [
+          {
+            "name": "setup_phishing_server",
+            "description": "启动钓鱼邮件服务器",
+            "command": "python3 external_tools/gophish_integration.py --action setup",
+            "timeout": 60
+          },
+          {
+            "name": "send_phishing_emails",
+            "description": "发送钓鱼邮件",
+            "command": "python3 external_tools/gophish_integration.py --action send --template chrome_update",
+            "timeout": 30
+          },
+          {
+            "name": "setup_payload_server",
+            "description": "启动恶意载荷服务器",
+            "command": "python3 -m http.server 8080 --directory payloads",
+            "background": true,
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "name": "execution",
+        "display_name": "代码执行与持久化",
+        "description": "执行恶意载荷并建立持久化机制",
+        "duration_estimate": 5,
+        "actions": [
+          {
+            "name": "simulate_payload_execution",
+            "description": "模拟恶意载荷执行",
+            "command": "python3 simulation_framework/attack_orchestrator.py --stage execution",
+            "timeout": 30
+          },
+          {
+            "name": "establish_persistence",
+            "description": "建立持久化后门",
+            "command": "python3 payloads/backdoor_scripts/setup_backdoor.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "name": "discovery",
+        "display_name": "内网侦察",
+        "description": "收集目标网络信息，识别关键资产和用户",
+        "duration_estimate": 15,
+        "actions": [
+          {
+            "name": "network_discovery",
+            "description": "网络发现扫描",
+            "command": "python3 simulation_framework/network_simulator.py --action discover",
+            "timeout": 60
+          },
+          {
+            "name": "host_enumeration",
+            "description": "主机信息枚举",
+            "command": "python3 external_tools/pentest_agent_integration.py --module reconnaissance",
+            "timeout": 45
+          },
+          {
+            "name": "service_detection",
+            "description": "服务和漏洞检测",
+            "command": "python3 external_tools/aurora_integration.py --stage discovery",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "name": "planning",
+        "display_name": "攻击规划",
+        "description": "基于收集的情报，自动生成攻击路径和策略",
+        "duration_estimate": 8,
+        "actions": [
+          {
+            "name": "vulnerability_analysis",
+            "description": "漏洞分析与优先级排序",
+            "command": "python3 analysis/network_analyzer.py --action analyze_vulnerabilities",
+            "timeout": 45
+          },
+          {
+            "name": "attack_path_generation",
+            "description": "攻击路径生成",
+            "command": "python3 external_tools/pentest_agent_integration.py --module planning",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "name": "lateral_movement",
+        "display_name": "横向移动与权限提升",
+        "description": "从初始感染点向网络内部扩散，获取更高权限",
+        "duration_estimate": 20,
+        "actions": [
+          {
+            "name": "credential_harvesting",
+            "description": "凭据收集",
+            "command": "python3 simulation_framework/lateral_movement.py --action harvest_credentials",
+            "timeout": 30
+          },
+          {
+            "name": "privilege_escalation",
+            "description": "权限提升",
+            "command": "python3 simulation_framework/lateral_movement.py --action escalate_privileges",
+            "timeout": 45
+          },
+          {
+            "name": "lateral_spread",
+            "description": "横向扩散",
+            "command": "python3 simulation_framework/lateral_movement.py --action lateral_spread",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "name": "collection",
+        "display_name": "数据窃取与影响",
+        "description": "窃取敏感数据，建立持久访问通道",
+        "duration_estimate": 12,
+        "actions": [
+          {
+            "name": "data_collection",
+            "description": "敏感数据收集",
+            "command": "python3 payloads/data_collection/collect_sensitive_data.py",
+            "timeout": 45
+          },
+          {
+            "name": "data_exfiltration",
+            "description": "数据外泄",
+            "command": "python3 simulation_framework/data_exfiltration.py --method http",
+            "timeout": 30
+          },
+          {
+            "name": "maintain_access",
+            "description": "维持持久访问",
+            "command": "python3 payloads/backdoor_scripts/maintain_access.py",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "targets": {
+      "victim_workstation": {
+        "ip": "192.168.10.10",
+        "hostname": "victim-workstation",
+        "os": "Ubuntu 20.04",
+        "services": [
+          "ssh",
+          "http"
+        ]
+      },
+      "file_server": {
+        "ip": "192.168.10.20",
+        "hostname": "file-server",
+        "os": "Ubuntu 20.04",
+        "services": [
+          "ssh",
+          "smb",
+          "ftp"
+        ]
+      },
+      "mail_server": {
+        "ip": "192.168.10.30",
+        "hostname": "mail-server",
+        "os": "Ubuntu 20.04",
+        "services": [
+          "ssh",
+          "smtp",
+          "imap"
+        ]
+      },
+      "web_server": {
+        "ip": "192.168.10.40",
+        "hostname": "web-server",
+        "os": "Ubuntu 20.04",
+        "services": [
+          "ssh",
+          "http",
+          "https"
+        ]
+      },
+      "database_server": {
+        "ip": "192.168.10.50",
+        "hostname": "database-server",
+        "os": "Ubuntu 20.04",
+        "services": [
+          "ssh",
+          "mysql",
+          "postgresql"
+        ]
+      }
+    },
+    "phishing_targets": [
+      {
+        "name": "张三",
+        "email": "zhangsan@company.local",
+        "position": "财务部经理",
+        "department": "财务部"
+      },
+      {
+        "name": "李四",
+        "email": "lisi@company.local",
+        "position": "IT管理员",
+        "department": "信息技术部"
+      },
+      {
+        "name": "王五",
+        "email": "wangwu@company.local",
+        "position": "人力资源总监",
+        "department": "人力资源部"
+      },
+      {
+        "name": "赵六",
+        "email": "zhaoliu@company.local",
+        "position": "市场部主管",
+        "department": "市场部"
+      },
+      {
+        "name": "钱七",
+        "email": "qianqi@company.local",
+        "position": "销售总监",
+        "department": "销售部"
+      }
+    ],
+    "reporting": {
+      "formats": [
+        "html",
+        "pdf",
+        "json"
+      ],
+      "include_screenshots": true,
+      "include_logs": true,
+      "include_network_diagrams": true,
+      "auto_generate": true
+    },
+    "logging": {
+      "level": "INFO",
+      "file": "results/logs/silverfox_simulation.log",
+      "max_size": "10MB",
+      "backup_count": 5
+    },
+    "integrations": {
+      "seed_email_system": {
+        "enabled": true,
+        "base_path": "../29-1-email-system",
+        "port": 5001
+      },
+      "gophish": {
+        "enabled": true,
+        "api_url": "http://localhost:3333/api",
+        "admin_user": "admin"
+      },
+      "aurora_demos": {
+        "enabled": true,
+        "base_path": "external_tools/aurora"
+      },
+      "pentest_agent": {
+        "enabled": true,
+        "base_path": "external_tools/pentest_agent"
+      }
+    }
+  }
+}

@@ -1,0 +1,142 @@
+aurora_path: "/opt/aurora-demos"
+working_directory: "/tmp/aurora-workspace"
+log_directory: "/var/log/aurora"
+report_directory: "/var/reports"
+
+attack_chains:
+  silverfox_chain:
+    name: "银狐木马攻击链"
+    description: "完整的银狐木马攻击链自动化执行"
+    stages:
+      - reconnaissance
+      - phishing_delivery
+      - malware_execution
+      - lateral_movement
+      - data_exfiltration
+      - cleanup
+
+  custom_chain:
+    name: "自定义攻击链"
+    description: "用户自定义的攻击链配置"
+    stages: []
+
+stage_configs:
+  reconnaissance:
+    tools:
+      - nmap
+      - masscan
+      - dnsrecon
+    options:
+      timing: "aggressive"
+      ports: "1-65535"
+      output_format: "json"
+
+  phishing_delivery:
+    templates:
+      - chrome_update
+      - office_document
+      - credential_harvest
+    smtp_servers:
+      - mail-qq-tencent
+      - smtp.gmail.com
+    tracking:
+      enabled: true
+      pixel_tracking: true
+      click_tracking: true
+
+  malware_execution:
+    payloads:
+      - silverfox_trojan.exe
+      - meterpreter.dll
+      - cobalt_strike_beacon.exe
+    execution_methods:
+      - rundll32
+      - regsvr32
+      - powershell
+    persistence:
+      registry: true
+      scheduled_task: true
+      startup_folder: false
+
+  lateral_movement:
+    techniques:
+      - pass_the_hash
+      - pass_the_ticket
+      - psexec
+      - wmi
+    tools:
+      - mimikatz
+      - bloodhound
+      - crackmapexec
+    credentials:
+      source: "dumped_hashes"
+      method: "mimikatz"
+
+  data_exfiltration:
+    methods:
+      - dns_tunneling
+      - https_exfil
+      - icmp_tunnel
+    data_types:
+      - credentials
+      - documents
+      - emails
+      - browser_data
+    destinations:
+      - "attacker.controlled.domain"
+      - "dropbox.com"
+      - "mega.nz"
+
+  cleanup:
+    actions:
+      - remove_logs
+      - clear_event_logs
+      - remove_artifacts
+      - kill_processes
+    thoroughness: "high"
+
+global_settings:
+  timeout: 3600
+  retry_attempts: 3
+  parallel_execution: true
+  max_concurrent_stages: 3
+
+logging:
+  level: "INFO"
+  format: "json"
+  rotation: "daily"
+  max_files: 30
+
+reporting:
+  formats:
+    - html
+    - json
+    - pdf
+  include_screenshots: true
+  include_logs: true
+  realtime_updates: true
+
+network_config:
+  proxy:
+    enabled: false
+    type: "http"
+    host: "127.0.0.1"
+    port: 8080
+  dns_servers:
+    - "8.8.8.8"
+    - "1.1.1.1"
+  timeout: 30
+
+security:
+  encryption:
+    enabled: true
+    algorithm: "AES256"
+  obfuscation:
+    enabled: true
+    level: "high"
+  anti_forensic:
+    enabled: true
+    techniques:
+      - timestomp
+      - shred_files
+      - overwrite_free_space

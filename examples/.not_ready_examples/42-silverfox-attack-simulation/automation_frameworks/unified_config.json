@@ -1,0 +1,177 @@
+{
+  "name": "银狐木马自动化攻击模拟统一配置",
+  "version": "1.0.0",
+  "description": "集成Gophish、Aurora-demos和PentestAgent的统一自动化框架配置",
+
+  "frameworks": {
+    "gophish": {
+      "enabled": true,
+      "config_path": "automation_frameworks/gophish_config.json",
+      "priority": 1,
+      "dependencies": []
+    },
+    "aurora_demos": {
+      "enabled": true,
+      "config_path": "automation_frameworks/aurora_config.yaml",
+      "priority": 2,
+      "dependencies": ["gophish"]
+    },
+    "pentest_agent": {
+      "enabled": true,
+      "config_path": "automation_frameworks/pentest_agent_config.json",
+      "priority": 3,
+      "dependencies": ["aurora_demos"]
+    }
+  },
+
+  "targets": [
+    "mail-qq-tencent",
+    "web-server",
+    "database-server",
+    "192.168.1.100",
+    "192.168.1.101"
+  ],
+
+  "attack_phases": {
+    "reconnaissance": {
+      "name": "情报收集阶段",
+      "framework": "pentest_agent",
+      "timeout": 300,
+      "required": true
+    },
+    "phishing": {
+      "name": "钓鱼攻击阶段",
+      "framework": "gophish",
+      "timeout": 600,
+      "required": true
+    },
+    "execution": {
+      "name": "恶意代码执行阶段",
+      "framework": "aurora_demos",
+      "timeout": 900,
+      "required": true
+    },
+    "lateral_movement": {
+      "name": "横向移动阶段",
+      "framework": "aurora_demos",
+      "timeout": 1200,
+      "required": true
+    },
+    "data_exfiltration": {
+      "name": "数据窃取阶段",
+      "framework": "aurora_demos",
+      "timeout": 600,
+      "required": true
+    },
+    "cleanup": {
+      "name": "痕迹清理阶段",
+      "framework": "aurora_demos",
+      "timeout": 300,
+      "required": false
+    }
+  },
+
+  "simulation_settings": {
+    "safe_mode": true,
+    "max_execution_time": 3600,
+    "parallel_execution": false,
+    "fail_fast": false,
+    "cleanup_on_failure": true
+  },
+
+  "reporting": {
+    "enabled": true,
+    "formats": ["json", "html", "pdf"],
+    "output_directory": "/var/reports/silverfox",
+    "include_logs": true,
+    "include_screenshots": false,
+    "realtime_updates": true
+  },
+
+  "logging": {
+    "level": "INFO",
+    "format": "json",
+    "rotation": "daily",
+    "max_files": 30,
+    "output_directory": "/var/log/silverfox"
+  },
+
+  "network_config": {
+    "proxy": {
+      "enabled": false,
+      "type": "http",
+      "host": "127.0.0.1",
+      "port": 8080
+    },
+    "dns_servers": ["8.8.8.8", "1.1.1.1"],
+    "timeout": 30,
+    "retries": 3
+  },
+
+  "security": {
+    "encryption": {
+      "enabled": true,
+      "algorithm": "AES256"
+    },
+    "data_sanitization": {
+      "enabled": true,
+      "remove_sensitive_data": true
+    },
+    "audit_trail": {
+      "enabled": true,
+      "log_all_actions": true
+    }
+  },
+
+  "integrations": {
+    "seed_emulator": {
+      "enabled": true,
+      "config_path": "config/seed_emulator_config.json",
+      "auto_start": true,
+      "network_topology": "enterprise"
+    },
+    "docker_containers": {
+      "enabled": true,
+      "containers": [
+        "mail-qq-tencent",
+        "web-server",
+        "database-server"
+      ],
+      "auto_cleanup": true
+    }
+  },
+
+  "alerting": {
+    "enabled": true,
+    "channels": ["console", "file"],
+    "triggers": {
+      "phase_completion": true,
+      "phase_failure": true,
+      "simulation_completion": true,
+      "error_occurred": true
+    },
+    "file_config": {
+      "log_file": "/var/log/silverfox/alerts.log",
+      "max_size": "10MB",
+      "rotation": "daily"
+    }
+  },
+
+  "custom_modules": {
+    "enabled": false,
+    "path": "automation_frameworks/custom_modules",
+    "auto_load": false
+  },
+
+  "performance": {
+    "monitoring": {
+      "enabled": true,
+      "metrics": ["cpu", "memory", "network", "disk"]
+    },
+    "optimization": {
+      "enabled": true,
+      "memory_limit": "2GB",
+      "cpu_limit": "80%"
+    }
+  }
+}

@@ -8,6 +8,9 @@ import os, subprocess
 import argparse
 import getopt
 import sys
+import shutil
+
+from tests.utils.compose import detect_compose_command
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--basic", action="store_true", help="Run basic tests")
@@ -126,12 +129,7 @@ class CompileTest(ut.TestCase):
     def build_test(self):
         log_file = os.path.join(self.init_cwd, 'test_log', "build_log.txt")
         print(log_file)
-        with open(os.devnull, 'w') as f:
-            result = subprocess.run(["docker", "compose"], stdout=f)
-            if result.returncode == 0:
-                docker_compose_version = 2
-            else:
-                docker_compose_version = 1
+    compose_cmd, docker_compose_version = detect_compose_command()
         
         # Temp Fix for Docker BuildKit
         # Disable BuildKit to avoid issues with Docker Compose v2
@@ -150,10 +148,7 @@ class CompileTest(ut.TestCase):
                     print(output)
                     with open(log_file, 'a') as f:
                         f.write('########### {} Test ##############\n'.format(dir))
-                        if(docker_compose_version == 1):
-                            result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f, env=env)
-                        else:
-                            result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f, env=env)
+                        result = subprocess.run(compose_cmd + ["build"], stderr=f, stdout=f, env=env)
 
                     os.system("echo 'y' | docker system prune > /dev/null")
                     assert result.returncode == 0, "docker build failed"

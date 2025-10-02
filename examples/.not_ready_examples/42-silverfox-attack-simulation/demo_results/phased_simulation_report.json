@@ -1,0 +1,33 @@
+{
+  "title": "银狐木马自动化攻击模拟集成报告",
+  "timestamp": "2025-09-24 22:38:40",
+  "frameworks_used": [
+    "gophish",
+    "aurora_demos",
+    "pentest_agent"
+  ],
+  "results": {
+    "phases_executed": [
+      "recon"
+    ],
+    "phase_results": {
+      "recon": {
+        "success": false,
+        "error": "扫描任务创建失败"
+      }
+    },
+    "overall_status": "recon_failed",
+    "timestamp": "2025-09-24 22:38:40"
+  },
+  "summary": {
+    "phishing_success": false,
+    "attack_chain_success": false,
+    "pentest_success": false,
+    "overall_status": "recon_failed"
+  },
+  "recommendations": [
+    "检查Gophish配置和邮件服务器连接",
+    "验证Aurora-demos攻击链配置",
+    "检查PentestAgent扫描配置和目标可达性"
+  ]
+}

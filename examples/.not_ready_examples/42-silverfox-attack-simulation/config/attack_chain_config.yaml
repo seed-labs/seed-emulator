@@ -1,0 +1,206 @@
+# 银狐木马攻击链配置
+name: SilverFoxAttackChain
+description: 银狐木马攻击链完整复现仿真
+version: "1.0"
+port: 4257
+
+# 攻击链阶段配置
+stages:
+  - name: initial_access
+    display_name: "初始访问与立足点建立"
+    description: "通过钓鱼邮件诱导用户下载伪装的Chrome浏览器安装包"
+    duration_estimate: 10
+    actions:
+      - name: setup_phishing_server
+        description: "启动钓鱼邮件服务器"
+        command: "python3 automation_frameworks/gophish_integration.py --action setup"
+        timeout: 60
+      - name: send_phishing_emails
+        description: "发送钓鱼邮件"
+        command: "python3 automation_frameworks/gophish_integration.py --action send --template chrome_update"
+        timeout: 30
+      - name: setup_payload_server
+        description: "启动恶意载荷服务器"
+        command: "python3 -m http.server 8080 --directory payloads"
+        background: true
+        timeout: 10
+
+  - name: execution
+    display_name: "代码执行与持久化"
+    description: "执行恶意载荷并建立持久化机制"
+    duration_estimate: 5
+    actions:
+      - name: simulate_payload_execution
+        description: "模拟恶意载荷执行"
+        command: "python3 simulation_framework/attack_orchestrator.py --stage execution"
+        timeout: 30
+      - name: establish_persistence
+        description: "建立持久化后门"
+        command: "python3 payloads/backdoor_scripts/setup_backdoor.py"
+        timeout: 20
+
+  - name: discovery
+    display_name: "内网侦察"
+    description: "收集目标网络信息，识别关键资产和用户"
+    duration_estimate: 15
+    actions:
+      - name: network_discovery
+        description: "网络发现扫描"
+        command: "python3 simulation_framework/network_simulator.py --action discover"
+        timeout: 60
+      - name: host_enumeration
+        description: "主机信息枚举"
+        command: "python3 automation_frameworks/pentest_agent_integration.py --module reconnaissance"
+        timeout: 45
+      - name: service_detection
+        description: "服务和漏洞检测"
+        command: "python3 automation_frameworks/aurora_demos_integration.py --stage discovery"
+        timeout: 30
+
+  - name: planning
+    display_name: "攻击规划"
+    description: "基于收集的情报，自动生成攻击路径和策略"
+    duration_estimate: 8
+    actions:
+      - name: vulnerability_analysis
+        description: "漏洞分析与优先级排序"
+        command: "python3 analysis/network_analyzer.py --action analyze_vulnerabilities"
+        timeout: 45
+      - name: attack_path_generation
+        description: "攻击路径生成"
+        command: "python3 automation_frameworks/pentest_agent_integration.py --module planning"
+        timeout: 30
+
+  - name: lateral_movement
+    display_name: "横向移动与权限提升"
+    description: "从初始感染点向网络内部扩散，获取更高权限"
+    duration_estimate: 20
+    actions:
+      - name: credential_harvesting
+        description: "凭据收集"
+        command: "python3 simulation_framework/lateral_movement.py --action harvest_credentials"
+        timeout: 30
+      - name: privilege_escalation
+        description: "权限提升"
+        command: "python3 simulation_framework/lateral_movement.py --action escalate_privileges"
+        timeout: 45
+      - name: lateral_spread
+        description: "横向扩散"
+        command: "python3 simulation_framework/lateral_movement.py --action lateral_spread"
+        timeout: 60
+
+  - name: collection
+    display_name: "数据窃取与影响"
+    description: "窃取敏感数据，建立持久访问通道"
+    duration_estimate: 12
+    actions:
+      - name: data_collection
+        description: "敏感数据收集"
+        command: "python3 payloads/data_collection/collect_sensitive_data.py"
+        timeout: 45
+      - name: data_exfiltration
+        description: "数据外泄"
+        command: "python3 simulation_framework/data_exfiltration.py --method http"
+        timeout: 30
+      - name: maintain_access
+        description: "维持持久访问"
+        command: "python3 payloads/backdoor_scripts/maintain_access.py"
+        timeout: 20
+
+# 目标系统配置
+targets:
+  victim_workstation:
+    ip: "192.168.10.10"
+    hostname: "victim-workstation"
+    os: "Ubuntu 20.04"
+    services: ["ssh", "http"]
+    
+  file_server:
+    ip: "192.168.10.20"
+    hostname: "file-server"
+    os: "Ubuntu 20.04"
+    services: ["ssh", "smb", "ftp"]
+    
+  mail_server:
+    ip: "192.168.10.30"
+    hostname: "mail-server"
+    os: "Ubuntu 20.04"
+    services: ["ssh", "smtp", "imap"]
+    
+  web_server:
+    ip: "192.168.10.40"
+    hostname: "web-server"
+    os: "Ubuntu 20.04"
+    services: ["ssh", "http", "https"]
+    
+  database_server:
+    ip: "192.168.10.50"
+    hostname: "database-server"
+    os: "Ubuntu 20.04"
+    services: ["ssh", "mysql", "postgresql"]
+
+# 钓鱼邮件目标配置
+phishing_targets:
+  - name: "张三"
+    email: "zhangsan@company.local"
+    position: "财务部经理"
+    department: "财务部"
+  - name: "李四"
+    email: "lisi@company.local"
+    position: "IT管理员"
+    department: "信息技术部"
+  - name: "王五"
+    email: "wangwu@company.local"
+    position: "人力资源总监"
+    department: "人力资源部"
+  - name: "赵六"
+    email: "zhaoliu@company.local"
+    position: "市场部主管"
+    department: "市场部"
+  - name: "钱七"
+    email: "qianqi@company.local"
+    position: "销售总监"
+    department: "销售部"
+
+# 报告配置
+reporting:
+  formats: ["html", "pdf", "json"]
+  include_screenshots: true
+  include_logs: true
+  include_network_diagrams: true
+  auto_generate: true
+  
+# 日志配置
+logging:
+  level: "INFO"
+  file: "results/logs/silverfox_simulation.log"
+  max_size: "10MB"
+  backup_count: 5
+  
+# 集成工具配置
+integrations:
+  seed_email_system:
+    enabled: true
+    base_path: "../29-1-email-system"
+    port: 5001
+
+  gophish:
+    enabled: true
+    api_url: "http://localhost:3333/api"
+    admin_user: "admin"
+    integration_module: "automation_frameworks/gophish_integration.py"
+
+  aurora_demos:
+    enabled: true
+    base_path: "automation_frameworks/aurora_demos_integration.py"
+    integration_module: "automation_frameworks/aurora_demos_integration.py"
+
+  pentest_agent:
+    enabled: true
+    base_path: "automation_frameworks/pentest_agent_integration.py"
+    integration_module: "automation_frameworks/pentest_agent_integration.py"
+
+  unified_automation:
+    enabled: true
+    config_path: "automation_frameworks/unified_config.json"
+    integrator_module: "automation_frameworks/unified_integrator.py"

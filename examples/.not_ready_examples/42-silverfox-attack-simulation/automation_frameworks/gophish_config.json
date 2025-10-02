@@ -1,0 +1,46 @@
+{
+  "api_key": "your-gophish-api-key-here",
+  "api_url": "http://localhost:3333/api",
+  "smtp_profiles": [
+    {
+      "name": "SEED Mail Server",
+      "host": "mail-qq-tencent",
+      "from_address": "security@chrome-update.com",
+      "username": "admin",
+      "password": "password",
+      "port": 25,
+      "encryption": "none"
+    }
+  ],
+  "email_templates": [
+    {
+      "name": "Chrome 浏览器更新通知",
+      "subject": "您的 Chrome 浏览器需要立即更新",
+      "html_file": "templates/phishing/chrome_update.html",
+      "text_file": "templates/phishing/chrome_update.txt"
+    }
+  ],
+  "landing_pages": [
+    {
+      "name": "Chrome 下载页面",
+      "html_file": "templates/phishing/chrome_download.html",
+      "redirect_url": "https://www.google.cn/chrome/"
+    }
+  ],
+  "user_groups": [
+    {
+      "name": "目标用户组",
+      "targets_file": "config/targets.json"
+    }
+  ],
+  "campaigns": [
+    {
+      "name": "Chrome 浏览器更新钓鱼活动",
+      "template_name": "Chrome 浏览器更新通知",
+      "page_name": "Chrome 下载页面",
+      "smtp_name": "SEED Mail Server",
+      "group_name": "目标用户组",
+      "url": "http://localhost:8080/chrome-update"
+    }
+  ]
+}

@@ -2,12 +2,16 @@
 # encoding: utf-8
 
 import unittest as ut
-import os, shutil
+import os
+import shutil
 import getopt
 import sys
 import docker
 import time
 import subprocess
+from typing import List
+
+from tests.utils.compose import detect_compose_command
 
 class SeedEmuTestCase(ut.TestCase):
     init_dir:    str
@@ -57,12 +61,7 @@ class SeedEmuTestCase(ut.TestCase):
 
         # if system is using a docker-compose version 2, test is done with version2.
         if cls.online_testing:
-            with open(os.devnull, 'w') as f:
-                result = subprocess.run(["docker", "compose"], stdout=f)
-            if result.returncode == 0:
-                cls.docker_compose_version = 2
-            else:
-                cls.docker_compose_version = 1
+            cls.compose_cmd, cls.docker_compose_version = detect_compose_command()
 
         if cls.online_testing:
             cls.gen_emulation_files()
@@ -128,10 +127,7 @@ class SeedEmuTestCase(ut.TestCase):
         env = os.environ.copy()
         env['DOCKER_BUILDKIT'] = '0'
         
-        if(cls.docker_compose_version == 1):
-            result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f)
-        else:
-            result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f, env=env)
+        result = subprocess.run(cls.compose_cmd + ["build"], stderr=f, stdout=f, env=env)
 
         f.close()
         os.system("echo 'y' | docker system prune > /dev/null")
@@ -145,10 +141,14 @@ class SeedEmuTestCase(ut.TestCase):
         @brief up all containers.
         """
         os.chdir(os.path.join(cls.emulator_code_dir, cls.output_dir))
-        if(cls.docker_compose_version == 1):
-            os.system("docker-compose up > ../../test_log/containers_log &")
-        else:
-            os.system("docker compose up > ../../test_log/containers_log &")
+        log_path = os.path.join(cls.init_dir, cls.test_log, "containers_log")
+        log_file = open(log_path, "w")
+        cls.compose_process = subprocess.Popen(
+            cls.compose_cmd + ["up"],
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+        )
+        cls.compose_log_handle = log_file
         os.chdir(cls.init_dir)
 
     @classmethod
@@ -157,13 +157,27 @@ class SeedEmuTestCase(ut.TestCase):
         @brief down all containers.
         """
         os.chdir(os.path.join(cls.emulator_code_dir, cls.output_dir))
-        if(cls.docker_compose_version == 1):
-            os.system("docker-compose down > /dev/null")
-        else:
-            os.system("docker compose down > /dev/null")
+        subprocess.run(cls.compose_cmd + ["down"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if getattr(cls, "compose_process", None):
+            try:
+                cls.compose_process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                cls.compose_process.kill()
+                cls.compose_process.wait()
+            cls.compose_process = None
+        if getattr(cls, "compose_log_handle", None):
+            cls.compose_log_handle.close()
+            cls.compose_log_handle = None
 
         os.system("echo 'y' | docker system prune > /dev/null")
         os.chdir(cls.init_dir)
+
+    @classmethod
+    def detect_compose_command(cls) -> List[str]:
+        # Backwards compatibility for subclasses expecting this method.
+        cmd, version = detect_compose_command()
+        cls.docker_compose_version = version
+        return cmd
 
     @classmethod
     def createDirectory(cls, directory:str, override:bool = False):

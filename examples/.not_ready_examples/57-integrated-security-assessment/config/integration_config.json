@@ -1,0 +1,116 @@
+{
+  "services": [
+    {
+      "key": "gophish",
+      "display_name": "Gophish 钓鱼平台",
+      "description": "真实钓鱼活动管理与模板生成",
+      "host": "localhost",
+      "port": 3333,
+      "container_name": "gophish",
+      "healthcheck": {
+        "type": "http",
+        "method": "GET",
+        "url": "https://localhost:3333",
+        "verify": false
+      },
+      "detail": {
+        "type": "gophish_campaigns",
+        "config_path": "external_tools/gophish/docker/config/config.json",
+        "api_key_env": "GOPHISH_API_KEY",
+        "verify": false
+      },
+      "actions": [
+        {"label": "打开控制台", "href": "https://localhost:3333", "external": true},
+        {"label": "查看 README", "href": "/external/gophish/README", "external": false}
+      ]
+    },
+    {
+      "key": "pentestagent",
+      "display_name": "PentestAgent 渗透测试编排",
+      "description": "LLM 驱动的情报收集与漏洞利用",
+      "host": "localhost",
+      "port": 5001,
+  "container_name": "pentestagent-execution",
+      "healthcheck": {
+        "type": "tcp"
+      },
+      "detail": {
+        "type": "pentestagent_plans",
+        "planning_dir": "external_tools/pentest-agent/data/planning"
+      },
+      "extra": "默认使用 Docker Compose，端口可按需修改",
+      "actions": [
+        {"label": "项目说明", "href": "https://github.com/nbshenxm/pentest-agent", "external": true}
+      ]
+    },
+    {
+      "key": "openbas",
+      "display_name": "OpenBAS 演练调度平台",
+      "description": "攻防演练任务编排与指标追踪",
+      "host": "localhost",
+      "port": 8443,
+      "container_name": "openbas",
+      "healthcheck": {
+        "type": "http",
+        "method": "GET",
+        "url": "https://localhost:8443/api/version",
+        "verify": false
+      },
+      "detail": {
+        "type": "openbas_scenarios",
+        "token_env": "OPENBAS_TOKEN",
+        "base_url_env": "OPENBAS_BASE_URL",
+        "verify": false
+      },
+      "actions": [
+        {"label": "登录 Web 控制台", "href": "https://localhost:8443", "external": true}
+      ]
+    },
+    {
+      "key": "seed_email_29",
+      "display_name": "29 基础邮件系统",
+      "description": "Seed-Emulator 基础邮件实验环境",
+      "host": "localhost",
+      "port": 5000,
+      "actions": [
+        {"label": "访问 Web UI", "href": "http://localhost:5000", "external": true}
+      ]
+    },
+    {
+      "key": "seed_email_29_1",
+      "display_name": "29-1 真实网络邮件系统",
+      "description": "多服务商仿真与跨域路由",
+      "host": "localhost",
+      "port": 5001,
+      "healthcheck": {
+        "type": "http",
+        "method": "GET",
+        "url": "http://localhost:5001"
+      }
+    },
+    {
+      "key": "seed_email_30",
+      "display_name": "30 AI 钓鱼检测系统",
+      "description": "AI 辅助钓鱼检测与生成",
+      "host": "localhost",
+      "port": 5002,
+      "healthcheck": {
+        "type": "http",
+        "method": "GET",
+        "url": "http://localhost:5002"
+      }
+    },
+    {
+      "key": "seed_email_31",
+      "display_name": "31 高级 APT 仿真系统",
+      "description": "高级对抗演练平台",
+      "host": "localhost",
+      "port": 5003,
+      "healthcheck": {
+        "type": "http",
+        "method": "GET",
+        "url": "http://localhost:5003"
+      }
+    }
+  ]
+}

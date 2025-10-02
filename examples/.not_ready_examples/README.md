@@ -1,272 +1,117 @@
-# 🎯 SEED邮件系统完整解决方案
+# 🎯 `.not_ready_examples` 目录总览（SEED 邮件与攻防实验线）
 
-基于SEED Emulator的邮件系统实验平台，集成了基础邮件服务、跨域邮件传输、AI钓鱼检测、以及完整的网络安全教学演示环境。
+这个目录汇集了尚未完全产品化但已可演示的实验项目，是 SEED 邮件系统及其安全攻防扩展的“预研工厂”。以下内容按照“从基础邮件 → 真实网络 → AI 钓鱼 → 高级攻防 → 全域集成”的演进路线梳理，便于快速讲解每个阶段的内容、拓扑、端口和与真实环境的差异。
 
-## 📋 项目总览
+## 🧭 讲解路线一图流
 
 ```
-SEED邮件系统完整架构
-├── 🎯 核心目标: 邮件系统安全教学与实验
-├── 🏗️ 架构层次: 基础→增强→AI→高级
-├── 📊 实验场景: 7个完整实验演示
-├── 🔧 技术栈: SEED Emulator + Docker + Flask + AI
-├── 🎪 演示效果: 真实邮件传输 + 钓鱼攻击链 + 损失评估
-└── 📚 教学价值: 网络安全、系统安全、AI安全
+29 基础邮件 ──▶ 29-1 真实邮件 ──▶ 30 AI 钓鱼 ──▶ 31 高级攻防 ──▶ 42 银狐仿真 ──▶ 57 综合评估
+			│                       │                         │
+			└──── 支撑 30/31 ───────┴───── 提供攻击链素材 ───┴── 替换42为标准化生态
 ```
 
-## 🚀 快速开始
+## � 核心项目速览
 
-### 环境要求
-- Ubuntu 20.04+ / CentOS 7+
-- Python 3.8+
-- Docker & Docker Compose
-- 8GB+ RAM, 50GB+ 磁盘空间
+| 项目编号 | 入口端口/服务 | 核心功能 & 角色 | 仿真拓扑要点 | 与真实环境差异 |
+|-----------|----------------|------------------|---------------|-----------------
+| **29** `29-email-system` | Web 控制台 `:5000`<br/>SMTP `25150` 系列<br/>IMAP `143150` 系列 | 三域（seedemail/corporate/smallbiz）邮件基础设施；MVP 使用 `docker-mailserver`，DNS 可选 | 5 个 AS：3 邮件 AS + 2 客户端 AS，通过 Transit AS 接入 IX | 省略公网复杂性；端口复用了宿主高位口；TLS/反垃圾策略为教学配置 |
+| **29-1** `29-1-email-system` | Web 控制台 `:5001`<br/>SMTP `2200-2205`<br/>IMAP `1400-1405` | 完整 DNS/MX & 多 ISP/IX，模拟 QQ/163/Gmail/Outlook/企业邮局 | 4 个 IX + 3 大运营商 AS + 6 个邮件服务商 + 4 组用户网络 | 邮件品牌与 IP 均为仿真；BGP 收敛时间缩短；证书与合规流程简化 |
+| **30** `30-phishing-ai-system` | AI 控制台 `:5002`（检测 API）<br/>钓鱼落地页 `:5004` 等 | 钓鱼邮件生成、社会工程画像、AI 防护与行为分析；集成本地 LLM / Ollama | 继承 29-1 拓扑，在企业网络加入 DMZ/内网/监控分区；攻击者基础设施单独子网 | AI 模型在本地离线运行；真实互联域名/证书流程用自动脚本模拟 |
+| **31** `31-advanced-phishing-system` | OpenAI 控制台 / Web 仪表板（默认 `:5003` / `:4257`） | GPT-4o + Claude + Qwen 协同；APT 级多阶段攻击链；AI 对抗样本 | 在 30 基础上扩展 OSINT、持久化、横向移动节点；多模型调用编排 | 使用代理网关替代真实云 API；对抗指标为实验数据，非生产精度 |
+| **42** `42-silverfox-attack-simulation` | 主控台 `:4257`<br/>Gophish `:3333`<br/>回连服务 `:4257/overview` | 银狐木马攻击链全流程复刻：钓鱼→内网侦察→横向→外泄；整合 Aurora / PentestAgent | 复用 29-31 环境，额外加受害工作站、文件/DB 服务器、攻击者编排器 | PentestAgent/Ops 脚本为自研缩减版；网络规模低于真实企业 |
+| **57** `57-integrated-security-assessment` | 控制台 `:4257`<br/>Gophish `:3333`<br/>OpenBAS `:8443`<br/>PentestAgent UI `:5080` | 用官方 Gophish + PentestAgent + OpenBAS 替换 42 自研组件，打造可直接演练的综合攻防 | 在 29-31 基础上新增红队、蓝队、监控子网；`seed_network_overlay.yaml` 描述全局映射 | 外部平台通过 Docker 网络桥接，未接入真实公网；API Token 使用实验凭据 |
 
-### 一键启动 (推荐)
-```bash
-# 进入项目目录
-cd /home/parallels/seed-email-system/examples/.not_ready_examples
+> 📌 **记忆提示**：29 = “打地基”，29-1 = “贴近真实互联网”，30 = “加入 AI 攻防”，31 = “多模型+APT”，42 = “完整银狐案例”，57 = “替换自研、接入生态”。
 
-# 一键启动所有服务
-./quick_start.sh
+## 🛰️ 拓扑对照与讲解重点
 
-# 验证启动状态
-seed-overview
-```
+### 1. 基础阶段（29）
+- 3 个邮件自治系统（Public/Corp/SMB）+ 2 个客户端 AS，通过 Transit → IX 结构讲解“邮件在互联网上如何流动”。
+- 重点示例：SMTP/IMAP 流程、`docker-mailserver` 配置、端口复用、账户管理脚本。
 
-### 手动启动
-```bash
-# 激活环境
-conda activate seed-emulator
+### 2. 真实互联网阶段（29-1）
+- 4 个国内外 IX + 3 大运营商 + 6 大服务商，覆盖跨境、跨运营商路由。
+- 演示 BGP 收敛、DNS 根/TLD/权威查询链路；强调“真实服务商”场景与实验环境差异（IP、证书、规模、法规）。
 
-# 加载别名系统
-source docker_aliases.sh
+### 3. AI 钓鱼阶段（30）
+- 企业网络分区（DMZ/办公/服务器/管理）+ 攻击者基础设施，配合 AI 生成与防护模块讲述“攻守自动化”。
+- 场景矩阵（CEO/供应链/金融等）适合抽卡式讲解，突出 AI 在攻击/防守双方的角色。
 
-# 逐个启动项目
-seed-29        # 基础邮件系统
-seed-29-1      # 真实邮件网络
-seed-30        # AI钓鱼系统
-./start_simulation.sh  # 钓鱼仿真环境
-```
+### 4. 高级攻防阶段（31）
+- 增加 OSINT 爬虫、APT 模拟器、持久化节点；强调多模型协同与对抗样本。
+- 可从“AI 决策链”切入：情报搜集 → 心理画像 → 多阶段攻击 → 绕过检测 → 反取证。
 
-## 📖 核心实验场景
+### 5. 银狐案例阶段（42）
+- 攻击链五阶段（立足点→侦察→规划→横向→外泄）+ Web 控制台实时展示。
+- 与真实银狐（SilverFox）差异：恶意载荷安全化、网络规模缩减、行为可视化、严格隔离。
 
-### 🏗️ 实验#1: 邮件系统基础测试
-**项目**: 29-email-system  
-**目标**: 掌握基础邮件服务架构  
-**端口**: http://localhost:5000  
-**功能**: SMTP/IMAP服务，Web界面，邮件模板
+### 6. 生态集成阶段（57）
+- 三方平台（Gophish / PentestAgent / OpenBAS）与 Seed 邮件系统联动的“特色协同演练”。
+- 讲解重点：`seed_network_helper.py` 负责把外部容器接入 Seed 网络；`integration_config.json` 用于健康检查；`MIGRATION_FROM_42.md` 指导替换旧流程。
 
-### 🌐 实验#2: 真实邮件服务商测试
-**项目**: 29-1-email-system  
-**目标**: 理解跨域邮件传输机制  
-**端口**: http://localhost:5001  
-**功能**: 多域名支持，BGP路由，DNS解析
+## 🔌 端口与服务速查
 
-### 🦠 实验#3: XSS漏洞攻击测试
-**项目**: gophish基础实验  
-**目标**: 掌握XSS存储型攻击技术  
-**端口**: http://localhost:5004  
-**功能**: 反馈表单，存储型XSS，攻击日志
+| 分类 | 服务 | 默认端口（宿主机） | 所属项目 |
+|------|------|--------------------|-----------|
+| 邮件基座 | Web 管理（29） | `5000` | 29 |
+|  | Web 管理（29-1） | `5001` | 29-1 |
+|  | SMTP | `25150-25152`（29） / `2200-2205`（29-1） | 29 / 29-1 |
+|  | IMAP | `143150-143152`（29） / `1400-1405`（29-1） | 29 / 29-1 |
+|  | RoundCube Webmail | `8000` | 29 / 29-1 |
+| 钓鱼/AI | AI 检测 API | `5002` | 30 |
+|  | 钓鱼落地/XSS/SQL/Heartbleed | `5002-5004` | 30 |
+|  | Gophish 控制台 | `3333` | 42 / 57 |
+| 攻防集成 | 银狐主控台 | `4257` | 42 |
+|  | 综合安全控制台 | `4257` | 57 |
+|  | OpenBAS | `8443` | 57 |
+|  | PentestAgent（UI） | `5080`（预留） | 57 |
+|  | 监控/ELK | `5601`（可选） | 57 |
+| 可视化 | Seed 网络地图 | `8080/map.html` | 29 / 29-1 |
+|  | 损失评估仪表板 | `5888` | 30 |
 
-### 💉 实验#4: SQL注入攻击测试
-**项目**: gophish基础实验  
-**目标**: 学习SQL注入漏洞利用  
-**端口**: http://localhost:5002  
-**功能**: 员工查询，数据库泄露，注入检测
+> 📌 **实操建议**：讲解前准备 `seed-overview` 或 `system_overview_app.py`，可在单页展示核心容器状态与端口映射。
 
-### 🔓 实验#5: Heartbleed内存泄露测试
-**项目**: gophish基础实验  
-**目标**: 理解SSL/TLS内存泄露漏洞  
-**端口**: http://localhost:5003  
-**功能**: SSL通信，内存泄露，敏感数据保护
+## � 与真实世界差异速记
 
-### 📊 实验#6: 损失评估仪表板测试
-**项目**: gophish基础实验  
-**目标**: 掌握网络安全经济影响评估  
-**端口**: http://localhost:5888  
-**功能**: 实时统计，损失计算，可视化图表
+1. **网络规模**：实验环境使用精简 AS/IX/子网，压缩 BGP 收敛时间，方便课堂演示。
+2. **域名与证书**：统一使用内网 DNS + 自签证书，模拟真实品牌但不会触网。
+3. **安全与合规**：钓鱼载荷均为安全化脚本，无 destructive payload；所有攻击活动限制在 Seed 虚拟网络内。
+4. **AI 服务**：本地/代理模型代替公网 API，可通过配置切换至真实 Key，但默认提供演示用占位符。
+5. **监控与日志**：集中在单机 Docker 环境，未引入真实 SOC/NOC 基础设施。
 
-### 🔗 实验#7: 完整攻击链集成测试
-**目标**: 从邮件到攻击的完整闭环演示  
-**流程**: 钓鱼邮件 → 用户点击 → 多重攻击 → 损失评估  
-**价值**: 理解真实网络攻击的完整生命周期
+## �️ 讲解时的推荐流程
 
-## 🎛️ 系统管理面板
+1. **开场**：展示上方演进图，明确“邮件主线 + 攻防扩展”的故事线。
+2. **基础两站（29 & 29-1）**：对比内网与真实互联网的拓扑、端口和路由差异。
+3. **AI 阶段（30）**：挑选 2-3 个攻击场景，展示 AI 生成钓鱼邮件与检测报告。
+4. **高级阶段（31）**：讲多模型协同和对抗样本，强调“攻守自动化竞速”。
+5. **案例阶段（42）**：结合 Web 控制台走一遍银狐攻击链。
+6. **生态阶段（57）**：说明为何要替换自研组件、如何用官方平台完成闭环演练。
+7. **总结**：回到“真实环境差异 + 教学价值”，给出下一步（如实验作业或研究课题）。
 
-### 系统总览面板
-**地址**: http://localhost:4257  
-**功能**: 统一管理界面，项目状态监控，系统健康检查
+## 📚 文档与脚本索引
 
-```bash
-# 启动系统总览
-seed-overview
+- `SEED_MAIL_SYSTEM_TEST_SCHEME.md`：邮件系统巡检与实验脚本合集（29/29-1 通用）。
+- `SYSTEM_OVERVIEW_README.md`、`FINAL_SYSTEM_OVERVIEW.md`：全局架构与部署记录。
+- `29/29-1/30/31/42/57` 下各自的 `README.md`：深入配置、指令、故障排查。
+- `42/docs/ATTACK_CHAIN_DETAILS.md`＆`57/docs/MIGRATION_FROM_42.md`：银狐攻击链细节与迁移对照。
+- `57/scripts/seed_network_helper.py`：红/蓝队容器接入 Seed 网络的 CLI。
 
-# 或直接运行
-python3 system_overview_app.py
-```
+## 🧩 其他目录说明
 
-### Webmail客户端
-**地址**: http://localhost:8000  
-**功能**: RoundCube Webmail，邮件收发界面
+- `demo_system_overview.py`, `system_overview_app.py`：统一监控入口，与 `templates/` 共同组成控制台。
+- `legacy/`, `old-docs/`：早期版本资料，可作对照但不再维护。
+- 其他编号目录（03/04/...）多为 DNS / BGP / 区块链等实验模块，与邮件主线关联较弱，此处暂不展开。
 
-**默认账户**:
-- 用户名: alice@seedemail.net / admin@corporate.local
-- 密码: password123
+> � 如果需要扩展讲解至其他编号，请先阅读对应子目录的 README 或 `docs/` 下的专题文档，以免引用过时脚本。
 
-## 📚 项目文档结构
+## 🧠 下一步可选深化
 
-### 核心文档
-- **[SEED_MAIL_SYSTEM_TEST_SCHEME.md](SEED_MAIL_SYSTEM_TEST_SCHEME.md)** - 完整测试方案和操作指南
-- **[PROBLEM_SOLUTIONS.md](PROBLEM_SOLUTIONS.md)** - 常见问题解决方案
-- **[README_DOCS.md](README_DOCS.md)** - 项目文档总览
-
-### 项目文档
-- **[29-email-system/README.md](29-email-system/README.md)** - 基础邮件系统文档
-- **[29-1-email-system/README.md](29-1-email-system/README.md)** - 真实网络邮件系统文档
-- **[30-phishing-ai-system/README.md](30-phishing-ai-system/README.md)** - AI钓鱼系统文档
-- **[gophish基础实验/README.md](gophish基础实验/README.md)** - 钓鱼仿真系统文档
-
-### 技术文档
-- **[SYSTEM_OVERVIEW_README.md](SYSTEM_OVERVIEW_README.md)** - 系统架构总览
-- **[FINAL_SYSTEM_OVERVIEW.md](FINAL_SYSTEM_OVERVIEW.md)** - 最终系统总结
-- **[PROJECT_COMPLETION_SUMMARY.md](PROJECT_COMPLETION_SUMMARY.md)** - 项目完成总结
-
-## 🔧 开发与部署
-
-### 项目结构
-```
-seed-email-system/
-├── examples/.not_ready_examples/          # 实验项目目录
-│   ├── 29-email-system/                   # 基础邮件系统
-│   ├── 29-1-email-system/                 # 真实网络邮件系统
-│   ├── 30-phishing-ai-system/             # AI钓鱼系统
-│   ├── gophish基础实验/                   # 钓鱼仿真环境
-│   ├── docker_aliases.sh                  # Docker别名系统
-│   ├── quick_start.sh                     # 一键启动脚本
-│   └── system_overview_app.py             # 系统总览面板
-├── docs/                                  # 文档目录
-└── scripts/                               # 工具脚本
-```
-
-### 开发环境配置
-```bash
-# 克隆项目
-git clone https://github.com/zzw4257/seed-email-system.git
-cd seed-email-system
-
-# 激活conda环境
-conda activate seed-emulator
-
-# 安装依赖
-pip install -r requirements.txt
-
-# 验证环境
-python3 --version && docker --version
-```
-
-### 部署脚本
-```bash
-# 清理环境
-./force_cleanup.sh
-
-# 优化系统
-python3 system_optimization.py
-
-# 启动测试
-./test_integration.sh
-```
-
-## 🎯 教学应用场景
-
-### 网络安全课程
-1. **邮件系统安全基础** - SMTP/IMAP协议安全
-2. **Web应用安全** - XSS/SQL注入漏洞
-3. **加密通信安全** - SSL/TLS漏洞分析
-4. **网络攻击链** - 从钓鱼到数据泄露
-5. **安全经济影响** - 攻击损失量化评估
-
-### 实验教学流程
-1. **环境搭建** (10分钟) - 系统部署和配置
-2. **基础实验** (20分钟) - 邮件系统功能验证
-3. **安全实验** (30分钟) - 漏洞攻击与防御
-4. **综合实验** (20分钟) - 完整攻击链演示
-5. **评估总结** (10分钟) - 实验报告与分析
-
-## 📊 系统规格
-
-### 硬件要求
-- **CPU**: 4核以上
-- **内存**: 8GB以上
-- **存储**: 50GB以上
-- **网络**: 千兆网卡
-
-### 软件依赖
-- **操作系统**: Ubuntu 20.04 / CentOS 7+
-- **Python**: 3.8+
-- **Docker**: 20.10+
-- **Docker Compose**: 2.0+
-
-### 网络端口分配
-| 服务 | 端口 | 说明 |
-|------|------|------|
-| 29项目Web | 5000 | 基础邮件系统管理界面 |
-| 29-1项目Web | 5001 | 真实网络邮件系统界面 |
-| SQL注入服务器 | 5002 | 数据库漏洞仿真 |
-| Heartbleed服务器 | 5003 | SSL漏洞仿真 |
-| XSS服务器 | 5004 | Web漏洞仿真 |
-| 系统总览 | 4257 | 统一管理系统界面 |
-| 损失评估 | 5888 | 攻击统计仪表板 |
-| Webmail | 8000 | RoundCube邮件客户端 |
-| Gophish | 3333 | 钓鱼邮件管理平台 |
-
-## 🚨 注意事项
-
-### 安全提醒
-- ⚠️ **仅用于教学研究** - 请勿用于非法活动
-- 🔒 **隔离环境** - 在虚拟机或容器中运行
-- 📝 **合规使用** - 遵守当地法律法规
-
-### 系统维护
-- 💾 **定期备份** - 重要数据定期备份
-- 🔄 **版本更新** - 及时更新系统和软件
-- 📊 **监控日志** - 注意系统运行日志
-
-### 故障排除
-- 📖 **查看文档** - 先查阅相关文档
-- 🐛 **常见问题** - 参考`PROBLEM_SOLUTIONS.md`
-- 💬 **技术支持** - 提交Issue获取帮助
-
-## 🤝 贡献指南
-
-### 代码贡献
-1. Fork项目到个人仓库
-2. 创建功能分支: `git checkout -b feature/new-feature`
-3. 提交更改: `git commit -m 'Add new feature'`
-4. 推送分支: `git push origin feature/new-feature`
-5. 创建Pull Request
-
-### 文档贡献
-- 发现文档问题请提交Issue
-- 改进建议欢迎Pull Request
-- 翻译贡献请联系维护者
-
-## 📄 许可证
-
-本项目采用MIT许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
-## 🙏 致谢
-
-感谢SEED实验室提供的技术支持和实验环境，感谢所有贡献者的辛勤工作。
-
-## 📞 联系方式
-
-- **项目主页**: https://github.com/zzw4257/seed-email-system
-- **问题反馈**: [提交Issue](https://github.com/zzw4257/seed-email-system/issues)
-- **邮箱**: zzw4257@example.com
+- 将 57 号实验脚本打包进 `labs/`，形成“一键拉起完整攻防演练”的课程模板。
+- 为 30/31 添加更多针对真实行业（金融、制造、医疗）的钓鱼模板与检测模型配置。
+- 在 29-1 的 BGP/DNS 场景中加入异常路由、DNS 劫持实验，强化“攻防联动”的背景故事。
 
 ---
 
-*最后更新: 2025年1月*  
-*版本: v2.0*  
-*维护者: SEED-Lab团队*
+*最后校对：2025-09*  
+*适用对象：课程讲师、攻防演练教官、研究生助教*

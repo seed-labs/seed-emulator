@@ -1,0 +1,48 @@
+# Seed-Emulator 叠加网络规划（草案）
+# TODO: 根据实际部署补充详细的节点、链路、服务映射
+
+seed_overlay:
+  name: seed-integrated-security
+  description: >-
+    在现有 29 / 29-1 / 30 / 31 项目的基础上，引入红队与蓝队控制节点，
+    将 Gophish、PentestAgent、OpenBAS 等外部工具挂载到 Seed-Emulator 网络。
+  networks:
+    red_team:
+      cidr: 10.57.10.0/24
+      seed_nodes:
+        - hnode_4257_redteam
+      services:
+        - name: gophish
+          ip: 10.57.10.10
+          ports: [3333, 8080]
+        - name: pentestagent
+          ip: 10.57.10.20
+          ports: [5001, 5002]
+    blue_team:
+      cidr: 10.57.20.0/24
+      seed_nodes:
+        - hnode_4257_blueteam
+      services:
+        - name: openbas
+          ip: 10.57.20.10
+          ports: [443]
+    monitoring:
+      cidr: 10.57.30.0/24
+      seed_nodes:
+        - hnode_4257_monitor
+      services:
+        - name: elk_stack
+          ip: 10.57.30.10
+          ports: [5601, 9200]
+  attachments:
+    - base_project: 29-email-system
+    - base_project: 29-1-email-system
+    - base_project: 30-phishing-ai-system
+    - base_project: 31-advanced-phishing-system
+  notes:
+    - >-
+      上述节点命名与 IP 仅为占位，实际部署时需与 Seed-Emulator 的
+      `seedemu/network/*.py` 配置保持一致。
+    - >-
+      若需在 Docker Compose 中加入这些网络，请确保已经创建 `seed_emulator` 外部网络，
+      并通过 `docker network connect` 将容器接入对应子网。
