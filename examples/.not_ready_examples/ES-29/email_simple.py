@@ -22,6 +22,7 @@ from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship
 from seedemu.compiler import Docker, Platform
 from seedemu.core import Emulator, Binding, Filter, Action
 from seedemu.utilities import Makers
+from seedemu.services import EmailService
 import os, sys
 
 # Simplified mailserver container configuration
@@ -205,38 +206,20 @@ def run(dumpfile=None):
             }
         ]
         
-        # Attach mailserver containers
-        # Precompute domain->IP mapping for transport map generation
-        domain_map = { m['domain']: m['ip'] for m in mailservers }
-
+        # Attach mailserver containers using EmailService (transport mode)
+        email_svc = EmailService(platform=platform_str, mode="transport")
         for mail in mailservers:
-            # Transport maps: only for non-local domains to avoid local delivery loops
-            transport_lines = ''
-            for dom, ip in domain_map.items():
-                if dom == mail['domain']:  # skip own domain
-                    continue
-                transport_lines += f"            echo '{dom} smtp:[{ip}]:25' >> /etc/postfix/transport &&\n"
-                transport_lines += f"            echo 'mail.{dom} smtp:[{ip}]:25' >> /etc/postfix/transport &&\n"
-
-            compose_entry = MAILSERVER_COMPOSE_TEMPLATE.format(
-                name=mail['name'],
-                platform=platform_str,
-                hostname=mail['hostname'],
+            email_svc.add_provider(
                 domain=mail['domain'],
-                gateway=mail['gateway'],
-                smtp_port=mail['ports']['smtp'],
-                submission_port=mail['ports']['submission'],
-                imap_port=mail['ports']['imap'],
-                imaps_port=mail['ports']['imaps'],
-                transport_entries=transport_lines
-            )
-            
-            docker.attachCustomContainer(
-                compose_entry=compose_entry,
                 asn=mail['asn'],
+                ip=mail['ip'],
+                gateway=mail['gateway'],
                 net=mail['network'],
-                ip_address=mail['ip']
+                hostname=mail['hostname'],
+                name=mail['name'],
+                ports=mail['ports']
             )
+        email_svc.attach_to_docker(docker)
         
         # Add Internet Map for visualization
         docker.attachInternetMap(

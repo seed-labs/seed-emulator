@@ -16,3 +16,4 @@ from .CAService import CAService, CAServer, RootCAStore
 from .ChainlinkService import *
 from .TrafficService import *
 from .DevService import *
+from .EmailService import EmailService

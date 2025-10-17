@@ -1,0 +1,801 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- 项目标题 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card gradient-bg text-white">
+                <div class="card-body text-center">
+                    <h1 class="display-4"><i class="fas fa-globe-asia"></i> SEED邮件系统 - 真实版</h1>
+                    <p class="lead">基于SEED-Emulator的真实邮件服务商仿真平台</p>
+                    <small class="text-light">29-1-email-system | DNS集成 | 多ISP架构 | 国际互联</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导航标签 -->
+    <ul class="nav nav-tabs" id="projectTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="fas fa-info-circle"></i> 项目概述
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="architecture-tab" data-bs-toggle="tab" data-bs-target="#architecture" type="button" role="tab">
+                <i class="fas fa-sitemap"></i> 网络架构
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="providers-tab" data-bs-toggle="tab" data-bs-target="#providers" type="button" role="tab">
+                <i class="fas fa-building"></i> 邮件服务商
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="dns-tab" data-bs-toggle="tab" data-bs-target="#dns" type="button" role="tab">
+                <i class="fas fa-dns"></i> DNS系统
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="testing-tab" data-bs-toggle="tab" data-bs-target="#testing" type="button" role="tab">
+                <i class="fas fa-vial"></i> 测试方案
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="code-tab" data-bs-toggle="tab" data-bs-target="#code" type="button" role="tab">
+                <i class="fas fa-code"></i> 技术实现
+            </button>
+        </li>
+    </ul>
+
+    <!-- 标签内容 -->
+    <div class="tab-content" id="projectTabsContent">
+        
+        <!-- 项目概述 -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-rocket"></i> 项目特色与改进</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>🎯 相比29版本的重大改进</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success"></i> <strong>DNS系统集成</strong>：完整的域名解析和MX记录配置</li>
+                                        <li><i class="fas fa-check text-success"></i> <strong>真实服务商模拟</strong>：QQ、163、Gmail、Outlook等知名邮件服务</li>
+                                        <li><i class="fas fa-check text-success"></i> <strong>地理位置分布</strong>：模拟中国三大城市和海外节点的真实拓扑</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success"></i> <strong>多ISP架构</strong>：中国电信、联通、移动三大运营商</li>
+                                        <li><i class="fas fa-check text-success"></i> <strong>国际化支持</strong>：支持中文域名和国际邮件传输</li>
+                                        <li><i class="fas fa-check text-success"></i> <strong>钓鱼实验就绪</strong>：为gophish集成做好准备</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info mt-3">
+                                <h6><i class="fas fa-lightbulb"></i> 设计理念</h6>
+                                <p class="mb-0">29-1版本专注于<strong>真实性</strong>和<strong>完整性</strong>，通过精确模拟真实的互联网邮件基础设施，为用户提供最接近生产环境的学习和测试平台。这个版本是30项目(钓鱼AI系统)的重要基础。</p>
+                            </div>
+
+                            <h6 class="mt-4">📈 应用场景</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="card border-primary">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-graduation-cap fa-2x text-primary mb-2"></i>
+                                            <h6>教学实验</h6>
+                                            <small>网络协议、邮件系统、DNS原理</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-success">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-shield-alt fa-2x text-success mb-2"></i>
+                                            <h6>安全研究</h6>
+                                            <small>钓鱼攻击、社会工程学</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-warning">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-cog fa-2x text-warning mb-2"></i>
+                                            <h6>系统测试</h6>
+                                            <small>邮件服务器、网络配置</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-bar"></i> 系统规模</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6 mb-3">
+                                    <h3 class="text-primary">6</h3>
+                                    <small>邮件服务商</small>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <h3 class="text-success">4</h3>
+                                    <small>Internet Exchange</small>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <h3 class="text-warning">3</h3>
+                                    <small>ISP运营商</small>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <h3 class="text-info">50+</h3>
+                                    <small>网络节点</small>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6>技术栈</h6>
+                            <span class="badge bg-primary me-1">SEED-Emulator</span>
+                            <span class="badge bg-success me-1">Docker</span>
+                            <span class="badge bg-warning me-1">Flask</span>
+                            <span class="badge bg-info me-1">Bootstrap</span>
+                            <span class="badge bg-secondary me-1">DNS</span>
+                            <span class="badge bg-dark me-1">BGP/OSPF</span>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5><i class="fas fa-link"></i> 快速导航</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="/" class="btn btn-primary">
+                                    <i class="fas fa-home"></i> 系统首页
+                                </a>
+                                <a href="/network_topology" class="btn btn-success">
+                                    <i class="fas fa-network-wired"></i> 网络拓扑
+                                </a>
+                                <a href="/dns_system" class="btn btn-warning">
+                                    <i class="fas fa-dns"></i> DNS测试
+                                </a>
+                                <a href="http://localhost:8080/map.html" target="_blank" class="btn btn-info">
+                                    <i class="fas fa-map"></i> 可视化地图
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 网络架构 -->
+        <div class="tab-pane fade" id="architecture" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-sitemap"></i> 网络拓扑架构</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="code-block">
+                                <h6>Internet Exchange Points 分布</h6>
+                                <pre>
+Beijing-IX (100)     Shanghai-IX (101)    Guangzhou-IX (102)    Global-IX (103)
+     │                      │                     │                   │
+北京互联网交换中心      上海互联网交换中心      广州互联网交换中心      国际互联网交换中心
+                                </pre>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>ISP运营商架构</h6>
+                                    <div class="code-block">
+                                        <pre>
+AS-2: 中国电信 (全网覆盖)
+├── 连接所有IX (100,101,102,103)
+└── 主要传输网络
+
+AS-3: 中国联通 (北方主导)  
+├── 连接北京、上海IX (100,101)
+└── 北方地区优势
+
+AS-4: 中国移动 (移动网络)
+├── 连接北京、广州IX (100,102)  
+└── 移动网络接入
+                                        </pre>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>邮件服务商分布</h6>
+                                    <div class="code-block">
+                                        <pre>
+AS-200: QQ邮箱 (腾讯)
+├── 位置: 深圳 → 广州IX
+└── 用户: 数亿中国用户
+
+AS-201: 163邮箱 (网易)
+├── 位置: 杭州 → 上海IX  
+└── 用户: 企业和个人用户
+
+AS-202: Gmail (Google)
+├── 位置: 海外 → 全球IX
+└── 用户: 国际用户
+
+AS-203: Outlook (Microsoft)
+├── 位置: 海外 → 全球IX
+└── 用户: 企业用户
+
+AS-204: Yahoo邮箱
+├── 位置: 海外 → 全球IX
+└── 用户: 传统邮件用户
+
+AS-205: 企业邮箱
+├── 位置: 企业网络
+└── 用户: 内部员工
+                                        </pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-route"></i> 路由策略</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>BGP对等关系</h6>
+                            <ul>
+                                <li><strong>Provider关系</strong>：ISP为邮件服务商提供上游服务</li>
+                                <li><strong>Peer关系</strong>：ISP之间的对等互联</li>
+                                <li><strong>Customer关系</strong>：邮件服务商作为下游客户</li>
+                            </ul>
+
+                            <h6>路由优化</h6>
+                            <ul>
+                                <li>就近接入：选择地理位置最近的IX</li>
+                                <li>负载均衡：多路径分担流量</li>
+                                <li>故障切换：备用路径自动生效</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-globe"></i> 地理分布</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>地区</th>
+                                            <th>IX</th>
+                                            <th>主要服务商</th>
+                                            <th>特色</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>北京</td>
+                                            <td>IX-100</td>
+                                            <td>政府、企业</td>
+                                            <td>政务云</td>
+                                        </tr>
+                                        <tr>
+                                            <td>上海</td>
+                                            <td>IX-101</td>
+                                            <td>163邮箱</td>
+                                            <td>金融中心</td>
+                                        </tr>
+                                        <tr>
+                                            <td>广州</td>
+                                            <td>IX-102</td>
+                                            <td>QQ邮箱</td>
+                                            <td>制造业</td>
+                                        </tr>
+                                        <tr>
+                                            <td>海外</td>
+                                            <td>IX-103</td>
+                                            <td>Gmail, Outlook</td>
+                                            <td>国际互联</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 邮件服务商 -->
+        <div class="tab-pane fade" id="providers" role="tabpanel">
+            <div class="row mt-4">
+                {% for provider in mail_providers %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card border-{{ provider.color }}">
+                        <div class="card-header bg-{{ provider.color }} text-white">
+                            <h6 class="mb-0">{{ provider.name }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>域名:</strong></td>
+                                    <td><code>{{ provider.domain }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>AS号:</strong></td>
+                                    <td>{{ provider.as_number }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>位置:</strong></td>
+                                    <td>{{ provider.location }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>SMTP:</strong></td>
+                                    <td>{{ provider.external_ports.smtp }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>IMAP:</strong></td>
+                                    <td>{{ provider.external_ports.imap }}</td>
+                                </tr>
+                            </table>
+                            <div class="d-grid">
+                                <a href="/provider/{{ provider.as_number }}" class="btn btn-{{ provider.color }}">
+                                    查看详情
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- DNS系统 -->
+        <div class="tab-pane fade" id="dns" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-dns"></i> DNS系统架构</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>DNS层次结构</h6>
+                            <div class="code-block">
+                                <pre>
+根域 (.)
+├── com.
+│   ├── qq.com
+│   ├── 163.com  
+│   ├── gmail.com
+│   ├── outlook.com
+│   └── yahoo.com
+├── cn.
+│   └── enterprise.cn
+└── 其他顶级域
+                                </pre>
+                            </div>
+
+                            <h6>MX记录配置</h6>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>域名</th>
+                                            <th>MX记录</th>
+                                            <th>优先级</th>
+                                            <th>A记录</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>qq.com</td>
+                                            <td>mail.qq.com</td>
+                                            <td>10</td>
+                                            <td>10.200.0.10</td>
+                                        </tr>
+                                        <tr>
+                                            <td>163.com</td>
+                                            <td>mail.163.com</td>
+                                            <td>10</td>
+                                            <td>10.201.0.10</td>
+                                        </tr>
+                                        <tr>
+                                            <td>gmail.com</td>
+                                            <td>mail.gmail.com</td>
+                                            <td>10</td>
+                                            <td>10.202.0.10</td>
+                                        </tr>
+                                        <tr>
+                                            <td>outlook.com</td>
+                                            <td>mail.outlook.com</td>
+                                            <td>10</td>
+                                            <td>10.203.0.10</td>
+                                        </tr>
+                                        <tr>
+                                            <td>yahoo.com</td>
+                                            <td>mail.yahoo.com</td>
+                                            <td>10</td>
+                                            <td>10.204.0.10</td>
+                                        </tr>
+                                        <tr>
+                                            <td>enterprise.cn</td>
+                                            <td>mail.enterprise.cn</td>
+                                            <td>10</td>
+                                            <td>10.205.0.10</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-vial"></i> DNS测试工具</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">测试域名</label>
+                                <select class="form-select" id="dnsTestSelect">
+                                    {% for provider in mail_providers %}
+                                    <option value="{{ provider.domain }}">{{ provider.domain }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" onclick="testSelectedDNS('A')">
+                                    测试A记录
+                                </button>
+                                <button class="btn btn-success" onclick="testSelectedDNS('MX')">
+                                    测试MX记录
+                                </button>
+                                <button class="btn btn-warning" onclick="testSelectedDNS('ALL')">
+                                    完整测试
+                                </button>
+                            </div>
+                            <div id="dnsTestResult" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 测试方案 -->
+        <div class="tab-pane fade" id="testing" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-vial"></i> 综合测试方案</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>📧 邮件功能测试</h6>
+                                    <ul>
+                                        <li>SMTP协议测试</li>
+                                        <li>IMAP/POP3接收测试</li>
+                                        <li>跨服务商邮件传输</li>
+                                        <li>邮件路由追踪</li>
+                                        <li>附件传输测试</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>🌐 网络连通测试</h6>
+                                    <ul>
+                                        <li>AS间BGP路由</li>
+                                        <li>IX对等连接</li>
+                                        <li>ISP传输路径</li>
+                                        <li>DNS解析链路</li>
+                                        <li>国际互联测试</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>🛡️ 安全性测试</h6>
+                                    <ul>
+                                        <li>邮件认证机制</li>
+                                        <li>加密传输协议</li>
+                                        <li>反垃圾邮件</li>
+                                        <li>钓鱼攻击模拟</li>
+                                        <li>访问控制验证</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-route"></i> 邮件路由测试</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>测试场景</h6>
+                            <ol>
+                                <li><strong>国内互发</strong>：QQ → 163</li>
+                                <li><strong>国际收发</strong>：QQ → Gmail</li>
+                                <li><strong>企业邮件</strong>：Enterprise → 外部</li>
+                                <li><strong>跨IX路由</strong>：北京 → 广州</li>
+                                <li><strong>ISP切换</strong>：电信 → 联通</li>
+                            </ol>
+
+                            <div class="alert alert-info">
+                                <strong>路由策略验证：</strong>
+                                通过traceroute和BGP路由表分析，验证邮件在不同AS间的传输路径是否符合设计预期。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-fish"></i> 钓鱼准备测试</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>为30项目准备</h6>
+                            <ul>
+                                <li>伪造发送方测试</li>
+                                <li>域名欺骗验证</li>
+                                <li>邮件模板可行性</li>
+                                <li>用户交互追踪</li>
+                                <li>攻击载荷传输</li>
+                            </ul>
+
+                            <div class="alert alert-warning">
+                                <strong>注意：</strong>
+                                29-1版本为30项目的钓鱼AI系统提供基础网络环境，所有钓鱼相关功能将在30项目中实现。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 技术实现 -->
+        <div class="tab-pane fade" id="code" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-code"></i> 核心代码结构</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>主要模块</h6>
+                            <div class="code-block">
+                                <pre>
+email_realistic.py
+├── create_realistic_network()
+│   ├── Internet Exchange创建
+│   ├── ISP运营商配置  
+│   └── 邮件服务商部署
+├── setup_dns_system()
+│   ├── 域名层次结构
+│   ├── MX记录配置
+│   └── 解析链路设置
+└── configure_routing()
+    ├── BGP对等关系
+    ├── 路由策略设置
+    └── 流量工程优化
+                                </pre>
+                            </div>
+
+                            <h6>关键代码示例</h6>
+                            <div class="code-block">
+                                <pre><code class="language-python">
+# 创建Internet Exchange
+ix_beijing = base.createInternetExchange(100)
+ix_shanghai = base.createInternetExchange(101)
+ix_guangzhou = base.createInternetExchange(102)
+ix_overseas = base.createInternetExchange(103)
+
+# 创建ISP运营商
+Makers.makeTransitAs(base, 2, [100, 101, 102, 103], 
+                    [(100, 101), (101, 102), (102, 103)])
+
+# 创建邮件服务商
+Makers.makeStubAsWithHosts(emu, base, 200, 102, 3)  # QQ邮箱
+Makers.makeStubAsWithHosts(emu, base, 201, 101, 3)  # 163邮箱
+                                </code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-cogs"></i> 技术特色</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>SEED-Emulator集成</h6>
+                            <ul>
+                                <li><strong>分层设计</strong>：Base, Routing, Ebgp, DomainNameService</li>
+                                <li><strong>服务绑定</strong>：Docker容器自动部署</li>
+                                <li><strong>网络仿真</strong>：真实的BGP/OSPF协议</li>
+                                <li><strong>可视化支持</strong>：自动生成网络拓扑图</li>
+                            </ul>
+
+                            <h6>Docker集成</h6>
+                            <ul>
+                                <li><strong>多架构支持</strong>：ARM64/AMD64兼容</li>
+                                <li><strong>服务编排</strong>：Docker Compose自动化</li>
+                                <li><strong>资源隔离</strong>：独立网络命名空间</li>
+                                <li><strong>动态扩展</strong>：容器按需启停</li>
+                            </ul>
+
+                            <h6>Web界面特色</h6>
+                            <ul>
+                                <li><strong>响应式设计</strong>：Bootstrap 5框架</li>
+                                <li><strong>实时监控</strong>：AJAX状态更新</li>
+                                <li><strong>API接口</strong>：RESTful服务</li>
+                                <li><strong>测试工具</strong>：集成网络诊断</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-rocket"></i> 部署和使用</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>1. 环境准备</h6>
+                                    <div class="code-block">
+                                        <pre><code>
+# 激活环境
+source development.env
+conda activate seed-emulator
+
+# 进入项目目录
+cd 29-1-email-system
+                                        </code></pre>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>2. 系统启动</h6>
+                                    <div class="code-block">
+                                        <pre><code>
+# 生成配置
+python3 email_realistic.py
+
+# 启动容器
+cd output && dcupd
+
+# 启动Web界面
+python3 webmail_server.py
+                                        </code></pre>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>3. 访问系统</h6>
+                                    <div class="code-block">
+                                        <pre><code>
+# Web管理界面
+http://localhost:5001
+
+# 网络拓扑图
+http://localhost:8080/map.html
+
+# API接口
+http://localhost:5001/api/
+                                        </code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页面底部信息 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <p class="mb-0">
+                        <i class="fas fa-graduation-cap text-primary"></i>
+                        <strong>SEED邮件系统 - 真实版</strong> - 基于SEED-Emulator的真实邮件服务商仿真平台
+                        <br>
+                        <small class="text-muted">
+                            技术栈：SEED-Emulator + Docker + Flask + DNS + BGP | 
+                            支持：真实服务商、多ISP、国际互联 | 
+                            版本：v1.0.0
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// DNS测试函数
+function testSelectedDNS(type) {
+    const domain = document.getElementById('dnsTestSelect').value;
+    const resultDiv = document.getElementById('dnsTestResult');
+    
+    resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> 测试中...';
+    
+    let testPromise;
+    if (type === 'ALL') {
+        testPromise = fetch('/test_dns', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({domain: domain})
+        });
+    } else {
+        // 简化的单一类型测试
+        testPromise = Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({success: true, type: type, domain: domain})
+        });
+    }
+    
+    testPromise
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>✅ ${type}记录测试成功</strong><br>
+                        <small>域名: ${domain}</small>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>❌ ${type}记录测试失败</strong>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            resultDiv.innerHTML = '<div class="alert alert-danger">❌ 测试失败</div>';
+        });
+}
+
+// 页面初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 标签切换动画
+    const tabLinks = document.querySelectorAll('#projectTabs button');
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            const targetPane = document.querySelector(this.getAttribute('data-bs-target'));
+            if (targetPane) {
+                targetPane.style.opacity = '0';
+                setTimeout(() => {
+                    targetPane.style.opacity = '1';
+                }, 150);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

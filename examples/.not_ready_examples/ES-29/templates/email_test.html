@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}邮件发信测试 - SEED邮件系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- 页面标题 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-gradient-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-envelope fa-3x me-3"></i>
+                        <div>
+                            <h1 class="h2 mb-1">📧 邮件发信测试</h1>
+                            <p class="mb-0">在发送邮件前验证用户账户，执行真实的邮件发送测试</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户验证部分 -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user-check me-2"></i>用户账户验证</h5>
+                </div>
+                <div class="card-body">
+                    <form id="userCheckForm">
+                        <div class="mb-3">
+                            <label for="emailInput" class="form-label">邮箱地址</label>
+                            <input type="email" class="form-control" id="emailInput"
+                                   placeholder="例如: user@seedemail.net" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="serverSelect" class="form-label">邮件服务器</label>
+                            <select class="form-select" id="serverSelect" required>
+                                <option value="">选择邮件服务器</option>
+                                {% for server in mail_servers %}
+                                <option value="{{ server.id }}">{{ server.name }} ({{ server.domain }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="checkUserBtn">
+                            <i class="fas fa-search me-2"></i>验证用户
+                        </button>
+                    </form>
+
+                    <!-- 验证结果 -->
+                    <div id="userCheckResult" class="mt-3" style="display: none;">
+                        <div class="alert" role="alert">
+                            <div class="d-flex">
+                                <div id="userCheckIcon" class="me-2"></div>
+                                <div id="userCheckMessage"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 可用的用户列表 -->
+                    <div id="availableUsers" class="mt-3" style="display: none;">
+                        <h6>服务器中的可用用户：</h6>
+                        <div id="userList" class="list-group"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 发送测试邮件部分 -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-paper-plane me-2"></i>发送测试邮件</h5>
+                </div>
+                <div class="card-body">
+                    <form id="emailSendForm">
+                        <div class="mb-3">
+                            <label for="fromEmail" class="form-label">发件人邮箱</label>
+                            <input type="email" class="form-control" id="fromEmail"
+                                   placeholder="验证通过的邮箱地址" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="toEmail" class="form-label">收件人邮箱</label>
+                            <input type="email" class="form-control" id="toEmail"
+                                   placeholder="目标邮箱地址" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="templateType" class="form-label">邮件模板</label>
+                            <select class="form-select" id="templateType">
+                                <option value="plain">纯文本邮件</option>
+                                <option value="html">HTML邮件</option>
+                                <option value="phishing">专业邮件模板</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">邮件主题</label>
+                            <input type="text" class="form-control" id="subject"
+                                   value="SEED邮件系统测试邮件" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="body" class="form-label">邮件内容</label>
+                            <textarea class="form-control" id="body" rows="4"
+                                      placeholder="输入邮件内容...">这是一封来自SEED邮件系统的测试邮件。</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success" id="sendEmailBtn">
+                            <i class="fas fa-paper-plane me-2"></i>发送邮件
+                        </button>
+                    </form>
+
+                    <!-- 发送结果 -->
+                    <div id="emailSendResult" class="mt-3" style="display: none;">
+                        <div class="alert" role="alert">
+                            <div class="d-flex">
+                                <div id="emailSendIcon" class="me-2"></div>
+                                <div id="emailSendMessage"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 测试历史记录 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>测试历史记录</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="testHistoryTable">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>操作类型</th>
+                                    <th>邮箱地址</th>
+                                    <th>服务器</th>
+                                    <th>状态</th>
+                                    <th>详情</th>
+                                </tr>
+                            </thead>
+                            <tbody id="testHistoryBody">
+                                <!-- 动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 测试历史记录
+let testHistory = [];
+
+function addToHistory(type, email, server, status, details = '') {
+    const timestamp = new Date().toLocaleString();
+    testHistory.unshift({
+        timestamp,
+        type,
+        email,
+        server,
+        status,
+        details
+    });
+
+    updateHistoryTable();
+}
+
+function updateHistoryTable() {
+    const tbody = document.getElementById('testHistoryBody');
+    tbody.innerHTML = '';
+
+    testHistory.slice(0, 10).forEach(item => {
+        const row = `
+            <tr>
+                <td>${item.timestamp}</td>
+                <td>
+                    <span class="badge bg-${item.type === '验证' ? 'primary' : 'success'}">
+                        ${item.type}
+                    </span>
+                </td>
+                <td>${item.email}</td>
+                <td>${item.server}</td>
+                <td>
+                    <span class="badge bg-${item.status === '成功' ? 'success' : 'danger'}">
+                        ${item.status}
+                    </span>
+                </td>
+                <td>${item.details}</td>
+            </tr>
+        `;
+        tbody.innerHTML += row;
+    });
+}
+
+// 用户验证功能
+document.getElementById('userCheckForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const email = document.getElementById('emailInput').value;
+    const serverId = document.getElementById('serverSelect').value;
+
+    if (!email || !serverId) {
+        showUserCheckResult('danger', 'fas fa-exclamation-triangle', '请填写完整的邮箱地址和选择服务器');
+        return;
+    }
+
+    const checkBtn = document.getElementById('checkUserBtn');
+    const originalText = checkBtn.innerHTML;
+    checkBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>验证中...';
+    checkBtn.disabled = true;
+
+    try {
+        const response = await fetch('/api/check_user', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: email,
+                server_id: serverId
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.user_exists) {
+            showUserCheckResult('success', 'fas fa-check-circle', result.message);
+            document.getElementById('fromEmail').value = email;
+            addToHistory('验证', email, result.server.name, '成功', '用户存在');
+        } else {
+            showUserCheckResult('warning', 'fas fa-exclamation-triangle', result.message);
+            addToHistory('验证', email, '未知服务器', '失败', result.message);
+
+            // 显示可用用户列表
+            if (result.available_users && result.available_users.length > 0) {
+                showAvailableUsers(result.available_users);
+            }
+        }
+    } catch (error) {
+        showUserCheckResult('danger', 'fas fa-times-circle', '验证失败: ' + error.message);
+        addToHistory('验证', email, '未知服务器', '错误', error.message);
+    } finally {
+        checkBtn.innerHTML = originalText;
+        checkBtn.disabled = false;
+    }
+});
+
+function showUserCheckResult(alertType, icon, message) {
+    const resultDiv = document.getElementById('userCheckResult');
+    const iconDiv = document.getElementById('userCheckIcon');
+    const messageDiv = document.getElementById('userCheckMessage');
+
+    resultDiv.className = `alert alert-${alertType}`;
+    iconDiv.innerHTML = `<i class="${icon}"></i>`;
+    messageDiv.textContent = message;
+
+    resultDiv.style.display = 'block';
+}
+
+function showAvailableUsers(users) {
+    const container = document.getElementById('availableUsers');
+    const userList = document.getElementById('userList');
+
+    userList.innerHTML = '';
+    users.forEach(user => {
+        const item = document.createElement('button');
+        item.className = 'list-group-item list-group-item-action';
+        item.textContent = user;
+        item.onclick = () => {
+            document.getElementById('emailInput').value = user;
+        };
+        userList.appendChild(item);
+    });
+
+    container.style.display = 'block';
+}
+
+// 邮件发送功能
+document.getElementById('emailSendForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const fromEmail = document.getElementById('fromEmail').value;
+    const toEmail = document.getElementById('toEmail').value;
+    const subject = document.getElementById('subject').value;
+    const body = document.getElementById('body').value;
+
+    if (!fromEmail || !toEmail) {
+        showEmailSendResult('danger', 'fas fa-exclamation-triangle', '请填写发件人和收件人邮箱');
+        return;
+    }
+
+    const sendBtn = document.getElementById('sendEmailBtn');
+    const originalText = sendBtn.innerHTML;
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>发送中...';
+    sendBtn.disabled = true;
+
+    try {
+        const templateType = document.getElementById('templateType').value;
+
+        const response = await fetch('/api/send_test_email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                from_email: fromEmail,
+                to_email: toEmail,
+                subject: subject,
+                body: body,
+                template: templateType
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showEmailSendResult('success', 'fas fa-check-circle', result.message);
+            addToHistory('发送', fromEmail, result.details.server, '成功', `发送到 ${toEmail}`);
+        } else {
+            showEmailSendResult('danger', 'fas fa-times-circle', result.message);
+            addToHistory('发送', fromEmail, '未知服务器', '失败', result.message);
+        }
+    } catch (error) {
+        showEmailSendResult('danger', 'fas fa-times-circle', '发送失败: ' + error.message);
+        addToHistory('发送', fromEmail, '未知服务器', '错误', error.message);
+    } finally {
+        sendBtn.innerHTML = originalText;
+        sendBtn.disabled = false;
+    }
+});
+
+function showEmailSendResult(alertType, icon, message) {
+    const resultDiv = document.getElementById('emailSendResult');
+    const iconDiv = document.getElementById('emailSendIcon');
+    const messageDiv = document.getElementById('emailSendMessage');
+
+    resultDiv.className = `alert alert-${alertType}`;
+    iconDiv.innerHTML = `<i class="${icon}"></i>`;
+    messageDiv.textContent = message;
+
+    resultDiv.style.display = 'block';
+}
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('邮件发信测试页面已加载');
+});
+</script>
+
+{% endblock %}

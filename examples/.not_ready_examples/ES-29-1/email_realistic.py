@@ -8,6 +8,7 @@ import sys
 import os
 from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship
 from seedemu.services import DomainNameService, DomainNameCachingService
+from seedemu.services import EmailService
 from seedemu.compiler import Docker, Platform
 from seedemu.core import Emulator, Binding, Filter, Action
 from seedemu.utilities import Makers
@@ -386,24 +387,21 @@ def run(platform="arm"):
     else:
         docker = Docker(platform=Platform.ARM64)
 
-    # 添加邮件服务器到Docker配置
+    # 使用 EmailService（DNS 模式）添加邮件服务器到 Docker 配置
+    email_svc = EmailService(platform=f"linux/{platform_str}", mode="dns", dns_nameserver="10.150.0.53")
     for mail in mail_servers:
-        compose_entry = MAILSERVER_COMPOSE_TEMPLATE.format(
-            name=mail['name'],
-            platform=platform_str,
-            hostname=mail['hostname'],
+        ports = {"smtp": mail['smtp_port'], "imap": mail['imap_port']}
+        email_svc.add_provider(
             domain=mail['domain'],
-            gateway=mail['gateway'],
-            smtp_port=mail['smtp_port'],
-            imap_port=mail['imap_port']
-        )
-
-        docker.attachCustomContainer(
-            compose_entry=compose_entry,
             asn=mail['asn'],
+            ip=mail['ip'],
+            gateway=mail['gateway'],
             net=mail['network'],
-            ip_address=mail['ip']
+            hostname=mail['hostname'],
+            name=mail['name'],
+            ports=ports,
         )
+    email_svc.attach_to_docker(docker)
 
     emu.compile(docker, "./output", override=True)
     

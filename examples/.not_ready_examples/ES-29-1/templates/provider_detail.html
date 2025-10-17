@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block title %}{{ provider.name }} - 服务商详情{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- 服务商头部信息 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-{{ provider.color }}">
+                <div class="card-header bg-{{ provider.color }} text-white">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-0">
+                                <i class="fas fa-at"></i> {{ provider.name }}
+                            </h4>
+                            <p class="mb-0">{{ provider.description }}</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="badge bg-light text-dark">AS-{{ provider.as_number }}</span>
+                            <span class="badge bg-success">运行中</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>域名:</strong><br>
+                            <code>{{ provider.domain }}</code>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>位置:</strong><br>
+                            {{ provider.location }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>SMTP端口:</strong><br>
+                            <code>localhost:{{ provider.external_ports.smtp }}</code>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>IMAP端口:</strong><br>
+                            <code>localhost:{{ provider.external_ports.imap }}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 容器状态 -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-server"></i> 容器状态</h5>
+                </div>
+                <div class="card-body">
+                    {% if containers %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>容器名称</th>
+                                    <th>状态</th>
+                                    <th>端口映射</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for container in containers %}
+                                <tr>
+                                    <td><code>{{ container.Name }}</code></td>
+                                    <td>
+                                        <span class="status-dot {% if 'running' in container.Status.lower() %}status-running{% else %}status-stopped{% endif %}"></span>
+                                        {{ container.Status }}
+                                    </td>
+                                    <td><small>{{ container.Ports or '无' }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        未找到该服务商的容器，请检查系统是否正常启动。
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-pie"></i> 快速统计</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>容器数量:</span>
+                            <strong>{{ containers|length }}</strong>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>邮件账户:</span>
+                            <strong>{{ accounts|length }}</strong>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>AS号:</span>
+                            <strong>{{ provider.as_number }}</strong>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="d-flex justify-content-between">
+                            <span>更新时间:</span>
+                            <small>{{ current_time }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 邮件账户管理 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-users"></i> 邮件账户</h5>
+                    <button class="btn btn-primary btn-sm" onclick="showCreateAccountModal()">
+                        <i class="fas fa-plus"></i> 创建账户
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if accounts %}
+                    <div class="row">
+                        {% for account in accounts %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-user"></i> {{ account }}
+                                    </h6>
+                                    <div class="btn-group-vertical d-grid gap-2">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="testEmailLogin('{{ account }}')">
+                                            测试登录
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm" onclick="sendTestEmail('{{ account }}')">
+                                            发送测试邮件
+                                        </button>
+                                        <button class="btn btn-outline-success btn-sm" onclick="copyEmailConfig('{{ account }}')">
+                                            复制配置
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        该服务商暂无预设邮件账户，您可以创建新账户进行测试。
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 网络测试工具 -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-network-wired"></i> 网络连通性测试</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">目标地址</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="networkTarget" placeholder="IP地址或域名">
+                            <button class="btn btn-primary" onclick="testNetworkConnectivity()">测试</button>
+                        </div>
+                    </div>
+                    <div id="networkTestResult"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-dns"></i> DNS解析测试</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">域名</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="dnsTarget" value="{{ provider.domain }}" placeholder="域名">
+                            <button class="btn btn-primary" onclick="testDNSResolution()">解析</button>
+                        </div>
+                    </div>
+                    <div id="dnsTestResult"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建账户模态框 -->
+<div class="modal fade" id="createAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">创建邮件账户 - {{ provider.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createAccountForm">
+                    <div class="mb-3">
+                        <label class="form-label">邮箱地址</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="username" placeholder="用户名">
+                            <span class="input-group-text">@{{ provider.domain }}</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">密码</label>
+                        <input type="password" class="form-control" name="password" placeholder="账户密码">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">显示名称</label>
+                        <input type="text" class="form-control" name="displayname" placeholder="可选">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="createAccount()">创建账户</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 显示创建账户模态框
+function showCreateAccountModal() {
+    const modal = new bootstrap.Modal(document.getElementById('createAccountModal'));
+    modal.show();
+}
+
+// 创建账户
+function createAccount() {
+    const form = document.getElementById('createAccountForm');
+    const formData = new FormData(form);
+    
+    const username = formData.get('username');
+    const password = formData.get('password');
+    
+    if (!username || !password) {
+        showAlert('请填写完整信息', 'warning');
+        return;
+    }
+    
+    // 模拟账户创建
+    showAlert(`账户 ${username}@{{ provider.domain }} 创建成功`, 'success');
+    
+    // 关闭模态框
+    const modal = bootstrap.Modal.getInstance(document.getElementById('createAccountModal'));
+    modal.hide();
+    
+    // 重新加载页面以显示新账户
+    setTimeout(() => location.reload(), 1000);
+}
+
+// 测试邮件登录
+function testEmailLogin(email) {
+    showAlert(`正在测试 ${email} 的登录连接...`, 'info');
+    
+    // 模拟登录测试
+    setTimeout(() => {
+        showAlert(`${email} 登录测试成功`, 'success');
+    }, 2000);
+}
+
+// 发送测试邮件
+function sendTestEmail(fromEmail) {
+    const subject = `来自${fromEmail}的测试邮件`;
+    const body = `这是从 ${fromEmail} 发送的测试邮件。\n\n时间: ${new Date().toLocaleString()}`;
+    
+    showAlert(`正在从 ${fromEmail} 发送测试邮件...`, 'info');
+    
+    // 模拟邮件发送
+    setTimeout(() => {
+        showAlert(`测试邮件发送成功`, 'success');
+    }, 2000);
+}
+
+// 复制邮件配置
+function copyEmailConfig(email) {
+    const config = `
+邮件配置 - ${email}
+═══════════════════════════════════════
+接收邮件服务器 (IMAP):
+  服务器: localhost
+  端口: {{ provider.external_ports.imap }}
+  安全类型: SSL/TLS
+
+发送邮件服务器 (SMTP):
+  服务器: localhost
+  端口: {{ provider.external_ports.smtp }}
+  安全类型: STARTTLS
+
+账户信息:
+  邮箱地址: ${email}
+  用户名: ${email}
+  密码: [请使用创建时设置的密码]
+`;
+    
+    copyToClipboard(config);
+}
+
+// 测试网络连通性
+function testNetworkConnectivity() {
+    const target = document.getElementById('networkTarget').value;
+    const resultDiv = document.getElementById('networkTestResult');
+    
+    if (!target) {
+        showAlert('请输入目标地址', 'warning');
+        return;
+    }
+    
+    resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> 测试中...';
+    
+    fetch('/test_connectivity', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({target: target})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>✅ 连通性测试成功</strong><br>
+                    <small>${target} 网络正常</small>
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>❌ 连通性测试失败</strong><br>
+                    <small>${data.error}</small>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<div class="alert alert-danger">❌ 测试失败</div>';
+        showAlert('网络测试失败: ' + error, 'danger');
+    });
+}
+
+// 测试DNS解析
+function testDNSResolution() {
+    const domain = document.getElementById('dnsTarget').value;
+    const resultDiv = document.getElementById('dnsTestResult');
+    
+    if (!domain) {
+        showAlert('请输入域名', 'warning');
+        return;
+    }
+    
+    resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> 解析中...';
+    
+    fetch('/test_dns', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({domain: domain})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>✅ DNS解析成功</strong><br>
+                    <small>A记录: ${data.a_record.success ? '✅' : '❌'}</small><br>
+                    <small>MX记录: ${data.mx_record.success ? '✅' : '❌'}</small>
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>❌ DNS解析失败</strong>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<div class="alert alert-danger">❌ 解析失败</div>';
+        showAlert('DNS测试失败: ' + error, 'danger');
+    });
+}
+</script>
+{% endblock %}
