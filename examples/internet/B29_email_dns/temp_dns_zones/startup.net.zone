@@ -1,0 +1,6 @@
+startup.net. 300 IN SOA ns.startup.net. admin.startup.net. 1 900 900 1800 60
+startup.net. 300 IN NS  ns.startup.net.
+ns.startup.net. 300 IN A 10.150.0.53
+startup.net. 300 IN A 10.205.0.10
+mail.startup.net. 300 IN A 10.205.0.10
+startup.net. 300 IN MX 10 mail.startup.net.

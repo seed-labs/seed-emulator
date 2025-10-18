@@ -4,7 +4,24 @@ set -uo pipefail
 # Batch cross-domain email tests for B29 (DNS-first)
 # Requires B29 stack up and accounts created via ./manage_roundcube.sh accounts
 
-mapfile -t PAIRS < <(cat <<'EOF'
+# Usage:
+#   ./run_cross_tests.sh                 # use defaults
+#   ./run_cross_tests.sh pairs.txt       # custom pairs file (one "from to" per line)
+#   ./run_cross_tests.sh --pairs pairs.txt
+
+PAIRS_INPUT=""
+if [ $# -ge 1 ]; then
+  if [ "$1" = "--pairs" ] && [ $# -ge 2 ]; then
+    PAIRS_INPUT="$2"
+  elif [ -f "$1" ]; then
+    PAIRS_INPUT="$1"
+  fi
+fi
+
+if [ -n "$PAIRS_INPUT" ] && [ -f "$PAIRS_INPUT" ]; then
+  mapfile -t PAIRS < <(grep -E -v '^\s*(#|$)' "$PAIRS_INPUT")
+else
+  mapfile -t PAIRS < <(cat <<'EOF'
 user@qq.com user@gmail.com
 user@gmail.com user@qq.com
 user@qq.com user@163.com
@@ -14,7 +31,8 @@ founder@startup.net admin@company.cn
 user@163.com user@gmail.com
 user@outlook.com user@qq.com
 EOF
-)
+  )
+fi
 
 # Domain -> container map
 function container_for_domain(){

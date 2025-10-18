@@ -131,6 +131,7 @@ class EmailService:
         hostname: str = "mail",
         name: Optional[str] = None,
         ports: Optional[Dict[str, str]] = None,
+        dns: Optional[str] = None,
     ) -> "EmailService":
         """Register a provider/mailserver to be attached later.
         ports expected keys for transport-mode: smtp, submission, imap, imaps
@@ -157,6 +158,7 @@ class EmailService:
                 "ip": ip,
                 "gateway": gateway,
                 "ports": ports,
+                "dns": dns,
             }
         )
         return self
@@ -193,11 +195,9 @@ class EmailService:
                 )
             else:
                 dns_block = ""
-                if self._dns_nameserver:
-                    # The template provides 8 leading spaces before {dns_block} (service-level indent).
-                    # YAML requires the list items to be indented further than the key.
-                    # Therefore, indent list items by 10 spaces.
-                    dns_block = "dns:\n          - {}\n".format(self._dns_nameserver)
+                dns_value = p.get("dns") or self._dns_nameserver
+                if dns_value:
+                    dns_block = "dns:\n          - {}\n".format(dns_value)
                 compose_entry = MAILSERVER_COMPOSE_TEMPLATE_DNS.format(
                     name=p["name"],
                     platform=self._platform,

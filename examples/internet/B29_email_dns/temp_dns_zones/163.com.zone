@@ -1,0 +1,6 @@
+163.com. 300 IN SOA ns.163.com. admin.163.com. 1 900 900 1800 60
+163.com. 300 IN NS  ns.163.com.
+ns.163.com. 300 IN A 10.150.0.53
+163.com. 300 IN A 10.201.0.10
+mail.163.com. 300 IN A 10.201.0.10
+163.com. 300 IN MX 10 mail.163.com.

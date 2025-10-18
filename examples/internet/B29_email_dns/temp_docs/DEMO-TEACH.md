@@ -1,8 +1,15 @@
-# 29-1项目演示教学指南
+# B29 项目演示教学指南
 
 **项目**: SEED 真实邮件系统 + DNS  
 **核心特性**: 完整DNS层次结构、MX记录、真实服务商模拟  
 **适用**: DNS教学、网络协议进阶、真实互联网模拟
+
+---
+
+## 范围与状态（Scope & Status）
+
+- 本指南适用于 `examples/internet/B29_email_dns/`（B29）。
+- 更早的 `29`、`29-1` 为历史草稿，不维护、不用于演示。
 
 ---
 
@@ -24,7 +31,7 @@
 ### 使用管理脚本创建（推荐）
 
 ```bash
-cd /home/parallels/seed-email-system/examples/.not_ready_examples/29-1-email-system
+cd /home/parallels/seed-email-system/examples/internet/B29_email_dns
 ./manage_roundcube.sh accounts
 ```
 
@@ -109,7 +116,7 @@ docker exec as152h-host_0-10.152.0.71 nslookup gmail.com
 docker exec as153h-host_0-10.153.0.71 nslookup 163.com
 ```
 
-**教学要点**: 所有AS的主机都配置了DNS服务器（10.150.0.53）
+**教学要点**: 演示时优先在“各提供商所在 AS 的本地缓存（10.{ASN}.0.53）”内查询（`nslookup ... 127.0.0.1`）。中央缓存（10.150.0.53）在某些 BGP 拓扑下可能对远端权威 NS 不可达而返回 `SERVFAIL`。
 
 ---
 
@@ -136,6 +143,10 @@ docker exec as150h-dns-cache-10.150.0.53 nslookup -type=mx company.cn
 # 自建邮箱MX记录
 docker exec as150h-dns-cache-10.150.0.53 nslookup -type=mx startup.net
 ```
+
+> 提示：对 `company.cn` 与 `startup.net`，更稳妥的做法是在各自 AS 的本地缓存内查询：
+> - `docker exec as204h-dns-cache-10.204.0.53 nslookup -type=mx company.cn 127.0.0.1`
+> - `docker exec as205h-dns-cache-10.205.0.53 nslookup -type=mx startup.net 127.0.0.1`
 
 **预期输出** (以qq.com为例):
 ```
@@ -387,8 +398,8 @@ docker exec as150h-host_1-10.150.0.72 hostname -I  # b-root-server
 # TLD DNS服务器（AS-150）
 echo -e "\n=== TLD DNS Servers ==="
 docker exec as150h-host_2-10.150.0.73 hostname -I  # .com
-docker exec as150h-host_4-10.150.0.75 hostname -I  # .net
-docker exec as150h-host_5-10.150.0.76 hostname -I  # .cn
+docker exec as150h-host_3-10.150.0.74 hostname -I  # .net
+docker exec as150h-host_4-10.150.0.75 hostname -I  # .cn
 
 # 邮件域DNS服务器（各自AS）
 echo -e "\n=== Mail Domain DNS Servers ==="
@@ -456,6 +467,16 @@ docker exec as150brd-router0-10.150.0.254 birdc show route for 10.202.0.0/24
 
 ---
 
+### ⚠️ 已知限制：AS-204（company.cn）↔ AS-205（startup.net）
+
+- 在当前多 IX + iBGP/IGP 配置下，AS-2 内部 r100 未形成 OSPF 邻居，部分 iBGP 邻居 Active，且 AS-205↔AS-2 的私有对等在 r100 侧未完全匹配，导致 204↔205 互通失败。
+- 课堂演示建议聚焦 QQ/163/Gmail/Outlook 四个提供商（6 条跨域全部通过）。
+- 详细分析与规避方案见：
+  - `README.md` → “Known Issue: AS-204 (company.cn) ↔ AS-205 (startup.net) BGP reachability”
+  - `docs/bgp_audit.md`
+
+---
+
 ## 🔟 端口服务测试
 
 ### 从宿主机测试端口
@@ -491,7 +512,7 @@ telnet 10.202.0.10 143  # IMAP
 
 ---
 
-## 📝 完整演示脚本（29-1专用）
+## 📝 完整演示脚本（B29）
 
 ```bash
 #!/bin/bash

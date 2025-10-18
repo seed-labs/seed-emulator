@@ -1,9 +1,30 @@
+## Demo Checklist & Teaching Guide
+
+- Use the step-by-step demo guide in `temp_docs/DEMO-TEACH.md` for a classroom-ready flow:
+  - Accounts, DNS MX, intra-domain delivery, simple BGP views, and connectivity tests.
+  - Includes copy-paste commands and expected outputs.
+  - Start Roundcube for live UI validation.
+
+## Related Documentation
+
+- EmailService API design (plan): `EmailService_design/API_SPEC.md`
+- BGP audit notes: `docs/bgp_audit.md`
+- Multi-dimensional testing guide: `docs/testing_guide.md`
+- Completion summary and known limitations: `COMPLETION_SUMMARY.md`
 # B29 Email (DNS-first) Example
 
 A realistic multi-ISP, multi-IX email system that prioritizes DNS-based mail routing (MX records) and exposes a webmail frontend with Roundcube. This example is derived from the ES-29-1 experiment and integrates the reusable `EmailService` helper to programmatically attach mail providers during Docker compilation.
 
 - Internet Map: http://localhost:8080/map.html
 - Roundcube Webmail: http://localhost:8082
+
+For a comprehensive step-by-step validation checklist, see:
+- Multi-Dimensional Testing Guide: `docs/testing_guide.md`
+
+## Scope & Status
+
+- This repository’s maintained focus is the B29 example: `examples/internet/B29_email_dns/`.
+- Earlier drafts (e.g., `29`, `29-1`) are legacy and not maintained for demos. Use B29 for all teaching and validation.
 
 ## Overview
 
@@ -95,6 +116,59 @@ docker logs --tail 100 mail-qq-tencent
 - Webmail (Roundcube): http://localhost:8082
   - Use accounts created by `./manage_roundcube.sh accounts` (password `password123`).
 
+### Intra-domain tests (self-send)
+
+Quickly verify each provider can deliver locally to its own domain.
+
+```bash
+# QQ (qq.com)
+printf "Subject: self QQ\n\n" | docker exec -i mail-qq-tencent sendmail user@qq.com
+
+# 163 (163.com)
+printf "Subject: self 163\n\n" | docker exec -i mail-163-netease sendmail user@163.com
+
+# Gmail (gmail.com)
+printf "Subject: self gmail\n\n" | docker exec -i mail-gmail-google sendmail user@gmail.com
+
+# Outlook (outlook.com)
+printf "Subject: self outlook\n\n" | docker exec -i mail-outlook-microsoft sendmail user@outlook.com
+
+# Company (company.cn)
+printf "Subject: self company\n\n" | docker exec -i mail-company-aliyun sendmail admin@company.cn
+
+# Startup (startup.net)
+printf "Subject: self startup\n\n" | docker exec -i mail-startup-selfhosted sendmail founder@startup.net
+```
+
+Check logs for Saved/INBOX evidence:
+
+```bash
+docker logs --since 2m <mail-container> | egrep -i "stored mail into mailbox 'INBOX'|status=sent|Saved"
+```
+
+### DNS checks (central vs per-AS caches)
+
+- Central cache (AS-150):
+```bash
+docker exec as150h-dns-cache-10.150.0.53 nslookup -type=mx qq.com
+docker exec as150h-dns-cache-10.150.0.53 nslookup -type=mx gmail.com
+```
+
+Note: Central cache may return SERVFAIL for domains whose authoritative NS resides behind currently unreachable AS paths during certain BGP topologies. Prefer per-AS caches (below) or direct authoritative queries in demos.
+
+- Per-AS caches (authoritative-forward preference):
+```bash
+# In provider AS (preferable for demos)
+docker exec as200h-dns-cache-10.200.0.53 nslookup -type=mx gmail.com 127.0.0.1
+docker exec as201h-dns-cache-10.201.0.53 nslookup -type=mx qq.com 127.0.0.1
+docker exec as202h-dns-cache-10.202.0.53 nslookup -type=mx outlook.com 127.0.0.1
+docker exec as203h-dns-cache-10.203.0.53 nslookup -type=mx 163.com 127.0.0.1
+
+# Company / Startup
+docker exec as204h-dns-cache-10.204.0.53 nslookup -type=mx company.cn 127.0.0.1
+docker exec as205h-dns-cache-10.205.0.53 nslookup -type=mx startup.net 127.0.0.1
+```
+
 ## Robustness Checks
 
 - NXDOMAIN MX:
@@ -162,14 +236,24 @@ Examples:
 ```bash
 # Generate 100 student accounts on company.cn and 20 teachers on startup.net
 cd /home/parallels/seed-email-system/examples/internet/B29_email_dns
-python3 tools/bulk_accounts.py --generate --count 100 --prefix stu --domain company.cn
-python3 tools/bulk_accounts.py --generate --count 20 --prefix tea --domain startup.net --start 1
+python tools/bulk_accounts.py --generate --count 100 --prefix stu --domain company.cn
+python tools/bulk_accounts.py --generate --count 20 --prefix tea --domain startup.net --start 1
 
 # Import CSV (map zju.edu.cn to company.cn)
-python3 tools/bulk_accounts.py --csv class.csv --domain-map zju.edu.cn=company.cn
+python tools/bulk_accounts.py --csv tools/sample_class.csv --domain-map zju.edu.cn=company.cn
 
 # Dry-run
-python3 tools/bulk_accounts.py --csv class.csv --domain-map zju.edu.cn=company.cn --dry-run
+python tools/bulk_accounts.py --csv tools/sample_class.csv --domain-map zju.edu.cn=company.cn --dry-run
+
+# Email-only CSV (preferred). If your roster already contains emails:
+# tools/emails.csv content:
+#   email\n
+#   alice@zju.edu.cn\n
+#   bob@zju.edu.cn
+python tools/bulk_accounts.py --csv tools/emails.csv
+
+# IDs-only CSV and apply a default domain for realism (no teacher/student role distinction needed):
+python tools/bulk_accounts.py --csv tools/ids.csv --default-domain zju.edu.cn
 ```
 ## Cleanup
 
@@ -205,6 +289,36 @@ B29_email_dns/
 - DKIM/DMARC/SPF are not hardened; logs include spam/AV pipeline for completeness.
 - Concurrent runs with other internet-map examples may conflict; run one example at a time.
 
+### Known Issue: AS-204 (company.cn) ↔ AS-205 (startup.net) BGP reachability
+
+- Symptom: cross-domain mail between `admin@company.cn` and `founder@startup.net` may fail with "Network is unreachable".
+- Cause (likely): with both AS-204 and AS-205 as customers of AS-2 (Telecom) but at different IXes, iBGP within AS-2 may not propagate customer routes across its IX routers as expected in the current seedemu defaults. See audit in `docs/bgp_audit.md`.
+- Impact on demos: all primary providers (QQ, 163, Gmail, Outlook) are fully functional. Batch tests typically show 6 passes, 2 fails.
+- Workarounds:
+  - Keep demos to the first four providers (QQ, 163, Gmail, Outlook) — all flows work and cover real-world scenarios.
+  - Or add a direct cross-connect peering to force reachability:
+    - In `email_realistic.py` after `configure_bgp_peering(...)`, consider: `ebgp.addCrossConnectPeering(204, 205, PeerRelationship.Peer)`.
+  - Or place AS-204 and AS-205 at the same IX and use a private peering there.
+  - Or simplify topology to a single IX for all providers.
+
 ## Credits
+
+## Automation: DNS-first and Transport modes
+
+- **DNS-first (recommended for B29)**
+  - Postfix relies on MX via DNS: `smtp_host_lookup = dns`.
+  - In `email_realistic.py`, `EmailService(platform=..., mode="dns", dns_nameserver="10.150.0.53")` and per-provider override `dns=f"10.{ASN}.0.53"` are used when calling `add_provider(...)` and `attach_to_docker(...)`.
+  - Pros: realistic, minimal hardcoding; aligns with internet mail.
+
+- **Transport-map mode (explicit next-hop)**
+  - Set `EmailService(..., mode="transport")` and expose ports including submission/imaps if needed.
+  - The service generates `/etc/postfix/transport` mapping `domain -> smtp:[ip]:25` for every other domain.
+  - Pros: deterministic, avoids DNS in teaching controlled experiments.
+  - To switch in B29: change instantiation in `email_realistic.py` to `mode="transport"` and re-generate.
+
+- **Tools for automation**
+  - `tools/email_autogen.py`: build small multi-domain email networks with either approach; generates output/ and compose to bring up quickly.
+  - `tools/bulk_accounts.py`: generate/import accounts (CSV/IDs/emails) across providers for classroom rosters.
+  - See examples in sections above for usage patterns.
 
 Based on SEED Emulator examples; extended with a reusable `EmailService` helper for provider attachment.

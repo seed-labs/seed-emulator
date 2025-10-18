@@ -1,0 +1,6 @@
+gmail.com. 300 IN SOA ns.gmail.com. admin.gmail.com. 1 900 900 1800 60
+gmail.com. 300 IN NS  ns.gmail.com.
+ns.gmail.com. 300 IN A 10.150.0.53
+gmail.com. 300 IN A 10.202.0.10
+mail.gmail.com. 300 IN A 10.202.0.10
+gmail.com. 300 IN MX 10 mail.gmail.com.

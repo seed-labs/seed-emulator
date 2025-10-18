@@ -1,0 +1,6 @@
+qq.com. 300 IN SOA ns.qq.com. admin.qq.com. 1 900 900 1800 60
+qq.com. 300 IN NS  ns.qq.com.
+ns.qq.com. 300 IN A 10.150.0.53
+qq.com. 300 IN A 10.200.0.10
+mail.qq.com. 300 IN A 10.200.0.10
+qq.com. 300 IN MX 10 mail.qq.com.

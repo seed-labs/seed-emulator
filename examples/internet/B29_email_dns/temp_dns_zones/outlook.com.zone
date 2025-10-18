@@ -1,0 +1,6 @@
+outlook.com. 300 IN SOA ns.outlook.com. admin.outlook.com. 1 900 900 1800 60
+outlook.com. 300 IN NS  ns.outlook.com.
+ns.outlook.com. 300 IN A 10.150.0.53
+outlook.com. 300 IN A 10.203.0.10
+mail.outlook.com. 300 IN A 10.203.0.10
+outlook.com. 300 IN MX 10 mail.outlook.com.

@@ -1,0 +1,6 @@
+company.cn. 300 IN SOA ns.company.cn. admin.company.cn. 1 900 900 1800 60
+company.cn. 300 IN NS  ns.company.cn.
+ns.company.cn. 300 IN A 10.150.0.53
+company.cn. 300 IN A 10.204.0.10
+mail.company.cn. 300 IN A 10.204.0.10
+company.cn. 300 IN MX 10 mail.company.cn.

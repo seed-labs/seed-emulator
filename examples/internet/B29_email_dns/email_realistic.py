@@ -94,7 +94,7 @@ def configure_bgp_peering(ebgp):
     ebgp.addPrivatePeerings(101, [2], [201], PeerRelationship.Provider)  # 163 - 电信
     ebgp.addPrivatePeerings(103, [2], [202], PeerRelationship.Provider)  # Gmail - 电信
     ebgp.addPrivatePeerings(103, [2], [203], PeerRelationship.Provider)  # Outlook - 电信
-    ebgp.addPrivatePeerings(101, [3], [204], PeerRelationship.Provider)  # 企业 - 联通
+    ebgp.addPrivatePeerings(101, [2], [204], PeerRelationship.Provider)  # 企业 - 电信 (改为电信以确保与AS-205互通)
     ebgp.addPrivatePeerings(100, [2], [205], PeerRelationship.Provider)  # 自建 - 电信
     
     # ISP为客户网络提供Transit服务
@@ -164,11 +164,12 @@ def configure_dns_system(emu, base):
     
     # 4. 绑定DNS服务器到物理节点
     # Root和TLD服务器部署在AS-150（北京用户网络，集中管理）
-    emu.addBinding(Binding('a-root-server', filter=Filter(asn=150), action=Action.FIRST))
-    emu.addBinding(Binding('b-root-server', filter=Filter(asn=150), action=Action.FIRST))
-    emu.addBinding(Binding('ns-com', filter=Filter(asn=150), action=Action.FIRST))
-    emu.addBinding(Binding('ns-net', filter=Filter(asn=150), action=Action.FIRST))
-    emu.addBinding(Binding('ns-cn', filter=Filter(asn=150), action=Action.FIRST))
+    # 为了保证可预测性与与root.hints一致，这里指定到固定的host节点
+    emu.addBinding(Binding('a-root-server', filter=Filter(asn=150, nodeName='host_0'), action=Action.FIRST))  # 10.150.0.71
+    emu.addBinding(Binding('b-root-server', filter=Filter(asn=150, nodeName='host_1'), action=Action.FIRST))  # 10.150.0.72
+    emu.addBinding(Binding('ns-com',        filter=Filter(asn=150, nodeName='host_2'), action=Action.FIRST))  # 10.150.0.73
+    emu.addBinding(Binding('ns-net',        filter=Filter(asn=150, nodeName='host_3'), action=Action.FIRST))  # 10.150.0.74
+    emu.addBinding(Binding('ns-cn',         filter=Filter(asn=150, nodeName='host_4'), action=Action.FIRST))  # 10.150.0.75
     
     # 每个邮件服务商的DNS服务器部署在各自的AS中
     emu.addBinding(Binding('ns-qq-com', filter=Filter(asn=200), action=Action.FIRST))
@@ -180,7 +181,17 @@ def configure_dns_system(emu, base):
     
     # 5. 创建本地DNS缓存服务器
     ldns = DomainNameCachingService()
-    ldns.install('global-dns-cache')
+    cache = ldns.install('global-dns-cache')
+    cache.addForwardZone('com.', 'ns-com')
+    cache.addForwardZone('net.', 'ns-net')
+    cache.addForwardZone('cn.', 'ns-cn')
+    # 直接将邮件域转发到其权威NS，避免依赖根与TLD可用性
+    cache.addForwardZone('qq.com.', 'ns-qq-com')
+    cache.addForwardZone('163.com.', 'ns-163-com')
+    cache.addForwardZone('gmail.com.', 'ns-gmail-com')
+    cache.addForwardZone('outlook.com.', 'ns-outlook-com')
+    cache.addForwardZone('company.cn.', 'ns-company-cn')
+    cache.addForwardZone('startup.net.', 'ns-startup-net')
     
     # 在AS-150中创建专门的DNS缓存主机
     as150 = base.getAutonomousSystem(150)
@@ -188,6 +199,25 @@ def configure_dns_system(emu, base):
     
     # 绑定DNS缓存服务器
     emu.addBinding(Binding('global-dns-cache', filter=Filter(asn=150, nodeName='dns-cache')))
+
+    # 为每个邮件服务商所在AS创建本地DNS缓存，避免跨AS访问10.150.0.53
+    # 仅转发六个邮件域到其权威NS，减少依赖
+    domain_forwarders = [
+        ('qq.com.', 'ns-qq-com'),
+        ('163.com.', 'ns-163-com'),
+        ('gmail.com.', 'ns-gmail-com'),
+        ('outlook.com.', 'ns-outlook-com'),
+        ('company.cn.', 'ns-company-cn'),
+        ('startup.net.', 'ns-startup-net'),
+    ]
+    for asn in [200, 201, 202, 203, 204, 205]:
+        vname = f'dns-cache-{asn}'
+        c = ldns.install(vname)
+        for z, nsname in domain_forwarders:
+            c.addForwardZone(z, nsname)
+        asx = base.getAutonomousSystem(asn)
+        asx.createHost('dns-cache').joinNetwork('net0', address=f'10.{asn}.0.53')
+        emu.addBinding(Binding(vname, filter=Filter(asn=asn, nodeName='dns-cache')))
     
     # 6. 设置所有节点使用这个local DNS
     base.setNameServers(['10.150.0.53'])
@@ -400,6 +430,7 @@ def run(platform="arm"):
             hostname=mail['hostname'],
             name=mail['name'],
             ports=ports,
+            dns=f"10.{mail['asn']}.0.53",
         )
     email_svc.attach_to_docker(docker)
 

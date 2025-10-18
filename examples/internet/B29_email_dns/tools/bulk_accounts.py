@@ -5,11 +5,15 @@ B29 Bulk Account Utility
 - Create many accounts quickly across B29 providers.
 - Supports CSV import (student/teacher IDs) and synthetic generation.
 
-CSV format (header optional):
-  id,type,display,domain
-Examples:
-  3230101234,student,张三,zju.edu.cn
-  T01,teacher,李老师,zju.edu.cn
+CSV formats (header optional):
+  - Simple emails (preferred):
+      email
+      alice@zju.edu.cn
+      bob@zju.edu.cn
+  - IDs with optional type/display/domain:
+      id,type,display,domain
+      3230101234,student,张三,zju.edu.cn
+      T01,teacher,李老师,zju.edu.cn
 
 Notes:
 - Domains must map to existing B29 providers (qq.com, 163.com, gmail.com, outlook.com, company.cn, startup.net)
@@ -134,32 +138,49 @@ def gen_accounts(prefix: str, count: int, start: int, domain: str, pad: int = 0)
     return [f"{prefix}{fmt(i)}@{domain}" for i in range(start, start + count)]
 
 
-def load_csv(path: str, student_domain: str, teacher_domain: str) -> List[str]:
+def load_csv(path: str, default_domain: str, student_domain: str, teacher_domain: str) -> List[str]:
     emails: List[str] = []
     with open(path, 'r', encoding='utf-8-sig') as f:
         r = csv.reader(f)
         rows = list(r)
         # skip header if present
-        if rows and rows[0] and rows[0][0].lower() in ('id', '学号', '编号'):
+        if rows and rows[0] and rows[0][0] and rows[0][0].lower() in ('id', '学号', '编号', 'email', '邮箱'):
             rows = rows[1:]
         for row in rows:
             if not row:
                 continue
-            # id,type,display,domain?
-            sid = (row[0] or '').strip()
-            typ = (row[1] or '').strip().lower() if len(row) > 1 else ''
-            dom = (row[3] or '').strip().lower() if len(row) > 3 else ''
+            # if any cell looks like an email, take it directly
+            cells = [c.strip() for c in row if c and c.strip()]
+            direct = next((c for c in cells if '@' in c), None)
+            if direct:
+                emails.append(direct)
+                continue
+
+            # otherwise, construct from id and domain selection
+            sid = (cells[0] if cells else '').strip()
+            # try to pick explicit domain if present in 2nd-4th columns
+            dom_candidates = []
+            if len(row) > 3 and row[3].strip():
+                dom_candidates.append(row[3].strip())
+            if len(row) > 2 and row[2].strip():
+                dom_candidates.append(row[2].strip())
+            if len(row) > 1 and row[1].strip():
+                dom_candidates.append(row[1].strip())
+            dom = ''
+            dom = next((d for d in dom_candidates if '.' in d), '')
             if not dom:
-                if typ in ('teacher', 't', '老师'):
-                    dom = teacher_domain
+                # fallback: default domain if provided
+                if default_domain:
+                    dom = default_domain
                 else:
-                    dom = student_domain
-            # basic patterns
-            if sid.startswith('T') or typ in ('teacher', 't', '老师'):
-                email = f"{sid}@{dom}"
-            else:
-                email = f"{sid}@{dom}"
-            emails.append(email)
+                    # legacy fallback by type or ID prefix
+                    typ = (row[1] or '').strip().lower() if len(row) > 1 else ''
+                    if sid.startswith('T') or typ in ('teacher', 't', '老师'):
+                        dom = teacher_domain
+                    else:
+                        dom = student_domain
+            if sid and dom:
+                emails.append(f"{sid}@{dom}")
     return emails
 
 
@@ -173,8 +194,9 @@ def main():
     ap.add_argument('--start', type=int, default=1, help='Start index for generated accounts')
     ap.add_argument('--domain', default='company.cn', help='Domain for generated accounts')
     ap.add_argument('--pad', type=int, default=0, help='Zero-pad width for numeric suffix when generating (e.g., 4)')
-    ap.add_argument('--student-domain', default='company.cn', help='Default student domain when CSV row has no domain')
-    ap.add_argument('--teacher-domain', default='startup.net', help='Default teacher domain when CSV row has no domain')
+    ap.add_argument('--default-domain', default='', help='Default domain when CSV row has no domain or email-only list is IDs (overrides student/teacher)')
+    ap.add_argument('--student-domain', default='company.cn', help='Legacy default when CSV row has no domain')
+    ap.add_argument('--teacher-domain', default='startup.net', help='Legacy default when CSV row has no domain')
     ap.add_argument('--password', default='password123')
     ap.add_argument('--containers', help='Explicit domain=container mappings, comma-separated (for autogen/custom)')
     ap.add_argument('--dry-run', action='store_true')
@@ -185,7 +207,7 @@ def main():
 
     targets: List[str] = []
     if args.csv:
-        targets.extend(load_csv(args.csv, args.student_domain, args.teacher_domain))
+        targets.extend(load_csv(args.csv, args.default_domain, args.student_domain, args.teacher_domain))
     if args.generate and args.count > 0:
         targets.extend(gen_accounts(args.prefix, args.count, args.start, args.domain, args.pad))
     if not targets:
