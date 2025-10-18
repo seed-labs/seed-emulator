@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}SEED邮件系统 - 真实版首页{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- 系统概览 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card gradient-bg text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="card-title mb-0">
+                                <i class="fas fa-globe"></i> SEED 真实邮件系统状态概览
+                            </h4>
+                            <p class="card-text mb-0">29-1-email-system 真实网络环境 | DNS集成 | 多ISP架构</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <h2 class="mb-0" data-status-update="containers">{{ topology.running_containers }}/{{ topology.total_containers }}</h2>
+                            <small>容器运行中</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 网络拓扑状态 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card topology-card border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-server fa-2x text-primary mb-2"></i>
+                    <h5 class="card-title">{{ topology.mail_servers }}</h5>
+                    <p class="card-text">邮件服务器</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card topology-card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-route fa-2x text-success mb-2"></i>
+                    <h5 class="card-title">{{ topology.routers }}</h5>
+                    <p class="card-text">路由器节点</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card topology-card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-exchange-alt fa-2x text-warning mb-2"></i>
+                    <h5 class="card-title">{{ topology.exchanges }}</h5>
+                    <p class="card-text">互联网交换中心</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card topology-card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-network-wired fa-2x text-info mb-2"></i>
+                    <h5 class="card-title">{{ topology.total_containers }}</h5>
+                    <p class="card-text">总容器数</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Internet Exchange Points -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-globe-asia"></i> Internet Exchange Points</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for ix in internet_exchanges %}
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-{{ ix.color }}">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-{{ ix.color }}">{{ ix.name }}</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">ID: {{ ix.id }}</small><br>
+                                        <i class="fas fa-map-marker-alt"></i> {{ ix.location }}
+                                    </p>
+                                    <span class="badge bg-{{ ix.color }}">运行中</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ISP服务商 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-building"></i> Internet Service Providers</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for isp in isp_providers %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-broadcast-tower"></i> {{ isp.name }}
+                                    </h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">AS-{{ isp.as }}</small><br>
+                                        覆盖范围: {{ isp.coverage }}
+                                    </p>
+                                    <div>
+                                        {% for ix_id in isp.ix_connections %}
+                                        <span class="badge bg-secondary me-1">IX-{{ ix_id }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 真实邮件服务商 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-envelope"></i> 真实邮件服务商</h5>
+                    <small class="text-muted">点击查看详情</small>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for provider in mail_providers %}
+                        <div class="col-lg-4 col-md-6 mb-4">
+                            <div class="card provider-card border-{{ provider.color }}" onclick="location.href='/provider/{{ provider.as_number }}'">
+                                <div class="card-header bg-{{ provider.color }} text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-at"></i> {{ provider.name }}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-8">
+                                            <p class="card-text mb-1">
+                                                <strong>域名:</strong> {{ provider.domain }}<br>
+                                                <strong>AS:</strong> {{ provider.as_number }}<br>
+                                                <strong>位置:</strong> {{ provider.location }}
+                                            </p>
+                                        </div>
+                                        <div class="col-4 text-end">
+                                            <span class="status-dot status-running"></span>
+                                            <small>运行中</small>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">
+                                            <i class="fas fa-plug"></i> SMTP: {{ provider.external_ports.smtp }}
+                                        </small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-inbox"></i> IMAP: {{ provider.external_ports.imap }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快速测试工具 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tools"></i> 快速测试工具</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">🌐 DNS解析测试</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="dnsTestDomain" placeholder="输入域名" value="qq.com">
+                                        <button class="btn btn-info" onclick="testDNS()">测试</button>
+                                    </div>
+                                    <div id="dnsResult" class="mt-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">🔗 网络连通性测试</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="pingTarget" placeholder="IP或域名" value="10.200.0.10">
+                                        <button class="btn btn-success" onclick="testConnectivity()">Ping</button>
+                                    </div>
+                                    <div id="pingResult" class="mt-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">📧 跨服务商邮件测试</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid">
+                                        <button class="btn btn-warning" onclick="showCrossProviderTest()">发送测试</button>
+                                    </div>
+                                    <div id="emailTestResult" class="mt-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 跨服务商邮件测试模态框 -->
+<div class="modal fade" id="crossProviderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">跨服务商邮件测试</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="crossProviderForm">
+                    <div class="mb-3">
+                        <label class="form-label">发送方服务商</label>
+                        <select class="form-select" name="from_provider">
+                            {% for provider in mail_providers %}
+                            <option value="{{ provider.as_number }}">{{ provider.name }} ({{ provider.domain }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">接收方服务商</label>
+                        <select class="form-select" name="to_provider">
+                            {% for provider in mail_providers %}
+                            <option value="{{ provider.as_number }}" {% if loop.index == 2 %}selected{% endif %}>{{ provider.name }} ({{ provider.domain }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">邮件主题</label>
+                        <input type="text" class="form-control" name="subject" value="跨服务商邮件测试">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">邮件内容</label>
+                        <textarea class="form-control" name="body" rows="3">这是一封跨服务商的测试邮件，用于验证不同ISP和IX之间的邮件路由功能。</textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="sendCrossProviderEmail()">发送测试邮件</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// DNS测试
+function testDNS() {
+    const domain = document.getElementById('dnsTestDomain').value;
+    const resultDiv = document.getElementById('dnsResult');
+    
+    if (!domain) {
+        showAlert('请输入域名', 'warning');
+        return;
+    }
+    
+    resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> 测试中...';
+    
+    fetch('/test_dns', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({domain: domain})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <small class="text-success">✅ DNS解析成功</small><br>
+                <small class="text-muted">A记录: ${data.a_record.success ? '成功' : '失败'}</small><br>
+                <small class="text-muted">MX记录: ${data.mx_record.success ? '成功' : '失败'}</small>
+            `;
+        } else {
+            resultDiv.innerHTML = '<small class="text-danger">❌ DNS解析失败</small>';
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<small class="text-danger">❌ 测试失败</small>';
+        showAlert('DNS测试失败: ' + error, 'danger');
+    });
+}
+
+// 网络连通性测试
+function testConnectivity() {
+    const target = document.getElementById('pingTarget').value;
+    const resultDiv = document.getElementById('pingResult');
+    
+    if (!target) {
+        showAlert('请输入目标地址', 'warning');
+        return;
+    }
+    
+    resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> 测试中...';
+    
+    fetch('/test_connectivity', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({target: target})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = '<small class="text-success">✅ 网络连通正常</small>';
+        } else {
+            resultDiv.innerHTML = '<small class="text-danger">❌ 网络不通</small>';
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<small class="text-danger">❌ 测试失败</small>';
+        showAlert('连通性测试失败: ' + error, 'danger');
+    });
+}
+
+// 显示跨服务商邮件测试模态框
+function showCrossProviderTest() {
+    const modal = new bootstrap.Modal(document.getElementById('crossProviderModal'));
+    modal.show();
+}
+
+// 发送跨服务商邮件
+function sendCrossProviderEmail() {
+    const form = document.getElementById('crossProviderForm');
+    const formData = new FormData(form);
+    
+    const data = {
+        from_provider: parseInt(formData.get('from_provider')),
+        to_provider: parseInt(formData.get('to_provider')),
+        subject: formData.get('subject'),
+        body: formData.get('body')
+    };
+    
+    fetch('/send_cross_provider_email', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            document.getElementById('emailTestResult').innerHTML = 
+                '<small class="text-success">✅ 邮件发送测试完成</small>';
+        } else {
+            showAlert(data.message, 'danger');
+        }
+        
+        // 关闭模态框
+        const modal = bootstrap.Modal.getInstance(document.getElementById('crossProviderModal'));
+        modal.hide();
+    })
+    .catch(error => {
+        showAlert('邮件测试失败: ' + error, 'danger');
+    });
+}
+</script>
+{% endblock %}
