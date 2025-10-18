@@ -127,7 +127,10 @@ class SeedEmuTestCase(ut.TestCase):
         env = os.environ.copy()
         env['DOCKER_BUILDKIT'] = '0'
         
-        result = subprocess.run(cls.compose_cmd + ["build"], stderr=f, stdout=f, env=env)
+        if(cls.docker_compose_version == 1):
+            result = subprocess.run(["docker-compose", "build"], stderr=f, stdout=f, env=env)
+        else:
+            result = subprocess.run(["docker", "compose", "build"], stderr=f, stdout=f, env=env)
 
         f.close()
         os.system("echo 'y' | docker system prune > /dev/null")
@@ -141,14 +144,10 @@ class SeedEmuTestCase(ut.TestCase):
         @brief up all containers.
         """
         os.chdir(os.path.join(cls.emulator_code_dir, cls.output_dir))
-        log_path = os.path.join(cls.init_dir, cls.test_log, "containers_log")
-        log_file = open(log_path, "w")
-        cls.compose_process = subprocess.Popen(
-            cls.compose_cmd + ["up"],
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-        )
-        cls.compose_log_handle = log_file
+        if(cls.docker_compose_version == 1):
+            os.system("DOCKER_BUILDKIT=0 docker-compose up > ../../test_log/containers_log &")
+        else:
+            os.system("DOCKER_BUILDKIT=0 docker compose up > ../../test_log/containers_log &")
         os.chdir(cls.init_dir)
 
     @classmethod

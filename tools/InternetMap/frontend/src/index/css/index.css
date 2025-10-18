@@ -9,9 +9,29 @@ body {
 
 .network .name::after {
     content: ':';
-} 
+}
 
 .network .address {
     margin-left: .2em;
 }
 
+a.home-item {
+    text-decoration: none;
+    color: inherit;
+    border: 1px black solid;
+    border-radius: 2px;
+}
+
+p.card-text {
+    height: 2.4em;
+    line-height: 1.2em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+img.bd-placeholder-img {
+    border-bottom: 1px black solid;
+}

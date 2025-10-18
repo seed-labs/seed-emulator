@@ -4,9 +4,9 @@ import dockerode from 'dockerode';
 import {SeedContainerInfo, Emulator, SeedNetInfo} from '../../utils/seedemu-meta';
 import {Sniffer} from '../../utils/sniffer';
 import {SubmitEvent} from '../../utils/submit-event';
+import {PluginManager} from '../../utils/plugin-manager';
 import WebSocket from 'ws';
 import {Controller} from '../../utils/controller';
-import {promises as fs} from 'fs';
 
 const router = express.Router();
 const docker = new dockerode();
@@ -14,16 +14,7 @@ const socketHandler = new SocketHandler(docker);
 const sniffer = new Sniffer(docker);
 const controller = new Controller(docker);
 const submitEvent = new SubmitEvent(docker);
-
-async function readJsonFile(filePath: string) {
-    try {
-        const data = await fs.readFile(filePath, 'utf-8');
-        return JSON.parse(data);
-    } catch (err) {
-        console.error(`read file ${fs.realpath(filePath)} failed:`, err);
-        throw err;
-    }
-}
+const pluginManager = new PluginManager(docker);
 
 const getContainers: () => Promise<SeedContainerInfo[]> = async function () {
     var containers: dockerode.ContainerInfo[] = await docker.listContainers();
@@ -54,6 +45,16 @@ sniffer.getLoggers().forEach(logger => logger.setSettings({
 controller.getLoggers().forEach(logger => logger.setSettings({
     minLevel: 'warn'
 }));
+
+router.get('/env.js', (req, res, next) => {
+  const envVarsForFrontend = {
+    CONSOLE: process.env.CONSOLE,
+  };
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(`window.__ENV__ = ${JSON.stringify(envVarsForFrontend)}`);
+
+  next();
+});
 
 router.get('/network', async function (req, res, next) {
     var networks = await docker.listNetworks();
@@ -97,22 +98,16 @@ router.get('/container', async function (req, res, next) {
 });
 
 router.get('/install', async function (req, res, next) {
-    readJsonFile('installs.json').then(installs => {
-        res.json({
-            ok: true,
-            result: installs
-        });
-    }).catch(e => {
-        res.json({
-            ok: false,
-            result: e.toString()
-        });
-    })
+    res.json({
+        ok: true,
+        result: pluginManager.plugins
+    });
 });
 
 router.post('/install', express.json(), async function (req, res, next) {
+    const plugin = req.body.title
     const address = `${req.socket.localAddress}:${req.socket.localPort}`
-    let ret = await submitEvent.submitEvent(address, (await getContainers()).map(c => c.Id), 'install');
+    let ret = await submitEvent.submitEvent(address, (await getContainers()).map(c => c.Id), 'install', plugin);
     if (ret) {
         ret = {
             ok: true,
@@ -130,7 +125,8 @@ router.post('/install', express.json(), async function (req, res, next) {
 });
 
 router.post('/uninstall', express.json(), async function (req, res, next) {
-    let ret = await submitEvent.submitEvent('', (await getContainers()).map(c => c.Id), 'uninstall');
+    const plugin = req.body.title
+    let ret = await submitEvent.submitEvent('', (await getContainers()).map(c => c.Id), 'uninstall', plugin);
     if (ret) {
         ret = {
             ok: true,
@@ -223,8 +219,9 @@ router.post('/container/:id/net', express.json(), async function (req, res, next
     next();
 });
 
-router.post('/container/:id/vis/set', express.json(), async function (req, res, next) {
-    let id = req.params.id;
+router.post('/container/vis/set', express.json(), async function (req, res, next) {
+    // let id = req.params.id;
+    let id = req.query.id as string;
     let action = req.query.action;
 
     var candidates = (await docker.listContainers())
@@ -238,30 +235,24 @@ router.post('/container/:id/vis/set', express.json(), async function (req, res, 
         next();
         return;
     }
-
     let option = {
-        id,
-        static: {},
-        dynamic: {},
+        id: candidates[0].Id,
+        static: {borderWidth: 1},
+        dynamic: {borderWidth: 4},
         action
     }
     switch (action) {
         case 'flash':
-            option.static = req.body.static || {borderWidth: 1};
-            option.dynamic = req.body.dynamic || {borderWidth: 4};
+        case 'flashOnce':
+            option = {...option, ...req.body['flash']};
             break
         case 'highlight':
-            option.static = req.body.static || {
-                color: {
-                    highlight: {
-                        border: '#2B7CE9',
-                        background: '#D2E5FF'
-                    },
-                }
-            };
+            option.static = (!req.body['highlight'] || Object.keys(req.body['highlight']).length === 0) ? {borderWidth: 4} : req.body['highlight'];
             break
         default:
-            option = {...option, ...req.body}
+            option.static = {borderWidth: 1};
+            option.dynamic = {borderWidth: 4};
+            break
     }
 
     var deadSockets: WebSocket[] = [];
@@ -269,7 +260,7 @@ router.post('/container/:id/vis/set', express.json(), async function (req, res, 
     visSubscribers.forEach(socket => {
         if (socket.readyState == 1) {
             socket.send(JSON.stringify({
-                source: id, data: JSON.stringify(option)
+                source: candidates[0].Id, data: JSON.stringify(option)
             }));
         }
 
@@ -292,6 +283,9 @@ router.post('/container/:id/vis/set', express.json(), async function (req, res, 
 
 router.ws('/console/:id', async function (ws, req, next) {
     try {
+        if (process.env.CONSOLE === 'false') {
+            throw Error('CONSOLE is not enabled');
+        }
         await socketHandler.handleSession(ws, req.params.id);
     } catch (e) {
         if (ws.readyState == 1) {
