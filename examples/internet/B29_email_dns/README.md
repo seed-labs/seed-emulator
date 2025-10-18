@@ -127,7 +127,7 @@ cd /home/parallels/seed-email-system/examples/internet/B29_email_dns
 
 ### Automation generator (transport-map) quick validation
 
-Optionally validate the automation generator that builds a small transport-map email network.
+Optionally validate the automation generator that builds a small transport-map email network. The script now lives alongside B29 at `tools/email_autogen.py`.
 
 Note: Stop B29 first to avoid Docker compose name/network conflicts.
 
@@ -135,14 +135,14 @@ Note: Stop B29 first to avoid Docker compose name/network conflicts.
 # 0) Stop B29 if running
 cd /home/parallels/seed-email-system/examples/internet/B29_email_dns/output && docker-compose down && cd -
 
-# 1) Generate a 3-domain auto network
-cd /home/parallels/seed-email-system/examples/email_auto
+# 1) Generate a 3-domain auto network (transport-map)
+cd /home/parallels/seed-email-system/examples/internet/B29_email_dns
 PYTHONPATH=/home/parallels/seed-email-system:$PYTHONPATH \
   /home/parallels/miniconda3/envs/seed-emulator/bin/python \
-  email_autogen.py --platform arm --domains seedemail.net corporate.local smallbiz.org --asn-start 150
+  tools/email_autogen.py --platform arm --domains seedemail.net corporate.local smallbiz.org --asn-start 150
 
 # 2) Bring it up and test
-cd output && docker-compose up -d && cd ..
+cd tools/output && docker-compose up -d && cd ../..
 printf "password123\npassword123\n" | docker exec -i mail-seedemail-net setup email add alice@seedemail.net
 printf "password123\npassword123\n" | docker exec -i mail-corporate-local setup email add admin@corporate.local
 printf "password123\npassword123\n" | docker exec -i mail-smallbiz-org setup email add bob@smallbiz.org
@@ -151,9 +151,26 @@ printf "Subject: corp->smb\n\nBody\n" | docker exec -i mail-corporate-local send
 printf "Subject: smb->seed\n\nBody\n" | docker exec -i mail-smallbiz-org sendmail alice@seedemail.net
 
 # 3) Tear down to keep environment clean
-cd output && docker-compose down && cd ..
-```
+cd tools/output && docker-compose down && cd ../..
 
+### Bulk accounts (CSV/generate)
+
+Use `tools/bulk_accounts.py` to create many accounts quickly on B29 providers.
+
+Examples:
+
+```bash
+# Generate 100 student accounts on company.cn and 20 teachers on startup.net
+cd /home/parallels/seed-email-system/examples/internet/B29_email_dns
+python3 tools/bulk_accounts.py --generate --count 100 --prefix stu --domain company.cn
+python3 tools/bulk_accounts.py --generate --count 20 --prefix tea --domain startup.net --start 1
+
+# Import CSV (map zju.edu.cn to company.cn)
+python3 tools/bulk_accounts.py --csv class.csv --domain-map zju.edu.cn=company.cn
+
+# Dry-run
+python3 tools/bulk_accounts.py --csv class.csv --domain-map zju.edu.cn=company.cn --dry-run
+```
 ## Cleanup
 
 ```bash
@@ -177,6 +194,7 @@ B29_email_dns/
 ├── roundcube-config/               # Roundcube customization
 ├── templates/                      # Web templates (optional UI)
 ├── static/                         # Static assets
+├── tools/                          # Helper tools (email_autogen.py, bulk_accounts.py)
 ├── temp_docs/                      # Legacy mixed-language docs (archived)
 └── output/                         # Generated compose for SEED emulation
 ```
