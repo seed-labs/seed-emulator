@@ -67,6 +67,7 @@ def parse_domain_map(arg: str) -> Dict[str, str]:
             raise SystemExit(f"Invalid domain-map entry: {item}")
         src, dst = item.split('=', 1)
         mapping[src.strip()] = dst.strip()
+    return mapping
 
 
 def parse_container_map(arg: str) -> Dict[str, str]:

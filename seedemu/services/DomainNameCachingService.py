@@ -134,11 +134,63 @@ class DomainNameCachingServer(Server, Configurable):
         node.appendStartCommand('service named start')
 
         for (zone_name, vnode_name) in self.__pending_forward_zones.items():
-            pnode = self.__emulator.resolvVnode(vnode_name)
+            # Prefer authoritative master IPs recorded by DomainNameService
+            vnode_addr = None
+            addrs: list = []
+            try:
+                dns_layer: DomainNameService = self.__emulator.getRegistry().get('seedemu', 'layer', 'DomainNameService')
+                masters = dns_layer.getMasterIp()
+                if zone_name in masters and len(masters[zone_name]) > 0:
+                    addrs = masters[zone_name]
+            except Exception:
+                pass
 
-            ifaces = pnode.getInterfaces()
-            assert len(ifaces) > 0, 'resolvePendingRecords(): node as{}/{} has no interfaces'.format(pnode.getAsn(), pnode.getName())
-            vnode_addr = ifaces[0].getAddress()
+            if not addrs:
+                # fallback: derive authoritative vnodenames from DNS layer and resolve via binding
+                try:
+                    server_vnodes = dns_layer.getZoneServerNames(zone_name)
+                    for v in server_vnodes:
+                        try:
+                            pn = self.__emulator.getBindingFor(v)
+                            ifaces = pn.getInterfaces()
+                            if len(ifaces) > 0:
+                                addrs.append(ifaces[0].getAddress())
+                        except Exception:
+                            continue
+                except Exception:
+                    pass
+
+            if vnode_addr is None and addrs:
+                vnode_addr = addrs[0]
+
+            if vnode_addr is None:
+                # binding should already be resolved by now; use it directly
+                try:
+                    pnode = self.__emulator.getBindingFor(vnode_name)
+                    ifaces = pnode.getInterfaces()
+                    assert len(ifaces) > 0, 'resolvePendingRecords(): node as{}/{} has no interfaces'.format(pnode.getAsn(), pnode.getName())
+                    vnode_addr = ifaces[0].getAddress()
+                except Exception:
+                    pass
+
+            if vnode_addr is None:
+                # final fallback: derive dns-auth-* name from ns-* and search registry
+                cand = vnode_name
+                if cand.startswith('ns-'):
+                    core = cand[3:]
+                    for suf in ('-com', '-net', '-cn'):
+                        if core.endswith(suf):
+                            core = core[: -len(suf)]
+                            break
+                    cand = f'dns-auth-{core}'
+                reg = self.__emulator.getRegistry()
+                for ((scope, typ, name), obj) in reg.getAll().items():
+                    if typ in ['hnode', 'rnode'] and name == cand:
+                        ifaces = obj.getInterfaces()
+                        if len(ifaces) > 0:
+                            vnode_addr = ifaces[0].getAddress()
+                            break
+
             node.appendFile('/etc/bind/named.conf.local',
                         'zone "{}" {{ type forward; forwarders {{ {}; }}; }};\n'.format(zone_name, vnode_addr))
 

@@ -20,12 +20,13 @@ Example usage:
     svc.attach_to_docker(docker)
 
 """
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Callable
+import os
 
 
 MAILSERVER_COMPOSE_TEMPLATE_TRANSPORT = """\
     {name}:
-        image: mailserver/docker-mailserver:edge
+        image: mailserver/docker-mailserver:12.1
         platform: {platform}
         container_name: {name}
         hostname: {hostname}
@@ -39,6 +40,9 @@ MAILSERVER_COMPOSE_TEMPLATE_TRANSPORT = """\
             - ENABLE_CLAMAV=0
             - ENABLE_FAIL2BAN=0
             - ENABLE_POSTGREY=0
+            - ENABLE_OPENDKIM=0
+            - ENABLE_OPENDMARC=0
+            - ENABLE_POLICYD_SPF=0
             - DMS_DEBUG=1
         volumes:
             - ./{name}-data/mail-data/:/var/mail/
@@ -70,7 +74,7 @@ MAILSERVER_COMPOSE_TEMPLATE_TRANSPORT = """\
 
 MAILSERVER_COMPOSE_TEMPLATE_DNS = """\
     {name}:
-        image: mailserver/docker-mailserver:edge
+        image: mailserver/docker-mailserver:12.1
         platform: {platform}
         container_name: {name}
         hostname: {hostname}
@@ -85,6 +89,9 @@ MAILSERVER_COMPOSE_TEMPLATE_DNS = """\
             - ENABLE_CLAMAV=0
             - ENABLE_FAIL2BAN=0
             - ENABLE_POSTGREY=0
+            - ENABLE_OPENDKIM=0
+            - ENABLE_OPENDMARC=0
+            - ENABLE_POLICYD_SPF=0
             - DMS_DEBUG=1
         volumes:
             - ./{name}-data/mail-data/:/var/mail/
@@ -120,6 +127,7 @@ class EmailService:
         self._mode = mode
         self._dns_nameserver = dns_nameserver
         self._providers: List[Dict] = []
+        self._use_build_wrappers = True  # build minimal local images to avoid docker-compose image inspect key error
 
     def add_provider(
         self,
@@ -181,33 +189,119 @@ class EmailService:
                         continue
                     transport_lines += f"            echo '{dom} smtp:[{ip}]:25' >> /etc/postfix/transport &&\n"
                     transport_lines += f"            echo 'mail.{dom} smtp:[{ip}]:25' >> /etc/postfix/transport &&\n"
-                compose_entry = MAILSERVER_COMPOSE_TEMPLATE_TRANSPORT.format(
-                    name=p["name"],
-                    platform=self._platform,
-                    hostname=p["hostname"],
-                    domain=p["domain"],
-                    gateway=p["gateway"],
-                    smtp_port=p["ports"].get("smtp", "25"),
-                    submission_port=p["ports"].get("submission", "587"),
-                    imap_port=p["ports"].get("imap", "143"),
-                    imaps_port=p["ports"].get("imaps", "993"),
-                    transport_entries=transport_lines,
-                )
+                if self._use_build_wrappers:
+                    # use build wrappers
+                    compose_entry = (
+                        f"    {p['name']}:\n"
+                        f"        build:\n"
+                        f"            context: ./{p['name']}_wrapper\n"
+                        f"        platform: {self._platform}\n"
+                        f"        container_name: {p['name']}\n"
+                        f"        hostname: {p['hostname']}\n"
+                        f"        domainname: {p['domain']}\n"
+                        f"        restart: unless-stopped\n"
+                        f"        privileged: true\n"
+                        f"        environment:\n"
+                        f"            - OVERRIDE_HOSTNAME={p['hostname']}.{p['domain']}\n"
+                        f"            - PERMIT_DOCKER=connected-networks\n"
+                        f"            - ONE_DIR=1\n"
+                        f"            - ENABLE_CLAMAV=0\n"
+                        f"            - ENABLE_FAIL2BAN=0\n"
+                        f"            - ENABLE_POSTGREY=0\n"
+                        f"            - ENABLE_OPENDKIM=0\n"
+                        f"            - ENABLE_OPENDMARC=0\n"
+                        f"            - ENABLE_POLICYD_SPF=0\n"
+                        f"            - DMS_DEBUG=1\n"
+                        f"        ports:\n"
+                        f"            - \"{p['ports'].get('smtp','25')}:25\"\n"
+                        f"            - \"{p['ports'].get('submission','587')}:587\"\n"
+                        f"            - \"{p['ports'].get('imap','143')}:143\"\n"
+                        f"            - \"{p['ports'].get('imaps','993')}:993\"\n"
+                        f"        cap_add:\n"
+                        f"            - NET_ADMIN\n"
+                        f"            - SYS_PTRACE\n"
+                        f"        command: >\n"
+                        f"            sh -c \"\n"
+                        f"            echo 'Starting mailserver setup...' &&\n"
+                        f"            ip route del default 2>/dev/null || true &&\n"
+                        f"            ip route add default via {p['gateway']} dev eth0 &&\n"
+                        f"            echo 'Configuring Postfix transport for cross-domain mail...' &&\n"
+                        f"{transport_lines}"
+                        f"            postmap /etc/postfix/transport &&\n"
+                        f"            postconf -e 'transport_maps = hash:/etc/postfix/transport' &&\n"
+                        f"            sleep 10 &&\n"
+                        f"            supervisord -c /etc/supervisor/supervisord.conf\n"
+                        f"            \"\n"
+                    )
+                else:
+                    compose_entry = MAILSERVER_COMPOSE_TEMPLATE_TRANSPORT.format(
+                        name=p["name"],
+                        platform=self._platform,
+                        hostname=p["hostname"],
+                        domain=p["domain"],
+                        gateway=p["gateway"],
+                        smtp_port=p["ports"].get("smtp", "25"),
+                        submission_port=p["ports"].get("submission", "587"),
+                        imap_port=p["ports"].get("imap", "143"),
+                        imaps_port=p["ports"].get("imaps", "993"),
+                        transport_entries=transport_lines,
+                    )
             else:
-                dns_block = ""
                 dns_value = p.get("dns") or self._dns_nameserver
-                if dns_value:
-                    dns_block = "dns:\n          - {}\n".format(dns_value)
-                compose_entry = MAILSERVER_COMPOSE_TEMPLATE_DNS.format(
-                    name=p["name"],
-                    platform=self._platform,
-                    hostname=p["hostname"],
-                    domain=p["domain"],
-                    gateway=p["gateway"],
-                    smtp_port=p["ports"].get("smtp", "25"),
-                    imap_port=p["ports"].get("imap", "143"),
-                    dns_block=dns_block,
-                )
+                dns_block = f"dns:\n          - {dns_value}\n" if dns_value else ""
+                if self._use_build_wrappers:
+                    compose_entry = (
+                        f"    {p['name']}:\n"
+                        f"        build:\n"
+                        f"            context: ./{p['name']}_wrapper\n"
+                        f"        platform: {self._platform}\n"
+                        f"        container_name: {p['name']}\n"
+                        f"        hostname: {p['hostname']}\n"
+                        f"        domainname: {p['domain']}\n"
+                        f"        restart: unless-stopped\n"
+                        f"        privileged: true\n"
+                        f"        {dns_block}"
+                        f"        environment:\n"
+                        f"            - OVERRIDE_HOSTNAME={p['hostname']}.{p['domain']}\n"
+                        f"            - PERMIT_DOCKER=connected-networks\n"
+                        f"            - ONE_DIR=1\n"
+                        f"            - ENABLE_CLAMAV=0\n"
+                        f"            - ENABLE_FAIL2BAN=0\n"
+                        f"            - ENABLE_POSTGREY=0\n"
+                        f"            - ENABLE_OPENDKIM=0\n"
+                        f"            - ENABLE_OPENDMARC=0\n"
+                        f"            - ENABLE_POLICYD_SPF=0\n"
+                        f"            - DMS_DEBUG=1\n"
+                        f"        ports:\n"
+                        f"            - \"{p['ports'].get('smtp','25')}:25\"\n"
+                        f"            - \"{p['ports'].get('imap','143')}:143\"\n"
+                        f"        cap_add:\n"
+                        f"            - NET_ADMIN\n"
+                        f"            - SYS_PTRACE\n"
+                        f"        command: >\n"
+                        f"            sh -c \"\n"
+                        f"            echo 'Starting mailserver setup...' &&\n"
+                        f"            ip route del default 2>/dev/null || true &&\n"
+                        f"            ip route add default via {p['gateway']} dev eth0 &&\n"
+                        f"            echo 'Configuring Postfix for DNS-first routing...' &&\n"
+                        f"            postconf -e 'relayhost =' &&\n"
+                        f"            postconf -e 'smtp_host_lookup = dns' &&\n"
+                        f"            postconf -e 'smtp_dns_support_level = enabled' &&\n"
+                        f"            sleep 10 &&\n"
+                        f"            supervisord -c /etc/supervisor/supervisord.conf\n"
+                        f"            \"\n"
+                    )
+                else:
+                    compose_entry = MAILSERVER_COMPOSE_TEMPLATE_DNS.format(
+                        name=p["name"],
+                        platform=self._platform,
+                        hostname=p["hostname"],
+                        domain=p["domain"],
+                        gateway=p["gateway"],
+                        smtp_port=p["ports"].get("smtp", "25"),
+                        imap_port=p["ports"].get("imap", "143"),
+                        dns_block=dns_block,
+                    )
 
             docker.attachCustomContainer(
                 compose_entry=compose_entry,
@@ -215,3 +309,24 @@ class EmailService:
                 net=p["network"],
                 ip_address=p["ip"],
             )
+
+    def get_output_callbacks(self) -> List[Callable]:
+        """Return file-writer callbacks to be executed in output/ to create wrapper Dockerfiles.
+        These will be run via Emulator.updateOutputDirectory after compile.
+        """
+        if not self._use_build_wrappers:
+            return []
+        callbacks: List[Callable] = []
+        for p in self._providers:
+            wrapper_dir = f"{p['name']}_wrapper"
+            def make_cb(dir_name=wrapper_dir):
+                def cb(_compiler):
+                    # We're likely running from the scenario folder, not output/
+                    out_dir = os.path.join('output', dir_name)
+                    os.makedirs(out_dir, exist_ok=True)
+                    dockerfile_path = os.path.join(out_dir, 'Dockerfile')
+                    with open(dockerfile_path, 'w') as f:
+                        f.write('FROM mailserver/docker-mailserver:12.1\n')
+                return cb
+            callbacks.append(make_cb())
+        return callbacks

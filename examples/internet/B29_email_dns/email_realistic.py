@@ -121,63 +121,62 @@ def configure_dns_system(emu, base):
     dns.install('b-root-server').addZone('.')
     
     # 2. 创建TLD DNS Servers（顶级域名服务器）
-    dns.install('ns-com').addZone('com.')      # .com TLD
-    dns.install('ns-net').addZone('net.')      # .net TLD
-    dns.install('ns-cn').addZone('cn.')        # .cn TLD (中国)
+    dns.install('ns-com').addZone('com.').setMaster()      # .com TLD
+    dns.install('ns-net').addZone('net.').setMaster()      # .net TLD
+    dns.install('ns-cn').addZone('cn.').setMaster()        # .cn TLD (中国)
     
     # 3. 为每个邮件服务商创建域名服务器
     # QQ邮箱 (qq.com)
-    dns.install('ns-qq-com').addZone('qq.com.')
+    dns.install('ns-qq-com').addZone('qq.com.').setMaster()
     dns.getZone('qq.com.').addRecord('@ A 10.200.0.10')
     dns.getZone('qq.com.').addRecord('@ MX 10 mail.qq.com.')
     dns.getZone('qq.com.').addRecord('mail A 10.200.0.10')
     
     # 163邮箱 (163.com)
-    dns.install('ns-163-com').addZone('163.com.')
+    dns.install('ns-163-com').addZone('163.com.').setMaster()
     dns.getZone('163.com.').addRecord('@ A 10.201.0.10')
     dns.getZone('163.com.').addRecord('@ MX 10 mail.163.com.')
     dns.getZone('163.com.').addRecord('mail A 10.201.0.10')
     
     # Gmail (gmail.com)
-    dns.install('ns-gmail-com').addZone('gmail.com.')
+    dns.install('ns-gmail-com').addZone('gmail.com.').setMaster()
     dns.getZone('gmail.com.').addRecord('@ A 10.202.0.10')
     dns.getZone('gmail.com.').addRecord('@ MX 10 mail.gmail.com.')
     dns.getZone('gmail.com.').addRecord('mail A 10.202.0.10')
     
     # Outlook (outlook.com)
-    dns.install('ns-outlook-com').addZone('outlook.com.')
+    dns.install('ns-outlook-com').addZone('outlook.com.').setMaster()
     dns.getZone('outlook.com.').addRecord('@ A 10.203.0.10')
     dns.getZone('outlook.com.').addRecord('@ MX 10 mail.outlook.com.')
     dns.getZone('outlook.com.').addRecord('mail A 10.203.0.10')
     
     # 企业邮箱 (company.cn)
-    dns.install('ns-company-cn').addZone('company.cn.')
+    dns.install('ns-company-cn').addZone('company.cn.').setMaster()
     dns.getZone('company.cn.').addRecord('@ A 10.204.0.10')
     dns.getZone('company.cn.').addRecord('@ MX 10 mail.company.cn.')
     dns.getZone('company.cn.').addRecord('mail A 10.204.0.10')
     
     # 自建邮箱 (startup.net)
-    dns.install('ns-startup-net').addZone('startup.net.')
+    dns.install('ns-startup-net').addZone('startup.net.').setMaster()
     dns.getZone('startup.net.').addRecord('@ A 10.205.0.10')
     dns.getZone('startup.net.').addRecord('@ MX 10 mail.startup.net.')
     dns.getZone('startup.net.').addRecord('mail A 10.205.0.10')
     
-    # 4. 绑定DNS服务器到物理节点
-    # Root和TLD服务器部署在AS-150（北京用户网络，集中管理）
-    # 为了保证可预测性与与root.hints一致，这里指定到固定的host节点
-    emu.addBinding(Binding('a-root-server', filter=Filter(asn=150, nodeName='host_0'), action=Action.FIRST))  # 10.150.0.71
-    emu.addBinding(Binding('b-root-server', filter=Filter(asn=150, nodeName='host_1'), action=Action.FIRST))  # 10.150.0.72
-    emu.addBinding(Binding('ns-com',        filter=Filter(asn=150, nodeName='host_2'), action=Action.FIRST))  # 10.150.0.73
-    emu.addBinding(Binding('ns-net',        filter=Filter(asn=150, nodeName='host_3'), action=Action.FIRST))  # 10.150.0.74
-    emu.addBinding(Binding('ns-cn',         filter=Filter(asn=150, nodeName='host_4'), action=Action.FIRST))  # 10.150.0.75
-    
-    # 每个邮件服务商的DNS服务器部署在各自的AS中
-    emu.addBinding(Binding('ns-qq-com', filter=Filter(asn=200), action=Action.FIRST))
-    emu.addBinding(Binding('ns-163-com', filter=Filter(asn=201), action=Action.FIRST))
-    emu.addBinding(Binding('ns-gmail-com', filter=Filter(asn=202), action=Action.FIRST))
-    emu.addBinding(Binding('ns-outlook-com', filter=Filter(asn=203), action=Action.FIRST))
-    emu.addBinding(Binding('ns-company-cn', filter=Filter(asn=204), action=Action.FIRST))
-    emu.addBinding(Binding('ns-startup-net', filter=Filter(asn=205), action=Action.FIRST))
+    # 4. 为权威DNS创建专用新主机（Action.NEW），确保 bind9 安装与启动
+    # AS-150: root 与 TLD 使用独立专用主机
+    emu.addBinding(Binding('^a-root-server$', action=Action.NEW, filter=Filter(asn=150, nodeName='dns-auth-root-a')))
+    emu.addBinding(Binding('^b-root-server$', action=Action.NEW, filter=Filter(asn=150, nodeName='dns-auth-root-b')))
+    emu.addBinding(Binding('^ns-com$',        action=Action.NEW, filter=Filter(asn=150, nodeName='dns-auth-com')))
+    emu.addBinding(Binding('^ns-net$',        action=Action.NEW, filter=Filter(asn=150, nodeName='dns-auth-net')))
+    emu.addBinding(Binding('^ns-cn$',         action=Action.NEW, filter=Filter(asn=150, nodeName='dns-auth-cn')))
+
+    # 各提供商 AS: 为各自域创建专用权威主机
+    emu.addBinding(Binding('^ns-qq-com$',      action=Action.NEW, filter=Filter(asn=200, nodeName='dns-auth-qq')))
+    emu.addBinding(Binding('^ns-163-com$',     action=Action.NEW, filter=Filter(asn=201, nodeName='dns-auth-163')))
+    emu.addBinding(Binding('^ns-gmail-com$',   action=Action.NEW, filter=Filter(asn=202, nodeName='dns-auth-gmail')))
+    emu.addBinding(Binding('^ns-outlook-com$', action=Action.NEW, filter=Filter(asn=203, nodeName='dns-auth-outlook')))
+    emu.addBinding(Binding('^ns-company-cn$',  action=Action.NEW, filter=Filter(asn=204, nodeName='dns-auth-company')))
+    emu.addBinding(Binding('^ns-startup-net$', action=Action.NEW, filter=Filter(asn=205, nodeName='dns-auth-startup')))
     
     # 5. 创建本地DNS缓存服务器
     ldns = DomainNameCachingService()
@@ -194,8 +193,7 @@ def configure_dns_system(emu, base):
     cache.addForwardZone('startup.net.', 'ns-startup-net')
     
     # 在AS-150中创建专门的DNS缓存主机
-    as150 = base.getAutonomousSystem(150)
-    as150.createHost('dns-cache').joinNetwork('net0', address='10.150.0.53')
+    base.getAutonomousSystem(150).createHost('dns-cache').joinNetwork('net0', address='10.150.0.53')
     
     # 绑定DNS缓存服务器
     emu.addBinding(Binding('global-dns-cache', filter=Filter(asn=150, nodeName='dns-cache')))
@@ -417,10 +415,19 @@ def run(platform="arm"):
     else:
         docker = Docker(platform=Platform.ARM64)
 
-    # 使用 EmailService（DNS 模式）添加邮件服务器到 Docker 配置
-    email_svc = EmailService(platform=f"linux/{platform_str}", mode="dns", dns_nameserver="10.150.0.53")
+    # 使用 EmailService（transport 模式）添加邮件服务器到 Docker 配置（绕过DNS，确保跨域稳定）
+    email_svc = EmailService(platform=f"linux/{platform_str}", mode="transport", dns_nameserver="10.150.0.53")
     for mail in mail_servers:
-        ports = {"smtp": mail['smtp_port'], "imap": mail['imap_port']}
+        # 为每个提供商分配唯一的 submission/imaps 端口，避免 587/993 端口冲突
+        offset = int(mail['asn']) - 200  # 200..205 -> 0..5
+        submission_port = str(5870 + offset)
+        imaps_port = str(9930 + offset)
+        ports = {
+            "smtp": mail['smtp_port'],
+            "submission": submission_port,
+            "imap": mail['imap_port'],
+            "imaps": imaps_port,
+        }
         email_svc.add_provider(
             domain=mail['domain'],
             asn=mail['asn'],
@@ -435,6 +442,7 @@ def run(platform="arm"):
     email_svc.attach_to_docker(docker)
 
     emu.compile(docker, "./output", override=True)
+    emu.updateOutputDirectory(docker, email_svc.get_output_callbacks())
     
     print(f"""
 ======================================================================
