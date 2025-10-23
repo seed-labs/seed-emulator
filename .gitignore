@@ -31,3 +31,7 @@ project-words.txt
 .venv
 **/.obsidian/**
 test_result.txt
+logs
+node_modules
+.vscode
+**/static/frontend
