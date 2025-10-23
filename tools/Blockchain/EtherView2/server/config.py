@@ -1,0 +1,31 @@
+from urllib.parse import quote_plus
+
+
+class Config(object):
+    NAME = 'SEED Labs'
+    CONSENSUS = 'POA'
+    DEFAULT_URL = 'http://10.154.0.72:8545'
+    ETH_NODE_NAME_PATTERN = 'Ethereum-POS'
+    DEFAULT_CHAIN_ID = 1337
+    CLIENT_WAITING_TIME = 10  # seconds
+
+    KEY_DERIVATION_PATH = "m/44'/60'/0'/0/{}"
+    MNEMONIC_PHRASE = "great amazing fun seed lab protect network system " \
+                      "security prevent attack future"
+    LOCAL_ACCOUNT_NAMES = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank']
+
+    # 前端 打包文件目录
+    FRONTEND_DIST_DIR = 'static/frontend'
+
+    # mysql
+    MYSQL_HOST = '10.1.10.61'
+    MYSQL_PORT = 3306
+    MYSQL_USER = 'root'
+    MYSQL_PASSWORD = 'Root@123#'
+    MYSQL_DB = 'eth_monitor'
+    # 使用 Flask‑SQLAlchemy 时的 URI 写法
+    SQLALCHEMY_DATABASE_URI = (
+        f'mysql+pymysql://{MYSQL_USER}:{quote_plus(MYSQL_PASSWORD)}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}'
+    )
+    # 关闭 SQLAlchemy 的事件系统（可选，提升性能）
+    SQLALCHEMY_TRACK_MODIFICATIONS = False

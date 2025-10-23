@@ -1,0 +1,20 @@
+/* src/styles/element/index.scss */
+@use "element-plus/theme-chalk/src/common/var.scss" as *;
+
+/* 下面覆盖 Element Plus 的主题变量 */
+$colors: (
+  "primary": (
+    "base": #ef913a,   // 主色
+  ),
+  "success": (
+    "base": #67c23a,
+  )
+);
+
+/* 其他自定义变量 */
+$border-radius-base: 6px;
+
+$el-table-width: 100%;
+$el-table-min-height: 400px;
+$el-table-max-height: 500px;
+$el-table-margin-bottom: 20px;

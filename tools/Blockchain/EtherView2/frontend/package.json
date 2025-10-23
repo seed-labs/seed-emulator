@@ -1,0 +1,31 @@
+{
+  "name": "vue3-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "build-test": "vue-tsc --skipLibCheck && vite build"
+  },
+  "dependencies": {
+    "pinia": "^3.0.3",
+    "vue": "^3.5.21"
+  },
+  "devDependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/tsconfig": "^0.8.1",
+    "axios": "^1.12.2",
+    "element-plus": "^2.11.4",
+    "ethers": "~5.4.7",
+    "sass-embedded": "^1.93.2",
+    "typescript": "~5.8.3",
+    "unplugin-auto-import": "^20.2.0",
+    "unplugin-vue-components": "^29.1.0",
+    "vite": "^7.1.7",
+    "vue-router": "^4.5.1",
+    "vue-tsc": "^3.0.7"
+  }
+}
