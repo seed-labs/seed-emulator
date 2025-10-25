@@ -74,9 +74,9 @@ EIP7805_FORK_EPOCH: 18446744073709551615
 # Time parameters
 # ---------------------------------------------------------------
 # 12 seconds
-SECONDS_PER_SLOT: 3
+SECONDS_PER_SLOT: 12
 # 14 (estimate from Eth1 mainnet)
-SECONDS_PER_ETH1_BLOCK: 5
+SECONDS_PER_ETH1_BLOCK: 14
 # 2**8 (= 256) epochs ~27 hours
 MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256
 # 2**8 (= 256) epochs ~27 hours
