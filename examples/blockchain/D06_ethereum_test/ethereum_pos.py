@@ -3,7 +3,7 @@
 
 from seedemu import *
 import sys, os
-import math
+import math, json
 
 ###############################################################################
 # Set the platform information
@@ -41,11 +41,23 @@ hosts_per_stub_as = math.ceil(total_number_of_eth_nodes / total_stub_as)
 # Create Emulator Base with the calculated number of hosts per stub AS
 emu = Makers.makeEmulatorBaseWith10StubASAndHosts(hosts_per_stub_as=hosts_per_stub_as)
 
+print(hosts_per_stub_as)
+
 # Create the Ethereum layer
 eth = EthereumService()
 
 # Create the Blockchain layer which is a sub-layer of Ethereum layer.
 blockchain = eth.createBlockchain(chainName="pos", consensus=ConsensusMechanism.POS)
+
+# Load the list of pre-funded accounts
+
+blockchain.addLocalAccount(address='0xF5406927254d2dA7F7c28A61191e3Ff1f2400fe9', balance=100000)
+
+# Load the account addresses and fund these accounts
+#with open("prefunded_accounts.json", 'r') as file:
+#      accounts = json.load(file)
+#for account in accounts:
+#    blockchain.addLocalAccount(address=account['address'], balance=10000) 
 
 asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
@@ -98,7 +110,10 @@ for asn in asns:
             emu.getVirtualNode(f'eth{i}').setDisplayName(f'Ethereum-POS-{i}')
 
         # Binding the virtual node to the physical node
-        emu.addBinding(Binding(f'eth{i}', filter=Filter(asn=asn, nodeName=f'host_{id}')))
+        print(f"id: {id}")
+        emu.addBinding(Binding(f'eth{i}', 
+                               filter=Filter(asn=asn, nodeName=f'host_{id}'), 
+                               action = Action.FIRST))
         
         # Increment the Ethereum node index
         i += 1
