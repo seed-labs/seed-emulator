@@ -15,7 +15,9 @@ class Config(object):
                       "security prevent attack future"
     LOCAL_ACCOUNT_NAMES = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank']
 
-    # 前端 打包文件目录
+    # frontend
+    URL_PREFIX = '/frontend'
+    STATIC_ASSET_PREFIX = '/static'
     FRONTEND_DIST_DIR = 'static/frontend'
 
     # mysql
@@ -32,5 +34,5 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # log
-    LOG_LEVEL = logging.DEBUG
+    LOG_LEVEL = logging.INFO
     LOG_FILE = 'logs/server.log'

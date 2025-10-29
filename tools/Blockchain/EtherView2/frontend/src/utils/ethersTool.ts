@@ -320,7 +320,7 @@ export async function get_GAS_price(provider?: providers.BaseProvider) {
     provider = provider ?? get_provider();
     let price = await provider.getGasPrice()
 
-    return `${ethers.utils.formatUnits(price, "gwei")} Gwei`
+    return `${Number(ethers.utils.formatUnits(price, "gwei")).toFixed(8)} Gwei`
 }
 
 export const get_balance = async (provider?: providers.BaseProvider, address: string) => {

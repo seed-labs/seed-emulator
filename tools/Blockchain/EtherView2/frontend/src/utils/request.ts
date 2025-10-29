@@ -4,9 +4,8 @@ import {ElMessage} from "element-plus"
 
 
 let request = axios.create({
-    baseURL: "/api",
-    // baseURL: import.meta.env.VITE_APP_BASE_URL,
-    timeout: 10000,
+    baseURL: import.meta.env.VITE_APP_BASE_URL,
+    timeout: import.meta.env.VITE_APP_TIMEOUT,
 })
 
 request.interceptors.request.use((config) => {

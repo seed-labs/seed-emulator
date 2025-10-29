@@ -1,6 +1,6 @@
-import {loadEnv, defineConfig} from 'vite'
-import vue from '@vitejs/plugin-vue'
 import {resolve} from 'path'
+import vue from '@vitejs/plugin-vue'
+import {loadEnv, defineConfig} from 'vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import {ElementPlusResolver} from 'unplugin-vue-components/resolvers'
@@ -9,6 +9,8 @@ const envDir = '.env'
 export default defineConfig(({mode}) => {
     const env = loadEnv(mode, envDir)
     return {
+        // 指定 env 文件所在目录
+        envDir: envDir,
         plugins: [
             vue(),
             // 自动按需导入 Element Plus 组件
@@ -73,8 +75,6 @@ export default defineConfig(({mode}) => {
             },
         },
         // 静态资源的基础路径配置
-        // base: env.VITE_STATIC_ASSET_PREFIX
-        // base: env.NODE_ENV === 'production' ? '/frontend' : '/'
-        // base: process.env.NODE_ENV === 'production' ? '/static/frontend/' : '/'
+        base: env.VITE_STATIC_ASSET_PREFIX
     }
 })

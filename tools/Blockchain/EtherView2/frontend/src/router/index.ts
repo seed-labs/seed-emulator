@@ -70,16 +70,13 @@ const routes = [
 ]
 
 const router = createRouter({
-    history: createWebHistory(process.env.NODE_ENV === 'production' ? '/frontend' : '/'), //url的基础路径
-    // history: createWebHistory(),
-    // history: createWebHistory(import.meta.env.VITE_URL_PREFIX), //url的基础路径
+    history: createWebHistory(import.meta.env.VITE_URL_PREFIX), //url的基础路径
     routes
 })
 
 router.beforeEach(async (to, from, next) => {
     let globalStore = useGlobalStore()
     document.title = to.meta.title || 'EtherView'
-    // next()
 
     if (globalStore.web3Url) {
         next()
