@@ -22,37 +22,58 @@ const routes = [
                     {
                         path: '/blockchain/tx',
                         name: 'transactions',
-                        component: () => import('@/views/blockchain/TXView.vue')
+                        component: () => import('@/views/blockchain/TXView.vue'),
+                        meta: {
+                            title: 'Transactions'
+                        }
                     },
                     {
                         path: '/blockchain/ptx',
                         name: 'pending transactions',
-                        component: () => import('@/views/blockchain/PTXView.vue')
+                        component: () => import('@/views/blockchain/PTXView.vue'),
+                        meta: {
+                            title: 'Pending Transactions'
+                        }
                     },
                     {
                         path: '/blockchain/citx',
                         name: 'contract internal transactions',
-                        component: () => import('@/views/blockchain/CITXView.vue')
+                        component: () => import('@/views/blockchain/CITXView.vue'),
+                        meta: {
+                            title: 'Contract Internal Transactions'
+                        }
                     },
                     {
                         path: '/blockchain/blocks',
                         name: 'blocks',
-                        component: () => import('@/views/blockchain/BlocksView.vue')
+                        component: () => import('@/views/blockchain/BlocksView.vue'),
+                        meta: {
+                            title: 'Blocks'
+                        }
                     },
                     {
                         path: '/blockchain/accounts',
                         name: 'accounts',
-                        component: () => import('@/views/blockchain/AccountsView.vue')
+                        component: () => import('@/views/blockchain/AccountsView.vue'),
+                        meta: {
+                            title: 'Accounts'
+                        }
                     },
                     {
                         path: '/blockchain/block/:id',
                         name: 'blockInfo',
-                        component: () => import('@/views/blockchain/BlockInfoView.vue')
+                        component: () => import('@/views/blockchain/BlockInfoView.vue'),
+                        meta: {
+                            title: 'Block Info'
+                        }
                     },
                     {
                         path: '/blockchain/tx/:id',
                         name: 'txInfo',
-                        component: () => import('@/views/blockchain/TxInfoView.vue')
+                        component: () => import('@/views/blockchain/TxInfoView.vue'),
+                        meta: {
+                            title: 'Transactions Info'
+                        }
                     },
                 ]
             }
