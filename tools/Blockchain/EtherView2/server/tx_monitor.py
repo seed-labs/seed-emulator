@@ -1,7 +1,7 @@
 import time
 import logging
 from web3 import Web3
-from models import db
+from server.utils.models import db
 
 
 class SimpleTransactionMonitor:
@@ -10,6 +10,7 @@ class SimpleTransactionMonitor:
         self.mysql_config = mysql_config
         self.conn = db.engine.raw_connection()
         self._setup_logging(logger)
+        self.init_data_total = 100
 
     def _setup_logging(self, logger):
         if logger is None:
@@ -21,76 +22,50 @@ class SimpleTransactionMonitor:
         else:
             self.logging = logger
 
-    def save_transaction(self, tx_hash, status, tx_data):
+    def _save_transaction(self, data_list):
         """保存交易到数据库"""
         try:
             with self.conn.cursor() as cursor:
-                cursor.execute("""
+                cursor.executemany("""
                     INSERT INTO transaction
-                    (tx_hash, block_number, status, from_address, to_address, value, gasPriceGwei, timestamp)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    (tx_hash, block_number, status, from_address, to_address, value, nonce, gasPriceGwei, gasPrice, gasUsed, timestamp)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                     block_number = VALUES(block_number),
                     value = VALUES(value),
+                    nonce = VALUES(nonce),
                     gasPriceGwei = VALUES(gasPriceGwei),
                     timestamp = VALUES(timestamp),
+                    gasPrice = VALUES(gasPrice),
+                    gasUsed = VALUES(gasUsed),
                     status = VALUES(status);
-                """, (
-                    tx_hash,
-                    tx_data['block_number'],
-                    status,
-                    tx_data['from'],
-                    tx_data['to'],
-                    tx_data['value'],
-                    tx_data['gasPriceGwei'],
-                    tx_data['timestamp'],
-                ))
+                """, data_list)
             self.conn.commit()
-            self.logging.info(f"保存交易: {tx_hash} - {status}")
+            self.logging.debug(f"save success: {data_list}")
+            self.logging.info("save success")
         except Exception as e:
-            self.logging.error(f"保存交易失败 {tx_hash}: {e}")
+            self.logging.error(f"save failed : {e}")
 
     def start_monitoring(self):
         """开始监控"""
         if not self.w3.isConnected():
-            self.logging.error("无法连接到区块链节点")
+            self.logging.error("connect web3 failed")
             return
 
-        self.logging.info("开始监控交易...")
+        self.logging.info("start_monitoring...")
         last_block = self.w3.eth.blockNumber
+        self._init_data(last_block)
         try:
             while True:
                 current_block = self.w3.eth.blockNumber
-                self.logging.info(f'{current_block}, {last_block}')
                 while current_block > last_block:
                     try:
                         last_block += 1
-                        logging.info(f"处理新区块 #{last_block}")
-
-                        # 获取区块详情
-                        block = self.w3.eth.getBlock(current_block, full_transactions=True)
-                        # 处理区块中的每笔交易
-                        for tx in block.transactions:
-                            tx_hash = tx.hash.hex()
-                            # 获取交易状态
-                            receipt = self.w3.eth.getTransactionReceipt(tx.hash)
-                            if receipt:
-                                status = "success" if receipt.status == 1 else "failed"
-                            else:
-                                status = "pending"
-                            # 准备交易数据
-                            tx_data = {
-                                'block_number': tx.blockNumber,
-                                'timestamp': block.timestamp,
-                                'from': tx['from'],
-                                'to': tx['to'],
-                                'nonce': tx.nonce,
-                                'value': float(self.w3.fromWei(tx.value, 'ether')),
-                                'gasPriceGwei': float(self.w3.fromWei(tx.gasPrice, 'gwei'))
-                            }
-                            print(tx_data, status, tx.blockNumber)
-                            # 保存到数据库
-                            self.save_transaction(tx_hash, status, tx_data)
+                        self.logging.info(f"deal new block #{last_block}")
+                        txs = self._get_tx_by_block_number(current_block)
+                        if not txs:
+                            continue
+                        self._save_transaction(txs)
                     except Exception as e:
                         self.logging.info(f"transaction error: {e}")
                 time.sleep(2)
@@ -100,17 +75,67 @@ class SimpleTransactionMonitor:
             if self.conn:
                 self.conn.close()
 
+    def _get_tx_by_block_number(self, block_number):
+        # 获取区块详情
+        block = self.w3.eth.getBlock(block_number, full_transactions=True)
+        txs = []
+        # 处理区块中的每笔交易
+        for tx in block.transactions:
+            tx_hash = tx.hash.hex()
+            # 获取交易状态
+            receipt = self.w3.eth.getTransactionReceipt(tx.hash)
+            if receipt:
+                status = "success" if receipt.status == 1 else "failed"
+            else:
+                status = "pending"
+            # 准备交易数据
+            tx_data = {
+                'block_number': tx.blockNumber,
+                'timestamp': block.timestamp,
+                'from': tx['from'],
+                'to': tx['to'],
+                'nonce': tx.nonce,
+                'value': float(self.w3.fromWei(tx.value, 'ether')),
+                'gasPriceGwei': float(self.w3.fromWei(tx.gasPrice, 'gwei')),
+                'gasPrice': tx.gasPrice,
+                'gasUsed': receipt.gasUsed,
+            }
+            txs.append(
+                (tx_hash,
+                 tx_data['block_number'],
+                 status,
+                 tx_data['from'],
+                 tx_data['to'],
+                 tx_data['value'],
+                 tx_data['nonce'],
+                 tx_data['gasPriceGwei'],
+                 tx_data['gasPrice'],
+                 tx_data['gasUsed'],
+                 tx_data['timestamp'])
+            )
+        return txs
+
+    def _init_data(self, last_block_number):
+        start = last_block_number - self.init_data_total
+        if start < 0:
+            start = 0
+        for i in range(start, last_block_number + 1):
+            txs = self._get_tx_by_block_number(i)
+            if not txs:
+                continue
+            self._save_transaction(txs)
+
 
 def run_tx_monitor(app):
     with app.app_context():
         monitor = SimpleTransactionMonitor(
-            websocket_url='http://192.168.254.128:8545',
-            # websocket_url='http://10.1.101.81:8545',
+            websocket_url=app.web3_url,
             mysql_config={
-                'host': 'localhost',
-                'user': 'root',
-                'password': 'Root@123#',
-                'database': 'eth_monitor',
+                'host': app.config.get('DB_HOST', 'localhost'),
+                'port': app.config.get('DB_PORT', 3306),
+                'user': app.config.get('DB_USER', 'root'),
+                'password': app.config.get('DB_PASSWORD', 'Root@123#'),
+                'database': app.config.get('DB_DATABASE', 'eth_monitor'),
                 'charset': 'utf8mb4'
             },
             logger=app.logger

@@ -35,3 +35,5 @@ logs
 node_modules
 .vscode
 **/static/frontend
+tools/Blockchain/EtherView2/frontend/auto-imports.d.ts
+tools/Blockchain/EtherView2/frontend/components.d.ts

@@ -29,7 +29,15 @@
           </div>
         </template>
         <el-table :data="tableData" max-height="500" v-loading="loading">
-          <el-table-column prop="hash" label="Hash" width="360" :show-overflow-tooltip="true"/>
+          <el-table-column prop="hash" label="Hash" width="360" :show-overflow-tooltip="true">
+            <template #default="scope">
+              <router-link
+                  :to="{ name: 'txInfo', params: { id: scope.row.hash } }"
+                  class="el-link el-link--primary">
+                {{ scope.row.hash }}
+              </router-link>
+            </template>
+          </el-table-column>
           <el-table-column prop="time" label="Age" width="120"/>
           <el-table-column prop="nonce" label="Nonce" width="240" :show-overflow-tooltip="true"/>
           <el-table-column prop="gasPrice" label="Gas Price" width="240" :show-overflow-tooltip="true"/>

@@ -1,17 +1,20 @@
-from flask import Flask, jsonify
-from .config import Config
-from web3 import Web3
-import os, json, docker, subprocess
-from web3.middleware import geth_poa_middleware
-import os, sys
+import os
+import sys
 import time
+import json
+import docker
 import logging
-from models import db
+from web3 import Web3
+from flask_cors import CORS
+from flask import Flask, jsonify
+from werkzeug.exceptions import HTTPException
 from logging.handlers import RotatingFileHandler
 from flask_apscheduler import APScheduler
-from tx_monitor import run_tx_monitor
-from flask_cors import CORS
-from werkzeug.exceptions import HTTPException
+from web3.middleware import geth_poa_middleware
+
+from .config import Config
+from server.utils.models import db
+from .tx_monitor import run_tx_monitor
 
 
 def create_app(test_config=None):
@@ -77,19 +80,18 @@ def create_app(test_config=None):
     eth_nodes_list = list(app.eth_nodes.items())
     assert len(eth_nodes_list) > 0
     app.web3_url = "http://%s:8545" % eth_nodes_list[0][1]['ip']
+    # app.web3_url = 'http://192.168.254.128:8545'
+    # app.web3_url = 'http://10.1.101.81:8545'
     print(app.web3_url)
 
     # Get the consensus from the emulator
     app.consensus = get_eth_consensus()
 
     from server.blueprint import RegexConverter
-    # Load blueprint modules
     from server.blueprint.api.views import api
     from server.blueprint.base.views import base
 
-    # 把转换器挂到 Flask 实例上，名字随意，这里用 "regex"
     app.url_map.converters['regex'] = RegexConverter
-
     app.register_blueprint(base)
     app.register_blueprint(api)
 
@@ -98,36 +100,21 @@ def create_app(test_config=None):
 
 # 基础日志配置
 def setup_logging(app):
-    # 设置日志级别
-    app.logger.setLevel(logging.INFO)
-
-    # 创建格式化器
+    app.logger.setLevel(app.config.get('LOG_LEVEL', logging.INFO))
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-
-    # 文件处理器 - 滚动日志文件
     if not os.path.exists('logs'):
         os.mkdir('logs')
 
     file_handler = RotatingFileHandler(
-        'logs/server.log',
-        maxBytes=10240,  # 10MB
+        filename=app.config.get('LOG_FILE', 'logs/server.log'),
+        maxBytes=10240,
         backupCount=10
     )
     file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging.DEBUG)
-
-    # 控制台处理器
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.DEBUG)
-
-    # 添加处理器到app logger
     app.logger.addHandler(file_handler)
-    # app.logger.addHandler(console_handler)
 
-    # 设置其他库的日志级别
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 

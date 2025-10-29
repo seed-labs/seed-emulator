@@ -1,7 +1,8 @@
 import os
-from flask import jsonify, send_from_directory, current_app
-from config import Config
 from werkzeug.routing import BaseConverter
+from flask import jsonify, send_from_directory, current_app
+
+from ..config import Config
 
 
 def serve_vue_app(path=None):

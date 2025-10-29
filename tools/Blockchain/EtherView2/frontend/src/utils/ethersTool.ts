@@ -1,11 +1,11 @@
 import {ethers, providers} from "ethers";
-// import {useGlobalStore} from "@/store"
+import {useGlobalStore} from "@/store"
 
-// const globalStore = useGlobalStore()
-// const provider_url = globalStore.web3Url
-const provider_url = "http://192.168.254.128:8545"
-
+const globalStore = useGlobalStore()
+const provider_url = globalStore.web3Url
 // const provider_url = "http://10.1.101.81:8545"
+// const provider_url = "http://192.168.254.128:8545"
+const BATCH_SIZE = 1000
 
 export function get_provider(): providers.BaseProvider {
     return ethers.getDefaultProvider(provider_url);
@@ -17,19 +17,21 @@ export async function get_blocks_total(provider?: providers.BaseProvider) {
 }
 
 
-export async function get_blocks(
+export async function get_blocks_with_transactions(
     provider?: providers.BaseProvider,
     start = 0,
     end = Infinity,
+    txn_limit = Infinity,
     reverse = false,
-    batchSize = 1000
+    batchSize = BATCH_SIZE
 ) {
     provider = provider ?? get_provider();
 
     const blocks: any[] = [];
+    const transactions: any[] = [];
     const latestBlockNumber = await provider.getBlockNumber();
 
-    if (latestBlockNumber <= 0) return;
+    if (latestBlockNumber <= 0) return {blocks, total: latestBlockNumber};
 
     // 参数合法化
     if (start < 0) start = 0;
@@ -47,6 +49,9 @@ export async function get_blocks(
     for (let i = end; i >= start; i--) {
         blockNumbers.push(i);
     }
+    if (batchSize > blockNumbers.length) {
+        batchSize = blockNumbers.length
+    }
 
     // 按 batchSize 切分并并发请求
     for (let i = 0; i < blockNumbers.length; i += batchSize) {
@@ -63,116 +68,20 @@ export async function get_blocks(
         // 将处理好的区块加入结果数组（保持原来的顺序）
         blocks.push(...rawBlocks);
     }
-
-    return {blocks, total: latestBlockNumber};
-}
-
-export async function show_all_blocks(blocks: any[]) {
-    return await show_current_block(blocks, 0)
-}
-
-export async function show_all_transactions(blocks: any[]) {
-    let transactions = [];
-    for (let block of blocks) {
-        for (const tx of block.transactions) {
-            tx.eth = ethers.utils.formatEther(tx.value)
-            tx.gasPriceGwei = ethers.utils.formatUnits(tx.gasPrice, 'gwei')
-            tx.timestamp = block.timestamp
+    for (const blk of blocks) {
+        if (transactions.length > txn_limit) {
+            break
         }
-        transactions.push({
-            [block.block_number]: block.transactions,
-        })
+        const txCount = blk.transactions.length;
+        const remainCount = txn_limit - transactions.length
+        transactions.push(...blk.transactions
+            .slice(Math.max(0, txCount - remainCount)) // 取最后 10 条（若不足则全部）
+            .reverse())
     }
-    // console.log("======================");
-    // console.log('all_transactions: ', transactions)
 
-    return transactions
+    return {blocks, transactions, total: latestBlockNumber};
 }
 
-export async function show_current_block(blocks: any[], limit = 20) {
-    let i = 0;
-    let _blocks = [];
-    if (limit > 0) {
-        i = blocks.length - limit;
-    }
-    i = i < 0 ? 0 : i;
-    for (i; i < blocks.length; i++) {
-        let block = blocks[i];
-
-        _blocks.push(block);
-    }
-
-    // console.log("======================");
-    // console.log(`current_block limit ${limit}: ${JSON.stringify(_blocks)}`);
-
-    return _blocks;
-}
-
-export async function show_current_transactions_by_time(blocks: any[], hour = 24) {
-    let transactions: any[] = [];
-    let pending_transactions: any[] = [];
-    let len = blocks.length;
-    let index = len - 1;
-    let totalGasUsed = BigInt(0);
-    let totalFees = BigInt(0);
-    let transactionCount = 0;
-    const time = Math.floor(Date.now() / 1000) - (hour * 60 * 60);
-
-    while (index >= 0) {
-        const block = blocks[index];
-        if (block.timestamp < time) {
-            console.log(`区块 ${block.number} 时间 ${new Date(block.timestamp * 1000)} 已超过24小时, 停止扫描`);
-            break;
-        }
-        if (block && block.transactions) {
-            const blockBaseFeePerGas = block.baseFeePerGas ? BigInt(block.baseFeePerGas) : BigInt(0);
-
-            // 计算区块内每笔交易的费用
-            for (const tx of block.transactions) {
-                if (tx && tx.blockNumber === null) {
-                    pending_transactions.push(tx);
-                }
-                if (tx.gasPrice && tx.gasLimit) {
-                    // 方法1：使用实际的gasUsed（如果可用）
-                    let txGasUsed = tx.gasUsed ? BigInt(tx.gasUsed) : BigInt(tx.gasLimit);
-
-                    // 方法2：对于EIP-1559交易，使用更精确的计算
-                    let txFee = BigInt(0);
-
-                    if (tx.type === 2) {
-                        // EIP-1559交易：gasUsed * (baseFee + priorityFee)
-                        const maxPriorityFeePerGas = tx.maxPriorityFeePerGas ? BigInt(tx.maxPriorityFeePerGas) : BigInt(0);
-                        const effectiveGasPrice = blockBaseFeePerGas + maxPriorityFeePerGas;
-                        txFee = txGasUsed * effectiveGasPrice;
-                    } else {
-                        // 传统交易：gasUsed * gasPrice
-                        txFee = txGasUsed * BigInt(tx.gasPrice);
-                    }
-
-                    totalGasUsed += txGasUsed;
-                    totalFees += txFee;
-                    transactionCount++;
-                }
-            }
-
-            const tTransactions = block.transactions.map((tx: any) => ({
-                ...tx,
-                blockTimestamp: block.timestamp,
-                humanTime: new Date(block.timestamp * 1000).toISOString()
-            }));
-
-            transactions.push(...tTransactions);
-        }
-
-        index--;
-    }
-    // console.log("======================");
-    // console.log(`current_transactions time ${hour}H: ${JSON.stringify(transactions)})}`);
-    // console.log(`current_pending_transactions time ${hour}H: ${JSON.stringify(pending_transactions)})}`);
-    // console.log(`Fee: ${JSON.stringify(calculateFeeStats(totalFees, totalGasUsed, transactionCount))}`);
-
-    return {transactions, pending_transactions}
-}
 
 export async function getPendingTxs(provider?: providers.BaseProvider) {
     provider = provider ?? get_provider();
@@ -183,6 +92,7 @@ export async function getPendingTxs(provider?: providers.BaseProvider) {
         for (const [address, txs] of Object.entries(txpoolContent.pending)) {
             for (const [nonce, tx] of Object.entries(txs)) {
                 allPendingTxs.push({
+                    time: tx.time,
                     from: address,
                     to: tx.to,
                     hash: tx.hash,
@@ -200,52 +110,96 @@ export async function getPendingTxs(provider?: providers.BaseProvider) {
     return allPendingTxs
 }
 
-export async function show_current_transactions(
-    provider?: providers.BaseProvider,
-    limit = 20,
-    batchSize = 1000
-) {
+export async function countPendingTxLastHour(provider?: providers.BaseProvider): Promise<number> {
     provider = provider ?? get_provider();
-
-    let transactions: any[] = [];
-    let blockNumber = await provider.getBlockNumber(); // 当前最高块号
-
-    // 循环直到收集到足够的交易或没有更多块可查
-    while (blockNumber >= 0 && transactions.length < limit) {
-        // 生成本轮需要查询的块号列表（向后递减）
-        const batchIndices: number[] = [];
-        for (let i = 0; i < batchSize && blockNumber - i >= 0; i++) {
-            batchIndices.push(blockNumber - i);
-        }
-
-        // 并发请求这些块
-        const batchBlocks = await Promise.all(
-            batchIndices.map((idx) => provider!.getBlockWithTransactions(idx))
-        );
-
-        // 按块号从新到旧的顺序依次合并交易
-        for (const blk of batchBlocks) {
-            if (blk && blk.transactions.length) {
-                transactions = transactions.concat(blk.transactions);
-                if (transactions.length >= limit) break; // 已够数，提前退出
+    const allPendingTxs = await getPendingTxs(provider)
+    let count = 0
+    const now = Date.now();
+    for (let tx of allPendingTxs) {
+        if (tx.time) {
+            const txTimeMs = Number(tx.time) * 1000;
+            if (now - txTimeMs <= 60 * 60 * 1000) {
+                count++;
             }
+        } else {
+            count++;
         }
-
-        // 更新下一个待查询的块号
-        blockNumber -= batchSize;
     }
 
-    // 截取到用户要求的上限
-    transactions = transactions.slice(0, limit);
-
-    // 将 value（Wei）转为 Ether 方便阅读
-    for (const tx of transactions) {
-        tx.eth = ethers.utils.formatEther(tx.value);
-    }
-
-    return transactions;
+    return count
 }
 
+export async function calcFeesLast24h(provider?: providers.BaseProvider): Promise<{
+    totalFeeWei: ethers.BigNumber;
+    avgFeeWei: ethers.BigNumber;
+    txCount: number;
+}> {
+    provider = provider ?? get_provider();
+    const latestBlockNumber = await provider.getBlockNumber();
+    const now = Math.floor(Date.now() / 1000); // 秒
+    const cutoffTimestamp = now - 24 * 60 * 60; // 24 h 前的区块时间戳
+
+    let totalFee = ethers.BigNumber.from(0);
+    let txCount = 0;
+    let blockNum = latestBlockNumber;
+
+    // 循环向前遍历区块，直到时间早于 24
+    while (blockNum >= 0) {
+        const block = await provider.getBlockWithTransactions(blockNum);
+        if (block.timestamp < cutoffTimestamp) {
+            break;
+        }
+
+        // 收集本块所有交易哈希
+        const txHashes = block.transactions.map((tx) => tx.hash);
+        const receipts = await getReceipts(txHashes);
+
+        for (const receipt of receipts) {
+            // effectiveGasPrice 在 EIP‑1559 之后可直接获取；若不存在则回退到 gasPrice
+            const gasPrice = receipt.effectiveGasPrice
+                ? receipt.effectiveGasPrice
+                : receipt.gasPrice || ethers.BigNumber.from(0);
+            const fee = receipt.gasUsed.mul(gasPrice);
+            totalFee = totalFee.add(fee);
+            txCount++;
+        }
+
+        // 为防止一次性遍历过多区块（尤其是链较长），可自行设置上限
+        // 这里示例每次向前 5000 个区块后强制退出（约 1‑2 天的区块数）
+        if (latestBlockNumber - blockNum > 5000) break;
+
+        blockNum--;
+    }
+
+    const avgFee = txCount > 0 ? totalFee.div(txCount) : ethers.BigNumber.from(0);
+    return {totalFeeWei: totalFee, avgFeeWei: avgFee, txCount};
+}
+
+export async function get_transaction_info(hash: string, provider?: providers.BaseProvider) {
+    provider = provider ?? get_provider();
+    const tx = await provider.getTransaction(hash);
+    if (!tx) {
+        console.log('未找到对应的交易');
+        return {};
+    }
+    const receipt = await provider.getTransactionReceipt(hash);
+
+    return {
+        hash: tx.hash,
+        from: tx.from,
+        to: tx.to,
+        value: ethers.utils.formatEther(tx.value),
+        gasPrice: ethers.utils.formatUnits(tx.gasPrice, 'gwei') + ' gwei',
+        nonce: tx.nonce,
+        data: tx.data,
+        blockNumber: tx.blockNumber,
+        // 回执信息
+        status: receipt ? (receipt.status === 1 ? 'Success' : 'Failed') : 'Pending',
+        gasUsed: receipt ? receipt.gasUsed.toString() : null,
+        cumulativeGasUsed: receipt ? receipt.cumulativeGasUsed.toString() : null,
+        transactionIndex: receipt ? receipt.transactionIndex : null,
+    }
+}
 
 export async function get_block(provider?: providers.BaseProvider, block_number: string) {
     provider = provider ?? get_provider();
@@ -253,22 +207,127 @@ export async function get_block(provider?: providers.BaseProvider, block_number:
     return await provider.getBlockWithTransactions(parseInt(block_number));
 }
 
-export async function get_GAS_price(provider?: providers.BaseProvider) {
+export async function get_blocks_24H(provider?: providers.BaseProvider, batchSize = BATCH_SIZE, includeTxs = true): Promise<ethers.providers.Block[]> {
     provider = provider ?? get_provider();
 
-    let price = await provider.getGasPrice()
+    // 1️⃣ 获取最新区块号
+    const latestNumber = await provider.getBlockNumber();
 
-    console.log("======================");
-    console.log(`当前 Gas 价格：${ethers.utils.formatUnits(price, "gwei")} Gwei`);
+    // 2️⃣ 计算时间阈值（Unix 秒）
+    const now = Math.floor(Date.now() / 1000);
+    const cutoff = now - 24 * 60 * 60;
+
+    // 4️⃣ 二分查找最早满足条件的区块号
+    let low = 0;
+    let high = latestNumber;
+    let startNumber = latestNumber; // 默认全部满足
+
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        const block = await provider.getBlock(mid);   // 只取时间戳即可
+        if (Number(block.timestamp) < cutoff) {
+            low = mid + 1;
+        } else {
+            startNumber = mid;
+            high = mid - 1;
+        }
+    }
+
+    const result: providers.Block[] = [];
+    for (let start = startNumber; start <= latestNumber; start += batchSize) {
+        let batchPayload = [];
+        for (let n = start; n < start + batchSize; n++) {
+            batchPayload.push({
+                jsonrpc: "2.0",
+                id: n,
+                method: "eth_getBlockByNumber",
+                params: [ethers.utils.hexValue(n), includeTxs],
+            })
+        }
+        const response = await fetch(provider_url, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(batchPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} – ${response.statusText}`);
+        }
+
+        const rawResults: any[] = await response.json();
+
+        // 5️⃣ 解析并再次过滤时间戳（防止节点返回的块时间略早）
+        for (const raw of rawResults) {
+            const block = raw.result as providers.Block;
+            if (block && Number(block.timestamp) >= cutoff) {
+                result.push(block);
+            }
+        }
+    }
+
+    // 按区块号升序返回（可自行改为降序）
+    result.sort((a, b) => a.number - b.number);
+    return result;
 }
 
+/**
+ * 1️⃣ 网络利用率
+ *    utilization = Σ(gasUsed) / Σ(gasLimit)
+ */
+export async function get_networkUtilization(blocks: ethers.providers.Block[]): Promise<string> {
+    let totalUsed = ethers.BigNumber.from(0);
+    let totalLimit = ethers.BigNumber.from(0);
+
+    for (const b of blocks) {
+        totalUsed = totalUsed.add(b.gasUsed);
+        totalLimit = totalLimit.add(b.gasLimit);
+    }
+
+    if (totalLimit.isZero()) return 0;
+
+    return `${(Number(totalUsed) * 10000 / Number(totalLimit) / 100).toFixed(8)}%`; // 如 78.34 (%)
+}
+
+export async function get_blocks_by_mevBuilders(blocks: ethers.providers.Block[], lastBlockNumber): Promise<string> {
+    let count = 0;
+    for (const b of blocks) {
+        const proposer = (b as any).miner || (b as any).proposer;
+        if (proposer) {
+            count++;
+        }
+    }
+    if (lastBlockNumber === 0) {
+        return "0"
+    }
+    return (count * 100 / lastBlockNumber).toFixed(2) + '%';
+}
+
+export async function get_BurntFees(blocks: ethers.providers.Block[]): Promise<string> {
+    let totalBurnWei = ethers.BigNumber.from(0);
+
+    for (const block of blocks) {
+        if (block.baseFeePerGas) {
+            const baseFee = ethers.BigNumber.from(block.baseFeePerGas)
+            const burn = baseFee.mul(block.gasUsed);
+            totalBurnWei = totalBurnWei.add(burn);
+        }
+    }
+
+    return `${Number(ethers.utils.formatEther(totalBurnWei)).toFixed(8)} ETH`;
+}
+
+export async function get_GAS_price(provider?: providers.BaseProvider) {
+    provider = provider ?? get_provider();
+    let price = await provider.getGasPrice()
+
+    return `${ethers.utils.formatUnits(price, "gwei")} Gwei`
+}
 
 export const get_balance = async (provider?: providers.BaseProvider, address: string) => {
     provider = provider ?? get_provider();
 
     let balance = await provider.getBalance(address);
 
-    //console.log(address + ':' + ethers.utils.formatEther(balance));
     let eth_balance = ethers.utils.formatEther(balance, {commify: true});
     eth_balance = (+eth_balance).toPrecision(10);
     return eth_balance;
@@ -280,44 +339,7 @@ export const get_nonce = async (provider?: providers.BaseProvider, address: stri
     return await provider.getTransactionCount(address, 'pending');
 }
 
-
-function calculateFeeStats(totalFees: any, totalGasUsed: any, transactionCount: any) {
-    if (transactionCount === 0) {
-        return {
-            totalFees: BigInt(0),
-            totalFeesETH: "0",
-            averageFee: BigInt(0),
-            averageFeeETH: "0",
-            totalGasUsed: BigInt(0),
-            transactionCount: 0,
-            averageGasPerTx: 0
-        };
-    }
-
-    const averageFee = totalFees / BigInt(transactionCount);
-    const averageGasPerTx = Number(totalGasUsed) / transactionCount;
-
-    return {
-        // 原始值（wei）
-        totalFees: totalFees.toString(),
-        averageFee: averageFee.toString(),
-        totalGasUsed: totalGasUsed.toString(),
-
-        // 格式化值（ETH）
-        totalFeesETH: ethers.utils.formatEther(totalFees),
-        averageFeeETH: ethers.utils.formatEther(averageFee),
-
-        // 统计信息
-        transactionCount: transactionCount,
-        averageGasPerTx: averageGasPerTx,
-
-        // Gwei单位（便于阅读）
-        totalFeesGwei: ethers.utils.formatUnits(totalFees, "gwei"),
-        averageFeeGwei: ethers.utils.formatUnits(averageFee, "gwei")
-    };
-}
-
-async function rebuildBlockData(provider?: providers.BaseProvider, block) {
+async function rebuildBlockData(provider?: providers.BaseProvider, block: ethers.providers.Block) {
     provider = provider ?? get_provider();
 
     block.block_number = block.number;
@@ -333,9 +355,6 @@ async function rebuildBlockData(provider?: providers.BaseProvider, block) {
         let hash = block.transactions[j].hash;
         let tx = await provider.getTransaction(hash);
         let tx_r = await provider.getTransactionReceipt(hash);
-        // let gasPrice = ethers.utils.formatUnits(tx.gasPrice, "gwei");
-        // let gasUsed = tx_r.gasUsed.toString();
-
         const gasPrice: ethers.BigNumber = tx.gasPrice ?? ethers.constants.Zero; // 若 undefined 则为 0
         const gasUsed: ethers.BigNumber = tx_r.gasUsed; // 已是 BigNumber
 

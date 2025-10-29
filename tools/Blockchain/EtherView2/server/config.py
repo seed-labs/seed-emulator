@@ -1,3 +1,4 @@
+import logging
 from urllib.parse import quote_plus
 
 
@@ -18,14 +19,18 @@ class Config(object):
     FRONTEND_DIST_DIR = 'static/frontend'
 
     # mysql
-    MYSQL_HOST = '10.1.10.61'
-    MYSQL_PORT = 3306
-    MYSQL_USER = 'root'
-    MYSQL_PASSWORD = 'Root@123#'
-    MYSQL_DB = 'eth_monitor'
+    DB_HOST = '10.1.10.61'
+    DB_PORT = 3306
+    DB_USER = 'root'
+    DB_PASSWORD = 'Root@123#'
+    DB_NAME = 'eth_monitor'
     # 使用 Flask‑SQLAlchemy 时的 URI 写法
     SQLALCHEMY_DATABASE_URI = (
-        f'mysql+pymysql://{MYSQL_USER}:{quote_plus(MYSQL_PASSWORD)}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}'
+        f'mysql+pymysql://{DB_USER}:{quote_plus(DB_PASSWORD)}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
     )
     # 关闭 SQLAlchemy 的事件系统（可选，提升性能）
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # log
+    LOG_LEVEL = logging.DEBUG
+    LOG_FILE = 'logs/server.log'

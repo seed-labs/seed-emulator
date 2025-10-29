@@ -17,74 +17,19 @@
       </div>
     </el-col>
   </el-row>
-  <el-row style="padding: 20px 0">
+  <el-row :gutter="20" style="padding: 20px 0">
     <el-col>
       <ul style="display: grid;grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     list-style: none;
     padding: 0;
     margin: 0;">
-        <li>
+        <li v-for="(value, key, i) in statisticInfo">
           <el-card>
-            <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-              <template #suffix>
+            <el-statistic :title="value.title" :value="value.value">
+              <template #prefix>
                 <el-icon>
-                  <User/>
-                </el-icon>
-              </template>
-            </el-statistic>
-          </el-card>
-        </li>
-        <li>
-          <el-card>
-            <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-              <template #suffix>
-                <el-icon>
-                  <User/>
-                </el-icon>
-              </template>
-            </el-statistic>
-          </el-card>
-        </li>
-        <li>
-          <el-card>
-            <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-              <template #suffix>
-                <el-icon>
-                  <User/>
-                </el-icon>
-              </template>
-            </el-statistic>
-          </el-card>
-        </li>
-        <li>
-          <el-card>
-            <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-              <template #suffix>
-                <el-icon>
-                  <User/>
-                </el-icon>
-              </template>
-            </el-statistic>
-          </el-card>
-        </li>
-        <li>
-          <el-card>
-            <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-              <template #suffix>
-                <el-icon>
-                  <User/>
-                </el-icon>
-              </template>
-            </el-statistic>
-          </el-card>
-        </li>
-        <li>
-          <el-card>
-            <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-              <template #suffix>
-                <el-icon>
-                  <User/>
+                  <component :is="value.icon"></component>
                 </el-icon>
               </template>
             </el-statistic>
@@ -98,11 +43,11 @@
       <el-card class="box-card">
         <template #header>
           <div class="card-header">
-            <span>Latest Blcoks</span>
+            <span>Latest Blocks</span>
             <el-button class="button" type="text">Customize</el-button>
           </div>
         </template>
-        <el-table :data="currentBlocksData" v-loading="loading">
+        <el-table :data="currentBlocksData" v-loading="tableLoading">
           <el-table-column prop="number" label="Number" width="240"/>
           <el-table-column prop="txn" label="TxN" width="240"/>
           <el-table-column prop="reward" label="Reward"/>
@@ -120,7 +65,7 @@
             <el-button class="button" type="text">Customize</el-button>
           </div>
         </template>
-        <el-table :data="currentTxData" v-loading="loading2">
+        <el-table :data="currentTxData" v-loading="tableLoading">
           <el-table-column prop="blockNumber" label="BlockNumber" width="120" :show-overflow-tooltip="true"/>
           <el-table-column prop="hash" label="Hash" width="200" :show-overflow-tooltip="true"/>
           <el-table-column prop="from" label="From" width="200" :show-overflow-tooltip="true"/>
@@ -135,38 +80,88 @@
   </el-row>
 </template>
 
+<script lang="ts">
+import {Basketball, CreditCard, Money, Position, TakeawayBox, Timer, User} from "@element-plus/icons-vue";
+
+export default {
+  components: {
+    Position,
+    User,
+    CreditCard,
+    Money,
+    Basketball,
+    Timer,
+    TakeawayBox,
+  }
+}
+</script>
+
 <script setup lang="ts">
-import {ref, onMounted} from 'vue'
+import {ref, onMounted, reactive} from 'vue'
 import {useRouter} from 'vue-router'
 import {ElNotification} from "element-plus";
-import {Search, User, Back} from '@element-plus/icons-vue'
+import {Search, Back} from '@element-plus/icons-vue'
+import {reqGetEtherScan, reqGetTXs} from '@/api/index'
+import {AllLoading} from '@/utils/tools'
 import {
   get_provider,
-  get_blocks,
+  get_blocks_with_transactions,
   get_blocks_total,
-  show_current_transactions
+  get_GAS_price
 } from "@/utils/ethersTool";
 
 const router = useRouter()
 const input3 = ref('')
 const select = ref('')
-const loading = ref(false);
-const loading2 = ref(false);
+const tableLoading = ref(false);
 const currentBlocksData = ref([]);
 const currentTxData = ref([]);
 const number = 20
+const blocksTotal = ref(0);
 const provider = get_provider()
-const getData = async () => {
-  loading.value = loading2.value = true
+const statisticInfo = reactive({
+  etherPrice: {
+    title: 'ETH PRICE',
+    value: '',
+    icon: 'Position'
+  },
+  TXN: {
+    title: 'TRANSACTIONS',
+    value: '',
+    icon: 'CreditCard'
+  },
+  gasPrice: {
+    title: 'GAS PRICE',
+    value: "",
+    icon: 'Money'
+  },
+  marketCap: {
+    title: 'MARKET CAP',
+    value: "",
+    icon: 'Basketball'
+  },
+  lastFinalizedBlock: {
+    title: 'LAST FINALIZED BLOCK',
+    value: '',
+    icon: 'Timer'
+  },
+  lastSafeBlock: {
+    title: 'LAST SAFE BLOCK',
+    value: '',
+    icon: 'TakeawayBox'
+  },
+})
+const getTableData = async () => {
+  tableLoading.value = true
   try {
-    let total = await get_blocks_total(provider)
-    let start = total - number + 1 > 0 ? total - number + 1 : 0
-    let {blocks} = await get_blocks(provider, start, total);
+    blocksTotal.value = await get_blocks_total(provider)
+    const start = blocksTotal.value - number + 1 > 0 ? blocksTotal.value - number + 1 : 0
+    const {blocks, transactions} = await get_blocks_with_transactions(provider, start, blocksTotal.value, 20);
+    statisticInfo.lastFinalizedBlock.value = blocksTotal.value.toString()
+    statisticInfo.lastSafeBlock.value = blocksTotal.value.toString()
     if (blocks) {
       currentBlocksData.value = blocks;
-      loading.value = false
-      currentTxData.value = await show_current_transactions(provider, number);
-      loading2.value = false
+      currentTxData.value = transactions;
     }
   } catch (e) {
     ElNotification({
@@ -174,8 +169,40 @@ const getData = async () => {
       message: e
     } as any)
   } finally {
-    loading.value = loading2.value = false
+    tableLoading.value = false
   }
+}
+
+const getEtherScanData = async () => {
+  const allLoading = AllLoading()
+  try {
+    const ret = await reqGetEtherScan()
+    const gasPrice = await get_GAS_price(provider)
+    const ret2 = await reqGetTXs()
+    if (ret.status && ret2.status) {
+      statisticInfo.etherPrice.value = ret.data.etherPrice
+      statisticInfo.gasPrice.value = gasPrice
+      statisticInfo.marketCap.value = ret.data.marketCap
+      statisticInfo.TXN.value = ret2.data.total;
+    } else {
+      ElNotification({
+        type: 'error',
+        message: ret.message
+      } as any)
+    }
+  } catch (e) {
+    ElNotification({
+      type: 'error',
+      message: e
+    } as any)
+  } finally {
+    allLoading.close()
+  }
+}
+
+const getData = async () => {
+  await getEtherScanData()
+  await getTableData()
 }
 
 const handleClickBlock = () => {

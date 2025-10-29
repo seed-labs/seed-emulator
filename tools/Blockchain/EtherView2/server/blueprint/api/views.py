@@ -1,9 +1,11 @@
 from flask import jsonify, Blueprint, current_app
 from eth_account import Account
 from .transaction.views import tx
+from .etherscan.views import etherscan
 
 api = Blueprint('api', __name__, url_prefix='/api')
 api.register_blueprint(tx)
+api.register_blueprint(etherscan)
 
 
 @api.route('/data')

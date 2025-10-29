@@ -5,48 +5,9 @@
     </el-breadcrumb-item>
   </el-breadcrumb>
   <el-row :gutter="20" class="row">
-    <el-col :span="6">
+    <el-col :span="24 / Object.keys(statisticInfo).length" v-for="(value, key, i) in statisticInfo">
       <el-card>
-        <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-          <template #suffix>
-            <el-icon>
-              <User/>
-            </el-icon>
-          </template>
-        </el-statistic>
-      </el-card>
-    </el-col>
-    <el-col :span="6">
-      <el-card>
-        <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-          <template #suffix>
-            <el-icon>
-              <User/>
-            </el-icon>
-          </template>
-        </el-statistic>
-      </el-card>
-    </el-col>
-    <el-col :span="6">
-      <el-card>
-        <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-          <template #suffix>
-            <el-icon>
-              <User/>
-            </el-icon>
-          </template>
-        </el-statistic>
-      </el-card>
-    </el-col>
-    <el-col :span="6">
-      <el-card>
-        <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-          <template #suffix>
-            <el-icon>
-              <User/>
-            </el-icon>
-          </template>
-        </el-statistic>
+        <el-statistic :title="value.title" :value="value.value"/>
       </el-card>
     </el-col>
   </el-row>
@@ -54,7 +15,15 @@
     <el-col :span="24">
       <el-card>
         <el-table :data="transactionsData" max-height="500" v-loading="loading">
-          <el-table-column prop="hash" label="Hash" width="360" :show-overflow-tooltip="true"/>
+          <el-table-column prop="hash" label="Hash" width="360" :show-overflow-tooltip="true">
+            <template #default="scope">
+              <router-link
+                  :to="{ name: 'txInfo', params: { id: scope.row.hash } }"
+                  class="el-link el-link--primary">
+                {{ scope.row.hash }}
+              </router-link>
+            </template>
+          </el-table-column>
           <el-table-column prop="block_number" label="blockNumber" width="120"/>
           <el-table-column prop="timestamp" label="Age" width="120">
             <template #default="scope">{{ timeTo(scope.row.timestamp) }}</template>
@@ -79,12 +48,12 @@
 <script setup lang="ts">
 import {ref, reactive, onMounted} from 'vue';
 import {ElNotification} from "element-plus";
-import {User} from "@element-plus/icons-vue";
-import {reqGetTXs} from '@/api/index';
+import {reqGetTxFees, reqGetTXs} from '@/api/index';
 import Pagination from "@/components/Pagination/index.vue"
 import {
-  timeTo,
+  timeTo, countPendingTxLastHour
 } from "@/utils/ethersTool";
+import {AllLoading} from "@/utils/tools.ts";
 
 const loading = ref(false);
 const transactionsData = ref([]);
@@ -94,8 +63,26 @@ const pageParams = reactive({
   currentPage: 1,
   pageSizes: [2, 5, 10, 50, 100],
 })
+const statisticInfo = reactive({
+  TXN24H: {
+    title: 'TRANSACTIONS (24H)',
+    value: '',
+  },
+  pendingTx1H: {
+    title: 'PENDING TRANSACTIONS (1H)',
+    value: '',
+  },
+  totalTXFee24H: {
+    title: 'TOTAL TRANSACTIONS FEE (24H)',
+    value: '',
+  },
+  avgTXFee24H: {
+    title: 'AVG. TRANSACTIONS FEE (24H)',
+    value: '',
+  },
+})
 
-const getData = async () => {
+const getTableData = async () => {
   loading.value = true
   try {
     let res = await reqGetTXs({
@@ -119,6 +106,36 @@ const getData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const getStatisticInfo = async () => {
+  const allLoading = AllLoading()
+  try {
+    const res = await reqGetTxFees()
+    statisticInfo.pendingTx1H.value = await countPendingTxLastHour()
+    if (res.status) {
+      statisticInfo.TXN24H.value = res.data.total;
+      statisticInfo.totalTXFee24H.value = res.data.totalFee;
+      statisticInfo.avgTXFee24H.value = res.data.avgFee;
+    } else {
+      ElNotification({
+        type: 'error',
+        message: res.message
+      } as any)
+    }
+  } catch (e) {
+    ElNotification({
+      type: 'error',
+      message: e
+    } as any)
+  } finally {
+    allLoading.close()
+  }
+}
+
+const getData = async () => {
+  await getStatisticInfo()
+  await getTableData()
 }
 
 onMounted(async () => {

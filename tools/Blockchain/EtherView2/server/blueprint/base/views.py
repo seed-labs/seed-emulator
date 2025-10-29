@@ -1,7 +1,7 @@
 import os
 from flask import Blueprint, send_from_directory, redirect
-from config import Config
-from blueprint import serve_vue_app
+from server.config import Config
+from server.blueprint import serve_vue_app
 
 base = Blueprint('base', __name__)
 

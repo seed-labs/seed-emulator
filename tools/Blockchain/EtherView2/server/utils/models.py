@@ -44,11 +44,18 @@ class Transaction(db.Model):
         nullable=False,
         comment="Value"
     )
+    nonce = db.Column(
+        db.Integer,
+        nullable=False,
+        comment="nonce"
+    )
     gasPriceGwei = db.Column(
         db.Numeric(20, 9),
         nullable=True,
         comment='Gas价格（Gwei单位）'
     )
+    gasUsed = db.Column(db.BigInteger, nullable=True)
+    gasPrice = db.Column(db.BigInteger, nullable=True)
     timestamp = db.Column(
         db.BigInteger,
         nullable=False,
@@ -72,6 +79,7 @@ class Transaction(db.Model):
             'block_number': self.block_number,
             'from': self.from_address,
             'to': self.to_address,
+            'nonce': self.nonce,
             'value': float(self.value) if self.value else 0.0,
             'gasPriceGwei': float(self.gasPriceGwei) if self.gasPriceGwei else None,
             'status': self.status,

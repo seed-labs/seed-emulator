@@ -49,6 +49,11 @@ const routes = [
                         name: 'blockInfo',
                         component: () => import('@/views/blockchain/BlockInfoView.vue')
                     },
+                    {
+                        path: '/blockchain/tx/:id',
+                        name: 'txInfo',
+                        component: () => import('@/views/blockchain/TxInfoView.vue')
+                    },
                 ]
             }
         ]
@@ -71,26 +76,27 @@ const router = createRouter({
     routes
 })
 
-// router.beforeEach(async (to, from, next) => {
-//     let globalStore = useGlobalStore()
-//     document.title = to.meta.title || 'EtherView'
-//
-//     if (globalStore.web3Url) {
-//         next()
-//     } else {
-//         try {
-//             await globalStore.getWeb3Url()
-//         } catch (err) {
-//             setTimeout(() => {
-//                 ElNotification({
-//                     type: 'error',
-//                     message: 'getWeb3Url error'
-//                 } as any)
-//             }, 1000)
-//         } finally {
-//             next({...to, replace: true})
-//         }
-//     }
-// })
+router.beforeEach(async (to, from, next) => {
+    let globalStore = useGlobalStore()
+    document.title = to.meta.title || 'EtherView'
+    // next()
+
+    if (globalStore.web3Url) {
+        next()
+    } else {
+        try {
+            await globalStore.getWeb3Url()
+        } catch (err) {
+            setTimeout(() => {
+                ElNotification({
+                    type: 'error',
+                    message: 'getWeb3Url error'
+                } as any)
+            }, 1000)
+        } finally {
+            next({...to, replace: true})
+        }
+    }
+})
 
 export default router
