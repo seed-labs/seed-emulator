@@ -6,6 +6,7 @@ export enum URL {
     Web3Url_URL = '/get_web3_url',
     ETHERSCAN_URL = '/etherscan',
     TX_FEES_URL = '/tx/fees',
+    TOTAL_ETH__URL = '/get_web3_total_eth',
 }
 
 export const reqGetAccounts = () => {
@@ -37,5 +38,11 @@ export const reqGetEtherScan = () => {
 export const reqGetTxFees = () => {
     return request.get(
         URL.TX_FEES_URL,
+    )
+}
+
+export const reqGetTotalETH = () => {
+    return request.get(
+        URL.TOTAL_ETH__URL,
     )
 }

@@ -7,46 +7,22 @@
   <el-row :gutter="20" class="row">
     <el-col :span="6">
       <el-card>
-        <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-          <template #suffix>
-            <el-icon>
-              <User/>
-            </el-icon>
-          </template>
-        </el-statistic>
+        <el-statistic title="TOTAL ETH" :value="totalETH" style="margin-right: 50px"/>
       </el-card>
     </el-col>
     <el-col :span="6">
       <el-card>
-        <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-          <template #suffix>
-            <el-icon>
-              <User/>
-            </el-icon>
-          </template>
-        </el-statistic>
+        <el-statistic title="用户" :value="1128" style="margin-right: 50px"/>
       </el-card>
     </el-col>
     <el-col :span="6">
       <el-card>
-        <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-          <template #suffix>
-            <el-icon>
-              <User/>
-            </el-icon>
-          </template>
-        </el-statistic>
+        <el-statistic title="用户" :value="1128" style="margin-right: 50px"/>
       </el-card>
     </el-col>
     <el-col :span="6">
       <el-card>
-        <el-statistic title="用户" :value="1128" style="margin-right: 50px">
-          <template #suffix>
-            <el-icon>
-              <User/>
-            </el-icon>
-          </template>
-        </el-statistic>
+        <el-statistic title="用户" :value="1128" style="margin-right: 50px"/>
       </el-card>
     </el-col>
   </el-row>
@@ -62,7 +38,7 @@
         </el-table>
         <Pagination
             :pageParams="pageParams"
-            :slice-data="sliceData"
+            :get-data="sliceData"
         />
       </el-card>
     </el-col>
@@ -71,9 +47,9 @@
 
 <script setup lang="ts">
 import {ref, reactive, onMounted} from 'vue';
-import {User} from "@element-plus/icons-vue";
+import {AllLoading} from '@/utils/tools'
 import {ElNotification} from "element-plus";
-import {reqGetAccounts} from '@/api/index'
+import {reqGetAccounts, reqGetTotalETH} from '@/api/index'
 import Pagination from "@/components/Pagination/index.vue"
 import {
   get_balance,
@@ -90,8 +66,9 @@ const pageParams = reactive({
   pageSizes: [2, 5, 10, 50, 100],
 })
 const provider = get_provider()
+const totalETH = ref<string>('')
 
-const getData = async () => {
+const getTableData = async () => {
   loading.value = true
   try {
     let accounts = await reqGetAccounts();
@@ -108,6 +85,26 @@ const getData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const getTotalETH = async () => {
+  const allLoading = AllLoading()
+  try {
+    totalETH.value = await reqGetTotalETH()
+    totalETH.value = `${totalETH.value} ETH`
+  } catch (e) {
+    ElNotification({
+      type: 'error',
+      message: e
+    } as any)
+  } finally {
+    allLoading.close()
+  }
+}
+
+const getData = async () => {
+  await getTotalETH()
+  await getTableData()
 }
 
 const sliceData = () => {

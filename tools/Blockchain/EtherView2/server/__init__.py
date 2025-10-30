@@ -20,8 +20,8 @@ from .tx_monitor import run_tx_monitor
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
-    os.environ['DOCKER_HOST'] = 'tcp://192.168.254.128:2375'
-    # os.environ['DOCKER_HOST'] = 'tcp://10.1.101.81:2375'
+    # os.environ['DOCKER_HOST'] = 'tcp://192.168.254.128:2375'
+    os.environ['DOCKER_HOST'] = 'tcp://10.1.101.81:2375'
     client = docker.from_env()
 
     is_ready = 0
@@ -61,10 +61,6 @@ def create_app(test_config=None):
             "message": description
         })
 
-    setup_logging(app)
-    setup_db(app)
-    setup_scheduler(app)
-
     # Set the global parameters using the configuration data
     app.configure = {}
     app.configure['eth_node_name_pattern'] = Config.ETH_NODE_NAME_PATTERN
@@ -83,6 +79,10 @@ def create_app(test_config=None):
     # app.web3_url = 'http://192.168.254.128:8545'
     # app.web3_url = 'http://10.1.101.81:8545'
     print(app.web3_url)
+
+    setup_logging(app)
+    setup_db(app)
+    # setup_scheduler(app)
 
     # Get the consensus from the emulator
     app.consensus = get_eth_consensus()
@@ -169,7 +169,6 @@ def load_eth_accounts(root_path):
 
 # Get the ethereum nodes info: container name and ID
 def load_eth_nodes(root_path):
-    eth_nodes = {}
     path = os.path.join(root_path, "emulator_data")
     filename = os.path.join(path, "containers.json")
     if os.path.exists(filename) is False:  # the file does not exist

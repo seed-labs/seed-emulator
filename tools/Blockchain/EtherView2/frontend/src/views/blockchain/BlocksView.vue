@@ -83,7 +83,7 @@ const statisticInfo = reactive({
     value: '',
   },
 })
-const blocks24H = ref<ethers.providers.Block>([])
+const blocks24H = ref<ethers.providers.Block[]>()
 const provider = get_provider()
 
 const getTableData = async () => {

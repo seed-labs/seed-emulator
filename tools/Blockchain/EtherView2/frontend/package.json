@@ -15,9 +15,11 @@
   },
   "devDependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@types/decimal.js": "^7.4.3",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.8.1",
     "axios": "^1.12.2",
+    "decimal.js": "^10.6.0",
     "element-plus": "^2.11.4",
     "ethers": "~5.4.7",
     "sass-embedded": "^1.93.2",

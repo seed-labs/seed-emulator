@@ -97,17 +97,19 @@ export default {
 </script>
 
 <script setup lang="ts">
+import Decimal from 'decimal.js';
 import {ref, onMounted, reactive} from 'vue'
 import {useRouter} from 'vue-router'
 import {ElNotification} from "element-plus";
 import {Search, Back} from '@element-plus/icons-vue'
-import {reqGetEtherScan, reqGetTXs} from '@/api/index'
+import {reqGetEtherScan, reqGetTXs, reqGetTotalETH} from '@/api/index'
 import {AllLoading} from '@/utils/tools'
 import {
   get_provider,
   get_blocks_with_transactions,
   get_blocks_total,
-  get_GAS_price
+  get_GAS_price,
+  calcMarketCap
 } from "@/utils/ethersTool";
 
 const router = useRouter()
@@ -119,6 +121,7 @@ const currentTxData = ref([]);
 const number = 20
 const blocksTotal = ref(0);
 const provider = get_provider()
+const totalETH = ref<Decimal>()
 const statisticInfo = reactive({
   etherPrice: {
     title: 'ETH PRICE',
@@ -182,7 +185,7 @@ const getEtherScanData = async () => {
     if (ret.status && ret2.status) {
       statisticInfo.etherPrice.value = ret.data.etherPrice
       statisticInfo.gasPrice.value = gasPrice
-      statisticInfo.marketCap.value = ret.data.marketCap
+      statisticInfo.marketCap.value = calcMarketCap(ret.data.etherPrice, totalETH.value)
       statisticInfo.TXN.value = ret2.data.total;
     } else {
       ElNotification({
@@ -200,7 +203,20 @@ const getEtherScanData = async () => {
   }
 }
 
+const getTotalETH = async () => {
+  try {
+    const totalETHStr = await reqGetTotalETH()
+    totalETH.value = new Decimal(totalETHStr)
+  } catch (e) {
+    ElNotification({
+      type: 'error',
+      message: e
+    } as any)
+  }
+}
+
 const getData = async () => {
+  await getTotalETH()
   await getEtherScanData()
   await getTableData()
 }

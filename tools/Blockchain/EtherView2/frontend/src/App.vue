@@ -2,7 +2,9 @@
   <el-config-provider :locale="lang">
   <div id="app">
     <el-row>
-      <el-col :span="2">logo</el-col>
+      <el-col :span="2">
+        <img src="@/assets/seed.png">
+      </el-col>
       <el-col :span="22" class="nav">
         <el-menu
             :default-active="route.path"

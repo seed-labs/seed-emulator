@@ -1,3 +1,4 @@
+from web3 import Web3
 from flask import jsonify, Blueprint, current_app
 from eth_account import Account
 from .transaction.views import tx
@@ -50,3 +51,18 @@ def get_web3_providers():
 @api.route('/get_web3_url')
 def get_web3_url():
     return jsonify({"data": current_app.web3_url, "status": True})
+
+
+@api.route('/get_web3_total_eth')
+def get_web3_total_eth():
+    total_wei = 0
+    accounts = get_accounts()
+
+    w3 = Web3(Web3.HTTPProvider(current_app.web3_url))
+    if not w3.isConnected():
+        return total_wei
+
+    for acct in accounts:
+        total_wei += w3.eth.get_balance(acct['address'])
+    total_eth = w3.fromWei(total_wei, 'ether')
+    return f'{total_eth:.8f}'

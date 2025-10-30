@@ -1,3 +1,4 @@
+import Decimal from 'decimal.js';
 import {ethers, providers} from "ethers";
 import {useGlobalStore} from "@/store"
 
@@ -129,52 +130,6 @@ export async function countPendingTxLastHour(provider?: providers.BaseProvider):
     return count
 }
 
-export async function calcFeesLast24h(provider?: providers.BaseProvider): Promise<{
-    totalFeeWei: ethers.BigNumber;
-    avgFeeWei: ethers.BigNumber;
-    txCount: number;
-}> {
-    provider = provider ?? get_provider();
-    const latestBlockNumber = await provider.getBlockNumber();
-    const now = Math.floor(Date.now() / 1000); // 秒
-    const cutoffTimestamp = now - 24 * 60 * 60; // 24 h 前的区块时间戳
-
-    let totalFee = ethers.BigNumber.from(0);
-    let txCount = 0;
-    let blockNum = latestBlockNumber;
-
-    // 循环向前遍历区块，直到时间早于 24
-    while (blockNum >= 0) {
-        const block = await provider.getBlockWithTransactions(blockNum);
-        if (block.timestamp < cutoffTimestamp) {
-            break;
-        }
-
-        // 收集本块所有交易哈希
-        const txHashes = block.transactions.map((tx) => tx.hash);
-        const receipts = await getReceipts(txHashes);
-
-        for (const receipt of receipts) {
-            // effectiveGasPrice 在 EIP‑1559 之后可直接获取；若不存在则回退到 gasPrice
-            const gasPrice = receipt.effectiveGasPrice
-                ? receipt.effectiveGasPrice
-                : receipt.gasPrice || ethers.BigNumber.from(0);
-            const fee = receipt.gasUsed.mul(gasPrice);
-            totalFee = totalFee.add(fee);
-            txCount++;
-        }
-
-        // 为防止一次性遍历过多区块（尤其是链较长），可自行设置上限
-        // 这里示例每次向前 5000 个区块后强制退出（约 1‑2 天的区块数）
-        if (latestBlockNumber - blockNum > 5000) break;
-
-        blockNum--;
-    }
-
-    const avgFee = txCount > 0 ? totalFee.div(txCount) : ethers.BigNumber.from(0);
-    return {totalFeeWei: totalFee, avgFeeWei: avgFee, txCount};
-}
-
 export async function get_transaction_info(hash: string, provider?: providers.BaseProvider) {
     provider = provider ?? get_provider();
     const tx = await provider.getTransaction(hash);
@@ -283,12 +238,12 @@ export async function get_networkUtilization(blocks: ethers.providers.Block[]): 
         totalLimit = totalLimit.add(b.gasLimit);
     }
 
-    if (totalLimit.isZero()) return 0;
+    if (totalLimit.isZero()) return "0";
 
-    return `${(Number(totalUsed) * 10000 / Number(totalLimit) / 100).toFixed(8)}%`; // 如 78.34 (%)
+    return `${(Number(totalUsed) * 10000 / Number(totalLimit) / 100).toFixed(8)}%`
 }
 
-export async function get_blocks_by_mevBuilders(blocks: ethers.providers.Block[], lastBlockNumber): Promise<string> {
+export async function get_blocks_by_mevBuilders(blocks: ethers.providers.Block[], lastBlockNumber: number): Promise<string> {
     let count = 0;
     for (const b of blocks) {
         const proposer = (b as any).miner || (b as any).proposer;
@@ -389,4 +344,9 @@ export function timeTo(timestamp: number) {
         }
     }
     return timeStr
+}
+
+export const calcMarketCap = (etherPrice: string, totalETH: Decimal): string => {
+    const _etherPrice = parseFloat(etherPrice.replace(/[^\d.-]/g, ""))
+    return `$${totalETH.times(_etherPrice).toFixed(4)}`
 }
