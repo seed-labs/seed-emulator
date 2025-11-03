@@ -21,7 +21,7 @@ class Config(object):
     FRONTEND_DIST_DIR = 'static/frontend'
 
     # mysql
-    DB_HOST = '10.1.10.61'
+    DB_HOST = 'localhost'
     DB_PORT = 3306
     DB_USER = 'root'
     DB_PASSWORD = 'Root@123#'
