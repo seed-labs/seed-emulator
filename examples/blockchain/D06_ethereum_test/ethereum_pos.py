@@ -112,7 +112,7 @@ for asn in asns:
         # Binding the virtual node to the physical node
         print(f"id: {id}")
         emu.addBinding(Binding(f'eth{i}', 
-                               filter=Filter(asn=asn, nodeName=f'host_{id}'), 
+                               filter=Filter(asn=asn, nodeName=f'^host_{id}$'), 
                                action = Action.FIRST))
         
         # Increment the Ethereum node index
