@@ -107,7 +107,7 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
             if net.getRemoteAccessProvider() != None:
                 rap = net.getRemoteAccessProvider()
 
-                brNode = self.createRouter('br-{}'.format(net.getName()))
+                brNode = self.createOpenVpnRouter('br-{}'.format(net.getName()))
                 brNet = emulator.getServiceNetwork()
 
                 rap.configureRemoteAccess(emulator, net, brNode, brNet)
@@ -373,3 +373,15 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
             out += host.print(indent + 4)
 
         return out
+
+    def createOpenVpnRouter(self, name: str) -> Node:
+        """!
+        @brief Create a OpenVpn router node.
+
+        @param name name of the new node.
+        @returns Node.
+        """
+        assert name not in self.__routers, 'Router with name {} already exists.'.format(name)
+        self.__routers[name] = Router(name, NodeRole.OpenVpnRouter, self.__asn)
+
+        return self.__routers[name]

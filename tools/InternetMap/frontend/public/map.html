@@ -4,6 +4,7 @@
 <head>
     <title>map</title>
     <meta name="viewport" content="width=device-width, initial-scale=.7">
+    <script src="/api/v1/env.js"></script>
 </head>
 
 <body>
@@ -17,6 +18,7 @@
             <div class="panel-title inactive clickable" id="tab-node-search-mode">Search</div>
             <div class="filter-wrap wrap" id="filter-wrap">
                 <input class="filter" id="filter" placeholder="Type a BPF expression to animate packet flows on the map..." autocorrect="off" autocapitalize="off" spellcheck="false" />
+                <button type="button" id="filter-commit" class="btn btn-primary btn-sm">Submit</button>
             </div>
             <div class="suggestions" id="filter-suggestions"></div>
         </div>
@@ -25,9 +27,14 @@
                 <i class="bi bi-gear" id="setting-toggle-chevron"></i>
             </div>
             <div class="setting-wrap wrap minimized" id="setting-wrap">
-                <div class="setting-controls">
-                    <input type="checkbox" id="setting-fixed"/>
-                    <label for="setting-fixed" >drag fixed</label>
+                <div class="setting-controls" id="setting-controls">
+                    <label class="fw-bold mt-1">other: </label>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="form-check">
+                            <input type="checkbox" id="setting-fixed"/>
+                            <label for="setting-fixed">drag fixed</label>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

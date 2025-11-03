@@ -99,7 +99,7 @@ class ScionOutputChecker:
         @param name name of the network
         @param remote_ip IP address on the given network of the router in question
         """
-        # nodes that are also on the the same network
+        # nodes that are also on the same network
         remote_br_candidates = [ (sname, svc)  for sname, svc in self._services.items() if 'networks' in svc and name in svc['networks'] ]
 
         remote_br = [ sname for (sname, svc) in remote_br_candidates if svc['networks'][name]['ipv4_address'] == remote_ip]
