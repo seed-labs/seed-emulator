@@ -60,7 +60,7 @@ def get_web3_total_eth():
 
     w3 = Web3(Web3.HTTPProvider(current_app.web3_url))
     if not w3.isConnected():
-        return total_wei
+        return str(total_wei)
 
     for acct in accounts:
         total_wei += w3.eth.get_balance(acct['address'])

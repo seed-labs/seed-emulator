@@ -7,7 +7,12 @@
   <el-row :gutter="20" class="row">
     <el-col :span="24 / Object.keys(statisticInfo).length" v-for="(value, key, i) in statisticInfo">
       <el-card>
-        <el-statistic :title="value.title" :value="value.value"/>
+        <router-link v-if="key==='pendingTx1H'"
+                     :to="{ name: 'pending transactions'}"
+                     class="el-link el-link--primary">
+          <el-statistic :title="value.title" :value="value.value" :value-style="{color: '#409EFF'}"/>
+        </router-link>
+        <el-statistic v-else :title="value.title" :value="value.value"/>
       </el-card>
     </el-col>
   </el-row>

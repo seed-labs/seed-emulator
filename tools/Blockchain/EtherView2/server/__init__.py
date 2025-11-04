@@ -21,7 +21,7 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
     # os.environ['DOCKER_HOST'] = 'tcp://192.168.254.128:2375'
-    os.environ['DOCKER_HOST'] = 'tcp://10.1.101.81:2375'
+    # os.environ['DOCKER_HOST'] = 'tcp://10.1.101.81:2375'
     client = docker.from_env()
 
     is_ready = 0
@@ -82,7 +82,7 @@ def create_app(test_config=None):
 
     setup_logging(app)
     setup_db(app)
-    # setup_scheduler(app)
+    setup_scheduler(app)
 
     # Get the consensus from the emulator
     app.consensus = get_eth_consensus()
