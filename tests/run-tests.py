@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from internet import IPAnyCastTestCase, MiniInternetTestCase, HostMgmtTestCase
+from internet import IPAnyCastTestCase, MiniInternetTestCase, HostMgmtTestCase, DNSTestCase, DNSTestCaseNoMaster, DNSTestCaseFallback
 from ethereum import EthereumPOATestCase, EthereumPOSTestCase, EthereumPOWTestCase
 from scion import ScionBgpMixedTestCase, ScionBwtesterTestCase, ScionLargeASNTestCase
 from options import SEEDEmuOptionSystemTestCase
@@ -52,6 +52,9 @@ internet_tests = [
     KuboUtilFuncsTestCase,
     IPAnyCastTestCase,
     HostMgmtTestCase,
+    DNSTestCase,
+    DNSTestCaseNoMaster,
+    DNSTestCaseFallback,
     # PKITestCase,
     DottedDictTestCase,
     TrafficGeneratorTestCase
