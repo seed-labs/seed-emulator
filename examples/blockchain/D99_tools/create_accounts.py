@@ -46,7 +46,7 @@ if __name__ == "__main__":
         print(f"  Private Key: {account['private_key']}")
         print("-" * 50)
 
-    print("*** Saved account data to prefunded_accounts.json")
-    with open("prefunded_accounts.json", "w") as f:
-        json.dump(accounts, f, indent=4) # indent for pretty-printing
+    #print("*** Saved account data to prefunded_accounts.json")
+    #with open("prefunded_accounts.json", "w") as f:
+    #    json.dump(accounts, f, indent=4) # indent for pretty-printing
 
