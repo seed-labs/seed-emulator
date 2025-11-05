@@ -1,0 +1,9 @@
+**/node_modules
+**/logs
+**/auto-imports.d.ts
+**/components.d.ts
+**/__pycache__
+**/.idea
+**/.vscode
+**/emulator_info
+**/emulator_data
