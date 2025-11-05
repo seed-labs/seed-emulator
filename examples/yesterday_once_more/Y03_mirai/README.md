@@ -1,10 +1,9 @@
-# Mirai Virus Replay
+# Replaying Mirai Attack
 
 We have provided demos for this attack in the following folders using different displaying methods:
-> if you don't have access to Proxmox VM System, please choose the `demo` folder to replay the mirai virus.
 
-1. `demo` folder: Demo about displaying victim's screen in your machine's browser(localhost,port 8888) or to display victim's screen in your own VM using Virtualbox/VMware/Parallels/... is provided.
+1. `demo` folder: Displaying victim's screen in your machine's browser (localhost,port 8888) or on the victim's screen in your own VM.
 
-2. `demo_with_proxmox_vm` folder: Demo about displaying victim's screen in our Proxmox VM System.
+2. `demo_with_proxmox_vm` folder: Displaying victim's screen in our Proxmox VM System. If you don't have access to the Proxmox VM System, please choose the `demo` folder.
 
-the detail of replaying is in mirai.ipynb, please read that jupyter notebook.
+Details of replaying is in mirai.ipynb, please read the provided jupyter notebook.

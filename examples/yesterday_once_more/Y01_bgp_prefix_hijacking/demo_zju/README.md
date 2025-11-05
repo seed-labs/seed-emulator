@@ -52,7 +52,7 @@ cd output_vm
 ./vm_buildup.sh
 ```
 
-5. Start the Jupyter notebook server (see `Jupyter/README.md`) and follow the instructions in the Jupyter notebook `Jupyter/bgp_attack_cn.ipynb` (Chinese version) or `Jupyter/bgp_attack.ipynb` (English version) to replay the attack.
+5. Start the Jupyter notebook server (see `Jupyter/README.md`) and follow the instructions in the Jupyter notebook `Jupyter/bgp_attack_cn.ipynb`  to replay the attack.
 
 
 ### Stop Replaying the attack

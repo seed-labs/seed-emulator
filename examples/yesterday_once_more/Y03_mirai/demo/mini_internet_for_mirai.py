@@ -212,7 +212,7 @@ def run(dumpfile=None, hosts_per_as=8):
                 host = base.getAutonomousSystem(stub_as).getHost(hostname)
                 docker.setImageOverride(host, 'mirai-base')
         emu.compile(docker, './output', override=True)
-        os.system('cp -r container_files/mirai-base ./output')
+        os.system('cp -r ../container_files/mirai-base ./output')
 
 if __name__ == "__main__":
     run()
