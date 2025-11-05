@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from seedemu import *
 import large_internet 
 from proxmox import Proxmox
