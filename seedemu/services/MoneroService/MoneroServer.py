@@ -1,0 +1,910 @@
+"""Monero 服务的 Server 实现。
+
+负责在物理节点上部署 monerod / monero-wallet-rpc，并根据 `MoneroNodeOptions`
+注入启动脚本。为了便于阅读，尽量分解为多个小方法，并辅以详细注释。
+"""
+from __future__ import annotations
+
+import json
+import os
+from textwrap import dedent
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, TYPE_CHECKING
+
+from seedemu.core.Node import Node
+from seedemu.core.Service import Server
+
+from .MoneroEnum import (
+    MoneroBinarySource,
+    MoneroMiningTrigger,
+    MoneroNodeKind,
+    MoneroNodeRole,
+    MoneroSeedConnectionMode,
+    MoneroWalletMode,
+)
+from .MoneroUtil import (
+    MoneroBinaryPaths,
+    MoneroNodeOptions,
+    MoneroWalletSpec,
+    build_endpoint,
+    sanitize_extra_args,
+)
+
+if TYPE_CHECKING:  # 避免循环引用
+    from .MoneroService import MoneroNetwork
+
+
+class MoneroBaseServer(Server):
+    """所有 Monero server 的基类。"""
+
+    def __init__(self, serial: int, network: "MoneroNetwork", options: MoneroNodeOptions):
+        super().__init__()
+        self._serial = serial
+        self._network = network
+        self._options = options
+
+        # 运行期绑定信息（在 configure 阶段填充）
+        self._resolved_ip: Optional[str] = None
+        self._resolved_node_name: Optional[str] = None
+        self._seed_endpoints: List[str] = []
+        self._fullnode_rpc_endpoints: List[str] = []
+        self._binding_lookup: Dict[str, Tuple[Node, str]] = {}
+
+    # ------------------------------------------------------------------
+    # 属性判断
+    # ------------------------------------------------------------------
+    @property
+    def options(self) -> MoneroNodeOptions:
+        return self._options
+
+    @property
+    def network(self) -> "MoneroNetwork":
+        return self._network
+
+    def getBinarySource(self) -> MoneroBinarySource:
+        return self._options.binary_source
+
+    def is_seed(self) -> bool:
+        return self._options.role == MoneroNodeRole.SEED
+
+    def is_full_node(self) -> bool:
+        return self._options.kind in (MoneroNodeKind.FULL, MoneroNodeKind.PRUNED)
+
+    def is_light_node(self) -> bool:
+        return self._options.kind == MoneroNodeKind.LIGHT
+
+    def get_rpc_port(self) -> Optional[int]:
+        return self._options.rpc_bind_port
+
+    def get_p2p_port(self) -> Optional[int]:
+        return self._options.p2p_bind_port
+
+    # ------------------------------------------------------------------
+    # 运行期信息注入
+    # ------------------------------------------------------------------
+    def set_binding(self, node: Node, ip: str):
+        self._resolved_node_name = node.getName()
+        self._resolved_ip = ip
+
+    def set_binding_lookup(self, lookup: Dict[str, Tuple[Node, str]]):
+        self._binding_lookup = lookup
+
+    def set_seed_endpoints(self, endpoints: Sequence[str]):
+        self._seed_endpoints = list(endpoints)
+
+    def set_fullnode_rpc_endpoints(self, endpoints: Sequence[str]):
+        self._fullnode_rpc_endpoints = list(endpoints)
+
+    # ------------------------------------------------------------------
+    # Fluent-style configuration API（与 EthereumService 风格一致）
+    # ------------------------------------------------------------------
+    def setRole(self, role: MoneroNodeRole) -> "MoneroBaseServer":
+        if self._options.kind == MoneroNodeKind.LIGHT and role != MoneroNodeRole.STANDALONE:
+            raise AssertionError("轻节点仅支持 MoneroNodeRole.STANDALONE 角色")
+        if self._options.kind == MoneroNodeKind.PRUNED and role == MoneroNodeRole.SEED:
+            raise AssertionError("剪枝节点不能承担种子角色")
+        self._options.role = role
+        if role == MoneroNodeRole.SEED:
+            self._options.wait_for_seed = False
+        return self
+
+    def setSeedRole(self) -> "MoneroBaseServer":
+        return self.setRole(MoneroNodeRole.SEED)
+
+    def setClientRole(self) -> "MoneroBaseServer":
+        return self.setRole(MoneroNodeRole.CLIENT)
+
+    def setSeedConnectionMode(self, mode: MoneroSeedConnectionMode) -> "MoneroBaseServer":
+        self._options.connect_mode = mode
+        return self
+
+    def setWaitForSeed(
+        self,
+        enabled: bool,
+        retry_interval: Optional[int] = None,
+        retry_attempts: Optional[int] = None,
+    ) -> "MoneroBaseServer":
+        self._options.wait_for_seed = enabled
+        if retry_interval is not None:
+            self._options.seed_retry_interval = retry_interval
+        if retry_attempts is not None:
+            self._options.seed_retry_attempts = retry_attempts
+        return self
+
+    def setWallet(self, wallet_spec: MoneroWalletSpec) -> "MoneroBaseServer":
+        self._options.wallet = wallet_spec.clone()
+        self._options.enable_wallet = True
+        return self
+
+    def enableWallet(self) -> "MoneroBaseServer":
+        self._options.enable_wallet = True
+        return self
+
+    def disableWallet(self) -> "MoneroBaseServer":
+        self._options.enable_wallet = False
+        return self
+
+    def enableWalletRpc(
+        self,
+        *,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        bind_ip: Optional[str] = None,
+        bind_port: Optional[int] = None,
+        allow_external: Optional[bool] = None,
+    ) -> "MoneroBaseServer":
+        self._options.enable_wallet = True
+        wallet = self._options.wallet
+        wallet.enable_rpc = True
+        if user is not None:
+            wallet.rpc_user = user
+        if password is not None:
+            wallet.rpc_password = password
+        if bind_ip is not None:
+            wallet.rpc_bind_ip = bind_ip
+        if bind_port is not None:
+            wallet.rpc_bind_port = bind_port
+        if allow_external is not None:
+            wallet.allow_external_rpc = allow_external
+        return self
+
+    def disableWalletRpc(self) -> "MoneroBaseServer":
+        self._options.wallet.enable_rpc = False
+        return self
+
+    def setWalletPassword(self, password: str) -> "MoneroBaseServer":
+        self._options.enable_wallet = True
+        self._options.wallet.password = password
+        return self
+
+    def setWalletPrimaryAddressPath(self, path: str) -> "MoneroBaseServer":
+        self._options.wallet.primary_address_path = path
+        return self
+
+    def setPersistData(self, enabled: bool) -> "MoneroBaseServer":
+        self._options.persist_data = enabled
+        return self
+
+    def setDataDir(self, data_dir: str) -> "MoneroBaseServer":
+        self._options.data_dir = data_dir
+        return self
+
+    def setLogDir(self, log_dir: str) -> "MoneroBaseServer":
+        self._options.log_dir = log_dir
+        return self
+
+    def setExtraDaemonArgs(self, args: Sequence[str]) -> "MoneroBaseServer":
+        self._options.extra_daemon_args = list(args)
+        return self
+
+    def addExtraDaemonArg(self, arg: str) -> "MoneroBaseServer":
+        if arg not in self._options.extra_daemon_args:
+            self._options.extra_daemon_args.append(arg)
+        return self
+
+    def setExtraEnv(self, env: Dict[str, str]) -> "MoneroBaseServer":
+        self._options.extra_env = dict(env)
+        return self
+
+    def addExtraEnv(self, key: str, value: str) -> "MoneroBaseServer":
+        self._options.extra_env[key] = value
+        return self
+
+    def setUpstreamNodes(self, upstreams: Sequence[str]) -> "MoneroBaseServer":
+        self._options.upstream_nodes = list(upstreams)
+        return self
+
+    def addUpstreamNode(self, upstream: str) -> "MoneroBaseServer":
+        if upstream not in self._options.upstream_nodes:
+            self._options.upstream_nodes.append(upstream)
+        return self
+
+    def clearUpstreamNodes(self) -> "MoneroBaseServer":
+        self._options.upstream_nodes.clear()
+        return self
+
+    def setFixedDifficulty(self, difficulty: Optional[int]) -> "MoneroBaseServer":
+        self._options.fixed_difficulty = difficulty
+        return self
+
+    def exposePorts(
+        self,
+        *,
+        p2p: Optional[bool] = None,
+        rpc: Optional[bool] = None,
+        zmq: Optional[bool] = None,
+    ) -> "MoneroBaseServer":
+        if p2p is not None:
+            self._options.expose_p2p = p2p
+        if rpc is not None:
+            self._options.expose_rpc = rpc
+        if zmq is not None:
+            self._options.expose_zmq = zmq
+        return self
+
+    # ------------------------------------------------------------------
+    # 生命周期钩子
+    # ------------------------------------------------------------------
+    def install(self, node: Node):  # pragma: no cover - 实际调用时由 seedemu 驱动
+        raise NotImplementedError
+
+    # ------------------------------------------------------------------
+    # 工具方法：生成公共脚本片段
+    # ------------------------------------------------------------------
+    def _render_seed_wait_section(self) -> str:
+        if not self.options.wait_for_seed or not self._seed_endpoints:
+            return ""
+
+        endpoints = " ".join(json.dumps(item) for item in self._seed_endpoints)
+        interval = max(1, self.options.seed_retry_interval)
+        attempts = self.options.seed_retry_attempts if self.options.seed_retry_attempts >= 0 else -1
+
+        return dedent(
+            f"""
+            seed_endpoints=({endpoints})
+            wait_attempts={attempts}
+            wait_interval={interval}
+
+            wait_for_seed() {{
+                local tries=0
+                if [ ${{#seed_endpoints[@]}} -eq 0 ]; then
+                    return 0
+                fi
+                echo "[monero] 等待种子节点可达..." >&2
+                while true; do
+                    for endpoint in "${{seed_endpoints[@]}}"; do
+                        IFS=':' read -r host port <<< "${{endpoint}}"
+                        if nc -z "$host" "$port" >/dev/null 2>&1; then
+                            echo "[monero] 种子节点 $host:$port 已可达" >&2
+                            return 0
+                        fi
+                    done
+                    tries=$((tries + 1))
+                    if [ {attempts} -ge 0 ] && [ $tries -ge {attempts} ]; then
+                        echo "[monero] 等待种子节点超时，继续启动" >&2
+                        return 1
+                    fi
+                    sleep {interval}
+                done
+            }}
+
+            wait_for_seed
+            """
+        ).strip()
+
+    def _render_rpc_wait_section(self, invoke: bool = False) -> str:
+        """生成等待 monerod RPC 的脚本片段。"""
+
+        rpc_port = self.options.rpc_bind_port
+        if rpc_port is None:
+            return ""
+
+        interval = max(1, self.options.rpc_poll_interval)
+        attempts = max(1, self.options.rpc_poll_max_attempts)
+
+        block = dedent(
+            f"""
+            wait_for_rpc() {{
+                local tries=0
+                local payload='{{"jsonrpc":"2.0","id":"0","method":"get_info"}}'
+                while true; do
+                    if curl --silent --fail --max-time 5 \
+                        -H 'Content-Type: application/json' \
+                        -d "$payload" \
+                        http://127.0.0.1:{rpc_port}/json_rpc >/dev/null 2>&1; then
+                        echo "[monero] RPC 服务已就绪" >&2
+                        return 0
+                    fi
+                    tries=$((tries + 1))
+                    if [ $tries -ge {attempts} ]; then
+                        echo "[monero] RPC 服务长时间未就绪，继续后续流程" >&2
+                        return 1
+                    fi
+                    sleep {interval}
+                done
+            }}
+            """
+        ).strip()
+
+        if invoke:
+            block += "\n\nwait_for_rpc"
+
+        return block
+
+    def _render_env_exports(self) -> str:
+        """将 NodeOptions.extra_env 转换为 shell export 命令。"""
+
+        if not self.options.extra_env:
+            return ""
+
+        exports = []
+        for key, value in sorted(self.options.extra_env.items()):
+            exports.append(f"export {key}={json.dumps(value)}")
+
+        return "\n".join(exports)
+
+    # ------------------------------------------------------------------
+    # 工具方法：钱包处理
+    # ------------------------------------------------------------------
+    def _infer_wallet_dir(self) -> str:
+        wallet_path = self.options.wallet.wallet_path
+        if not wallet_path:
+            return os.path.join(self.options.data_dir, "wallets")
+        return os.path.dirname(wallet_path)
+
+    def _render_wallet_generation_block(self) -> str:
+        """生成钱包文件的 shell 片段。"""
+
+        opts = self.options
+        if not opts.enable_wallet:
+            return ""
+
+        wallet: MoneroWalletSpec = opts.wallet
+        if wallet.mode == MoneroWalletMode.NONE:
+            return ""
+
+        wallet_path = json.dumps(wallet.wallet_path)
+        password = json.dumps(wallet.password)
+        log_file = json.dumps(os.path.join(opts.log_dir, "wallet-cli.log"))
+        network_flag = self.network.get_network_flag() or ""
+        network_flag_literal = json.dumps(network_flag)
+
+        snippets: List[str] = []
+
+        if wallet.mode == MoneroWalletMode.AUTO_GENERATED:
+            snippets.append(
+                dedent(
+                    f"""
+                    if [ ! -f {wallet_path} ]; then
+                        wallet_args=(
+                            "--generate-new-wallet" {wallet_path}
+                            "--password" {password}
+                            "--mnemonic-language" "English"
+                            "--restore-height" "0"
+                            "--create-address-file"
+                            "--log-file" {log_file}
+                            "--offline"
+                            "--command" "set refresh-from-block-height 0"
+                            "--command" "exit"
+                        )
+                        if [ -n {network_flag_literal} ]; then
+                            wallet_args+=({network_flag_literal})
+                        fi
+                        "$WALLET_CLI_BIN" "${{wallet_args[@]}}" >/dev/null 2>&1 || true
+                    fi
+                    """
+                ).strip()
+            )
+        elif wallet.mode == MoneroWalletMode.IMPORT_MNEMONIC:
+            if wallet.mnemonic:
+                mnemonic_file = json.dumps(
+                    os.path.join(self._infer_wallet_dir(), "mnemonic.txt")
+                )
+                restore_append = ""
+                if wallet.restore_height:
+                    restore_append = (
+                        f'                    restore_args+=( "--restore-height" "{wallet.restore_height}" )'
+                    )
+                snippet = dedent(
+                    f"""
+                    if [ ! -f {wallet_path} ]; then
+                        cat <<'__MONERO_MNEMONIC__' > {mnemonic_file}
+{wallet.mnemonic}
+__MONERO_MNEMONIC__
+                        mnemonic_words=$(tr '\\n' ' ' < {mnemonic_file} | tr -s ' ')
+                        restore_args=(
+                            "--restore-deterministic-wallet"
+                            "--wallet-file" {wallet_path}
+                            "--password" {password}
+                            "--electrum-seed" "$mnemonic_words"
+                            "--create-address-file"
+                            "--log-file" {log_file}
+                            "--offline"
+                            "--command" "set refresh-from-block-height 0"
+                            "--command" "exit"
+                        )
+                        if [ -n {network_flag_literal} ]; then
+                            restore_args+=({network_flag_literal})
+                        fi
+__RESTORE_APPEND__
+                        "$WALLET_CLI_BIN" "${{restore_args[@]}}" >/dev/null 2>&1 || true
+                        rm -f {mnemonic_file}
+                    fi
+                    """
+                ).strip()
+                snippet = snippet.replace("__RESTORE_APPEND__", restore_append)
+                snippets.append(snippet)
+            else:
+                snippets.append(
+                    f'echo "[monero] 未提供助记词，无法导入钱包 {wallet.wallet_path}" >&2'
+                )
+        elif wallet.mode == MoneroWalletMode.EXISTING_FILE:
+            snippets.append(
+                dedent(
+                    f"""
+                    if [ ! -f {wallet_path} ]; then
+                        echo "[monero] 预期钱包文件 {wallet.wallet_path} 已由用户预置" >&2
+                    fi
+                    """
+                ).strip()
+            )
+
+        if opts.enable_wallet and wallet.auto_save_primary_address:
+            address_file_literal = json.dumps(f"{wallet.wallet_path}.address.txt")
+            primary_address_path = json.dumps(wallet.primary_address_path)
+            snippets.append(
+                dedent(
+                    f"""
+                    if [ -f {address_file_literal} ]; then
+                        addr_line=$(sed -n '1p' {address_file_literal} | tr -d '\r\n')
+                        if [ -n "$addr_line" ]; then
+                            printf "%s\n" "$addr_line" > {primary_address_path}
+                        fi
+                    fi
+                    """
+                ).strip()
+            )
+
+        if opts.enable_wallet:
+            wallet_refresh_block = dedent(
+                f"""
+                if [ -f {wallet_path} ]; then
+                    refresh_args=(
+                        "--wallet-file" {wallet_path}
+                        "--password" {password}
+                        "--log-file" {log_file}
+                        "--offline"
+                        "--command" "set refresh-from-block-height 0"
+                        "--command" "exit"
+                    )
+                    if [ -n {network_flag_literal} ]; then
+                        refresh_args+=({network_flag_literal})
+                    fi
+                    "$WALLET_CLI_BIN" "${{refresh_args[@]}}" >/dev/null 2>&1 || true
+                fi
+                """
+            ).strip()
+            snippets.append(wallet_refresh_block)
+
+        return "\n\n".join(snippets)
+
+    # ------------------------------------------------------------------
+    # 可覆盖：生成启动脚本
+    # ------------------------------------------------------------------
+    def _render_start_script(self) -> str:
+        raise NotImplementedError
+
+    # MIRROR 模式无需额外安装步骤
+
+
+class MoneroFullNodeServer(MoneroBaseServer):
+    """运行 monerod 的节点（Full / Pruned）。"""
+
+    def install(self, node: Node):  # pragma: no cover - 运行时调用
+        self._ensure_prerequisites(node)
+        script = self._render_start_script()
+        node.setFile("/usr/local/bin/seedemu-monero-node.sh", script)
+        node.addBuildCommandAtEnd("chmod +x /usr/local/bin/seedemu-monero-node.sh")
+        node.appendStartCommand("/usr/local/bin/seedemu-monero-node.sh")
+
+    # ------------------------------------------------------------------
+    # 安装前的准备
+    # ------------------------------------------------------------------
+    def _ensure_prerequisites(self, node: Node):
+        opts = self.options
+
+        if opts.binary_source != MoneroBinarySource.MIRROR:
+            self.network.log(
+                f"节点 {node.getName()} 使用自定义二进制：monerod={opts.binaries.monerod}"
+            )
+
+        node.insertStartCommand(0, "cd /")
+
+        if opts.persist_data:
+            node.addPersistentStorage(opts.data_dir)
+
+        wallet_dir = self._infer_wallet_dir()
+
+        if opts.expose_p2p and opts.p2p_bind_port:
+            node.addPortForwarding(opts.p2p_bind_port, opts.p2p_bind_port, proto="tcp")
+        if opts.expose_rpc and opts.rpc_bind_port:
+            node.addPortForwarding(opts.rpc_bind_port, opts.rpc_bind_port, proto="tcp")
+        if opts.expose_zmq and opts.zmq_bind_port:
+            node.addPortForwarding(opts.zmq_bind_port, opts.zmq_bind_port, proto="tcp")
+
+        # 预创建目录，避免脚本中反复判断
+        node.appendStartCommand(f"mkdir -p {opts.data_dir}")
+        node.appendStartCommand(f"mkdir -p {opts.log_dir}")
+        if opts.enable_wallet:
+            node.appendStartCommand(f"mkdir -p {wallet_dir}")
+
+    # ------------------------------------------------------------------
+    # Fluent configuration
+    # ------------------------------------------------------------------
+    def enableMining(
+        self,
+        *,
+        threads: Optional[int] = None,
+        address: Optional[str] = None,
+        trigger: Optional[MoneroMiningTrigger] = None,
+    ) -> "MoneroFullNodeServer":
+        if self.options.kind == MoneroNodeKind.PRUNED:
+            raise AssertionError("剪枝节点不支持挖矿")
+
+        self.options.enable_mining = True
+        if threads is not None:
+            self.options.mining_threads = threads
+        if address is not None:
+            self.options.mining_address = address
+        if trigger is not None:
+            self.options.mining_trigger = trigger
+
+        if self.options.mining_address is None:
+            self.options.enable_wallet = True
+            wallet_cfg = self.options.wallet
+            wallet_cfg.auto_save_primary_address = True
+            wallet_cfg.enable_rpc = True
+            if not wallet_cfg.rpc_user:
+                wallet_cfg.rpc_user = "miner"
+            if not wallet_cfg.rpc_password:
+                wallet_cfg.rpc_password = wallet_cfg.password or "miner"
+
+        return self
+
+    def disableMining(self) -> "MoneroFullNodeServer":
+        self.options.enable_mining = False
+        return self
+
+    def setMiningAddress(self, address: str) -> "MoneroFullNodeServer":
+        self.options.mining_address = address
+        return self
+
+    def setMiningThreads(self, threads: int) -> "MoneroFullNodeServer":
+        self.options.mining_threads = threads
+        return self
+
+    def setMiningTrigger(
+        self, trigger: MoneroMiningTrigger
+    ) -> "MoneroFullNodeServer":
+        self.options.mining_trigger = trigger
+        return self
+
+    def setSeedRole(self) -> "MoneroFullNodeServer":
+        super().setSeedRole()
+        return self
+
+    def setClientRole(self) -> "MoneroFullNodeServer":
+        super().setClientRole()
+        return self
+
+    def setFixedDifficulty(self, difficulty: Optional[int]) -> "MoneroFullNodeServer":
+        super().setFixedDifficulty(difficulty)
+        return self
+
+    def exposePorts(
+        self,
+        *,
+        p2p: Optional[bool] = None,
+        rpc: Optional[bool] = None,
+        zmq: Optional[bool] = None,
+    ) -> "MoneroFullNodeServer":
+        super().exposePorts(p2p=p2p, rpc=rpc, zmq=zmq)
+        return self
+
+    # ------------------------------------------------------------------
+    # 启动脚本生成
+    # ------------------------------------------------------------------
+    def _render_start_script(self) -> str:
+        opts = self.options
+        wallet = opts.wallet
+        wallet_dir = self._infer_wallet_dir()
+        wallet_setup_block = self._render_wallet_generation_block()
+
+        daemon_args: List[str] = [
+            f"--data-dir={opts.data_dir}",
+            f"--log-file={os.path.join(opts.log_dir, 'monerod.log')}",
+            f"--p2p-bind-ip={opts.p2p_bind_ip}",
+        ]
+
+        if opts.p2p_bind_port is not None:
+            daemon_args.append(f"--p2p-bind-port={opts.p2p_bind_port}")
+
+        daemon_args.append(f"--rpc-bind-ip={opts.rpc_bind_ip}")
+        if opts.rpc_bind_port is not None:
+            daemon_args.append(f"--rpc-bind-port={opts.rpc_bind_port}")
+
+        daemon_args.extend(
+            [
+                "--confirm-external-bind",
+                "--allow-local-ip",
+                "--log-level=1",
+                "--non-interactive",
+                "--no-igd",
+            ]
+        )
+
+        if opts.zmq_bind_port:
+            daemon_args.append(f"--zmq-rpc-bind-ip={opts.zmq_bind_ip}")
+            daemon_args.append(f"--zmq-rpc-bind-port={opts.zmq_bind_port}")
+
+        # 网络类型对应的 flag
+        flag = self.network.get_network_flag()
+        if flag:
+            daemon_args.append(flag)
+
+        if opts.kind == MoneroNodeKind.PRUNED:
+            daemon_args.append("--prune-blockchain")
+
+        if opts.fixed_difficulty:
+            daemon_args.append(f"--fixed-difficulty={opts.fixed_difficulty}")
+
+        # 连接策略
+        if self._seed_endpoints:
+            for endpoint in self._seed_endpoints:
+                if opts.connect_mode == MoneroSeedConnectionMode.EXCLUSIVE:
+                    daemon_args.append(f"--add-exclusive-node={endpoint}")
+                elif opts.connect_mode == MoneroSeedConnectionMode.PRIORITY:
+                    daemon_args.append(f"--add-priority-node={endpoint}")
+                else:
+                    daemon_args.append(f"--seed-node={endpoint}")
+
+        for peer in opts.preferred_peers:
+            daemon_args.append(f"--add-peer={peer}")
+
+        daemon_args.extend(sanitize_extra_args(opts.extra_daemon_args))
+
+        daemon_args_str = "\n".join(
+            f"DAEMON_ARGS+=(\"{arg}\")" for arg in daemon_args if arg
+        )
+
+        seed_section = self._render_seed_wait_section()
+        env_exports = self._render_env_exports()
+
+        should_wait_for_rpc = (
+            opts.rpc_bind_port is not None
+            and opts.enable_wallet
+            and wallet.enable_rpc
+        )
+
+        rpc_wait_section = ""
+        if should_wait_for_rpc:
+            rpc_wait_section = self._render_rpc_wait_section(invoke=True)
+
+        mining_enabled = opts.enable_mining and (
+            opts.mining_trigger != MoneroMiningTrigger.MANUAL
+        )
+
+        wallet_gen_block = wallet_setup_block
+
+        mining_setup_block = ""
+        if mining_enabled:
+            direct_address = opts.mining_address or self.network.get_default_mining_address()
+            if direct_address:
+                mining_setup_block = dedent(
+                    f"""
+                    echo "[monero] 使用固定挖矿地址 {direct_address}" >&2
+                    DAEMON_ARGS+=("--start-mining={direct_address}")
+                    DAEMON_ARGS+=("--mining-threads={opts.mining_threads}")
+                    """
+                ).strip()
+            elif opts.enable_wallet and wallet.auto_save_primary_address:
+                primary_address_path = json.dumps(wallet.primary_address_path)
+                address_file_literal = json.dumps(f"{wallet.wallet_path}.address.txt")
+                mining_setup_block = dedent(
+                    f"""
+                    mining_target=""
+                    if [ -f {primary_address_path} ]; then
+                        mining_target=$(sed -n '1p' {primary_address_path} | tr -d '[:space:]')
+                    fi
+                    if [ -z "$mining_target" ] && [ -f {address_file_literal} ]; then
+                        mining_target=$(grep -oE '[0-9A-Za-z]{{95}}' {address_file_literal} | head -n 1 | tr -d '\r\n')
+                        if [ -n "$mining_target" ]; then
+                            printf "%s\n" "$mining_target" > {primary_address_path}
+                        fi
+                    fi
+                    if [ -n "$mining_target" ]; then
+                        DAEMON_ARGS+=("--start-mining=$mining_target")
+                        DAEMON_ARGS+=("--mining-threads={opts.mining_threads}")
+                        echo "[monero] 已自动配置挖矿地址 $mining_target" >&2
+                    else
+                        echo "[monero] 未找到挖矿地址，挖矿参数未注入" >&2
+                    fi
+                    """
+                ).strip()
+            else:
+                mining_setup_block = "echo \"[monero] 未配置可用的挖矿地址，挖矿参数未注入\" >&2"
+
+        wallet_rpc_block = ""
+        if opts.enable_wallet and wallet.enable_rpc:
+            rpc_login = ""
+            if wallet.rpc_user and wallet.rpc_password:
+                rpc_login = f"--rpc-login={wallet.rpc_user}:{wallet.rpc_password}"
+            allow_external = "--disable-rpc-ban"
+            if not wallet.allow_external_rpc:
+                allow_external = ""
+            extra_flags = " ".join(wallet.extra_rpc_flags)
+            daemon_address = f"127.0.0.1:{opts.rpc_bind_port}"
+            wallet_rpc_log = json.dumps(os.path.join(opts.log_dir, "wallet-rpc.log"))
+            network_flag_cli = flag or ""
+            wallet_rpc_block = dedent(
+                f"""
+                echo "[monero] 启动 wallet RPC..." >&2
+                touch {wallet_rpc_log}
+                "$WALLET_RPC_BIN" --daemon-address {daemon_address} \
+                    --wallet-file {json.dumps(wallet.wallet_path)} \
+                    --password {json.dumps(wallet.password)} \
+                    --rpc-bind-ip {json.dumps(wallet.rpc_bind_ip)} \
+                    --rpc-bind-port {wallet.rpc_bind_port} \
+                    --confirm-external-bind \
+                    --trusted-daemon \
+                    {rpc_login} {allow_external} {extra_flags} {network_flag_cli} \
+                    >> {wallet_rpc_log} 2>&1 &
+                """
+            ).strip()
+
+        return dedent(
+            f"""
+            #!/bin/bash
+            set -euo pipefail
+
+            MONEROD_BIN={json.dumps(opts.binaries.monerod)}
+            WALLET_CLI_BIN={json.dumps(opts.binaries.wallet_cli)}
+            WALLET_RPC_BIN={json.dumps(opts.binaries.wallet_rpc)}
+            LOG_DIR={json.dumps(opts.log_dir)}
+
+            mkdir -p "$LOG_DIR"
+
+            declare -a DAEMON_ARGS
+{daemon_args_str}
+
+            {env_exports}
+
+            {wallet_gen_block}
+
+            {mining_setup_block}
+
+            {seed_section}
+
+            monerod_log="{os.path.join(opts.log_dir, 'monerod.log')}"
+            touch "$monerod_log"
+
+            TAIL_PID=""
+            if command -v tail >/dev/null 2>&1; then
+                tail -F "$monerod_log" >&2 &
+                TAIL_PID=$!
+                trap 'if [ -n "${{TAIL_PID:-}}" ]; then kill "$TAIL_PID" 2>/dev/null || true; fi' EXIT
+            fi
+
+            echo "[monero] 启动 monerod..." >&2
+            "$MONEROD_BIN" "${{DAEMON_ARGS[@]}}" \
+                >> "$monerod_log" 2>&1 &
+            DAEMON_PID=$!
+
+            {rpc_wait_section}
+
+            {wallet_rpc_block}
+
+            wait "$DAEMON_PID"
+            EXIT_STATUS=$?
+
+            if [ -n "${{TAIL_PID:-}}" ]; then
+                kill "$TAIL_PID" 2>/dev/null || true
+                wait "$TAIL_PID" 2>/dev/null || true
+            fi
+
+            exit "$EXIT_STATUS"
+            """
+        ).strip() + "\n"
+
+
+class MoneroLightNodeServer(MoneroBaseServer):
+    """只运行钱包 RPC 的轻节点。"""
+
+    def install(self, node: Node):  # pragma: no cover
+        opts = self.options
+
+        if opts.binary_source != MoneroBinarySource.MIRROR:
+            self.network.log(
+                f"轻节点 {node.getName()} 使用自定义钱包二进制 {opts.binaries.wallet_rpc}"
+            )
+
+        wallet_dir = self._infer_wallet_dir()
+        node.insertStartCommand(0, "cd /")
+        node.appendStartCommand(f"mkdir -p {opts.log_dir}")
+        node.appendStartCommand(f"mkdir -p {wallet_dir}")
+
+        wallet = opts.wallet
+        node.addSoftware("curl")
+
+        script = self._render_start_script()
+        node.setFile("/usr/local/bin/seedemu-monero-light.sh", script)
+        node.addBuildCommandAtEnd("chmod +x /usr/local/bin/seedemu-monero-light.sh")
+        node.appendStartCommand("/usr/local/bin/seedemu-monero-light.sh")
+
+    def _render_start_script(self) -> str:
+        opts = self.options
+        wallet = opts.wallet
+        wallet_dir = self._infer_wallet_dir()
+        wallet_setup_block = self._render_wallet_generation_block()
+
+        upstreams = opts.upstream_nodes
+        if not upstreams and self._fullnode_rpc_endpoints:
+            upstreams = list(self._fullnode_rpc_endpoints)
+
+        daemon_address_list = " ".join(json.dumps(item) for item in upstreams)
+
+        rpc_login = ""
+        if wallet.rpc_user and wallet.rpc_password:
+            rpc_login = f"--rpc-login={wallet.rpc_user}:{wallet.rpc_password}"
+
+        allow_external = "--disable-rpc-ban"
+        if not wallet.allow_external_rpc:
+            allow_external = ""
+
+        wallet_path_literal = json.dumps(wallet.wallet_path)
+        password_literal = json.dumps(wallet.password)
+        rpc_bind_ip_literal = json.dumps(wallet.rpc_bind_ip)
+        wallet_rpc_log = json.dumps(os.path.join(opts.log_dir, "wallet-rpc.log"))
+
+        extra_flags = " ".join(wallet.extra_rpc_flags)
+        network_flag_cli = self.network.get_network_flag() or ""
+
+        env_exports = self._render_env_exports()
+
+        return dedent(
+            f"""
+            #!/bin/bash
+            set -euo pipefail
+
+            WALLET_CLI_BIN={json.dumps(opts.binaries.wallet_cli)}
+            WALLET_RPC_BIN={json.dumps(opts.binaries.wallet_rpc)}
+            LOG_DIR={json.dumps(opts.log_dir)}
+
+            UPSTREAMS=({daemon_address_list})
+            if [ ${{#UPSTREAMS[@]}} -eq 0 ]; then
+                echo "[monero-light] 未指定上游全节点，退出" >&2
+                exit 1
+            fi
+
+            mkdir -p "$LOG_DIR"
+
+            {env_exports}
+
+            {wallet_setup_block}
+
+            for daemon in "${{UPSTREAMS[@]}}"; do
+                echo "[monero-light] 使用上游 $daemon" >&2
+                "$WALLET_RPC_BIN" --daemon-address "$daemon" \
+                    --wallet-file {wallet_path_literal} \
+                    --password {password_literal} \
+                    --rpc-bind-ip {rpc_bind_ip_literal} \
+                    --rpc-bind-port {wallet.rpc_bind_port} \
+                    --confirm-external-bind \
+                    {rpc_login} {allow_external} {extra_flags} {network_flag_cli} \
+                    >> {wallet_rpc_log} 2>&1 &
+            done
+
+            wait
+            """
+        ).strip() + "\n"
+
+

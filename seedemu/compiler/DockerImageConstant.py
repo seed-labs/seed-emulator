@@ -27,6 +27,8 @@ ETHEREUM_IMAGE_POS = DockerImage(name='handsonsecurity/seedemu-ethereum:pos',
                                 software=['software-properties-common', 'python3', 'python3-pip'],
                                 subset=BASE_IMAGE)
 
+MONERO_IMAGE = DockerImage(name='seedemu-monero:latest', software=[], subset=BASE_IMAGE)
+
 OP_STACK_IMAGE = DockerImage(name='huagluck/seedemu-op-stack', software=[], subset=BASE_IMAGE)
 
 SC_DEPLOYER_IMAGE = DockerImage(name='huagluck/seedemu-sc-deployer', software=[], subset=BASE_IMAGE)
@@ -60,6 +62,8 @@ ETHEREUM_IMAGE_ARM64_POS = DockerImage(name='handsonsecurity/seedemu-ethereum-ar
                                 software=['software-properties-common', 'python3', 'python3-pip'],
                                 subset=BASE_IMAGE_ARM64)
 
+MONERO_IMAGE_ARM64 = DockerImage(name='seedemu-monero:latest', software=[], subset=BASE_IMAGE_ARM64)
+
 OP_STACK_IMAGE_ARM64 = DockerImage(name='huagluck/seedemu-op-stack', software=[], subset=BASE_IMAGE_ARM64)
 
 SC_DEPLOYER_IMAGE_ARM64 = DockerImage(name='huagluck/seedemu-sc-deployer', software=[], subset=BASE_IMAGE_ARM64)
@@ -75,6 +79,7 @@ BASESYSTEM_DOCKERIMAGE_MAPPING = {
          BaseSystem.SEEDEMU_ETHEREUM:       ETHEREUM_IMAGE,
         BaseSystem.SEEDEMU_ETHEREUM_LEGACY:       ETHEREUM_IMAGE_LEGACY,
         BaseSystem.SEEDEMU_ETHEREUM_POS:       ETHEREUM_IMAGE_POS,
+        BaseSystem.SEEDEMU_MONERO:        MONERO_IMAGE,
         BaseSystem.SEEDEMU_OP_STACK:       OP_STACK_IMAGE,
         BaseSystem.SEEDEMU_SC_DEPLOYER:    SC_DEPLOYER_IMAGE,
         BaseSystem.SEEDEMU_CHAINLINK:      CHAINLINK_IMAGE
@@ -87,6 +92,7 @@ BASESYSTEM_ARM64_DOCKERIMAGE_MAPPING = {
         BaseSystem.SEEDEMU_ETHEREUM:    ETHEREUM_IMAGE_ARM64,
         BaseSystem.SEEDEMU_ETHEREUM_LEGACY:       ETHEREUM_IMAGE_ARM64_LEGACY,
         BaseSystem.SEEDEMU_ETHEREUM_POS:       ETHEREUM_IMAGE_ARM64_POS,
+        BaseSystem.SEEDEMU_MONERO:        MONERO_IMAGE_ARM64,
         BaseSystem.SEEDEMU_OP_STACK:    OP_STACK_IMAGE_ARM64,
         BaseSystem.SEEDEMU_SC_DEPLOYER: SC_DEPLOYER_IMAGE_ARM64,
         BaseSystem.SEEDEMU_CHAINLINK:   CHAINLINK_IMAGE_ARM64
