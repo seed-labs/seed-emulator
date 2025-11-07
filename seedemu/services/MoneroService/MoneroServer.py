@@ -407,12 +407,13 @@ set -euo pipefail
 __MONERO_WALLET_GENERATE__
                 chmod +x "$wallet_generate_script"
                 if command -v script >/dev/null 2>&1; then
-                    cmd="$wallet_generate_script"
-                    cmd+=" $(printf '%q' \"$WALLET_CLI_BIN\")"
+                    cmd="bash"
+                    cmd+=" $(printf '%q' "$wallet_generate_script")"
+                    cmd+=" $(printf '%q' "$WALLET_CLI_BIN")"
 __WALLET_ARGS_LOOP__
                     script -q -c "$cmd" /dev/null || true
                 else
-                    "$wallet_generate_script" "$WALLET_CLI_BIN" "${wallet_args[@]}" >/dev/null 2>&1 || true
+                    bash "$wallet_generate_script" "$WALLET_CLI_BIN" "${wallet_args[@]}" >/dev/null 2>&1 || true
                 fi
                 rm -f "$wallet_generate_script"
             fi
@@ -529,7 +530,8 @@ shift
 __MONERO_WALLET_INIT__
                 chmod +x "$wallet_cmd_script"
                 if command -v script >/dev/null 2>&1; then
-                    cmd="$wallet_cmd_script"
+                    cmd="bash"
+                    cmd+=" $(printf '%q' "$wallet_cmd_script")"
                     cmd+=" $(printf '%q' "$wallet_password")"
                     cmd+=" $(printf '%q' "$WALLET_CLI_BIN")"
                     for arg in "${wallet_cli_args[@]}"; do
@@ -537,7 +539,7 @@ __MONERO_WALLET_INIT__
                     done
                     script -q -c "$cmd" /dev/null || true
                 else
-                    "$wallet_cmd_script" "$wallet_password" "$WALLET_CLI_BIN" "${wallet_cli_args[@]}" >/dev/null 2>&1 || true
+                    bash "$wallet_cmd_script" "$wallet_password" "$WALLET_CLI_BIN" "${wallet_cli_args[@]}" >/dev/null 2>&1 || true
                 fi
                 rm -f "$wallet_cmd_script"
             fi
@@ -556,7 +558,9 @@ __MONERO_WALLET_INIT__
 
         return "\n\n".join(snippets)
 
-    def _render_wallet_rescan_block(self, daemon_expr: Optional[str] = None) -> str:
+    def _render_wallet_rescan_block(
+        self, daemon_expr: Optional[str] = None, *, include_refresh: bool = True
+    ) -> str:
         """生成在 monerod RPC 可用后执行的钱包重扫脚本。"""
 
         opts = self.options
@@ -577,6 +581,38 @@ __MONERO_WALLET_INIT__
             if opts.rpc_bind_port is None:
                 return ""
             daemon_expr = json.dumps(f"127.0.0.1:{opts.rpc_bind_port}")
+
+        rescan_prefix: List[str] = []
+        if include_refresh:
+            rescan_prefix.extend(
+                [
+                    "printf 'set refresh-from-block-height 0\\n'",
+                    "sleep 1",
+                    "printf '%s\\n' \"$wallet_password\"",
+                    "sleep 1",
+                ]
+            )
+
+        rescan_suffix = [
+            "printf 'save\\n'",
+            "sleep 1",
+            "printf 'exit\\n'",
+        ]
+
+        rescan_body_no_confirm = rescan_prefix + [
+            "printf 'rescan_bc\\n'",
+            "sleep 1",
+        ] + rescan_suffix
+
+        rescan_body_with_confirm = rescan_prefix + [
+            "printf 'rescan_bc\\n'",
+            "sleep 1",
+            "printf 'yes\\n'",
+            "sleep 1",
+        ] + rescan_suffix
+
+        rescan_body = "\n".join(rescan_body_no_confirm)
+        rescan_body_confirm = "\n".join(rescan_body_with_confirm)
 
         template = """
         if [ -f __WALLET_PATH__ ]; then
@@ -603,32 +639,55 @@ set -euo pipefail
 wallet_password="$1"
 shift
 {
-    printf 'set refresh-from-block-height 0\n'
-    sleep 1
-    printf '%s\n' "$wallet_password"
-    sleep 1
-    printf 'rescan_bc\n'
-    sleep 1
-    printf 'yes\n'
-    sleep 1
-    printf 'save\n'
-    sleep 1
-    printf 'exit\n'
+__WALLET_RESCAN_BODY__
 } | "$@"
 __MONERO_WALLET_RESCAN__
             chmod +x "$wallet_rescan_script"
-            if command -v script >/dev/null 2>&1; then
-                cmd="$wallet_rescan_script"
-                cmd+=" $(printf '%q' "$wallet_password")"
-                cmd+=" $(printf '%q' "$WALLET_CLI_BIN")"
-                for arg in "${wallet_cli_args[@]}"; do
-                    cmd+=" $(printf '%q' "$arg")"
-                done
-                script -q -c "$cmd" /dev/null || true
-            else
-                "$wallet_rescan_script" "$wallet_password" "$WALLET_CLI_BIN" "${wallet_cli_args[@]}" >/dev/null 2>&1 || true
+            wallet_rescan_confirm_script=$(mktemp "/tmp/monero-wallet-rescan-confirm.XXXXXX")
+            cat <<'__MONERO_WALLET_RESCAN_CONFIRM__' > "$wallet_rescan_confirm_script"
+#!/bin/bash
+set -euo pipefail
+wallet_password="$1"
+shift
+{
+__WALLET_RESCAN_CONFIRM_BODY__
+} | "$@"
+__MONERO_WALLET_RESCAN_CONFIRM__
+            chmod +x "$wallet_rescan_confirm_script"
+
+            run_wallet_rescan() {
+                local script_path="$1"
+                local exit_code=0
+                local cmd=""
+                if command -v script >/dev/null 2>&1; then
+                    cmd="bash"
+                    cmd+=" $(printf '%q' \"$script_path\")"
+                    cmd+=" $(printf '%q' \"$wallet_password\")"
+                    cmd+=" $(printf '%q' \"$WALLET_CLI_BIN\")"
+                    for arg in "${wallet_cli_args[@]}"; do
+                        cmd+=" $(printf '%q' \"$arg\")"
+                    done
+                    if command -v timeout >/dev/null 2>&1; then
+                        timeout 120 script -q -c "$cmd" /dev/null || exit_code=$?
+                    else
+                        script -q -c "$cmd" /dev/null || exit_code=$?
+                    fi
+                else
+                    if command -v timeout >/dev/null 2>&1; then
+                        timeout 120 bash "$script_path" "$wallet_password" "$WALLET_CLI_BIN" "${wallet_cli_args[@]}" >/dev/null 2>&1 || exit_code=$?
+                    else
+                        bash "$script_path" "$wallet_password" "$WALLET_CLI_BIN" "${wallet_cli_args[@]}" >/dev/null 2>&1 || exit_code=$?
+                    fi
+                fi
+                return "$exit_code"
+            }
+
+            if ! run_wallet_rescan "$wallet_rescan_script"; then
+                echo "[monero] rescan 需要确认，尝试带确认选项..." >&2
+                run_wallet_rescan "$wallet_rescan_confirm_script" || true
             fi
-            rm -f "$wallet_rescan_script"
+
+            rm -f "$wallet_rescan_script" "$wallet_rescan_confirm_script"
         fi
         """
 
@@ -642,6 +701,14 @@ __MONERO_WALLET_RESCAN__
         wallet_rescan_block = dedent(template)
         for key, value in replacements.items():
             wallet_rescan_block = wallet_rescan_block.replace(key, value)
+
+        wallet_rescan_block = wallet_rescan_block.replace(
+            "__WALLET_RESCAN_BODY__", indent(rescan_body, " " * 12)
+        )
+        wallet_rescan_block = wallet_rescan_block.replace(
+            "__WALLET_RESCAN_CONFIRM_BODY__",
+            indent(rescan_body_confirm, " " * 12),
+        )
 
         return wallet_rescan_block.strip()
 
@@ -1009,7 +1076,9 @@ class MoneroLightNodeServer(MoneroBaseServer):
         wallet = opts.wallet
         wallet_dir = self._infer_wallet_dir()
         wallet_setup_block = self._render_wallet_generation_block()
-        wallet_sync_block = self._render_wallet_rescan_block(daemon_expr='"$primary_daemon"')
+        wallet_sync_block = self._render_wallet_rescan_block(
+            daemon_expr='"$primary_daemon"', include_refresh=False
+        )
 
         primary_daemon_block = ""
         if wallet_sync_block:
