@@ -1,22 +1,22 @@
 <template>
-  <el-row style="padding: 20px 0">
-    <el-col :span="12">
-      <div class="mt-4">
-        <el-input v-model="input3" placeholder="请输入" class="input-with-select">
-          <template #prepend>
-            <el-select v-model="select" placeholder="Select" style="width: 115px">
-              <el-option label="Restaurant" value="1"/>
-              <el-option label="Order No." value="2"/>
-              <el-option label="Tel" value="3"/>
-            </el-select>
-          </template>
-          <template #append>
-            <el-button :icon="Search"/>
-          </template>
-        </el-input>
-      </div>
-    </el-col>
-  </el-row>
+<!--  <el-row style="padding: 20px 0">-->
+<!--    <el-col :span="12">-->
+<!--      <div class="mt-4">-->
+<!--        <el-input v-model="input3" placeholder="请输入" class="input-with-select">-->
+<!--          <template #prepend>-->
+<!--            <el-select v-model="select" placeholder="Select" style="width: 115px">-->
+<!--              <el-option label="Restaurant" value="1"/>-->
+<!--              <el-option label="Order No." value="2"/>-->
+<!--              <el-option label="Tel" value="3"/>-->
+<!--            </el-select>-->
+<!--          </template>-->
+<!--          <template #append>-->
+<!--            <el-button :icon="Search"/>-->
+<!--          </template>-->
+<!--        </el-input>-->
+<!--      </div>-->
+<!--    </el-col>-->
+<!--  </el-row>-->
   <el-row :gutter="20" style="padding: 20px 0">
     <el-col>
       <ul style="display: grid;grid-template-columns: repeat(3, 1fr);
@@ -121,36 +121,36 @@ const currentTxData = ref([]);
 const number = 20
 const blocksTotal = ref(0);
 const provider = get_provider()
-const totalETH = ref<Decimal>(0.0)
+const totalETH = ref<Decimal>(new Decimal(-1))
 const statisticInfo = reactive({
   etherPrice: {
     title: 'ETH PRICE',
-    value: '0',
+    value: '-1',
     icon: 'Position'
   },
   TXN: {
     title: 'TRANSACTIONS',
-    value: '0',
+    value: '-1',
     icon: 'CreditCard'
   },
   gasPrice: {
     title: 'GAS PRICE',
-    value: "0",
+    value: "-1",
     icon: 'Money'
   },
   marketCap: {
     title: 'MARKET CAP',
-    value: "0",
+    value: "-1",
     icon: 'Basketball'
   },
   lastFinalizedBlock: {
     title: 'LAST FINALIZED BLOCK',
-    value: '0',
+    value: '-1',
     icon: 'Timer'
   },
   lastSafeBlock: {
     title: 'LAST SAFE BLOCK',
-    value: '0',
+    value: '-1',
     icon: 'TakeawayBox'
   },
 })

@@ -26,6 +26,7 @@
             </el-menu-item-group>
             <el-menu-item-group title="--">
               <el-menu-item index="/blockchain/accounts">Accounts</el-menu-item>
+              <el-menu-item index="/blockchain/wallet">Wallet</el-menu-item>
             </el-menu-item-group>
           </el-sub-menu>
         </el-menu>

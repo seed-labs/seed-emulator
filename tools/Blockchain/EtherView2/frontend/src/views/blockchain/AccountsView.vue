@@ -52,8 +52,8 @@ import {ElNotification} from "element-plus";
 import {reqGetAccounts, reqGetTotalETH} from '@/api/index'
 import Pagination from "@/components/Pagination/index.vue"
 import {
-  get_balance,
-  get_nonce, get_provider,
+  update_balance,
+  get_provider,
 } from "@/utils/ethersTool";
 import styleExports from "@/style/blockchain/index.module.scss"
 
@@ -67,7 +67,7 @@ const pageParams = reactive({
   pageSizes: [2, 5, 10, 50, 100],
 })
 const provider = get_provider()
-const totalETH = ref<string>('')
+const totalETH = ref<string>('-1')
 
 const getTableData = async () => {
   loading.value = true
@@ -115,40 +115,10 @@ const sliceData = () => {
   )
 }
 
-const update_balance = async () => {
-  // sort the data by address
-  let data = accountsData.value;
-
-  if (data === null) return;
-
-  for (let r of data) {
-    let balance = await get_balance(provider, r.address);
-    let nonce = await get_nonce(provider, r.address);
-    let change = 0;
-
-    if ("balance" in r) {
-      change = balance - r["balance"];
-      if (change == 0) {
-        // If change == 0, keep the previous change
-        change = r["recent-change"];
-      } else r["recent-change"] = change;
-
-      r["balance"] = balance;
-    } else {
-      r["balance"] = balance;
-      r["recent-change"] = 0;
-    }
-
-    r.balance = balance
-    r.change = change
-    r.nonce = nonce
-  }
-}
-
 onMounted(async () => {
   await getData()
   window.setInterval(() => {
-    update_balance()
+    update_balance(provider, accountsData.value)
   }, 1000)
 })
 </script>

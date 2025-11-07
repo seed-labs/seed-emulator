@@ -72,19 +72,19 @@ const pageParams = reactive({
 const statisticInfo = reactive({
   TXN24H: {
     title: 'TRANSACTIONS (24H)',
-    value: '',
+    value: '-1',
   },
   pendingTx1H: {
     title: 'PENDING TRANSACTIONS (1H)',
-    value: '',
+    value: '-1',
   },
   totalTXFee24H: {
     title: 'TOTAL TRANSACTIONS FEE (24H)',
-    value: '',
+    value: '-1',
   },
   avgTXFee24H: {
     title: 'AVG. TRANSACTIONS FEE (24H)',
-    value: '',
+    value: '-1',
   },
 })
 

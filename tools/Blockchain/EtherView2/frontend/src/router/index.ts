@@ -75,6 +75,14 @@ const routes = [
                             title: 'Transactions Info'
                         }
                     },
+                    {
+                        path: '/blockchain/wallet',
+                        name: 'Wallet',
+                        component: () => import('@/views/blockchain/WalletView.vue'),
+                        meta: {
+                            title: 'Wallet'
+                        }
+                    },
                 ]
             }
         ]

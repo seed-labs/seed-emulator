@@ -350,3 +350,32 @@ export const calcMarketCap = (etherPrice: string, totalETH: Decimal): string => 
     const _etherPrice = parseFloat(etherPrice.replace(/[^\d.-]/g, ""))
     return `$${totalETH.times(_etherPrice).toFixed(4)}`
 }
+
+export const update_balance = async (provider?: providers.BaseProvider, accountsData: []) => {
+    let data = accountsData;
+    if (data === null) return;
+    provider = provider ?? get_provider();
+
+    for (let r of data) {
+        let balance = await get_balance(provider, r.address);
+        let nonce = await get_nonce(provider, r.address);
+        let change = 0;
+
+        if ("balance" in r) {
+            change = balance - r["balance"];
+            if (change == 0) {
+                // If change == 0, keep the previous change
+                change = r["recent-change"];
+            } else r["recent-change"] = change;
+
+            r["balance"] = balance;
+        } else {
+            r["balance"] = balance;
+            r["recent-change"] = 0;
+        }
+
+        r.balance = balance
+        r.change = change
+        r.nonce = nonce
+    }
+}

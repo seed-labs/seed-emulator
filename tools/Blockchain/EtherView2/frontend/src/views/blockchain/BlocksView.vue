@@ -69,19 +69,19 @@ const pageParams = reactive({
 const statisticInfo = reactive({
   networkUtilization: {
     title: 'Network Utilization (24H)',
-    value: '',
+    value: '-1',
   },
   lastSafeBlock: {
     title: 'LAST SAFE BLOCK',
-    value: '',
+    value: '-1',
   },
   blkByMevBuilders24H: {
     title: 'BLOCKS BY MEV BUILDERS (24H)',
-    value: '',
+    value: '-1',
   },
   burntFees: {
     title: 'BURNT FEES',
-    value: '',
+    value: '-1',
   },
 })
 const blocks24H = ref<ethers.providers.Block[]>()

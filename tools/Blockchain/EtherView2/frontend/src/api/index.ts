@@ -1,12 +1,20 @@
 import request from '@/utils/request'
 
-export enum URL {
-    ACCOUNTS_URL = '/get_accounts',
-    TXS_URL = '/tx',
-    Web3Url_URL = '/get_web3_url',
-    ETHERSCAN_URL = '/etherscan',
-    TX_FEES_URL = '/tx/fees',
-    TOTAL_ETH__URL = '/get_web3_total_eth',
+export const URL = {
+    ACCOUNTS_URL: '/get_accounts',
+    TXS_URL: '/tx',
+    Web3Url_URL: '/get_web3_url',
+    ETHERSCAN_URL: '/etherscan',
+    TX_FEES_URL: '/tx/fees',
+    TOTAL_ETH_URL: '/get_web3_total_eth',
+    RESTORE_ACCOUNTS_URL: '/restore_accounts',
+    SEND_TX_URL: '/sendTX',
+}
+
+const headers = {
+    headers: {
+        'Content-Type': 'multipart/form-data'
+    }
 }
 
 export const reqGetAccounts = () => {
@@ -15,8 +23,15 @@ export const reqGetAccounts = () => {
     )
 }
 
+export const reqRestoreAccounts = (params: {}) => {
+    return request.get(
+        URL.RESTORE_ACCOUNTS_URL,
+        {params}
+    )
+}
 
-export const reqGetTXs = (params) => {
+
+export const reqGetTXs = (params: {}) => {
     return request.get(
         URL.TXS_URL,
         {params}
@@ -43,6 +58,14 @@ export const reqGetTxFees = () => {
 
 export const reqGetTotalETH = () => {
     return request.get(
-        URL.TOTAL_ETH__URL,
+        URL.TOTAL_ETH_URL,
+    )
+}
+
+export const reqSendTX = (data: {}) => {
+    return request.post(
+        URL.SEND_TX_URL,
+        data,
+        headers
     )
 }
