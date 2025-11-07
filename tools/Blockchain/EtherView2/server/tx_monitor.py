@@ -1,7 +1,10 @@
 import time
 import logging
+
+import web3.exceptions
 from web3 import Web3
 from server.utils.models import db
+from web3.middleware import geth_poa_middleware
 
 
 class SimpleTransactionMonitor:
@@ -57,7 +60,11 @@ class SimpleTransactionMonitor:
                 return
         self.logging.info("start_monitoring...")
         last_block = self.w3.eth.blockNumber
-        self._init_data(last_block)
+        try:
+            self._init_data(last_block)
+        except web3.exceptions.ExtraDataLengthError:
+            self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+            self._init_data(last_block)
         try:
             while True:
                 current_block = self.w3.eth.blockNumber
