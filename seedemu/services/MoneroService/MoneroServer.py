@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import os
-from textwrap import dedent
+from textwrap import dedent, indent
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, TYPE_CHECKING
 
 from seedemu.core.Node import Node
@@ -371,29 +371,64 @@ class MoneroBaseServer(Server):
         snippets: List[str] = []
 
         if wallet.mode == MoneroWalletMode.AUTO_GENERATED:
-            snippets.append(
+            wallet_args_loop = indent(
                 dedent(
-                    f"""
-                    if [ ! -f {wallet_path} ]; then
-                        wallet_args=(
-                            "--generate-new-wallet" {wallet_path}
-                            "--password" {password}
-                            "--mnemonic-language" "English"
-                            "--restore-height" "0"
-                            "--create-address-file"
-                            "--log-file" {log_file}
-                            "--offline"
-                            "--command" "set refresh-from-block-height 0"
-                            "--command" "exit"
-                        )
-                        if [ -n {network_flag_literal} ]; then
-                            wallet_args+=({network_flag_literal})
-                        fi
-                        "$WALLET_CLI_BIN" "${{wallet_args[@]}}" >/dev/null 2>&1 || true
-                    fi
                     """
-                ).strip()
+                    for arg in "${wallet_args[@]}"; do
+                        cmd+=" $(printf '%q' "$arg")"
+                    done
+                    """
+                ).strip(),
+                " " * 24,
             )
+
+            template = """
+            if [ ! -f __WALLET_PATH__ ]; then
+                wallet_args=(
+                    "--generate-new-wallet" __WALLET_PATH__
+                    "--password" __PASSWORD__
+                    "--mnemonic-language" "English"
+                    "--restore-height" "0"
+                    "--create-address-file"
+                    "--log-file" __LOG_FILE__
+                    "--offline"
+                )
+                if [ -n __NETWORK_FLAG_LITERAL__ ]; then
+                    wallet_args+=(__NETWORK_FLAG_LITERAL__)
+                fi
+                wallet_generate_script=$(mktemp "/tmp/monero-wallet-generate.XXXXXX")
+                cat <<'__MONERO_WALLET_GENERATE__' > "$wallet_generate_script"
+#!/bin/bash
+set -euo pipefail
+{
+    sleep 1
+    printf 'exit\n'
+} | "$@"
+__MONERO_WALLET_GENERATE__
+                chmod +x "$wallet_generate_script"
+                if command -v script >/dev/null 2>&1; then
+                    cmd="$wallet_generate_script"
+                    cmd+=" $(printf '%q' \"$WALLET_CLI_BIN\")"
+__WALLET_ARGS_LOOP__
+                    script -q -c "$cmd" /dev/null || true
+                else
+                    "$wallet_generate_script" "$WALLET_CLI_BIN" "${wallet_args[@]}" >/dev/null 2>&1 || true
+                fi
+                rm -f "$wallet_generate_script"
+            fi
+            """
+
+            snippet = dedent(template).strip()
+            replacements = {
+                "__WALLET_PATH__": wallet_path,
+                "__PASSWORD__": password,
+                "__LOG_FILE__": log_file,
+                "__NETWORK_FLAG_LITERAL__": network_flag_literal,
+            }
+            for key, value in replacements.items():
+                snippet = snippet.replace(key, value)
+            snippet = snippet.replace("__WALLET_ARGS_LOOP__", wallet_args_loop)
+            snippets.append(snippet)
         elif wallet.mode == MoneroWalletMode.IMPORT_MNEMONIC:
             if wallet.mnemonic:
                 mnemonic_file = json.dumps(
@@ -419,8 +454,6 @@ __MONERO_MNEMONIC__
                             "--create-address-file"
                             "--log-file" {log_file}
                             "--offline"
-                            "--command" "set refresh-from-block-height 0"
-                            "--command" "exit"
                         )
                         if [ -n {network_flag_literal} ]; then
                             restore_args+=({network_flag_literal})
@@ -465,27 +498,152 @@ __RESTORE_APPEND__
             )
 
         if opts.enable_wallet:
-            wallet_refresh_block = dedent(
-                f"""
-                if [ -f {wallet_path} ]; then
-                    refresh_args=(
-                        "--wallet-file" {wallet_path}
-                        "--password" {password}
-                        "--log-file" {log_file}
-                        "--offline"
-                        "--command" "set refresh-from-block-height 0"
-                        "--command" "exit"
-                    )
-                    if [ -n {network_flag_literal} ]; then
-                        refresh_args+=({network_flag_literal})
-                    fi
-                    "$WALLET_CLI_BIN" "${{refresh_args[@]}}" >/dev/null 2>&1 || true
+            template = """
+            if [ -f __WALLET_PATH__ ]; then
+                wallet_file=__WALLET_PATH__
+                wallet_password=__PASSWORD__
+                wallet_cli_args=(
+                    "--wallet-file" "$wallet_file"
+                    "--password" "$wallet_password"
+                    "--log-file" __LOG_FILE__
+                    "--offline"
+                )
+                if [ -n __NETWORK_FLAG_LITERAL__ ]; then
+                    wallet_cli_args+=(__NETWORK_FLAG_LITERAL__)
                 fi
-                """
-            ).strip()
+                wallet_cmd_script=$(mktemp "/tmp/monero-wallet-init.XXXXXX")
+                cat <<'__MONERO_WALLET_INIT__' > "$wallet_cmd_script"
+#!/bin/bash
+set -euo pipefail
+wallet_password="$1"
+shift
+{
+    printf 'set refresh-from-block-height 0\n'
+    sleep 1
+    printf '%s\n' "$wallet_password"
+    sleep 1
+    printf 'save\n'
+    sleep 1
+    printf 'exit\n'
+} | "$@"
+__MONERO_WALLET_INIT__
+                chmod +x "$wallet_cmd_script"
+                if command -v script >/dev/null 2>&1; then
+                    cmd="$wallet_cmd_script"
+                    cmd+=" $(printf '%q' "$wallet_password")"
+                    cmd+=" $(printf '%q' "$WALLET_CLI_BIN")"
+                    for arg in "${wallet_cli_args[@]}"; do
+                        cmd+=" $(printf '%q' "$arg")"
+                    done
+                    script -q -c "$cmd" /dev/null || true
+                else
+                    "$wallet_cmd_script" "$wallet_password" "$WALLET_CLI_BIN" "${wallet_cli_args[@]}" >/dev/null 2>&1 || true
+                fi
+                rm -f "$wallet_cmd_script"
+            fi
+            """
+            wallet_refresh_block = dedent(template)
+            replacements = {
+                "__WALLET_PATH__": wallet_path,
+                "__PASSWORD__": password,
+                "__LOG_FILE__": log_file,
+                "__NETWORK_FLAG_LITERAL__": network_flag_literal,
+            }
+            for key, value in replacements.items():
+                wallet_refresh_block = wallet_refresh_block.replace(key, value)
+            wallet_refresh_block = wallet_refresh_block.strip()
             snippets.append(wallet_refresh_block)
 
         return "\n\n".join(snippets)
+
+    def _render_wallet_rescan_block(self, daemon_expr: Optional[str] = None) -> str:
+        """生成在 monerod RPC 可用后执行的钱包重扫脚本。"""
+
+        opts = self.options
+        if not opts.enable_wallet:
+            return ""
+
+        wallet = opts.wallet
+        if not wallet.wallet_path:
+            return ""
+
+        wallet_path = json.dumps(wallet.wallet_path)
+        password = json.dumps(wallet.password)
+        log_file = json.dumps(os.path.join(opts.log_dir, "wallet-cli.log"))
+        network_flag = self.network.get_network_flag() or ""
+        network_flag_literal = json.dumps(network_flag)
+
+        if daemon_expr is None:
+            if opts.rpc_bind_port is None:
+                return ""
+            daemon_expr = json.dumps(f"127.0.0.1:{opts.rpc_bind_port}")
+
+        template = """
+        if [ -f __WALLET_PATH__ ]; then
+            wallet_file=__WALLET_PATH__
+            wallet_password=__PASSWORD__
+            if pgrep -f "monero-wallet-rpc --wallet-file $wallet_file" >/dev/null 2>&1; then
+                echo "[monero] 正在停止已存在的 wallet-rpc 以执行 CLI 操作" >&2
+                pkill -f "monero-wallet-rpc --wallet-file $wallet_file" || true
+                sleep 1
+            fi
+            wallet_cli_args=(
+                "--wallet-file" "$wallet_file"
+                "--password" "$wallet_password"
+                "--daemon-address" __DAEMON_ADDRESS__
+                "--log-file" __LOG_FILE__
+            )
+            if [ -n __NETWORK_FLAG_LITERAL__ ]; then
+                wallet_cli_args+=(__NETWORK_FLAG_LITERAL__)
+            fi
+            wallet_rescan_script=$(mktemp "/tmp/monero-wallet-rescan.XXXXXX")
+            cat <<'__MONERO_WALLET_RESCAN__' > "$wallet_rescan_script"
+#!/bin/bash
+set -euo pipefail
+wallet_password="$1"
+shift
+{
+    printf 'set refresh-from-block-height 0\n'
+    sleep 1
+    printf '%s\n' "$wallet_password"
+    sleep 1
+    printf 'rescan_bc\n'
+    sleep 1
+    printf 'yes\n'
+    sleep 1
+    printf 'save\n'
+    sleep 1
+    printf 'exit\n'
+} | "$@"
+__MONERO_WALLET_RESCAN__
+            chmod +x "$wallet_rescan_script"
+            if command -v script >/dev/null 2>&1; then
+                cmd="$wallet_rescan_script"
+                cmd+=" $(printf '%q' "$wallet_password")"
+                cmd+=" $(printf '%q' "$WALLET_CLI_BIN")"
+                for arg in "${wallet_cli_args[@]}"; do
+                    cmd+=" $(printf '%q' "$arg")"
+                done
+                script -q -c "$cmd" /dev/null || true
+            else
+                "$wallet_rescan_script" "$wallet_password" "$WALLET_CLI_BIN" "${wallet_cli_args[@]}" >/dev/null 2>&1 || true
+            fi
+            rm -f "$wallet_rescan_script"
+        fi
+        """
+
+        replacements = {
+            "__WALLET_PATH__": wallet_path,
+            "__PASSWORD__": password,
+            "__DAEMON_ADDRESS__": daemon_expr,
+            "__LOG_FILE__": log_file,
+            "__NETWORK_FLAG_LITERAL__": network_flag_literal,
+        }
+        wallet_rescan_block = dedent(template)
+        for key, value in replacements.items():
+            wallet_rescan_block = wallet_rescan_block.replace(key, value)
+
+        return wallet_rescan_block.strip()
 
     # ------------------------------------------------------------------
     # 可覆盖：生成启动脚本
@@ -689,6 +847,10 @@ class MoneroFullNodeServer(MoneroBaseServer):
         if should_wait_for_rpc:
             rpc_wait_section = self._render_rpc_wait_section(invoke=True)
 
+        wallet_rescan_block = ""
+        if should_wait_for_rpc:
+            wallet_rescan_block = self._render_wallet_rescan_block()
+
         mining_enabled = opts.enable_mining and (
             opts.mining_trigger != MoneroMiningTrigger.MANUAL
         )
@@ -801,6 +963,8 @@ class MoneroFullNodeServer(MoneroBaseServer):
 
             {rpc_wait_section}
 
+            {wallet_rescan_block}
+
             {wallet_rpc_block}
 
             wait "$DAEMON_PID"
@@ -845,6 +1009,25 @@ class MoneroLightNodeServer(MoneroBaseServer):
         wallet = opts.wallet
         wallet_dir = self._infer_wallet_dir()
         wallet_setup_block = self._render_wallet_generation_block()
+        wallet_sync_block = self._render_wallet_rescan_block(daemon_expr='"$primary_daemon"')
+
+        primary_daemon_block = ""
+        if wallet_sync_block:
+            primary_daemon_body = indent(wallet_sync_block, " " * 12).rstrip()
+            primary_daemon_body = primary_daemon_body.replace(
+                "\n" + " " * 12 + "__MONERO_WALLET_RESCAN__",
+                "\n__MONERO_WALLET_RESCAN__",
+            )
+            primary_daemon_block = (
+                " " * 12
+                + "primary_daemon=\"${UPSTREAMS[0]}\"\n"
+                + " " * 12
+                + "if [ -n \"$primary_daemon\" ]; then\n"
+                + primary_daemon_body
+                + "\n"
+                + " " * 12
+                + "fi"
+            )
 
         upstreams = opts.upstream_nodes
         if not upstreams and self._fullnode_rpc_endpoints:
@@ -890,6 +1073,8 @@ class MoneroLightNodeServer(MoneroBaseServer):
             {env_exports}
 
             {wallet_setup_block}
+
+{primary_daemon_block if primary_daemon_block else ""}
 
             for daemon in "${{UPSTREAMS[@]}}"; do
                 echo "[monero-light] 使用上游 $daemon" >&2

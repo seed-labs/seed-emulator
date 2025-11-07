@@ -81,25 +81,57 @@ light_wallet_template = MoneroWalletSpec(
     allow_external_rpc=True,
 )
 
+seed_wallet = MoneroWalletSpec(
+    mode=MoneroWalletMode.AUTO_GENERATED,
+    password="seedemu",
+    enable_rpc=True,
+    rpc_user="monero",
+    rpc_password="seedemu",
+    allow_external_rpc=False,
+)
+
+client_wallet = MoneroWalletSpec(
+    mode=MoneroWalletMode.AUTO_GENERATED,
+    password="client",
+    enable_rpc=True,
+    rpc_user="client",
+    rpc_password="client",
+    allow_external_rpc=False,
+)
+
 # AS150-154：host_0 为种子节点，host_1 为 full client（仅 AS150 的 client 挖矿）。
 seed_asns = [150, 151, 152, 153, 154]
 for asn in seed_asns:
     seed_vnode = f"monero-seed-{asn}"
     seed_server = network.createNode(seed_vnode, kind=MoneroNodeKind.FULL, binary_source=MoneroBinarySource.MIRROR)
-    seed_server.setSeedRole().enableWallet().enableWalletRpc(allow_external=False)
+    seed_server.setSeedRole().setWallet(seed_wallet).enableWalletRpc(
+        user=seed_wallet.rpc_user,
+        password=seed_wallet.rpc_password,
+        allow_external=False,
+    )
     seed_server.setDisplayName(f"Monero-Seed-{asn}")
     _bind(emu, seed_vnode, asn, host_index=0)
 
     client_vnode = f"monero-client-{asn}"
     client_server = network.createNode(client_vnode, kind=MoneroNodeKind.FULL, binary_source=MoneroBinarySource.MIRROR)
-    client_server.setClientRole().enableWallet()
+    client_server.setClientRole().setWallet(client_wallet)
     client_server.setDisplayName(f"Monero-Client-{asn}")
 
     if asn == 150:
-        client_server.setWallet(mining_wallet).enableWalletRpc(allow_external=False)
+        client_server.setWallet(mining_wallet).enableWalletRpc(
+            user=mining_wallet.rpc_user,
+            password=mining_wallet.rpc_password,
+            allow_external=False,
+        )
         client_server.enableMining(
             threads=1,
             trigger=MoneroMiningTrigger.AFTER_SEED_REACHABLE,
+        )
+    else:
+        client_server.enableWalletRpc(
+            user=client_wallet.rpc_user,
+            password=client_wallet.rpc_password,
+            allow_external=False,
         )
 
     _bind(emu, client_vnode, asn, host_index=1)
@@ -108,7 +140,11 @@ for asn in seed_asns:
 for asn in [160, 161]:
     vnode = f"monero-client-{asn}"
     server = network.createNode(vnode, kind=MoneroNodeKind.FULL, binary_source=MoneroBinarySource.MIRROR)
-    server.setClientRole().enableWallet()
+    server.setClientRole().setWallet(client_wallet).enableWalletRpc(
+        user=client_wallet.rpc_user,
+        password=client_wallet.rpc_password,
+        allow_external=False,
+    )
     server.setDisplayName(f"Monero-Client-{asn}")
     _bind(emu, vnode, asn, host_index=0)
 
@@ -123,7 +159,11 @@ for asn in [162, 163]:
 # AS164：一个 pruned 节点。
 pruned_vnode = "monero-pruned-164"
 pruned_server = network.createNode(pruned_vnode, kind=MoneroNodeKind.PRUNED)
-pruned_server.setClientRole().enableWallet()
+pruned_server.setClientRole().setWallet(client_wallet).enableWalletRpc(
+    user=client_wallet.rpc_user,
+    password=client_wallet.rpc_password,
+    allow_external=False,
+)
 pruned_server.setDisplayName("Monero-Pruned-164")
 _bind(emu, pruned_vnode, 164, host_index=0)
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
-
 from enum import Enum
-
 
 class MoneroNodeKind(Enum):
     """节点类别：决定底层守护进程运行模式。"""
