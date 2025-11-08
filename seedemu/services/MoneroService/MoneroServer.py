@@ -614,103 +614,120 @@ __MONERO_WALLET_INIT__
         rescan_body = "\n".join(rescan_body_no_confirm)
         rescan_body_confirm = "\n".join(rescan_body_with_confirm)
 
-        template = """
-        if [ -f __WALLET_PATH__ ]; then
-            wallet_file=__WALLET_PATH__
-            wallet_password=__PASSWORD__
-            if pgrep -f "monero-wallet-rpc --wallet-file $wallet_file" >/dev/null 2>&1; then
-                echo "[monero] 正在停止已存在的 wallet-rpc 以执行 CLI 操作" >&2
-                pkill -f "monero-wallet-rpc --wallet-file $wallet_file" || true
-                sleep 1
-            fi
-            wallet_cli_args=(
-                "--wallet-file" "$wallet_file"
-                "--password" "$wallet_password"
-                "--daemon-address" __DAEMON_ADDRESS__
-                "--log-file" __LOG_FILE__
-            )
-            if [ -n __NETWORK_FLAG_LITERAL__ ]; then
-                wallet_cli_args+=(__NETWORK_FLAG_LITERAL__)
-            fi
-            wallet_rescan_script=$(mktemp "/tmp/monero-wallet-rescan.XXXXXX")
-            cat <<'__MONERO_WALLET_RESCAN__' > "$wallet_rescan_script"
-#!/bin/bash
-set -euo pipefail
-wallet_password="$1"
-shift
-{
-__WALLET_RESCAN_BODY__
-} | "$@"
-__MONERO_WALLET_RESCAN__
-            chmod +x "$wallet_rescan_script"
-            wallet_rescan_confirm_script=$(mktemp "/tmp/monero-wallet-rescan-confirm.XXXXXX")
-            cat <<'__MONERO_WALLET_RESCAN_CONFIRM__' > "$wallet_rescan_confirm_script"
-#!/bin/bash
-set -euo pipefail
-wallet_password="$1"
-shift
-{
-__WALLET_RESCAN_CONFIRM_BODY__
-} | "$@"
-__MONERO_WALLET_RESCAN_CONFIRM__
-            chmod +x "$wallet_rescan_confirm_script"
-
-            run_wallet_rescan() {
-                local script_path="$1"
-                local exit_code=0
-                local cmd=""
-                if command -v script >/dev/null 2>&1; then
-                    cmd="bash"
-                    cmd+=" $(printf '%q' \"$script_path\")"
-                    cmd+=" $(printf '%q' \"$wallet_password\")"
-                    cmd+=" $(printf '%q' \"$WALLET_CLI_BIN\")"
-                    for arg in "${wallet_cli_args[@]}"; do
-                        cmd+=" $(printf '%q' \"$arg\")"
-                    done
-                    if command -v timeout >/dev/null 2>&1; then
-                        timeout 120 script -q -c "$cmd" /dev/null || exit_code=$?
-                    else
-                        script -q -c "$cmd" /dev/null || exit_code=$?
-                    fi
-                else
-                    if command -v timeout >/dev/null 2>&1; then
-                        timeout 120 bash "$script_path" "$wallet_password" "$WALLET_CLI_BIN" "${wallet_cli_args[@]}" >/dev/null 2>&1 || exit_code=$?
-                    else
-                        bash "$script_path" "$wallet_password" "$WALLET_CLI_BIN" "${wallet_cli_args[@]}" >/dev/null 2>&1 || exit_code=$?
-                    fi
-                fi
-                return "$exit_code"
-            }
-
-            if ! run_wallet_rescan "$wallet_rescan_script"; then
-                echo "[monero] rescan 需要确认，尝试带确认选项..." >&2
-                run_wallet_rescan "$wallet_rescan_confirm_script" || true
-            fi
-
-            rm -f "$wallet_rescan_script" "$wallet_rescan_confirm_script"
-        fi
-        """
-
-        replacements = {
-            "__WALLET_PATH__": wallet_path,
-            "__PASSWORD__": password,
-            "__DAEMON_ADDRESS__": daemon_expr,
-            "__LOG_FILE__": log_file,
-            "__NETWORK_FLAG_LITERAL__": network_flag_literal,
-        }
-        wallet_rescan_block = dedent(template)
-        for key, value in replacements.items():
-            wallet_rescan_block = wallet_rescan_block.replace(key, value)
-
-        wallet_rescan_block = wallet_rescan_block.replace(
-            "__WALLET_RESCAN_BODY__", indent(rescan_body, " " * 12)
+        lines: List[str] = []
+        lines.append(f"        if [ -f {wallet_path} ]; then")
+        lines.append(f"            wallet_file={wallet_path}")
+        lines.append(f"            wallet_password={password}")
+        lines.append(
+            "            if pgrep -f \"monero-wallet-rpc --wallet-file $wallet_file\" >/dev/null 2>&1; then"
         )
-        wallet_rescan_block = wallet_rescan_block.replace(
-            "__WALLET_RESCAN_CONFIRM_BODY__",
-            indent(rescan_body_confirm, " " * 12),
+        lines.append(
+            "                echo \"[monero] 正在停止已存在的 wallet-rpc 以执行 CLI 操作\" >&2"
         )
+        lines.append(
+            "                pkill -f \"monero-wallet-rpc --wallet-file $wallet_file\" || true"
+        )
+        lines.append("                sleep 1")
+        lines.append("            fi")
+        lines.append("            wallet_cli_args=(")
+        lines.append("                \"--wallet-file\" \"$wallet_file\"")
+        lines.append("                \"--password\" \"$wallet_password\"")
+        lines.append(f"                \"--daemon-address\" {daemon_expr}")
+        lines.append(f"                \"--log-file\" {log_file}")
+        lines.append("            )")
+        if network_flag:
+            lines.append(f"            if [ -n {network_flag_literal} ]; then")
+            lines.append(f"                wallet_cli_args+=({network_flag_literal})")
+            lines.append("            fi")
+        lines.append(
+            "            wallet_rescan_script=$(mktemp \"/tmp/monero-wallet-rescan.XXXXXX\")"
+        )
+        lines.append(
+            "            cat <<'__MONERO_WALLET_RESCAN__' > \"$wallet_rescan_script\""
+        )
+        lines.extend(
+            [
+                "#!/bin/bash",
+                "set -euo pipefail",
+                "wallet_password=\"$1\"",
+                "shift",
+                "{",
+                *rescan_body.splitlines(),
+                "} | \"$@\"",
+                "__MONERO_WALLET_RESCAN__",
+            ]
+        )
+        lines.append("            chmod +x \"$wallet_rescan_script\"")
+        lines.append(
+            "            wallet_rescan_confirm_script=$(mktemp \"/tmp/monero-wallet-rescan-confirm.XXXXXX\")"
+        )
+        lines.append(
+            "            cat <<'__MONERO_WALLET_RESCAN_CONFIRM__' > \"$wallet_rescan_confirm_script\""
+        )
+        lines.extend(
+            [
+                "#!/bin/bash",
+                "set -euo pipefail",
+                "wallet_password=\"$1\"",
+                "shift",
+                "{",
+                *rescan_body_confirm.splitlines(),
+                "} | \"$@\"",
+                "__MONERO_WALLET_RESCAN_CONFIRM__",
+            ]
+        )
+        lines.append("            chmod +x \"$wallet_rescan_confirm_script\"")
+        lines.append("")
+        lines.append("            run_wallet_rescan() {")
+        lines.append("                local script_path=\"$1\"")
+        lines.append("                local exit_code=0")
+        lines.append("                local cmd=\"\"")
+        lines.append("                if command -v script >/dev/null 2>&1; then")
+        lines.append("                    cmd=\"bash\"")
+        lines.append("                    cmd+=\" $(printf '%q' \"$script_path\")\"")
+        lines.append("                    cmd+=\" $(printf '%q' \"$wallet_password\")\"")
+        lines.append("                    cmd+=\" $(printf '%q' \"$WALLET_CLI_BIN\")\"")
+        lines.append("                    for arg in \"${wallet_cli_args[@]}\"; do")
+        lines.append("                        cmd+=\" $(printf '%q' \"$arg\")\"")
+        lines.append("                    done")
+        lines.append("                    if command -v timeout >/dev/null 2>&1; then")
+        lines.append("                        timeout 120 script -q -c \"$cmd\" /dev/null || exit_code=$?")
+        lines.append("                    else")
+        lines.append("                        script -q -c \"$cmd\" /dev/null || exit_code=$?")
+        lines.append("                    fi")
+        lines.append("                else")
+        lines.append("                    if command -v timeout >/dev/null 2>&1; then")
+        lines.append(
+            "                        timeout 120 bash \"$script_path\" \"$wallet_password\" \"$WALLET_CLI_BIN\" \"${wallet_cli_args[@]}\" >/dev/null 2>&1 || exit_code=$?"
+        )
+        lines.append("                    else")
+        lines.append(
+            "                        bash \"$script_path\" \"$wallet_password\" \"$WALLET_CLI_BIN\" \"${wallet_cli_args[@]}\" >/dev/null 2>&1 || exit_code=$?"
+        )
+        lines.append("                    fi")
+        lines.append("                fi")
+        lines.append("                return \"$exit_code\"")
+        lines.append("            }")
+        lines.append("")
+        lines.append(
+            "            if ! run_wallet_rescan \"$wallet_rescan_script\"; then"
+        )
+        lines.append(
+            "                echo \"[monero] rescan 需要确认，尝试带确认选项...\" >&2"
+        )
+        lines.append(
+            "                run_wallet_rescan \"$wallet_rescan_confirm_script\" || true"
+        )
+        lines.append("            fi")
+        lines.append("")
+        lines.append(
+            "            rm -f \"$wallet_rescan_script\" \"$wallet_rescan_confirm_script\""
+        )
+        lines.append("        fi")
 
-        return wallet_rescan_block.strip()
+        wallet_rescan_block = "\n".join(lines)
+
+        return wallet_rescan_block
 
     # ------------------------------------------------------------------
     # 可覆盖：生成启动脚本
@@ -1086,6 +1103,10 @@ class MoneroLightNodeServer(MoneroBaseServer):
             primary_daemon_body = primary_daemon_body.replace(
                 "\n" + " " * 12 + "__MONERO_WALLET_RESCAN__",
                 "\n__MONERO_WALLET_RESCAN__",
+            )
+            primary_daemon_body = primary_daemon_body.replace(
+                "\n" + " " * 12 + "__MONERO_WALLET_RESCAN_CONFIRM__",
+                "\n__MONERO_WALLET_RESCAN_CONFIRM__",
             )
             primary_daemon_block = (
                 " " * 12
