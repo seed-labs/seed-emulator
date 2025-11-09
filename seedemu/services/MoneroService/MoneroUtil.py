@@ -79,6 +79,7 @@ class MoneroNodeOptions:
     fixed_difficulty: Optional[int] = None
     extra_daemon_args: List[str] = field(default_factory=list)
     extra_env: Dict[str, str] = field(default_factory=dict)
+    custom_binary_imports: Dict[str, str] = field(default_factory=dict)
 
     expose_p2p: bool = False
     expose_rpc: bool = False
@@ -122,6 +123,7 @@ class MoneroNodeOptions:
             expose_rpc=self.expose_rpc,
             expose_zmq=self.expose_zmq,
             name=self.name,
+            custom_binary_imports=dict(self.custom_binary_imports),
         )
 
 

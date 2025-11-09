@@ -28,15 +28,15 @@ class MoneroWalletConfig:
 
     mode: MoneroWalletMode = MoneroWalletMode.AUTO_GENERATED
     wallet_path: str = "/var/lib/monero/wallets/seedemu-wallet"
-    password: str = "seedemu"
+    password: str = "seed"
     mnemonic: Optional[str] = None
     restore_height: int = 0
 
     enable_rpc: bool = False
     rpc_bind_ip: str = "0.0.0.0"
     rpc_bind_port: int = 18088
-    rpc_user: Optional[str] = None
-    rpc_password: Optional[str] = None
+    rpc_user: Optional[str] = "seed"
+    rpc_password: Optional[str] = "seed"
     allow_external_rpc: bool = True
     extra_rpc_flags: List[str] = field(default_factory=list)
 

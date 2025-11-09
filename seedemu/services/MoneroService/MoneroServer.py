@@ -88,6 +88,25 @@ class MoneroBaseServer(Server):
     def set_fullnode_rpc_endpoints(self, endpoints: Sequence[str]):
         self._fullnode_rpc_endpoints = list(endpoints)
 
+    def _import_custom_binaries(self, node: Node):
+        """Import user-provided binaries into the container when requested."""
+        opts = self.options
+        if opts.binary_source != MoneroBinarySource.CUSTOM:
+            return
+        if not opts.custom_binary_imports:
+            self.network.log(
+                f"[{opts.name}] binary_source is CUSTOM but no custom_binary_imports were provided"
+            )
+            return
+        for container_path, host_path in opts.custom_binary_imports.items():
+            abs_host_path = os.path.abspath(host_path)
+            if not os.path.exists(abs_host_path):
+                raise FileNotFoundError(
+                    f"Custom Monero binary not found: {abs_host_path}"
+                )
+            node.importFile(abs_host_path, container_path)
+            node.addBuildCommandAtEnd(f"chmod +x {container_path}")
+
     
     # Fluent-style configuration API (aligned with EthereumService style)
     
@@ -771,6 +790,7 @@ class MoneroFullNodeServer(MoneroBaseServer):
 
     def install(self, node: Node):  # pragma: no cover - invoked at runtime
         self._ensure_prerequisites(node)
+        self._import_custom_binaries(node)
         script = self._render_start_script()
         node.setFile("/usr/local/bin/seedemu-monero-node.sh", script)
         node.addBuildCommandAtEnd("chmod +x /usr/local/bin/seedemu-monero-node.sh")
@@ -1179,6 +1199,8 @@ class MoneroLightNodeServer(MoneroBaseServer):
 
         wallet = opts.wallet
         node.addSoftware("curl")
+
+        self._import_custom_binaries(node)
 
         script = self._render_start_script()
         node.setFile("/usr/local/bin/seedemu-monero-light.sh", script)
