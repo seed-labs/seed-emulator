@@ -8,6 +8,8 @@ ENV MONERO_VERSION=v0.18.3.3 \
     BUILDKIT_SANDBOX_UID=0 \
     BUILDKIT_SANDBOX_GID=0
 
+# Pin the CLI bundle to v0.18.3.3 to keep the emulator reproducible.
+
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends ca-certificates curl bzip2 && \

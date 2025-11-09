@@ -28,11 +28,13 @@ from .MoneroUtil import (
 
 
 class MoneroService(Service):
-    """Monero 区块链服务入口。
+    """Entry point for the Monero blockchain service.
 
-    与 EthereumService 类似，MoneroService 负责维护虚拟节点与 Monero 网络
-    之间的映射关系，并在 render 阶段调用各个 server 的 install() 方法完成
-    部署。为保持语义清晰，将具体的网络/节点逻辑委托给 MoneroNetwork。
+    Similar to ``EthereumService``, the ``MoneroService`` keeps track of the
+    mapping between virtual nodes and Monero networks, and during the render
+    phase invokes each server's ``install()`` method to provision the software.
+    Network- and node-specific logic is delegated to :class:`MoneroNetwork`
+    to keep the semantics clean.
     """
 
     def __init__(self):
@@ -40,24 +42,34 @@ class MoneroService(Service):
         self.__serial = 0
         self.__networks: Dict[str, MoneroNetwork] = {}
 
-    # ------------------------------------------------------------------
-    # Service 接口
-    # ------------------------------------------------------------------
+    
+    # Service interface
+    
     def getName(self) -> str:
         return "MoneroService"
 
     def _createServer(self) -> Server:
-        raise AssertionError("请通过 MoneroNetwork.createNode() 安装 Monero 节点")
+        raise AssertionError("Install Monero nodes via MoneroNetwork.createNode() instead")
 
     def configure(self, emulator: Emulator):
-        """配置阶段：注入绑定信息并让 MoneroNetwork 计算互联参数。"""
+        """Inject binding information and let ``MoneroNetwork`` derive connectivity.
+
+        Args:
+            emulator: Active :class:`seedemu.core.Emulator` instance orchestrating
+                the deployment.
+        """
 
         super().configure(emulator)
         for network in self.__networks.values():
             network.configure(emulator)
 
     def _doInstall(self, node: Node, server: Server):
-        """安装阶段的钩子，增加日志信息便于调试。"""
+        """Hook invoked during installation to emit debugging logs.
+
+        Args:
+            node: Physical node to deploy onto.
+            server: Service-specific server instance responsible for rendering.
+        """
 
         if isinstance(server, MoneroBaseServer):
             if server.getBinarySource() == MoneroBinarySource.MIRROR:
@@ -67,16 +79,26 @@ class MoneroService(Service):
 
         super()._doInstall(node, server)
 
-    # ------------------------------------------------------------------
-    # 网络管理
-    # ------------------------------------------------------------------
+    
+    # Network management
+    
     def createNetwork(
         self,
         name: str,
         net_type: MoneroNetworkType = MoneroNetworkType.TESTNET,
         defaults: Optional[MoneroNetworkDefaults] = None,
     ) -> "MoneroNetwork":
-        assert name not in self.__networks, f"重复的 Monero 网络名: {name}"
+        """Create and register a logical Monero network.
+
+        Args:
+            name: Unique network identifier.
+            net_type: Network type which influences default ports and flags.
+            defaults: Optional defaults to clone instead of inferring automatically.
+
+        Returns:
+            The newly created :class:`MoneroNetwork` instance.
+        """
+        assert name not in self.__networks, f"Duplicated Monero network name: {name}"
 
         defaults = defaults.clone() if defaults else infer_default_ports(net_type)
         defaults.net_type = net_type
@@ -91,14 +113,24 @@ class MoneroService(Service):
     def getNetwork(self, name: str) -> "MoneroNetwork":
         return self.__networks[name]
 
-    # ------------------------------------------------------------------
-    # 内部方法
-    # ------------------------------------------------------------------
+    
+    # Internal helpers
+    
     def _register_node(
         self, vnode: str, network: "MoneroNetwork", options: MoneroNodeOptions
     ) -> MoneroBaseServer:
+        """Register a virtual node with the service and return its server instance.
+
+        Args:
+            vnode: Virtual node identifier within the emulator.
+            network: Monero network the node belongs to.
+            options: Node options that control runtime behaviour.
+
+        Returns:
+            The :class:`MoneroBaseServer` responsible for rendering the node.
+        """
         if vnode in self._pending_targets:
-            return self._pending_targets[vnode]  # 允许幂等调用
+            return self._pending_targets[vnode]  # Allow idempotent calls
 
         self.__serial += 1
 
@@ -115,10 +147,11 @@ class MoneroService(Service):
 
 
 class MoneroNetwork:
-    """描述一条 Monero 私有网络（测试网或主网仿真）。
+    """Representation of a private Monero network (testnet or emulated mainnet).
 
-    该类维护网络级默认配置、端口分配器以及节点实例，负责在 configure
-    阶段补齐 IP/端口等运行期信息。
+    The network keeps default configuration, port allocators, and node instances,
+    and during ``configure`` fills in runtime information such as IP addresses
+    and ports.
     """
 
     def __init__(self, service: MoneroService, name: str, defaults: MoneroNetworkDefaults):
@@ -132,12 +165,12 @@ class MoneroNetwork:
         self._zmq_counter = defaults.default_zmq_port
         self._wallet_rpc_counter = defaults.light_wallet_rpc_start
 
-        # 记录已经分配的端口，避免意外重复。键为 (port, purpose)
+        # Track allocated ports to avoid accidental reuse. Key is (port, purpose).
         self._allocated_ports: Dict[Tuple[int, str], str] = {}
 
-    # ------------------------------------------------------------------
-    # 对外 API
-    # ------------------------------------------------------------------
+    
+    # Public API
+    
     def getName(self) -> str:
         return self._name
 
@@ -172,13 +205,31 @@ class MoneroNetwork:
         connect_mode: Optional[MoneroSeedConnectionMode] = None,
         options: Optional[MoneroNodeOptions] = None,
     ) -> MoneroBaseServer:
+        """Create a Monero node inside this network.
+
+        Args:
+            vnode: Virtual node name used during binding.
+            kind: Node kind (full/pruned/light).
+            role: Optional default role for the node.
+            enable_mining: Explicit mining toggle.
+            mining_threads: Number of CPU threads for mining.
+            mining_address: Explicit mining address to use.
+            wallet: Wallet template override.
+            binary_source: Source of Monero binaries (mirror/custom).
+            mining_trigger: Mining trigger strategy override.
+            connect_mode: Seed connection mode override.
+            options: Optional pre-configured :class:`MoneroNodeOptions`.
+
+        Returns:
+            The server abstraction for the newly created node.
+        """
         opts = options.clone() if options else MoneroNodeOptions()
 
         opts.kind = kind
         opts.role = role or (MoneroNodeRole.STANDALONE if kind == MoneroNodeKind.LIGHT else MoneroNodeRole.CLIENT)
         opts.name = opts.name or vnode
 
-        # 网络级布尔配置在 options==None 时继承默认值
+        # Inherit network-level boolean defaults when ``options`` is None
         if options is None:
             opts.persist_data = self._defaults.persist_data
             opts.binary_source = self._defaults.binary_source
@@ -192,7 +243,7 @@ class MoneroNetwork:
         if mining_address is not None:
             opts.mining_address = mining_address
 
-        # 处理钱包配置，确保不会与其他节点共享引用
+        # Handle wallet configuration while avoiding shared references
         if wallet is not None:
             opts.wallet = wallet.clone()
         elif options is None:
@@ -213,11 +264,11 @@ class MoneroNetwork:
         if opts.kind == MoneroNodeKind.PRUNED:
             if opts.role == MoneroNodeRole.SEED:
                 raise AssertionError(
-                    "Pruned 节点不能作为种子节点，请改用 MoneroNodeKind.FULL。"
+                    "Pruned nodes cannot act as seed nodes; use MoneroNodeKind.FULL instead."
                 )
             if opts.enable_mining:
                 self.log(
-                    f"[{self._name}] 节点 {vnode} 为剪枝模式，挖矿能力已自动禁用。"
+                    f"[{self._name}] Node {vnode} runs in pruned mode; mining has been disabled automatically."
                 )
                 opts.enable_mining = False
 
@@ -240,7 +291,7 @@ class MoneroNetwork:
         connect_mode: MoneroSeedConnectionMode = MoneroSeedConnectionMode.EXCLUSIVE,
         options: Optional[MoneroNodeOptions] = None,
     ) -> MoneroBaseServer:
-        """创建 Full Node + 种子角色，可根据参数选择是否挖矿。"""
+        """Create a full node with seed role and optional mining."""
 
         server = self.createNode(
             vnode,
@@ -279,7 +330,7 @@ class MoneroNetwork:
         connect_mode: MoneroSeedConnectionMode = MoneroSeedConnectionMode.EXCLUSIVE,
         options: Optional[MoneroNodeOptions] = None,
     ) -> MoneroBaseServer:
-        """创建 Full Node + 客户端角色，支持按需开启挖矿。"""
+        """Create a full node with client role and optional mining."""
 
         server = self.createNode(
             vnode,
@@ -314,10 +365,10 @@ class MoneroNetwork:
         connect_mode: MoneroSeedConnectionMode = MoneroSeedConnectionMode.EXCLUSIVE,
         options: Optional[MoneroNodeOptions] = None,
     ) -> MoneroBaseServer:
-        """创建剪枝全节点，默认启用钱包并禁止挖矿。"""
+        """Create a pruned node; wallet stays enabled while mining is disabled."""
 
         if options and options.enable_mining:
-            raise AssertionError("剪枝节点不支持挖矿，请关闭 options.enable_mining。")
+            raise AssertionError("Pruned nodes do not support mining; disable options.enable_mining.")
 
         server = self.createNode(
             vnode,
@@ -341,9 +392,20 @@ class MoneroNetwork:
         wallet: Optional[MoneroWalletSpec] = None,
         options: Optional[MoneroNodeOptions] = None,
     ) -> MoneroBaseServer:
+        """Create a light wallet node and register it with the network.
+
+        Args:
+            vnode: Virtual node identifier.
+            wallet: Wallet specification template.
+            options: Optional preconfigured node options.
+
+        Returns:
+            The ``MoneroBaseServer`` representing the light wallet node.
+        """
         return self.createNode(vnode, kind=MoneroNodeKind.LIGHT, wallet=wallet, options=options)
 
     def configure(self, emulator: Emulator):
+        """Populate runtime metadata (binding info, seed lists, RPC endpoints)."""
         if not self._nodes:
             return
 
@@ -367,17 +429,23 @@ class MoneroNetwork:
         for vnode, server in self._nodes.items():
             server.set_binding_lookup(binding_lookup)
             if server.is_seed():
-                # 种子节点之间互联（排除自身）
+                # Interconnect seed nodes while excluding the current node
                 other_seeds = [endpoint for peer, endpoint in seed_endpoints if peer != vnode]
             else:
                 other_seeds = [endpoint for _, endpoint in seed_endpoints]
             server.set_seed_endpoints(other_seeds)
             server.set_fullnode_rpc_endpoints(fullnode_rpc)
 
-    # ------------------------------------------------------------------
-    # 内部辅助
-    # ------------------------------------------------------------------
+    
+    # Internal utilities
+    
     def _apply_defaults(self, vnode: str, opts: MoneroNodeOptions):
+        """Apply network-level defaults and auto-assign ports for a node.
+
+        Args:
+            vnode: Node identifier used for logging.
+            opts: Options object to mutate in-place.
+        """
         defaults = self._defaults
 
         if opts.data_dir == "/var/lib/monero":
@@ -415,16 +483,16 @@ class MoneroNetwork:
         if opts.enable_mining and opts.mining_threads <= 0:
             opts.mining_threads = defaults.default_mining_threads
 
-        # 种子节点无需等待自己
+        # Seed nodes do not wait for themselves
         if opts.role == MoneroNodeRole.SEED and opts.wait_for_seed:
             opts.wait_for_seed = False
 
-        # 在 Light 节点上默认启用钱包 RPC
+        # Enable wallet RPC by default on light nodes
         if opts.kind == MoneroNodeKind.LIGHT:
             opts.enable_wallet = True
             opts.wallet.enable_rpc = True
 
-        # 钱包模板
+        # Wallet template
         wallet_template = opts.wallet.clone()
 
         if not wallet_template.wallet_path:
@@ -457,7 +525,7 @@ class MoneroNetwork:
 
         opts.wallet = wallet_template
 
-        # 记录端口分配，便于排查冲突
+        # Record port assignments to help diagnose conflicts
         self._mark_port(opts.p2p_bind_port, "p2p", opts.name)
         if opts.rpc_bind_port is not None:
             self._mark_port(opts.rpc_bind_port, "rpc", opts.name)
@@ -467,10 +535,11 @@ class MoneroNetwork:
             self._mark_port(wallet_template.rpc_bind_port, "wallet-rpc", opts.name)
 
     def _alloc_port(self, category: str) -> int:
-        """分配下一个可用端口。
+        """Allocate the next available port for the given ``category``.
 
-        category 可取 p2p/rpc/zmq/wallet_rpc。为保持简单，这里采用线性递增策略，
-        如需更复杂的端口规划可在 MoneroNodeOptions 中显式指定。
+        Categories include ``p2p``, ``rpc``, ``zmq``, and ``wallet_rpc``. A simple
+        linear counter is used; more complex port planning can be achieved by
+        explicitly setting values on :class:`MoneroNodeOptions`.
         """
 
         if not self._defaults.auto_assign_ports:
@@ -497,23 +566,31 @@ class MoneroNetwork:
             port = self._wallet_rpc_counter
             self._wallet_rpc_counter += 1
             return port
-        raise AssertionError(f"未知端口类型: {category}")
+        raise AssertionError(f"Unknown port category: {category}")
 
     def _mark_port(self, port: Optional[int], purpose: str, vnode: str):
+        """Track which node claimed a specific port purpose.
+
+        Args:
+            port: Port number that was allocated.
+            purpose: Port type (p2p/rpc/zmq/wallet-rpc).
+            vnode: Node identifier that owns the port.
+        """
         if port is None:
             return
         key = (port, purpose)
         existing = self._allocated_ports.get(key)
         if existing and existing != vnode:
-            self.log(f"WARNING: 端口 {port} ({purpose}) 同时被 {existing} 与 {vnode} 使用")
+            self.log(f"WARNING: port {port} ({purpose}) is used by both {existing} and {vnode}")
         else:
             self._allocated_ports[key] = vnode
 
     def _get_primary_ip(self, node: Node) -> str:
+        """Return the IP address on the local network used for service bindings."""
         for iface in node.getInterfaces():
             if iface.getNet().getType() == NetworkType.Local:
                 return str(iface.getAddress())
-        raise AssertionError(f"节点 {node.getName()} 未找到本地网络接口")
+        raise AssertionError(f"Node {node.getName()} has no local network interface")
 
     def get_network_flag(self) -> Optional[str]:
         net_type = self._defaults.net_type
@@ -531,16 +608,19 @@ class MoneroNetwork:
     def log(self, message: str):
         self._service.log(f"[{self._name}] {message}")
 
-    # ------------------------------------------------------------------
-    # 调试辅助
-    # ------------------------------------------------------------------
+    
+    # Debug helpers
+    
     def iterNodes(self) -> Iterator[MoneroBaseServer]:
+        """Yield each registered node server."""
         return iter(self._nodes.values())
 
     def getSeeds(self) -> List[str]:
+        """Return the names of all nodes acting as seeds."""
         return [name for name, server in self._nodes.items() if server.is_seed()]
 
     def getFullNodes(self) -> List[str]:
+        """Return the names of all nodes that run full/pruned daemons."""
         return [name for name, server in self._nodes.items() if server.is_full_node()]
 
 

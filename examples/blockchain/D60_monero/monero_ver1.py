@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-"""在基础 10 Stub-AS 网络上部署 MoneroService 的示例脚本。
+"""Example script that deploys ``MoneroService`` on the base 10 Stub-AS topology.
 
-该示例仿照 `examples/blockchain/D01_ethereum_pos/ethereum_pos.py` 的结构，
-利用 `Makers.makeEmulatorBaseWith10StubASAndHosts()` 构建底层拓扑，并按照
-预期角色创建以下 Monero 节点：
+The structure mirrors ``examples/blockchain/D01_ethereum_pos/ethereum_pos.py`` by
+building the underlying network through
+``Makers.makeEmulatorBaseWith10StubASAndHosts()`` and creating the following
+Monero nodes with predefined roles:
 
-* AS150-154: host_0 作为种子节点，host_1 作为 full client（仅 AS150 的 client 节点挖矿）。
-* AS160-161: 每个 AS 一个 full client 节点。
-* AS162-163: 每个 AS 一个 light wallet 节点。
-* AS164: 一个 pruned 节点。
+* AS150-154: ``host_0`` acts as the seed node, ``host_1`` as the full client
+  (only AS150 mines).
+* AS160-161: one full client per AS.
+* AS162-163: one light wallet node per AS.
+* AS164: one pruned node.
 
 """
 
@@ -99,7 +101,7 @@ client_wallet = MoneroWalletSpec(
     allow_external_rpc=False,
 )
 
-# AS150-154：host_0 为种子节点，host_1 为 full client（仅 AS150 的 client 挖矿）。
+# AS150-154: host_0 acts as the seed node; host_1 acts as the full client (only AS150 mines).
 seed_asns = [150, 151, 152, 153, 154]
 for asn in seed_asns:
     seed_vnode = f"monero-seed-{asn}"
@@ -136,7 +138,7 @@ for asn in seed_asns:
 
     _bind(emu, client_vnode, asn, host_index=1)
 
-# AS160-161：各一个 full client 节点。
+# AS160-161: one full client per AS.
 for asn in [160, 161]:
     vnode = f"monero-client-{asn}"
     server = network.createNode(vnode, kind=MoneroNodeKind.FULL, binary_source=MoneroBinarySource.MIRROR)
@@ -148,7 +150,7 @@ for asn in [160, 161]:
     server.setDisplayName(f"Monero-Client-{asn}")
     _bind(emu, vnode, asn, host_index=0)
 
-# AS162-163：各一个 light wallet 节点。
+# AS162-163: one light wallet node per AS.
 for asn in [162, 163]:
     vnode = f"monero-light-{asn}"
     server = network.createNode(vnode, kind=MoneroNodeKind.LIGHT, binary_source=MoneroBinarySource.MIRROR)
@@ -156,7 +158,7 @@ for asn in [162, 163]:
     server.setDisplayName(f"Monero-Light-{asn}")
     _bind(emu, vnode, asn, host_index=0)
 
-# AS164：一个 pruned 节点。
+# AS164: one pruned node.
 pruned_vnode = "monero-pruned-164"
 pruned_server = network.createNode(pruned_vnode, kind=MoneroNodeKind.PRUNED)
 pruned_server.setClientRole().setWallet(client_wallet).enableWalletRpc(

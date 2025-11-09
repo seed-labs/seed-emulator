@@ -1,10 +1,4 @@
-"""Monero 服务公共工具函数与数据结构。
 
-设计目标：
-    * 为 `MoneroService` 提供可复用的配置数据结构
-    * 封装常用的脚本拼装逻辑
-    * 尽量保持纯数据、纯函数，方便单元测试
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -22,14 +16,14 @@ from .MoneroWallet import MoneroWalletConfig
 
 
 class MoneroWalletSpec(MoneroWalletConfig):
-    """钱包配置别名。继承后仅是语义上区分“模板”与“运行时配置”。"""
+    """Wallet configuration alias that distinguishes templates from runtime config."""
 
     pass
 
 
 @dataclass
 class MoneroBinaryPaths:
-    """节点使用的可执行文件路径集合。"""
+    """Executable paths used by a node."""
 
     monerod: str = "monerod"
     wallet_cli: str = "monero-wallet-cli"
@@ -45,7 +39,7 @@ class MoneroBinaryPaths:
 
 @dataclass
 class MoneroNodeOptions:
-    """描述单个节点的安装与运行选项。"""
+    """Installation and runtime options for a single node."""
 
     kind: MoneroNodeKind = MoneroNodeKind.FULL
     role: MoneroNodeRole = MoneroNodeRole.CLIENT
@@ -133,7 +127,7 @@ class MoneroNodeOptions:
 
 @dataclass
 class MoneroNetworkDefaults:
-    """网络级默认配置。"""
+    """Network-level default configuration."""
 
     net_type: MoneroNetworkType = MoneroNetworkType.TESTNET
     binary_source: MoneroBinarySource = MoneroBinarySource.MIRROR
@@ -172,7 +166,7 @@ class MoneroNetworkDefaults:
 
 
 def infer_default_ports(net_type: MoneroNetworkType) -> MoneroNetworkDefaults:
-    """根据网络类型生成默认端口配置。"""
+    """Return default port assignments for the given network type."""
 
     if net_type == MoneroNetworkType.MAINNET:
         return MoneroNetworkDefaults(
@@ -201,7 +195,7 @@ def infer_default_ports(net_type: MoneroNetworkType) -> MoneroNetworkDefaults:
             light_wallet_rpc_start=38088,
         )
 
-    # 默认为 testnet
+    # Default to testnet
     return MoneroNetworkDefaults(
         net_type=MoneroNetworkType.TESTNET,
         default_p2p_port=28080,
@@ -212,13 +206,13 @@ def infer_default_ports(net_type: MoneroNetworkType) -> MoneroNetworkDefaults:
 
 
 def build_endpoint(address: str, port: int) -> str:
-    """将 IP 与端口组合成 `host:port` 形式。"""
+    """Combine IP and port into ``host:port`` form."""
 
     return f"{address}:{port}"
 
 
 def sanitize_extra_args(args: List[str]) -> List[str]:
-    """过滤空字符串，确保生成的命令更紧凑。"""
+    """Filter out empty strings so the resulting command stays compact."""
 
     return [item.strip() for item in args if item and item.strip()]
 

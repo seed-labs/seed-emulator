@@ -1,4 +1,3 @@
-"""钱包配置相关的数据结构与辅助方法。"""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -9,22 +8,22 @@ from .MoneroEnum import MoneroWalletMode
 
 @dataclass
 class MoneroWalletConfig:
-    """描述钱包生成或导入策略。
+    """Describe how a wallet should be generated or imported.
 
     Attributes:
-        mode: `MoneroWalletMode`，指定钱包来源。
-        wallet_path: 钱包文件路径（针对 `EXISTING_FILE` 或自定义目录）。
-        password: 钱包密码，若未指定则默认使用 "seedemu"。
-        mnemonic: 导入助记词（`IMPORT_MNEMONIC` 模式下必填）。
-        restore_height: 恢复高度，可减少同步时间。
-        enable_rpc: 是否启动 `monero-wallet-rpc` 服务。
-        rpc_bind_ip: RPC 监听地址。
-        rpc_bind_port: RPC 监听端口。
-        rpc_user: RPC 认证用户名。
-        rpc_password: RPC 认证密码。
-        allow_external_rpc: 是否允许外部访问 RPC。
-        extra_rpc_flags: 附加给 `monero-wallet-rpc` 的参数。
-        auto_save_primary_address: 是否将主地址保存到文件，供挖矿流程引用。
+        mode: :class:`MoneroWalletMode` specifying how the wallet is sourced.
+        wallet_path: Location of the wallet file (used for ``EXISTING_FILE`` or custom directories).
+        password: Wallet password, defaults to ``"seedemu"`` when not provided.
+        mnemonic: Mnemonic phrase used in ``IMPORT_MNEMONIC`` mode.
+        restore_height: Block height to start scanning from to reduce sync time.
+        enable_rpc: Whether to start ``monero-wallet-rpc``.
+        rpc_bind_ip: IP address for the wallet RPC service.
+        rpc_bind_port: Port for the wallet RPC service.
+        rpc_user: Username for RPC authentication.
+        rpc_password: Password for RPC authentication.
+        allow_external_rpc: Whether remote RPC connections are accepted.
+        extra_rpc_flags: Additional flags passed to ``monero-wallet-rpc``.
+        auto_save_primary_address: Save the primary address to a file for mining automation.
     """
 
     mode: MoneroWalletMode = MoneroWalletMode.AUTO_GENERATED
@@ -45,14 +44,15 @@ class MoneroWalletConfig:
     primary_address_path: str = "/var/lib/monero/wallets/primary-address.txt"
 
     def clone(self) -> "MoneroWalletConfig":
-        """返回当前配置的浅拷贝。
+        """Return a shallow copy of the current configuration.
 
-        使用 dataclasses.asdict 可以深拷贝列表/字典字段，避免不同节点之间共享引用。
+        ``dataclasses.asdict`` performs deep copies for list/dict fields, avoiding
+        shared references between nodes.
         """
 
         return self.__class__(**asdict(self))
 
     def needs_wallet_file(self) -> bool:
-        """判断是否需要已经存在的钱包文件。"""
+        """Return ``True`` if an existing wallet file is required."""
 
         return self.mode == MoneroWalletMode.EXISTING_FILE
