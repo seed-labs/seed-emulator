@@ -1,0 +1,528 @@
+{
+  "as_list": [
+    {
+      "as_id": 11,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 17,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 23,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 45,
+      "as_type": "transit",
+      "host_num": 12
+    },
+    {
+      "as_id": 50,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 58,
+      "as_type": "transit",
+      "host_num": 5
+    },
+    {
+      "as_id": 74,
+      "as_type": "transit",
+      "host_num": 10
+    },
+    {
+      "as_id": 86,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 87,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 153,
+      "as_type": "stub",
+      "host_num": 5
+    },
+    {
+      "as_id": 160,
+      "as_type": "stub",
+      "host_num": 18
+    },
+    {
+      "as_id": 163,
+      "as_type": "stub",
+      "host_num": 5
+    },
+    {
+      "as_id": 167,
+      "as_type": "stub",
+      "host_num": 4
+    },
+    {
+      "as_id": 170,
+      "as_type": "stub",
+      "host_num": 10
+    },
+    {
+      "as_id": 187,
+      "as_type": "stub",
+      "host_num": 12
+    },
+    {
+      "as_id": 191,
+      "as_type": "stub",
+      "host_num": 15
+    },
+    {
+      "as_id": 196,
+      "as_type": "stub",
+      "host_num": 2
+    },
+    {
+      "as_id": 200,
+      "as_type": "stub",
+      "host_num": 15
+    },
+    {
+      "as_id": 210,
+      "as_type": "stub",
+      "host_num": 4
+    },
+    {
+      "as_id": 212,
+      "as_type": "stub",
+      "host_num": 3
+    },
+    {
+      "as_id": 213,
+      "as_type": "stub",
+      "host_num": 10
+    },
+    {
+      "as_id": 229,
+      "as_type": "stub",
+      "host_num": 18
+    },
+    {
+      "as_id": 239,
+      "as_type": "stub",
+      "host_num": 4
+    },
+    {
+      "as_id": 244,
+      "as_type": "stub",
+      "host_num": 3
+    }
+  ],
+  "as_ix_connections": [
+    {
+      "as_id": 11,
+      "as_type": "transit",
+      "ix_list": [
+        108,
+        131
+      ]
+    },
+    {
+      "as_id": 17,
+      "as_type": "transit",
+      "ix_list": [
+        108,
+        119,
+        120,
+        137,
+        149
+      ]
+    },
+    {
+      "as_id": 23,
+      "as_type": "transit",
+      "ix_list": [
+        134,
+        149
+      ]
+    },
+    {
+      "as_id": 45,
+      "as_type": "transit",
+      "ix_list": [
+        120,
+        134
+      ]
+    },
+    {
+      "as_id": 50,
+      "as_type": "transit",
+      "ix_list": [
+        107,
+        108,
+        120,
+        143,
+        149
+      ]
+    },
+    {
+      "as_id": 58,
+      "as_type": "transit",
+      "ix_list": [
+        119,
+        143
+      ]
+    },
+    {
+      "as_id": 74,
+      "as_type": "transit",
+      "ix_list": [
+        137,
+        143
+      ]
+    },
+    {
+      "as_id": 86,
+      "as_type": "transit",
+      "ix_list": [
+        107,
+        134
+      ]
+    },
+    {
+      "as_id": 87,
+      "as_type": "transit",
+      "ix_list": [
+        107,
+        119,
+        134,
+        137
+      ]
+    },
+    {
+      "as_id": 153,
+      "as_type": "stub",
+      "ix_list": [
+        137
+      ]
+    },
+    {
+      "as_id": 160,
+      "as_type": "stub",
+      "ix_list": [
+        143
+      ]
+    },
+    {
+      "as_id": 163,
+      "as_type": "stub",
+      "ix_list": [
+        107
+      ]
+    },
+    {
+      "as_id": 167,
+      "as_type": "stub",
+      "ix_list": [
+        119
+      ]
+    },
+    {
+      "as_id": 170,
+      "as_type": "stub",
+      "ix_list": [
+        137
+      ]
+    },
+    {
+      "as_id": 187,
+      "as_type": "stub",
+      "ix_list": [
+        143
+      ]
+    },
+    {
+      "as_id": 191,
+      "as_type": "stub",
+      "ix_list": [
+        149
+      ]
+    },
+    {
+      "as_id": 196,
+      "as_type": "stub",
+      "ix_list": [
+        137
+      ]
+    },
+    {
+      "as_id": 200,
+      "as_type": "stub",
+      "ix_list": [
+        143
+      ]
+    },
+    {
+      "as_id": 210,
+      "as_type": "stub",
+      "ix_list": [
+        108
+      ]
+    },
+    {
+      "as_id": 212,
+      "as_type": "stub",
+      "ix_list": [
+        120
+      ]
+    },
+    {
+      "as_id": 213,
+      "as_type": "stub",
+      "ix_list": [
+        134
+      ]
+    },
+    {
+      "as_id": 229,
+      "as_type": "stub",
+      "ix_list": [
+        137
+      ]
+    },
+    {
+      "as_id": 239,
+      "as_type": "stub",
+      "ix_list": [
+        131
+      ]
+    },
+    {
+      "as_id": 244,
+      "as_type": "stub",
+      "ix_list": [
+        137
+      ]
+    }
+  ],
+  "machines": [
+    {
+      "machine_id": 0,
+      "as_list": [
+        160,
+        187,
+        200
+      ]
+    },
+    {
+      "machine_id": 1,
+      "as_list": [
+        23,
+        191
+      ]
+    },
+    {
+      "machine_id": 2,
+      "as_list": [
+        11,
+        210,
+        239
+      ]
+    },
+    {
+      "machine_id": 3,
+      "as_list": [
+        170,
+        196,
+        229
+      ]
+    },
+    {
+      "machine_id": 4,
+      "as_list": [
+        17,
+        45,
+        50,
+        58,
+        74,
+        86,
+        87,
+        153,
+        163,
+        167,
+        212,
+        213,
+        244
+      ]
+    }
+  ],
+  "ix_partitions": [
+    {
+      "ix_id": 108,
+      "total_as": 4,
+      "machines": [
+        2,
+        4
+      ],
+      "cuts": 1,
+      "as_by_machine": {
+        "2": [
+          11,
+          210
+        ],
+        "4": [
+          17,
+          50
+        ]
+      }
+    },
+    {
+      "ix_id": 134,
+      "total_as": 5,
+      "machines": [
+        1,
+        4
+      ],
+      "cuts": 1,
+      "as_by_machine": {
+        "1": [
+          23
+        ],
+        "4": [
+          45,
+          86,
+          87,
+          213
+        ]
+      }
+    },
+    {
+      "ix_id": 137,
+      "total_as": 8,
+      "machines": [
+        3,
+        4
+      ],
+      "cuts": 1,
+      "as_by_machine": {
+        "3": [
+          170,
+          196,
+          229
+        ],
+        "4": [
+          17,
+          74,
+          87,
+          153,
+          244
+        ]
+      }
+    },
+    {
+      "ix_id": 143,
+      "total_as": 6,
+      "machines": [
+        0,
+        4
+      ],
+      "cuts": 1,
+      "as_by_machine": {
+        "0": [
+          160,
+          187,
+          200
+        ],
+        "4": [
+          50,
+          58,
+          74
+        ]
+      }
+    },
+    {
+      "ix_id": 149,
+      "total_as": 4,
+      "machines": [
+        1,
+        4
+      ],
+      "cuts": 1,
+      "as_by_machine": {
+        "1": [
+          23,
+          191
+        ],
+        "4": [
+          17,
+          50
+        ]
+      }
+    },
+    {
+      "ix_id": 107,
+      "total_as": 4,
+      "machines": [
+        4
+      ],
+      "cuts": 0,
+      "as_by_machine": {
+        "4": [
+          50,
+          86,
+          87,
+          163
+        ]
+      }
+    },
+    {
+      "ix_id": 119,
+      "total_as": 4,
+      "machines": [
+        4
+      ],
+      "cuts": 0,
+      "as_by_machine": {
+        "4": [
+          17,
+          58,
+          87,
+          167
+        ]
+      }
+    },
+    {
+      "ix_id": 120,
+      "total_as": 4,
+      "machines": [
+        4
+      ],
+      "cuts": 0,
+      "as_by_machine": {
+        "4": [
+          17,
+          45,
+          50,
+          212
+        ]
+      }
+    },
+    {
+      "ix_id": 131,
+      "total_as": 2,
+      "machines": [
+        2
+      ],
+      "cuts": 0,
+      "as_by_machine": {
+        "2": [
+          11,
+          239
+        ]
+      }
+    }
+  ]
+}

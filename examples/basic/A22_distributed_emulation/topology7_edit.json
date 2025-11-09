@@ -1,0 +1,2687 @@
+{
+  "as_list": [
+    {
+      "as_id": 3,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 9,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 10,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 13,
+      "as_type": "transit",
+      "host_num": 12
+    },
+    {
+      "as_id": 15,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 20,
+      "as_type": "transit",
+      "host_num": 5
+    },
+    {
+      "as_id": 22,
+      "as_type": "transit",
+      "host_num": 10
+    },
+    {
+      "as_id": 25,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 28,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 29,
+      "as_type": "transit",
+      "host_num": 10
+    },
+    {
+      "as_id": 33,
+      "as_type": "transit",
+      "host_num": 10
+    },
+    {
+      "as_id": 35,
+      "as_type": "transit",
+      "host_num": 13
+    },
+    {
+      "as_id": 36,
+      "as_type": "transit",
+      "host_num": 11
+    },
+    {
+      "as_id": 37,
+      "as_type": "transit",
+      "host_num": 10
+    },
+    {
+      "as_id": 39,
+      "as_type": "transit",
+      "host_num": 7
+    },
+    {
+      "as_id": 43,
+      "as_type": "transit",
+      "host_num": 6
+    },
+    {
+      "as_id": 44,
+      "as_type": "transit",
+      "host_num": 10
+    },
+    {
+      "as_id": 46,
+      "as_type": "transit",
+      "host_num": 13
+    },
+    {
+      "as_id": 47,
+      "as_type": "transit",
+      "host_num": 10
+    },
+    {
+      "as_id": 48,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 49,
+      "as_type": "transit",
+      "host_num": 11
+    },
+    {
+      "as_id": 51,
+      "as_type": "transit",
+      "host_num": 5
+    },
+    {
+      "as_id": 59,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 60,
+      "as_type": "transit",
+      "host_num": 11
+    },
+    {
+      "as_id": 63,
+      "as_type": "transit",
+      "host_num": 12
+    },
+    {
+      "as_id": 64,
+      "as_type": "transit",
+      "host_num": 9
+    },
+    {
+      "as_id": 68,
+      "as_type": "transit",
+      "host_num": 11
+    },
+    {
+      "as_id": 74,
+      "as_type": "transit",
+      "host_num": 10
+    },
+    {
+      "as_id": 75,
+      "as_type": "transit",
+      "host_num": 12
+    },
+    {
+      "as_id": 76,
+      "as_type": "transit",
+      "host_num": 6
+    },
+    {
+      "as_id": 78,
+      "as_type": "transit",
+      "host_num": 11
+    },
+    {
+      "as_id": 81,
+      "as_type": "transit",
+      "host_num": 5
+    },
+    {
+      "as_id": 94,
+      "as_type": "transit",
+      "host_num": 5
+    },
+    {
+      "as_id": 96,
+      "as_type": "transit",
+      "host_num": 8
+    },
+    {
+      "as_id": 97,
+      "as_type": "transit",
+      "host_num": 7
+    },
+    {
+      "as_id": 150,
+      "as_type": "stub",
+      "host_num": 19
+    },
+    {
+      "as_id": 151,
+      "as_type": "stub",
+      "host_num": 15
+    },
+    {
+      "as_id": 153,
+      "as_type": "stub",
+      "host_num": 11
+    },
+    {
+      "as_id": 155,
+      "as_type": "stub",
+      "host_num": 2
+    },
+    {
+      "as_id": 156,
+      "as_type": "stub",
+      "host_num": 11
+    },
+    {
+      "as_id": 157,
+      "as_type": "stub",
+      "host_num": 11
+    },
+    {
+      "as_id": 158,
+      "as_type": "stub",
+      "host_num": 4
+    },
+    {
+      "as_id": 159,
+      "as_type": "stub",
+      "host_num": 15
+    },
+    {
+      "as_id": 160,
+      "as_type": "stub",
+      "host_num": 3
+    },
+    {
+      "as_id": 161,
+      "as_type": "stub",
+      "host_num": 3
+    },
+    {
+      "as_id": 162,
+      "as_type": "stub",
+      "host_num": 20
+    },
+    {
+      "as_id": 163,
+      "as_type": "stub",
+      "host_num": 19
+    },
+    {
+      "as_id": 164,
+      "as_type": "stub",
+      "host_num": 18
+    },
+    {
+      "as_id": 165,
+      "as_type": "stub",
+      "host_num": 12
+    },
+    {
+      "as_id": 166,
+      "as_type": "stub",
+      "host_num": 3
+    },
+    {
+      "as_id": 167,
+      "as_type": "stub",
+      "host_num": 20
+    },
+    {
+      "as_id": 168,
+      "as_type": "stub",
+      "host_num": 13
+    },
+    {
+      "as_id": 172,
+      "as_type": "stub",
+      "host_num": 10
+    },
+    {
+      "as_id": 173,
+      "as_type": "stub",
+      "host_num": 1
+    },
+    {
+      "as_id": 174,
+      "as_type": "stub",
+      "host_num": 16
+    },
+    {
+      "as_id": 175,
+      "as_type": "stub",
+      "host_num": 2
+    },
+    {
+      "as_id": 176,
+      "as_type": "stub",
+      "host_num": 19
+    },
+    {
+      "as_id": 177,
+      "as_type": "stub",
+      "host_num": 15
+    },
+    {
+      "as_id": 178,
+      "as_type": "stub",
+      "host_num": 4
+    },
+    {
+      "as_id": 179,
+      "as_type": "stub",
+      "host_num": 4
+    },
+    {
+      "as_id": 180,
+      "as_type": "stub",
+      "host_num": 2
+    },
+    {
+      "as_id": 183,
+      "as_type": "stub",
+      "host_num": 5
+    },
+    {
+      "as_id": 184,
+      "as_type": "stub",
+      "host_num": 19
+    },
+    {
+      "as_id": 185,
+      "as_type": "stub",
+      "host_num": 5
+    },
+    {
+      "as_id": 186,
+      "as_type": "stub",
+      "host_num": 2
+    },
+    {
+      "as_id": 187,
+      "as_type": "stub",
+      "host_num": 12
+    },
+    {
+      "as_id": 188,
+      "as_type": "stub",
+      "host_num": 11
+    },
+    {
+      "as_id": 190,
+      "as_type": "stub",
+      "host_num": 11
+    },
+    {
+      "as_id": 191,
+      "as_type": "stub",
+      "host_num": 2
+    },
+    {
+      "as_id": 192,
+      "as_type": "stub",
+      "host_num": 16
+    },
+    {
+      "as_id": 193,
+      "as_type": "stub",
+      "host_num": 16
+    },
+    {
+      "as_id": 196,
+      "as_type": "stub",
+      "host_num": 4
+    },
+    {
+      "as_id": 198,
+      "as_type": "stub",
+      "host_num": 18
+    },
+    {
+      "as_id": 200,
+      "as_type": "stub",
+      "host_num": 10
+    },
+    {
+      "as_id": 201,
+      "as_type": "stub",
+      "host_num": 11
+    },
+    {
+      "as_id": 202,
+      "as_type": "stub",
+      "host_num": 18
+    },
+    {
+      "as_id": 203,
+      "as_type": "stub",
+      "host_num": 20
+    },
+    {
+      "as_id": 205,
+      "as_type": "stub",
+      "host_num": 3
+    },
+    {
+      "as_id": 206,
+      "as_type": "stub",
+      "host_num": 4
+    },
+    {
+      "as_id": 207,
+      "as_type": "stub",
+      "host_num": 3
+    },
+    {
+      "as_id": 208,
+      "as_type": "stub",
+      "host_num": 12
+    },
+    {
+      "as_id": 209,
+      "as_type": "stub",
+      "host_num": 11
+    },
+    {
+      "as_id": 211,
+      "as_type": "stub",
+      "host_num": 14
+    },
+    {
+      "as_id": 212,
+      "as_type": "stub",
+      "host_num": 18
+    },
+    {
+      "as_id": 213,
+      "as_type": "stub",
+      "host_num": 12
+    },
+    {
+      "as_id": 214,
+      "as_type": "stub",
+      "host_num": 2
+    },
+    {
+      "as_id": 215,
+      "as_type": "stub",
+      "host_num": 18
+    },
+    {
+      "as_id": 216,
+      "as_type": "stub",
+      "host_num": 19
+    },
+    {
+      "as_id": 217,
+      "as_type": "stub",
+      "host_num": 1
+    },
+    {
+      "as_id": 218,
+      "as_type": "stub",
+      "host_num": 3
+    },
+    {
+      "as_id": 219,
+      "as_type": "stub",
+      "host_num": 14
+    },
+    {
+      "as_id": 220,
+      "as_type": "stub",
+      "host_num": 2
+    },
+    {
+      "as_id": 221,
+      "as_type": "stub",
+      "host_num": 11
+    },
+    {
+      "as_id": 223,
+      "as_type": "stub",
+      "host_num": 4
+    },
+    {
+      "as_id": 224,
+      "as_type": "stub",
+      "host_num": 18
+    },
+    {
+      "as_id": 225,
+      "as_type": "stub",
+      "host_num": 12
+    },
+    {
+      "as_id": 226,
+      "as_type": "stub",
+      "host_num": 18
+    },
+    {
+      "as_id": 227,
+      "as_type": "stub",
+      "host_num": 5
+    },
+    {
+      "as_id": 228,
+      "as_type": "stub",
+      "host_num": 16
+    },
+    {
+      "as_id": 229,
+      "as_type": "stub",
+      "host_num": 18
+    },
+    {
+      "as_id": 230,
+      "as_type": "stub",
+      "host_num": 13
+    },
+    {
+      "as_id": 231,
+      "as_type": "stub",
+      "host_num": 16
+    },
+    {
+      "as_id": 232,
+      "as_type": "stub",
+      "host_num": 20
+    },
+    {
+      "as_id": 233,
+      "as_type": "stub",
+      "host_num": 5
+    },
+    {
+      "as_id": 235,
+      "as_type": "stub",
+      "host_num": 2
+    },
+    {
+      "as_id": 236,
+      "as_type": "stub",
+      "host_num": 3
+    },
+    {
+      "as_id": 238,
+      "as_type": "stub",
+      "host_num": 5
+    },
+    {
+      "as_id": 239,
+      "as_type": "stub",
+      "host_num": 2
+    },
+    {
+      "as_id": 240,
+      "as_type": "stub",
+      "host_num": 1
+    },
+    {
+      "as_id": 241,
+      "as_type": "stub",
+      "host_num": 1
+    },
+    {
+      "as_id": 242,
+      "as_type": "stub",
+      "host_num": 11
+    },
+    {
+      "as_id": 246,
+      "as_type": "stub",
+      "host_num": 14
+    },
+    {
+      "as_id": 247,
+      "as_type": "stub",
+      "host_num": 13
+    },
+    {
+      "as_id": 249,
+      "as_type": "stub",
+      "host_num": 19
+    },
+    {
+      "as_id": 250,
+      "as_type": "stub",
+      "host_num": 13
+    }
+  ],
+  "as_ix_connections": [
+    {
+      "as_id": 3,
+      "as_type": "transit",
+      "ix_list": [
+        108,
+        109,
+        113,
+        129,
+        133,
+        143
+      ]
+    },
+    {
+      "as_id": 9,
+      "as_type": "transit",
+      "ix_list": [
+        120,
+        123
+      ]
+    },
+    {
+      "as_id": 10,
+      "as_type": "transit",
+      "ix_list": [
+        109,
+        115,
+        117,
+        129,
+        130,
+        136,
+        138,
+        146,
+        148
+      ]
+    },
+    {
+      "as_id": 13,
+      "as_type": "transit",
+      "ix_list": [
+        107,
+        109,
+        125,
+        133,
+        138,
+        144
+      ]
+    },
+    {
+      "as_id": 15,
+      "as_type": "transit",
+      "ix_list": [
+        108,
+        123,
+        125,
+        149
+      ]
+    },
+    {
+      "as_id": 20,
+      "as_type": "transit",
+      "ix_list": [
+        104,
+        108,
+        116,
+        129,
+        139,
+        144,
+        146,
+        148
+      ]
+    },
+    {
+      "as_id": 22,
+      "as_type": "transit",
+      "ix_list": [
+        107,
+        109
+      ]
+    },
+    {
+      "as_id": 25,
+      "as_type": "transit",
+      "ix_list": [
+        122,
+        123
+      ]
+    },
+    {
+      "as_id": 28,
+      "as_type": "transit",
+      "ix_list": [
+        109,
+        141
+      ]
+    },
+    {
+      "as_id": 29,
+      "as_type": "transit",
+      "ix_list": [
+        102,
+        107,
+        111,
+        124,
+        125,
+        139,
+        148
+      ]
+    },
+    {
+      "as_id": 33,
+      "as_type": "transit",
+      "ix_list": [
+        109,
+        122
+      ]
+    },
+    {
+      "as_id": 35,
+      "as_type": "transit",
+      "ix_list": [
+        123,
+        133
+      ]
+    },
+    {
+      "as_id": 36,
+      "as_type": "transit",
+      "ix_list": [
+        139,
+        149
+      ]
+    },
+    {
+      "as_id": 37,
+      "as_type": "transit",
+      "ix_list": [
+        104,
+        107,
+        138,
+        149
+      ]
+    },
+    {
+      "as_id": 39,
+      "as_type": "transit",
+      "ix_list": [
+        130,
+        149
+      ]
+    },
+    {
+      "as_id": 43,
+      "as_type": "transit",
+      "ix_list": [
+        108,
+        116,
+        117,
+        125,
+        129
+      ]
+    },
+    {
+      "as_id": 44,
+      "as_type": "transit",
+      "ix_list": [
+        102,
+        104,
+        108,
+        113,
+        114,
+        115,
+        117,
+        118,
+        120,
+        122,
+        129,
+        130,
+        135,
+        136,
+        138,
+        141,
+        144,
+        148
+      ]
+    },
+    {
+      "as_id": 46,
+      "as_type": "transit",
+      "ix_list": [
+        102,
+        114,
+        116,
+        117,
+        139,
+        146
+      ]
+    },
+    {
+      "as_id": 47,
+      "as_type": "transit",
+      "ix_list": [
+        109,
+        118,
+        139
+      ]
+    },
+    {
+      "as_id": 48,
+      "as_type": "transit",
+      "ix_list": [
+        111,
+        138
+      ]
+    },
+    {
+      "as_id": 49,
+      "as_type": "transit",
+      "ix_list": [
+        104,
+        123,
+        125,
+        130,
+        133,
+        148
+      ]
+    },
+    {
+      "as_id": 51,
+      "as_type": "transit",
+      "ix_list": [
+        102,
+        109,
+        111,
+        115,
+        116,
+        117,
+        123,
+        124,
+        148
+      ]
+    },
+    {
+      "as_id": 59,
+      "as_type": "transit",
+      "ix_list": [
+        102,
+        111,
+        129,
+        149
+      ]
+    },
+    {
+      "as_id": 60,
+      "as_type": "transit",
+      "ix_list": [
+        114,
+        123,
+        124,
+        125,
+        136,
+        138,
+        139,
+        143,
+        144
+      ]
+    },
+    {
+      "as_id": 63,
+      "as_type": "transit",
+      "ix_list": [
+        107,
+        111,
+        113,
+        115,
+        116,
+        118,
+        120,
+        122,
+        124,
+        125,
+        130,
+        133,
+        135,
+        136,
+        139,
+        141,
+        143,
+        146
+      ]
+    },
+    {
+      "as_id": 64,
+      "as_type": "transit",
+      "ix_list": [
+        108,
+        109,
+        129,
+        143
+      ]
+    },
+    {
+      "as_id": 68,
+      "as_type": "transit",
+      "ix_list": [
+        123,
+        133,
+        144,
+        146
+      ]
+    },
+    {
+      "as_id": 74,
+      "as_type": "transit",
+      "ix_list": [
+        104,
+        109,
+        122,
+        123,
+        135,
+        149
+      ]
+    },
+    {
+      "as_id": 75,
+      "as_type": "transit",
+      "ix_list": [
+        124,
+        149
+      ]
+    },
+    {
+      "as_id": 76,
+      "as_type": "transit",
+      "ix_list": [
+        109,
+        114,
+        129,
+        149
+      ]
+    },
+    {
+      "as_id": 78,
+      "as_type": "transit",
+      "ix_list": [
+        104,
+        133
+      ]
+    },
+    {
+      "as_id": 81,
+      "as_type": "transit",
+      "ix_list": [
+        104,
+        109
+      ]
+    },
+    {
+      "as_id": 94,
+      "as_type": "transit",
+      "ix_list": [
+        109,
+        143
+      ]
+    },
+    {
+      "as_id": 96,
+      "as_type": "transit",
+      "ix_list": [
+        102,
+        133
+      ]
+    },
+    {
+      "as_id": 97,
+      "as_type": "transit",
+      "ix_list": [
+        114,
+        149
+      ]
+    },
+    {
+      "as_id": 150,
+      "as_type": "stub",
+      "ix_list": [
+        139
+      ]
+    },
+    {
+      "as_id": 151,
+      "as_type": "stub",
+      "ix_list": [
+        104
+      ]
+    },
+    {
+      "as_id": 153,
+      "as_type": "stub",
+      "ix_list": [
+        107
+      ]
+    },
+    {
+      "as_id": 155,
+      "as_type": "stub",
+      "ix_list": [
+        122
+      ]
+    },
+    {
+      "as_id": 156,
+      "as_type": "stub",
+      "ix_list": [
+        136
+      ]
+    },
+    {
+      "as_id": 157,
+      "as_type": "stub",
+      "ix_list": [
+        109
+      ]
+    },
+    {
+      "as_id": 158,
+      "as_type": "stub",
+      "ix_list": [
+        107
+      ]
+    },
+    {
+      "as_id": 159,
+      "as_type": "stub",
+      "ix_list": [
+        135
+      ]
+    },
+    {
+      "as_id": 160,
+      "as_type": "stub",
+      "ix_list": [
+        135
+      ]
+    },
+    {
+      "as_id": 161,
+      "as_type": "stub",
+      "ix_list": [
+        149
+      ]
+    },
+    {
+      "as_id": 162,
+      "as_type": "stub",
+      "ix_list": [
+        104
+      ]
+    },
+    {
+      "as_id": 163,
+      "as_type": "stub",
+      "ix_list": [
+        102
+      ]
+    },
+    {
+      "as_id": 164,
+      "as_type": "stub",
+      "ix_list": [
+        148
+      ]
+    },
+    {
+      "as_id": 165,
+      "as_type": "stub",
+      "ix_list": [
+        138
+      ]
+    },
+    {
+      "as_id": 166,
+      "as_type": "stub",
+      "ix_list": [
+        114
+      ]
+    },
+    {
+      "as_id": 167,
+      "as_type": "stub",
+      "ix_list": [
+        117
+      ]
+    },
+    {
+      "as_id": 168,
+      "as_type": "stub",
+      "ix_list": [
+        122
+      ]
+    },
+    {
+      "as_id": 172,
+      "as_type": "stub",
+      "ix_list": [
+        115
+      ]
+    },
+    {
+      "as_id": 173,
+      "as_type": "stub",
+      "ix_list": [
+        116
+      ]
+    },
+    {
+      "as_id": 174,
+      "as_type": "stub",
+      "ix_list": [
+        108
+      ]
+    },
+    {
+      "as_id": 175,
+      "as_type": "stub",
+      "ix_list": [
+        141
+      ]
+    },
+    {
+      "as_id": 176,
+      "as_type": "stub",
+      "ix_list": [
+        136
+      ]
+    },
+    {
+      "as_id": 177,
+      "as_type": "stub",
+      "ix_list": [
+        122
+      ]
+    },
+    {
+      "as_id": 178,
+      "as_type": "stub",
+      "ix_list": [
+        138
+      ]
+    },
+    {
+      "as_id": 179,
+      "as_type": "stub",
+      "ix_list": [
+        138
+      ]
+    },
+    {
+      "as_id": 180,
+      "as_type": "stub",
+      "ix_list": [
+        115
+      ]
+    },
+    {
+      "as_id": 183,
+      "as_type": "stub",
+      "ix_list": [
+        104
+      ]
+    },
+    {
+      "as_id": 184,
+      "as_type": "stub",
+      "ix_list": [
+        146
+      ]
+    },
+    {
+      "as_id": 185,
+      "as_type": "stub",
+      "ix_list": [
+        129
+      ]
+    },
+    {
+      "as_id": 186,
+      "as_type": "stub",
+      "ix_list": [
+        117
+      ]
+    },
+    {
+      "as_id": 187,
+      "as_type": "stub",
+      "ix_list": [
+        116
+      ]
+    },
+    {
+      "as_id": 188,
+      "as_type": "stub",
+      "ix_list": [
+        146
+      ]
+    },
+    {
+      "as_id": 190,
+      "as_type": "stub",
+      "ix_list": [
+        102
+      ]
+    },
+    {
+      "as_id": 191,
+      "as_type": "stub",
+      "ix_list": [
+        113
+      ]
+    },
+    {
+      "as_id": 192,
+      "as_type": "stub",
+      "ix_list": [
+        114
+      ]
+    },
+    {
+      "as_id": 193,
+      "as_type": "stub",
+      "ix_list": [
+        149
+      ]
+    },
+    {
+      "as_id": 196,
+      "as_type": "stub",
+      "ix_list": [
+        138
+      ]
+    },
+    {
+      "as_id": 198,
+      "as_type": "stub",
+      "ix_list": [
+        148
+      ]
+    },
+    {
+      "as_id": 200,
+      "as_type": "stub",
+      "ix_list": [
+        136
+      ]
+    },
+    {
+      "as_id": 201,
+      "as_type": "stub",
+      "ix_list": [
+        129
+      ]
+    },
+    {
+      "as_id": 202,
+      "as_type": "stub",
+      "ix_list": [
+        116
+      ]
+    },
+    {
+      "as_id": 203,
+      "as_type": "stub",
+      "ix_list": [
+        129
+      ]
+    },
+    {
+      "as_id": 205,
+      "as_type": "stub",
+      "ix_list": [
+        130
+      ]
+    },
+    {
+      "as_id": 206,
+      "as_type": "stub",
+      "ix_list": [
+        123
+      ]
+    },
+    {
+      "as_id": 207,
+      "as_type": "stub",
+      "ix_list": [
+        114
+      ]
+    },
+    {
+      "as_id": 208,
+      "as_type": "stub",
+      "ix_list": [
+        118
+      ]
+    },
+    {
+      "as_id": 209,
+      "as_type": "stub",
+      "ix_list": [
+        117
+      ]
+    },
+    {
+      "as_id": 211,
+      "as_type": "stub",
+      "ix_list": [
+        114
+      ]
+    },
+    {
+      "as_id": 212,
+      "as_type": "stub",
+      "ix_list": [
+        102
+      ]
+    },
+    {
+      "as_id": 213,
+      "as_type": "stub",
+      "ix_list": [
+        104
+      ]
+    },
+    {
+      "as_id": 214,
+      "as_type": "stub",
+      "ix_list": [
+        149
+      ]
+    },
+    {
+      "as_id": 215,
+      "as_type": "stub",
+      "ix_list": [
+        109
+      ]
+    },
+    {
+      "as_id": 216,
+      "as_type": "stub",
+      "ix_list": [
+        139
+      ]
+    },
+    {
+      "as_id": 217,
+      "as_type": "stub",
+      "ix_list": [
+        144
+      ]
+    },
+    {
+      "as_id": 218,
+      "as_type": "stub",
+      "ix_list": [
+        148
+      ]
+    },
+    {
+      "as_id": 219,
+      "as_type": "stub",
+      "ix_list": [
+        149
+      ]
+    },
+    {
+      "as_id": 220,
+      "as_type": "stub",
+      "ix_list": [
+        136
+      ]
+    },
+    {
+      "as_id": 221,
+      "as_type": "stub",
+      "ix_list": [
+        143
+      ]
+    },
+    {
+      "as_id": 223,
+      "as_type": "stub",
+      "ix_list": [
+        102
+      ]
+    },
+    {
+      "as_id": 224,
+      "as_type": "stub",
+      "ix_list": [
+        133
+      ]
+    },
+    {
+      "as_id": 225,
+      "as_type": "stub",
+      "ix_list": [
+        136
+      ]
+    },
+    {
+      "as_id": 226,
+      "as_type": "stub",
+      "ix_list": [
+        104
+      ]
+    },
+    {
+      "as_id": 227,
+      "as_type": "stub",
+      "ix_list": [
+        116
+      ]
+    },
+    {
+      "as_id": 228,
+      "as_type": "stub",
+      "ix_list": [
+        108
+      ]
+    },
+    {
+      "as_id": 229,
+      "as_type": "stub",
+      "ix_list": [
+        122
+      ]
+    },
+    {
+      "as_id": 230,
+      "as_type": "stub",
+      "ix_list": [
+        108
+      ]
+    },
+    {
+      "as_id": 231,
+      "as_type": "stub",
+      "ix_list": [
+        149
+      ]
+    },
+    {
+      "as_id": 232,
+      "as_type": "stub",
+      "ix_list": [
+        115
+      ]
+    },
+    {
+      "as_id": 233,
+      "as_type": "stub",
+      "ix_list": [
+        144
+      ]
+    },
+    {
+      "as_id": 235,
+      "as_type": "stub",
+      "ix_list": [
+        113
+      ]
+    },
+    {
+      "as_id": 236,
+      "as_type": "stub",
+      "ix_list": [
+        116
+      ]
+    },
+    {
+      "as_id": 238,
+      "as_type": "stub",
+      "ix_list": [
+        123
+      ]
+    },
+    {
+      "as_id": 239,
+      "as_type": "stub",
+      "ix_list": [
+        133
+      ]
+    },
+    {
+      "as_id": 240,
+      "as_type": "stub",
+      "ix_list": [
+        133
+      ]
+    },
+    {
+      "as_id": 241,
+      "as_type": "stub",
+      "ix_list": [
+        138
+      ]
+    },
+    {
+      "as_id": 242,
+      "as_type": "stub",
+      "ix_list": [
+        130
+      ]
+    },
+    {
+      "as_id": 246,
+      "as_type": "stub",
+      "ix_list": [
+        124
+      ]
+    },
+    {
+      "as_id": 247,
+      "as_type": "stub",
+      "ix_list": [
+        104
+      ]
+    },
+    {
+      "as_id": 249,
+      "as_type": "stub",
+      "ix_list": [
+        129
+      ]
+    },
+    {
+      "as_id": 250,
+      "as_type": "stub",
+      "ix_list": [
+        116
+      ]
+    }
+  ],
+  "machines": [
+    {
+      "machine_id": 0,
+      "as_list": [
+        167,
+        186,
+        208,
+        209,
+        213,
+        247
+      ]
+    },
+    {
+      "machine_id": 1,
+      "as_list": [
+        60,
+        97,
+        161,
+        165,
+        179,
+        190,
+        221
+      ]
+    },
+    {
+      "machine_id": 2,
+      "as_list": [
+        233,
+        249
+      ]
+    },
+    {
+      "machine_id": 3,
+      "as_list": [
+        13,
+        35,
+        68,
+        153,
+        178,
+        215,
+        241
+      ]
+    },
+    {
+      "machine_id": 4,
+      "as_list": [
+        185,
+        201,
+        203,
+        228
+      ]
+    },
+    {
+      "machine_id": 5,
+      "as_list": [
+        75,
+        176,
+        242
+      ]
+    },
+    {
+      "machine_id": 6,
+      "as_list": [
+        48,
+        168,
+        177,
+        205,
+        229
+      ]
+    },
+    {
+      "machine_id": 7,
+      "as_list": [
+        9,
+        15,
+        20,
+        49,
+        78,
+        214,
+        240
+      ]
+    },
+    {
+      "machine_id": 8,
+      "as_list": [
+        25,
+        164,
+        206,
+        238
+      ]
+    },
+    {
+      "machine_id": 9,
+      "as_list": [
+        10,
+        33,
+        44,
+        51,
+        59,
+        74,
+        76,
+        183
+      ]
+    },
+    {
+      "machine_id": 10,
+      "as_list": [
+        3,
+        64,
+        94,
+        191,
+        224,
+        230
+      ]
+    },
+    {
+      "machine_id": 11,
+      "as_list": [
+        157,
+        173,
+        216,
+        236
+      ]
+    },
+    {
+      "machine_id": 12,
+      "as_list": [
+        96,
+        163,
+        212,
+        239,
+        246
+      ]
+    },
+    {
+      "machine_id": 13,
+      "as_list": [
+        184,
+        188
+      ]
+    },
+    {
+      "machine_id": 14,
+      "as_list": [
+        187,
+        202,
+        227,
+        250
+      ]
+    },
+    {
+      "machine_id": 15,
+      "as_list": [
+        156,
+        166,
+        192,
+        200,
+        207,
+        225
+      ]
+    },
+    {
+      "machine_id": 16,
+      "as_list": [
+        43,
+        46,
+        150,
+        174,
+        211,
+        223
+      ]
+    },
+    {
+      "machine_id": 17,
+      "as_list": [
+        28,
+        29,
+        47,
+        63,
+        158,
+        235
+      ]
+    },
+    {
+      "machine_id": 18,
+      "as_list": [
+        22,
+        36,
+        37,
+        39,
+        81,
+        151,
+        196
+      ]
+    },
+    {
+      "machine_id": 19,
+      "as_list": [
+        172,
+        180,
+        198,
+        232
+      ]
+    },
+    {
+      "machine_id": 20,
+      "as_list": [
+        155,
+        162,
+        193,
+        219,
+        226,
+        231
+      ]
+    },
+    {
+      "machine_id": 21,
+      "as_list": [
+        159,
+        160,
+        175,
+        217,
+        218,
+        220
+      ]
+    }
+  ],
+  "ix_partitions": [
+    {
+      "ix_id": 109,
+      "total_as": 15,
+      "machines": [
+        3,
+        9,
+        10,
+        11,
+        17,
+        18
+      ],
+      "cuts": 5,
+      "as_by_machine": {
+        "3": [
+          13,
+          215
+        ],
+        "9": [
+          10,
+          33,
+          51,
+          74,
+          76
+        ],
+        "10": [
+          3,
+          64,
+          94
+        ],
+        "11": [
+          157
+        ],
+        "17": [
+          28,
+          47
+        ],
+        "18": [
+          22,
+          81
+        ]
+      }
+    },
+    {
+      "ix_id": 116,
+      "total_as": 11,
+      "machines": [
+        7,
+        9,
+        11,
+        14,
+        16,
+        17
+      ],
+      "cuts": 5,
+      "as_by_machine": {
+        "7": [
+          20
+        ],
+        "9": [
+          51
+        ],
+        "11": [
+          173,
+          236
+        ],
+        "14": [
+          187,
+          202,
+          227,
+          250
+        ],
+        "16": [
+          43,
+          46
+        ],
+        "17": [
+          63
+        ]
+      }
+    },
+    {
+      "ix_id": 129,
+      "total_as": 12,
+      "machines": [
+        2,
+        4,
+        7,
+        9,
+        10,
+        16
+      ],
+      "cuts": 5,
+      "as_by_machine": {
+        "2": [
+          249
+        ],
+        "4": [
+          185,
+          201,
+          203
+        ],
+        "7": [
+          20
+        ],
+        "9": [
+          10,
+          44,
+          59,
+          76
+        ],
+        "10": [
+          3,
+          64
+        ],
+        "16": [
+          43
+        ]
+      }
+    },
+    {
+      "ix_id": 130,
+      "total_as": 7,
+      "machines": [
+        5,
+        6,
+        7,
+        9,
+        17,
+        18
+      ],
+      "cuts": 5,
+      "as_by_machine": {
+        "5": [
+          242
+        ],
+        "6": [
+          205
+        ],
+        "7": [
+          49
+        ],
+        "9": [
+          10,
+          44
+        ],
+        "17": [
+          63
+        ],
+        "18": [
+          39
+        ]
+      }
+    },
+    {
+      "ix_id": 136,
+      "total_as": 9,
+      "machines": [
+        1,
+        5,
+        9,
+        15,
+        17,
+        21
+      ],
+      "cuts": 5,
+      "as_by_machine": {
+        "1": [
+          60
+        ],
+        "5": [
+          176
+        ],
+        "9": [
+          10,
+          44
+        ],
+        "15": [
+          156,
+          200,
+          225
+        ],
+        "17": [
+          63
+        ],
+        "21": [
+          220
+        ]
+      }
+    },
+    {
+      "ix_id": 139,
+      "total_as": 9,
+      "machines": [
+        1,
+        7,
+        11,
+        16,
+        17,
+        18
+      ],
+      "cuts": 5,
+      "as_by_machine": {
+        "1": [
+          60
+        ],
+        "7": [
+          20
+        ],
+        "11": [
+          216
+        ],
+        "16": [
+          46,
+          150
+        ],
+        "17": [
+          29,
+          47,
+          63
+        ],
+        "18": [
+          36
+        ]
+      }
+    },
+    {
+      "ix_id": 144,
+      "total_as": 7,
+      "machines": [
+        1,
+        2,
+        3,
+        7,
+        9,
+        21
+      ],
+      "cuts": 5,
+      "as_by_machine": {
+        "1": [
+          60
+        ],
+        "2": [
+          233
+        ],
+        "3": [
+          13,
+          68
+        ],
+        "7": [
+          20
+        ],
+        "9": [
+          44
+        ],
+        "21": [
+          217
+        ]
+      }
+    },
+    {
+      "ix_id": 146,
+      "total_as": 7,
+      "machines": [
+        3,
+        7,
+        9,
+        13,
+        16,
+        17
+      ],
+      "cuts": 5,
+      "as_by_machine": {
+        "3": [
+          68
+        ],
+        "7": [
+          20
+        ],
+        "9": [
+          10
+        ],
+        "13": [
+          184,
+          188
+        ],
+        "16": [
+          46
+        ],
+        "17": [
+          63
+        ]
+      }
+    },
+    {
+      "ix_id": 148,
+      "total_as": 9,
+      "machines": [
+        7,
+        8,
+        9,
+        17,
+        19,
+        21
+      ],
+      "cuts": 5,
+      "as_by_machine": {
+        "7": [
+          20,
+          49
+        ],
+        "8": [
+          164
+        ],
+        "9": [
+          10,
+          44,
+          51
+        ],
+        "17": [
+          29
+        ],
+        "19": [
+          198
+        ],
+        "21": [
+          218
+        ]
+      }
+    },
+    {
+      "ix_id": 149,
+      "total_as": 14,
+      "machines": [
+        1,
+        5,
+        7,
+        9,
+        18,
+        20
+      ],
+      "cuts": 5,
+      "as_by_machine": {
+        "1": [
+          97,
+          161
+        ],
+        "5": [
+          75
+        ],
+        "7": [
+          15,
+          214
+        ],
+        "9": [
+          59,
+          74,
+          76
+        ],
+        "18": [
+          36,
+          37,
+          39
+        ],
+        "20": [
+          193,
+          219,
+          231
+        ]
+      }
+    },
+    {
+      "ix_id": 102,
+      "total_as": 10,
+      "machines": [
+        1,
+        9,
+        12,
+        16,
+        17
+      ],
+      "cuts": 4,
+      "as_by_machine": {
+        "1": [
+          190
+        ],
+        "9": [
+          44,
+          51,
+          59
+        ],
+        "12": [
+          96,
+          163,
+          212
+        ],
+        "16": [
+          46,
+          223
+        ],
+        "17": [
+          29
+        ]
+      }
+    },
+    {
+      "ix_id": 104,
+      "total_as": 13,
+      "machines": [
+        0,
+        7,
+        9,
+        18,
+        20
+      ],
+      "cuts": 4,
+      "as_by_machine": {
+        "0": [
+          213,
+          247
+        ],
+        "7": [
+          20,
+          49,
+          78
+        ],
+        "9": [
+          44,
+          74,
+          183
+        ],
+        "18": [
+          37,
+          81,
+          151
+        ],
+        "20": [
+          162,
+          226
+        ]
+      }
+    },
+    {
+      "ix_id": 108,
+      "total_as": 9,
+      "machines": [
+        4,
+        7,
+        9,
+        10,
+        16
+      ],
+      "cuts": 4,
+      "as_by_machine": {
+        "4": [
+          228
+        ],
+        "7": [
+          15,
+          20
+        ],
+        "9": [
+          44
+        ],
+        "10": [
+          3,
+          64,
+          230
+        ],
+        "16": [
+          43,
+          174
+        ]
+      }
+    },
+    {
+      "ix_id": 122,
+      "total_as": 9,
+      "machines": [
+        6,
+        8,
+        9,
+        17,
+        20
+      ],
+      "cuts": 4,
+      "as_by_machine": {
+        "6": [
+          168,
+          177,
+          229
+        ],
+        "8": [
+          25
+        ],
+        "9": [
+          33,
+          44,
+          74
+        ],
+        "17": [
+          63
+        ],
+        "20": [
+          155
+        ]
+      }
+    },
+    {
+      "ix_id": 123,
+      "total_as": 11,
+      "machines": [
+        1,
+        3,
+        7,
+        8,
+        9
+      ],
+      "cuts": 4,
+      "as_by_machine": {
+        "1": [
+          60
+        ],
+        "3": [
+          35,
+          68
+        ],
+        "7": [
+          9,
+          15,
+          49
+        ],
+        "8": [
+          25,
+          206,
+          238
+        ],
+        "9": [
+          51,
+          74
+        ]
+      }
+    },
+    {
+      "ix_id": 124,
+      "total_as": 6,
+      "machines": [
+        1,
+        5,
+        9,
+        12,
+        17
+      ],
+      "cuts": 4,
+      "as_by_machine": {
+        "1": [
+          60
+        ],
+        "5": [
+          75
+        ],
+        "9": [
+          51
+        ],
+        "12": [
+          246
+        ],
+        "17": [
+          29,
+          63
+        ]
+      }
+    },
+    {
+      "ix_id": 125,
+      "total_as": 7,
+      "machines": [
+        1,
+        3,
+        7,
+        16,
+        17
+      ],
+      "cuts": 4,
+      "as_by_machine": {
+        "1": [
+          60
+        ],
+        "3": [
+          13
+        ],
+        "7": [
+          15,
+          49
+        ],
+        "16": [
+          43
+        ],
+        "17": [
+          29,
+          63
+        ]
+      }
+    },
+    {
+      "ix_id": 133,
+      "total_as": 11,
+      "machines": [
+        3,
+        7,
+        10,
+        12,
+        17
+      ],
+      "cuts": 4,
+      "as_by_machine": {
+        "3": [
+          13,
+          35,
+          68
+        ],
+        "7": [
+          49,
+          78,
+          240
+        ],
+        "10": [
+          3,
+          224
+        ],
+        "12": [
+          96,
+          239
+        ],
+        "17": [
+          63
+        ]
+      }
+    },
+    {
+      "ix_id": 138,
+      "total_as": 11,
+      "machines": [
+        1,
+        3,
+        6,
+        9,
+        18
+      ],
+      "cuts": 4,
+      "as_by_machine": {
+        "1": [
+          60,
+          165,
+          179
+        ],
+        "3": [
+          13,
+          178,
+          241
+        ],
+        "6": [
+          48
+        ],
+        "9": [
+          10,
+          44
+        ],
+        "18": [
+          37,
+          196
+        ]
+      }
+    },
+    {
+      "ix_id": 114,
+      "total_as": 9,
+      "machines": [
+        1,
+        9,
+        15,
+        16
+      ],
+      "cuts": 3,
+      "as_by_machine": {
+        "1": [
+          60,
+          97
+        ],
+        "9": [
+          44,
+          76
+        ],
+        "15": [
+          166,
+          192,
+          207
+        ],
+        "16": [
+          46,
+          211
+        ]
+      }
+    },
+    {
+      "ix_id": 107,
+      "total_as": 7,
+      "machines": [
+        3,
+        17,
+        18
+      ],
+      "cuts": 2,
+      "as_by_machine": {
+        "3": [
+          13,
+          153
+        ],
+        "17": [
+          29,
+          63,
+          158
+        ],
+        "18": [
+          22,
+          37
+        ]
+      }
+    },
+    {
+      "ix_id": 111,
+      "total_as": 5,
+      "machines": [
+        6,
+        9,
+        17
+      ],
+      "cuts": 2,
+      "as_by_machine": {
+        "6": [
+          48
+        ],
+        "9": [
+          51,
+          59
+        ],
+        "17": [
+          29,
+          63
+        ]
+      }
+    },
+    {
+      "ix_id": 113,
+      "total_as": 5,
+      "machines": [
+        9,
+        10,
+        17
+      ],
+      "cuts": 2,
+      "as_by_machine": {
+        "9": [
+          44
+        ],
+        "10": [
+          3,
+          191
+        ],
+        "17": [
+          63,
+          235
+        ]
+      }
+    },
+    {
+      "ix_id": 115,
+      "total_as": 7,
+      "machines": [
+        9,
+        17,
+        19
+      ],
+      "cuts": 2,
+      "as_by_machine": {
+        "9": [
+          10,
+          44,
+          51
+        ],
+        "17": [
+          63
+        ],
+        "19": [
+          172,
+          180,
+          232
+        ]
+      }
+    },
+    {
+      "ix_id": 117,
+      "total_as": 8,
+      "machines": [
+        0,
+        9,
+        16
+      ],
+      "cuts": 2,
+      "as_by_machine": {
+        "0": [
+          167,
+          186,
+          209
+        ],
+        "9": [
+          10,
+          44,
+          51
+        ],
+        "16": [
+          43,
+          46
+        ]
+      }
+    },
+    {
+      "ix_id": 118,
+      "total_as": 4,
+      "machines": [
+        0,
+        9,
+        17
+      ],
+      "cuts": 2,
+      "as_by_machine": {
+        "0": [
+          208
+        ],
+        "9": [
+          44
+        ],
+        "17": [
+          47,
+          63
+        ]
+      }
+    },
+    {
+      "ix_id": 120,
+      "total_as": 3,
+      "machines": [
+        7,
+        9,
+        17
+      ],
+      "cuts": 2,
+      "as_by_machine": {
+        "7": [
+          9
+        ],
+        "9": [
+          44
+        ],
+        "17": [
+          63
+        ]
+      }
+    },
+    {
+      "ix_id": 135,
+      "total_as": 5,
+      "machines": [
+        9,
+        17,
+        21
+      ],
+      "cuts": 2,
+      "as_by_machine": {
+        "9": [
+          44,
+          74
+        ],
+        "17": [
+          63
+        ],
+        "21": [
+          159,
+          160
+        ]
+      }
+    },
+    {
+      "ix_id": 141,
+      "total_as": 4,
+      "machines": [
+        9,
+        17,
+        21
+      ],
+      "cuts": 2,
+      "as_by_machine": {
+        "9": [
+          44
+        ],
+        "17": [
+          28,
+          63
+        ],
+        "21": [
+          175
+        ]
+      }
+    },
+    {
+      "ix_id": 143,
+      "total_as": 6,
+      "machines": [
+        1,
+        10,
+        17
+      ],
+      "cuts": 2,
+      "as_by_machine": {
+        "1": [
+          60,
+          221
+        ],
+        "10": [
+          3,
+          64,
+          94
+        ],
+        "17": [
+          63
+        ]
+      }
+    }
+  ]
+}
