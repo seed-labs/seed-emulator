@@ -1518,6 +1518,1205 @@
       ]
     }
   ],
+  "as_relations": [
+    {
+      "as1_id": 59,
+      "as1_type": "transit",
+      "as2_id": 163,
+      "as2_type": "stub",
+      "ix_id": 102,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 59,
+      "as1_type": "transit",
+      "as2_id": 190,
+      "as2_type": "stub",
+      "ix_id": 102,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 59,
+      "as1_type": "transit",
+      "as2_id": 212,
+      "as2_type": "stub",
+      "ix_id": 102,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 96,
+      "as1_type": "transit",
+      "as2_id": 223,
+      "as2_type": "stub",
+      "ix_id": 102,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 20,
+      "as1_type": "transit",
+      "as2_id": 151,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 20,
+      "as1_type": "transit",
+      "as2_id": 183,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 162,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 213,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 49,
+      "as1_type": "transit",
+      "as2_id": 151,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 49,
+      "as1_type": "transit",
+      "as2_id": 183,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 78,
+      "as1_type": "transit",
+      "as2_id": 151,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 78,
+      "as1_type": "transit",
+      "as2_id": 162,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 78,
+      "as1_type": "transit",
+      "as2_id": 226,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 78,
+      "as1_type": "transit",
+      "as2_id": 247,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 81,
+      "as1_type": "transit",
+      "as2_id": 213,
+      "as2_type": "stub",
+      "ix_id": 104,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 37,
+      "as1_type": "transit",
+      "as2_id": 153,
+      "as2_type": "stub",
+      "ix_id": 107,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 158,
+      "as2_type": "stub",
+      "ix_id": 107,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 3,
+      "as1_type": "transit",
+      "as2_id": 228,
+      "as2_type": "stub",
+      "ix_id": 108,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 15,
+      "as1_type": "transit",
+      "as2_id": 228,
+      "as2_type": "stub",
+      "ix_id": 108,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 20,
+      "as1_type": "transit",
+      "as2_id": 174,
+      "as2_type": "stub",
+      "ix_id": 108,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 43,
+      "as1_type": "transit",
+      "as2_id": 174,
+      "as2_type": "stub",
+      "ix_id": 108,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 230,
+      "as2_type": "stub",
+      "ix_id": 108,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 64,
+      "as1_type": "transit",
+      "as2_id": 228,
+      "as2_type": "stub",
+      "ix_id": 108,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 64,
+      "as1_type": "transit",
+      "as2_id": 230,
+      "as2_type": "stub",
+      "ix_id": 108,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 13,
+      "as1_type": "transit",
+      "as2_id": 157,
+      "as2_type": "stub",
+      "ix_id": 109,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 76,
+      "as1_type": "transit",
+      "as2_id": 215,
+      "as2_type": "stub",
+      "ix_id": 109,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 3,
+      "as1_type": "transit",
+      "as2_id": 191,
+      "as2_type": "stub",
+      "ix_id": 113,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 3,
+      "as1_type": "transit",
+      "as2_id": 235,
+      "as2_type": "stub",
+      "ix_id": 113,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 191,
+      "as2_type": "stub",
+      "ix_id": 113,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 235,
+      "as2_type": "stub",
+      "ix_id": 113,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 191,
+      "as2_type": "stub",
+      "ix_id": 113,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 235,
+      "as2_type": "stub",
+      "ix_id": 113,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 46,
+      "as1_type": "transit",
+      "as2_id": 166,
+      "as2_type": "stub",
+      "ix_id": 114,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 46,
+      "as1_type": "transit",
+      "as2_id": 192,
+      "as2_type": "stub",
+      "ix_id": 114,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 46,
+      "as1_type": "transit",
+      "as2_id": 207,
+      "as2_type": "stub",
+      "ix_id": 114,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 60,
+      "as1_type": "transit",
+      "as2_id": 207,
+      "as2_type": "stub",
+      "ix_id": 114,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 76,
+      "as1_type": "transit",
+      "as2_id": 211,
+      "as2_type": "stub",
+      "ix_id": 114,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 180,
+      "as2_type": "stub",
+      "ix_id": 115,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 232,
+      "as2_type": "stub",
+      "ix_id": 115,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 51,
+      "as1_type": "transit",
+      "as2_id": 172,
+      "as2_type": "stub",
+      "ix_id": 115,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 51,
+      "as1_type": "transit",
+      "as2_id": 180,
+      "as2_type": "stub",
+      "ix_id": 115,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 232,
+      "as2_type": "stub",
+      "ix_id": 115,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 20,
+      "as1_type": "transit",
+      "as2_id": 173,
+      "as2_type": "stub",
+      "ix_id": 116,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 20,
+      "as1_type": "transit",
+      "as2_id": 250,
+      "as2_type": "stub",
+      "ix_id": 116,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 43,
+      "as1_type": "transit",
+      "as2_id": 236,
+      "as2_type": "stub",
+      "ix_id": 116,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 43,
+      "as1_type": "transit",
+      "as2_id": 250,
+      "as2_type": "stub",
+      "ix_id": 116,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 46,
+      "as1_type": "transit",
+      "as2_id": 202,
+      "as2_type": "stub",
+      "ix_id": 116,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 51,
+      "as1_type": "transit",
+      "as2_id": 187,
+      "as2_type": "stub",
+      "ix_id": 116,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 51,
+      "as1_type": "transit",
+      "as2_id": 236,
+      "as2_type": "stub",
+      "ix_id": 116,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 227,
+      "as2_type": "stub",
+      "ix_id": 116,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 167,
+      "as2_type": "stub",
+      "ix_id": 117,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 209,
+      "as2_type": "stub",
+      "ix_id": 117,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 46,
+      "as1_type": "transit",
+      "as2_id": 167,
+      "as2_type": "stub",
+      "ix_id": 117,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 46,
+      "as1_type": "transit",
+      "as2_id": 209,
+      "as2_type": "stub",
+      "ix_id": 117,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 51,
+      "as1_type": "transit",
+      "as2_id": 167,
+      "as2_type": "stub",
+      "ix_id": 117,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 51,
+      "as1_type": "transit",
+      "as2_id": 186,
+      "as2_type": "stub",
+      "ix_id": 117,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 208,
+      "as2_type": "stub",
+      "ix_id": 118,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 47,
+      "as1_type": "transit",
+      "as2_id": 208,
+      "as2_type": "stub",
+      "ix_id": 118,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 168,
+      "as2_type": "stub",
+      "ix_id": 122,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 177,
+      "as2_type": "stub",
+      "ix_id": 122,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 229,
+      "as2_type": "stub",
+      "ix_id": 122,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 168,
+      "as2_type": "stub",
+      "ix_id": 122,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 229,
+      "as2_type": "stub",
+      "ix_id": 122,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 74,
+      "as1_type": "transit",
+      "as2_id": 155,
+      "as2_type": "stub",
+      "ix_id": 122,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 15,
+      "as1_type": "transit",
+      "as2_id": 206,
+      "as2_type": "stub",
+      "ix_id": 123,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 25,
+      "as1_type": "transit",
+      "as2_id": 206,
+      "as2_type": "stub",
+      "ix_id": 123,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 35,
+      "as1_type": "transit",
+      "as2_id": 238,
+      "as2_type": "stub",
+      "ix_id": 123,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 29,
+      "as1_type": "transit",
+      "as2_id": 246,
+      "as2_type": "stub",
+      "ix_id": 124,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 51,
+      "as1_type": "transit",
+      "as2_id": 246,
+      "as2_type": "stub",
+      "ix_id": 124,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 3,
+      "as1_type": "transit",
+      "as2_id": 185,
+      "as2_type": "stub",
+      "ix_id": 129,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 3,
+      "as1_type": "transit",
+      "as2_id": 201,
+      "as2_type": "stub",
+      "ix_id": 129,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 20,
+      "as1_type": "transit",
+      "as2_id": 203,
+      "as2_type": "stub",
+      "ix_id": 129,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 201,
+      "as2_type": "stub",
+      "ix_id": 129,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 203,
+      "as2_type": "stub",
+      "ix_id": 129,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 64,
+      "as1_type": "transit",
+      "as2_id": 201,
+      "as2_type": "stub",
+      "ix_id": 129,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 64,
+      "as1_type": "transit",
+      "as2_id": 249,
+      "as2_type": "stub",
+      "ix_id": 129,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 76,
+      "as1_type": "transit",
+      "as2_id": 201,
+      "as2_type": "stub",
+      "ix_id": 129,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 10,
+      "as1_type": "transit",
+      "as2_id": 242,
+      "as2_type": "stub",
+      "ix_id": 130,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 39,
+      "as1_type": "transit",
+      "as2_id": 205,
+      "as2_type": "stub",
+      "ix_id": 130,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 205,
+      "as2_type": "stub",
+      "ix_id": 130,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 3,
+      "as1_type": "transit",
+      "as2_id": 239,
+      "as2_type": "stub",
+      "ix_id": 133,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 3,
+      "as1_type": "transit",
+      "as2_id": 240,
+      "as2_type": "stub",
+      "ix_id": 133,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 49,
+      "as1_type": "transit",
+      "as2_id": 240,
+      "as2_type": "stub",
+      "ix_id": 133,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 68,
+      "as1_type": "transit",
+      "as2_id": 239,
+      "as2_type": "stub",
+      "ix_id": 133,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 68,
+      "as1_type": "transit",
+      "as2_id": 240,
+      "as2_type": "stub",
+      "ix_id": 133,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 78,
+      "as1_type": "transit",
+      "as2_id": 224,
+      "as2_type": "stub",
+      "ix_id": 133,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 96,
+      "as1_type": "transit",
+      "as2_id": 239,
+      "as2_type": "stub",
+      "ix_id": 133,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 159,
+      "as2_type": "stub",
+      "ix_id": 135,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 74,
+      "as1_type": "transit",
+      "as2_id": 160,
+      "as2_type": "stub",
+      "ix_id": 135,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 10,
+      "as1_type": "transit",
+      "as2_id": 176,
+      "as2_type": "stub",
+      "ix_id": 136,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 156,
+      "as2_type": "stub",
+      "ix_id": 136,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 220,
+      "as2_type": "stub",
+      "ix_id": 136,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 225,
+      "as2_type": "stub",
+      "ix_id": 136,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 60,
+      "as1_type": "transit",
+      "as2_id": 176,
+      "as2_type": "stub",
+      "ix_id": 136,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 60,
+      "as1_type": "transit",
+      "as2_id": 220,
+      "as2_type": "stub",
+      "ix_id": 136,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 200,
+      "as2_type": "stub",
+      "ix_id": 136,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 13,
+      "as1_type": "transit",
+      "as2_id": 179,
+      "as2_type": "stub",
+      "ix_id": 138,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 178,
+      "as2_type": "stub",
+      "ix_id": 138,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 196,
+      "as2_type": "stub",
+      "ix_id": 138,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 48,
+      "as1_type": "transit",
+      "as2_id": 165,
+      "as2_type": "stub",
+      "ix_id": 138,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 48,
+      "as1_type": "transit",
+      "as2_id": 178,
+      "as2_type": "stub",
+      "ix_id": 138,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 48,
+      "as1_type": "transit",
+      "as2_id": 196,
+      "as2_type": "stub",
+      "ix_id": 138,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 48,
+      "as1_type": "transit",
+      "as2_id": 241,
+      "as2_type": "stub",
+      "ix_id": 138,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 46,
+      "as1_type": "transit",
+      "as2_id": 216,
+      "as2_type": "stub",
+      "ix_id": 139,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 47,
+      "as1_type": "transit",
+      "as2_id": 216,
+      "as2_type": "stub",
+      "ix_id": 139,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 150,
+      "as2_type": "stub",
+      "ix_id": 139,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 175,
+      "as2_type": "stub",
+      "ix_id": 141,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 63,
+      "as1_type": "transit",
+      "as2_id": 221,
+      "as2_type": "stub",
+      "ix_id": 143,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 94,
+      "as1_type": "transit",
+      "as2_id": 221,
+      "as2_type": "stub",
+      "ix_id": 143,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 13,
+      "as1_type": "transit",
+      "as2_id": 233,
+      "as2_type": "stub",
+      "ix_id": 144,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 217,
+      "as2_type": "stub",
+      "ix_id": 144,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 60,
+      "as1_type": "transit",
+      "as2_id": 233,
+      "as2_type": "stub",
+      "ix_id": 144,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 10,
+      "as1_type": "transit",
+      "as2_id": 188,
+      "as2_type": "stub",
+      "ix_id": 146,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 20,
+      "as1_type": "transit",
+      "as2_id": 184,
+      "as2_type": "stub",
+      "ix_id": 146,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 46,
+      "as1_type": "transit",
+      "as2_id": 184,
+      "as2_type": "stub",
+      "ix_id": 146,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 68,
+      "as1_type": "transit",
+      "as2_id": 184,
+      "as2_type": "stub",
+      "ix_id": 146,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 20,
+      "as1_type": "transit",
+      "as2_id": 164,
+      "as2_type": "stub",
+      "ix_id": 148,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 20,
+      "as1_type": "transit",
+      "as2_id": 218,
+      "as2_type": "stub",
+      "ix_id": 148,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 29,
+      "as1_type": "transit",
+      "as2_id": 164,
+      "as2_type": "stub",
+      "ix_id": 148,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 44,
+      "as1_type": "transit",
+      "as2_id": 218,
+      "as2_type": "stub",
+      "ix_id": 148,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 49,
+      "as1_type": "transit",
+      "as2_id": 198,
+      "as2_type": "stub",
+      "ix_id": 148,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 51,
+      "as1_type": "transit",
+      "as2_id": 218,
+      "as2_type": "stub",
+      "ix_id": 148,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 15,
+      "as1_type": "transit",
+      "as2_id": 219,
+      "as2_type": "stub",
+      "ix_id": 149,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 37,
+      "as1_type": "transit",
+      "as2_id": 231,
+      "as2_type": "stub",
+      "ix_id": 149,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 39,
+      "as1_type": "transit",
+      "as2_id": 214,
+      "as2_type": "stub",
+      "ix_id": 149,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 59,
+      "as1_type": "transit",
+      "as2_id": 214,
+      "as2_type": "stub",
+      "ix_id": 149,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 76,
+      "as1_type": "transit",
+      "as2_id": 161,
+      "as2_type": "stub",
+      "ix_id": 149,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 76,
+      "as1_type": "transit",
+      "as2_id": 219,
+      "as2_type": "stub",
+      "ix_id": 149,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 97,
+      "as1_type": "transit",
+      "as2_id": 161,
+      "as2_type": "stub",
+      "ix_id": 149,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 97,
+      "as1_type": "transit",
+      "as2_id": 193,
+      "as2_type": "stub",
+      "ix_id": 149,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 22,
+      "as1_type": "transit",
+      "as2_id": 94,
+      "as2_type": "transit",
+      "ix_id": 109,
+      "provider_link": false,
+      "raw_flag": 0
+    },
+    {
+      "as1_id": 51,
+      "as1_type": "transit",
+      "as2_id": 76,
+      "as2_type": "transit",
+      "ix_id": 109,
+      "provider_link": false,
+      "raw_flag": 0
+    },
+    {
+      "as1_id": 51,
+      "as1_type": "transit",
+      "as2_id": 63,
+      "as2_type": "transit",
+      "ix_id": 111,
+      "provider_link": false,
+      "raw_flag": 0
+    }
+  ],
   "machines": [
     {
       "machine_id": 0,

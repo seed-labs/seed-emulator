@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship
 from seedemu.services import WebService
 from seedemu.compiler import Docker, Platform
 from seedemu.core import Emulator, Binding, Filter
@@ -134,23 +134,74 @@ def run(dumpfile = None, topology_file = None):
             print(f"Warning: Unknown AS type '{as_type}' for AS {as_id}, skipping...")
 
     ###############################################################################
+    # Create a mapping from AS ID to AS type for quick lookup
+    as_type_map = {}
+    for as_info in as_list:
+        as_id = as_info.get('as_id')
+        if as_id is not None:
+            as_type_map[as_id] = as_info.get('as_type', '').lower()
+    
+    ###############################################################################
     # Set up EBGP peering at Internet Exchanges
-    # For each IX, find all ASes connected to it and peer them via Route Server
+    # Strategy:
+    # 1) Transit ASes peer with each other via Route Server (RS) at each IX
+    # 2) Private peerings use the explicit provider_link relations from input
+    
     # Create a set of all created AS IDs for validation
     created_as_ids = set(transit_as_list + stub_as_list)
     
+    # Step 1: RS peering among transit ASes at each IX
     for ix_id in sorted(ix_ids):
-        ases_at_ix = []
+        transit_ases_at_ix = []
         for conn in as_ix_connections:
             as_id = conn.get('as_id')
             if as_id is not None and ix_id in conn.get('ix_list', []):
-                # Only add AS if it was actually created
-                if as_id in created_as_ids:
-                    ases_at_ix.append(as_id)
-        
-        # Add RS peers for all ASes at this IX (similar to mini_internet.py)
-        if len(ases_at_ix) > 0:
-            ebgp.addRsPeers(ix_id, ases_at_ix)
+                if as_id in created_as_ids and as_type_map.get(as_id, '').lower() == 'transit':
+                    transit_ases_at_ix.append(as_id)
+        if len(transit_ases_at_ix) > 0:
+            ebgp.addRsPeers(ix_id, transit_ases_at_ix)
+    
+    # Step 2: Private peerings from as_relations.provider_link
+    as_relations = topology.get('as_relations', [])
+    for rel in as_relations:
+        try:
+            ix_id = rel.get('ix_id')
+            if ix_id is None:
+                continue
+            provider_flag = rel.get('provider_link', False)
+            if not provider_flag:
+                continue
+            
+            as1_id = rel.get('as1_id')
+            as2_id = rel.get('as2_id')
+            as1_type = str(rel.get('as1_type', '')).lower()
+            as2_type = str(rel.get('as2_type', '')).lower()
+            
+            # Determine provider (transit) and customer (stub)
+            provider_as = None
+            customer_as = None
+            if as1_type == 'transit' and as2_type == 'stub':
+                provider_as = as1_id
+                customer_as = as2_id
+            elif as2_type == 'transit' and as1_type == 'stub':
+                provider_as = as2_id
+                customer_as = as1_id
+            else:
+                # If types are unexpected, skip this relation
+                continue
+            
+            # Validate AS existence and membership
+            if provider_as not in created_as_ids or customer_as not in created_as_ids:
+                continue
+            if ix_id not in as_to_ix_map.get(provider_as, []) or ix_id not in as_to_ix_map.get(customer_as, []):
+                # Both ASes must be at the specified IX
+                continue
+            
+            # Add private peering for this specific pair at the given IX
+            ebgp.addPrivatePeerings(ix_id, [provider_as], [customer_as], PeerRelationship.Provider)
+        except Exception:
+            # Be conservative; ignore malformed relation entries
+            continue
 
     ###############################################################################
     # Rendering 
@@ -172,7 +223,38 @@ def run(dumpfile = None, topology_file = None):
 
         ###############################################################################
         # Compilation
-        emu.compile(docker, './output', override=True)
+        # If topology has machine partitions, compile distributed outputs per machine.
+        machines = topology.get('machines', [])
+        ix_partitions = topology.get('ix_partitions', [])
+        if isinstance(machines, list) and len(machines) > 0:
+            # Build a mapping for quick AS -> IX list lookup (already built: as_to_ix_map)
+            # Build IX -> machines mapping if ix_partitions provided
+            ix_to_machines = {}
+            if isinstance(ix_partitions, list):
+                for part in ix_partitions:
+                    ixid = part.get('ix_id')
+                    mlist = part.get('machines', [])
+                    if ixid is not None:
+                        ix_to_machines[ixid] = set(mlist)
+            for m in machines:
+                mid = m.get('machine_id')
+                asns = set(m.get('as_list', []))
+                # Determine ix ids for this machine
+                ix_ids = set()
+                if ix_to_machines:
+                    for ixid, mset in ix_to_machines.items():
+                        if mid in mset:
+                            ix_ids.add(ixid)
+                else:
+                    # Fallback: derive ix ids from AS assignments
+                    for asn in asns:
+                        for ixid in as_to_ix_map.get(asn, []):
+                            ix_ids.add(ixid)
+                outdir = f'./output-m{mid}'
+                docker.compile_subset(emu, outdir, asns, ix_ids, override=True)
+        else:
+            # Fallback to single output
+            emu.compile(docker, './output', override=True)
 
 if __name__ == '__main__':
     run()

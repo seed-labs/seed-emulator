@@ -341,6 +341,8 @@ class Docker(Compiler):
     __config: List[ Tuple[BaseOption , Scope] ] # all encountered Options for .env file
     __option_handling: OptionHandling # strategy how to deal with Options
     __basesystem_dockerimage_mapping: dict
+    __subset_asns: Set[int] | None
+    __subset_ix_ids: Set[int] | None
 
     def __init__(
         self,
@@ -421,6 +423,8 @@ class Docker(Compiler):
         self.__platform = platform
 
         self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
+        self.__subset_asns = None
+        self.__subset_ix_ids = None
 
         for name, image in self.__basesystem_dockerimage_mapping.items():
             priority = 0
@@ -438,6 +442,28 @@ class Docker(Compiler):
         if key not in self.__vol_names:
             self.__volumes_dedup.append(vol)
             self.__vol_names.append(key)
+        return self
+
+    def compile_subset(self, emulator: Emulator, output: str, include_asns: Set[int], include_ix_ids: Set[int], override: bool = False) -> 'Docker':
+        """!
+        @brief Compile only a subset of the emulator filtered by ASNs and IX IDs.
+        Generates an output directory with only the selected AS nodes and IX networks.
+        @param emulator emulator object.
+        @param output output directory path.
+        @param include_asns set of ASNs to include.
+        @param include_ix_ids set of IX IDs to include.
+        @param override override output if exists.
+        """
+        # Temporarily set filters, run normal compile, then clear filters
+        prev_asns = self.__subset_asns
+        prev_ixids = self.__subset_ix_ids
+        try:
+            self.__subset_asns = set(include_asns) if include_asns is not None else None
+            self.__subset_ix_ids = set(include_ix_ids) if include_ix_ids is not None else None
+            super().compile(emulator, output, override)
+        finally:
+            self.__subset_asns = prev_asns
+            self.__subset_ix_ids = prev_ixids
         return self
 
     def _getVolumes(self) -> List[BaseVolume]:
@@ -1314,30 +1340,88 @@ class Docker(Compiler):
 
         self._groupSoftware(emulator)
 
-        for ((scope, type, name), obj) in registry.getAll().items():
+        # Determine if we are in subset mode
+        subset_mode = self.__subset_asns is not None or self.__subset_ix_ids is not None
 
-            if type == 'net':
-                self._log('creating network: {}/{}...'.format(scope, name))
-                self.__networks += self._compileNet(obj)
+        # Compile networks first (respecting subset filters if enabled)
+        for ((scope, type, name), obj) in registry.getAll().items():
+            if type != 'net':
+                continue
+            if subset_mode:
+                # scope is either 'ix' or ASN (int) depending on registration convention
+                if scope == 'ix':
+                    # name is expected to be like 'ix{ID}'
+                    try:
+                        ix_id = int(name.replace('ix', ''))
+                    except Exception:
+                        ix_id = None
+                    if self.__subset_ix_ids is not None and (ix_id is None or ix_id not in self.__subset_ix_ids):
+                        continue
+                else:
+                    # scope is ASN for AS-local nets
+                    try:
+                        asn = int(scope)
+                    except Exception:
+                        asn = None
+                    if self.__subset_asns is not None and (asn is None or asn not in self.__subset_asns):
+                        continue
+            self._log('creating network: {}/{}...'.format(scope, name))
+            self.__networks += self._compileNet(obj)
 
         for ((scope, type, name), obj) in registry.getAll().items():
             if type == 'rnode':
+                if subset_mode:
+                    try:
+                        asn = int(scope)
+                    except Exception:
+                        asn = None
+                    if self.__subset_asns is not None and (asn is None or asn not in self.__subset_asns):
+                        continue
                 self._log('compiling router node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
 
             if type == 'csnode':
+                if subset_mode:
+                    try:
+                        asn = int(scope)
+                    except Exception:
+                        asn = None
+                    if self.__subset_asns is not None and (asn is None or asn not in self.__subset_asns):
+                        continue
                 self._log('compiling control service node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
 
             if type == 'hnode':
+                if subset_mode:
+                    try:
+                        asn = int(scope)
+                    except Exception:
+                        asn = None
+                    if self.__subset_asns is not None and (asn is None or asn not in self.__subset_asns):
+                        continue
                 self._log('compiling host node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
 
             if type == 'rs':
+                if subset_mode:
+                    # Route server belongs to IX scope
+                    try:
+                        ix_id = int(scope)
+                    except Exception:
+                        ix_id = None
+                    if self.__subset_ix_ids is not None and (ix_id is None or ix_id not in self.__subset_ix_ids):
+                        continue
                 self._log('compiling rs node for {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
             if type == 'snode':
+                if subset_mode:
+                    try:
+                        asn = int(scope)
+                    except Exception:
+                        asn = None
+                    if self.__subset_asns is not None and (asn is None or asn not in self.__subset_asns):
+                        continue
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 

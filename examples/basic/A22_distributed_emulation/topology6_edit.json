@@ -308,6 +308,206 @@
       ]
     }
   ],
+  "as_relations": [
+    {
+      "as1_id": 86,
+      "as1_type": "transit",
+      "as2_id": 163,
+      "as2_type": "stub",
+      "ix_id": 107,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 17,
+      "as1_type": "transit",
+      "as2_id": 210,
+      "as2_type": "stub",
+      "ix_id": 108,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 58,
+      "as1_type": "transit",
+      "as2_id": 167,
+      "as2_type": "stub",
+      "ix_id": 119,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 45,
+      "as1_type": "transit",
+      "as2_id": 212,
+      "as2_type": "stub",
+      "ix_id": 120,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 50,
+      "as1_type": "transit",
+      "as2_id": 212,
+      "as2_type": "stub",
+      "ix_id": 120,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 11,
+      "as1_type": "transit",
+      "as2_id": 239,
+      "as2_type": "stub",
+      "ix_id": 131,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 45,
+      "as1_type": "transit",
+      "as2_id": 213,
+      "as2_type": "stub",
+      "ix_id": 134,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 86,
+      "as1_type": "transit",
+      "as2_id": 213,
+      "as2_type": "stub",
+      "ix_id": 134,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 17,
+      "as1_type": "transit",
+      "as2_id": 196,
+      "as2_type": "stub",
+      "ix_id": 137,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 17,
+      "as1_type": "transit",
+      "as2_id": 229,
+      "as2_type": "stub",
+      "ix_id": 137,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 74,
+      "as1_type": "transit",
+      "as2_id": 170,
+      "as2_type": "stub",
+      "ix_id": 137,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 74,
+      "as1_type": "transit",
+      "as2_id": 196,
+      "as2_type": "stub",
+      "ix_id": 137,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 87,
+      "as1_type": "transit",
+      "as2_id": 153,
+      "as2_type": "stub",
+      "ix_id": 137,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 87,
+      "as1_type": "transit",
+      "as2_id": 170,
+      "as2_type": "stub",
+      "ix_id": 137,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 87,
+      "as1_type": "transit",
+      "as2_id": 244,
+      "as2_type": "stub",
+      "ix_id": 137,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 50,
+      "as1_type": "transit",
+      "as2_id": 187,
+      "as2_type": "stub",
+      "ix_id": 143,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 58,
+      "as1_type": "transit",
+      "as2_id": 160,
+      "as2_type": "stub",
+      "ix_id": 143,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 58,
+      "as1_type": "transit",
+      "as2_id": 200,
+      "as2_type": "stub",
+      "ix_id": 143,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 74,
+      "as1_type": "transit",
+      "as2_id": 160,
+      "as2_type": "stub",
+      "ix_id": 143,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 50,
+      "as1_type": "transit",
+      "as2_id": 191,
+      "as2_type": "stub",
+      "ix_id": 149,
+      "provider_link": true,
+      "raw_flag": -1
+    },
+    {
+      "as1_id": 17,
+      "as1_type": "transit",
+      "as2_id": 11,
+      "as2_type": "transit",
+      "ix_id": 108,
+      "provider_link": false,
+      "raw_flag": 0
+    },
+    {
+      "as1_id": 86,
+      "as1_type": "transit",
+      "as2_id": 45,
+      "as2_type": "transit",
+      "ix_id": 134,
+      "provider_link": false,
+      "raw_flag": 0
+    }
+  ],
   "machines": [
     {
       "machine_id": 0,
