@@ -31,9 +31,9 @@ class MoneroService(Service):
     """Entry point for the Monero blockchain service.
 
     Similar to ``EthereumService``, the ``MoneroService`` keeps track of the
-    mapping between virtual nodes and Monero networks, and during the render
+    mapping between virtual nodes and Monero blockchains, and during the render
     phase invokes each server's ``install()`` method to provision the software.
-    Network- and node-specific logic is delegated to :class:`MoneroNetwork`
+    Blockchain- and node-specific logic is delegated to :class:`MoneroNetwork`
     to keep the semantics clean.
     """
 
@@ -80,25 +80,27 @@ class MoneroService(Service):
         super()._doInstall(node, server)
 
     
-    # Network management
+    # Blockchain management
     
-    def createNetwork(
+    def createBlockchain(
         self,
         name: str,
         net_type: MoneroNetworkType = MoneroNetworkType.TESTNET,
         defaults: Optional[MoneroNetworkDefaults] = None,
     ) -> "MoneroNetwork":
-        """Create and register a logical Monero network.
+        """Create and register a logical Monero blockchain.
+
+        This aligns with EthereumService.createBlockchain().
 
         Args:
-            name: Unique network identifier.
-            net_type: Network type which influences default ports and flags.
+            name: Unique blockchain identifier.
+            net_type: Blockchain type which influences default ports and flags.
             defaults: Optional defaults to clone instead of inferring automatically.
 
         Returns:
             The newly created :class:`MoneroNetwork` instance.
         """
-        assert name not in self.__networks, f"Duplicated Monero network name: {name}"
+        assert name not in self.__networks, f"Duplicated Monero blockchain name: {name}"
 
         defaults = defaults.clone() if defaults else infer_default_ports(net_type)
         defaults.net_type = net_type
@@ -107,10 +109,12 @@ class MoneroService(Service):
         self.__networks[name] = network
         return network
 
-    def getNetworkNames(self) -> List[str]:
+    def getBlockchainNames(self) -> List[str]:
+        """Return the names of registered blockchains."""
         return list(self.__networks.keys())
 
-    def getNetwork(self, name: str) -> "MoneroNetwork":
+    def getBlockchain(self, name: str) -> "MoneroNetwork":
+        """Return the blockchain object with the given name."""
         return self.__networks[name]
 
     
