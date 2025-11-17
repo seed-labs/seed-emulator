@@ -45,7 +45,17 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
         self.__name_servers = []
 
+    def setSubnets(self, subnet: str) -> AutonomousSystem:
+        """!
+        @brief set subnets to use for auto-assignment.
 
+        @param subnets list of IPv4Network to use for auto-assignment.
+
+        @returns self, for chaining API calls.
+        """
+        self.__subnets = list(IPv4Network(subnet).subnets(new_prefix = 24))
+
+        return self
 
     def setNameServers(self, servers: List[str]) -> AutonomousSystem:
         """!
@@ -184,7 +194,7 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         @returns Network.
         @throws StopIteration if subnet exhausted.
         """
-        assert prefix != "auto" or self.__asn <= 255, "can't use auto: asn > 255"
+        #assert prefix != "auto" or self.__asn <= 255, "can't use auto: asn > 255"
 
         network = IPv4Network(prefix) if prefix != "auto" else self.__subnets.pop(0)
         assert name not in self.__nets, 'Network with name {} already exist.'.format(name)
