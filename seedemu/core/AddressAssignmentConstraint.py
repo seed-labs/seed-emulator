@@ -180,7 +180,7 @@ class AddressAssignmentConstraint(Printable):
         @returns offset.
         @throws AssertionError if can't map ASN to IP address.
         """
-        #assert asn >= 2 and asn <= 254, "can't map ASN {} to IX address.".format(asn)
+        assert asn >= 2 and asn <= 254, "can't map ASN {} to IX address.".format(asn)
         return asn
 
     def print(self, indent: int) -> str:
