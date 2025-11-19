@@ -19,7 +19,7 @@ class InternetExchange(Printable, Configurable):
     __rs: Node
     __name: str
 
-    def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None, create_rs = True):
+    def __init__(self, id: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None, create_rs = True, rsAdress = None):
         """!
         @brief InternetExchange constructor.
 
@@ -29,7 +29,8 @@ class InternetExchange(Printable, Configurable):
         @param create_rs (optional) create route server node for the IX or not.
           ( route servers are only relevant for BGP, thus the default is True. But RSes can be disabled for SCION)
         """
-
+        if create_rs== True and id>254 :
+            assert rsAdress!=None, "rsAdress can't be None"
         self.__id = id
 
         assert prefix != "auto" or self.__id <= 255, "can't use auto: id > 255"
@@ -39,8 +40,11 @@ class InternetExchange(Printable, Configurable):
         self.__net = Network(self.__name, NetworkType.InternetExchange, network, aac, False)
 
         if create_rs:
-            self.__rs = Router(self.__name, NodeRole.RouteServer, self.__id)      
-            self.__rs.joinNetwork(self.__name)
+            self.__rs = Router(self.__name, NodeRole.RouteServer, self.__id) 
+            if rsAdress == None: 
+                self.__rs.joinNetwork(self.__name)
+            else:
+                self.__rs.joinNetwork(self.__name, rsAdress)
         else:
             self.__rs = None
 

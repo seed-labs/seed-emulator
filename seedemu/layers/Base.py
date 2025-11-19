@@ -170,7 +170,7 @@ class Base(Layer, Graphable):
         asn = asObject.getAsn()
         self.__ases[asn] = asObject
 
-    def createInternetExchange(self, asn: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None, create_rs=True) -> InternetExchange:
+    def createInternetExchange(self, asn: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None, create_rs=True, rsAdress = None) -> InternetExchange:
         """!
         @brief Create a new InternetExchange.
 
@@ -181,7 +181,7 @@ class Base(Layer, Graphable):
         @throws AssertionError if IX exists.
         """
         assert asn not in self.__ixes, "ix{} already exist.".format(asn)
-        self.__ixes[asn] = InternetExchange(asn, prefix, aac, create_rs)
+        self.__ixes[asn] = InternetExchange(asn, prefix, aac, create_rs, rsAdress)
         return self.__ixes[asn]
 
     def getInternetExchange(self, asn: int) -> InternetExchange:
