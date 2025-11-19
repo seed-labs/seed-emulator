@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-"""Concise MoneroService example using primarily default configuration."""
+"""Minimal MoneroService example using primarily default configuration."""
 
 from __future__ import annotations
 
@@ -10,16 +10,16 @@ import sys
 
 from seedemu import Binding, Filter, Makers
 from seedemu.compiler import Docker, Platform
-from seedemu.services.MoneroService import (
-    MoneroService,
-    MoneroMiningTrigger,
-)
+from seedemu.services.MoneroService import MoneroService, MoneroMiningTrigger
 
 
 def _bind(emu, vnode: str, asn: int, host_index: int) -> None:
-    emu.addBinding(Binding(vnode, filter=Filter(asn=asn, nodeName=f"host_{host_index}")))
+    emu.addBinding(Binding(vnode, filter=Filter(asn=asn, nodeName=f"^host_{host_index}$")))
 
+###############################################################################
+# Set the platform information (select amd/arm via CLI argument)
 script_name = os.path.basename(__file__)
+
 if len(sys.argv) == 1:
     platform = Platform.AMD64
 elif len(sys.argv) == 2:
@@ -34,23 +34,30 @@ else:
     print(f"Usage:  {script_name} amd|arm")
     sys.exit(1)
 
+###############################################################################
+# Global configuration
+
 hosts_per_stub_as = 3
+# Build the base topology of 10 Stub-AS, each with 3 hosts
 emu = Makers.makeEmulatorBaseWith10StubASAndHosts(hosts_per_stub_as=hosts_per_stub_as)
 
 monero = MoneroService()
-network = monero.createNetwork("base-monero")
-network.setFixedDifficulty(2000)
+# Create a blockchain named base-monero; set a small difficulty for quick blocks in demos
+blockchain = monero.createBlockchain("base-monero")
+blockchain.setFixedDifficulty(2000)
 
+# AS150-154: one seed node and one client per AS; only AS150 client mines
 seed_asns = [150, 151, 152, 153, 154]
 for asn in seed_asns:
     seed_vnode = f"monero-seed-{asn}"
-    seed_server = network.createSeedNode(seed_vnode)
+    seed_server = blockchain.createSeedNode(seed_vnode)
     seed_server.setDisplayName(f"Monero-Seed-{asn}")
     _bind(emu, seed_vnode, asn, host_index=0)
 
     client_vnode = f"monero-client-{asn}"
-    client_server = network.createClientNode(client_vnode)
+    client_server = blockchain.createClientNode(client_vnode)
     if asn == 150:
+        # Only AS150 client mines; 1 thread; start after seed becomes reachable
         client_server.enableMining(
             threads=1,
             trigger=MoneroMiningTrigger.AFTER_SEED_REACHABLE,
@@ -58,26 +65,31 @@ for asn in seed_asns:
     client_server.setDisplayName(f"Monero-Client-{asn}")
     _bind(emu, client_vnode, asn, host_index=1)
 
+# AS160-161: one full client per AS
 for asn in [160, 161]:
     vnode = f"monero-client-{asn}"
-    server = network.createClientNode(vnode)
+    server = blockchain.createClientNode(vnode)
     server.setDisplayName(f"Monero-Client-{asn}")
     _bind(emu, vnode, asn, host_index=0)
 
+# AS162-163: one light wallet node per AS (wallet RPC enabled by default)
 for asn in [162, 163]:
     vnode = f"monero-light-{asn}"
-    server = network.createLightWallet(vnode)
+    server = blockchain.createLightWallet(vnode)
     server.setDisplayName(f"Monero-Light-{asn}")
     _bind(emu, vnode, asn, host_index=0)
 
+# AS164: one pruned node (reduced disk usage; no mining)
 pruned_vnode = "monero-pruned-164"
-pruned_server = network.createPrunedNode(pruned_vnode)
+pruned_server = blockchain.createPrunedNode(pruned_vnode)
 pruned_server.setDisplayName("Monero-Pruned-164")
 _bind(emu, pruned_vnode, 164, host_index=0)
 
+# Add the Monero service as a layer, then render
 emu.addLayer(monero)
 emu.render()
 
+# Compile docker-compose and build context into ./output
 docker = Docker(internetMapEnabled=True, platform=platform)
 emu.compile(docker, "./output", override=True)
 
