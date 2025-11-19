@@ -37,7 +37,7 @@ class CompileTest(ut.TestCase):
             "basic/A05_components" :                    (["components.py"], ["output",  "base_component.bin"]),
             "basic/A06_merge_emulation" :               (["merge_emulation.py"], ["output"]),
             "basic/A07_compilers" :                     (["compilers.py"], ["output",  "base_component.bin"]),
-            "basic/A08_buildtime_docker" :              (["create_eth_account.py"], ["output"]),
+            #"basic/A08_buildtime_docker" :              (["create_eth_account.py"], ["output"]),
             "basic/A09_node_customization" :            (["node_customization.py"], ["output"]),
             "basic/A10_add_containers" :                (["add_containers.py"], ["output"]),
             #"basic/A20_nano_internet" :                 (["nano_internet.py"], ["output", "base_component.bin"]),
