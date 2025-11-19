@@ -170,18 +170,20 @@ class Base(Layer, Graphable):
         asn = asObject.getAsn()
         self.__ases[asn] = asObject
 
-    def createInternetExchange(self, asn: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None, create_rs=True, rsAdress = None) -> InternetExchange:
+    def createInternetExchange(self, asn: int, prefix: str = "auto", aac: AddressAssignmentConstraint = None, create_rs=True, rsAddress = None) -> InternetExchange:
         """!
         @brief Create a new InternetExchange.
 
         @param asn ASN of the new IX.
         @param prefix (optional) prefix of the IX peering LAN.
         @param aac (optional) Address assignment constraint.
+        @param create_rs (optional) create route server node for the IX or not.
+        @param rsAddress (optional) specific address for the route server.
         @returns created IX.
         @throws AssertionError if IX exists.
         """
         assert asn not in self.__ixes, "ix{} already exist.".format(asn)
-        self.__ixes[asn] = InternetExchange(asn, prefix, aac, create_rs, rsAdress)
+        self.__ixes[asn] = InternetExchange(asn, prefix, aac, create_rs, rsAddress)
         return self.__ixes[asn]
 
     def getInternetExchange(self, asn: int) -> InternetExchange:
