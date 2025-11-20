@@ -51,7 +51,7 @@ eth = EthereumService()
 blockchain = eth.createBlockchain(chainName="pos", consensus=ConsensusMechanism.POS)
 
 # Generate a list of accounts and prefund them
-accounts_total  = 1000
+accounts_total  = 10
 pre_funded_amount = 1000000
 mnemonic = "gentle always fun glass foster produce north tail security list example gain"
 Account.enable_unaudited_hdwallet_features()

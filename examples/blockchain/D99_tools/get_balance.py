@@ -22,7 +22,7 @@ w3 = Web3(Web3.HTTPProvider(eth_node_url))
 
 Account.enable_unaudited_hdwallet_features()
 
-for i in range(1000):
+for i in range(10):
    mnemonic = "gentle always fun glass foster produce north tail security list example gain"
    path = f"m/44'/60'/0'/0/{i}"
    account = Account.from_mnemonic(mnemonic, account_path=path)

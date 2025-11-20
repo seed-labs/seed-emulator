@@ -75,7 +75,7 @@ mnemonic = "gentle always fun glass foster produce north tail security list exam
 
 # Make sure that these accounts are pre-funded in the emulator, 
 # otherwise they don't have sufficient fund to send transactions.
-total = 1000
+total = 10
 
 print(f"Generating {total} accounts ...")
 for i in range(total):
@@ -85,11 +85,11 @@ for i in range(total):
    accounts.append(account)
 
 
-rounds = 10000000000  # how many rounds: each round one transaction is sent 
-wait_time = 0.5  # waiting time after a transaction is sent
+rounds = 1  # how many rounds: each round one transaction is sent 
+wait_time = 0.1  # waiting time after a transaction is sent
 
 for x in range(rounds):
-   amount = random.randint(1, 10)/10
+   amount = random.randint(1, 10)/100
 
    sender_index = random.randint(0, total-1)
    recipt_index = random.randint(0, total-1) 
