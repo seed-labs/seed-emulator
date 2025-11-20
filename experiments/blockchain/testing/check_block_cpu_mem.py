@@ -19,8 +19,6 @@ rpc_url = sys.argv[1]
 # -------------------------
 # Log file initialization
 # -------------------------
-# ½« rpc_url ÖÐ·Ç·¨ÎÄ¼þÃû×Ö·ûÌæ»»Îª "_"
-safe_rpc = urllib.parse.quote_plus(rpc_url)
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 filename = f"system_info-{safe_rpc}-{timestamp}.log"
 
