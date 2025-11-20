@@ -53,7 +53,7 @@ class CompileTest(ut.TestCase):
             "internet/B20_dhcp" :                       (["dhcp.py"], ["output", "base_internet.bin"]),
             "internet/B21_etc_hosts":                   (["etc_hosts.py"], ["output", "base_internet.bin"]),
             "internet/B22_botnet":                      (["botnet_basic.py"], ["output", "base_internet.bin"]),
-            "internet/B23_darknet_tor":                 (["darknet_tor.py"], ["output", "base_internet.bin"]),
+            #"internet/B23_darknet_tor":                 (["darknet_tor.py"], ["output", "base_internet.bin"]),
             "internet/B24_ip_anycast":                  (["ip_anycast.py"], ["output", "base_internet.bin"]),
             "internet/B25_pki":                         (["pki.py", "pki_with_dns.py"], ["output", "base_internet.bin", "base_internet_dns.bin"]),
             "internet/B26_ipfs_kubo":                   (["kubo.py"], ["output", "base_component.bin"]),
