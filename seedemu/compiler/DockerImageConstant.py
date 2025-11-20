@@ -27,7 +27,7 @@ ETHEREUM_IMAGE_POS = DockerImage(name='handsonsecurity/seedemu-ethereum:pos',
                                 software=['software-properties-common', 'python3', 'python3-pip'],
                                 subset=BASE_IMAGE)
 
-MONERO_IMAGE = DockerImage(name='seedemu-monero:latest', software=[], subset=BASE_IMAGE)
+MONERO_IMAGE = DockerImage(name='handsonsecurity/seedemu-monero:latest', software=[], subset=BASE_IMAGE)
 
 OP_STACK_IMAGE = DockerImage(name='huagluck/seedemu-op-stack', software=[], subset=BASE_IMAGE)
 
@@ -62,7 +62,7 @@ ETHEREUM_IMAGE_ARM64_POS = DockerImage(name='handsonsecurity/seedemu-ethereum-ar
                                 software=['software-properties-common', 'python3', 'python3-pip'],
                                 subset=BASE_IMAGE_ARM64)
 
-MONERO_IMAGE_ARM64 = DockerImage(name='seedemu-monero:latest', software=[], subset=BASE_IMAGE_ARM64)
+MONERO_IMAGE_ARM64 = DockerImage(name='handsonsecurity/seedemu-monero:latest', software=[], subset=BASE_IMAGE_ARM64)
 
 OP_STACK_IMAGE_ARM64 = DockerImage(name='huagluck/seedemu-op-stack', software=[], subset=BASE_IMAGE_ARM64)
 
