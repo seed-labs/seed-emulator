@@ -22,63 +22,35 @@ cd compile-test
 ./compile-test.py
 ```
 
-#### Expected Result
-```sh
-...ommitted...
-######### C00-hybrid-internet Test #########
-######### C01-hybrid-dns-component Test #########
-######### C02-hybrid-internet-with-dns Test #########
-######### C03-bring-your-own-internet Test #########
-######### C04-ethereum-pos Test #########
-ok
-
-----------------------------------------------------------------------
-Ran 1 test in 59.980s
-
-OK
-==========Test #0=========
-score: 1 of 1 (0 errors, 0 failures)
-```
-
-
 ### 2. Run Emulator Dynamic Test
 
-A dynamic test including `internet` and `ethereum` runs containers from the emulator files and see if it performs a unit test inside a docker container dynamically using a `docker` python library. For the Ethereum test,  we use `web3` python library as well.
+A dynamic test including `internet`, `ethereum` and `email` runs containers from the emulator files and see if it performs a unit test inside a docker container dynamically using a `docker` python library.
 
 ```sh
 # Run the Test Script
 ./run-test.py
 ```
 
-The `run-test.py` runs `ip_anycast` and `mini_internet` tests in `internet` folder and `POW`, `POA`, and `POS`test in `ethereum` folder. A test result is not only printed out to the terminal also saved as a file named `test_result.txt` and each detailed test logs are located in a folder of each test. For example, a test log of `POA` is in `ethereum/POA/test_log` folder. 
-
-```sh
-test_log/
-├── build_log
-├── compile_log
-├── containers_log
-└── test_result.txt
-```
+The `run-test.py` runs multiple test suites including:
+- Internet Protocols: `ip_anycast`, `mini_internet`
+- DNS: `dns`, `dns_no_master`, `dns_fallback`
+- Email: `email` (Comprehensive test for Postfix/Dovecot/Roundcube)
+- Ethereum: `POW`, `POA`, `POS`
 
 #### Check score of each test
 ```sh
 $ cat test_result.txt | grep score
 score: 3 of 3 (0 errors, 0 failures)
-score: 3 of 3 (0 errors, 0 failures)
-score: 8 of 8 (0 errors, 0 failures)
-score: 4 of 4 (0 errors, 0 failures)
-score: 8 of 8 (0 errors, 0 failures)
+...
 ```
 
 ## Dynamic testcase folder structure
-Each testcase has a format of folder as below. A `emulator-code/test-emulator.py` contains a python script for emulation file generation. Each testcase has a format of folder as below. A `emulator-code/test-emulator.py` contains a python script for emulation file generation. 
+Each testcase has a format of folder as below. A `emulator-code/test-emulator.py` contains a python script for emulation file generation.
 
 ```sh
-$ tree mini_internet/
-mini_internet/
+tests/internet/email/
 ├── emulator-code
-│   └── test-emulator.py
+│   └── test-emulator.py  <-- Copied from examples/internet/B29_email_dns/email_simple_v2.py
 ├── __init__.py
-└── MiniInternetTestCase.py
+└── EmailTestCase.py      <-- Test logic
 ```
-
