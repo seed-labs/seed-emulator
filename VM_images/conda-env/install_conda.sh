@@ -2,6 +2,7 @@
 set -e
 INSTALL_PREFIX="$HOME/miniconda3"
 ENV_NAME="seedpy310"
+
 # ===============================
 # 1. Download Miniconda installer
 # ===============================
@@ -13,9 +14,10 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/
 # ===============================
 echo "[2/5] Installing Miniconda to the current user directory..."
 bash ~/miniconda.sh -b -p "$HOME/miniconda3"
-# -------------------------------
+
+# ===============================
 # 3. Initialize conda
-# -------------------------------
+# ===============================
 echo "[INFO] Initializing conda..."
 source "$INSTALL_PREFIX/etc/profile.d/conda.sh"
 
