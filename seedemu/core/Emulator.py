@@ -5,7 +5,7 @@ from .Merger import Mergeable, Merger
 from .Registry import Registry, Registrable, Printable
 from .Network import Network
 from seedemu import core
-from typing import Dict, Set, Tuple, List
+from typing import Dict, Set, Tuple, List, Optional
 from sys import prefix, stderr
 from ipaddress import IPv4Address, IPv4Network
 import pickle
@@ -673,3 +673,48 @@ class Emulator:
             ix_as_connections[ix_id] = connected_asns
         
         return ix_as_connections
+
+    def partEmulator(self, 
+                     machine_capacities: List[int],
+                     solver_name: str = 'pulp',
+                     time_limit: int = 180,
+                     node_resources: Dict[str, int] = None) -> Optional[Dict]:
+        """!
+        @brief Partition the emulator across multiple machines.
+        
+        This method partitions ASs and IXPs across multiple machines based on
+        machine capacity constraints, minimizing IX partitions.
+        
+        @param machine_capacities List of machine capacities (resource limits for each machine).
+        @param solver_name Solver to use ('pulp', 'copt', 'cbc', 'glpk'). Default is 'pulp'.
+        @param time_limit Time limit for solver in seconds. Default is 180.
+        @param node_resources Dictionary mapping node types to resource consumption.
+                           Default is {'host': 1, 'router': 1}.
+        @return Dictionary containing partition result, or None if solving failed.
+                Format: {machine_id: {'as_list': [...], 'ixp_list': [...]}}
+                where ixp_list contains tuples of (ix_id, needs_rs).
+        """
+        assert self.__rendered, 'emulator is not rendered.'
+        
+        # Import here to avoid circular dependencies
+        from seedemu.utilities.PartitionDataExtractor import PartitionDataExtractor
+        from seedemu.utilities.PartitionSolver import PartitionSolver
+        
+        # Extract topology data
+        extractor = PartitionDataExtractor(self)
+        
+        # Override node resources if provided
+        if node_resources is not None:
+            extractor.NODE_RESOURCES = node_resources
+        
+        topo_data = extractor.extract()
+        
+        # Solve partition problem
+        solver = PartitionSolver(timeLimit=time_limit)
+        result = solver.solve(
+            topo_data=topo_data,
+            machine_capacities=machine_capacities,
+            solver_name=solver_name
+        )
+        
+        return result
