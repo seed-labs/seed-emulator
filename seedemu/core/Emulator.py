@@ -593,3 +593,83 @@ class Emulator:
         assert self.__rendered, 'emulator is not rendered.'
         base:Base = self.getLayer('Base')
         return base.getAutonomousSystem(asn).getNetwork(network).hasDHCPService()
+
+    def calculateAsResource(self, asn: int, nodeResources: Dict[str, int] = None) -> int:
+        """!
+        @brief Calculate AS resource consumption.
+        
+        Resource calculation rules are defined by nodeResources dictionary:
+        - 'host': resource consumption per host node (default 1)
+        - 'router': resource consumption per router node (default 1)
+        - Additional node types can be added as needed
+        
+        @param asn AS number.
+        @param nodeResources Dictionary mapping node types to resource consumption.
+                           Default is {'host': 1, 'router': 1}.
+                           Example: {'host': 1, 'router': 2, 'ethereum': 10}
+        @return Resource consumption value.
+        """
+        assert self.__rendered, 'emulator is not rendered.'
+        
+        # Default resource values
+        if nodeResources is None:
+            nodeResources = {'host': 1, 'router': 1}
+        
+        # Get all nodes in this AS (via Registry)
+        # Nodes are registered in Registry as (scope, type, name), where scope is ASN as string
+        scope = str(asn)
+        
+        resource = 0
+        
+        # Count and calculate resource for host nodes
+        if 'host' in nodeResources:
+            hosts = self.__registry.getByType(scope, 'hnode')
+            host_count = len(hosts)
+            resource += host_count * nodeResources['host']
+        
+        # Count and calculate resource for router nodes
+        if 'router' in nodeResources:
+            routers = self.__registry.getByType(scope, 'rnode')
+            router_count = len(routers)
+            resource += router_count * nodeResources['router']
+        
+        return resource
+
+    def getIxAsConnections(self) -> Dict[int, Set[int]]:
+        """!
+        @brief Get IX-AS connection relationships.
+        
+        This method extracts which ASs are connected to each IX by examining
+        the nodes associated with each IX's network.
+        
+        @return Dictionary with IX ID as key and set of connected AS IDs as value.
+        """
+        assert self.__rendered, 'emulator is not rendered.'
+        base = self.getLayer('Base')
+        
+        all_ixps = base.getInternetExchangeIds()
+        ix_as_connections = {}
+        
+        for ix_id in all_ixps:
+            ix_obj = base.getInternetExchange(ix_id)
+            network = ix_obj.getNetwork()
+            
+            # Get all nodes connected to this network
+            connected_nodes = network.getAssociations()
+            
+            # Extract ASNs of these nodes (filter out RouteServer nodes)
+            connected_asns = set()
+            for node in connected_nodes:
+                # RouteServer's ASN equals IX ID, need to exclude
+                if node.getRole() == NodeRole.RouteServer:
+                    continue
+                
+                # Only consider BorderRouter and Router roles
+                if node.getRole() in [NodeRole.BorderRouter, NodeRole.Router]:
+                    asn = node.getAsn()
+                    if asn != ix_id:  # Ensure it's not RouteServer
+                        connected_asns.add(asn)
+            
+            ix_as_connections[ix_id] = connected_asns
+        
+        return ix_as_connections
