@@ -610,30 +610,9 @@ class Emulator:
         @return Resource consumption value.
         """
         assert self.__rendered, 'emulator is not rendered.'
-        
-        # Default resource values
-        if nodeResources is None:
-            nodeResources = {'host': 1, 'router': 1}
-        
-        # Get all nodes in this AS (via Registry)
-        # Nodes are registered in Registry as (scope, type, name), where scope is ASN as string
-        scope = str(asn)
-        
-        resource = 0
-        
-        # Count and calculate resource for host nodes
-        if 'host' in nodeResources:
-            hosts = self.__registry.getByType(scope, 'hnode')
-            host_count = len(hosts)
-            resource += host_count * nodeResources['host']
-        
-        # Count and calculate resource for router nodes
-        if 'router' in nodeResources:
-            routers = self.__registry.getByType(scope, 'rnode')
-            router_count = len(routers)
-            resource += router_count * nodeResources['router']
-        
-        return resource
+        base = self.getLayer('Base')
+        as_obj = base.getAutonomousSystem(asn)
+        return as_obj.calculateResource(nodeResources)
 
     def getIxAsConnections(self) -> Dict[int, Set[int]]:
         """!

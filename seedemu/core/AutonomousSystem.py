@@ -11,7 +11,7 @@ from .Configurable import Configurable
 from .Customizable import Customizable
 from .Node import promote_to_real_world_router
 from ipaddress import IPv4Network
-from typing import Dict, List
+from typing import Dict, List, Optional
 import requests
 
 RIS_PREFIXLIST_URL = 'https://stat.ripe.net/data/announced-prefixes/data.json'
@@ -303,6 +303,38 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         @returns list of hosts.
         """
         return list(self.__hosts.keys())
+
+    def calculateResource(self, nodeResources: Dict[str, int] = None) -> int:
+        """!
+        @brief Calculate AS resource consumption.
+        
+        Resource calculation rules are defined by nodeResources dictionary:
+        - 'host': resource consumption per host node (default 1)
+        - 'router': resource consumption per router node (default 1)
+        - Additional node types can be added as needed
+        
+        @param nodeResources Dictionary mapping node types to resource consumption.
+                           Default is {'host': 1, 'router': 1}.
+                           Example: {'host': 1, 'router': 2, 'ethereum': 10}
+        @return Resource consumption value.
+        """
+        # Default resource values
+        if nodeResources is None:
+            nodeResources = {'host': 1, 'router': 1}
+        
+        resource = 0
+        
+        # Count and calculate resource for host nodes
+        if 'host' in nodeResources:
+            host_count = len(self.__hosts)
+            resource += host_count * nodeResources['host']
+        
+        # Count and calculate resource for router nodes
+        if 'router' in nodeResources:
+            router_count = len(self.__routers)
+            resource += router_count * nodeResources['router']
+        
+        return resource
 
     def _doCreateGraphs(self, emulator: Emulator):
         """!
