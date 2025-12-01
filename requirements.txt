@@ -49,3 +49,4 @@ web3==5.31.1
 websocket-client==1.8.0
 websockets==9.1
 yarl==1.18.3
+pulp==3.3.0
