@@ -16,7 +16,7 @@ def main():
     parser.add_argument("--threshold", type=int, default=20, help="Warn if block interval > threshold (default: 20s)")
     args = parser.parse_args()
 
-    # --- log ÎÄ¼þÃû´øÊ±¼ä ---
+
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_file = f"block_delay_{timestamp}.log"
 
