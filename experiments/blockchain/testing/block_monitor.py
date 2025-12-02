@@ -5,7 +5,7 @@ from datetime import datetime
 from web3 import Web3
 import os
 
-def log_warning(message: str, log_file: str):
+def log_message(message: str, log_file: str):
     with open(log_file, "a") as f:
         f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}\n")
 
@@ -18,7 +18,7 @@ def main():
 
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_file = f"block_delay_{timestamp}.log"
+    log_file = f"block_interval_{timestamp}.log"
 
     w3 = Web3(Web3.HTTPProvider(args.node))
 
@@ -42,12 +42,13 @@ def main():
         if current_block > last_block:
             now = time.time()
             diff = now - last_time
-            print(f"?? New block detected: {current_block} | Interval: {diff:.2f}s")
-
+            normal=(f"?? New block detected: {current_block} | Interval: {diff:.2f}s")
+            print(normal)
+            log_message(normal,log_file)
             if diff > args.threshold:
-                warning = f"?? Block interval too long ({diff:.2f}s) at block {current_block}"
+                warning = f"?? WARNING, Block interval too long ({diff:.2f}s) at block {current_block}"
                 print(warning)
-                log_warning(warning, log_file)
+                log_message(warning, log_file)
 
             last_block = current_block
             last_time = now
@@ -56,4 +57,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
