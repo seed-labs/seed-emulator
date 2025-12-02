@@ -49,3 +49,27 @@ python3 block_monitor.py --node http://10.164.0.84:8545 --threshold 20 --interva
 python3 web3_raw_tx.py
 ```
 程序自动每60s自动发一次交易并写入日志
+
+
+## docker limit设置
+执行
+```
+sudo ./set_docker_limits.sh
+```
+
+## 系统设置
+执行
+```
+sudo ./set_sys_limit.sh
+```
+
+## docker compose 分批build 和up ，默认50个，可以自行修改
+将脚本拷贝到output/文件夹
+执行build
+```
+./batch_docker_compose_build.sh
+```
+执行分批up
+```
+./batch_docker_compose_up.sh
+‵‵‵
