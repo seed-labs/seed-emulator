@@ -15,7 +15,10 @@ import json
 from yaml import dump
 
 SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-multiarch-map:buildx-latest'
-SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:buildx-latest'
+
+# The Etherview is updated on 2025/11, we name the new version 2.0
+#SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:buildx-latest'
+SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:2.0'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
