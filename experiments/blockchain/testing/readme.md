@@ -72,4 +72,15 @@ sudo ./set_sys_limit.sh
 执行分批up
 ```
 ./batch_docker_compose_up.sh
-‵‵‵
+```
+
+## 检测运行的Ethereum-POS容器数量
+```
+source  pos_container_size_check.sh
+```
+## 获取node节点的peer
+执行
+```
+./get_peer.py
+```
+参数node在代码里面修改
