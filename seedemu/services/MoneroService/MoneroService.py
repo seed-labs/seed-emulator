@@ -495,6 +495,13 @@ class MoneroNetwork:
         if opts.kind == MoneroNodeKind.LIGHT:
             opts.enable_wallet = True
             opts.wallet.enable_rpc = True
+        
+        # Enable wallet RPC by default for all nodes (if wallet is enabled)
+        # Note: Mining nodes already have wallet RPC enabled via enableMining()
+        # We enable RPC for all nodes by default to allow querying balances
+        if opts.enable_wallet:
+            if not opts.wallet.enable_rpc:
+                opts.wallet.enable_rpc = True
 
         # Wallet template
         wallet_template = opts.wallet.clone()
