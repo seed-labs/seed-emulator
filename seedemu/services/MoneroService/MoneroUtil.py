@@ -142,7 +142,7 @@ class MoneroNetworkDefaults:
     default_zmq_port: int = 28082
 
     light_wallet_rpc_start: int = 38088
-    auto_assign_ports: bool = True
+    auto_assign_ports: bool = False
 
     fixed_difficulty: Optional[int] = None
     default_mining_threads: int = 1
