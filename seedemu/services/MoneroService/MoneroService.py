@@ -515,8 +515,11 @@ class MoneroNetwork:
             default_wallet_port = self._defaults.wallet.rpc_bind_port
             wallet_auto_assigned = False
             if wallet_template.rpc_bind_port <= 0:
-                wallet_template.rpc_bind_port = self._alloc_port("wallet_rpc")
-                wallet_auto_assigned = True
+                if self._defaults.auto_assign_ports:
+                    wallet_template.rpc_bind_port = self._alloc_port("wallet_rpc")
+                    wallet_auto_assigned = True
+                else:
+                    wallet_template.rpc_bind_port = default_wallet_port
             elif (
                 self._defaults.auto_assign_ports
                 and wallet_template.rpc_bind_port == default_wallet_port
@@ -525,7 +528,8 @@ class MoneroNetwork:
                 wallet_template.rpc_bind_port = self._alloc_port("wallet_rpc")
                 wallet_auto_assigned = True
 
-            if self._defaults.auto_assign_ports or wallet_auto_assigned:
+            # Only check for collisions if auto-assigning ports
+            if self._defaults.auto_assign_ports and wallet_auto_assigned:
                 collisions = {port for port in [
                     opts.p2p_bind_port,
                     opts.rpc_bind_port,
@@ -554,11 +558,13 @@ class MoneroNetwork:
         """
 
         if not self._defaults.auto_assign_ports:
+            # For wallet_rpc, use the wallet's default port (18088) instead of light_wallet_rpc_start
+            if category == "wallet_rpc":
+                return self._defaults.wallet.rpc_bind_port
             return {
                 "p2p": self._defaults.default_p2p_port,
                 "rpc": self._defaults.default_rpc_port,
                 "zmq": self._defaults.default_zmq_port,
-                "wallet_rpc": self._defaults.light_wallet_rpc_start,
             }[category]
 
         if category == "p2p":
