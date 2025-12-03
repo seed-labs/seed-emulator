@@ -1,0 +1,9 @@
+keystore/
+emulator_info/
+emulator_data/
+logs
+node_modules
+.vscode
+**/static/frontend
+auto-imports.d.ts
+components.d.ts

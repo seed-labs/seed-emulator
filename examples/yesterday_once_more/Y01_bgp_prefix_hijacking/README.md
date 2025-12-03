@@ -1,6 +1,8 @@
 # BGP Prefix Hijacking Attack
 
-We created two networks, one larger than the other. The larger one
-has a real-world router, so it can connect to the outside world,
-allowing to hijack outside networks. Jupyter notebooks are
-provide in `demo1` and `demo2` folders. 
+We have provided two demos for this attack in the following folders using different displaying methods:
+
+1. `demo` folder: a demonstration of the BGP prefix hijacking attack.
+
+2. `demo_zju` folder: This demo is for a demonstration in our own university, where we have some special setup. This demo is not general for public. 
+

@@ -4,6 +4,7 @@
 from seedemu import *
 import sys, os
 import math, json
+from eth_account import Account
 
 ###############################################################################
 # Set the platform information
@@ -41,7 +42,7 @@ hosts_per_stub_as = math.ceil(total_number_of_eth_nodes / total_stub_as)
 # Create Emulator Base with the calculated number of hosts per stub AS
 emu = Makers.makeEmulatorBaseWith10StubASAndHosts(hosts_per_stub_as=hosts_per_stub_as)
 
-print(hosts_per_stub_as)
+print(f"Number of eth nodes per stub AS: {hosts_per_stub_as}")
 
 # Create the Ethereum layer
 eth = EthereumService()
@@ -49,15 +50,15 @@ eth = EthereumService()
 # Create the Blockchain layer which is a sub-layer of Ethereum layer.
 blockchain = eth.createBlockchain(chainName="pos", consensus=ConsensusMechanism.POS)
 
-# Load the list of pre-funded accounts
+# Generate a list of accounts and prefund them
+accounts_total  = 10
+pre_funded_amount = 1000000
+mnemonic = "gentle always fun glass foster produce north tail security list example gain"
+Account.enable_unaudited_hdwallet_features()
+for i in range(accounts_total):
+     account = Account.from_mnemonic(mnemonic, account_path=f"m/44'/60'/0'/0/{i}")
+     blockchain.addLocalAccount(address=account.address, balance=pre_funded_amount)
 
-blockchain.addLocalAccount(address='0xF5406927254d2dA7F7c28A61191e3Ff1f2400fe9', balance=100000)
-
-# Load the account addresses and fund these accounts
-#with open("prefunded_accounts.json", 'r') as file:
-#      accounts = json.load(file)
-#for account in accounts:
-#    blockchain.addLocalAccount(address=account['address'], balance=10000) 
 
 asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
@@ -110,7 +111,7 @@ for asn in asns:
             emu.getVirtualNode(f'eth{i}').setDisplayName(f'Ethereum-POS-{i}')
 
         # Binding the virtual node to the physical node
-        print(f"id: {id}")
+        #print(f"id: {id}")
         emu.addBinding(Binding(f'eth{i}', 
                                filter=Filter(asn=asn, nodeName=f'^host_{id}$'), 
                                action = Action.FIRST))

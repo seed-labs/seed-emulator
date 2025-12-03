@@ -1,7 +1,6 @@
 #!/bin/env python3
 
 from eth_account import Account
-from eth_account.hdaccount import generate_mnemonic
 import json, sys
 
 def generate_keys_from_mnemonic_eth_account(mnemonic: str, num_accounts: int = 5) -> list:
@@ -27,7 +26,6 @@ def generate_keys_from_mnemonic_eth_account(mnemonic: str, num_accounts: int = 5
             'address': account.address,
             'private_key': account.key.hex(),
         })
-        print(i)
     
     return accounts
 
@@ -41,13 +39,14 @@ if __name__ == "__main__":
     mnemonic = "gentle always fun glass foster produce north tail security list example gain"
     accounts = generate_keys_from_mnemonic_eth_account(mnemonic, total)
     
-    json_string = json.dumps(accounts)
-    with open("prefunded_accounts.json", "w") as f:
-        json.dump(accounts, f, indent=4) # indent for pretty-printing
 
-    #for account in accounts:
-        #print(f"Account {account['account_index']}:")
-        #print(f"  Address: {account['address']}")
-        #print(f"  Private Key: {account['private_key']}")
-        #print("-" * 50)
+    for account in accounts:
+        print(f"Account {account['account_index']}:")
+        print(f"  Address: {account['address']}")
+        print(f"  Private Key: {account['private_key']}")
+        print("-" * 50)
+
+    #print("*** Saved account data to prefunded_accounts.json")
+    #with open("prefunded_accounts.json", "w") as f:
+    #    json.dump(accounts, f, indent=4) # indent for pretty-printing
 

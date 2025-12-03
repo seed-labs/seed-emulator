@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+    seedemu-etherview:
+        build: .
+        container_name: seedemu-etherview 
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+            - 5000:5000
+        image: handsonsecurity/seedemu-etherview
+        environment:
+            - MYSQL_PASSWORD=123456
+            - MYSQL_DATABASE=eth_monitor

@@ -57,7 +57,7 @@ def send_eth_transaction(from_account, to_address, amount_eth, nonce=None):
         return tx_hash.hex()
     
     except Exception as e:
-        print(f"Error sending transaction: {e}")
+        print(f"Error sending transaction (ignored): {e}")
         return None
 
 
@@ -72,22 +72,22 @@ Account.enable_unaudited_hdwallet_features()
 accounts = []
 mnemonic = "gentle always fun glass foster produce north tail security list example gain"
 
-total = 1000
 
-'''
+# Make sure that these accounts are pre-funded in the emulator, 
+# otherwise they don't have sufficient fund to send transactions.
+total = 10
+
+print(f"Generating {total} accounts ...")
 for i in range(total):
    path = f"m/44'/60'/0'/0/{i}"
    account = Account.from_mnemonic(mnemonic, account_path=path)
    #print("({}:{})".format(i, wallet.getBalance(account.address)))
    accounts.append(account)
-'''
 
-# Load the account addresses 
-with open("prefunded_accounts.json", 'r') as file:
-      accounts = json.load(file)
 
-rounds = 10000000
-wait_time = 0.1
+rounds = 1  # how many rounds: each round one transaction is sent 
+wait_time = 0.1  # waiting time after a transaction is sent
+
 for x in range(rounds):
    amount = random.randint(1, 10)/100
 
@@ -97,17 +97,15 @@ for x in range(rounds):
        recipt_index = random.randint(0, total-1) 
 
    print("----------------------------------------------------")
-   print("{}: Sending {} ethers from {} to {}".format(x, amount, sender_index, recipt_index))
+   print("{}: Sending {} ethers from accounts[{}] to accounts[{}]".format(x, amount, sender_index, recipt_index))
    
    # Select the sender and recipient
-   sender = Account.from_key(accounts[sender_index]['private_key'])
-   to_address = accounts[recipt_index]['address']
-   print(sender.address)
-   print(sender.key.hex())
+   sender = accounts[sender_index]
+   to_address = accounts[recipt_index].address
 
    tx_hash = send_eth_transaction(sender, to_address, amount)
    if tx_hash:
-       print(f"Real transaction sent! Hash: {tx_hash}")
+       print(f"Transaction is sent! Hash: {tx_hash}")
 
    time.sleep(wait_time)   
 
