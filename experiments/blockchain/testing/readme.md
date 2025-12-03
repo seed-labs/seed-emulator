@@ -65,7 +65,7 @@ sudo ./set_sys_limit.sh
 
 ## docker compose 分批build 和up ，默认50个，可以自行修改
 将脚本拷贝到output/文件夹
-执行build
+执行分批build
 ```
 ./batch_docker_compose_build.sh
 ```
