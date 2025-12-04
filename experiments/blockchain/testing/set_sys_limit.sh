@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -e
+echo "kernel.pid_max = 4194303" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
 
 echo "===== Applying system-wide file descriptor and process limits ====="
 
