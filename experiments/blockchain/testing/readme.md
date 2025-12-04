@@ -84,3 +84,9 @@ source  pos_container_size_check.sh
 ./get_peer.py
 ```
 参数node在代码里面修改
+
+## 查看所有POS是否政策geth attach 获取block
+执行
+```
+./get_each_pos_block.sh 
+```
