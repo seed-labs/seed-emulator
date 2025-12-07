@@ -676,8 +676,8 @@ class Emulator:
         assert self.__rendered, 'emulator is not rendered.'
         
         # Import here to avoid circular dependencies
-        from seedemu.utilities.PartitionDataExtractor import PartitionDataExtractor
-        from seedemu.utilities.PartitionSolver import PartitionSolver
+        from seedemu.partition.PartitionDataExtractor import PartitionDataExtractor
+        from seedemu.partition.PartitionSolver import PartitionSolver
         
         # Extract topology data
         extractor = PartitionDataExtractor(self)
