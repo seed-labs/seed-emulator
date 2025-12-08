@@ -1,0 +1,119 @@
+.console-window {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.console-window.dragging {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  opacity: 0.95;
+  cursor: move;
+}
+
+.console-window.focused {
+  border-color: #409eff;
+  box-shadow: 0 0 0 1px #409eff, 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.console-titlebar.active {
+  background: #409eff !important;
+  color: white;
+}
+
+.console-titlebar.active .console-action {
+  color: white;
+}
+
+.console-action:hover {
+  background-color: rgba(64, 158, 255, 0.1) !important;
+  border-radius: 3px;
+}
+
+/* 确保操作按钮可以被点击 */
+.console-action {
+  pointer-events: auto !important;
+}
+
+.resize-handle {
+  background: transparent;
+  transition: background-color 0.2s;
+}
+
+.resize-handle:hover {
+  background-color: rgba(64, 158, 255, 0.3);
+}
+
+.resize-n, .resize-s {
+  cursor: ns-resize;
+}
+
+.resize-e, .resize-w {
+  cursor: ew-resize;
+}
+
+.resize-ne, .resize-sw {
+  cursor: nesw-resize;
+}
+
+.resize-nw, .resize-se {
+  cursor: nwse-resize;
+}
+
+.taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #f5f7fa;
+  border-top: 1px solid #ebeef5;
+  padding: 4px;
+  display: flex;
+  gap: 4px;
+  z-index: 99999;
+  overflow-x: auto;
+}
+
+.taskbar.hide {
+  display: none !important;
+}
+
+.taskbar-item {
+  transition: all 0.2s ease;
+}
+
+.taskbar-item:hover {
+  transform: translateY(-1px);
+}
+
+.taskbar-item.active {
+  box-shadow: 0 2px 4px rgba(64, 158, 255, 0.3);
+}
+
+.console-mask {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.hide {
+  display: none !important;
+}
+
+/* 确保 iframe 可以正确显示和交互 */
+.console-iframe {
+  pointer-events: auto !important;
+  z-index: 1;
+}
+
+/* 确保调整大小手柄在 iframe 上方 */
+.resize-handle {
+  pointer-events: auto !important;
+  z-index: 2;
+}
+
+/* 确保遮罩层在 iframe 上方但不在按钮上方 */
+.console-mask {
+  pointer-events: auto !important;
+  z-index: 3;
+}
+
+/* 确保按钮在遮罩层上方 */
+.console-action {
+  z-index: 4 !important;
+}
