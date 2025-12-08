@@ -1,0 +1,28 @@
+{
+    "machines": [
+        {
+            "name": "VM1",
+            "ip": "192.168.104.2",
+            "port": 22,
+            "user": "seed",
+            "password": "dees",
+            "capacity": 60
+        },
+        {
+            "name": "VM2",
+            "ip": "192.168.104.3",
+            "port": 22,
+            "user": "seed",
+            "password": "dees",
+            "capacity": 70
+        },
+        {
+            "name": "VM3",
+            "ip": "192.168.104.4",
+            "port": 22,
+            "user": "seed",
+            "password": "dees",
+            "capacity": 50
+        }
+    ]
+}
