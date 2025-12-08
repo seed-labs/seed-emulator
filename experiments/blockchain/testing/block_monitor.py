@@ -12,7 +12,7 @@ def log_message(message: str, log_file: str):
 def main():
     parser = argparse.ArgumentParser(description="Monitor Ethereum block interval time")
     parser.add_argument("--node", required=True, help="Ethereum node HTTP URL, e.g. http://127.0.0.1:8545")
-    parser.add_argument("--interval", type=int, default=5, help="Polling interval in seconds (default: 5s)")
+    parser.add_argument("--interval", type=int, default=1, help="Polling interval in seconds (default: 1s)")
     parser.add_argument("--threshold", type=int, default=20, help="Warn if block interval > threshold (default: 20s)")
     args = parser.parse_args()
 
@@ -38,7 +38,14 @@ def main():
     last_time = time.time()
 
     while True:
-        current_block = w3.eth.block_number
+        #current_block = w3.eth.block_number
+        try:
+            current_block = w3.eth.block_number
+        except Exception as e:
+            fatal = f"[FATAL] RPC connection lost, cannot get block number: {e}"
+            print(fatal)
+            log_message(fatal, log_file)
+            sys.exit(1)
         if current_block > last_block:
             now = time.time()
             diff = now - last_time

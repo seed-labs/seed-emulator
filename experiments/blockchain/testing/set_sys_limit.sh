@@ -22,12 +22,15 @@ append_if_missing() {
 # Add limits (soft/hard nofile + nproc)
 append_if_missing "* soft nofile"    "*               soft    nofile          1048576"
 append_if_missing "* hard nofile"    "*               hard    nofile          1048576"
-append_if_missing "* soft nproc"     "*               soft    nproc           1048576"
-append_if_missing "* hard nproc"     "*               hard    nproc           1048576"
+append_if_missing "* soft nproc"     "*               soft    nproc           unlimited"
+append_if_missing "* hard nproc"     "*               hard    nproc           unlimited"
 
 # Add root-specific limits
 append_if_missing "root soft nofile" "root            soft    nofile          1048576"
 append_if_missing "root hard nofile" "root            hard    nofile          1048576"
+append_if_missing "root soft noproc" "root            soft    nofile          unlimited"
+append_if_missing "root hard noproc" "root            hard    nofile          unlimited"
+
 
 echo "===== Done. Reboot required for full effect ====="
 
