@@ -1,17 +1,20 @@
 import paramiko
+import os
 
 FILE_SCRIPT_TEMPLATE = """#!/usr/bin/env python3
 # encoding: utf-8
 from seedemu.compiler.Proxmox import SSHExecutor
 import json
-
 machine_config = json.load(open('machine_config.json'))
 for machine_id, machine in enumerate(machine_config['machines']):
     ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
-    ssh_executor.upload_file(
-        local_path=f'output_{machine_id}/',
-        remote_path=f'/home/seed/output_{machine_id}/'
-    )
+    try:
+        ssh_executor.upload(
+            local_path=f'output_{machine_id}/',
+            remote_path=f'/home/seed/output_{machine_id}/'
+        )
+    finally:
+        ssh_executor.close()
 """
 
 EXECUTOR_SCRIPT_TEMPLATE = """#!/usr/bin/env python3
@@ -42,30 +45,75 @@ class SSHExecutor:
         self.port = port
         self.user = user
         self.password = password
+        self._client = None
+
+    def _get_client(self):
+        if self._client is None or not self._client.get_transport().is_active():
+            print(f"Connecting to {self.user}@{self.host}:{self.port}...")
+            self._client = paramiko.SSHClient()
+            self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self._client.connect(self.host, port=self.port, username=self.user, password=self.password)
+        return self._client
 
     def run_command(self, command):
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(self.host, port=self.port, username=self.user, password=self.password)
-        try:
-            stdin, stdout, stderr = client.exec_command(command)
-            output = stdout.read().decode()
-            error = stderr.read().decode()
-            return output, error
-        finally:
-            client.close()
+        client = self._get_client()
+        stdin, stdout, stderr = client.exec_command(command)
+        output = stdout.read().decode('utf-8', errors='ignore')
+        error = stderr.read().decode('utf-8', errors='ignore')
+        
+        print(f"--- Command Output from {self.host} ---")
+        if output:
+            print(output)
+        if error:
+            print(f"--- Command Error from {self.host} ---")
+            print(error)
+            
+        return output, error
 
-    def upload_file(self, local_path, remote_path):
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(self.host, port=self.port, username=self.user, password=self.password)
+    def upload(self, local_path, remote_path):
+        client = self._get_client()
+        sftp = client.open_sftp()
         try:
-            sftp = client.open_sftp()
-            sftp.put(local_path, remote_path)
-            sftp.close()
+            if os.path.isdir(local_path):
+                print(f"Uploading directory '{local_path}' to '{remote_path}'...")
+                self._upload_directory(sftp, local_path, remote_path)
+            elif os.path.isfile(local_path):
+                print(f"Uploading file '{local_path}' to '{remote_path}'...")
+                remote_dir = os.path.dirname(remote_path)
+                try:
+                    sftp.stat(remote_dir)
+                except FileNotFoundError:
+                    sftp.mkdir(remote_dir)
+                sftp.put(local_path, remote_path)
+            else:
+                raise ValueError(f"Local path '{local_path}' is not a valid file or directory.")
+            print("Upload complete.")
             return True
+        except Exception as e:
+            print(f"Upload failed: {e}")
+            return False
         finally:
-            client.close()
+            sftp.close()
+    def _upload_directory(self, sftp, local_path, remote_path):
+        try:
+            sftp.stat(remote_path)
+        except FileNotFoundError:
+            print(f"Creating remote directory: {remote_path}")
+            sftp.mkdir(remote_path)
+        for item in os.listdir(local_path):
+            local_item_path = os.path.join(local_path, item)
+            remote_item_path = os.path.join(remote_path, item).replace('\\', '/')
+            if os.path.isdir(local_item_path):
+                self._upload_directory(sftp, local_item_path, remote_item_path)
+            elif os.path.isfile(local_item_path):
+                print(f"  Uploading {local_item_path} -> {remote_item_path}")
+                sftp.put(local_item_path, remote_item_path)
+
+    def close(self):
+        if self._client:
+            self._client.close()
+            self._client = None
+            print(f"Connection to {self.host} closed.")
 
 class ScriptGenerator:
     def generate(self, script_type: str):
