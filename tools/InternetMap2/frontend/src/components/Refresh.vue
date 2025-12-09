@@ -6,7 +6,7 @@ import {ElNotification} from "element-plus";
 const KEY = 'refreshProvide'
 const injected = inject(KEY) as { updateRefreshKey: (value: string) => void };
 if (!injected) {
-  throw new Error('未能成功注入父组件提供的值');
+  throw new Error('The value provided by the parent component failed to be injected successfully');
 }
 
 const onRefresh = () => {

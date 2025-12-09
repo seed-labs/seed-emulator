@@ -132,7 +132,7 @@ onMounted(() => {
             <el-input
                 v-model="state.keyword"
                 style="max-width: 240px"
-                placeholder="关键词搜索（回车）"
+                placeholder="Keyword search (Press Enter)"
                 :prefix-icon="Search"
                 @keyup.enter.native="onKeywordSearch"
             />
@@ -144,7 +144,7 @@ onMounted(() => {
         :data="state.tableData" style="width: 100%" table-layout="fixed"
         :header-cell-style="{fontSize: '20px', color: 'white', background: '#cfb2f6', textAlign: 'center'}"
         v-loading="state.loading"
-        element-loading-text="数据加载中..."
+        element-loading-text="loading..."
         highlight-current-row
         max-height="800"
         :cell-style="{textAlign: 'center'}"
@@ -153,7 +153,7 @@ onMounted(() => {
       <el-table-column label="Index" type="index" width="100" align="center"/>
       <el-table-column prop="name" label="Name"/>
       <el-table-column label="Action">
-        <template #="{row}">
+        <template #default="{row}">
           <el-button class="btn" type="primary" size="small" @click="onInstall(row)">Install</el-button>
           <el-button class="btn" type="danger" size="small" @click="onUninstall(row)">Uninstall</el-button>
         </template>

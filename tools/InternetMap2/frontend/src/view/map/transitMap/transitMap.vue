@@ -5,13 +5,14 @@ import SettingNumItem from "./SettingNumItem.vue"
 import {ElNotification} from "element-plus"
 import {MapUi, type TransitMapUiOtherConfiguration} from "./ui.ts"
 import {DataSource} from "./datasource.ts"
+import type {TransitsEmulatorNodeInfo} from "@/utils/types.ts";
 
 const mapRef = ref()
 const TRANSIT_NUM_KEY = 'transitNumProvide'
 const transitNum = ref(0);
 const transitNumMax = ref(0);
-const transits = ref([])
-const transitsSelected = ref([])
+const transits = ref<TransitsEmulatorNodeInfo[]>([])
+const transitsCheckedList = ref<string[]>([])
 const onTransitNumChange = (currentValue: number) => {
   if (!mapRef.value?.mapUi) return
   try {
@@ -24,11 +25,10 @@ const onTransitNumChange = (currentValue: number) => {
     } as any)
   }
 }
-
-const onTransitsSelectedChange = (currentValue: number) => {
+const onTransitsCheckedChange = (currentValue: number) => {
   if (!mapRef.value?.mapUi) return
   try {
-    mapRef.value?.mapUi.onTransitsSelectedChange(currentValue as number)
+    mapRef.value?.mapUi.onTransitsCheckedChange(currentValue as number)
   } catch (e) {
     ElNotification({
       type: 'error',
@@ -41,9 +41,9 @@ provide(TRANSIT_NUM_KEY, {
       transitNum,
       transitNumMax,
       transits,
-      transitsSelected,
+      transitsCheckedList,
       onTransitNumChange,
-      onTransitsSelectedChange,
+      onTransitsCheckedChange,
     }
 )
 
@@ -51,7 +51,8 @@ const transitMapUiOtherConfiguration: TransitMapUiOtherConfiguration = {
   settingControls: {
     transitNumberValue: transitNum,
     transitNumberMaxValue: transitNumMax,
-    transits
+    transits,
+    transitsCheckedList
   },
 }
 </script>

@@ -3,7 +3,7 @@ import type {FullItem} from 'vis-data/declarations/data-interface';
 import type {EdgeOptions, NodeOptions} from 'vis-network';
 import request from '@/utils/request';
 import type {AxiosRequestConfig, AxiosResponse} from 'axios';
-import type {BgpPeer, EmulatorNetwork, EmulatorNode} from './types';
+import type {BgpPeer, EmulatorNetwork, EmulatorNode, EmulatorNodeInfo, TransitsEmulatorNodeInfo} from './types';
 
 export const META_CLASS = 'org.seedsecuritylabs.seedemu.meta.class';
 
@@ -46,17 +46,13 @@ export class DataSource {
     public services: Set<string>;
     private _nodes: EmulatorNode[];
     private _nets: EmulatorNetwork[];
-
     private readonly _wsProtocol: string;
-    private _socket: WebSocket;
-    private _socketVis: WebSocket;
-
+    private _socket!: WebSocket;
+    private _socketVis!: WebSocket;
     private _connected: boolean;
-
-    private _packetEventHandler: (nodeId: string) => void;
-    private _errorHandler: (error: any) => void;
-
-    private _visEventHandler: (params: any) => void;
+    private _packetEventHandler!: (nodeId: string) => void;
+    private _errorHandler!: (error: any) => void;
+    private _visEventHandler!: (params: any) => void;
 
     /**
      * construct new data provider.
@@ -227,7 +223,7 @@ export class DataSource {
         this._socketVis.close();
     }
 
-    getNodeInfoById(nodeId) {
+    getNodeInfoById(nodeId: string) {
         return this._nodes.find(n => n.Id === nodeId);
     }
 
@@ -419,18 +415,34 @@ export class DataSource {
         return this._nets.filter(net => net.meta.emulatorInfo.type === 'global')
     }
 
-    get transits(): number[] {
-        let number = 0
+    get transits(): Array<TransitsEmulatorNodeInfo> {
         let asnSet = new Set<number>()
+        let asnInfoMap = new Map<number, EmulatorNodeInfo[]>();
         this._nodes.forEach(node => {
             const asn = node.meta.emulatorInfo.asn
-            if (asnSet.has(asn) || !["Router", "BorderRouter"].includes(node.meta.emulatorInfo.role) || node.meta.emulatorInfo.name.startsWith("router")) {
+            if (!["Router", "BorderRouter"].includes(node.meta.emulatorInfo.role) || node.meta.emulatorInfo.name.startsWith("router")) {
                 return
             }
-            asnSet.add(asn)
-            number += 1
+            if (asnSet.has(asn)) {
+                asnInfoMap.get(asn)!.push(node.meta.emulatorInfo)
+            } else {
+                asnSet.add(asn)
+                asnInfoMap.set(asn, [node.meta.emulatorInfo])
+            }
         })
-        return [...asnSet].sort((a, b) => a - b)
+        const asnInfoArray: TransitsEmulatorNodeInfo[] = Array.from(asnInfoMap, ([asn, info]): {
+            asn: number,
+            info: EmulatorNodeInfo[]
+        } => ({asn, info}));
+
+        return asnInfoArray.sort(
+            (a, b) => {
+                if (b.info.length !== a.info.length) {
+                    return b.info.length - a.info.length
+                }
+                return a.asn - b.asn
+            }
+        )
     }
 
     get groups(): Set<string> {

@@ -141,7 +141,7 @@ onMounted(() => {
                 <el-input
                     v-model="state.keyword"
                     style="max-width: 240px"
-                    placeholder="关键词搜索（回车）"
+                    placeholder="Keyword search (Press Enter)"
                     :prefix-icon="Search"
                     @keyup.enter.native="onKeywordSearch"
                 />
@@ -153,7 +153,7 @@ onMounted(() => {
             :data="state.containerTableData" style="width: 100%" table-layout="fixed"
             :header-cell-style="{fontSize: '20px', color: 'white', background: '#cfb2f6', textAlign: 'center'}"
             v-loading="state.loading"
-            element-loading-text="数据加载中..."
+            element-loading-text="loading..."
             highlight-current-row
             max-height="400"
             :cell-style="{textAlign: 'center'}"
@@ -161,29 +161,29 @@ onMounted(() => {
           <el-table-column type="selection" width="55"/>
           <el-table-column label="Index" type="index" width="100" align="center"/>
           <el-table-column prop="asn" label="ASN">
-            <template #="{row}">
+            <template #default="{row}">
               {{ row.meta.emulatorInfo.asn }}
             </template>
           </el-table-column>
           <el-table-column prop="name" label="Name">
-            <template #="{row}">
+            <template #default="{row}">
               {{ row.meta.emulatorInfo.name }}
             </template>
           </el-table-column>
           <el-table-column prop="type" label="Type">
-            <template #="{row}">
+            <template #default="{row}">
               {{ row.meta.emulatorInfo.role }}
             </template>
           </el-table-column>
           <el-table-column prop="ip" label="IP Address(es)">
-            <template #="{row}">
+            <template #default="{row}">
               <el-row v-for="net in row.meta.emulatorInfo.nets" justify="center">
                 <strong>{{ net.name }}</strong>: <span>{{ net.address }}</span>
               </el-row>
             </template>
           </el-table-column>
           <el-table-column label="Action">
-            <template #="{row}">
+            <template #default="{row}">
               <el-button class="btn" type="primary" size="small" @click="onAttach(row)">Attach</el-button>
               <el-button class="btn" type="danger" size="small" @click="onKill(row)">Kill</el-button>
             </template>
@@ -212,7 +212,7 @@ onMounted(() => {
                 <el-input
                     v-model="state.keyword"
                     style="max-width: 240px"
-                    placeholder="关键词搜索（回车）"
+                    placeholder="Keyword search (Press Enter)"
                     :prefix-icon="Search"
                     @keyup.enter.native="onKeywordSearch"
                 />
@@ -224,7 +224,7 @@ onMounted(() => {
             :data="state.netTableData" style="width: 100%" table-layout="fixed"
             :header-cell-style="{fontSize: '20px', color: 'white', background: '#cfb2f6', textAlign: 'center'}"
             v-loading="state.loading"
-            element-loading-text="数据加载中..."
+            element-loading-text="loading..."
             highlight-current-row
             max-height="400"
             :cell-style="{textAlign: 'center'}"
@@ -232,22 +232,22 @@ onMounted(() => {
           <el-table-column type="selection" width="55"/>
           <el-table-column label="Index" type="index" width="100" align="center"/>
           <el-table-column prop="asn" label="ASN(scope)">
-            <template #="{row}">
+            <template #default="{row}">
               {{ row.meta.emulatorInfo.scope }}
             </template>
           </el-table-column>
           <el-table-column prop="name" label="Name">
-            <template #="{row}">
+            <template #default="{row}">
               {{ row.meta.emulatorInfo.name }}
             </template>
           </el-table-column>
           <el-table-column prop="type" label="Type">
-            <template #="{row}">
+            <template #default="{row}">
               {{ row.meta.emulatorInfo.type }}
             </template>
           </el-table-column>
           <el-table-column prop="prefix" label="Network Prefix">
-            <template #="{row}">
+            <template #default="{row}">
               {{ row.meta.emulatorInfo.prefix }}
             </template>
           </el-table-column>

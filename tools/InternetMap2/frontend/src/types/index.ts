@@ -1,3 +1,6 @@
+import type {Ref} from "vue";
+import type {TransitsEmulatorNodeInfo} from "@/utils/types.ts";
+
 export interface NewRouteRecord {
     title: string | undefined,
     name: string,
@@ -27,7 +30,7 @@ export interface Response {
 
 export interface Details {
     title: string,
-    data: { [key: string]: string | string[]}
+    data: { [key: string]: string | string[] }
 }
 
 export interface HoverNodeEvent {
@@ -37,4 +40,14 @@ export interface HoverNodeEvent {
         canvas: { x: number; y: number; };
     };
     event: MouseEvent;
+}
+
+export interface transitProvider {
+    transitNum: Ref<number>,
+    transitNumMax: Ref<number>,
+    transits: Ref<TransitsEmulatorNodeInfo[]>,
+    transitsCheckedList: Ref<number[]>,
+    onTransitNumChange: (val: number) => void,
+    onTransitsCheckedChange: (val: number[]) => void,
+    onTransitsCheckAllChange?: (val: boolean) => void,
 }

@@ -4,7 +4,7 @@ import {inject} from "vue";
 const KEY = 'ixNumProvide'
 const injected = inject(KEY);
 if (!injected) {
-  throw new Error('未能成功注入父组件提供的值');
+  throw new Error('The value provided by the parent component failed to be injected successfully');
 }
 const ixNum = computed({
   get: () => injected.ixNum.value,

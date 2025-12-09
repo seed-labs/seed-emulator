@@ -59,3 +59,21 @@ export interface BgpPeer {
     protocolState: string;
     bgpState: string;
 }
+
+export interface EmulatorNodeInfo {
+    nets: {
+        name: string,
+        address: string
+    }[],
+    asn: number,
+    name: string,
+    role: string,
+    custom?: string,
+    description?: string,
+    displayname?: string
+}
+
+export interface TransitsEmulatorNodeInfo {
+    asn: number;
+    info: EmulatorNodeInfo[]
+}

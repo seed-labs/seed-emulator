@@ -99,7 +99,7 @@ export class MapUi {
     protected _datasource: DataSource;
 
     private _filterInputValue: Ref<string>;
-    private allLoadingInstance: LoadingInstance;
+    protected allLoadingInstance: LoadingInstance;
 
     private _logPanel: HTMLElement;
     private _logView: HTMLElement;
