@@ -98,7 +98,7 @@ emu.addBinding(Binding('global-dns', filter = Filter(asn=153, nodeName="local-dn
 ```
 
 We need to add 10.153.0.53 as the local DNS server for all the nodes in the emulation.
-This is done by adding the following record  record in `/etc/resolve.conf`:
+This is done by adding the following record in `/etc/resolve.conf`:
 ```
 nameserver 10.153.0.53
 ```
