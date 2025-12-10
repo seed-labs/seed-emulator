@@ -28,7 +28,7 @@ rounds = 10000000000
 wait_time = 60  # seconds between transactions
 
 # Log filename with timestamp
-log_file = f"transaction_log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
+log_file = f"transaction_log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
 
 def log_transaction(amount, from_addr, to_addr, tx_hash, status):
     """Append detailed transaction info to log file"""

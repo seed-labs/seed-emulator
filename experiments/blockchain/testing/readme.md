@@ -65,7 +65,7 @@ sudo ./set_sys_limit.sh
 
 ## docker compose 分批build 和up ，默认50个，可以自行修改
 将脚本拷贝到output/文件夹
-执行build
+执行分批build
 ```
 ./batch_docker_compose_build.sh
 ```
@@ -84,3 +84,9 @@ source  pos_container_size_check.sh
 ./get_peer.py
 ```
 参数node在代码里面修改
+
+## 查看所有POS能否geth attach 获取block
+执行
+```
+./get_each_pos_block.sh 
+```

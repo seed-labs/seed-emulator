@@ -10,9 +10,11 @@ sudo mkdir -p /etc/systemd/system/docker.service.d
 cat <<EOF | sudo tee /etc/systemd/system/docker.service.d/override.conf >/dev/null
 [Service]
 LimitNOFILE=1048576
-LimitNPROC=4194304
-TasksMax=4194304
+LimitNPROC=1048576
+LimitCORE=infinity
+TasksMax=infinity
 EOF
+
 
 echo "? override.conf created with high limits"
 

@@ -59,8 +59,9 @@ while True:
     try:
         block_num = web3.eth.block_number
     except Exception as e:
-        block_num = f"ERR:{e}"
-
+        print(f"[FATAL] RPC connection lost, cannot get block number: {e}")
+        print("[FATAL] Script will exit now.")
+        sys.exit(1)
     # CPU + Mem
     mem_usage = get_memory_usage_gb()
     cpu_usage = get_cpu_usage()
