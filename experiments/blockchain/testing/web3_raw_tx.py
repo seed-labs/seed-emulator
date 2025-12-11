@@ -3,13 +3,28 @@
 
 import random
 import time
+import argparse
 from web3 import Web3
 from eth_account import Account
 from datetime import datetime
 
+# --------------------------
+# Parse command-line arguments
+# --------------------------
+parser = argparse.ArgumentParser(description="ETH transaction sender")
+parser.add_argument(
+    "--node",
+    type=str,
+    default="http://10.164.0.118:8545",
+    help="Ethereum node RPC URL"
+)
+args = parser.parse_args()
+
+# Use passed-in node URL
+NODE_URL = args.node
+
 # Connect to blockchain
-eth_node_url = 'http://10.153.0.71:8545'
-w3 = Web3(Web3.HTTPProvider(eth_node_url))
+w3 = Web3(Web3.HTTPProvider(NODE_URL))
 
 Account.enable_unaudited_hdwallet_features()
 
