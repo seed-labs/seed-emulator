@@ -73,6 +73,35 @@ html, body, .map-area, .map {
     background-color: #fff;
 }
 
+.tabs-panel .suggestions:empty {
+    display: none;
+}
+
+.tabs-panel .suggestions .suggestion {
+    line-height: 2rem;
+    padding-left: .5em;
+    padding-right: .5em;
+    cursor: pointer;
+}
+
+.tabs-panel  .suggestions .suggestion .name {
+    font-weight: bold;
+    padding-right: .5em;
+}
+
+.tabs-panel  .suggestions .suggestion .details {
+    color: #666;
+    font-size: .8em;
+}
+
+.tabs-panel  .suggestions .suggestion.active {
+    background-color: #ccc;
+}
+
+.tabs-panel  .suggestions .suggestion:hover:not(.active) {
+    background-color: #eee;
+}
+
 .log-panel {
     font-family: 'Courier New', Courier, monospace;
     bottom: 10px;

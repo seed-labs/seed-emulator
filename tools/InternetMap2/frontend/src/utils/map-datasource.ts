@@ -472,7 +472,7 @@ export class DataSource {
             let nets = node.NetworkSettings.Networks;
             Object.keys(nets).forEach(key => {
                 let label = '';
-                let net = nets[key];
+                let net = nets[key]!;
                 if (net.NetworkID !== currentNode['id']) {
                     return
                 }

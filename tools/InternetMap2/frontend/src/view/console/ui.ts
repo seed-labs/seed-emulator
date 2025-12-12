@@ -102,7 +102,7 @@ export class ConsoleUi {
      * handlw window size change: resize terminal.
      */
     private _handleSizeChange() {
-        let dim = this._fit.proposeDimensions();
+        let dim = this._fit.proposeDimensions()!;
         this._fit.fit();
         if (this._socket && this._socket.readyState == 1) {
             this._socket.send(`\t\r\n\ttermsz;${dim.rows},${dim.cols}`);
@@ -115,30 +115,30 @@ export class ConsoleUi {
     private _nextNotification() {
         if (this._notifications.length == 0) return;
 
-        var noteElement = document.createElement('div');
+        let noteElement = document.createElement('div');
         noteElement.classList.add('xterm-hover');
         noteElement.classList.add('tooltip');
         noteElement.classList.add('bottom-tooltip');
 
-        var textElement = document.createElement('div');
-        textElement.innerText = this._notifications.pop();
+        let textElement = document.createElement('div');
+        textElement.innerText = this._notifications.pop() as string;
 
         noteElement.appendChild(textElement);
 
-        var infoElement = document.createElement('div');
+        let infoElement = document.createElement('div');
         infoElement.classList.add('muted');
         infoElement.innerText = 'Tap on this message to dismiss.';
 
         noteElement.appendChild(infoElement);
 
-        var cb = this._nextNotification.bind(this);
+        let cb = this._nextNotification.bind(this);
 
         noteElement.onclick = () => {
             noteElement.remove();
             cb();
         };
 
-        this._terminal.element.appendChild(noteElement);
+        this._terminal.element!.appendChild(noteElement);
     }
 
     /**
@@ -180,7 +180,7 @@ export class ConsoleUi {
 
         if ('ontouchstart' in window) {
             this.createNotification('Touchscreen detected - Swipe left/right to move the cursor, double tap to go back in history.')
-            var hammer = new Hammer(this._terminal.element);
+            let hammer = new Hammer(this._terminal.element as HTMLElement);
     
             hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
             hammer.on('swipe', (e) => {
@@ -188,7 +188,7 @@ export class ConsoleUi {
                 switch(e.direction) {
                     case Hammer.DIRECTION_RIGHT: socket.send('\x1b[C'); break;
                     case Hammer.DIRECTION_LEFT: socket.send('\x1b[D'); break;
-                };
+                }
             });
     
             hammer.get('tap').set({ taps: 2 });

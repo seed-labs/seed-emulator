@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import {inject} from "vue";
+import {inject, computed} from "vue";
+import type {IXProvider} from "@/types";
 
 const KEY = 'ixNumProvide'
-const injected = inject(KEY);
+const injected = inject(KEY) as IXProvider;
 if (!injected) {
   throw new Error('The value provided by the parent component failed to be injected successfully');
 }

@@ -1,4 +1,5 @@
 import {DataSource as BaseDataSource, type Edge, type Vertex} from '@/utils/map-datasource.ts';
+import type {EmulatorNetwork, EmulatorNode} from "@/utils/types.ts";
 
 export class DataSource extends BaseDataSource {
     visDataSet(transitsNumber: number): { vertices: Vertex[], edges: Edge[] } {
@@ -26,22 +27,22 @@ export class DataSource extends BaseDataSource {
                 if (edge.from !== transit.id) {
                     continue
                 }
-                const from = _nodes.find(item => item.Id === edge!.from)
-                const to = _nets.find(item => item.Id === edge!.to)
+                const from = _nodes.find(item => item.Id === edge!.from) as EmulatorNode
+                const to = _nets.find(item => item.Id === edge!.to) as EmulatorNetwork
 
-                let nodeInfo = from!.meta.emulatorInfo;
+                let nodeInfo = from.meta.emulatorInfo;
                 let netInfo = to!.meta.emulatorInfo;
                 let nodeVertex: Vertex = {
-                    id: from!.Id,
+                    id: from.Id,
                     label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
                     type: 'node',
                     shape: ['Router', 'BorderRouter'].includes(nodeInfo.role) ? 'dot' : 'hexagon',
-                    object: from!,
+                    object: from,
                     collapsed: false,
                     custom: nodeInfo.custom
                 };
-                if (!newVerticeIds.has(from!.Id)) {
-                    newVerticeIds.add(from!.Id)
+                if (!newVerticeIds.has(from.Id)) {
+                    newVerticeIds.add(from.Id)
                     newVertices.push(nodeVertex)
                     nodeVertex.group = nodeInfo.asn.toString();
                 }
@@ -93,7 +94,8 @@ export class DataSource extends BaseDataSource {
         const {_nets, _nodes} = this.getter()
         const transitsWithWeight = this.dealTransitWeight(allVertices)
         for (const transit of transitsWithWeight) {
-            if (!AsnArray.includes(transit.object.meta.emulatorInfo.asn)) {
+            const obj = transit.object as EmulatorNode
+            if (!AsnArray.includes(obj.meta.emulatorInfo.asn)) {
                 break
             }
 
@@ -102,22 +104,22 @@ export class DataSource extends BaseDataSource {
                 if (edge.from !== transit.id) {
                     continue
                 }
-                const from = _nodes.find(item => item.Id === edge!.from)
-                const to = _nets.find(item => item.Id === edge!.to)
+                const from = _nodes.find(item => item.Id === edge!.from) as EmulatorNode
+                const to = _nets.find(item => item.Id === edge!.to) as EmulatorNetwork
 
-                let nodeInfo = from!.meta.emulatorInfo;
-                let netInfo = to!.meta.emulatorInfo;
+                let nodeInfo = from.meta.emulatorInfo;
+                let netInfo = to.meta.emulatorInfo;
                 let nodeVertex: Vertex = {
-                    id: from!.Id,
+                    id: from.Id,
                     label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
                     type: 'node',
                     shape: ['Router', 'BorderRouter'].includes(nodeInfo.role) ? 'dot' : 'hexagon',
-                    object: from!,
+                    object: from,
                     collapsed: false,
                     custom: nodeInfo.custom
                 };
-                if (!newVerticeIds.has(from!.Id)) {
-                    newVerticeIds.add(from!.Id)
+                if (!newVerticeIds.has(from.Id)) {
+                    newVerticeIds.add(from.Id)
                     newVertices.push(nodeVertex)
                     nodeVertex.group = nodeInfo.asn.toString();
                 }

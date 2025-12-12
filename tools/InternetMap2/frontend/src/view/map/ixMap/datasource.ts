@@ -1,4 +1,5 @@
 import {DataSource as BaseDataSource, type Edge, type Vertex} from '@/utils/map-datasource.ts';
+import type {EmulatorNetwork} from "@/utils/types.ts";
 
 export class DataSource extends BaseDataSource {
     visDataSet(ixsNumber: number): { vertices: Vertex[], edges: Edge[] } {
@@ -25,7 +26,7 @@ export class DataSource extends BaseDataSource {
             displayIxIds = ixs.map(item => item.Id)
         }
         displayIxIds.forEach(id => {
-            const net = _nets.find(item => item.Id === id)
+            const net = _nets.find(item => item.Id === id) as EmulatorNetwork
             const netInfo = net.meta.emulatorInfo;
 
             let netVertex: Vertex = {
@@ -69,25 +70,21 @@ export class DataSource extends BaseDataSource {
             return graph;
         };
 
-// 检查路径是否经过其他 star 节点（除了起点和终点）
         const pathPassesThroughOtherStar = (
             path: string[],
-            startStar: string,
-            endStar: string,
             nodeMap: Map<string, Vertex>
         ): boolean => {
-            // 检查路径的中间节点（排除起点和终点）
+
             for (let i = 1; i < path.length - 1; i++) {
-                const nodeId = path[i];
+                const nodeId = path[i] as string;
                 const node = nodeMap.get(nodeId);
                 if (node && node.shape === 'star') {
-                    return true; // 路径中经过了其他 star 节点
+                    return true;
                 }
             }
             return false;
         };
 
-// 查找两个节点之间的所有不重复路径，且不经过其他 star 节点
         const findAllDirectPathsBetweenStars = (
             graph: Map<string, string[]>,
             start: string,
@@ -140,7 +137,7 @@ export class DataSource extends BaseDataSource {
 
             // 排除起点和终点（都是 star 节点），只检查中间节点
             for (let i = 1; i < path.length - 1; i++) {
-                const nodeId = path[i];
+                const nodeId = path[i] as string;
                 const node = nodeMap.get(nodeId);
                 if (node && node.shape === 'dot') {
                     dotNodes.add(nodeId);
@@ -181,7 +178,7 @@ export class DataSource extends BaseDataSource {
 
                 // 过滤掉经过其他 star 节点的路径（双重检查）
                 const validPaths = allPaths.filter(path =>
-                    !pathPassesThroughOtherStar(path, starNode, targetStar, nodeMap)
+                    !pathPassesThroughOtherStar(path, nodeMap)
                 );
 
                 if (validPaths.length > 0) {

@@ -42,6 +42,12 @@ export interface HoverNodeEvent {
     event: MouseEvent;
 }
 
+export interface IXProvider {
+    ixNum: Ref<number>,
+    ixNumMax: Ref<number>,
+    onIXNumChange: (val: number) => void,
+}
+
 export interface transitProvider {
     transitNum: Ref<number>,
     transitNumMax: Ref<number>,

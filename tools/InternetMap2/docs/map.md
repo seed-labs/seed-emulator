@@ -1,4 +1,4 @@
-## map.html
+## map
 
 The network topology diagram illustrates the interconnection relationships between nodes and networks, along with auxiliary features including filtering, search, settings, replay, and logging capabilities.
 

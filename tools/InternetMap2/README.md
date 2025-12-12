@@ -6,9 +6,9 @@ This is a visualization tool that we developed for the Internet emulator.
 
 Currently, the tool supports the following features:
 
-- [index](#indexhtml):
+- [index](#home):
   - Home page
-- [map](#maphtml):
+- [map](#map):
   - Display topology of the network
   - Search and highlight nodes on the map 
   - Animate packet flows using BPF expressions 
@@ -17,11 +17,15 @@ Currently, the tool supports the following features:
   - Customize node styles 
   - Expand/collapse nodes 
   - Drag-to-fix node positions
-- [dashboard](#dashboardhtml):
+- [transitMap](#transitMap):
+  - Similar to the map page in function
+  - Displayed up to the transit level and will not show the Host at a deeper level
+  - Filter by the number or name of transit
+- [dashboard](#dashboard):
   - List nodes in the emulation 
   - Access nodes in the emulation 
   - Search nodes by ASN, node name, or IP address
-- [plugin](#pluginhtml)
+- [plugin](#plugin)
   - Plugin installation page
 
 
@@ -35,10 +39,10 @@ The Internet Map runs inside an independent container. We can use the `docker-co
 1. Start the emulation as you normally would. (e.g., `docker-compose up`)
 2. Run `docker-compose build && docker-compose up` in this folder to build and start the Internet Map container.
 3. Once the container is up, access the tool using the following pages:
-   1. Home page: [http://localhost:8080/](http://localhost:8080/) or [http://localhost:8080/index.html](http://localhost:8080/index.html) 
-   2. The Map page: [http://localhost:8080/map.html](http://localhost:8080/map.html)
-   3. Dashboard: [http://localhost:8080/dashboard.html](http://localhost:8080/dashboard.html)
-   4. Plugin pag: [http://localhost:8080/plugin.html](http://localhost:8080/plugin.html)
+   1. Home page: [http://localhost:8080/](http://localhost:8080/) or [http://localhost:8080/pro/home](http://localhost:8080/pro/home) 
+   2. The Map page: [http://localhost:8080/pro/map](http://localhost:8080/pro/map)
+   3. Dashboard: [http://localhost:8080/pro/dashboard](http://localhost:8080/pro/dashboard)
+   4. Plugin pag: [http://localhost:8080/pro/plugin](http://localhost:8080/pro/plugin)
 
 
 ### Start the tool during the runtime
@@ -53,25 +57,31 @@ Note that the Internet Map allows unauthenticated console access to all nodes, w
 
 ## Pages 
 
-### index.html
+### home
 
 Home page, the entry point. 
 
-![index.png](docs/assets/index.png)
+![home.png](docs/assets/index.png)
 
-### map.html
+### map
 
 The network topology diagram displays interconnection relationships between nodes and networks, along with auxiliary functions including filtering, search, settings, replay, and logging. For detailed introductions, [please refer to this document](./docs/map.md).
 
 ![map.png](docs/assets/map.png)
 
-### dashboard.html
+### transitMap
+
+Similar to the map page in function, the difference lies in the display dimension. transitMap only shows up to the transit dimension and does not display the Host at a deeper level. For detailed introductions, [please refer to this document](./docs/transitMap.md).
+
+![transitMap.png](docs/assets/transitMap.png)
+
+### dashboard
 
 Displays the emulator nodes and networks.
 
 ![dashboard.png](docs/assets/dashboard.png)
 
-### plugin.html
+### plugin
 
 Plugin installation page: installing additional tools inside the emulator. For detailed instructions, [please refer to this document](docs/plugin.md).
 
