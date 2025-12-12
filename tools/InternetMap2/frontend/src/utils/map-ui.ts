@@ -1,12 +1,14 @@
 import {DataSet} from 'vis-data';
 import type {FullItem} from 'vis-data/declarations/data-interface';
-import {Network, type NodeOptions} from 'vis-network';
+import {Network, type NodeOptions, type Options} from 'vis-network';
 import type {Ref} from "vue"
 import {bpfCompletionTree} from './bpf';
 import {Completion} from './completion';
 import type {EmulatorNetwork, EmulatorNode} from './types';
 import {WindowManager} from './window-manager';
 import {DataSource, type NodesType, type EdgesType, type Vertex, META_CLASS, type Edge} from './map-datasource';
+import {DataSource as IXDataSource} from "@/view/map/ixMap/datasource.ts";
+import {DataSource as TransitDataSource} from "@/view/map/transitMap/datasource.ts";
 import type {Details, HoverNodeEvent} from '@/types/index.ts'
 import type {LoadingInstance} from 'element-plus/es/components/loading/src/loading';
 import {allLoading} from "@/utils/tools.ts";
@@ -40,12 +42,14 @@ export const CLICK_CLASS = {
  * map UI element bindings.
  */
 export interface MapUiConfiguration {
-    datasource: DataSource, // data provider
+    datasource: DataSource | IXDataSource | TransitDataSource, // data provider
     mapElementId: string, // element id of the map
     detailsDialogVisible: Ref<boolean>,
     details: Ref<Details[]>,
+    allService: Ref<string[]>,
     filterInputValue: Ref<string>,
     searchInputValue: Ref<string>,
+    suggestionsElementId: string,
     logBodyElementId: string, // element id of the log body (the tbody)
     logPanelElementId: string, // element id of the log panel
     logViewportElementId: string, // element id of the log viewport (the table wrapper w/ overflow scroll)
@@ -109,6 +113,9 @@ export class MapUi {
     private _logDisable: Ref<boolean>;
     private _logToggle: HTMLElement;
 
+    private _suggestions: HTMLElement;
+    private allService: Ref<string[]>;
+
     private _replayButton: replayValueType;
     private _recordButton: replayValueType;
     private _forwardButton: replayValueType;
@@ -131,7 +138,6 @@ export class MapUi {
 
     private detailsDialogVisible: Ref<boolean>
     private vertexDetails: Ref<Details[]>
-    private allService: Ref<string[]>
 
     /** list of log elements to be rendered to log body */
     private _logQueue: HTMLElement[];
@@ -202,10 +208,10 @@ export class MapUi {
      */
     constructor(config: MapUiConfiguration, otherConfiguration = {}) {
         this._otherConfiguration = otherConfiguration;
+        this.allService = config.allService
         this._datasource = config.datasource;
         this.detailsDialogVisible = config.detailsDialogVisible as Ref<boolean>
         this.vertexDetails = config.details
-        this.allService = config.allService
         this._filterInputValue = config.filterInputValue;
         // this._searchInput = document.getElementById(config.searchInputElementId) as HTMLInputElement;
         this.allLoadingInstance = allLoading()
@@ -219,6 +225,8 @@ export class MapUi {
         this._logDisable = config.logControls.disableCheckboxValue;
 
         this._logToggle = document.getElementById(config.logControls.minimizeToggleElementId) as HTMLElement;
+
+        this._suggestions = document.getElementById(config.suggestionsElementId) as HTMLElement;
 
         this._replayButton = config.replayControls.replayButtonValue
         this._recordButton = config.replayControls.recordButtonValue;
@@ -361,6 +369,9 @@ export class MapUi {
             }
 
             let node = this._nodes.get(data.source as string) as FullItem<Vertex, "id">;
+            if (node === null) {
+                return;
+            }
 
             let timeString = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}.${now.getMilliseconds()}`;
 
@@ -865,7 +876,7 @@ export class MapUi {
             }
         }
 
-        let current = children[this._suggestionsSelection];
+        let current = children[this._suggestionsSelection] as Element;
         current.classList.add('active');
 
         let boxRect = this._suggestions.getBoundingClientRect();
@@ -888,7 +899,7 @@ export class MapUi {
      *
      * @param term current search/filter term.
      */
-    private _updateFilterSuggestions(term: string) {
+    public updateFilterSuggestions(term: string) {
         this._suggestions.innerText = '';
 
         if (this._filterMode == 'filter') {
@@ -934,7 +945,7 @@ export class MapUi {
                 item.onclick = () => {
                     this._filterInputValue.value += `${fillText} `;
                     this._moveSuggestionSelection('clear');
-                    this._updateFilterSuggestions(this._filterInputValue.value);
+                    this.updateFilterSuggestions(this._filterInputValue.value);
                 };
 
                 this._suggestions.appendChild(item);
@@ -1026,7 +1037,7 @@ export class MapUi {
         if (((!event || event.key != 'Enter') && !forced)) {
             this._moveSuggestionSelection('clear');
             this._suggestions.innerText = '';
-            this._updateFilterSuggestions(term);
+            this.updateFilterSuggestions(term);
 
             return;
         }
@@ -1069,6 +1080,25 @@ export class MapUi {
         div.appendChild(span1);
 
         return div;
+    }
+
+    public async setFilterMode(mode: FilterMode) {
+        if (mode == this._filterMode) {
+            return;
+        }
+
+        this._filterMode = mode;
+
+        this._suggestions.innerText = '';
+        this._moveSuggestionSelection('clear');
+
+        if (mode == 'filter') {
+            this._updateSearchHighlights(new Set<string>());
+        }
+
+        if (mode == 'node-search') {
+            await this._filterUpdateHandler(undefined, true);
+        }
     }
 
     /**
@@ -1303,7 +1333,7 @@ export class MapUi {
         if (this._replayPos >= this._playlist.length) {
             this._replayStatus = this.replayStatusInfo.status = 'paused';
             this.replayStatusInfo.text = 'End of record.';
-            this._replaySeekBar.value = '0';
+            this._replaySeekBar.value = 0;
             this._replayPos = 0;
             this._updateReplayControls();
             return;
@@ -1329,9 +1359,9 @@ export class MapUi {
         let current = this._playlist[this._replayPos];
         current?.nodes.forEach(node => this._flashingNodes.add(node));
         let flashRequest = Array.from(this._flashingNodes).map(nodeId => {
-            let style;
+            let style: {};
             if (this._flashVisStyleMapping.hasOwnProperty(nodeId)) {
-                style = this._flashVisStyleMapping[nodeId].dynamic;
+                style = this._flashVisStyleMapping[nodeId]!.dynamic as NodeOptions;
             } else {
                 style = dynamicDefault;
             }
@@ -1402,7 +1432,7 @@ export class MapUi {
 
             while (this._logQueue.length > 0) {
                 scroll = true;
-                this._logBody.appendChild(this._logQueue.shift());
+                this._logBody.appendChild(this._logQueue.shift()!);
             }
 
             if (scroll && this._logAutoscroll.value && !this._logDisable.value) {
@@ -1447,7 +1477,7 @@ export class MapUi {
         this._edges = new DataSet(edges);
         this._nodes = new DataSet(vertices);
 
-        let groups = {};
+        let groups: {[key: string]: {}} = {};
 
         this._datasource.groups.forEach(group => {
             groups[group] = {
@@ -1500,9 +1530,11 @@ export class MapUi {
                 hideNodesOnDrag: false
             },
             ...otherOptions
-        });
+        } as Options);
 
         this._graph.on('click', async (ev) => {
+            this._suggestions.innerText = '';
+            this._moveSuggestionSelection('clear');
             if (ev.nodes.length <= 0) {
                 return;
             }
@@ -1579,9 +1611,11 @@ export class MapUi {
     }
 
     onSubmitFilter = async (term: string) => {
+        this._suggestions.innerText = ''
         this._filterInputValue.value = await this._datasource.setSniffFilter(term);
     }
     onSubmitSearch = async (term: string) => {
+        this._suggestions.innerText = ''
         let hits = new Set<string>();
         this._lastSearchTerm = term;
 

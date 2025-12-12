@@ -1,5 +1,5 @@
 <script setup lang="ts" xmlns="http://www.w3.org/1999/html">
-import {ref, onMounted, reactive, nextTick, type PropType, type Component} from "vue";
+import {ref, onMounted, reactive, nextTick, shallowRef, type PropType, type Component} from "vue";
 import type {TabsPaneContext} from 'element-plus'
 import {ElNotification} from "element-plus";
 import type {Details} from '@/types'
@@ -24,21 +24,34 @@ import {DataSource} from "@/view/map/map/datasource.ts";
 import {DataSource as IXDataSource} from "@/view/map/ixMap/datasource.ts";
 import {DataSource as TransitDataSource} from "@/view/map/transitMap/datasource.ts";
 
-interface Props {
+
+// ① 为每一种 UI 类对应的配置类型建立映射
+type OtherConfigOf<T> =
+    T extends typeof MapUi ? OtherConfiguration :
+        T extends typeof IXMapUi ? IxMapUiOtherConfiguration :
+            T extends typeof TransitMapUi ? TransitMapUiOtherConfiguration :
+                never;
+
+// ② Props 使用单一泛型参数 M，M 决定 dataSource 与 otherConfig 的具体类型
+interface Props<M extends typeof MapUi | typeof IXMapUi | typeof TransitMapUi> {
   settingNumItem?: PropType<Component>
-  mapUiClass: typeof MapUi | typeof IXMapUi | typeof TransitMapUi
-  dataSourceClass: typeof DataSource | typeof IXDataSource | typeof TransitDataSource
-  otherConfig: OtherConfiguration | IxMapUiOtherConfiguration | TransitMapUiOtherConfiguration
+  mapUiClass: M;
+  dataSourceClass:
+      M extends typeof MapUi ? typeof DataSource :
+          M extends typeof IXMapUi ? typeof IXDataSource :
+              M extends typeof TransitMapUi ? typeof TransitDataSource :
+                  never;
+  otherConfig: OtherConfigOf<M>;
 }
 
-const props = withDefaults(defineProps<Props>(), {})
+const props = withDefaults(defineProps<Props<any>>(), {})
 
 interface RuleForm {
   dragFixed: boolean
   services: string[]
 }
 
-const mapUi = shallowRef<MapUi | IXMapUi | TransitMapUi>(null)
+const mapUi = shallowRef<MapUi | IXMapUi | TransitMapUi>()
 const serviceColors = ["black", "blue", "green", "red", "yellow", "orange"]
 const inputActiveName = ref('settings')
 const inputFilter = ref('')
@@ -99,6 +112,13 @@ const onSubmitSearch = () => {
 }
 const onTabsClick = (tab: TabsPaneContext) => {
   dialogVisible.value = tab.paneName === 'settings'
+  if (!mapUi.value) return
+
+  if (tab.paneName === 'search') {
+    mapUi.value?.setFilterMode('node-search')
+  } else if (tab.paneName === 'filter') {
+    mapUi.value?.setFilterMode('filter')
+  }
 }
 const onDragFixedChange = (val: boolean) => {
   if (!mapUi.value) return
@@ -191,6 +211,16 @@ const onReplaySeekUp = () => {
   if (!mapUi.value) return
   mapUi.value?.replaySeekMouseup()
 }
+const filterClick = () => {
+  if (!mapUi.value) return
+  mapUi.value?.updateFilterSuggestions(inputFilter.value)
+}
+const filterMouseup = () => {
+
+}
+const filterMousedown = () => {
+
+}
 onMounted(() => {
   nextTick(async () => {
     const datasource = new props.dataSourceClass();
@@ -202,6 +232,7 @@ onMounted(() => {
       allService,
       filterInputValue: inputFilter,
       searchInputValue: inputSearch,
+      suggestionsElementId: 'filter-suggestions',
       logPanelElementId: 'log-panel',
       logBodyElementId: 'log-body',
       logViewportElementId: 'log-viewport',
@@ -248,6 +279,9 @@ defineExpose({mapUi})
             placeholder="Type a BPF expression to animate packet flows on the map..."
             class="input-with-select"
             id="input-filter"
+            @click="filterClick"
+            @mouseup="filterMouseup"
+            @mousedown="filterMousedown"
         >
           <template #prepend>
             <el-button type="primary" class="submit" @click="onSubmitFilter">Submit</el-button>
@@ -267,6 +301,7 @@ defineExpose({mapUi})
         </el-input>
       </el-tab-pane>
       <el-tab-pane label="Settings" name="settings"/>
+      <div class="suggestions" id="filter-suggestions"></div>
     </el-tabs>
   </el-col>
   <div class="map-area">
@@ -469,6 +504,35 @@ defineExpose({mapUi})
 </style>
 
 <style lang="scss">
+.tabs-panel .suggestions:empty {
+  display: none;
+}
+
+.tabs-panel .suggestions .suggestion {
+  line-height: 2rem;
+  padding-left: .5em;
+  padding-right: .5em;
+  cursor: pointer;
+}
+
+.tabs-panel .suggestions .suggestion .name {
+  font-weight: bold;
+  padding-right: .5em;
+}
+
+.tabs-panel .suggestions .suggestion .details {
+  color: #666;
+  font-size: .8em;
+}
+
+.tabs-panel .suggestions .suggestion.active {
+  background-color: #ccc;
+}
+
+.tabs-panel .suggestions .suggestion:hover:not(.active) {
+  background-color: #eee;
+}
+
 .el-dialog {
   opacity: 85%;
   position: absolute;

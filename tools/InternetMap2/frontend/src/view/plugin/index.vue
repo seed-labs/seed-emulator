@@ -41,9 +41,9 @@ const onInstall = async (row: pluginType) => {
   console.log(row)
   const loading = allLoading()
   try {
-    const res = await reqInstall({id: row.id, title: row.name})
+    const res = await reqInstall(row)
     if (!res.ok) {
-      throw Error(res.message)
+      throw Error(res.result)
     }
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : String(e)
@@ -59,7 +59,7 @@ const onInstall = async (row: pluginType) => {
 const onUninstall = async (row: pluginType) => {
   const loading = allLoading()
   try {
-    const res = await reqUninstall({id: row.id, title: row.name})
+    const res = await reqUninstall(row)
     if (!res.ok) {
       throw Error("reqUninstall error")
     }

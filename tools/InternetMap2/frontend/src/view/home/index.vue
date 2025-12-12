@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import mapImg from '@/assets/img/map.png'
+import transitMapImg from '@/assets/img/transitMap.png'
 import dashboardImg from '@/assets/img/dashboard.png'
 import pluginImg from '@/assets/img/plugin.png'
 
@@ -19,7 +20,7 @@ import pluginImg from '@/assets/img/plugin.png'
   <el-row style="padding: 20px 0" :justify="'center'">
     <el-col :span="22">
       <ul style="
-        display: grid;grid-template-columns: repeat(3, 1fr);
+        display: grid;grid-template-columns: repeat(4, 1fr);
         gap: 20px;
         list-style: none;
         padding: 0;
@@ -39,7 +40,26 @@ import pluginImg from '@/assets/img/plugin.png'
                 <template #header>
                   <h3>MAP</h3>
                 </template>
-                <el-image :src="mapImg" :fit="fit"/>
+                <el-image :src="mapImg" :fit="'fit'"/>
+              </el-card>
+            </el-tooltip>
+          </router-link>
+        </li>
+        <li>
+          <router-link
+              :to="{ name: 'transitMap'}"
+          >
+            <el-tooltip
+                class="box-item"
+                effect="dark"
+                content="Similar to the map page in function, the difference lies in the display dimension. transitMap only shows up to the transit dimension and does not display the Host at a deeper level."
+                placement="bottom-start"
+            >
+              <el-card>
+                <template #header>
+                  <h3>TRANSIT MAP</h3>
+                </template>
+                <el-image :src="transitMapImg" :fit="'fit'"/>
               </el-card>
             </el-tooltip>
           </router-link>
@@ -58,7 +78,7 @@ import pluginImg from '@/assets/img/plugin.png'
                 <template #header>
                   <h3>DASHBOARD</h3>
                 </template>
-                <el-image :src="dashboardImg" :fit="fit"/>
+                <el-image :src="dashboardImg" :fit="'fit'"/>
               </el-card>
             </el-tooltip>
           </router-link>
@@ -77,7 +97,7 @@ import pluginImg from '@/assets/img/plugin.png'
                 <template #header>
                   <h3>PLUGIN</h3>
                 </template>
-                <el-image :src="pluginImg" :fit="fit"/>
+                <el-image :src="pluginImg" :fit="'fit'"/>
               </el-card>
             </el-tooltip>
           </router-link>

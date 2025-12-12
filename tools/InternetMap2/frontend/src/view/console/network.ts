@@ -1,5 +1,6 @@
 import type {AxiosRequestConfig} from "axios";
 import request from "@/utils/request.ts";
+import type {Response} from "@/utils/types.ts";
 
 /**
  * console network manager.
@@ -22,7 +23,7 @@ export class ConsoleNetwork {
             url: `/container/${this._id}`,
         };
         try {
-            const response = await request(config);
+            const response: Response = await request(config);
             if (response.ok) {
                 return response;
             } else {

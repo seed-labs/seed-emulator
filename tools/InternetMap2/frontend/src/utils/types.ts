@@ -36,22 +36,12 @@ export interface EmulatorNetwork {
             name: string,
             prefix: string,
             description?: string,
-            displayname?: string
+            displayname?: string,
         },
         relation?: {
             parent: Set<string>,
         },
     }
-}
-
-export interface IPlugin {
-    id: string;
-    name: string;
-    version: string;
-    entryPoint: string;
-    description?: string;
-    activate?: () => void;
-    deactivate?: () => void;
 }
 
 export interface BgpPeer {
@@ -76,4 +66,9 @@ export interface EmulatorNodeInfo {
 export interface TransitsEmulatorNodeInfo {
     asn: number;
     info: EmulatorNodeInfo[]
+}
+
+export interface Response {
+    ok: boolean,
+    result?: any
 }

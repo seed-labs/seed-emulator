@@ -105,7 +105,7 @@ router.get('/install', async function (req, res, next) {
 });
 
 router.post('/install', express.json(), async function (req, res, next) {
-    const plugin = req.body.title
+    const plugin = req.body.name
     const address = `${req.socket.localAddress}:${req.socket.localPort}`
     let ret = await submitEvent.submitEvent(address, (await getContainers()).map(c => c.Id), 'install', plugin);
     if (ret) {
@@ -125,7 +125,7 @@ router.post('/install', express.json(), async function (req, res, next) {
 });
 
 router.post('/uninstall', express.json(), async function (req, res, next) {
-    const plugin = req.body.title
+    const plugin = req.body.name
     let ret = await submitEvent.submitEvent('', (await getContainers()).map(c => c.Id), 'uninstall', plugin);
     if (ret) {
         ret = {

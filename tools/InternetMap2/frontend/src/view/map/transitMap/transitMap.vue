@@ -12,7 +12,7 @@ const TRANSIT_NUM_KEY = 'transitNumProvide'
 const transitNum = ref(0);
 const transitNumMax = ref(0);
 const transits = ref<TransitsEmulatorNodeInfo[]>([])
-const transitsCheckedList = ref<string[]>([])
+const transitsCheckedList = ref<number[]>([])
 const onTransitNumChange = (currentValue: number) => {
   if (!mapRef.value?.mapUi) return
   try {

@@ -51,12 +51,12 @@ const onAdd = () => {
   console.log('add')
 }
 
-const onAttach = async (row) => {
-  console.log("onAttach")
+const onAttach = async (row: {}) => {
+  console.log("onAttach", row)
 }
 
-const onKill = async (row) => {
-  console.log("onKill")
+const onKill = async (row: {}) => {
+  console.log("onKill", row)
 }
 
 const onDownload = () => {
@@ -128,6 +128,11 @@ onMounted(() => {
         <template #header>
           <div class="card-header">
             <el-row>
+              <el-col>
+                <h3>Nodes</h3>
+              </el-col>
+            </el-row>
+            <el-row>
               <el-col class="tools" :span="21">
                 <el-button class="btn" @click="onAdd">Select all</el-button>
                 <el-button class="btn" @click="onDownload">Invert selections</el-button>
@@ -198,6 +203,11 @@ onMounted(() => {
       <el-card>
         <template #header>
           <div class="card-header">
+            <el-row>
+              <el-col>
+                <h3>Networks</h3>
+              </el-col>
+            </el-row>
             <el-row>
               <el-col class="tools" :span="21">
                 <el-button class="btn" @click="onAdd">Select all</el-button>
@@ -282,4 +292,7 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
+.el-card{
+  --el-card-padding: 10px
+}
 </style>

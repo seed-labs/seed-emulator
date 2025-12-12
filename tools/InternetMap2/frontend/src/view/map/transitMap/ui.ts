@@ -1,54 +1,16 @@
 import type {Vertex, Edge} from "@/utils/map-datasource.ts";
-import {MapUi as BaseMapUi, type replayValueType} from "@/utils/map-ui.ts";
+import {MapUi as BaseMapUi, type MapUiConfiguration} from "@/utils/map-ui.ts";
 import {DataSource} from './datasource.ts';
 import type {Ref} from "vue";
-import type {Details} from "@/types";
 import {allLoading} from "@/utils/tools.ts";
 import type {TransitsEmulatorNodeInfo} from "@/utils/types.ts";
-
-interface MapUiConfiguration {
-    datasource: DataSource, // data provider
-    mapElementId: string, // element id of the map
-    detailsDialogVisible: Ref<boolean>,
-    details: Ref<Details[]>,
-    allService: Ref<string[]>,
-    filterInputValue: Ref<string>,
-    searchInputValue: Ref<string>,
-    logBodyElementId: string, // element id of the log body (the tbody)
-    logPanelElementId: string, // element id of the log panel
-    logViewportElementId: string, // element id of the log viewport (the table wrapper w/ overflow scroll)
-    logWrapElementId: string, // element id of the log wrap (hidden when minimized)
-    logControls: { // controls for log
-        autoscrollCheckboxValue: Ref<boolean>, // element id of autoscroll checkbox
-        disableCheckboxValue: Ref<boolean>, // element id of log disable checkbox
-        minimizeToggleElementId: string, // element id of log minimize/unminimize toggle
-    },
-    windowManager: { // console window manager
-        desktopElementId: string,
-        taskbarElementId: string,
-    },
-    replayControls: { // replay controls
-        recordButtonValue: replayValueType, // element id of record button
-        replayButtonValue: replayValueType, // element id of replay button
-        stopButtonValue: replayValueType // element id of stop button
-        backwardButtonValue: replayValueType, // element id of backward button
-        forwardButtonValue: replayValueType, // element id of forward button
-        seekBarValue: replayValueType, // element id of seek bar
-        intervalValue: replayValueType, // element id of interval input
-    },
-    replayStatusInfo: {
-        text: string,
-        status: string,
-        disabled: boolean
-    }
-}
 
 export interface TransitMapUiOtherConfiguration {
     settingControls: {
         transitNumberValue: Ref<number>,
         transitNumberMaxValue: Ref<number>,
         transits: Ref<TransitsEmulatorNodeInfo[]>,
-        transitsCheckedList: Ref<string[]>,
+        transitsCheckedList: Ref<number[]>,
     },
 }
 
@@ -120,7 +82,7 @@ export class MapUi extends BaseMapUi {
             _nodes.add(item)
         })
         let updateHidden = _nodes.get({
-            filter: item => vertices.filter(v => v.id === item.id && item.hidden).length
+            filter: item => vertices.some(v => v.id === item.id && item.hidden)
         }).map(item => ({id: item.id, hidden: false}))
         _nodes.update(updateHidden)
 
@@ -133,8 +95,8 @@ export class MapUi extends BaseMapUi {
         _nodes.update(updateHidden)
 
         _edges.remove(_edges.get({
-            filter: (item: Edge) => !edges.filter(_item => _item.from === item.from && _item.to === item.to).length
-        }).map((item: Edge) => item.id))
+            filter: (item: Edge) => !edges.some(_item => _item.from === item.from && _item.to === item.to)
+        }).map((item: Edge) => item.id!))
 
         edges.filter((item: Edge) => !_edges.get({
             filter: (_item: Edge) => _item.from === item.from && _item.to === item.to

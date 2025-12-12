@@ -588,7 +588,7 @@ export class Window {
         this.close();
         // 使用 console.html 页面，因为那是已经开发好的 xterm 终端页面
         window.open(
-            `/console#${this._id}`, this._title,
+            `${import.meta.env.VITE_FRONTEND_URL_PREFIX}/console#${this._id}`, this._title,
             `directories=no,titlebar=no,toolbar=no,location=no,status=no,menubar=no,scrollbars=no,width=${w},height=${h}`
         );
     }
@@ -731,7 +731,7 @@ export class WindowManager {
             this,
             id,
             title,
-            `/console#${id}`,  // 使用已经开发好的 xterm 终端页面
+            `${import.meta.env.VITE_FRONTEND_URL_PREFIX}/console#${id}`,  // 使用已经开发好的 xterm 终端页面
             10 + this._nextOffset,
             10 + this._nextOffset
         );
