@@ -16,13 +16,13 @@
 
 ---
 
-## `docker.py` Usage Guide
+## `dockerBuild_Up.py` Usage Guide
 
 This script manages the lifecycle of the Docker containers used in the simulation.
 
 **Command Syntax:**
 ```bash
-python docker.py <command_id> <monitor_interval> <batch_size> <parallel_jobs>
+python dockerBuild_Up.py <command_id> <monitor_interval> <batch_size> <parallel_jobs>
 
 Parameters:
 
@@ -44,7 +44,7 @@ Recommended Configurations (for AMD Machine)
 
 Command:
 
-python docker.py 1 2 50 16
+python dockerBuild_Up.py 1 2 50 16
 
 
 Details:
@@ -62,7 +62,7 @@ docker images | wc
 
 Command:
 
-python docker.py 2 2 50 8
+python dockerBuild_Up.py 2 2 50 8
 
 
 Details:
