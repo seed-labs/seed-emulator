@@ -371,12 +371,19 @@ class Proxmox:
             dns_servers = nameserver.replace(',', ' ').strip()
             cmd.extend(["--nameserver", dns_servers])
         
-        # Enable SSH password authentication in Cloud-Init
-        cmd.extend([
-            "--sshkeys", "",  # Clear any existing SSH keys to allow password auth
-        ])
-            
+        # Execute the command to set Cloud-Init configuration
         self._run_cmd(cmd)
+        
+        # Clear any existing SSH keys to allow password authentication
+        # Use --delete to remove SSH keys instead of setting empty string
+        try:
+            self._run_cmd([
+                "qm", "set", str(vmid),
+                "--delete", "sshkeys"
+            ], ignore_error=True)
+        except Exception:
+            # If deletion fails, it's okay - SSH keys may not exist
+            pass
         
         # Reset Cloud-Init to ensure it runs on next boot
         print(f"    -> Resetting Cloud-Init state...")
