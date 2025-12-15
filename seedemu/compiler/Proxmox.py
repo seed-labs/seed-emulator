@@ -29,7 +29,7 @@ import json
 machine_config = json.load(open('machine_config.json'))
 for machine_id, machine in enumerate(machine_config['machines']):
     ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
-    ssh_executor.run_command(f'cd /home/seed/output_{machine_id}/ && DOCKER_BUILDKIT=0 docker compose build && docker compose up -d')
+    ssh_executor.run_command(f'sudo systemctl restart docker && cd /home/seed/output_{machine_id}/ && DOCKER_BUILDKIT=0 docker compose build && docker compose up -d')
 """
 
 BUILDNET_SCRIPT_TEMPLATE = """#!/usr/bin/env python3
