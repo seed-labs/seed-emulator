@@ -166,9 +166,9 @@ class Proxmox:
         except json.JSONDecodeError:
             print(f"[Error] Failed to decode JSON from: {cmd_str}")
             sys.exit(1)
-            
+
     # ================= Network Management =================
-    def create_ovs_bridge(self, bridge_name, comment="Created_by_Script"):
+    def create_ovs_bridge(self, bridge_name, comment="Created_by_Script", bridge_ip=None, bridge_cidr=24):
         # Check if OVS bridge already exists
         print(f"\n[*] Checking network bridge: {bridge_name}")
         
@@ -198,7 +198,39 @@ class Proxmox:
         # Wait for network to stabilize
         print("    -> Waiting for network to stabilize...")
         time.sleep(5)
+        
+        # Configure bridge IP if provided
+        if bridge_ip:
+            self.config_bridge_ip(bridge_name, bridge_ip, bridge_cidr)
+        
         print("    -> Network ready.")
+
+    def config_bridge_ip(self, bridge_name, ip, cidr=24):
+        # Configure IP address for the bridge interface
+        # This allows Proxmox host to communicate with VMs on this bridge
+        print(f"    -> Configuring IP address {ip}/{cidr} on bridge {bridge_name}...")
+        
+        # Check if IP is already configured
+        try:
+            result = subprocess.run(
+                ["ip", "addr", "show", bridge_name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            if ip in result.stdout:
+                print(f"    -> IP {ip}/{cidr} already configured on {bridge_name}. Skipping.")
+                return
+        except Exception:
+            pass
+        
+        # Configure IP using ip command
+        self._run_cmd(["ip", "addr", "add", f"{ip}/{cidr}", "dev", bridge_name])
+        
+        # Bring up the interface
+        self._run_cmd(["ip", "link", "set", bridge_name, "up"])
+        
+        print(f"    -> Bridge {bridge_name} IP configured successfully.")
 
     # ================= VM Management =================
     def vm_exists(self, vmid):
@@ -206,12 +238,47 @@ class Proxmox:
         res = self._run_cmd(["qm", "status", str(vmid)], ignore_error=True)
         return res is not None
 
-    def deploy_vm(self, template_id, vmid, name, 
-                  storage="local-lvm", full_clone=True):
+   
+    def get_next_available_vmid(self, start_from=100):
+        # Get next available VM ID starting from start_from
+        # List all existing VMs
+        try:
+            vms = self._run_cmd(["qm", "list"], ignore_error=True)
+            if vms:
+                # Parse VM list to get existing VMIDs
+                existing_vmids = set()
+                for line in vms.split('\n')[1:]:  # Skip header line
+                    if line.strip():
+                        parts = line.split()
+                        if parts and parts[0].isdigit():
+                            existing_vmids.add(int(parts[0]))
+                
+                # Find next available VMID
+                vmid = start_from
+                while vmid in existing_vmids:
+                    vmid += 1
+                return vmid
+            else:
+                return start_from
+        except Exception:
+            # If qm list fails, try checking sequentially
+            vmid = start_from
+            while self.vm_exists(vmid):
+                vmid += 1
+            return vmid
+
+    def deploy_vm(self, template_id, vmid=None, name=None, 
+                  storage="local-lvm", full_clone=False):
         # Clone VM
+        # If vmid is None, auto-allocate next available VMID
+        if vmid is None:
+            vmid = self.get_next_available_vmid()
+            print(f"[*] Auto-allocated VMID: {vmid}")
+        
         if self.vm_exists(vmid):
             print(f"[Warn] VM {vmid} already exists. Skipping clone.")
-            return False
+            return False, vmid
+        
         print(f"\n[*] Cloning VM {template_id} -> {vmid} ({name})...")
         cmd = [
             "qm", "clone", str(template_id), str(vmid),
@@ -219,12 +286,14 @@ class Proxmox:
         ]
         if full_clone:
             cmd.extend(["--full", "1"])
-        if storage:
-            cmd.extend(["--storage", storage])
+            # Storage parameter is only allowed for full clones
+            if storage:
+                cmd.extend(["--storage", storage])
+        # For linked clones, storage parameter is not allowed
             
         self._run_cmd(cmd)
         print("    -> Clone finished.")
-        return True
+        return True, vmid
 
     def config_network(self, vmid, bridge, firewall=True, model="virtio"):
         # Configure VM network card to connect to specified bridge
@@ -253,12 +322,49 @@ class Proxmox:
             
         self._run_cmd(cmd)
 
-    def start_vm(self, vmid):
+    def start_vm(self, vmid, wait_for_cloudinit=True, wait_timeout=120):
         # Start VM
         # Check status
         status_out = self._run_cmd(["qm", "status", str(vmid)])
         if "status: running" in status_out:
             print(f"    -> VM {vmid} is already running.")
+            if wait_for_cloudinit:
+                print(f"    -> Waiting for Cloud-Init to complete...")
+                self._wait_for_cloudinit(vmid, wait_timeout)
             return
         print(f"    -> Starting VM {vmid}...")
         self._run_cmd(["qm", "start", str(vmid)])
+        
+        # Wait for VM to boot and Cloud-Init to apply network configuration
+        if wait_for_cloudinit:
+            print(f"    -> Waiting for Cloud-Init to complete (timeout: {wait_timeout}s)...")
+            self._wait_for_cloudinit(vmid, wait_timeout)
+
+    def _wait_for_cloudinit(self, vmid, timeout=120):
+        # Wait for Cloud-Init to complete by checking VM agent status
+        # This ensures network configuration has been applied
+        start_time = time.time()
+        check_interval = 5
+        
+        while time.time() - start_time < timeout:
+            try:
+                # Check if qemu-guest-agent is responding
+                result = subprocess.run(
+                    ["qm", "guest", "cmd", str(vmid), "network-get-interfaces"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    print(f"    -> Cloud-Init network configuration applied.")
+                    time.sleep(2)  # Additional wait for network to stabilize
+                    return
+            except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                pass
+            
+            elapsed = int(time.time() - start_time)
+            print(f"    -> Waiting for Cloud-Init... ({elapsed}/{timeout}s)")
+            time.sleep(check_interval)
+        
+        print(f"    -> Warning: Cloud-Init wait timeout after {timeout}s. Network may not be fully configured.")
