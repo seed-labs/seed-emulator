@@ -389,122 +389,12 @@ class Proxmox:
         print(f"    -> Resetting Cloud-Init state...")
         self.reset_cloudinit(vmid)
 
-    def start_vm(self, vmid, wait_for_cloudinit=True, wait_timeout=120):
+    def start_vm(self, vmid):
         # Start VM
         # Check status
         status_out = self._run_cmd(["qm", "status", str(vmid)])
         if "status: running" in status_out:
             print(f"    -> VM {vmid} is already running.")
-            if wait_for_cloudinit:
-                print(f"    -> Waiting for Cloud-Init to complete...")
-                self._wait_for_cloudinit(vmid, wait_timeout)
             return
         print(f"    -> Starting VM {vmid}...")
         self._run_cmd(["qm", "start", str(vmid)])
-        
-        # Wait for VM to boot and Cloud-Init to apply network configuration
-        if wait_for_cloudinit:
-            print(f"    -> Waiting for Cloud-Init to complete (timeout: {wait_timeout}s)...")
-            self._wait_for_cloudinit(vmid, wait_timeout)
-            
-            # Ensure SSH service is started after Cloud-Init
-            print(f"    -> Ensuring SSH service is running...")
-            self._ensure_ssh_service(vmid)
-
-    def _wait_for_cloudinit(self, vmid, timeout=120):
-        # Wait for Cloud-Init to complete by checking VM agent status and network connectivity
-        # This ensures network configuration has been applied
-        start_time = time.time()
-        check_interval = 5
-        network_ready = False
-        ssh_ready = False
-        
-        print(f"    -> Waiting for VM to boot and Cloud-Init to apply configuration...")
-        
-        while time.time() - start_time < timeout:
-            try:
-                # First check if qemu-guest-agent is responding
-                result = subprocess.run(
-                    ["qm", "guest", "cmd", str(vmid), "network-get-interfaces"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    timeout=5
-                )
-                if result.returncode == 0:
-                    network_ready = True
-                    
-                    # Try to check if SSH is accessible (optional, may not work immediately)
-                    # This is just a best-effort check
-                    try:
-                        # Get VM IP from Cloud-Init config (we'll check via ping instead)
-                        # For now, just wait a bit more for SSH to start
-                        if not ssh_ready and (time.time() - start_time) > 30:
-                            ssh_ready = True  # Assume SSH will be ready after 30s
-                    except Exception:
-                        pass
-                    
-                    if network_ready:
-                        print(f"    -> Cloud-Init network configuration applied.")
-                        time.sleep(3)  # Additional wait for network and SSH to stabilize
-                        return
-            except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
-                pass
-            
-            elapsed = int(time.time() - start_time)
-            if elapsed % 10 == 0:  # Print every 10 seconds
-                print(f"    -> Waiting for Cloud-Init... ({elapsed}/{timeout}s)")
-            time.sleep(check_interval)
-        
-        if network_ready:
-            print(f"    -> Cloud-Init network configuration applied (timeout reached).")
-        else:
-            print(f"    -> Warning: Cloud-Init wait timeout after {timeout}s. Network may not be fully configured.")
-
-    def _ensure_ssh_service(self, vmid):
-        # Ensure SSH service is enabled and started via guest agent
-        # This is needed because cloned VMs may have SSH service disabled
-        # Try both 'ssh' and 'sshd' service names (Ubuntu uses 'ssh', some systems use 'sshd')
-        max_retries = 3
-        retry_delay = 5
-        service_names = ["ssh", "sshd"]
-        
-        for service_name in service_names:
-            for attempt in range(max_retries):
-                try:
-                    # Try to enable SSH service via guest agent
-                    result = subprocess.run(
-                        ["qm", "guest", "cmd", str(vmid), "exec", "--", "systemctl", "enable", service_name],
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        timeout=10
-                    )
-                    
-                    # Check if service exists and was enabled
-                    if result.returncode == 0 or "already enabled" in result.stderr.lower() or "Created symlink" in result.stdout:
-                        # SSH service enabled, now start it
-                        result = subprocess.run(
-                            ["qm", "guest", "cmd", str(vmid), "exec", "--", "systemctl", "start", service_name],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            text=True,
-                            timeout=10
-                        )
-                        
-                        if result.returncode == 0 or "already active" in result.stderr.lower() or "active (running)" in result.stdout:
-                            print(f"    -> SSH service ({service_name}) is running.")
-                            return True
-                        elif "not found" in result.stderr.lower() or "does not exist" in result.stderr.lower():
-                            # Service doesn't exist, try next service name
-                            break
-                except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
-                    if attempt < max_retries - 1:
-                        print(f"    -> Retrying SSH service start ({service_name}, attempt {attempt + 1}/{max_retries})...")
-                        time.sleep(retry_delay)
-                    elif service_name == service_names[-1] and attempt == max_retries - 1:
-                        # Last service name, last attempt
-                        print(f"    -> Warning: Could not start SSH service via guest agent. SSH may need manual configuration.")
-                        return False
-        
-        return False
