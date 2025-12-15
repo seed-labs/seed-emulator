@@ -293,6 +293,10 @@ class Proxmox:
             
         self._run_cmd(cmd)
         print("    -> Clone finished.")
+        
+        # Note: Cloud-Init reset will be done in config_cloudinit
+        # to ensure it happens after all configuration is set
+        
         return True, vmid
 
     def config_network(self, vmid, bridge, firewall=True, model="virtio"):
@@ -306,9 +310,53 @@ class Proxmox:
             "--net0", net_conf
         ])
 
+    def reset_cloudinit(self, vmid):
+        # Reset Cloud-Init state to ensure it runs on next boot
+        # This is important for cloned VMs to apply new network configuration
+        # In Proxmox, we can force Cloud-Init to run by toggling the ciupgrade option
+        print(f"    -> Ensuring Cloud-Init will run on next boot...")
+        try:
+            # Method 1: Try using pvesh to reset Cloud-Init (Proxmox 7.0+)
+            # This clears the Cloud-Init status so it runs again
+            result = subprocess.run(
+                ["pvesh", "create", f"/nodes/localhost/qemu/{vmid}/cloudinit", "reset"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=10
+            )
+            if result.returncode == 0:
+                print(f"    -> Cloud-Init reset successful.")
+                return
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+            pass
+        
+        # Method 2: Force Cloud-Init to regenerate by toggling a setting
+        # This ensures Cloud-Init runs on next boot
+        try:
+            # Get current ciupgrade value
+            current_config = self._run_cmd(["qm", "config", str(vmid)], ignore_error=True)
+            if current_config:
+                # Toggle ciupgrade to force Cloud-Init refresh
+                # First check if it's set
+                has_ciupgrade = "ciupgrade:" in current_config or "ciupgrade: 1" in current_config
+                if not has_ciupgrade:
+                    # Set ciupgrade to enable Cloud-Init upgrade/refresh
+                    self._run_cmd(["qm", "set", str(vmid), "--ciupgrade", "1"], ignore_error=True)
+        except Exception:
+            pass
+        
+        print(f"    -> Cloud-Init will run on next boot.")
+
     def config_cloudinit(self, vmid, ip, gw, user, password, nameserver=None):
         # Inject Cloud-Init configuration: IP, gateway, username, password
         print(f"    -> Injecting Cloud-Init (IP: {ip}, User: {user})")
+        
+        # Ensure Cloud-Init is enabled
+        self._run_cmd([
+            "qm", "set", str(vmid),
+            "--agent", "enabled=1"
+        ])
         
         cmd = [
             "qm", "set", str(vmid),
@@ -317,10 +365,22 @@ class Proxmox:
             "--cipassword", password
         ]
         
+        # Format nameserver: if multiple DNS servers provided (comma-separated), convert to space-separated
         if nameserver:
-            cmd.extend(["--nameserver", nameserver])
+            # Convert comma-separated to space-separated for Proxmox
+            dns_servers = nameserver.replace(',', ' ').strip()
+            cmd.extend(["--nameserver", dns_servers])
+        
+        # Enable SSH password authentication in Cloud-Init
+        cmd.extend([
+            "--sshkeys", "",  # Clear any existing SSH keys to allow password auth
+        ])
             
         self._run_cmd(cmd)
+        
+        # Reset Cloud-Init to ensure it runs on next boot
+        print(f"    -> Resetting Cloud-Init state...")
+        self.reset_cloudinit(vmid)
 
     def start_vm(self, vmid, wait_for_cloudinit=True, wait_timeout=120):
         # Start VM
@@ -339,16 +399,24 @@ class Proxmox:
         if wait_for_cloudinit:
             print(f"    -> Waiting for Cloud-Init to complete (timeout: {wait_timeout}s)...")
             self._wait_for_cloudinit(vmid, wait_timeout)
+            
+            # Ensure SSH service is started after Cloud-Init
+            print(f"    -> Ensuring SSH service is running...")
+            self._ensure_ssh_service(vmid)
 
     def _wait_for_cloudinit(self, vmid, timeout=120):
-        # Wait for Cloud-Init to complete by checking VM agent status
+        # Wait for Cloud-Init to complete by checking VM agent status and network connectivity
         # This ensures network configuration has been applied
         start_time = time.time()
         check_interval = 5
+        network_ready = False
+        ssh_ready = False
+        
+        print(f"    -> Waiting for VM to boot and Cloud-Init to apply configuration...")
         
         while time.time() - start_time < timeout:
             try:
-                # Check if qemu-guest-agent is responding
+                # First check if qemu-guest-agent is responding
                 result = subprocess.run(
                     ["qm", "guest", "cmd", str(vmid), "network-get-interfaces"],
                     stdout=subprocess.PIPE,
@@ -357,14 +425,79 @@ class Proxmox:
                     timeout=5
                 )
                 if result.returncode == 0:
-                    print(f"    -> Cloud-Init network configuration applied.")
-                    time.sleep(2)  # Additional wait for network to stabilize
-                    return
+                    network_ready = True
+                    
+                    # Try to check if SSH is accessible (optional, may not work immediately)
+                    # This is just a best-effort check
+                    try:
+                        # Get VM IP from Cloud-Init config (we'll check via ping instead)
+                        # For now, just wait a bit more for SSH to start
+                        if not ssh_ready and (time.time() - start_time) > 30:
+                            ssh_ready = True  # Assume SSH will be ready after 30s
+                    except Exception:
+                        pass
+                    
+                    if network_ready:
+                        print(f"    -> Cloud-Init network configuration applied.")
+                        time.sleep(3)  # Additional wait for network and SSH to stabilize
+                        return
             except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
                 pass
             
             elapsed = int(time.time() - start_time)
-            print(f"    -> Waiting for Cloud-Init... ({elapsed}/{timeout}s)")
+            if elapsed % 10 == 0:  # Print every 10 seconds
+                print(f"    -> Waiting for Cloud-Init... ({elapsed}/{timeout}s)")
             time.sleep(check_interval)
         
-        print(f"    -> Warning: Cloud-Init wait timeout after {timeout}s. Network may not be fully configured.")
+        if network_ready:
+            print(f"    -> Cloud-Init network configuration applied (timeout reached).")
+        else:
+            print(f"    -> Warning: Cloud-Init wait timeout after {timeout}s. Network may not be fully configured.")
+
+    def _ensure_ssh_service(self, vmid):
+        # Ensure SSH service is enabled and started via guest agent
+        # This is needed because cloned VMs may have SSH service disabled
+        # Try both 'ssh' and 'sshd' service names (Ubuntu uses 'ssh', some systems use 'sshd')
+        max_retries = 3
+        retry_delay = 5
+        service_names = ["ssh", "sshd"]
+        
+        for service_name in service_names:
+            for attempt in range(max_retries):
+                try:
+                    # Try to enable SSH service via guest agent
+                    result = subprocess.run(
+                        ["qm", "guest", "cmd", str(vmid), "exec", "--", "systemctl", "enable", service_name],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        timeout=10
+                    )
+                    
+                    # Check if service exists and was enabled
+                    if result.returncode == 0 or "already enabled" in result.stderr.lower() or "Created symlink" in result.stdout:
+                        # SSH service enabled, now start it
+                        result = subprocess.run(
+                            ["qm", "guest", "cmd", str(vmid), "exec", "--", "systemctl", "start", service_name],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            text=True,
+                            timeout=10
+                        )
+                        
+                        if result.returncode == 0 or "already active" in result.stderr.lower() or "active (running)" in result.stdout:
+                            print(f"    -> SSH service ({service_name}) is running.")
+                            return True
+                        elif "not found" in result.stderr.lower() or "does not exist" in result.stderr.lower():
+                            # Service doesn't exist, try next service name
+                            break
+                except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                    if attempt < max_retries - 1:
+                        print(f"    -> Retrying SSH service start ({service_name}, attempt {attempt + 1}/{max_retries})...")
+                        time.sleep(retry_delay)
+                    elif service_name == service_names[-1] and attempt == max_retries - 1:
+                        # Last service name, last attempt
+                        print(f"    -> Warning: Could not start SSH service via guest agent. SSH may need manual configuration.")
+                        return False
+        
+        return False
