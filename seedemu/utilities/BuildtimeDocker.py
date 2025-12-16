@@ -112,4 +112,10 @@ class BuildtimeDockerContainer:
             raise Exception("Failed to run docker container:\n" + run_command)
 
         for source, _ in self.__volumes:
+        # On Linux/macOS we can chown to the current UID/GID so the host user owns the output.
+        # On Windows, os.getuid/getgid do not exist and chown is meaningless for NTFS permissions,
+        # so we just skip the chown step.
+         if hasattr(os, "getuid") and hasattr(os, "getgid"):
             sh(f"docker run --rm {source}:/tmp alpine:latest chown -R {os.getuid()}:{os.getgid()} /tmp")
+        else:
+             logging.warning("Skipping docker chown step on Windows (os.getuid/getgid not available).")

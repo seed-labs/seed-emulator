@@ -21,7 +21,8 @@ UtilityServerFileTemplates: Dict[str, str] = {
         'fund_account':    get_file_content("files_utility/fund_account.py"),
         'deploy_contract': get_file_content("files_utility/deploy_contract.py"),
         'utility_server':  get_file_content("files_utility/utility_server.py"),
-        'server_setup':    get_file_content("files_utility/utility_server_setup.py")
+        'server_setup':    get_file_content("files_utility/utility_server_setup.sh")
+
 }
 
 FaucetServerFileTemplates: Dict[str, str] = {

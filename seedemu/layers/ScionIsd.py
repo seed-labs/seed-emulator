@@ -1,10 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 import subprocess
 from collections import defaultdict
 from os.path import join as pjoin
 from tempfile import TemporaryDirectory
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
-
 from seedemu.core import Emulator, Layer, Node, ScionAutonomousSystem
 from seedemu.core.ScionAutonomousSystem import IA
 from seedemu.layers import ScionBase
@@ -160,17 +159,76 @@ class ScionIsd(Layer): # could be made a Customizable as well ..
 
         return out
 
-    def __gen_scion_crypto(self, base_layer: ScionBase, tempdir: str):
-        """Generate cryptographic material in a temporary directory on the host."""
+        def __gen_scion_crypto(self, base_layer: ScionBase, tempdir: str):
+            """Generate cryptographic material in a temporary directory on the host."""
         topofile = self.__gen_topofile(base_layer, tempdir)
         self._log("Calling scion-pki")
+
         try:
             result = subprocess.run(
                 ["scion-pki", "testcrypto", "-t", topofile, "-o", tempdir, "--as-validity", "30d"],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
             )
         except FileNotFoundError:
-            assert False, "scion-pki not found in PATH"
+            # Windows host cannot execute Linux scion-pki -> run inside Docker.
+            if shutil.which("docker") is None:
+                raise AssertionError("scion-pki not found in PATH and docker is not available")
+
+            topo_name = os.path.basename(topofile)
+
+            # Prefer a locally existing image first; otherwise fall back to upstream.
+            image_candidates = [
+                "scion-release-fetch-container_v0.12.0",
+                "scionproto/scion:v0.12.0",
+                "scionproto/scion:latest",
+            ]
+            image = None
+            for img in image_candidates:
+                inspect = subprocess.run(
+                    ["docker", "image", "inspect", img],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+                if inspect.returncode == 0:
+                    image = img
+                    break
+            if image is None:
+                image = "scionproto/scion:latest"
+
+            # Run scion-pki inside the container. We mount tempdir to /work so
+            # both topology file and output directory are available inside Docker.
+            cmd = (
+                "set -e; "
+                "TOPO=/work/" + topo_name + "; "
+                "if command -v scion-pki >/dev/null 2>&1; then "
+                "  scion-pki testcrypto -t \"$TOPO\" -o /work --as-validity 30d; "
+                "elif [ -x /app/bin/scion-pki ]; then "
+                "  /app/bin/scion-pki testcrypto -t \"$TOPO\" -o /work --as-validity 30d; "
+                "elif [ -x /bin/scion-pki ]; then "
+                "  /bin/scion-pki testcrypto -t \"$TOPO\" -o /work --as-validity 30d; "
+                "else "
+                "  echo 'scion-pki not found in container image' >&2; exit 127; "
+                "fi"
+            )
+
+            result = subprocess.run(
+                ["docker", "run", "--rm", "-v", f"{tempdir}:/work", image, "sh", "-lc", cmd],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+            )
+
+        if result.returncode != 0:
+            raise RuntimeError("scion-pki failed:\n" + (result.stdout or ""))
+
+        if result.stdout:
+            self._log(result.stdout)
+
 
         for line in result.stdout.split('\n'):
             self._log(line)

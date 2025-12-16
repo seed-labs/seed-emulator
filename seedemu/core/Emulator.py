@@ -8,6 +8,7 @@ from seedemu import core
 from typing import Dict, Set, Tuple, List
 from sys import prefix, stderr
 from ipaddress import IPv4Address, IPv4Network
+from seedemu.core.ExternalEmulation import ExternalEmuSpec
 import pickle
 
 class BindingDatabase(Registrable, Printable):
@@ -114,6 +115,8 @@ class Emulator:
         self.__service_net_prefix = serviceNetworkPrefix
         self.__service_net = None
         self.__ecp = ExternalConnectivityProvider()
+        self.__externalComponents = {}
+
 
 
     def __render(self, layerName, optional: bool, configure: bool):
@@ -593,3 +596,23 @@ class Emulator:
         assert self.__rendered, 'emulator is not rendered.'
         base:Base = self.getLayer('Base')
         return base.getAutonomousSystem(asn).getNetwork(network).hasDHCPService()
+
+    def registerExternalComponent(self, component):
+        """Register an external component."""
+        self.__externalComponents[component.name] = component
+
+    def getExternalComponents(self):
+        """Return all registered external components."""
+        return self.__externalComponents
+    
+    def addExternalEmulation(self, spec: "ExternalEmuSpec") -> None:
+        """Register an external emulator integration (Task 3)."""
+        if not hasattr(self, "_external_emulations"):
+            self._external_emulations = {}
+        self._external_emulations[spec.name] = spec
+        return self
+
+    def getExternalEmulations(self):
+        """Return all registered external emulator integrations."""
+        return getattr(self, "_external_emulations", {})
+

@@ -1,0 +1,6 @@
+*.sh text eol=lf
+*interface_setup* text eol=lf
+Dockerfile* text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
