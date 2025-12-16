@@ -2,7 +2,7 @@
     "machines": [
         {
             "name": "VM1",
-            "ip": "192.168.104.2",
+            "ip": "192.168.105.2",
             "port": 22,
             "user": "seed",
             "password": "dees",
@@ -10,7 +10,7 @@
         },
         {
             "name": "VM2",
-            "ip": "192.168.104.3",
+            "ip": "192.168.105.3",
             "port": 22,
             "user": "seed",
             "password": "dees",
@@ -18,7 +18,7 @@
         },
         {
             "name": "VM3",
-            "ip": "192.168.104.4",
+            "ip": "192.168.105.4",
             "port": 22,
             "user": "seed",
             "password": "dees",
