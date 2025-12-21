@@ -9,38 +9,84 @@ FILE_SCRIPT_TEMPLATE = """#!/usr/bin/env python3
 # encoding: utf-8
 from seedemu.compiler.Proxmox import SSHExecutor
 import json
-machine_config = json.load(open('machine_config.json'))
-for machine_id, machine in enumerate(machine_config['machines']):
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def upload_to_machine(machine_id, machine):
     ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
     try:
         ssh_executor.upload(
             local_path=f'output_{machine_id}/',
             remote_path=f'/home/seed/output_{machine_id}/'
         )
+        return f"Machine {machine_id} ({machine['ip']}): Upload completed"
+    except Exception as e:
+        return f"Machine {machine_id} ({machine['ip']}): Upload failed - {str(e)}"
     finally:
         ssh_executor.close()
+
+machine_config = json.load(open('machine_config.json'))
+with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor:
+    futures = {
+        executor.submit(upload_to_machine, machine_id, machine): (machine_id, machine)
+        for machine_id, machine in enumerate(machine_config['machines'])
+    }
+    for future in as_completed(futures):
+        result = future.result()
+        print(result)
 """
 
 EXECUTOR_SCRIPT_TEMPLATE = """#!/usr/bin/env python3
 # encoding: utf-8
 from seedemu.compiler.Proxmox import SSHExecutor
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def execute_on_machine(machine_id, machine):
+    ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
+    try:
+        ssh_executor.run_command(f'cd /home/seed/output_{machine_id}/ && DOCKER_BUILDKIT=0 docker compose build && docker compose up -d')
+        return f"Machine {machine_id} ({machine['ip']}): Command executed successfully"
+    except Exception as e:
+        return f"Machine {machine_id} ({machine['ip']}): Command failed - {str(e)}"
+    finally:
+        ssh_executor.close()
 
 machine_config = json.load(open('machine_config.json'))
-for machine_id, machine in enumerate(machine_config['machines']):
-    ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
-    ssh_executor.run_command(f'sudo systemctl restart docker && cd /home/seed/output_{machine_id}/ && DOCKER_BUILDKIT=0 docker compose build && docker compose up -d')
+with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor:
+    futures = {
+        executor.submit(execute_on_machine, machine_id, machine): (machine_id, machine)
+        for machine_id, machine in enumerate(machine_config['machines'])
+    }
+    for future in as_completed(futures):
+        result = future.result()
+        print(result)
 """
 
 BUILDNET_SCRIPT_TEMPLATE = """#!/usr/bin/env python3
 # encoding: utf-8
 from seedemu.compiler.Proxmox import SSHExecutor
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def buildnet_on_machine(machine_id, machine):
+    ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
+    try:
+        ssh_executor.run_command(f'cd /home/seed/output_{machine_id}/ && chmod +x ./net.sh && ./net.sh')
+        return f"Machine {machine_id} ({machine['ip']}): Buildnet completed successfully"
+    except Exception as e:
+        return f"Machine {machine_id} ({machine['ip']}): Buildnet failed - {str(e)}"
+    finally:
+        ssh_executor.close()
 
 machine_config = json.load(open('machine_config.json'))
-for machine_id, machine in enumerate(machine_config['machines']):
-    ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
-    ssh_executor.run_command(f'cd /home/seed/output_{machine_id}/ && chmod +x ./net.sh && ./net.sh')
+with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor:
+    futures = {
+        executor.submit(buildnet_on_machine, machine_id, machine): (machine_id, machine)
+        for machine_id, machine in enumerate(machine_config['machines'])
+    }
+    for future in as_completed(futures):
+        result = future.result()
+        print(result)
 """
 
 class SSHExecutor:
