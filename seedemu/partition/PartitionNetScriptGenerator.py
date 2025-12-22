@@ -27,9 +27,6 @@ fi
 
 echo "Using physical interface: $PHYSICAL_IFACE"
 
-# Install required tools
-sudo apt-get install -y vlan bridge-utils
-
 # Function: Find bridge for IXP network
 find_bridge_for_ixp() {{
     local ixp_id=$1
