@@ -89,6 +89,100 @@ with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor
         print(result)
 """
 
+COMBINED_SCRIPT_TEMPLATE = """#!/usr/bin/env python3
+# encoding: utf-8
+from seedemu.compiler.Proxmox import SSHExecutor
+import json
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def upload_to_machine(machine_id, machine):
+    ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
+    try:
+        ssh_executor.upload(
+            local_path=f'output_{machine_id}/',
+            remote_path=f'/home/seed/output_{machine_id}/'
+        )
+        return f"Machine {machine_id} ({machine['ip']}): Upload completed"
+    except Exception as e:
+        return f"Machine {machine_id} ({machine['ip']}): Upload failed - {str(e)}"
+    finally:
+        ssh_executor.close()
+
+def execute_on_machine(machine_id, machine):
+    ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
+    try:
+        ssh_executor.run_command(f'cd /home/seed/output_{machine_id}/ && DOCKER_BUILDKIT=0 docker compose build && docker compose up -d')
+        return f"Machine {machine_id} ({machine['ip']}): Command executed successfully"
+    except Exception as e:
+        return f"Machine {machine_id} ({machine['ip']}): Command failed - {str(e)}"
+    finally:
+        ssh_executor.close()
+
+def buildnet_on_machine(machine_id, machine):
+    ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
+    try:
+        ssh_executor.run_command(f'cd /home/seed/output_{machine_id}/ && chmod +x ./net.sh && ./net.sh')
+        return f"Machine {machine_id} ({machine['ip']}): Buildnet completed successfully"
+    except Exception as e:
+        return f"Machine {machine_id} ({machine['ip']}): Buildnet failed - {str(e)}"
+    finally:
+        ssh_executor.close()
+
+machine_config = json.load(open('machine_config.json'))
+
+# Step 1: Upload files
+print("="*70)
+print("Step 1: Uploading files to remote machines...")
+print("="*70)
+with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor:
+    futures = {
+        executor.submit(upload_to_machine, machine_id, machine): (machine_id, machine)
+        for machine_id, machine in enumerate(machine_config['machines'])
+    }
+    for future in as_completed(futures):
+        result = future.result()
+        print(result)
+
+# Wait 5 seconds before next step
+print("\nWaiting 5 seconds before next step...")
+time.sleep(5)
+
+# Step 2: Execute docker compose commands
+print("\n" + "="*70)
+print("Step 2: Executing docker compose commands...")
+print("="*70)
+with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor:
+    futures = {
+        executor.submit(execute_on_machine, machine_id, machine): (machine_id, machine)
+        for machine_id, machine in enumerate(machine_config['machines'])
+    }
+    for future in as_completed(futures):
+        result = future.result()
+        print(result)
+
+# Wait 5 seconds before next step
+print("\nWaiting 5 seconds before next step...")
+time.sleep(5)
+
+# Step 3: Execute net.sh scripts
+print("\n" + "="*70)
+print("Step 3: Executing net.sh scripts...")
+print("="*70)
+with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor:
+    futures = {
+        executor.submit(buildnet_on_machine, machine_id, machine): (machine_id, machine)
+        for machine_id, machine in enumerate(machine_config['machines'])
+    }
+    for future in as_completed(futures):
+        result = future.result()
+        print(result)
+
+print("\n" + "="*70)
+print("All steps completed!")
+print("="*70)
+"""
+
 class SSHExecutor:
     def __init__(self, host, port, user, password):
         self.host = host
@@ -175,6 +269,8 @@ class ScriptGenerator:
             return EXECUTOR_SCRIPT_TEMPLATE
         elif script_type == 'buildnet':
             return BUILDNET_SCRIPT_TEMPLATE
+        elif script_type == 'combined':
+            return COMBINED_SCRIPT_TEMPLATE
         else:
             raise ValueError(f'Invalid script type: {script_type}')
 
