@@ -129,7 +129,7 @@ def buildnet_on_machine(machine_id, machine):
     finally:
         ssh_executor.close()
 
-machine_config = json.load(open('machine_config.json'))
+machine_config = json.load(open('config.json'))
 
 # Step 1: Upload files
 print("="*70)
