@@ -1,5 +1,31 @@
 from seedemu import *
 import os, sys
+import json
+from seedemu.compiler.Proxmox import Proxmox
+
+# Load configuration from machine_config.json
+def load_config(config_path='config.json'):
+    """Load configuration from JSON file"""
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    return config
+
+# Load configuration
+config = load_config()
+
+# Read Proxmox configuration from JSON
+proxmox_config = config.get('proxmox', {})
+BRIDGE_NAME = proxmox_config.get('bridge_name', 'vmbr3')
+TEMPLATE_ID = proxmox_config.get('template_id', 152)
+GATEWAY = proxmox_config.get('gateway', '192.168.105.1')
+USERNAME = proxmox_config.get('username', 'seed')
+PASSWORD = proxmox_config.get('password', 'dees')
+DNS_SERVERS = proxmox_config.get('dns_servers', '10.10.0.21,8.8.8.8')
+FIREWALL_ENABLED = proxmox_config.get('firewall_enabled', False)
+BRIDGE_CIDR = proxmox_config.get('bridge_cidr', 24)
+STORAGE = proxmox_config.get('storage', 'local-lvm')
+FULL_CLONE = proxmox_config.get('full_clone', False)
+VM_NETWORK_MODEL = proxmox_config.get('vm_network_model', 'virtio')
 
 HOSTS_PER_AS = 10
 
@@ -163,10 +189,104 @@ emu.addLayer(dhcp)
 emu.render()
 
 ###############################################################################
+# Create Proxmox VMs and OVS Bridge
+# Use machine configuration from loaded config
+machines = config['machines']
+vm_ips = [machine['ip'] for machine in machines]
+num_vms = len(machines)
+
+print("\n" + "="*70)
+print("Creating Proxmox VMs and OVS Bridge")
+print("="*70)
+print(f"Number of VMs to create: {num_vms}")
+print(f"Bridge name: {BRIDGE_NAME}")
+print(f"Template ID: {TEMPLATE_ID}")
+print(f"Gateway: {GATEWAY}")
+print(f"VM IPs: {vm_ips}")
+
+# Initialize Proxmox client
+pm = Proxmox()
+
+# 1. Create OVS Bridge and configure IP address
+print("\n" + "-"*70)
+print("Step 1: Creating OVS Bridge and Configuring IP")
+print("-"*70)
+pm.create_ovs_bridge(
+    BRIDGE_NAME,
+    comment="Created_by_distributed_emulation_script",
+    bridge_ip=GATEWAY,
+    bridge_cidr=BRIDGE_CIDR
+)
+
+# 2. Create and configure VMs
+print("\n" + "-"*70)
+print("Step 2: Creating and Configuring VMs")
+print("-"*70)
+
+vmids = []
+for idx, machine in enumerate(machines):
+    ip = machine['ip']
+    vm_name = machine.get('name', f"VM-{ip.split('.')[-1]}")
+    
+    print(f"\n--- Processing VM {idx + 1}/{num_vms}: {vm_name} (IP: {ip}) ---")
+    
+    # Clone VM (auto-allocate VMID)
+    success, vmid = pm.deploy_vm(
+        template_id=TEMPLATE_ID,
+        vmid=None,  # Auto-allocate
+        name=vm_name,
+        storage=STORAGE,
+        full_clone=FULL_CLONE
+    )
+    
+    if not success:
+        # VM already exists, but still need to configure
+        print(f"    -> VM {vmid} already exists, will update configuration")
+    
+    vmids.append(vmid)
+    print(f"    -> VMID: {vmid}")
+    
+    # Configure network (connect to bridge, firewall setting)
+    pm.config_network(
+        vmid=vmid,
+        bridge=BRIDGE_NAME,
+        firewall=FIREWALL_ENABLED,
+        model=VM_NETWORK_MODEL
+    )
+    
+    # Configure Cloud-Init (IP, gateway, username, password, DNS)
+    # Use machine-specific credentials if available, otherwise use global defaults
+    vm_user = machine.get('user', USERNAME)
+    vm_password = machine.get('password', PASSWORD)
+    pm.config_cloudinit(
+        vmid=vmid,
+        ip=ip,
+        gw=GATEWAY,
+        user=vm_user,
+        password=vm_password,
+        nameserver=DNS_SERVERS
+    )
+    
+    # Start VM
+    pm.start_vm(vmid, wait_for_cloudinit=False)
+    
+    print(f"    -> VM {vmid} ({vm_name}) configured and started successfully")
+
+# 3. Summary
+print("\n" + "-"*70)
+print("VM Creation Summary")
+print("-"*70)
+print(f"Bridge: {BRIDGE_NAME}")
+print(f"Created VMs:")
+for idx, (vmid, machine) in enumerate(zip(vmids, machines), 1):
+    vm_name = machine.get('name', f"VM-{machine['ip'].split('.')[-1]}")
+    print(f"  {idx}. VMID {vmid}: {vm_name} ({machine['ip']})")
+print("-"*70)
+
+###############################################################################
 # Partition the emulator across multiple machines
 # Define machine capacities (resource limits for each machine)
-machine_config = json.load(open('machine_config.json'))
-machine_capacities = [machine['capacity'] for machine in machine_config['machines']]
+machine_capacities = [machine['capacity'] for machine in machines]
 
 # Call partition solver
 print("\n" + "="*70)
@@ -231,20 +351,15 @@ if partition_result:
         except Exception as e:
             print(f"✗ Failed to compile Machine {machine_id}: {e}")
 
-    # Generate controller scripts
+    # Generate combined controller script
     try:
         script_generator = ScriptGenerator()
-        file_script = script_generator.generate(script_type='file')
-        with open('distribute.py', 'w') as f:
-            f.write(file_script)
-        execute_script = script_generator.generate(script_type='executor')
-        with open('execute.py', 'w') as f:
-            f.write(execute_script)
-        buildnet_script = script_generator.generate(script_type='buildnet')
-        with open('buildnet.py', 'w') as f:
-            f.write(buildnet_script)
+        combined_script = script_generator.generate(script_type='combined')
+        with open('deploy.py', 'w') as f:
+            f.write(combined_script)
+        print(f"✓ Generated combined deployment script: deploy.py")
     except Exception as e:
-        print(f"✗ Failed to generate scripts: {e}")
+        print(f"✗ Failed to generate script: {e}")
     
     print("\n" + "="*70)
     print("All sub-emulators compiled!")

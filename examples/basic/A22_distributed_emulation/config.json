@@ -1,4 +1,17 @@
 {
+    "proxmox": {
+        "bridge_name": "vmbr3",
+        "template_id": 152,
+        "gateway": "192.168.105.1",
+        "username": "seed",
+        "password": "dees",
+        "dns_servers": "10.10.0.21,8.8.8.8",
+        "firewall_enabled": false,
+        "bridge_cidr": 24,
+        "storage": "local-lvm",
+        "full_clone": false,
+        "vm_network_model": "virtio"
+    },
     "machines": [
         {
             "name": "VM1",
