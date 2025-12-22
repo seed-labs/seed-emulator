@@ -145,11 +145,11 @@ with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor
         print(result)
 
 # Wait 5 seconds before next step
-print("\nWaiting 5 seconds before next step...")
+print('\\n' + "Waiting 5 seconds before next step...")
 time.sleep(5)
 
 # Step 2: Execute docker compose commands
-print("\n" + "="*70)
+print('\\n' + "="*70)
 print("Step 2: Executing docker compose commands...")
 print("="*70)
 with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor:
@@ -162,11 +162,11 @@ with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor
         print(result)
 
 # Wait 5 seconds before next step
-print("\nWaiting 5 seconds before next step...")
+print('\\n' + "Waiting 5 seconds before next step...")
 time.sleep(5)
 
 # Step 3: Execute net.sh scripts
-print("\n" + "="*70)
+print('\\n' + "="*70)
 print("Step 3: Executing net.sh scripts...")
 print("="*70)
 with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor:
@@ -178,7 +178,7 @@ with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor
         result = future.result()
         print(result)
 
-print("\n" + "="*70)
+print('\\n' + "="*70)
 print("All steps completed!")
 print("="*70)
 """
