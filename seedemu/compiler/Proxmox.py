@@ -112,7 +112,7 @@ def upload_to_machine(machine_id, machine):
 def execute_on_machine(machine_id, machine):
     ssh_executor = SSHExecutor(host=machine['ip'], port=machine['port'], user=machine['user'], password=machine['password'])
     try:
-        ssh_executor.run_command(f'cd /home/seed/output_{machine_id}/ && DOCKER_BUILDKIT=0 docker compose build && docker compose up -d')
+        ssh_executor.run_command(f'sudo systemctl restart systemd-logind && sudo systemctl restart dbus && sudo systemctl restart docker && sudo systemctl restart containerd && cd /home/seed/output_{machine_id}/ && DOCKER_BUILDKIT=0 docker compose build && docker compose up -d')
         return f"Machine {machine_id} ({machine['ip']}): Command executed successfully"
     except Exception as e:
         return f"Machine {machine_id} ({machine['ip']}): Command failed - {str(e)}"
@@ -145,8 +145,8 @@ with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor
         print(result)
 
 # Wait 5 seconds before next step
-print('\\n' + "Waiting 5 seconds before next step...")
-time.sleep(5)
+print('\\n' + "Waiting 10 seconds before next step...")
+time.sleep(10)
 
 # Step 2: Execute docker compose commands
 print('\\n' + "="*70)
@@ -162,8 +162,8 @@ with ThreadPoolExecutor(max_workers=len(machine_config['machines'])) as executor
         print(result)
 
 # Wait 5 seconds before next step
-print('\\n' + "Waiting 5 seconds before next step...")
-time.sleep(5)
+print('\\n' + "Waiting 10 seconds before next step...")
+time.sleep(10)
 
 # Step 3: Execute net.sh scripts
 print('\\n' + "="*70)
