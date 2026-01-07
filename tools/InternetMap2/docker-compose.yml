@@ -4,6 +4,7 @@ services:
     seedemu-client:
         build: .
         container_name: seedemu_client
+        image: handsonsecurity/seedemu-internetmap:2.0
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:
