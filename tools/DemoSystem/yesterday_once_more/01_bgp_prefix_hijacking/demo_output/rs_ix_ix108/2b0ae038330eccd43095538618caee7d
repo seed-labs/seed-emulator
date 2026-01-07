@@ -1,0 +1,23 @@
+router id 10.108.0.108;
+ipv4 table t_direct;
+protocol device {
+}
+protocol bgp p_as3 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.108.0.108 as 108;
+    neighbor 10.108.0.3 as 3;
+}
+protocol bgp p_as4 {
+    ipv4 {
+        import all;
+        export all;
+    };
+    rs client;
+    local 10.108.0.108 as 108;
+    neighbor 10.108.0.4 as 4;
+}
+

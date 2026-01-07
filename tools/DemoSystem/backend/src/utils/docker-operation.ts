@@ -679,7 +679,7 @@ APPEND_EOF`
     ): Promise<{ stdout: string; stderr: string }> {
         let cleanedStdout, cleanedStderr
         try {
-            let cmd = `cd ${composePath} && docker compose ${command}`;
+            let cmd = `cd ${composePath} && DOCKER_BUILDKIT=0 docker compose build && docker compose ${command}`;
             if (serviceName) {
                 cmd += ` ${serviceName}`;
             }

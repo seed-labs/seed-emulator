@@ -1,0 +1,110 @@
+router id 10.0.0.21;
+ipv4 table t_direct;
+protocol device {
+}
+protocol kernel {
+    ipv4 {
+        import all;
+        export all;
+    };
+    learn;
+}
+protocol direct local_nets {
+    ipv4 {
+        table t_direct;
+        import all;
+    };
+
+    interface "net_103_106";
+
+}
+define LOCAL_COMM = (13, 0, 0);
+define CUSTOMER_COMM = (13, 1, 0);
+define PEER_COMM = (13, 2, 0);
+define PROVIDER_COMM = (13, 3, 0);
+ipv4 table t_bgp;
+protocol pipe {
+    table t_bgp;
+    peer table master4;
+    import none;
+    export all;
+}
+protocol pipe {
+    table t_direct;
+    peer table t_bgp;
+    import none;
+    export filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; };
+}
+protocol bgp c_as167 {
+    ipv4 {
+        table t_bgp;
+        import filter {
+            bgp_large_community.add(CUSTOMER_COMM);
+            bgp_local_pref = 30;
+            accept;
+        };
+        export all;
+        next hop self;
+    };
+    local 10.106.0.13 as 13;
+    neighbor 10.106.0.167 as 167;
+}
+protocol bgp c_as168 {
+    ipv4 {
+        table t_bgp;
+        import filter {
+            bgp_large_community.add(CUSTOMER_COMM);
+            bgp_local_pref = 30;
+            accept;
+        };
+        export all;
+        next hop self;
+    };
+    local 10.106.0.13 as 13;
+    neighbor 10.106.0.168 as 168;
+}
+protocol bgp c_as169 {
+    ipv4 {
+        table t_bgp;
+        import filter {
+            bgp_large_community.add(CUSTOMER_COMM);
+            bgp_local_pref = 30;
+            accept;
+        };
+        export all;
+        next hop self;
+    };
+    local 10.106.0.13 as 13;
+    neighbor 10.106.0.169 as 169;
+}
+ipv4 table t_ospf;
+protocol ospf ospf1 {
+    ipv4 {
+        table t_ospf;
+        import all;
+        export all;
+    };
+    area 0 {
+        interface "dummy0" { stub; };
+        interface "ix106" { stub; };
+        interface "net_103_106" { hello 1; dead count 2; };
+
+    };
+}
+protocol pipe {
+    table t_ospf;
+    peer table master4;
+    import none;
+    export all;
+}
+protocol bgp ibgp1 {
+    ipv4 {
+        table t_bgp;
+        import all;
+        export all;
+        igp table t_ospf;
+    };
+    local 10.0.0.21 as 13;
+    neighbor 10.0.0.20 as 13;
+}
+
