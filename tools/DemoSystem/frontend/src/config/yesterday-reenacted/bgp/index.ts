@@ -7,7 +7,7 @@ export const config = [
                 action: 'compose',
                 cmd: "composeUp",
                 detach: false,
-                composePath: './examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/output',
+                composePath: './yesterday_once_more/01_bgp_prefix_hijacking/demo_output',
                 pythonFile: 'BGP_Prefix_Hijacking.py'
             }]
         }],
@@ -78,7 +78,7 @@ docker exec as199brd-attacker-bgp-10.199.0.254 birdc configure</pre>
                         action: 'cp',
                         srcName: '',
                         dstName: 'as199brd-attacker-bgp-10.199.0.254',
-                        srcPath: './examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/Jupyter/as199brd_bird.conf_malicious',
+                        srcPath: './yesterday_once_more/01_bgp_prefix_hijacking/files/as199brd_bird.conf_malicious',
                         dstPath: '/etc/bird/bird.conf',
                         detach: false
                     },
@@ -151,7 +151,7 @@ docker exec as153brd-router0-10.153.0.254 birdc configure</pre>
                         action: 'cp',
                         srcName: '',
                         dstName: 'as153brd-router0-10.153.0.254',
-                        srcPath: './examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/Jupyter/as153brd_bird.conf_fightback',
+                        srcPath: './yesterday_once_more/01_bgp_prefix_hijacking/files/as153brd_bird.conf_fightback',
                         dstPath: '/etc/bird/bird.conf',
                         detach: false
                     },
@@ -181,7 +181,7 @@ docker exec as153brd-router0-10.153.0.254 birdc configure</pre>
                         action: 'cp',
                         srcName: '',
                         dstName: 'as153brd-router0-10.153.0.254',
-                        srcPath: './examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/Jupyter/as153brd_bird.conf_original',
+                        srcPath: './yesterday_once_more/01_bgp_prefix_hijacking/files/as153brd_bird.conf_original',
                         dstPath: '/etc/bird/bird.conf',
                         detach: false
                     },
@@ -257,7 +257,7 @@ docker exec as11brd-r105-10.105.0.11 birdc configure</pre>
                         action: 'cp',
                         srcName: '',
                         dstName: 'as11brd-r105-10.105.0.11',
-                        srcPath: './examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/Jupyter/as11brd-r105_bird.conf_fixproblem',
+                        srcPath: './yesterday_once_more/01_bgp_prefix_hijacking/files/as11brd-r105_bird.conf_fixproblem',
                         dstPath: '/etc/bird/bird.conf',
                         detach: false
                     },
@@ -281,7 +281,7 @@ docker exec as11brd-r105-10.105.0.11 birdc configure</pre>
                         action: 'cp',
                         srcName: '',
                         dstName: 'as199brd-attacker-bgp-10.199.0.254',
-                        srcPath: './examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/Jupyter/as199brd_bird.conf_original',
+                        srcPath: './yesterday_once_more/01_bgp_prefix_hijacking/files/as199brd_bird.conf_original',
                         dstPath: '/etc/bird/bird.conf',
                         detach: false
                     },
@@ -295,7 +295,7 @@ docker exec as11brd-r105-10.105.0.11 birdc configure</pre>
                         action: 'cp',
                         srcName: '',
                         dstName: 'as153brd-router0-10.153.0.254',
-                        srcPath: './examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/Jupyter/as153brd_bird.conf_original',
+                        srcPath: './yesterday_once_more/01_bgp_prefix_hijacking/files/as153brd_bird.conf_original',
                         dstPath: '/etc/bird/bird.conf',
                         detach: false
                     },
@@ -309,7 +309,7 @@ docker exec as11brd-r105-10.105.0.11 birdc configure</pre>
                         action: 'cp',
                         srcName: '',
                         dstName: 'as11brd-r105-10.105.0.11',
-                        srcPath: './examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/Jupyter/as11brd-r105_bird.conf_original',
+                        srcPath: './yesterday_once_more/01_bgp_prefix_hijacking/files/as11brd-r105_bird.conf_original',
                         dstPath: '/etc/bird/bird.conf',
                         detach: false
                     },
@@ -331,7 +331,7 @@ docker exec as11brd-r105-10.105.0.11 birdc configure</pre>
                 action: 'compose',
                 cmd: "composeDown",
                 detach: false,
-                composePath: './examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/output'
+                composePath: './yesterday_once_more/01_bgp_prefix_hijacking/demo_output'
             }]
         }],
     },

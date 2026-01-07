@@ -1,0 +1,29 @@
+#!/bin/bash
+iptables -t nat -A POSTROUTING -d 58.205.0.0/16 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 58.205.0.0/16 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 222.192.0.0/16 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 222.192.0.0/16 -j TTL --ttl-set 64
+iptables -t nat -A POSTROUTING -d 10.203.0.0/16 -j MASQUERADE
+iptables -t mangle -A POSTROUTING -d 10.203.0.0/16 -j TTL --ttl-set 64
+gw="`ip rou show default | cut -d' ' -f3`"
+if [ -z "$gw" ]; then
+
+    #line=$(<"/ifinfo.txt")
+    line=$(grep '^000_svc:' "/ifinfo.txt")
+    if [ -z "$line" ]; then
+        echo "Error: Could not find 000_svc in /ifinfo.txt" >&2
+        exit 1
+    fi
+    ip_portion=$(echo "$line" | cut -d':' -f2)
+    ip_only=$(echo "$ip_portion" | cut -d'/' -f1)
+    docker_host="${ip_only%.*}.1"
+    if [ -z "$docker_host"]; then
+        echo "Error: Could not determine the default route required to configure BIRD." >&2
+        exit 1;
+    else
+        gw="$docker_host";
+    fi
+fi
+sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
+exit 0
+
