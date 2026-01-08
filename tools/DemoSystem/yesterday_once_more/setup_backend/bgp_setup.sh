@@ -3,21 +3,24 @@
 TARGET='./target_prefix'
 BGP_CONF_DIR="../01_bgp_prefix_hijacking/files/as199_include"
 
-# 2. Check if the file exists
+# Create the folder if it does not exist
+mkdir -p "$BGP_CONF_DIR"
+
+# Check if the file exists
 if [ ! -f "$TARGET" ]; then
     echo "Error: File '$TARGET' not found."
     exit 1
 fi
 
 BGP_ENTRIES=''
-# 3. Read the file line by line
+# Read the file line by line
 # IFS= prevents trimming leading/trailing whitespace from the raw line
 # -r prevents backslashes from being interpreted as escape characters
 # || [ -n "$line" ] ensures the last line is processed even if it lacks a newline
 while IFS= read -r line || [ -n "$line" ]; do
 
-    # Skip empty lines (optional)
-    [[ -z "$line" ]] && continue
+    [[ "$line" == \#* ]] && continue   # Skip comment
+    [[ -z "$line" ]] && continue       # Skip empty lines 
 
     # 4. Split the line into an array
     # Unquoted $line inside parentheses triggers default word splitting (whitespace)
