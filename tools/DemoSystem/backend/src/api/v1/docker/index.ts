@@ -140,12 +140,20 @@ router.post('/exec/cp', async (req, res) => {
     if (dstPath.startsWith("./")) {
         srcPath = path.resolve(path.resolve(basePath), dstPath);
     }
-    if (srcName === '') {
-        cpRet = await dockerOperation.copyToContainer(docker, dstId, srcPath, dstPath)
-    } else if (dstName === '') {
-        cpRet = await dockerOperation.copyFromContainer(docker, srcId, srcPath, dstPath)
+    if (srcPath.endsWith("/")) {
+        if (srcName === '') {
+            cpRet = await dockerOperation.copyDirectoryToContainer(docker, dstId, srcPath, dstPath)
+        } else if (dstName === '') {
+            cpRet = await dockerOperation.copyDirectoryFromContainer(docker, srcId, srcPath, dstPath)
+        }
     } else {
-        cpRet = await dockerOperation.copyBetweenContainers(docker, srcId, srcPath, dstId, dstPath)
+        if (srcName === '') {
+            cpRet = await dockerOperation.copyToContainer(docker, dstId, srcPath, dstPath)
+        } else if (dstName === '') {
+            cpRet = await dockerOperation.copyFromContainer(docker, srcId, srcPath, dstPath)
+        } else {
+            cpRet = await dockerOperation.copyBetweenContainers(docker, srcId, srcPath, dstId, dstPath)
+        }
     }
     if (cpRet) {
         res.json({ok: true, result: ''});

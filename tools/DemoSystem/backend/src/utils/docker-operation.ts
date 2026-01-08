@@ -13,6 +13,8 @@ const execAsync = promisify(exec);
 
 const PORT = '2375'
 
+const docker = new dockerode();
+
 interface ExecResult {
     ok: boolean;
     exitCode?: number;
@@ -24,11 +26,11 @@ interface ExecResult {
 
 export class DockerOperation implements LogProducer {
     private readonly _logger: Logger;
-    private _dockerMap: Map<string, dockerode>;
+    // private _dockerMap: Map<string, dockerode>;
 
     constructor() {
         this._logger = new Logger({name: 'Docker'});
-        this._dockerMap = new Map()
+        // this._dockerMap = new Map()
     }
 
     genKey(host: string, port: string) {
@@ -39,32 +41,33 @@ export class DockerOperation implements LogProducer {
     }
 
     async getDocker(config: DockerOptions) {
-        let docker: dockerode = null
-        const {host, port} = config
-        const key = this.genKey(host, port.toString())
-        if (this._dockerMap.has(key)) {
-            docker = this._dockerMap.get(key)
-        } else {
-            if (port === '0' || port === '') {
-                config.port = PORT
-            }
-            docker = new dockerode(config);
-        }
-        if (await this.isConnection(docker)) {
-            this._dockerMap.set(key, docker)
-        } else {
-            docker = null
-        }
         return docker
+        // let docker: dockerode = null
+        // const {host, port} = config
+        // const key = this.genKey(host, port.toString())
+        // if (this._dockerMap.has(key)) {
+        //     docker = this._dockerMap.get(key)
+        // } else {
+        //     if (port === '0' || port === '') {
+        //         config.port = PORT
+        //     }
+        //     docker = new dockerode(config);
+        // }
+        // if (await this.isConnection(docker)) {
+        //     this._dockerMap.set(key, docker)
+        // } else {
+        //     docker = null
+        // }
+        // return docker
     }
 
-    removeDocker(host: string, port: string) {
-        const key = this.genKey(host, port)
-        if (this._dockerMap.has(key)) {
-            this._dockerMap.delete(key)
-        }
-        return true
-    }
+    // removeDocker(host: string, port: string) {
+    //     const key = this.genKey(host, port)
+    //     if (this._dockerMap.has(key)) {
+    //         this._dockerMap.delete(key)
+    //     }
+    //     return true
+    // }
 
     async isConnection(docker: dockerode): Promise<boolean> {
         try {
@@ -97,7 +100,7 @@ export class DockerOperation implements LogProducer {
             return containerInfo!.Id
 
         } catch (error) {
-            console.error('查找容器失败:', error)
+            this._logger.error('查找容器失败:', error)
             this._logger.error(`查找容器失败: ${error}`,)
             return ''
         }
@@ -142,7 +145,6 @@ export class DockerOperation implements LogProducer {
             }
 
         } catch (error) {
-            console.log('copy failed:', error)
             this._logger.error('copy failed:', error);
             ret = false
         }
@@ -178,7 +180,7 @@ export class DockerOperation implements LogProducer {
                 throw new Error(`创建目录失败: ${dirPath}`);
             }
         } catch (error) {
-            console.error(`确保目录存在失败 ${dirPath}:`, error);
+            this._logger.error(`确保目录存在失败 ${dirPath}:`, error);
             throw error;
         }
     }
@@ -442,7 +444,7 @@ APPEND_EOF`
             throw new Error(`不支持的路径类型: ${sourcePath}`);
 
         } catch (error) {
-            console.error('复制到容器失败:', error);
+            this._logger.error('复制到容器失败:', error);
             return false;
         }
     }
@@ -479,11 +481,11 @@ APPEND_EOF`
                 noOverwriteDirNonDir: false
             });
 
-            console.log(`文件复制成功: ${hostFilePath} -> ${containerFilePath}`);
+            this._logger.info(`文件复制成功: ${hostFilePath} -> ${containerFilePath}`);
             return true;
 
         } catch (error) {
-            console.error('复制文件到容器失败:', error);
+            this._logger.error('复制文件到容器失败:', error);
         }
     }
 
@@ -509,11 +511,11 @@ APPEND_EOF`
                 noOverwriteDirNonDir: false
             });
 
-            console.log(`目录复制成功: ${hostDirPath} -> ${containerDirPath}`);
+            this._logger.info(`目录复制成功: ${hostDirPath} -> ${containerDirPath}`);
             return true;
 
         } catch (error) {
-            console.error('复制目录到容器失败:', error);
+            this._logger.error('复制目录到容器失败:', error);
             return false;
         }
     }
@@ -549,7 +551,7 @@ APPEND_EOF`
             }
 
         } catch (error) {
-            console.error('从容器复制失败:', error);
+            this._logger.error('从容器复制失败:', error);
             return false;
         }
     }
@@ -604,11 +606,11 @@ APPEND_EOF`
                 archiveStream.on('error', reject);
             });
 
-            console.log(`文件复制成功: ${containerFilePath} -> ${hostFilePath}`);
+            this._logger.info(`文件复制成功: ${containerFilePath} -> ${hostFilePath}`);
             return true;
 
         } catch (error) {
-            console.error('使用 getArchive 复制文件失败:', error);
+            this._logger.error('使用 getArchive 复制文件失败:', error);
         }
     }
 
@@ -644,11 +646,11 @@ APPEND_EOF`
                 archiveStream.on('error', reject);
             });
 
-            console.log(`目录复制成功: ${containerDirPath} -> ${hostDirPath}`);
+            this._logger.info(`目录复制成功: ${containerDirPath} -> ${hostDirPath}`);
             return true;
 
         } catch (error) {
-            console.error('复制目录从容器失败:', error);
+            this._logger.error('复制目录从容器失败:', error);
         }
     }
 
@@ -721,7 +723,6 @@ APPEND_EOF`
      * 停止 Docker Compose 服务
      */
     async composeDown(composePath: string): Promise<string> {
-        console.log(`composePath: ${composePath}`)
         const result = await this.execComposeCommand(composePath, 'down');
 
         if (result.stderr) {

@@ -140,13 +140,8 @@ const onConfirmNext = async (activeStep: number, subStepIndex: number = 0): Prom
   }
   return ret
 }
-const getIp = async () => {
-  const res = await executeApiCall(() =>
-      reqGetIP()
-  )
-  if (res) {
-    ip.value = res.result
-  }
+const getIp = () => {
+  ip.value = window.location.hostname
 }
 onMounted(() => {
   getIp()
