@@ -1,15 +1,11 @@
 FROM node:22
 
-ARG HTTP_PROXY
-ARG HTTPS_PROXY
-ARG http_proxy
-ARG https_proxy
+ARG PROXY_HOST
+ARG PROXY_PORT
 
 # 设置环境变量
-ENV HTTP_PROXY=${HTTP_PROXY}
-ENV HTTPS_PROXY=${HTTPS_PROXY}
-ENV http_proxy=${http_proxy}
-ENV https_proxy=${https_proxy}
+ENV HTTP_PROXY=http://${PROXY_HOST}:${PROXY_PORT}
+ENV HTTPS_PROXY=http://${PROXY_HOST}:${PROXY_PORT}
 
 # 设置 APT 代理（重要！）
 RUN if [ -n "$HTTP_PROXY" ]; then \

@@ -75,6 +75,20 @@ docker exec as199brd-attacker-bgp-10.199.0.254 birdc configure</pre>
                 `,
                 cmdKwargs: [
                     {
+                        action: 'exec',
+                        containerNames: ['as199brd-attacker-bgp-10.199.0.254'],
+                        cmd: "mkdir -p /etc/bird/as199_include/",
+                        detach: false
+                    },
+                    {
+                        action: 'cp',
+                        srcName: '',
+                        dstName: 'as199brd-attacker-bgp-10.199.0.254',
+                        srcPath: './yesterday_once_more/01_bgp_prefix_hijacking/files/as199_include/',
+                        dstPath: '/etc/bird/as199_include/',
+                        detach: false
+                    },
+                    {
                         action: 'cp',
                         srcName: '',
                         dstName: 'as199brd-attacker-bgp-10.199.0.254',

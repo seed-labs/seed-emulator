@@ -5,10 +5,8 @@ services:
         build:
             context: .
             args:
-                http_proxy: http://10.1.10.61:7890
-                https_proxy: http://10.1.10.61:7890
-                HTTP_PROXY: http://10.1.10.61:7890
-                HTTPS_PROXY: http://10.1.10.61:7890
+                PROXY_HOST: 10.1.10.61
+                PROXY_PORT: 7890
         image: handsonsecurity/seedemu-demosystem:2.0
         container_name: seedemu_demo_system
         volumes:
@@ -19,5 +17,3 @@ services:
         cap_add:
             - ALL
         privileged: true
-        environment:
-            - HOST=192.168.254.131
