@@ -3,8 +3,8 @@
 TARGET='./target_prefix'
 BGP_CONF_DIR="../01_bgp_prefix_hijacking/files/as199_include"
 
-# Create the folder if it does not exist
-mkdir -p "$BGP_CONF_DIR"
+rm -rf   "$BGP_CONF_DIR"  # Clean the folder
+mkdir -p "$BGP_CONF_DIR"  # Create the folder if it does not exist
 
 # Check if the file exists
 if [ ! -f "$TARGET" ]; then
@@ -22,16 +22,11 @@ while IFS= read -r line || [ -n "$line" ]; do
     [[ "$line" == \#* ]] && continue   # Skip comment
     [[ -z "$line" ]] && continue       # Skip empty lines 
 
-    # 4. Split the line into an array
+    # Split the line into an array
     # Unquoted $line inside parentheses triggers default word splitting (whitespace)
     elements=($line)
 
-    # 5. Iterate through the elements
-    for element in "${elements[@]}"; do
-        echo "Prefix: $element"
-    done
-
-    # Set up bird conf's include entries
+    # Set up bird conf's include entries; only use the first field 
     IP_PREFIX="${elements[0]}"
     BGP_ENTRY=$(cat <<EOF
 protocol static {
