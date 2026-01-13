@@ -20,8 +20,11 @@ DOCKER_COMPOSE_ENTRY = """\
         privileged: true
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
-        ports:
-            - 8080:8080/tcp
+        command: /bin/sh -c "
+                   ip route del default  &&
+                   ip route add default via {default_route} &&
+                   tail -f /dev/null
+                 "
 """
 
 def setup_dns(emu):
@@ -33,7 +36,7 @@ def setup_dns(emu):
     dns.install('root-server').addZone('.').setMaster()
     dns.install('com-server').addZone('com.').setMaster()
 
-    dns.getZone('com.').addRecord('worm.com.  A  2.0.0.0')
+    dns.getZone('com.').addRecord('worm.com. 1 IN  A  2.0.0.0')
 
     # Customize the display names (for visualization purpose)
     emu.getVirtualNode('root-server').setDisplayName('Root')
@@ -46,12 +49,6 @@ def setup_dns(emu):
     as160.createHost('com-node').joinNetwork('net0', address = '10.160.0.53')
     emu.addBinding(Binding('root-server', filter=Filter(asn=150, nodeName='root-node')))
     emu.addBinding(Binding('com-server', filter=Filter(asn=160, nodeName='com-node')))
-
-    current_dir = os.getcwd()
-    com_server = as160.getHost('com-node')
-    com_server.importFile(hostpath=f"{current_dir}/scripts/add_dns_record.sh", 
-                          containerpath="/tmp/add_dns_record.sh")
-    com_server.appendStartCommand("chmod +x /tmp/add_dns_record.sh")
 
 
 
@@ -203,11 +200,11 @@ def run(dumpfile=None, hosts_per_as=2):
     ebgp.addPrivatePeerings(102, [2],  [77777], PeerRelationship.Provider)
 
 
-    # Create a new AS as the BGP attacker, attach it to ix-105 and peer with AS-11
+    # Create a new AS, attach it to ix-105 and peer with AS-11
     as199 = base.createAutonomousSystem(199)
     as199.createNetwork('net0')
     as199.createHost('host-0').joinNetwork('net0')
-    as199.createRouter('attacker-bgp').joinNetwork('net0').joinNetwork('ix105')
+    as199.createRouter('router0').joinNetwork('net0').joinNetwork('ix105')
     ebgp.addPrivatePeerings(105, [11],  [199], PeerRelationship.Provider)
 
     # Enable VPN on AS 174
@@ -283,8 +280,19 @@ def run(dumpfile=None, hosts_per_as=2):
         docker = Docker(platform=platform, internetMapEnabled=False)
 
         # Use the new internet-map:2.0
-        docker.attachCustomContainer(compose_entry =
-             DOCKER_COMPOSE_ENTRY.format(name="seedemu_internetmap"))
+        """
+        docker.attachCustomContainer(compose_entry = DOCKER_COMPOSE_ENTRY.format(
+                      name="seedemu_internetmap", 
+                      default_route=emu.getDefaultRouterByAsnAndNetwork(199, 'net0')),
+                asn=199, net='net0', ip_address='10.199.0.90',
+                port_forwarding="8080:8080/tcp",
+                node_name='internet-map', show_on_map=False)
+        """
+
+        docker.attachInternetMap(asn=199, net='net0', ip_address='10.199.0.90',
+                port_forwarding='8080:8080/tcp', 
+                env=[f'DEFAULT_ROUTE={emu.getDefaultRouterByAsnAndNetwork(199, "net0")}'])
+
 
         # Use the "morris-worm-base" custom base image
         docker.addImage(DockerImage('morris-worm-base', [], local = True))
