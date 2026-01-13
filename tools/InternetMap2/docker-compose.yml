@@ -1,9 +1,9 @@
 version: "3"
 
 services:
-    seedemu-client:
+    seedemu-internetmap:
         build: .
-        container_name: seedemu_client
+        container_name: seedemu_internetmap
         image: handsonsecurity/seedemu-internetmap:2.0
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
