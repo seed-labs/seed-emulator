@@ -10,4 +10,7 @@ WORKDIR /usr/src/app/backend
 RUN npm install
 RUN npm install -D typescript @types/tar-fs
 RUN ./node_modules/.bin/tsc
+
+RUN apt-get update && apt-get install -y --no-install-recommends iproute2 
+
 ENTRYPOINT ["sh", "/start.sh"]
