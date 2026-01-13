@@ -47,13 +47,13 @@ if [ -z "${ACTION}" ]; then
 fi
 
 case "${ACTION}" in
-    "flash"|"highlight"|"flashOnce")
+    "flash"|"highlight"|"flashOnce"|"restore")
         URL="${URL}&action=${ACTION}"
         ;;
     "")
         ;;
     *)
-        echo "error: unknown action '${ACTION}' [flash|flashOnce|highlight]"
+        echo "error: unknown action '${ACTION}' [flash|flashOnce|highlight|restore]"
         show_usage
         exit 1
         ;;
