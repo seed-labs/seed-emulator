@@ -16,6 +16,7 @@ class BaseSystem(Enum):
     SEEDEMU_ETHEREUM    = 'seedemu-ethereum'
     SEEDEMU_ETHEREUM_LEGACY    = 'seedemu-ethereum-legacy'
     SEEDEMU_ETHEREUM_POS       = 'seedemu-ethereum-pos'
+    SEEDEMU_MONERO      = 'seedemu-monero'
     SEEDEMU_OP_STACK    = 'seedemu-op-stack'
     SEEDEMU_SC_DEPLOYER = 'seedemu-sc-deployer'
     SEEDEMU_CHAINLINK   = 'seedemu-chainlink'
@@ -30,6 +31,7 @@ class BaseSystem(Enum):
                 SEEDEMU_ETHEREUM: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_ETHEREUM_LEGACY: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_ETHEREUM_POS: [UBUNTU_20_04, SEEDEMU_BASE],
+                SEEDEMU_MONERO: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_OP_STACK: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_SC_DEPLOYER: [UBUNTU_20_04, SEEDEMU_BASE],
                 SEEDEMU_CHAINLINK: [UBUNTU_20_04, SEEDEMU_BASE],
