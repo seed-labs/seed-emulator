@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+    seedemu-demo-system:
+        build:
+            context: .
+            args:
+                PROXY_HOST: 10.1.10.61
+                PROXY_PORT: 7890
+        image: handsonsecurity/seedemu-demosystem:2.0
+        container_name: seedemu_demo_system
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - .:/BaseDir
+        ports:
+            - 5050:5050
+        cap_add:
+            - ALL
+        privileged: true
