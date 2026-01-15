@@ -215,11 +215,9 @@ const filterClick = () => {
   if (!mapUi.value) return
   mapUi.value?.updateFilterSuggestions(inputFilter.value)
 }
-const filterMouseup = () => {
-
-}
-const filterMousedown = () => {
-
+const searchInput = () => {
+  if (!mapUi.value) return
+  mapUi.value?.updateFilterSuggestions(inputSearch.value)
 }
 onMounted(() => {
   nextTick(async () => {
@@ -280,8 +278,6 @@ defineExpose({mapUi})
             class="input-with-select"
             id="input-filter"
             @click="filterClick"
-            @mouseup="filterMouseup"
-            @mousedown="filterMousedown"
         >
           <template #prepend>
             <el-button type="primary" class="submit" @click="onSubmitFilter">Submit</el-button>
@@ -294,6 +290,7 @@ defineExpose({mapUi})
             placeholder="Search networks and nodes..."
             class="input-with-select"
             id="input-search"
+            @input="searchInput"
         >
           <template #prepend>
             <el-button type="primary" class="submit" @click="onSubmitSearch">Submit</el-button>
