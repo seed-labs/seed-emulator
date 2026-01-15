@@ -22,8 +22,8 @@ declare global {
     }
 }
 const CONSOLE = window.__ENV__?.CONSOLE;
-const CLICK_DELAY = 25
-const VIS_VERTEX_MAX = 200
+const CLICK_DELAY = 250
+const VIS_VERTEX_MAX = 300
 
 export interface replayValueType {
     disabled: boolean,
@@ -1022,7 +1022,6 @@ export class MapUi {
                 this._suggestions.appendChild(item);
             });
         }
-
     }
 
     /**
