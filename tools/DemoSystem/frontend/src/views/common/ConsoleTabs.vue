@@ -4,21 +4,21 @@
       <!-- Attack effect iframe -->
       <el-splitter-panel class="iframe-panel">
         <el-tabs v-model="activeTabName" class="box-card iframe-card">
-          <el-tab-pane class="iframe-wrapper" name="attackEffect">
-            <template #label>
-              <span class="custom-tabs-label">
-                效果展示
-                <el-icon @click.stop="refreshAttackEffect"><Refresh/></el-icon>
-              </span>
-            </template>
-            <Iframe
-                ref="iframeRef"
-                v-if="componentConfig.attackEffectConfig.type === 'iframe'"
-                v-model:target-i-ps="form.targetIPs"
-                v-model:target-host="form.targetHost"
-            />
-          </el-tab-pane>
-          <el-tab-pane class="exec-result-tab">
+          <!--          <el-tab-pane class="iframe-wrapper" name="attackEffect">-->
+          <!--            <template #label>-->
+          <!--              <span class="custom-tabs-label">-->
+          <!--                效果展示-->
+          <!--                <el-icon @click.stop="refreshAttackEffect"><Refresh/></el-icon>-->
+          <!--              </span>-->
+          <!--            </template>-->
+          <!--            <Iframe-->
+          <!--                ref="iframeRef"-->
+          <!--                v-if="componentConfig.attackEffectConfig.type === 'iframe'"-->
+          <!--                v-model:target-i-ps="form.targetIPs"-->
+          <!--                v-model:target-host="form.targetHost"-->
+          <!--            />-->
+          <!--          </el-tab-pane>-->
+          <el-tab-pane class="exec-result-tab" name="execResult">
             <template #label>
               <span class="custom-tabs-label">
                 执行结果
@@ -58,16 +58,35 @@
                   <span class="step-title">{{ `${i + 1}. ${e.headerTitle}` }}</span>
                 </div>
                 <div class="step-content">
-                  <template v-for="(t, index) in e.text" :key="t.shortText">
+                  <template v-for="(t, index1) in e.text" :key="t.shortText">
                     <el-collapse v-if="t.shortText">
-                      <el-collapse-item :title="setTitle(i, index, t.shortText)" :name="index">
+                      <el-collapse-item :title="setTitle(i, index1, t.shortText)" :name="index1">
                         <div v-html="t.innerHtml"/>
                       </el-collapse-item>
+                      <el-space wrap v-if="t.cmdGroupKwargs && t.cmdGroupKwargs.length">
+                        <el-tooltip
+                            v-for="(g, index2) in t.cmdGroupKwargs"
+                            :key="g.title"
+                            class="box-item"
+                            effect="dark"
+                            :content="g.tooltip"
+                            placement="bottom-start"
+                        >
+                          <el-button
+                              type="primary"
+                              :icon="VideoPlay"
+                              @click="executeStep(i, index1, index2)"
+                              :loading="executingSteps[i]"
+                          >
+                            {{ g.title }}
+                          </el-button>
+                        </el-tooltip>
+                      </el-space>
                       <el-button
-                          v-if="t.cmdKwargs && t.cmdKwargs.length"
+                          v-else-if="t.cmdKwargs && t.cmdKwargs.length"
                           type="success"
                           :icon="VideoPlay"
-                          @click="executeStep(i, index)"
+                          @click="executeStep(i, index1)"
                           :loading="executingSteps[i]"
                       >
                         运行
@@ -77,7 +96,7 @@
                         v-else
                         type="success"
                         :icon="VideoPlay"
-                        @click="executeStep(i, index)"
+                        @click="executeStep(i, index1)"
                         :loading="executingSteps[i]"
                     >
                       运行
@@ -94,14 +113,14 @@
 </template>
 
 <script setup lang="ts">
-import {VideoPlay, Refresh, Delete} from '@element-plus/icons-vue'
-import Iframe from "./AttackEffectIframe.vue"
+import {VideoPlay, Delete} from '@element-plus/icons-vue'
+// import Iframe from "./AttackEffectIframe.vue"
 
 interface ConsoleTabsProps {
   form: any
   componentConfig: any
   fontSize?: number
-  confirmNext: (stepIndex: number, subStepIndex: number) => Promise<boolean> | boolean
+  confirmNext: (...stepArgs: number[]) => Promise<boolean> | boolean
 }
 
 interface ConsoleTabsEmits {
@@ -121,9 +140,9 @@ const props = withDefaults(defineProps<ConsoleTabsProps>(), {
 })
 
 const emit = defineEmits<ConsoleTabsEmits>()
-const iframeRef = ref()
+// const iframeRef = ref()
 const fontSize = ref(props.fontSize)
-const activeTabName = ref('attackEffect')
+const activeTabName = ref('execResult')
 const executingSteps = reactive<boolean[]>(Array(props.componentConfig.config.length).fill(false))
 const stepResultsList = ref<string[]>([])
 
@@ -132,11 +151,16 @@ watch(() => props.fontSize, (newSize) => {
   fontSize.value = newSize
 })
 // 执行单个步骤
-const executeStep = async (stepIndex: number, subStepIndex: number = 0) => {
+// const executeStep = async (stepIndex: number, subStepIndex: number = 0) => {
+const executeStep = async (...stepArgs: number[]) => {
+  if (stepArgs.length === 0) {
+    return
+  }
+  const stepIndex = stepArgs[0] as number
   executingSteps[stepIndex] = true
 
   try {
-    const res = await props.confirmNext(stepIndex, subStepIndex)
+    const res = await props.confirmNext(...stepArgs)
     if (!res.ok) {
       throw Error(res.result)
     }
@@ -144,7 +168,7 @@ const executeStep = async (stepIndex: number, subStepIndex: number = 0) => {
     if (stepIndex === 0 || stepIndex === props.componentConfig.config.length - 1) {
       msg = `✅ 步骤[${stepIndex + 1}] 成功\n时间:${new Date().toLocaleTimeString()}`
     } else {
-      msg = `✅ 步骤[${stepIndex + 1}-${subStepIndex + 1}] 成功\n时间:${new Date().toLocaleTimeString()}`
+      msg = `✅ 步骤[${stepArgs.map(a => a + 1).join('-')}] 成功\n时间:${new Date().toLocaleTimeString()}`
     }
     try {
       const {succeeded} = JSON.parse(res.result)
@@ -158,7 +182,7 @@ const executeStep = async (stepIndex: number, subStepIndex: number = 0) => {
     }
     stepResultsList.value.push(msg)
   } catch (error) {
-    stepResultsList.value.push(`❌ 步骤[${stepIndex + 1}-${subStepIndex + 1}] 失败\n时间:${new Date().toLocaleTimeString()}\n错误信息: ${error}`)
+    stepResultsList.value.push(`❌ 步骤[${stepArgs.map(a => a + 1).join('-')}] 失败\n时间:${new Date().toLocaleTimeString()}\n错误信息: ${error}`)
   } finally {
     executingSteps[stepIndex] = false
   }
@@ -170,11 +194,11 @@ const clearStepResults = () => {
   stepResultsList.value = []
 }
 
-const refreshAttackEffect = () => {
-  if (iframeRef.value) {
-    iframeRef.value.refresh()
-  }
-}
+// const refreshAttackEffect = () => {
+//   if (iframeRef.value) {
+//     iframeRef.value.refresh()
+//   }
+// }
 </script>
 
 <style scoped lang="scss">

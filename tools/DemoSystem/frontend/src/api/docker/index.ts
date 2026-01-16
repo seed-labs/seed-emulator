@@ -4,6 +4,7 @@ import type {ApiResponse} from "@/api"
 export const URL = {
     DOCKER_CONNECT_URL: '/docker/connect',
     DOCKER_EXEC_URL: '/docker/exec',
+    HOST_EXEC_URL: '/docker/host/exec',
     DOCKER_COMPOSE_EXEC_URL: '/docker/compose/exec',
     DOCKER_EXEC_CP_URL: '/docker/exec/cp',
     DOCKER_EXEC_RENAME_URL: '/docker/exec/rename',
@@ -16,6 +17,10 @@ export const reqDockerConnect = (data: { host: string; port: string }): Promise<
         URL.DOCKER_CONNECT_URL,
         data,
     )
+}
+
+export interface HostExec {
+    cmd: string
 }
 
 export interface DockerExec {
@@ -41,7 +46,6 @@ export interface DockerComposeExec {
     port: string;
     composePath: string,
     cmd: string,
-    pythonFile?: string
 }
 
 export interface DockerExecRename {
@@ -61,6 +65,13 @@ export interface DockerExecAppendToFile {
     filepath: string,
     content: string,
     signature: string,
+}
+
+export const reqHostExec = (data: HostExec): Promise<ApiResponse<any>> => {
+    return request.post(
+        URL.HOST_EXEC_URL,
+        data,
+    )
 }
 
 export const reqDockerExec = (data: DockerExec): Promise<ApiResponse<any>> => {

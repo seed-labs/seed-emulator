@@ -24,10 +24,10 @@
           <template #title>大规模区块链仿真演示</template>
           <el-menu-item index="/large-scale-blockchain-simulation">大规模区块链仿真演示</el-menu-item>
         </el-sub-menu>
-        <el-sub-menu index="/yesterday-reenacted">
+        <el-sub-menu index="/yesterday_once_more">
           <template #title>昨日重现</template>
-          <el-menu-item index="/yesterday-reenacted">昨日重现</el-menu-item>
-          <el-menu-item index="/yesterday-reenacted/bgp">BGP 劫持攻击</el-menu-item>
+          <el-menu-item index="/yesterday_once_more">昨日重现</el-menu-item>
+          <el-menu-item index="/yesterday_once_more/bgp">BGP 劫持攻击</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="/auto-CTF">
           <template #title>自动 CTF 靶场</template>

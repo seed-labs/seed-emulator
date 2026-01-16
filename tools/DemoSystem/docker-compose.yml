@@ -11,9 +11,10 @@ services:
         container_name: seedemu_demo_system
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
-            - .:/BaseDir
+            - .:/DemoSystem
         ports:
             - 5050:5050
         cap_add:
             - ALL
+        pid: host
         privileged: true

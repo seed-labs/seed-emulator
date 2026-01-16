@@ -24,8 +24,8 @@ interface ConfigCacheItem {
 }
 
 // 使用 import.meta.glob 获取所有配置文件
-// 这会自动扫描 src/config 目录下所有子目录中的 index.ts 文件
-const configModules = import.meta.glob('@/config/**/index.ts', {
+// 这会自动扫描 src/extensions 目录下所有子目录中的 index.ts 文件
+const configModules = import.meta.glob('@/extensions/**/index.ts', {
     eager: false,
     // import: 'default'  // 默认导入 default 导出
 })
@@ -81,9 +81,9 @@ function setToCache(key: string, data: any, expiry: number = defaultCacheExpiry)
 /**
  * 标准化配置路径
  * 支持多种格式的路径输入：
- * - /yesterday-reenacted/bgp
- * - yesterday-reenacted/bgp
- * - yesterday-reenacted/bgp/
+ * - /yesterday_once_more/bgp
+ * - yesterday_once_more/bgp
+ * - yesterday_once_more/bgp/
  */
 function normalizeConfigPath(path: string): string {
     // 移除开头和结尾的斜杠
@@ -106,9 +106,9 @@ function findMatchingModulePath(configPath: string): string | null {
 
     // 方法1：精确匹配
     for (const modulePath of modulePaths) {
-        // 移除 @/config/ 前缀和 /index.ts 后缀
+        // 移除 @/extensions/ 前缀和 /index.ts 后缀
         const relativePath = modulePath
-            .replace('@/config/', '')
+            .replace('@/extensions/', '')
             .replace('/index.ts', '')
 
         if (relativePath === normalizedPath) {
@@ -157,7 +157,7 @@ export async function loadConfigByGlob(configPath: string): Promise<any> {
             console.warn(`未找到配置文件: ${configPath}`)
             console.debug('可用的配置路径:',
                 Object.keys(configModules).map(p =>
-                    p.replace('@/config/', '').replace('/index.ts', '')
+                    p.replace('@/extensions/', '').replace('/index.ts', '')
                 )
             )
             return null
@@ -198,7 +198,6 @@ export async function loadConfigByGlob(configPath: string): Promise<any> {
  */
 export async function loadMultipleConfigs(
     configPaths: string[],
-    options: LoadConfigOptions = {}
 ): Promise<Record<string, any>> {
     const results: Record<string, any> = {}
     const errors: Record<string, Error> = {}
@@ -206,7 +205,7 @@ export async function loadMultipleConfigs(
     await Promise.all(
         configPaths.map(async (path) => {
             try {
-                const config = await loadConfigByGlob(path, options)
+                const config = await loadConfigByGlob(path)
                 if (config) {
                     const key = path.replace(/^\/+|\/+$/g, '').replace(/\//g, '-')
                     results[key] = config
@@ -231,7 +230,7 @@ export async function loadMultipleConfigs(
 export function getAvailableConfigPaths(): string[] {
     return Object.keys(configModules).map(modulePath =>
         modulePath
-            .replace('@/config/', '')
+            .replace('@/extensions/', '')
             .replace('/index.ts', '')
     )
 }

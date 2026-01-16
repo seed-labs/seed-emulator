@@ -1,11 +1,8 @@
 import express from 'express';
 import {spawn} from "child_process"
-import {getLocalIp} from '../../utils/tool';
 import dockerRouter from './docker/index';
 
 const router = express.Router();
-
-
 router.get('/env.js', (req, res, next) => {
     const envVarsForFrontend = {
         CONSOLE: process.env.CONSOLE,
@@ -15,19 +12,6 @@ router.get('/env.js', (req, res, next) => {
 
     next();
 });
-
-router.get('/ip', async function (req, res, next) {
-    const ip = getLocalIp()
-    const ok = ip !== ''
-
-    res.json({
-        ok: ok,
-        result: ok ? ip : "getIp failed"
-    });
-
-    next();
-});
-
 router.post('/run', async (req, res) => {
     const {cmd} = req.body;
 
@@ -116,7 +100,6 @@ router.post('/run', async (req, res) => {
         });
     }
 });
-
 router.post('/ssh/run', (req, res) => {
     const {host, port = 22, user, keyPath, remoteCmd} = req.body;
     // 示例白名单，仅允许 ls、cat、df 等安全命令
@@ -150,7 +133,6 @@ router.post('/ssh/run', (req, res) => {
         res.status(500).json({error: err.message});
     });
 });
-
 router.post('/stream', (req, res) => {
     const {cmd, args = []} = req.body;   // 例如：{ "cmd": "ping", "args": ["-c", "4", "8.8.8.8"] }
 
@@ -176,6 +158,5 @@ router.post('/stream', (req, res) => {
         res.status(500).json({error: err.message});
     });
 });
-
 router.use('/docker', dockerRouter);
 export default router;
