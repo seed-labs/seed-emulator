@@ -34,7 +34,7 @@ export const defaultRouters: RouteRecord[] = [
                 },
                 // 添加 props 函数
                 props: (route) => ({
-                    name: route.query.name,
+                    name: route.query.name || "bgp",
                 })
             },
             // {
@@ -58,9 +58,9 @@ export const defaultRouters: RouteRecord[] = [
             //     },
             // },
             // {
-            //     path: '/yesterday-reenacted',
+            //     path: '/yesterday_once_more',
             //     component: () => import('@/views/yesterdayReenacted/index.vue'),
-            //     name: 'yesterday-reenacted',
+            //     name: 'yesterday_once_more',
             //     meta: {
             //         title: "昨日重现",
             //         icon: 'HomeFilled',
@@ -68,7 +68,7 @@ export const defaultRouters: RouteRecord[] = [
             //     },
             // },
             // {
-            //     path: '/yesterday-reenacted/bgp',
+            //     path: '/yesterday_once_more/bgp',
             //     component: () => import('@/views/yesterdayReenacted/bgpExploration/index.vue'),
             //     name: 'bgp-exploration',
             //     meta: {

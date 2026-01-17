@@ -40,6 +40,6 @@ RUN pnpm i
 RUN pnpm run build-dev
 WORKDIR /usr/src/app/backend
 RUN npm install
-RUN npm install -D typescript @types/tar-fs
+RUN npm install -D typescript @types/tar-fs js-yaml @types/js-yaml
 RUN ./node_modules/.bin/tsc
 ENTRYPOINT ["sh", "/start.sh"]

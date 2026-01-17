@@ -42,7 +42,7 @@ const gridList: GridItem[] = [
   },
   {
     img: new URL('@/assets/img/seed.png', import.meta.url).href,
-    toName: 'yesterday-reenacted',
+    toName: 'yesterday_once_more',
     title: '“昨日重现”演示',
     description: 'The network topology diagram displays interconnection relationships between nodes and networks, along with auxiliary functions including filtering, search, settings, replay, and logging.',
   },
