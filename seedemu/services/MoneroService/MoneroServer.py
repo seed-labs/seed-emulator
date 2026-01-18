@@ -282,7 +282,8 @@ class MoneroBaseServer(Server):
         """Return a shell function that waits until at least one seed is reachable.
 
         The generated snippet polls each configured seed endpoint with ``nc`` and
-        optionally honours retry interval/attempts taken from ``MoneroNodeOptions``.
+        retries indefinitely until at least one seed node becomes reachable.
+        Progress is logged every 10 attempts to track waiting status.
 
         Returns:
             A multiline shell function definition or an empty string if the node
@@ -293,33 +294,42 @@ class MoneroBaseServer(Server):
 
         endpoints = " ".join(json.dumps(item) for item in self._seed_endpoints)
         interval = max(1, self.options.seed_retry_interval)
-        attempts = self.options.seed_retry_attempts if self.options.seed_retry_attempts >= 0 else -1
 
         return dedent(
             f"""
             seed_endpoints=({endpoints})
-            wait_attempts={attempts}
             wait_interval={interval}
 
             wait_for_seed() {{
                 local tries=0
+                local start_time=$(date +%s)
+                
                 if [ ${{#seed_endpoints[@]}} -eq 0 ]; then
+                    echo "[monero] No seed endpoints specified, skipping wait" >&2
                     return 0
                 fi
-                echo "[monero] Waiting for seed node to become reachable..." >&2
+                
+                echo "[monero] Waiting for seed node to become reachable (will retry indefinitely)..." >&2
+                echo "[monero] Seed endpoints to check: ${{seed_endpoints[*]}}" >&2
+                
                 while true; do
+                    tries=$((tries + 1))
+                    local current_time=$(date +%s)
+                    local elapsed=$((current_time - start_time))
+                    
                     for endpoint in "${{seed_endpoints[@]}}"; do
                         IFS=':' read -r host port <<< "${{endpoint}}"
                         if nc -z "$host" "$port" >/dev/null 2>&1; then
-                            echo "[monero] Seed node $host:$port is reachable" >&2
+                            echo "[monero] ✓ Seed node $host:$port is reachable (after $tries attempts, $elapsed seconds)" >&2
                             return 0
                         fi
                     done
-                    tries=$((tries + 1))
-                    if [ {attempts} -ge 0 ] && [ $tries -ge {attempts} ]; then
-                echo "[monero] Timed out waiting for seed node, continuing startup" >&2
-                        return 1
+                    
+                    # Log progress every 10 attempts (approximately every 50 seconds if interval is 5)
+                    if [ $((tries % 10)) -eq 0 ]; then
+                        echo "[monero] Still waiting for seed node... (attempt $tries, elapsed: $elapsed s)" >&2
                     fi
+                    
                     sleep {interval}
                 done
             }}
