@@ -9,6 +9,11 @@ from seedemu.core.Service import Server, Service
 from seedemu.core.enums import NetworkType
 from seedemu.core.BaseSystem import BaseSystem
 
+# Import for type hinting only (avoid circular import)
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from seedemu.compiler import Docker
+
 from .MoneroEnum import (
     MoneroBinarySource,
     MoneroMiningTrigger,
@@ -740,10 +745,14 @@ class MoneroNetwork:
             return
         key = (port, purpose)
         existing = self._allocated_ports.get(key)
-        if existing and existing != vnode:
-            self.log(f"WARNING: port {port} ({purpose}) is used by both {existing} and {vnode}")
-        else:
-            self._allocated_ports[key] = vnode
+        # Note: When auto_assign_ports=False (default), all nodes use the same default ports.
+        # This is normal in Docker containerized environments where each container has its own
+        # network namespace. The warning below is from legacy dynamic port assignment logic
+        # and can be safely commented out.
+        # if existing and existing != vnode:
+        #     self.log(f"WARNING: port {port} ({purpose}) is used by both {existing} and {vnode}")
+        # else:
+        self._allocated_ports[key] = vnode
 
     def _get_primary_ip(self, node: Node) -> str:
         """Return the IP address on the local network used for service bindings."""
