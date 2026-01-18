@@ -974,7 +974,9 @@ class MoneroFullNodeServer(MoneroBaseServer):
             daemon_args.append(f"--fixed-difficulty={opts.fixed_difficulty}")
 
         # Connection strategy
-        if self._seed_endpoints:
+        # Only add seed endpoint arguments if not using Monero's default seed nodes
+        use_default_seeds = self._network._defaults.use_default_seed_nodes
+        if self._seed_endpoints and not use_default_seeds:
             for endpoint in self._seed_endpoints:
                 if opts.connect_mode == MoneroSeedConnectionMode.EXCLUSIVE:
                     daemon_args.append(f"--add-exclusive-node={endpoint}")

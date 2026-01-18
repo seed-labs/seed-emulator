@@ -151,6 +151,8 @@ class MoneroNetworkDefaults:
     default_log_level: int = 1  # Default log level for all nodes: 0=ERROR, 1=INFO, 2=DEBUG, 3=TRACE, 4=TRACE+ALL
 
     persist_data: bool = True
+    use_default_seed_nodes: bool = False  # If True, don't pass seed endpoints via CLI, use Monero's built-in defaults
+    custom_base_image: Optional[str] = None  # Custom base Docker image name (e.g., 'custom-monero-base:latest') containing custom binaries
 
     def clone(self) -> "MoneroNetworkDefaults":
         return MoneroNetworkDefaults(
@@ -168,6 +170,8 @@ class MoneroNetworkDefaults:
             default_mining_threads=self.default_mining_threads,
             default_log_level=self.default_log_level,
             persist_data=self.persist_data,
+            use_default_seed_nodes=self.use_default_seed_nodes,
+            custom_base_image=self.custom_base_image,
         )
 
 
