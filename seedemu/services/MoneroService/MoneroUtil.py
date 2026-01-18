@@ -67,6 +67,7 @@ class MoneroNodeOptions:
 
     data_dir: str = "/var/lib/monero"
     log_dir: str = "/var/log/monero"
+    log_level: int = 1  # Monero log level: 0=ERROR, 1=INFO, 2=DEBUG, 3=TRACE, 4=TRACE+ALL
     persist_data: bool = True
 
     wait_for_seed: bool = True
@@ -110,6 +111,7 @@ class MoneroNodeOptions:
             zmq_bind_port=self.zmq_bind_port,
             data_dir=self.data_dir,
             log_dir=self.log_dir,
+            log_level=self.log_level,
             persist_data=self.persist_data,
             wait_for_seed=self.wait_for_seed,
             seed_retry_interval=self.seed_retry_interval,
@@ -146,6 +148,7 @@ class MoneroNetworkDefaults:
 
     fixed_difficulty: Optional[int] = None
     default_mining_threads: int = 1
+    default_log_level: int = 1  # Default log level for all nodes: 0=ERROR, 1=INFO, 2=DEBUG, 3=TRACE, 4=TRACE+ALL
 
     persist_data: bool = True
 
@@ -163,6 +166,7 @@ class MoneroNetworkDefaults:
             auto_assign_ports=self.auto_assign_ports,
             fixed_difficulty=self.fixed_difficulty,
             default_mining_threads=self.default_mining_threads,
+            default_log_level=self.default_log_level,
             persist_data=self.persist_data,
         )
 

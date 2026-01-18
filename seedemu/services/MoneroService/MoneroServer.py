@@ -220,6 +220,18 @@ class MoneroBaseServer(Server):
         self._options.log_dir = log_dir
         return self
 
+    def setLogLevel(self, level: int) -> "MoneroBaseServer":
+        """Set the log level for this node.
+        
+        Args:
+            level: Log level (0=ERROR, 1=INFO, 2=DEBUG, 3=TRACE, 4=TRACE+ALL)
+        
+        Returns:
+            ``self`` for fluent chaining.
+        """
+        self._options.log_level = level
+        return self
+
     def setExtraDaemonArgs(self, args: Sequence[str]) -> "MoneroBaseServer":
         self._options.extra_daemon_args = list(args)
         return self
@@ -940,7 +952,7 @@ class MoneroFullNodeServer(MoneroBaseServer):
             [
                 "--confirm-external-bind",
                 "--allow-local-ip",
-                "--log-level=1",
+                f"--log-level={opts.log_level}",
                 "--non-interactive",
                 "--no-igd",
             ]

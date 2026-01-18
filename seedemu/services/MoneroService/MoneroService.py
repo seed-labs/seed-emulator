@@ -186,6 +186,21 @@ class MoneroNetwork:
         self._defaults.fixed_difficulty = difficulty
         return self
 
+    def setDefaultLogLevel(self, level: int) -> "MoneroNetwork":
+        """Set the default log level for all nodes in this network.
+        
+        Args:
+            level: Log level (0=ERROR, 1=INFO, 2=DEBUG, 3=TRACE, 4=TRACE+ALL)
+        
+        Returns:
+            ``self`` for fluent chaining.
+        
+        Example:
+            >>> blockchain.setDefaultLogLevel(4)  # Set all nodes to TRACE+ALL
+        """
+        self._defaults.default_log_level = level
+        return self
+
     def setSeedConnectionMode(self, mode: MoneroSeedConnectionMode) -> "MoneroNetwork":
         self._defaults.seed_connection_mode = mode
         return self
@@ -486,6 +501,10 @@ class MoneroNetwork:
 
         if opts.enable_mining and opts.mining_threads <= 0:
             opts.mining_threads = defaults.default_mining_threads
+
+        # Apply default log level from network defaults
+        # Network-level default always applies unless node explicitly sets a different value via setLogLevel()
+        opts.log_level = defaults.default_log_level
 
         # Seed nodes do not wait for themselves
         if opts.role == MoneroNodeRole.SEED and opts.wait_for_seed:
