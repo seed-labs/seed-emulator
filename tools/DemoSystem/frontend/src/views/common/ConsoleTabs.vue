@@ -60,7 +60,10 @@
                 <div class="step-content">
                   <template v-for="(t, index1) in e.text" :key="t.shortText">
                     <el-collapse v-if="t.shortText">
-                      <el-collapse-item :title="setTitle(i, index1, t.shortText)" :name="index1">
+                      <el-collapse-item v-if="e.text.length === 1" :title="t.shortText" :name="index1">
+                        <div v-html="t.innerHtml"/>
+                      </el-collapse-item>
+                      <el-collapse-item v-else :title="setTitle(i, index1, t.shortText)" :name="index1">
                         <div v-html="t.innerHtml"/>
                       </el-collapse-item>
                       <el-space wrap v-if="t.cmdGroupKwargs && t.cmdGroupKwargs.length">
@@ -75,7 +78,7 @@
                           <el-button
                               type="primary"
                               :icon="VideoPlay"
-                              @click="executeStep(i, index1, index2)"
+                              @click="executeStep(e.text.length, i, index1, index2)"
                               :loading="executingSteps[i]"
                           >
                             {{ g.title }}
@@ -86,7 +89,7 @@
                           v-else-if="t.cmdKwargs && t.cmdKwargs.length"
                           type="success"
                           :icon="VideoPlay"
-                          @click="executeStep(i, index1)"
+                          @click="executeStep(e.text.length, i, index1)"
                           :loading="executingSteps[i]"
                       >
                         运行
@@ -96,7 +99,7 @@
                         v-else
                         type="success"
                         :icon="VideoPlay"
-                        @click="executeStep(i, index1)"
+                        @click="executeStep(e.text.length, i, index1)"
                         :loading="executingSteps[i]"
                     >
                       运行
@@ -151,8 +154,7 @@ watch(() => props.fontSize, (newSize) => {
   fontSize.value = newSize
 })
 // 执行单个步骤
-// const executeStep = async (stepIndex: number, subStepIndex: number = 0) => {
-const executeStep = async (...stepArgs: number[]) => {
+const executeStep = async (textLength: number, ...stepArgs: number[]) => {
   if (stepArgs.length === 0) {
     return
   }
@@ -165,7 +167,7 @@ const executeStep = async (...stepArgs: number[]) => {
       throw Error(res.result)
     }
     let msg
-    if (stepIndex === 0 || stepIndex === props.componentConfig.config.length - 1) {
+    if (stepIndex === 0 || stepIndex === props.componentConfig.config.length - 1 || textLength === 1) {
       msg = `✅ 步骤[${stepIndex + 1}] 成功\n时间:${new Date().toLocaleTimeString()}`
     } else {
       msg = `✅ 步骤[${stepArgs.map(a => a + 1).join('-')}] 成功\n时间:${new Date().toLocaleTimeString()}`

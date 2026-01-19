@@ -29,6 +29,7 @@ export interface SeedemuConf {
     condaPath: string;
     demoSystem: {
         hostProjectPath: string
+        envName: string
     }
 }
 
@@ -704,6 +705,7 @@ APPEND_EOF`
             command,
             seedemuConf.demoSystem.hostProjectPath,
             seedemuConf.condaPath,
+            seedemuConf.demoSystem.envName,
         )
         command = `nsenter -t ${HOST_PID} -m -u -i -n -p /bin/sh -c "${command}"`;
         this._logger.info(`宿主机执行命令: ${command}`);

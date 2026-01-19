@@ -1,5 +1,5 @@
 baseInfo:
-  name: "BGP前缀劫持"
+  name: "BGP 前缀劫持"
   path: "./yesterday_once_more/01_bgp_prefix_hijacking"
 
 sections:
