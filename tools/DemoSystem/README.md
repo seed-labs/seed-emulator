@@ -7,9 +7,5 @@
 3. build 构建镜像。(e.g., `docker compose build`)
 4. 启动容器。(e.g., `docker compose up`)
 5. 攻击演示
-   - http://<host_ip>:5050/pro/common?name=bgp
-   - http://<host_ip>:5050/pro/common?name=bgpBD
-
-
-注：
-   `Demo System` 会使用到 `handsonsecurity/seedemu-internetmap:2.0` 镜像，请提前到 tools/InternetMap2 路径下构建
+    - http://<host_ip>:5050/pro/common?name=bgp
+    - http://<host_ip>:5050/pro/common?name=morris

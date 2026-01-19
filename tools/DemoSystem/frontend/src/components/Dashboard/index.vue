@@ -85,7 +85,8 @@ const gridList = props.gridList?.length ? props.gridList : defaultGridList
     <el-card>
       <ul class="custom-grid">
         <li v-for="item in gridList" :key="item.title">
-          <router-link :to="{ name: item.toName }">
+<!--          <router-link :to="{ name: item.toName }">-->
+          <router-link>
             <el-tooltip
                 class="box-item"
                 effect="dark"
@@ -96,7 +97,7 @@ const gridList = props.gridList?.length ? props.gridList : defaultGridList
                 <template #header>
                   <div class="card-title">{{ item.title }}</div>
                 </template>
-                <el-image :src="item.img" style="height: 200px;"/>
+                <el-image :src="item.img" style="height: 1000px;"/>
               </el-card>
             </el-tooltip>
           </router-link>
