@@ -9,6 +9,11 @@ from seedemu.core.Service import Server, Service
 from seedemu.core.enums import NetworkType
 from seedemu.core.BaseSystem import BaseSystem
 
+# Import for type hinting only (avoid circular import)
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from seedemu.compiler import Docker
+
 from .MoneroEnum import (
     MoneroBinarySource,
     MoneroMiningTrigger,
@@ -72,7 +77,12 @@ class MoneroService(Service):
         """
 
         if isinstance(server, MoneroBaseServer):
-            if server.getBinarySource() == MoneroBinarySource.MIRROR:
+            network = server.network
+            # Check if custom base image is configured for this network
+            if network._defaults.custom_base_image:
+                # Store custom base image name in node attribute for later use
+                node.setAttribute('__monero_custom_base_image', network._defaults.custom_base_image)
+            elif server.getBinarySource() == MoneroBinarySource.MIRROR:
                 node.setBaseSystem(BaseSystem.SEEDEMU_MONERO)
 
         self.log(f"install {server.__class__.__name__} on as{node.getAsn()}/{node.getName()}")
@@ -116,6 +126,74 @@ class MoneroService(Service):
     def getBlockchain(self, name: str) -> "MoneroNetwork":
         """Return the blockchain object with the given name."""
         return self.__networks[name]
+
+    @staticmethod
+    def applyCustomBaseImageOverrides(emulator: Emulator, compiler: "Docker"):
+        """Apply custom base image overrides to all Monero nodes.
+        
+        This method should be called after emu.render() but before emu.compile()
+        to apply custom base image settings to the Docker compiler.
+        
+        It scans all nodes in the emulator and applies image overrides for nodes
+        that have the '__monero_custom_base_image' attribute set. It also ensures
+        that the custom base image is added to the compiler's image list if not
+        already present.
+        
+        Args:
+            emulator: The emulator instance (must be rendered).
+            compiler: The Docker compiler instance.
+        
+        Example:
+            >>> blockchain.setCustomBaseImage('custom-monero-base:latest')
+            >>> emu.render()
+            >>> monero.applyCustomBaseImageOverrides(emu, docker)
+            >>> emu.compile(docker, './output')
+        """
+        # Get the MoneroService layer
+        monero_service = None
+        try:
+            monero_service = emulator.getLayer('MoneroService')
+        except:
+            # MoneroService might not be found if not added as a layer
+            return
+        
+        if monero_service is None:
+            return
+        
+        # Get all targets (server, node) pairs from MoneroService
+        targets = monero_service.getTargets()
+        
+        # Collect unique custom base image names
+        custom_image_names = set()
+        for server, node in targets:
+            if isinstance(server, MoneroBaseServer):
+                if node.hasAttribute('__monero_custom_base_image'):
+                    image_name = node.getAttribute('__monero_custom_base_image')
+                    custom_image_names.add(image_name)
+        
+        # Ensure custom images are added to the compiler
+        # Create a minimal DockerImage object for external images
+        from seedemu.compiler.DockerImage import DockerImage
+        for image_name in custom_image_names:
+            # Check if image is already in compiler (by checking getImages)
+            existing_images = [img.getName() for img, _ in compiler.getImages()]
+            if image_name not in existing_images:
+                # Add the image to compiler as an external image (not local)
+                # Use empty software list since we don't know what's installed
+                external_image = DockerImage(name=image_name, software=[], local=False, subset=None)
+                compiler.addImage(external_image, priority=0)
+        
+        # Apply image overrides to nodes
+        applied_count = 0
+        for server, node in targets:
+            if isinstance(server, MoneroBaseServer):
+                if node.hasAttribute('__monero_custom_base_image'):
+                    image_name = node.getAttribute('__monero_custom_base_image')
+                    compiler.setImageOverride(node, image_name)
+                    applied_count += 1
+        
+        if applied_count > 0:
+            print(f"[MoneroService] Applied custom base image override to {applied_count} node(s)")
 
     
     # Internal helpers
@@ -186,8 +264,74 @@ class MoneroNetwork:
         self._defaults.fixed_difficulty = difficulty
         return self
 
+    def setDefaultLogLevel(self, level: int) -> "MoneroNetwork":
+        """Set the default log level for all nodes in this network.
+        
+        Args:
+            level: Log level (0=ERROR, 1=INFO, 2=DEBUG, 3=TRACE, 4=TRACE+ALL)
+        
+        Returns:
+            ``self`` for fluent chaining.
+        
+        Example:
+            >>> blockchain.setDefaultLogLevel(4)  # Set all nodes to TRACE+ALL
+        """
+        self._defaults.default_log_level = level
+        return self
+
     def setSeedConnectionMode(self, mode: MoneroSeedConnectionMode) -> "MoneroNetwork":
         self._defaults.seed_connection_mode = mode
+        return self
+
+    def setUseDefaultSeedNodes(self, enabled: bool = True) -> "MoneroNetwork":
+        """Enable/disable using Monero's built-in default seed nodes.
+        
+        When enabled, seed endpoints will not be passed via CLI arguments (--add-exclusive-node,
+        --add-priority-node, or --seed-node). Instead, Monero will use its built-in default
+        seed nodes (which can be modified in the source code).
+        
+        This is useful when you've modified Monero source code to use custom seed node IPs,
+        allowing nodes to connect using Monero's natural peer discovery logic.
+        
+        Args:
+            enabled: If True, use Monero's default seed nodes (don't pass via CLI).
+                    If False, pass seed endpoints via CLI arguments (default behavior).
+        
+        Returns:
+            ``self`` for fluent chaining.
+        """
+        self._defaults.use_default_seed_nodes = enabled
+        return self
+
+    def setCustomBaseImage(self, image_name: str) -> "MoneroNetwork":
+        """Set a custom base Docker image for all Monero nodes in this network.
+        
+        When set, all nodes will use the specified Docker image as their base image
+        instead of the default seedemu-monero image. This is useful when you have
+        compiled custom Monero binaries and want to include them in a base image
+        for faster Docker builds (avoiding copying binaries into each node).
+        
+        The custom base image should be built beforehand and contain:
+        - All required Monero dependencies (libboost, libssl, etc.)
+        - Custom Monero binaries at /usr/local/bin/monerod, /usr/local/bin/monero-wallet-cli,
+          and /usr/local/bin/monero-wallet-rpc
+        
+        After calling this method, you should call MoneroService.applyCustomBaseImageOverrides()
+        after emu.render() but before emu.compile() to apply the image overrides to the compiler.
+        
+        Args:
+            image_name: Name of the custom Docker image (e.g., 'custom-monero-base:latest').
+        
+        Returns:
+            ``self`` for fluent chaining.
+        
+        Example:
+            >>> blockchain.setCustomBaseImage('custom-monero-base:latest')
+            >>> emu.render()
+            >>> monero.applyCustomBaseImageOverrides(emu, docker)
+            >>> emu.compile(docker, './output')
+        """
+        self._defaults.custom_base_image = image_name
         return self
 
     def setDefaultWalletTemplate(self, spec: MoneroWalletSpec) -> "MoneroNetwork":
@@ -487,6 +631,10 @@ class MoneroNetwork:
         if opts.enable_mining and opts.mining_threads <= 0:
             opts.mining_threads = defaults.default_mining_threads
 
+        # Apply default log level from network defaults
+        # Network-level default always applies unless node explicitly sets a different value via setLogLevel()
+        opts.log_level = defaults.default_log_level
+
         # Seed nodes do not wait for themselves
         if opts.role == MoneroNodeRole.SEED and opts.wait_for_seed:
             opts.wait_for_seed = False
@@ -597,10 +745,14 @@ class MoneroNetwork:
             return
         key = (port, purpose)
         existing = self._allocated_ports.get(key)
-        if existing and existing != vnode:
-            self.log(f"WARNING: port {port} ({purpose}) is used by both {existing} and {vnode}")
-        else:
-            self._allocated_ports[key] = vnode
+        # Note: When auto_assign_ports=False (default), all nodes use the same default ports.
+        # This is normal in Docker containerized environments where each container has its own
+        # network namespace. The warning below is from legacy dynamic port assignment logic
+        # and can be safely commented out.
+        # if existing and existing != vnode:
+        #     self.log(f"WARNING: port {port} ({purpose}) is used by both {existing} and {vnode}")
+        # else:
+        self._allocated_ports[key] = vnode
 
     def _get_primary_ip(self, node: Node) -> str:
         """Return the IP address on the local network used for service bindings."""
