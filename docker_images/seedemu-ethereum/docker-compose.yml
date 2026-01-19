@@ -1,9 +1,14 @@
 version: "3.4"
+
 services:
-    test:
-        build:
-            context: .
-            dockerfile: Dockerfile
-        image: handsonsecurity/seedemu-ethereum
+  seedemu-legacy:
+    build:
+      context: ./legacy
+      dockerfile: Dockerfile
+    image: handsonsecurity/seedemu-ethereum:legacy
 
-
+  seedemu-pos:
+    build:
+      context: ./pos
+      dockerfile: Dockerfile
+    image: handsonsecurity/seedemu-ethereum:pos

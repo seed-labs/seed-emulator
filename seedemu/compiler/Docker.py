@@ -1,13 +1,6 @@
-﻿from __future__ import annotations
-
-from pathlib import Path
-from datetime import datetime
+from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import (
-    Node, Network, Compiler, BaseSystem, BaseOption,
-    Scope, ScopeType, ScopeTier, OptionHandling,
-    BaseVolume, OptionMode
-)
+from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
@@ -19,47 +12,20 @@ from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
-import shlex
 from yaml import dump
 
-from seedemu.core.ExternalEmulation import ExternalEmuSpec, ExternalNetRef, ExternalFileSpec
+SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-internetmap:2.0'
 
-
-SEEDEMU_INTERNET_MAP_IMAGE = 'handsonsecurity/seedemu-multiarch-map:buildx-latest'
-SEEDEMU_ETHER_VIEW_IMAGE = 'handsonsecurity/seedemu-multiarch-etherview:buildx-latest'
-
+# The Etherview is updated on 2025/11, we name the new version 2.0
+#SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:buildx-latest'
+SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:2.0'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
-
-# ----------------------------
-# External Emulation (Task 3)
-# ----------------------------
-
-DockerCompilerFileTemplates['compose_external_emu'] = """\
-    {serviceId}:
-        image: {image}
-        container_name: {containerName}
-{privileged}{cap_add}{workdir}{command}        volumes:
-            - ./{bundleDir}:{mountTo}
-{networks_block}{environment_block}
-"""
-
-# ----------------------------
-# Existing templates
-# ----------------------------
-
-DockerCompilerFileTemplates['compose_external_service'] = """\
-    {serviceId}:
-        build: ./{serviceId}
-        container_name: {containerName}
-{cap_add}{privileged}        networks:
-{networks}{ports}{volumes}        environment:
-{environment}
-"""
 
 DockerCompilerFileTemplates['dockerfile'] = """\
 ARG DEBIAN_FRONTEND=noninteractive
 """
+#RUN echo 'exec zsh' > /root/.bashrc
 
 DockerCompilerFileTemplates['start_script'] = """\
 #!/bin/bash
@@ -89,22 +55,20 @@ net() {
         ip -j link | jq -cr '.[] .operstate' | grep -q UP && echo "up" || echo "down"
         return
     }
-    ip -j link | jq -cr '.[] .ifname' | while read -r ifname; do
-        ip link set "$ifname" "$1"
-    done
+
+    ip -j li | jq -cr '.[] .ifname' | while read -r ifname; do ip link set "$ifname" "$1"; done
 }
 
 bgp() {
     cmd="$1"
     peer="$2"
-    [ "$cmd" = "bird_peer_down" ] && birdc dis "$peer"
-    [ "$cmd" = "bird_peer_up" ] && birdc en "$peer"
+    [ "$cmd" = "bird_peer_down" ] && birdc dis "$2"
+    [ "$cmd" = "bird_peer_up" ] && birdc en "$2"
 }
 
 while read -sr line; do {
     id="`cut -d ';' -f1 <<< "$line"`"
     cmd="`cut -d ';' -f2 <<< "$line"`"
-    peer="`cut -d ';' -f3 <<< "$line"`"
 
     output="no such command."
 
@@ -113,7 +77,7 @@ while read -sr line; do {
     [ "$cmd" = "net_status" ] && output="`net status 2>&1`"
     [ "$cmd" = "bird_list_peer" ] && output="`birdc s p | grep --color=never BGP 2>&1`"
 
-    [[ "$cmd" == "bird_peer_"* ]] && output="`bgp "$cmd" "$peer" 2>&1`"
+    [[ "$cmd" == "bird_peer_"* ]] && output="`bgp $cmd 2>&1`"
 
     printf '_BEGIN_RESULT_'
     jq -Mcr --arg id "$id" --arg return_value "$?" --arg output "$output" -n '{id: $id | tonumber, return_value: $return_value | tonumber, output: $output }'
@@ -272,6 +236,79 @@ DockerCompilerFileTemplates['local_image'] = """\
         image: {imageName}
 """
 
+# class DockerImage(object):
+#     """!
+#     @brief The DockerImage class.
+
+#     This class represents a candidate image for docker compiler.
+#     """
+
+#     __software: Set[str]
+#     __name: str
+#     __local: bool
+#     __dirName: str
+
+#     def __init__(self, name: str, software: List[str], local: bool = False, dirName: str = None) -> None:
+#         """!
+#         @brief create a new docker image.
+
+#         @param name name of the image. Can be name of a local image, image on
+#         dockerhub, or image in private repo.
+#         @param software set of software pre-installed in the image, so the
+#         docker compiler can skip them when compiling.
+#         @param local (optional) set this image as a local image. A local image
+#         is built locally instead of pulled from the docker hub. Default to False.
+#         @param dirName (optional) directory name of the local image (when local
+#         is True). Default to None. None means use the name of the image.
+#         """
+#         super().__init__()
+
+#         self.__name = name
+#         self.__software = set()
+#         self.__local = local
+#         self.__dirName = dirName if dirName != None else name
+
+#         for soft in software:
+#             self.__software.add(soft)
+
+#     def getName(self) -> str:
+#         """!
+#         @brief get the name of this image.
+
+#         @returns name.
+#         """
+#         return self.__name
+
+#     def getSoftware(self) -> Set[str]:
+#         """!
+#         @brief get set of software installed on this image.
+
+#         @return set.
+#         """
+#         return self.__software
+#     def getDirName(self) -> str:
+#         """!
+#         @brief returns the directory name of this image.
+#         @return directory name.
+#         """
+#         return self.__dirName
+
+#     def isLocal(self) -> bool:
+#         """!
+#         @brief returns True if this image is local.
+
+#         @return True if this image is local.
+#         """
+#         return self.__local
+
+#     def addSoftwares(self, software) -> DockerImage:
+#         """!
+#         @brief add softwares to this image.
+#         @return self, for chaining api calls.
+#         """
+#         for soft in software:
+#             self.__software.add(soft)
+
 
 class Docker(Compiler):
     """!
@@ -289,8 +326,10 @@ class Docker(Compiler):
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
 
+
     __internet_map_enabled: bool
     __internet_map_port: int
+
 
     __ether_view_enabled: bool
     __ether_view_port: int
@@ -302,13 +341,13 @@ class Docker(Compiler):
     __disable_images: bool
     __image_per_node_list: Dict[Tuple[str, str], DockerImage]
     _used_images: Set[str]
-    __config: List[Tuple[BaseOption, Scope]]  # all encountered Options for .env file
-    __option_handling: OptionHandling  # strategy how to deal with Options
+    __config: List[ Tuple[BaseOption , Scope] ] # all encountered Options for .env file
+    __option_handling: OptionHandling # strategy how to deal with Options
     __basesystem_dockerimage_mapping: dict
 
     def __init__(
         self,
-        platform: Platform = Platform.AMD64,
+        platform:Platform = Platform.AMD64,
         namingScheme: str = "as{asn}{role}-{displayName}-{primaryIp}",
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
@@ -320,13 +359,46 @@ class Docker(Compiler):
         clientHideServiceNet: bool = True,
         option_handling: OptionHandling = OptionHandling.CREATE_SEPARATE_ENV_FILE
     ):
+        """!
+        @brief Docker compiler constructor.
+
+        @param platform (optional) node cpu architecture Default to Platform.AMD64
+        @param namingScheme (optional) node naming scheme. Available variables
+        are: {asn}, {role} (r - router, h - host, rs - route server), {name},
+        {primaryIp} and {displayName}. {displayName} will automatically fall
+        back to {name} if
+        Default to as{asn}{role}-{displayName}-{primaryIp}.
+        @param selfManagedNetwork (optional) use self-managed network. Enable
+        this to manage the network inside containers instead of using docker's
+        network management. This works by first assigning "dummy" prefix and
+        address to containers, then replace those address with "real" address
+        when the containers start. This will allow the use of overlapping
+        networks in the emulation and will allow the use of the ".1" address on
+        nodes. Note this will break port forwarding (except for service nodes
+        like real-world access node and remote access node.) Default to False.
+        @param dummyNetworksPool (optional) dummy networks pool. This should not
+        overlap with any "real" networks used in the emulation, including
+        loopback IP addresses. Default to 10.128.0.0/9.
+        @param dummyNetworksMask (optional) mask of dummy networks. Default to
+        24.
+        @param internetMapEnabled (optional) set if seedemu internetMap should be enabled.
+        Default to False. Note that the seedemu internetMap allows unauthenticated
+        access to all nodes, which can potentially allow root access to the
+        emulator host. Only enable seedemu in a trusted network.
+        @param internetMapPort (optional) set seedemu internetMap port. Default to 8080.
+        @param etherViewEnabled (optional) set if seedemu EtherView should be enabled.
+        Default to False.
+        @param etherViewPort (optional) set seedemu EtherView port. Default to 5000.
+        @param clientHideServiceNet (optional) hide service network for the
+        client map by not adding metadata on the net. Default to True.
+        """
         self.__option_handling = option_handling
         self.__networks = ""
         self.__services = ""
         self.__custom_services = ""
         self.__naming_scheme = namingScheme
         self.__self_managed_network = selfManagedNetwork
-        self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix=dummyNetworksMask)
+        self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
         self.__internet_map_enabled = internetMapEnabled
         self.__internet_map_port = internetMapPort
@@ -341,13 +413,16 @@ class Docker(Compiler):
         self.__disable_images = False
         self._used_images = set()
         self.__image_per_node_list = {}
-        self.__config = []  # variables for '.env' file alongside 'docker-compose.yml'
+        self.__config = [] # variables for '.env' file alongside 'docker-compose.yml'
 
-        self.__volumes_dedup = []
+        self.__volumes_dedup = (
+            []
+        )  # unforunately set(()) failed to automatically deduplicate
         self.__vol_names = []
         super().__init__()
 
         self.__platform = platform
+
         self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
 
         for name, image in self.__basesystem_dockerimage_mapping.items():
@@ -356,115 +431,12 @@ class Docker(Compiler):
                 priority = 1
             self.addImage(image, priority=priority)
 
-    # ----------------------------
-    # External Emulation (Task 3)
-    # ----------------------------
-
-    def _resolve_external_net(self, emulator: Emulator, ref: ExternalNetRef) -> str:
-        """
-        Map ExternalNetRef -> docker-compose network name used by SEED.
-        """
-        reg = emulator.getRegistry()
-
-        if ref.scope == "ix":
-            target_scope = "ix"
-            target_name = ref.name
-        elif ref.scope == "as":
-            assert ref.asn is not None, "ExternalNetRef(scope='as') requires asn"
-            target_scope = str(ref.asn)
-            target_name = ref.name
-        else:
-            raise ValueError(f"Unknown ExternalNetRef.scope: {ref.scope}")
-
-        for ((scope, typ, name), obj) in reg.getAll().items():
-            if typ != "net":
-                continue
-            if str(scope) == str(target_scope) and name == target_name:
-                return self._getRealNetName(obj)
-
-        raise KeyError(f"Could not find network: scope={target_scope} name={target_name}")
-
-    def _writeExternalEmuBundles(self, output_dir: str, specs: List[ExternalEmuSpec]) -> None:
-        """
-        Writes generated files for ExternalEmuSpec into:
-          <output_dir>/external_emulations/<spec.name>/...
-        """
-        out = Path(output_dir).resolve()
-        base = out / "external_emulations"
-        base.mkdir(parents=True, exist_ok=True)
-
-        for spec in specs:
-            spec_dir = base / spec.name
-            spec_dir.mkdir(parents=True, exist_ok=True)
-
-            for fs in spec.files:
-                fpath = spec_dir / fs.relpath
-                fpath.parent.mkdir(parents=True, exist_ok=True)
-                if isinstance(fs.content, bytes):
-                    fpath.write_bytes(fs.content)
-                else:
-                    fpath.write_text(str(fs.content), encoding="utf-8")
-
-        self._log(f"Wrote external emulation bundles to: {base}")
-
-    def _compileExternalEmuService(self, emulator: Emulator, spec: ExternalEmuSpec) -> str:
-        """
-        Adds a docker-compose service for one ExternalEmuSpec.
-        """
-        service_id = sub(r'[^a-zA-Z0-9_.-]', '_', f"extemu_{spec.name}")
-        container_name = service_id
-        bundle_dir = str((Path("external_emulations") / spec.name)).replace("\\", "/")
-
-        privileged = "        privileged: true\n" if getattr(spec, "privileged", True) else ""
-        cap_add = "        cap_add:\n            - ALL\n" if getattr(spec, "cap_add_all", True) else ""
-
-        workdir = ""
-        if getattr(spec, "workdir", None):
-            workdir = f"        working_dir: {json.dumps(spec.workdir)}\n"
-
-        command = ""
-        if getattr(spec, "command", None):
-            command = f"        command: {json.dumps(spec.command)}\n"
-
-        # networks block
-        networks_block = ""
-        if getattr(spec, "networks", None):
-            nets = ""
-            for nref in spec.networks:
-                net_name = self._resolve_external_net(emulator, nref)
-                if getattr(nref, "ipv4", None):
-                    nets += f"            {net_name}:\n                ipv4_address: {nref.ipv4}\n"
-                else:
-                    nets += f"            {net_name}:\n"
-            networks_block = "        networks:\n" + nets
-
-        # environment block (optional)
-        environment_block = ""
-        if getattr(spec, "env", None):
-            env_lines = ""
-            for k, v in spec.env.items():
-                env_lines += f"            - {k}={v}\n"
-            environment_block = "        environment:\n" + env_lines
-
-        return DockerCompilerFileTemplates['compose_external_emu'].format(
-            serviceId=service_id,
-            image=spec.image,
-            containerName=container_name,
-            privileged=privileged,
-            cap_add=cap_add,
-            workdir=workdir,
-            command=command,
-            bundleDir=bundle_dir,
-            mountTo=getattr(spec, "mount_to", "/seedext"),
-            networks_block=networks_block,
-            environment_block=environment_block
-        ) + "\n"
-
-    # ----------------------------
-    # Existing Docker compiler code
-    # ----------------------------
-
     def _addVolume(self, vol: BaseVolume):
+        """! @brief add a docker volume/bind mount/or tmpfs
+
+        Remember them for later, to generate the top lvl 'volumes:' section of docker-compose.yml
+        """
+        # if vol.type() == 'volume': # then it is a named-volume
         key = vol.asDict()["source"]
         if key not in self.__vol_names:
             self.__volumes_dedup.append(vol)
@@ -472,6 +444,9 @@ class Docker(Compiler):
         return self
 
     def _getVolumes(self) -> List[BaseVolume]:
+        """! @brief get all docker volumes/mounts that must appear
+            in docker-compose.yml top-level  'volumes:' section
+        """
         return self.__volumes_dedup
 
     def optionHandlingCapabilities(self) -> OptionHandling:
@@ -480,60 +455,90 @@ class Docker(Compiler):
     def getName(self) -> str:
         return "Docker"
 
-    def addImage(self, image: DockerImage, priority: int = -1) -> "Docker":
-        assert image.getName() not in self.__images, f'image with name {image.getName()} already exists.'
+    def addImage(self, image: DockerImage, priority: int = -1) -> Docker:
+        """!
+        @brief add an candidate image to the compiler.
+
+        @param image image to add.
+        @param priority (optional) priority of this image. Used when one or more
+        images with same number of missing software exist. The one with highest
+        priority wins. If two or more images with same priority and same number
+        of missing software exist, the one added the last will be used. All
+        built-in images has priority of 0. Default to -1. All built-in images are
+        prior to the added candidate image. To set a candidate image to a node,
+        use setImageOverride() method.
+
+        @returns self, for chaining api calls.
+        """
+        assert image.getName() not in self.__images, 'image with name {} already exists.'.format(image.getName())
+
         self.__images[image.getName()] = (image, priority)
+
         return self
 
     def getImages(self) -> List[Tuple[DockerImage, int]]:
+        """!
+        @brief get list of images configured.
+
+        @returns list of tuple of images and priority.
+        """
+
         return list(self.__images.values())
 
-    def forceImage(self, imageName: str) -> "Docker":
+    def forceImage(self, imageName: str) -> Docker:
+        """!
+        @brief forces the docker compiler to use a image, identified by the
+        imageName. Image with such name must be added to the docker compiler
+        with the addImage method, or the docker compiler will fail at compile
+        time. Set to None to disable the force behavior.
+
+        @param imageName name of the image.
+
+        @returns self, for chaining api calls.
+        """
         self.__forced_image = imageName
+
         return self
 
-    def disableImages(self, disabled: bool = True) -> "Docker":
+    def disableImages(self, disabled: bool = True) -> Docker:
+        """!
+        @brief forces the docker compiler to not use any images and build
+        everything for starch. Set to False to disable the behavior.
+
+        @param disabled (option) disabled image if True. Default to True.
+
+        @returns self, for chaining api calls.
+        """
         self.__disable_images = disabled
+
         return self
 
-    def setImageOverride(self, node: Node, imageName: str) -> "Docker":
+    def setImageOverride(self, node:Node, imageName:str) -> Docker:
+        """!
+        @brief set the docker compiler to use a image on the specified Node.
+
+        @param node target node to override image.
+        @param imageName name of the image to use.
+
+        @returns self, for chaining api calls.
+        """
         asn = node.getAsn()
         name = node.getName()
-        self.__image_per_node_list[(asn, name)] = imageName
-        return self
+        self.__image_per_node_list[(asn, name)]=imageName
 
     def _groupSoftware(self, emulator: Emulator):
+        """!
+        @brief Group apt-get install calls to maximize docker cache.
+
+        @param emulator emulator to load nodes from.
+        """
+
         registry = emulator.getRegistry()
 
-        # --- Task 2: export external components config for hardware/standalone hookup ---
-        externals = getattr(emulator, "getExternalComponents", lambda: {})()
-        self._log(f"External components detected: {list(externals.keys())}")
-
-        external_dump = {}
-        for name, ext in externals.items():
-            external_dump[name] = {
-                "name": getattr(ext, "name", name),
-                "role": getattr(ext, "role", None),
-                "asn": getattr(ext, "asn", None),
-                "impl_type": getattr(ext, "impl_type", None),
-                "interfaces": [
-                    {
-                        "name": getattr(i, "name", None),
-                        "network": getattr(i, "network", None),
-                        "ip": getattr(i, "ip", None),
-                        "mac": getattr(i, "mac", None),
-                    }
-                    for i in getattr(ext, "interfaces", [])
-                ],
-                "scion": getattr(ext, "scion", {}),
-            }
-
-        if external_dump:
-            with open("externals.json", "w", encoding="utf-8") as f:
-                json.dump(external_dump, f, indent=2)
-            self._log("Wrote externals.json (for hardware/standalone integration).")
-
+        # { [imageName]: { [softName]: [nodeRef] } }
         softGroups: Dict[str, Dict[str, List[Node]]] = {}
+
+        # { [imageName]: useCount }
         groupIter: Dict[str, int] = {}
 
         for ((scope, type, name), obj) in registry.getAll().items():
@@ -541,14 +546,16 @@ class Docker(Compiler):
                 continue
 
             node: Node = obj
+
             (img, _) = self._selectImageFor(node)
             imgName = img.getName()
 
-            if imgName not in groupIter:
+            if not imgName in groupIter:
                 groupIter[imgName] = 0
+
             groupIter[imgName] += 1
 
-            if imgName not in softGroups:
+            if not imgName in softGroups:
                 softGroups[imgName] = {}
 
             group = softGroups[imgName]
@@ -560,7 +567,7 @@ class Docker(Compiler):
 
         for (key, val) in softGroups.items():
             maxIter = groupIter[key]
-            self._log(f'grouping software for image "{key}" - {maxIter} references.')
+            self._log('grouping software for image "{}" - {} references.'.format(key, maxIter))
             step = 1
 
             for commRequired in range(maxIter, 0, -1):
@@ -570,190 +577,346 @@ class Docker(Compiler):
                 for (soft, nodes) in val.items():
                     if len(nodes) == commRequired:
                         currentTier.add(soft)
-                        for node in nodes:
-                            currentTierNodes.add(node)
+                        for node in nodes: currentTierNodes.add(node)
 
                 for node in currentTierNodes:
                     if not node.hasAttribute('__soft_install_tiers'):
                         node.setAttribute('__soft_install_tiers', [])
+
                     node.getAttribute('__soft_install_tiers').append(currentTier)
 
+
                 if len(currentTier) > 0:
-                    self._log(
-                        f'the following software has been grouped together in step {step}: {currentTier} '
-                        f'since they are referenced by {len(currentTierNodes)} nodes.'
-                    )
+                    self._log('the following software has been grouped together in step {}: {} since they are referenced by {} nodes.'.format(step, currentTier, len(currentTierNodes)))
                     step += 1
 
+
     def _selectImageFor(self, node: Node) -> Tuple[DockerImage, Set[str]]:
+        """!
+        @brief select image for the given node.
+
+        @param node node.
+
+        @returns tuple of selected image and set of missing software.
+        """
         nodeSoft = node.getSoftware()
         nodeKey = (node.getAsn(), node.getName())
 
+        # #1 Highest Priority (User Custom Image)
         if nodeKey in self.__image_per_node_list:
             image_name = self.__image_per_node_list[nodeKey]
-            assert image_name in self.__images, f'image-per-node configured, but image {image_name} does not exist.'
+
+            assert image_name in self.__images, 'image-per-node configured, but image {} does not exist.'.format(image_name)
+
             (image, _) = self.__images[image_name]
-            self._log(f'image-per-node configured, using {image.getName()}')
+
+            self._log('image-per-node configured, using {}'.format(image.getName()))
             return (image, nodeSoft - image.getSoftware())
 
+        # Should we keep this feature?
         if self.__disable_images:
             self._log('disable-imaged configured, using base image.')
             (image, _) = self.__images['ubuntu:20.04']
             return (image, nodeSoft - image.getSoftware())
 
-        if self.__forced_image is not None:
-            assert self.__forced_image in self.__images, f'forced-image configured, but image {self.__forced_image} does not exist.'
+        # Set Default Image for All Nodes
+        if self.__forced_image != None:
+            assert self.__forced_image in self.__images, 'forced-image configured, but image {} does not exist.'.format(self.__forced_image)
+
             (image, _) = self.__images[self.__forced_image]
-            self._log(f'force-image configured, using image: {image.getName()}')
+
+            self._log('force-image configured, using image: {}'.format(image.getName()))
+
             return (image, nodeSoft - image.getSoftware())
 
+        #Maintain a table : Virtual Image Name - Actual Image Name
         image = self.__basesystem_dockerimage_mapping[node.getBaseSystem()]
+
         return (image, nodeSoft - image.getSoftware())
 
+        # candidates: List[Tuple[DockerImage, int]] = []
+        # minMissing = len(nodeSoft)
+        # for (image, prio) in self.__images.values():
+        #     missing = len(nodeSoft - image.getSoftware())
+
+        #     if missing < minMissing:
+        #         candidates = []
+        #         minMissing = missing
+        #     if missing <= minMissing:
+        #         candidates.append((image, prio))
+
+        # assert len(candidates) > 0, '_electImageFor ended w/ no images?'
+
+        # (selected, maxPrio) = candidates[0]
+
+        # for (candidate, prio) in candidates:
+        #     if prio >= maxPrio:
+        #         maxPrio = prio
+        #         selected = candidate
+
+        # return (selected, nodeSoft - selected.getSoftware())
+
+
     def _getNetMeta(self, net: Network) -> str:
+        """!
+        @brief get net metadata labels.
+
+        @param net net object.
+
+        @returns metadata labels string.
+        """
+
         (scope, type, name) = net.getRegistryInfo()
+
         labels = ''
 
         if self.__client_hide_svcnet and scope == 'seedemu' and name == '000_svc':
             return DockerCompilerFileTemplates['compose_label_meta'].format(
-                key='dummy',
-                value='dummy label for hidden node/net'
+                key = 'dummy',
+                value = 'dummy label for hidden node/net'
             )
 
         labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-            key='type',
-            value='global' if scope == 'ix' else 'local'
+            key = 'type',
+            value = 'global' if scope == 'ix' else 'local'
         )
-        labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='scope', value=scope)
-        labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='name', value=name)
-        labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='prefix', value=net.getPrefix())
 
-        if net.getDisplayName() is not None:
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'scope',
+            value = scope
+        )
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'name',
+            value = name
+        )
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'prefix',
+            value = net.getPrefix()
+        )
+
+        if net.getDisplayName() != None:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key='displayname', value=net.getDisplayName()
+                key = 'displayname',
+                value = net.getDisplayName()
             )
-        if net.getDescription() is not None:
+
+        if net.getDescription() != None:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key='description', value=net.getDescription()
+                key = 'description',
+                value = net.getDescription()
             )
 
         return labels
 
     def _getNodeMeta(self, node: Node) -> str:
+        """!
+        @brief get node metadata labels.
+
+        @param node node object.
+
+        @returns metadata labels string.
+        """
         (scope, type, name) = node.getRegistryInfo()
+
         labels = ''
 
-        labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='asn', value=node.getAsn())
-        labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='nodename', value=name)
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'asn',
+            value = node.getAsn()
+        )
+
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key = 'nodename',
+            value = name
+        )
 
         if type == 'hnode':
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='role', value='Host')
-        if type == 'rnode':
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='role', value='Router')
-        if type == 'brdnode':
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='role', value='BorderRouter')
-        if type == 'csnode':
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='role', value='SCION Control Service')
-        if type == 'snode':
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='role', value='Emulator Service Worker')
-        if type == 'rs':
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='role', value='Route Server')
-
-        if node.getDisplayName() is not None:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key='displayname', value=node.getDisplayName()
+                key = 'role',
+                value = 'Host'
             )
-        if node.getDescription() is not None:
+
+        if type == 'rnode':
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key='description', value=node.getDescription()
+                key = 'role',
+                value = 'Router'
+            )
+        if type == 'brdnode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'BorderRouter'
+            )
+
+        if type == 'csnode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'SCION Control Service'
+            )
+
+        if type == 'snode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'Emulator Service Worker'
+            )
+
+        if type == 'rs':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'Route Server'
+            )
+
+        if node.getDisplayName() != None:
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'displayname',
+                value = node.getDisplayName()
+            )
+
+        if node.getDescription() != None:
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'description',
+                value = node.getDescription()
             )
 
         if len(node.getClasses()) > 0:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key='class',
-                value=json.dumps(node.getClasses()).replace("\"", "\\\"")
+                key = 'class',
+                value = json.dumps(node.getClasses()).replace("\"", "\\\"")
             )
 
         for key, value in node.getLabel().items():
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key=key, value=value)
-
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = key,
+                value = value
+            )
         n = 0
         for iface in node.getInterfaces():
             net = iface.getNet()
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key=f'net.{n}.name', value=net.getName())
+
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
-                key=f'net.{n}.address',
-                value=f'{iface.getAddress()}/{net.getPrefix().prefixlen}'
+                key = 'net.{}.name'.format(n),
+                value = net.getName()
             )
+
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'net.{}.address'.format(n),
+                value = '{}/{}'.format(iface.getAddress(), net.getPrefix().prefixlen)
+            )
+
             n += 1
 
         return labels
 
     def _nodeRoleToString(self, role: NodeRole):
-        if role == NodeRole.Host:
-            return 'h'
-        if role == NodeRole.Router:
-            return 'r'
-        if role == NodeRole.OpenVpnRouter:
-            return 'r'
-        if role == NodeRole.ControlService:
-            return 'cs'
-        if role == NodeRole.RouteServer:
-            return 'rs'
-        if role == NodeRole.BorderRouter:
-            return 'brd'
-        assert False, f'unknown node role {role}'
+        """!
+        @brief convert node role to prefix string
+
+        @param role node role
+
+        @returns prefix string
+        """
+        if role == NodeRole.Host: return 'h'
+        if role == NodeRole.Router: return 'r'
+        if role == NodeRole.OpenVpnRouter: return 'r'
+        if role == NodeRole.ControlService: return 'cs'
+        if role == NodeRole.RouteServer: return 'rs'
+        if role == NodeRole.BorderRouter: return 'brd'
+        assert False, 'unknown node role {}'.format(role)
 
     def _contextToPrefix(self, scope: str, type: str) -> str:
-        return f'{type}_{scope}_'
+        """!
+        @brief Convert context to prefix.
+
+        @param scope scope.
+        @param type type.
+
+        @returns prefix string.
+        """
+        return '{}_{}_'.format(type, scope)
 
     def _addFile(self, path: str, content: str) -> str:
+        """!
+        @brief Stage file to local folder and return Dockerfile command.
+
+        @param path path to file. (in container)
+        @param content content of the file.
+
+        @returns COPY expression for dockerfile.
+        """
+
         staged_path = md5(path.encode('utf-8')).hexdigest()
         print(content, file=open(staged_path, 'w'))
-        return f'COPY {staged_path} {path}\n'
+        return 'COPY {} {}\n'.format(staged_path, path)
 
     def _importFile(self, path: str, hostpath: str) -> str:
+        """!
+        @brief Stage file to local folder and return Dockerfile command.
+
+        @param path path to file. (in container)
+        @param hostpath path to file. (on host)
+
+        @returns COPY expression for dockerfile.
+        """
+
         staged_path = md5(path.encode('utf-8')).hexdigest()
         copyfile(hostpath, staged_path)
-        return f'COPY {staged_path} {path}\n'
+        return 'COPY {} {}\n'.format(staged_path, path)
+
 
     def _getComposeNodeName(self, node: Node) -> str:
+        """!
+        @brief Given a node, compute its final container_name, as it will be
+        known in the docker-compose file.
+        """
         name = self.__naming_scheme.format(
-            asn=node.getAsn(),
-            role=self._nodeRoleToString(node.getRole()),
-            name=node.getName(),
-            displayName=node.getDisplayName() if node.getDisplayName() is not None else node.getName(),
-            primaryIp=node.getInterfaces()[0].getAddress()
+            asn = node.getAsn(),
+            role = self._nodeRoleToString(node.getRole()),
+            name = node.getName(),
+            displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
+            primaryIp = node.getInterfaces()[0].getAddress()
         )
+
         return sub(r'[^a-zA-Z0-9_.-]', '_', name)
 
     def _getRealNodeName(self, node: Node) -> str:
+        """!
+        @brief Computes the sub directory names inside the output folder.
+        """
         (scope, type, _) = node.getRegistryInfo()
         prefix = self._contextToPrefix(scope, type)
-        return f'{prefix}{node.getName()}'
+        return '{}{}'.format(prefix, node.getName())
 
     def _getRealNetName(self, net: Network):
-        (netscope, _, _) = net.getRegistryInfo()
-        net_prefix = self._contextToPrefix(netscope, 'net')
-        if net.getType() == NetworkType.Bridge:
-            net_prefix = ''
-        return f'{net_prefix}{net.getName()}'
+          """!
+          @brief Computes name  of a network as it will be known in the docker-compose file.
+          """
+          (netscope, _, _) = net.getRegistryInfo()
+          net_prefix = self._contextToPrefix(netscope, 'net')
+          if net.getType() == NetworkType.Bridge: net_prefix = ''
+          return '{}{}'.format(net_prefix, net.getName())
 
     def _getComposeServicePortList(self, node: Node) -> str:
+        """!
+        @brief Computes the 'ports:' section of the service in docker-compose.yml.
+        """
         _ports = node.getPorts()
         ports = ''
         if len(_ports) > 0:
             lst = ''
             for (h, n, p) in _ports:
                 lst += DockerCompilerFileTemplates['compose_port'].format(
-                    hostPort=h,
-                    nodePort=n,
-                    proto=p
+                    hostPort = h,
+                    nodePort = n,
+                    proto = p
                 )
-            ports = DockerCompilerFileTemplates['compose_ports'].format(portList=lst)
+            ports = DockerCompilerFileTemplates['compose_ports'].format(
+                portList = lst
+            )
         return ports
 
     def _getComposeNodeNets(self, node: Node) -> str:
+
         node_nets = ''
         dummy_addr_map = ''
 
@@ -773,66 +936,70 @@ class Docker(Compiler):
                     d_address, d_prefix.prefixlen,
                     iface.getAddress(), iface.getNet().getPrefix().prefixlen
                 )
+
                 address = d_address
 
-                self._log(
-                    'using self-managed network: using dummy address {}/{} for {}/{} on as{}/{}'.format(
-                        d_address, d_prefix.prefixlen, iface.getAddress(), iface.getNet().getPrefix().prefixlen,
-                        node.getAsn(), node.getName()
-                    )
-                )
+                self._log('using self-managed network: using dummy address {}/{} for {}/{} on as{}/{}'.format(
+                    d_address, d_prefix.prefixlen, iface.getAddress(), iface.getNet().getPrefix().prefixlen,
+                    node.getAsn(), node.getName()
+                ))
 
-            if address is None:
+            if address == None:
                 address = ""
             else:
-                address = DockerCompilerFileTemplates['compose_service_network_address'].format(address=address)
+                address = DockerCompilerFileTemplates['compose_service_network_address'].format(address = address)
 
             node_nets += DockerCompilerFileTemplates['compose_service_network'].format(
-                netId=real_netname,
-                address=address
+                netId = real_netname,
+                address = address
             )
-
         return node_nets, dummy_addr_map
 
     def _getComposeNodeVolumes(self, node: Node) -> str:
+        """ compute the docker-compose 'volumes:' section for this service(emulation node)"""
+
         volumes = ''
-        svcvols = list(set(node.getDockerVolumes()))
+        # svcvols = map( lambda vol: ServiceLvlVolume(vol), node.getCustomVolumes() )
+        svcvols = list (set(node.getDockerVolumes() ))
         for v in svcvols:
             v.mode = 'service'
-        yamlvols = '\n'.join(map(lambda line: '        ' + line, dump(svcvols).split('\n')))
-        volumes += '        volumes:\n' + yamlvols if len(node.getDockerVolumes()) > 0 else ''
+        yamlvols = '\n'.join(map( lambda line: '        ' + line ,dump( svcvols ).split('\n') ) )
 
+        volumes +='        volumes:\n' + yamlvols if len(node.getDockerVolumes()) > 0 else   ''
+
+
+        # the top-level docker-compose volumes section is rendered at a later stage ..
+        # Remember encountered volumes until then
         for v in node.getDockerVolumes():
             self._addVolume(v)
+
         return volumes
 
     def _computeDockerfile(self, node: Node) -> str:
+        """!
+        @brief Returns dockerfile contents for node.
+        """
         dockerfile = DockerCompilerFileTemplates['dockerfile']
 
         (image, soft) = self._selectImageFor(node)
 
         if not node.hasAttribute('__soft_install_tiers') and len(soft) > 0:
-            dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(
-                ' '.join(sorted(soft))
-            )
+            dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(soft)))
 
         if node.hasAttribute('__soft_install_tiers'):
             softLists: List[List[str]] = node.getAttribute('__soft_install_tiers')
             for softList in softLists:
                 softList = set(softList) & soft
-                if len(softList) == 0:
-                    continue
-                dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(
-                    ' '.join(sorted(softList))
-                )
+                if len(softList) == 0: continue
+                dockerfile += 'RUN apt-get update && apt-get install -y --no-install-recommends {}\n'.format(' '.join(sorted(softList)))
 
+        #included in the seedemu-base dockerImage.
+        #dockerfile += 'RUN curl -L https://grml.org/zsh/zshrc > /root/.zshrc\n'
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
 
-        for cmd in node.getDockerCommands():
-            dockerfile += f'{cmd}\n'
-        for cmd in node.getBuildCommands():
-            dockerfile += f'RUN {cmd}\n'
+        for cmd in node.getDockerCommands(): dockerfile += '{}\n'.format(cmd)
+        for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
         start_commands = ''
 
@@ -849,7 +1016,7 @@ class Docker(Compiler):
             start_commands += '{}{}\n'.format(cmd, ' &' if fork else '')
 
         dockerfile += self._addFile('/start.sh', DockerCompilerFileTemplates['start_script'].format(
-            startCommands=start_commands,
+            startCommands = start_commands,
             buildtime_sysctl=self._getNodeBuildtimeSysctl(node)
         ))
 
@@ -857,11 +1024,6 @@ class Docker(Compiler):
         dockerfile += self._addFile('/seedemu_worker', DockerCompilerFileTemplates['seedemu_worker'])
 
         dockerfile += 'RUN chmod +x /start.sh\n'
-        dockerfile += 'RUN set -e; for f in /start.sh /interface_setup; do ' \
-              'if [ -f "$f" ]; then tr -d "\\r" < "$f" > "$f.tmp"; mv "$f.tmp" "$f"; chmod +x "$f"; fi; ' \
-              'done\n'
-
-
         dockerfile += 'RUN chmod +x /seedemu_sniffer\n'
         dockerfile += 'RUN chmod +x /seedemu_worker\n'
 
@@ -872,35 +1034,58 @@ class Docker(Compiler):
         for (cpath, hpath) in node.getImportedFiles().items():
             dockerfile += self._importFile(cpath, hpath)
 
-        for cmd in node.getBuildCommandsAtEnd():
-            dockerfile += f'RUN {cmd}\n'
+        # These commands are added by node.addBuildCommandAtEnd()
+        # These RUN commands are placed at the end, after all the files
+        #      are copied (COPY commands).
+        for cmd in node.getBuildCommandsAtEnd(): dockerfile += 'RUN {}\n'.format(cmd)
 
         dockerfile += 'CMD ["/start.sh"]\n'
         return dockerfile
 
     def _getNodeBuildtimeSysctl(self, node: Node) -> str:
+        """!@brief get sysctl-flag settings for /start.sh script
+            @note   if a sysctl-option is in BUILD_TIME mode, it will go to /start.sh
+                otherwise if mode is RUNTIME the flag will be set in docker-compose.yml
+                (except for custom named interfaces such as 'net0' which would still go to /start.sh
+                because they simply don't exist yet once the container starts up
+                and /interface_setup hasn't been called yet )
+        """
         set_flags = []
         rp_opt = node.getOption('sysctl_netipv4_conf_rp_filter')
         for k, v in rp_opt.value.items():
+            # custom interfaces are always BUILD_TIME
             if k not in ['all', 'default']:
                 rp_filter = f'echo {int(v)} > /proc/sys/net/ipv4/conf/{k}/rp_filter'
                 set_flags.append(rp_filter)
             elif rp_opt.mode == OptionMode.BUILD_TIME:
+                # flags for 'all' and 'default' interfaces
+                # could be set in docker-compose.yml already if OptionMode is RUNTIME
                 rp_filter = f'echo {int(v)} > /proc/sys/net/ipv4/conf/{k}/rp_filter'
                 set_flags.append(rp_filter)
+
+
 
         if opts := node.getScopedOptions(prefix='sysctl'):
             for o, _ in opts:
                 if o.mode != OptionMode.BUILD_TIME:
+                    # then its already set in docker-compose.yml
                     continue
-                if o.fullname() == 'sysctl_netipv4_conf_rp_filter':
-                    continue
+                if o.fullname() == 'sysctl_netipv4_conf_rp_filter': continue
                 for s in repr(o).split('\n'):
-                    set_flags.append(f'sysctl -w {s.strip()} > /dev/null 2>&1')
+                   set_flags.append(f'sysctl -w {s.strip()} > /dev/null 2>&1')
+
 
         return '\n'.join(set_flags)
 
-    def _compileNode(self, node: Node) -> str:
+    def _compileNode(self, node: Node ) -> str:
+        """!
+        @brief Compile a single node. Will create folder for node and the
+        dockerfile.
+
+        @param node node to compile.
+
+        @returns docker-compose service string.
+        """
         real_nodename = self._getRealNodeName(node)
         node_nets, dummy_addr_map = self._getComposeNodeNets(node)
         if self.__self_managed_network:
@@ -909,7 +1094,7 @@ class Docker(Compiler):
         mkdir(real_nodename)
         chdir(real_nodename)
 
-        image, _ = self._selectImageFor(node)
+        image,_ = self._selectImageFor(node)
         dockerfile = self._computeDockerfile(node)
         print(dockerfile, file=open('Dockerfile', 'w'))
 
@@ -917,41 +1102,68 @@ class Docker(Compiler):
 
         name = self._getComposeNodeName(node)
         return DockerCompilerFileTemplates['compose_service'].format(
-            nodeId=real_nodename,
-            nodeName=name,
-            dependsOn=md5(image.getName().encode('utf-8')).hexdigest(),
-            networks=node_nets,
-            sysctls=self._getNodeSysctls(node),
-            ports=self._getComposeServicePortList(node),
-            labelList=self._getNodeMeta(node),
-            volumes=self._getComposeNodeVolumes(node),
-            environment="    - CONTAINER_NAME={}\n            ".format(name) + self._computeNodeEnvironment(node)
+            nodeId = real_nodename,
+            nodeName = name,
+            dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
+            networks = node_nets,
+            sysctls = self._getNodeSysctls(node),
+            # privileged = 'true' if node.isPrivileged() else 'false',
+            ports = self._getComposeServicePortList(node),
+            labelList = self._getNodeMeta(node),
+            volumes = self._getComposeNodeVolumes(node),
+            environment= "    - CONTAINER_NAME={}\n            ".format(name) + self._computeNodeEnvironment(node)
         )
 
     def _getNodeSysctls(self, node: Node) -> str:
-        opt_keyvals = []
+        """!@brief compute the 'sysctl:' section of the node's service
+                    in docker-compose.yml file
+            @note sysctl flags which are set in the docker-compose.yml file
+                can be changed, without having to recompile any images and
+                thus correspond to OptionMode.RUN_TIME
+        """
+        opt_keyvals = [] # 'repr' of all sysctl options set on this node i.e. : '- net.ipv4.ip_forwarding = 0'
+        #TODO: check if option mode is runtime
+        # if not the setting of this option should go to the /start.sh script (BUILD_TIME)
+        # Also interfaces other than 'all'|'default' cant go in the docker-compose.yml file
+        # because they only exist under this name once the /interface_setup script has run
+        # and renamed them to their final/expected names i.e. 'net0'
         if opts := node.getScopedOptions(prefix='sysctl'):
             for o, _ in opts:
                 if o.mode == OptionMode.RUN_TIME:
-                    if (val := o.repr_runtime()) is not None:
+                    if (val := o.repr_runtime()) != None:
                         for s in val.split('\n'):
                             opt_keyvals.append(f'- {s.strip()}')
                     else:
                         opt_keyvals.append(repr(o))
         if len(opt_keyvals) > 0:
-            return DockerCompilerFileTemplates['compose_sysctl'] + '           ' + '\n           '.join(opt_keyvals)
+            return DockerCompilerFileTemplates['compose_sysctl'] + '           ' + '\n           '.join( opt_keyvals )
         else:
             return ''
 
     def _computeNodeEnvironment(self, node: Node) -> str:
+        """!
+        @brief computes the environment section
+          of the docker-compose service for the given node
+        """
+
+        # just copy all nodes scoped runtime opts into a  list (tuple(opt, scope))
+        # and sort the list ascending by scope (specific to more general )
+        #  Then uniqueify the list  -> whats left is the .env file's content...
+        # minimal without duplicates
+
         def unique_partial_order_snd(elements):
             unique_list = []
+
             for elem in elements:
+                #if not any(elem == existing or existing < elem or elem < existing for existing in unique_list):
                 if not any((elem[1] == existing[1]) and (elem[0].name == existing[0].name) for existing in unique_list):
                     unique_list.append(elem)
+
             return unique_list
 
+
         def cmp_snd(a, b):
+            """Custom comparator for sorting based on the second tuple element."""
             try:
                 if a[1] < b[1]:
                     return -1
@@ -965,19 +1177,19 @@ class Docker(Compiler):
         scopts = node.getScopedRuntimeOptions()
 
         if self.__option_handling == OptionHandling.DIRECT_DOCKER_COMPOSE:
-            keyval_list = map(lambda x: f'- {x.name.upper()}={x.value}', [o for o, s in scopts])
+            keyval_list = map(lambda x: f'- {x.name.upper()}={x.value}', [ o for o,s in scopts] )
             return '\n            '.join(keyval_list)
-
         elif self.__option_handling == OptionHandling.CREATE_SEPARATE_ENV_FILE:
+
             self.__config.extend(scopts)
-            res = sorted(self.__config, key=cmp_to_key(cmp_snd))
+
+            res= sorted( self.__config, key=cmp_to_key(cmp_snd) )
+            #remember encountered variables for .env file generation later..
             self.__config = unique_partial_order_snd(res)
-            keyval_list = map(lambda x: f'- {x[0].name.upper()}=${{{self._sndary_key(x[0], x[1])}}}', scopts)
+            keyval_list = map(lambda x: f'- {x[0].name.upper()}=${{{ self._sndary_key(x[0],x[1])}}}',  scopts )
             return '\n            '.join(keyval_list)
 
-        return ""
-
-    def _sndary_key(self, o: BaseOption, s: Scope) -> str:
+    def _sndary_key(self, o: BaseOption, s: Scope )   -> str:
         base = o.name.upper()
         match s.tier:
             case ScopeTier.Global:
@@ -995,6 +1207,7 @@ class Docker(Compiler):
                     case ScopeType.RNODE:
                         return f'{base}_RNODE'
                     case _:
+                        #TODO: combination (ORed) Flags not yet implemented
                         raise NotImplementedError
             case ScopeTier.AS:
                 match s.type:
@@ -1011,358 +1224,260 @@ class Docker(Compiler):
                     case ScopeType.RNODE:
                         return f'{base}_{s.asn}_RNODE'
                     case _:
+                        # combination (ORed) Flags not yet implemented
+                        #TODO: How should we call CSNODE|HNODE or BRDNODE|RSNODE|RNODE ?!
                         raise NotImplementedError
             case ScopeTier.Node:
-                return f'{base}_{s.asn}_{s.node.upper()}'
+                return f'{base}_{s.asn}_{s.node.upper()}' # maybe add type here
 
     def _compileNet(self, net: Network) -> str:
+        """!
+        @brief compile a network.
+
+        @param net net object.
+
+        @returns docker-compose network string.
+        """
         if self.__self_managed_network and net.getType() != NetworkType.Bridge:
             pfx = next(self.__dummy_network_pool)
             net.setAttribute('dummy_prefix', pfx)
             net.setAttribute('dummy_prefix_index', 2)
-            self._log(f'self-managed network: using dummy prefix {pfx}')
+            self._log('self-managed network: using dummy prefix {}'.format(pfx))
+
 
         return DockerCompilerFileTemplates['compose_network'].format(
-            netId=self._getRealNetName(net),
-            prefix=net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
-            mtu=net.getMtu(),
-            labelList=self._getNetMeta(net)
+            netId = self._getRealNetName(net),
+            prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
+            mtu = net.getMtu(),
+            labelList = self._getNetMeta(net)
         )
 
     def generateEnvFile(self, scope: Scope, dir_prefix: str = '/'):
-        prefix = dir_prefix
+        """!
+           @brief   generates the '.env' file that accompanies any 'docker-compose.yml' file
+           @param scope  filter ENV variables by scope (i.e. ASN).
+                This is required i.e. by DistributedDocker compiler which generates a separate .env file per AS,
+                which contains only the relevant subset of all variables.
+        """
+
+        prefix=dir_prefix
         if dir_prefix != '' and not dir_prefix.endswith('/'):
             prefix += '/'
 
         vars = []
-        for o, s in self.__config:
+        for o,s in self.__config:
             try:
                 if s < scope or s == scope:
-                    sndkey = self._sndary_key(o, s)
+                    sndkey = self._sndary_key(o,s)
                     val = o.value
-                    vars.append(f'{sndkey}={val}')
+                    vars.append( f'{sndkey}={val}')
             except:
                 pass
-        assert len(vars) == len(self.__config), 'implementation error'
-        print('\n'.join(vars), file=open(f'{prefix}.env', 'w'))
+        assert len(vars)==len(self.__config), 'implementation error'
+        print( '\n'.join(vars) ,file=open(f'{prefix}.env','w'))
 
     def _makeDummies(self) -> str:
+        """!
+        @brief create dummy services to get around docker pull limits.
+
+        @returns docker-compose service string.
+        """
         mkdir('dummies')
         chdir('dummies')
 
         dummies = ''
+
         for image in self._used_images:
-            self._log(f'adding dummy service for image {image}...')
+            self._log('adding dummy service for image {}...'.format(image))
 
             imageDigest = md5(image.encode('utf-8')).hexdigest()
             dockerImage, _ = self.__images[image]
             if dockerImage.isLocal():
                 dummies += DockerCompilerFileTemplates['compose_dummy'].format(
-                    imageDigest=imageDigest,
-                    dependsOn=DockerCompilerFileTemplates['depends_on'].format(dependsOn=image)
+                    imageDigest = imageDigest,
+                    dependsOn= DockerCompilerFileTemplates['depends_on'].format(
+                        dependsOn = image
+                    )
                 )
             else:
                 dummies += DockerCompilerFileTemplates['compose_dummy'].format(
-                    imageDigest=imageDigest,
-                    dependsOn=""
+                    imageDigest = imageDigest,
+                    dependsOn= ""
                 )
 
-            dockerfile = f'FROM {image}\n'
+            dockerfile = 'FROM {}\n'.format(image)
             print(dockerfile, file=open(imageDigest, 'w'))
 
         chdir('..')
+
         return dummies
-
-    def _writeExternalBundles(self, output_dir: str, externals: dict) -> None:
-        """
-        Create a uniquely identifiable folder per external component and write:
-          - external_components/<id>/externals.json  (single external only)
-          - external_components/<id>/README.md       (how to connect)
-          - external_components/<id>/attach_linux.sh (IP/MAC bring-up)
-          - external_components/<id>/scion/*         (topology.json + keys if discoverable)
-        """
-        out = Path(output_dir).resolve()
-        base = out / "external_components"
-        base.mkdir(parents=True, exist_ok=True)
-
-        all_topologies = list(out.rglob("topology.json"))
-        all_keys_dirs = [p for p in out.rglob("keys") if p.is_dir()]
-
-        for ext_name, ext in externals.items():
-            name = getattr(ext, "name", ext_name)
-            role = getattr(ext, "role", "unknown")
-            asn = getattr(ext, "asn", -1)
-            impl_type = getattr(ext, "impl_type", "generic")
-            interfaces = getattr(ext, "interfaces", [])
-
-            ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-            folder_name = f"{name}__asn{asn}__{ts}"
-            comp_dir = base / folder_name
-            comp_dir.mkdir(parents=True, exist_ok=True)
-
-            ext_dict = {
-                "name": name,
-                "role": role,
-                "asn": asn,
-                "impl_type": impl_type,
-                "interfaces": [
-                    {
-                        "name": getattr(i, "name", ""),
-                        "network": getattr(i, "network", ""),
-                        "ip": getattr(i, "ip", ""),
-                        "mac": getattr(i, "mac", ""),
-                    }
-                    for i in interfaces
-                ],
-                "scion": getattr(ext, "scion", {}) or {},
-            }
-            with open(comp_dir / "externals.json", "w", encoding="utf-8") as f:
-                json.dump({name: ext_dict}, f, indent=2)
-
-            lines = [
-                "#!/bin/bash",
-                "set -euo pipefail",
-                "",
-                f"# External component: {name} (role={role}, asn={asn}, impl={impl_type})",
-                "# Usage:",
-                "#   sudo IFACE=<your-physical-or-tap-interface> ./attach_linux.sh",
-                "",
-                'IFACE="${IFACE:-}"',
-                'if [ -z "$IFACE" ]; then',
-                '  echo "ERROR: Set IFACE, e.g.: sudo IFACE=eth1 ./attach_linux.sh" >&2',
-                "  exit 1",
-                "fi",
-                "",
-                "echo \"Bringing up $IFACE for external component...\"",
-                "ip link set \"$IFACE\" up",
-                "",
-            ]
-
-            for i in interfaces:
-                iname = getattr(i, "name", "")
-                ip = getattr(i, "ip", "")
-                mac = getattr(i, "mac", "")
-                net = getattr(i, "network", "")
-
-                lines += [f"# Interface {iname} -> SEED network '{net}'"]
-                if mac:
-                    lines += [f"ip link set dev \"$IFACE\" address {mac}"]
-                if ip:
-                    lines += [
-                        f"ip addr flush dev \"$IFACE\" || true",
-                        f"ip addr add {ip} dev \"$IFACE\"",
-                    ]
-                lines += [""]
-
-            lines += [
-                "ip addr show dev \"$IFACE\"",
-                "echo \"OK. Now connect this interface into your hardware/standalone emulation fabric (bridge/tap).\"",
-                "",
-            ]
-
-            attach_path = comp_dir / "attach_linux.sh"
-            attach_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-            try:
-                attach_path.chmod(0o755)
-            except Exception:
-                pass
-
-            readme = [
-                f"# External Component Bundle: {name}",
-                "",
-                f"- role: `{role}`",
-                f"- asn: `{asn}`",
-                f"- impl_type: `{impl_type}`",
-                "",
-                "## What this bundle is",
-                "This folder is generated by SEED to prepare connecting an external hardware/standalone emulation node",
-                "(e.g., NetFPGA/P4 switch environment) to a SEED topology.",
-                "",
-                "## How to use (operator steps)",
-                "1) Identify the host interface (or TAP) that connects to your hardware/standalone emulation.",
-                "2) Run the provided Linux script to set MAC/IP and bring the interface up:",
-                "",
-                "```bash",
-                "sudo IFACE=<iface> ./attach_linux.sh",
-                "```",
-                "",
-                "3) Connect that interface into your testbed fabric (Linux bridge / switch port / tap).",
-                "",
-                "## Files",
-                "- `externals.json`: machine-readable definition of this external component",
-                "- `attach_linux.sh`: prepared interface config commands",
-                "- `scion/`: if SCION artifacts are discoverable in SEED output, they are copied here",
-                "",
-            ]
-            (comp_dir / "README.md").write_text("\n".join(readme) + "\n", encoding="utf-8")
-
-            scion_dir = comp_dir / "scion"
-            scion_dir.mkdir(parents=True, exist_ok=True)
-            copied = False
-
-            scion_obj = getattr(ext, "scion", {}) or {}
-            if isinstance(scion_obj, dict) and scion_obj:
-                topo = scion_obj.get("topology_json")
-                if isinstance(topo, dict):
-                    (scion_dir / "topology.json").write_text(json.dumps(topo, indent=2) + "\n", encoding="utf-8")
-                    copied = True
-
-            for topo_path in all_topologies:
-                p = str(topo_path).lower()
-                if (f"as{asn}" in p) or (name.lower() in p):
-                    try:
-                        data = topo_path.read_text(encoding="utf-8")
-                        (scion_dir / "topology.json").write_text(data, encoding="utf-8")
-                        copied = True
-                        break
-                    except Exception:
-                        pass
-
-            for keys_dir in all_keys_dirs:
-                p = str(keys_dir).lower()
-                if (f"as{asn}" in p) or (name.lower() in p):
-                    try:
-                        target = scion_dir / "keys"
-                        target.mkdir(parents=True, exist_ok=True)
-                        for fp in keys_dir.rglob("*"):
-                            if fp.is_file():
-                                rel = fp.relative_to(keys_dir)
-                                dest = target / rel
-                                dest.parent.mkdir(parents=True, exist_ok=True)
-                                dest.write_bytes(fp.read_bytes())
-                        copied = True
-                        break
-                    except Exception:
-                        pass
-
-            if not copied:
-                (scion_dir / "README.txt").write_text(
-                    "SCION artifacts not found in this output. When compiling a SCION topology, "
-                    "SEED will copy topology.json and keys here (best-effort discovery).\n",
-                    encoding="utf-8",
-                )
-
-        self._log(f"Wrote external component bundles to: {base}")
 
     def _doCompile(self, emulator: Emulator):
         registry = emulator.getRegistry()
-        outdir = str(Path(".").resolve())
-
-        # Task 2 bundles
-        externals = getattr(emulator, "getExternalComponents", lambda: {})()
-        self._log(f"External components detected: {list(externals.keys())}")
-        self._writeExternalBundles(outdir, externals)
-
-        # Task 3 (External Emulations)
-        ext_specs = list(getattr(emulator, "getExternalEmulations", lambda: [])() or [])
-        if ext_specs:
-            self._log(f"External emulations detected: {[s.name for s in ext_specs]}")
-            self._writeExternalEmuBundles(outdir, ext_specs)
-            for s in ext_specs:
-                self.__services += self._compileExternalEmuService(emulator, s)
 
         self._groupSoftware(emulator)
 
         for ((scope, type, name), obj) in registry.getAll().items():
+
             if type == 'net':
-                self._log(f'creating network: {scope}/{name}...')
+                self._log('creating network: {}/{}...'.format(scope, name))
                 self.__networks += self._compileNet(obj)
 
         for ((scope, type, name), obj) in registry.getAll().items():
             if type == 'rnode':
-                self._log(f'compiling router node {name} for as{scope}...')
-                self.__services += self._compileNode(obj)
-            elif type == 'csnode':
-                self._log(f'compiling control service node {name} for as{scope}...')
-                self.__services += self._compileNode(obj)
-            elif type == 'hnode':
-                self._log(f'compiling host node {name} for as{scope}...')
-                self.__services += self._compileNode(obj)
-            elif type == 'rs':
-                self._log(f'compiling rs node for {name}...')
-                self.__services += self._compileNode(obj)
-            elif type == 'snode':
-                self._log(f'compiling service node {name}...')
+                self._log('compiling router node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
 
+            if type == 'csnode':
+                self._log('compiling control service node {} for as{}...'.format(name, scope))
+                self.__services += self._compileNode(obj)
+
+            if type == 'hnode':
+                self._log('compiling host node {} for as{}...'.format(name, scope))
+                self.__services += self._compileNode(obj)
+
+            if type == 'rs':
+                self._log('compiling rs node for {}...'.format(name))
+                self.__services += self._compileNode(obj)
+
+            if type == 'snode':
+                self._log('compiling service node {}...'.format(name))
+                self.__services += self._compileNode(obj)
+
+        # Add the Internet Map contaienr to the emulator
         if self.__internet_map_enabled:
             self._log('enabling seedemu-internet-map...')
+
+            # Attach the Map container to the default network
             self.attachInternetMap(port_forwarding="{}:8080/tcp".format(self.__internet_map_port))
 
+
+        # Add the Ether View contaienr to docker's default network
         if self.__ether_view_enabled:
             self._log('enabling seedemu-ether-view...')
+
             self.__services += DockerCompilerFileTemplates['seedemu_ether_view'].format(
-                clientImage=SEEDEMU_ETHER_VIEW_IMAGE,
-                clientPort=self.__ether_view_port
+                clientImage = SEEDEMU_ETHER_VIEW_IMAGE,
+                clientPort = self.__ether_view_port
             )
             self.__services += '\n'
 
+
+        # Add custom entries (typically added through Docker::attachCustomContainer APIs)
         self.__services += self.__custom_services
 
+
         local_images = ''
+
         for (image, _) in self.__images.values():
-            if image.getName() not in self._used_images or not image.isLocal():
-                continue
+            if image.getName() not in self._used_images or not image.isLocal(): continue
             local_images += DockerCompilerFileTemplates['local_image'].format(
-                imageName=image.getName(),
-                dirName=image.getDirName()
+                imageName = image.getName(),
+                dirName = image.getDirName()
             )
 
         toplevelvolumes = self._computeComposeTopLvlVolumes()
 
-        self._log('creating docker-compose.yml...')
-        print(
-            DockerCompilerFileTemplates['compose'].format(
-                services=self.__services,
-                networks=self.__networks,
-                volumes=toplevelvolumes,
-                dummies=local_images + self._makeDummies(),
-            ),
-            file=open('docker-compose.yml', 'w')
-        )
+        self._log('creating docker-compose.yml...'.format(scope, name))
+        print(DockerCompilerFileTemplates['compose'].format(
+            services = self.__services,
+            networks = self.__networks,
+            volumes = toplevelvolumes,
+            dummies = local_images + self._makeDummies()
+        ), file=open('docker-compose.yml', 'w'))
 
-        self.generateEnvFile(Scope(ScopeTier.Global), '')
+        self.generateEnvFile(Scope(ScopeTier.Global),'')
 
     def _computeComposeTopLvlVolumes(self) -> str:
+        """!@brief render the 'volumes:' section of the docker-compose.yml file
+        It contains named volumes but not bind-mounts.
+        """
         toplevelvolumes = ''
         if len(topvols := self._getVolumes()) > 0:
             hit = False
-            for v in topvols:
+            #topvols = set(map( lambda vol: TopLvlVolume(vol), pool.getVolumes() ))
+
+            for v in  topvols:
                 v.mode = 'toplevel'
 
-            for v in [vv for vv in topvols if vv.asDict()['type'] == 'volume']:
+            #toplevelvolumes += '\n'.join(map( lambda line: '        ' + line ,dump( topvols ).split('\n') ) )
+
+            # sharedFolders/bind mounts do not belong in the top-level volumes section
+            for v in [vv  for  vv in topvols if vv.asDict()['type'] == 'volume' ]:
                 hit = True
-                toplevelvolumes += '  {}:\n'.format(v.asDict()['source'])
-                lines = dump(v).rstrip('\n').split('\n')
-                toplevelvolumes += '\n'.join(
-                    map(lambda x: '        ' if x[0] != 0 else '        ' + x[1] if x[1] != '' else '', enumerate(lines))
-                )
+                toplevelvolumes += '  {}:\n'.format(v.asDict()['source']) # why not 'name'
+                lines = dump( v ).rstrip('\n').split('\n')
+                toplevelvolumes += '\n'.join( map( lambda x: '        '
+                                                  if x[0] != 0 else '        ' + x[1]
+                                                  if x[1] != ''else '' , enumerate(lines ) ) )
                 toplevelvolumes += '\n'
 
-            if hit:
-                toplevelvolumes = 'volumes:\n' + toplevelvolumes
+            if hit: toplevelvolumes = 'volumes:\n' + toplevelvolumes
         return toplevelvolumes
 
     def attachInternetMap(self, asn: int = -1, net: str = '', ip_address: str = '',
-                          port_forwarding: str = '', env: list = [],
-                          show_on_map=False, node_name='seedemu_internet_map') -> "Docker":
-        self._log(f'attaching the Internet Map container to {asn}:{net}')
+                      port_forwarding: str = '', env: list = [],
+                      show_on_map=False, node_name='seedemu_internet_map') -> Docker:
+        """!
+        @brief add the pre-built Map container to the emulator (the entry should not
+            include any network entry, as the network entry will be added here)
+
+        @param asn the autonomous system number of the network. -1 means no network
+            information is provided, so the container will be attached to the default
+            network provided by the docker
+        @param net the name of the network that this container is attached to.
+        @param ip_address the IP address set for this container. If no IP address is provided,
+            docker will provide one when building the image.
+        @param port_forwarding the port forwarding field.
+        @param env the list of the environment variables.
+        @param show_on_map it is show on the map.
+        @param node_name.
+
+        @returns self, for chaining API calls.
+        """
+
+        self._log('attaching the Internet Map container to {}:{}'.format(asn, net))
+
+        # If this is not set to False, Docker compiler will attach another copy of the MAP
+        # container to the default network. This is to avoid that.
         self.__internet_map_enabled = False
+
         self.attachCustomContainer(
             DockerCompilerFileTemplates['seedemu_internet_map'].format(
                 serviceName=node_name,
                 clientImage=SEEDEMU_INTERNET_MAP_IMAGE,
                 containerName=node_name,
             ),
-            asn=asn, net=net, ip_address=ip_address, port_forwarding=port_forwarding,
-            env=env, show_on_map=show_on_map, node_name=node_name
+            asn=asn, net=net, ip_address=ip_address, port_forwarding=port_forwarding, env=env, show_on_map=show_on_map,
+            node_name=node_name
         )
         return self
 
     def attachCustomContainer(self, compose_entry: str, asn: int = -1, net: str = '',
                               ip_address: str = '', port_forwarding: str = '', env: list = [],
-                              show_on_map=False, node_name: str = 'unnamed') -> "Docker":
-        self._log(f'attaching an existing container to {asn}:{net}')
+                              show_on_map=False, node_name: str = 'unnamed') -> Docker:
+        """!
+        @brief add an pre-built container image to the emulator (the entry should not
+            include any network entry, as the network entry will be added here)
+
+        @param entry the docker compose entry (without the network entry)
+        @param asn the autonomous system number of the network. -1 means no network
+            information is provided, so the container will be attached to the default
+            network provided by the docker
+        @param net the name of the network that this container is attached to.
+        @param ip_address the IP address set for this container. If no IP address is provided,
+            docker will provide one when building the image.
+        @param port_forwarding the port forwarding field.
+
+        @param env the list of the environment variables.
+        @param show_on_map it is show on the map.
+        @param node_name.
+
+        @returns self, for chaining API calls.
+        """
+
+        self._log('attaching an existing container to {}:{}'.format(asn, net))
+
         self.__custom_services += compose_entry
 
         if port_forwarding != '':
@@ -1372,18 +1487,24 @@ class Docker(Compiler):
 
         if env:
             self.__custom_services += DockerCompilerFileTemplates['environment_variable_entry']
+
             field_name = DockerCompilerFileTemplates['environment_variable_entry']
+            # count how many leading spaces this field name has (for alignment purpose)
             leading_spaces = len(field_name) - len(field_name.lstrip())
             for e in env:
                 self.__custom_services += '{}- {}\n'.format(' ' * (leading_spaces + 4), e)
 
-        if asn < 0:
+        if asn < 0:  # Do not set the network entry; will use the default docker network
             self.__custom_services += '\n'
         else:
             net_prefix = self._contextToPrefix(asn, 'net')
             real_netname = '{}{}'.format(net_prefix, net)
 
-            ipv4_address_entry = '' if ip_address == '' else 'ipv4_address: {}'.format(ip_address)
+            # Construct the IP address field (leave it empty if IP address is not provided)
+            if ip_address == '':
+                ipv4_address_entry = ''
+            else:
+                ipv4_address_entry = 'ipv4_address: {}'.format(ip_address)
 
             self.__custom_services += DockerCompilerFileTemplates['network_entry'].format(
                 network_name_field=real_netname,
@@ -1392,27 +1513,49 @@ class Docker(Compiler):
             self.__custom_services += '\n'
 
         if show_on_map:
-            self.__custom_services += DockerCompilerFileTemplates['custom_compose_label_meta'].format(
-                labelList=self._getCustomNodeMeta(asn, node_name, net, ip_address)
-            )
+            self.__custom_services += DockerCompilerFileTemplates['custom_compose_label_meta'].format(labelList=self._getCustomNodeMeta(
+                asn, node_name, net, ip_address
+            ))
             self.__custom_services += '\n'
 
         return self
 
-    def _getCustomNodeMeta(self, asn: int = -1, node_name: str = '', net: str = '', ip_address: str = '') -> str:
+    def _getCustomNodeMeta(self, asn: int = -1, node_name: str = '', net: str = '', ip_address: str = '', ) -> str:
+        """!
+        @brief get custom node metadata labels.
+
+        @returns metadata labels string.
+        """
         labels = ''
 
         if asn > -1:
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='asn', value=asn)
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key='asn',
+                value=asn
+            )
         if node_name:
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='nodename', value=node_name)
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key='nodename',
+                value=node_name
+            )
 
-        labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='role', value='Host')
-
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key='role',
+            value='Host'
+        )
         if net:
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='net.0.name', value=net)
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key='net.0.name',
+                value=net
+            )
         if ip_address:
-            labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='net.0.address', value=ip_address)
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key='net.0.address',
+                value=ip_address
+            )
+        labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+            key='custom',
+            value='custom'
+        )
 
-        labels += DockerCompilerFileTemplates['compose_label_meta'].format(key='custom', value='custom')
         return labels

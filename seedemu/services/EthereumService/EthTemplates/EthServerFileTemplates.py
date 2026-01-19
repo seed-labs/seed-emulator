@@ -14,15 +14,15 @@ def get_file_content(filename):
 
 EthServerFileTemplates: Dict[str, str] = {
         'bootstrapper':        get_file_content("files_ethereum/bootstrapper.sh"),
-        'beacon_bootstrapper': get_file_content("files_ethereum/beacon_bootstrapper.sh")
+        'beacon_bootstrapper': get_file_content("files_ethereum/beacon_bootstrapper.sh"),
+        'fetch_bn_enr':    get_file_content("files_ethereum/fetch_bn_enr.sh"),
 }
 
 UtilityServerFileTemplates: Dict[str, str] = {
         'fund_account':    get_file_content("files_utility/fund_account.py"),
         'deploy_contract': get_file_content("files_utility/deploy_contract.py"),
         'utility_server':  get_file_content("files_utility/utility_server.py"),
-        'server_setup':    get_file_content("files_utility/utility_server_setup.sh")
-
+        'server_setup':    get_file_content("files_utility/utility_server_setup.py")
 }
 
 FaucetServerFileTemplates: Dict[str, str] = {
