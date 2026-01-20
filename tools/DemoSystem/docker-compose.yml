@@ -4,9 +4,6 @@ services:
     seedemu-demo-system:
         build:
             context: .
-            args:
-                PROXY_HOST: 10.1.10.61
-                PROXY_PORT: 7890
         image: handsonsecurity/seedemu-demosystem:2.0
         container_name: seedemu_demo_system
         volumes:

@@ -1,5 +1,5 @@
 baseInfo:
-  name: "morris worm 蠕虫"
+  name: "Morris worm 蠕虫"
   path: "./yesterday_once_more/02_morris_worm"
 
 sections:
@@ -87,7 +87,5 @@ sections:
   - headerTitle: "关闭靶场"
     steps:
       - type: "command_only"
-        action: docker_compose
-        cmd: composeDown
-        detach: false
-        composePath: "./yesterday_once_more/02_morris_worm/emulator/demo_output"
+        action: host_exec
+        cmd: "cd $hostProjectPath/yesterday_once_more/02_morris_worm/emulator/demo_output && docker compose down"

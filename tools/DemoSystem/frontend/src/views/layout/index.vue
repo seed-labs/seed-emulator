@@ -1,7 +1,7 @@
 <template>
   <el-header>
     <el-menu
-        :default-active="route.path"
+        :default-active="defaultActive"
         class="menu"
         mode="horizontal"
         unique-opened
@@ -16,22 +16,10 @@
       </el-menu-item>
       <div class="right-items">
         <el-menu-item index="/home">首页</el-menu-item>
-        <el-sub-menu index="/large-scale-internet-simulation">
-          <template #title>大规模互联网仿真演示</template>
-          <el-menu-item index="/large-scale-internet-simulation">大规模互联网仿真演示</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="/large-scale-blockchain-simulation">
-          <template #title>大规模区块链仿真演示</template>
-          <el-menu-item index="/large-scale-blockchain-simulation">大规模区块链仿真演示</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="/yesterday_once_more">
+        <el-sub-menu index="common">
           <template #title>昨日重现</template>
-          <el-menu-item index="/yesterday_once_more">昨日重现</el-menu-item>
-          <el-menu-item index="/yesterday_once_more/bgp">BGP 劫持攻击</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="/auto-CTF">
-          <template #title>自动 CTF 靶场</template>
-          <el-menu-item index="/auto-CTF">自动 CTF 靶场</el-menu-item>
+          <el-menu-item index="/common?name=bgp">BGP 前缀劫持</el-menu-item>
+          <el-menu-item index="/common?name=morris">Morris worm 蠕虫</el-menu-item>
         </el-sub-menu>
       </div>
     </el-menu>
@@ -45,6 +33,7 @@
 import {useRoute} from 'vue-router';
 
 const route = useRoute();
+const defaultActive = ref<string>(route.path)
 </script>
 
 <style scoped lang="scss">
@@ -61,6 +50,16 @@ const route = useRoute();
   .el-menu .el-menu-item-group .el-menu-item {
     font-size: 12px;
   }
+
+  /* 自定义激活样式 */
+  .el-sub-menu.is-active :deep(.el-sub-menu__title) {
+    color: var(--el-color-primary) !important;
+    border-bottom-color: var(--el-color-primary) !important;
+  }
 }
 
+.dashboard-link {
+  text-decoration: none; /* 去除下划线 */
+}
 </style>
+

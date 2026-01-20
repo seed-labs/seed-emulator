@@ -37,56 +37,6 @@ export const defaultRouters: RouteRecord[] = [
                     name: route.query.name || "bgp",
                 })
             },
-            // {
-            //     path: '/large-scale-internet-simulation',
-            //     component: () => import('@/views/largeScaleInternetSimulation/index.vue'),
-            //     name: 'large-scale-internet-simulation',
-            //     meta: {
-            //         title: "大规模互联网仿真演示",
-            //         icon: 'HomeFilled',
-            //         componentName: 'LargeScaleInternetSimulation',
-            //     },
-            // },
-            // {
-            //     path: '/large-scale-blockchain-simulation',
-            //     component: () => import('@/views/largeScaleBlockchainSimulation/index.vue'),
-            //     name: 'large-scale-blockchain-simulation',
-            //     meta: {
-            //         title: "大规模区块链仿真演示",
-            //         icon: 'HomeFilled',
-            //         componentName: 'LargeScaleBlockchainSimulation',
-            //     },
-            // },
-            // {
-            //     path: '/yesterday_once_more',
-            //     component: () => import('@/views/yesterdayReenacted/index.vue'),
-            //     name: 'yesterday_once_more',
-            //     meta: {
-            //         title: "昨日重现",
-            //         icon: 'HomeFilled',
-            //         componentName: 'YesterdayReenacted',
-            //     },
-            // },
-            // {
-            //     path: '/yesterday_once_more/bgp',
-            //     component: () => import('@/views/yesterdayReenacted/bgpExploration/index.vue'),
-            //     name: 'bgp-exploration',
-            //     meta: {
-            //         title: "BGP 劫持攻击",
-            //         icon: 'HomeFilled',
-            //         componentName: 'BgpExploration',
-            //     },
-            // },
-            // {
-            //     path: '/auto-CTF',
-            //     component: () => import('@/views/autoCTFRange/index.vue'),
-            //     name: 'auto-CTF',
-            //     meta: {
-            //         title: "自动 CTF 靶场",
-            //         icon: 'HomeFilled',
-            //         componentName: 'AutoCTFRange',
-            //     },
-            // },
         ]
     },
     {
@@ -113,57 +63,5 @@ let router = createRouter({
         }
     }
 })
-
-// router.beforeEach(async (to, from, next) => {
-//     let userStore = useUserStore()
-//     if (to.meta.title) {
-//         document.title = `${settings.title} - ${to.meta.title}`
-//     } else {
-//         document.title = settings.title
-//     }
-//     // 进度条开始
-//     NProgress.start()
-//     // 登录判断
-//     if (userStore.token) {
-//         if (to.name === 'login') {
-//             next({name: 'home'})
-//         } else {
-//             let userInfo = userStore.userInfo
-//             if (Object.keys(userInfo).length) {
-//                 next()
-//             } else {
-//                 try {
-//                     await userStore.getSelfInfo()
-//                     // await userStore.getMenuTree()
-//                     // 确保addRoute()时动态添加的路由已经完全被加载上
-//                     // replace: true只是一个设置信息，告诉VUE本次操作后，不能通过浏览器后退按钮，返回前一个路由
-//                     // to不能找到对应的路由的话，就再执行一次beforeEach((to, from, next)直到其中的next({ ...to})能找到对应的路由为止
-//                     // 切记 any路由也要采用动态注册方式，否则此处会经常匹配到any路由 ！！！
-//                     // 切记 any路由也要采用动态注册方式，否则此处会经常匹配到any路由 ！！！
-//                     // 切记 any路由也要采用动态注册方式，否则此处会经常匹配到any路由 ！！！
-//                     next({...to, replace: true})
-//                 } catch (err) {
-//                     setTimeout(() => {
-//                         ElNotification({
-//                             type: 'error',
-//                             message: '获取基础信息失败，退出登录'
-//                         })
-//                     }, 1000)
-//                     // token过期, 清空所有用户数据
-//                     userStore.resetState()
-//                     // 跳转到登录页
-//                     next({name: 'login', query: {redirect: to.path}})
-//                 }
-//             }
-//         }
-//     } else {
-//         // 切勿直接用 next({name: 'login', query: {redirect: to.path}}) 代替下面判断
-//         if (to.name === 'login') {
-//             next()
-//         } else {
-//             next({name: 'login', query: {redirect: to.path}})
-//         }
-//     }
-// })
 
 export default router

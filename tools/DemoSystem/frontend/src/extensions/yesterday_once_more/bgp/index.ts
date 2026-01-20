@@ -1,3 +1,8 @@
+export const baseInfo = {
+  "name": "BGP 前缀劫持",
+  "path": "./yesterday_once_more/01_bgp_prefix_hijacking"
+}
+
 export const config = [
   {
     "headerTitle": "启动靶场",
@@ -7,10 +12,8 @@ export const config = [
         "cmdKwargs": [
           {
             "type": "command_only",
-            "action": "docker_compose",
-            "cmd": "composeUp",
-            "detach": false,
-            "composePath": "./yesterday_once_more/01_bgp_prefix_hijacking/demo_output"
+            "action": "host_exec",
+            "cmd": "cd $hostProjectPath/yesterday_once_more/01_bgp_prefix_hijacking/demo_output && docker compose up -d"
           }
         ]
       }
@@ -251,10 +254,8 @@ export const config = [
         "cmdKwargs": [
           {
             "type": "command_only",
-            "action": "docker_compose",
-            "cmd": "composeDown",
-            "detach": false,
-            "composePath": "./yesterday_once_more/01_bgp_prefix_hijacking/demo_output"
+            "action": "host_exec",
+            "cmd": "cd $hostProjectPath/yesterday_once_more/01_bgp_prefix_hijacking/demo_output && docker compose down"
           }
         ]
       }

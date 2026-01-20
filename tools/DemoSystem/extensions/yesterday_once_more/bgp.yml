@@ -6,10 +6,8 @@ sections:
   - headerTitle: "启动靶场"
     steps:
       - type: "command_only"
-        action: docker_compose
-        cmd: composeUp
-        detach: false
-        composePath: "./yesterday_once_more/01_bgp_prefix_hijacking/demo_output"
+        action: host_exec
+        cmd: "cd $hostProjectPath/yesterday_once_more/01_bgp_prefix_hijacking/demo_output && docker compose up -d"
 
   - headerTitle: "环境设置"
     steps:
@@ -272,7 +270,5 @@ sections:
   - headerTitle: "关闭靶场"
     steps:
       - type: "command_only"
-        action: docker_compose
-        cmd: composeDown
-        detach: false
-        composePath: "./yesterday_once_more/01_bgp_prefix_hijacking/demo_output"
+        action: host_exec
+        cmd: "cd $hostProjectPath/yesterday_once_more/01_bgp_prefix_hijacking/demo_output && docker compose down"

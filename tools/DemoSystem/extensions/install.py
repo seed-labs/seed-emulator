@@ -168,6 +168,9 @@ def generate_ts_from_yaml(yaml_file, output_ts_file):
 
         ts_config.append(section_config)
 
+    # 获取baseInfo
+    base_info = config_data.get('baseInfo', {})
+
     # 生成TypeScript代码
     # 使用自定义的JSON编码器确保中文字符正确处理
     class CustomJSONEncoder(json.JSONEncoder):
@@ -175,10 +178,14 @@ def generate_ts_from_yaml(yaml_file, output_ts_file):
             # 使用ensure_ascii=False保持中文字符
             return json.dumps(obj, ensure_ascii=False, indent=2)
 
-    ts_code = """export const config = {}
+    # 生成包含baseInfo和config的TypeScript代码
+    ts_code = """export const baseInfo = {}
+
+export const config = {}
 
 export default config
-""".format(CustomJSONEncoder().encode(ts_config))
+""".format(CustomJSONEncoder().encode(base_info),
+           CustomJSONEncoder().encode(ts_config))
 
     # 确保输出目录存在
     os.makedirs(os.path.dirname(output_ts_file), exist_ok=True)
@@ -187,7 +194,7 @@ export default config
     with open(output_ts_file, 'w', encoding='utf-8') as f:
         f.write(ts_code)
 
-    return ts_config
+    return ts_config, base_info
 
 
 def validate_yaml_structure(yaml_file):
@@ -286,9 +293,11 @@ def main():
         print(f"  输出文件: {output_ts_file}")
 
         # 生成TypeScript配置文件
-        config = generate_ts_from_yaml(yml_file, output_ts_file)
+        result = generate_ts_from_yaml(yml_file, output_ts_file)
 
-        if config:
+        if result:
+            config, base_info = result
+
             # 添加到组件记录
             # 相对路径使用正斜杠（符合TypeScript/前端习惯）
             component_key = component_name
@@ -301,6 +310,7 @@ def main():
             # 统计信息
             total_steps = sum(len(section['text']) for section in config)
             print(f"  ✅ 成功生成: {len(config)} 个部分, {total_steps} 个步骤")
+            print(f"  🔹 baseInfo: {base_info.get('name', '未命名')}")
             successful_count += 1
         else:
             print(f"  ❌ 失败: {rel_path}")
