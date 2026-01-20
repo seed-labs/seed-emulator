@@ -1,11 +1,17 @@
 ### Demo System Manual
 
-1. 切换到 Demo System 项目根目录下
-2. 修改配置文件 `docker-compose.yml`，请根据实际情况配置
-    - http_proxy/https_proxy/HTTP_PROXY/HTTPS_PROXY，clash代理地址
-    - HOST，主机IP地址（即 `Demo System` 容器所在主机），目的是访问同主机的 `Internet Map`
-3. build 构建镜像。(e.g., `docker compose build`)
-4. 启动容器。(e.g., `docker compose up`)
-5. 攻击演示
-    - http://<host_ip>:5050/pro/common?name=bgp
-    - http://<host_ip>:5050/pro/common?name=morris
+# Step 1: Start the Demo container
+
+1. Build docker image: run `DOCKER_BUILDKIT=0 docker compose build` 
+2. Start the container: run `docker compose up`
+3. Access the demo site: `http://<host_ip>:5050`, where the IP address
+   is the host machine's IP address. If you run the browser on the host
+   machine, use `localhost` will be fine.   
+
+# Step 2: Set up the Demo  
+
+1. Go to `yesterday_once_more/setup_backend`, follow the instructions in `README.md`
+   to set up the backend.
+
+2. Go to `yesterday_once_more/setup_frontend`, follow the instructions in `README.md`
+   to set up the frontend. 
