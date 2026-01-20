@@ -1,11 +1,16 @@
-<template>
+<template xmlns="http://www.w3.org/1999/html">
   <div class="main-container">
     <iframe
         v-if="iframeSrc"
         :src="iframeSrc"
         class="full-iframe"
     />
-    <el-empty v-else :image-size="600" :description="alertTitle"/>
+    <el-empty v-else :image-size="600">
+      <template #description>
+        {{ emptyTitle }}<br/>
+        {{ alertTitle }}
+      </template>
+    </el-empty>
     <el-affix :offset="120" class="setting-affix">
       <el-button
           v-show="!dialogVisible"
@@ -19,8 +24,8 @@
 
     <!-- 使用 ResizableDialog 包裹对话框内容 -->
     <ResizableDialog
+        :title="title"
         v-model="dialogVisible"
-        title="Console"
         :width="dialogWidth"
         :height="dialogHeight"
         :show-resize-hint="true"
@@ -32,14 +37,7 @@
         @fontSizeChange="handleFontSizeChange"
     >
       <!-- 使用插槽 -->
-      <slot
-          name="console-tabs"
-          :update-active-step="handleUpdateActiveStep"
-          :update-pop-visible="handleUpdatePopVisible"
-          :pre-step="handlePreStep"
-          :cancel="handleCancel"
-          :complete="handleComplete"
-      >
+      <slot name="console-tabs">
         <div class="default-console">
           <p>请提供console-tabs插槽内容</p>
         </div>
@@ -51,13 +49,14 @@
 
 <script setup lang="ts">
 import {Setting} from '@element-plus/icons-vue'
-import {ref, computed} from 'vue'
 import {ElMessage} from 'element-plus'
 import ResizableDialog from '@/components/ResizableDialog/index.vue'
 
 interface BaseMapProps {
   defaultFontSize: number,
   iframeSrc: string,
+  title: string,
+  emptyTitle: string,
 }
 
 interface BaseMapEmits {
@@ -79,9 +78,7 @@ interface BaseMapEmits {
 const props = defineProps<BaseMapProps>()
 const emit = defineEmits<BaseMapEmits>()
 
-const activeStep = ref(0)
-const popVisible = ref(false)
-const alertTitle = ref("请先选择并启动靶场")
+const alertTitle = ref("请先启动靶场")
 
 // 对话框相关状态
 const dialogVisible = ref(false)
@@ -104,33 +101,6 @@ const onDialogReset = () => {
   dialogHeight.value = '600px'
   ElMessage.success('对话框已重置为默认大小')
 }
-
-// 事件处理方法
-const handleUpdateActiveStep = (value: number) => {
-  activeStep.value = value
-  emit('update:active-step', value)
-}
-
-const handleUpdatePopVisible = (value: boolean) => {
-  popVisible.value = value
-  emit('update:pop-visible', value)
-}
-
-const handlePreStep = () => {
-  if (activeStep.value > 0) {
-    activeStep.value--
-  }
-  emit('pre-step')
-}
-
-const handleCancel = () => {
-  popVisible.value = false
-  emit('cancel')
-}
-
-const handleComplete = () => {
-  emit('complete')
-}
 </script>
 
 <style scoped>
@@ -142,24 +112,6 @@ const handleComplete = () => {
   height: calc(100vh - var(--el-header-height) - 2 * var(--el-main-padding));
   overflow: hidden;
   position: relative;
-
-  .el-empty {
-    width: 100%;
-    height: 100%;
-    border: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-  }
-
-  :deep(.el-empty__description p) {
-    font-size: 50px;
-    color: #ff4d4f;
-    font-weight: 600;
-    line-height: 1.5;
-  }
 }
 
 /* 全屏iframe */
@@ -212,6 +164,26 @@ const handleComplete = () => {
 
   .setting-affix {
     left: 10px;
+  }
+}
+</style>
+
+<style lang="scss">
+.el-empty {
+  width: 100%;
+  height: 100%;
+  border: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  .el-empty__description {
+    font-size: 50px;
+    color: #ff4d4f;
+    font-weight: 600;
+    line-height: 1.5;
   }
 }
 </style>

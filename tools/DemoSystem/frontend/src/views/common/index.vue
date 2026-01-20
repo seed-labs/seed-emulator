@@ -1,27 +1,19 @@
 <template>
   <BaseMap
+      :title="title"
+      :empty-title="emptyTitle"
       :iframe-src="iframeSrc"
       :default-font-size="fontSize"
       @update:font-size="handleFontSizeChange"
   >
     <!-- 使用具名插槽 -->
-    <template #console-tabs="{
-      updateActiveStep,
-      updatePopVisible,
-      preStep,
-      cancel,
-      complete,
-    }">
+    <template #console-tabs>
       <ConsoleTabs
+          :key="consoleTabsKey"
           :form="form"
           :component-config="componentConfig"
           :confirm-next="onConfirmNext"
           :font-size="fontSize"
-          @update:active-step="updateActiveStep"
-          @update:pop-visible="updatePopVisible"
-          @pre-step="preStep"
-          @cancel="cancel"
-          @complete="complete"
       />
     </template>
   </BaseMap>
@@ -32,7 +24,7 @@ import {type ApiResponse} from "@/api/index.ts";
 import BaseMap from '@/components/BaseMap/index.vue'
 import ConsoleTabs from './ConsoleTabs.vue'
 import type {BGPConsoleForm} from "@/types";
-import {addContentMarker, AllLoading, contentMarker, dockerExec, getBirdConfigContent} from "@/utils/tools.ts"
+import {AllLoading, dockerExec} from "@/utils/tools.ts"
 import {loadConfigByGlob} from '@/utils/configLoader'
 import {componentRecord} from '@/extensions/index.ts'
 
@@ -46,6 +38,7 @@ const props = withDefaults(defineProps<Props>(), {
   name: 'bgp'
 })
 
+const consoleTabsKey = ref(0)
 const componentConfig = ref<any>(null)
 
 const loadConfig = async (path: string) => {
@@ -54,6 +47,8 @@ const loadConfig = async (path: string) => {
     if (!componentConfig.value) {
       console.error('未找到配置')
     }
+    title.value = componentConfig.value.baseInfo.name
+    emptyTitle.value = `欢迎来到 \`${title.value}\``
   } catch (err: any) {
     console.error('配置加载错误:', err)
   }
@@ -63,7 +58,9 @@ const loadConfig = async (path: string) => {
 watch(
     () => props.name,
     async (newVal) => {
-      await loadConfig(componentRecord[newVal] as string)
+      consoleTabsKey.value++
+      const componentPath = componentRecord[newVal] || 'bgp'
+      await loadConfig(componentPath as string)
       // if (componentConfig.value.attackEffectConfig.type === 'iframe') {
       //   form.targetHost = componentConfig.value.attackEffectConfig.targetHost || ''
       //   form.targetIPs = componentConfig.value.attackEffectConfig.targetIPs || []
@@ -74,6 +71,8 @@ watch(
 
 const ip = ref<string>('')
 const iframeSrc = ref<string>('')
+const title = ref<string>('BGP 前缀劫持')
+const emptyTitle = ref<string>('欢迎来到 `BGP 前缀劫持` 演示')
 
 // 新增字体大小状态
 const fontSize = ref(20)

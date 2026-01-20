@@ -11,11 +11,10 @@
       @update:model-value="$emit('update:modelValue', $event)"
   >
     <!-- 自定义标题栏 -->
-    <template #header="{ title: slotTitle, close }">
+    <template #header>
       <div class="resizable-dialog-header" ref="headerRef">
         <div class="header-content">
-          <slot name="title" v-if="$slots.title"></slot>
-          <span v-else>{{ slotTitle }}</span>
+          <span>{{ props.title }}</span>
         </div>
         <div class="header-actions">
           <!-- 新增字体大小控制区域 -->
@@ -85,6 +84,7 @@ import {useGesture} from '@vueuse/gesture'
 
 interface Props {
   modelValue: boolean
+  title: string
   width?: string
   height?: string
   minWidth?: number
@@ -103,6 +103,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  title: 'Base map',
   width: '1200px',
   height: '900px',
   minWidth: 400,

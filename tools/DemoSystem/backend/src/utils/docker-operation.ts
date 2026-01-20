@@ -674,7 +674,8 @@ APPEND_EOF`
      * 启动指定路径的 Docker Compose 服务
      */
     async composeUp(composePath: string, serviceName?: string): Promise<string> {
-        let command = "DOCKER_BUILDKIT=0 docker compose build && docker compose up -d"
+        // let command = "DOCKER_BUILDKIT=0 docker compose build && docker compose up -d"
+        let command = "docker compose up -d"
         command = serviceName ? `${command} ${serviceName}` : command;
         const result = await this.execComposeCommand(composePath, command);
 
