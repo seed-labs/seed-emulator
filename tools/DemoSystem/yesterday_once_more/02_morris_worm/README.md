@@ -1,8 +1,19 @@
-请先在主机`/etc/seedemu/seedemu.conf`中配置如下信息，请根据实际情况填写。
+# README
+
+- Put the correct information in the `seedemu.conf` file,
+  and copy it to `/etc/seedemu/seedemu.conf`
 
 ```yaml
-condaPath: /home/cy/miniconda3/condabin/conda # conda 路径 (which conda)
+condaPath: /home/cy/miniconda3/condabin/conda # conda's path
 
 demoSystem:
-  envName: seedpy310 # demoSystem 需要使用到的 conda 环境名称 
-  hostProjectPath: /home/cy/projects/debug/seed-emulator/tools/DemoSystem # DemoSystem 的项目根目录
+  envName: seedpy310   # The conda environemnt name needed for demoSystem
+  hostProjectPath: /home/cy/projects/debug/seed-emulator/tools/DemoSystem  # DemoSystem's root folder 
+```
+
+- Go to the `emulator` folder, run `large-internet.py` to generate the emulator files
+
+- Go to the `demo_output` folder, run `dcbuild` to build the container. 
+  Note, `dcbuild` is the alias for `DOCKER_BUILDKIT=0 docker compose build`
+
+After this step, the setup is complete, we are ready to run the demo system. 
