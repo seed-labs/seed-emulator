@@ -1,20 +1,19 @@
 FROM node:22-slim AS builder
 
-WORKDIR /build
-COPY . .
-WORKDIR /build/frontend
 RUN npm install -g pnpm
+WORKDIR /build/frontend
+COPY frontend/package.json frontend/pnpm-lock.yaml* ./
 RUN pnpm i
+COPY frontend/ .
 RUN pnpm run build-dev
 
 FROM node:22-slim
-WORKDIR /usr/src/app
-COPY . .
-COPY --from=builder /build/frontend/dist ./frontend/dist
-WORKDIR /usr/src/app/backend
-RUN npm install
-RUN npm install -D typescript @types/tar-fs js-yaml @types/js-yaml
-RUN ./node_modules/.bin/tsc
 COPY start.sh /
 RUN chmod +x /start.sh
+WORKDIR /usr/src/app/backend
+COPY backend/package.json backend/pnpm-lock.yaml* ./
+RUN npm install
+COPY backend/ .
+COPY --from=builder /build/frontend/dist ../frontend/dist
+RUN ./node_modules/.bin/tsc
 ENTRYPOINT ["sh", "/start.sh"]

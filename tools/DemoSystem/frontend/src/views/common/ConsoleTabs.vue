@@ -117,6 +117,7 @@
 
 <script setup lang="ts">
 import {VideoPlay, Delete} from '@element-plus/icons-vue'
+
 // import Iframe from "./AttackEffectIframe.vue"
 
 interface ConsoleTabsProps {
@@ -160,18 +161,21 @@ const executeStep = async (textLength: number, ...stepArgs: number[]) => {
   }
   const stepIndex = stepArgs[0] as number
   executingSteps[stepIndex] = true
+  let msg, msgPrefix
+
+  if (stepIndex === 0 || stepIndex === props.componentConfig.config.length - 1 || textLength === 1) {
+    msgPrefix = `步骤[${stepIndex + 1}]`
+  } else {
+    msgPrefix = `步骤[${stepArgs.map(a => a + 1).join('-')}]`
+  }
 
   try {
     const res = await props.confirmNext(...stepArgs)
     if (!res.ok) {
       throw Error(res.result)
     }
-    let msg
-    if (stepIndex === 0 || stepIndex === props.componentConfig.config.length - 1 || textLength === 1) {
-      msg = `✅ 步骤[${stepIndex + 1}] 成功\n时间:${new Date().toLocaleTimeString()}`
-    } else {
-      msg = `✅ 步骤[${stepArgs.map(a => a + 1).join('-')}] 成功\n时间:${new Date().toLocaleTimeString()}`
-    }
+
+    msg = `✅ ${msgPrefix} 成功\n时间:${new Date().toLocaleTimeString()}`
     try {
       const {succeeded} = JSON.parse(res.result)
       if (succeeded && succeeded.length && succeeded[0].output !== '') {
@@ -182,10 +186,10 @@ const executeStep = async (textLength: number, ...stepArgs: number[]) => {
         msg = `${msg}\n输出:\n${res.result}`
       }
     }
-    stepResultsList.value.push(msg)
   } catch (error) {
-    stepResultsList.value.push(`❌ 步骤[${stepArgs.map(a => a + 1).join('-')}] 失败\n时间:${new Date().toLocaleTimeString()}\n错误信息: ${error}`)
+    msg = `❌ ${msgPrefix} 失败\n时间:${new Date().toLocaleTimeString()}\n错误信息: ${error}`
   } finally {
+    stepResultsList.value.push(msg)
     executingSteps[stepIndex] = false
   }
 }
