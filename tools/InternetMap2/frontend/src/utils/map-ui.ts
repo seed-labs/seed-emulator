@@ -1566,7 +1566,6 @@ export class MapUi {
                         this._edges.add(edge)
                     }
                 })
-                this._graph.stabilize();
                 this._expandNode(nodeId);
             } else {
                 this._collapseNode(nodeId);
