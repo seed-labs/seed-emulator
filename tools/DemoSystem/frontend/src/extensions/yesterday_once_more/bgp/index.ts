@@ -24,8 +24,12 @@ export const config = [
     "text": [
       {
         "shortText": "环境设置",
-        "innerHtml": "<div>首先，我们需要启动仿真器。</div>\n<div>在本实验中，我们用 AS-199 来劫持 AS-153 的 IP 前缀（10.153.0.0/24）。为了帮助观察 BGP 劫持的效果，我们先从一台机器上发包给 AS-153 的机器。在 Internet Map 上我们应该可以看到数据包的流动（在 Filter 栏填入 icmp，加回车）：</div>\n<div>如果您使用自己的虚拟机连接到仿真器网络，可以从您的虚拟机访问机器 10.153.0.71。</div>\n<div class=\"code-block\">\n    <div class=\"code-header\">\n        <span class=\"code-title\">命令</span>\n    </div>\n    <pre class=\"code-content\">docker exec as151h-host_0-10.151.0.71 ping 10.153.0.71</pre>\n</div>",
+        "innerHtml": "<div>首先，我们需要启动仿真器。</div>\n<div>在本实验中，我们用 AS-199 来劫持 AS-153 的 IP 前缀（10.153.0.0/24）。为了帮助观察 BGP 劫持的效果，我们先从一台机器上发包给 AS-153 的机器。在 Internet Map 上我们应该可以看到数据包的流动（在 Filter 栏填入 icmp，加回车）：</div>\n<div>如果您使用自己的虚拟机连接到仿真器网络，可以从您的虚拟机访问机器 10.153.0.71。</div>\n<div class=\"code-block\">\n    <div class=\"code-header\">\n        <span class=\"code-title\">命令</span>\n    </div>\n    <pre class=\"code-content\">cd $hostProjectPath/yesterday_once_more/setup_backend &amp;&amp; /bin/bash 01_bgp_setup.sh\ndocker exec as151h-host_0-10.151.0.71 ping 10.153.0.71</pre>\n</div>",
         "cmdKwargs": [
+          {
+            "action": "host_exec",
+            "cmd": "cd $hostProjectPath/yesterday_once_more/setup_backend && /bin/bash 01_bgp_setup.sh"
+          },
           {
             "action": "docker_exec",
             "containerNames": [
@@ -162,9 +166,8 @@ export const config = [
         "innerHtml": "<div>从结果中，我们只能看到一个 BGP session，即 u_as11；这是 AS-11。该自治系统在多个位置都有 BGP 路由器。从 Internet Map 上，我们可以看到 AS-199 和 AS-11 是在 IX-105 进行的对等连接（peering）。我们可以找到对应的容器名称 (as11brd-r105-10.105.0.11)</div>\n<div class=\"code-block\">\n    <div class=\"code-header\">\n        <span class=\"code-title\">命令</span>\n    </div>\n    <pre class=\"code-content\">docker ps | grep as11</pre>\n</div>",
         "cmdKwargs": [
           {
-            "action": "docker_exec",
-            "cmd": "ps|grep as11",
-            "detach": false
+            "action": "host_exec",
+            "cmd": "docker ps|grep as11"
           }
         ]
       },
