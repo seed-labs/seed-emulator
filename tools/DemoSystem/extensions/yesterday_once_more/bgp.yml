@@ -22,8 +22,12 @@ sections:
             content: "如果您使用自己的虚拟机连接到仿真器网络，可以从您的虚拟机访问机器 10.153.0.71。"
           - type: "code_block"
             title: "命令"
-            content: "docker exec as151h-host_0-10.151.0.71 ping 10.153.0.71"
+            content: |
+              cd $hostProjectPath/yesterday_once_more/setup_backend && /bin/bash 01_bgp_setup.sh
+              docker exec as151h-host_0-10.151.0.71 ping 10.153.0.71
         commands:
+          - action: host_exec
+            cmd: "cd $hostProjectPath/yesterday_once_more/setup_backend && /bin/bash 01_bgp_setup.sh"
           - action: docker_exec
             containerNames: ["as151h-host_0-10.151.0.71"]
             cmd: "ping 10.153.0.71"
@@ -190,9 +194,8 @@ sections:
             title: "命令"
             content: "docker ps | grep as11"
         commands:
-          - action: docker_exec
-            cmd: "ps|grep as11"
-            detach: false
+          - action: host_exec
+            cmd: "docker ps|grep as11"
 
       - type: "description_with_command"
         shortText: "修改 as11brd-r105-10.105.0.11 的 BGP 配置"
