@@ -4,7 +4,8 @@
 conda_env='emu'  
 
 conda_path=$(which conda)
-demo_system_path=$(pwd | sed 's/DemoSystem.*/DemoSystem/' )
+demo_system_path=$(pwd -P | sed 's/DemoSystem.*/DemoSystem/' )
+echo $demo_system_path
 
 CONFIG=$(cat <<EOF
 condaPath: $conda_path
