@@ -191,6 +191,7 @@ class EmailService:
                     transport_lines += f"            echo 'mail.{dom} smtp:[{ip}]:25' >> /etc/postfix/transport &&\n"
                 if self._use_build_wrappers:
                     # use build wrappers
+                    # IMPORTANT: Indentation for environment must be 12 spaces (under 'container_name' which is 8)
                     compose_entry = (
                         f"    {p['name']}:\n"
                         f"        build:\n"
@@ -260,7 +261,7 @@ class EmailService:
                         f"        domainname: {p['domain']}\n"
                         f"        restart: unless-stopped\n"
                         f"        privileged: true\n"
-                        f"        {dns_block}"
+                        f"{('        ' + dns_block) if dns_block else ''}"
                         f"        environment:\n"
                         f"            - OVERRIDE_HOSTNAME={p['hostname']}.{p['domain']}\n"
                         f"            - PERMIT_DOCKER=connected-networks\n"
@@ -321,8 +322,8 @@ class EmailService:
             wrapper_dir = f"{p['name']}_wrapper"
             def make_cb(dir_name=wrapper_dir):
                 def cb(_compiler):
-                    # We're likely running from the scenario folder, not output/
-                    out_dir = os.path.join('output', dir_name)
+                    # We assume CWD is the output directory (server.py ensures this)
+                    out_dir = dir_name
                     os.makedirs(out_dir, exist_ok=True)
                     dockerfile_path = os.path.join(out_dir, 'Dockerfile')
                     with open(dockerfile_path, 'w') as f:
