@@ -571,6 +571,321 @@ def render_simulation() -> str:
     except Exception as e:
         return f"Error rendering simulation: {str(e)}"
 
+
+# ==============================================================================
+# Email Service Tools
+# ==============================================================================
+
+@mcp.tool()
+def install_email_service(
+    domain: str,
+    asn: int,
+    ip: str,
+    gateway: str,
+    mode: str = "dns",
+    hostname: str = "mail",
+    dns_server: str = ""
+) -> str:
+    """Install an email server (Postfix/Dovecot based) for a domain.
+    
+    Args:
+        domain: Email domain (e.g., "example.com")
+        asn: AS number where the mail server resides
+        ip: IP address for the mail server
+        gateway: Default gateway IP for routing
+        mode: "dns" (uses DNS for routing) or "transport" (explicit transport maps)
+        hostname: Hostname prefix (default "mail", results in mail.example.com)
+        dns_server: Optional DNS server IP for DNS mode
+    
+    Example:
+        install_email_service("example.com", 100, "10.100.0.10", "10.100.0.254")
+    """
+    from seedemu.services.EmailService import EmailService
+    
+    try:
+        # Get or create EmailService instance in runtime
+        if not hasattr(runtime, 'email_service'):
+            runtime.email_service = EmailService(mode=mode, dns_nameserver=dns_server or None)
+        
+        email_svc = runtime.email_service
+        
+        # Add provider
+        email_svc.add_provider(
+            domain=domain,
+            asn=asn,
+            ip=ip,
+            gateway=gateway,
+            hostname=hostname,
+            dns=dns_server or None
+        )
+        
+        runtime.log_code(f"# Email Service")
+        runtime.log_code(f"email_svc = EmailService(mode='{mode}')")
+        runtime.log_code(f"email_svc.add_provider(domain='{domain}', asn={asn}, ip='{ip}', gateway='{gateway}')")
+        
+        return f"Email service registered for {hostname}.{domain} (IP: {ip}, AS{asn}). Will be attached during Docker compilation."
+    except Exception as e:
+        return f"Error installing email service: {str(e)}"
+
+
+@mcp.tool()
+def list_email_providers() -> str:
+    """List all registered email providers."""
+    if not hasattr(runtime, 'email_service'):
+        return "No email services registered."
+    
+    providers = runtime.email_service.get_providers()
+    if not providers:
+        return "No email providers registered."
+    
+    result = []
+    for p in providers:
+        result.append({
+            "domain": p["domain"],
+            "hostname": f"{p['hostname']}.{p['domain']}",
+            "ip": p["ip"],
+            "asn": p["asn"]
+        })
+    
+    import json
+    return json.dumps(result, indent=2)
+
+# ==============================================================================
+# Docker Tools (Build & Deploy)
+# ==============================================================================
+
+def _get_docker_compose_cmd():
+    """Return the correct docker compose command for this system."""
+    import subprocess
+    # Try docker compose (v2) first
+    try:
+        result = subprocess.run(["docker", "compose", "version"], 
+                                capture_output=True, timeout=5)
+        if result.returncode == 0:
+            return ["docker", "compose"]
+    except:
+        pass
+    # Fall back to docker-compose (v1)
+    return ["docker-compose"]
+
+@mcp.tool()
+def compile_simulation(output_dir: str) -> str:
+    """Compile the rendered simulation to Docker Compose files.
+    
+    Args:
+        output_dir: Path to the output directory for Docker files.
+    """
+    emulator = runtime.get_emulator()
+    
+    if not emulator.rendered():
+        return "Error: Simulation not rendered. Call render_simulation first."
+    
+    import os
+    from seedemu.compiler import Docker
+    
+    try:
+        # Ensure output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Compile to Docker
+        docker_compiler = Docker()
+        
+        # Attach EmailService if registered
+        if hasattr(runtime, 'email_service'):
+            runtime.email_service.attach_to_docker(docker_compiler)
+            runtime.log_code(f"email_svc.attach_to_docker(docker)")
+        
+        docker_compiler.compile(emulator, output_dir, override=True)
+        
+        # Run output callbacks for email wrapper Dockerfiles
+        if hasattr(runtime, 'email_service'):
+            import os as os_module
+            prev_cwd = os_module.getcwd()
+            os_module.chdir(output_dir)
+            for cb in runtime.email_service.get_output_callbacks():
+                try:
+                    cb(docker_compiler)
+                except:
+                    pass  # Ignore callback errors
+            os_module.chdir(prev_cwd)
+        
+        runtime.output_dir = os.path.abspath(output_dir)
+        runtime.log_code(f"docker = Docker()")
+        runtime.log_code(f"docker.compile(emulator, '{output_dir}')")
+        
+        return f"Compiled simulation to Docker files in '{output_dir}'."
+    except Exception as e:
+        return f"Error compiling simulation: {str(e)}"
+
+@mcp.tool()
+def build_images() -> str:
+    """Build Docker images for the simulation.
+    
+    Must be called after compile_simulation.
+    """
+    if not runtime.output_dir:
+        return "Error: No output directory set. Call compile_simulation first."
+    
+    import subprocess
+    
+    try:
+        result = subprocess.run(
+            _get_docker_compose_cmd() + ["build"],
+            cwd=runtime.output_dir,
+            capture_output=True,
+            text=True,
+            timeout=600  # 10 minutes timeout
+        )
+        
+        if result.returncode != 0:
+            return f"Error building images: {result.stderr}"
+        
+        return "Docker images built successfully."
+    except subprocess.TimeoutExpired:
+        return "Error: Build timed out after 10 minutes."
+    except Exception as e:
+        return f"Error building images: {str(e)}"
+
+@mcp.tool()
+def start_simulation() -> str:
+    """Start the simulation (docker compose up).
+    
+    Must be called after build_images.
+    """
+    if not runtime.output_dir:
+        return "Error: No output directory set. Call compile_simulation first."
+    
+    import subprocess
+    
+    try:
+        result = subprocess.run(
+            _get_docker_compose_cmd() + ["up", "-d"],
+            cwd=runtime.output_dir,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        if result.returncode != 0:
+            return f"Error starting simulation: {result.stderr}"
+        
+        return "Simulation started. Containers are running."
+    except Exception as e:
+        return f"Error starting simulation: {str(e)}"
+
+@mcp.tool()
+def stop_simulation() -> str:
+    """Stop the simulation (docker compose down)."""
+    if not runtime.output_dir:
+        return "Error: No output directory set."
+    
+    import subprocess
+    
+    try:
+        result = subprocess.run(
+            _get_docker_compose_cmd() + ["down"],
+            cwd=runtime.output_dir,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+        
+        if result.returncode != 0:
+            return f"Error stopping simulation: {result.stderr}"
+        
+        return "Simulation stopped. Containers removed."
+    except Exception as e:
+        return f"Error stopping simulation: {str(e)}"
+
+@mcp.tool()
+def list_containers() -> str:
+    """List all running containers in the simulation."""
+    try:
+        docker_client = runtime.get_docker_client()
+        containers = docker_client.containers.list()
+        
+        result = []
+        for c in containers:
+            result.append({
+                "name": c.name,
+                "status": c.status,
+                "image": c.image.tags[0] if c.image.tags else "unknown"
+            })
+        
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return f"Error listing containers: {str(e)}"
+
+# ==============================================================================
+# Dynamic Runtime Tools (Container Interaction)
+# ==============================================================================
+
+@mcp.tool()
+def exec_command(container_name: str, command: str) -> str:
+    """Execute a command inside a running container.
+    
+    Args:
+        container_name: Name of the container.
+        command: Command to execute (e.g., 'ip route').
+    """
+    try:
+        docker_client = runtime.get_docker_client()
+        container = docker_client.containers.get(container_name)
+        
+        result = container.exec_run(command, demux=False)
+        output = result.output.decode('utf-8', errors='replace')
+        
+        return f"Exit code: {result.exit_code}\n{output}"
+    except Exception as e:
+        return f"Error executing command: {str(e)}"
+
+@mcp.tool()
+def get_logs(container_name: str, tail: int = 50) -> str:
+    """Get logs from a container.
+    
+    Args:
+        container_name: Name of the container.
+        tail: Number of lines to return (default 50).
+    """
+    try:
+        docker_client = runtime.get_docker_client()
+        container = docker_client.containers.get(container_name)
+        
+        logs = container.logs(tail=tail).decode('utf-8', errors='replace')
+        return logs
+    except Exception as e:
+        return f"Error getting logs: {str(e)}"
+
+@mcp.tool()
+def ping_test(src_container: str, dst_ip: str, count: int = 4) -> str:
+    """Test network connectivity using ping.
+    
+    Args:
+        src_container: Name of the source container.
+        dst_ip: Destination IP address or hostname.
+        count: Number of ping packets (default 4).
+    """
+    return exec_command(src_container, f"ping -c {count} {dst_ip}")
+
+@mcp.tool()
+def get_routing_table(container_name: str) -> str:
+    """Get the routing table from a container.
+    
+    Args:
+        container_name: Name of the container.
+    """
+    return exec_command(container_name, "ip route")
+
+@mcp.tool()
+def get_bgp_status(container_name: str) -> str:
+    """Get BGP protocol status from a router container.
+    
+    Args:
+        container_name: Name of the router container.
+    """
+    # SEED uses BIRD for routing
+    return exec_command(container_name, "birdc show protocol")
+
 # ==============================================================================
 # Helper Resources
 # ==============================================================================

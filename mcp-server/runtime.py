@@ -22,6 +22,10 @@ class EmulatorRuntime:
         self.emulator.addLayer(self.base)
         self.rendered = False
         
+        # Docker deployment state
+        self.output_dir = None
+        self.docker_client = None
+        
         # Name -> Object mapping for easy lookup by LLM
         self.registry = {}
         # Operation history for exporting script
@@ -29,11 +33,19 @@ class EmulatorRuntime:
             "from seedemu.core import Emulator, Binding, Filter",
             "from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, Mpls",
             "from seedemu.services import WebService, DomainNameService",
+            "from seedemu.compiler import Docker",
             "",
             "emulator = Emulator()",
             "base = Base()",
             "emulator.addLayer(base)",
         ]
+    
+    def get_docker_client(self):
+        """Get or create Docker client"""
+        if self.docker_client is None:
+            import docker
+            self.docker_client = docker.from_env()
+        return self.docker_client
 
     def get_emulator(self) -> Emulator:
         return self.emulator
