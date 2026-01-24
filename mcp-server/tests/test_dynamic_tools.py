@@ -7,7 +7,8 @@ from unittest.mock import patch, MagicMock
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from server import (
-    exec_command, get_logs, ping_test, get_routing_table, get_bgp_status
+    exec_command, get_logs, ping_test, get_routing_table, get_bgp_status,
+    traceroute, capture_traffic, get_interface_stats
 )
 from runtime import runtime
 
@@ -97,8 +98,63 @@ class TestDynamicTools(unittest.TestCase):
         result = get_bgp_status("test_router")
         self.assertIn("BIRD", result)
         mock_container.exec_run.assert_called_once()
+        mock_container.exec_run.assert_called_once()
         call_args = mock_container.exec_run.call_args[0][0]
         self.assertIn("birdc", call_args)
+
+    @patch.object(runtime, 'get_docker_client')
+    def test_traceroute(self, mock_get_client):
+        """traceroute should execute traceroute command"""
+        mock_client = MagicMock()
+        mock_container = MagicMock()
+        mock_container.exec_run.return_value = MagicMock(
+            exit_code=0,
+            output=b"1  10.0.0.254  0.1 ms"
+        )
+        mock_client.containers.get.return_value = mock_container
+        mock_get_client.return_value = mock_client
+        
+        result = traceroute("src_container", "8.8.8.8")
+        self.assertIn("10.0.0.254", result)
+        mock_container.exec_run.assert_called_once()
+        call_args = mock_container.exec_run.call_args[0][0]
+        self.assertIn("traceroute", call_args)
+
+    @patch.object(runtime, 'get_docker_client')
+    def test_capture_traffic(self, mock_get_client):
+        """capture_traffic should use timeout and tcpdump"""
+        mock_client = MagicMock()
+        mock_container = MagicMock()
+        mock_container.exec_run.return_value = MagicMock(
+            exit_code=0,
+            output=b"tcpdump output line 1\nline 2"
+        )
+        mock_client.containers.get.return_value = mock_container
+        mock_get_client.return_value = mock_client
+        
+        result = capture_traffic("test_pod", duration=5, filter="port 80")
+        self.assertIn("tcpdump output", result)
+        call_args = mock_container.exec_run.call_args[0][0]
+        self.assertIn("timeout 5", call_args)
+        self.assertIn("tcpdump", call_args)
+        self.assertIn("port 80", call_args)
+        
+    @patch.object(runtime, 'get_docker_client')
+    def test_get_interface_stats(self, mock_get_client):
+        """get_interface_stats should execute ip link show"""
+        mock_client = MagicMock()
+        mock_container = MagicMock()
+        mock_container.exec_run.return_value = MagicMock(
+            exit_code=0,
+            output=b"[{\"ifname\":\"eth0\", \"stats64\":{\"rx\":{\"bytes\":100}}}]"
+        )
+        mock_client.containers.get.return_value = mock_container
+        mock_get_client.return_value = mock_client
+        
+        result = get_interface_stats("test_container")
+        self.assertIn("eth0", result)
+        call_args = mock_container.exec_run.call_args[0][0]
+        self.assertIn("ip -s -j link show", call_args)
 
 if __name__ == '__main__':
     unittest.main()

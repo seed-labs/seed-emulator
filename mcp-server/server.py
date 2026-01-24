@@ -1160,6 +1160,46 @@ def get_bgp_status(container_name: str) -> str:
     # SEED uses BIRD for routing
     return exec_command(container_name, "birdc show protocol")
 
+@mcp.tool()
+def traceroute(src_container: str, dst_ip: str) -> str:
+    """Trace the path to a destination IP.
+    
+    Args:
+        src_container: Name of the source container.
+        dst_ip: Destination IP address.
+    """
+    # Try different traceroute commands
+    cmd = f"sh -c 'traceroute -n {dst_ip} || tracepath -n {dst_ip}'"
+    return exec_command(src_container, cmd)
+
+@mcp.tool()
+def capture_traffic(
+    container_name: str,
+    interface: str = "eth0",
+    duration: int = 10,
+    filter: str = ""
+) -> str:
+    """Capture network traffic on a container interface.
+    
+    Args:
+        container_name: Name of the container.
+        interface: Network interface (default eth0).
+        duration: Capture duration in seconds (default 10).
+        filter: Tcpdump filter expression (e.g., "port 80").
+    """
+    # Use timeout to stop tcpdump after duration
+    cmd = f"timeout {duration} tcpdump -i {interface} -n {filter}"
+    return exec_command(container_name, cmd)
+
+@mcp.tool()
+def get_interface_stats(container_name: str) -> str:
+    """Get network interface statistics (bytes/packets).
+    
+    Args:
+        container_name: Name of the container.
+    """
+    return exec_command(container_name, "ip -s -j link show")
+
 # ==============================================================================
 # Helper Resources
 # ==============================================================================
