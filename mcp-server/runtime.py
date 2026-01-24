@@ -65,6 +65,10 @@ class EmulatorRuntime:
         """Log Python code for export"""
         self.code_buffer.append(code)
 
+    def get_code_log(self) -> list:
+        """Get the logged code lines"""
+        return self.code_buffer
+
     def get_script(self) -> str:
         """Get the full Python script"""
         return "\n".join(self.code_buffer)

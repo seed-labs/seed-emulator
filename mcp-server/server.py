@@ -767,6 +767,164 @@ def get_node_interfaces(node_name: str) -> str:
         return f"Error getting interfaces: {str(e)}"
 
 # ==============================================================================
+# Topology Export Tools
+# ==============================================================================
+
+@mcp.tool()
+def get_topology_summary() -> str:
+    """Get a human-readable summary of the current topology.
+    
+    Returns information about all ASes, IXes, nodes, and their connections.
+    """
+    base = runtime.get_base()
+    
+    summary = {
+        "autonomous_systems": [],
+        "internet_exchanges": [],
+        "total_routers": 0,
+        "total_hosts": 0
+    }
+    
+    # Get all ASes
+    for asn in base.getAsns():
+        asys = base.getAutonomousSystem(asn)
+        routers = asys.getRouters()
+        hosts = asys.getHosts()
+        networks = asys.getNetworks()
+        
+        summary["autonomous_systems"].append({
+            "asn": asn,
+            "routers": routers,
+            "hosts": hosts,
+            "networks": networks
+        })
+        summary["total_routers"] += len(routers)
+        summary["total_hosts"] += len(hosts)
+    
+    # Get all IXes
+    for ix_id in base.getInternetExchangeIds():
+        ix = base.getInternetExchange(ix_id)
+        summary["internet_exchanges"].append({
+            "id": ix_id,
+            "name": ix.getDisplayName() if hasattr(ix, 'getDisplayName') else f"IX{ix_id}"
+        })
+    
+    import json
+    return json.dumps(summary, indent=2)
+
+
+@mcp.tool()
+def export_topology(format: str = "json") -> str:
+    """Export the current topology in various formats.
+    
+    Args:
+        format: Output format - "json", "mermaid", or "graphviz"
+    
+    Returns:
+        Topology representation in the requested format
+    """
+    base = runtime.get_base()
+    
+    if format == "json":
+        return get_topology_summary()
+    
+    elif format == "mermaid":
+        lines = ["graph LR"]
+        
+        # Add ASes as subgraphs
+        for asn in base.getAsns():
+            asys = base.getAutonomousSystem(asn)
+            lines.append(f"    subgraph AS{asn}")
+            
+            for r_name in asys.getRouters():
+                lines.append(f"        {r_name}[({r_name})]")
+            for h_name in asys.getHosts():
+                lines.append(f"        {h_name}[{h_name}]")
+            
+            lines.append("    end")
+        
+        # Add IXes
+        for ix_id in base.getInternetExchangeIds():
+            lines.append(f"    IX{ix_id}{{IX{ix_id}}}")
+        
+        return "\n".join(lines)
+    
+    elif format == "graphviz":
+        lines = ["digraph Topology {"]
+        lines.append("    rankdir=LR;")
+        
+        # Add ASes
+        for asn in base.getAsns():
+            asys = base.getAutonomousSystem(asn)
+            lines.append(f"    subgraph cluster_AS{asn} {{")
+            lines.append(f'        label="AS{asn}";')
+            
+            for r_name in asys.getRouters():
+                lines.append(f'        {r_name} [shape=ellipse];')
+            for h_name in asys.getHosts():
+                lines.append(f'        {h_name} [shape=box];')
+            
+            lines.append("    }")
+        
+        lines.append("}")
+        return "\n".join(lines)
+    
+    else:
+        return f"Error: Unknown format '{format}'. Supported: json, mermaid, graphviz"
+
+
+@mcp.tool()
+def export_python_script(filepath: str = "") -> str:
+    """Export the logged API calls as a Python script.
+    
+    Args:
+        filepath: Optional file path to save the script. If empty, returns the script content.
+    
+    Returns:
+        The Python script content or confirmation of file save.
+    """
+    code_log = runtime.get_code_log()
+    
+    script_lines = [
+        "#!/usr/bin/env python3",
+        "\"\"\"Auto-generated SEED Emulator script.\"\"\"",
+        "",
+        "from seedemu.core import Emulator",
+        "from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf",
+        "from seedemu.compiler import Docker",
+        "from seedemu.services import WebService, DomainNameService",
+        "",
+        "# Create emulator and layers",
+        "emulator = Emulator()",
+        "base = Base()",
+        "emulator.addLayer(base)",
+        "",
+        "# Generated API calls",
+    ]
+    
+    script_lines.extend(code_log)
+    
+    script_lines.extend([
+        "",
+        "# Render and compile",
+        "emulator.render()",
+        "# docker = Docker()",
+        "# docker.compile(emulator, './output')",
+    ])
+    
+    script_content = "\n".join(script_lines)
+    
+    if filepath:
+        try:
+            with open(filepath, 'w') as f:
+                f.write(script_content)
+            return f"Python script saved to {filepath}"
+        except Exception as e:
+            return f"Error saving script: {str(e)}"
+    else:
+        return script_content
+
+# ==============================================================================
 # Docker Tools (Build & Deploy)
 # ==============================================================================
 
@@ -1005,29 +1163,7 @@ def get_bgp_status(container_name: str) -> str:
 # ==============================================================================
 # Helper Resources
 # ==============================================================================
-@mcp.resource("seed://topology/summary")
-def get_topology_summary() -> str:
-    """Get a JSON summary of the current topology (ASes, Nodes, Links)"""
-    base = runtime.get_base()
-    summary = {
-        "ases": [],
-        "ixs": []
-    }
-    for asn in base.getAsns():
-        as_obj = base.getAutonomousSystem(asn)
-        as_data = {
-            "asn": asn,
-            "routers": list(as_obj.getRouters()),
-            "hosts": list(as_obj.getHosts()),
-            "networks": list(as_obj.getNetworks())
-        }
-        summary["ases"].append(as_data)
-        
-    for ix_id in base.getInternetExchangeIds():
-        ix = base.getInternetExchange(ix_id)
-        summary["ixs"].append({"asn": ix_id, "name": ix.getName()})
 
-    return json.dumps(summary, indent=2)
 @mcp.resource("seed://topology/graph")
 def get_topology_graph() -> str:
     """Get a Graphviz DOT description of the topology (Requires Render)"""
