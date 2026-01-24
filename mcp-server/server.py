@@ -584,7 +584,8 @@ def install_email_service(
     gateway: str,
     mode: str = "dns",
     hostname: str = "mail",
-    dns_server: str = ""
+    dns_server: str = "",
+    network_name: str = "net0"
 ) -> str:
     """Install an email server (Postfix/Dovecot based) for a domain.
     
@@ -596,6 +597,7 @@ def install_email_service(
         mode: "dns" (uses DNS for routing) or "transport" (explicit transport maps)
         hostname: Hostname prefix (default "mail", results in mail.example.com)
         dns_server: Optional DNS server IP for DNS mode
+        network_name: Name of the network to attach to (default "net0")
     
     Example:
         install_email_service("example.com", 100, "10.100.0.10", "10.100.0.254")
@@ -616,7 +618,8 @@ def install_email_service(
             ip=ip,
             gateway=gateway,
             hostname=hostname,
-            dns=dns_server or None
+            dns=dns_server or None,
+            net=network_name
         )
         
         runtime.log_code(f"# Email Service")
@@ -1199,6 +1202,63 @@ def get_interface_stats(container_name: str) -> str:
         container_name: Name of the container.
     """
     return exec_command(container_name, "ip -s -j link show")
+
+# ==============================================================================
+# BGP Security Tools
+# ==============================================================================
+
+@mcp.tool()
+def bgp_announce_prefix(
+    router_container: str,
+    prefix: str,
+    next_hop: str = ""
+) -> str:
+    """Announce a BGP prefix from a router (for hijacking simulations).
+    
+    This injects a static route and configures BIRD to redistribute it via BGP.
+    WARNING: Use only for security research/education.
+    
+    Args:
+        router_container: Name of the router container (must run BIRD).
+        prefix: IP prefix to announce (e.g., "10.100.0.0/24").
+        next_hop: Optional next-hop IP (defaults to router's own IP).
+    
+    Example:
+        bgp_announce_prefix("as666brd-attacker", "10.150.0.0/24")
+    """
+    # Step 1: Add static route to kernel
+    route_cmd = f"ip route add {prefix} dev lo 2>/dev/null || true"
+    exec_command(router_container, route_cmd)
+    
+    # Step 2: Configure BIRD to redistribute kernel routes
+    # This requires the protocol kernel { } to have export all or similar
+    # We add a static route in BIRD directly for more control
+    bird_cmd = f'''birdc << EOF
+configure soft
+protocol static hijack_{prefix.replace('/', '_').replace('.', '_')} {{
+    route {prefix} blackhole;
+}}
+EOF'''
+    result = exec_command(router_container, f"sh -c '{bird_cmd}'")
+    
+    return f"Announced prefix {prefix} from {router_container}. BIRD output: {result[:200]}"
+
+@mcp.tool()
+def get_looking_glass(router_container: str, prefix: str = "") -> str:
+    """Query BGP routes from a router (looking glass).
+    
+    Args:
+        router_container: Name of the router container.
+        prefix: Optional prefix to filter (e.g., "10.100.0.0/24"). If empty, shows all routes.
+    
+    Example:
+        get_looking_glass("as100brd-r100", "10.200.0.0/24")
+    """
+    if prefix:
+        cmd = f"birdc 'show route for {prefix} all'"
+    else:
+        cmd = "birdc 'show route'"
+    return exec_command(router_container, cmd)
 
 # ==============================================================================
 # Helper Resources
