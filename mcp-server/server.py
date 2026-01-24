@@ -651,6 +651,122 @@ def list_email_providers() -> str:
     return json.dumps(result, indent=2)
 
 # ==============================================================================
+# Network Configuration Tools
+# ==============================================================================
+
+@mcp.tool()
+def configure_link_properties(
+    node_name: str,
+    interface_index: int = 0,
+    latency_ms: int = 0,
+    bandwidth_bps: int = 0,
+    packet_loss: float = 0.0
+) -> str:
+    """Configure link properties (latency, bandwidth, packet loss) for a node's interface.
+    
+    Args:
+        node_name: Name of the node
+        interface_index: Index of the interface (0 for first interface)
+        latency_ms: Latency to add in milliseconds (default 0)
+        bandwidth_bps: Egress bandwidth limit in bits per second (0 = unlimited)
+        packet_loss: Packet drop percentage 0-100 (default 0)
+    
+    Example:
+        configure_link_properties("r1", 0, latency_ms=50, bandwidth_bps=1000000)
+    """
+    try:
+        node = runtime.find_node_by_name(node_name)
+        if not node:
+            return f"Error: Node '{node_name}' not found."
+        
+        ifaces = node.getInterfaces()
+        if interface_index >= len(ifaces):
+            return f"Error: Interface index {interface_index} out of range. Node has {len(ifaces)} interfaces."
+        
+        iface = ifaces[interface_index]
+        iface.setLinkProperties(
+            latency=latency_ms,
+            bandwidth=bandwidth_bps,
+            packetDrop=packet_loss
+        )
+        
+        runtime.log_code(f"# Configure link properties for {node_name}")
+        runtime.log_code(f"node.getInterfaces()[{interface_index}].setLinkProperties(latency={latency_ms}, bandwidth={bandwidth_bps}, packetDrop={packet_loss})")
+        
+        props = []
+        if latency_ms > 0:
+            props.append(f"latency={latency_ms}ms")
+        if bandwidth_bps > 0:
+            props.append(f"bandwidth={bandwidth_bps}bps")
+        if packet_loss > 0:
+            props.append(f"loss={packet_loss}%")
+        
+        return f"Configured {node_name} interface {interface_index}: {', '.join(props) if props else 'default properties'}"
+    except Exception as e:
+        return f"Error configuring link properties: {str(e)}"
+
+
+@mcp.tool()
+def add_static_route(
+    node_name: str,
+    destination: str,
+    next_hop: str
+) -> str:
+    """Add a static route to a node.
+    
+    Args:
+        node_name: Name of the node
+        destination: Destination network in CIDR format (e.g., "10.0.0.0/8")
+        next_hop: Next hop IP address
+    
+    Example:
+        add_static_route("host1", "0.0.0.0/0", "10.100.0.254")
+    """
+    try:
+        node = runtime.find_node_by_name(node_name)
+        if not node:
+            return f"Error: Node '{node_name}' not found."
+        
+        # Add static route command to node startup
+        route_cmd = f"ip route add {destination} via {next_hop} || true"
+        node.appendStartCommand(route_cmd)
+        
+        runtime.log_code(f"# Add static route to {node_name}")
+        runtime.log_code(f"node.appendStartCommand('{route_cmd}')")
+        
+        return f"Added static route on {node_name}: {destination} via {next_hop}"
+    except Exception as e:
+        return f"Error adding static route: {str(e)}"
+
+
+@mcp.tool()
+def get_node_interfaces(node_name: str) -> str:
+    """Get information about a node's network interfaces.
+    
+    Args:
+        node_name: Name of the node
+    """
+    try:
+        node = runtime.find_node_by_name(node_name)
+        if not node:
+            return f"Error: Node '{node_name}' not found."
+        
+        ifaces = node.getInterfaces()
+        result = []
+        for i, iface in enumerate(ifaces):
+            info = {
+                "index": i,
+                "address": str(iface.getAddress()) if iface.getAddress() else "not assigned",
+                "network": iface.getNet().getName() if iface.getNet() else "unknown"
+            }
+            result.append(info)
+        
+        import json
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return f"Error getting interfaces: {str(e)}"
+
+# ==============================================================================
 # Docker Tools (Build & Deploy)
 # ==============================================================================
 
