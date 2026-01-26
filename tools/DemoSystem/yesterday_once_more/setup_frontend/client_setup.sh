@@ -29,12 +29,19 @@ done < "$TARGET"
 
 DNS_ENTRIES=${DNS_ENTRIES%\\n}
 
+
+START="# BEGIN CUSTOM"
+END="# END CUSTOM"
+if ! grep -q "$START" /etc/hosts; then
+    echo -e "\n$START\n$END" | sudo tee -a /etc/hosts > /dev/null
+    echo "Markers created."
+fi
+
 # Add the mapping to the /etc/hosts file
-sudo sed -i '/# BEGIN CUSTOM/,/# END CUSTOM/{//!d;}' /etc/hosts && sudo sed -i "/# BEGIN CUSTOM/a $DNS_ENTRIES" /etc/hosts
+sudo sed -i "/$START/,/$END/{//!d;}" /etc/hosts && sudo sed -i "/$START/a $DNS_ENTRIES" /etc/hosts
 
 # Add the routing information
 for network in "${NETWORKS[@]}"; do
    echo "RUN: sudo ip route add $network via $ROUTER"
    sudo ip route add "$network" via "$ROUTER"
 done
-
