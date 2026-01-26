@@ -3,7 +3,7 @@
 TARGET='./target_prefix'
 BGP_CONF_DIR="../01_bgp_prefix_hijacking/files/as199_include"
 
-rm -rf   "$BGP_CONF_DIR"  # Clean the folder
+sudo rm -rf   "$BGP_CONF_DIR"  # Clean the folder
 mkdir -p "$BGP_CONF_DIR"  # Create the folder if it does not exist
 
 # Check if the file exists
