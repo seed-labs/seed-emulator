@@ -3,6 +3,7 @@ import yaml
 import json
 import os
 import glob
+import shutil
 from pathlib import Path
 
 
@@ -228,17 +229,161 @@ def find_all_yml_files(base_dir):
     return yml_files
 
 
-def generate_overview_index(component_record, output_file):
-    """生成概览index.ts文件"""
-    # 生成TypeScript代码 - 使用format()而不是f-string避免反斜杠问题
+def copy_assets(source_base_dir, target_base_dir, menus_data):
+    """复制资源文件（图片、视频等）"""
+    assets_copied = {
+        'img': [],
+        'video': []
+    }
+
+    def process_menu_item(item):
+        # 复制图片
+        if 'meta' in item and 'img' in item['meta'] and item['meta']['img']:
+            img_path = item['meta']['img']
+            if img_path:  # 非空字符串
+                # 构建源文件路径
+                source_img = os.path.join(source_base_dir, img_path)
+                # 构建目标文件路径 - 修正：直接使用assets_target_dir
+                target_img = os.path.join(
+                    os.path.join(target_base_dir, 'img'), os.path.basename(os.path.basename(img_path))
+                )
+
+                # 确保目标目录存在
+                os.makedirs(os.path.dirname(target_img), exist_ok=True)
+
+                # 复制文件
+                if os.path.exists(source_img):
+                    shutil.copy2(source_img, target_img)
+                    assets_copied['img'].append(img_path)
+                    print(f"    复制图片: {img_path}")
+                    print(f"      源路径: {source_img}")
+                    print(f"      目标路径: {target_img}")
+                else:
+                    print(f"    ⚠️ 图片不存在: {source_img}")
+
+        # 复制视频
+        if 'meta' in item and 'video' in item['meta'] and 'src' in item['meta']['video']:
+            video_src = item['meta']['video']['src']
+            if video_src:  # 非空字符串
+                # 构建源文件路径
+                source_video = os.path.join(source_base_dir, video_src)
+                target_video = os.path.join(
+                    os.path.join(target_base_dir, 'video'), os.path.basename(os.path.basename(video_src))
+                )
+
+                # 确保目标目录存在
+                os.makedirs(os.path.dirname(target_video), exist_ok=True)
+
+                # 复制文件
+                if os.path.exists(source_video):
+                    shutil.copy2(source_video, target_video)
+                    assets_copied['video'].append(video_src)
+                    print(f"    复制视频: {video_src}")
+                    print(f"      源路径: {source_video}")
+                    print(f"      目标路径: {target_video}")
+                else:
+                    print(f"    ⚠️ 视频不存在: {source_video}")
+
+        # 处理子菜单
+        if 'children' in item:
+            for child in item['children']:
+                process_menu_item(child)
+
+    # 处理所有菜单项
+    for menu in menus_data:
+        process_menu_item(menu)
+
+    return assets_copied
+
+
+def convert_menus_for_json(menus_data):
+    """转换menus数据，准备生成JSON"""
+
+    def convert_item(item):
+        # 创建新对象的副本
+        new_item = item.copy()
+
+        if 'meta' in new_item:
+            new_item['meta'] = new_item['meta'].copy()
+
+            # 处理图片路径 - 使用占位符
+            if 'img' in new_item['meta'] and new_item['meta']['img']:
+                img_path = new_item['meta']['img']
+                if img_path and img_path.strip():
+                    # 使用特殊占位符，后续会替换
+                    new_item['meta']['img'] = f'__IMG_PLACEHOLDER__{img_path}__'
+
+            # 处理视频路径
+            if 'video' in new_item['meta'] and new_item['meta']['video']:
+                new_item['meta']['video'] = new_item['meta']['video'].copy()
+                video_src = new_item['meta']['video'].get('src', '')
+                if video_src and video_src.strip():
+                    # 使用特殊占位符
+                    new_item['meta']['video']['src'] = f'__VIDEO_PLACEHOLDER__{video_src}__'
+
+        # 递归处理子菜单
+        if 'children' in new_item:
+            new_item['children'] = [convert_item(child) for child in new_item['children']]
+
+        return new_item
+
+    return [convert_item(menu) for menu in menus_data]
+
+
+def replace_placeholders_with_new_url(json_str):
+    """将JSON字符串中的占位符替换为new URL()表达式"""
+
+    import re
+
+    # 替换img占位符
+    def replace_img_placeholder(match):
+        path = match.group(1)
+        # 确保路径以 @/ 开头
+        if not path.startswith('@/'):
+            path = '@/{}'.format(path)
+        return 'new URL(\'{}\', import.meta.url).href'.format(path)
+
+    # 替换video.src占位符
+    def replace_video_placeholder(match):
+        path = match.group(1)
+        # 确保路径以 @/ 开头
+        if not path.startswith('@/'):
+            path = '@/{}'.format(path)
+        return 'new URL(\'{}\', import.meta.url).href'.format(path)
+
+    # 先替换video.src占位符
+    json_str = re.sub(r'"__VIDEO_PLACEHOLDER__([^"]+)__"', replace_video_placeholder, json_str)
+
+    # 再替换img占位符
+    json_str = re.sub(r'"__IMG_PLACEHOLDER__([^"]+)__"', replace_img_placeholder, json_str)
+
+    return json_str
+
+
+def generate_extensions_index(component_record, menus_data, output_file, target_base_dir):
+    """生成扩展的概览index.ts文件，包含componentRecord和menus"""
+
+    # 转换menus数据，使用占位符
+    converted_menus = convert_menus_for_json(menus_data)
+
+    # 生成TypeScript代码
     entries = []
     for key, value in component_record.items():
-        entries.append(f'    {key}: \'{value}\'')
+        entries.append('    {}: \'{}\''.format(key, value))
 
+    # 生成menus的JSON字符串
+    menus_json = json.dumps(converted_menus, ensure_ascii=False, indent=2)
+
+    # 将占位符替换为new URL()表达式
+    menus_ts_code = replace_placeholders_with_new_url(menus_json)
+
+    # 生成完整的TypeScript代码
     ts_code = """export const componentRecord = {{
-{}
+{entries}
 }}
-""".format(',\n'.join(entries))
+
+export const menus = {menus}
+""".format(entries=',\n'.join(entries), menus=menus_ts_code)
 
     # 确保输出目录存在
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
@@ -247,7 +392,24 @@ def generate_overview_index(component_record, output_file):
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(ts_code)
 
-    print(f"\n已生成概览文件: {output_file}")
+    print(f"\n已生成扩展概览文件: {output_file}")
+
+
+def load_menus_config(menus_file):
+    """加载menus.yml配置文件"""
+    try:
+        with open(menus_file, 'r', encoding='utf-8') as f:
+            config_data = yaml.safe_load(f)
+
+        if 'menus' not in config_data:
+            print(f"  警告: menus.yml文件缺少menus字段")
+            return []
+
+        return config_data['menus']
+
+    except Exception as e:
+        print(f"  错误: 无法读取menus.yml文件 {menus_file}: {e}")
+        return []
 
 
 def main():
@@ -257,8 +419,12 @@ def main():
     # 输出目录（frontend/src/extensions/）
     output_base_dir = os.path.join(os.path.dirname(script_dir), 'frontend', 'src', 'extensions')
 
+    # 前端资源目录（frontend/src/assets/）
+    assets_target_dir = os.path.join(os.path.dirname(script_dir), 'frontend', 'src', 'assets')
+
     print(f"脚本目录: {script_dir}")
     print(f"输出目录: {output_base_dir}")
+    print(f"资源目录: {assets_target_dir}")
 
     # 查找所有YAML文件
     yml_files = find_all_yml_files(script_dir)
@@ -272,8 +438,13 @@ def main():
     component_record = {}
     successful_count = 0
 
+    # 先处理所有实验配置文件
     for yml_file, rel_path in yml_files:
-        print(f"\n处理文件: {rel_path}")
+        # 跳过menus.yml文件，单独处理
+        if os.path.basename(yml_file) == 'menus.yml':
+            continue
+
+        print(f"\n处理实验文件: {rel_path}")
 
         # 验证YAML结构
         if not validate_yaml_structure(yml_file):
@@ -315,19 +486,43 @@ def main():
         else:
             print(f"  ❌ 失败: {rel_path}")
 
-    # 生成概览index.ts文件
+    # 处理menus.yml文件
+    menus_file = os.path.join(script_dir, 'menus.yml')
+    menus_data = []
+
+    if os.path.exists(menus_file):
+        print(f"\n处理菜单文件: menus.yml")
+        menus_data = load_menus_config(menus_file)
+        if menus_data:
+            print(f"  ✅ 成功加载: {len(menus_data)} 个菜单项")
+
+            # 统计子菜单项
+            child_count = sum(len(menu.get('children', [])) for menu in menus_data)
+            print(f"    包含: {child_count} 个子菜单项")
+
+            # 复制资源文件
+            print(f"\n复制资源文件:")
+            assets_copied = copy_assets(script_dir, assets_target_dir, menus_data)
+
+            print(f"    图片: {len(assets_copied['img'])} 个")
+            print(f"    视频: {len(assets_copied['video'])} 个")
+    else:
+        print(f"\n⚠️ 未找到menus.yml文件，将只生成componentRecord")
+
+    # 生成扩展的概览index.ts文件（包含componentRecord和menus）
     overview_file = os.path.join(output_base_dir, 'index.ts')
-    generate_overview_index(component_record, overview_file)
+    generate_extensions_index(component_record, menus_data, overview_file, assets_target_dir)
 
     # 打印总结
     print(f"\n{'=' * 50}")
     print(f"处理完成:")
     print(f"  总共找到: {len(yml_files)} 个YML文件")
-    print(f"  成功生成: {successful_count} 个组件")
-    print(f"  失败: {len(yml_files) - successful_count} 个")
+    print(f"  成功生成: {successful_count} 个实验组件")
+    print(f"  加载菜单: {len(menus_data)} 个主菜单项")
+    print(f"  失败: {len(yml_files) - successful_count - (1 if os.path.exists(menus_file) else 0)} 个")
 
     if component_record:
-        print(f"\n生成的组件:")
+        print(f"\n生成的实验组件:")
         for key, value in sorted(component_record.items()):
             print(f"  {key}: '{value}'")
 

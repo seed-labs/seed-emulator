@@ -16,7 +16,7 @@ app.get('/pro/*', (req: Request, res: Response) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
 app.get('/', (req: Request, res: Response) => {
-    res.redirect('/pro/home');
+    res.redirect('/pro/dashboard/home');
 });
 app.use(errorHandler)
 

@@ -67,6 +67,42 @@ export const findRouteWithParents = (path: string, routes: RouteRecord[]): Route
     findRecursive(routes, path)
     return result
 }
+
+export interface MenuMeta {
+    title: string
+    img?: string
+    description?: string
+    video?: {
+        src: string
+        title: string
+        description: string
+    }
+}
+
+export interface MenuItem {
+    name: string
+    path: string
+    meta: MenuMeta
+    children?: MenuItem[]
+}
+
+export const findMenuByName = (
+    menus: MenuItem[],
+    name: string
+): MenuItem | undefined => {
+    for (const menu of menus) {
+        if (menu.name === name) {
+            return menu
+        }
+
+        if (menu.children?.length) {
+            const found = findMenuByName(menu.children, name)
+            if (found) return found
+        }
+    }
+
+    return undefined
+}
 export const showNotification = (type: 'success' | 'warning' | 'info' | 'error' | '', message: string, title?: string) => {
     ElNotification({
         type,
