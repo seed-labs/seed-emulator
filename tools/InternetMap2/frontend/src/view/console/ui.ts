@@ -1,7 +1,7 @@
-import { Terminal } from 'xterm';
-import { AttachAddon } from 'xterm-addon-attach';
-import { FitAddon } from 'xterm-addon-fit';
-import type { ConsoleEvent } from '@/utils/console-event';
+import {Terminal} from 'xterm';
+import {AttachAddon} from 'xterm-addon-attach';
+import {FitAddon} from 'xterm-addon-fit';
+import type {ConsoleEvent} from '@/utils/console-event';
 import Hammer from 'hammerjs';
 
 /**
@@ -17,9 +17,9 @@ export class ConsoleUi {
 
     /** info panel element. */
     private _infoPanel: HTMLDivElement;
-    
+
     private _fit: FitAddon;
-    
+
     /** websocket to console. */
     private _socket: WebSocket;
 
@@ -31,7 +31,7 @@ export class ConsoleUi {
 
     /**
      * construct UI controller.
-     * 
+     *
      * @param id container id.
      * @param term terminal element.
      * @param title title for the infoplate.
@@ -45,39 +45,39 @@ export class ConsoleUi {
         this._terminal = term;
         this._id = id;
 
-        var infoPanel = document.createElement('div');
+        let infoPanel = document.createElement('div');
         infoPanel.classList.add('xterm-hover');
         infoPanel.classList.add('tooltip');
         infoPanel.classList.add('right-tooltip');
         infoPanel.classList.add('persistent-tooltip');
 
-        var els = items.map(item => {
-            var p = document.createElement('div');
-    
-            var l = document.createElement('span');
+        let els = items.map(item => {
+            let p = document.createElement('div');
+
+            let l = document.createElement('span');
             l.innerText = item.label;
             l.classList.add('infopanel-label');
-    
-            var t = document.createElement('span');
+
+            let t = document.createElement('span');
             t.innerText = item.text;
             t.classList.add('infopanel-text');
-    
+
             p.append(l);
             p.append(t);
-    
+
             return p;
         });
 
-        var titleElement = document.createElement('div');
+        let titleElement = document.createElement('div');
         titleElement.classList.add('infopanel-title');
         titleElement.innerText = title;
 
-        var itemsElement = document.createElement('div');
+        let itemsElement = document.createElement('div');
         els.forEach(e => itemsElement.appendChild(e));
 
         infoPanel.appendChild(titleElement);
         infoPanel.appendChild(itemsElement);
-        
+
         term.element.appendChild(infoPanel);
 
         this._infoPanel = infoPanel;
@@ -87,11 +87,11 @@ export class ConsoleUi {
         this._fit = new FitAddon();
         term.loadAddon(this._fit);
 
-        var sizeChange = this._handleSizeChange.bind(this);
+        let sizeChange = this._handleSizeChange.bind(this);
 
         if (window.visualViewport) {
-            document.documentElement.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
-            window.visualViewport.onresize = function() {
+            document.documentElement.addEventListener('touchmove', e => e.preventDefault(), {passive: false});
+            window.visualViewport.onresize = function () {
                 document.documentElement.style.height = `${this.height}px`;
                 sizeChange();
             };
@@ -143,7 +143,7 @@ export class ConsoleUi {
 
     /**
      * create new notification. push to queue if one is already showing.
-     * 
+     *
      * @param text notification text.
      */
     createNotification(text: string) {
@@ -154,7 +154,7 @@ export class ConsoleUi {
 
     /**
      * attach to console.
-     * 
+     *
      * @param socket websocket.
      */
     attach(socket: WebSocket) {
@@ -163,7 +163,7 @@ export class ConsoleUi {
 
         this._socket = socket;
 
-        var attachAddon = new AttachAddon(socket);
+        let attachAddon = new AttachAddon(socket);
         this._terminal.loadAddon(attachAddon);
 
         window.setTimeout(this._handleSizeChange.bind(this), 1000);
@@ -181,17 +181,21 @@ export class ConsoleUi {
         if ('ontouchstart' in window) {
             this.createNotification('Touchscreen detected - Swipe left/right to move the cursor, double tap to go back in history.')
             let hammer = new Hammer(this._terminal.element as HTMLElement);
-    
-            hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
+
+            hammer.get('swipe').set({direction: Hammer.DIRECTION_HORIZONTAL});
             hammer.on('swipe', (e) => {
                 if (socket.readyState != 1) return;
-                switch(e.direction) {
-                    case Hammer.DIRECTION_RIGHT: socket.send('\x1b[C'); break;
-                    case Hammer.DIRECTION_LEFT: socket.send('\x1b[D'); break;
+                switch (e.direction) {
+                    case Hammer.DIRECTION_RIGHT:
+                        socket.send('\x1b[C');
+                        break;
+                    case Hammer.DIRECTION_LEFT:
+                        socket.send('\x1b[D');
+                        break;
                 }
             });
-    
-            hammer.get('tap').set({ taps: 2 });
+
+            hammer.get('tap').set({taps: 2});
             hammer.on('tap', (e) => {
                 if (socket.readyState != 1) return;
                 socket.send('\x1b[A');
@@ -202,25 +206,30 @@ export class ConsoleUi {
     /**
      * setup ipc with the windowmanager.
      */
-    configureIpc() {
+    configureIpc(cmd: string = '') {
         try {
             if (window.self === window.top) return;
         } catch (e) {
             // in frame if error too?
         }
 
-        var parent = window.parent.document;
+        let parent = window.parent.document;
 
-        var sendReady = () => {
+        let sendReady = () => {
             parent.dispatchEvent(new CustomEvent<ConsoleEvent>('console', {
                 detail: {
                     type: 'ready',
                     id: this._id
                 }
             }));
+            if (cmd && cmd.trim() !== '') {
+                setTimeout(() => {
+                    this._socket.send(`\n${cmd}\n`)
+                }, 1000)
+            }
         };
 
-        if (this._socket.readyState == 1) sendReady();
+        if (this._socket.readyState === 1) sendReady();
         else this._socket.addEventListener('open', sendReady);
 
         this._socket.addEventListener('error', () => {
@@ -249,7 +258,7 @@ export class ConsoleUi {
                 }
             }));
         });
-    
+
         window.addEventListener('blur', () => {
             parent.dispatchEvent(new CustomEvent<ConsoleEvent>('console', {
                 detail: {
@@ -258,9 +267,9 @@ export class ConsoleUi {
                 }
             }));
         });
-    
+
         document.addEventListener('console', (e: CustomEvent<ConsoleEvent>) => {
-            var ce: ConsoleEvent = e.detail;
+            let ce: ConsoleEvent = e.detail;
             if (ce.id != this._id) return;
             if (this._socket.readyState != 1) return;
             this._socket.send(ce.data);

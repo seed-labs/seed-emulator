@@ -3,7 +3,22 @@
 import {onMounted} from "vue";
 import {Terminal} from 'xterm';
 import {initConsole} from "@/view/console/console.ts"
+import type {IframeQueryData} from "@/types";
 
+
+const parseQueryData = <T>(queryString: string, key: string): T | null => {
+  const params = new URLSearchParams(queryString)
+  const raw = params.get(key)
+
+  if (!raw) return null
+
+  try {
+    return JSON.parse(raw) as T
+  } catch (e) {
+    console.warn(`query ${key} JSON parse failed`, e)
+    return null
+  }
+}
 
 onMounted(() => {
   const term = new Terminal({
@@ -25,8 +40,11 @@ onMounted(() => {
 
   term.open(document.getElementById('terminal'));
 
-  const id = window.location.hash.replace('#', '');
-  initConsole(id, term)
+  const hash = window.location.hash.replace('#', '');
+  const [id, queryString] = hash.split('?')
+  const queryData = parseQueryData<IframeQueryData>(queryString || '', 'data')
+  const cmd = queryData?.cmd || ''
+  initConsole(id!, term, cmd)
 })
 </script>
 

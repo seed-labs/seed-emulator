@@ -3,7 +3,7 @@ import {ref, onMounted, reactive, nextTick, shallowRef, type PropType, type Comp
 import type {TabsPaneContext} from 'element-plus'
 import {ElNotification} from "element-plus";
 import type {Details} from '@/types'
-import {allLoading} from '@/utils/tools.ts'
+import {allLoading, getSocket} from '@/utils/tools.ts'
 import {
   ArrowUpBold,
   ArrowDownBold,
@@ -258,6 +258,16 @@ onMounted(() => {
     const ui = new props.mapUiClass(config, props.otherConfig);
     await ui.start();
     mapUi.value = ui
+
+    const ws = getSocket()
+    ws.onmessage = (event) => {
+      try {
+        const {nodeId, title, cmd} = JSON.parse(event.data)
+        ui.createWindow(nodeId, title, {cmd})
+      } catch (e) {
+        console.log(e)
+      }
+    }
   })
 })
 defineExpose({mapUi})

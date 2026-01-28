@@ -57,3 +57,7 @@ export interface transitProvider {
     onTransitsCheckedChange: (val: number[]) => void,
     onTransitsCheckAllChange?: (val: boolean) => void,
 }
+
+export interface IframeQueryData {
+  cmd: string
+}

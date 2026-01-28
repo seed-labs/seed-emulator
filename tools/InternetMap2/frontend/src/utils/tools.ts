@@ -85,3 +85,8 @@ export const allLoading = () => {
         fullscreen: true
     })
 }
+
+export const getSocket = (protocol: string = 'ws', uri: string = '/host'): WebSocket => {
+    const host = import.meta.env.MODE === 'development' ? import.meta.env.VITE_PROXY_ADDRESS.replace(/^https?:\/\//, '') : location.host
+    return new WebSocket(`${protocol}://${host}${import.meta.env.VITE_SERVER_URL_PREFIX}${uri}`);
+}

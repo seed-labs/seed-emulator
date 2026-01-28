@@ -47,13 +47,13 @@ controller.getLoggers().forEach(logger => logger.setSettings({
 }));
 
 router.get('/env.js', (req, res, next) => {
-  const envVarsForFrontend = {
-    CONSOLE: process.env.CONSOLE,
-  };
-  res.setHeader('Content-Type', 'application/javascript');
-  res.send(`window.__ENV__ = ${JSON.stringify(envVarsForFrontend)}`);
+    const envVarsForFrontend = {
+        CONSOLE: process.env.CONSOLE,
+    };
+    res.setHeader('Content-Type', 'application/javascript');
+    res.send(`window.__ENV__ = ${JSON.stringify(envVarsForFrontend)}`);
 
-  next();
+    next();
 });
 
 router.get('/network', async function (req, res, next) {
@@ -300,6 +300,7 @@ router.ws('/console/:id', async function (ws, req, next) {
 var snifferSubscribers: WebSocket[] = [];
 var currentSnifferFilter: string = '';
 var visSubscribers: WebSocket[] = [];
+var hostSubscribers: WebSocket[] = [];
 
 router.post('/sniff', express.json(), async function (req, res, next) {
     sniffer.setListener((nodeId, data) => {
@@ -354,6 +355,34 @@ router.ws('/container/vis/set', async function (ws, req, next) {
     visSubscribers.push(ws);
     next();
 });
+
+router.ws('/host', async function (ws, req, next) {
+    hostSubscribers.push(ws);
+    next();
+});
+
+router.post('/host', express.json(), async function (req, res, next) {
+    let deadSockets: WebSocket[] = [];
+
+    hostSubscribers.forEach(socket => {
+        if (socket.readyState == 1) {
+            socket.send(JSON.stringify(req.body));
+        }
+
+        if (socket.readyState > 1) {
+            deadSockets.push(socket);
+        }
+    });
+
+    deadSockets.forEach(socket => hostSubscribers.splice(hostSubscribers.indexOf(socket), 1));
+
+    res.json({
+        ok: true,
+        result: ""
+    });
+
+    next()
+})
 
 router.get('/container/:id/bgp', async function (req, res, next) {
     let id = req.params.id;

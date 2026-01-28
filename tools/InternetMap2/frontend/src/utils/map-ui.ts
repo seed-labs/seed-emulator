@@ -9,7 +9,7 @@ import {WindowManager} from './window-manager';
 import {DataSource, type NodesType, type EdgesType, type Vertex, META_CLASS, type Edge} from './map-datasource';
 import {DataSource as IXDataSource} from "@/view/map/ixMap/datasource.ts";
 import {DataSource as TransitDataSource} from "@/view/map/transitMap/datasource.ts";
-import type {Details, HoverNodeEvent} from '@/types/index.ts'
+import type {Details, HoverNodeEvent, IframeQueryData} from '@/types/index.ts'
 import type {LoadingInstance} from 'element-plus/es/components/loading/src/loading';
 import {allLoading} from "@/utils/tools.ts";
 
@@ -1100,6 +1100,10 @@ export class MapUi {
         }
     }
 
+    public createWindow(nodeId: string, title: string, queryData: IframeQueryData = {cmd: ''}) {
+        this._windowManager.createWindow(nodeId.substr(0, 12), title, queryData, true);
+    }
+
     /**
      * update infoplate with node.
      *
@@ -1192,7 +1196,6 @@ export class MapUi {
                 consoleLink.setAttribute("params", JSON.stringify({
                     nodeId: node.Id.substr(0, 12),
                     label: vertex.label,
-                    "onclick": "onClickTest()"
                 }))
                 detail4.data["Launch console"] = consoleLink.outerHTML
 
@@ -1476,7 +1479,7 @@ export class MapUi {
         this._edges = new DataSet(edges);
         this._nodes = new DataSet(vertices);
 
-        let groups: {[key: string]: {}} = {};
+        let groups: { [key: string]: {} } = {};
 
         this._datasource.groups.forEach(group => {
             groups[group] = {
