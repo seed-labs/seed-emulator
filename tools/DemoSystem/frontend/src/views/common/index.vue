@@ -1,41 +1,32 @@
 <template>
   <BaseMap
+      :title="title"
+      :empty-title="emptyTitle"
       :iframe-src="iframeSrc"
       :default-font-size="fontSize"
       @update:font-size="handleFontSizeChange"
   >
     <!-- 使用具名插槽 -->
-    <template #console-tabs="{
-      updateActiveStep,
-      updatePopVisible,
-      preStep,
-      cancel,
-      complete,
-    }">
+    <template #console-tabs>
       <ConsoleTabs
+          :key="consoleTabsKey"
           :form="form"
           :component-config="componentConfig"
           :confirm-next="onConfirmNext"
           :font-size="fontSize"
-          @update:active-step="updateActiveStep"
-          @update:pop-visible="updatePopVisible"
-          @pre-step="preStep"
-          @cancel="cancel"
-          @complete="complete"
       />
     </template>
   </BaseMap>
 </template>
 
 <script setup lang="ts">
-import {type ApiResponse, reqGetIP} from "@/api/index.ts";
+import {type ApiResponse} from "@/api/index.ts";
 import BaseMap from '@/components/BaseMap/index.vue'
 import ConsoleTabs from './ConsoleTabs.vue'
 import type {BGPConsoleForm} from "@/types";
-import {executeApiCall} from '@/hook/index.ts'
-import {addContentMarker, AllLoading, contentMarker, dockerExec, getBirdConfigContent} from "@/utils/tools.ts"
+import {AllLoading, dockerExec} from "@/utils/tools.ts"
 import {loadConfigByGlob} from '@/utils/configLoader'
-import {componentRecord} from '@/config/index.ts'
+import {componentRecord} from '@/extensions/index.ts'
 
 // 定义 Props 类型
 interface Props {
@@ -47,6 +38,7 @@ const props = withDefaults(defineProps<Props>(), {
   name: 'bgp'
 })
 
+const consoleTabsKey = ref(0)
 const componentConfig = ref<any>(null)
 
 const loadConfig = async (path: string) => {
@@ -55,6 +47,8 @@ const loadConfig = async (path: string) => {
     if (!componentConfig.value) {
       console.error('未找到配置')
     }
+    title.value = componentConfig.value.baseInfo.name
+    emptyTitle.value = `欢迎来到 \`${title.value}\``
   } catch (err: any) {
     console.error('配置加载错误:', err)
   }
@@ -64,17 +58,21 @@ const loadConfig = async (path: string) => {
 watch(
     () => props.name,
     async (newVal) => {
-      await loadConfig(componentRecord[newVal] as string)
-      if (componentConfig.value.attackEffectConfig.type === 'iframe') {
-        form.targetHost = componentConfig.value.attackEffectConfig.targetHost || ''
-        form.targetIPs = componentConfig.value.attackEffectConfig.targetIPs || []
-      }
+      consoleTabsKey.value++
+      const componentPath = componentRecord[newVal] || 'bgp'
+      await loadConfig(componentPath as string)
+      // if (componentConfig.value.attackEffectConfig.type === 'iframe') {
+      //   form.targetHost = componentConfig.value.attackEffectConfig.targetHost || ''
+      //   form.targetIPs = componentConfig.value.attackEffectConfig.targetIPs || []
+      // }
     },
     {immediate: true}
 )
 
 const ip = ref<string>('')
 const iframeSrc = ref<string>('')
+const title = ref<string>('BGP 前缀劫持')
+const emptyTitle = ref<string>('欢迎来到 `BGP 前缀劫持` 演示')
 
 // 新增字体大小状态
 const fontSize = ref(20)
@@ -96,15 +94,29 @@ watch(() => ip.value, (newIp) => {
 const handleFontSizeChange = (val: number) => {
   fontSize.value = val
 }
-const onConfirmNext = async (activeStep: number, subStepIndex: number = 0): Promise<ApiResponse<any>> => {
+const onConfirmNext = async (...stepArgs: number[]): Promise<ApiResponse<any>> => {
+  if (stepArgs.length === 0) {
+    return {ok: false, result: "参数有误"}
+  }
+
   let ret: ApiResponse = {ok: true, result: ''}
   const allLoading = AllLoading()
-  let intervalEvent = null
+  let intervalEvent = null, cmdKwargs: any[]
+  const activeStep = stepArgs[0] as number
+  switch (stepArgs.length) {
+    case 2:
+      cmdKwargs = componentConfig.value.config[activeStep].text[stepArgs[1] as number].cmdKwargs
+      break
+    case 3:
+      cmdKwargs = componentConfig.value.config[activeStep].text[stepArgs[1] as number].cmdGroupKwargs[stepArgs[2] as number].cmdKwargs
+      break
+    default:
+      cmdKwargs = componentConfig.value.config[activeStep].text[stepArgs[1] as number].cmdKwargs
+  }
   try {
     intervalEvent = window.setInterval(() => {
       allLoading.setText(`[时间:${new Date().toLocaleTimeString()}] 执行中, 请等待…`)
     }, 5000);
-    const cmdKwargs = componentConfig.value.config[activeStep].text[subStepIndex].cmdKwargs
     for (const kwargs of cmdKwargs) {
       kwargs.host = form.host
       kwargs.port = form.port
@@ -113,9 +125,6 @@ const onConfirmNext = async (activeStep: number, subStepIndex: number = 0): Prom
       }
       if (kwargs.containerNames === undefined) {
         kwargs.containerNames = [] as string[]
-      }
-      if (kwargs.action === 'append') {
-        kwargs.content = addContentMarker(getBirdConfigContent(form.targetIPs), contentMarker(kwargs.filepath))
       }
       ret = await dockerExec({...kwargs}) as ApiResponse
       if (!ret.ok) {

@@ -1,4 +1,8 @@
 
+These files are for running the worm attacks from the command line.
+They are already integrated into the demo system, so they are not 
+needed for the demo system.  
+
 1. Run `setup.sh` to disable the address randomization
 2. Run `first_attack.py` to attack the first node `10.151.0.71`.
    The actual worm is in `worm.py`, which will be copied to the compromised nodes 

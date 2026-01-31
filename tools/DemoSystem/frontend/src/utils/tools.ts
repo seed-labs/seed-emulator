@@ -3,13 +3,12 @@ import type {RouteRecord, NewRouteRecord} from "@/types/index.ts";
 import {ElLoading, ElNotification} from "element-plus";
 import {executeApiCall} from "@/hook";
 import {
+    reqHostExec,
     reqDockerExec,
     reqDockerExecCp,
     reqDockerComposeExec,
-    reqDockerExecAppendToFile,
 } from "@/api/docker";
-import type {DockerExec, DockerExecCp, DockerComposeExec} from "@/api/docker";
-
+import type {HostExec, DockerExec, DockerExecCp, DockerComposeExec} from "@/api/docker";
 
 // 按path 查找路由对象
 export const getRouteByPath = (path: string) => {
@@ -17,7 +16,6 @@ export const getRouteByPath = (path: string) => {
     const routes = router.getRoutes()
     return routes.find(route => route.path === path)
 }
-
 // 将路由的所有最底层item插入到同一个列表
 export const RouterToListItem = (routes: RouteRecord[]) => {
     const result: NewRouteRecord[] = [];
@@ -42,7 +40,6 @@ export const RouterToListItem = (routes: RouteRecord[]) => {
     walk(routes);
     return result;
 }
-
 export const findRouteWithParents = (path: string, routes: RouteRecord[]): RouteRecord[] => {
     const result: RouteRecord[] = []
 
@@ -70,7 +67,6 @@ export const findRouteWithParents = (path: string, routes: RouteRecord[]): Route
     findRecursive(routes, path)
     return result
 }
-
 export const showNotification = (type: 'success' | 'warning' | 'info' | 'error' | '', message: string, title?: string) => {
     ElNotification({
         type,
@@ -78,7 +74,6 @@ export const showNotification = (type: 'success' | 'warning' | 'info' | 'error' 
         title
     })
 }
-
 export const AllLoading = () => {
     return ElLoading.service({
         lock: true,
@@ -87,58 +82,50 @@ export const AllLoading = () => {
         fullscreen: true
     })
 }
-
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const contentMarker = (signature: string): string => {
     // const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
     return `# ==================== signature ${signature} ====================
 # Do not edit manually between BEGIN and END markers`.trim()
 }
-
 export const addContentMarker = (configContent: string, signature: string): string => {
     // const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
     return `${signature}
 ${configContent}`.trim()
 }
-
-
 export const dockerExec = async (params: { [key: string]: any }) => {
     const action = params.action || "exec"
     delete params.action;
     let ret
     switch (action) {
-        case 'cp':
+        case 'docker_cp':
             ret = await executeApiCall(() =>
                 reqDockerExecCp(params as DockerExecCp)
             )
             break
-        case 'exec':
+        case 'docker_exec':
             ret = await executeApiCall(() =>
                 reqDockerExec(params as DockerExec)
             )
             break
-        case 'compose':
+        case 'docker_compose':
             ret = await executeApiCall(() =>
                 reqDockerComposeExec(params as DockerComposeExec)
             )
             break
-        case 'append':
+        case 'host_exec':
             ret = await executeApiCall(() =>
-                reqDockerExecAppendToFile(params as DockerExecAppendToFile)
+                reqHostExec(params as HostExec)
             )
             break
         default:
             ret = {ok: false, result: `不支持的action: ${action}`}
-            console.log("action", action)
     }
 
     return ret
 }
-
-
 export const getBirdConfigContent = (targetIPs: string[]) => {
     const base = `protocol static {
   ipv4 { table t_bgp;  };
@@ -161,7 +148,6 @@ export const getBirdConfigContent = (targetIPs: string[]) => {
     return `${base}${routes}
 }`
 }
-
 export const splitCIDRInTwo = (cidr: string): [string, string] => {
     const [ip, prefixStr] = cidr.split('/');
     const prefix = parseInt(prefixStr!);

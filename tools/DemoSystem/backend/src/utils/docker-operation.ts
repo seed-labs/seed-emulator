@@ -1,4 +1,4 @@
-import dockerode, {DockerOptions} from 'dockerode';
+import dockerode from 'dockerode';
 import {LogProducer} from '../interfaces/log-producer';
 import {Logger} from 'tslog';
 import {PassThrough, Readable} from 'stream';
@@ -8,12 +8,13 @@ import tar from 'tar-stream';
 import tarFs from 'tar-fs';
 import {exec} from 'child_process';
 import {promisify} from 'util';
+import yaml from 'js-yaml';
+import {replaceRelativePath} from "./tool";
 
 const execAsync = promisify(exec);
-
-const PORT = '2375'
-
 const docker = new dockerode();
+const HOST_PID = 1;
+const SEEDEMU_CONF_FILE_PATH = '/etc/seedemu/seedemu.conf'
 
 interface ExecResult {
     ok: boolean;
@@ -24,61 +25,24 @@ interface ExecResult {
     error?: string;    // 执行错误信息
 }
 
+export interface SeedemuConf {
+    condaPath: string;
+    demoSystem: {
+        hostProjectPath: string
+        envName: string
+    }
+}
+
 export class DockerOperation implements LogProducer {
     private readonly _logger: Logger;
-    // private _dockerMap: Map<string, dockerode>;
+    public seedemuConf: SeedemuConf | null = null;
 
     constructor() {
         this._logger = new Logger({name: 'Docker'});
-        // this._dockerMap = new Map()
     }
 
-    genKey(host: string, port: string) {
-        if (port === '0' || port === '') {
-            port = PORT
-        }
-        return `${host}:${port}`
-    }
-
-    async getDocker(config: DockerOptions) {
+    async getDocker() {
         return docker
-        // let docker: dockerode = null
-        // const {host, port} = config
-        // const key = this.genKey(host, port.toString())
-        // if (this._dockerMap.has(key)) {
-        //     docker = this._dockerMap.get(key)
-        // } else {
-        //     if (port === '0' || port === '') {
-        //         config.port = PORT
-        //     }
-        //     docker = new dockerode(config);
-        // }
-        // if (await this.isConnection(docker)) {
-        //     this._dockerMap.set(key, docker)
-        // } else {
-        //     docker = null
-        // }
-        // return docker
-    }
-
-    // removeDocker(host: string, port: string) {
-    //     const key = this.genKey(host, port)
-    //     if (this._dockerMap.has(key)) {
-    //         this._dockerMap.delete(key)
-    //     }
-    //     return true
-    // }
-
-    async isConnection(docker: dockerode): Promise<boolean> {
-        try {
-            const pingResult = await docker.ping();   // 返回 Buffer，内容通常是 "OK"
-            // ping 成功，返回 true
-            this._logger.info(`Docker ping response: ${pingResult.toString()}`);
-            return true;
-        } catch (err) {
-            this._logger.error(`无法连接到远程 Docker:${err.message}`,);
-            return false;
-        }
     }
 
     async getContainerIdByName(docker: dockerode, containers: dockerode.ContainerInfo[], containerName: string): Promise<string> {
@@ -333,6 +297,7 @@ APPEND_EOF`
         } catch (error) {
             this._logger.warn(`Error exec cmd: (${cmd}), error: ${error}`);
             ret.ok = false
+            ret.stderr = `${error}`
         }
         return ret
     }
@@ -681,7 +646,7 @@ APPEND_EOF`
     ): Promise<{ stdout: string; stderr: string }> {
         let cleanedStdout, cleanedStderr
         try {
-            let cmd = `cd ${composePath} && DOCKER_BUILDKIT=0 docker compose build && docker compose ${command}`;
+            let cmd = `cd ${composePath} && ${command}`;
             if (serviceName) {
                 cmd += ` ${serviceName}`;
             }
@@ -708,8 +673,10 @@ APPEND_EOF`
     /**
      * 启动指定路径的 Docker Compose 服务
      */
-    async composeUp(composePath: string, pythonFile: string, serviceName?: string): Promise<string> {
-        const command = serviceName ? `up -d ${serviceName}` : 'up -d';
+    async composeUp(composePath: string, serviceName?: string): Promise<string> {
+        // let command = "DOCKER_BUILDKIT=0 docker compose build && docker compose up -d"
+        let command = "docker compose up -d"
+        command = serviceName ? `${command} ${serviceName}` : command;
         const result = await this.execComposeCommand(composePath, command);
 
         if (result.stderr && !result.stderr.includes('Creating')) {
@@ -723,7 +690,8 @@ APPEND_EOF`
      * 停止 Docker Compose 服务
      */
     async composeDown(composePath: string): Promise<string> {
-        const result = await this.execComposeCommand(composePath, 'down');
+        const command = "docker compose down"
+        const result = await this.execComposeCommand(composePath, command);
 
         if (result.stderr) {
             throw new Error(result.stderr);
@@ -732,65 +700,42 @@ APPEND_EOF`
         return result.stdout || '服务停止成功';
     }
 
-    /**
-     * 查看 Docker Compose 服务状态
-     */
-    async composePs(composePath: string): Promise<string> {
-        const result = await this.execComposeCommand(composePath, 'ps');
-        return result.stdout || result.stderr;
-    }
-
-    /**
-     * 查看 Docker Compose 日志
-     */
-    async composeLogs(composePath: string, serviceName?: string, tail: number = 100): Promise<string> {
-        const command = `logs --tail ${tail} ${serviceName || ''}`.trim();
-        const result = await this.execComposeCommand(composePath, command);
-        return result.stdout || result.stderr;
-    }
-
-    /**
-     * 重启 Docker Compose 服务
-     */
-    async composeRestart(composePath: string, serviceName?: string): Promise<string> {
-        const result = await this.execComposeCommand(composePath, 'restart', serviceName);
-
-        if (result.stderr) {
-            throw new Error(result.stderr);
+    async execOnHost(command: string): Promise<ExecResult> {
+        const seedemuConf = await this.getHostSeedemuConf()
+        command = replaceRelativePath(
+            command,
+            seedemuConf.demoSystem.hostProjectPath,
+            seedemuConf.condaPath,
+            seedemuConf.demoSystem.envName,
+        )
+        command = `nsenter -t ${HOST_PID} -m -u -i -n -p /bin/sh -c "${command}"`;
+        this._logger.info(`宿主机执行命令: ${command}`);
+        try {
+            const _ret = await execAsync(command, {timeout: 60000 * 30})
+            return {..._ret, ok: true};
+        } catch (error: any) {
+            if (error.stdout || error.stderr) {
+                return {
+                    ok: false,
+                    stdout: error.stdout || '',
+                    stderr: error.stderr || ''
+                };
+            }
+            return {
+                ok: false,
+                stdout: '',
+                stderr: error.message || ''
+            };
         }
-
-        return result.stdout || '服务重启成功';
     }
 
-    /**
-     * 构建 Docker Compose 服务
-     */
-    async composeBuild(composePath: string, serviceName?: string): Promise<string> {
-        const result = await this.execComposeCommand(composePath, 'build', serviceName);
-
-        if (result.stderr && !result.stderr.includes('Building')) {
-            throw new Error(result.stderr);
+    async getHostSeedemuConf(): Promise<SeedemuConf> {
+        if (this.seedemuConf === null) {
+            const command = `nsenter -t ${HOST_PID} -m -u -i -n -p -- cat ${JSON.stringify(SEEDEMU_CONF_FILE_PATH)}`;
+            const {stdout} = await execAsync(command, {timeout: 6000})
+            this.seedemuConf = yaml.load(stdout) as SeedemuConf;
         }
-
-        return result.stdout || '构建成功';
-    }
-
-    /**
-     * 拉取 Docker Compose 镜像
-     */
-    async composePull(composePath: string): Promise<string> {
-        const result = await this.execComposeCommand(composePath, 'pull');
-
-        if (result.stderr) {
-            throw new Error(result.stderr);
-        }
-
-        return result.stdout || '镜像拉取成功';
-    }
-
-    async runScript(command: string): Promise<{ stdout: string; stderr: string }> {
-        const {stdout, stderr} = await execAsync(command);
-        return {stdout, stderr}
+        return this.seedemuConf;
     }
 
     getLoggers(): Logger[] {

@@ -24,8 +24,8 @@ interface ConfigCacheItem {
 }
 
 // 使用 import.meta.glob 获取所有配置文件
-// 这会自动扫描 src/config 目录下所有子目录中的 index.ts 文件
-const configModules = import.meta.glob('@/config/**/index.ts', {
+// 这会自动扫描 src/extensions 目录下所有子目录中的 index.ts 文件
+const configModules = import.meta.glob('@/extensions/**/index.ts', {
     eager: false,
     // import: 'default'  // 默认导入 default 导出
 })
@@ -37,7 +37,7 @@ const defaultCacheExpiry = 5 * 60 * 1000 // 5分钟
 /**
  * 清理过期的缓存
  */
-function cleanupExpiredCache(): void {
+const cleanupExpiredCache = (): void => {
     const now = Date.now()
     for (const [key, item] of configCache.entries()) {
         if (now - item.timestamp > item.expiry) {
@@ -49,7 +49,7 @@ function cleanupExpiredCache(): void {
 /**
  * 从缓存获取配置
  */
-function getFromCache(key: string): any | null {
+const getFromCache = (key: string): any | null => {
     const item = configCache.get(key)
     if (!item) return null
 
@@ -65,7 +65,7 @@ function getFromCache(key: string): any | null {
 /**
  * 设置缓存
  */
-function setToCache(key: string, data: any, expiry: number = defaultCacheExpiry): void {
+const setToCache = (key: string, data: any, expiry: number = defaultCacheExpiry): void => {
     configCache.set(key, {
         data,
         timestamp: Date.now(),
@@ -81,11 +81,11 @@ function setToCache(key: string, data: any, expiry: number = defaultCacheExpiry)
 /**
  * 标准化配置路径
  * 支持多种格式的路径输入：
- * - /yesterday-reenacted/bgp
- * - yesterday-reenacted/bgp
- * - yesterday-reenacted/bgp/
+ * - /yesterday_once_more/bgp
+ * - yesterday_once_more/bgp
+ * - yesterday_once_more/bgp/
  */
-function normalizeConfigPath(path: string): string {
+const normalizeConfigPath = (path: string): string => {
     // 移除开头和结尾的斜杠
     let normalized = path.replace(/^\/+|\/+$/g, '')
 
@@ -98,7 +98,7 @@ function normalizeConfigPath(path: string): string {
 /**
  * 查找匹配的模块路径
  */
-function findMatchingModulePath(configPath: string): string | null {
+const findMatchingModulePath = (configPath: string): string | null => {
     const normalizedPath = normalizeConfigPath(configPath)
 
     // 获取所有可能的模块路径
@@ -106,9 +106,9 @@ function findMatchingModulePath(configPath: string): string | null {
 
     // 方法1：精确匹配
     for (const modulePath of modulePaths) {
-        // 移除 @/config/ 前缀和 /index.ts 后缀
+        // 移除 @/extensions/ 前缀和 /index.ts 后缀
         const relativePath = modulePath
-            .replace('@/config/', '')
+            .replace('@/extensions/', '')
             .replace('/index.ts', '')
 
         if (relativePath === normalizedPath) {
@@ -142,7 +142,7 @@ function findMatchingModulePath(configPath: string): string | null {
  * @param configPath 配置路径
  * @returns 配置对象
  */
-export async function loadConfigByGlob(configPath: string): Promise<any> {
+export const loadConfigByGlob = async (configPath: string): Promise<any> => {
 
     // 验证输入
     if (!configPath) {
@@ -157,7 +157,7 @@ export async function loadConfigByGlob(configPath: string): Promise<any> {
             console.warn(`未找到配置文件: ${configPath}`)
             console.debug('可用的配置路径:',
                 Object.keys(configModules).map(p =>
-                    p.replace('@/config/', '').replace('/index.ts', '')
+                    p.replace('@/extensions/', '').replace('/index.ts', '')
                 )
             )
             return null
@@ -196,17 +196,16 @@ export async function loadConfigByGlob(configPath: string): Promise<any> {
 /**
  * 批量加载多个配置
  */
-export async function loadMultipleConfigs(
+export const loadMultipleConfigs = async (
     configPaths: string[],
-    options: LoadConfigOptions = {}
-): Promise<Record<string, any>> {
+): Promise<Record<string, any>> => {
     const results: Record<string, any> = {}
     const errors: Record<string, Error> = {}
 
     await Promise.all(
         configPaths.map(async (path) => {
             try {
-                const config = await loadConfigByGlob(path, options)
+                const config = await loadConfigByGlob(path)
                 if (config) {
                     const key = path.replace(/^\/+|\/+$/g, '').replace(/\//g, '-')
                     results[key] = config
@@ -228,10 +227,10 @@ export async function loadMultipleConfigs(
 /**
  * 获取所有可用的配置路径
  */
-export function getAvailableConfigPaths(): string[] {
+export const getAvailableConfigPaths = (): string[] => {
     return Object.keys(configModules).map(modulePath =>
         modulePath
-            .replace('@/config/', '')
+            .replace('@/extensions/', '')
             .replace('/index.ts', '')
     )
 }
@@ -239,7 +238,7 @@ export function getAvailableConfigPaths(): string[] {
 /**
  * 预加载所有配置（可用于优化首次加载）
  */
-export async function preloadAllConfigs(): Promise<void> {
+export const preloadAllConfigs = async (): Promise<void> => {
     console.debug('开始预加载所有配置...')
 
     const promises = Object.keys(configModules).map(async (modulePath) => {
@@ -259,7 +258,7 @@ export async function preloadAllConfigs(): Promise<void> {
 /**
  * 清除所有配置缓存
  */
-export function clearAllCache(): void {
+export const clearAllCache = (): void => {
     configCache.clear()
     console.debug('已清除所有配置缓存')
 }
@@ -267,10 +266,10 @@ export function clearAllCache(): void {
 /**
  * 获取缓存统计信息
  */
-export function getCacheStats(): {
+export const getCacheStats = (): {
     size: number
     keys: string[]
-} {
+} => {
     return {
         size: configCache.size,
         keys: Array.from(configCache.keys())
