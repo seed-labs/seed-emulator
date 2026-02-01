@@ -1,11 +1,24 @@
 import sys
 import os
+from enum import Enum
 
 # Add parent directory to path to import seedemu
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from seedemu.core import Emulator
 from seedemu.layers import Base
+
+
+class AgentPhase(Enum):
+    """Agent state machine phases."""
+    IDLE = "idle"                    # No active work
+    DESIGNING = "designing"          # Creating design, awaiting confirmation
+    CONFIRMED = "confirmed"          # Design approved, ready to execute
+    COMPILING = "compiling"          # Generating Docker files
+    RUNNING = "running"              # Simulation containers are up
+    OPERATING = "operating"          # Performing dynamic operations
+    DEBUGGING = "debugging"          # Analyzing/fixing issues
+
 
 class EmulatorRuntime:
     _instance = None
@@ -21,6 +34,11 @@ class EmulatorRuntime:
         self.base = Base()
         self.emulator.addLayer(self.base)
         self.rendered = False
+        
+        # Agent state machine
+        self.phase = AgentPhase.IDLE
+        self.current_example = None     # Path to loaded example
+        self.examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'examples'))
         
         # Docker deployment state
         self.output_dir = None
@@ -39,6 +57,14 @@ class EmulatorRuntime:
             "base = Base()",
             "emulator.addLayer(base)",
         ]
+    
+    def set_phase(self, phase: AgentPhase):
+        """Update agent phase."""
+        self.phase = phase
+    
+    def get_phase(self) -> AgentPhase:
+        """Get current agent phase."""
+        return self.phase
     
     def get_docker_client(self):
         """Get or create Docker client"""
