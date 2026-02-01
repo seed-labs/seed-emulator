@@ -1,0 +1,93 @@
+---
+# K3s Installation Playbook for SEED Emulator
+# Installs K3s with Multus + Macvlan CNI for L2 connectivity
+
+- name: Install K3s Master
+  hosts: master
+  become: yes
+  tasks:
+    - name: Install K3s server
+      shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={{ k3s_version }} \
+          K3S_KUBECONFIG_MODE="644" \
+          INSTALL_K3S_EXEC="--flannel-backend=host-gw --disable=traefik" \
+          sh -
+      args:
+        creates: /etc/rancher/k3s/k3s.yaml
+
+    - name: Wait for K3s to be ready
+      shell: kubectl get nodes
+      register: nodes
+      until: nodes.rc == 0
+      retries: 30
+      delay: 5
+
+    - name: Get K3s token
+      shell: cat /var/lib/rancher/k3s/server/node-token
+      register: k3s_token
+
+    - name: Store token
+      set_fact:
+        k3s_server_token: "{{ k3s_token.stdout }}"
+
+    - name: Install Multus CNI
+      shell: kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset.yml
+      
+    - name: Label master node
+      shell: kubectl label node {{ inventory_hostname }} seedemu.io/as-group={{ seedemu_as_group }} --overwrite
+
+- name: Install K3s Workers
+  hosts: workers
+  become: yes
+  tasks:
+    - name: Install K3s agent
+      shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={{ k3s_version }} \
+          K3S_URL=https://{{ hostvars['k3s-master']['ansible_host'] }}:6443 \
+          K3S_TOKEN={{ hostvars['k3s-master']['k3s_server_token'] }} \
+          sh -
+      args:
+        creates: /var/lib/rancher/k3s/agent
+
+- name: Configure Worker Labels
+  hosts: master
+  become: yes
+  tasks:
+    - name: Wait for workers to join
+      shell: kubectl get nodes | grep -c Ready
+      register: ready_nodes
+      until: ready_nodes.stdout | int >= 3
+      retries: 30
+      delay: 10
+
+    - name: Label worker nodes
+      shell: |
+        kubectl label node k3s-worker1 seedemu.io/as-group=as150 --overwrite
+        kubectl label node k3s-worker2 seedemu.io/as-group=as151 --overwrite
+
+- name: Setup Macvlan CNI
+  hosts: master
+  become: yes
+  tasks:
+    - name: Create Macvlan NetworkAttachmentDefinition
+      shell: |
+        cat <<EOF | kubectl apply -f -
+        apiVersion: "k8s.cni.cncf.io/v1"
+        kind: NetworkAttachmentDefinition
+        metadata:
+          name: macvlan-conf
+          namespace: default
+        spec:
+          config: '{
+            "cniVersion": "0.3.1",
+            "type": "macvlan",
+            "master": "eth0",
+            "mode": "bridge",
+            "ipam": {
+              "type": "host-local",
+              "ranges": [
+                [{"subnet": "10.0.0.0/8"}]
+              ]
+            }
+          }'
+        EOF

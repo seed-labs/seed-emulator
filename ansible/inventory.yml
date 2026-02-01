@@ -1,0 +1,28 @@
+---
+# K3s Multi-Node Cluster Inventory
+# For SEED Emulator Ultra-High Standards Testing
+
+all:
+  vars:
+    ansible_user: parallels
+    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+    k3s_version: v1.28.5+k3s1
+    
+  children:
+    master:
+      hosts:
+        k3s-master:
+          ansible_host: 192.168.64.10
+          k3s_role: server
+          seedemu_as_group: as2
+          
+    workers:
+      hosts:
+        k3s-worker1:
+          ansible_host: 192.168.64.11
+          k3s_role: agent
+          seedemu_as_group: as150
+        k3s-worker2:
+          ansible_host: 192.168.64.12
+          k3s_role: agent
+          seedemu_as_group: as151

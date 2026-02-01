@@ -1,0 +1,105 @@
+# SEED Emulator - E2E Test Workflow
+# Runs automated tests on multi-node Kind cluster
+
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'seedemu/**'
+      - 'examples/kubernetes/**'
+      - 'tests/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-html pytest-timeout
+      
+      - name: Setup Kind
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: seedemu-test
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            nodes:
+              - role: control-plane
+              - role: worker
+              - role: worker
+      
+      - name: Install Multus CNI
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset.yml
+          kubectl rollout status daemonset/kube-multus-ds -n kube-system --timeout=120s
+      
+      - name: Label nodes
+        run: |
+          kubectl label node seedemu-test-worker seedemu.io/as-group=as150 --overwrite
+          kubectl label node seedemu-test-worker2 seedemu.io/as-group=as151 --overwrite
+          kubectl label node seedemu-test-control-plane seedemu.io/as-group=as2 --overwrite
+      
+      - name: Generate SEED Emulator deployment
+        run: |
+          cd examples/kubernetes
+          PYTHONPATH=../.. python3 k8s_multinode_demo_dynamic.py
+      
+      - name: Build and load Docker images
+        run: |
+          cd examples/kubernetes/output_multinode_bridge
+          ./build_images.sh
+          
+          # Load images into Kind
+          for img in $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "hnode|brdnode|rnode|rs_ix"); do
+            kind load docker-image $img --name seedemu-test
+          done
+      
+      - name: Create namespace
+        run: kubectl create namespace seedemu
+      
+      - name: Deploy SEED Emulator
+        run: |
+          kubectl apply -f examples/kubernetes/output_multinode_bridge/k8s.yaml -n seedemu
+          
+          # Wait for pods to be ready
+          kubectl wait --for=condition=Ready pods --all -n seedemu --timeout=300s || true
+      
+      - name: Run E2E tests
+        run: |
+          pytest tests/e2e_test.py -v --html=test-report.html --timeout=120
+        continue-on-error: true
+      
+      - name: Collect logs
+        if: always()
+        run: |
+          kubectl get pods -n seedemu -o wide > pod-status.txt
+          kubectl describe pods -n seedemu > pod-describe.txt
+          kubectl logs -n seedemu -l app --all-containers=true > pod-logs.txt 2>&1 || true
+      
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-report
+          path: |
+            test-report.html
+            pod-status.txt
+            pod-describe.txt
+            pod-logs.txt
