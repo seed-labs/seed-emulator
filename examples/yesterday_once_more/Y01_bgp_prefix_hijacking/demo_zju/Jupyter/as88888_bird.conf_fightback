@@ -1,0 +1,88 @@
+router id 10.0.0.81;
+ipv4 table t_direct;
+protocol device {
+}
+protocol kernel {
+    ipv4 {
+        import all;
+        export all;
+    };
+    learn;
+}
+define LOCAL_COMM = (88888, 0, 0);
+define CUSTOMER_COMM = (88888, 1, 0);
+define PEER_COMM = (88888, 2, 0);
+define PROVIDER_COMM = (88888, 3, 0);
+ipv4 table t_bgp;
+protocol pipe {
+    table t_bgp;
+    peer table master4;
+    import none;
+    export all;
+}
+protocol pipe {
+    table t_direct;
+    peer table t_bgp;
+    import none;
+    export filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; };
+}
+protocol bgp u_as3 {
+    ipv4 {
+        table t_bgp;
+        import filter {
+            bgp_large_community.add(PROVIDER_COMM);
+            bgp_local_pref = 10;
+            accept;
+        };
+        export where bgp_large_community ~ [LOCAL_COMM, CUSTOMER_COMM];
+        next hop self;
+    };
+    local 10.103.0.177 as 88888;
+    neighbor 10.103.0.3 as 3;
+}
+ipv4 table t_rw;
+protocol static real_world {
+    ipv4 { table t_rw; import all; };
+    route 58.205.0.0/18 via 192.168.66.1;
+    route 58.205.64.0/18 via 192.168.66.1;
+    route 58.205.128.0/18 via 192.168.66.1;
+    route 58.205.192.0/18 via 192.168.66.1;
+    route 222.192.0.0/18 via 192.168.66.1;
+    route 222.192.64.0/18 via 192.168.66.1;
+    route 222.192.128.0/18 via 192.168.66.1;
+    route 222.192.192.0/18 via 192.168.66.1;
+    route 10.203.0.0/18 via 192.168.66.1;
+    route 10.203.64.0/18 via 192.168.66.1;
+    route 10.203.128.0/18 via 192.168.66.1;
+    route 10.203.192.0/18 via 192.168.66.1;
+    route 118.228.0.0/18 via 192.168.66.1;
+    route 118.228.64.0/18 via 192.168.66.1;
+    route 118.228.128.0/18 via 192.168.66.1;
+    route 118.228.192.0/18 via 192.168.66.1;
+}
+protocol pipe {
+    table t_rw;
+    peer table t_bgp;
+    import none;
+    export filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; };
+}
+ipv4 table t_ospf;
+protocol ospf ospf1 {
+    ipv4 {
+        table t_ospf;
+        import all;
+        export all;
+    };
+    area 0 {
+        interface "dummy0" { stub; };
+        interface "ix103" { stub; };
+        interface "000_svc" { stub; };
+
+    };
+}
+protocol pipe {
+    table t_ospf;
+    peer table master4;
+    import none;
+    export all;
+}

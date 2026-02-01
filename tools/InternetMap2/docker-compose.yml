@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+    seedemu-internetmap:
+        build: .
+        container_name: seedemu_internetmap
+        image: handsonsecurity/seedemu-internetmap:2.0
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+            - 8080:8080
+        cap_add:
+            - ALL
+        privileged: true

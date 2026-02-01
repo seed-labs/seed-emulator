@@ -36,3 +36,6 @@ Gmail
 QQ
 __pycache__/
 *.pyc
+
+**/auto-imports.d.ts
+**/components.d.ts
