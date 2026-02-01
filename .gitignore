@@ -31,3 +31,8 @@ project-words.txt
 .venv
 **/.obsidian/**
 test_result.txt
+.env
+Gmail
+QQ
+__pycache__/
+*.pyc
