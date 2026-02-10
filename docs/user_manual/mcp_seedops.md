@@ -200,6 +200,9 @@ defaults:
   timeout_seconds: 20
   parallelism: 30
   max_output_chars: 6000
+  on_error: stop
+  retries: 1
+  retry_delay_seconds: 1
 
 steps:
   - action: workspace_refresh
@@ -215,6 +218,8 @@ steps:
     id: routes
     selector: { asn: [150, 151] }
     command: "ip route"
+    on_error: continue
+    retries: 0
     save_as: routes_as150_151
 
   - action: sleep
@@ -225,6 +230,9 @@ Notes:
 
 - For `ops_exec/ops_logs/routing_bgp_summary/inventory_list_nodes`, selector is taken from `step.selector` or `defaults.selector`.
 - To select everything, explicitly pass `{}` (do not use `[]`).
+- `retries` is the number of retries after the first attempt (total attempts = `1 + retries`).
+- `on_error: continue` keeps the job running and the final job status becomes `succeeded_with_errors`.
+- `retry_delay_seconds` controls the delay between retries.
 
 ---
 
