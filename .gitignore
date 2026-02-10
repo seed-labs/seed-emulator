@@ -32,6 +32,7 @@ project-words.txt
 **/.obsidian/**
 test_result.txt
 .env
+.seedops/
 Gmail
 QQ
 __pycache__/
