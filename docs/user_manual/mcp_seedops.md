@@ -2,6 +2,50 @@
 
 SeedOps turns the `mcp-server` into an **operational control plane** for **already-running** SEED Emulator Docker/Compose networks.
 
+---
+
+## Quick start (10 minutes)
+
+1) Start server:
+
+```bash
+cd mcp-server
+python3 -m pip install -r requirements.txt
+export SEED_MCP_TOKEN='change-me'
+export FASTMCP_HOST=127.0.0.1 FASTMCP_PORT=8000 FASTMCP_STREAMABLE_HTTP_PATH=/mcp
+python3 serve_http.py
+```
+
+2) Attach and inspect (via client such as `seed-agent`):
+
+- `workspace_create(name)`
+- `workspace_attach_compose(workspace_id, output_dir)`
+- `workspace_refresh(workspace_id)`
+- `routing_bgp_summary(workspace_id, selector)`
+
+3) Run deterministic playbook:
+
+- `playbook_validate(playbook_yaml)`
+- `playbook_run(workspace_id, playbook_yaml)`
+- `job_get(job_id)` + `artifacts_list(job_id)`
+
+4) Optional capability introspection:
+
+- `seedops_capabilities()`
+
+---
+
+## Typical closed-loop workflow
+
+For production-like operations, use this order:
+
+1. attach workspace
+2. refresh inventory
+3. selector-scoped observation (`ops_logs` / `routing_bgp_summary`)
+4. run bounded playbook job
+5. download/parse artifacts
+6. summarize + decide next action
+
 It is designed for:
 
 - Attaching to an existing `docker compose up -d` output (no rebuild needed)
@@ -69,6 +113,23 @@ By default, SeedOps stores state under `mcp-server/.seedops/`:
 
 - DB: `mcp-server/.seedops/seedops.db` (override with `SEEDOPS_DB_PATH`)
 - Workspace data/artifacts: `mcp-server/.seedops/workspaces/` (override with `SEEDOPS_DATA_DIR`)
+
+---
+
+## Capability discovery
+
+Tool: `seedops_capabilities()`
+
+This is a lightweight introspection endpoint intended for higher-level planners
+(for example SeedAgent MCP) and automation clients. It returns:
+
+- `playbook_version`
+- `supported_actions`
+- `default_limits` (`timeout_seconds`, `parallelism`, `max_output_chars`, `artifact_chunk_bytes`)
+- `tool_names`
+
+Use this to keep planner prompts and policy checks aligned with the server's
+actual supported tool/action surface.
 
 ---
 

@@ -9,7 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from .config import load_config
 from .artifacts import ArtifactManager
 from .jobs import JobManager
-from .playbooks import parse_playbook_yaml
+from .playbooks import SUPPORTED_ACTIONS, SUPPORTED_PLAYBOOK_VERSION, parse_playbook_yaml
 from .store import SeedOpsStore
 from .workspaces import WorkspaceManager
 from .ops import OpsService
@@ -45,6 +45,34 @@ def register_tools(mcp: FastMCP, services: SeedOpsServices | None = None) -> Non
     """Register SeedOps Phase 1 tools on a FastMCP instance."""
     svcs = services or get_services()
 
+    tool_names = [
+        "seedops_capabilities",
+        "workspace_create",
+        "workspace_list",
+        "workspace_get",
+        "workspace_attach_compose",
+        "workspace_attach_labels",
+        "workspace_refresh",
+        "events_list",
+        "inventory_list_nodes",
+        "inventory_get_node",
+        "ops_exec",
+        "ops_logs",
+        "routing_bgp_summary",
+        "playbook_validate",
+        "playbook_run",
+        "jobs_list",
+        "job_get",
+        "job_steps_list",
+        "job_cancel",
+        "collector_start",
+        "snapshots_list",
+        "artifacts_list",
+        "artifact_read",
+        "artifact_read_chunk",
+        "maintenance_prune_workspace",
+    ]
+
     def _audit_error(workspace_id: str, *, tool: str, error: Exception, data: dict[str, Any] | None = None) -> None:
         try:
             # Only write an audit event if the workspace exists.
@@ -60,6 +88,25 @@ def register_tools(mcp: FastMCP, services: SeedOpsServices | None = None) -> Non
         except Exception:
             # Never let audit logging break tool execution.
             return
+
+    @mcp.tool()
+    def seedops_capabilities() -> str:
+        """Return capability metadata for SeedOps clients and planners."""
+
+        return _json(
+            {
+                "seedops_version": "phase2",
+                "playbook_version": SUPPORTED_PLAYBOOK_VERSION,
+                "supported_actions": sorted(SUPPORTED_ACTIONS),
+                "default_limits": {
+                    "timeout_seconds": 30,
+                    "parallelism": 20,
+                    "max_output_chars": 8000,
+                    "artifact_chunk_bytes": 65536,
+                },
+                "tool_names": tool_names,
+            }
+        )
 
     @mcp.tool()
     def workspace_create(name: str) -> str:

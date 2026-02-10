@@ -1,30 +1,57 @@
-# User Manual for the SEED Emulator
+# SEED Emulator User Manual Index
 
-We have plenty of examples to demonstrate the usages of the SEED emulator.
-This document provides a portal to those examples.
+This is the primary manual hub for `seed-email-service`.
 
-## Internet Emulator: Basic elements
+---
 
-  - [Create an emulator: the overall flow](./overall_flow.md)
-  - [Autonomous system](./as.md)
-  - [Internet exchange](./internet_exchange.md)
-  - [BGP routers and Peering](./bgp.md) 
-  - [Routing](./routing.md) 
-  - [Node customization](./node.md): install software, add startup command, 
-           assign hostname, etc.
-  - [Component and Binding](./component.md): bind virtual nodes in component 
-           to physical nodes, filters  
-  - [Compilation](./compiler.md): generate emulation files (docker files)
-  - [Visualization](./visualization.md): visualize the emulated Internet
-  - [Docker image](./docker.md): generate images for AMD and ARM platforms, 
-           use custom images 
+## Recommended reading paths
 
-## MCP Operational Control Plane
+### Path A: Build and run a lab (first-time users)
 
-  - [SeedOps (operate already-running networks)](./mcp_seedops.md)
+1. [Overall flow](./overall_flow.md)
+2. [Autonomous system](./as.md)
+3. [BGP and peering](./bgp.md)
+4. [Compilation](./compiler.md)
+5. [Visualization](./visualization.md)
 
-## [Internet Emulator: Components and Advanced Features](./internet/README.md)
+### Path B: Operate an existing running lab (OPS)
 
-## [Blockchain Emulator](./blockchain/README.md)
+1. [SeedOps MCP guide](./mcp_seedops.md)
+2. [Selectors and inventory](./mcp_seedops.md#phase-1-workspaces--inventory)
+3. [Playbooks/jobs/artifacts](./mcp_seedops.md#phase-2-jobs--yaml-playbooks)
 
-## Frequently Asked Questions (FAQ)
+---
+
+## Core emulator manuals
+
+- [Create an emulator: overall flow](./overall_flow.md)
+- [Autonomous system](./as.md)
+- [Internet exchange](./internet_exchange.md)
+- [BGP routers and peering](./bgp.md)
+- [Routing](./routing.md)
+- [Node customization](./node.md)
+- [Component and binding](./component.md)
+- [Compilation](./compiler.md)
+- [Visualization](./visualization.md)
+- [Docker images](./docker.md)
+
+---
+
+## MCP operations control plane
+
+- [SeedOps: operate already-running networks](./mcp_seedops.md)
+
+---
+
+## Domain-specific manuals
+
+- [Internet advanced features](./internet/README.md)
+- [Blockchain emulator](./blockchain/README.md)
+
+---
+
+## Notes and troubleshooting
+
+- [General notes](./00_notes.md)
+- [Docker Hub proxy](./dockerhub_proxy.md)
+- [Misc manual topics](./misc.md)
