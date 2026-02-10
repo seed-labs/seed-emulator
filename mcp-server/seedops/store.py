@@ -664,3 +664,125 @@ class SeedOpsStore:
                 )
             rows = cur.fetchall()
         return [self._row_to_snapshot(r) for r in rows]
+
+    def prune_events(self, workspace_id: str, *, keep_last: int = 5000) -> int:
+        keep = int(keep_last)
+        with self._lock:
+            cur = self._conn.cursor()
+            if keep <= 0:
+                cur.execute("DELETE FROM events WHERE workspace_id = ?", (workspace_id,))
+                self._conn.commit()
+                return int(cur.rowcount or 0)
+
+            cur.execute(
+                """
+                DELETE FROM events
+                 WHERE workspace_id = ?
+                   AND event_id NOT IN (
+                        SELECT event_id
+                          FROM events
+                         WHERE workspace_id = ?
+                         ORDER BY ts DESC, event_id DESC
+                         LIMIT ?
+                   )
+                """,
+                (workspace_id, workspace_id, keep),
+            )
+            self._conn.commit()
+            return int(cur.rowcount or 0)
+
+    def prune_snapshots(self, workspace_id: str, *, snapshot_type: str | None = None, keep_last: int = 5000) -> int:
+        keep = int(keep_last)
+        with self._lock:
+            cur = self._conn.cursor()
+            if keep <= 0:
+                if snapshot_type:
+                    cur.execute("DELETE FROM snapshots WHERE workspace_id = ? AND snapshot_type = ?", (workspace_id, snapshot_type))
+                else:
+                    cur.execute("DELETE FROM snapshots WHERE workspace_id = ?", (workspace_id,))
+                self._conn.commit()
+                return int(cur.rowcount or 0)
+
+            if snapshot_type:
+                cur.execute(
+                    """
+                    DELETE FROM snapshots
+                     WHERE workspace_id = ?
+                       AND snapshot_type = ?
+                       AND snapshot_id NOT IN (
+                            SELECT snapshot_id
+                              FROM snapshots
+                             WHERE workspace_id = ?
+                               AND snapshot_type = ?
+                             ORDER BY ts DESC, snapshot_id DESC
+                             LIMIT ?
+                       )
+                    """,
+                    (workspace_id, snapshot_type, workspace_id, snapshot_type, keep),
+                )
+            else:
+                cur.execute(
+                    """
+                    DELETE FROM snapshots
+                     WHERE workspace_id = ?
+                       AND snapshot_id NOT IN (
+                            SELECT snapshot_id
+                              FROM snapshots
+                             WHERE workspace_id = ?
+                             ORDER BY ts DESC, snapshot_id DESC
+                             LIMIT ?
+                       )
+                    """,
+                    (workspace_id, workspace_id, keep),
+                )
+            self._conn.commit()
+            return int(cur.rowcount or 0)
+
+    def list_terminal_job_ids_to_prune(self, workspace_id: str, *, keep_last: int = 200) -> list[str]:
+        keep = int(keep_last)
+        terminal = ("succeeded", "failed", "canceled", "interrupted", "succeeded_with_errors")
+        with self._lock:
+            cur = self._conn.cursor()
+            cur.execute(
+                f"""
+                SELECT job_id
+                  FROM jobs
+                 WHERE workspace_id = ?
+                   AND status IN ({",".join("?" for _ in terminal)})
+                 ORDER BY created_at DESC, job_id DESC
+                """,
+                (workspace_id, *terminal),
+            )
+            job_ids = [str(r["job_id"]) for r in cur.fetchall()]
+        if keep <= 0:
+            return job_ids
+        return job_ids[keep:]
+
+    def list_artifacts_for_job_ids(self, job_ids: list[str]) -> list[ArtifactRow]:
+        if not job_ids:
+            return []
+        placeholders = ",".join("?" for _ in job_ids)
+        with self._lock:
+            cur = self._conn.cursor()
+            cur.execute(f"SELECT * FROM artifacts WHERE job_id IN ({placeholders})", tuple(job_ids))
+            rows = cur.fetchall()
+        return [self._row_to_artifact(r) for r in rows]
+
+    def delete_jobs_and_related(self, job_ids: list[str]) -> dict[str, int]:
+        if not job_ids:
+            return {"jobs_deleted": 0, "job_steps_deleted": 0, "artifacts_deleted": 0}
+        placeholders = ",".join("?" for _ in job_ids)
+        with self._lock:
+            cur = self._conn.cursor()
+            cur.execute(f"DELETE FROM job_steps WHERE job_id IN ({placeholders})", tuple(job_ids))
+            steps_deleted = int(cur.rowcount or 0)
+            cur.execute(f"DELETE FROM artifacts WHERE job_id IN ({placeholders})", tuple(job_ids))
+            artifacts_deleted = int(cur.rowcount or 0)
+            cur.execute(f"DELETE FROM jobs WHERE job_id IN ({placeholders})", tuple(job_ids))
+            jobs_deleted = int(cur.rowcount or 0)
+            self._conn.commit()
+        return {
+            "jobs_deleted": jobs_deleted,
+            "job_steps_deleted": steps_deleted,
+            "artifacts_deleted": artifacts_deleted,
+        }

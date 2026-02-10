@@ -556,3 +556,52 @@ def register_tools(mcp: FastMCP, services: SeedOpsServices | None = None) -> Non
             )
         except Exception as e:
             return _json({"error": str(e)})
+
+    @mcp.tool()
+    def maintenance_prune_workspace(
+        workspace_id: str,
+        keep_events: int = 5000,
+        keep_snapshots: int = 5000,
+        keep_terminal_jobs: int = 200,
+    ) -> str:
+        """Prune old events/snapshots/jobs/artifacts to control disk usage (Phase 2)."""
+        try:
+            if svcs.workspaces.get(workspace_id) is None:
+                return _json({"error": "workspace not found"})
+
+            job_ids = svcs.store.list_terminal_job_ids_to_prune(workspace_id, keep_last=keep_terminal_jobs)
+            artifacts = svcs.store.list_artifacts_for_job_ids(job_ids)
+            file_counts = svcs.artifacts.delete_files(artifacts)
+            db_counts = svcs.store.delete_jobs_and_related(job_ids)
+
+            events_deleted = svcs.store.prune_events(workspace_id, keep_last=keep_events)
+            snapshots_deleted = svcs.store.prune_snapshots(workspace_id, keep_last=keep_snapshots)
+
+            payload = {
+                "workspace_id": workspace_id,
+                "keep": {
+                    "events": int(keep_events),
+                    "snapshots": int(keep_snapshots),
+                    "terminal_jobs": int(keep_terminal_jobs),
+                },
+                "deleted": {
+                    "events": int(events_deleted),
+                    "snapshots": int(snapshots_deleted),
+                    "jobs": int(db_counts.get("jobs_deleted", 0)),
+                    "job_steps": int(db_counts.get("job_steps_deleted", 0)),
+                    "artifacts": int(db_counts.get("artifacts_deleted", 0)),
+                    "artifact_files": file_counts,
+                },
+            }
+
+            svcs.store.insert_event(
+                workspace_id,
+                level="info",
+                event_type="maintenance.prune",
+                message="Workspace pruned",
+                data=payload,
+            )
+            return _json(payload)
+        except Exception as e:
+            _audit_error(workspace_id, tool="maintenance_prune_workspace", error=e)
+            return _json({"error": str(e)})

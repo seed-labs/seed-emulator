@@ -185,3 +185,23 @@ class ArtifactManager:
             eof=eof,
             content_b64=b64,
         )
+
+    def delete_files(self, artifacts: list[ArtifactRow]) -> dict[str, int]:
+        """Delete artifact files from disk.
+
+        Returns counts: {deleted, missing, errors}.
+        """
+        deleted = 0
+        missing = 0
+        errors = 0
+        for a in artifacts:
+            try:
+                p = self._resolve_artifact_path(a.path)
+                if p.exists():
+                    p.unlink()
+                    deleted += 1
+                else:
+                    missing += 1
+            except Exception:
+                errors += 1
+        return {"deleted": deleted, "missing": missing, "errors": errors}
