@@ -254,3 +254,17 @@ Snapshot types (current):
 
 - `inventory_summary`
 - `bgp_summary_counts`
+
+---
+
+## Maintenance: pruning
+
+Long-running control planes accumulate events, snapshots, jobs, and artifacts. Use:
+
+- `maintenance_prune_workspace(workspace_id, keep_events=5000, keep_snapshots=5000, keep_terminal_jobs=200)`
+
+This deletes:
+
+- old `events` and `snapshots` beyond keep limits
+- terminal jobs beyond keep limit (and their job steps)
+- artifact files on disk for pruned jobs
