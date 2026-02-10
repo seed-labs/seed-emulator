@@ -19,6 +19,10 @@ This document provides a portal to those examples.
   - [Docker image](./docker.md): generate images for AMD and ARM platforms, 
            use custom images 
 
+## MCP Operational Control Plane
+
+  - [SeedOps (operate already-running networks)](./mcp_seedops.md)
+
 ## [Internet Emulator: Components and Advanced Features](./internet/README.md)
 
 ## [Blockchain Emulator](./blockchain/README.md)

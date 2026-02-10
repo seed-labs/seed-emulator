@@ -20,6 +20,7 @@ including Blockchain, Botnet, and many other useful elements of the Internet.
 
 -  [Getting Started](#getting-started)
 -  [User Manuals](#user-manuals)
+-  [MCP Ops Control Plane (SeedOps)](#mcp-ops-control-plane-seedops)
 -  [Contributing](#contributing)
 -  [License](#license)
 
@@ -82,6 +83,13 @@ To run an example, do the following:
 ## User Manuals
 
 User manuals are provided inside the [docs/user_manual/](./docs/user_manual) folder.
+
+## MCP Ops Control Plane (SeedOps)
+
+This repository includes an MCP server for operating **already-running** Docker/Compose simulations
+(workspace attachment, inventory/selector, batch exec/logs, BGP summary, and YAML playbooks/jobs).
+
+See [SeedOps user manual](./docs/user_manual/mcp_seedops.md).
 
 ## Contributing
 
