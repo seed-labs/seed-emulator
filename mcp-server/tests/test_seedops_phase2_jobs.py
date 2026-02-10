@@ -3,6 +3,7 @@ import sys
 import tempfile
 import time
 import unittest
+import base64
 
 # Add parent directory (mcp-server) to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -134,6 +135,12 @@ steps:
             self.assertIsNotNone(read)
             self.assertIn("{", read.content)
 
+            chunk = artifacts.read_chunk_base64(arts[0].artifact_id, offset=0, max_bytes=64)
+            self.assertIsNotNone(chunk)
+            self.assertGreater(chunk.bytes_read, 0)
+            decoded = base64.b64decode(chunk.content_b64.encode("ascii"))
+            self.assertIn(b"{", decoded)
+
             steps = store.list_job_steps(job.job_id, since_step_id=0, limit=200)
             self.assertTrue(any(s.event_type == "step.finished" for s in steps))
 
@@ -160,4 +167,3 @@ steps:
 
 if __name__ == "__main__":
     unittest.main()
-

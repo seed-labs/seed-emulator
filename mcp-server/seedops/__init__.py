@@ -516,3 +516,33 @@ def register_tools(mcp: FastMCP, services: SeedOpsServices | None = None) -> Non
             )
         except Exception as e:
             return _json({"error": str(e)})
+
+    @mcp.tool()
+    def artifact_read_chunk(artifact_id: str, offset: int = 0, max_bytes: int = 65536) -> str:
+        """Read an artifact chunk as base64 (Phase 2, remote-friendly)."""
+        try:
+            res = svcs.artifacts.read_chunk_base64(artifact_id, offset=offset, max_bytes=max_bytes)
+            if res is None:
+                return _json({"error": "not found"})
+            return _json(
+                {
+                    "artifact": {
+                        "artifact_id": res.artifact.artifact_id,
+                        "job_id": res.artifact.job_id,
+                        "workspace_id": res.artifact.workspace_id,
+                        "name": res.artifact.name,
+                        "kind": res.artifact.kind,
+                        "path": res.artifact.path,
+                        "size_bytes": res.artifact.size_bytes,
+                        "created_at": res.artifact.created_at,
+                    },
+                    "encoding": "base64",
+                    "offset": res.offset,
+                    "bytes_read": res.bytes_read,
+                    "file_size": res.file_size,
+                    "eof": res.eof,
+                    "content_b64": res.content_b64,
+                }
+            )
+        except Exception as e:
+            return _json({"error": str(e)})
