@@ -293,7 +293,17 @@ def register_tools(mcp: FastMCP, services: SeedOpsServices | None = None) -> Non
                         "version": pb.version,
                         "name": pb.name,
                         "defaults": pb.defaults,
-                        "steps": [{"id": s.step_id, "action": s.action, "save_as": s.save_as} for s in pb.steps],
+                        "steps": [
+                            {
+                                "id": s.step_id,
+                                "action": s.action,
+                                "save_as": s.save_as,
+                                "on_error": s.on_error,
+                                "retries": s.retries,
+                                "retry_delay_seconds": s.retry_delay_seconds,
+                            }
+                            for s in pb.steps
+                        ],
                     },
                 }
             )

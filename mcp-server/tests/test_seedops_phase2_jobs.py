@@ -144,6 +144,65 @@ steps:
             steps = store.list_job_steps(job.job_id, since_step_id=0, limit=200)
             self.assertTrue(any(s.event_type == "step.finished" for s in steps))
 
+    def test_playbook_retries_and_on_error_continue(self):
+        class FlakyOps(FakeOps):
+            def __init__(self):
+                self.calls = 0
+
+            def exec(self, workspace_id: str, *, selector, command: str, timeout_seconds=30, parallelism=20, max_output_chars=8000):
+                self.calls += 1
+                if "flaky" in command and self.calls == 1:
+                    raise RuntimeError("transient error")
+                if "always_fail" in command:
+                    raise RuntimeError("permanent error")
+                return super().exec(
+                    workspace_id,
+                    selector=selector,
+                    command=command,
+                    timeout_seconds=timeout_seconds,
+                    parallelism=parallelism,
+                    max_output_chars=max_output_chars,
+                )
+
+        with tempfile.TemporaryDirectory() as td:
+            store = SeedOpsStore(os.path.join(td, "seedops.db"))
+            ws = store.create_workspace("lab1")
+            artifacts = ArtifactManager(base_dir=os.path.join(td, "data"), store=store)
+
+            mgr = JobManager(store=store, workspaces=FakeWorkspaces(), ops=FlakyOps(), artifacts=artifacts)
+            job = mgr.start_playbook(
+                ws.workspace_id,
+                playbook_yaml="""
+version: 1
+name: retry_and_continue
+defaults:
+  selector: {}
+  retries: 1
+  retry_delay_seconds: 0.01
+steps:
+  - action: ops_exec
+    id: flaky
+    selector: {}
+    command: "flaky"
+  - action: ops_exec
+    id: fail_but_continue
+    selector: {}
+    command: "always_fail"
+    on_error: continue
+    retries: 0
+  - action: workspace_refresh
+    id: refresh
+""",
+            )
+
+            final = _wait_for_job(store, job.job_id, timeout_seconds=5.0)
+            self.assertIsNotNone(final)
+            self.assertEqual(final.status, "succeeded_with_errors")
+
+            steps = store.list_job_steps(job.job_id, since_step_id=0, limit=500)
+            self.assertTrue(any(s.event_type == "step.retry" for s in steps))
+            self.assertTrue(any(s.event_type == "step.failed" for s in steps))
+
     def test_collector_job_and_snapshots(self):
         with tempfile.TemporaryDirectory() as td:
             store = SeedOpsStore(os.path.join(td, "seedops.db"))

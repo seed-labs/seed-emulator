@@ -6,7 +6,7 @@ from typing import Any
 
 from .artifacts import ArtifactManager
 from .ops import OpsService
-from .playbooks import Playbook, PlaybookStep, parse_playbook_yaml
+from .playbooks import Playbook, PlaybookStep, SUPPORTED_ON_ERROR, parse_playbook_yaml
 from .store import JobRow, SeedOpsStore
 from .workspaces import WorkspaceManager
 
@@ -143,6 +143,34 @@ class JobManager:
             return defaults_sel, False
         return None, False
 
+    def _effective_on_error(self, playbook: Playbook, step: PlaybookStep) -> str:
+        if step.on_error:
+            return step.on_error
+        val = playbook.defaults.get("on_error")
+        if isinstance(val, str) and val.strip() in SUPPORTED_ON_ERROR:
+            return val.strip()
+        return "stop"
+
+    def _effective_retries(self, playbook: Playbook, step: PlaybookStep) -> int:
+        if step.retries is not None:
+            return int(step.retries)
+        val = playbook.defaults.get("retries")
+        try:
+            retries = int(val) if val is not None else 0
+        except Exception:
+            retries = 0
+        return max(0, retries)
+
+    def _effective_retry_delay_seconds(self, playbook: Playbook, step: PlaybookStep) -> float:
+        if step.retry_delay_seconds is not None:
+            return float(step.retry_delay_seconds)
+        val = playbook.defaults.get("retry_delay_seconds")
+        try:
+            delay = float(val) if val is not None else 1.0
+        except Exception:
+            delay = 1.0
+        return max(0.0, delay)
+
     def _summarize_result(self, action: str, result: Any) -> dict[str, Any]:
         if action == "inventory_list_nodes" and isinstance(result, list):
             sample = []
@@ -242,6 +270,7 @@ class JobManager:
         )
 
         try:
+            had_errors = False
             for idx, step in enumerate(playbook.steps, start=1):
                 if cancel.is_set():
                     self._store.insert_job_step(
@@ -273,7 +302,60 @@ class JobManager:
                     data={"action": step.action},
                 )
 
-                result = self._execute_step(workspace_id, playbook, step, cancel)
+                retries = self._effective_retries(playbook, step)
+                delay = self._effective_retry_delay_seconds(playbook, step)
+                on_error = self._effective_on_error(playbook, step)
+
+                attempt = 0
+                last_error: Exception | None = None
+                result: Any | None = None
+                while True:
+                    if cancel.is_set():
+                        raise RuntimeError("canceled")
+                    attempt += 1
+                    try:
+                        result = self._execute_step(workspace_id, playbook, step, cancel)
+                        break
+                    except Exception as e:
+                        last_error = e
+                        max_attempts = 1 + int(retries)
+                        if attempt >= max_attempts:
+                            break
+                        self._store.insert_job_step(
+                            job_id,
+                            level="warn",
+                            step_index=idx,
+                            step_name=step.step_id,
+                            event_type="step.retry",
+                            message=str(e),
+                            data={"action": step.action, "attempt": attempt, "max_attempts": max_attempts, "delay_seconds": delay},
+                        )
+                        _sleep_interruptible(cancel, delay)
+
+                if result is None and last_error is not None:
+                    had_errors = True
+                    self._store.insert_job_step(
+                        job_id,
+                        level="error",
+                        step_index=idx,
+                        step_name=step.step_id,
+                        event_type="step.failed",
+                        message=str(last_error),
+                        data={"action": step.action, "attempts": attempt, "retries": retries, "on_error": on_error},
+                    )
+
+                    if on_error != "continue":
+                        raise last_error
+
+                    # Continue to next step, but still update job progress.
+                    self._store.update_job(
+                        job_id,
+                        progress_current=idx,
+                        message=f"{step.step_id} failed (continuing) ({idx}/{total})",
+                    )
+                    continue
+
+                assert result is not None
                 summary = self._summarize_result(step.action, result)
 
                 artifact_id = None
@@ -303,12 +385,13 @@ class JobManager:
                 )
 
             finished_at = int(time.time())
-            self._store.update_job(job_id, status="succeeded", finished_at=finished_at, message="succeeded")
+            final_status = "succeeded_with_errors" if had_errors else "succeeded"
+            self._store.update_job(job_id, status=final_status, finished_at=finished_at, message=final_status)
             self._store.insert_event(
                 workspace_id,
                 level="info",
-                event_type="job.succeeded",
-                message=f"Job succeeded: {playbook.name}",
+                event_type="job.succeeded" if final_status == "succeeded" else "job.succeeded_with_errors",
+                message=f"Job {final_status}: {playbook.name}",
                 data={"job_id": job_id},
             )
         except Exception as e:
@@ -411,4 +494,3 @@ class JobManager:
             )
         finally:
             self._cleanup_thread(job_id)
-
