@@ -84,6 +84,9 @@ Attach by Compose output directory (recommended):
 
 - Tool: `workspace_attach_compose(workspace_id, output_dir)`
 - It reads `output_dir/docker-compose.yml` and records `services.*.container_name`
+- Notes:
+  - `output_dir` must exist and contain `docker-compose.yml`
+  - If `services.*.container_name` are missing (empty list), the tool returns an error; use `workspace_attach_labels` instead
 
 Or attach by label scan:
 

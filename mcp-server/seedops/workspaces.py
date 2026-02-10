@@ -14,19 +14,47 @@ from .store import EventRow, SeedOpsStore, WorkspaceRow
 
 
 def extract_container_names_from_compose(output_dir: str) -> list[str]:
-    compose_path = os.path.join(output_dir, "docker-compose.yml")
-    with open(compose_path, "r") as f:
-        data = yaml.safe_load(f) or {}
+    output_dir_s = str(output_dir or "").strip()
+    if not output_dir_s:
+        raise ValueError("output_dir is required.")
+    output_dir_abs = os.path.abspath(output_dir_s)
+    if not os.path.isdir(output_dir_abs):
+        raise ValueError(f"output_dir not found or not a directory: {output_dir_abs}")
+
+    compose_path = os.path.join(output_dir_abs, "docker-compose.yml")
+    if not os.path.exists(compose_path):
+        raise ValueError(f"docker-compose.yml not found at: {compose_path}")
+
+    try:
+        with open(compose_path, "r") as f:
+            data = yaml.safe_load(f) or {}
+    except Exception as e:
+        raise ValueError(f"Failed to parse docker-compose.yml: {e}") from e
+
     services = data.get("services") or {}
     if not isinstance(services, dict):
-        return []
+        raise ValueError("docker-compose.yml: 'services' must be a mapping (dict).")
+
+    total_services = 0
+    with_container_name = 0
     names: list[str] = []
     for svc in services.values():
+        total_services += 1
         if not isinstance(svc, dict):
             continue
         cname = svc.get("container_name")
         if cname:
+            with_container_name += 1
             names.append(str(cname))
+
+    if not names:
+        raise ValueError(
+            "No services.*.container_name found in docker-compose.yml "
+            f"(services={total_services}, with_container_name={with_container_name}). "
+            "SeedOps attach_compose requires container_name. "
+            "Recompile with container_name or use workspace_attach_labels."
+        )
+
     # stable order
     names.sort()
     return names
@@ -89,8 +117,9 @@ class WorkspaceManager:
         if not ws:
             raise ValueError("Workspace not found")
 
-        output_dir_abs = os.path.abspath(output_dir)
-        container_names = extract_container_names_from_compose(output_dir_abs)
+        output_dir_s = str(output_dir or "").strip()
+        container_names = extract_container_names_from_compose(output_dir_s)
+        output_dir_abs = os.path.abspath(output_dir_s)
 
         attach_config = {
             "output_dir": output_dir_abs,
@@ -111,6 +140,12 @@ class WorkspaceManager:
         ws = self._store.get_workspace(workspace_id)
         if not ws:
             raise ValueError("Workspace not found")
+
+        # Validate regex at attach time for fast feedback.
+        try:
+            re.compile(str(name_regex))
+        except re.error as e:
+            raise ValueError(f"Invalid name_regex: {e}") from e
 
         attach_config = {
             "name_regex": name_regex,
@@ -228,4 +263,3 @@ class WorkspaceManager:
 
     def list_events(self, workspace_id: str, *, since_ts: int = 0, limit: int = 200) -> list[EventRow]:
         return self._store.list_events(workspace_id, since_ts=since_ts, limit=limit)
-

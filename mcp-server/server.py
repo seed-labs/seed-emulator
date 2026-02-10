@@ -56,7 +56,7 @@ try:
     _register_seedops_tools(mcp)
 except Exception as _e:
     # Keep server importable even if SeedOps dependencies are missing in a minimal env.
-    pass
+    print(f"[server] SeedOps tools not registered: {_e}", file=sys.stderr)
 
 # ==============================================================================
 # Infrastructure Tools (Base Layer)
