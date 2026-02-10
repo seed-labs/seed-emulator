@@ -187,16 +187,41 @@ Supported actions:
 - `ops_exec`
 - `ops_logs`
 - `routing_bgp_summary`
+- `ping`
+- `traceroute`
+- `inject_fault`
+- `capture_evidence`
 - `sleep`
+
+### Playbook templating (vars + step references)
+
+SeedOps playbooks support a **safe** templating syntax inside step args (and `save_as`):
+
+- Inline: `echo asn={{ vars.asn }}` → string interpolation
+- Full value: `selector: "{{ vars.selector }}"` → returns a **typed** object (dict/list/int/...)
+
+Expressions are **path-only** (no code execution): `a.b[0]['k']`.
+
+Template context keys:
+
+- `vars`: from `playbook.vars` (defaults to `{}`)
+- `workspace_id`, `job_id`
+- `steps.<step_id>` after a step runs:
+  - success: `{action, ok=true, summary, artifact_id, attempts}`
+  - failure (with `on_error: continue`): `{action, ok=false, error, attempts}`
 
 Example:
 
 ```yaml
 version: 1
 name: bgp_check
-defaults:
-  selector:
+vars:
+  routers:
     role: ["BorderRouter", "Router"]
+  dst: 1.1.1.1
+defaults:
+  # Full-template returns a dict (typed), so this works for selectors.
+  selector: "{{ vars.routers }}"
   timeout_seconds: 20
   parallelism: 30
   max_output_chars: 6000
@@ -214,10 +239,16 @@ steps:
     # selector can be omitted to use defaults.selector
     save_as: bgp_summary
 
+  - action: ping
+    id: ping_dst
+    dst: "{{ vars.dst }}"
+    count: 2
+    save_as: "ping_{{ vars.dst }}"
+
   - action: ops_exec
     id: routes
     selector: { asn: [150, 151] }
-    command: "ip route"
+    command: "echo parsed={{ steps.refresh.summary.counts.nodes_parsed }} && ip route"
     on_error: continue
     retries: 0
     save_as: routes_as150_151
@@ -230,9 +261,22 @@ Notes:
 
 - For `ops_exec/ops_logs/routing_bgp_summary/inventory_list_nodes`, selector is taken from `step.selector` or `defaults.selector`.
 - To select everything, explicitly pass `{}` (do not use `[]`).
+- `ping/traceroute/inject_fault/capture_evidence` also require a selector via `step.selector` or `defaults.selector` (use `{}` to select all).
 - `retries` is the number of retries after the first attempt (total attempts = `1 + retries`).
 - `on_error: continue` keeps the job running and the final job status becomes `succeeded_with_errors`.
 - `retry_delay_seconds` controls the delay between retries.
+
+### Diagnostic / forensics actions
+
+These actions are wrappers around `ops_exec` and share `timeout_seconds`, `parallelism`, and `max_output_chars` behavior:
+
+- `ping`: `{selector?, dst, count?}` → runs `ping -c <count> <dst>`
+- `traceroute`: `{selector?, dst}` → runs `traceroute -n <dst> || tracepath -n <dst>`
+- `inject_fault`: `{selector?, fault_type, params?, interface?}`:
+  - `packet_loss` (params=`10`), `latency` (params=`100`), `bandwidth` (params=`1mbit`)
+  - `kill_process` (params=`bird`), `disconnect` (params=`eth0`), `reset`
+- `capture_evidence`: `{selector?, evidence_type}`:
+  - `routing_snapshot`, `network_state`, `process_list`, `logs`, `full`
 
 ---
 
