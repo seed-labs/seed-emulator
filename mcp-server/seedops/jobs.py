@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shlex
 import threading
 import time
 from typing import Any
@@ -8,6 +9,7 @@ from .artifacts import ArtifactManager
 from .ops import OpsService
 from .playbooks import Playbook, PlaybookStep, SUPPORTED_ON_ERROR, parse_playbook_yaml
 from .store import JobRow, SeedOpsStore
+from .template import TemplateError, render_value
 from .workspaces import WorkspaceManager
 
 
@@ -133,15 +135,34 @@ class JobManager:
         thread.start()
         return job
 
-    def _effective_selector(self, playbook: Playbook, step: PlaybookStep) -> tuple[dict[str, Any] | None, bool]:
+    def _render_default(self, playbook: Playbook, key: str, context: dict[str, Any]) -> Any:
+        if key not in playbook.defaults:
+            return None
+        try:
+            return render_value(playbook.defaults.get(key), context)
+        except TemplateError as e:
+            raise ValueError(f"Template error in defaults.{key}: {e}") from None
+
+    def _effective_selector(
+        self,
+        playbook: Playbook,
+        *,
+        step_args: dict[str, Any],
+        context: dict[str, Any],
+    ) -> tuple[dict[str, Any] | None, bool]:
         # Return (selector, explicitly_provided)
-        if "selector" in step.args:
-            sel = step.args.get("selector")
+        if "selector" in step_args:
+            sel = step_args.get("selector")
             return (sel if isinstance(sel, dict) else None), True
-        defaults_sel = playbook.defaults.get("selector")
-        if isinstance(defaults_sel, dict):
-            return defaults_sel, False
-        return None, False
+
+        defaults_sel_raw = playbook.defaults.get("selector")
+        if defaults_sel_raw is None:
+            return None, False
+        try:
+            defaults_sel = render_value(defaults_sel_raw, context)
+        except TemplateError as e:
+            raise ValueError(f"Template error in defaults.selector: {e}") from None
+        return (defaults_sel if isinstance(defaults_sel, dict) else None), False
 
     def _effective_on_error(self, playbook: Playbook, step: PlaybookStep) -> str:
         if step.on_error:
@@ -178,14 +199,19 @@ class JobManager:
                 if isinstance(n, dict) and "node_id" in n:
                     sample.append(str(n["node_id"]))
             return {"count": len(result), "sample_node_ids": sample}
-        if action == "ops_exec" and isinstance(result, dict):
-            return {
-                "command": result.get("command"),
-                "command_hash": result.get("command_hash"),
-                "backend": result.get("backend"),
-                "counts": result.get("counts"),
-                "fail_reasons": result.get("fail_reasons"),
-            }
+        if action in {"ops_exec", "ping", "traceroute", "inject_fault", "capture_evidence"} and isinstance(result, dict):
+            summary = self._summarize_exec_like(result)
+            if action in {"ping", "traceroute"}:
+                summary["dst"] = result.get("dst")
+            if action == "ping":
+                summary["count"] = result.get("count")
+            if action == "inject_fault":
+                summary["fault_type"] = result.get("fault_type")
+                summary["params"] = result.get("params")
+                summary["interface"] = result.get("interface")
+            if action == "capture_evidence":
+                summary["evidence_type"] = result.get("evidence_type")
+            return summary
         if action == "ops_logs" and isinstance(result, dict):
             return {"counts": result.get("counts"), "fail_reasons": result.get("fail_reasons")}
         if action == "routing_bgp_summary" and isinstance(result, dict):
@@ -197,11 +223,29 @@ class JobManager:
             return result
         return {"result_type": type(result).__name__}
 
-    def _execute_step(self, workspace_id: str, playbook: Playbook, step: PlaybookStep, cancel: threading.Event) -> Any:
+    def _summarize_exec_like(self, result: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "command": result.get("command"),
+            "command_hash": result.get("command_hash"),
+            "backend": result.get("backend"),
+            "counts": result.get("counts"),
+            "fail_reasons": result.get("fail_reasons"),
+        }
+
+    def _execute_step(
+        self,
+        workspace_id: str,
+        playbook: Playbook,
+        step: PlaybookStep,
+        *,
+        step_args: dict[str, Any],
+        cancel: threading.Event,
+        context: dict[str, Any],
+    ) -> Any:
         action = step.action
 
         if action == "sleep":
-            seconds = float(step.args.get("seconds", 0))
+            seconds = float(step_args.get("seconds", 0))
             _sleep_interruptible(cancel, seconds)
             return {"slept_seconds": seconds}
 
@@ -212,23 +256,35 @@ class JobManager:
             return self._workspaces.refresh(workspace_id)
 
         if action == "inventory_list_nodes":
-            sel, _explicit = self._effective_selector(playbook, step)
+            sel, explicit = self._effective_selector(playbook, step_args=step_args, context=context)
+            if explicit and sel is None:
+                raise ValueError("selector must be a dict (use {} to select all).")
             selector = sel or {}
             return self._workspaces.list_nodes(workspace_id, selector=selector)
 
-        if action in {"ops_exec", "ops_logs", "routing_bgp_summary"}:
-            sel, explicit = self._effective_selector(playbook, step)
+        if action in {
+            "ops_exec",
+            "ops_logs",
+            "routing_bgp_summary",
+            "ping",
+            "traceroute",
+            "inject_fault",
+            "capture_evidence",
+        }:
+            sel, explicit = self._effective_selector(playbook, step_args=step_args, context=context)
             if sel is None and not explicit:
                 raise ValueError(f"{action} requires selector via step.selector or defaults.selector (use {{}} to select all).")
+            if explicit and sel is None:
+                raise ValueError("selector must be a dict (use {} to select all).")
             selector = sel if isinstance(sel, dict) else {}
 
             if action == "ops_exec":
-                command = str(step.args.get("command") or "").strip()
+                command = str(step_args.get("command") or "").strip()
                 if not command:
                     raise ValueError("ops_exec requires non-empty command.")
-                timeout_seconds = int(step.args.get("timeout_seconds") or playbook.defaults.get("timeout_seconds") or 30)
-                parallelism = int(step.args.get("parallelism") or playbook.defaults.get("parallelism") or 20)
-                max_output_chars = int(step.args.get("max_output_chars") or playbook.defaults.get("max_output_chars") or 8000)
+                timeout_seconds = int(step_args.get("timeout_seconds") or self._render_default(playbook, "timeout_seconds", context) or 30)
+                parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 20)
+                max_output_chars = int(step_args.get("max_output_chars") or self._render_default(playbook, "max_output_chars", context) or 8000)
                 return self._ops.exec(
                     workspace_id,
                     selector=selector,
@@ -239,10 +295,10 @@ class JobManager:
                 )
 
             if action == "ops_logs":
-                tail = int(step.args.get("tail") or playbook.defaults.get("tail") or 200)
-                since_seconds = int(step.args.get("since_seconds") or playbook.defaults.get("since_seconds") or 0)
-                parallelism = int(step.args.get("parallelism") or playbook.defaults.get("parallelism") or 20)
-                max_output_chars = int(step.args.get("max_output_chars") or playbook.defaults.get("max_output_chars") or 8000)
+                tail = int(step_args.get("tail") or self._render_default(playbook, "tail", context) or 200)
+                since_seconds = int(step_args.get("since_seconds") or self._render_default(playbook, "since_seconds", context) or 0)
+                parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 20)
+                max_output_chars = int(step_args.get("max_output_chars") or self._render_default(playbook, "max_output_chars", context) or 8000)
                 return self._ops.logs(
                     workspace_id,
                     selector=selector,
@@ -254,6 +310,153 @@ class JobManager:
 
             if action == "routing_bgp_summary":
                 return self._ops.bgp_summary(workspace_id, selector=selector)
+
+            if action == "ping":
+                dst = str(step_args.get("dst") or "").strip()
+                if not dst:
+                    raise ValueError("ping requires non-empty dst.")
+                count = int(step_args.get("count") or 4)
+                timeout_seconds = int(step_args.get("timeout_seconds") or self._render_default(playbook, "timeout_seconds", context) or 30)
+                parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 20)
+                max_output_chars = int(step_args.get("max_output_chars") or self._render_default(playbook, "max_output_chars", context) or 8000)
+
+                cmd = f"ping -c {count} {shlex.quote(dst)}"
+                res = self._ops.exec(
+                    workspace_id,
+                    selector=selector,
+                    command=cmd,
+                    timeout_seconds=timeout_seconds,
+                    parallelism=parallelism,
+                    max_output_chars=max_output_chars,
+                )
+                return {"dst": dst, "count": count, **res}
+
+            if action == "traceroute":
+                dst = str(step_args.get("dst") or "").strip()
+                if not dst:
+                    raise ValueError("traceroute requires non-empty dst.")
+                timeout_seconds = int(step_args.get("timeout_seconds") or self._render_default(playbook, "timeout_seconds", context) or 30)
+                parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 20)
+                max_output_chars = int(step_args.get("max_output_chars") or self._render_default(playbook, "max_output_chars", context) or 8000)
+
+                script = f"traceroute -n {shlex.quote(dst)} || tracepath -n {shlex.quote(dst)}"
+                cmd = f"sh -lc {shlex.quote(script)}"
+                res = self._ops.exec(
+                    workspace_id,
+                    selector=selector,
+                    command=cmd,
+                    timeout_seconds=timeout_seconds,
+                    parallelism=parallelism,
+                    max_output_chars=max_output_chars,
+                )
+                return {"dst": dst, **res}
+
+            if action == "inject_fault":
+                fault_type = str(step_args.get("fault_type") or "").strip().lower()
+                if not fault_type:
+                    raise ValueError("inject_fault requires non-empty fault_type.")
+                params = str(step_args.get("params") or "").strip()
+                interface = str(step_args.get("interface") or "eth0").strip() or "eth0"
+
+                if fault_type == "packet_loss":
+                    percent = params or "10"
+                    cmd = f"tc qdisc add dev {shlex.quote(interface)} root netem loss {shlex.quote(percent)}%"
+                elif fault_type == "latency":
+                    ms = params or "100"
+                    cmd = f"tc qdisc add dev {shlex.quote(interface)} root netem delay {shlex.quote(ms)}ms"
+                elif fault_type == "bandwidth":
+                    rate = params or "1mbit"
+                    cmd = (
+                        f"tc qdisc add dev {shlex.quote(interface)} root tbf rate {shlex.quote(rate)}"
+                        " burst 32kbit latency 400ms"
+                    )
+                elif fault_type == "kill_process":
+                    process = params or "bird"
+                    cmd = f"pkill -9 {shlex.quote(process)} 2>/dev/null || echo 'Process not found'"
+                elif fault_type == "disconnect":
+                    iface = params or interface
+                    cmd = f"ip link set {shlex.quote(iface)} down"
+                elif fault_type == "reset":
+                    cmd = f"tc qdisc del dev {shlex.quote(interface)} root 2>/dev/null || true"
+                else:
+                    raise ValueError(
+                        "Unknown fault_type. Valid: packet_loss, latency, bandwidth, kill_process, disconnect, reset"
+                    )
+
+                timeout_seconds = int(step_args.get("timeout_seconds") or self._render_default(playbook, "timeout_seconds", context) or 30)
+                parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 20)
+                max_output_chars = int(step_args.get("max_output_chars") or self._render_default(playbook, "max_output_chars", context) or 8000)
+
+                res = self._ops.exec(
+                    workspace_id,
+                    selector=selector,
+                    command=cmd,
+                    timeout_seconds=timeout_seconds,
+                    parallelism=parallelism,
+                    max_output_chars=max_output_chars,
+                )
+                return {"fault_type": fault_type, "params": params, "interface": interface, **res}
+
+            if action == "capture_evidence":
+                evidence_type = str(step_args.get("evidence_type") or "").strip().lower()
+                if not evidence_type:
+                    raise ValueError("capture_evidence requires non-empty evidence_type.")
+
+                parts: list[str] = []
+
+                if evidence_type in {"routing_snapshot", "full"}:
+                    parts.append("echo '=== ROUTING TABLE ==='")
+                    parts.append("ip route || true")
+                    parts.append("echo ''")
+                    parts.append("echo '=== BGP STATUS ==='")
+                    parts.append("birdc show protocol 2>/dev/null || echo 'No BIRD'")
+                    parts.append("echo ''")
+                    parts.append("echo '=== BGP ROUTES ==='")
+                    parts.append("birdc 'show route' 2>/dev/null || echo 'No BIRD'")
+
+                if evidence_type in {"network_state", "full"}:
+                    parts.append("echo ''")
+                    parts.append("echo '=== INTERFACES ==='")
+                    parts.append("ip addr || true")
+                    parts.append("echo ''")
+                    parts.append("echo '=== ARP TABLE ==='")
+                    parts.append("ip neigh || true")
+                    parts.append("echo ''")
+                    parts.append("echo '=== ACTIVE CONNECTIONS ==='")
+                    parts.append("ss -tuln 2>/dev/null || netstat -tuln || true")
+
+                if evidence_type in {"process_list", "full"}:
+                    parts.append("echo ''")
+                    parts.append("echo '=== PROCESSES ==='")
+                    parts.append("ps aux || true")
+
+                if evidence_type in {"logs", "full"}:
+                    parts.append("echo ''")
+                    parts.append("echo '=== SYSLOG (last 50 lines) ==='")
+                    parts.append("tail -50 /var/log/syslog 2>/dev/null || echo 'No syslog'")
+                    parts.append("echo ''")
+                    parts.append("echo '=== DMESG (last 20 lines) ==='")
+                    parts.append("dmesg | tail -20 2>/dev/null || echo 'No dmesg'")
+
+                if not parts:
+                    raise ValueError(
+                        "Unknown evidence_type. Valid: routing_snapshot, network_state, process_list, logs, full"
+                    )
+
+                script = "\n".join(parts)
+                cmd = f"sh -lc {shlex.quote(script)}"
+                timeout_seconds = int(step_args.get("timeout_seconds") or self._render_default(playbook, "timeout_seconds", context) or 30)
+                parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 20)
+                max_output_chars = int(step_args.get("max_output_chars") or self._render_default(playbook, "max_output_chars", context) or 8000)
+                res = self._ops.exec(
+                    workspace_id,
+                    selector=selector,
+                    command=cmd,
+                    timeout_seconds=timeout_seconds,
+                    parallelism=parallelism,
+                    max_output_chars=max_output_chars,
+                )
+                return {"evidence_type": evidence_type, **res}
 
         raise ValueError(f"Unsupported step action: {action}")
 
@@ -271,6 +474,13 @@ class JobManager:
 
         try:
             had_errors = False
+            context: dict[str, Any] = {
+                "workspace_id": workspace_id,
+                "job_id": job_id,
+                "vars": playbook.vars,
+                "playbook": {"version": playbook.version, "name": playbook.name, "defaults": playbook.defaults},
+                "steps": {},
+            }
             for idx, step in enumerate(playbook.steps, start=1):
                 if cancel.is_set():
                     self._store.insert_job_step(
@@ -314,7 +524,22 @@ class JobManager:
                         raise RuntimeError("canceled")
                     attempt += 1
                     try:
-                        result = self._execute_step(workspace_id, playbook, step, cancel)
+                        context["now_ts"] = int(time.time())
+                        context["step"] = {"id": step.step_id, "action": step.action, "index": idx, "attempt": attempt}
+                        try:
+                            rendered = render_value(step.args, context)
+                        except TemplateError as e:
+                            raise ValueError(f"Template error in step {step.step_id}: {e}") from None
+                        if not isinstance(rendered, dict):
+                            raise ValueError(f"Step args must be a dict after templating (step {step.step_id}).")
+                        result = self._execute_step(
+                            workspace_id,
+                            playbook,
+                            step,
+                            step_args=rendered,
+                            cancel=cancel,
+                            context=context,
+                        )
                         break
                     except Exception as e:
                         last_error = e
@@ -334,6 +559,12 @@ class JobManager:
 
                 if result is None and last_error is not None:
                     had_errors = True
+                    context["steps"][step.step_id] = {
+                        "action": step.action,
+                        "ok": False,
+                        "error": str(last_error),
+                        "attempts": attempt,
+                    }
                     self._store.insert_job_step(
                         job_id,
                         level="error",
@@ -360,14 +591,28 @@ class JobManager:
 
                 artifact_id = None
                 if step.save_as:
+                    try:
+                        rendered_name = render_value(step.save_as, context)
+                    except TemplateError as e:
+                        raise ValueError(f"Template error in save_as for step {step.step_id}: {e}") from None
+                    name_s = str(rendered_name).strip()
+                    if not name_s:
+                        raise ValueError(f"save_as resolved to empty name for step {step.step_id}.")
                     artifact = self._artifacts.write_json(
                         workspace_id=workspace_id,
                         job_id=job_id,
-                        name=step.save_as,
+                        name=name_s,
                         data=result,
                     )
                     artifact_id = artifact.artifact_id
 
+                context["steps"][step.step_id] = {
+                    "action": step.action,
+                    "ok": True,
+                    "summary": summary,
+                    "artifact_id": artifact_id,
+                    "attempts": attempt,
+                }
                 self._store.insert_job_step(
                     job_id,
                     level="info",

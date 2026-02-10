@@ -14,6 +14,10 @@ SUPPORTED_ACTIONS = {
     "ops_exec",
     "ops_logs",
     "routing_bgp_summary",
+    "ping",
+    "traceroute",
+    "inject_fault",
+    "capture_evidence",
     "sleep",
 }
 
@@ -35,6 +39,7 @@ class PlaybookStep:
 class Playbook:
     version: int
     name: str
+    vars: dict[str, Any]
     defaults: dict[str, Any]
     steps: list[PlaybookStep]
 
@@ -45,6 +50,7 @@ def parse_playbook_yaml(playbook_yaml: str) -> Playbook:
     YAML schema (v1):
       version: 1
       name: <str>
+      vars: <optional dict>
       defaults:
         selector: {...}
         timeout_seconds: 30
@@ -54,7 +60,7 @@ def parse_playbook_yaml(playbook_yaml: str) -> Playbook:
         retries: 0
         retry_delay_seconds: 1
       steps:
-        - action: workspace_refresh|inventory_list_nodes|ops_exec|ops_logs|routing_bgp_summary|sleep
+        - action: workspace_refresh|inventory_list_nodes|ops_exec|ops_logs|routing_bgp_summary|ping|traceroute|inject_fault|capture_evidence|sleep
           id: <optional str>
           save_as: <optional str>
           on_error: <optional stop|continue>
@@ -75,6 +81,11 @@ def parse_playbook_yaml(playbook_yaml: str) -> Playbook:
         raise ValueError(f"Unsupported playbook version: {version_i} (supported: {SUPPORTED_PLAYBOOK_VERSION})")
 
     name = str(data.get("name") or "playbook").strip() or "playbook"
+
+    vars_raw = data.get("vars") or {}
+    if not isinstance(vars_raw, dict):
+        raise ValueError("playbook.vars must be a dict.")
+    vars_v: dict[str, Any] = vars_raw
 
     defaults = data.get("defaults") or {}
     if not isinstance(defaults, dict):
@@ -149,13 +160,33 @@ def parse_playbook_yaml(playbook_yaml: str) -> Playbook:
         if action == "ops_exec":
             if "command" not in args:
                 raise ValueError(f"playbook.steps[{i}] ops_exec requires 'command'.")
-        if action in {"ops_exec", "ops_logs", "routing_bgp_summary", "inventory_list_nodes"}:
+        if action in {
+            "ops_exec",
+            "ops_logs",
+            "routing_bgp_summary",
+            "inventory_list_nodes",
+            "ping",
+            "traceroute",
+            "inject_fault",
+            "capture_evidence",
+        }:
             sel = args.get("selector")
             if sel is not None and not isinstance(sel, dict):
-                raise ValueError(f"playbook.steps[{i}] selector must be a dict.")
+                # Allow selector templating via full-template strings like "{{ vars.selector }}".
+                if not (isinstance(sel, str) and "{{" in sel and "}}" in sel):
+                    raise ValueError(f"playbook.steps[{i}] selector must be a dict (or a template string).")
         if action == "sleep":
             if "seconds" not in args:
                 raise ValueError(f"playbook.steps[{i}] sleep requires 'seconds'.")
+        if action in {"ping", "traceroute"}:
+            if "dst" not in args:
+                raise ValueError(f"playbook.steps[{i}] {action} requires 'dst'.")
+        if action == "inject_fault":
+            if "fault_type" not in args:
+                raise ValueError(f"playbook.steps[{i}] inject_fault requires 'fault_type'.")
+        if action == "capture_evidence":
+            if "evidence_type" not in args:
+                raise ValueError(f"playbook.steps[{i}] capture_evidence requires 'evidence_type'.")
 
         steps.append(
             PlaybookStep(
@@ -169,4 +200,4 @@ def parse_playbook_yaml(playbook_yaml: str) -> Playbook:
             )
         )
 
-    return Playbook(version=version_i, name=name, defaults=defaults, steps=steps)
+    return Playbook(version=version_i, name=name, vars=vars_v, defaults=defaults, steps=steps)
