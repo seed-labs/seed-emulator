@@ -191,6 +191,7 @@ Supported actions:
 - `traceroute`
 - `inject_fault`
 - `capture_evidence`
+- `pcap_capture`
 - `sleep`
 
 ### Playbook templating (vars + step references)
@@ -277,6 +278,9 @@ These actions are wrappers around `ops_exec` and share `timeout_seconds`, `paral
   - `kill_process` (params=`bird`), `disconnect` (params=`eth0`), `reset`
 - `capture_evidence`: `{selector?, evidence_type}`:
   - `routing_snapshot`, `network_state`, `process_list`, `logs`, `full`
+- `pcap_capture`: `{selector?, interface?, duration_seconds?, filter?, max_bytes?, parallelism?}`
+  - Captures a `.pcap` **artifact per selected node** and returns `artifact_id` values for download via `artifact_read_chunk`.
+  - Requires `tcpdump` in the container and `docker` CLI on the server host.
 
 ---
 
