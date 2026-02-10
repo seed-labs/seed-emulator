@@ -160,11 +160,23 @@ Then poll:
 
 - `job_get(job_id)`
 - `job_steps_list(job_id, since_step_id=0, limit=200)`
-- `artifacts_list(job_id)` + `artifact_read(artifact_id)`
+- `artifacts_list(job_id)` then:
+  - `artifact_read(artifact_id)` (small text)
+  - `artifact_read_chunk(artifact_id, offset=0, max_bytes=65536)` (large/binary, remote-friendly)
 
 Cancel a running job:
 
 - `job_cancel(job_id)`
+
+### Artifacts (remote-friendly)
+
+Artifact `path` values are **server-local filesystem paths**. Remote clients should use `artifact_read` or `artifact_read_chunk`.
+
+To download an artifact in chunks:
+
+1. Call `artifacts_list(job_id)` to find `artifact_id`
+2. Repeatedly call `artifact_read_chunk(artifact_id, offset, max_bytes)` until `eof=true`
+3. Base64-decode `content_b64` and append bytes locally
 
 ### Playbook YAML schema (v1)
 
@@ -234,4 +246,3 @@ Snapshot types (current):
 
 - `inventory_summary`
 - `bgp_summary_counts`
-
