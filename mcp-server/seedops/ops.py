@@ -326,6 +326,110 @@ class OpsService:
         )
         return payload
 
+    def exec_cli(
+        self,
+        workspace_id: str,
+        *,
+        selector: dict[str, Any],
+        command: str,
+        timeout_seconds: int = 30,
+        parallelism: int = 20,
+        max_output_chars: int = 8000,
+    ) -> dict[str, Any]:
+        """Execute a shell command across containers using the docker CLI backend.
+
+        This is safer for long-running commands because it enforces a host-side timeout.
+        """
+        if not shutil.which("docker"):
+            raise RuntimeError("docker CLI not found; cannot use exec_cli backend.")
+
+        nodes = self._workspaces.list_nodes(workspace_id, selector=selector)
+        backend = "cli"
+
+        script = f"command -v timeout >/dev/null 2>&1 && timeout {int(timeout_seconds)}s {command} || {command}"
+
+        def worker(node: dict[str, Any]) -> dict[str, Any]:
+            node_id = node.get("node_id")
+            cname = node.get("container_name")
+            try:
+                run = self._run_shell(
+                    docker_client=None,
+                    backend="cli",
+                    container_name=str(cname),
+                    shell_script=script,
+                    timeout_seconds=int(timeout_seconds),
+                    max_output_chars=int(max_output_chars),
+                )
+                exit_code = int(run["exit_code"])
+                out = str(run["output"])
+                timed_out = bool(run["timed_out"])
+                ok = exit_code == 0 and not timed_out
+                item: dict[str, Any] = {
+                    "node_id": node_id,
+                    "container_name": cname,
+                    "ok": ok,
+                    "exit_code": exit_code,
+                    "output": out,
+                }
+                if not ok:
+                    if timed_out:
+                        item["error"] = f"timeout after {int(timeout_seconds)}s"
+                    else:
+                        head = (out or "").strip().splitlines()[:1]
+                        item["error"] = head[0][:200] if head else f"exit_code {exit_code}"
+                return item
+            except Exception as e:
+                return {
+                    "node_id": node_id,
+                    "container_name": cname,
+                    "ok": False,
+                    "exit_code": -1,
+                    "error": str(e),
+                    "output": "",
+                }
+
+        results: list[dict[str, Any]] = []
+        with ThreadPoolExecutor(max_workers=max(1, int(parallelism))) as pool:
+            futs = [pool.submit(worker, n) for n in nodes]
+            for fut in as_completed(futs):
+                results.append(fut.result())
+
+        results.sort(key=lambda r: str(r.get("node_id", "")))
+        ok = sum(1 for r in results if r.get("ok"))
+        fail = len(results) - ok
+        cmd_hash = hashlib.sha256(command.encode("utf-8")).hexdigest()[:12]
+
+        fail_reasons: dict[str, int] = {}
+        for r in results:
+            if r.get("ok"):
+                continue
+            reason = str(r.get("error") or f"exit_code {r.get('exit_code')}")
+            fail_reasons[reason] = fail_reasons.get(reason, 0) + 1
+
+        payload = {
+            "command": command,
+            "command_hash": cmd_hash,
+            "counts": {"total": len(results), "ok": ok, "fail": fail},
+            "results": results,
+            "backend": backend,
+            "fail_reasons": fail_reasons,
+        }
+
+        self._store.insert_event(
+            workspace_id,
+            level="info",
+            event_type="ops.exec",
+            message=f"Batch exec (cli): {cmd_hash}",
+            data={
+                "command": command,
+                "command_hash": cmd_hash,
+                "counts": payload["counts"],
+                "backend": backend,
+                "fail_reasons": fail_reasons,
+            },
+        )
+        return payload
+
     def logs(
         self,
         workspace_id: str,

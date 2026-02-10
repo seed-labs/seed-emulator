@@ -52,6 +52,48 @@ class ArtifactManager:
         self._store = store
         self._base_dir.mkdir(parents=True, exist_ok=True)
 
+    def allocate_path(self, *, workspace_id: str, job_id: str, name: str, suffix: str) -> Path:
+        safe = _safe_name(name)
+        suf = str(suffix or "").strip()
+        if suf and not suf.startswith("."):
+            suf = f".{suf}"
+
+        out_dir = self._job_artifacts_dir(workspace_id, job_id)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        return out_dir / f"{safe}{suf}"
+
+    def register_file(
+        self,
+        *,
+        workspace_id: str,
+        job_id: str,
+        name: str,
+        kind: str,
+        path: str,
+    ) -> ArtifactRow:
+        safe = _safe_name(name)
+        if not safe:
+            raise ValueError("Artifact name cannot be empty.")
+
+        p = self._resolve_artifact_path(path)
+        if not p.exists():
+            raise ValueError("Artifact file does not exist.")
+
+        size = int(p.stat().st_size)
+        artifact_id = str(uuid.uuid4())
+        self._store.insert_artifact(
+            artifact_id=artifact_id,
+            job_id=job_id,
+            workspace_id=workspace_id,
+            name=safe,
+            kind=str(kind or "bin"),
+            path=str(p),
+            size_bytes=size,
+        )
+        row = self._store.get_artifact(artifact_id)
+        assert row is not None
+        return row
+
     def _resolve_artifact_path(self, raw_path: str) -> Path:
         base = self._base_dir.resolve()
         p = Path(raw_path)
@@ -71,6 +113,49 @@ class ArtifactManager:
 
     def _job_artifacts_dir(self, workspace_id: str, job_id: str) -> Path:
         return self._workspace_dir(workspace_id) / "artifacts" / job_id
+
+    def write_bytes(
+        self,
+        *,
+        workspace_id: str,
+        job_id: str,
+        name: str,
+        data: bytes,
+        kind: str = "bin",
+        suffix: str = ".bin",
+    ) -> ArtifactRow:
+        path = self.allocate_path(workspace_id=workspace_id, job_id=job_id, name=name, suffix=suffix)
+        tmp = Path(str(path) + ".tmp")
+        with open(tmp, "wb") as f:
+            f.write(bytes(data))
+        os.replace(tmp, path)
+        return self.register_file(
+            workspace_id=workspace_id,
+            job_id=job_id,
+            name=name,
+            kind=kind,
+            path=str(path),
+        )
+
+    def write_text(
+        self,
+        *,
+        workspace_id: str,
+        job_id: str,
+        name: str,
+        text: str,
+        kind: str = "text",
+        suffix: str = ".txt",
+        encoding: str = "utf-8",
+    ) -> ArtifactRow:
+        return self.write_bytes(
+            workspace_id=workspace_id,
+            job_id=job_id,
+            name=name,
+            data=(text or "").encode(encoding, errors="replace"),
+            kind=kind,
+            suffix=suffix,
+        )
 
     def write_json(self, *, workspace_id: str, job_id: str, name: str, data: Any) -> ArtifactRow:
         safe = _safe_name(name)

@@ -18,6 +18,7 @@ SUPPORTED_ACTIONS = {
     "traceroute",
     "inject_fault",
     "capture_evidence",
+    "pcap_capture",
     "sleep",
 }
 
@@ -60,7 +61,7 @@ def parse_playbook_yaml(playbook_yaml: str) -> Playbook:
         retries: 0
         retry_delay_seconds: 1
       steps:
-        - action: workspace_refresh|inventory_list_nodes|ops_exec|ops_logs|routing_bgp_summary|ping|traceroute|inject_fault|capture_evidence|sleep
+        - action: workspace_refresh|inventory_list_nodes|ops_exec|ops_logs|routing_bgp_summary|ping|traceroute|inject_fault|capture_evidence|pcap_capture|sleep
           id: <optional str>
           save_as: <optional str>
           on_error: <optional stop|continue>
@@ -169,6 +170,7 @@ def parse_playbook_yaml(playbook_yaml: str) -> Playbook:
             "traceroute",
             "inject_fault",
             "capture_evidence",
+            "pcap_capture",
         }:
             sel = args.get("selector")
             if sel is not None and not isinstance(sel, dict):

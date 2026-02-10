@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import os
 import shlex
+import shutil
+import subprocess
+import selectors as _selectors
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from typing import Any
 
 from .artifacts import ArtifactManager
@@ -22,6 +28,158 @@ def _sleep_interruptible(cancel: threading.Event, seconds: float) -> None:
         if remaining <= 0:
             return
         time.sleep(min(0.2, remaining))
+
+
+def _capture_pcap_to_file(
+    *,
+    container_name: str,
+    interface: str,
+    duration_seconds: int,
+    filter_expr: str,
+    out_path: str,
+    max_bytes: int,
+) -> dict[str, Any]:
+    """Capture a PCAP from a container to a local file via `docker exec`.
+
+    This uses tcpdump with `-w -` to write PCAP bytes to stdout, then streams stdout to `out_path`.
+    """
+    if not shutil.which("docker"):
+        raise RuntimeError("docker CLI not found; pcap_capture requires docker CLI.")
+
+    dur = max(1, int(duration_seconds))
+    iface = str(interface or "any").strip() or "any"
+    filt = str(filter_expr or "").strip()
+    max_bytes_i = max(0, int(max_bytes))
+
+    tcpdump_cmd = f"tcpdump -i {shlex.quote(iface)} -U -w -"
+    if filt:
+        tcpdump_cmd += f" {filt}"
+    shell_script = f"command -v timeout >/dev/null 2>&1 && timeout {dur}s {tcpdump_cmd} || {tcpdump_cmd}"
+
+    cmd = ["docker", "exec", str(container_name), "sh", "-lc", shell_script]
+
+    start = time.monotonic()
+    proc = subprocess.Popen(  # noqa: S603
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=0,
+    )
+    assert proc.stdout is not None
+    assert proc.stderr is not None
+
+    sel = _selectors.DefaultSelector()
+    sel.register(proc.stdout, _selectors.EVENT_READ)
+    sel.register(proc.stderr, _selectors.EVENT_READ)
+
+    bytes_written = 0
+    truncated = False
+    timed_out = False
+    stderr_buf = bytearray()
+    stderr_max = 8192
+
+    def read_chunk(f) -> bytes:
+        try:
+            return f.read1(4096)  # type: ignore[attr-defined]
+        except Exception:
+            return f.read(4096)
+
+    with open(out_path, "wb") as out_f:
+        try:
+            while sel.get_map():
+                if (time.monotonic() - start) > float(dur + 10):
+                    timed_out = True
+                    break
+
+                events = sel.select(timeout=0.1)
+                if not events:
+                    if proc.poll() is not None:
+                        # Drain remaining quickly.
+                        for key in list(sel.get_map().values()):
+                            chunk = read_chunk(key.fileobj)
+                            if not chunk:
+                                try:
+                                    sel.unregister(key.fileobj)
+                                except Exception:
+                                    pass
+                                continue
+                            if key.fileobj is proc.stdout:
+                                if max_bytes_i > 0 and bytes_written < max_bytes_i:
+                                    remaining = max_bytes_i - bytes_written
+                                    out_f.write(chunk[:remaining])
+                                    bytes_written += min(len(chunk), remaining)
+                                    if len(chunk) > remaining:
+                                        truncated = True
+                                else:
+                                    truncated = True
+                            else:
+                                if len(stderr_buf) < stderr_max:
+                                    remaining = stderr_max - len(stderr_buf)
+                                    stderr_buf.extend(chunk[:remaining])
+                        continue
+                    continue
+
+                for key, _mask in events:
+                    chunk = read_chunk(key.fileobj)
+                    if not chunk:
+                        try:
+                            sel.unregister(key.fileobj)
+                        except Exception:
+                            pass
+                        continue
+
+                    if key.fileobj is proc.stdout:
+                        if truncated:
+                            # Stop reading stdout once we hit the cap; terminate below.
+                            continue
+                        if max_bytes_i > 0 and bytes_written < max_bytes_i:
+                            remaining = max_bytes_i - bytes_written
+                            out_f.write(chunk[:remaining])
+                            bytes_written += min(len(chunk), remaining)
+                            if len(chunk) > remaining:
+                                truncated = True
+                        else:
+                            truncated = True
+
+                        if truncated:
+                            break
+                    else:
+                        if len(stderr_buf) < stderr_max:
+                            remaining = stderr_max - len(stderr_buf)
+                            stderr_buf.extend(chunk[:remaining])
+
+                if truncated:
+                    break
+        finally:
+            try:
+                sel.close()
+            except Exception:
+                pass
+
+    if timed_out or truncated:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+        try:
+            proc.wait(timeout=2)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+    exit_code = proc.wait() if proc.poll() is None else int(proc.returncode)
+    if timed_out and exit_code == 0:
+        exit_code = -1
+
+    return {
+        "exit_code": int(exit_code),
+        "bytes_written": int(bytes_written),
+        "truncated": bool(truncated),
+        "timed_out": bool(timed_out),
+        "stderr_head": stderr_buf.decode("utf-8", errors="replace").strip(),
+    }
 
 
 class JobManager:
@@ -212,6 +370,14 @@ class JobManager:
             if action == "capture_evidence":
                 summary["evidence_type"] = result.get("evidence_type")
             return summary
+        if action == "pcap_capture" and isinstance(result, dict):
+            arts = result.get("artifacts") or []
+            sample = []
+            if isinstance(arts, list):
+                for a in arts[:10]:
+                    if isinstance(a, dict) and a.get("ok"):
+                        sample.append({"node_id": a.get("node_id"), "artifact_id": a.get("artifact_id")})
+            return {"counts": result.get("counts"), "sample": sample}
         if action == "ops_logs" and isinstance(result, dict):
             return {"counts": result.get("counts"), "fail_reasons": result.get("fail_reasons")}
         if action == "routing_bgp_summary" and isinstance(result, dict):
@@ -270,6 +436,7 @@ class JobManager:
             "traceroute",
             "inject_fault",
             "capture_evidence",
+            "pcap_capture",
         }:
             sel, explicit = self._effective_selector(playbook, step_args=step_args, context=context)
             if sel is None and not explicit:
@@ -457,6 +624,111 @@ class JobManager:
                     max_output_chars=max_output_chars,
                 )
                 return {"evidence_type": evidence_type, **res}
+
+            if action == "pcap_capture":
+                job_id = str(context.get("job_id") or "").strip()
+                if not job_id:
+                    raise RuntimeError("job_id missing from context")
+
+                interface = str(step_args.get("interface") or "any").strip() or "any"
+                duration_seconds = int(step_args.get("duration_seconds") or 10)
+                filter_expr = str(step_args.get("filter") or "").strip()
+                max_bytes = int(step_args.get("max_bytes") or (20 * 1024 * 1024))
+                parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 5)
+
+                nodes = self._workspaces.list_nodes(workspace_id, selector=selector)
+
+                def worker(node: dict[str, Any]) -> dict[str, Any]:
+                    node_id = str(node.get("node_id") or "")
+                    cname = str(node.get("container_name") or "")
+                    name = f"{step.step_id}_{node_id}"
+                    path = self._artifacts.allocate_path(
+                        workspace_id=workspace_id,
+                        job_id=job_id,
+                        name=name,
+                        suffix=".pcap",
+                    )
+                    tmp = Path(str(path) + ".tmp")
+                    try:
+                        meta = _capture_pcap_to_file(
+                            container_name=cname,
+                            interface=interface,
+                            duration_seconds=int(duration_seconds),
+                            filter_expr=filter_expr,
+                            out_path=str(tmp),
+                            max_bytes=int(max_bytes),
+                        )
+                        if int(meta.get("bytes_written") or 0) <= 0:
+                            try:
+                                if tmp.exists():
+                                    tmp.unlink()
+                            except Exception:
+                                pass
+                            err = meta.get("stderr_head") or "no data captured"
+                            return {
+                                "node_id": node_id,
+                                "container_name": cname,
+                                "ok": False,
+                                "error": str(err),
+                                "meta": meta,
+                            }
+
+                        os.replace(tmp, path)
+                        artifact = self._artifacts.register_file(
+                            workspace_id=workspace_id,
+                            job_id=job_id,
+                            name=name,
+                            kind="pcap",
+                            path=str(path),
+                        )
+                        return {
+                            "node_id": node_id,
+                            "container_name": cname,
+                            "ok": True,
+                            "artifact_id": artifact.artifact_id,
+                            "size_bytes": artifact.size_bytes,
+                            "name": artifact.name,
+                            "meta": meta,
+                        }
+                    except Exception as e:
+                        try:
+                            if tmp.exists():
+                                tmp.unlink()
+                        except Exception:
+                            pass
+                        try:
+                            if path.exists():
+                                path.unlink()
+                        except Exception:
+                            pass
+                        return {"node_id": node_id, "container_name": cname, "ok": False, "error": str(e)}
+
+                results: list[dict[str, Any]] = []
+                with ThreadPoolExecutor(max_workers=max(1, int(parallelism))) as pool:
+                    futs = [pool.submit(worker, n) for n in nodes]
+                    for fut in as_completed(futs):
+                        results.append(fut.result())
+
+                results.sort(key=lambda r: str(r.get("node_id", "")))
+                ok = sum(1 for r in results if r.get("ok"))
+                fail = len(results) - ok
+
+                payload = {
+                    "interface": interface,
+                    "duration_seconds": int(duration_seconds),
+                    "filter": filter_expr,
+                    "max_bytes": int(max_bytes),
+                    "counts": {"total": len(results), "ok": ok, "fail": fail},
+                    "artifacts": results,
+                }
+                self._store.insert_event(
+                    workspace_id,
+                    level="info",
+                    event_type="ops.pcap_capture",
+                    message=f"pcap_capture ({step.step_id})",
+                    data={**payload["counts"], "interface": interface, "duration_seconds": int(duration_seconds), "filter": filter_expr},
+                )
+                return payload
 
         raise ValueError(f"Unsupported step action: {action}")
 
