@@ -110,6 +110,11 @@ High-level agent and Codex integration live in:
 
 - `../seed-agent/README.md`
 
+Recommended closed-loop launcher from `seed-agent`:
+
+- `../seed-agent/scripts/seed-codex up`
+- `../seed-agent/scripts/seed-codex ui`
+
 ---
 
 ## Contributing

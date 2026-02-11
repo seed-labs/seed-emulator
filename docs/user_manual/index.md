@@ -11,3 +11,4 @@ High-frequency links:
 - [Compilation](./compiler.md)
 - [Visualization](./visualization.md)
 - [SeedOps MCP operations](./mcp_seedops.md)
+- [SeedAgent/Codex one-command launcher](../../../seed-agent/README.md#quick-start)
