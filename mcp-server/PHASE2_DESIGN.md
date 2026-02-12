@@ -1,5 +1,12 @@
 # MCP Server Tools - Phase 2 Design
 
+> Note (2026-02-10): The SeedOps "Phase 2" implemented in this repository focuses on
+> **jobs / YAML playbooks / artifacts / snapshots / collector** for operating already-running networks.
+> See `docs/user_manual/mcp_seedops.md` for the up-to-date user-facing guide.
+>
+> The sections below describe an additional roadmap for extending build-time/service tools, which is
+> orthogonal to SeedOps automation.
+
 ## 已完成的工具 (Phase 1)
 
 ### 基础设施层 (5个)

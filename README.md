@@ -1,92 +1,126 @@
-Internet Emulator
----
+# SEED Emulator (`seed-email-service`)
 
-The objective of the SEED-Emulator project is to help create emulators of 
-the Internet. These emulators are for educational uses, and they can be
-used as the platform for designing hands-on lab exercises for various subjects,
-including cybersecurity, networking, etc.
+`seed-email-service` is the core SEED Emulator repository. It provides:
 
-The project provides essential elements of the Internet (as Python classes), including 
-Internet exchanges, autonomous systems, BGP routers, DNS infrastructure, 
-a variety of services. Users can use these elements as the building blocks
-to build their emulation programmatically. The output of the program 
-is a set of docker container folders/files. When these containers are built and 
-started, they form a small-size Internet. New building blocks are being added,
-including Blockchain, Botnet, and many other useful elements of the Internet. 
+- programmable Internet emulation (AS/IX/BGP/DNS/services)
+- compiler outputs to Docker/Compose runtimes
+- a modern MCP operations control plane (`SeedOps`) for running labs
+
+This repo now supports two complementary workflows:
+
+1. **BUILD path**: define topology -> compile -> run containers
+2. **OPS path**: attach to running output -> observe/operate via MCP tools
 
 ![The Web UI](./docs/assets/web-ui.png)
 
-## Table of Contents
+---
 
--  [Getting Started](#getting-started)
--  [User Manuals](#user-manuals)
--  [Contributing](#contributing)
--  [License](#license)
+## Quick Start (BUILD path)
 
+### Prerequisites
 
-## Getting Started
+- `python3`
+- `docker`
+- `docker-compose` (or compose plugin)
 
-### Install the necessary software
+### Environment
 
-To run the emulator, you need to install `docker`, `docker-compose`, 
-and `python3`.
+```bash
+source development.env
+```
 
+For persistent usage, add repo root to `PYTHONPATH` in your shell profile.
 
-### Set up the project
+### Run a minimal example
 
-To run the emulator code, we can add this folder to the `PYTHONPATH` environment variable. Running `source development.env` 
-inside the project's root directory can temporarily run our code but will lose its effect when you restart your shell. We do recommend to permanently add the project's root directory to the `PYTHONPATH` environment variable.
+```bash
+cd examples/basic/A00_simple_as
+python3 simple_as.py
+cd output
+docker-compose build && docker-compose up
+```
 
-### Set up the proxy (not needed if you don't have an issue)
+After startup, routers need time to converge.
 
-The emulator needs to fetch docker images from the Docker Hub. 
-If you are in Mainland China, you may not be able to directly get the 
-docker images. However, there are many docker hub proxies that 
-you can use. Please follow [these instructions](./docs/user_manual/dockerhub_proxy.md)
-to set up the docker hub proxies.
+---
 
-However, sometimes the docker hub proxies are not working or working incredibly slow. In this case, we recommend you to build the docker images locally in your docker hub. 
+## Quick Start (OPS path / SeedOps MCP)
 
-Please follow [these instructions](./docker_images/README.md) to build the docker images locally.
+Start SeedOps MCP server:
 
-If you do not have such an issue, please skip this step. 
+```bash
+cd mcp-server
+export SEED_MCP_TOKEN=your-bearer-token
+export FASTMCP_HOST=127.0.0.1 FASTMCP_PORT=8000 FASTMCP_STREAMABLE_HTTP_PATH=/mcp
+python serve_http.py
+```
 
+Then use a client (for example `seed-agent`) to call SeedOps tools:
 
-### Run Examples
+- workspace attach (`workspace_attach_compose` / `workspace_attach_labels`)
+- inventory + selectors (`inventory_list_nodes`)
+- batch ops (`ops_exec`, `ops_logs`, `routing_bgp_summary`)
+- async jobs/artifacts (`playbook_run`, `job_get`, `artifacts_list`)
 
-We have provided many examples in the [examples/](./examples/) folder. 
-Detailed explanations are provided the README file in each example folder.
-To run an example, do the following:
+SeedOps manual:
 
-1. Pick an example, for example, `A00-simple-as`. 
+- `docs/user_manual/mcp_seedops.md`
 
-2. Build the emulation. For this example, go to `examples/A00-simple-as/`, and
-   run `python3 ./simple-as.py`. The container files will be created inside the
-  `output/` folder. For some examples, such as `B02-mini-internet-with-dns`,
-   they depend on other examples, so you need to run those examples first. 
+---
 
-3. Build and run the generated containers. First `cd output/`, then do `docker-compose
-   build && docker-compose up`. The emulator will start running. Give it a
-   minute or two (or longer if your emulator is large) to let the routers do
-   their jobs.
+## Repository map
 
-4. Some examples already include the visualization container (called Internet
-   Map).  Point your browser to `http://127.0.0.1:8080/map.html`, and you will
-   see the visualization. More instructions on how to use the visualization app
-   is given in [this manual](./docs/user_manual/internet_map.md).  If the map
-   is not included, you can open a new terminal window, navigate to the project
-   root directory, cd to `client/`, and run `docker-compose build &&
-   docker-compose up`. This will bring up the Internet Map container. 
+```text
+seed-email-service/
+├── examples/                 # Topology and scenario examples
+├── mcp-server/               # SeedOps MCP server implementation
+├── docs/user_manual/         # User manuals and feature guides
+├── library/, seedemu/        # Emulator core packages
+├── docker_images/            # Container image build assets
+└── client/                   # Visualization/client components
+```
 
+---
 
-## User Manuals
+## Documentation entrypoints
 
-User manuals are provided inside the [docs/user_manual/](./docs/user_manual) folder.
+- Main user manual index: `docs/user_manual/README.md`
+- Build flow overview: `docs/user_manual/overall_flow.md`
+- SeedOps MCP operations: `docs/user_manual/mcp_seedops.md`
+- Example catalogs:
+  - `examples/basic/README.md`
+  - `examples/internet/README.md`
+  - `examples/blockchain/README.md`
+  - `examples/scion/README.md`
+
+---
+
+## Notes for constrained network environments
+
+If Docker Hub access is unstable:
+
+- configure proxy: `docs/user_manual/dockerhub_proxy.md`
+- or build local images: `docker_images/README.md`
+
+---
+
+## Related repository
+
+High-level agent and Codex integration live in:
+
+- `../seed-agent/README.md`
+
+Recommended closed-loop launcher from `seed-agent`:
+
+- `../seed-agent/scripts/seed-codex up`
+- `../seed-agent/scripts/seed-codex ui`
+
+---
 
 ## Contributing
 
-Contributions to SEED-Emulator are always welcome. For contribution guidelines, please see [CONTRIBUTING](./CONTRIBUTING.md).
+See `CONTRIBUTING.md`.
 
 ## License
 
-The software is licensed under the GNU General Public License v3.0 license, with copyright by The SEED-Emulator Developers (see [LICENSE](./LICENSE.txt)).
+GNU GPL v3.0, see `LICENSE.txt`.

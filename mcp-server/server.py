@@ -13,7 +13,50 @@ from seedemu.services import WebService, DomainNameService, BotnetService, Botne
 
 from runtime import runtime
 
-mcp = FastMCP("seed-emulator-mcp")
+
+def _create_mcp() -> FastMCP:
+    # When launched via serve_http.py, enable Streamable-HTTP auth settings at construction time.
+    # This avoids mutating private FastMCP internals after import.
+    if (os.environ.get("SEED_MCP_HTTP") or "").strip() == "1":
+        from mcp.server.transport_security import TransportSecuritySettings
+
+        from seedops.auth import StaticTokenVerifier, build_auth_settings
+        from seedops.config import load_config
+
+        cfg = load_config(require_token=True)
+        auth = build_auth_settings(cfg.public_url)
+        verifier = StaticTokenVerifier(cfg.token or "")
+        transport_security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=cfg.dns_rebinding_protection,
+            allowed_hosts=cfg.allowed_hosts,
+            allowed_origins=cfg.allowed_origins,
+        )
+
+        return FastMCP(
+            "seed-emulator-mcp",
+            host=cfg.host,
+            port=cfg.port,
+            streamable_http_path=cfg.streamable_http_path,
+            auth=auth,
+            token_verifier=verifier,
+            transport_security=transport_security,
+        )
+
+    return FastMCP("seed-emulator-mcp")
+
+
+mcp = _create_mcp()
+
+# Register SeedOps (Phase 1) operational tools (workspace/inventory/batch ops).
+# This keeps existing tools intact and adds new ones for attaching to and operating
+# on already-running simulations.
+try:
+    from seedops import register_tools as _register_seedops_tools
+
+    _register_seedops_tools(mcp)
+except Exception as _e:
+    # Keep server importable even if SeedOps dependencies are missing in a minimal env.
+    print(f"[server] SeedOps tools not registered: {_e}", file=sys.stderr)
 
 # ==============================================================================
 # Infrastructure Tools (Base Layer)
