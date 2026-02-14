@@ -11,6 +11,29 @@
 | `k8s_nano_internet.py` | `basic/A20_nano_internet` | 小型互联网仿真 |
 | `k8s_mini_internet.py` | `internet/B00_mini_internet` | 完整的小型互联网 |
 | `k8s_multinode_demo.py` | (新增) | 展示多机调度、资源限制等 K8s 高级功能 |
+| `k8s_hybrid_kubevirt_demo.py` | (新增) | 混合部署：KubeVirt 路由器 + 容器节点 |
+
+## 混合模式兼容档位（Runtime Profile）
+
+`k8s_hybrid_kubevirt_demo.py` 与 `scripts/validate_kubevirt_hybrid.sh` 支持通过 `SEED_RUNTIME_PROFILE` 选择兼容模式：
+
+- `auto`（默认）：自动选择；在 `arm64 + 无 /dev/kvm` 时自动降级为容器模式。
+- `full`：强制启用 KubeVirt VM + 容器混合模式。
+- `degraded`：强制全部容器模式（不生成 VM 清单），用于无硬件虚拟化场景。
+- `strict`：要求 VM 模式可用；若平台不满足则直接失败。
+
+示例：
+
+```bash
+# 自动兼容（推荐）
+SEED_RUNTIME_PROFILE=auto PYTHONPATH=../.. python3 k8s_hybrid_kubevirt_demo.py
+
+# 强制混合 VM 模式
+SEED_RUNTIME_PROFILE=full PYTHONPATH=../.. python3 k8s_hybrid_kubevirt_demo.py
+
+# 强制降级容器模式
+SEED_RUNTIME_PROFILE=degraded PYTHONPATH=../.. python3 k8s_hybrid_kubevirt_demo.py
+```
 
 ## 快速开始
 

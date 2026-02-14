@@ -9,6 +9,7 @@ from hashlib import md5
 from os import mkdir, chdir
 import json
 import os
+import yaml
 
 
 class SchedulingStrategy:
@@ -210,7 +211,7 @@ spec:
         return manifest
 
     def _compileNodeK8s(self, node: Node) -> str:
-        """Compile a node to Kubernetes Deployment manifest.
+        """Compile a node to Kubernetes Deployment manifest or KubeVirt VirtualMachine.
         
         Includes:
         - Scheduling constraints (nodeSelector based on strategy)
@@ -219,6 +220,27 @@ spec:
         - Optional Service generation
         """
         self._current_node = node
+
+        # Check virtualization mode
+        if node.getVirtualizationMode() == "KubeVirt":
+            result = self._compileNodeKubeVirt(node)
+
+            if self.__generate_services:
+                node_name = self._getComposeNodeName(node).replace('_', '-').lower()
+                asn = str(node.getAsn())
+                role = self._nodeRoleToString(node.getRole())
+                labels = {
+                    "app": node_name,
+                    "seedemu.io/asn": asn,
+                    "seedemu.io/role": role,
+                    "seedemu.io/name": node.getName(),
+                    "kubevirt.io/domain": node_name
+                }
+                service = self._compileServiceK8s(node, node_name, labels)
+                if service:
+                    result += "\n---\n" + service
+
+            return result
 
         # 1. Prepare Docker build context (reuse logic from Docker compiler)
         real_nodename = self._getRealNodeName(node)
@@ -403,6 +425,179 @@ spec:
         
         return json.dumps(service)
 
+    def _compileNodeKubeVirt(self, node: Node) -> str:
+        """Compile a node to KubeVirt VirtualMachine manifest."""
+        node_name = self._getComposeNodeName(node).replace('_', '-').lower()
+        asn = str(node.getAsn())
+        role = self._nodeRoleToString(node.getRole())
+
+        self._assertKubeVirtCompatibility(node)
+
+        # 1. Build Cloud-Init User Data
+        user_data = {
+            "packages": list(node.getSoftware()),
+            "write_files": [],
+            "runcmd": []
+        }
+
+        # Add files
+        for f in node.getFiles():
+            path, content = f.get()
+            user_data["write_files"].append({
+                "path": path,
+                "content": content,
+                "permissions": "0644"
+            })
+
+        # Generate and add replace_address.sh (Address Hack)
+        # For VMs, interfaces are eth1, eth2... (eth0 is mgmt)
+        address_script = self._generateK8sAddressScript(interface_prefix="eth")
+        user_data["write_files"].append({
+            "path": "/usr/local/bin/replace_address.sh",
+            "content": address_script,
+            "permissions": "0755"
+        })
+        user_data["runcmd"].append(["/usr/local/bin/replace_address.sh"])
+
+        for command in node.getBuildCommands():
+            user_data["runcmd"].append(self._toCloudInitRunCommand(command, False))
+
+        for command in node.getBuildCommandsAtEnd():
+            user_data["runcmd"].append(self._toCloudInitRunCommand(command, False))
+
+        # Add start commands
+        for cmd, fork in node.getStartCommands():
+            user_data["runcmd"].append(self._toCloudInitRunCommand(cmd, fork))
+
+        for cmd, fork in node.getPostConfigCommands():
+            user_data["runcmd"].append(self._toCloudInitRunCommand(cmd, fork))
+
+        cloud_init_yaml = "#cloud-config\n" + yaml.dump(user_data)
+
+        # 2. Network Configuration
+        networks = [{"name": "default", "pod": {}}]
+        interfaces = [{"name": "default", "masquerade": {}}]
+
+        for i, iface in enumerate(node.getInterfaces()):
+            net = iface.getNet()
+            net_name = self._getRealNetName(net).replace('_', '-').lower()
+
+            networks.append({
+                "name": f"net{i+1}",
+                "multus": {"networkName": net_name}
+            })
+            interfaces.append({
+                "name": f"net{i+1}",
+                "bridge": {}
+            })
+
+        # 3. Build Manifest
+        labels = {
+            "app": node_name,
+            "seedemu.io/asn": asn,
+            "seedemu.io/role": role,
+            "seedemu.io/name": node.getName(),
+            "kubevirt.io/domain": node_name
+        }
+
+        # Default base image (Ubuntu 22.04)
+        # TODO: Make this configurable via options
+        container_disk_image = "quay.io/containerdisks/ubuntu:22.04"
+        cloud_init_secret_name = f"{node_name.replace('.', '-')}-cloudinit"
+
+        cloud_init_secret = {
+            "apiVersion": "v1",
+            "kind": "Secret",
+            "metadata": {
+                "name": cloud_init_secret_name,
+                "namespace": self.__namespace,
+                "labels": labels
+            },
+            "type": "Opaque",
+            "stringData": {
+                "userdata": cloud_init_yaml
+            }
+        }
+
+        manifest = {
+            "apiVersion": "kubevirt.io/v1",
+            "kind": "VirtualMachine",
+            "metadata": {
+                "name": node_name,
+                "namespace": self.__namespace,
+                "labels": labels
+            },
+            "spec": {
+                "runStrategy": "Always",
+                "template": {
+                    "metadata": {
+                        "labels": labels
+                    },
+                    "spec": {
+                        "domain": {
+                            "devices": {
+                                "disks": [
+                                    {"name": "containerdisk", "disk": {"bus": "virtio"}},
+                                    {"name": "cloudinitdisk", "disk": {"bus": "virtio"}}
+                                ],
+                                "interfaces": interfaces
+                            },
+                            "resources": {
+                                "requests": {"memory": "512M"},
+                                "limits": {"memory": "1024M"}
+                            }
+                        },
+                        "networks": networks,
+                        "volumes": [
+                            {
+                                "name": "containerdisk",
+                                "containerDisk": {"image": container_disk_image}
+                            },
+                            {
+                                "name": "cloudinitdisk",
+                                "cloudInitNoCloud": {
+                                    "secretRef": {
+                                        "name": cloud_init_secret_name
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+
+        # Add scheduling constraints
+        node_selector = self._computeNodeSelector(node, asn, role)
+        if node_selector:
+            manifest["spec"]["template"]["spec"]["nodeSelector"] = node_selector
+
+        return json.dumps(cloud_init_secret) + "\n---\n" + json.dumps(manifest)
+
+    def _assertKubeVirtCompatibility(self, node: Node) -> None:
+        unsupported_features: List[str] = []
+
+        if node.getImportedFiles():
+            unsupported_features.append("imported files")
+        if node.getDockerCommands():
+            unsupported_features.append("docker commands")
+        if node.getDockerVolumes():
+            unsupported_features.append("docker volumes")
+
+        runtime_options = list(node.getScopedRuntimeOptions())
+        if runtime_options:
+            unsupported_features.append("runtime options")
+
+        if unsupported_features:
+            unsupported_list = ", ".join(unsupported_features)
+            raise AssertionError(
+                f"Node as{node.getAsn()}/{node.getName()} in KubeVirt mode has unsupported features: {unsupported_list}"
+            )
+
+    def _toCloudInitRunCommand(self, command: str, fork: bool) -> List[str]:
+        command_value = f"{command} &" if fork else command
+        return ["sh", "-c", command_value]
+
     def _addFile(self, path: str, content: str) -> str:
         """Override _addFile to intercept the replacement script generation."""
         if path == '/replace_address.sh' and self.__use_multus and self._current_node:
@@ -410,18 +605,18 @@ spec:
             content = self._generateK8sAddressScript()
         return super()._addFile(path, content)
 
-    def _generateK8sAddressScript(self) -> str:
+    def _generateK8sAddressScript(self, interface_prefix: str = "net") -> str:
         """
         Generates a script to configure IPs on Multus interfaces.
-        Multus interfaces are usually named net1, net2... in the order they appear in the annotation.
+        Multus interfaces are usually named net1, net2... (default) or eth1, eth2... (VMs)
         """
         node = self._current_node
         script = "#!/bin/bash\n"
         script += "# K8s Address Replacement\n"
 
         for i, iface in enumerate(node.getInterfaces()):
-            # Interface names: net1, net2... (1-based index usually)
-            dev_name = f"net{i+1}"
+            # Interface names: net1, net2... or eth1, eth2... (1-based index)
+            dev_name = f"{interface_prefix}{i+1}"
             addr = iface.getAddress()
             prefix_len = iface.getNet().getPrefix().prefixlen
 

@@ -239,6 +239,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
 
     __geo: Tuple[float,float,str] # (Latitude,Longitude,Address) -- optional parameter that contains the geographical location of the Node
     __note: str # optional parameter that contains a note about the Node
+    __virtualization_mode: str # "Container" (default) or "KubeVirt"
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -251,6 +252,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         """
         super().__init__()
 
+        self.__virtualization_mode = "Container"
         self.__interfaces = []
         self.__files = {}
         self.__imported_files = {}
@@ -1000,6 +1002,25 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         """
         return self.__note
 
+    def setVirtualizationMode(self, mode: str) -> Node:
+        """!
+        @brief Set the virtualization mode for this node.
+
+        @param mode "Container" (default) or "KubeVirt".
+        @returns self, for chaining API calls.
+        """
+        assert mode in ["Container", "KubeVirt"], "Invalid virtualization mode. Must be 'Container' or 'KubeVirt'."
+        self.__virtualization_mode = mode
+        return self
+
+    def getVirtualizationMode(self) -> str:
+        """!
+        @brief Get the virtualization mode.
+
+        @returns "Container" or "KubeVirt".
+        """
+        return self.__virtualization_mode
+
     def copySettings(self, node: Node):
         """!
         @brief copy settings from another node.
@@ -1021,6 +1042,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for v in node.getDockerVolumes(): self.addDockerVolume(v)
         for (c, f) in node.getStartCommands(): self.appendStartCommand(c, f)
+        self.setVirtualizationMode(node.getVirtualizationMode())
         # for (c, f) in node.getUserStartCommands(): self.appendUserStartCommand(c, f)
         for c in node.getBuildCommands(): self.addBuildCommand(c)
         for s in node.getSoftware(): self.addSoftware(s)
@@ -1472,4 +1494,3 @@ def promote_to_scion_router(node: Node):
         extn.initScionRouter()
         node.installExtension(extn)
     return node
-
