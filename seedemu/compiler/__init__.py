@@ -1,7 +1,7 @@
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
 from .Docker import Docker
-from .Kubernetes import KubernetesCompiler
+from .Kubernetes import KubernetesCompiler, SchedulingStrategy
 # Disable the compilers options
 from .DistributedDocker import DistributedDocker
 from .Graphviz import Graphviz
