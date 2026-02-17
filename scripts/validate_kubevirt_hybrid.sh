@@ -7,7 +7,7 @@ OUTPUT_DIR="${EXAMPLE_DIR}/output_kubevirt_hybrid"
 CLUSTER_NAME="${SEED_CLUSTER_NAME:-seedemu-kvtest}"
 NAMESPACE="${SEED_NAMESPACE:-seedemu-kvtest}"
 KUBECONTEXT="kind-${CLUSTER_NAME}"
-ARTIFACT_DIR="${ROOT_DIR}/output/kubevirt_validation"
+ARTIFACT_DIR="${SEED_ARTIFACT_DIR:-${ROOT_DIR}/output/kubevirt_validation}"
 DEPLOY_WAIT_TIMEOUT="${DEPLOY_WAIT_TIMEOUT:-1200s}"
 VMI_WAIT_TIMEOUT="${VMI_WAIT_TIMEOUT:-480s}"
 BGP_WAIT_TIMEOUT_SECONDS="${BGP_WAIT_TIMEOUT_SECONDS:-300}"
@@ -73,9 +73,10 @@ if [ "${NODE_ARCH}" = "arm64" ] && [ "${HOST_HAS_KVM}" = "false" ]; then
     echo ">>> Warning: arm64 host without /dev/kvm detected; auto profile will switch to degraded mode"
 fi
 
-CONTROL_NODE="$(kubectl get nodes --no-headers | awk '$3 ~ /control-plane/ {print $1; exit}')"
-WORKER_A_NODE="$(kubectl get nodes --no-headers | awk '$3 !~ /control-plane/ {print $1; exit}')"
-WORKER_B_NODE="$(kubectl get nodes --no-headers | awk '$3 !~ /control-plane/ {print $1}' | sed -n '2p')"
+CONTROL_NODE="$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+WORKER_NODES="$(kubectl get nodes --no-headers | awk '$3 !~ /control-plane/ {print $1}')"
+WORKER_A_NODE="$(printf '%s\n' "${WORKER_NODES}" | sed -n '1p')"
+WORKER_B_NODE="$(printf '%s\n' "${WORKER_NODES}" | sed -n '2p')"
 
 if [ -z "${CONTROL_NODE}" ] || [ -z "${WORKER_A_NODE}" ]; then
     echo "Expected at least one control-plane and one worker node" >&2
@@ -220,8 +221,26 @@ done
 
 echo ">>> Self-healing check"
 WEB151_DEPLOYMENT="$(kubectl -n "${NAMESPACE}" get pod "${WEB151_POD}" -o jsonpath='{.metadata.labels.app}')"
+RECOVERY_CHECK_PATH="${ARTIFACT_DIR}/recovery_check.json"
+RECOVERY_START_TS="$(date +%s)"
 kubectl -n "${NAMESPACE}" delete pod "${WEB151_POD}" >/dev/null
-kubectl -n "${NAMESPACE}" rollout status deployment/"${WEB151_DEPLOYMENT}" --timeout=600s
+if kubectl -n "${NAMESPACE}" rollout status deployment/"${WEB151_DEPLOYMENT}" --timeout=600s; then
+    RECOVERY_END_TS="$(date +%s)"
+    RECOVERY_SECONDS="$((RECOVERY_END_TS - RECOVERY_START_TS))"
+    NEW_WEB151_POD="$(kubectl -n "${NAMESPACE}" get pods -l app="${WEB151_DEPLOYMENT}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+    cat > "${RECOVERY_CHECK_PATH}" <<EOF
+{"status":"recovered","deployment":"${WEB151_DEPLOYMENT}","old_pod":"${WEB151_POD}","new_pod":"${NEW_WEB151_POD}","recovery_seconds":${RECOVERY_SECONDS}}
+EOF
+else
+    RECOVERY_END_TS="$(date +%s)"
+    RECOVERY_SECONDS="$((RECOVERY_END_TS - RECOVERY_START_TS))"
+    cat > "${RECOVERY_CHECK_PATH}" <<EOF
+{"status":"timeout","deployment":"${WEB151_DEPLOYMENT}","old_pod":"${WEB151_POD}","new_pod":null,"recovery_seconds":${RECOVERY_SECONDS}}
+EOF
+    collect_failure_diagnostics
+    echo "Self-healing check failed" >&2
+    exit 1
+fi
 
 echo ">>> Capturing evidence"
 kubectl -n "${NAMESPACE}" get pods -o wide > "${ARTIFACT_DIR}/pods_wide.txt"

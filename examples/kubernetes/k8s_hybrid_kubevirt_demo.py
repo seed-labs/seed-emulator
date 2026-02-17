@@ -107,16 +107,20 @@ def run():
     as150.createNetwork("net0")
     as150_router = as150.createRouter("router0").joinNetwork("net0").joinNetwork("ix100")
     router_virtualization_mode = apply_router_profile(as150_router, resolved_runtime_profile)
-    as150.createHost("web").joinNetwork("net0")
+    as150_web = as150.createHost("web").joinNetwork("net0")
     web.install("web150")
     emu.addBinding(Binding("web150", filter=Filter(nodeName="web", asn=150)))
 
     as151 = base.createAutonomousSystem(151)
     as151.createNetwork("net0")
-    as151.createRouter("router0").joinNetwork("net0").joinNetwork("ix100")
-    as151.createHost("web").joinNetwork("net0")
+    as151_router = as151.createRouter("router0").joinNetwork("net0").joinNetwork("ix100")
+    as151_web = as151.createHost("web").joinNetwork("net0")
     web.install("web151")
     emu.addBinding(Binding("web151", filter=Filter(nodeName="web", asn=151)))
+
+    # Keep diagnostic commands available for e2e validation commands.
+    for node in (as150_router, as151_router, as150_web, as151_web):
+        node.addSoftware("traceroute")
 
     ebgp.addRsPeer(100, 150)
     ebgp.addRsPeer(100, 151)
