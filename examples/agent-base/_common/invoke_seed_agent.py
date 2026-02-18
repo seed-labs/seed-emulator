@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Call canonical Seed-Agent MCP tools and return parsed JSON."""
 
 from __future__ import annotations

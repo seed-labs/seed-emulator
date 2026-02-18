@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Render showcase run artifacts/logs into a Markdown report."""
 
 from __future__ import annotations

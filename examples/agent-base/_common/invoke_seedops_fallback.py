@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Run deterministic SeedOps fallback flows for agent-base scenarios."""
 
 from __future__ import annotations

@@ -13,15 +13,12 @@ SEED_AGENT_MCP_URL="${SEED_AGENT_MCP_URL:-http://127.0.0.1:8100/mcp}"
 SEEDOPS_MCP_URL="${SEEDOPS_MCP_URL:-${SEED_MCP_URL:-http://127.0.0.1:8000/mcp}}"
 
 seed_python_bin() {
-  if command -v python3 >/dev/null 2>&1; then
-    echo "python3"
-    return 0
-  fi
   if command -v python >/dev/null 2>&1; then
     echo "python"
     return 0
   fi
-  echo "python3"
+  echo "python command not found" >&2
+  return 1
 }
 
 seed_resolve_path() {

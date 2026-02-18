@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SEED_AGENT_DIR="${SEED_AGENT_DIR:-${REPO_ROOT}/subrepos/seed-agent}"
-SEED_AGENT_DIR="$(python3 - <<'PY' "$SEED_AGENT_DIR"
+SEED_AGENT_DIR="$(python - <<'PY' "$SEED_AGENT_DIR"
 import os, sys
 print(os.path.abspath(os.path.expanduser(sys.argv[1])))
 PY
@@ -105,7 +105,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-WORK_DIR="$(python3 - <<'PY' "$WORK_DIR"
+WORK_DIR="$(python - <<'PY' "$WORK_DIR"
 import os, sys
 print(os.path.abspath(os.path.expanduser(sys.argv[1])))
 PY
@@ -166,7 +166,7 @@ require_cmd() {
   fi
 }
 
-require_cmd python3
+require_cmd python
 require_cmd docker
 require_cmd docker-compose
 
@@ -184,7 +184,7 @@ export SEED_AGENT_MCP_URL="http://127.0.0.1:8100/mcp"
 
 patch_compose_and_clear_conflicts() {
   local compose_file="$1"
-  python3 - "${compose_file}" <<'PY'
+  python - "${compose_file}" <<'PY'
 import subprocess
 import yaml
 from pathlib import Path
@@ -243,7 +243,7 @@ patch_compose_and_clear_conflicts "${B00_TMP}/docker-compose.yml"
 patch_compose_and_clear_conflicts "${B29_TMP}/docker-compose.yml"
 
 wait_mcp_ready() {
-  python3 - <<'PY'
+  python - <<'PY'
 import time
 import urllib.request
 
@@ -292,7 +292,7 @@ trap cleanup EXIT
 (cd "${REPO_ROOT}/mcp-server" && \
   FASTMCP_HOST="127.0.0.1" FASTMCP_PORT="8000" FASTMCP_STREAMABLE_HTTP_PATH="/mcp" \
   SEED_MCP_TOKEN="${SEED_MCP_TOKEN}" SEED_MCP_PUBLIC_URL="http://127.0.0.1:8000" \
-  python3 serve_http.py >"${LOG_DIR}/seedops.log" 2>&1) &
+  python serve_http.py >"${LOG_DIR}/seedops.log" 2>&1) &
 SEEDOPS_PID=$!
 
 (cd "${SEED_AGENT_DIR}" && \
@@ -308,7 +308,7 @@ SEEDOPS_PID=$!
   LLM_API_KEY="${LLM_API_KEY:-}" \
   LLM_BASE_URL="${LLM_BASE_URL:-}" \
   LLM_MODEL="${LLM_MODEL}" \
-  python3 serve_seedagent_http.py >"${LOG_DIR}/seedagent.log" 2>&1) &
+  python serve_seedagent_http.py >"${LOG_DIR}/seedagent.log" 2>&1) &
 SEEDAGENT_PID=$!
 
 wait_mcp_ready
@@ -354,7 +354,7 @@ RUNNING_B29="$(cd "${B29_TMP}" && docker-compose ps --services --filter status=r
 echo "B29 running services: ${RUNNING_B29}"
 
 if [[ "${RUN_B29_CANONICAL_QUICK}" -eq 1 ]]; then
-  python3 "${REPO_ROOT}/examples/agent-base/_common/invoke_seed_agent.py" run \
+  python "${REPO_ROOT}/examples/agent-base/_common/invoke_seed_agent.py" run \
     --url "${SEED_AGENT_MCP_URL}" \
     --token "${SEED_AGENT_MCP_TOKEN}" \
     --request "Attach to B29 and summarize bgp briefly." \
@@ -379,7 +379,7 @@ run_cmd_with_timeout 2100 \
 RC_S04=$?
 set -e
 
-python3 - "${SUMMARY_JSON}" "${RUNNING_B00}" "${RUNNING_B29}" "${RC_S01}" "${RC_S02}" "${RC_S03}" "${RC_S04}" "${S01_MODE}" "${S04_MODE}" "${REPO_ROOT}" <<'PY'
+python - "${SUMMARY_JSON}" "${RUNNING_B00}" "${RUNNING_B29}" "${RC_S01}" "${RC_S02}" "${RC_S03}" "${RC_S04}" "${S01_MODE}" "${S04_MODE}" "${REPO_ROOT}" <<'PY'
 import json
 import sys
 from pathlib import Path

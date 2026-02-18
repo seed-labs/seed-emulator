@@ -68,7 +68,7 @@ set -e
 SUMMARY_JSON="${WORK_DIR}/real_showcase_summary.json"
 LOG_DIR="${WORK_DIR}/logs"
 
-python3 "${RENDER_SCRIPT}" \
+python "${RENDER_SCRIPT}" \
   --summary "${SUMMARY_JSON}" \
   --logs-dir "${LOG_DIR}" \
   --output "${REPORT_FILE}" \
@@ -83,4 +83,3 @@ if [[ "${RUN_RC}" -ne 0 ]]; then
   exit "${RUN_RC}"
 fi
 exit "${REPORT_RC}"
-
