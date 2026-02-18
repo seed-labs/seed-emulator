@@ -98,8 +98,14 @@ Useful options:
   --s04-mode fallback
 ```
 
-If your `seed-agent` is managed as a subrepo/submodule, this script auto-detects `./subrepos/seed-agent`.
-You can still override explicitly:
+Default Seed-Agent path is the repo submodule: `./subrepos/seed-agent`.
+Initialize once after clone:
+
+```bash
+git submodule update --init --recursive
+```
+
+You can still override path explicitly:
 
 ```bash
 export SEED_AGENT_DIR=./subrepos/seed-agent

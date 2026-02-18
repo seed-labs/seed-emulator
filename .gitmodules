@@ -1,0 +1,4 @@
+[submodule "subrepos/seed-agent"]
+	path = subrepos/seed-agent
+	url = https://github.com/zzw4257/seed-agent.git
+	branch = feat/codex-integration

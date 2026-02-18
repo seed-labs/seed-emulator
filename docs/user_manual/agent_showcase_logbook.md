@@ -17,13 +17,19 @@ seed-email-service/
     └── seed-agent/
 ```
 
-Then set:
+Initialize submodule:
+
+```bash
+git submodule update --init --recursive
+```
+
+Optional override:
 
 ```bash
 export SEED_AGENT_DIR=./subrepos/seed-agent
 ```
 
-`run_real_showcase.sh` prefers `./subrepos/seed-agent` automatically when present.
+`run_real_showcase.sh` defaults to `./subrepos/seed-agent`.
 
 ## LLM Environment
 

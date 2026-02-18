@@ -3,18 +3,22 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-if [[ -z "${SEED_AGENT_DIR:-}" ]]; then
-  if [[ -d "${REPO_ROOT}/subrepos/seed-agent" ]]; then
-    SEED_AGENT_DIR="${REPO_ROOT}/subrepos/seed-agent"
-  else
-    SEED_AGENT_DIR="${REPO_ROOT}/../seed-agent"
-  fi
-fi
+SEED_AGENT_DIR="${SEED_AGENT_DIR:-${REPO_ROOT}/subrepos/seed-agent}"
 SEED_AGENT_DIR="$(python3 - <<'PY' "$SEED_AGENT_DIR"
 import os, sys
 print(os.path.abspath(os.path.expanduser(sys.argv[1])))
 PY
 )"
+if [[ ! -d "${SEED_AGENT_DIR}" ]]; then
+  echo "Seed-Agent directory not found: ${SEED_AGENT_DIR}" >&2
+  echo "Initialize submodule first: git submodule update --init --recursive" >&2
+  exit 2
+fi
+if [[ ! -f "${SEED_AGENT_DIR}/serve_seedagent_http.py" ]]; then
+  echo "Invalid Seed-Agent directory: ${SEED_AGENT_DIR}" >&2
+  echo "Expected file missing: serve_seedagent_http.py" >&2
+  exit 2
+fi
 ENV_FILE="${ENV_FILE:-}"
 if [[ -z "${ENV_FILE}" && -f "${REPO_ROOT}/.env" ]]; then
   ENV_FILE="${REPO_ROOT}/.env"

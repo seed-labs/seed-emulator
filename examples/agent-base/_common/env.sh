@@ -4,7 +4,7 @@ SEED_AGENT_BASE_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SEED_AGENT_BASE_DIR="$(cd "${SEED_AGENT_BASE_COMMON_DIR}/.." && pwd)"
 SEED_EMAIL_REPO_ROOT="$(cd "${SEED_AGENT_BASE_DIR}/../.." && pwd)"
 
-SEED_AGENT_DIR="${SEED_AGENT_DIR:-${SEED_EMAIL_REPO_ROOT}/../seed-agent}"
+SEED_AGENT_DIR="${SEED_AGENT_DIR:-${SEED_EMAIL_REPO_ROOT}/subrepos/seed-agent}"
 
 B29_OUTPUT_DIR="${B29_OUTPUT_DIR:-examples/internet/B29_email_dns/output}"
 B00_OUTPUT_DIR="${B00_OUTPUT_DIR:-examples/internet/B00_mini_internet/output}"
