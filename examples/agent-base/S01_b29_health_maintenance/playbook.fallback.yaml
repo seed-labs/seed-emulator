@@ -1,0 +1,35 @@
+version: 1
+name: s01_b29_health_maintenance
+defaults:
+  selector:
+    asn: [200, 201]
+  timeout_seconds: 20
+  parallelism: 20
+  max_output_chars: 12000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh_summary
+
+  - action: routing_bgp_summary
+    id: bgp
+    selector:
+      asn: [200, 201]
+      role: ["BorderRouter", "Router"]
+    save_as: bgp_summary
+
+  - action: ops_logs
+    id: host_logs
+    selector:
+      asn: [200, 201]
+      role: ["Host"]
+    tail: 150
+    save_as: host_logs
+
+  - action: capture_evidence
+    id: router_evidence
+    selector:
+      asn: [200, 201]
+      role: ["BorderRouter", "Router"]
+    evidence_type: routing_snapshot
+    save_as: router_evidence

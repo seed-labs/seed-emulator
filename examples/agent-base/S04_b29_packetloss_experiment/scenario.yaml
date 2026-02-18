@@ -1,0 +1,20 @@
+id: S04_b29_packetloss_experiment
+category: experiment
+baseline: B29
+default_policy: read_only
+workspace_name: lab1
+attach_output_env: B29_OUTPUT_DIR
+canonical_request: >
+  Baseline B29 mail-network behavior, inject controlled packet loss in net_ops,
+  observe mail/log impact, rollback with reset, then summarize before/during/after.
+fallback_playbook: playbook.fallback.yaml
+assertions:
+  - risk gate blocks experiment when disabled
+  - status and job_status are valid for experiment and rollback
+  - before/during/after mail logs are collected
+  - rollback reset evidence is recorded
+artifacts:
+  - mail_logs.before.txt
+  - mail_logs.during.txt
+  - mail_logs.after.txt
+  - experiment_report.md
