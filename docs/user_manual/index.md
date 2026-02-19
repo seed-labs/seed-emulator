@@ -12,4 +12,7 @@ High-frequency links:
 - [Visualization](./visualization.md)
 - [SeedOps MCP operations](./mcp_seedops.md)
 - [Seed-Agent showcase logbook](./agent_showcase_logbook.md)
+- [Seed-Agent mission packs](../../examples/agent-missions/README.md)
+- [Seed-Agent mission logbook](./agent_missions_logbook.md)
+- [Seed-Agent platform review](./seed_agent_platform_review.md)
 - [SeedAgent/Codex one-command launcher](../../../subrepos/seed-agent/README.md#quick-start)

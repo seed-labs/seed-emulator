@@ -1,0 +1,28 @@
+{
+  "layers": [
+    {
+      "layer": "MCP Server (SeedOps)",
+      "owner": "seed-email-service/mcp-server",
+      "key_points": ["Workspace lifecycle", "Playbook execution", "Artifacts storage"],
+      "refs": ["mcp-server/seedops", "docs/user_manual/mcp_seedops.md"]
+    },
+    {
+      "layer": "MCP Client",
+      "owner": "subrepos/seed-agent/mcp_client",
+      "key_points": ["Stable wrappers", "Deterministic ops path", "Upstream errors mapped"],
+      "refs": ["subrepos/seed-agent/mcp_client/seedops_api.py"]
+    },
+    {
+      "layer": "Codex Shell (optional)",
+      "owner": "subrepos/seed-agent/scripts/seed-codex",
+      "key_points": ["Project-scoped CODEX_HOME", "Profiles + enabled_tools", "TUI launcher"],
+      "refs": ["subrepos/seed-agent/scripts/seed-codex", "subrepos/seed-agent/configs/codex.seed.example.toml"]
+    },
+    {
+      "layer": "Seed-Agent Core",
+      "owner": "subrepos/seed-agent/seedagent_mcp + task_engine",
+      "key_points": ["Planner + policy + fallback", "Task engine multi-turn", "HITL confirmation gate"],
+      "refs": ["subrepos/seed-agent/seedagent_mcp/service.py", "subrepos/seed-agent/task_engine/orchestrator.py"]
+    }
+  ]
+}

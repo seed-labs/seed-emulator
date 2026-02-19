@@ -92,6 +92,9 @@ seed-email-service/
   - `examples/internet/README.md`
   - `examples/blockchain/README.md`
   - `examples/scion/README.md`
+  - `examples/agent-missions/README.md` (task-engine runtime operations)
+  - `docs/user_manual/agent_missions_logbook.md` (runtime evidence snapshots)
+  - `docs/user_manual/seed_agent_platform_review.md` (full platform retrospective)
 
 ---
 

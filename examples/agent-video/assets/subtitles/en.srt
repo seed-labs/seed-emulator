@@ -1,0 +1,55 @@
+1
+00:00:00,000 --> 00:00:09,000
+SEED’s goal is not to wrap an LLM with a shell, but to unify emulation, operations experiments, and audit evidence into one executable loop.
+
+2
+00:00:09,000 --> 00:00:17,000
+Responsibilities are explicit: SeedOps provides execution primitives, Seed-Agent owns mission semantics and decisions, and Codex only improves interaction efficiency.
+
+3
+00:00:17,000 --> 00:00:26,000
+Users can launch the same mission from CLI, API, or IDE, instead of being locked into a single frontend.
+
+4
+00:00:26,000 --> 00:00:34,000
+The primary path starts from a natural-language objective, then task begin, plan, policy check, and finally run plus artifacts download.
+
+5
+00:00:34,000 --> 00:00:42,000
+Each phase returns consistent status semantics: ok, needs_input, awaiting_confirmation, blocked, and upstream_error.
+
+6
+00:00:42,000 --> 00:00:51,000
+When required inputs are missing, the system returns a question set; when policy escalation is requested, it stops at a confirmation gate instead of executing.
+
+7
+00:00:51,000 --> 00:00:59,000
+Only after approval does execution enter net_ops or danger stages, with decision logs and approval tokens persisted.
+
+8
+00:00:59,000 --> 00:01:08,000
+Execution still reuses SeedOps playbook and workspace mechanisms, avoiding duplicated implementation while preserving low-level fallback.
+
+9
+00:01:08,000 --> 00:01:16,000
+If LLM planning is invalid or over-privileged, Seed-Agent automatically switches to template fallback to keep execution continuous and explainable.
+
+10
+00:01:16,000 --> 00:01:24,000
+This guarantees two properties at once: policy controllability and execution stability, especially for batch teaching and research experiments.
+
+11
+00:01:24,000 --> 00:01:33,000
+In today’s real run evidence, we can directly inspect session_id, job_id, planner_mode, risk_gate_status, and artifact index.
+
+12
+00:01:33,000 --> 00:01:41,000
+The same mission engine can cover security response, routing troubleshooting, convergence comparison, and fault-impact evaluation.
+
+13
+00:01:41,000 --> 00:01:50,000
+Adding a new mission usually requires only YAML templates, stage policies, and acceptance checks, without changing the core state machine.
+
+14
+00:01:50,000 --> 00:02:00,000
+That is the platform value: MCP becomes a cross-scenario mission bus so teaching, research, and engineering share one agent capability stack.

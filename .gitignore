@@ -46,3 +46,6 @@ examples/agent-base/**/artifacts/
 examples/agent-base/S*_*/20*/
 examples/agent-base/S*_*/latest
 examples/agent-base/**/downloads*/
+
+# Seed-Agent mission review runtime outputs (keep mission source files tracked)
+examples/agent-missions/reports/

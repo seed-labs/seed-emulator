@@ -1,0 +1,36 @@
+task_id: RS_B00_CONVERGENCE_COMPARISON
+title: B00 Convergence Comparison
+track: research
+baseline: B00
+objective_template: compare routing convergence behavior under two conditions
+required_inputs:
+  - id: attach_output_dir
+    question: Provide B00 output directory for attach.
+    required: true
+    reason: Runtime workspace attachment is required.
+  - id: comparison_target
+    question: What route/prefix or AS pair should be compared?
+    required: true
+    reason: Metrics need explicit target scope.
+stages: [observe, analyze, verify]
+policy_by_stage:
+  observe: read_only
+  analyze: read_only
+  verify: read_only
+canonical_request_templates:
+  - >
+    Attach to {attach_output_dir}; collect convergence-relevant BGP snapshots and
+    diagnostics for {comparison_target}; compare behavior across available observations
+    and output quantitative differences with confidence notes.
+fallback_playbooks:
+  - examples/agent-missions/playbooks/rs_b00_convergence_comparison.yaml
+acceptance_checks:
+  - status == ok
+  - report includes comparable metrics
+  - output includes assumptions and limitations
+report_template: |
+  Research report for {task_id}:
+  - objective: {objective}
+  - metrics: {metrics}
+  - conclusion: {conclusion}
+

@@ -1,0 +1,91 @@
+{
+  "title": "SEED Platform Agent Showcase",
+  "language": "zh-CN",
+  "target_duration_sec": 120,
+  "segments": [
+    {
+      "id": "s01",
+      "duration_sec": 9,
+      "zh": "SEED 平台目标不是把大模型外包一层壳，而是把网络仿真、运维实验、证据审计统一到可执行闭环。",
+      "en": "SEED’s goal is not to wrap an LLM with a shell, but to unify emulation, operations experiments, and audit evidence into one executable loop."
+    },
+    {
+      "id": "s02",
+      "duration_sec": 8,
+      "zh": "这条闭环的职责拆分非常明确：SeedOps 提供执行原语，Seed-Agent 负责任务语义与决策，Codex 仅负责交互效率。",
+      "en": "Responsibilities are explicit: SeedOps provides execution primitives, Seed-Agent owns mission semantics and decisions, and Codex only improves interaction efficiency."
+    },
+    {
+      "id": "s03",
+      "duration_sec": 9,
+      "zh": "因此用户可以从 CLI、API 或 IDE 发起同一任务，不再被某个单一前端绑定。",
+      "en": "Users can launch the same mission from CLI, API, or IDE, instead of being locked into a single frontend."
+    },
+    {
+      "id": "s04",
+      "duration_sec": 8,
+      "zh": "主链路从自然语言 objective 开始，经 task begin、plan、policy check，最终到 run 与 artifacts download。",
+      "en": "The primary path starts from a natural-language objective, then task begin, plan, policy check, and finally run plus artifacts download."
+    },
+    {
+      "id": "s05",
+      "duration_sec": 8,
+      "zh": "每个阶段都返回统一状态语义：ok、needs_input、awaiting_confirmation、blocked、upstream_error。",
+      "en": "Each phase returns consistent status semantics: ok, needs_input, awaiting_confirmation, blocked, and upstream_error."
+    },
+    {
+      "id": "s06",
+      "duration_sec": 9,
+      "zh": "当任务缺少关键参数时，系统会返回问题清单；当策略越级时，系统会停在确认门，而不是直接执行。",
+      "en": "When required inputs are missing, the system returns a question set; when policy escalation is requested, it stops at a confirmation gate instead of executing."
+    },
+    {
+      "id": "s07",
+      "duration_sec": 8,
+      "zh": "确认通过后才会进入 net_ops 或 danger 阶段，并记录 decision log 与 approval token。",
+      "en": "Only after approval does execution enter net_ops or danger stages, with decision logs and approval tokens persisted."
+    },
+    {
+      "id": "s08",
+      "duration_sec": 9,
+      "zh": "执行侧依然复用 SeedOps 的 playbook 与 workspace 机制，避免重复造轮子，也保留低层回退能力。",
+      "en": "Execution still reuses SeedOps playbook and workspace mechanisms, avoiding duplicated implementation while preserving low-level fallback."
+    },
+    {
+      "id": "s09",
+      "duration_sec": 8,
+      "zh": "如果 LLM 规划输出非法或越权，Seed-Agent 会自动切换 template fallback，保证流程可继续且可解释。",
+      "en": "If LLM planning is invalid or over-privileged, Seed-Agent automatically switches to template fallback to keep execution continuous and explainable."
+    },
+    {
+      "id": "s10",
+      "duration_sec": 8,
+      "zh": "这同时保证了两点：一是策略可控，二是执行稳定，尤其适用于教学和科研中的批量实验。",
+      "en": "This guarantees two properties at once: policy controllability and execution stability, especially for batch teaching and research experiments."
+    },
+    {
+      "id": "s11",
+      "duration_sec": 9,
+      "zh": "在今天的真实运行证据里，可以直接看到 session_id、job_id、planner_mode、risk_gate_status 与 artifact index。",
+      "en": "In today’s real run evidence, we can directly inspect session_id, job_id, planner_mode, risk_gate_status, and artifact index."
+    },
+    {
+      "id": "s12",
+      "duration_sec": 8,
+      "zh": "同一个任务引擎可覆盖安全响应、路由排障、收敛对比、故障影响评估等多类任务包。",
+      "en": "The same mission engine can cover security response, routing troubleshooting, convergence comparison, and fault-impact evaluation."
+    },
+    {
+      "id": "s13",
+      "duration_sec": 9,
+      "zh": "新增任务通常只需扩展 YAML 模板、阶段策略和验收断言，而不需要修改核心状态机代码。",
+      "en": "Adding a new mission usually requires only YAML templates, stage policies, and acceptance checks, without changing the core state machine."
+    },
+    {
+      "id": "s14",
+      "duration_sec": 10,
+      "zh": "这就是平台化价值：把 MCP 变成跨场景任务执行总线，让 SEED 在教学、科研和工程中共享同一套智能体能力。",
+      "en": "That is the platform value: MCP becomes a cross-scenario mission bus so teaching, research, and engineering share one agent capability stack."
+    }
+  ]
+}
