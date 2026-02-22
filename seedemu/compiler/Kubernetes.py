@@ -117,6 +117,17 @@ class KubernetesCompiler(Docker):
     def getName(self) -> str:
         return "Kubernetes"
 
+
+    @staticmethod
+    def _safeBridgeName(name: str) -> str:
+        """Generate a Linux bridge name that fits the 15-char IFNAMSIZ limit.
+        
+        Uses 'br-' prefix (3 chars) + md5 hash truncated to 12 chars = 15 chars total.
+        This ensures uniqueness while staying within the kernel limit.
+        """
+        h = md5(name.encode()).hexdigest()[:12]
+        return f"br-{h}"
+
     def _doCompile(self, emulator: Emulator):
         registry = emulator.getRegistry()
         self._groupSoftware(emulator)
@@ -185,7 +196,7 @@ class KubernetesCompiler(Docker):
             config = {
                 "cniVersion": "0.3.1",
                 "type": "bridge",
-                "bridge": f"br-{name}",
+                "bridge": self._safeBridgeName(name),
                 "isGateway": False,
                 "ipam": {
                     "type": "host-local",
@@ -196,7 +207,7 @@ class KubernetesCompiler(Docker):
             config = {
                 "cniVersion": "0.3.1",
                 "type": "bridge",
-                "bridge": f"br-{name}",
+                "bridge": self._safeBridgeName(name),
                 "ipam": {}  # No IPAM, we manage IPs inside
             }
 
