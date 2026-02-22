@@ -40,3 +40,12 @@ __pycache__/
 
 **/auto-imports.d.ts
 **/components.d.ts
+
+# Seed-Agent showcase runtime outputs (keep scenario source files tracked)
+examples/agent-base/**/artifacts/
+examples/agent-base/S*_*/20*/
+examples/agent-base/S*_*/latest
+examples/agent-base/**/downloads*/
+
+# Seed-Agent mission review runtime outputs (keep mission source files tracked)
+examples/agent-missions/reports/

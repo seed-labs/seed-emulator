@@ -1,0 +1,18 @@
+{
+  "generated_at_utc": "2026-02-18T18:34:44.525593+00:00",
+  "source": "/tmp/seed-agent-video-evidence/run/RS_B00_CONVERGENCE_COMPARISON/20260218T183442Z/execute.json",
+  "task_id": "RS_B00_CONVERGENCE_COMPARISON",
+  "objective": "Compare convergence behavior",
+  "session_id": "46f5b268-81e8-4329-86d9-f933f9e60257",
+  "begin_status": null,
+  "execute_status": "ok",
+  "task_status": "ok",
+  "job_id": "16a67a1b-d73f-48e9-ac06-0a6c11e0656c",
+  "job_status": "succeeded",
+  "planner_mode": "template_fallback",
+  "risk_gate_status": "awaiting_confirmation",
+  "notes": [
+    "Collected by examples/agent-video/scripts/collect_runtime_evidence.sh",
+    "This is a minimal snapshot for the 120s video overlay."
+  ]
+}

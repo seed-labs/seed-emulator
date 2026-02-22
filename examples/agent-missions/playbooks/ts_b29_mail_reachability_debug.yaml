@@ -1,0 +1,25 @@
+version: 1
+name: ts_b29_mail_reachability_debug
+defaults:
+  selector: {}
+  timeout_seconds: 30
+  parallelism: 20
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: ping
+    id: ping_diag
+    dst: 1.1.1.1
+    count: 2
+    save_as: ping
+  - action: traceroute
+    id: trace_diag
+    dst: 1.1.1.1
+    save_as: trace
+  - action: ops_logs
+    id: mail_logs
+    tail: 200
+    save_as: mail_logs
+

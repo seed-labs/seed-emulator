@@ -1,0 +1,20 @@
+id: S02_b00_path_maintenance
+category: maintenance
+baseline: B00
+default_policy: read_only
+workspace_name: lab1
+attach_output_env: B00_OUTPUT_DIR
+canonical_request: >
+  Attach to ${B00_OUTPUT_DIR}; collect BGP summary, route snapshots, and traceroute
+  diagnostics for router groups; identify probable path breakpoints.
+fallback_playbook: playbook.fallback.yaml
+assertions:
+  - seed_agent_plan.status=ok
+  - seed_agent_run.status=ok
+  - summary.job_status is terminal
+  - summary.workspace_id and summary.job_id are non-empty
+artifacts:
+  - plan.json
+  - run.json
+  - diagnostics/routes.txt
+  - diagnostics/trace.txt

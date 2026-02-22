@@ -1,0 +1,23 @@
+version: 1
+name: sec_b29_dns_mail_abuse_response
+defaults:
+  selector: {}
+  timeout_seconds: 30
+  parallelism: 20
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: ops_logs
+    id: dns_mail_logs
+    tail: 250
+    save_as: logs
+  - action: routing_bgp_summary
+    id: bgp
+    save_as: bgp
+  - action: ops_exec
+    id: mitigation_check
+    command: "birdc show protocols"
+    save_as: mitigation_check
+

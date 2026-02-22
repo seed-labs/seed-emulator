@@ -92,6 +92,9 @@ seed-email-service/
   - `examples/internet/README.md`
   - `examples/blockchain/README.md`
   - `examples/scion/README.md`
+  - `examples/agent-missions/README.md` (task-engine runtime operations)
+  - `docs/user_manual/agent_missions_logbook.md` (runtime evidence snapshots)
+  - `docs/user_manual/seed_agent_platform_review.md` (full platform retrospective)
 
 ---
 
@@ -108,12 +111,12 @@ If Docker Hub access is unstable:
 
 High-level agent and Codex integration live in:
 
-- `../seed-agent/README.md`
+- `subrepos/seed-agent/README.md`
 
 Recommended closed-loop launcher from `seed-agent`:
 
-- `../seed-agent/scripts/seed-codex up`
-- `../seed-agent/scripts/seed-codex ui`
+- `subrepos/seed-agent/scripts/seed-codex up`
+- `subrepos/seed-agent/scripts/seed-codex ui`
 
 ---
 

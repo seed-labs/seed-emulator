@@ -1,0 +1,31 @@
+version: 1
+name: rs_b29_fault_impact_ablation
+defaults:
+  selector: {}
+  timeout_seconds: 30
+  parallelism: 20
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: routing_bgp_summary
+    id: baseline_bgp
+    save_as: baseline_bgp
+  - action: inject_fault
+    id: inject_fault
+    fault_type: packet_loss
+    loss_percent: 15
+    duration_seconds: 20
+    save_as: fault_injected
+  - action: routing_bgp_summary
+    id: during_fault_bgp
+    save_as: during_fault_bgp
+  - action: inject_fault
+    id: rollback_fault
+    fault_type: reset
+    save_as: fault_reset
+  - action: routing_bgp_summary
+    id: post_reset_bgp
+    save_as: post_reset_bgp
+

@@ -1,0 +1,19 @@
+id: S03_b00_latency_experiment
+category: experiment
+baseline: B00
+default_policy: read_only
+workspace_name: lab1
+attach_output_env: B00_OUTPUT_DIR
+canonical_request: >
+  Baseline in read_only, then run controlled latency injection experiment in net_ops,
+  and finally rollback with reset. Provide before/during/after comparison.
+fallback_playbook: playbook.fallback.yaml
+assertions:
+  - risk gate blocks experiment when disabled
+  - experiment and rollback jobs are terminal when gate is enabled
+  - rollback evidence is present
+artifacts:
+  - baseline.json
+  - experiment.json
+  - rollback.json
+  - comparison.md

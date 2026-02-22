@@ -1,0 +1,26 @@
+version: 1
+name: s02_b00_path_maintenance
+defaults:
+  selector:
+    role: ["BorderRouter", "Router"]
+  timeout_seconds: 20
+  parallelism: 20
+  max_output_chars: 12000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh_summary
+
+  - action: routing_bgp_summary
+    id: bgp
+    save_as: bgp_summary
+
+  - action: ops_exec
+    id: routes
+    command: ip route
+    save_as: routes_snapshot
+
+  - action: traceroute
+    id: trace
+    dst: 1.1.1.1
+    save_as: trace_snapshot

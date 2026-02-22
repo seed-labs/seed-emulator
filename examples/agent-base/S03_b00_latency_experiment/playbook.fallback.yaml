@@ -1,0 +1,37 @@
+version: 1
+name: s03_b00_latency_experiment
+defaults:
+  selector:
+    role: ["BorderRouter", "Router"]
+  timeout_seconds: 25
+  parallelism: 20
+  max_output_chars: 12000
+steps:
+  - action: workspace_refresh
+    id: refresh_before
+    save_as: baseline_refresh
+
+  - action: routing_bgp_summary
+    id: bgp_before
+    save_as: baseline_bgp
+
+  - action: inject_fault
+    id: inject_latency
+    fault_type: latency
+    params: "120"
+    interface: eth0
+    save_as: latency_injection
+
+  - action: sleep
+    id: settle_after_injection
+    seconds: 2
+
+  - action: traceroute
+    id: trace_during
+    dst: 1.1.1.1
+    save_as: trace_during_latency
+
+  - action: capture_evidence
+    id: evidence_during
+    evidence_type: network_state
+    save_as: evidence_during_latency

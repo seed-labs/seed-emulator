@@ -40,6 +40,9 @@ This is the primary manual hub for `seed-email-service`.
 ## MCP operations control plane
 
 - [SeedOps: operate already-running networks](./mcp_seedops.md)
+- [Seed-Agent mission packs (task-engine examples)](../../examples/agent-missions/README.md)
+- [Seed-Agent mission runtime logbook](./agent_missions_logbook.md)
+- [Seed-Agent platform review](./seed_agent_platform_review.md)
 
 ---
 

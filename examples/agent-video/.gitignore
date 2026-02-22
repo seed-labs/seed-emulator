@@ -1,0 +1,13 @@
+node_modules/
+output/
+.runtime/
+.codex-seed-video/
+
+# Generated audio
+assets/audio/voiceover.wav
+assets/audio/tts_manifest.json
+assets/audio/segments/
+public/voiceover.wav
+
+# Generated evidence (kept as placeholders in repo, but avoid accidental extra files)
+assets/evidence/*.generated.json

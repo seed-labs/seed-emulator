@@ -1,0 +1,23 @@
+version: 1
+name: ts_b00_bgp_flap_rootcause
+defaults:
+  selector: {}
+  timeout_seconds: 30
+  parallelism: 20
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: routing_bgp_summary
+    id: bgp_before
+    save_as: bgp_before
+  - action: traceroute
+    id: trace_diag
+    dst: 1.1.1.1
+    save_as: trace
+  - action: ops_exec
+    id: protocol_diag
+    command: "birdc show protocols all"
+    save_as: protocol_diag
+

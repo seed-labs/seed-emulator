@@ -1,0 +1,20 @@
+id: S01_b29_health_maintenance
+category: maintenance
+baseline: B29
+default_policy: read_only
+workspace_name: lab1
+attach_output_env: B29_OUTPUT_DIR
+canonical_request: >
+  Attach to ${B29_OUTPUT_DIR}; refresh inventory; summarize BGP on routers;
+  tail operational logs on mail and DNS nodes; return anomalies and next actions.
+fallback_playbook: playbook.fallback.yaml
+assertions:
+  - status=ok
+  - summary.job_status in {succeeded,succeeded_with_errors}
+  - compiled_plan.policy.allowed=true
+  - summary.artifact_count>=1
+artifacts:
+  - response.canonical.json
+  - job.steps.json
+  - artifacts.list.json
+  - summary.md

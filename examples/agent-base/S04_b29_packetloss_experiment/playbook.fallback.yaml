@@ -1,0 +1,37 @@
+version: 1
+name: s04_b29_packetloss_experiment
+defaults:
+  selector:
+    asn: [200, 201]
+    role: ["BorderRouter", "Router"]
+  timeout_seconds: 25
+  parallelism: 20
+  max_output_chars: 12000
+steps:
+  - action: workspace_refresh
+    id: refresh_before_fault
+    save_as: refresh_summary
+
+  - action: inject_fault
+    id: inject_packet_loss
+    fault_type: packet_loss
+    params: "25"
+    interface: eth0
+    save_as: packetloss_injection
+
+  - action: sleep
+    id: settle_after_fault
+    seconds: 2
+
+  - action: ops_logs
+    id: mail_logs_during_fault
+    selector:
+      asn: [200, 201]
+      role: ["Host"]
+    tail: 200
+    save_as: mail_logs_during
+
+  - action: capture_evidence
+    id: evidence_during_fault
+    evidence_type: network_state
+    save_as: evidence_during_packetloss

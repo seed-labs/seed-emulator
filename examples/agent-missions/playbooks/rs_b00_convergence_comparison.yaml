@@ -1,0 +1,22 @@
+version: 1
+name: rs_b00_convergence_comparison
+defaults:
+  selector: {}
+  timeout_seconds: 30
+  parallelism: 20
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: routing_bgp_summary
+    id: bgp_snapshot_a
+    save_as: bgp_a
+  - action: sleep
+    id: wait_window
+    seconds: 2
+    save_as: wait_window
+  - action: routing_bgp_summary
+    id: bgp_snapshot_b
+    save_as: bgp_b
+

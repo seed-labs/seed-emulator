@@ -1,0 +1,23 @@
+version: 1
+name: sec_b29_social_engineering_triage
+defaults:
+  selector: {}
+  timeout_seconds: 30
+  parallelism: 20
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: routing_bgp_summary
+    id: bgp_summary
+    save_as: bgp_summary
+  - action: ops_logs
+    id: mail_dns_logs
+    tail: 200
+    save_as: logs
+  - action: capture_evidence
+    id: evidence
+    evidence_type: full
+    save_as: evidence
+
