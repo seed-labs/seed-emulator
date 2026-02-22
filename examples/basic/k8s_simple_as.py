@@ -3,7 +3,7 @@
 
 from seedemu.layers import Base, Routing, Ebgp
 from seedemu.services import WebService
-from seedemu.compiler import Kubernetes, Platform
+from seedemu.compiler import KubernetesCompiler, Platform
 from seedemu.core import Emulator, Binding, Filter
 import sys, os
 
@@ -108,7 +108,7 @@ def run(dumpfile = None):
         emu.render()
 
         # Use Kubernetes compiler instead of Docker
-        k8s = Kubernetes(registry='localhost:5000', namespace='seedemu', platform=platform) 
+        k8s = KubernetesCompiler(registry_prefix='localhost:5000', namespace='seedemu')
 
         ###############################################################################
         # Compilation
