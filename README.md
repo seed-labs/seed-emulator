@@ -1,6 +1,6 @@
-# SEED Emulator (`seed-email-service`)
+# SEED Emulator (`mcp-server` branch)
 
-`seed-email-service` is the core SEED Emulator repository. It provides:
+This repository is the core SEED Emulator codebase for the `mcp-server` branch. It provides:
 
 - programmable Internet emulation (AS/IX/BGP/DNS/services)
 - compiler outputs to Docker/Compose runtimes
@@ -68,10 +68,84 @@ SeedOps manual:
 
 ---
 
+## Practical Runtime Usage (recommended)
+
+Use this when you want to operate and maintain real running labs (not build-only).
+
+### 1) Start a real target lab
+
+```bash
+docker-compose -f mcp-server/output_e2e_demo/docker-compose.yml up -d
+```
+
+### 2) Start the dual MCP stack (SeedOps + SeedAgent)
+
+```bash
+export SEED_REPO_ROOT=/path/to/your/seed-repo
+
+export SEED_MCP_TOKEN=your-seedops-token
+export SEED_AGENT_MCP_TOKEN=your-seedagent-token
+
+# LLM vars: both naming styles are supported by seed-agent.
+export LLM_BASE_URL=https://your-openai-compatible-endpoint/v1
+export LLM_API_KEY=your-llm-key
+export LLM_MODEL=gpt-5.2
+
+"${SEED_REPO_ROOT}/subrepos/seed-agent/scripts/seed-codex" up
+"${SEED_REPO_ROOT}/subrepos/seed-agent/scripts/seed-codex" status
+```
+
+### 3) Run maintenance checks (natural language, real runtime)
+
+```bash
+cd "${SEED_REPO_ROOT}/subrepos/seed-agent"
+export SEED_MCP_CLIENT_MODE=http
+export SEED_MCP_URL=http://127.0.0.1:8000/mcp
+export SEED_MCP_TOKEN=your-seedops-token
+python main.py "Attach to ${SEED_REPO_ROOT}/mcp-server/output_e2e_demo and refresh inventory, then summarize BGP health"
+```
+
+### 4) Run controlled experiment tasks with confirmation gate
+
+```bash
+cd "${SEED_REPO_ROOT}"
+export SEED_AGENT_MCP_URL=http://127.0.0.1:8100/mcp
+export SEED_AGENT_MCP_TOKEN=your-seedagent-token
+
+examples/agent-missions/run_task_demo.sh \
+  --task RS_B29_FAULT_IMPACT_ABLATION \
+  --objective "Run controlled packet loss ablation with rollback" \
+  --attach-output-dir examples/internet/B29_email_dns/output \
+  --risk on \
+  --confirm-token YES_RUN_DYNAMIC_FAULTS
+```
+
+### 5) Stop services
+
+```bash
+"${SEED_REPO_ROOT}/subrepos/seed-agent/scripts/seed-codex" down
+```
+
+### 6) If first startup fails due old Docker residues
+
+If you see `invalid pool request: Pool overlaps`, remove only overlapping SEED networks:
+
+```bash
+docker network rm \
+  b29_output_net_151_net0 \
+  b29_output_net_152_net0 \
+  output_e2e_demo_net_150_net0 \
+  red_blue_demo_net_100_link_web100_r100
+```
+
+If you see `container name ... is already in use`, remove conflicting old containers, then retry `docker-compose up -d`.
+
+---
+
 ## Repository map
 
 ```text
-seed-email-service/
+seed-repo/
 ├── examples/                 # Topology and scenario examples
 ├── mcp-server/               # SeedOps MCP server implementation
 ├── docs/user_manual/         # User manuals and feature guides

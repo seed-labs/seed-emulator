@@ -2,8 +2,11 @@ import sys
 import os
 from enum import Enum
 
-# Add parent directory to path to import seedemu
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Ensure local repository root has highest import priority for `seedemu`.
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+while _REPO_ROOT in sys.path:
+    sys.path.remove(_REPO_ROOT)
+sys.path.insert(0, _REPO_ROOT)
 
 from seedemu.core import Emulator
 from seedemu.layers import Base
