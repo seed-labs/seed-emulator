@@ -72,3 +72,11 @@ export interface Response {
     ok: boolean,
     result?: any
 }
+
+
+export interface IXLocation {
+  id: string
+  name: string
+  lat: number
+  lon: number
+}

@@ -1,4 +1,5 @@
 import {type ConsoleEvent} from './console-event';
+import type {IframeQueryData} from "@/types";
 
 export type WindowManagerEvent = 'taskbarchanges';
 
@@ -542,6 +543,10 @@ export class Window {
     }
 
     // 公共方法
+    iframeElement(): HTMLIFrameElement {
+        return this._frameElement;
+    }
+
     getId(): string {
         return this._id;
     }
@@ -721,17 +726,22 @@ export class WindowManager {
         }
     }
 
-    createWindow(id: string, title: string): Window {
+    createWindow(id: string, title: string, queryData: IframeQueryData = {cmd: ''}, reload: boolean = false): Window {
         if (this._windows[id]) {
-            this.setActiveWindowDirect(this._windows[id]);
-            return this._windows[id];
+            if (!reload) {
+                this.setActiveWindowDirect(this._windows[id]);
+                return this._windows[id];
+            }
+            this._windows[id].close()
         }
+
+        const url = `${import.meta.env.VITE_FRONTEND_URL_PREFIX}/console#${id}?data=${encodeURIComponent(JSON.stringify(queryData))}`
 
         const win = new Window(
             this,
             id,
             title,
-            `${import.meta.env.VITE_FRONTEND_URL_PREFIX}/console#${id}`,  // 使用已经开发好的 xterm 终端页面
+            url,  // 使用已经开发好的 xterm 终端页面
             10 + this._nextOffset,
             10 + this._nextOffset
         );

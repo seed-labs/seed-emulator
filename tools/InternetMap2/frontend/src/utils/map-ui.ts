@@ -5,11 +5,11 @@ import type {Ref} from "vue"
 import {bpfCompletionTree} from './bpf';
 import {Completion} from './completion';
 import type {EmulatorNetwork, EmulatorNode} from './types';
-import {WindowManager} from './window-manager';
+import {WindowManager, Window} from './window-manager';
 import {DataSource, type NodesType, type EdgesType, type Vertex, META_CLASS, type Edge} from './map-datasource';
 import {DataSource as IXDataSource} from "@/view/map/ixMap/datasource.ts";
 import {DataSource as TransitDataSource} from "@/view/map/transitMap/datasource.ts";
-import type {Details, HoverNodeEvent} from '@/types/index.ts'
+import type {Details, HoverNodeEvent, IframeQueryData} from '@/types/index.ts'
 import type {LoadingInstance} from 'element-plus/es/components/loading/src/loading';
 import {allLoading} from "@/utils/tools.ts";
 
@@ -36,6 +36,10 @@ export const CLICK_CLASS = {
     CONSOLE_CLASS: 'console-action',
     NET_TOGGLE_CLASS: 'net-toggle-action',
     RELOAD_CLASS: 'reload-action',
+}
+
+export const wsDataType = {
+    CAPTURE_PACKET: "CAPTURE_PACKET"
 }
 
 /**
@@ -92,8 +96,8 @@ interface PlaylistItem {
     at: number
 }
 
-const staticDefault = {borderWidth: 1}
-const dynamicDefault = {borderWidth: 4}
+const staticDefault = {borderWidth: 1, size: 25}
+const dynamicDefault = {borderWidth: 4, size: 25}
 
 /**
  * map UI controller.
@@ -416,11 +420,7 @@ export class MapUi {
                 window.clearInterval(this._flasherVis[nodeId]);
             }
 
-            if (_data.action === 'flashOnce') {
-                this._flashVisNodes(
-                    nodeId, _data.interval, _data.static, _data.dynamic, _data.action
-                )
-            } else {
+            if (_data.action === 'flash') {
                 const currentTime = new Date().getTime();
                 const offset = currentTime - this._firstIntervalStartTime;
                 const adjustedDelay = this._intervalDefault - (offset % this._intervalDefault);
@@ -431,97 +431,18 @@ export class MapUi {
                         )
                     }, this._intervalDefault);
                 }, adjustedDelay)
+            } else {
+                if (this._flasherVis[nodeId]) {
+                    window.clearInterval(this._flasherVis[nodeId]);
+                }
+                window.setTimeout(() => {
+                    this._flashVisNodes(
+                        nodeId, _data.interval, _data.static, _data.dynamic, _data.action
+                    )
+                }, 1000)
             }
         });
     }
-
-    public setDragFixed = (val: boolean) => {
-        this._graph.setOptions({physics: !val});
-    }
-
-    public recordStartStop() {
-        if (this._replayStatus !== 'stopped') {
-            return;
-        }
-
-        if (this._recording) {
-            this._recording = false;
-            this.replayStatusInfo.text = 'Replay stopped.';
-            this._updateReplayControls();
-        } else {
-            this._events = [];
-            this._recording = true;
-            this.replayStatusInfo.text = 'Recording events...';
-            this._updateReplayControls();
-        }
-    }
-
-    public replayPlayPause() {
-        if (this._recording) {
-            return;
-        }
-
-        if (this._replayStatus === 'stopped') {
-            this._replayPos = 0;
-            this.replayStatusInfo.text = 'Replay stopped.';
-            this._replayStatus = this.replayStatusInfo.status = 'playing';
-            this._playlist = this._buildPlayList();
-            this._doReplay();
-            this._updateReplayControls();
-        } else if (this._replayStatus === 'playing') {
-            this._replayStatus = this.replayStatusInfo.status = 'paused';
-            this._updateReplayControls();
-        } else if (this._replayStatus === 'paused') {
-            this._replayStatus = this.replayStatusInfo.status = 'playing';
-            this._updateReplayControls();
-        }
-    }
-
-    public replayStop() {
-        if (this._replayStatus === 'stopped') {
-            return;
-        }
-
-        this._replayStatus = this.replayStatusInfo.status = 'stopped';
-        window.clearTimeout(this._replayTask);
-
-        // un-flash nodes.
-        let unflashRequest = Array.from(this._flashingNodes).map(nodeId => {
-            return {
-                id: nodeId, ...staticDefault
-            }
-        });
-        this._nodes.update(unflashRequest);
-        this._flashingNodes.clear();
-        this._flashingVisNodes.clear();
-        this._updateReplayControls();
-        this.replayStatusInfo.text = 'Replay stopped.';
-    }
-
-    public replaySeek(offset: number, absolute: boolean = false) {
-        if (this._replayStatus === 'stopped') {
-            return;
-        }
-
-        this._replayStatus = this.replayStatusInfo.status = 'paused';
-        this._updateReplayControls();
-
-        if (absolute) {
-            this._replayPos = offset;
-        } else {
-            this._replayPos += offset;
-        }
-
-        this._doReplay(true);
-    }
-
-    public replaySeekMousedown = () => {
-        this._seeking = true;
-    };
-
-    public replaySeekMouseup = () => {
-        this._seeking = false;
-    };
 
     private _updateReplayControls() {
         if (this._replayStatus === 'playing' || this._replayStatus === 'paused') {
@@ -722,12 +643,13 @@ export class MapUi {
             case 'flash':
                 return this._flashVisNodesFlash(nodeId, _static, dynamic, interval);
             case 'highlight':
+            case 'restore':
                 return this._flashVisNodesHighlight(nodeId, _static);
             default:
                 break
         }
 
-        if (this._flashingVisNodes.size != 0 && !this._flashingVisNodes.has(nodeId)) {
+        if (this._flashingVisNodes.size !== 0 && !this._flashingVisNodes.has(nodeId)) {
             // some nodes still flashing; wait for next time
             return;
         }
@@ -740,7 +662,7 @@ export class MapUi {
 
         this._visSetQueue.add(nodeId)
         let updateEdgeIds = new Set<string>();
-        this._findEdgeIds(nodeId).forEach(edgeId => updateEdgeIds.add(edgeId));
+        this._findEdgeIds(nodeId)!.forEach(edgeId => updateEdgeIds.add(edgeId));
         this._nodes.update({
             id: nodeId, ..._static
         });
@@ -778,6 +700,12 @@ export class MapUi {
     }
 
     private _flashVisNodesHighlight(nodeId: string, highLight: {}) {
+        this._nodes.update({
+            id: nodeId, ...highLight
+        });
+    }
+
+    private _flashVisNodesRestore(nodeId: string, highLight: {}) {
         this._nodes.update({
             id: nodeId, ...highLight
         });
@@ -895,136 +823,6 @@ export class MapUi {
     }
 
     /**
-     * update filter/search suggestions.
-     *
-     * @param term current search/filter term.
-     */
-    public updateFilterSuggestions(term: string) {
-        this._suggestions.innerText = '';
-
-        if (this._filterMode == 'filter') {
-            this._bpfCompletion.getCompletion(term).forEach(comp => {
-
-                let item = document.createElement('div');
-                item.className = 'suggestion';
-
-                var title = comp.fulltext;
-                var fillText = comp.partialword;
-
-                if (this._curretNode) {
-                    if (this._curretNode.type == 'network') {
-                        let prefix = (this._curretNode.object as EmulatorNetwork).meta.emulatorInfo.prefix;
-
-                        title = title.replace('<net>', prefix);
-                        fillText = fillText.replace('<net>', prefix);
-                    }
-
-                    if (this._curretNode.type == 'node') {
-                        let addresses = (this._curretNode.object as EmulatorNode).meta.emulatorInfo.nets.map(net => net.address.split('/')[0]);
-                        let addressesExpr = addresses.join(' or ');
-
-                        if (addresses.length > 1) {
-                            addressesExpr = `(${addressesExpr})`;
-                        }
-
-                        title = title.replace('<host>', addressesExpr);
-                        fillText = fillText.replace('<host>', addressesExpr);
-                    }
-                }
-
-                let name = document.createElement('span');
-                name.className = 'name';
-                name.innerText = title;
-
-                let details = document.createElement('span');
-                details.className = 'details';
-                details.innerText = comp.description;
-
-                item.appendChild(name);
-                item.appendChild(details);
-                item.onclick = () => {
-                    this._filterInputValue.value += `${fillText} `;
-                    this._moveSuggestionSelection('clear');
-                    this.updateFilterSuggestions(this._filterInputValue.value);
-                };
-
-                this._suggestions.appendChild(item);
-            });
-        }
-
-        if (this._filterMode == 'node-search') {
-            let vertices = this._findNodes(term);
-
-            if (term != '') {
-                let defaultItem = document.createElement('div');
-                defaultItem.className = 'suggestion';
-
-                let defaultName = document.createElement('span');
-                defaultName.className = 'name';
-                defaultName.innerText = term;
-
-                let defailtDetails = document.createElement('span');
-                defailtDetails.className = 'details';
-                defailtDetails.innerText = 'Press enter to show all matches on the map...';
-
-                defaultItem.onclick = () => {
-                    this._moveSuggestionSelection('clear');
-                    this._filterUpdateHandler(undefined, true);
-                };
-
-                defaultItem.appendChild(defaultName);
-                defaultItem.appendChild(defailtDetails);
-
-                this._suggestions.appendChild(defaultItem);
-            }
-
-            vertices.forEach(vertex => {
-                var itemName = vertex.label;
-                var itemDetails = '';
-
-                if (vertex.type == 'node') {
-                    let node = vertex.object as EmulatorNode;
-
-                    itemDetails = node.meta.emulatorInfo.nets.map(net => net.address).join(', ');
-                    itemName = `${node.meta.emulatorInfo.role}: ${itemName}`;
-                }
-
-                if (vertex.type == 'network') {
-                    let net = vertex.object as EmulatorNetwork;
-
-                    itemDetails = net.meta.emulatorInfo.prefix;
-                    itemName = `${net.meta.emulatorInfo.type == 'global' ? 'Exchange' : 'Network'}: ${itemName}`;
-                }
-
-                let item = document.createElement('div');
-                item.className = 'suggestion';
-
-                let name = document.createElement('span');
-                name.className = 'name';
-                name.innerText = itemName;
-
-                let details = document.createElement('span');
-                details.className = 'details';
-                details.innerText = itemDetails;
-
-                item.appendChild(name);
-                item.appendChild(details);
-
-                item.onclick = () => {
-                    this._focusNode(vertex.id);
-                    let set = new Set<string>();
-                    set.add(vertex.id);
-                    this._updateSearchHighlights(set);
-                    this._suggestions.innerText = '';
-                    this._moveSuggestionSelection('clear');
-                };
-
-                this._suggestions.appendChild(item);
-            });
-        }
-    }
-
-    /**
      * commit a filter search.
      *
      * @param event if triggerd by keydown/keyup event, the event.
@@ -1079,25 +877,6 @@ export class MapUi {
         div.appendChild(span1);
 
         return div;
-    }
-
-    public async setFilterMode(mode: FilterMode) {
-        if (mode == this._filterMode) {
-            return;
-        }
-
-        this._filterMode = mode;
-
-        this._suggestions.innerText = '';
-        this._moveSuggestionSelection('clear');
-
-        if (mode == 'filter') {
-            this._updateSearchHighlights(new Set<string>());
-        }
-
-        if (mode == 'node-search') {
-            await this._filterUpdateHandler(undefined, true);
-        }
     }
 
     /**
@@ -1192,7 +971,6 @@ export class MapUi {
                 consoleLink.setAttribute("params", JSON.stringify({
                     nodeId: node.Id.substr(0, 12),
                     label: vertex.label,
-                    "onclick": "onClickTest()"
                 }))
                 detail4.data["Launch console"] = consoleLink.outerHTML
 
@@ -1415,6 +1193,266 @@ export class MapUi {
         }, 300);
     }
 
+    public setDragFixed = (val: boolean) => {
+        this._graph.setOptions({physics: !val});
+    }
+
+    public recordStartStop() {
+        if (this._replayStatus !== 'stopped') {
+            return;
+        }
+
+        if (this._recording) {
+            this._recording = false;
+            this.replayStatusInfo.text = 'Replay stopped.';
+            this._updateReplayControls();
+        } else {
+            this._events = [];
+            this._recording = true;
+            this.replayStatusInfo.text = 'Recording events...';
+            this._updateReplayControls();
+        }
+    }
+
+    public replayPlayPause() {
+        if (this._recording) {
+            return;
+        }
+
+        if (this._replayStatus === 'stopped') {
+            this._replayPos = 0;
+            this.replayStatusInfo.text = 'Replay stopped.';
+            this._replayStatus = this.replayStatusInfo.status = 'playing';
+            this._playlist = this._buildPlayList();
+            this._doReplay();
+            this._updateReplayControls();
+        } else if (this._replayStatus === 'playing') {
+            this._replayStatus = this.replayStatusInfo.status = 'paused';
+            this._updateReplayControls();
+        } else if (this._replayStatus === 'paused') {
+            this._replayStatus = this.replayStatusInfo.status = 'playing';
+            this._updateReplayControls();
+        }
+    }
+
+    public replayStop() {
+        if (this._replayStatus === 'stopped') {
+            return;
+        }
+
+        this._replayStatus = this.replayStatusInfo.status = 'stopped';
+        window.clearTimeout(this._replayTask);
+
+        // un-flash nodes.
+        let unflashRequest = Array.from(this._flashingNodes).map(nodeId => {
+            return {
+                id: nodeId, ...staticDefault
+            }
+        });
+        this._nodes.update(unflashRequest);
+        this._flashingNodes.clear();
+        this._flashingVisNodes.clear();
+        this._updateReplayControls();
+        this.replayStatusInfo.text = 'Replay stopped.';
+    }
+
+    public replaySeek(offset: number, absolute: boolean = false) {
+        if (this._replayStatus === 'stopped') {
+            return;
+        }
+
+        this._replayStatus = this.replayStatusInfo.status = 'paused';
+        this._updateReplayControls();
+
+        if (absolute) {
+            this._replayPos = offset;
+        } else {
+            this._replayPos += offset;
+        }
+
+        this._doReplay(true);
+    }
+
+    public replaySeekMousedown = () => {
+        this._seeking = true;
+    };
+
+    public replaySeekMouseup = () => {
+        this._seeking = false;
+    };
+
+    /**
+     * update filter/search suggestions.
+     *
+     * @param term current search/filter term.
+     */
+    public updateFilterSuggestions(term: string) {
+        this._suggestions.innerText = '';
+
+        if (this._filterMode == 'filter') {
+            this._bpfCompletion.getCompletion(term).forEach(comp => {
+
+                let item = document.createElement('div');
+                item.className = 'suggestion';
+
+                var title = comp.fulltext;
+                var fillText = comp.partialword;
+
+                if (this._curretNode) {
+                    if (this._curretNode.type == 'network') {
+                        let prefix = (this._curretNode.object as EmulatorNetwork).meta.emulatorInfo.prefix;
+
+                        title = title.replace('<net>', prefix);
+                        fillText = fillText.replace('<net>', prefix);
+                    }
+
+                    if (this._curretNode.type == 'node') {
+                        let addresses = (this._curretNode.object as EmulatorNode).meta.emulatorInfo.nets.map(net => net.address.split('/')[0]);
+                        let addressesExpr = addresses.join(' or ');
+
+                        if (addresses.length > 1) {
+                            addressesExpr = `(${addressesExpr})`;
+                        }
+
+                        title = title.replace('<host>', addressesExpr);
+                        fillText = fillText.replace('<host>', addressesExpr);
+                    }
+                }
+
+                let name = document.createElement('span');
+                name.className = 'name';
+                name.innerText = title;
+
+                let details = document.createElement('span');
+                details.className = 'details';
+                details.innerText = comp.description;
+
+                item.appendChild(name);
+                item.appendChild(details);
+                item.onclick = () => {
+                    this._filterInputValue.value += `${fillText} `;
+                    this._moveSuggestionSelection('clear');
+                    this.updateFilterSuggestions(this._filterInputValue.value);
+                };
+
+                this._suggestions.appendChild(item);
+            });
+        }
+
+        if (this._filterMode == 'node-search') {
+            let vertices = this._findNodes(term);
+
+            if (term != '') {
+                let defaultItem = document.createElement('div');
+                defaultItem.className = 'suggestion';
+
+                let defaultName = document.createElement('span');
+                defaultName.className = 'name';
+                defaultName.innerText = term;
+
+                let defailtDetails = document.createElement('span');
+                defailtDetails.className = 'details';
+                defailtDetails.innerText = 'Press enter to show all matches on the map...';
+
+                defaultItem.onclick = () => {
+                    this._moveSuggestionSelection('clear');
+                    this._filterUpdateHandler(undefined, true);
+                };
+
+                defaultItem.appendChild(defaultName);
+                defaultItem.appendChild(defailtDetails);
+
+                this._suggestions.appendChild(defaultItem);
+            }
+
+            vertices.forEach(vertex => {
+                var itemName = vertex.label;
+                var itemDetails = '';
+
+                if (vertex.type == 'node') {
+                    let node = vertex.object as EmulatorNode;
+
+                    itemDetails = node.meta.emulatorInfo.nets.map(net => net.address).join(', ');
+                    itemName = `${node.meta.emulatorInfo.role}: ${itemName}`;
+                }
+
+                if (vertex.type == 'network') {
+                    let net = vertex.object as EmulatorNetwork;
+
+                    itemDetails = net.meta.emulatorInfo.prefix;
+                    itemName = `${net.meta.emulatorInfo.type == 'global' ? 'Exchange' : 'Network'}: ${itemName}`;
+                }
+
+                let item = document.createElement('div');
+                item.className = 'suggestion';
+
+                let name = document.createElement('span');
+                name.className = 'name';
+                name.innerText = itemName;
+
+                let details = document.createElement('span');
+                details.className = 'details';
+                details.innerText = itemDetails;
+
+                item.appendChild(name);
+                item.appendChild(details);
+
+                item.onclick = () => {
+                    this._focusNode(vertex.id);
+                    let set = new Set<string>();
+                    set.add(vertex.id);
+                    this._updateSearchHighlights(set);
+                    this._suggestions.innerText = '';
+                    this._moveSuggestionSelection('clear');
+                };
+
+                this._suggestions.appendChild(item);
+            });
+        }
+    }
+
+    public async setFilterMode(mode: FilterMode) {
+        if (mode == this._filterMode) {
+            return;
+        }
+
+        this._filterMode = mode;
+
+        this._suggestions.innerText = '';
+        this._moveSuggestionSelection('clear');
+
+        if (mode == 'filter') {
+            this._updateSearchHighlights(new Set<string>());
+        }
+
+        if (mode == 'node-search') {
+            await this._filterUpdateHandler(undefined, true);
+        }
+    }
+
+    public createWindow(nodeId: string, title: string, queryData: IframeQueryData = {cmd: ''}) {
+        this._windowManager.createWindow(nodeId.substr(0, 12), title, queryData, true);
+    }
+
+    public setBackgroundImg(src: string) {
+        const canvasContainer = this._graph.canvas.body.container
+        canvasContainer.style.backgroundImage = `url(${src})`
+        canvasContainer.style.backgroundSize = 'cover'
+        canvasContainer.style.backgroundPosition = 'center'
+    }
+
+    public getConsoleIframeElement(id: string): HTMLIFrameElement {
+        return this._windowManager.getWindows()[id]!.iframeElement()
+    }
+
+    public getNodeInfoByContainerName(name: string) {
+        return this._datasource.getNodeInfoByContainerName(name)
+    }
+
+    public getNodeInfoById(id: string) {
+        return this._datasource.getNodeInfoById(id)
+    }
+
     /**
      * connect datasource, start mapping, and start the log/flash workers.
      */
@@ -1476,7 +1514,7 @@ export class MapUi {
         this._edges = new DataSet(edges);
         this._nodes = new DataSet(vertices);
 
-        let groups: {[key: string]: {}} = {};
+        let groups: { [key: string]: {} } = {};
 
         this._datasource.groups.forEach(group => {
             groups[group] = {
@@ -1528,6 +1566,17 @@ export class MapUi {
                 // hideEdgesOnDrag: true, // 拖拽时隐藏边提升性能
                 hideNodesOnDrag: false
             },
+            // physics: {
+            //     enabled: true,
+            //     solver: 'barnesHut',
+            //     barnesHut: {gravitationalConstant: -2600, springLength: 120},
+            //     stabilization: {iterations: 200}
+            // },
+            // interaction: {
+            //     dragView: false, // 初始不允许拖动
+            //     zoomView: false,
+            //     zoomSpeed: 0.4
+            // },
             ...otherOptions
         } as Options);
 
@@ -1543,7 +1592,6 @@ export class MapUi {
                 this.detailsDialogVisible.value = true
             }, CLICK_DELAY);
         });
-
         this._graph.on('doubleClick', (ev) => {
             if (ev.nodes.length <= 0) {
                 return;
@@ -1566,7 +1614,6 @@ export class MapUi {
                         this._edges.add(edge)
                     }
                 })
-                this._graph.stabilize();
                 this._expandNode(nodeId);
             } else {
                 this._collapseNode(nodeId);
@@ -1595,11 +1642,9 @@ export class MapUi {
             };
             Object.assign(tooltip.style, styles);
         });
-
         this._graph.on('blurNode', () => {
             tooltip.style.display = 'none';
         });
-
         this._graph.on('stabilizationProgress', (params) => {
             const percent = Math.round((params.iterations / params.total) * 100)
             this.allLoadingInstance?.setText(`${percent}%`)
@@ -1700,5 +1745,8 @@ export class MapUi {
         }));
 
         this._nodes.update(updates);
+    }
+    updateNodeStyle = (style: {}) => {
+        this._nodes.update(style);
     }
 }

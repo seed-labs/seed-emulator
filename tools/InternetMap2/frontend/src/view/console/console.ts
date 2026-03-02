@@ -4,7 +4,7 @@ import '@/style/console/console.css';
 import {ConsoleUi} from './ui';
 import {ConsoleNetwork} from './network';
 
-export async function initConsole(id: string, term: Terminal) {
+export async function initConsole(id: string, term: Terminal, cmd:string = '') {
     const net = new ConsoleNetwork(id);
     let container
     try {
@@ -52,5 +52,7 @@ export async function initConsole(id: string, term: Terminal) {
     let ws = net.getSocket();
 
     ui.attach(ws);
-    ui.configureIpc();
+    ui.configureIpc(cmd);
+
+    return ws
 }

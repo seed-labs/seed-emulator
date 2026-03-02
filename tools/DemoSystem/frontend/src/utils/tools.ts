@@ -67,6 +67,42 @@ export const findRouteWithParents = (path: string, routes: RouteRecord[]): Route
     findRecursive(routes, path)
     return result
 }
+
+export interface MenuMeta {
+    title: string
+    img?: string
+    description?: string
+    video?: {
+        src: string
+        title: string
+        description: string
+    }
+}
+
+export interface MenuItem {
+    name: string
+    path: string
+    meta: MenuMeta
+    children?: MenuItem[]
+}
+
+export const findMenuByName = (
+    menus: MenuItem[],
+    name: string
+): MenuItem | undefined => {
+    for (const menu of menus) {
+        if (menu.name === name) {
+            return menu
+        }
+
+        if (menu.children?.length) {
+            const found = findMenuByName(menu.children, name)
+            if (found) return found
+        }
+    }
+
+    return undefined
+}
 export const showNotification = (type: 'success' | 'warning' | 'info' | 'error' | '', message: string, title?: string) => {
     ElNotification({
         type,
@@ -83,18 +119,6 @@ export const AllLoading = () => {
     })
 }
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-export const contentMarker = (signature: string): string => {
-    // const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
-
-    return `# ==================== signature ${signature} ====================
-# Do not edit manually between BEGIN and END markers`.trim()
-}
-export const addContentMarker = (configContent: string, signature: string): string => {
-    // const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
-
-    return `${signature}
-${configContent}`.trim()
-}
 export const dockerExec = async (params: { [key: string]: any }) => {
     const action = params.action || "exec"
     delete params.action;
@@ -119,6 +143,18 @@ export const dockerExec = async (params: { [key: string]: any }) => {
             ret = await executeApiCall(() =>
                 reqHostExec(params as HostExec)
             )
+            break
+        case 'terminal_exec':
+            const msg = {
+                type: "DEMO_SYSTEM_CTRL",
+                cmd: params.cmd || "pwd",
+                name: params.containerName
+            }
+            params.terminalIframeElement?.contentWindow?.postMessage(
+                msg,
+                '*'
+            )
+            ret = {ok: true, result: "ok"}
             break
         default:
             ret = {ok: false, result: `不支持的action: ${action}`}

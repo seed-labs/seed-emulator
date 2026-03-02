@@ -42,11 +42,7 @@ router.post('/exec', async (req, res) => {
         )).filter(id => id !== "")
     }
     if (!containerIds.length) {
-        dockerOperation.execDockerCommand(cmd).then(r => {
-            res.json({ok: true, result: r.stdout})
-        }).catch(err => {
-            res.json({ok: false, result: err.message})
-        })
+        res.json({ok: false, result: `容器未找到 ${containerNames}`})
         return
     }
     await Promise.all(
@@ -75,36 +71,6 @@ router.post('/exec', async (req, res) => {
         return
     }
     res.json({ok: true, result: JSON.stringify({succeeded, failed})});
-});
-router.post('/compose/exec', async (req, res) => {
-    let {host, port, composePath, cmd} = req.body as {
-        host: string;
-        port: string,
-        composePath: string,
-        cmd: string,
-    };
-
-    const docker = await dockerOperation.getDocker();
-    if (!docker) {
-        res.json({ok: false, result: "getDocker failed"});
-        return
-    }
-    try {
-        composePath = path.join(basePath, composePath)
-        switch (cmd) {
-            case "composeUp":
-                await dockerOperation.composeUp(composePath)
-                break
-            case "composeDown":
-                await dockerOperation.composeDown(composePath)
-                break
-            default:
-                throw new Error(`暂不支持的命令: ${cmd}`)
-        }
-        res.json({ok: true, result: ''});
-    } catch (e) {
-        res.json({ok: false, result: e.message as string})
-    }
 });
 router.post('/host/exec', async (req, res) => {
     let {cmd} = req.body as { cmd: string }

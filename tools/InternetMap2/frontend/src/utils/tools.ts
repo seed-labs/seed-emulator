@@ -85,3 +85,17 @@ export const allLoading = () => {
         fullscreen: true
     })
 }
+
+export const getSocket = (protocol: string = 'ws', uri: string = '/host'): WebSocket => {
+    const host = import.meta.env.MODE === 'development' ? import.meta.env.VITE_PROXY_ADDRESS.replace(/^https?:\/\//, '') : location.host
+    return new WebSocket(`${protocol}://${host}${import.meta.env.VITE_SERVER_URL_PREFIX}${uri}`);
+}
+
+export const geoToXY = (lat: number, lon: number) => {
+    const WIDTH = 2400
+    const HEIGHT = 1200
+    return {
+        x: ((lon + 180) / 360) * WIDTH - WIDTH / 2,
+        y: ((90 - lat) / 180) * HEIGHT - HEIGHT / 2
+    }
+}

@@ -2,8 +2,16 @@ import {DataSet} from 'vis-data';
 import type {FullItem} from 'vis-data/declarations/data-interface';
 import type {EdgeOptions, NodeOptions} from 'vis-network';
 import request from '@/utils/request';
+import {geoToXY, getSocket} from '@/utils/tools.ts';
 import type {AxiosRequestConfig, AxiosResponse} from 'axios';
-import type {BgpPeer, EmulatorNetwork, EmulatorNode, EmulatorNodeInfo, TransitsEmulatorNodeInfo} from './types';
+import type {
+    BgpPeer,
+    EmulatorNetwork,
+    EmulatorNode,
+    EmulatorNodeInfo,
+    TransitsEmulatorNodeInfo,
+    IXLocation
+} from './types';
 
 export const META_CLASS = 'org.seedsecuritylabs.seedemu.meta.class';
 
@@ -227,6 +235,10 @@ export class DataSource {
         return this._nodes.find(n => n.Id === nodeId);
     }
 
+    getNodeInfoByContainerName(name: string) {
+        return this._nodes.find(node => node.Names.includes(name));
+    }
+
     getNodeInfoByIP(ip) {
         return this._nodes.find(node => {
             const net = node.NetworkSettings.Networks;
@@ -363,6 +375,15 @@ export class DataSource {
         let vertices: Vertex[] = [];
         let hiddenNodeNetworkIds = new Set<string>()
 
+        // const IX_DB: IXLocation[] = [
+        //     {id: 'HN', name: 'HaiNan-IX', lat: 20.04, lon: 110.19},
+        //     {id: 'BJ', name: 'BeiJing-IX', lat: 39.9, lon: 116.4},
+        //     {id: 'AMS', name: 'AMS-IX', lat: 52.37, lon: 4.9},
+        //     {id: 'LON', name: 'LINX', lat: 51.5, lon: -0.12},
+        //     {id: 'TYO', name: 'JP-IX', lat: 35.68, lon: 139.76},
+        //     {id: 'NewYork', name: 'NewYork-IX', lat: 74.01, lon: 40.71}
+        // ]
+
         this._nodes.forEach(node => {
             let nodeInfo = node.meta.emulatorInfo;
             let vertex: Vertex = {
@@ -373,7 +394,7 @@ export class DataSource {
                 // hidden: !['Router', 'BorderRouter', 'Route Server'].includes(nodeInfo.role),
                 object: node,
                 collapsed: false,
-                custom: node.meta.emulatorInfo.custom
+                custom: node.meta.emulatorInfo.custom,
             };
 
             if (nodeInfo.role != 'Route Server') {
@@ -400,6 +421,22 @@ export class DataSource {
                 collapsed: hiddenNodeNetworkIds.has(net.Id),
                 borderWidth: hiddenNodeNetworkIds.has(net.Id) ? 3 : 1
             };
+
+            // if (netInfo.type === 'global') {
+            //     const ix = IX_DB.pop()
+            //     if (ix) {
+            //         vertex.physics = false
+            //         vertex.fixed = true
+            //         vertex.label = ix.name
+            //         const pos = geoToXY(ix!.lat, ix!.lon)
+            //         console.log(pos)
+            //         vertex.x = pos.x
+            //         vertex.y = pos.y
+            //         vertex.size = 30
+            //         vertex.color = { background: '#2563eb', border: '#0f172a' }
+            //         vertex.font = { size: 13, color: '#000' }
+            //     }
+            // }
 
             if (netInfo.type == 'local') {
                 vertex.group = netInfo.scope;

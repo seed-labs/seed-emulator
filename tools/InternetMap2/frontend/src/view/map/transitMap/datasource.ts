@@ -30,6 +30,8 @@ export class DataSource extends BaseDataSource {
                 const from = _nodes.find(item => item.Id === edge!.from) as EmulatorNode
                 const to = _nets.find(item => item.Id === edge!.to) as EmulatorNetwork
 
+                if (!from || !to) continue
+
                 let nodeInfo = from.meta.emulatorInfo;
                 let netInfo = to!.meta.emulatorInfo;
                 let nodeVertex: Vertex = {

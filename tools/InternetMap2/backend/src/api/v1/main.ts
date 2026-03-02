@@ -8,6 +8,11 @@ import {PluginManager} from '../../utils/plugin-manager';
 import WebSocket from 'ws';
 import {Controller} from '../../utils/controller';
 
+const wsDataType = {
+    SNIFF_PACKET: "SNIFF_PACKET",
+    CAPTURE_PACKET: "CAPTURE_PACKET"
+}
+
 const router = express.Router();
 const docker = new dockerode();
 const socketHandler = new SocketHandler(docker);
@@ -47,13 +52,13 @@ controller.getLoggers().forEach(logger => logger.setSettings({
 }));
 
 router.get('/env.js', (req, res, next) => {
-  const envVarsForFrontend = {
-    CONSOLE: process.env.CONSOLE,
-  };
-  res.setHeader('Content-Type', 'application/javascript');
-  res.send(`window.__ENV__ = ${JSON.stringify(envVarsForFrontend)}`);
+    const envVarsForFrontend = {
+        CONSOLE: process.env.CONSOLE,
+    };
+    res.setHeader('Content-Type', 'application/javascript');
+    res.send(`window.__ENV__ = ${JSON.stringify(envVarsForFrontend)}`);
 
-  next();
+    next();
 });
 
 router.get('/network', async function (req, res, next) {
@@ -237,8 +242,8 @@ router.post('/container/vis/set', express.json(), async function (req, res, next
     }
     let option = {
         id: candidates[0].Id,
-        static: {borderWidth: 1},
-        dynamic: {borderWidth: 4},
+        static: {borderWidth: 1, size: 25},
+        dynamic: {borderWidth: 4, size: 25},
         action
     }
     switch (action) {
@@ -250,8 +255,8 @@ router.post('/container/vis/set', express.json(), async function (req, res, next
             option.static = (!req.body['highlight'] || Object.keys(req.body['highlight']).length === 0) ? {borderWidth: 4} : req.body['highlight'];
             break
         default:
-            option.static = {borderWidth: 1};
-            option.dynamic = {borderWidth: 4};
+            option.static = {borderWidth: 1, size: 25};
+            option.dynamic = {borderWidth: 4, size: 25};
             break
     }
 
@@ -300,16 +305,21 @@ router.ws('/console/:id', async function (ws, req, next) {
 var snifferSubscribers: WebSocket[] = [];
 var currentSnifferFilter: string = '';
 var visSubscribers: WebSocket[] = [];
+var hostSubscribers: WebSocket[] = [];
+var packetSubscribers: WebSocket[] = [];
 
 router.post('/sniff', express.json(), async function (req, res, next) {
+    currentSnifferFilter = req.body.filter ?? '';
     sniffer.setListener((nodeId, data) => {
-        var deadSockets: WebSocket[] = [];
+        let deadSockets: WebSocket[] = [];
 
         snifferSubscribers.forEach(socket => {
-            if (socket.readyState == 1) {
-                socket.send(JSON.stringify({
-                    source: nodeId, data: data.toString('utf8')
-                }));
+            if (currentSnifferFilter !== '') {
+                if (socket.readyState == 1) {
+                    socket.send(JSON.stringify({
+                        type: wsDataType.SNIFF_PACKET, source: nodeId, data: data.toString('utf8')
+                    }));
+                }
             }
 
             if (socket.readyState > 1) {
@@ -319,8 +329,6 @@ router.post('/sniff', express.json(), async function (req, res, next) {
 
         deadSockets.forEach(socket => snifferSubscribers.splice(snifferSubscribers.indexOf(socket), 1));
     });
-
-    currentSnifferFilter = req.body.filter ?? '';
 
     await sniffer.sniff((await getContainers()).map(c => c.Id), currentSnifferFilter);
 
@@ -354,6 +362,34 @@ router.ws('/container/vis/set', async function (ws, req, next) {
     visSubscribers.push(ws);
     next();
 });
+
+router.ws('/host', async function (ws, req, next) {
+    hostSubscribers.push(ws);
+    next();
+});
+
+router.post('/host', express.json(), async function (req, res, next) {
+    let deadSockets: WebSocket[] = [];
+
+    hostSubscribers.forEach(socket => {
+        if (socket.readyState == 1) {
+            socket.send(JSON.stringify(req.body));
+        }
+
+        if (socket.readyState > 1) {
+            deadSockets.push(socket);
+        }
+    });
+
+    deadSockets.forEach(socket => hostSubscribers.splice(hostSubscribers.indexOf(socket), 1));
+
+    res.json({
+        ok: true,
+        result: ""
+    });
+
+    next()
+})
 
 router.get('/container/:id/bgp', async function (req, res, next) {
     let id = req.params.id;
@@ -402,6 +438,58 @@ router.post('/container/:id/bgp/:peer', express.json(), async function (req, res
 
     res.json({
         ok: true
+    });
+
+    next();
+});
+
+router.ws('/packet', async function (ws, req, next) {
+    packetSubscribers.push(ws);
+    next();
+});
+router.post('/packet', express.json(), async function (req, res, next) {
+    let packetNum = 0
+    const action = req.body.action ?? ""
+    const id = req.body.nodeId ?? (await getContainers()).find(c => c.Names.includes(req.body.nodeName))?.Id
+    if (!id) {
+        res.json({
+            ok: false,
+            result: `nodeId: ${id} or nodeName: ${req.body.nodeName} does not exist`
+        });
+        next();
+        return;
+    }
+    sniffer.setCapturePacketListener((nodeId) => {
+        if (nodeId != id) {
+            return
+        }
+        let deadSockets: WebSocket[] = [];
+        packetNum = action === "restore" ? -1 : packetNum + 1
+        packetSubscribers.forEach(socket => {
+            if (socket.readyState == 1) {
+                socket.send(JSON.stringify({
+                    type: wsDataType.CAPTURE_PACKET, source: nodeId, data: {
+                        packetNum,
+                    }
+                }));
+            }
+
+            if (socket.readyState > 1) {
+                deadSockets.push(socket);
+            }
+        });
+
+        deadSockets.forEach(socket => snifferSubscribers.splice(snifferSubscribers.indexOf(socket), 1));
+    });
+
+    const currentPacketFilter = req.body.filter ?? '';
+    await sniffer.sniff([id], currentPacketFilter);
+
+    res.json({
+        ok: true,
+        result: {
+            currentPacketFilter: currentPacketFilter
+        }
     });
 
     next();

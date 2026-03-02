@@ -6,6 +6,7 @@ import { SessionManager, Session } from './session-manager';
 export class Sniffer implements LogProducer {
     private _logger: Logger;
     private _listener: (nodeId: string, stdout: any) => void;
+    private _capturePacketListener: (nodeId: string) => void;
     private _sessionManager: SessionManager;
 
     constructor(docker: dockerode) {
@@ -20,6 +21,9 @@ export class Sniffer implements LogProducer {
         session.stream.addListener('data', data => {
             if (this._listener) {
                 this._listener(nodeId, data);
+            }
+            if (this._capturePacketListener) {
+                this._capturePacketListener(nodeId);
             }
         });
     }
@@ -40,6 +44,10 @@ export class Sniffer implements LogProducer {
 
     setListener(listener: (nodeId: string, stdout: any) => void) {
         this._listener = listener;
+    }
+
+    setCapturePacketListener(listener: (nodeId: string) => void) {
+        this._capturePacketListener = listener;
     }
 
     clearListener() {

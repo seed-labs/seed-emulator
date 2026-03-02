@@ -10,13 +10,14 @@ export interface RouteRecord {
     path: string;
     component?: () => Promise<any>;
     name?: string;
-    redirect?: { name: string };
+    redirect?: { name: string, params?: { [key: string]: string } };
     meta?: {
         title: string;
         icon?: string;
         componentName?: string | undefined;
     };
     children?: RouteRecord[];
+    props?: boolean;
 }
 
 export interface Response {
@@ -26,14 +27,14 @@ export interface Response {
 }
 
 export interface BaseConsoleForm {
-  name: string
-  host: string
-  port: string
+    name: string
+    host: string
+    port: string
 }
 
 // 定义不同子组件可能需要的特定表单类型
 export interface BGPConsoleForm extends BaseConsoleForm {
-  targetHost: string
-  targetType: string
-  targetIPs: string[]
+    targetHost: string
+    targetType: string
+    targetIPs: string[]
 }
