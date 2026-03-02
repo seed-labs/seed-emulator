@@ -75,6 +75,40 @@ kubectl get nodes -o wide
 - Kind 节点是容器，但 K8s 的调度/控制器/自愈语义是真实的。
 - 这条链路适合验证编译产物正确性、工作负载可用性、协议与连通性检查。
 
+#### 2.1.1 重要：Multus 的 `Text file busy` 问题（已在脚本中自动规避）
+
+在某些环境中，Multus 的 initContainer 会把 `multus-shim` 直接 `cp` 到宿主机 `/opt/cni/bin/multus-shim`。
+如果 kubelet/containerd 正在执行这个二进制，Linux 可能报错 `Text file busy`，导致：
+
+- `kube-multus-ds` CrashLoop
+- 所有 Pod 都会卡在 `ContainerCreating`（连 `coredns` 都起不来）
+
+本仓库的 `setup_kubevirt_cluster.sh` 已自动把安装方式改成 “cp 到临时文件再 `mv` 原子替换”，避免覆盖正在执行的文件。
+
+如果你是在“已有集群”上遇到这个问题，可以手工修复（一次即可）：
+
+```bash
+kubectl -n kube-system patch ds kube-multus-ds --type='strategic' -p '{
+  "spec": {
+    "template": {
+      "spec": {
+        "initContainers": [
+          {
+            "name": "install-multus-binary",
+            "command": ["/bin/sh", "-c"],
+            "args": [
+              "set -eu; src=/usr/src/multus-cni/bin/multus-shim; dst=/host/opt/cni/bin/multus-shim; tmp=/host/opt/cni/bin/.multus-shim.tmp.$$; cp \"$src\" \"$tmp\"; chmod 0755 \"$tmp\"; mv -f \"$tmp\" \"$dst\";"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}'
+kubectl -n kube-system rollout status ds/kube-multus-ds --timeout=300s
+kubectl -n kube-system get pod -l name=multus -o wide
+```
+
 ### 2.2 运行一个例子（以 `k8s_transit_as.py` 为例）
 
 ```bash
@@ -92,6 +126,35 @@ kubectl create ns "${SEED_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -
 kubectl apply -n "${SEED_NAMESPACE}" -f k8s.yaml
 kubectl get pods -n "${SEED_NAMESPACE}" -o wide
 ```
+
+### 2.3 一键验证链路（推荐，带证据输出）
+
+如果你不是在“开发示例脚本”，而是想快速回答 “现在这套 K8s 后端到底能不能稳定跑通”，优先用仓库自带验证脚本：
+
+```bash
+cd /home/zzw4257/seed-k8s
+source scripts/env_seedemu.sh
+
+# 建议先用 degraded（全容器）跑通链路，再切 full/auto 走 VM。
+SEED_NAMESPACE=seedemu-local-quick \
+SEED_REGISTRY=localhost:5001 \
+SEED_CNI_TYPE=bridge \
+SEED_RUNTIME_PROFILE=degraded \
+SEED_CLEAN_NAMESPACE=true \
+SEED_ARTIFACT_DIR=/home/zzw4257/seed-k8s/output/kubevirt_validation_local_quick \
+./scripts/validate_kubevirt_hybrid.sh
+```
+
+它会做的事情（每一步都有 timeout，失败会落证据）：
+
+- 编译示例 `examples/kubernetes/k8s_hybrid_kubevirt_demo.py`
+- 构建并 push 镜像到 `SEED_REGISTRY`
+- 清理并重建 namespace（避免脏状态影响）
+- `kubectl apply` 部署 manifest，并等待 `Deployment/VMI` Ready
+- 检查 BGP 是否 `Established`
+- 做跨 AS ping 验证
+- 删除一个关键 Pod，验证 deployment 自愈并记录恢复时间
+- 输出证据到 `SEED_ARTIFACT_DIR/`（例如：`runtime_profile.json`、`bird_protocols.txt`、`pods_wide.txt`、`recovery_check.json`）
 
 ---
 

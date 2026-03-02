@@ -147,8 +147,45 @@ fetch_kubeconfig() {
 verify_cluster_readiness() {
     echo "[6/7] Verifying cluster readiness"
     kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" wait --for=condition=Ready node --all --timeout=300s
+    patch_multus_atomic_shim_install
     kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system rollout status daemonset/kube-multus-ds --timeout=300s
     kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" get nodes -o wide
+}
+
+patch_multus_atomic_shim_install() {
+    if ! kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system get daemonset/kube-multus-ds >/dev/null 2>&1; then
+        return
+    fi
+
+    local cmd0
+    cmd0="$(kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system get daemonset/kube-multus-ds -o jsonpath='{.spec.template.spec.initContainers[?(@.name=="install-multus-binary")].command[0]}' 2>/dev/null || true)"
+    if [ "${cmd0}" = "/bin/sh" ] || [ "${cmd0}" = "sh" ]; then
+        echo "  multus shim installer already uses atomic install"
+        return
+    fi
+
+    echo "  patching multus shim installer to avoid 'Text file busy' (atomic mv)"
+    kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system patch daemonset/kube-multus-ds --type='strategic' -p "$(
+        cat <<'JSON'
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "initContainers": [
+          {
+            "name": "install-multus-binary",
+            "command": ["/bin/sh", "-c"],
+            "args": [
+              "set -eu; src=/usr/src/multus-cni/bin/multus-shim; dst=/host/opt/cni/bin/multus-shim; tmp=/host/opt/cni/bin/.multus-shim.tmp.$$; cp \"$src\" \"$tmp\"; chmod 0755 \"$tmp\"; mv -f \"$tmp\" \"$dst\";"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+JSON
+    )" >/dev/null || true
 }
 
 validate_registry_pull_chain() {

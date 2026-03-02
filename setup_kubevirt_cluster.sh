@@ -151,11 +151,56 @@ ensure_cni_plugins_for_multus() {
 install_multus() {
     echo ">>> Installing Multus ${MULTUS_VERSION}"
     kubectl apply -f "${MULTUS_MANIFEST_URL}" >/dev/null
+
+    # Some Multus manifests (including thick deployments) install multus-shim by
+    # directly copying over /host/opt/cni/bin/multus-shim. If kubelet/containerd
+    # are concurrently executing the binary, Linux can raise ETXTBSY ("Text file busy"),
+    # crashing the initContainer and breaking Pod sandbox creation cluster-wide.
+    # We patch the initContainer to do an atomic replace (copy to temp + mv).
+    patch_multus_atomic_shim_install
+
     kubectl -n kube-system set resources daemonset/kube-multus-ds -c kube-multus \
         --requests="cpu=${MULTUS_CPU_REQUEST},memory=${MULTUS_MEMORY_REQUEST}" \
         --limits="cpu=${MULTUS_CPU_LIMIT},memory=${MULTUS_MEMORY_LIMIT}" >/dev/null
     echo ">>> Multus resources: requests(cpu=${MULTUS_CPU_REQUEST},memory=${MULTUS_MEMORY_REQUEST}) limits(cpu=${MULTUS_CPU_LIMIT},memory=${MULTUS_MEMORY_LIMIT})"
     kubectl -n kube-system rollout status daemonset/kube-multus-ds --timeout=300s
+}
+
+patch_multus_atomic_shim_install() {
+    if ! kubectl -n kube-system get daemonset/kube-multus-ds >/dev/null 2>&1; then
+        return
+    fi
+
+    # If already patched, don't trigger another rollout.
+    local cmd0
+    cmd0="$(kubectl -n kube-system get daemonset/kube-multus-ds -o jsonpath='{.spec.template.spec.initContainers[?(@.name=="install-multus-binary")].command[0]}' 2>/dev/null || true)"
+    if [ "${cmd0}" = "/bin/sh" ] || [ "${cmd0}" = "sh" ]; then
+        echo ">>> Multus shim installer already uses atomic install"
+        return
+    fi
+
+    echo ">>> Patching Multus shim installer to avoid 'Text file busy' (atomic mv)"
+    kubectl -n kube-system patch daemonset/kube-multus-ds --type='strategic' -p "$(
+        cat <<'JSON'
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "initContainers": [
+          {
+            "name": "install-multus-binary",
+            "command": ["/bin/sh", "-c"],
+            "args": [
+              "set -eu; src=/usr/src/multus-cni/bin/multus-shim; dst=/host/opt/cni/bin/multus-shim; tmp=/host/opt/cni/bin/.multus-shim.tmp.$$; cp \"$src\" \"$tmp\"; chmod 0755 \"$tmp\"; mv -f \"$tmp\" \"$dst\";"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+JSON
+    )" >/dev/null
 }
 
 install_kubevirt() {

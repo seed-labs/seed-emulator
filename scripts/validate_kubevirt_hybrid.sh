@@ -13,6 +13,7 @@ VMI_WAIT_TIMEOUT="${VMI_WAIT_TIMEOUT:-480s}"
 BGP_WAIT_TIMEOUT_SECONDS="${BGP_WAIT_TIMEOUT_SECONDS:-300}"
 RUNTIME_PROFILE="${SEED_RUNTIME_PROFILE:-auto}"
 CLEAN_NAMESPACE="${SEED_CLEAN_NAMESPACE:-true}"
+AUTO_FIX_MULTUS_TEXT_BUSY="${SEED_AUTO_FIX_MULTUS_TEXT_BUSY:-true}"
 CONNECTIVITY_TARGET_IP="${SEED_WEB151_SIM_IP:-10.151.0.71}"
 CONNECTIVITY_RETRY="${CONNECTIVITY_RETRY:-24}"
 CONNECTIVITY_RETRY_INTERVAL_SECONDS="${CONNECTIVITY_RETRY_INTERVAL_SECONDS:-5}"
@@ -68,6 +69,66 @@ print(data.get("reason", ""))
 PY
 }
 
+ensure_multus_ready() {
+    if ! kubectl -n kube-system get daemonset/kube-multus-ds >/dev/null 2>&1; then
+        echo ">>> Multus not installed (kube-system/daemonset kube-multus-ds missing). This workflow requires Multus." >&2
+        echo ">>> Fix: run ./setup_kubevirt_cluster.sh (Kind) or ./scripts/setup_k3s_cluster.sh (K3s)." >&2
+        exit 1
+    fi
+
+    local desired ready
+    desired="$(kubectl -n kube-system get daemonset/kube-multus-ds -o jsonpath='{.status.desiredNumberScheduled}' 2>/dev/null || echo 0)"
+    ready="$(kubectl -n kube-system get daemonset/kube-multus-ds -o jsonpath='{.status.numberReady}' 2>/dev/null || echo 0)"
+
+    if [ "${desired}" != "0" ] && [ "${ready}" = "${desired}" ]; then
+        return
+    fi
+
+    echo ">>> Multus not ready: ${ready}/${desired}"
+
+    if [ "${AUTO_FIX_MULTUS_TEXT_BUSY}" = "true" ]; then
+        local cmd0
+        cmd0="$(kubectl -n kube-system get daemonset/kube-multus-ds -o jsonpath='{.spec.template.spec.initContainers[?(@.name==\"install-multus-binary\")].command[0]}' 2>/dev/null || true)"
+        if [ "${cmd0}" = "cp" ]; then
+            echo ">>> Detected cp-based multus-shim installer; patching to atomic install (avoid 'Text file busy')"
+            kubectl -n kube-system patch daemonset/kube-multus-ds --type='strategic' -p "$(
+                cat <<'JSON'
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "initContainers": [
+          {
+            "name": "install-multus-binary",
+            "command": ["/bin/sh", "-c"],
+            "args": [
+              "set -eu; src=/usr/src/multus-cni/bin/multus-shim; dst=/host/opt/cni/bin/multus-shim; tmp=/host/opt/cni/bin/.multus-shim.tmp.$$; cp \"$src\" \"$tmp\"; chmod 0755 \"$tmp\"; mv -f \"$tmp\" \"$dst\";"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+JSON
+            )" >/dev/null || true
+        fi
+    fi
+
+    kubectl -n kube-system rollout status daemonset/kube-multus-ds --timeout=300s || true
+
+    desired="$(kubectl -n kube-system get daemonset/kube-multus-ds -o jsonpath='{.status.desiredNumberScheduled}' 2>/dev/null || echo 0)"
+    ready="$(kubectl -n kube-system get daemonset/kube-multus-ds -o jsonpath='{.status.numberReady}' 2>/dev/null || echo 0)"
+
+    if [ "${desired}" = "0" ] || [ "${ready}" != "${desired}" ]; then
+        echo ">>> Multus still not ready after remediation. Diagnostics:" >&2
+        kubectl -n kube-system get daemonset/kube-multus-ds -o wide || true
+        kubectl -n kube-system get pods -l name=multus -o wide || true
+        kubectl -n kube-system get events --sort-by=.lastTimestamp | tail -n 40 || true
+        exit 1
+    fi
+}
+
 configure_kind_masq_exemptions() {
     if [ "${KIND_FIX_MASQ}" != "true" ]; then
         return
@@ -104,6 +165,8 @@ configure_kind_masq_exemptions() {
 
 echo ">>> Using kube context ${KUBECONTEXT}"
 kubectl config use-context "${KUBECONTEXT}" >/dev/null
+
+ensure_multus_ready
 
 NODE_ARCH="$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.architecture}')"
 HOST_HAS_KVM="false"
