@@ -20,7 +20,7 @@ const parseQueryData = <T>(queryString: string, key: string): T | null => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   const term = new Terminal({
     theme: {
       foreground: '#C5C8C6',
@@ -38,13 +38,26 @@ onMounted(() => {
     }
   });
 
-  term.open(document.getElementById('terminal'));
+  term.open(document.getElementById('terminal')!);
 
   const hash = window.location.hash.replace('#', '');
   const [id, queryString] = hash.split('?')
   const queryData = parseQueryData<IframeQueryData>(queryString || '', 'data')
   const cmd = queryData?.cmd || ''
-  initConsole(id!, term, cmd)
+  const ws = await initConsole(id!, term, cmd)
+  window.addEventListener('message', (e) => {
+    if (!ws) {
+      return
+    }
+    const msg = e.data
+    if (msg?.type === 'DEMO_SYSTEM_CTRL') {
+      if (msg?.cmd && msg?.cmd.trim() !== '') {
+        setTimeout(() => {
+          ws.send(`${msg?.cmd}\n`)
+        }, 1000)
+      }
+    }
+  })
 })
 </script>
 

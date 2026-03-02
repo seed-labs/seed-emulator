@@ -1,5 +1,6 @@
 export const componentRecord = {
     bgp: 'yesterday_once_more/bgp',
+    mirai: 'yesterday_once_more/mirai',
     morris: 'yesterday_once_more/morris'
 }
 
@@ -53,6 +54,20 @@ export const menus = [
           "title": "Morris worm 蠕虫",
           "img": new URL('@/assets/img/worm.png', import.meta.url).href,
           "description": "莫里斯蠕虫（1988年11月）是通过互联网传播的最古老的计算机蠕虫之一。虽然它很古老，但今天大多数蠕虫使用的技术仍然是相同的。它们包括两个主要部分：攻击和自我复制。攻击部分利用一个漏洞（或几个漏洞），因此蠕虫可以进入另一台计算机。自我复制部分是将自己的副本发送到受感染的机器，然后从那里发动攻击。",
+          "video": {
+            "src": "",
+            "title": "",
+            "description": ""
+          }
+        }
+      },
+      {
+        "name": "mirai",
+        "path": "/dashboard/yesterdayOnceMore/simulation/mirai",
+        "meta": {
+          "title": "Mirai 僵尸网络攻击",
+          "img": new URL('@/assets/img/mirai.png', import.meta.url).href,
+          "description": "近年来物联网（IoT）安全领域最经典、最具代表性的威胁之一。它主要通过暴力破解（Brute Force）手段入侵具有弱密码的网络设备（如路由器、DVR、摄像头等），将其转变为“僵尸”（Bot），并在命令与控制（C&C）服务器的指挥下发起大规模的分布式拒绝服务（DDoS）攻击。",
           "video": {
             "src": "",
             "title": "",

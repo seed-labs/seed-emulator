@@ -78,6 +78,16 @@ export const defaultRouters: RouteRecord[] = [
                     componentName: 'transitMap',
                 },
             },
+            // {
+            //     path: '/testMap',
+            //     component: () => import('@/view/map/test/testMap.vue'),
+            //     name: 'testMap',
+            //     meta: {
+            //         title: "testMap",
+            //         icon: 'HomeFilled',
+            //         componentName: 'testMap',
+            //     },
+            // },
         ]
     },
     {

@@ -224,7 +224,7 @@ export class ConsoleUi {
             }));
             if (cmd && cmd.trim() !== '') {
                 setTimeout(() => {
-                    this._socket.send(`\n${cmd}\n`)
+                    this._socket.send(`${cmd}\n`)
                 }, 1000)
             }
         };

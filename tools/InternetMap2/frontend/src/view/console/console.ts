@@ -53,4 +53,6 @@ export async function initConsole(id: string, term: Terminal, cmd:string = '') {
 
     ui.attach(ws);
     ui.configureIpc(cmd);
+
+    return ws
 }

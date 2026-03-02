@@ -296,7 +296,7 @@ APPEND_EOF`
             ret.stdout = output.stdout;
             this._logger.info(`containerId: ${containerId} Successfully exec cmd: (${cmd}), detach: ${detach}`);
         } catch (error) {
-            this._logger.warn(`Error exec cmd: (${cmd}), error: ${error}`);
+            this._logger.warn(`Warning exec cmd: (${cmd}), error: ${error}`);
             ret.ok = false
             ret.stderr = `${error}`
         }

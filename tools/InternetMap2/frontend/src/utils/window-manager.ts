@@ -543,6 +543,10 @@ export class Window {
     }
 
     // 公共方法
+    iframeElement(): HTMLIFrameElement {
+        return this._frameElement;
+    }
+
     getId(): string {
         return this._id;
     }

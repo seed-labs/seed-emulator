@@ -1,7 +1,7 @@
 <script setup lang="ts" xmlns="http://www.w3.org/1999/html">
 import {ref, onMounted, reactive, nextTick, shallowRef, type PropType, type Component} from "vue";
 import type {TabsPaneContext} from 'element-plus'
-import {ElNotification} from "element-plus";
+import {ElNotification, ElMessage} from "element-plus";
 import type {Details} from '@/types'
 import {allLoading, getSocket} from '@/utils/tools.ts'
 import {
@@ -16,7 +16,7 @@ import {
   VideoPlay,
   SwitchButton
 } from '@element-plus/icons-vue'
-import {CLICK_CLASS} from "@/utils/map-ui.ts";
+import {CLICK_CLASS, wsDataType} from "@/utils/map-ui.ts";
 import {MapUi, type OtherConfiguration} from "@/view/map/map/ui.ts";
 import {MapUi as IXMapUi, type IxMapUiOtherConfiguration} from "@/view/map/ixMap/ui.ts";
 import {MapUi as TransitMapUi, type TransitMapUiOtherConfiguration} from "@/view/map/transitMap/ui.ts";
@@ -102,9 +102,15 @@ const replayState = reactive({
   }
 })
 
+const imgSrc = new URL('@/assets/img/worldMap.png', import.meta.url).href
 const onSubmitFilter = async () => {
   if (!mapUi.value) return
   await mapUi.value?.onSubmitFilter(inputFilter.value)
+  ElMessage({
+    message: '已提交',
+    type: 'success',
+    duration: 1000
+  })
 }
 const onSubmitSearch = () => {
   if (!mapUi.value) return
@@ -219,6 +225,63 @@ const searchInput = () => {
   if (!mapUi.value) return
   mapUi.value?.updateFilterSuggestions(inputSearch.value)
 }
+
+const getConsoleIframeElement = (id: string) => {
+  if (!mapUi.value) return
+  return mapUi.value?.getConsoleIframeElement(id)
+}
+
+const getNodeInfoByContainerName = (name: string) => {
+  if (!mapUi.value) return
+  return mapUi.value?.getNodeInfoByContainerName(name)
+}
+
+const packetWsSet = () => {
+  const packetWs = getSocket('ws', '/packet')
+  packetWs.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data?.type !== wsDataType.CAPTURE_PACKET) {
+        return
+      }
+      let nodeInfo, style
+      const packetNum = data.data.packetNum ?? -1
+      if (packetNum === -1) {
+        nodeInfo = mapUi.value?.getNodeInfoById(data.source)?.meta.emulatorInfo
+        style = {
+          id: data.source,
+          borderWidth: 1,
+          label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
+          size: 25,
+          font: {size: 14},
+        }
+      } else {
+        style = {
+          id: data.source,
+          borderWidth: 4,
+          label: `${packetNum}`,
+          font: {size: 50},
+          size: 60,
+        }
+      }
+      mapUi.value?.updateNodeStyle(style)
+    } catch (e) {
+      console.log(e)
+    }
+  }
+}
+
+const hostWsSet = (ui: MapUi | IXMapUi | TransitMapUi) => {
+  const ws = getSocket()
+  ws.onmessage = (event) => {
+    try {
+      const {nodeId, title, cmd} = JSON.parse(event.data)
+      ui.createWindow(nodeId, title, {cmd})
+    } catch (e) {
+      console.log(e)
+    }
+  }
+}
 onMounted(() => {
   nextTick(async () => {
     const datasource = new props.dataSourceClass();
@@ -257,17 +320,24 @@ onMounted(() => {
     }
     const ui = new props.mapUiClass(config, props.otherConfig);
     await ui.start();
+    // ui.setBackgroundImg(imgSrc)
     mapUi.value = ui
+    hostWsSet(ui)
+    packetWsSet()
 
-    const ws = getSocket()
-    ws.onmessage = (event) => {
-      try {
-        const {nodeId, title, cmd} = JSON.parse(event.data)
-        ui.createWindow(nodeId, title, {cmd})
-      } catch (e) {
-        console.log(e)
+    window.addEventListener('message', (e) => {
+      const msg = e.data
+      if (msg?.type === 'DEMO_SYSTEM_CTRL') {
+        const nodeInfo = getNodeInfoByContainerName(`/${msg.name}`)
+        if (!nodeInfo) {
+          return
+        }
+        getConsoleIframeElement(nodeInfo.Id.slice(0, 12))?.contentWindow?.postMessage(
+            msg,
+            '*'
+        )
       }
-    }
+    })
   })
 })
 defineExpose({mapUi})

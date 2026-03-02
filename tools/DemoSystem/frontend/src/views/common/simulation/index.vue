@@ -1,5 +1,6 @@
 <template>
   <BaseMap
+      ref="baseMapRef"
       :title="title"
       :empty-title="emptyTitle"
       :iframe-src="iframeSrc"
@@ -40,6 +41,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const consoleTabsKey = ref(0)
 const componentConfig = ref<any>(null)
+const baseMapRef = ref<InstanceType<typeof BaseMap> | null>(null);
 
 const loadConfig = async (path: string) => {
   try {
@@ -102,7 +104,7 @@ const onConfirmNext = async (...stepArgs: number[]): Promise<ApiResponse<any>> =
   let ret: ApiResponse = {ok: true, result: ''}
   const allLoading = AllLoading()
   let intervalEvent = null, cmdKwargs: any[]
-  const activeStep = stepArgs[0] as number
+  const activeStep = stepArgs[0] as numberd
   switch (stepArgs.length) {
     case 2:
       cmdKwargs = componentConfig.value.config[activeStep].text[stepArgs[1] as number].cmdKwargs
@@ -126,6 +128,17 @@ const onConfirmNext = async (...stepArgs: number[]): Promise<ApiResponse<any>> =
       if (kwargs.containerNames === undefined) {
         kwargs.containerNames = [] as string[]
       }
+      if (kwargs.cmd) {
+        kwargs.cmd = kwargs.cmd.replace('$hostname', form.host)
+      }
+      if (kwargs.action === 'terminal_exec') {
+        const iframeElement = baseMapRef.value?.internetMapRef;
+        if (iframeElement) {
+          kwargs.terminalIframeElement = iframeElement
+        } else {
+          console.warn('internetMapRef 未准备好');
+        }
+      }
       ret = await dockerExec({...kwargs}) as ApiResponse
       if (!ret.ok) {
         break
@@ -133,8 +146,10 @@ const onConfirmNext = async (...stepArgs: number[]): Promise<ApiResponse<any>> =
     }
     if (ret.ok) {
       if (activeStep === 0) {
-        iframeSrc.value = `http://${form.host}:8080/pro/map`
-        // iframeSrc.value = `http://${form.host}:8080/map.html`
+        iframeSrc.value = ''
+        setTimeout(() => {
+          iframeSrc.value = `http://${form.host}:8080/pro/map`
+        }, 1000)
       } else if (activeStep === componentConfig.value.config.length - 1) {
         iframeSrc.value = ''
       }
