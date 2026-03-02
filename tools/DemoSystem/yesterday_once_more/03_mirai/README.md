@@ -1,9 +1,24 @@
-# Replaying Mirai Attack
+## Demo for Mirai Attack
 
 We have provided demos for this attack in the following folders using different displaying methods:
 
-1. `demo` folder: Displaying victim's screen in your machine's browser (localhost,port 8888) or on the victim's screen in your own VM.
+### Replay the attack
 
-2. `demo_with_proxmox_vm` folder: Displaying victim's screen in our Proxmox VM System. If you don't have access to the Proxmox VM System, please choose the `demo` folder.
+To replay the attack, follow the instructions below:
 
-Details of replaying is in mirai.ipynb, please read the provided jupyter notebook.
+1. Generate the emulator 
+
+```bash
+cd demo 
+python ./mirai_internet_with_dns.py
+```
+
+2. Start the emulator:
+
+```bash
+cd demo_output
+DOCKER_BUILDKIT=0 docker compose build
+```
+
+3. Operate on the `DemoSystem` webpage
+
