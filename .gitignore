@@ -32,5 +32,8 @@ project-words.txt
 **/.obsidian/**
 test_result.txt
 
+# Local kind binary (some workflows download it into repo root)
+kind
+
 **/auto-imports.d.ts
 **/components.d.ts

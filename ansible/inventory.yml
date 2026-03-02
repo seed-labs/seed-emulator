@@ -4,25 +4,28 @@
 
 all:
   vars:
-    ansible_user: parallels
-    ansible_ssh_private_key_file: ~/.ssh/id_rsa
-    k3s_version: v1.28.5+k3s1
+    ansible_user: __SEED_K3S_USER__
+    ansible_ssh_private_key_file: __SEED_K3S_SSH_KEY__
+    k3s_version: __SEED_K3S_VERSION__
+    seed_registry_host: __SEED_REGISTRY_HOST__
+    seed_registry_port: __SEED_REGISTRY_PORT__
+    seed_cni_master_interface: __SEED_CNI_MASTER_INTERFACE__
     
   children:
     master:
       hosts:
         k3s-master:
-          ansible_host: 192.168.64.10
+          ansible_host: __SEED_K3S_MASTER_IP__
           k3s_role: server
           seedemu_as_group: as2
           
     workers:
       hosts:
         k3s-worker1:
-          ansible_host: 192.168.64.11
+          ansible_host: __SEED_K3S_WORKER1_IP__
           k3s_role: agent
           seedemu_as_group: as150
         k3s-worker2:
-          ansible_host: 192.168.64.12
+          ansible_host: __SEED_K3S_WORKER2_IP__
           k3s_role: agent
           seedemu_as_group: as151

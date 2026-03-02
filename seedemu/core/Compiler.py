@@ -72,6 +72,8 @@ class Compiler:
                 self._log('output folder "{}" already exist. Set "override = True" when calling compile() to override.'.format(output))
                 exit(1)
         mkdir(output)
+        # Implementation note: compilers run within the output directory so backends
+        # can emit relative artifacts (e.g., build scripts, manifests).
         chdir(output)
         self._doCompile(emulator)
         chdir(cur)

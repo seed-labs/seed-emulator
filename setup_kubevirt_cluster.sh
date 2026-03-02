@@ -8,6 +8,10 @@ KIND_VERSION="${KIND_VERSION:-v0.27.0}"
 K8S_NODE_IMAGE="${K8S_NODE_IMAGE:-kindest/node:v1.32.2}"
 WORKER_COUNT="${WORKER_COUNT:-2}"
 MULTUS_VERSION="${MULTUS_VERSION:-v4.1.0}"
+MULTUS_CPU_REQUEST="${MULTUS_CPU_REQUEST:-100m}"
+MULTUS_CPU_LIMIT="${MULTUS_CPU_LIMIT:-500m}"
+MULTUS_MEMORY_REQUEST="${MULTUS_MEMORY_REQUEST:-200Mi}"
+MULTUS_MEMORY_LIMIT="${MULTUS_MEMORY_LIMIT:-512Mi}"
 KUBEVIRT_VERSION="${KUBEVIRT_VERSION:-v1.7.0}"
 CNI_PLUGINS_VERSION="${CNI_PLUGINS_VERSION:-v1.8.0}"
 
@@ -147,6 +151,10 @@ ensure_cni_plugins_for_multus() {
 install_multus() {
     echo ">>> Installing Multus ${MULTUS_VERSION}"
     kubectl apply -f "${MULTUS_MANIFEST_URL}" >/dev/null
+    kubectl -n kube-system set resources daemonset/kube-multus-ds -c kube-multus \
+        --requests="cpu=${MULTUS_CPU_REQUEST},memory=${MULTUS_MEMORY_REQUEST}" \
+        --limits="cpu=${MULTUS_CPU_LIMIT},memory=${MULTUS_MEMORY_LIMIT}" >/dev/null
+    echo ">>> Multus resources: requests(cpu=${MULTUS_CPU_REQUEST},memory=${MULTUS_MEMORY_REQUEST}) limits(cpu=${MULTUS_CPU_LIMIT},memory=${MULTUS_MEMORY_LIMIT})"
     kubectl -n kube-system rollout status daemonset/kube-multus-ds --timeout=300s
 }
 
@@ -156,7 +164,14 @@ install_kubevirt() {
     kubectl -n kubevirt rollout status deployment/virt-operator --timeout=600s
     kubectl apply -f "${KUBEVIRT_CR_URL}" >/dev/null
 
+    local cr_deadline
+    cr_deadline=$((SECONDS + 120))
     until kubectl -n kubevirt get kubevirt kubevirt >/dev/null 2>&1; do
+        if [ "${SECONDS}" -ge "${cr_deadline}" ]; then
+            echo "Timed out waiting for KubeVirt CR (kubevirt/kubevirt) to appear." >&2
+            kubectl -n kubevirt get all -o wide || true
+            exit 1
+        fi
         sleep 2
     done
 

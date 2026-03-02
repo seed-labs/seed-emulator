@@ -129,17 +129,35 @@ def run(dumpfile=None, hosts_per_as=2):
     ###############################################################################
     # Kubernetes Compilation
 
+    registry_prefix = os.environ.get("SEED_REGISTRY", "localhost:5001")
+    namespace = os.environ.get("SEED_NAMESPACE", "seedemu")
+    cni_type = os.environ.get("SEED_CNI_TYPE", "bridge").strip().lower()
+    cni_master_interface = os.environ.get("SEED_CNI_MASTER_INTERFACE", "eth0").strip()
+    image_pull_policy = os.environ.get("SEED_IMAGE_PULL_POLICY", "IfNotPresent").strip()
+
     # Configure the compiler
     k8s = KubernetesCompiler(
-        registry_prefix="localhost:5000",
-        namespace="seedemu"
+        registry_prefix=registry_prefix,
+        namespace=namespace,
+        use_multus=True,
+        internetMapEnabled=False,
+        cni_type=cni_type,
+        cni_master_interface=cni_master_interface,
+        generate_services=True,
+        image_pull_policy=image_pull_policy,
     )
 
-    # Compile to the 'output' directory relative to script
-    output_dir = os.path.join(os.path.dirname(__file__), 'output_mini_internet')
+    # Compile to the output directory.
+    output_dir = os.environ.get("SEED_OUTPUT_DIR")
+    if not output_dir:
+        output_dir = os.path.join(os.path.dirname(__file__), 'output_mini_internet')
+    elif not os.path.isabs(output_dir):
+        output_dir = os.path.join(os.path.dirname(__file__), output_dir)
     emu.compile(k8s, output_dir, override=True)
 
     print(f"Compilation complete. Output generated in {output_dir}")
+    print(f"Registry prefix: {registry_prefix}")
+    print(f"Namespace: {namespace}")
 
 if __name__ == "__main__":
     run()

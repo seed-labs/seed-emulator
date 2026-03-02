@@ -1010,6 +1010,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         @returns self, for chaining API calls.
         """
         assert mode in ["Container", "KubeVirt"], "Invalid virtualization mode. Must be 'Container' or 'KubeVirt'."
+        # Virtualization mode is part of per-node runtime intent (container vs VM).
         self.__virtualization_mode = mode
         return self
 
@@ -1042,6 +1043,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for v in node.getDockerVolumes(): self.addDockerVolume(v)
         for (c, f) in node.getStartCommands(): self.appendStartCommand(c, f)
+        # Keep VM/container semantics consistent after render-time binding.
         self.setVirtualizationMode(node.getVirtualizationMode())
         # for (c, f) in node.getUserStartCommands(): self.appendUserStartCommand(c, f)
         for c in node.getBuildCommands(): self.addBuildCommand(c)

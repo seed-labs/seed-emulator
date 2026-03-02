@@ -132,6 +132,10 @@ class KubernetesCompiler(Docker):
         registry = emulator.getRegistry()
         self._groupSoftware(emulator)
 
+        # Implementation overview:
+        # (1) networks -> NetworkAttachmentDefinition (Multus),
+        # (2) nodes -> Deployment/VirtualMachine,
+        # (3) output artifacts (k8s.yaml, build_images.sh, .env).
         # 1. Generate NetworkAttachmentDefinitions (if Multus)
         if self.__use_multus:
             for ((scope, type, name), obj) in registry.getAll().items():
@@ -233,6 +237,7 @@ spec:
         self._current_node = node
 
         # Check virtualization mode
+        # Virtualization split point: "KubeVirt" -> VirtualMachine, otherwise Deployment.
         if node.getVirtualizationMode() == "KubeVirt":
             result = self._compileNodeKubeVirt(node)
 
@@ -442,6 +447,7 @@ spec:
         asn = str(node.getAsn())
         role = self._nodeRoleToString(node.getRole())
 
+        # Fail-fast boundary for unsupported container-only features.
         self._assertKubeVirtCompatibility(node)
 
         # 1. Build Cloud-Init User Data
@@ -460,8 +466,9 @@ spec:
                 "permissions": "0644"
             })
 
-        # Generate and add replace_address.sh (Address Hack)
-        # For VMs, interfaces are eth1, eth2... (eth0 is mgmt)
+        # Generate and add replace_address.sh to configure static IPs on Multus interfaces.
+        # For VMs, interface names are not always eth1/eth2 (predictable naming varies),
+        # so the generated script falls back to auto-detection when needed.
         address_script = self._generateK8sAddressScript(interface_prefix="eth")
         user_data["write_files"].append({
             "path": "/usr/local/bin/replace_address.sh",
@@ -469,6 +476,13 @@ spec:
             "permissions": "0755"
         })
         user_data["runcmd"].append(["/usr/local/bin/replace_address.sh"])
+
+        # Routers need forwarding and relaxed rp_filter for asymmetric paths.
+        user_data["runcmd"].extend([
+            ["sh", "-c", "sysctl -w net.ipv4.ip_forward=1"],
+            ["sh", "-c", "sysctl -w net.ipv4.conf.all.rp_filter=0"],
+            ["sh", "-c", "sysctl -w net.ipv4.conf.default.rp_filter=0"],
+        ])
 
         for command in node.getBuildCommands():
             user_data["runcmd"].append(self._toCloudInitRunCommand(command, False))
@@ -618,24 +632,61 @@ spec:
 
     def _generateK8sAddressScript(self, interface_prefix: str = "net") -> str:
         """
-        Generates a script to configure IPs on Multus interfaces.
-        Multus interfaces are usually named net1, net2... (default) or eth1, eth2... (VMs)
+        Generate a script to configure static IPs on Multus interfaces.
+
+        - In containers, Multus interfaces are typically named net1/net2/...
+        - In VMs (KubeVirt), interface names depend on predictable naming rules and
+          are not reliably eth1/eth2/...
+
+        The generated script prefers deterministic `${prefix}1..N` when present,
+        otherwise it auto-detects non-default interfaces by ifindex order.
         """
         node = self._current_node
+        iface_count = len(node.getInterfaces())
+
         script = "#!/bin/bash\n"
-        script += "# K8s Address Replacement\n"
+        script += "set -euo pipefail\n"
+        script += "# K8s Address Replacement (Multus)\n\n"
+        script += f"iface_prefix=\"{interface_prefix}\"\n"
+        script += f"expected_ifaces={iface_count}\n\n"
+
+        script += "declare -a seed_ifaces=()\n"
+        script += "if [ -n \"${iface_prefix}\" ] && ip link show \"${iface_prefix}1\" >/dev/null 2>&1; then\n"
+        script += "  for i in $(seq 1 ${expected_ifaces}); do\n"
+        script += "    seed_ifaces+=(\"${iface_prefix}${i}\")\n"
+        script += "  done\n"
+        script += "else\n"
+        script += "  default_if=\"$(ip route show default 2>/dev/null | awk '/default/ {print $5; exit}')\"\n"
+        script += "  [ -z \"${default_if}\" ] && default_if=\"eth0\"\n"
+        script += "  mapfile -t seed_ifaces < <(\n"
+        script += "    for dev in /sys/class/net/*; do\n"
+        script += "      name=\"$(basename \"$dev\")\"\n"
+        script += "      [ \"$name\" = \"lo\" ] && continue\n"
+        script += "      [ \"$name\" = \"$default_if\" ] && continue\n"
+        script += "      idx=\"$(cat \"$dev/ifindex\" 2>/dev/null || echo 9999)\"\n"
+        script += "      echo \"$idx $name\"\n"
+        script += "    done | sort -n | awk '{print $2}'\n"
+        script += "  )\n"
+        script += "fi\n\n"
+
+        script += "configure_iface() {\n"
+        script += "  local slot=\"$1\"\n"
+        script += "  local addr=\"$2\"\n"
+        script += "  local iface=\"${seed_ifaces[$slot]:-}\"\n"
+        script += "  if [ -z \"$iface\" ]; then\n"
+        script += "    echo \"Missing data interface index $slot for $addr\" >&2\n"
+        script += "    return 1\n"
+        script += "  fi\n"
+        script += "  echo \"Configuring $iface with $addr\"\n"
+        script += "  ip link set \"$iface\" up\n"
+        script += "  ip addr flush dev \"$iface\" || true\n"
+        script += "  ip addr add \"$addr\" dev \"$iface\"\n"
+        script += "}\n\n"
 
         for i, iface in enumerate(node.getInterfaces()):
-            # Interface names: net1, net2... or eth1, eth2... (1-based index)
-            dev_name = f"{interface_prefix}{i+1}"
             addr = iface.getAddress()
             prefix_len = iface.getNet().getPrefix().prefixlen
-
-            script += f"echo 'Configuring {dev_name} with {addr}/{prefix_len}'\n"
-            # Ensure the interface is up and address is set
-            script += f"ip link set {dev_name} up\n"
-            script += f"ip addr flush dev {dev_name} || true\n"
-            script += f"ip addr add {addr}/{prefix_len} dev {dev_name}\n"
+            script += f"configure_iface {i} \"{addr}/{prefix_len}\"\n"
 
         return script
 

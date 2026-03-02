@@ -39,29 +39,47 @@ SEED_RUNTIME_PROFILE=degraded PYTHONPATH=../.. python3 k8s_hybrid_kubevirt_demo.
 
 ### 1. 环境准备
 ```bash
-# 创建 Kind 集群 (含本地 Registry)
-./setup_kind_cluster.sh
-
-# 配置 Registry Mirror
-./patch_kind_registry.sh
-
-# 安装 Multus CNI
-kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset-thick.yml
+cd ../../
+SEED_CLUSTER_NAME=seedemu-kvtest WORKER_COUNT=2 ./setup_kubevirt_cluster.sh
 ```
 
 ### 2. 运行示例
 ```bash
-# 编译
-PYTHONPATH=../.. python3 k8s_simple_as.py
+cd examples/kubernetes
+source ../../scripts/env_seedemu.sh
+
+# 编译（以 transit 为例）
+python3 k8s_transit_as.py
 
 # 构建并推送镜像
-cd output_simple_as && ./build_images.sh
+cd output_transit_as && ./build_images.sh
 
 # 部署
-kubectl apply -f k8s.yaml
+kubectl create ns "${SEED_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -n "${SEED_NAMESPACE}" -f k8s.yaml
 
 # 验证
-kubectl get pods -n seedemu
+kubectl get pods -n "${SEED_NAMESPACE}" -o wide
+```
+
+## K3s 多机（真实 KVM）一键启动
+
+```bash
+cd ../../
+./scripts/kvm_quickstart.sh up
+```
+
+如果你只想先安装依赖（需要 sudo）：
+
+```bash
+./scripts/kvm_quickstart.sh prereq
+```
+
+常用管理命令：
+
+```bash
+./scripts/kvm_quickstart.sh status
+./scripts/kvm_quickstart.sh down
 ```
 
 ## K8s vs Docker Compose 核心优势
@@ -77,5 +95,8 @@ kubectl get pods -n seedemu
 
 - `k8s_*.py`: K8s 示例脚本
 - `api_server.py`: K8s API 服务 (用于可视化)
-- `setup_kind_cluster.sh`: Kind 集群创建脚本
-- `patch_kind_registry.sh`: Registry 配置修复脚本
+- `scripts/env_seedemu.sh`: 统一路径与环境变量护栏
+- `scripts/kvm_lab.sh`: 创建/销毁 KVM 三节点实验环境
+- `scripts/kvm_quickstart.sh`: 一键安装依赖并拉起 KVM + k3s
+- `scripts/setup_k3s_cluster.sh`: 在 KVM 节点安装 k3s、multus、registry
+- `scripts/validate_kubevirt_hybrid.sh`: Hybrid(KubeVirt) 端到端验证
