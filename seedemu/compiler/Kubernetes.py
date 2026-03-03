@@ -15,6 +15,7 @@ import yaml
 class SchedulingStrategy:
     """Scheduling strategy constants for Kubernetes node placement."""
     NONE = "none"           # No scheduling constraints
+    AUTO = "auto"           # Automatic soft grouping + soft spreading
     BY_AS = "by_as"         # Schedule pods by AS number
     BY_ROLE = "by_role"     # Schedule pods by node role (router, host, etc.)
     CUSTOM = "custom"       # Use custom labels provided by user
@@ -74,8 +75,9 @@ class KubernetesCompiler(Docker):
         @param internetMapEnabled (optional) Enable Internet Map visualization service. Default True.
         @param scheduling_strategy (optional) How to schedule pods across nodes. Options:
             - "none": No scheduling constraints (default)
-            - "by_as": Schedule pods with same AS to same node
-            - "by_role": Schedule by node role (router, host, etc.)
+            - "auto": Let scheduler auto-balance with soft AS/role affinity
+            - "by_as": Prefer pods with same AS on same node (no node pre-labeling needed)
+            - "by_role": Prefer same role on same node (no node pre-labeling needed)
             - "custom": Use custom node_labels mapping
         @param node_labels (optional) Custom node labels for scheduling. Dict mapping AS numbers or
             node names to label dicts. Example: {"150": {"kubernetes.io/hostname": "node1"}}
@@ -105,7 +107,15 @@ class KubernetesCompiler(Docker):
         self._current_node = None
         
         # Multi-node deployment settings
-        self.__scheduling_strategy = scheduling_strategy
+        strategy = (scheduling_strategy or SchedulingStrategy.NONE).strip().lower()
+        valid = {
+            SchedulingStrategy.NONE,
+            SchedulingStrategy.AUTO,
+            SchedulingStrategy.BY_AS,
+            SchedulingStrategy.BY_ROLE,
+            SchedulingStrategy.CUSTOM,
+        }
+        self.__scheduling_strategy = strategy if strategy in valid else SchedulingStrategy.NONE
         self.__node_labels = node_labels or {}
         self.__default_resources = default_resources or {}
         self.__cni_type = cni_type
@@ -157,6 +167,10 @@ class KubernetesCompiler(Docker):
         with open('build_images.sh', 'w') as f:
             f.write("#!/bin/bash\n")
             f.write("set -e\n")
+            # Docker BuildKit can be flaky on some teaching/workstation environments
+            # (e.g., snapshot cache corruption). Default to legacy builder for
+            # reproducibility; users can override by editing the script if needed.
+            f.write("export DOCKER_BUILDKIT=0\n")
             f.write("\n".join(self.__build_commands))
             f.write("\n")
         os.chmod('build_images.sh', 0o755)
@@ -200,7 +214,11 @@ class KubernetesCompiler(Docker):
             config = {
                 "cniVersion": "0.3.1",
                 "type": "bridge",
-                "bridge": self._safeBridgeName(name),
+                # The Linux bridge device lives at node scope (not K8s namespace scope).
+                # If we only hash `name`, different namespaces compiling the same topology
+                # (e.g., multiple smoke runs) will share the same L2 segment and collide on
+                # IPs/MACs, causing flaky BGP/OSPF behavior. Salt with namespace to isolate.
+                "bridge": self._safeBridgeName(f"{self.__namespace}:{name}"),
                 "isGateway": False,
                 "ipam": {
                     "type": "host-local",
@@ -211,7 +229,8 @@ class KubernetesCompiler(Docker):
             config = {
                 "cniVersion": "0.3.1",
                 "type": "bridge",
-                "bridge": self._safeBridgeName(name),
+                # Same rationale as host-local branch: isolate bridge names per namespace.
+                "bridge": self._safeBridgeName(f"{self.__namespace}:{name}"),
                 "ipam": {}  # No IPAM, we manage IPs inside
             }
 
@@ -300,11 +319,23 @@ spec:
         annotations = {}
         if self.__use_multus:
             nets = []
+            net_specs = []
             for iface in node.getInterfaces():
                 net = iface.getNet()
                 net_name = self._getRealNetName(net).replace('_', '-').lower()
                 nets.append(net_name)
-            if nets:
+                if self.__cni_type in {"macvlan", "ipvlan"}:
+                    prefix_len = net.getPrefix().prefixlen
+                    net_specs.append({
+                        "name": net_name,
+                        "ips": [f"{iface.getAddress()}/{prefix_len}"]
+                    })
+
+            if self.__cni_type in {"macvlan", "ipvlan"} and net_specs:
+                # Static IPAM requires IPs in Multus runtime config. Use JSON form annotation
+                # so each secondary interface gets deterministic seed-emulator addresses.
+                annotations["k8s.v1.cni.cncf.io/networks"] = json.dumps(net_specs)
+            elif nets:
                 annotations["k8s.v1.cni.cncf.io/networks"] = ", ".join(nets)
 
         # Compute Envs
@@ -318,7 +349,8 @@ spec:
             "app": node_name,
             "seedemu.io/asn": asn,
             "seedemu.io/role": role,
-            "seedemu.io/name": node.getName()
+            "seedemu.io/name": node.getName(),
+            "seedemu.io/workload": "seedemu",
         }
 
         # Build pod spec
@@ -339,9 +371,7 @@ spec:
             pod_spec["containers"][0]["resources"] = self.__default_resources
 
         # Add scheduling constraints based on strategy
-        node_selector = self._computeNodeSelector(node, asn, role)
-        if node_selector:
-            pod_spec["nodeSelector"] = node_selector
+        self._applySchedulingConstraints(pod_spec, node, asn, role, labels)
 
         manifest = {
             "apiVersion": "apps/v1",
@@ -376,17 +406,14 @@ spec:
 
     def _computeNodeSelector(self, node: Node, asn: str, role: str) -> Dict[str, str]:
         """Compute nodeSelector based on scheduling strategy."""
-        if self.__scheduling_strategy == SchedulingStrategy.NONE:
+        if self.__scheduling_strategy in {
+            SchedulingStrategy.NONE,
+            SchedulingStrategy.AUTO,
+            SchedulingStrategy.BY_AS,
+            SchedulingStrategy.BY_ROLE,
+        }:
             return {}
-        
-        if self.__scheduling_strategy == SchedulingStrategy.BY_AS:
-            # Schedule by AS number - pods with same AS go to same node
-            return {"seedemu.io/as-group": f"as{asn}"}
-        
-        if self.__scheduling_strategy == SchedulingStrategy.BY_ROLE:
-            # Schedule by role - routers on one type of node, hosts on another
-            return {"seedemu.io/role-group": role}
-        
+
         if self.__scheduling_strategy == SchedulingStrategy.CUSTOM:
             # Use custom labels if provided
             # First check node-specific labels
@@ -400,6 +427,86 @@ spec:
             return {}
         
         return {}
+
+    def _computePodAffinity(self, asn: str, role: str) -> Dict[str, Any]:
+        """Compute pod affinity rules for soft grouping strategies."""
+        preferred_terms: List[Dict[str, Any]] = []
+
+        if self.__scheduling_strategy in {SchedulingStrategy.AUTO, SchedulingStrategy.BY_AS}:
+            preferred_terms.append({
+                "weight": 90,
+                "podAffinityTerm": {
+                    "labelSelector": {
+                        "matchExpressions": [{
+                            "key": "seedemu.io/asn",
+                            "operator": "In",
+                            "values": [asn],
+                        }]
+                    },
+                    "topologyKey": "kubernetes.io/hostname",
+                }
+            })
+
+        if self.__scheduling_strategy in {SchedulingStrategy.AUTO, SchedulingStrategy.BY_ROLE}:
+            preferred_terms.append({
+                "weight": 40,
+                "podAffinityTerm": {
+                    "labelSelector": {
+                        "matchExpressions": [{
+                            "key": "seedemu.io/role",
+                            "operator": "In",
+                            "values": [role],
+                        }]
+                    },
+                    "topologyKey": "kubernetes.io/hostname",
+                }
+            })
+
+        if not preferred_terms:
+            return {}
+
+        return {
+            "podAffinity": {
+                "preferredDuringSchedulingIgnoredDuringExecution": preferred_terms
+            }
+        }
+
+    def _computeTopologySpreadConstraints(self) -> List[Dict[str, Any]]:
+        """Compute topology spread constraints for automatic balancing."""
+        if self.__scheduling_strategy != SchedulingStrategy.AUTO:
+            return []
+
+        return [{
+            "maxSkew": 1,
+            "topologyKey": "kubernetes.io/hostname",
+            "whenUnsatisfiable": "ScheduleAnyway",
+            "labelSelector": {
+                "matchLabels": {
+                    "seedemu.io/workload": "seedemu"
+                }
+            }
+        }]
+
+    def _applySchedulingConstraints(
+        self,
+        pod_spec: Dict[str, Any],
+        node: Node,
+        asn: str,
+        role: str,
+        labels: Dict[str, str],
+    ) -> None:
+        """Apply nodeSelector/affinity/topology spread to a pod or VMI spec."""
+        node_selector = self._computeNodeSelector(node, asn, role)
+        if node_selector:
+            pod_spec["nodeSelector"] = node_selector
+
+        affinity = self._computePodAffinity(asn, role)
+        if affinity:
+            pod_spec["affinity"] = affinity
+
+        spread = self._computeTopologySpreadConstraints()
+        if spread:
+            pod_spec["topologySpreadConstraints"] = spread
 
     def _compileServiceK8s(self, node: Node, node_name: str, labels: Dict[str, str]) -> Optional[str]:
         """Generate a Kubernetes Service for a node if needed."""
@@ -522,6 +629,7 @@ spec:
             "seedemu.io/asn": asn,
             "seedemu.io/role": role,
             "seedemu.io/name": node.getName(),
+            "seedemu.io/workload": "seedemu",
             "kubevirt.io/domain": node_name
         }
 
@@ -593,9 +701,7 @@ spec:
         }
 
         # Add scheduling constraints
-        node_selector = self._computeNodeSelector(node, asn, role)
-        if node_selector:
-            manifest["spec"]["template"]["spec"]["nodeSelector"] = node_selector
+        self._applySchedulingConstraints(manifest["spec"]["template"]["spec"], node, asn, role, labels)
 
         return json.dumps(cloud_init_secret) + "\n---\n" + json.dumps(manifest)
 
@@ -754,7 +860,6 @@ spec:
   ports:
   - port: 8080
     targetPort: 8080
-    nodePort: 30080
 """
         
         self.__manifests.append(internet_map_manifest)

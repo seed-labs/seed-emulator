@@ -1,0 +1,68 @@
+profiles:
+  mini_internet:
+    profile_id: mini_internet
+    compile_script: examples/kubernetes/k8s_mini_internet.py
+    default_namespace: seedemu-k3s-mini-mn
+    default_cni_type: macvlan
+    default_scheduling_strategy: auto
+    verify_mode: mini_strict3
+    verify_targets:
+      required_labels:
+        - "seedemu.io/name=router0,seedemu.io/asn=151"
+        - "seedemu.io/name=ix100,seedemu.io/asn=100"
+        - "seedemu.io/name=host_0,seedemu.io/asn=150"
+      connectivity_probe:
+        source_label: "seedemu.io/name=host_0,seedemu.io/asn=150"
+        target_ip: "10.151.0.71"
+    observe_required_files:
+      - summary.json
+      - placement.tsv
+      - bird_r151.txt
+      - bird_rs100.txt
+      - ping_150_to_151.txt
+
+  transit_as:
+    profile_id: transit_as
+    compile_script: examples/kubernetes/k8s_transit_as.py
+    default_namespace: seedemu-k8s-transit
+    default_cni_type: macvlan
+    default_scheduling_strategy: auto
+    verify_mode: generic_ready
+    verify_targets:
+      min_deployments_available: 1
+      min_pods_running: 1
+    observe_required_files:
+      - summary.json
+      - placement.tsv
+
+  mini_internet_viz:
+    profile_id: mini_internet_viz
+    compile_script: examples/kubernetes/k8s_mini_internet_with_visualization.py
+    default_namespace: seedemu-k8s-mini-viz
+    default_cni_type: macvlan
+    default_scheduling_strategy: auto
+    verify_mode: generic_ready
+    verify_targets:
+      min_deployments_available: 1
+      min_pods_running: 1
+      expected_service_keywords:
+        - map
+        - api
+    observe_required_files:
+      - summary.json
+      - placement.tsv
+
+  hybrid_kubevirt:
+    profile_id: hybrid_kubevirt
+    compile_script: examples/kubernetes/k8s_hybrid_kubevirt_demo.py
+    default_namespace: seedemu-hybrid-repro
+    default_cni_type: bridge
+    default_scheduling_strategy: auto
+    verify_mode: hybrid_vm
+    verify_targets:
+      min_vm_or_vmi: 1
+      min_pods_running: 1
+    observe_required_files:
+      - summary.json
+      - vm_vmi.txt
+      - pods_wide.txt

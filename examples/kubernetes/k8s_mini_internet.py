@@ -5,10 +5,28 @@
 # Adapted for KubernetesCompiler
 
 from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship
-from seedemu.compiler import KubernetesCompiler, Platform
+from seedemu.compiler import KubernetesCompiler, SchedulingStrategy, Platform
 from seedemu.core import Emulator
 from seedemu.utilities import Makers
-import os, sys
+import os
+import json
+
+
+def _parse_node_labels_json(raw: str):
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid SEED_NODE_LABELS_JSON: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError("SEED_NODE_LABELS_JSON must be a JSON object")
+    normalized = {}
+    for key, value in data.items():
+        if not isinstance(value, dict):
+            raise ValueError(f"SEED_NODE_LABELS_JSON['{key}'] must be an object of label->value")
+        normalized[str(key)] = {str(k): str(v) for k, v in value.items()}
+    return normalized
 
 def run(dumpfile=None, hosts_per_as=2):
     # Initialize Emulator
@@ -131,9 +149,21 @@ def run(dumpfile=None, hosts_per_as=2):
 
     registry_prefix = os.environ.get("SEED_REGISTRY", "localhost:5001")
     namespace = os.environ.get("SEED_NAMESPACE", "seedemu")
+    cluster_name = os.environ.get("SEED_CLUSTER_NAME", "seedemu-kvtest")
     cni_type = os.environ.get("SEED_CNI_TYPE", "bridge").strip().lower()
     cni_master_interface = os.environ.get("SEED_CNI_MASTER_INTERFACE", "eth0").strip()
-    image_pull_policy = os.environ.get("SEED_IMAGE_PULL_POLICY", "IfNotPresent").strip()
+    # Using a fixed ':latest' tag across multiple compiled topologies can lead to stale
+    # images when the cluster caches tags. Default to Always for correctness.
+    image_pull_policy = os.environ.get("SEED_IMAGE_PULL_POLICY", "Always").strip()
+    scheduling_strategy = os.environ.get("SEED_SCHEDULING_STRATEGY", SchedulingStrategy.AUTO).strip().lower()
+    node_labels = _parse_node_labels_json(os.environ.get("SEED_NODE_LABELS_JSON", ""))
+    force_colocate = os.environ.get("SEED_FORCE_COLOCATE", "false").strip().lower() in {"1", "true", "yes"}
+
+    if force_colocate and not node_labels and cni_type in {"bridge", "host-local"}:
+        single_node = os.environ.get("SEED_SINGLE_NODE", f"{cluster_name}-control-plane").strip()
+        colocate_asns = list(range(100, 106)) + [2, 3, 4, 11, 12, 150, 151, 152, 153, 154, 160, 161, 162, 163, 164, 170, 171]
+        node_labels = {str(asn): {"kubernetes.io/hostname": single_node} for asn in colocate_asns}
+        scheduling_strategy = SchedulingStrategy.CUSTOM
 
     # Configure the compiler
     k8s = KubernetesCompiler(
@@ -141,6 +171,8 @@ def run(dumpfile=None, hosts_per_as=2):
         namespace=namespace,
         use_multus=True,
         internetMapEnabled=False,
+        scheduling_strategy=scheduling_strategy,
+        node_labels=node_labels,
         cni_type=cni_type,
         cni_master_interface=cni_master_interface,
         generate_services=True,
@@ -160,4 +192,9 @@ def run(dumpfile=None, hosts_per_as=2):
     print(f"Namespace: {namespace}")
 
 if __name__ == "__main__":
-    run()
+    hosts_per_as_env = os.environ.get("SEED_HOSTS_PER_AS", "2")
+    try:
+        hosts_per_as = int(hosts_per_as_env)
+    except ValueError as exc:
+        raise ValueError(f"Invalid SEED_HOSTS_PER_AS: {hosts_per_as_env}") from exc
+    run(hosts_per_as=hosts_per_as)

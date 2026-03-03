@@ -1,0 +1,104 @@
+failure_actions:
+  KCFG_MISSING:
+    first_evidence_pattern: kubeconfig_fetch.log
+    minimal_retry_command: scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_mini_internet_multinode.sh preflight
+    fallback_command: scripts/setup_k3s_cluster.sh
+    operator_hint: kubeconfig 失效或 master 不可达，先修 kubeconfig 再做 preflight
+    safe_auto_retry: true
+    requires_confirmation: false
+
+  SSH_KEY_INVALID:
+    first_evidence_pattern: summary.json
+    minimal_retry_command: export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_mini_internet_multinode.sh preflight
+    fallback_command: chmod 600 /path/to/key && ssh -i /path/to/key ${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}
+    operator_hint: SSH 密钥路径或权限错误
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  NODE_NOT_READY:
+    first_evidence_pattern: preflight.json
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh preflight
+    fallback_command: scripts/setup_k3s_cluster.sh
+    operator_hint: 节点未 Ready，先检查 k3s 和节点状态
+    safe_auto_retry: true
+    requires_confirmation: true
+
+  MULTUS_NOT_READY:
+    first_evidence_pattern: multus_status.txt
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh preflight
+    fallback_command: kubectl -n kube-system rollout restart ds/kube-multus-ds
+    operator_hint: Multus 未就绪，先修复 daemonset
+    safe_auto_retry: true
+    requires_confirmation: false
+
+  REGISTRY_UNREACHABLE:
+    first_evidence_pattern: preflight.json
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh preflight
+    fallback_command: scripts/setup_k3s_cluster.sh
+    operator_hint: registry 在 worker 不可达，优先修复 master registry
+    safe_auto_retry: true
+    requires_confirmation: true
+
+  COMPILE_FAILED:
+    first_evidence_pattern: compile.log
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh compile
+    fallback_command: PYTHONPATH=/home/zzw4257/seed-k8s python3 examples/kubernetes/k8s_mini_internet.py
+    operator_hint: 编译阶段失败，检查示例脚本参数和 PYTHONPATH
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  BUILD_FAILED:
+    first_evidence_pattern: remote_build.log
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh build
+    fallback_command: scripts/validate_k3s_mini_internet_multinode.sh compile && scripts/validate_k3s_mini_internet_multinode.sh build
+    operator_hint: 镜像构建/推送失败，检查 docker、registry、SSH 链路
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  DEPLOY_TIMEOUT:
+    first_evidence_pattern: wait.log
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh deploy
+    fallback_command: kubectl -n ${SEED_NAMESPACE} get events --sort-by=.lastTimestamp
+    operator_hint: 部署超时，先看 pods/events 再重试 deploy
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  PLACEMENT_FAILED:
+    first_evidence_pattern: placement_check.json
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
+    fallback_command: cat ${SEED_ARTIFACT_DIR}/placement_actual.json
+    operator_hint: 调度分布未命中当前 placement gate（strict3 或 auto 模式）
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  BGP_NOT_ESTABLISHED:
+    first_evidence_pattern: bird_router151.txt
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
+    fallback_command: cat ${SEED_ARTIFACT_DIR}/bird_ix100.txt
+    operator_hint: BGP 邻居未建立，优先排查路由器邻接与网络附加
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  CONNECTIVITY_FAILED:
+    first_evidence_pattern: ping_150_to_151.txt
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
+    fallback_command: kubectl -n ${SEED_NAMESPACE} get pod -o wide
+    operator_hint: 跨 AS 连通失败，先确认 BGP 再看数据平面
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  RECOVERY_FAILED:
+    first_evidence_pattern: recovery_check.json
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
+    fallback_command: kubectl -n ${SEED_NAMESPACE} rollout status deployment --all --timeout=300s
+    operator_hint: 自愈检查失败，优先看 rollout 和 deployment 事件
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  OBSERVE_NAMESPACE_MISMATCH:
+    first_evidence_pattern: report/report.json
+    minimal_retry_command: scripts/inspect_k3s_mini_internet.sh ${SEED_NAMESPACE}
+    fallback_command: scripts/seedlab_report_from_artifacts.sh ${SEED_ARTIFACT_DIR} ${SEED_OBSERVE_DIR}
+    operator_hint: 观测快照与验证命名空间不一致
+    safe_auto_retry: true
+    requires_confirmation: false
