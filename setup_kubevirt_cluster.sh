@@ -8,6 +8,10 @@ KIND_VERSION="${KIND_VERSION:-v0.27.0}"
 K8S_NODE_IMAGE="${K8S_NODE_IMAGE:-kindest/node:v1.32.2}"
 WORKER_COUNT="${WORKER_COUNT:-2}"
 MULTUS_VERSION="${MULTUS_VERSION:-v4.1.0}"
+MULTUS_CPU_REQUEST="${MULTUS_CPU_REQUEST:-100m}"
+MULTUS_CPU_LIMIT="${MULTUS_CPU_LIMIT:-500m}"
+MULTUS_MEMORY_REQUEST="${MULTUS_MEMORY_REQUEST:-200Mi}"
+MULTUS_MEMORY_LIMIT="${MULTUS_MEMORY_LIMIT:-512Mi}"
 KUBEVIRT_VERSION="${KUBEVIRT_VERSION:-v1.7.0}"
 CNI_PLUGINS_VERSION="${CNI_PLUGINS_VERSION:-v1.8.0}"
 
@@ -147,7 +151,56 @@ ensure_cni_plugins_for_multus() {
 install_multus() {
     echo ">>> Installing Multus ${MULTUS_VERSION}"
     kubectl apply -f "${MULTUS_MANIFEST_URL}" >/dev/null
+
+    # Some Multus manifests (including thick deployments) install multus-shim by
+    # directly copying over /host/opt/cni/bin/multus-shim. If kubelet/containerd
+    # are concurrently executing the binary, Linux can raise ETXTBSY ("Text file busy"),
+    # crashing the initContainer and breaking Pod sandbox creation cluster-wide.
+    # We patch the initContainer to do an atomic replace (copy to temp + mv).
+    patch_multus_atomic_shim_install
+
+    kubectl -n kube-system set resources daemonset/kube-multus-ds -c kube-multus \
+        --requests="cpu=${MULTUS_CPU_REQUEST},memory=${MULTUS_MEMORY_REQUEST}" \
+        --limits="cpu=${MULTUS_CPU_LIMIT},memory=${MULTUS_MEMORY_LIMIT}" >/dev/null
+    echo ">>> Multus resources: requests(cpu=${MULTUS_CPU_REQUEST},memory=${MULTUS_MEMORY_REQUEST}) limits(cpu=${MULTUS_CPU_LIMIT},memory=${MULTUS_MEMORY_LIMIT})"
     kubectl -n kube-system rollout status daemonset/kube-multus-ds --timeout=300s
+}
+
+patch_multus_atomic_shim_install() {
+    if ! kubectl -n kube-system get daemonset/kube-multus-ds >/dev/null 2>&1; then
+        return
+    fi
+
+    # If already patched, don't trigger another rollout.
+    local cmd0
+    cmd0="$(kubectl -n kube-system get daemonset/kube-multus-ds -o jsonpath='{.spec.template.spec.initContainers[?(@.name=="install-multus-binary")].command[0]}' 2>/dev/null || true)"
+    if [ "${cmd0}" = "/bin/sh" ] || [ "${cmd0}" = "sh" ]; then
+        echo ">>> Multus shim installer already uses atomic install"
+        return
+    fi
+
+    echo ">>> Patching Multus shim installer to avoid 'Text file busy' (atomic mv)"
+    kubectl -n kube-system patch daemonset/kube-multus-ds --type='strategic' -p "$(
+        cat <<'JSON'
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "initContainers": [
+          {
+            "name": "install-multus-binary",
+            "command": ["/bin/sh", "-c"],
+            "args": [
+              "set -eu; src=/usr/src/multus-cni/bin/multus-shim; dst=/host/opt/cni/bin/multus-shim; tmp=/host/opt/cni/bin/.multus-shim.tmp.$$; cp \"$src\" \"$tmp\"; chmod 0755 \"$tmp\"; mv -f \"$tmp\" \"$dst\";"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+JSON
+    )" >/dev/null
 }
 
 install_kubevirt() {
@@ -156,7 +209,14 @@ install_kubevirt() {
     kubectl -n kubevirt rollout status deployment/virt-operator --timeout=600s
     kubectl apply -f "${KUBEVIRT_CR_URL}" >/dev/null
 
+    local cr_deadline
+    cr_deadline=$((SECONDS + 120))
     until kubectl -n kubevirt get kubevirt kubevirt >/dev/null 2>&1; do
+        if [ "${SECONDS}" -ge "${cr_deadline}" ]; then
+            echo "Timed out waiting for KubeVirt CR (kubevirt/kubevirt) to appear." >&2
+            kubectl -n kubevirt get all -o wide || true
+            exit 1
+        fi
         sleep 2
     done
 

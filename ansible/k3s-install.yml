@@ -6,6 +6,34 @@
   hosts: master
   become: yes
   tasks:
+    - name: Ensure k3s config directory exists
+      file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: "0755"
+
+    - name: Configure registry mirror (insecure HTTP)
+      copy:
+        dest: /etc/rancher/k3s/registries.yaml
+        mode: "0644"
+        content: |
+          mirrors:
+            "{{ seed_registry_host }}:{{ seed_registry_port }}":
+              endpoint:
+                - "http://{{ seed_registry_host }}:{{ seed_registry_port }}"
+
+    - name: Install Docker (used to host local registry container)
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
     - name: Install K3s server
       shell: |
         curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={{ k3s_version }} \
@@ -40,11 +68,27 @@
   hosts: workers
   become: yes
   tasks:
+    - name: Ensure k3s config directory exists
+      file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: "0755"
+
+    - name: Configure registry mirror (insecure HTTP)
+      copy:
+        dest: /etc/rancher/k3s/registries.yaml
+        mode: "0644"
+        content: |
+          mirrors:
+            "{{ seed_registry_host }}:{{ seed_registry_port }}":
+              endpoint:
+                - "http://{{ seed_registry_host }}:{{ seed_registry_port }}"
+
     - name: Install K3s agent
       shell: |
         curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={{ k3s_version }} \
-          K3S_URL=https://{{ hostvars['k3s-master']['ansible_host'] }}:6443 \
-          K3S_TOKEN={{ hostvars['k3s-master']['k3s_server_token'] }} \
+          K3S_URL=https://{{ hostvars[groups['master'][0]]['ansible_host'] }}:6443 \
+          K3S_TOKEN={{ hostvars[groups['master'][0]]['k3s_server_token'] }} \
           sh -
       args:
         creates: /var/lib/rancher/k3s/agent
@@ -61,9 +105,8 @@
       delay: 10
 
     - name: Label worker nodes
-      shell: |
-        kubectl label node k3s-worker1 seedemu.io/as-group=as150 --overwrite
-        kubectl label node k3s-worker2 seedemu.io/as-group=as151 --overwrite
+      shell: kubectl label node {{ item }} seedemu.io/as-group={{ hostvars[item]['seedemu_as_group'] }} --overwrite
+      loop: "{{ groups['workers'] }}"
 
 - name: Setup Macvlan CNI
   hosts: master
@@ -81,7 +124,7 @@
           config: '{
             "cniVersion": "0.3.1",
             "type": "macvlan",
-            "master": "eth0",
+            "master": "{{ seed_cni_master_interface }}",
             "mode": "bridge",
             "ipam": {
               "type": "host-local",

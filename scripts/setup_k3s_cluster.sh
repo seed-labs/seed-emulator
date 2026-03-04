@@ -1,99 +1,216 @@
 #!/bin/bash
-# SEED Emulator - K3s Multi-Node Cluster Setup Script
-# This script sets up a 3-node K3s cluster for ultra-high standards testing
-
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+source "${SCRIPT_DIR}/env_seedemu.sh"
+
+PROJECT_ROOT="${REPO_ROOT}"
+INVENTORY_TEMPLATE="${PROJECT_ROOT}/ansible/inventory.yml"
+PLAYBOOK_PATH="${PROJECT_ROOT}/ansible/k3s-install.yml"
+
+SEED_K3S_MASTER_IP="${SEED_K3S_MASTER_IP:-192.168.64.10}"
+SEED_K3S_WORKER1_IP="${SEED_K3S_WORKER1_IP:-192.168.64.11}"
+SEED_K3S_WORKER2_IP="${SEED_K3S_WORKER2_IP:-192.168.64.12}"
+SEED_K3S_USER="${SEED_K3S_USER:-parallels}"
+SEED_K3S_SSH_KEY="${SEED_K3S_SSH_KEY:-$HOME/.ssh/id_rsa}"
+SEED_K3S_VERSION="${SEED_K3S_VERSION:-v1.28.5+k3s1}"
+SEED_REGISTRY_HOST="${SEED_REGISTRY_HOST:-${SEED_K3S_MASTER_IP}}"
+SEED_REGISTRY_PORT="${SEED_REGISTRY_PORT:-5000}"
+SEED_K3S_CLUSTER_NAME="${SEED_K3S_CLUSTER_NAME:-seedemu-k3s}"
+SEED_CNI_MASTER_INTERFACE="${SEED_CNI_MASTER_INTERFACE:-eth0}"
+
+SSH_CONNECT_TIMEOUT_SECONDS="${SEED_SSH_CONNECT_TIMEOUT_SECONDS:-10}"
+ANSIBLE_TIMEOUT="${SEED_ANSIBLE_TIMEOUT:-1800s}"
+SSH_OPTS=(
+    -o StrictHostKeyChecking=no
+    -o UserKnownHostsFile=/dev/null
+    -o BatchMode=yes
+    -o ConnectTimeout="${SSH_CONNECT_TIMEOUT_SECONDS}"
+    -o ServerAliveInterval=30
+    -o ServerAliveCountMax=3
+    -i "${SEED_K3S_SSH_KEY}"
+)
+
+OUTPUT_KUBECONFIG_DIR="${PROJECT_ROOT}/output/kubeconfigs"
+OUTPUT_KUBECONFIG="${OUTPUT_KUBECONFIG_DIR}/${SEED_K3S_CLUSTER_NAME}.yaml"
 
 echo "=============================================="
 echo "SEED Emulator - K3s Multi-Node Cluster Setup"
 echo "=============================================="
+echo "master=${SEED_K3S_MASTER_IP} worker1=${SEED_K3S_WORKER1_IP} worker2=${SEED_K3S_WORKER2_IP}"
+echo "user=${SEED_K3S_USER} k3s_version=${SEED_K3S_VERSION}"
+echo "registry=${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}"
+echo ""
 
-# Check prerequisites
-check_prerequisites() {
-    echo "[1/5] Checking prerequisites..."
-    
-    if ! command -v ansible &> /dev/null; then
-        echo "Installing Ansible..."
-        pip3 install ansible
-    fi
-    
-    if ! command -v ssh &> /dev/null; then
-        echo "ERROR: SSH not found"
+require_cmd() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        echo "Missing required command: $1" >&2
         exit 1
     fi
-    
-    echo "✓ Prerequisites OK"
 }
 
-# Verify VM connectivity
+run_with_timeout() {
+    local duration="$1"
+    shift
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "${duration}" "$@"
+    else
+        "$@"
+    fi
+}
+
+check_prerequisites() {
+    echo "[1/7] Checking prerequisites"
+    require_cmd ansible-playbook
+    require_cmd ssh
+    require_cmd ping
+    require_cmd kubectl
+    require_cmd sed
+
+    if [ ! -f "${SEED_K3S_SSH_KEY}" ]; then
+        echo "SSH key not found: ${SEED_K3S_SSH_KEY}" >&2
+        exit 1
+    fi
+}
+
 verify_connectivity() {
-    echo "[2/5] Verifying VM connectivity..."
-    
-    HOSTS=("192.168.64.10" "192.168.64.11" "192.168.64.12")
-    for host in "${HOSTS[@]}"; do
-        if ping -c 1 -W 2 "$host" &> /dev/null; then
-            echo "  ✓ $host reachable"
+    echo "[2/7] Verifying VM connectivity"
+    local host
+    for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
+        if ping -c 1 -W 2 "${host}" >/dev/null 2>&1; then
+            echo "  reachable: ${host}"
         else
-            echo "  ✗ $host unreachable"
-            echo ""
-            echo "Please ensure VMs are running with these IPs:"
-            echo "  - 192.168.64.10 (k3s-master)"
-            echo "  - 192.168.64.11 (k3s-worker1)"
-            echo "  - 192.168.64.12 (k3s-worker2)"
+            echo "  unreachable: ${host}" >&2
+            exit 1
+        fi
+
+        if ! run_with_timeout 12s ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${host}" "echo ssh-ok" >/dev/null 2>&1; then
+            echo "  ssh failed (non-interactive): ${SEED_K3S_USER}@${host}" >&2
+            echo "  Hint: ensure key-based SSH works (no password prompt) and security group allows 22/tcp." >&2
             exit 1
         fi
     done
-    
-    echo "✓ All VMs reachable"
+
+    if ! run_with_timeout 12s ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n true" >/dev/null 2>&1; then
+        echo "sudo on master requires password: ${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" >&2
+        echo "This script requires passwordless sudo on remote nodes to avoid hanging." >&2
+        exit 1
+    fi
 }
 
-# Run Ansible playbook
+render_inventory() {
+    local output_path="$1"
+    sed \
+        -e "s|__SEED_K3S_USER__|${SEED_K3S_USER}|g" \
+        -e "s|__SEED_K3S_SSH_KEY__|${SEED_K3S_SSH_KEY}|g" \
+        -e "s|__SEED_K3S_VERSION__|${SEED_K3S_VERSION}|g" \
+        -e "s|__SEED_K3S_MASTER_IP__|${SEED_K3S_MASTER_IP}|g" \
+        -e "s|__SEED_K3S_WORKER1_IP__|${SEED_K3S_WORKER1_IP}|g" \
+        -e "s|__SEED_K3S_WORKER2_IP__|${SEED_K3S_WORKER2_IP}|g" \
+        -e "s|__SEED_REGISTRY_HOST__|${SEED_REGISTRY_HOST}|g" \
+        -e "s|__SEED_REGISTRY_PORT__|${SEED_REGISTRY_PORT}|g" \
+        -e "s|__SEED_CNI_MASTER_INTERFACE__|${SEED_CNI_MASTER_INTERFACE}|g" \
+        "${INVENTORY_TEMPLATE}" > "${output_path}"
+}
+
 run_ansible() {
-    echo "[3/5] Installing K3s cluster..."
-    
-    cd "$PROJECT_ROOT/ansible"
-    ansible-playbook -i inventory.yml k3s-install.yml
-    
-    echo "✓ K3s cluster installed"
+    echo "[3/7] Installing K3s cluster via Ansible"
+    local inventory_tmp
+    inventory_tmp="$(mktemp)"
+    trap 'rm -f "${inventory_tmp}"' RETURN
+    render_inventory "${inventory_tmp}"
+    ANSIBLE_HOST_KEY_CHECKING=False \
+        run_with_timeout "${ANSIBLE_TIMEOUT}" \
+        ansible-playbook \
+        -i "${inventory_tmp}" \
+        "${PLAYBOOK_PATH}" \
+        --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=${SSH_CONNECT_TIMEOUT_SECONDS} -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o BatchMode=yes"
+    trap - RETURN
+    rm -f "${inventory_tmp}"
 }
 
-# Setup private registry
 setup_registry() {
-    echo "[4/5] Setting up private registry..."
-    
-    ssh parallels@192.168.64.10 "docker run -d -p 5000:5000 --restart=always --name registry registry:2" || true
-    
-    echo "✓ Registry running at 192.168.64.10:5000"
+    echo "[4/7] Ensuring private registry on master"
+    run_with_timeout 60s ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+        "docker rm -f registry >/dev/null 2>&1 || true; docker run -d -p ${SEED_REGISTRY_PORT}:5000 --restart=always --name registry registry:2 >/dev/null"
 }
 
-# Verify cluster
-verify_cluster() {
-    echo "[5/5] Verifying cluster..."
-    
-    ssh parallels@192.168.64.10 "kubectl get nodes -o wide"
-    
-    echo ""
-    echo "=============================================="
-    echo "K3s Cluster Ready!"
-    echo "=============================================="
-    echo ""
-    echo "To use the cluster:"
-    echo "  export KUBECONFIG=\$(ssh parallels@192.168.64.10 'cat /etc/rancher/k3s/k3s.yaml')"
-    echo ""
-    echo "To deploy SEED Emulator:"
-    echo "  cd examples/kubernetes"
-    echo "  PYTHONPATH=../.. python3 k8s_multinode_demo_dynamic.py"
-    echo "  cd output_multinode_bridge"
-    echo "  ./build_images.sh"
-    echo "  # Push to registry: docker tag <img> 192.168.64.10:5000/<img> && docker push"
+fetch_kubeconfig() {
+    echo "[5/7] Fetching kubeconfig"
+    mkdir -p "${OUTPUT_KUBECONFIG_DIR}"
+    run_with_timeout 30s ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+        "sudo -n cat /etc/rancher/k3s/k3s.yaml" > "${OUTPUT_KUBECONFIG}"
+    sed -i "s|127.0.0.1|${SEED_K3S_MASTER_IP}|g" "${OUTPUT_KUBECONFIG}"
+    echo "kubeconfig: ${OUTPUT_KUBECONFIG}"
 }
 
-# Main
+verify_cluster_readiness() {
+    echo "[6/7] Verifying cluster readiness"
+    kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" wait --for=condition=Ready node --all --timeout=300s
+    patch_multus_atomic_shim_install
+    kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system rollout status daemonset/kube-multus-ds --timeout=300s
+    kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" get nodes -o wide
+}
+
+patch_multus_atomic_shim_install() {
+    if ! kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system get daemonset/kube-multus-ds >/dev/null 2>&1; then
+        return
+    fi
+
+    local cmd0
+    cmd0="$(kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system get daemonset/kube-multus-ds -o jsonpath='{.spec.template.spec.initContainers[?(@.name=="install-multus-binary")].command[0]}' 2>/dev/null || true)"
+    if [ "${cmd0}" = "/bin/sh" ] || [ "${cmd0}" = "sh" ]; then
+        echo "  multus shim installer already uses atomic install"
+        return
+    fi
+
+    echo "  patching multus shim installer to avoid 'Text file busy' (atomic mv)"
+    kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system patch daemonset/kube-multus-ds --type='strategic' -p "$(
+        cat <<'JSON'
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "initContainers": [
+          {
+            "name": "install-multus-binary",
+            "command": ["/bin/sh", "-c"],
+            "args": [
+              "set -eu; src=/usr/src/multus-cni/bin/multus-shim; dst=/host/opt/cni/bin/multus-shim; tmp=/host/opt/cni/bin/.multus-shim.tmp.$$; cp \"$src\" \"$tmp\"; chmod 0755 \"$tmp\"; mv -f \"$tmp\" \"$dst\";"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+JSON
+    )" >/dev/null || true
+}
+
+validate_registry_pull_chain() {
+    echo "[7/7] Validating registry pull chain"
+    local check_image="${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/seedemu/registry-check:latest"
+
+    run_with_timeout 120s ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+        "docker pull --quiet busybox:1.36 >/dev/null && docker tag busybox:1.36 ${check_image} && docker push ${check_image} >/dev/null"
+
+    kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system delete pod registry-self-check --ignore-not-found >/dev/null || true
+    kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system run registry-self-check \
+        --image="${check_image}" --restart=Never --command -- sh -c 'echo registry-ok' >/dev/null
+    kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system wait --for=jsonpath='{.status.phase}'=Succeeded --timeout=180s pod/registry-self-check
+    kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system logs pod/registry-self-check
+    kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system delete pod registry-self-check --ignore-not-found >/dev/null
+}
+
 check_prerequisites
 verify_connectivity
 run_ansible
 setup_registry
-verify_cluster
+fetch_kubeconfig
+verify_cluster_readiness
+validate_registry_pull_chain
+
+echo ""
+echo "K3s cluster is ready."
+echo "Use kubeconfig: ${OUTPUT_KUBECONFIG}"

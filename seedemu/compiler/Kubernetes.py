@@ -15,6 +15,7 @@ import yaml
 class SchedulingStrategy:
     """Scheduling strategy constants for Kubernetes node placement."""
     NONE = "none"           # No scheduling constraints
+    AUTO = "auto"           # Automatic soft grouping + soft spreading
     BY_AS = "by_as"         # Schedule pods by AS number
     BY_ROLE = "by_role"     # Schedule pods by node role (router, host, etc.)
     CUSTOM = "custom"       # Use custom labels provided by user
@@ -74,8 +75,9 @@ class KubernetesCompiler(Docker):
         @param internetMapEnabled (optional) Enable Internet Map visualization service. Default True.
         @param scheduling_strategy (optional) How to schedule pods across nodes. Options:
             - "none": No scheduling constraints (default)
-            - "by_as": Schedule pods with same AS to same node
-            - "by_role": Schedule by node role (router, host, etc.)
+            - "auto": Let scheduler auto-balance with soft AS/role affinity
+            - "by_as": Prefer pods with same AS on same node (no node pre-labeling needed)
+            - "by_role": Prefer same role on same node (no node pre-labeling needed)
             - "custom": Use custom node_labels mapping
         @param node_labels (optional) Custom node labels for scheduling. Dict mapping AS numbers or
             node names to label dicts. Example: {"150": {"kubernetes.io/hostname": "node1"}}
@@ -105,7 +107,15 @@ class KubernetesCompiler(Docker):
         self._current_node = None
         
         # Multi-node deployment settings
-        self.__scheduling_strategy = scheduling_strategy
+        strategy = (scheduling_strategy or SchedulingStrategy.NONE).strip().lower()
+        valid = {
+            SchedulingStrategy.NONE,
+            SchedulingStrategy.AUTO,
+            SchedulingStrategy.BY_AS,
+            SchedulingStrategy.BY_ROLE,
+            SchedulingStrategy.CUSTOM,
+        }
+        self.__scheduling_strategy = strategy if strategy in valid else SchedulingStrategy.NONE
         self.__node_labels = node_labels or {}
         self.__default_resources = default_resources or {}
         self.__cni_type = cni_type
@@ -132,6 +142,10 @@ class KubernetesCompiler(Docker):
         registry = emulator.getRegistry()
         self._groupSoftware(emulator)
 
+        # Implementation overview:
+        # (1) networks -> NetworkAttachmentDefinition (Multus),
+        # (2) nodes -> Deployment/VirtualMachine,
+        # (3) output artifacts (k8s.yaml, build_images.sh, .env).
         # 1. Generate NetworkAttachmentDefinitions (if Multus)
         if self.__use_multus:
             for ((scope, type, name), obj) in registry.getAll().items():
@@ -153,6 +167,10 @@ class KubernetesCompiler(Docker):
         with open('build_images.sh', 'w') as f:
             f.write("#!/bin/bash\n")
             f.write("set -e\n")
+            # Docker BuildKit can be flaky on some teaching/workstation environments
+            # (e.g., snapshot cache corruption). Default to legacy builder for
+            # reproducibility; users can override by editing the script if needed.
+            f.write("export DOCKER_BUILDKIT=0\n")
             f.write("\n".join(self.__build_commands))
             f.write("\n")
         os.chmod('build_images.sh', 0o755)
@@ -196,7 +214,11 @@ class KubernetesCompiler(Docker):
             config = {
                 "cniVersion": "0.3.1",
                 "type": "bridge",
-                "bridge": self._safeBridgeName(name),
+                # The Linux bridge device lives at node scope (not K8s namespace scope).
+                # If we only hash `name`, different namespaces compiling the same topology
+                # (e.g., multiple smoke runs) will share the same L2 segment and collide on
+                # IPs/MACs, causing flaky BGP/OSPF behavior. Salt with namespace to isolate.
+                "bridge": self._safeBridgeName(f"{self.__namespace}:{name}"),
                 "isGateway": False,
                 "ipam": {
                     "type": "host-local",
@@ -207,7 +229,8 @@ class KubernetesCompiler(Docker):
             config = {
                 "cniVersion": "0.3.1",
                 "type": "bridge",
-                "bridge": self._safeBridgeName(name),
+                # Same rationale as host-local branch: isolate bridge names per namespace.
+                "bridge": self._safeBridgeName(f"{self.__namespace}:{name}"),
                 "ipam": {}  # No IPAM, we manage IPs inside
             }
 
@@ -233,6 +256,7 @@ spec:
         self._current_node = node
 
         # Check virtualization mode
+        # Virtualization split point: "KubeVirt" -> VirtualMachine, otherwise Deployment.
         if node.getVirtualizationMode() == "KubeVirt":
             result = self._compileNodeKubeVirt(node)
 
@@ -295,11 +319,23 @@ spec:
         annotations = {}
         if self.__use_multus:
             nets = []
+            net_specs = []
             for iface in node.getInterfaces():
                 net = iface.getNet()
                 net_name = self._getRealNetName(net).replace('_', '-').lower()
                 nets.append(net_name)
-            if nets:
+                if self.__cni_type in {"macvlan", "ipvlan"}:
+                    prefix_len = net.getPrefix().prefixlen
+                    net_specs.append({
+                        "name": net_name,
+                        "ips": [f"{iface.getAddress()}/{prefix_len}"]
+                    })
+
+            if self.__cni_type in {"macvlan", "ipvlan"} and net_specs:
+                # Static IPAM requires IPs in Multus runtime config. Use JSON form annotation
+                # so each secondary interface gets deterministic seed-emulator addresses.
+                annotations["k8s.v1.cni.cncf.io/networks"] = json.dumps(net_specs)
+            elif nets:
                 annotations["k8s.v1.cni.cncf.io/networks"] = ", ".join(nets)
 
         # Compute Envs
@@ -313,7 +349,8 @@ spec:
             "app": node_name,
             "seedemu.io/asn": asn,
             "seedemu.io/role": role,
-            "seedemu.io/name": node.getName()
+            "seedemu.io/name": node.getName(),
+            "seedemu.io/workload": "seedemu",
         }
 
         # Build pod spec
@@ -334,9 +371,7 @@ spec:
             pod_spec["containers"][0]["resources"] = self.__default_resources
 
         # Add scheduling constraints based on strategy
-        node_selector = self._computeNodeSelector(node, asn, role)
-        if node_selector:
-            pod_spec["nodeSelector"] = node_selector
+        self._applySchedulingConstraints(pod_spec, node, asn, role, labels)
 
         manifest = {
             "apiVersion": "apps/v1",
@@ -371,17 +406,14 @@ spec:
 
     def _computeNodeSelector(self, node: Node, asn: str, role: str) -> Dict[str, str]:
         """Compute nodeSelector based on scheduling strategy."""
-        if self.__scheduling_strategy == SchedulingStrategy.NONE:
+        if self.__scheduling_strategy in {
+            SchedulingStrategy.NONE,
+            SchedulingStrategy.AUTO,
+            SchedulingStrategy.BY_AS,
+            SchedulingStrategy.BY_ROLE,
+        }:
             return {}
-        
-        if self.__scheduling_strategy == SchedulingStrategy.BY_AS:
-            # Schedule by AS number - pods with same AS go to same node
-            return {"seedemu.io/as-group": f"as{asn}"}
-        
-        if self.__scheduling_strategy == SchedulingStrategy.BY_ROLE:
-            # Schedule by role - routers on one type of node, hosts on another
-            return {"seedemu.io/role-group": role}
-        
+
         if self.__scheduling_strategy == SchedulingStrategy.CUSTOM:
             # Use custom labels if provided
             # First check node-specific labels
@@ -395,6 +427,86 @@ spec:
             return {}
         
         return {}
+
+    def _computePodAffinity(self, asn: str, role: str) -> Dict[str, Any]:
+        """Compute pod affinity rules for soft grouping strategies."""
+        preferred_terms: List[Dict[str, Any]] = []
+
+        if self.__scheduling_strategy in {SchedulingStrategy.AUTO, SchedulingStrategy.BY_AS}:
+            preferred_terms.append({
+                "weight": 90,
+                "podAffinityTerm": {
+                    "labelSelector": {
+                        "matchExpressions": [{
+                            "key": "seedemu.io/asn",
+                            "operator": "In",
+                            "values": [asn],
+                        }]
+                    },
+                    "topologyKey": "kubernetes.io/hostname",
+                }
+            })
+
+        if self.__scheduling_strategy in {SchedulingStrategy.AUTO, SchedulingStrategy.BY_ROLE}:
+            preferred_terms.append({
+                "weight": 40,
+                "podAffinityTerm": {
+                    "labelSelector": {
+                        "matchExpressions": [{
+                            "key": "seedemu.io/role",
+                            "operator": "In",
+                            "values": [role],
+                        }]
+                    },
+                    "topologyKey": "kubernetes.io/hostname",
+                }
+            })
+
+        if not preferred_terms:
+            return {}
+
+        return {
+            "podAffinity": {
+                "preferredDuringSchedulingIgnoredDuringExecution": preferred_terms
+            }
+        }
+
+    def _computeTopologySpreadConstraints(self) -> List[Dict[str, Any]]:
+        """Compute topology spread constraints for automatic balancing."""
+        if self.__scheduling_strategy != SchedulingStrategy.AUTO:
+            return []
+
+        return [{
+            "maxSkew": 1,
+            "topologyKey": "kubernetes.io/hostname",
+            "whenUnsatisfiable": "ScheduleAnyway",
+            "labelSelector": {
+                "matchLabels": {
+                    "seedemu.io/workload": "seedemu"
+                }
+            }
+        }]
+
+    def _applySchedulingConstraints(
+        self,
+        pod_spec: Dict[str, Any],
+        node: Node,
+        asn: str,
+        role: str,
+        labels: Dict[str, str],
+    ) -> None:
+        """Apply nodeSelector/affinity/topology spread to a pod or VMI spec."""
+        node_selector = self._computeNodeSelector(node, asn, role)
+        if node_selector:
+            pod_spec["nodeSelector"] = node_selector
+
+        affinity = self._computePodAffinity(asn, role)
+        if affinity:
+            pod_spec["affinity"] = affinity
+
+        spread = self._computeTopologySpreadConstraints()
+        if spread:
+            pod_spec["topologySpreadConstraints"] = spread
 
     def _compileServiceK8s(self, node: Node, node_name: str, labels: Dict[str, str]) -> Optional[str]:
         """Generate a Kubernetes Service for a node if needed."""
@@ -442,6 +554,7 @@ spec:
         asn = str(node.getAsn())
         role = self._nodeRoleToString(node.getRole())
 
+        # Fail-fast boundary for unsupported container-only features.
         self._assertKubeVirtCompatibility(node)
 
         # 1. Build Cloud-Init User Data
@@ -460,8 +573,9 @@ spec:
                 "permissions": "0644"
             })
 
-        # Generate and add replace_address.sh (Address Hack)
-        # For VMs, interfaces are eth1, eth2... (eth0 is mgmt)
+        # Generate and add replace_address.sh to configure static IPs on Multus interfaces.
+        # For VMs, interface names are not always eth1/eth2 (predictable naming varies),
+        # so the generated script falls back to auto-detection when needed.
         address_script = self._generateK8sAddressScript(interface_prefix="eth")
         user_data["write_files"].append({
             "path": "/usr/local/bin/replace_address.sh",
@@ -469,6 +583,13 @@ spec:
             "permissions": "0755"
         })
         user_data["runcmd"].append(["/usr/local/bin/replace_address.sh"])
+
+        # Routers need forwarding and relaxed rp_filter for asymmetric paths.
+        user_data["runcmd"].extend([
+            ["sh", "-c", "sysctl -w net.ipv4.ip_forward=1"],
+            ["sh", "-c", "sysctl -w net.ipv4.conf.all.rp_filter=0"],
+            ["sh", "-c", "sysctl -w net.ipv4.conf.default.rp_filter=0"],
+        ])
 
         for command in node.getBuildCommands():
             user_data["runcmd"].append(self._toCloudInitRunCommand(command, False))
@@ -508,6 +629,7 @@ spec:
             "seedemu.io/asn": asn,
             "seedemu.io/role": role,
             "seedemu.io/name": node.getName(),
+            "seedemu.io/workload": "seedemu",
             "kubevirt.io/domain": node_name
         }
 
@@ -579,9 +701,7 @@ spec:
         }
 
         # Add scheduling constraints
-        node_selector = self._computeNodeSelector(node, asn, role)
-        if node_selector:
-            manifest["spec"]["template"]["spec"]["nodeSelector"] = node_selector
+        self._applySchedulingConstraints(manifest["spec"]["template"]["spec"], node, asn, role, labels)
 
         return json.dumps(cloud_init_secret) + "\n---\n" + json.dumps(manifest)
 
@@ -618,24 +738,61 @@ spec:
 
     def _generateK8sAddressScript(self, interface_prefix: str = "net") -> str:
         """
-        Generates a script to configure IPs on Multus interfaces.
-        Multus interfaces are usually named net1, net2... (default) or eth1, eth2... (VMs)
+        Generate a script to configure static IPs on Multus interfaces.
+
+        - In containers, Multus interfaces are typically named net1/net2/...
+        - In VMs (KubeVirt), interface names depend on predictable naming rules and
+          are not reliably eth1/eth2/...
+
+        The generated script prefers deterministic `${prefix}1..N` when present,
+        otherwise it auto-detects non-default interfaces by ifindex order.
         """
         node = self._current_node
+        iface_count = len(node.getInterfaces())
+
         script = "#!/bin/bash\n"
-        script += "# K8s Address Replacement\n"
+        script += "set -euo pipefail\n"
+        script += "# K8s Address Replacement (Multus)\n\n"
+        script += f"iface_prefix=\"{interface_prefix}\"\n"
+        script += f"expected_ifaces={iface_count}\n\n"
+
+        script += "declare -a seed_ifaces=()\n"
+        script += "if [ -n \"${iface_prefix}\" ] && ip link show \"${iface_prefix}1\" >/dev/null 2>&1; then\n"
+        script += "  for i in $(seq 1 ${expected_ifaces}); do\n"
+        script += "    seed_ifaces+=(\"${iface_prefix}${i}\")\n"
+        script += "  done\n"
+        script += "else\n"
+        script += "  default_if=\"$(ip route show default 2>/dev/null | awk '/default/ {print $5; exit}')\"\n"
+        script += "  [ -z \"${default_if}\" ] && default_if=\"eth0\"\n"
+        script += "  mapfile -t seed_ifaces < <(\n"
+        script += "    for dev in /sys/class/net/*; do\n"
+        script += "      name=\"$(basename \"$dev\")\"\n"
+        script += "      [ \"$name\" = \"lo\" ] && continue\n"
+        script += "      [ \"$name\" = \"$default_if\" ] && continue\n"
+        script += "      idx=\"$(cat \"$dev/ifindex\" 2>/dev/null || echo 9999)\"\n"
+        script += "      echo \"$idx $name\"\n"
+        script += "    done | sort -n | awk '{print $2}'\n"
+        script += "  )\n"
+        script += "fi\n\n"
+
+        script += "configure_iface() {\n"
+        script += "  local slot=\"$1\"\n"
+        script += "  local addr=\"$2\"\n"
+        script += "  local iface=\"${seed_ifaces[$slot]:-}\"\n"
+        script += "  if [ -z \"$iface\" ]; then\n"
+        script += "    echo \"Missing data interface index $slot for $addr\" >&2\n"
+        script += "    return 1\n"
+        script += "  fi\n"
+        script += "  echo \"Configuring $iface with $addr\"\n"
+        script += "  ip link set \"$iface\" up\n"
+        script += "  ip addr flush dev \"$iface\" || true\n"
+        script += "  ip addr add \"$addr\" dev \"$iface\"\n"
+        script += "}\n\n"
 
         for i, iface in enumerate(node.getInterfaces()):
-            # Interface names: net1, net2... or eth1, eth2... (1-based index)
-            dev_name = f"{interface_prefix}{i+1}"
             addr = iface.getAddress()
             prefix_len = iface.getNet().getPrefix().prefixlen
-
-            script += f"echo 'Configuring {dev_name} with {addr}/{prefix_len}'\n"
-            # Ensure the interface is up and address is set
-            script += f"ip link set {dev_name} up\n"
-            script += f"ip addr flush dev {dev_name} || true\n"
-            script += f"ip addr add {addr}/{prefix_len} dev {dev_name}\n"
+            script += f"configure_iface {i} \"{addr}/{prefix_len}\"\n"
 
         return script
 
@@ -703,7 +860,6 @@ spec:
   ports:
   - port: 8080
     targetPort: 8080
-    nodePort: 30080
 """
         
         self.__manifests.append(internet_map_manifest)

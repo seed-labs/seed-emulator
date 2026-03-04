@@ -1,4 +1,5 @@
 import time
+import os
 from seedemu.compiler import KubernetesCompiler, SchedulingStrategy
 from seedemu.core import Emulator, Binding, Filter
 from seedemu.layers import Base, Routing, Ebgp
@@ -61,21 +62,32 @@ r3.joinNetwork("net0").joinNetwork("ix101")
 # AS150 -> Node 1 (seedemu-worker)
 # AS151 -> Node 2 (seedemu-worker2)
 # AS2   -> Node 3 (seedemu-control-plane)
+cluster_name = os.environ.get("SEED_CLUSTER_NAME", "seedemu-kvtest")
+control_node = os.environ.get("SEED_CONTROL_NODE", f"{cluster_name}-control-plane")
+worker_a = os.environ.get("SEED_WORKER_A", f"{cluster_name}-worker")
+worker_b = os.environ.get("SEED_WORKER_B", f"{cluster_name}-worker2")
+
 node_labels = {
-    "150": {"kubernetes.io/hostname": "seedemu-worker"},
-    "151": {"kubernetes.io/hostname": "seedemu-worker2"},
-    "2":   {"kubernetes.io/hostname": "seedemu-control-plane"}
+    "150": {"kubernetes.io/hostname": worker_a},
+    "151": {"kubernetes.io/hostname": worker_b},
+    "2": {"kubernetes.io/hostname": control_node},
 }
 
 # Compilation
 if __name__ == "__main__":
-    # NO REGISTRY prefix -> local images
-    REGISTRY_IP = ""
+    registry_prefix = os.environ.get("SEED_REGISTRY", "").strip()
+    namespace = os.environ.get("SEED_NAMESPACE", "seedemu").strip()
+    cni_type = os.environ.get("SEED_CNI_TYPE", "bridge").strip().lower()
+    output_dir = os.environ.get("SEED_OUTPUT_DIR")
+    if not output_dir:
+        output_dir = os.path.join(os.path.dirname(__file__), "output_multinode_bridge")
+    elif not os.path.isabs(output_dir):
+        output_dir = os.path.join(os.path.dirname(__file__), output_dir)
     
     # Create Kubernetes compiler with multi-node features
     k8s = KubernetesCompiler(
-        registry_prefix=REGISTRY_IP,  # Empty for local tags
-        namespace="seedemu",
+        registry_prefix=registry_prefix,  # Empty for local tags (kind load mode)
+        namespace=namespace,
         use_multus=True,
         internetMapEnabled=False,
         
@@ -90,7 +102,7 @@ if __name__ == "__main__":
         },
         
         # Connectivity
-        cni_type="bridge",
+        cni_type=cni_type,
         
         # Service Discovery
         generate_services=True,
@@ -104,9 +116,14 @@ if __name__ == "__main__":
     emu.addBinding(Binding('web151', filter=Filter(nodeName='web151', asn=151)))
     
     emu.render()
-    emu.compile(k8s, "./output_multinode_bridge", override=True)
+    emu.compile(k8s, output_dir, override=True)
     
     print("\n" + "="*80)
     print("Multi-Node Kubernetes Deployment Generated (Local Load Mode)!")
     print("="*80)
-    print("REMINDER: Run 'kind load docker-image <image_name> --name seedemu' for all images")
+    if not registry_prefix:
+        print(
+            f"REMINDER: Run 'kind load docker-image <image_name> --name {cluster_name}' for all images"
+        )
+    print(f"Output directory: {output_dir}")
+    print(f"Namespace: {namespace}")

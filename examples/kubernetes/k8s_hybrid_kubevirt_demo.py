@@ -11,6 +11,7 @@ from seedemu.core import Emulator, Binding, Filter
 
 
 VALID_RUNTIME_PROFILES = {"auto", "full", "degraded", "strict"}
+VALID_CNI_TYPES = {"bridge", "host-local", "macvlan", "ipvlan"}
 
 
 def _normalize_arch(machine: str) -> str:
@@ -56,6 +57,8 @@ def resolve_runtime_profile(requested_profile: str, capabilities: Dict[str, obje
     arch = str(capabilities["arch"])
     has_kvm = bool(capabilities["has_kvm"])
 
+    # "auto" expresses environment-aware policy selection.
+    # arm64 without /dev/kvm falls back to degraded to keep the workflow runnable.
     if normalized_requested == "auto":
         if arch == "arm64" and not has_kvm:
             return "degraded", "auto fallback: arm64 host without /dev/kvm"
@@ -75,6 +78,7 @@ def resolve_runtime_profile(requested_profile: str, capabilities: Dict[str, obje
 
 
 def apply_router_profile(as150_router, resolved_profile: str) -> str:
+    # Runtime profile is materialized as per-node virtualization mode.
     virtualization_mode = "KubeVirt" if resolved_profile == "full" else "Container"
     as150_router.setVirtualizationMode(virtualization_mode)
     return virtualization_mode
@@ -87,9 +91,17 @@ def run():
     vm_node = os.environ.get("SEED_VM_NODE", f"{cluster_name}-control-plane")
     worker_a = os.environ.get("SEED_WORKER_A", f"{cluster_name}-worker")
     worker_b = os.environ.get("SEED_WORKER_B", f"{cluster_name}-worker2")
+    cni_type = os.environ.get("SEED_CNI_TYPE", "bridge").strip().lower()
+    cni_master_interface = os.environ.get("SEED_CNI_MASTER_INTERFACE", "eth0").strip()
+    image_pull_policy = os.environ.get("SEED_IMAGE_PULL_POLICY", "Always").strip()
+    if cni_type not in VALID_CNI_TYPES:
+        raise ValueError(
+            f"Invalid SEED_CNI_TYPE '{cni_type}'. Supported values: {sorted(VALID_CNI_TYPES)}"
+        )
 
     requested_runtime_profile = os.environ.get("SEED_RUNTIME_PROFILE", "auto")
     host_capabilities = detect_host_capabilities()
+    # The resolved value directly determines whether VM resources exist.
     resolved_runtime_profile, profile_reason = resolve_runtime_profile(
         requested_runtime_profile,
         host_capabilities,
@@ -150,12 +162,17 @@ def run():
             "requests": {"cpu": "100m", "memory": "128Mi"},
             "limits": {"cpu": "500m", "memory": "1Gi"},
         },
-        cni_type="bridge",
+        cni_type=cni_type,
+        cni_master_interface=cni_master_interface,
         generate_services=True,
-        image_pull_policy="Always",
+        image_pull_policy=image_pull_policy,
     )
 
-    output_dir = os.path.join(os.path.dirname(__file__), "output_kubevirt_hybrid")
+    output_dir = os.environ.get("SEED_OUTPUT_DIR")
+    if not output_dir:
+        output_dir = os.path.join(os.path.dirname(__file__), "output_kubevirt_hybrid")
+    elif not os.path.isabs(output_dir):
+        output_dir = os.path.join(os.path.dirname(__file__), output_dir)
     emu.compile(k8s, output_dir, override=True)
 
     profile_summary = {
@@ -169,12 +186,14 @@ def run():
     }
 
     profile_summary_path = os.path.join(output_dir, "runtime_profile.json")
+    # Write decision evidence for reproducible review/debugging.
     with open(profile_summary_path, "w", encoding="utf-8") as profile_file:
         json.dump(profile_summary, profile_file, indent=2, sort_keys=True)
 
     print(f"Output directory: {output_dir}")
     print(f"Namespace: {namespace}")
     print(f"Runtime profile: {requested_runtime_profile.lower()} -> {resolved_runtime_profile}")
+    print(f"CNI type: {cni_type}")
     print(f"Profile reason: {profile_reason}")
     print(f"Router virtualization mode: {router_virtualization_mode}")
     print(f"Profile summary: {profile_summary_path}")
