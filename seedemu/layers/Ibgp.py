@@ -17,11 +17,28 @@ IbgpFileTemplates['ibgp_peer'] = '''
     neighbor {peerAddress} as {asn};
 '''
 
+IbgpFileTemplates['ibgp_rr_client'] = '''
+    ipv4 {{
+        table t_bgp;
+        import all;
+        export all;
+        igp table t_ospf;
+    }};
+    local {localAddress} as {asn};
+    neighbor {peerAddress} as {asn};
+    rr client;
+'''
+
 class Ibgp(Layer, Graphable):
     """!
     @brief The Ibgp (iBGP) layer.
 
-    This layer automatically setup full mesh peering between routers within AS.
+    This layer sets up iBGP peering between routers within an AS.
+
+    Default behavior is full-mesh iBGP. If one or more routers in an AS are
+    marked as route reflectors via Router.makeRouteReflector(), iBGP sessions
+    will be configured in an RR topology (clients peer only with RRs; RRs mesh
+    with each other).
     """
     __masked: Set[int]
 
@@ -32,6 +49,9 @@ class Ibgp(Layer, Graphable):
         super().__init__()
         self.__masked = set()
         self.addDependency('Ospf', False, False)
+
+    def __is_rr(self, node: Node) -> bool:
+        return hasattr(node, "isRouteReflector") and bool(node.isRouteReflector())
 
     def __dfs(self, start: Node, visited: List[Node], netname: str = 'self'):
         """!
@@ -97,6 +117,7 @@ class Ibgp(Layer, Graphable):
 
             self._log('setting up IBGP peering for as{}...'.format(asn))
             routers: List[Node] = ScopedRegistry(str(asn), reg).getByType('rnode')
+            as_has_rr = any(self.__is_rr(r) for r in routers)
 
             for local in routers:
                 self._log('setting up IBGP peering on as{}/{}...'.format(asn, local.getName()))
@@ -104,16 +125,33 @@ class Ibgp(Layer, Graphable):
                 remotes = []
                 self.__dfs(local, remotes)
 
+                local_is_rr = self.__is_rr(local)
+                component_rrs = [r for r in remotes if self.__is_rr(r)]
+                use_full_mesh = (not as_has_rr) or ((not local_is_rr) and len(component_rrs) == 0)
+
+                if use_full_mesh:
+                    peers = [r for r in remotes if r != local]
+                elif local_is_rr:
+                    # RR peers with all other routers in its component (RR<->RR, RR<->client).
+                    peers = [r for r in remotes if r != local]
+                else:
+                    # Client peers only with RRs in its component.
+                    peers = component_rrs
+
                 n = 1
-                for remote in remotes:
-                    if local == remote: continue
+                for remote in peers:
+                    if local == remote:
+                        continue
 
                     laddr = local.getLoopbackAddress()
                     raddr = remote.getLoopbackAddress()
                     local.addTable('t_bgp')
                     local.addTablePipe('t_bgp')
                     local.addTablePipe('t_direct', 't_bgp')
-                    local.addProtocol('bgp', 'ibgp{}'.format(n), IbgpFileTemplates['ibgp_peer'].format(
+                    template_key = 'ibgp_peer'
+                    if (not use_full_mesh) and local_is_rr and (not self.__is_rr(remote)):
+                        template_key = 'ibgp_rr_client'
+                    local.addProtocol('bgp', 'ibgp{}'.format(n), IbgpFileTemplates[template_key].format(
                         localAddress = laddr,
                         peerAddress = raddr,
                         asn = asn
@@ -121,7 +159,10 @@ class Ibgp(Layer, Graphable):
 
                     n += 1
 
-                    self._log('adding peering: {} <-> {} (ibgp, as{})'.format(laddr, raddr, asn))
+                    if template_key == 'ibgp_rr_client':
+                        self._log('adding peering: {} <-> {} (ibgp-rr-client, as{})'.format(laddr, raddr, asn))
+                    else:
+                        self._log('adding peering: {} <-> {} (ibgp, as{})'.format(laddr, raddr, asn))
 
     def _doCreateGraphs(self, emulator: Emulator):
         base: Base = emulator.getRegistry().get('seedemu', 'layer', 'Base')
@@ -136,11 +177,74 @@ class Ibgp(Layer, Graphable):
                 edge.style = 'dotted'
 
             rtrs = ScopedRegistry(str(asn), emulator.getRegistry()).getByType('rnode').copy()
-            
-            while len(rtrs) > 0:
-                a = rtrs.pop()
-                for b in rtrs:
-                    ibgpgraph.addEdge('Router: {}'.format(a.getName()), 'Router: {}'.format(b.getName()), style = 'solid')
+            rtrs_set = set(rtrs)
+
+            def local_router_neighbors(node: Node) -> List[Node]:
+                neighs: List[Node] = []
+                for iface in node.getInterfaces():
+                    net = iface.getNet()
+                    if net.getType() != NetworkType.Local:
+                        continue
+                    for neigh in net.getAssociations():
+                        if neigh not in rtrs_set:
+                            continue
+                        role = neigh.getRole()
+                        if role not in (NodeRole.Router, NodeRole.BorderRouter, NodeRole.OpenVpnRouter):
+                            continue
+                        neighs.append(neigh)
+                return neighs
+
+            # Mirror the render() topology:
+            # - component without RR => full-mesh within component
+            # - component with RR(s) => RR mesh + clients->RR star within component
+            unseen = set(rtrs)
+            while unseen:
+                start = unseen.pop()
+                stack = [start]
+                component: Set[Node] = set()
+
+                while stack:
+                    cur = stack.pop()
+                    if cur in component:
+                        continue
+                    component.add(cur)
+                    for neigh in local_router_neighbors(cur):
+                        if neigh not in component:
+                            stack.append(neigh)
+
+                unseen -= component
+
+                comp_list = sorted(component, key=lambda r: r.getName())
+                comp_rrs = [r for r in comp_list if self.__is_rr(r)]
+
+                if len(comp_rrs) == 0:
+                    for i, a in enumerate(comp_list):
+                        for b in comp_list[i + 1 :]:
+                            ibgpgraph.addEdge(
+                                'Router: {}'.format(a.getName()),
+                                'Router: {}'.format(b.getName()),
+                                style='solid',
+                            )
+                    continue
+
+                # RR<->RR mesh
+                for i, a in enumerate(comp_rrs):
+                    for b in comp_rrs[i + 1 :]:
+                        ibgpgraph.addEdge(
+                            'Router: {}'.format(a.getName()),
+                            'Router: {}'.format(b.getName()),
+                            style='solid',
+                        )
+
+                # client<->RR star
+                comp_clients = [r for r in comp_list if r not in comp_rrs]
+                for client in comp_clients:
+                    for rr in comp_rrs:
+                        ibgpgraph.addEdge(
+                            'Router: {}'.format(client.getName()),
+                            'Router: {}'.format(rr.getName()),
+                            style='solid',
+                        )
             
 
     def print(self, indent: int) -> str:
@@ -157,4 +261,3 @@ class Ibgp(Layer, Graphable):
             out += '{}\n'.format(asn)
 
         return out
-

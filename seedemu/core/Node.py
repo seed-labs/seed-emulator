@@ -1137,7 +1137,7 @@ if [ -z "$gw" ]; then
     ip_portion=$(echo "$line" | cut -d':' -f2)
     ip_only=$(echo "$ip_portion" | cut -d'/' -f1)
     docker_host="${ip_only%.*}.1"
-    if [ -z "$docker_host"]; then
+    if [ -z "$docker_host" ]; then
         echo "Error: Could not determine the default route required to configure BIRD." >&2
         exit 1;
     else
@@ -1158,12 +1158,14 @@ class Router(Node):
 
     __loopback_address: str
     __is_border_router: bool
+    __ibgp_is_rr: bool
 
     __extensions: Dict[str, RouterExtension]
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         self.__is_border_router = False
         self.__loopback_address = None
+        self.__ibgp_is_rr = False
         self.__extensions = {}
         super().__init__( name,role,asn,scope)
 
@@ -1209,6 +1211,34 @@ class Router(Node):
         @returns address.
         """
         return self.__loopback_address
+
+    def makeRouteReflector(self, is_rr: bool = True) -> Router:
+        """!
+        @brief Mark this router as an iBGP route reflector.
+
+        If at least one router in an AS is marked as a route reflector, the
+        Ibgp layer will establish iBGP sessions in an RR topology (clients peer
+        with RRs; RRs mesh with each other) instead of a full-mesh.
+
+        @param is_rr whether this router is a route reflector.
+        @returns self, for chaining API calls.
+        """
+        self.__ibgp_is_rr = bool(is_rr)
+        return self
+
+    def isRouteReflector(self) -> bool:
+        """!
+        @brief Check whether this router is an iBGP route reflector.
+
+        @returns True if this router is a route reflector.
+        """
+        return bool(self.__ibgp_is_rr)
+
+    def configure(self, emulator: Emulator):
+        super().configure(emulator)
+        # Persist RR intent for layers/compilers that inspect registry attrs.
+        if hasattr(self, "_attrs"):
+            self.setAttribute("__ibgp_is_rr", bool(self.__ibgp_is_rr))
 
     def addProtocol(self, protocol: str, name: str, body: str) -> Router:
         """!
