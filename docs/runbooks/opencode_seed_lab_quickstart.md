@@ -12,6 +12,7 @@
 
 - `docs/runbooks/20260305_k3s_kvm_multinode_real_topology_rr.md`
 - `docs/k3s_runtime_architecture.md`
+- `docs/runbooks/seed_lab_evidence_first_operator_guide.md`
 
 ---
 

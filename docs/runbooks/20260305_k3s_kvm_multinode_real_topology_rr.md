@@ -3,6 +3,10 @@
 > 本文件是**一次性统一记录**：把我们之前做过的事情、做法、入口、产物与人工检查方式写清楚。  
 > 目标：任何人**不借助 AI**，只按本文就能复现并理解 `mini_internet` 与 `real_topology_rr`（K3s 多节点）的运行模式与验证方式。
 
+给不熟 K8s、只想抓住“怎么跑 / 怎么看证据 / 怎么问 AI”的同学，优先看：
+
+- `docs/runbooks/seed_lab_evidence_first_operator_guide.md`
+
 ---
 
 ## 0. 时间戳与范围
