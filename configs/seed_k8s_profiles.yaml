@@ -21,6 +21,22 @@ profiles:
       - bird_rs100.txt
       - ping_150_to_151.txt
 
+  real_topology_rr:
+    profile_id: real_topology_rr
+    compile_script: examples/kubernetes/k8s_real_topology_rr.py
+    default_namespace: seedemu-k3s-real-topo
+    default_cni_type: macvlan
+    default_scheduling_strategy: auto
+    verify_mode: generic_ready
+    verify_targets:
+      min_deployments_available: 1
+      min_pods_running: 1
+    observe_required_files:
+      - summary.json
+      - placement.tsv
+      - pods_wide.txt
+      - bird_sample.txt
+
   transit_as:
     profile_id: transit_as
     compile_script: examples/kubernetes/k8s_transit_as.py

@@ -9,6 +9,7 @@ from hashlib import md5
 from os import mkdir, chdir
 import json
 import os
+import shutil
 import yaml
 
 
@@ -163,16 +164,186 @@ class KubernetesCompiler(Docker):
         with open('k8s.yaml', 'w') as f:
             f.write("\n---\n".join(self.__manifests))
 
+        # Stage local Dockerfile contexts for built-in base images (to avoid relying on Docker Hub mirrors
+        # that may not whitelist custom images like handsonsecurity/*).
+        used_images = sorted(getattr(self, "_used_images", set()))
+        try:
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            base_image_sources = {
+                # These match DockerImageConstant defaults.
+                "handsonsecurity/seedemu-multiarch-base:buildx-latest": os.path.join(repo_root, "docker_images", "multiarch", "seedemu-base"),
+                "handsonsecurity/seedemu-multiarch-router:buildx-latest": os.path.join(repo_root, "docker_images", "multiarch", "seedemu-router"),
+            }
+            staged_any = False
+            for image in used_images:
+                src = base_image_sources.get(image)
+                if not src or not os.path.isdir(src):
+                    continue
+                digest = md5(image.encode("utf-8")).hexdigest()
+                dst_root = os.path.join("base_images", digest)
+                os.makedirs(os.path.dirname(dst_root), exist_ok=True)
+                if os.path.exists(dst_root):
+                    shutil.rmtree(dst_root)
+                shutil.copytree(src, dst_root)
+                staged_any = True
+            if not staged_any and os.path.isdir("base_images"):
+                shutil.rmtree("base_images")
+        except Exception:
+            # Best-effort only: compilation should still succeed even if we can't stage base images.
+            pass
+
         # build_images.sh
         with open('build_images.sh', 'w') as f:
-            f.write("#!/bin/bash\n")
-            f.write("set -e\n")
-            # Docker BuildKit can be flaky on some teaching/workstation environments
-            # (e.g., snapshot cache corruption). Default to legacy builder for
-            # reproducibility; users can override by editing the script if needed.
-            f.write("export DOCKER_BUILDKIT=0\n")
-            f.write("\n".join(self.__build_commands))
+            f.write("#!/usr/bin/env bash\n")
+            f.write("set -euo pipefail\n")
+            # Allow callers to override BuildKit/parallelism without editing generated artifacts.
+            f.write('export DOCKER_BUILDKIT="${SEED_DOCKER_BUILDKIT:-0}"\n')
+            f.write('PARALLELISM="${SEED_BUILD_PARALLELISM:-1}"\n')
+            f.write('if ! [[ "${PARALLELISM}" =~ ^[0-9]+$ ]]; then PARALLELISM=1; fi\n')
+            # Export so the inline Python snippet (daemon.json edit) can see it.
+            f.write('export SEED_DOCKER_IO_MIRROR_ENDPOINT="${SEED_DOCKER_IO_MIRROR_ENDPOINT:-https://docker.m.daocloud.io}"\n')
+            f.write('MIRROR_HOST="${SEED_DOCKER_IO_MIRROR_ENDPOINT#http://}"\n')
+            f.write('MIRROR_HOST="${MIRROR_HOST#https://}"\n')
+            # Export so the inline Python snippet (daemon.json edit) can see it.
+            f.write(f'export REGISTRY_PREFIX="{self.__registry_prefix}"\n')
             f.write("\n")
+            f.write("docker_pull() {\n")
+            f.write("  local image=\"$1\"\n")
+            f.write("  if command -v timeout >/dev/null 2>&1; then\n")
+            f.write("    timeout 180s docker pull \"$image\"\n")
+            f.write("  else\n")
+            f.write("    docker pull \"$image\"\n")
+            f.write("  fi\n")
+            f.write("}\n")
+            f.write("\n")
+            f.write("mirror_image_name() {\n")
+            f.write("  local image=\"$1\"\n")
+            f.write("  if [[ -z \"${MIRROR_HOST}\" ]]; then\n")
+            f.write("    echo \"$image\"\n")
+            f.write("    return 0\n")
+            f.write("  fi\n")
+            f.write("  if [[ \"$image\" == *\"/\"* ]]; then\n")
+            f.write("    echo \"${MIRROR_HOST}/${image}\"\n")
+            f.write("  else\n")
+            f.write("    echo \"${MIRROR_HOST}/library/${image}\"\n")
+            f.write("  fi\n")
+            f.write("}\n")
+            f.write("\n")
+            f.write("ensure_image_present() {\n")
+            f.write("  local image=\"$1\"\n")
+            f.write("  if docker image inspect \"$image\" >/dev/null 2>&1; then\n")
+            f.write("    return 0\n")
+            f.write("  fi\n")
+            f.write("  local mirror\n")
+            f.write("  mirror=\"$(mirror_image_name \"$image\")\"\n")
+            # In environments where Docker Hub is blocked, try the mirror first.
+            f.write("  if [[ \"$mirror\" != \"$image\" ]]; then\n")
+            f.write("    if docker_pull \"$mirror\" >/dev/null 2>&1; then\n")
+            f.write("      docker tag \"$mirror\" \"$image\" >/dev/null 2>&1 || true\n")
+            f.write("      return 0\n")
+            f.write("    fi\n")
+            f.write("  fi\n")
+            f.write("  if docker_pull \"$image\" >/dev/null 2>&1; then\n")
+            f.write("    return 0\n")
+            f.write("  fi\n")
+            f.write("  echo \"[build_images] ERROR: cannot pull base image: $image\" >&2\n")
+            f.write("  echo \"[build_images] Hint: set SEED_DOCKER_IO_MIRROR_ENDPOINT to a reachable mirror\" >&2\n")
+            f.write("  return 1\n")
+            f.write("}\n")
+            f.write("\n")
+            f.write("ensure_docker_daemon_config() {\n")
+            f.write("  if [[ -z \"${REGISTRY_PREFIX}\" ]]; then return 0; fi\n")
+            f.write("  if [[ \"$(id -u)\" != \"0\" ]]; then return 0; fi\n")
+            f.write("  if ! command -v systemctl >/dev/null 2>&1; then return 0; fi\n")
+            f.write("  mkdir -p /etc/docker\n")
+            f.write("  local result\n")
+            f.write("  result=\"$(python3 - <<'PY'\n")
+            f.write("import json\n")
+            f.write("from pathlib import Path\n")
+            f.write("import os\n")
+            f.write("\n")
+            f.write("registry = os.environ.get('REGISTRY_PREFIX', '')\n")
+            f.write("mirror = os.environ.get('SEED_DOCKER_IO_MIRROR_ENDPOINT', '')\n")
+            f.write("p = Path('/etc/docker/daemon.json')\n")
+            f.write("data = {}\n")
+            f.write("if p.exists():\n")
+            f.write("    try:\n")
+            f.write("        data = json.loads(p.read_text(encoding='utf-8'))\n")
+            f.write("    except Exception:\n")
+            f.write("        data = {}\n")
+            f.write("\n")
+            f.write("before = json.dumps(data, sort_keys=True)\n")
+            f.write("insec = set(data.get('insecure-registries', []) or [])\n")
+            f.write("if registry and '/' not in registry:\n")
+            f.write("    insec.add(registry)\n")
+            f.write("data['insecure-registries'] = sorted(insec)\n")
+            f.write("\n")
+            f.write("mirrors = list(data.get('registry-mirrors', []) or [])\n")
+            f.write("if mirror and mirror not in mirrors:\n")
+            f.write("    mirrors.append(mirror)\n")
+            f.write("data['registry-mirrors'] = mirrors\n")
+            f.write("\n")
+            f.write("after = json.dumps(data, sort_keys=True)\n")
+            f.write("if after != before:\n")
+            f.write("    p.write_text(json.dumps(data, indent=2) + '\\n', encoding='utf-8')\n")
+            f.write("    print('changed')\n")
+            f.write("else:\n")
+            f.write("    print('unchanged')\n")
+            f.write("PY\n")
+            f.write(")\"\n")
+            f.write("  if [[ \"${result}\" == \"changed\" ]]; then\n")
+            f.write("    systemctl restart docker >/dev/null 2>&1 || true\n")
+            f.write("    sleep 2\n")
+            f.write("  fi\n")
+            f.write("}\n")
+            f.write("\n")
+            f.write("prepare_dummy_image() {\n")
+            f.write("  local base_image=\"$1\"\n")
+            f.write("  local dummy_tag=\"$2\"\n")
+            f.write("  if docker image inspect \"$dummy_tag\" >/dev/null 2>&1; then\n")
+            f.write("    return 0\n")
+            f.write("  fi\n")
+            f.write("  if ! docker image inspect \"$base_image\" >/dev/null 2>&1; then\n")
+            f.write("    local ctx=\"base_images/${dummy_tag}\"\n")
+            f.write("    if [ -f \"${ctx}/Dockerfile\" ]; then\n")
+            f.write("      echo \"[build_images] building base image: ${base_image} (from ${ctx})\" >&2\n")
+            f.write("      # Pre-pull common upstream bases via mirror+tag to avoid Docker Hub outages.\n")
+            f.write("      ensure_image_present \"ubuntu:20.04\"\n")
+            f.write("      docker build -t \"${base_image}\" \"${ctx}\"\n")
+            f.write("    else\n")
+            f.write("      ensure_image_present \"$base_image\"\n")
+            f.write("    fi\n")
+            f.write("  fi\n")
+            f.write("  mkdir -p dummies\n")
+            f.write("  local df=\"dummies/${dummy_tag}.Dockerfile\"\n")
+            f.write("  printf 'FROM %s\\n' \"$base_image\" > \"$df\"\n")
+            f.write("  docker build -t \"$dummy_tag\" -f \"$df\" dummies >/dev/null\n")
+            f.write("}\n")
+            f.write("\n")
+            f.write("ensure_docker_daemon_config\n")
+
+            if used_images:
+                f.write('echo "[build_images] preparing base-image dummies"\n')
+                for image in used_images:
+                    digest = md5(image.encode("utf-8")).hexdigest()
+                    f.write(f'prepare_dummy_image "{image}" "{digest}"\n')
+                f.write("\n")
+            f.write('JOBS_FILE="$(mktemp)"\n')
+            f.write('cleanup() { rm -f "${JOBS_FILE}"; }\n')
+            f.write('trap cleanup EXIT\n')
+            f.write("cat > \"${JOBS_FILE}\" <<'JOBS'\n")
+            f.write("\n".join(self.__build_commands))
+            f.write("\nJOBS\n")
+            f.write('if [ "${PARALLELISM}" -le 1 ]; then\n')
+            f.write('  while IFS= read -r cmd; do\n')
+            f.write('    [ -z "${cmd}" ] && continue\n')
+            f.write('    echo "+ ${cmd}"\n')
+            f.write('    eval "${cmd}"\n')
+            f.write('  done < "${JOBS_FILE}"\n')
+            f.write('else\n')
+            # Run each full line as one job (preserve spaces in the docker commands).
+            f.write("  awk 'NF' \"${JOBS_FILE}\" | xargs -P \"${PARALLELISM}\" -d '\\n' -I {} bash -lc 'set -euo pipefail; cmd=\"{}\"; echo \"+ ${cmd}\"; eval \"${cmd}\"'\n")
+            f.write('fi\n')
         os.chmod('build_images.sh', 0o755)
 
         # Generate .env file
@@ -304,11 +475,10 @@ spec:
         else:
             full_image_name = f"{real_nodename}:latest"
             
-        self.__build_commands.append(f"docker build -t {full_image_name} ./{real_nodename}")
-        
-        # Only push if there is a registry
+        build_cmd = f"docker build -t {full_image_name} ./{real_nodename}"
         if self.__registry_prefix:
-            self.__build_commands.append(f"docker push {full_image_name}")
+            build_cmd = f"{build_cmd} && docker push {full_image_name}"
+        self.__build_commands.append(build_cmd)
 
         # 3. Generate Deployment Manifest
         node_name = self._getComposeNodeName(node).replace('_', '-').lower()  # K8s names must be DNS compliant

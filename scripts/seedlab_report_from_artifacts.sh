@@ -105,6 +105,7 @@ report_dir = Path(${REPORT_DIR@Q}).resolve()
 report_dir.mkdir(parents=True, exist_ok=True)
 
 summary = json.loads((validation_dir / "summary.json").read_text(encoding="utf-8"))
+profile_id = str(summary.get("profile", "") or summary.get("profile_id", "") or "")
 
 
 def load_json_if_exists(path: Path):
@@ -136,38 +137,54 @@ overall_pass = placement_passed and bgp and connectivity and recovery_passed
 
 failure_reason = str(summary.get("failure_reason", "") or "")
 failure_code = str(summary.get("failure_code", "") or "")
-if diagnostics and isinstance(diagnostics, dict):
-    failure_code = str(diagnostics.get("failure_code", failure_code) or failure_code)
-
-if (observe_namespace_match is False) and not failure_code:
-    failure_code = "OBSERVE_NAMESPACE_MISMATCH"
-
-retry_by_failure = {
-    "kubeconfig_not_found_after_fetch": "scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_mini_internet_multinode.sh preflight",
-    "ssh_key_not_found": "export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_mini_internet_multinode.sh preflight",
-    "preflight_failed_after_repair": "scripts/validate_k3s_mini_internet_multinode.sh preflight",
-    "compile_missing_k8s_yaml": "scripts/validate_k3s_mini_internet_multinode.sh compile",
-    "deploy_wait_timeout_or_failure": "scripts/validate_k3s_mini_internet_multinode.sh deploy",
-    "strict3_placement_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
-    "placement_check_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
-    "bgp_not_established": "scripts/validate_k3s_mini_internet_multinode.sh verify",
-    "connectivity_check_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
-    "recovery_check_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
-}
-
-if overall_pass:
-    next_namespace = str(summary.get("namespace", "") or "seedemu-k3s-mini-mn")
-    recommended_next = f"scripts/inspect_k3s_mini_internet.sh {next_namespace}"
-else:
-    recommended_next = retry_by_failure.get(failure_reason, "scripts/validate_k3s_mini_internet_multinode.sh verify")
-
 minimal_retry_command = ""
 fallback_command = ""
 first_evidence_file = ""
 if diagnostics and isinstance(diagnostics, dict):
+    failure_code = str(diagnostics.get("failure_code", failure_code) or failure_code)
     minimal_retry_command = str(diagnostics.get("minimal_retry_command", "") or "")
     fallback_command = str(diagnostics.get("fallback_command", "") or "")
     first_evidence_file = str(diagnostics.get("first_evidence_file", "") or "")
+
+if (observe_namespace_match is False) and not failure_code:
+    failure_code = "OBSERVE_NAMESPACE_MISMATCH"
+
+if profile_id == "real_topology_rr":
+    retry_by_failure = {
+        "kubeconfig_fetch_failed": "scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_real_topology_multinode.sh preflight",
+        "kubeconfig_not_found_after_fetch": "scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_real_topology_multinode.sh preflight",
+        "ssh_key_not_found": "export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_real_topology_multinode.sh preflight",
+        "compile_missing_k8s_yaml": "scripts/validate_k3s_real_topology_multinode.sh compile",
+        "compile_missing_build_script": "scripts/validate_k3s_real_topology_multinode.sh compile",
+        "build_failed": "scripts/validate_k3s_real_topology_multinode.sh build",
+        "deploy_wait_timeout_or_failure": "scripts/validate_k3s_real_topology_multinode.sh deploy",
+        "placement_check_failed": "scripts/validate_k3s_real_topology_multinode.sh verify",
+        "bgp_not_established": "scripts/validate_k3s_real_topology_multinode.sh verify",
+        "strict3_not_supported": "export SEED_PLACEMENT_MODE=auto && scripts/validate_k3s_real_topology_multinode.sh verify",
+    }
+else:
+    retry_by_failure = {
+        "kubeconfig_not_found_after_fetch": "scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_mini_internet_multinode.sh preflight",
+        "ssh_key_not_found": "export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_mini_internet_multinode.sh preflight",
+        "preflight_failed_after_repair": "scripts/validate_k3s_mini_internet_multinode.sh preflight",
+        "compile_missing_k8s_yaml": "scripts/validate_k3s_mini_internet_multinode.sh compile",
+        "deploy_wait_timeout_or_failure": "scripts/validate_k3s_mini_internet_multinode.sh deploy",
+        "strict3_placement_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
+        "placement_check_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
+        "bgp_not_established": "scripts/validate_k3s_mini_internet_multinode.sh verify",
+        "connectivity_check_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
+        "recovery_check_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
+    }
+
+if overall_pass:
+    next_namespace = str(summary.get("namespace", "") or "")
+    if profile_id == "mini_internet":
+        recommended_next = f"scripts/inspect_k3s_mini_internet.sh {next_namespace or 'seedemu-k3s-mini-mn'}"
+    else:
+        recommended_next = f"kubectl -n {next_namespace or 'default'} get pods -o wide"
+else:
+    recommended_next = retry_by_failure.get(failure_reason, minimal_retry_command or "scripts/validate_k3s_mini_internet_multinode.sh verify")
+
 if not minimal_retry_command and next_actions and isinstance(next_actions, dict):
     minimal_retry_command = str(next_actions.get("minimal_retry_command", "") or "")
 if not fallback_command and next_actions and isinstance(next_actions, dict):
@@ -179,8 +196,35 @@ if not fallback_command:
 if not first_evidence_file:
     first_evidence_file = str((validation_dir / "summary.json").resolve())
 
+evidence_files = {}
+def add_evidence(key: str, path: Path):
+    if path.exists():
+        evidence_files[key] = str(path.resolve())
+
+add_evidence("summary", validation_dir / "summary.json")
+add_evidence("diagnostics", validation_dir / "diagnostics.json")
+add_evidence("next_actions", validation_dir / "next_actions.json")
+
+if profile_id == "real_topology_rr":
+    add_evidence("counts", validation_dir / "counts.json")
+    add_evidence("placement", validation_dir / "placement.tsv")
+    add_evidence("pods_wide", validation_dir / "pods_wide.txt")
+    add_evidence("deployments_wide", validation_dir / "deployments_wide.txt")
+    add_evidence("bird_sample", validation_dir / "bird_sample.txt")
+else:
+    add_evidence("placement", validation_dir / "placement.tsv")
+    add_evidence("placement_check", validation_dir / "placement_check.json")
+    add_evidence("bird_router151", validation_dir / "bird_router151.txt")
+    add_evidence("bird_ix100", validation_dir / "bird_ix100.txt")
+    add_evidence("ping_150_to_151", validation_dir / "ping_150_to_151.txt")
+    add_evidence("recovery_check", validation_dir / "recovery_check.json")
+
+if observe_dir:
+    add_evidence("observe_summary", observe_dir / "summary.json")
+
 report = {
     "generated_at": datetime.now(timezone.utc).isoformat(),
+    "profile_id": profile_id,
     "validation_dir": str(validation_dir),
     "observe_dir": str(observe_dir) if observe_dir else "",
     "report_dir": str(report_dir),
@@ -209,15 +253,7 @@ report = {
     "next_actions": next_actions,
     "observe_summary": observe_summary,
     "observe_namespace_match": observe_namespace_match,
-    "evidence_files": {
-        "summary": str((validation_dir / "summary.json").resolve()),
-        "placement_check": str((validation_dir / "placement_check.json").resolve()),
-        "bird_router151": str((validation_dir / "bird_router151.txt").resolve()),
-        "bird_ix100": str((validation_dir / "bird_ix100.txt").resolve()),
-        "ping_150_to_151": str((validation_dir / "ping_150_to_151.txt").resolve()),
-        "recovery_check": str((validation_dir / "recovery_check.json").resolve()),
-        "observe_summary": str((observe_dir / "summary.json").resolve()) if observe_dir else "",
-    },
+    "evidence_files": evidence_files,
     "recommended_next_command": recommended_next,
 }
 
@@ -250,17 +286,11 @@ md_lines = [
     "",
     "## Evidence",
     "",
-    f"- summary: '{report['evidence_files']['summary']}'",
-    f"- placement_check: '{report['evidence_files']['placement_check']}'",
-    f"- bird_router151: '{report['evidence_files']['bird_router151']}'",
-    f"- bird_ix100: '{report['evidence_files']['bird_ix100']}'",
-    f"- ping_150_to_151: '{report['evidence_files']['ping_150_to_151']}'",
-    f"- recovery_check: '{report['evidence_files']['recovery_check']}'",
+    *(f"- {k}: '{v}'" for k, v in report["evidence_files"].items()),
     f"- first_evidence_file: '{report['first_evidence_file']}'",
 ]
 
-if report["evidence_files"]["observe_summary"]:
-    md_lines.append(f"- observe_summary: '{report['evidence_files']['observe_summary']}'")
+if "observe_summary" in report["evidence_files"]:
     md_lines.append(f"- observe_namespace_match: '{report['observe_namespace_match']}'")
 
 md_lines.extend([

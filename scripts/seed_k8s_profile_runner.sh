@@ -25,6 +25,17 @@ REPORT_DIR="${BASE_DIR}/report"
 RUNNER_SUMMARY="${BASE_DIR}/runner_summary.json"
 RUNNER_DIAGNOSTICS="${BASE_DIR}/diagnostics.json"
 RUNNER_NEXT_ACTIONS="${BASE_DIR}/next_actions.json"
+RUNNER_LOG="${BASE_DIR}/runner.log"
+
+setup_runner_logging() {
+  local enabled="${SEED_RUNNER_LOG:-true}"
+  if [ "${enabled}" != "true" ]; then
+    return 0
+  fi
+  mkdir -p "${BASE_DIR}"
+  touch "${RUNNER_LOG}"
+  exec > >(tee -a "${RUNNER_LOG}") 2>&1
+}
 
 rebind_run_paths() {
   BASE_DIR="$1"
@@ -35,6 +46,7 @@ rebind_run_paths() {
   RUNNER_SUMMARY="${BASE_DIR}/runner_summary.json"
   RUNNER_DIAGNOSTICS="${BASE_DIR}/diagnostics.json"
   RUNNER_NEXT_ACTIONS="${BASE_DIR}/next_actions.json"
+  RUNNER_LOG="${BASE_DIR}/runner.log"
 }
 
 adopt_latest_for_read_actions() {
@@ -99,6 +111,36 @@ require_cmd() {
     echo "Missing required command: $1" >&2
     exit 1
   fi
+}
+
+ensure_kubeconfig() {
+  # Prefer an already-working kubectl environment (kind, etc.). If kubectl is
+  # not usable, fall back to the repo-managed k3s kubeconfig.
+  if kubectl get nodes >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local cluster_name kubeconfig_path
+  cluster_name="${SEED_K3S_CLUSTER_NAME:-seedemu-k3s}"
+  kubeconfig_path="${REPO_ROOT}/output/kubeconfigs/${cluster_name}.yaml"
+
+  if [ -f "${kubeconfig_path}" ]; then
+    export KUBECONFIG="${kubeconfig_path}"
+    if kubectl get nodes >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+
+  if "${SCRIPT_DIR}/k3s_fetch_kubeconfig.sh" >/dev/null 2>&1 && [ -f "${kubeconfig_path}" ]; then
+    export KUBECONFIG="${kubeconfig_path}"
+    if kubectl get nodes >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+
+  echo "ERROR: kubectl cannot reach a cluster." >&2
+  echo "Hint: export KUBECONFIG=${kubeconfig_path} (or run scripts/k3s_fetch_kubeconfig.sh)" >&2
+  return 1
 }
 
 usage() {
@@ -203,6 +245,58 @@ Path(${RUNNER_NEXT_ACTIONS@Q}).write_text(json.dumps(next_actions, indent=2), en
 PY
 }
 
+write_runner_failure_from_validation() {
+  local default_stage="$1"
+  local diag_file="${VALIDATION_DIR}/diagnostics.json"
+  local summary_file="${VALIDATION_DIR}/summary.json"
+
+  if [ -f "${diag_file}" ]; then
+    python3 - <<PY
+import json
+from pathlib import Path
+
+p = Path(${diag_file@Q})
+data = json.loads(p.read_text(encoding="utf-8"))
+stage = str(data.get("stage", "") or "")
+failure_code = str(data.get("failure_code", "") or "")
+failure_reason = str(data.get("failure_reason", "") or "")
+evidence = str(data.get("first_evidence_file", "") or str(p))
+minimal = str(data.get("minimal_retry_command", "") or "")
+fallback = str(data.get("fallback_command", "") or "")
+print(stage)
+print(failure_code)
+print(failure_reason)
+print(evidence)
+print(minimal)
+print(fallback)
+PY
+    return 0
+  fi
+
+  if [ -f "${summary_file}" ]; then
+    python3 - <<PY
+import json
+from pathlib import Path
+
+p = Path(${summary_file@Q})
+data = json.loads(p.read_text(encoding="utf-8"))
+failure_code = str(data.get("failure_code", "") or "")
+failure_reason = str(data.get("failure_reason", "") or "")
+print(${default_stage@Q})
+print(failure_code or "DEPLOY_TIMEOUT")
+print(failure_reason or "unknown_failure")
+print(str(p))
+print(f"scripts/seed_k8s_profile_runner.sh {${PROFILE_ID@Q}} {${ACTION@Q}}")
+print(f"scripts/seed_k8s_profile_runner.sh {${PROFILE_ID@Q}} triage")
+PY
+    return 0
+  fi
+
+  printf '%s\n' "${default_stage}" "DEPLOY_TIMEOUT" "unknown_failure" "${VALIDATION_DIR}/" \
+    "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} ${ACTION}" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor"
+  return 0
+}
+
 next_from_map() {
   local failure_code="$1"
   python3 - <<PY
@@ -254,6 +348,11 @@ run_mini_validate() {
   "${SCRIPT_DIR}/validate_k3s_mini_internet_multinode.sh" "${mini_action}"
 }
 
+run_real_topology_validate() {
+  local topo_action="$1"
+  "${SCRIPT_DIR}/validate_k3s_real_topology_multinode.sh" "${topo_action}"
+}
+
 run_generic_compile() {
   local compile_script
   compile_script="$(profile_field compile_script)"
@@ -299,6 +398,8 @@ run_generic_build() {
 }
 
 run_generic_deploy() {
+  ensure_kubeconfig || return 1
+
   local deploy_timeout
   deploy_timeout="${SEED_GENERIC_DEPLOY_TIMEOUT_SECONDS:-1200}"
 
@@ -321,6 +422,8 @@ run_generic_deploy() {
 }
 
 run_generic_verify() {
+  ensure_kubeconfig || return 1
+
   local verify_mode
   verify_mode="$(profile_field verify_mode)"
 
@@ -343,6 +446,8 @@ run_generic_verify() {
 }
 
 run_observe() {
+  ensure_kubeconfig || return 1
+
   if [ "${PROFILE_ID}" = "mini_internet" ]; then
     "${SCRIPT_DIR}/inspect_k3s_mini_internet.sh" "${SEED_NAMESPACE}" "${OBSERVE_DIR}"
   else
@@ -509,6 +614,52 @@ PY
     return 1
   fi
 
+  if [ "${PROFILE_ID}" = "real_topology_rr" ]; then
+    if run_real_topology_validate preflight; then
+      write_runner_artifacts "doctor" "PASS" "" "" "${VALIDATION_DIR}/summary.json" \
+        "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify"
+      return 0
+    fi
+
+    local failure_code minimal fallback
+    failure_code="$(python3 - <<PY
+import json
+from pathlib import Path
+p = Path(${VALIDATION_DIR@Q}) / "diagnostics.json"
+if p.exists():
+    data = json.loads(p.read_text(encoding="utf-8"))
+    print(data.get("failure_code", "NODE_NOT_READY"))
+else:
+    print("NODE_NOT_READY")
+PY
+)"
+    minimal="$(python3 - <<PY
+import json
+from pathlib import Path
+p = Path(${VALIDATION_DIR@Q}) / "diagnostics.json"
+if p.exists():
+    data = json.loads(p.read_text(encoding="utf-8"))
+    print(str(data.get("minimal_retry_command", "")))
+else:
+    print("")
+PY
+)"
+    fallback="$(python3 - <<PY
+import json
+from pathlib import Path
+p = Path(${VALIDATION_DIR@Q}) / "diagnostics.json"
+if p.exists():
+    data = json.loads(p.read_text(encoding="utf-8"))
+    print(str(data.get("fallback_command", "")))
+else:
+    print("")
+PY
+)"
+    write_runner_artifacts "doctor" "FAIL" "${failure_code}" "preflight_failed" "${VALIDATION_DIR}/diagnostics.json" \
+      "${minimal:-scripts/validate_k3s_real_topology_multinode.sh preflight}" "${fallback:-scripts/setup_k3s_cluster.sh}"
+    return 1
+  fi
+
   local cluster_name kubeconfig_path
   cluster_name="${SEED_K3S_CLUSTER_NAME:-seedemu-k3s}"
   kubeconfig_path="${REPO_ROOT}/output/kubeconfigs/${cluster_name}.yaml"
@@ -530,6 +681,11 @@ run_start() {
     run_mini_validate compile || return 1
     run_mini_validate build || return 1
     run_mini_validate deploy || return 1
+  elif [ "${PROFILE_ID}" = "real_topology_rr" ]; then
+    run_real_topology_validate preflight || return 1
+    run_real_topology_validate compile || return 1
+    run_real_topology_validate build || return 1
+    run_real_topology_validate deploy || return 1
   else
     run_doctor || return 1
     run_generic_compile || return 1
@@ -544,6 +700,8 @@ run_start() {
 run_verify() {
   if [ "${PROFILE_ID}" = "mini_internet" ]; then
     run_mini_validate verify || return 1
+  elif [ "${PROFILE_ID}" = "real_topology_rr" ]; then
+    run_real_topology_validate verify || return 1
   else
     run_generic_verify || return 1
   fi
@@ -553,10 +711,10 @@ run_verify() {
 }
 
 run_all() {
-  run_start
-  run_verify
-  run_observe
-  run_report
+  run_start || return 1
+  run_verify || return 1
+  run_observe || return 1
+  run_report || return 1
   write_runner_artifacts "all" "PASS" "" "" "${REPORT_DIR}/report.json" \
     "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} report" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage"
 }
@@ -627,6 +785,7 @@ main() {
 
   adopt_latest_for_read_actions
   init_profile_context
+  setup_runner_logging
   log "Profile=${PROFILE_ID} Action=${ACTION} BaseDir=${BASE_DIR}"
 
   case "${ACTION}" in
@@ -634,24 +793,79 @@ main() {
       run_doctor
       ;;
     start)
-      run_start
+      if ! run_start; then
+        mapfile -t _fields < <(write_runner_failure_from_validation "start")
+        stage="${_fields[0]:-start}"
+        failure_code="${_fields[1]:-DEPLOY_TIMEOUT}"
+        failure_reason="${_fields[2]:-run_start_failed}"
+        evidence="${_fields[3]:-${VALIDATION_DIR}/diagnostics.json}"
+        minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start}"
+        fallback="${_fields[5]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor}"
+        write_runner_artifacts "${stage}" "FAIL" "${failure_code:-DEPLOY_TIMEOUT}" "${failure_reason:-run_start_failed}" "${evidence}" \
+          "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor}"
+        exit 1
+      fi
       ;;
     verify)
-      run_verify
+      if ! run_verify; then
+        mapfile -t _fields < <(write_runner_failure_from_validation "verify")
+        stage="${_fields[0]:-verify}"
+        failure_code="${_fields[1]:-DEPLOY_TIMEOUT}"
+        failure_reason="${_fields[2]:-run_verify_failed}"
+        evidence="${_fields[3]:-${VALIDATION_DIR}/diagnostics.json}"
+        minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify}"
+        fallback="${_fields[5]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        write_runner_artifacts "${stage}" "FAIL" "${failure_code:-DEPLOY_TIMEOUT}" "${failure_reason:-run_verify_failed}" "${evidence}" \
+          "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        exit 1
+      fi
       ;;
     observe)
-      run_observe
+      if ! run_observe; then
+        mapfile -t _fields < <(write_runner_failure_from_validation "observe")
+        stage="${_fields[0]:-observe}"
+        failure_code="${_fields[1]:-DEPLOY_TIMEOUT}"
+        failure_reason="${_fields[2]:-run_observe_failed}"
+        evidence="${_fields[3]:-${VALIDATION_DIR}/diagnostics.json}"
+        minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} observe}"
+        fallback="${_fields[5]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        write_runner_artifacts "${stage}" "FAIL" "${failure_code:-DEPLOY_TIMEOUT}" "${failure_reason:-run_observe_failed}" "${evidence}" \
+          "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} observe}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        exit 1
+      fi
       write_runner_artifacts "observe" "PASS" "" "" "${OBSERVE_DIR}/summary.json" \
         "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} report" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage"
       ;;
     all)
-      run_all
+      if ! run_all; then
+        mapfile -t _fields < <(write_runner_failure_from_validation "all")
+        stage="${_fields[0]:-all}"
+        failure_code="${_fields[1]:-DEPLOY_TIMEOUT}"
+        failure_reason="${_fields[2]:-run_all_failed}"
+        evidence="${_fields[3]:-${VALIDATION_DIR}/diagnostics.json}"
+        minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        fallback="${_fields[5]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor}"
+        write_runner_artifacts "${stage}" "FAIL" "${failure_code:-DEPLOY_TIMEOUT}" "${failure_reason:-run_all_failed}" "${evidence}" \
+          "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor}"
+        exit 1
+      fi
       ;;
     triage)
       run_triage
       ;;
     report)
-      run_report
+      if ! run_report; then
+        mapfile -t _fields < <(write_runner_failure_from_validation "report")
+        stage="${_fields[0]:-report}"
+        failure_code="${_fields[1]:-DEPLOY_TIMEOUT}"
+        failure_reason="${_fields[2]:-run_report_failed}"
+        evidence="${_fields[3]:-${VALIDATION_DIR}/diagnostics.json}"
+        minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} report}"
+        fallback="${_fields[5]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        write_runner_artifacts "${stage}" "FAIL" "${failure_code:-DEPLOY_TIMEOUT}" "${failure_reason:-run_report_failed}" "${evidence}" \
+          "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} report}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        exit 1
+      fi
       write_runner_artifacts "report" "PASS" "" "" "${REPORT_DIR}/report.json" \
         "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor"
       ;;

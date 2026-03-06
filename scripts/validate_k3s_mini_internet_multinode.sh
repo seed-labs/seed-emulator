@@ -82,6 +82,8 @@ SEED_PLACEMENT_MODE="${SEED_PLACEMENT_MODE:-auto}"
 SEED_SCHEDULING_STRATEGY="${SEED_SCHEDULING_STRATEGY:-}"
 SEED_MIN_NODES_USED="${SEED_MIN_NODES_USED:-2}"
 SEED_REQUIRE_ALL_NODES="${SEED_REQUIRE_ALL_NODES:-false}"
+SEED_BUILD_PARALLELISM="${SEED_BUILD_PARALLELISM:-1}"
+SEED_DOCKER_BUILDKIT="${SEED_DOCKER_BUILDKIT:-0}"
 SEED_HOSTS_PER_AS="${SEED_HOSTS_PER_AS:-2}"
 CONNECTIVITY_RETRY="${CONNECTIVITY_RETRY:-24}"
 CONNECTIVITY_RETRY_INTERVAL_SECONDS="${CONNECTIVITY_RETRY_INTERVAL_SECONDS:-5}"
@@ -131,6 +133,7 @@ SEED_NODE_LABELS_JSON_EFFECTIVE=""
 SSH_OPTS=(
   -o StrictHostKeyChecking=no
   -o UserKnownHostsFile=/dev/null
+  -o LogLevel=ERROR
   -o BatchMode=yes
   -o ConnectTimeout=10
   -o ServerAliveInterval=30
@@ -472,7 +475,10 @@ ensure_kubeconfig() {
 
 get_node_name_by_ip() {
   local ip="$1"
-  kubectl get nodes -o wide --no-headers | awk -v ip="${ip}" '$6==ip {print $1; exit}'
+  # Avoid SIGPIPE failures under `set -o pipefail` when awk exits early.
+  local nodes
+  nodes="$(kubectl get nodes -o wide --no-headers 2>/dev/null || true)"
+  awk -v ip="${ip}" '$6==ip {print $1; exit}' <<<"${nodes}"
 }
 
 detect_cluster_nodes() {
@@ -558,12 +564,14 @@ JSON
 }
 
 run_preflight_check_once() {
-  local virsh_ok ssh_ok sudo_ok nodes_ok multus_ok registry_ok registry_reachable_ok kubeconfig_ok
+  local virsh_ok ssh_ok sudo_ok nodes_ok multus_ok multus_rbac_ok cni_plugins_ok registry_ok registry_reachable_ok kubeconfig_ok
   virsh_ok="false"
   ssh_ok="false"
   sudo_ok="false"
   nodes_ok="false"
   multus_ok="false"
+  multus_rbac_ok="false"
+  cni_plugins_ok="false"
   registry_ok="false"
   registry_reachable_ok="false"
   kubeconfig_ok="false"
@@ -608,6 +616,46 @@ run_preflight_check_once() {
     multus_ok="true"
   fi
 
+  local can_list
+  can_list="$(kubectl --kubeconfig "${KUBECONFIG_PATH}" auth can-i list pods -n kube-system --as system:serviceaccount:kube-system:multus 2>/dev/null || echo no)"
+  echo "${can_list}" > "${ARTIFACT_DIR}/multus_rbac_can_i_list_pods.txt"
+  if [ "${can_list}" = "yes" ]; then
+    multus_rbac_ok="true"
+  fi
+  if [ "${multus_ok}" = "true" ] && [ "${multus_rbac_ok}" = "true" ]; then
+    multus_ok="true"
+  else
+    multus_ok="false"
+  fi
+
+  local -a required_plugins
+  required_plugins=()
+  case "${SEED_CNI_TYPE}" in
+    macvlan)
+      required_plugins=(macvlan static)
+      ;;
+    ipvlan)
+      required_plugins=(ipvlan static)
+      ;;
+  esac
+
+  : > "${ARTIFACT_DIR}/cni_plugins_status.txt"
+  if [ "${#required_plugins[@]}" = "0" ]; then
+    cni_plugins_ok="true"
+  else
+    cni_plugins_ok="true"
+    local host
+    for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
+      if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
+        "set -euo pipefail; for p in ${required_plugins[*]}; do test -x \"/opt/cni/bin/\$p\" || test -x \"/var/lib/rancher/k3s/data/current/bin/\$p\"; done" >/dev/null 2>&1; then
+        echo -e "${host}\tok" >> "${ARTIFACT_DIR}/cni_plugins_status.txt"
+      else
+        echo -e "${host}\tmissing" >> "${ARTIFACT_DIR}/cni_plugins_status.txt"
+        cni_plugins_ok="false"
+      fi
+    done
+  fi
+
   # 6) registry
   if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -x registry" >/dev/null 2>&1; then
     registry_ok="true"
@@ -621,6 +669,9 @@ run_preflight_check_once() {
   # artifacts
   kubectl --kubeconfig "${KUBECONFIG_PATH}" get nodes -o wide > "${ARTIFACT_DIR}/kube_nodes.txt" 2>/dev/null || true
   kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system get ds kube-multus-ds -o wide > "${ARTIFACT_DIR}/multus_status.txt" 2>/dev/null || true
+  kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system get pods -o wide > "${ARTIFACT_DIR}/kube_system_pods.txt" 2>/dev/null || true
+  (kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system get events --sort-by=.lastTimestamp 2>/dev/null || true) \
+    | tail -n 80 > "${ARTIFACT_DIR}/kube_system_events_tail.txt" 2>/dev/null || true
 
   python3 - <<PY
 import json
@@ -633,6 +684,8 @@ preflight = {
     "kubeconfig_ok": ${kubeconfig_ok@Q} == "true",
     "k3s_nodes_ready": ${nodes_ok@Q} == "true",
     "multus_ready": ${multus_ok@Q} == "true",
+    "multus_rbac_can_list_pods": ${multus_rbac_ok@Q} == "true",
+    "cni_plugins_ok": ${cni_plugins_ok@Q} == "true",
     "registry_container_running": ${registry_ok@Q} == "true",
     "registry_reachable_from_workers": ${registry_reachable_ok@Q} == "true",
     "master_ip": ${SEED_K3S_MASTER_IP@Q},
@@ -650,6 +703,7 @@ PY
     && [ "${kubeconfig_ok}" = "true" ] \
     && [ "${nodes_ok}" = "true" ] \
     && [ "${multus_ok}" = "true" ] \
+    && [ "${cni_plugins_ok}" = "true" ] \
     && [ "${registry_ok}" = "true" ] \
     && [ "${registry_reachable_ok}" = "true" ]; then
     return 0
@@ -661,7 +715,13 @@ PY
 repair_registry_connectivity() {
   log "Attempting quick registry remediation on master"
   ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
-    "sudo -n docker rm -f registry >/dev/null 2>&1 || true; sudo -n docker run -d --network host --restart=always --name registry registry:2 >/dev/null"
+    "set -euo pipefail; \
+     sudo -n docker rm -f registry >/dev/null 2>&1 || true; \
+     if ! sudo -n docker image inspect registry:2 >/dev/null 2>&1; then \
+       sudo -n docker pull registry:2 >/dev/null 2>&1 || (sudo -n docker pull docker.m.daocloud.io/library/registry:2 >/dev/null && sudo -n docker tag docker.m.daocloud.io/library/registry:2 registry:2 >/dev/null); \
+     fi; \
+     sudo -n docker run -d --network host --restart=always --name registry \
+       -e REGISTRY_HTTP_ADDR=0.0.0.0:${SEED_REGISTRY_PORT} registry:2 >/dev/null"
 
   local i
   for i in $(seq 1 12); do
@@ -674,6 +734,114 @@ repair_registry_connectivity() {
   done
 
   return 1
+}
+
+repair_multus_hostpaths_for_k3s() {
+  if ! kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system get ds kube-multus-ds >/dev/null 2>&1; then
+    return 1
+  fi
+
+  log "Attempting quick multus hostPath repair for k3s"
+  local conf_dir bin_dir
+  conf_dir="$(ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+    "sudo -n sh -c 'sed -n \"s/^\\s*conf_dir\\s*=\\s*\\\"\\([^\\\"]*\\)\\\".*/\\1/p\" /var/lib/rancher/k3s/agent/etc/containerd/config.toml | head -n 1' 2>/dev/null" \
+    || true)"
+  bin_dir="$(ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+    "sudo -n sh -c 'if [ -d /var/lib/rancher/k3s/data/current/bin ]; then echo /var/lib/rancher/k3s/data/current/bin; else sed -n \"s/^\\s*bin_dir\\s*=\\s*\\\"\\([^\\\"]*\\)\\\".*/\\1/p\" /var/lib/rancher/k3s/agent/etc/containerd/config.toml | head -n 1; fi' 2>/dev/null" \
+    || true)"
+
+  if [ -z "${conf_dir}" ] || [ -z "${bin_dir}" ]; then
+    return 1
+  fi
+
+  kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system patch ds kube-multus-ds --type='strategic' -p "$(
+    cat <<JSON
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "volumes": [
+          {"name": "cni", "hostPath": {"path": "${conf_dir}"}},
+          {"name": "cnibin", "hostPath": {"path": "${bin_dir}"}}
+        ]
+      }
+    }
+  }
+}
+JSON
+  )" >/dev/null 2>&1 || true
+  kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system rollout restart ds/kube-multus-ds >/dev/null 2>&1 || true
+  kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system rollout status ds/kube-multus-ds --timeout=300s >/dev/null 2>&1 || true
+  return 0
+}
+
+repair_multus_rbac_for_k3s() {
+  log "Attempting quick multus RBAC repair (allow list/watch pods)"
+  kubectl --kubeconfig "${KUBECONFIG_PATH}" apply -f - <<'YAML' >/dev/null 2>&1 || true
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: multus
+rules:
+- apiGroups:
+  - k8s.cni.cncf.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/status
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - ""
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+  - update
+YAML
+  kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system rollout restart ds/kube-multus-ds >/dev/null 2>&1 || true
+  kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system rollout status ds/kube-multus-ds --timeout=300s >/dev/null 2>&1 || true
+  return 0
+}
+
+repair_cni_plugins_for_k3s() {
+  if [ "${SEED_CNI_TYPE}" != "macvlan" ] && [ "${SEED_CNI_TYPE}" != "ipvlan" ]; then
+    return 0
+  fi
+
+  local -a plugins
+  plugins=(static)
+  if [ "${SEED_CNI_TYPE}" = "macvlan" ]; then
+    plugins+=(macvlan)
+  else
+    plugins+=(ipvlan)
+  fi
+
+  log "Attempting quick CNI plugins install: ${plugins[*]}"
+  local host
+  for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
+    ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
+      "set -euo pipefail; \
+       export DEBIAN_FRONTEND=noninteractive; \
+       sudo -n apt-get update -y >/dev/null; \
+       sudo -n apt-get install -y containernetworking-plugins >/dev/null; \
+       sudo -n mkdir -p /opt/cni/bin; \
+       for p in ${plugins[*]}; do \
+         if [ -x \"/usr/lib/cni/\$p\" ]; then sudo -n ln -sf \"/usr/lib/cni/\$p\" \"/opt/cni/bin/\$p\"; fi; \
+         if [ -d /var/lib/rancher/k3s/data/current/bin ]; then sudo -n ln -sf \"/usr/lib/cni/\$p\" \"/var/lib/rancher/k3s/data/current/bin/\$p\" || true; fi; \
+       done" >/dev/null 2>&1 || true
+  done
+  return 0
 }
 
 run_preflight() {
@@ -694,8 +862,27 @@ run_preflight() {
     return
   fi
 
-  log "Preflight failed; attempting quick registry remediation"
+  log "Preflight failed; attempting quick multus/CNI remediation"
   PRECHECK_REPAIRED="true"
+  FALLBACK_USED="multus_k3s_auto_repair"
+
+  repair_multus_rbac_for_k3s || true
+  repair_cni_plugins_for_k3s || true
+  repair_multus_hostpaths_for_k3s || true
+
+  if run_preflight_check_once; then
+    detect_cluster_nodes
+    resolve_cni_master_interface
+    resolve_scheduling_defaults
+    set_effective_node_labels_json
+    log "Placement mode=${SEED_PLACEMENT_MODE}, scheduling=${SEED_SCHEDULING_STRATEGY}"
+    LAST_FAILURE_CODE=""
+    record_stage_event "${CURRENT_STAGE}" "PASS" "${LAST_COMMAND}" "${ARTIFACT_DIR}/preflight.json" ""
+    write_diagnostics_and_next_actions "${CURRENT_STAGE}" "PASS" "" "${LAST_FAILURE_CODE}"
+    return
+  fi
+
+  log "Preflight still failing; attempting quick registry remediation"
   FALLBACK_USED="registry_host_network_repair"
 
   if repair_registry_connectivity; then
@@ -717,9 +904,18 @@ run_preflight() {
 
   (
     cd "${REPO_ROOT}"
-    set -a
-    source "${REPO_ROOT}/output/kvm_lab/k3s_vm_env.sh"
-    set +a
+    if [ -f "${REPO_ROOT}/output/kvm_lab/k3s_vm_env.sh" ]; then
+      set -a
+      source "${REPO_ROOT}/output/kvm_lab/k3s_vm_env.sh"
+      set +a
+    fi
+    export SEED_K3S_MASTER_IP="${SEED_K3S_MASTER_IP}"
+    export SEED_K3S_WORKER1_IP="${SEED_K3S_WORKER1_IP}"
+    export SEED_K3S_WORKER2_IP="${SEED_K3S_WORKER2_IP}"
+    export SEED_K3S_USER="${SEED_K3S_USER}"
+    export SEED_K3S_SSH_KEY="${SEED_K3S_SSH_KEY}"
+    export SEED_REGISTRY_HOST="${SEED_REGISTRY_HOST}"
+    export SEED_REGISTRY_PORT="${SEED_REGISTRY_PORT}"
     export SEED_ANSIBLE_TIMEOUT="${SEED_ANSIBLE_TIMEOUT:-600s}"
     ./scripts/setup_k3s_cluster.sh
   ) > "${ARTIFACT_DIR}/preflight_repair.log" 2>&1 || fail_with_reason "preflight_repair_failed"
@@ -795,7 +991,10 @@ run_remote_build() {
     return 1
   fi
 
-  if ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n bash -lc '
+  if ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n env \
+    SEED_BUILD_PARALLELISM=${SEED_BUILD_PARALLELISM} \
+    SEED_DOCKER_BUILDKIT=${SEED_DOCKER_BUILDKIT} \
+    bash -lc '
     set -euo pipefail
     cd "${REMOTE_WORK_DIR}"
     tar -xzf compiled.tar.gz
