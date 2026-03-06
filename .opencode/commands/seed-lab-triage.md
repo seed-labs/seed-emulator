@@ -12,6 +12,6 @@ Use skills:
 Mandatory behavior:
 
 1. Run:
-   - `/home/zzw4257/seed-k8s/scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} triage`
+   - `scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} triage`
 2. Prefer diagnostics from `next_actions.json` and `diagnostics.json`.
 3. Return strict 5-tuple.

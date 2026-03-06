@@ -42,7 +42,7 @@ failure_actions:
   COMPILE_FAILED:
     first_evidence_pattern: compile.log
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh compile
-    fallback_command: PYTHONPATH=/home/zzw4257/seed-k8s python3 examples/kubernetes/k8s_mini_internet.py
+    fallback_command: PYTHONPATH=. python3 examples/kubernetes/k8s_mini_internet.py
     operator_hint: 编译阶段失败，检查示例脚本参数和 PYTHONPATH
     safe_auto_retry: false
     requires_confirmation: false

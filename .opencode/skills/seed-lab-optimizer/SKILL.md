@@ -12,7 +12,7 @@ Use for proactive guidance in k8s/k3s experiments, especially after stage failur
 1. At session start, read:
    - `configs/seed_k8s_profiles.yaml`
    - latest artifact under `output/profile_runs/<profile>/latest` or `output/multinode_mini_validation/latest`
-   - `/home/zzw4257/seed-k8s/output/assistant_entry/latest/summary.json` (if exists)
+   - `output/assistant_entry/latest/summary.json` (if exists)
 2. Always prioritize machine-readable guidance from:
    - `next_actions.json`
    - `diagnostics.json`
@@ -27,7 +27,7 @@ Use for proactive guidance in k8s/k3s experiments, especially after stage failur
    - `CONFIRM_SEED_DESTRUCTIVE: <target>`
 
 6. For ambiguous "help me start" intent, do bootstrap first:
-   - run `/home/zzw4257/seed-k8s/scripts/seed_lab_entry_status.sh`
+   - run `scripts/seed_lab_entry_status.sh`
    - report:
      - available runtime state
      - available k8s/k3s macro tasks
@@ -108,7 +108,7 @@ In all modes, expose key env vars when giving runnable commands:
 
 Preferred orchestrator:
 
-`/home/zzw4257/seed-k8s/scripts/seed_k8s_profile_runner.sh <profile_id> <action>`
+`scripts/seed_k8s_profile_runner.sh <profile_id> <action>`
 
 Actions:
 

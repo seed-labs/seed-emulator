@@ -10,13 +10,13 @@ Use before compile/build/deploy/verify for any k3s-based SEED run.
 ## Workflow
 
 1. Load guardrails:
-   - `/home/zzw4257/seed-k8s/scripts/env_seedemu.sh`
+   - `scripts/env_seedemu.sh`
 2. Run non-destructive smoke checks:
-   - `/home/zzw4257/seed-k8s/scripts/opencode_seedlab_smoke.sh`
+   - `scripts/opencode_seedlab_smoke.sh`
 3. If kubeconfig missing or invalid:
-   - `/home/zzw4257/seed-k8s/scripts/k3s_fetch_kubeconfig.sh`
+   - `scripts/k3s_fetch_kubeconfig.sh`
 4. Run preflight stage:
-   - `/home/zzw4257/seed-k8s/scripts/validate_k3s_mini_internet_multinode.sh preflight`
+   - `scripts/validate_k3s_mini_internet_multinode.sh preflight`
 
 ## Required evidence
 

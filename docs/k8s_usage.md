@@ -2,9 +2,13 @@
 
 本指南的目标是：把 SEED 的 K8s 方案“真的用起来”，并且在不同环境（本机 Kind、实验室多机、云上多机）都能复现，不会因为等待/网络抖动导致脚本卡死。
 
-仓库路径默认：
+如果你要看长期维护与架构抽象，而不是只看操作步骤，请同时阅读：
 
-- `/home/zzw4257/seed-k8s`
+- `docs/k3s_runtime_architecture.md`
+
+仓库路径不固定，本文统一用：
+
+- `<repo_root>`（例如：`/home/seed/seed-emulator-k8s`）
 
 ---
 
@@ -36,8 +40,8 @@
 `development.env` 里是 `pwd` 注入 `PYTHONPATH`（有 cwd 漂移风险）。建议统一使用：
 
 ```bash
-cd /home/zzw4257/seed-k8s
-source /home/zzw4257/miniconda3/etc/profile.d/conda.sh
+cd <repo_root>
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate seedemu-k8s-py310
 source scripts/env_seedemu.sh
 ```
@@ -64,7 +68,7 @@ source scripts/env_seedemu.sh
 ### 2.1 创建 Kind + Multus + KubeVirt + Registry（一次性）
 
 ```bash
-cd /home/zzw4257/seed-k8s
+cd <repo_root>
 SEED_CLUSTER_NAME=seedemu-kvtest WORKER_COUNT=2 ./setup_kubevirt_cluster.sh
 kubectl config use-context kind-seedemu-kvtest
 kubectl get nodes -o wide
@@ -132,7 +136,7 @@ kubectl get pods -n "${SEED_NAMESPACE}" -o wide
 如果你不是在“开发示例脚本”，而是想快速回答 “现在这套 K8s 后端到底能不能稳定跑通”，优先用仓库自带验证脚本：
 
 ```bash
-cd /home/zzw4257/seed-k8s
+cd <repo_root>
 source scripts/env_seedemu.sh
 
 # 建议先用 degraded（全容器）跑通链路，再切 full/auto 走 VM。
@@ -141,7 +145,7 @@ SEED_REGISTRY=localhost:5001 \
 SEED_CNI_TYPE=bridge \
 SEED_RUNTIME_PROFILE=degraded \
 SEED_CLEAN_NAMESPACE=true \
-SEED_ARTIFACT_DIR=/home/zzw4257/seed-k8s/output/kubevirt_validation_local_quick \
+SEED_ARTIFACT_DIR="${REPO_ROOT}/output/kubevirt_validation_local_quick" \
 ./scripts/validate_kubevirt_hybrid.sh
 ```
 
@@ -174,7 +178,7 @@ SEED_ARTIFACT_DIR=/home/zzw4257/seed-k8s/output/kubevirt_validation_local_quick 
 在控制机（你现在这台机器）执行：
 
 ```bash
-cd /home/zzw4257/seed-k8s
+cd <repo_root>
 source scripts/env_seedemu.sh
 
 export SEED_K3S_MASTER_IP=1.2.3.4
@@ -201,7 +205,7 @@ export SEED_K3S_CLUSTER_NAME=seedemu-k3s
 ### 3.3 切换到 K3s 集群并运行例子
 
 ```bash
-export KUBECONFIG=/home/zzw4257/seed-k8s/output/kubeconfigs/seedemu-k3s.yaml
+export KUBECONFIG="${REPO_ROOT}/output/kubeconfigs/seedemu-k3s.yaml"
 kubectl get nodes -o wide
 
 export SEED_NAMESPACE=seedemu-k3s-test
@@ -212,7 +216,7 @@ export SEED_CNI_TYPE=macvlan
 ip -o -4 route show to default | awk '{print $5; exit}'
 export SEED_CNI_MASTER_INTERFACE=eth0
 
-cd /home/zzw4257/seed-k8s/examples/kubernetes
+cd <repo_root>/examples/kubernetes
 python3 k8s_transit_as.py
 cd output_transit_as
 ./build_images.sh

@@ -11,7 +11,7 @@ Use after deployment readiness for acceptance checks.
 
 Use:
 
-- `/home/zzw4257/seed-k8s/scripts/validate_k3s_mini_internet_multinode.sh verify`
+- `scripts/validate_k3s_mini_internet_multinode.sh verify`
 
 ## Acceptance criteria
 

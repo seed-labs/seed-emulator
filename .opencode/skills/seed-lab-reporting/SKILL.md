@@ -11,7 +11,7 @@ Use after verify/observe, or when user asks for a concise review package.
 
 Run:
 
-`/home/zzw4257/seed-k8s/scripts/seedlab_report_from_artifacts.sh [validation_dir] [observe_dir] [report_dir]`
+`scripts/seedlab_report_from_artifacts.sh [validation_dir] [observe_dir] [report_dir]`
 
 If arguments are not given:
 

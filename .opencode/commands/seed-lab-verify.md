@@ -12,6 +12,6 @@ Use skills:
 Mandatory behavior:
 
 1. Run:
-   - `/home/zzw4257/seed-k8s/scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} verify`
+   - `scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} verify`
 2. Read `next_actions.json` and prefer its `minimal_retry_command`.
 3. On failure return strict 5-tuple.

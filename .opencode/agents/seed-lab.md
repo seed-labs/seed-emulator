@@ -29,8 +29,8 @@ Always start with `seed-lab-experiment-assistant`, then load on demand:
 - Prefer running through `scripts/seed_k8s_profile_runner.sh` for multi-profile scenarios.
 
 2. Path safety
-- Use absolute paths only.
-- Normalize workspace root to `/home/zzw4257/seed-k8s`.
+- Prefer repo-root relative paths (e.g., `scripts/...`, `output/...`).
+- Ensure your working directory is the repo root (the directory containing `opencode.jsonc`).
 
 3. Proactive behavior
 - After each stage, read `next_actions.json` and suggest one next command.
@@ -43,12 +43,13 @@ Always start with `seed-lab-experiment-assistant`, then load on demand:
 
 3.1 Session bootstrap for real users (mandatory)
 - If user intent is broad/ambiguous (eg. "how to start", "what is available", "show current status"):
-  - Run `/home/zzw4257/seed-k8s/scripts/seed_lab_entry_status.sh`.
+  - Run `scripts/seed_lab_entry_status.sh`.
   - Start with a practical intake summary:
     - what is currently available (KVM VMs, kubeconfig, k8s nodes, namespace)
     - what macro tasks are available for k8s/k3s in this workspace
     - where evidence/output files are located
     - one recommended next command
+- If the user prefers free-form Q&A (no slash commands), still follow the same evidence-first workflow and answer directly.
 - Do not jump into long pipelines (`start|all|verify`) unless user explicitly asks or confirms.
 
 4. Safe auto-retry boundary
@@ -84,7 +85,7 @@ Always start with `seed-lab-experiment-assistant`, then load on demand:
   - `fallback_command=cat ${SEED_ARTIFACT_DIR}/placement_actual.json`
 
 7. Command validity
-- For `/home/zzw4257/seed-k8s/scripts/seed_k8s_profile_runner.sh`, only use valid actions:
+- For `scripts/seed_k8s_profile_runner.sh`, only use valid actions:
   - `doctor|start|verify|observe|all|triage|report`
 - Do not suggest unsupported actions like `compile`, `build`, `deploy`, or `run` for this runner.
 
@@ -102,8 +103,8 @@ Always start with `seed-lab-experiment-assistant`, then load on demand:
 
 ## Preferred entry scripts
 
-- `/home/zzw4257/seed-k8s/scripts/seed_k8s_profile_runner.sh`
-- `/home/zzw4257/seed-k8s/scripts/validate_k3s_mini_internet_multinode.sh`
-- `/home/zzw4257/seed-k8s/scripts/inspect_k3s_mini_internet.sh`
-- `/home/zzw4257/seed-k8s/scripts/seedlab_report_from_artifacts.sh`
-- `/home/zzw4257/seed-k8s/scripts/seed_lab_entry_status.sh`
+- `scripts/seed_k8s_profile_runner.sh`
+- `scripts/validate_k3s_mini_internet_multinode.sh`
+- `scripts/inspect_k3s_mini_internet.sh`
+- `scripts/seedlab_report_from_artifacts.sh`
+- `scripts/seed_lab_entry_status.sh`

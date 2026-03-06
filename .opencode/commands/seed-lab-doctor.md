@@ -12,6 +12,6 @@ Use skills:
 Mandatory behavior:
 
 1. Run:
-   - `/home/zzw4257/seed-k8s/scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} doctor`
+   - `scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} doctor`
 2. Output one risk summary and one next command.
 3. If failed, return strict 5-tuple.

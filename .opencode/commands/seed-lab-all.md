@@ -11,7 +11,7 @@ Use skills:
 Mandatory behavior:
 
 1. Run:
-   - `/home/zzw4257/seed-k8s/scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} all`
+   - `scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} all`
 2. Report:
    - latest runner summary path
    - report.json/report.md path

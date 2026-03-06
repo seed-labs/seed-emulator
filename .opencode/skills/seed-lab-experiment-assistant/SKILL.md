@@ -34,8 +34,9 @@ Use for end-to-end SEED experiments on k3s/kvm where the goal is runnable, verif
 - Default.
 - Run stage actions and produce artifacts.
 - If user intent is broad/ambiguous (no explicit stage/action), run bootstrap first:
-  - `/home/zzw4257/seed-k8s/scripts/seed_lab_entry_status.sh`
+  - `scripts/seed_lab_entry_status.sh`
   - then recommend exactly one next command.
+- Do not require slash commands: if the user asks in natural language (e.g. “现在跑咋样/卡哪了/下一步是什么”), read artifacts and answer directly with evidence + one next action.
 
 2. `explain_only` mode
 - Trigger when user says they only want explanation/playbook and explicitly asks not to run commands.

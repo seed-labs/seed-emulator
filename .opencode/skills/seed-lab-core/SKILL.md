@@ -9,8 +9,8 @@ Use this skill for any SEED lab run in this workspace. It defines non-negotiable
 
 ## Non-negotiable rules
 
-1. Use `/home/zzw4257/seed-k8s` as repo root.
-2. Use absolute paths only.
+1. Use the repo root (the directory containing `opencode.jsonc`) as workspace root.
+2. Prefer repo-root relative paths (e.g., `scripts/...`, `output/...`) or `${REPO_ROOT}` from `scripts/env_seedemu.sh`.
 3. Run stages in this order unless user explicitly overrides:
    - bootstrap
    - preflight
@@ -29,7 +29,7 @@ Use this skill for any SEED lab run in this workspace. It defines non-negotiable
 
 Bootstrap stage command:
 
-- `/home/zzw4257/seed-k8s/scripts/seed_lab_entry_status.sh`
+- `scripts/seed_lab_entry_status.sh`
 
 ## Required environment contract
 

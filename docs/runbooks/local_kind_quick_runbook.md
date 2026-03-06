@@ -4,7 +4,7 @@
 
 本 Runbook 假设仓库在：
 
-- `/home/zzw4257/seed-k8s`
+- `<repo_root>`（例如：`/home/seed/seed-emulator-k8s`）
 
 并且你希望“不要卡死”，所以所有等待都必须有 timeout，失败要有证据落盘。
 
@@ -45,7 +45,7 @@ kubectl version --client
 ### 1.2 Conda 环境就绪（固定 Python 依赖）
 
 ```bash
-source /home/zzw4257/miniconda3/etc/profile.d/conda.sh
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda env list | rg -n "seedemu-k8s-py310" || true
 conda activate seedemu-k8s-py310
 python -V
@@ -57,14 +57,14 @@ python -c "import yaml; import geopy; print('deps-ok')"
 ```bash
 conda create -n seedemu-k8s-py310 python=3.10 -y
 conda activate seedemu-k8s-py310
-cd /home/zzw4257/seed-k8s
+cd <repo_root>
 pip install -r requirements.txt -r tests/requirements.txt
 ```
 
 ### 1.3 路径护栏（强制绝对 PYTHONPATH，避免 cwd 漂移）
 
 ```bash
-cd /home/zzw4257/seed-k8s
+cd <repo_root>
 source scripts/env_seedemu.sh
 python -c "import seedemu; print('seedemu-import-ok')"
 echo "REPO_ROOT=$REPO_ROOT"
@@ -83,8 +83,8 @@ echo "PYTHONPATH=$PYTHONPATH"
 ### 2.1 一键创建/修复集群
 
 ```bash
-cd /home/zzw4257/seed-k8s
-source /home/zzw4257/miniconda3/etc/profile.d/conda.sh
+cd <repo_root>
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate seedemu-k8s-py310
 source scripts/env_seedemu.sh
 
@@ -134,8 +134,8 @@ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' | rg 
 ### 3.1 执行命令（推荐直接复制）
 
 ```bash
-cd /home/zzw4257/seed-k8s
-source /home/zzw4257/miniconda3/etc/profile.d/conda.sh
+cd <repo_root>
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate seedemu-k8s-py310
 source scripts/env_seedemu.sh
 
@@ -144,7 +144,7 @@ SEED_REGISTRY=localhost:5001 \
 SEED_CNI_TYPE=bridge \
 SEED_RUNTIME_PROFILE=degraded \
 SEED_CLEAN_NAMESPACE=true \
-SEED_ARTIFACT_DIR=/home/zzw4257/seed-k8s/output/kubevirt_validation_local_quick \
+SEED_ARTIFACT_DIR="${REPO_ROOT}/output/kubevirt_validation_local_quick" \
 ./scripts/validate_kubevirt_hybrid.sh
 ```
 
@@ -159,10 +159,10 @@ SEED_ARTIFACT_DIR=/home/zzw4257/seed-k8s/output/kubevirt_validation_local_quick 
 ### 3.3 证据产物在哪里（跑完必看）
 
 ```bash
-ls -la /home/zzw4257/seed-k8s/output/kubevirt_validation_local_quick
-cat /home/zzw4257/seed-k8s/output/kubevirt_validation_local_quick/runtime_profile.json
-cat /home/zzw4257/seed-k8s/output/kubevirt_validation_local_quick/recovery_check.json
-sed -n '1,80p' /home/zzw4257/seed-k8s/output/kubevirt_validation_local_quick/bird_protocols.txt
+ls -la "${REPO_ROOT}/output/kubevirt_validation_local_quick"
+cat "${REPO_ROOT}/output/kubevirt_validation_local_quick/runtime_profile.json"
+cat "${REPO_ROOT}/output/kubevirt_validation_local_quick/recovery_check.json"
+sed -n '1,80p' "${REPO_ROOT}/output/kubevirt_validation_local_quick/bird_protocols.txt"
 ```
 
 对照 Docker Compose 的意义：
@@ -181,8 +181,8 @@ sed -n '1,80p' /home/zzw4257/seed-k8s/output/kubevirt_validation_local_quick/bir
 ### 4.1 执行命令
 
 ```bash
-cd /home/zzw4257/seed-k8s
-source /home/zzw4257/miniconda3/etc/profile.d/conda.sh
+cd <repo_root>
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate seedemu-k8s-py310
 source scripts/env_seedemu.sh
 
@@ -191,7 +191,7 @@ SEED_REGISTRY=localhost:5001 \
 SEED_CNI_TYPE=bridge \
 SEED_RUNTIME_PROFILE=full \
 SEED_CLEAN_NAMESPACE=true \
-SEED_ARTIFACT_DIR=/home/zzw4257/seed-k8s/output/kubevirt_validation_local_full \
+SEED_ARTIFACT_DIR="${REPO_ROOT}/output/kubevirt_validation_local_full" \
 ./scripts/validate_kubevirt_hybrid.sh
 ```
 
@@ -211,10 +211,10 @@ kubectl -n seedemu-local-full get events --sort-by=.lastTimestamp | tail -n 30
 ### 4.3 证据产物（跑完必看）
 
 ```bash
-ls -la /home/zzw4257/seed-k8s/output/kubevirt_validation_local_full
-cat /home/zzw4257/seed-k8s/output/kubevirt_validation_local_full/runtime_profile.json
-cat /home/zzw4257/seed-k8s/output/kubevirt_validation_local_full/vm_vmi.txt
-cat /home/zzw4257/seed-k8s/output/kubevirt_validation_local_full/recovery_check.json
+ls -la "${REPO_ROOT}/output/kubevirt_validation_local_full"
+cat "${REPO_ROOT}/output/kubevirt_validation_local_full/runtime_profile.json"
+cat "${REPO_ROOT}/output/kubevirt_validation_local_full/vm_vmi.txt"
+cat "${REPO_ROOT}/output/kubevirt_validation_local_full/recovery_check.json"
 ```
 
 ---
@@ -226,8 +226,8 @@ cat /home/zzw4257/seed-k8s/output/kubevirt_validation_local_full/recovery_check.
 ### 5.1 `k8s_transit_as.py`
 
 ```bash
-cd /home/zzw4257/seed-k8s
-source /home/zzw4257/miniconda3/etc/profile.d/conda.sh
+cd <repo_root>
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate seedemu-k8s-py310
 source scripts/env_seedemu.sh
 
@@ -248,8 +248,8 @@ kubectl -n "${SEED_NAMESPACE}" get pods -o wide
 ### 5.2 `k8s_mini_internet.py`
 
 ```bash
-cd /home/zzw4257/seed-k8s
-source /home/zzw4257/miniconda3/etc/profile.d/conda.sh
+cd <repo_root>
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate seedemu-k8s-py310
 source scripts/env_seedemu.sh
 
@@ -270,8 +270,8 @@ kubectl -n "${SEED_NAMESPACE}" get pods -o wide
 ### 5.3 `k8s_mini_internet_with_visualization.py`（含 Internet Map）
 
 ```bash
-cd /home/zzw4257/seed-k8s
-source /home/zzw4257/miniconda3/etc/profile.d/conda.sh
+cd <repo_root>
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate seedemu-k8s-py310
 source scripts/env_seedemu.sh
 
@@ -360,4 +360,3 @@ kubectl delete ns seedemu-local-full --ignore-not-found
 kind delete cluster --name seedemu-kvtest
 docker rm -f kind-registry || true
 ```
-

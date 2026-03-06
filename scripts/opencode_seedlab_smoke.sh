@@ -16,7 +16,9 @@ log() {
 }
 
 pass() {
-    log "PASS: $1"
+    if [[ "${SMOKE_VERBOSE}" == "true" ]]; then
+        log "PASS: $1"
+    fi
 }
 
 fail() {
@@ -31,15 +33,14 @@ warn() {
 
 SMOKE_FAIL=0
 SMOKE_WARN=0
-
-if [[ "${REPO_ROOT}" != "/home/zzw4257/seed-k8s" ]]; then
-    warn "repo root is ${REPO_ROOT}, expected /home/zzw4257/seed-k8s"
-fi
+SMOKE_VERBOSE="${SEED_SMOKE_VERBOSE:-false}"
 
 if [[ -f "${REPO_ROOT}/scripts/env_seedemu.sh" ]]; then
     # shellcheck source=/dev/null
     source "${REPO_ROOT}/scripts/env_seedemu.sh"
-    pass "env_seedemu.sh sourced"
+    if [[ "${SMOKE_VERBOSE}" == "true" ]]; then
+        pass "env_seedemu.sh sourced"
+    fi
 else
     fail "missing scripts/env_seedemu.sh"
 fi
@@ -49,6 +50,7 @@ required_files=(
     "${REPO_ROOT}/configs/seed_failure_action_map.yaml"
     "${REPO_ROOT}/scripts/k3s_fetch_kubeconfig.sh"
     "${REPO_ROOT}/scripts/validate_k3s_mini_internet_multinode.sh"
+    "${REPO_ROOT}/scripts/validate_k3s_real_topology_multinode.sh"
     "${REPO_ROOT}/scripts/inspect_k3s_mini_internet.sh"
     "${REPO_ROOT}/scripts/seed_lab_entry_status.sh"
     "${REPO_ROOT}/scripts/bootstrap_seed_lab_env.sh"

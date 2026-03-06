@@ -11,9 +11,9 @@ Use skills:
 Mandatory behavior:
 
 1. Run:
-   - `/home/zzw4257/seed-k8s/scripts/seed_lab_entry_status.sh`
+   - `scripts/seed_lab_entry_status.sh`
 2. Read:
-   - `/home/zzw4257/seed-k8s/output/assistant_entry/latest/summary.json`
+   - `output/assistant_entry/latest/summary.json`
 3. Output sections:
    - `当前可用环境` (KVM/k3s/kubeconfig/namespace)
    - `可做任务` (k8s/k3s macro tasks and profile options)

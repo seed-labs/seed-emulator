@@ -2,6 +2,8 @@
 
 本目录包含将 SEED-Emulator 部署到 Kubernetes 的示例脚本。
 
+K3s/K8s 的长期运行抽象、profile/runner/validate 分层与维护建议见：`docs/k3s_runtime_architecture.md`
+
 ## 示例对照表
 
 | K8s 示例 | 对应 Docker 示例 | 说明 |
@@ -10,6 +12,7 @@
 | `k8s_transit_as.py` | `basic/A01_transit_as` | Transit AS 拓扑示例 |
 | `k8s_nano_internet.py` | `basic/A20_nano_internet` | 小型互联网仿真 |
 | `k8s_mini_internet.py` | `internet/B00_mini_internet` | 完整的小型互联网 |
+| `k8s_real_topology_rr.py` | (外部数据集) | 真实拓扑（RR iBGP），面向 K3s 多节点演示（默认 214；可扩到 1897） |
 | `k8s_multinode_demo.py` | (新增) | 展示多机调度、资源限制等 K8s 高级功能 |
 | `k8s_hybrid_kubevirt_demo.py` | (新增) | 混合部署：KubeVirt 路由器 + 容器节点 |
 
