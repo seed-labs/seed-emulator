@@ -9,6 +9,7 @@ all:
     k3s_version: __SEED_K3S_VERSION__
     seed_registry_host: __SEED_REGISTRY_HOST__
     seed_registry_port: __SEED_REGISTRY_PORT__
+    seed_docker_io_mirror_endpoint: __SEED_DOCKER_IO_MIRROR_ENDPOINT__
     seed_cni_master_interface: __SEED_CNI_MASTER_INTERFACE__
     
   children:

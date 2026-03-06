@@ -191,7 +191,9 @@ if [ -z "${CONTROL_NODE}" ]; then
     CONTROL_NODE="$(kubectl get nodes -l node-role.kubernetes.io/master -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
 fi
 if [ -z "${CONTROL_NODE}" ]; then
-    CONTROL_NODE="$(kubectl get nodes --no-headers 2>/dev/null | awk '$3 ~ /(control-plane|master)/ {print $1; exit}')"
+    # Avoid SIGPIPE failures under `set -o pipefail` when awk exits early.
+    nodes_txt="$(kubectl get nodes --no-headers 2>/dev/null || true)"
+    CONTROL_NODE="$(awk '$3 ~ /(control-plane|master)/ {print $1; exit}' <<<"${nodes_txt}")"
 fi
 
 mapfile -t ALL_NODES < <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
