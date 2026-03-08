@@ -434,4 +434,6 @@ kubectl -n "${NS}" get events --sort-by=.lastTimestamp | tail -n 40
 
 ## 相关文档
 
+- `docs/runbooks/seed_lab_senior_plain_handoff_20260308.md`：给学长/维护者的一份直白总说明，先看这一份
+
 - `docs/runbooks/seed_k8s_multilayer_commit_replay_20260308.md`：分层改动、commit 切法、维护回放

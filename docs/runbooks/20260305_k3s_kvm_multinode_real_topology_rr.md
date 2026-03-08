@@ -7,6 +7,8 @@
 
 给不熟 K8s、只想抓住“怎么跑 / 怎么看证据 / 怎么问 AI”的同学，优先看：
 
+- `docs/runbooks/seed_lab_senior_plain_handoff_20260308.md`
+
 - `docs/runbooks/seed_lab_evidence_first_operator_guide.md`
 - `docs/runbooks/seed_k8s_multilayer_commit_replay_20260308.md`
 
