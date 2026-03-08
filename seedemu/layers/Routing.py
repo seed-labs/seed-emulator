@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from seedemu.core import (ScopedRegistry, Node, Interface, Network, Emulator,
                           Layer, Router, BaseSystem,
                           promote_to_real_world_router)
@@ -32,12 +34,35 @@ protocol kernel {{
 }}
 """
 
+RoutingFileTemplates["rnode_bird_no_kernel"] = """\
+router id {routerId};
+ipv4 table t_direct;
+protocol device {{
+}}
+"""
+
 RoutingFileTemplates['rnode_bird_direct'] = """
     ipv4 {{
         table t_direct;
         import all;
     }};
 {interfaces}
+"""
+
+RoutingFileTemplates['kernel_device_ospf_only'] = """
+protocol kernel {{
+    merge paths on;
+    persist;
+    scan time {interval};
+    ipv4 {{
+        import none;
+        export filter {{
+            if source = RTS_DEVICE then accept;
+            if source = RTS_OSPF then accept;
+            reject;
+        }};
+    }};
+}}
 """
 
 
@@ -59,6 +84,8 @@ class Routing(Layer):
 
     _loopback_assigner: IPv4Network
     _loopback_pos: int
+    __kernel_export_mode: str
+    __kernel_scan_time_seconds: int
 
     def __init__(self, loopback_range: str = '10.0.0.0/16'):
         """!
@@ -70,10 +97,40 @@ class Routing(Layer):
         super().__init__()
         self._loopback_assigner = IPv4Network(loopback_range)
         self._loopback_pos = 1
+        self.__kernel_export_mode = 'default'
+        self.__kernel_scan_time_seconds = 60000
         self.addDependency('Base', False, False)
 
     def getName(self) -> str:
         return "Routing"
+
+    def setKernelExportMode(self, mode: str) -> Routing:
+        """!
+        @brief Set kernel export mode for router BIRD configs.
+
+        @param mode one of: default, device_ospf_only.
+        @returns self, for chaining API calls.
+        """
+        assert mode in ('default', 'device_ospf_only'), 'kernel export mode must be default or device_ospf_only'
+        self.__kernel_export_mode = mode
+
+        return self
+
+    def getKernelExportMode(self) -> str:
+        """!
+        @brief Get current kernel export mode.
+
+        @returns kernel export mode string.
+        """
+        return self.__kernel_export_mode
+
+    def __install_kernel_export_override(self, node: Router):
+        if self.__kernel_export_mode != 'device_ospf_only':
+            return
+
+        node.setFile('/etc/bird/conf/kernel.conf', RoutingFileTemplates['kernel_device_ospf_only'].format(
+            interval=self.__kernel_scan_time_seconds,
+        ))
 
     def _installBird(self, node: Node):
         """!
@@ -114,9 +171,15 @@ class Routing(Layer):
                 ifaces += RoutingFileTemplates["rnode_bird_direct_interface"].format(
                     interfaceName = net.getName()
                 )
-        rnode.setFile("/etc/bird/bird.conf",
-            RoutingFileTemplates["rnode_bird"].format(
+        bird_template = "rnode_bird"
+        if self.__kernel_export_mode == "device_ospf_only":
+            bird_template = "rnode_bird_no_kernel"
+
+        rnode.setFile('/etc/bird/bird.conf',
+            RoutingFileTemplates[bird_template].format(
               routerId = rnode.getLoopbackAddress()))
+        if self.__kernel_export_mode == "device_ospf_only":
+            rnode.appendFile('/etc/bird/bird.conf', '\ninclude "/etc/bird/conf/*.conf";\n')
         rnode.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
         rnode.appendStartCommand('bird -d', True)
         if has_localnet:
@@ -155,6 +218,7 @@ class Routing(Layer):
                 assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rnode.getAsn(), rnode.getName())
 
                 self._configure_bird_router(rnode)
+                self.__install_kernel_export_override(rnode)
 
     def render(self, emulator: Emulator):
         reg = emulator.getRegistry()

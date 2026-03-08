@@ -11,7 +11,7 @@ from .Configurable import Configurable
 from .Customizable import Customizable
 from .Node import promote_to_real_world_router
 from ipaddress import IPv4Network
-from typing import Dict, List
+from typing import Dict, List, Tuple, Set
 import requests
 
 RIS_PREFIXLIST_URL = 'https://stat.ripe.net/data/announced-prefixes/data.json'
@@ -29,6 +29,7 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
     __hosts: Dict[str, Node]
     __nets: Dict[str, Network]
     __name_servers: List[str]
+    __clusters: Dict[str, Tuple[Set[str], Set[str]]]
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
@@ -44,6 +45,54 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         self.__asn = asn
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
         self.__name_servers = []
+        self.__clusters = {}
+
+    def createCluster(self, cluster_id: str) -> AutonomousSystem:
+        """!
+        @brief Register a clustered iBGP RR cluster identifier.
+
+        @param cluster_id cluster identifier string.
+        @returns self, for chaining API calls.
+        """
+        if cluster_id not in self.__clusters:
+            self.__clusters[cluster_id] = (set(), set())
+
+        return self
+
+    def _aggregateBgpClusters(self) -> Dict[str, Tuple[Set[str], Set[str]]]:
+        """!
+        @brief Aggregate RR/client membership for clustered iBGP mode.
+
+        Routers without an explicit cluster assignment are placed into a
+        default cluster to keep progressive migrations simple.
+        """
+        merged: Dict[str, Tuple[Set[str], Set[str]]] = {
+            cluster_id: (set(rrs), set(clients))
+            for cluster_id, (rrs, clients) in self.__clusters.items()
+        }
+        default_cluster_id = "10.0.0.0"
+
+        def ensure_cluster(cluster_id: str) -> Tuple[Set[str], Set[str]]:
+            if cluster_id not in merged:
+                merged[cluster_id] = (set(), set())
+            return merged[cluster_id]
+
+        for router in self.__routers.values():
+            cluster_id = router.getBgpClusterId() if hasattr(router, 'getBgpClusterId') else None
+            if not cluster_id:
+                cluster_id = default_cluster_id
+
+            rr_set, client_set = ensure_cluster(cluster_id)
+            if hasattr(router, 'isRouteReflector') and router.isRouteReflector():
+                rr_set.add(router.getName())
+            else:
+                client_set.add(router.getName())
+
+        self.__clusters = merged
+        return {
+            cluster_id: (set(rrs), set(clients))
+            for cluster_id, (rrs, clients) in merged.items()
+        }
 
 
 

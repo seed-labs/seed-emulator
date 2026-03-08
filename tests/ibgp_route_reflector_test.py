@@ -16,6 +16,11 @@ def _count_rr_client(conf: str) -> int:
     return len(re.findall(r"^\s*rr client;\s*$", conf, flags=re.MULTILINE))
 
 
+def _count_rr_cluster_id(conf: str, cluster_id: str) -> int:
+    pattern = rf"^\s*rr cluster id\s+{re.escape(cluster_id)};\s*$"
+    return len(re.findall(pattern, conf, flags=re.MULTILINE))
+
+
 class IbgpRouteReflectorTest(unittest.TestCase):
     def _new_emulator(self):
         emulator = Emulator()
@@ -82,6 +87,25 @@ class IbgpRouteReflectorTest(unittest.TestCase):
         emulator.render()
         return emulator, base, ibgp, asn
 
+    def _render_clustered_rr_as(self, reflection_mode: str):
+        emulator, base, ibgp = self._new_emulator()
+
+        asn = 153
+        cluster_id = "10.10.10.10"
+        asobj = base.createAutonomousSystem(asn)
+        asobj.createNetwork("net0")
+        asobj.createCluster(cluster_id)
+
+        routers = {}
+        for name in ("r0", "r1", "r2"):
+            routers[name] = asobj.createRouter(name).joinNetwork("net0").joinBgpCluster(cluster_id)
+
+        routers["r0"].makeRouteReflector(True)
+        ibgp.setReflectionMode(reflection_mode)
+
+        emulator.render()
+        return emulator, base, ibgp, asn, cluster_id
+
     def _bird_conf(self, base: Base, asn: int, router_name: str) -> str:
         router = base.getAutonomousSystem(asn).getRouter(router_name)
         return router.getFile("/etc/bird/bird.conf").get()[1]
@@ -145,6 +169,35 @@ class IbgpRouteReflectorTest(unittest.TestCase):
             {
                 frozenset(("Router: r0", "Router: r1")),
                 frozenset(("Router: r2", "Router: r3")),
+            },
+        )
+
+    def test_cluster_ids_are_ignored_in_simple_mode(self):
+        _, base, _, asn, cluster_id = self._render_clustered_rr_as("simple")
+
+        rr_conf = self._bird_conf(base, asn, "r0")
+        self.assertEqual(_count_neighbors(rr_conf, asn), 2)
+        self.assertEqual(_count_rr_client(rr_conf), 2)
+        self.assertEqual(_count_rr_cluster_id(rr_conf, cluster_id), 0)
+
+    def test_clustered_mode_uses_cluster_ids(self):
+        emulator, base, ibgp, asn, cluster_id = self._render_clustered_rr_as("clustered")
+
+        rr_conf = self._bird_conf(base, asn, "r0")
+        self.assertEqual(_count_neighbors(rr_conf, asn), 2)
+        self.assertEqual(_count_rr_client(rr_conf), 2)
+        self.assertEqual(_count_rr_cluster_id(rr_conf, cluster_id), 2)
+
+        for router_name in ("r1", "r2"):
+            conf = self._bird_conf(base, asn, router_name)
+            self.assertEqual(_count_neighbors(conf, asn), 1)
+            self.assertEqual(_count_rr_client(conf), 0)
+
+        self.assertEqual(
+            self._graph_edges(emulator, ibgp, asn),
+            {
+                frozenset(("Router: r0", "Router: r1")),
+                frozenset(("Router: r0", "Router: r2")),
             },
         )
 

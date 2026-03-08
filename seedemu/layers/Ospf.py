@@ -11,13 +11,18 @@ OspfFileTemplates['ospf_body'] = """
         import all;
         export all;
     }};
+{timing_directives}
     area 0 {{
 {interfaces}
     }};
 """
 
-OspfFileTemplates['ospf_interface'] = """\
+OspfFileTemplates['ospf_interface_default'] = """\
         interface "{interfaceName}" {{ hello 1; dead count 2; }};
+"""
+
+OspfFileTemplates['ospf_interface_large_scale'] = """\
+        interface "{interfaceName}" {{ hello 30; dead 36000; type pointopoint; retransmit 20; }};
 """
 
 OspfFileTemplates['ospf_stub_interface'] = """\
@@ -39,6 +44,7 @@ class Ospf(Layer):
     __stubs: Set[Tuple[int, str]]
     __masked: Set[Tuple[int, str]]
     __masked_asn: Set[int]
+    __timing_profile: str
 
     def __init__(self):
         """!
@@ -48,11 +54,32 @@ class Ospf(Layer):
         self.__stubs = set()
         self.__masked = set()
         self.__masked_asn = set()
+        self.__timing_profile = 'default'
 
         self.addDependency('Routing', False, False)
 
     def getName(self) -> str:
         return 'Ospf'
+
+    def setTimingProfile(self, profile: str) -> Ospf:
+        """!
+        @brief Set OSPF timing profile.
+
+        @param profile one of: default, large_scale.
+        @returns self, for chaining API calls.
+        """
+        assert profile in ('default', 'large_scale'), 'timing profile must be default or large_scale'
+        self.__timing_profile = profile
+
+        return self
+
+    def getTimingProfile(self) -> str:
+        """!
+        @brief Get current OSPF timing profile.
+
+        @returns timing profile string.
+        """
+        return self.__timing_profile
 
     def markAsStub(self, asn: int, netname: str) -> Ospf:
         """!
@@ -144,6 +171,8 @@ class Ospf(Layer):
 
     def render(self, emulator: Emulator):
         reg = emulator.getRegistry()
+        interface_template = 'ospf_interface_default' if self.__timing_profile == 'default' else 'ospf_interface_large_scale'
+        timing_directives = '' if self.__timing_profile == 'default' else '    tick 3;\n'
 
         for ((scope, type, name), obj) in reg.getAll().items():
             if type != 'rnode': continue
@@ -169,13 +198,14 @@ class Ospf(Layer):
             for name in stubs: ospf_interfaces += OspfFileTemplates['ospf_stub_interface'].format(
                 interfaceName = name
             )
-            for name in active: ospf_interfaces += OspfFileTemplates['ospf_interface'].format(
+            for name in active: ospf_interfaces += OspfFileTemplates[interface_template].format(
                 interfaceName = name
             )
 
             if ospf_interfaces != '':
                 router.addTable('t_ospf')
                 router.addProtocol('ospf', 'ospf1', OspfFileTemplates['ospf_body'].format(
+                    timing_directives = timing_directives,
                     interfaces = ospf_interfaces
                 ))
                 router.addTablePipe('t_ospf')
@@ -210,4 +240,3 @@ class Ospf(Layer):
             out += 'as{}\n'.format(asn)
 
         return out
-

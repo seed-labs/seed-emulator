@@ -1159,6 +1159,7 @@ class Router(Node):
     __loopback_address: str
     __is_border_router: bool
     __ibgp_is_rr: bool
+    __bgp_cluster_id: str
 
     __extensions: Dict[str, RouterExtension]
 
@@ -1166,6 +1167,7 @@ class Router(Node):
         self.__is_border_router = False
         self.__loopback_address = None
         self.__ibgp_is_rr = False
+        self.__bgp_cluster_id = None
         self.__extensions = {}
         super().__init__( name,role,asn,scope)
 
@@ -1234,11 +1236,34 @@ class Router(Node):
         """
         return bool(self.__ibgp_is_rr)
 
+    def joinBgpCluster(self, cluster_id: str) -> Router:
+        """!
+        @brief Assign this router to a clustered iBGP RR cluster.
+
+        Cluster IDs are only consumed when Ibgp reflection mode is
+        `clustered`.
+
+        @param cluster_id cluster identifier string.
+        @returns self, for chaining API calls.
+        """
+        self.__bgp_cluster_id = cluster_id
+        return self
+
+    def getBgpClusterId(self) -> str | None:
+        """!
+        @brief Get the clustered iBGP RR cluster identifier, if any.
+
+        @returns cluster identifier or None.
+        """
+        return self.__bgp_cluster_id
+
     def configure(self, emulator: Emulator):
         super().configure(emulator)
         # Persist RR intent for layers/compilers that inspect registry attrs.
         if hasattr(self, "_attrs"):
             self.setAttribute("__ibgp_is_rr", bool(self.__ibgp_is_rr))
+            if self.__bgp_cluster_id is not None:
+                self.setAttribute("__bgp_cluster_id", self.__bgp_cluster_id)
 
     def addProtocol(self, protocol: str, name: str, body: str) -> Router:
         """!
