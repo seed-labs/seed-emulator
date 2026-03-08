@@ -1,11 +1,11 @@
 # SEED Emulator K3s 运行抽象与维护手册
 
-最后更新：`2026-03-06`
+最后更新：`2026-03-08 10:16 UTC`
 
 本文不是“快速上手页”，而是给后续开发、测试、维护者的长期文档。它回答四个问题：
 
 1. 本仓库现在怎样抽象 K3s/K8s 运行模式。
-2. `mini_internet` 与 `real_topology_rr` 这两个大小例子在抽象层面分别代表什么。
+2. `mini_internet`、`real_topology_rr`、`real_topology_rr_scale` 这几个大小例子在抽象层面分别代表什么。
 3. 新例子、新 profile、新验证链路应该如何加入，而不破坏现有体系。
 4. 后续开发、测试、维护应该遵循什么边界与流程。
 
@@ -13,6 +13,7 @@
 
 - 快速入口：`docs/runbooks/opencode_seed_lab_quickstart.md`
 - 带时间戳的迁移/复盘记录：`docs/runbooks/20260305_k3s_kvm_multinode_real_topology_rr.md`
+- 分层改动/commit 回放：`docs/runbooks/seed_k8s_multilayer_commit_replay_20260308.md`
 - 通用 K8s 使用说明：`docs/k8s_usage.md`
 
 ---
@@ -72,6 +73,7 @@
 
 - `mini_internet`
 - `real_topology_rr`
+- `real_topology_rr_scale`
 - `transit_as`
 - `mini_internet_viz`
 - `hybrid_kubevirt`
@@ -85,7 +87,7 @@
 - 统一外部入口。
 - 生成每次 run 的目录结构。
 - 对 profile 做分发：
-  - 专用 validate 路径（`mini_internet` / `real_topology_rr`）
+  - 专用 validate 路径（`mini_internet` / `real_topology_rr` / `real_topology_rr_scale`）
   - generic 路径（其他 profile）
 - 维护 `latest` 链接和 `runner_summary.json`。
 
@@ -103,7 +105,7 @@ scripts/seed_k8s_profile_runner.sh <profile_id> <action>
 
 - 做 kubeconfig/preflight 检查。
 - 编译。
-- 远程构建镜像并推送到 registry。
+- 远程构建镜像，并按 profile 选择 `push 到 registry` 或 `preload 到 containerd`。
 - 部署到 K3s。
 - 写出严格验证证据。
 
@@ -180,7 +182,8 @@ output/profile_runs/<profile_id>/<run_id>/
 - 外部数据文件驱动
 - K3s 多节点大规模部署
 - route reflector iBGP 拓扑支持
-- registry 远程 build + push
+- master 远程 build + containerd preload 导入（默认）
+- `mini_internet` 仍可继续走 registry push
 - 大规模 workload 计数、分布与 BGP 抽样验证
 
 它的意义不是“取代 mini”，而是：
@@ -189,6 +192,27 @@ output/profile_runs/<profile_id>/<run_id>/
 - `real_topology_rr` 负责**大规模真实演示**
 
 两者不能互相代替。
+
+### 4.3 `real_topology_rr_scale`
+
+定位：
+
+- 同一真实拓扑链路上的 scale profile。
+- 专门承接学长旧实验仓里与大规模收敛相关的扩展思路，但以显式 knobs 暴露。
+
+它代表的抽象能力：
+
+- `Ibgp.setReflectionMode("clustered")`
+- `Routing.setKernelExportMode("device_ospf_only")`
+- `Ospf.setTimingProfile("default")`（当前 `real_topology_rr_scale` 在 3 节点 214 规模实验环境中的默认值）
+
+它的意义是：
+
+- baseline 继续可复现、可回归
+- scale profile 继续做大规模实验
+- 二者共用同一 runner / validate / report / entry-status 链路
+
+如需复现实验性慢时序，仍可显式设置 `Ospf.setTimingProfile("large_scale")` / `SEED_OSPF_TIMING_PROFILE=large_scale`。
 
 ---
 
@@ -513,10 +537,13 @@ kubectl -n <ns> exec -it <router-pod> -- birdc show protocols
 2. **把 report 再统一成 profile-aware 模板**
 - 现在已支持 mini/real 两条主线，但仍可继续抽象。
 
-3. **给 `KubernetesCompiler` 增加更可测试的 build plan 输出**
+3. **把 baseline / scale profile 的证据并排展示**
+- 让维护者一眼看出默认值与实验值分别是什么。
+
+4. **给 `KubernetesCompiler` 增加更可测试的 build plan 输出**
 - 把 `build_images.sh` 的 job 列表单独输出为 JSON，便于测试和审计。
 
-4. **给 `real_topology_rr` 增加更细的 BGP 抽样策略**
+5. **给 `real_topology_rr` / `real_topology_rr_scale` 增加更细的 BGP 抽样策略**
 - 当前只要求存在 `Established`，未来可增加多 AS 抽样。
 
 ### 11.2 不建议现在做的方向
@@ -542,6 +569,7 @@ python3 -m unittest tests/kubevirt_compiler_test.py -v
 scripts/opencode_seedlab_smoke.sh
 scripts/seed_k8s_profile_runner.sh mini_internet report
 scripts/seed_k8s_profile_runner.sh real_topology_rr report
+scripts/seed_k8s_profile_runner.sh real_topology_rr_scale report
 ```
 
 如果当天涉及 K3s 集群变更，再加：
@@ -549,6 +577,7 @@ scripts/seed_k8s_profile_runner.sh real_topology_rr report
 ```bash
 scripts/seed_k8s_profile_runner.sh mini_internet all
 SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr all
+SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale all
 ```
 
 ---

@@ -1,17 +1,21 @@
 # 2026-03-05 记录：K3s+KVM 多节点复现（mini_internet）+ Real Topology RR（214/1897）迁移到本仓库
 
+最后更新：`2026-03-08 10:16 UTC`
+
 > 本文件是**一次性统一记录**：把我们之前做过的事情、做法、入口、产物与人工检查方式写清楚。  
 > 目标：任何人**不借助 AI**，只按本文就能复现并理解 `mini_internet` 与 `real_topology_rr`（K3s 多节点）的运行模式与验证方式。
 
 给不熟 K8s、只想抓住“怎么跑 / 怎么看证据 / 怎么问 AI”的同学，优先看：
 
 - `docs/runbooks/seed_lab_evidence_first_operator_guide.md`
+- `docs/runbooks/seed_k8s_multilayer_commit_replay_20260308.md`
 
 ---
 
 ## 0. 时间戳与范围
 
 - 记录日期：`2026-03-05`
+- 最近补充验证：`2026-03-08 10:16 UTC`
 - 本仓库：`/home/seed/seed-emulator-k8s`
 - 本记录覆盖两条线：
   1. **历史（外部目录）**：`~/lxl_topology/autocoder_test` 下基于 `RR_214_example.py` 的大规模 Docker Compose 运行（1899 服务）与经验总结。
@@ -21,12 +25,16 @@
 
 - `mini_internet`（K3s 多节点）：
   - 结果：PASS
-  - RunID：`output/profile_runs/mini_internet/20260305_202033`
-  - 汇总：`output/profile_runs/mini_internet/20260305_202033/validation/summary.json`
+  - RunID：`output/profile_runs/mini_internet/20260308_082105`
+  - 汇总：`output/profile_runs/mini_internet/20260308_082105/validation/summary.json`
 - `real_topology_rr`（K3s 多节点，`SEED_TOPOLOGY_SIZE=214`）：
   - 结果：PASS（`expected_nodes=214`, `nodes_used=3`, `bgp_passed=true`）
-  - RunID：`output/profile_runs/real_topology_rr/20260305_202612`
-  - 汇总：`output/profile_runs/real_topology_rr/20260305_202612/validation/summary.json`
+  - RunID：`output/profile_runs/real_topology_rr/20260308_080803`
+  - 汇总：`output/profile_runs/real_topology_rr/20260308_080803/validation/summary.json`
+- `real_topology_rr_scale`（K3s 多节点，`SEED_TOPOLOGY_SIZE=214`）：
+  - 结果：PASS（`expected_nodes=214`, `nodes_used=3`, `bgp_passed=true`, `image_distribution_mode=preload`）
+  - RunID：`output/profile_runs/real_topology_rr_scale/20260308_100706`
+  - 汇总：`output/profile_runs/real_topology_rr_scale/20260308_100706/validation/summary.json`
 
 ---
 
@@ -76,10 +84,16 @@ scripts/seed_lab_entry_status.sh
 - K3s 三节点（KVM）：
   - `seed-k3s-master` / `seed-k3s-worker1` / `seed-k3s-worker2`
   - IP：`192.168.122.110/111/112`
+- registry：`192.168.122.110:5000`（就是 `seed-k3s-master:5000`）
 - kubeconfig（仓库产物）：`output/kubeconfigs/seedemu-k3s.yaml`
 - 默认路由网卡（节点内）：`ens2`（脚本会通过 SSH 自动探测并写入 `SEED_CNI_MASTER_INTERFACE`）
 - 容量（当前小规格，仅建议先跑 214 级别）：
   - master/worker1/worker2：约 `4+2+2 CPU / 6+4+4Gi`
+- 三层 OS 关系（非常重要）：
+  - host：`Ubuntu 24.04.3 LTS`
+  - 当前 K3s/KVM guest：`Ubuntu 22.04.5 LTS`
+  - 当前仓库容器基础镜像：`ubuntu:20.04`
+  - 学长旧实验仓 `/home/seed/seed-emulator` 容器基础镜像：`24.04`
 - CNI 建议：
   - K3s 多节点真实二层：`SEED_CNI_TYPE=macvlan`（需要 `SEED_CNI_MASTER_INTERFACE=ens2`）
 - 受限网络提示（Docker Hub 不可用时必看）：
@@ -227,7 +241,42 @@ scripts/seed_k8s_profile_runner.sh real_topology_rr all
 - `output/profile_runs/real_topology_rr/latest/validation/placement.tsv`
 - `output/profile_runs/real_topology_rr/latest/validation/bird_sample.txt`
 
-### 5.3 构建并行度控制（大规模 build 必懂）
+### 5.3 real_topology_rr_scale（显式大规模实验档）
+
+说明：
+
+- 这不是新的平行体系，而是同一条 K3s 主线下的 scale profile
+- 用于承接学长旧版大规模思路，但不覆盖默认值
+
+```bash
+cd <repo_root>
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
+conda activate seedemu-k8s-py310
+source scripts/env_seedemu.sh
+
+SEED_EXPERIMENT_PROFILE=real_topology_rr_scale \
+SEED_REAL_TOPOLOGY_DIR="$HOME/lxl_topology/autocoder_test" \
+SEED_TOPOLOGY_SIZE=214 \
+scripts/seed_k8s_profile_runner.sh real_topology_rr_scale all
+```
+
+这个 profile 默认会显式开启：
+
+- `SEED_IBGP_REFLECTION_MODE=clustered`
+- `SEED_ROUTING_KERNEL_EXPORT_MODE=device_ospf_only`
+- `SEED_OSPF_TIMING_PROFILE=default`
+
+说明：`SEED_OSPF_TIMING_PROFILE=large_scale` 仍保留为显式实验开关，但在当前 3 节点 `214` 规模实验环境中不作为默认值，因为会导致 OSPF 邻接卡在 `Init/ExStart`。
+
+成功证据：
+
+- `output/profile_runs/real_topology_rr_scale/latest/validation/summary.json`
+- `output/profile_runs/real_topology_rr_scale/latest/validation/placement.tsv`
+- `output/profile_runs/real_topology_rr_scale/latest/validation/bird_sample.txt`
+
+当前这台 3 节点实验集群如果同时保留 `mini_internet`、`real_topology_rr`、`real_topology_rr_scale` 多个大 namespace，容易碰到 K3s 默认 `Too many pods` 调度上限；跑 `real_topology_rr_scale` 前先清掉其他 demo namespace。
+
+### 5.4 构建并行度控制（大规模 build 必懂）
 
 `KubernetesCompiler` 生成的 `build_images.sh` 支持：
 
@@ -238,7 +287,7 @@ scripts/seed_k8s_profile_runner.sh real_topology_rr all
 
 ```bash
 SEED_BUILD_PARALLELISM=4 SEED_DOCKER_BUILDKIT=0 \
-scripts/seed_k8s_profile_runner.sh real_topology_rr start
+scripts/seed_k8s_profile_runner.sh real_topology_rr_scale start
 ```
 
 > K3s 多节点验证脚本会在 master 上远程执行 `build_images.sh`，并透传这两个 env。
@@ -258,10 +307,34 @@ scripts/seed_k8s_profile_runner.sh real_topology_rr start
 - 产物：`k8s.yaml` + `build_images.sh`
 - 运行模型：
   1. compile（生成清单 + build 脚本）
-  2. build（build + push 到 registry）
+  2. build（在 master 上执行 `build_images.sh`；`mini_internet` 默认走 registry push，`real_topology_rr*` 默认走 preload）
   3. deploy（`kubectl apply`，Deployment 管理生命周期）
   4. verify（pods/placement/BGP 证据化）
 - 自愈：Deployment 原生保证（无需“手动重启容器”）
+
+### 6.3 当前确认的镜像流向
+
+`mini_internet` 默认链路：
+
+1. 本地 compile 生成 `k8s.yaml` + `build_images.sh`
+2. 把编译产物打包并 `scp` 到 `seed-k3s-master`
+3. 在 `192.168.122.110` 上执行 `build_images.sh`
+4. push 到 `192.168.122.110:5000`
+5. workers 从这个 registry 拉镜像
+
+`real_topology_rr` / `real_topology_rr_scale` 默认链路：
+
+1. 本地 compile 生成 `k8s.yaml` + `build_images.sh`
+2. 把编译产物打包并 `scp` 到 `seed-k3s-master`
+3. 在 `192.168.122.110` 上执行 `build_images.sh`
+4. preload 到 `seed-k3s-master` / `seed-k3s-worker1` / `seed-k3s-worker2` 的 containerd
+5. `kubectl apply` 直接使用预载入镜像
+
+所以看到 `192.168.122.110:5000` 相关报错时，含义是：
+
+- build 发生在 master
+- 如果当前跑的是 `mini_internet`，push 目标就是 master 自己的本地 registry
+- 如果当前跑的是 `real_topology_rr*`，优先先看 `preload_*.log`，不是先怀疑 registry push
 
 ---
 
@@ -374,6 +447,17 @@ kubectl -n "$NS" get events --sort-by=.lastTimestamp | tail -n 40
 - **多节点分布**：`placement.tsv`（至少 `nodes_used>=2`）
 - **协议收敛**：`bird_sample.txt`（至少一个 `Established`）
 
+### 9.4 当前最近一次真实失败证据
+
+当前已确认最近一次 `mini_internet` 失败的直接原因不是 compile，而是：
+
+- master registry `192.168.122.110:5000` push 超时
+
+证据：
+
+- `output/profile_runs/mini_internet/latest/diagnostics.json`
+- `output/profile_runs/mini_internet/latest/validation/remote_build.log`
+
 ---
 
 ## 10. 回归测试（本次实现的自证）
@@ -403,6 +487,7 @@ python3 -m unittest tests/kubevirt_compiler_test.py -v
 - 新增/迁移：`examples/kubernetes/k8s_real_topology_rr.py`（Real Topology RR -> KubernetesCompiler）
 - 新增：`scripts/validate_k3s_real_topology_multinode.sh`（real_topology_rr 强验证流水线 + 证据落盘）
 - 新增 profile：`configs/seed_k8s_profiles.yaml`（`real_topology_rr`）
+- 新增 profile：`configs/seed_k8s_profiles.yaml`（`real_topology_rr_scale`）
 - RR 支持：
   - `seedemu/core/Node.py`（Router RR 标记 API）
   - `seedemu/layers/Ibgp.py`（RR iBGP 渲染 + graph）
@@ -476,6 +561,8 @@ opencode
 export SEED_EXPERIMENT_PROFILE=mini_internet
 # 或：
 export SEED_EXPERIMENT_PROFILE=real_topology_rr
+# 或：
+export SEED_EXPERIMENT_PROFILE=real_topology_rr_scale
 ```
 
 Real Topology RR 还需要外部数据集：
@@ -483,6 +570,14 @@ Real Topology RR 还需要外部数据集：
 ```bash
 export SEED_REAL_TOPOLOGY_DIR="$HOME/lxl_topology/autocoder_test"
 export SEED_TOPOLOGY_SIZE=214
+```
+
+如果你要重建 KVM guest 版本，入口现在是：
+
+```bash
+export SEED_KVM_UBUNTU_SERIES=jammy
+# 或
+export SEED_KVM_UBUNTU_SERIES=noble
 ```
 
 ### 13.4 破坏性动作的确认短语（必须）

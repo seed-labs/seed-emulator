@@ -430,3 +430,8 @@ kubectl -n "${NS}" exec <pod> -- birdc show route count
 kubectl -n "${NS}" logs <pod> --tail=200
 kubectl -n "${NS}" get events --sort-by=.lastTimestamp | tail -n 40
 ```
+
+
+## 相关文档
+
+- `docs/runbooks/seed_k8s_multilayer_commit_replay_20260308.md`：分层改动、commit 切法、维护回放

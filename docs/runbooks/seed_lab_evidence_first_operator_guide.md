@@ -1,6 +1,6 @@
 # SEED Lab 证据优先操作指南（给不熟 K8s 的同学）
 
-最后更新：`2026-03-06`
+最后更新：`2026-03-08 10:16 UTC`
 
 这份文档是给“知道我们在做什么，但不想先学一大堆 Kubernetes 概念”的同学准备的。
 
@@ -13,6 +13,10 @@
 
 如果你只想记住一个入口，请记住：
 
+维护者如果要看“这次改动按什么层切、怎么 review、怎么继续改”，再看：
+
+- `docs/runbooks/seed_k8s_multilayer_commit_replay_20260308.md`
+
 ```bash
 cd /home/seed/seed-emulator-k8s
 source scripts/env_seedemu.sh
@@ -21,7 +25,7 @@ scripts/seed_k8s_profile_runner.sh <profile> <action>
 
 其中：
 
-- `<profile>` 目前最重要的是 `mini_internet` 和 `real_topology_rr`
+- `<profile>` 目前最重要的是 `mini_internet`、`real_topology_rr`、`real_topology_rr_scale`
 - `<action>` 最常用的是 `doctor`、`all`、`report`
 
 ---
@@ -63,6 +67,22 @@ scripts/seed_k8s_profile_runner.sh <profile> <action>
 - `SEED_CNI_TYPE=macvlan`
 - `SEED_CNI_MASTER_INTERFACE=ens2`
 
+当前必须明确区分的三层版本：
+
+- 宿主机：`Ubuntu 24.04.3 LTS`
+- 当前 3 台 K3s/KVM 节点：`Ubuntu 22.04.5 LTS`
+- 当前仓库容器基础镜像：`ubuntu:20.04`
+
+补充：
+
+- 学长旧实验仓 `/home/seed/seed-emulator` 已把容器基础镜像改到 `24.04`
+- 但当前 `seed-emulator-k8s` 主线还没有默认切过去
+
+当前 registry 主机也要记清楚：
+
+- `192.168.122.110:5000`
+- 其中 `192.168.122.110` 就是 `seed-k3s-master`
+
 ### 1.3 先看状态，而不是直接开跑
 
 第一条建议命令：
@@ -81,6 +101,25 @@ cat output/assistant_entry/latest/summary.json
 - 给出当前环境快照
 
 如果连这一步都看不懂，就先不要直接跑 `all`。
+
+### 1.4 当前已确认的最近失败证据
+
+最近一次 `mini_internet` 主链路失败，不是 compile 挂掉，而是：
+
+- 在 `seed-k3s-master (192.168.122.110)` 上 build 后 push 到本地 registry 超时
+
+证据文件：
+
+- `output/profile_runs/mini_internet/latest/diagnostics.json`
+- `output/profile_runs/mini_internet/latest/validation/remote_build.log`
+
+关键错误可概括为：
+
+- `dial tcp 192.168.122.110:5000: i/o timeout`
+
+所以以后再碰到 `BUILD_FAILED` 或 `REGISTRY_TIMEOUT`，优先排查 registry，不要先怀疑 compile 脚本。
+
+补充：当前 `real_topology_rr` / `real_topology_rr_scale` 在这套 3 节点 K3s+KVM 实验环境里，默认已经改成 **master build + preload 到所有节点**，不再把 registry push 作为主路径；`mini_internet` 仍保留 registry push 主路径。
 
 ---
 
@@ -144,7 +183,7 @@ scripts/seed_k8s_profile_runner.sh mini_internet all
 
 当前我们已有一份通过的记录：
 
-- `output/profile_runs/mini_internet/20260305_202033/validation/summary.json`
+- `output/profile_runs/mini_internet/20260308_082105/validation/summary.json`
 
 重点字段：
 
@@ -287,6 +326,11 @@ done
 - 验证脚本：`scripts/validate_k3s_real_topology_multinode.sh`
 - 统一入口：`scripts/seed_k8s_profile_runner.sh`
 
+当前这条线已经拆成两个 profile：
+
+- `real_topology_rr`：baseline，保守稳定版
+- `real_topology_rr_scale`：scale，显式开启大规模实验 knobs 的版本
+
 ### 4.1 和历史 Docker Compose 的对应关系
 
 历史：
@@ -339,6 +383,25 @@ done
 
 - `seedemu/compiler/Kubernetes.py`
 
+#### E. baseline / scale 两档能力
+
+- `real_topology_rr`
+  - `SEED_PROFILE_KIND=baseline`
+  - `SEED_IBGP_REFLECTION_MODE=simple`
+  - `SEED_ROUTING_KERNEL_EXPORT_MODE=default`
+  - `SEED_OSPF_TIMING_PROFILE=default`
+- `real_topology_rr_scale`
+  - `SEED_PROFILE_KIND=scale`
+  - `SEED_IBGP_REFLECTION_MODE=clustered`
+  - `SEED_ROUTING_KERNEL_EXPORT_MODE=device_ospf_only`
+  - `SEED_OSPF_TIMING_PROFILE=default`
+
+原则：
+
+- 默认安全、显式启用
+- 学长旧的大规模思路被吸收进主线，但不再覆盖默认行为
+- 当前 3 节点实验集群上，`real_topology_rr_scale` 默认保持 `SEED_OSPF_TIMING_PROFILE=default`；`large_scale` 仍可手动显式开启，但不是默认值
+
 职责：
 
 - 生成更可控的 `build_images.sh`
@@ -359,6 +422,8 @@ done
 
 当前建议先跑 `214` 规模，因为三节点资源只够这个级别稳定演示。
 
+baseline（默认真实拓扑档）：
+
 ```bash
 cd /home/seed/seed-emulator-k8s
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
@@ -372,15 +437,32 @@ export SEED_TOPOLOGY_SIZE=214
 scripts/seed_k8s_profile_runner.sh real_topology_rr all
 ```
 
+scale（显式大规模实验档）：
+
+```bash
+cd /home/seed/seed-emulator-k8s
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
+conda activate seedemu-k8s-py310
+source scripts/env_seedemu.sh
+
+export KUBECONFIG=output/kubeconfigs/seedemu-k3s.yaml
+export SEED_REAL_TOPOLOGY_DIR="$HOME/lxl_topology/autocoder_test"
+export SEED_TOPOLOGY_SIZE=214
+
+scripts/seed_k8s_profile_runner.sh real_topology_rr_scale all
+```
+
 ### 4.4 跑完以后看哪里
 
 总结果：
 
-- `output/profile_runs/real_topology_rr/latest/validation/summary.json`
+- baseline：`output/profile_runs/real_topology_rr/latest/validation/summary.json`
+- scale：`output/profile_runs/real_topology_rr_scale/latest/validation/summary.json`
 
-当前已通过的一次记录：
+当前已通过的记录：
 
-- `output/profile_runs/real_topology_rr/20260305_202612/validation/summary.json`
+- baseline：`output/profile_runs/real_topology_rr/20260308_080803/validation/summary.json`
+- scale：`output/profile_runs/real_topology_rr_scale/20260308_100706/validation/summary.json`
 
 关键字段：
 
@@ -392,25 +474,32 @@ scripts/seed_k8s_profile_runner.sh real_topology_rr all
 
 #### A. 数量对不对
 
-- `output/profile_runs/real_topology_rr/latest/validation/counts.json`
+- baseline：`output/profile_runs/real_topology_rr/latest/validation/counts.json`
+- scale：`output/profile_runs/real_topology_rr_scale/latest/validation/counts.json`
 
 #### B. pod 是否分布到了多个节点
 
-- `output/profile_runs/real_topology_rr/latest/validation/placement.tsv`
+- baseline：`output/profile_runs/real_topology_rr/latest/validation/placement.tsv`
+- scale：`output/profile_runs/real_topology_rr_scale/latest/validation/placement.tsv`
 
 #### C. 所有 workload 是否都起来了
 
-- `output/profile_runs/real_topology_rr/latest/validation/pods_wide.txt`
-- `output/profile_runs/real_topology_rr/latest/validation/deployments_wide.txt`
+- baseline：`output/profile_runs/real_topology_rr/latest/validation/pods_wide.txt`
+- scale：`output/profile_runs/real_topology_rr_scale/latest/validation/pods_wide.txt`
+- baseline：`output/profile_runs/real_topology_rr/latest/validation/deployments_wide.txt`
+- scale：`output/profile_runs/real_topology_rr_scale/latest/validation/deployments_wide.txt`
 
 #### D. BGP 至少有没有 Established
 
-- `output/profile_runs/real_topology_rr/latest/validation/bird_sample.txt`
+- baseline：`output/profile_runs/real_topology_rr/latest/validation/bird_sample.txt`
+- scale：`output/profile_runs/real_topology_rr_scale/latest/validation/bird_sample.txt`
 
 #### E. 总报告
 
-- `output/profile_runs/real_topology_rr/latest/report/report.json`
-- `output/profile_runs/real_topology_rr/latest/report/report.md`
+- baseline：`output/profile_runs/real_topology_rr/latest/report/report.json`
+- scale：`output/profile_runs/real_topology_rr_scale/latest/report/report.json`
+- baseline：`output/profile_runs/real_topology_rr/latest/report/report.md`
+- scale：`output/profile_runs/real_topology_rr_scale/latest/report/report.md`
 
 ### 4.6 跑的时候怎么盯
 
@@ -418,13 +507,15 @@ scripts/seed_k8s_profile_runner.sh real_topology_rr all
 
 ```bash
 tail -f output/profile_runs/real_topology_rr/latest/runner.log
+# 或
+tail -f output/profile_runs/real_topology_rr_scale/latest/runner.log
 ```
 
 和：
 
 ```bash
 export KUBECONFIG=output/kubeconfigs/seedemu-k3s.yaml
-export NS=seedemu-k3s-real-topo
+export NS=seedemu-k3s-real-topo-scale   # baseline 改成 seedemu-k3s-real-topo
 
 kubectl -n "$NS" get pods -o wide
 kubectl -n "$NS" get deploy -o wide
@@ -473,6 +564,7 @@ kubectl -n "$NS" get events --sort-by=.lastTimestamp | tail -n 40
 2. 不要把运行逻辑塞进 prompt，让离开 AI 就不会跑
 3. 不要让大规模例子成为默认 smoke
 4. 不要只看终端，不落证据文件
+5. 不要把大规模实验 knobs 直接改成默认值
 
 ---
 
@@ -505,6 +597,7 @@ opencode
 #### 环境入口
 
 - `output/assistant_entry/latest/summary.json`
+- `output/assistant_entry/latest/summary.md`
 
 #### 某次运行的主状态
 
@@ -518,8 +611,17 @@ opencode
 #### 最终验收
 
 - `output/profile_runs/<profile>/latest/validation/summary.json`
+- `output/profile_runs/<profile>/latest/report/report.json`
+- `output/profile_runs/<profile>/latest/report/report.md`
 
 ### 6.3 如果学长不会写好 prompt，就照抄这句
+
+推荐问法也可以直接改成下面几类：
+
+- “先读 `output/assistant_entry/latest/summary.json`，告诉我现在 host OS、VM OS、container base image 分别是什么。”
+- “先读 `output/profile_runs/<profile>/latest/validation/diagnostics.json`，告诉我失败阶段、failure code、第一证据文件、最小重试命令。”
+- “先读 `output/profile_runs/<profile>/latest/report/report.json`，告诉我 registry 流向和当前卡在哪一段。”
+- “不要讲概念，直接给我一条下一步命令，并说明要看哪个证据文件。”
 
 你可以直接对 AI 说：
 
@@ -618,6 +720,11 @@ opencode
 5. 以后加新例子，不是只写 Python 文件
    - 必须同时补 profile、validate、report、文档
 
+6. 如果要重建 KVM 三节点，guest 版本入口现在已经参数化
+   - `SEED_KVM_UBUNTU_SERIES=jammy`：当前默认，对应现在真实运行的 `22.04.5`
+   - `SEED_KVM_UBUNTU_SERIES=noble`：显式切到 `24.04` cloud image，需要重建集群
+   - `SEED_KVM_BASE_IMAGE_URL` / `SEED_KVM_BASE_IMAGE_PATH` 优先级更高
+
 ---
 
 ## 9. 相关文档（按用途看）
@@ -637,4 +744,3 @@ opencode
 ### 当前仓库的 Kubernetes 示例说明
 
 - `examples/kubernetes/README.md`
-
