@@ -104,6 +104,10 @@ if has_cmd kubectl; then
       "${OUT_DIR}/kube_nodes.txt" \
       "${OUT_DIR}/kube_nodes.err" || true
     capture_or_note \
+      "kubectl --kubeconfig '${KUBECONFIG}' get nodes -o json" \
+      "${OUT_DIR}/kube_nodes.json" \
+      "${OUT_DIR}/kube_nodes_json.err" || true
+    capture_or_note \
       "kubectl --kubeconfig '${KUBECONFIG}' get ns" \
       "${OUT_DIR}/kube_namespaces.txt" \
       "${OUT_DIR}/kube_namespaces.err" || true
@@ -142,6 +146,10 @@ export ENTRY_SEED_OUTPUT_DIR="${SEED_OUTPUT_DIR}"
 export ENTRY_MASTER_NAME="${SEED_K3S_MASTER_NAME}"
 export ENTRY_WORKER1_NAME="${SEED_K3S_WORKER1_NAME}"
 export ENTRY_WORKER2_NAME="${SEED_K3S_WORKER2_NAME}"
+export ENTRY_SEED_REGISTRY_HOST="${SEED_REGISTRY_HOST:-192.168.122.110}"
+export ENTRY_SEED_REGISTRY_PORT="${SEED_REGISTRY_PORT:-5000}"
+export ENTRY_SEED_PROFILE_KIND="${SEED_PROFILE_KIND:-}"
+export ENTRY_SEED_IMAGE_DISTRIBUTION_MODE="${SEED_IMAGE_DISTRIBUTION_MODE:-}"
 
 python3 - <<'PY'
 import json
@@ -172,7 +180,34 @@ summary = {
     "seed_placement_mode": os.environ["ENTRY_SEED_PLACEMENT_MODE"],
     "seed_artifact_dir": os.environ["ENTRY_SEED_ARTIFACT_DIR"],
     "seed_output_dir": os.environ["ENTRY_SEED_OUTPUT_DIR"],
+    "registry_host": os.environ["ENTRY_SEED_REGISTRY_HOST"],
+    "registry_port": os.environ["ENTRY_SEED_REGISTRY_PORT"],
 }
+
+profile_kind = os.environ.get("ENTRY_SEED_PROFILE_KIND", "").strip() or (
+    "scale" if summary["seed_profile"] == "real_topology_rr_scale" else "baseline"
+)
+summary["profile_kind"] = profile_kind
+
+image_distribution_mode = os.environ.get("ENTRY_SEED_IMAGE_DISTRIBUTION_MODE", "").strip()
+if not image_distribution_mode:
+    if summary["seed_profile"] in {"real_topology_rr", "real_topology_rr_scale"}:
+        image_distribution_mode = "preload"
+    else:
+        image_distribution_mode = "registry"
+summary["image_distribution_mode"] = image_distribution_mode
+
+host_os = "unknown"
+os_release = Path("/etc/os-release")
+if os_release.exists():
+    data = {}
+    for raw in os_release.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        data[key.strip()] = value.strip().strip('"')
+    host_os = data.get("PRETTY_NAME") or data.get("NAME") or "unknown"
+summary["host_os"] = host_os
 
 profiles = []
 if profile_file.exists() and yaml is not None:
@@ -193,6 +228,16 @@ if profile_file.exists() and yaml is not None:
             )
 
 summary["available_profiles"] = sorted(profiles, key=lambda item: item["profile_id"])
+
+container_base_image = "unknown"
+dockerfile = repo_root / "docker_images/seedemu-base/Dockerfile"
+if dockerfile.exists():
+    for raw in dockerfile.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw.strip()
+        if line.upper().startswith("FROM "):
+            container_base_image = line.split(None, 1)[1]
+            break
+summary["container_base_image"] = container_base_image
 
 virsh_file = out_dir / "virsh_list_all.txt"
 expected_vms = [
@@ -243,6 +288,43 @@ summary["kubernetes"] = {
     if (out_dir / "kube_current_context.txt").exists()
     else "",
 }
+
+node_matrix = []
+nodes_json = out_dir / "kube_nodes.json"
+if nodes_json.exists():
+    try:
+        loaded = json.loads(nodes_json.read_text(encoding="utf-8"))
+    except Exception:
+        loaded = {}
+    for item in loaded.get("items", []) if isinstance(loaded, dict) else []:
+        metadata = item.get("metadata", {}) or {}
+        node_info = (item.get("status", {}) or {}).get("nodeInfo", {}) or {}
+        node_matrix.append(
+            {
+                "name": metadata.get("name", ""),
+                "os_image": node_info.get("osImage", ""),
+                "kernel_version": node_info.get("kernelVersion", ""),
+                "container_runtime": node_info.get("containerRuntimeVersion", ""),
+            }
+        )
+summary["k3s_node_os_matrix"] = node_matrix
+
+if image_distribution_mode == "preload":
+    summary["image_flow"] = [
+        "local compile",
+        "scp compiled artifacts to seed-k3s-master",
+        f"run build_images.sh on {summary['registry_host']}",
+        "preload images into master/worker containerd",
+        "kubectl apply uses preloaded images",
+    ]
+else:
+    summary["image_flow"] = [
+        "local compile",
+        "scp compiled artifacts to seed-k3s-master",
+        f"run build_images.sh on {summary['registry_host']}",
+        f"push images to {summary['registry_host']}:{summary['registry_port']}",
+        "workers pull images from master registry",
+    ]
 
 latest_runs = {}
 if profile_root.exists():
@@ -319,13 +401,26 @@ markdown.append("")
 markdown.append(f"- Summary JSON: `{summary_path}`")
 markdown.append(f"- Namespace: `{summary['seed_namespace']}`")
 markdown.append(f"- Profile: `{summary['seed_profile']}`")
+markdown.append(f"- Profile kind: `{summary['profile_kind']}`")
 markdown.append(f"- Placement mode: `{summary['seed_placement_mode']}`")
+markdown.append(f"- Registry: `{summary['registry_host']}:{summary['registry_port']}`")
+markdown.append(f"- Image distribution: `{summary['image_distribution_mode']}`")
+markdown.append(f"- Host OS: `{summary['host_os']}`")
+markdown.append(f"- Container base image: `{summary['container_base_image']}`")
 markdown.append(
     f"- K8s Nodes Ready: `{summary['kubernetes']['nodes']['ready']}/{summary['kubernetes']['nodes']['total']}`"
 )
 markdown.append(
     f"- Expected KVM Running: `{summary['kvm']['expected_vm_running_count']}/{len(expected_vms)}`"
 )
+markdown.append("")
+markdown.append("## OS Matrix")
+for item in summary["k3s_node_os_matrix"]:
+    markdown.append(f"- `{item['name']}` -> `{item['os_image']}` / `{item['container_runtime']}`")
+markdown.append("")
+markdown.append("## Image Flow")
+for step in summary["image_flow"]:
+    markdown.append(f"- `{step}`")
 markdown.append("")
 markdown.append("## Next Commands")
 for item in summary["macro_tasks"]:

@@ -95,6 +95,7 @@ mkdir -p "${REPORT_DIR}"
 
 python3 - <<PY
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -106,6 +107,54 @@ report_dir.mkdir(parents=True, exist_ok=True)
 
 summary = json.loads((validation_dir / "summary.json").read_text(encoding="utf-8"))
 profile_id = str(summary.get("profile", "") or summary.get("profile_id", "") or "")
+
+def detect_host_os() -> str:
+    os_release = Path("/etc/os-release")
+    if not os_release.exists():
+        return "unknown"
+    data = {}
+    for raw in os_release.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        data[key.strip()] = value.strip().strip('"')
+    return data.get("PRETTY_NAME") or data.get("NAME") or "unknown"
+
+def load_nodes_matrix() -> list[dict]:
+    candidates = [validation_dir / "nodes.json", validation_dir / "kube_nodes.json"]
+    for path in candidates:
+        loaded = load_json_if_exists(path)
+        if not isinstance(loaded, dict):
+            continue
+        items = loaded.get("items", [])
+        matrix = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            metadata = item.get("metadata", {}) or {}
+            status = item.get("status", {}) or {}
+            node_info = status.get("nodeInfo", {}) or {}
+            matrix.append(
+                {
+                    "name": metadata.get("name", ""),
+                    "os_image": node_info.get("osImage", ""),
+                    "kernel_version": node_info.get("kernelVersion", ""),
+                    "container_runtime": node_info.get("containerRuntimeVersion", ""),
+                }
+            )
+        if matrix:
+            return matrix
+    return []
+
+def detect_container_base_series() -> str:
+    dockerfile = Path(${REPO_ROOT@Q}) / "docker_images/seedemu-base/Dockerfile"
+    if not dockerfile.exists():
+        return "unknown"
+    for raw in dockerfile.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw.strip()
+        if line.upper().startswith("FROM "):
+            return line.split(None, 1)[1]
+    return "unknown"
 
 
 def load_json_if_exists(path: Path):
@@ -149,13 +198,14 @@ if diagnostics and isinstance(diagnostics, dict):
 if (observe_namespace_match is False) and not failure_code:
     failure_code = "OBSERVE_NAMESPACE_MISMATCH"
 
-if profile_id == "real_topology_rr":
+if profile_id in {"real_topology_rr", "real_topology_rr_scale"}:
     retry_by_failure = {
         "kubeconfig_fetch_failed": "scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_real_topology_multinode.sh preflight",
         "kubeconfig_not_found_after_fetch": "scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_real_topology_multinode.sh preflight",
         "ssh_key_not_found": "export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_real_topology_multinode.sh preflight",
         "compile_missing_k8s_yaml": "scripts/validate_k3s_real_topology_multinode.sh compile",
         "compile_missing_build_script": "scripts/validate_k3s_real_topology_multinode.sh compile",
+        "registry_timeout": f"scripts/seed_k8s_profile_runner.sh {profile_id} start",
         "build_failed": "scripts/validate_k3s_real_topology_multinode.sh build",
         "deploy_wait_timeout_or_failure": "scripts/validate_k3s_real_topology_multinode.sh deploy",
         "placement_check_failed": "scripts/validate_k3s_real_topology_multinode.sh verify",
@@ -205,9 +255,11 @@ add_evidence("summary", validation_dir / "summary.json")
 add_evidence("diagnostics", validation_dir / "diagnostics.json")
 add_evidence("next_actions", validation_dir / "next_actions.json")
 
-if profile_id == "real_topology_rr":
+if profile_id in {"real_topology_rr", "real_topology_rr_scale"}:
     add_evidence("counts", validation_dir / "counts.json")
     add_evidence("placement", validation_dir / "placement.tsv")
+    add_evidence("nodes", validation_dir / "nodes_wide.txt")
+    add_evidence("nodes_json", validation_dir / "nodes.json")
     add_evidence("pods_wide", validation_dir / "pods_wide.txt")
     add_evidence("deployments_wide", validation_dir / "deployments_wide.txt")
     add_evidence("bird_sample", validation_dir / "bird_sample.txt")
@@ -222,6 +274,34 @@ else:
 if observe_dir:
     add_evidence("observe_summary", observe_dir / "summary.json")
 
+host_os = detect_host_os()
+node_os_matrix = load_nodes_matrix()
+container_base_image = detect_container_base_series()
+registry = str(summary.get("registry", "") or "")
+registry_host = str(summary.get("registry_host", "") or "")
+registry_port = str(summary.get("registry_port", "") or "")
+profile_kind = str(summary.get("profile_kind", "baseline") or "baseline")
+image_distribution_mode = str(summary.get("image_distribution_mode", "") or "")
+if not image_distribution_mode:
+    image_distribution_mode = "preload" if profile_id in {"real_topology_rr", "real_topology_rr_scale"} else "registry"
+
+if image_distribution_mode == "preload":
+    image_flow = [
+        "local compile",
+        "scp compiled artifacts to seed-k3s-master",
+        f"run build_images.sh on {registry_host or '192.168.122.110'}",
+        "preload images into master/worker containerd",
+        "kubectl apply uses preloaded images",
+    ]
+else:
+    image_flow = [
+        "local compile",
+        "scp compiled artifacts to seed-k3s-master",
+        f"run build_images.sh on {registry_host or '192.168.122.110'}",
+        f"push images to {registry or '192.168.122.110:5000'}",
+        "workers pull images from master registry",
+    ]
+
 report = {
     "generated_at": datetime.now(timezone.utc).isoformat(),
     "profile_id": profile_id,
@@ -230,8 +310,17 @@ report = {
     "report_dir": str(report_dir),
     "cluster": summary.get("cluster", ""),
     "namespace": summary.get("namespace", ""),
+    "profile_kind": profile_kind,
     "cni_type": summary.get("cni_type", ""),
     "cni_master_interface": summary.get("cni_master_interface", ""),
+    "registry": registry,
+    "registry_host": registry_host,
+    "registry_port": registry_port,
+    "image_distribution_mode": image_distribution_mode,
+    "host_os": host_os,
+    "node_os_matrix": node_os_matrix,
+    "container_base_image": container_base_image,
+    "image_flow": image_flow,
     "placement_mode": placement_mode,
     "nodes_used": summary.get("nodes_used", 0),
     "placement_passed": placement_passed,
@@ -267,9 +356,19 @@ md_lines = [
     f"- Observe dir: '{report['observe_dir']}'" if report["observe_dir"] else "- Observe dir: '(not provided)'",
     f"- Cluster: '{report['cluster']}'",
     f"- Namespace: '{report['namespace']}'",
+    f"- Profile kind: '{report['profile_kind']}'",
     f"- CNI: '{report['cni_type']}' (iface: '{report['cni_master_interface']}')",
+    f"- Registry: '{report['registry']}'",
+    f"- Image distribution: '{report['image_distribution_mode']}'",
+    f"- Host OS: '{report['host_os']}'",
+    f"- Container base image: '{report['container_base_image']}'",
     f"- Placement mode: '{report['placement_mode']}'",
     f"- Nodes used: '{report['nodes_used']}'",
+    "",
+    "## Environment",
+    "",
+    *(f"- node_os: '{item['name']} | {item['os_image']} | {item['container_runtime']}'" for item in report["node_os_matrix"]),
+    *(f"- image_flow: '{step}'" for step in report["image_flow"]),
     "",
     "## Verdict",
     "",

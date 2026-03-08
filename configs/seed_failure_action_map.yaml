@@ -55,6 +55,14 @@ failure_actions:
     safe_auto_retry: false
     requires_confirmation: false
 
+  REGISTRY_TIMEOUT:
+    first_evidence_pattern: remote_build.log
+    minimal_retry_command: scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} start
+    fallback_command: tail -n 200 output/profile_runs/${SEED_EXPERIMENT_PROFILE:-mini_internet}/latest/validation/remote_build.log
+    operator_hint: master registry 推送超时，优先检查 192.168.122.110:5000 的 registry 负载、网络与磁盘
+    safe_auto_retry: false
+    requires_confirmation: false
+
   DEPLOY_TIMEOUT:
     first_evidence_pattern: wait.log
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh deploy
