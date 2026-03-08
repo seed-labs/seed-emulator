@@ -69,6 +69,13 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _env_choice(name: str, default: str, allowed: tuple[str, ...]) -> str:
+    value = os.environ.get(name, default).strip().lower()
+    if value not in allowed:
+        raise ValueError(f"Invalid {name}: {value}. Allowed values: {', '.join(allowed)}")
+    return value
+
+
 def _get_output_dir(default_dirname: str) -> str:
     configured = os.environ.get("SEED_OUTPUT_DIR")
     if not configured:
@@ -189,6 +196,21 @@ def run() -> None:
     emu = Emulator()
     base = Base()
     ebgp = Ebgp()
+    routing = Routing().setKernelExportMode(_env_choice(
+        "SEED_ROUTING_KERNEL_EXPORT_MODE",
+        "default",
+        ("default", "device_ospf_only"),
+    ))
+    ibgp = Ibgp().setReflectionMode(_env_choice(
+        "SEED_IBGP_REFLECTION_MODE",
+        "simple",
+        ("simple", "clustered"),
+    ))
+    ospf = Ospf().setTimingProfile(_env_choice(
+        "SEED_OSPF_TIMING_PROFILE",
+        "default",
+        ("default", "large_scale"),
+    ))
 
     # 1) Internet Exchanges (+ route servers)
     for ixp_name in topo["ixps"]:
@@ -271,10 +293,10 @@ def run() -> None:
 
     # Layers
     emu.addLayer(base)
-    emu.addLayer(Routing())
+    emu.addLayer(routing)
     emu.addLayer(ebgp)
-    emu.addLayer(Ibgp())
-    emu.addLayer(Ospf())
+    emu.addLayer(ibgp)
+    emu.addLayer(ospf)
     emu.render()
 
     # Kubernetes compilation
@@ -323,6 +345,9 @@ def run() -> None:
     print(f"Registry prefix: {registry_prefix}")
     print(f"CNI type: {cni_type}")
     print(f"Internet Map enabled: {enable_internet_map}")
+    print(f"iBGP reflection mode: {ibgp.getReflectionMode()}")
+    print(f"Routing kernel export mode: {routing.getKernelExportMode()}")
+    print(f"OSPF timing profile: {ospf.getTimingProfile()}")
 
 
 if __name__ == "__main__":

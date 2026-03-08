@@ -19,6 +19,8 @@ Actions:
   status  Show VM status from scripts/kvm_lab.sh
 
 Optional env vars:
+  SEED_KVM_UBUNTU_SERIES=jammy|noble
+  SEED_KVM_BASE_IMAGE_URL / SEED_KVM_BASE_IMAGE_PATH (override series-derived defaults)
   SEED_K3S_CLUSTER_NAME
   SEED_K3S_MASTER_IP / SEED_K3S_WORKER1_IP / SEED_K3S_WORKER2_IP
   SEED_K3S_USER / SEED_K3S_SSH_KEY / SEED_K3S_VERSION

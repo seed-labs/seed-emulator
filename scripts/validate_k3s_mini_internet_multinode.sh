@@ -84,6 +84,11 @@ SEED_MIN_NODES_USED="${SEED_MIN_NODES_USED:-2}"
 SEED_REQUIRE_ALL_NODES="${SEED_REQUIRE_ALL_NODES:-false}"
 SEED_BUILD_PARALLELISM="${SEED_BUILD_PARALLELISM:-1}"
 SEED_DOCKER_BUILDKIT="${SEED_DOCKER_BUILDKIT:-0}"
+SEED_REGISTRY_PUSH_RETRIES="${SEED_REGISTRY_PUSH_RETRIES:-5}"
+SEED_REGISTRY_PUSH_BACKOFF_SECONDS="${SEED_REGISTRY_PUSH_BACKOFF_SECONDS:-5}"
+SEED_DOCKER_MAX_CONCURRENT_UPLOADS="${SEED_DOCKER_MAX_CONCURRENT_UPLOADS:-1}"
+SEED_REGISTRY_PUSH_TIMEOUT_SECONDS="${SEED_REGISTRY_PUSH_TIMEOUT_SECONDS:-180}"
+SEED_KUBECTL_EXEC_TIMEOUT_SECONDS="${SEED_KUBECTL_EXEC_TIMEOUT_SECONDS:-20}"
 SEED_HOSTS_PER_AS="${SEED_HOSTS_PER_AS:-2}"
 CONNECTIVITY_RETRY="${CONNECTIVITY_RETRY:-24}"
 CONNECTIVITY_RETRY_INTERVAL_SECONDS="${CONNECTIVITY_RETRY_INTERVAL_SECONDS:-5}"
@@ -92,6 +97,7 @@ DEPLOY_WAIT_TIMEOUT="${DEPLOY_WAIT_TIMEOUT:-1800s}"
 CLEAN_NAMESPACE="${SEED_CLEAN_NAMESPACE:-true}"
 SEED_AUTO_CNI_FALLBACK="${SEED_AUTO_CNI_FALLBACK:-false}"
 SEED_EXPERIMENT_PROFILE="${SEED_EXPERIMENT_PROFILE:-mini_internet}"
+SEED_PROFILE_KIND="${SEED_PROFILE_KIND:-baseline}"
 SEED_AGENT_PROACTIVE_MODE="${SEED_AGENT_PROACTIVE_MODE:-guided}"
 SEED_FAILURE_ACTION_MAP="${SEED_FAILURE_ACTION_MAP:-${REPO_ROOT}/configs/seed_failure_action_map.yaml}"
 
@@ -140,9 +146,18 @@ SSH_OPTS=(
   -o ServerAliveCountMax=3
   -i "${SEED_K3S_SSH_KEY}"
 )
+SSH_EXEC_OPTS=("${SSH_OPTS[@]}" -n)
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
+run_kubectl_exec() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "${SEED_KUBECTL_EXEC_TIMEOUT_SECONDS}" kubectl "$@"
+  else
+    kubectl "$@"
+  fi
 }
 
 usage() {
@@ -254,6 +269,10 @@ resolve_failure_code() {
       ;;
     compile_missing_k8s_yaml|compile_missing_build_script)
       echo "COMPILE_FAILED"
+      return
+      ;;
+    registry_timeout)
+      echo "REGISTRY_TIMEOUT"
       return
       ;;
     build_failed)
@@ -431,10 +450,14 @@ summary = {
     "cluster": "${SEED_K3S_CLUSTER_NAME}",
     "namespace": "${SEED_NAMESPACE}",
     "profile": "${SEED_EXPERIMENT_PROFILE}",
+    "profile_kind": "${SEED_PROFILE_KIND}",
     "proactive_mode": "${SEED_AGENT_PROACTIVE_MODE}",
     "placement_mode": "${SEED_PLACEMENT_MODE}",
     "cni_type": "${SEED_CNI_TYPE}",
     "cni_master_interface": "${EFFECTIVE_CNI_IFACE}",
+    "registry_host": "${SEED_REGISTRY_HOST}",
+    "registry_port": int("${SEED_REGISTRY_PORT}"),
+    "registry": "${SEED_REGISTRY}",
     "nodes_used": int("${NODES_USED}"),
     "placement_passed": "${PLACEMENT_PASSED}" == "true",
     "strict3_passed": "${STRICT3_PASSED}" == "true",
@@ -502,9 +525,9 @@ detect_cluster_nodes() {
 resolve_cni_master_interface() {
   local master_iface worker1_iface worker2_iface
 
-  master_iface="$(ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "ip -o -4 route show to default | sed -n '1{s/.* dev \\([^ ]*\\).*/\\1/p}'")"
-  worker1_iface="$(ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "ip -o -4 route show to default | sed -n '1{s/.* dev \\([^ ]*\\).*/\\1/p}'")"
-  worker2_iface="$(ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "ip -o -4 route show to default | sed -n '1{s/.* dev \\([^ ]*\\).*/\\1/p}'")"
+  master_iface="$(ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "ip -o -4 route show to default | sed -n '1{s/.* dev \\([^ ]*\\).*/\\1/p}'")"
+  worker1_iface="$(ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "ip -o -4 route show to default | sed -n '1{s/.* dev \\([^ ]*\\).*/\\1/p}'")"
+  worker2_iface="$(ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "ip -o -4 route show to default | sed -n '1{s/.* dev \\([^ ]*\\).*/\\1/p}'")"
 
   if [ -z "${master_iface}" ] || [ -z "${worker1_iface}" ] || [ -z "${worker2_iface}" ]; then
     fail_with_reason "failed_to_detect_default_route_interface"
@@ -586,15 +609,15 @@ run_preflight_check_once() {
   fi
 
   # 2) ssh + sudo
-  if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "echo ok" >/dev/null 2>&1 \
-    && ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "echo ok" >/dev/null 2>&1 \
-    && ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "echo ok" >/dev/null 2>&1; then
+  if ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "echo ok" >/dev/null 2>&1 \
+    && ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "echo ok" >/dev/null 2>&1 \
+    && ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "echo ok" >/dev/null 2>&1; then
     ssh_ok="true"
   fi
 
-  if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n true" >/dev/null 2>&1 \
-    && ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "sudo -n true" >/dev/null 2>&1 \
-    && ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "sudo -n true" >/dev/null 2>&1; then
+  if ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n true" >/dev/null 2>&1 \
+    && ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "sudo -n true" >/dev/null 2>&1 \
+    && ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "sudo -n true" >/dev/null 2>&1; then
     sudo_ok="true"
   fi
 
@@ -646,7 +669,7 @@ run_preflight_check_once() {
     cni_plugins_ok="true"
     local host
     for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
-      if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
+      if ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
         "set -euo pipefail; for p in ${required_plugins[*]}; do test -x \"/opt/cni/bin/\$p\" || test -x \"/var/lib/rancher/k3s/data/current/bin/\$p\"; done" >/dev/null 2>&1; then
         echo -e "${host}\tok" >> "${ARTIFACT_DIR}/cni_plugins_status.txt"
       else
@@ -657,17 +680,18 @@ run_preflight_check_once() {
   fi
 
   # 6) registry
-  if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -x registry" >/dev/null 2>&1; then
+  if ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -x registry" >/dev/null 2>&1; then
     registry_ok="true"
   fi
 
-  if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1 \
-    && ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1; then
+  if ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1 \
+    && ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1; then
     registry_reachable_ok="true"
   fi
 
   # artifacts
   kubectl --kubeconfig "${KUBECONFIG_PATH}" get nodes -o wide > "${ARTIFACT_DIR}/kube_nodes.txt" 2>/dev/null || true
+  kubectl --kubeconfig "${KUBECONFIG_PATH}" get nodes -o json > "${ARTIFACT_DIR}/kube_nodes.json" 2>/dev/null || true
   kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system get ds kube-multus-ds -o wide > "${ARTIFACT_DIR}/multus_status.txt" 2>/dev/null || true
   kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system get pods -o wide > "${ARTIFACT_DIR}/kube_system_pods.txt" 2>/dev/null || true
   (kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system get events --sort-by=.lastTimestamp 2>/dev/null || true) \
@@ -714,7 +738,7 @@ PY
 
 repair_registry_connectivity() {
   log "Attempting quick registry remediation on master"
-  ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+  ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
     "set -euo pipefail; \
      sudo -n docker rm -f registry >/dev/null 2>&1 || true; \
      if ! sudo -n docker image inspect registry:2 >/dev/null 2>&1; then \
@@ -725,8 +749,8 @@ repair_registry_connectivity() {
 
   local i
   for i in $(seq 1 12); do
-    if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1 \
-      && ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1; then
+    if ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1 \
+      && ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1; then
       log "Registry is reachable from both workers"
       return 0
     fi
@@ -743,10 +767,10 @@ repair_multus_hostpaths_for_k3s() {
 
   log "Attempting quick multus hostPath repair for k3s"
   local conf_dir bin_dir
-  conf_dir="$(ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+  conf_dir="$(ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
     "sudo -n sh -c 'sed -n \"s/^\\s*conf_dir\\s*=\\s*\\\"\\([^\\\"]*\\)\\\".*/\\1/p\" /var/lib/rancher/k3s/agent/etc/containerd/config.toml | head -n 1' 2>/dev/null" \
     || true)"
-  bin_dir="$(ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+  bin_dir="$(ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
     "sudo -n sh -c 'if [ -d /var/lib/rancher/k3s/data/current/bin ]; then echo /var/lib/rancher/k3s/data/current/bin; else sed -n \"s/^\\s*bin_dir\\s*=\\s*\\\"\\([^\\\"]*\\)\\\".*/\\1/p\" /var/lib/rancher/k3s/agent/etc/containerd/config.toml | head -n 1; fi' 2>/dev/null" \
     || true)"
 
@@ -830,7 +854,7 @@ repair_cni_plugins_for_k3s() {
   log "Attempting quick CNI plugins install: ${plugins[*]}"
   local host
   for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
-    ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
+    ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
       "set -euo pipefail; \
        export DEBIAN_FRONTEND=noninteractive; \
        sudo -n apt-get update -y >/dev/null; \
@@ -980,7 +1004,7 @@ run_remote_build() {
     return 1
   fi
 
-  if ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+  if ! ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
     "rm -rf '${REMOTE_WORK_DIR}' && mkdir -p '${REMOTE_WORK_DIR}'"; then
     FAILURE_REASON="build_failed"
     return 1
@@ -991,16 +1015,24 @@ run_remote_build() {
     return 1
   fi
 
-  if ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n env \
+  if ! ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n env \
     SEED_BUILD_PARALLELISM=${SEED_BUILD_PARALLELISM} \
     SEED_DOCKER_BUILDKIT=${SEED_DOCKER_BUILDKIT} \
+    SEED_REGISTRY_PUSH_RETRIES=${SEED_REGISTRY_PUSH_RETRIES} \
+    SEED_REGISTRY_PUSH_BACKOFF_SECONDS=${SEED_REGISTRY_PUSH_BACKOFF_SECONDS} \
+    SEED_DOCKER_MAX_CONCURRENT_UPLOADS=${SEED_DOCKER_MAX_CONCURRENT_UPLOADS} \
+    SEED_REGISTRY_PUSH_TIMEOUT_SECONDS=${SEED_REGISTRY_PUSH_TIMEOUT_SECONDS} \
     bash -lc '
     set -euo pipefail
     cd "${REMOTE_WORK_DIR}"
     tar -xzf compiled.tar.gz
     ./build_images.sh
   '" 2>&1 | tee "${ARTIFACT_DIR}/remote_build.log"; then
-    FAILURE_REASON="build_failed"
+    if grep -Eiq 'i/o timeout|Client\.Timeout|TLS handshake timeout|context deadline exceeded' "${ARTIFACT_DIR}/remote_build.log"; then
+      FAILURE_REASON="registry_timeout"
+    else
+      FAILURE_REASON="build_failed"
+    fi
     return 1
   fi
 
@@ -1183,8 +1215,8 @@ run_verify_bgp() {
   deadline="$(( $(date +%s) + BGP_WAIT_TIMEOUT_SECONDS ))"
 
   while true; do
-    kubectl -n "${SEED_NAMESPACE}" exec "${router151}" -- birdc s p 2>/dev/null > "${ARTIFACT_DIR}/bird_router151.txt" || true
-    kubectl -n "${SEED_NAMESPACE}" exec "${rs100}" -- birdc s p 2>/dev/null > "${ARTIFACT_DIR}/bird_ix100.txt" || true
+    run_kubectl_exec -n "${SEED_NAMESPACE}" exec "${router151}" -- birdc s p 2>/dev/null > "${ARTIFACT_DIR}/bird_router151.txt" || true
+    run_kubectl_exec -n "${SEED_NAMESPACE}" exec "${rs100}" -- birdc s p 2>/dev/null > "${ARTIFACT_DIR}/bird_ix100.txt" || true
 
     if grep -q 'Established' "${ARTIFACT_DIR}/bird_router151.txt" \
       && grep -Eq 'p_as2[[:space:]]+BGP.*Established' "${ARTIFACT_DIR}/bird_ix100.txt" \
@@ -1217,7 +1249,7 @@ run_verify_connectivity() {
   for ((attempt=1; attempt<=CONNECTIVITY_RETRY; attempt++)); do
     {
       echo "=== attempt ${attempt}/${CONNECTIVITY_RETRY} ==="
-      kubectl -n "${SEED_NAMESPACE}" exec "${host150}" -- ping -c 3 -W 2 "${target_ip}"
+      run_kubectl_exec -n "${SEED_NAMESPACE}" exec "${host150}" -- ping -c 3 -W 2 "${target_ip}"
     } >> "${ARTIFACT_DIR}/ping_150_to_151.txt" 2>&1 && {
       CONNECTIVITY_PASSED="true"
       return 0

@@ -79,9 +79,35 @@ SEED_PLACEMENT_MODE="${SEED_PLACEMENT_MODE:-auto}"
 SEED_MIN_NODES_USED="${SEED_MIN_NODES_USED:-2}"
 SEED_BUILD_PARALLELISM="${SEED_BUILD_PARALLELISM:-1}"
 SEED_DOCKER_BUILDKIT="${SEED_DOCKER_BUILDKIT:-0}"
+SEED_REGISTRY_PUSH_RETRIES="${SEED_REGISTRY_PUSH_RETRIES:-5}"
+SEED_REGISTRY_PUSH_BACKOFF_SECONDS="${SEED_REGISTRY_PUSH_BACKOFF_SECONDS:-5}"
+SEED_DOCKER_MAX_CONCURRENT_UPLOADS="${SEED_DOCKER_MAX_CONCURRENT_UPLOADS:-1}"
+SEED_REGISTRY_PUSH_TIMEOUT_SECONDS="${SEED_REGISTRY_PUSH_TIMEOUT_SECONDS:-180}"
+SEED_IMAGE_DISTRIBUTION_MODE="${SEED_IMAGE_DISTRIBUTION_MODE:-preload}"
+case "${SEED_IMAGE_DISTRIBUTION_MODE}" in
+  registry|preload) ;;
+  *)
+    echo "Unsupported SEED_IMAGE_DISTRIBUTION_MODE: ${SEED_IMAGE_DISTRIBUTION_MODE} (expected: registry or preload)" >&2
+    exit 1
+    ;;
+esac
+SEED_IMAGE_PULL_POLICY="${SEED_IMAGE_PULL_POLICY:-}"
+if [ -z "${SEED_IMAGE_PULL_POLICY}" ]; then
+  if [ "${SEED_IMAGE_DISTRIBUTION_MODE}" = "preload" ]; then
+    SEED_IMAGE_PULL_POLICY="IfNotPresent"
+  else
+    SEED_IMAGE_PULL_POLICY="Always"
+  fi
+fi
+SEED_KUBECTL_EXEC_TIMEOUT_SECONDS="${SEED_KUBECTL_EXEC_TIMEOUT_SECONDS:-20}"
 BGP_WAIT_TIMEOUT_SECONDS="${BGP_WAIT_TIMEOUT_SECONDS:-300}"
 DEPLOY_WAIT_TIMEOUT="${DEPLOY_WAIT_TIMEOUT:-2400s}"
 CLEAN_NAMESPACE="${SEED_CLEAN_NAMESPACE:-true}"
+SEED_EXPERIMENT_PROFILE="${SEED_EXPERIMENT_PROFILE:-real_topology_rr}"
+SEED_PROFILE_KIND="${SEED_PROFILE_KIND:-baseline}"
+SEED_IBGP_REFLECTION_MODE="${SEED_IBGP_REFLECTION_MODE:-simple}"
+SEED_ROUTING_KERNEL_EXPORT_MODE="${SEED_ROUTING_KERNEL_EXPORT_MODE:-default}"
+SEED_OSPF_TIMING_PROFILE="${SEED_OSPF_TIMING_PROFILE:-default}"
 
 SEED_REAL_TOPOLOGY_DIR="${SEED_REAL_TOPOLOGY_DIR:-$HOME/lxl_topology/autocoder_test}"
 SEED_TOPOLOGY_SIZE="${SEED_TOPOLOGY_SIZE:-214}"
@@ -119,9 +145,27 @@ SSH_OPTS=(
   -o ServerAliveCountMax=3
   -i "${SEED_K3S_SSH_KEY}"
 )
+SSH_EXEC_OPTS=("${SSH_OPTS[@]}" -n)
+SEED_SSH_PROBE_TIMEOUT_SECONDS="${SEED_SSH_PROBE_TIMEOUT_SECONDS:-20}"
+
+run_ssh_probe() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "${SEED_SSH_PROBE_TIMEOUT_SECONDS}" ssh "$@"
+  else
+    ssh "$@"
+  fi
+}
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
+run_kubectl_exec() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "${SEED_KUBECTL_EXEC_TIMEOUT_SECONDS}" kubectl "$@"
+  else
+    kubectl "$@"
+  fi
 }
 
 usage() {
@@ -154,11 +198,17 @@ resolve_failure_code() {
     ssh_key_not_found)
       echo "SSH_KEY_INVALID"
       ;;
-    compile_missing_k8s_yaml|compile_missing_build_script|compile_failed)
+    compile_missing_k8s_yaml|compile_missing_build_script|compile_missing_image_refs|compile_failed)
       echo "COMPILE_FAILED"
+      ;;
+    registry_timeout)
+      echo "REGISTRY_TIMEOUT"
       ;;
     build_failed)
       echo "BUILD_FAILED"
+      ;;
+    image_preload_failed)
+      echo "IMAGE_PRELOAD_FAILED"
       ;;
     deploy_wait_timeout_or_failure|deploy_failed)
       echo "DEPLOY_TIMEOUT"
@@ -225,10 +275,19 @@ summary = {
     "generated_at": datetime.now(timezone.utc).isoformat(),
     "cluster": ${SEED_K3S_CLUSTER_NAME@Q},
     "namespace": ${SEED_NAMESPACE@Q},
-    "profile": "real_topology_rr",
+    "profile": ${SEED_EXPERIMENT_PROFILE@Q},
+    "profile_kind": ${SEED_PROFILE_KIND@Q},
     "cni_type": ${SEED_CNI_TYPE@Q},
     "cni_master_interface": ${EFFECTIVE_CNI_IFACE@Q},
     "placement_mode": "auto",
+    "registry_host": ${SEED_REGISTRY_HOST@Q},
+    "registry_port": int(${SEED_REGISTRY_PORT@Q}),
+    "registry": ${SEED_REGISTRY@Q},
+    "image_distribution_mode": ${SEED_IMAGE_DISTRIBUTION_MODE@Q},
+    "image_pull_policy": ${SEED_IMAGE_PULL_POLICY@Q},
+    "ibgp_reflection_mode": ${SEED_IBGP_REFLECTION_MODE@Q},
+    "routing_kernel_export_mode": ${SEED_ROUTING_KERNEL_EXPORT_MODE@Q},
+    "ospf_timing_profile": ${SEED_OSPF_TIMING_PROFILE@Q},
     "topology_size": int(${SEED_TOPOLOGY_SIZE@Q}),
     "real_topology_dir": ${SEED_REAL_TOPOLOGY_DIR@Q},
     "topology_file": ${SEED_TOPOLOGY_FILE@Q},
@@ -241,7 +300,7 @@ summary = {
     "connectivity_passed": ${OVERALL_PASSED@Q} == "true",
     "recovery_passed": ${OVERALL_PASSED@Q} == "true",
     "duration_seconds": int(${duration_seconds@Q}),
-    "fallback_used": "none",
+    "fallback_used": "preload" if ${SEED_IMAGE_DISTRIBUTION_MODE@Q} == "preload" else "none",
     "failure_reason": "" if ${status@Q} == "PASS" else ${FAILURE_REASON@Q},
     "failure_code": "" if ${status@Q} == "PASS" else ${FAILURE_CODE@Q},
 }
@@ -287,13 +346,13 @@ ensure_kubeconfig() {
 detect_default_iface() {
   local ip="$1"
   # Avoid SIGPIPE issues from `awk '{...; exit}'` when the producer keeps writing.
-  ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${ip}" \
+  run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${ip}" \
     "ip -o -4 route show to default | sed -n '1{s/.* dev \\([^ ]*\\).*/\\1/p}'"
 }
 
 repair_registry_connectivity() {
   log "Attempting quick registry remediation on master"
-  ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+  run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
     "set -euo pipefail; \
      sudo -n docker rm -f registry >/dev/null 2>&1 || true; \
      if ! sudo -n docker image inspect registry:2 >/dev/null 2>&1; then \
@@ -304,8 +363,8 @@ repair_registry_connectivity() {
 
   local i
   for i in $(seq 1 12); do
-    if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1 \
-      && ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1; then
+    if run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1 \
+      && run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1; then
       log "Registry is reachable from both workers"
       return 0
     fi
@@ -322,10 +381,10 @@ repair_multus_hostpaths_for_k3s() {
 
   log "Attempting quick multus hostPath repair for k3s"
   local conf_dir bin_dir
-  conf_dir="$(ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+  conf_dir="$(run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
     "sudo -n sh -c 'sed -n \"s/^\\s*conf_dir\\s*=\\s*\\\"\\([^\\\"]*\\)\\\".*/\\1/p\" /var/lib/rancher/k3s/agent/etc/containerd/config.toml | head -n 1' 2>/dev/null" \
     || true)"
-  bin_dir="$(ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+  bin_dir="$(run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
     "sudo -n sh -c 'if [ -d /var/lib/rancher/k3s/data/current/bin ]; then echo /var/lib/rancher/k3s/data/current/bin; else sed -n \"s/^\\s*bin_dir\\s*=\\s*\\\"\\([^\\\"]*\\)\\\".*/\\1/p\" /var/lib/rancher/k3s/agent/etc/containerd/config.toml | head -n 1; fi' 2>/dev/null" \
     || true)"
 
@@ -409,7 +468,7 @@ repair_cni_plugins_for_k3s() {
   log "Attempting quick CNI plugins install: ${plugins[*]}"
   local host
   for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
-    ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
+    run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
       "set -euo pipefail; \
        export DEBIAN_FRONTEND=noninteractive; \
        sudo -n apt-get update -y >/dev/null; \
@@ -421,6 +480,61 @@ repair_cni_plugins_for_k3s() {
        done" >/dev/null 2>&1 || true
   done
   return 0
+}
+
+write_image_refs_artifact() {
+  if [ -s "${COMPILE_DIR}/images.txt" ]; then
+    cp "${COMPILE_DIR}/images.txt" "${ARTIFACT_DIR}/image_refs.txt"
+  else
+    awk '/^seedemu_build_and_push / {print $2}' "${COMPILE_DIR}/build_images.sh" > "${ARTIFACT_DIR}/image_refs.txt"
+  fi
+
+  if [ ! -s "${ARTIFACT_DIR}/image_refs.txt" ]; then
+    fail_with_reason "compile_missing_image_refs" "${COMPILE_DIR}/build_images.sh"       "scripts/validate_k3s_real_topology_multinode.sh compile" "sed -n '1,120p' ${COMPILE_DIR}/build_images.sh"
+  fi
+}
+
+preload_images_on_node() {
+  local node_ip="$1"
+  local node_label="$2"
+  local sample_image="$3"
+  local log_file="${ARTIFACT_DIR}/preload_${node_label}.log"
+
+  log "Preload: import images into ${node_label} (${node_ip})"
+  if [ "${node_ip}" = "${SEED_K3S_MASTER_IP}" ]; then
+    if ! ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n bash -lc '
+      set -euo pipefail
+      cd "${REMOTE_WORK_DIR}"
+      xargs -r sudo -n docker save < images.txt | sudo -n k3s ctr images import -
+    '" 2>&1 | tee "${log_file}"; then
+      fail_with_reason "image_preload_failed" "${log_file}"         "scripts/validate_k3s_real_topology_multinode.sh build" "tail -n 100 ${log_file}"
+    fi
+  else
+    if ! ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n bash -lc '
+      set -euo pipefail
+      cd "${REMOTE_WORK_DIR}"
+      xargs -r sudo -n docker save < images.txt
+    '" | ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${node_ip}" "sudo -n k3s ctr images import -" 2>&1 | tee "${log_file}"; then
+      fail_with_reason "image_preload_failed" "${log_file}"         "scripts/validate_k3s_real_topology_multinode.sh build" "tail -n 100 ${log_file}"
+    fi
+  fi
+
+  if ! ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${node_ip}" "sudo -n k3s ctr images list | grep -F '${sample_image}'"     > "${ARTIFACT_DIR}/preload_${node_label}_sample.txt" 2>&1; then
+    fail_with_reason "image_preload_failed" "${ARTIFACT_DIR}/preload_${node_label}_sample.txt"       "scripts/validate_k3s_real_topology_multinode.sh build" "cat ${ARTIFACT_DIR}/preload_${node_label}_sample.txt"
+  fi
+}
+
+preload_images_to_cluster() {
+  write_image_refs_artifact
+  local sample_image
+  sample_image="$(head -n 1 "${ARTIFACT_DIR}/image_refs.txt")"
+  if [ -z "${sample_image}" ]; then
+    fail_with_reason "compile_missing_image_refs" "${ARTIFACT_DIR}/image_refs.txt"       "scripts/validate_k3s_real_topology_multinode.sh compile" "cat ${ARTIFACT_DIR}/image_refs.txt"
+  fi
+
+  preload_images_on_node "${SEED_K3S_MASTER_IP}" "master" "${sample_image}"
+  preload_images_on_node "${SEED_K3S_WORKER1_IP}" "worker1" "${sample_image}"
+  preload_images_on_node "${SEED_K3S_WORKER2_IP}" "worker2" "${sample_image}"
 }
 
 resolve_cni_master_interface() {
@@ -521,12 +635,13 @@ run_preflight() {
   if [ "${SEED_PLACEMENT_MODE}" = "strict3" ]; then
     fail_with_reason "strict3_not_supported" "${ARTIFACT_DIR}/summary.json" \
       "export SEED_PLACEMENT_MODE=auto && scripts/validate_k3s_real_topology_multinode.sh preflight" \
-      "scripts/seed_k8s_profile_runner.sh real_topology_rr doctor"
+      "scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE} doctor"
   fi
   SEED_PLACEMENT_MODE="auto"
 
   ensure_kubeconfig
   kubectl get nodes -o wide > "${ARTIFACT_DIR}/nodes_wide.txt"
+  kubectl get nodes -o json > "${ARTIFACT_DIR}/nodes.json"
 
   if ! (kubectl get nodes --no-headers | awk '$2 !~ /^Ready/ {bad=1} END{exit bad}'); then
     fail_with_reason "placement_check_failed" "${ARTIFACT_DIR}/nodes_wide.txt" \
@@ -579,7 +694,7 @@ run_preflight() {
     local host missing
     missing="false"
     for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
-      if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
+      if run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
         "set -euo pipefail; for p in ${required_plugins[*]}; do test -x \"/opt/cni/bin/\$p\" || test -x \"/var/lib/rancher/k3s/data/current/bin/\$p\"; done" >/dev/null 2>&1; then
         echo -e "${host}\tok" >> "${ARTIFACT_DIR}/cni_plugins_status.txt"
       else
@@ -592,7 +707,7 @@ run_preflight() {
       missing="false"
       : > "${ARTIFACT_DIR}/cni_plugins_status.txt"
       for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
-        if ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
+        if run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
           "set -euo pipefail; for p in ${required_plugins[*]}; do test -x \"/opt/cni/bin/\$p\" || test -x \"/var/lib/rancher/k3s/data/current/bin/\$p\"; done" >/dev/null 2>&1; then
           echo -e "${host}\tok" >> "${ARTIFACT_DIR}/cni_plugins_status.txt"
         else
@@ -607,28 +722,22 @@ run_preflight() {
     fi
   fi
 
-  if ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
-    "command -v docker >/dev/null 2>&1 && sudo -n docker ps --format '{{.Names}}' 2>/dev/null | grep -x registry" >/dev/null 2>&1; then
-    repair_registry_connectivity || true
-    if ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
-      "command -v docker >/dev/null 2>&1 && sudo -n docker ps --format '{{.Names}}' 2>/dev/null | grep -x registry" >/dev/null 2>&1; then
-      fail_with_reason "registry_unreachable" "${ARTIFACT_DIR}/nodes_wide.txt" \
-        "scripts/setup_k3s_cluster.sh" "ssh -i ${SEED_K3S_SSH_KEY} ${SEED_K3S_USER}@${SEED_K3S_MASTER_IP} 'sudo docker ps'"
+  if [ "${SEED_IMAGE_DISTRIBUTION_MODE}" != "preload" ]; then
+    if ! run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}"       "command -v docker >/dev/null 2>&1 && sudo -n docker ps --format '{{.Names}}' 2>/dev/null | grep -x registry" >/dev/null 2>&1; then
+      repair_registry_connectivity || true
+      if ! run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}"         "command -v docker >/dev/null 2>&1 && sudo -n docker ps --format '{{.Names}}' 2>/dev/null | grep -x registry" >/dev/null 2>&1; then
+        fail_with_reason "registry_unreachable" "${ARTIFACT_DIR}/nodes_wide.txt"           "scripts/setup_k3s_cluster.sh" "ssh -i ${SEED_K3S_SSH_KEY} ${SEED_K3S_USER}@${SEED_K3S_MASTER_IP} 'sudo docker ps'"
+      fi
     fi
-  fi
 
-  if ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" \
-    "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1 \
-    || ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" \
-    "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1; then
-    repair_registry_connectivity || true
-    if ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" \
-      "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1 \
-      || ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" \
-      "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1; then
-      fail_with_reason "registry_unreachable" "${ARTIFACT_DIR}/nodes_wide.txt" \
-        "scripts/setup_k3s_cluster.sh" "ssh -i ${SEED_K3S_SSH_KEY} ${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP} 'curl -v http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/'"
+    if ! run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}"       "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1       || ! run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}"       "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1; then
+      repair_registry_connectivity || true
+      if ! run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}"         "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1         || ! run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}"         "curl -m 5 -fsS http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/ >/dev/null" >/dev/null 2>&1; then
+        fail_with_reason "registry_unreachable" "${ARTIFACT_DIR}/nodes_wide.txt"           "scripts/setup_k3s_cluster.sh" "ssh -i ${SEED_K3S_SSH_KEY} ${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP} 'curl -v http://${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}/v2/'"
+      fi
     fi
+  else
+    log "Preflight: registry hard-check skipped because SEED_IMAGE_DISTRIBUTION_MODE=preload"
   fi
 
   resolve_cni_master_interface
@@ -655,11 +764,15 @@ run_compile() {
     SEED_CNI_TYPE="${SEED_CNI_TYPE}" \
     SEED_CNI_MASTER_INTERFACE="${EFFECTIVE_CNI_IFACE}" \
     SEED_SCHEDULING_STRATEGY="${SEED_SCHEDULING_STRATEGY}" \
+    SEED_IMAGE_PULL_POLICY="${SEED_IMAGE_PULL_POLICY}" \
     SEED_OUTPUT_DIR="${COMPILE_DIR}" \
     SEED_REAL_TOPOLOGY_DIR="${SEED_REAL_TOPOLOGY_DIR}" \
     SEED_TOPOLOGY_SIZE="${SEED_TOPOLOGY_SIZE}" \
     SEED_TOPOLOGY_FILE="${SEED_TOPOLOGY_FILE}" \
     SEED_ASSIGNMENT_FILE="${SEED_ASSIGNMENT_FILE}" \
+    SEED_IBGP_REFLECTION_MODE="${SEED_IBGP_REFLECTION_MODE}" \
+    SEED_ROUTING_KERNEL_EXPORT_MODE="${SEED_ROUTING_KERNEL_EXPORT_MODE}" \
+    SEED_OSPF_TIMING_PROFILE="${SEED_OSPF_TIMING_PROFILE}" \
     python3 examples/kubernetes/k8s_real_topology_rr.py
   ) 2>&1 | tee "${ARTIFACT_DIR}/compile.log"
 
@@ -679,25 +792,39 @@ run_remote_build() {
   local tarball="${ARTIFACT_DIR}/compiled.tar.gz"
   tar -C "${COMPILE_DIR}" -czf "${tarball}" .
 
-  ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
+  run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" \
     "rm -rf '${REMOTE_WORK_DIR}' && mkdir -p '${REMOTE_WORK_DIR}'"
   scp -q "${SSH_OPTS[@]}" "${tarball}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}:${REMOTE_WORK_DIR}/compiled.tar.gz"
 
-  if ! ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n env \
+  if ! ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n env \
     SEED_BUILD_PARALLELISM=${SEED_BUILD_PARALLELISM} \
     SEED_DOCKER_BUILDKIT=${SEED_DOCKER_BUILDKIT} \
+    SEED_REGISTRY_PUSH_RETRIES=${SEED_REGISTRY_PUSH_RETRIES} \
+    SEED_REGISTRY_PUSH_BACKOFF_SECONDS=${SEED_REGISTRY_PUSH_BACKOFF_SECONDS} \
+    SEED_DOCKER_MAX_CONCURRENT_UPLOADS=${SEED_DOCKER_MAX_CONCURRENT_UPLOADS} \
+    SEED_REGISTRY_PUSH_TIMEOUT_SECONDS=${SEED_REGISTRY_PUSH_TIMEOUT_SECONDS} \
+    SEED_IMAGE_DISTRIBUTION_MODE=${SEED_IMAGE_DISTRIBUTION_MODE} \
     bash -lc '
     set -euo pipefail
     cd \"${REMOTE_WORK_DIR}\"
     tar -xzf compiled.tar.gz
     ./build_images.sh
   '" 2>&1 | tee "${ARTIFACT_DIR}/remote_build.log"; then
+    if grep -Eiq 'i/o timeout|Client\.Timeout|TLS handshake timeout|context deadline exceeded' "${ARTIFACT_DIR}/remote_build.log"; then
+      fail_with_reason "registry_timeout" "${ARTIFACT_DIR}/remote_build.log" \
+        "scripts/validate_k3s_real_topology_multinode.sh build" "tail -n 200 ${ARTIFACT_DIR}/remote_build.log"
+    fi
     fail_with_reason "build_failed" "${ARTIFACT_DIR}/remote_build.log" \
       "scripts/validate_k3s_real_topology_multinode.sh build" "tail -n 200 ${ARTIFACT_DIR}/remote_build.log"
   fi
 
-  write_diagnostics "${CURRENT_STAGE}" "PASS" "${ARTIFACT_DIR}/remote_build.log" \
-    "scripts/validate_k3s_real_topology_multinode.sh deploy" "scripts/validate_k3s_real_topology_multinode.sh verify"
+  if [ "${SEED_IMAGE_DISTRIBUTION_MODE}" = "preload" ]; then
+    preload_images_to_cluster
+  else
+    write_image_refs_artifact
+  fi
+
+  write_diagnostics "${CURRENT_STAGE}" "PASS" "${ARTIFACT_DIR}/remote_build.log"     "scripts/validate_k3s_real_topology_multinode.sh deploy" "scripts/validate_k3s_real_topology_multinode.sh verify"
 }
 
 run_deploy() {
@@ -790,7 +917,7 @@ JSON
   deadline="$(( $(date +%s) + BGP_WAIT_TIMEOUT_SECONDS ))"
   : > "${ARTIFACT_DIR}/bird_sample.txt"
   while true; do
-    kubectl -n "${SEED_NAMESPACE}" exec "${sample_pod}" -- birdc show protocols > "${ARTIFACT_DIR}/bird_sample.txt" 2>&1 || true
+    run_kubectl_exec -n "${SEED_NAMESPACE}" exec "${sample_pod}" -- birdc show protocols > "${ARTIFACT_DIR}/bird_sample.txt" 2>&1 || true
     if grep -Eq 'BGP.*Established|Established.*BGP' "${ARTIFACT_DIR}/bird_sample.txt"; then
       break
     fi
@@ -814,7 +941,7 @@ run_clean() {
   ensure_kubeconfig
   kubectl delete namespace "${SEED_NAMESPACE}" --ignore-not-found >/dev/null 2>&1 || true
   write_diagnostics "${CURRENT_STAGE}" "PASS" "${ARTIFACT_DIR}/summary.json" \
-    "scripts/validate_k3s_real_topology_multinode.sh all" "scripts/seed_k8s_profile_runner.sh real_topology_rr all"
+    "scripts/validate_k3s_real_topology_multinode.sh all" "scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE} all"
 }
 
 START_TS="$(date +%s)"

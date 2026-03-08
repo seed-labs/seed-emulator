@@ -341,6 +341,24 @@ init_profile_context() {
   export SEED_K3S_MASTER_IP="${SEED_K3S_MASTER_IP:-192.168.122.110}"
   export SEED_K3S_USER="${SEED_K3S_USER:-ubuntu}"
   export SEED_K3S_SSH_KEY="${SEED_K3S_SSH_KEY:-$HOME/.ssh/id_ed25519}"
+
+  case "${PROFILE_ID}" in
+    real_topology_rr_scale)
+      export SEED_PROFILE_KIND="${SEED_PROFILE_KIND:-scale}"
+      export SEED_IBGP_REFLECTION_MODE="${SEED_IBGP_REFLECTION_MODE:-clustered}"
+      export SEED_ROUTING_KERNEL_EXPORT_MODE="${SEED_ROUTING_KERNEL_EXPORT_MODE:-device_ospf_only}"
+      export SEED_OSPF_TIMING_PROFILE="${SEED_OSPF_TIMING_PROFILE:-default}"
+      ;;
+    real_topology_rr)
+      export SEED_PROFILE_KIND="${SEED_PROFILE_KIND:-baseline}"
+      export SEED_IBGP_REFLECTION_MODE="${SEED_IBGP_REFLECTION_MODE:-simple}"
+      export SEED_ROUTING_KERNEL_EXPORT_MODE="${SEED_ROUTING_KERNEL_EXPORT_MODE:-default}"
+      export SEED_OSPF_TIMING_PROFILE="${SEED_OSPF_TIMING_PROFILE:-default}"
+      ;;
+    *)
+      export SEED_PROFILE_KIND="${SEED_PROFILE_KIND:-baseline}"
+      ;;
+  esac
 }
 
 run_mini_validate() {
@@ -351,6 +369,10 @@ run_mini_validate() {
 run_real_topology_validate() {
   local topo_action="$1"
   "${SCRIPT_DIR}/validate_k3s_real_topology_multinode.sh" "${topo_action}"
+}
+
+is_real_topology_profile() {
+  [ "${PROFILE_ID}" = "real_topology_rr" ] || [ "${PROFILE_ID}" = "real_topology_rr_scale" ]
 }
 
 run_generic_compile() {
@@ -614,7 +636,7 @@ PY
     return 1
   fi
 
-  if [ "${PROFILE_ID}" = "real_topology_rr" ]; then
+  if is_real_topology_profile; then
     if run_real_topology_validate preflight; then
       write_runner_artifacts "doctor" "PASS" "" "" "${VALIDATION_DIR}/summary.json" \
         "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify"
@@ -681,7 +703,7 @@ run_start() {
     run_mini_validate compile || return 1
     run_mini_validate build || return 1
     run_mini_validate deploy || return 1
-  elif [ "${PROFILE_ID}" = "real_topology_rr" ]; then
+  elif is_real_topology_profile; then
     run_real_topology_validate preflight || return 1
     run_real_topology_validate compile || return 1
     run_real_topology_validate build || return 1
@@ -700,7 +722,7 @@ run_start() {
 run_verify() {
   if [ "${PROFILE_ID}" = "mini_internet" ]; then
     run_mini_validate verify || return 1
-  elif [ "${PROFILE_ID}" = "real_topology_rr" ]; then
+  elif is_real_topology_profile; then
     run_real_topology_validate verify || return 1
   else
     run_generic_verify || return 1

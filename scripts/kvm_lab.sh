@@ -8,10 +8,27 @@ ACTION="${1:-up}"
 
 SEED_KVM_NETWORK="${SEED_KVM_NETWORK:-default}"
 SEED_KVM_STORAGE_DIR="${SEED_KVM_STORAGE_DIR:-${REPO_ROOT}/output/kvm_lab}"
-SEED_KVM_BASE_IMAGE_URL="${SEED_KVM_BASE_IMAGE_URL:-https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img}"
-SEED_KVM_BASE_IMAGE_PATH="${SEED_KVM_BASE_IMAGE_PATH:-${SEED_KVM_STORAGE_DIR}/base/jammy-server-cloudimg-amd64.img}"
+SEED_KVM_UBUNTU_SERIES="${SEED_KVM_UBUNTU_SERIES:-jammy}"
 SEED_KVM_DISK_GB="${SEED_KVM_DISK_GB:-50}"
 SEED_KVM_BOOT_TIMEOUT_SECONDS="${SEED_KVM_BOOT_TIMEOUT_SECONDS:-300}"
+
+case "${SEED_KVM_UBUNTU_SERIES}" in
+    jammy)
+        DEFAULT_KVM_BASE_IMAGE_URL="https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+        DEFAULT_KVM_BASE_IMAGE_PATH="${SEED_KVM_STORAGE_DIR}/base/jammy-server-cloudimg-amd64.img"
+        ;;
+    noble)
+        DEFAULT_KVM_BASE_IMAGE_URL="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+        DEFAULT_KVM_BASE_IMAGE_PATH="${SEED_KVM_STORAGE_DIR}/base/noble-server-cloudimg-amd64.img"
+        ;;
+    *)
+        echo "Unsupported SEED_KVM_UBUNTU_SERIES: ${SEED_KVM_UBUNTU_SERIES} (expected: jammy or noble)" >&2
+        exit 1
+        ;;
+esac
+
+SEED_KVM_BASE_IMAGE_URL="${SEED_KVM_BASE_IMAGE_URL:-${DEFAULT_KVM_BASE_IMAGE_URL}}"
+SEED_KVM_BASE_IMAGE_PATH="${SEED_KVM_BASE_IMAGE_PATH:-${DEFAULT_KVM_BASE_IMAGE_PATH}}"
 
 SEED_K3S_USER="${SEED_K3S_USER:-ubuntu}"
 SEED_K3S_SSH_KEY="${SEED_K3S_SSH_KEY:-$HOME/.ssh/id_ed25519}"
@@ -76,6 +93,8 @@ Actions:
   status  Show VM state and current IP leases
 
 Important env vars (optional):
+  SEED_KVM_UBUNTU_SERIES (jammy|noble, default: jammy)
+  SEED_KVM_BASE_IMAGE_URL / SEED_KVM_BASE_IMAGE_PATH (override series-derived defaults)
   SEED_K3S_MASTER_IP / SEED_K3S_WORKER1_IP / SEED_K3S_WORKER2_IP
   SEED_K3S_USER
   SEED_K3S_SSH_KEY
@@ -274,6 +293,9 @@ export SEED_K3S_USER="${SEED_K3S_USER}"
 export SEED_K3S_SSH_KEY="${SEED_K3S_SSH_KEY}"
 export SEED_REGISTRY_HOST="${SEED_K3S_MASTER_IP}"
 export SEED_REGISTRY_PORT="\${SEED_REGISTRY_PORT:-5000}"
+export SEED_KVM_UBUNTU_SERIES="${SEED_KVM_UBUNTU_SERIES}"
+export SEED_KVM_BASE_IMAGE_URL="${SEED_KVM_BASE_IMAGE_URL}"
+export SEED_KVM_BASE_IMAGE_PATH="${SEED_KVM_BASE_IMAGE_PATH}"
 EOF
     chmod +x "${ENV_FILE}"
 }
@@ -307,6 +329,8 @@ action_up() {
     write_env_file
     echo ""
     echo "KVM lab is ready."
+    echo "Ubuntu series: ${SEED_KVM_UBUNTU_SERIES}"
+    echo "Base image: ${SEED_KVM_BASE_IMAGE_PATH}"
     echo "Environment file: ${ENV_FILE}"
     echo ""
     echo "Next:"
@@ -343,6 +367,9 @@ action_status() {
     require_cmd virsh
 
     local i vm_name
+    echo "Ubuntu series: ${SEED_KVM_UBUNTU_SERIES}"
+    echo "Base image URL: ${SEED_KVM_BASE_IMAGE_URL}"
+    echo "Base image path: ${SEED_KVM_BASE_IMAGE_PATH}"
     for i in "${!VM_NAMES[@]}"; do
         vm_name="${VM_NAMES[$i]}"
         if domain_exists "${vm_name}"; then
