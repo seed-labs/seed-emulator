@@ -73,10 +73,7 @@ export interface Response {
     result?: any
 }
 
-
-export interface IXLocation {
-  id: string
-  name: string
-  lat: number
-  lon: number
+export interface VisData {
+    nodes: EmulatorNode[],
+    nets: EmulatorNetwork[]
 }

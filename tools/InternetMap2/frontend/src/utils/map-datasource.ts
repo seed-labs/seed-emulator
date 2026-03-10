@@ -2,7 +2,6 @@ import {DataSet} from 'vis-data';
 import type {FullItem} from 'vis-data/declarations/data-interface';
 import type {EdgeOptions, NodeOptions} from 'vis-network';
 import request from '@/utils/request';
-import {geoToXY, getSocket} from '@/utils/tools.ts';
 import type {AxiosRequestConfig, AxiosResponse} from 'axios';
 import type {
     BgpPeer,
@@ -10,7 +9,6 @@ import type {
     EmulatorNode,
     EmulatorNodeInfo,
     TransitsEmulatorNodeInfo,
-    IXLocation
 } from './types';
 
 export const META_CLASS = 'org.seedsecuritylabs.seedemu.meta.class';
@@ -52,12 +50,12 @@ export interface FilterRespond {
 
 export class DataSource {
     public services: Set<string>;
-    private _nodes: EmulatorNode[];
-    private _nets: EmulatorNetwork[];
+    protected _nodes: EmulatorNode[];
+    protected _nets: EmulatorNetwork[];
     private readonly _wsProtocol: string;
     private _socket!: WebSocket;
     private _socketVis!: WebSocket;
-    private _connected: boolean;
+    protected _connected: boolean;
     private _packetEventHandler!: (nodeId: string) => void;
     private _errorHandler!: (error: any) => void;
     private _visEventHandler!: (params: any) => void;
