@@ -218,7 +218,6 @@ export class MapUi {
         this.vertexDetails = config.details
         this._filterInputValue = config.filterInputValue;
         // this._searchInput = document.getElementById(config.searchInputElementId) as HTMLInputElement;
-        this.allLoadingInstance = allLoading()
         this._mapElement = document.getElementById(config.mapElementId) as HTMLElement;
 
         this._logPanel = document.getElementById(config.logPanelElementId) as HTMLElement;
@@ -1510,6 +1509,7 @@ export class MapUi {
      * redraw map.
      */
     redraw() {
+        this.allLoadingInstance = allLoading()
         const {vertices, edges} = this.getDataSetOrigin()
         this._edges = new DataSet(edges);
         this._nodes = new DataSet(vertices);
