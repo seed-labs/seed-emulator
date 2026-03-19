@@ -1,600 +1,202 @@
-# SEED Emulator K3s 运行抽象与维护手册
+# SEED Emulator K3s Runtime Architecture
 
-最后更新：`2026-03-08 10:16 UTC`
+This document is the maintainer-facing architecture manual for the SEED
+K8s/K3s subsystem.
 
-本文不是“快速上手页”，而是给后续开发、测试、维护者的长期文档。它回答四个问题：
+It answers four questions:
 
-1. 本仓库现在怎样抽象 K3s/K8s 运行模式。
-2. `mini_internet`、`real_topology_rr`、`real_topology_rr_scale` 这几个大小例子在抽象层面分别代表什么。
-3. 新例子、新 profile、新验证链路应该如何加入，而不破坏现有体系。
-4. 后续开发、测试、维护应该遵循什么边界与流程。
+1. What is the maintained runtime model?
+2. Which profiles and examples are officially supported?
+3. What evidence defines a successful run?
+4. How do we promote new examples without weakening the baseline?
 
-相关入口文档：
+## 1. Architectural boundary
 
-- 快速入口：`docs/runbooks/opencode_seed_lab_quickstart.md`
-- 带时间戳的迁移/复盘记录：`docs/runbooks/20260305_k3s_kvm_multinode_real_topology_rr.md`
-- 分层改动/commit 回放：`docs/runbooks/seed_k8s_multilayer_commit_replay_20260308.md`
-- 通用 K8s 使用说明：`docs/k8s_usage.md`
+The K8s subsystem is intentionally layered:
 
----
+- **Example script**: builds topology and compiles Kubernetes artifacts
+- **Profile**: names the workflow and declares defaults and contract
+- **Runner**: the public lifecycle entry
+- **Validate / report**: turn cluster state into evidence and normalized reports
+- **Acceptance harness**: runs the public delivery checks
 
-## 1. 设计目标
+The operator entry is fixed:
 
-当前 K3s/K8s 方案的目标不是“把 Docker Compose 原封不动搬进 K8s”，而是形成一套稳定的多层运行抽象：
+```bash
+scripts/seed_k8s_profile_runner.sh <profile> <action>
+```
 
-- **编译层**：Python 示例脚本只描述拓扑与编译参数，不直接关心部署细节。
-- **profile 层**：用 profile 表达“跑什么、默认 namespace/cni/scheduling 是什么、验证期望是什么”。
-- **执行层**：统一 runner 负责 `doctor/start/verify/observe/report` 生命周期。
-- **验证层**：真实多节点验证脚本负责把“成功/失败”落成证据，而不是靠人看终端。
-- **报告层**：把验证产物归一化，产出可供 AI 和人类同时消费的 summary/diagnostics/report。
+We do not create a second execution framework for “advanced” runs.
 
-一句话：
+## 2. Reference truth and support tiers
 
-> 示例脚本负责“生成”，profile 负责“命名和默认值”，runner 负责“调度生命周期”，validate 脚本负责“证据化验收”。
+### Tier-1 runtime-validated profiles
 
----
-
-## 2. 运行抽象总览
-
-### 2.1 四个核心对象
-
-#### A. 示例脚本（compile script）
-
-位置：`examples/kubernetes/*.py`
-
-职责：
-
-- 构建 SEED 拓扑。
-- 读取运行时 env。
-- 调用 `KubernetesCompiler` 输出 `k8s.yaml` 与 `build_images.sh`。
-
-示例：
-
-- `examples/kubernetes/k8s_mini_internet.py`
-- `examples/kubernetes/k8s_real_topology_rr.py`
-
-边界：
-
-- 不直接 `kubectl apply`
-- 不直接 `docker build`
-- 不直接做 cluster preflight
-
-#### B. Profile
-
-位置：`configs/seed_k8s_profiles.yaml`
-
-职责：
-
-- 定义 profile id。
-- 给出默认 namespace / CNI / scheduling。
-- 描述 verify mode 和观测产物要求。
-
-当前关键 profile：
+These are the branch truth for runtime acceptance:
 
 - `mini_internet`
 - `real_topology_rr`
 - `real_topology_rr_scale`
+
+Current validated size on the reference cluster:
+
+- `mini_internet`
+- `real_topology_rr(214)`
+- `real_topology_rr_scale(214)`
+
+### Tier-2 capability-gated profiles
+
 - `transit_as`
 - `mini_internet_viz`
 - `hybrid_kubevirt`
 
-#### C. Runner
+These can be part of the public subsystem, but they may legally return a
+capability-gated outcome when the reference cluster lacks a required feature.
 
-位置：`scripts/seed_k8s_profile_runner.sh`
+### Tier-3 compile-only backlog
 
-职责：
+- `k8s_nano_internet.py`
+- `k8s_multinode_demo.py`
+- `k8s_multinode_demo_dynamic.py`
 
-- 统一外部入口。
-- 生成每次 run 的目录结构。
-- 对 profile 做分发：
-  - 专用 validate 路径（`mini_internet` / `real_topology_rr` / `real_topology_rr_scale`）
-  - generic 路径（其他 profile）
-- 维护 `latest` 链接和 `runner_summary.json`。
+Tier-3 examples must compile cleanly and be classified in the public matrix,
+but they are not runtime gates yet.
 
-这是当前最重要的抽象边界：
+## 3. Profile contract
 
-```bash
-scripts/seed_k8s_profile_runner.sh <profile_id> <action>
-```
+Profiles live in `configs/seed_k8s_profiles.yaml`.
 
-#### D. Validate 脚本
-
-位置：`scripts/validate_k3s_*_multinode.sh`
-
-职责：
-
-- 做 kubeconfig/preflight 检查。
-- 编译。
-- 远程构建镜像，并按 profile 选择 `push 到 registry` 或 `preload 到 containerd`。
-- 部署到 K3s。
-- 写出严格验证证据。
-
-当前已有：
-
-- `scripts/validate_k3s_mini_internet_multinode.sh`
-- `scripts/validate_k3s_real_topology_multinode.sh`
-
----
-
-## 3. 目录与产物抽象
-
-### 3.1 单次运行的标准目录
-
-统一输出到：
-
-```text
-output/profile_runs/<profile_id>/<run_id>/
-```
-
-标准子目录：
-
-- `compiled/`：编译产物（`k8s.yaml`, `build_images.sh`）
-- `validation/`：验证证据
-- `observe/`：运行时观测快照
-- `report/`：归一化报告
-- `runner.log`：runner 总日志
-- `runner_summary.json`：runner 级状态摘要
-- `diagnostics.json` / `next_actions.json`：runner 级下一步动作
-
-### 3.2 为什么必须保留这些层
-
-这是为了服务两个消费方：
-
-- **人类维护者**：可以直接看 `summary.json` / `bird_sample.txt` / `placement.tsv`
-- **AI/agent**：可以只读固定路径，输出稳定的“状态 + 证据 + 下一步命令”
-
-这也是为什么我们不把所有逻辑都塞进一个超长 shell 脚本里：
-
-- 编译产物要能单独复用
-- 验证证据要能单独审阅
-- 报告要能独立再生成
-
----
-
-## 4. 当前两个代表性例子的抽象意义
-
-### 4.1 `mini_internet`
-
-定位：
-
-- 小规模、可重复、强校验的基线例子。
-- 用来验证“多节点调度 + 协议收敛 + 连通性 + 自愈”整条链路。
-
-它代表的抽象能力：
-
-- profile 化运行
-- `strict3` / `auto` placement
-- BGP 与 ping 的强校验
-- Pod 重建/恢复验证
-- 适合作为 CI/回归主力例子
-
-它的意义不是规模，而是**验证强度高、闭环完整**。
-
-### 4.2 `real_topology_rr`
-
-定位：
-
-- 真实拓扑数据集迁移后的多节点大演示例子。
-- 当前默认跑 `214` 规模，未来可扩到 `1897`。
-
-它代表的抽象能力：
-
-- 外部数据文件驱动
-- K3s 多节点大规模部署
-- route reflector iBGP 拓扑支持
-- master 远程 build + containerd preload 导入（默认）
-- `mini_internet` 仍可继续走 registry push
-- 大规模 workload 计数、分布与 BGP 抽样验证
-
-它的意义不是“取代 mini”，而是：
-
-- `mini_internet` 负责**严密回归**
-- `real_topology_rr` 负责**大规模真实演示**
-
-两者不能互相代替。
-
-### 4.3 `real_topology_rr_scale`
-
-定位：
-
-- 同一真实拓扑链路上的 scale profile。
-- 专门承接学长旧实验仓里与大规模收敛相关的扩展思路，但以显式 knobs 暴露。
-
-它代表的抽象能力：
-
-- `Ibgp.setReflectionMode("clustered")`
-- `Routing.setKernelExportMode("device_ospf_only")`
-- `Ospf.setTimingProfile("default")`（当前 `real_topology_rr_scale` 在 3 节点 214 规模实验环境中的默认值）
-
-它的意义是：
-
-- baseline 继续可复现、可回归
-- scale profile 继续做大规模实验
-- 二者共用同一 runner / validate / report / entry-status 链路
-
-如需复现实验性慢时序，仍可显式设置 `Ospf.setTimingProfile("large_scale")` / `SEED_OSPF_TIMING_PROFILE=large_scale`。
-
----
-
-## 5. K3s 运行模式的核心抽象提升
-
-相对于过去“直接跑 Compose 或手写脚本”的模式，现在的提升主要有五点。
-
-### 5.1 从“容器集合”升级为“生命周期对象”
-
-Docker Compose 关注：
-
-- build
-- up
-- ps
-- logs
-
-现在的 K3s 抽象关注：
-
-- doctor
-- start
-- verify
-- observe
-- report
-- triage
-
-这使得运行不再只是“起来没起来”，而是有阶段、有验收、有证据。
-
-### 5.2 从“单次命令”升级为“可追踪运行”
-
-以前常见问题：
-
-- 人工执行多步命令，终端关了就丢信息。
-- 很难知道这次部署和上次部署差别在哪。
-
-现在：
-
-- 每次 run 有独立目录。
-- `latest` 永远指向当前最相关的一次运行。
-- 失败可以只看 `diagnostics.json`。
-
-### 5.3 从“脚本成功”升级为“证据成功”
-
-现在的成功判据必须落盘。
-
-例如：
-
-- `mini_internet` 看 `placement.tsv` / `bird_router151.txt` / `ping_150_to_151.txt`
-- `real_topology_rr` 看 `counts.json` / `placement.tsv` / `bird_sample.txt`
-
-这是后续自动化和 agent 化的基础。
-
-### 5.4 从“示例是孤岛”升级为“示例属于 profile 体系”
-
-新增例子时，不能只加 `examples/kubernetes/foo.py`。
-
-必须同时回答：
-
-- 它属于哪个 profile？
-- 它默认 namespace/cni 是什么？
-- 它成功证据是什么？
-- 它失败时最小重试命令是什么？
-
-### 5.5 从“实验能跑”升级为“可维护”
-
-可维护性体现在：
-
-- repo-root 相对路径
-- `source scripts/env_seedemu.sh`
-- `summary.json` / `diagnostics.json` 约定
-- failure code 映射
-- 统一 runner 入口
-
----
-
-## 6. RR core 变更的工程意义
-
-### 6.1 变更点
-
-核心改动位于：
-
-- `seedemu/core/Node.py`
-- `seedemu/layers/Ibgp.py`
-- `tests/ibgp_route_reflector_test.py`
-
-### 6.2 新行为
-
-新增 Router API：
-
-- `Router.makeRouteReflector(is_rr=True)`
-- `Router.isRouteReflector()`
-
-Ibgp 行为：
-
-- AS 内无 RR：保持 full-mesh
-- AS 内有 RR：
-  - RR 之间 full-mesh
-  - client 只连 RR
-  - RR -> client 会话带 `rr client;`
-
-### 6.3 为什么这是“内核级”改动
-
-因为这不是示例层逻辑，而是：
-
-- 影响所有可能使用 Ibgp 的拓扑
-- 影响 BIRD 配置生成
-- 影响 graph 可视化
-- 影响未来真实拓扑和教学拓扑的行为一致性
-
-所以它必须有独立单测，不能只靠一次大规模跑通来证明。
-
----
-
-## 7. 测试分层建议
-
-### 7.1 单元测试层
-
-适合放在 `tests/*.py`，要求秒级完成。
-
-当前核心例子：
-
-- `tests/ibgp_route_reflector_test.py`
-- `tests/kubevirt_compiler_test.py`
-
-RR 相关单测至少应覆盖：
-
-- 无 RR 时 full-mesh 不变
-- 单 RR 时 client 只连 RR
-- 多 RR 时 client 连所有 RR，RR 之间互连
-- graph 与会话拓扑一致
-- 不同连通分量在同一 AS 内行为正确
-
-### 7.2 编译回归层
-
-目标：确认编译器输出格式不坏。
-
-推荐：
-
-```bash
-python3 -m unittest tests/kubevirt_compiler_test.py -v
-```
-
-未来如果 `KubernetesCompiler` 再扩展 registry/build 行为，建议新增：
-
-- `build_images.sh` 结构断言
-- `SEED_BUILD_PARALLELISM` 行为断言
-- `SEED_DOCKER_BUILDKIT` 输出断言
-
-### 7.3 多节点验证层
-
-这是最接近真实运行的自动化。
-
-命令：
-
-```bash
-scripts/seed_k8s_profile_runner.sh mini_internet all
-scripts/seed_k8s_profile_runner.sh real_topology_rr all
-```
-
-该层不适合高频 CI，但适合：
-
-- 发布前验收
-- 集群变更后回归
-- 演示前预热
-
-### 7.4 手工检查层
-
-永远保留最小可执行手工检查：
-
-```bash
-export KUBECONFIG=output/kubeconfigs/seedemu-k3s.yaml
-kubectl -n <ns> get pods -o wide
-kubectl -n <ns> get deploy -o wide
-kubectl -n <ns> exec -it <router-pod> -- birdc show protocols
-```
-
-原因：
-
-- 自动化失败时，人工需要最短路径确认真实状态。
-- 手工命令是所有文档、agent、排障的共同底座。
-
----
-
-## 8. 新增一个 K3s profile 的标准流程
-
-### 8.1 第一步：先定义它属于哪一类
-
-先决定它是：
-
-- **generic profile**：generic verify 就够用
-- **specialized profile**：需要专用 validate 脚本
-
-判断标准：
-
-- 是否有强协议校验？
-- 是否有严格 placement 规则？
-- 是否需要远程 build / 多节点证据？
-- 是否有外部数据集？
-
-只要答案大于等于一个“是”，优先考虑专用 validate 脚本。
-
-### 8.2 第二步：加 compile script
-
-要求：
-
-- 只负责拓扑和 compiler 参数
-- 所有运行时差异优先 env 化
-- 缺关键文件时 fail-fast
-
-### 8.3 第三步：加 profile
-
-必须在 `configs/seed_k8s_profiles.yaml` 中登记：
+Each public profile must declare:
 
 - `profile_id`
+- `support_tier`
+- `acceptance_level`
+- `capacity_gate`
 - `compile_script`
 - `default_namespace`
 - `default_cni_type`
 - `default_scheduling_strategy`
 - `verify_mode`
-- `observe_required_files`
 
-### 8.4 第四步：确定验证方式
+Tier-1 and Tier-2 public profiles also declare validation artifact
+requirements.
 
-- generic：沿用 runner generic 路径
-- specialized：新增 `scripts/validate_k3s_<profile>_multinode.sh`
+## 4. Artifact contract
 
-### 8.5 第五步：补文档与证据说明
+Every official runtime-supported profile must produce a stable evidence set.
 
-至少更新：
+The core files are:
 
-- `docs/runbooks/opencode_seed_lab_quickstart.md`
-- `examples/kubernetes/README.md`
+- `validation/summary.json`
+- `validation/placement_by_as.tsv`
+- `validation/protocol_health.json`
+- `validation/connectivity_matrix.tsv`
+- `validation/convergence_timeline.json`
+- `validation/failure_injection_summary.json`
+- `validation/resource_summary.json`
+- `validation/relationship_graph.json`
+- `validation/network_attachment_matrix.tsv`
+- `report/report.json`
 
-如果是结构性能力增强，再补：
+The summary and report contracts must keep these fields non-null:
 
-- `docs/k3s_runtime_architecture.md`
-- 时间戳 runbook
+- `profile_id`
+- `runner_status`
+- `pipeline_duration_seconds`
+- `image_distribution_mode`
+- `support_tier`
+- `capacity_gate_status`
 
----
+## 5. Protocol startup model
 
-## 9. 维护者最常做的事情
+The maintained multi-node model is explicit:
 
-### 9.1 升级一个示例脚本
+- `start` deploys workloads
+- `phase-start` starts `bird` and performs protocol startup
+- `verify` checks placement, protocol health, connectivity, and recovery
 
-检查清单：
+This keeps deployment failures separate from protocol failures.
 
-- 示例脚本只改 compile 行为，没有偷偷塞部署逻辑
-- 新 env 都有默认值或 fail-fast
-- README / quickstart 有对应说明
-- validate 证据路径没变或已同步更新 report
+## 6. Relationship evidence
 
-### 9.2 调整 runner
+One of the main reasons for the K8s branch is to prove that the K8s runtime can
+express the strong workload relationships that used to be easier to “see” in the
+Compose workflow.
 
-风险最大，因为它是所有 profile 的统一入口。
+The maintained evidence is:
 
-修改 `scripts/seed_k8s_profile_runner.sh` 时必须确认：
+- `placement_by_as.tsv`: which AS landed on which node
+- `network_attachment_matrix.tsv`: what network attachments each Pod reported
+- `relationship_graph.json`: ASN, Pod, node, attachment, and sampled protocol
+  adjacency graph
 
-- `latest` 链接逻辑不回退
-- read-only action（`report`, `triage`）可以复用旧 run
-- `KUBECONFIG` 选择逻辑不会误连 `localhost:8080`
-- `runner.log` 不会因为只读动作被错误截断
+These files are required because “Pods are ready” is not enough for a network
+experiment delivery.
 
-### 9.3 调整 validate 脚本
+## 7. Capacity gate model
 
-必须保证：
+The current reference cluster is the 3-node K3s+KVM environment.
 
-- 失败总能生成 `diagnostics.json`
-- 失败总有最小重试命令
-- 关键证据文件路径稳定
-- preflight 可以单独运行
+The real-topology scale target remains official, but it is capacity-gated on the
+reference cluster:
 
-### 9.4 调整 report 逻辑
+- `214` is the maintained Tier-1 runtime acceptance size
+- `1897/1899` stays supported in code and docs
+- larger runs on the reference cluster must fail with `CAPACITY_GATED`
 
-必须保证：
+This keeps the roadmap visible without pretending the current hardware can
+accept everything.
 
-- 没有 observe 目录时也能生成报告
-- profile 差异不会导致引用不存在的证据文件
-- 失败分支不会因为缺字段而再次失败
+## 8. Acceptance system
 
----
-
-## 10. 当前实际运行规模的抽象边界
-
-### 10.1 `mini_internet`
-
-当前定位：
-
-- 常驻回归例子
-- 小规模、快验证
-- 最适合频繁执行
-
-### 10.2 `real_topology_rr` 214
-
-当前定位：
-
-- 真实拓扑多节点标准演示
-- 适配当前 KVM 三节点资源
-- 是“真实拓扑链路可工作”的主证据
-
-### 10.3 `real_topology_rr` 1897
-
-当前定位：
-
-- 大演示目标
-- 不是当前默认回归用例
-- 需要更高 KVM 规格后再作为常规演示入口
-
-维护原则：
-
-- 不要让 1897 成为默认 smoke/CI
-- 214 作为真实拓扑默认验证规格
-- 1897 作为容量验证与大演示专用规格
-
----
-
-## 11. 未来开发建议
-
-### 11.1 建议优先做的方向
-
-1. **把 failure code/profile 关系继续结构化**
-- 让 `configs/seed_failure_action_map.yaml` 支持 profile-aware fallback。
-
-2. **把 report 再统一成 profile-aware 模板**
-- 现在已支持 mini/real 两条主线，但仍可继续抽象。
-
-3. **把 baseline / scale profile 的证据并排展示**
-- 让维护者一眼看出默认值与实验值分别是什么。
-
-4. **给 `KubernetesCompiler` 增加更可测试的 build plan 输出**
-- 把 `build_images.sh` 的 job 列表单独输出为 JSON，便于测试和审计。
-
-5. **给 `real_topology_rr` / `real_topology_rr_scale` 增加更细的 BGP 抽样策略**
-- 当前只要求存在 `Established`，未来可增加多 AS 抽样。
-
-### 11.2 不建议现在做的方向
-
-1. 把所有 profile 合并成一个超级 validate 脚本
-- 会迅速失控，失去 profile 语义。
-
-2. 把所有逻辑塞进 AI prompt
-- 会让“没有 AI 就无法复现”，与当前目标相反。
-
-3. 让大规模 1897 成为默认回归
-- 会拖慢日常开发与问题定位。
-
----
-
-## 12. 发布前检查清单
-
-每次准备演示或合并较大改动前，至少做：
+The public acceptance entry is:
 
 ```bash
-python3 -m unittest tests/ibgp_route_reflector_test.py -v
-python3 -m unittest tests/kubevirt_compiler_test.py -v
-scripts/opencode_seedlab_smoke.sh
-scripts/seed_k8s_profile_runner.sh mini_internet report
-scripts/seed_k8s_profile_runner.sh real_topology_rr report
-scripts/seed_k8s_profile_runner.sh real_topology_rr_scale report
+scripts/seed_k8s_acceptance.sh <suite>
 ```
 
-如果当天涉及 K3s 集群变更，再加：
+The maintained suites are:
 
-```bash
-scripts/seed_k8s_profile_runner.sh mini_internet all
-SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr all
-SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale all
-```
+- `docs`
+- `unit`
+- `compile-all`
+- `tier1-runtime`
+- `tier2-runtime`
+- `all`
 
----
+This is intentionally broader than unit tests. The K8s subsystem is accepted by
+runtime evidence, not by unit coverage alone.
 
-## 13. 结论
+## 9. Public docs vs local notes
 
-当前仓库的 K3s/K8s 抽象已经稳定形成以下结构：
+Tracked docs must remain:
 
-- 示例脚本：负责生成
-- profile：负责命名与默认值
-- runner：负责生命周期入口
-- validate：负责真实证据化验收
-- report：负责给人和 AI 的统一阅读面
+- English
+- stable
+- operator or maintainer facing
 
-未来所有新增能力，建议都顺着这五层扩展，而不是绕开它们单点堆脚本。这样才能同时满足：
+The following must stay out of git:
 
-- 人能清晰复现
-- AI 能稳定协作
-- 文档能长期维护
-- 测试能持续回归
+- dated runbooks
+- private handoff notes
+- personal assessments
+- local showcase/report packs
+- local `.opencode` package state
+
+Those belong under ignored local paths such as `output/private_docs/`.
+
+## 10. Promotion path for new examples
+
+An example moves through these stages:
+
+1. **Compile-only**: stable `k8s.yaml` and `build_images.sh`
+2. **Tier-2**: documented runtime workflow and capability-gated acceptance
+3. **Tier-1**: full validation contract and stable runtime evidence on the
+   reference cluster
+
+Promotion requires:
+
+- docs update,
+- profile metadata update (if operator-facing),
+- acceptance coverage,
+- evidence contract stability.

@@ -157,6 +157,12 @@ docker = Docker(internetMapEnabled=True, platform=Platform.AMD64)
 emu.compile(docker, './output', override = True)
 ```
 
+This repository also includes a Kubernetes compiler (`KubernetesCompiler`) for
+running emulations on Kubernetes/K3s (including multi-node setups). If you want
+to use the Kubernetes/K3s workflow, see:
+
+- `docs/k8s_usage.md`
+
 The `internetMapEnabled` flag indicates whether the 
 visualization app (the Internet Map app, running inside an independent container) 
 should be included in the generated 

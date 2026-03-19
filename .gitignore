@@ -29,6 +29,10 @@ client/backend/bin
 output*
 project-words.txt
 .venv
+.env
+.opencode/node_modules
+.opencode/package.json
+.opencode/bun.lock
 **/.obsidian/**
 test_result.txt
 

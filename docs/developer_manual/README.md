@@ -4,7 +4,9 @@
 - [Creating a new service](./01-creating-a-new-service.md)
 - [Creating a new component](./02-creating-a-new-component.md)
 - [Creating a new rap](./03-createing-a-new-rap.md)
+- [Creating a new experiment](./04-creating-a-new-experiment.md)
 - [Creating a test suite](./04-create-test-suites.md)
+- [Migrating examples to K8s/K3s](./20-migrating-examples-to-k8s.md)
 - FAQs
     - [How to get ip address](./99-FAQs.md#Q01-how-to-get-ip-address)
     - [How to make a change on all nodes](./99-FAQs.md#Q02-how-to-make-a-change-on-all-nodes)
@@ -33,7 +35,7 @@ There are several ways you can contribute to SEED emulator:
 4. **Create a Branch**: Create a new branch for your contribution using `git checkout -b branch-name`.
 5. **Make Changes**: Make changes to the codebase, documentation, or any other relevant files.
 6. **Write Tests**: Write test code to verify the functionality of your changes thoroughly. ([details](./04-create-test-suites.md))
-7. **Run Tests**: Execute the test suite to ensure that your changes pass all existing tests. ([how to run existing tests](../../test/README.md))
+7. **Run Tests**: Execute the test suite to ensure that your changes pass all existing tests. ([how to run existing tests](../../tests/README.md))
 8. **Update Documentation**: Update the documentation to reflect any changes or additions.
 9. **Commit Changes**: Commit your changes with descriptive commit messages using `git commit`.
 10. **Push Changes**: Push your changes to your fork on GitHub with `git push`.

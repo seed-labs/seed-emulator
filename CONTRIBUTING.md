@@ -38,6 +38,23 @@ figure out where you can best be helpful.
   can be found in the [labs/](./labs/) folder. You can help develop
   these labs or propose new ideas.
 
+## Documentation Hygiene (Repository Policy)
+
+This repository keeps only **public manuals** and **maintainer docs** under `docs/`.
+Personal notes, dated handoffs, meeting minutes, and one-off run logs should **not**
+be committed to git (they make master PRs noisy and hard to review).
+
+Use this rule of thumb:
+
+- Put private materials under `output/private_docs/` (ignored by `.gitignore`).
+- Do not add dated files such as `docs/runbooks/*YYYYMMDD*.md` or `docs/design/*YYYYMMDD*.md`.
+
+You can run a local check:
+
+```bash
+scripts/check_doc_hygiene.sh
+```
+
 ## Running Linters and Code Formatters
 
 - **flake8** checks compliance with the PEP 8 style guide. You can invoke it

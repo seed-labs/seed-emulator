@@ -15,6 +15,7 @@ started, they form a small-size Internet. New building blocks are being added,
 including Blockchain, Botnet, and many other useful elements of the Internet. 
 
 ![The Web UI](./docs/assets/web-ui.png)
+![SEED Emulator runtime overview](./docs/assets/generated/seed-k8s-runtime-overview.png)
 
 ## Table of Contents
 
@@ -78,6 +79,26 @@ To run an example, do the following:
    root directory, cd to `client/`, and run `docker-compose build &&
    docker-compose up`. This will bring up the Internet Map container. 
 
+### Kubernetes / K3s (multi-node)
+
+This repository also supports generating Kubernetes manifests through
+`KubernetesCompiler` and running SEED topologies on Kubernetes/K3s, including
+the maintained 3-node K3s+KVM reference cluster used by the `k8s` branch.
+
+![SEED Emulator K3s evidence loop](./docs/assets/generated/seed-k3s-evidence-loop.png)
+
+The official README figures can be regenerated with:
+
+```bash
+python3 tools/generate_k8s_readme_figures.py
+```
+
+Start here:
+
+- Operator manual: `docs/k8s_usage.md`
+- Maintainer manual: `docs/k3s_runtime_architecture.md`
+- Kubernetes examples and support matrix: `examples/kubernetes/README.md`
+- Optional AI helper quickstart: `docs/runbooks/opencode_seed_lab_quickstart.md`
 
 ## User Manuals
 

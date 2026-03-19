@@ -1,86 +1,117 @@
-# SEED Emulator KubeVirt Hybrid Kubernetes 设计文档
+# SEED Emulator KubeVirt Hybrid Kubernetes Design
 
-## 1. 概述 (Overview)
+## 1. Overview
 
-本设计旨在扩展 SEED Emulator，使其能够利用 **KubeVirt** 在 Kubernetes 集群中运行虚拟机（VM）节点，同时保持与容器节点的互操作性。目标是覆盖本地开发环境与标准 Linux 服务器环境。
+This design extends SEED Emulator so that selected nodes can run as
+**KubeVirt virtual machines** inside a Kubernetes cluster while remaining
+interoperable with normal container-based nodes.
 
-### 核心目标
-1. **高保真仿真**: 允许特定节点运行自定义内核或容器之外的操作系统能力。
-2. **混合部署**: 在同一仿真网络中混合运行容器（Docker）和虚拟机（KubeVirt）。
-3. **无缝集成**: 保持 Python 拓扑定义方式不变，通过 `node.setVirtualizationMode('KubeVirt')` 启用 VM。
-4. **自动化部署**: 提供一键脚本搭建 Kind + Multus + KubeVirt 环境。
+The goal is to support both local development environments and standard Linux
+server environments without changing the Python topology model.
 
-## 2. 架构设计 (Architecture)
+### Design goals
 
-### 2.1 基础架构层 (Infrastructure)
-- **宿主机**: Linux 开发机 / Linux 服务器。
-- **集群管理**: **Kind (Kubernetes in Docker)**。
-- **虚拟化技术**: **KubeVirt**，优先 KVM；无硬件虚拟化时可用 QEMU 软件模拟（性能较低）。
-- **网络层**: **Multus CNI**，使 Pod/VM 可挂载多网卡（eth0 管理网，net1/net2 仿真网）。
+1. **Higher-fidelity emulation**  
+   Allow selected nodes to run with kernel or OS behavior that does not fit the
+   normal container model.
+2. **Hybrid deployment**  
+   Run containers and virtual machines in the same emulated network.
+3. **Minimal topology changes**  
+   Keep the topology API stable and enable VM mode through
+   `node.setVirtualizationMode('KubeVirt')`.
+4. **Automated environment setup**  
+   Provide a repeatable Kind + Multus + KubeVirt bootstrap workflow.
 
-### 2.2 节点类型 (Node Types)
+## 2. Runtime architecture
 
-| 特性 | 容器节点 (Container Node) | 虚拟机节点 (KubeVirt Node) |
+### 2.1 Infrastructure layer
+
+- **Host**: Linux workstation or Linux server
+- **Cluster manager**: Kind for local cluster creation
+- **Virtualization**: KubeVirt, preferring KVM and falling back to software
+  emulation when hardware support is unavailable
+- **Network layer**: Multus CNI so Pods and VMs can attach multiple interfaces
+
+### 2.2 Node types
+
+| Property | Container node | KubeVirt VM node |
 |:---|:---|:---|
-| **资源定义** | Kubernetes `Deployment` | KubeVirt `VirtualMachine` |
-| **启动方式** | Docker 镜像启动 | ContainerDisk + Cloud-Init |
-| **配置注入** | `Dockerfile` 构建时注入 + 启动脚本 | `Cloud-Init` (User Data) 运行时注入 |
-| **IP 管理** | `replace_address.sh` (容器内执行) | `write_files` + `runcmd` (Cloud-Init) |
-| **适用场景** | 路由器、Web、普通主机 | 自定义内核测试、特殊网络栈、高隔离需求 |
+| Runtime object | Kubernetes `Deployment` | KubeVirt `VirtualMachine` |
+| Boot path | Docker image | containerDisk + cloud-init |
+| File injection | `Dockerfile` + copied assets | cloud-init `write_files` |
+| Startup logic | `/start.sh` | cloud-init `runcmd` |
+| Address rewrite | container-side helper script | VM-side cloud-init scripts |
+| Best use case | routers, hosts, services | custom kernel or high-isolation nodes |
 
-## 3. 动态注入策略 (Dynamic Injection Strategy)
+## 3. Compilation strategy
 
-SEED Emulator 传统上依赖 `Dockerfile` 构建镜像。对于 VM 路径，应避免构建体积巨大的 VM 镜像。
+The traditional SEED flow relies on Dockerfile-driven image construction. That
+works well for containers, but it is too heavy for VM images. The hybrid design
+therefore uses **generic cloud images + cloud-init** for VM nodes.
 
-**方案**: 使用通用 Cloud Image（如 Ubuntu）+ Cloud-Init。
+### 3.1 Compiler mapping
 
-### 3.1 转换逻辑
-编译器 `Kubernetes.py` 进行如下转换：
+The Kubernetes compiler maps SEED node operations as follows:
 
-1. **基础镜像**
-   - 容器: `FROM ubuntu:20.04`
-   - VM: `quay.io/containerdisks/ubuntu:22.04`
+1. **Base image**
+   - container: normal container base image
+   - VM: generic KubeVirt-compatible Ubuntu cloud image
+2. **`node.addFile(...)`**
+   - container: copied into the image
+   - VM: emitted into cloud-init `write_files`
+3. **`node.addSoftware(...)`**
+   - container: installed by Dockerfile package steps
+   - VM: emitted into cloud-init package installation
+4. **`node.appendStartCommand(...)`**
+   - container: added to `/start.sh`
+   - VM: added to cloud-init `runcmd`
 
-2. **文件注入 (`node.addFile`)**
-   - 容器: `COPY file /path/file`
-   - VM: 转换为 Cloud-Init `write_files`
+## 4. Networking model
 
-3. **软件安装 (`node.addSoftware`)**
-   - 容器: `RUN apt-get install -y package`
-   - VM: 转换为 Cloud-Init `packages`
+SEED topologies use static addresses, while Kubernetes CNI workflows normally
+expect dynamic IP assignment. The hybrid design handles this explicitly.
 
-4. **启动命令 (`node.appendStartCommand`)**
-   - 容器: 写入 `/start.sh` 并作为 CMD 执行
-   - VM: 转换为 Cloud-Init `runcmd`
+### 4.1 Container path
 
-## 4. 网络与地址管理 (Networking & Address Hack)
+- Multus attaches the extra interfaces.
+- A container-side helper rewrites the interface addresses to match the SEED
+  topology.
+- The expected secondary interface names are typically `net1`, `net2`, and so
+  on.
 
-SEED Emulator 采用静态 IP，和 CNI 动态 IPAM 存在冲突。
+### 4.2 VM path
 
-### 4.1 容器方案
-- Multus 创建接口后，容器内执行 `/replace_address.sh`，通过 `ip addr add` 覆盖地址。
-- 接口名通常为 `net1`, `net2`。
+- VM interfaces are commonly exposed as `eth0` for management and `eth1`,
+  `eth2`, ... for experiment links.
+- The compiler emits cloud-init configuration that maps SEED interfaces onto
+  the VM-visible device order.
 
-### 4.2 虚拟机方案
-- VM 内常见接口顺序：`eth0`（管理网）、`eth1`、`eth2`（仿真网）。
-- 编译器按接口顺序生成 Cloud-Init 配置，将模型中的网卡映射到 VM 内设备名。
+### 4.3 Operational constraints
 
-关键约束：
-- 必须保证 Multus CNI 配置与二层互通能力正确（`bridge`/`macvlan` 等）。
-- 在 Kind 本地验证中，`bridge` 模式最稳健。
+- Multus must provide correct layer-2 behavior for the selected attachment
+  mode, such as `bridge` or `macvlan`.
+- For local Kind-based validation, `bridge` remains the most predictable mode.
 
-## 5. 实施计划 (Implementation Plan)
+## 5. Implementation plan
 
-1. **Python 核心扩展**
-   - `Node.py`: 增加 `virtualization_mode` 属性。
-   - `Kubernetes.py`: 增加 `_compileNodeKubeVirt`，生成 Cloud-Init 与 VM 清单。
+1. **Core Python support**
+   - extend `Node.py` with virtualization-mode metadata
+   - extend `seedemu/compiler/Kubernetes.py` with VM compilation paths and
+     cloud-init generation
+2. **Environment automation**
+   - keep `setup_kubevirt_cluster.sh` as the one-shot bootstrap entry
+   - detect virtualization support
+   - install Kind, Multus, and KubeVirt
+   - wait for readiness and write diagnostics
+3. **Validation**
+   - validate a hybrid topology such as one VM router plus two container hosts
+   - check connectivity, BGP behavior, and recovery behavior
 
-2. **环境脚本**
-   - `setup_kubevirt_cluster.sh`
-   - 检测 CPU 虚拟化能力。
-   - 安装 Kind、Multus、KubeVirt。
-   - 等待组件就绪并输出诊断信息。
+## 6. Relationship to the maintained K8s branch
 
-3. **验证**
-   - 构建“1 VM 路由器 + 2 容器主机”拓扑。
-   - 验证互通、BGP、恢复能力。
+This design document explains the hybrid execution model. The maintained public
+operator flow is documented separately:
+
+- Operator workflow: `docs/k8s_usage.md`
+- Maintainer architecture: `docs/k3s_runtime_architecture.md`
+- Local Kind/KubeVirt runbook: `docs/runbooks/local_kind_quick_runbook.md`

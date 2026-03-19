@@ -1,5 +1,5 @@
 ---
-description: Execute full run (start->verify->observe->report) with proactive diagnostics.
+description: Execute full run (build->start->phase-start->verify->observe->report) with proactive diagnostics.
 agent: seed-lab
 ---
 

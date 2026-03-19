@@ -14,6 +14,27 @@ on a single host.
 emu.compile(Docker(), './output/regular-docker')
 ```
 
+## Kubernetes compiler (`KubernetesCompiler`)
+
+This compiler generates Kubernetes manifests for running an emulation on a
+Kubernetes cluster (including multi-node K3s).
+
+```python
+from seedemu.compiler import KubernetesCompiler
+
+emu.compile(KubernetesCompiler(), './output/k8s')
+```
+
+The compiler will generate:
+
+- `k8s.yaml`: Kubernetes resources (`Deployment`, `Service`, etc.)
+- `build_images.sh`: image build/push helper
+
+For this repository’s end-to-end K3s workflow (profiles, evidence artifacts,
+and troubleshooting), see:
+
+- `docs/k8s_usage.md`
+
 ## Distributed Docker (`DistributedDocker`) compiler
 
 ```python

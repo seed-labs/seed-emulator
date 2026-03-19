@@ -18,6 +18,7 @@ This document provides a portal to those examples.
   - [Visualization](./visualization.md): visualize the emulated Internet
   - [Docker image](./docker.md): generate images for AMD and ARM platforms, 
            use custom images 
+  - Kubernetes/K3s usage: see `docs/k8s_usage.md` (repo root)
 
 ## [Internet Emulator: Components and Advanced Features](./internet/README.md)
 

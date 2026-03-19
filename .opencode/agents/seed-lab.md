@@ -86,8 +86,9 @@ Always start with `seed-lab-experiment-assistant`, then load on demand:
 
 7. Command validity
 - For `scripts/seed_k8s_profile_runner.sh`, only use valid actions:
-  - `doctor|start|verify|observe|all|triage|report`
-- Do not suggest unsupported actions like `compile`, `build`, `deploy`, or `run` for this runner.
+  - `doctor|build|start|phase-start|verify|observe|compare|showcase|all|triage|report`
+- Do not suggest unsupported actions like `compile`/`deploy`/`run` for this runner; use the runner actions above.
+- Remember: `start` deploys workloads but does NOT start bird; use `phase-start` for phased protocol startup.
 
 8. Environment visibility contract
 - In execution mode, proactively surface these vars when proposing commands:
