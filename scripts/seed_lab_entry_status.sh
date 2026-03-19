@@ -3,6 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/env_seedemu.sh"
+source "${SCRIPT_DIR}/seed_k8s_cluster_inventory.sh"
+seed_load_cluster_inventory
 
 SEED_K3S_CLUSTER_NAME="${SEED_K3S_CLUSTER_NAME:-seedemu-k3s}"
 SEED_K3S_MASTER_NAME="${SEED_K3S_MASTER_NAME:-seed-k3s-master}"
@@ -150,6 +152,9 @@ export ENTRY_SEED_REGISTRY_HOST="${SEED_REGISTRY_HOST:-192.168.122.110}"
 export ENTRY_SEED_REGISTRY_PORT="${SEED_REGISTRY_PORT:-5000}"
 export ENTRY_SEED_PROFILE_KIND="${SEED_PROFILE_KIND:-}"
 export ENTRY_SEED_IMAGE_DISTRIBUTION_MODE="${SEED_IMAGE_DISTRIBUTION_MODE:-}"
+export ENTRY_CLUSTER_INVENTORY_NAME="${SEED_CLUSTER_INVENTORY_NAME:-}"
+export ENTRY_CLUSTER_INVENTORY_PATH="${SEED_CLUSTER_INVENTORY_PATH:-}"
+export ENTRY_CLUSTER_INVENTORY_LOADED="${SEED_CLUSTER_INVENTORY_LOADED:-false}"
 
 python3 - <<'PY'
 import json
@@ -182,6 +187,9 @@ summary = {
     "seed_output_dir": os.environ["ENTRY_SEED_OUTPUT_DIR"],
     "registry_host": os.environ["ENTRY_SEED_REGISTRY_HOST"],
     "registry_port": os.environ["ENTRY_SEED_REGISTRY_PORT"],
+    "cluster_inventory_name": os.environ.get("ENTRY_CLUSTER_INVENTORY_NAME", ""),
+    "cluster_inventory_path": os.environ.get("ENTRY_CLUSTER_INVENTORY_PATH", ""),
+    "cluster_inventory_loaded": os.environ.get("ENTRY_CLUSTER_INVENTORY_LOADED", "false") == "true",
 }
 
 profile_kind = os.environ.get("ENTRY_SEED_PROFILE_KIND", "").strip() or (
@@ -224,6 +232,9 @@ if profile_file.exists() and yaml is not None:
                     "default_namespace": cfg.get("default_namespace", ""),
                     "default_cni_type": cfg.get("default_cni_type", ""),
                     "verify_mode": cfg.get("verify_mode", ""),
+                    "support_tier": cfg.get("support_tier", ""),
+                    "acceptance_level": cfg.get("acceptance_level", ""),
+                    "capacity_gate": cfg.get("capacity_gate", ""),
                 }
             )
 
@@ -308,6 +319,7 @@ if nodes_json.exists():
             }
         )
 summary["k3s_node_os_matrix"] = node_matrix
+summary["node_os_matrix"] = node_matrix
 
 if image_distribution_mode == "preload":
     summary["image_flow"] = [
@@ -333,8 +345,17 @@ if profile_root.exists():
             continue
         latest_link = pdir / "latest"
         target = ""
-        summary_file = ""
+        runner_summary_file = ""
+        validation_summary_file = ""
+        report_file = ""
         status = ""
+        overall_passed = None
+        namespace = ""
+        nodes_used = 0
+        expected_nodes = 0
+        pipeline_duration_seconds = 0
+        validation_duration_seconds = 0
+        first_evidence_file = ""
         if latest_link.exists():
             try:
                 target = str(latest_link.resolve())
@@ -342,16 +363,78 @@ if profile_root.exists():
                 target = str(latest_link)
             runner_summary = Path(target) / "runner_summary.json"
             if runner_summary.exists():
-                summary_file = str(runner_summary)
+                runner_summary_file = str(runner_summary)
                 try:
                     data = json.loads(runner_summary.read_text(encoding="utf-8"))
                     status = data.get("status", "")
                 except Exception:
                     status = ""
+            validation_summary = Path(target) / "validation" / "summary.json"
+            timing_json = Path(target) / "validation" / "timing.json"
+            if validation_summary.exists():
+                validation_summary_file = str(validation_summary)
+                try:
+                    data = json.loads(validation_summary.read_text(encoding="utf-8"))
+                except Exception:
+                    data = {}
+                try:
+                    timing_data = json.loads(timing_json.read_text(encoding="utf-8")) if timing_json.exists() else {}
+                except Exception:
+                    timing_data = {}
+                if isinstance(data, dict):
+                    namespace = str(data.get("namespace", "") or "")
+                    nodes_used = int(data.get("nodes_used", 0) or 0)
+                    expected_nodes = int(data.get("expected_nodes", 0) or 0)
+                    status = status or str(data.get("runner_status", "") or "")
+                    validation_duration_seconds = int(
+                        data.get("validation_duration_seconds", data.get("duration_seconds", 0)) or 0
+                    )
+                    build_duration = int(timing_data.get("build_duration_seconds", data.get("build_duration_seconds", 0)) or 0)
+                    up_duration = int(timing_data.get("up_duration_seconds", data.get("up_duration_seconds", 0)) or 0)
+                    phase_duration = int(
+                        timing_data.get("phase_start_duration_seconds", data.get("phase_start_duration_seconds", 0)) or 0
+                    )
+                    pipeline_duration_seconds = max(
+                        int(data.get("pipeline_duration_seconds", 0) or 0),
+                        build_duration + up_duration + phase_duration + validation_duration_seconds,
+                        validation_duration_seconds,
+                    )
+                    overall_passed = all(
+                        bool(data.get(key, False))
+                        for key in (
+                            "placement_passed",
+                            "bgp_passed",
+                            "connectivity_passed",
+                            "recovery_passed",
+                        )
+                    )
+            report_json = Path(target) / "report" / "report.json"
+            if report_json.exists():
+                report_file = str(report_json)
+                try:
+                    report_data = json.loads(report_json.read_text(encoding="utf-8"))
+                except Exception:
+                    report_data = {}
+                if isinstance(report_data, dict):
+                    if "overall_passed" in report_data:
+                        overall_passed = bool(report_data.get("overall_passed"))
+                    first_evidence_file = str(report_data.get("first_evidence_file", "") or "")
+                    pipeline_duration_seconds = int(
+                        report_data.get("pipeline_duration_seconds", pipeline_duration_seconds) or pipeline_duration_seconds
+                    )
         latest_runs[pdir.name] = {
             "latest_dir": target,
-            "runner_summary": summary_file,
+            "runner_summary": runner_summary_file,
+            "validation_summary": validation_summary_file,
+            "report": report_file,
             "status": status,
+            "overall_passed": overall_passed,
+            "namespace": namespace,
+            "nodes_used": nodes_used,
+            "expected_nodes": expected_nodes,
+            "pipeline_duration_seconds": pipeline_duration_seconds,
+            "validation_duration_seconds": validation_duration_seconds,
+            "first_evidence_file": first_evidence_file,
         }
 summary["latest_profile_runs"] = latest_runs
 
@@ -402,6 +485,7 @@ markdown.append(f"- Summary JSON: `{summary_path}`")
 markdown.append(f"- Namespace: `{summary['seed_namespace']}`")
 markdown.append(f"- Profile: `{summary['seed_profile']}`")
 markdown.append(f"- Profile kind: `{summary['profile_kind']}`")
+markdown.append(f"- Cluster inventory: `{summary['cluster_inventory_name'] or 'not-set'}`")
 markdown.append(f"- Placement mode: `{summary['seed_placement_mode']}`")
 markdown.append(f"- Registry: `{summary['registry_host']}:{summary['registry_port']}`")
 markdown.append(f"- Image distribution: `{summary['image_distribution_mode']}`")
@@ -415,12 +499,21 @@ markdown.append(
 )
 markdown.append("")
 markdown.append("## OS Matrix")
-for item in summary["k3s_node_os_matrix"]:
+for item in summary["node_os_matrix"]:
     markdown.append(f"- `{item['name']}` -> `{item['os_image']}` / `{item['container_runtime']}`")
 markdown.append("")
 markdown.append("## Image Flow")
 for step in summary["image_flow"]:
     markdown.append(f"- `{step}`")
+markdown.append("")
+markdown.append("## Latest Profile Runs")
+for profile_id, item in sorted(summary["latest_profile_runs"].items()):
+    markdown.append(
+        f"- `{profile_id}` -> status=`{item.get('status', '') or 'unknown'}` pass=`{item.get('overall_passed', '')}` "
+        f"ns=`{item.get('namespace', '')}` nodes=`{item.get('nodes_used', 0)}` "
+        f"expected=`{item.get('expected_nodes', 0)}` total=`{item.get('pipeline_duration_seconds', 0)}s` "
+        f"run=`{item.get('latest_dir', '')}`"
+    )
 markdown.append("")
 markdown.append("## Next Commands")
 for item in summary["macro_tasks"]:

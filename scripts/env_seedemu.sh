@@ -15,12 +15,14 @@ else
     export PYTHONPATH="${REPO_ROOT}"
 fi
 
-export SEED_CLUSTER_NAME="${SEED_CLUSTER_NAME:-seedemu-kvtest}"
-export SEED_NAMESPACE="${SEED_NAMESPACE:-seedemu-kvtest}"
-export SEED_REGISTRY="${SEED_REGISTRY:-localhost:5001}"
-export SEED_CNI_TYPE="${SEED_CNI_TYPE:-bridge}"
-export SEED_CNI_MASTER_INTERFACE="${SEED_CNI_MASTER_INTERFACE:-eth0}"
-export SEED_SCHEDULING_STRATEGY="${SEED_SCHEDULING_STRATEGY:-auto}"
+_seedemu_shortcuts_dir="${REPO_ROOT}/scripts/shortcuts"
+if [ -d "${_seedemu_shortcuts_dir}" ]; then
+    case ":${PATH}:" in
+        *":${_seedemu_shortcuts_dir}:"*) ;;
+        *) export PATH="${_seedemu_shortcuts_dir}:${PATH}" ;;
+    esac
+fi
+
 export SEED_EXPERIMENT_PROFILE="${SEED_EXPERIMENT_PROFILE:-mini_internet}"
 export SEED_AGENT_PROACTIVE_MODE="${SEED_AGENT_PROACTIVE_MODE:-guided}"
 export SEED_FAILURE_ACTION_MAP="${SEED_FAILURE_ACTION_MAP:-${REPO_ROOT}/configs/seed_failure_action_map.yaml}"

@@ -54,6 +54,14 @@ failure_actions:
     operator_hint: 镜像构建/推送失败，检查 docker、registry、SSH 链路
     safe_auto_retry: false
     requires_confirmation: false
+  IMAGE_PRELOAD_FAILED:
+    first_evidence_pattern: preload_master.log
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh build
+    fallback_command: tail -n 200 output/profile_runs/${SEED_EXPERIMENT_PROFILE:-mini_internet}/latest/validation/preload_master.log
+    operator_hint: 镜像已在 master 构建完成，但导入到 k3s 节点失败，先看 preload_*.log 和 sample 证据
+    safe_auto_retry: false
+    requires_confirmation: false
+
 
   REGISTRY_TIMEOUT:
     first_evidence_pattern: remote_build.log
@@ -84,6 +92,14 @@ failure_actions:
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
     fallback_command: cat ${SEED_ARTIFACT_DIR}/bird_ix100.txt
     operator_hint: BGP 邻居未建立，优先排查路由器邻接与网络附加
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  PROTOCOL_HEALTH_FAILED:
+    first_evidence_pattern: protocol_health.json
+    minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
+    fallback_command: cat ${SEED_ARTIFACT_DIR}/protocol_health.json
+    operator_hint: 协议健康检查失败，先看 protocol_health.json 和 bgp_health_summary.json
     safe_auto_retry: false
     requires_confirmation: false
 

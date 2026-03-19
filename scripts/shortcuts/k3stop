@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
+seed_shortcuts_source_env
+seed_shortcuts_ensure_kubeconfig
+
+usage() {
+  cat <<'USAGE'
+Usage: k3stop [profile]
+Maps to: kubectl top nodes && kubectl -n <ns> top pods
+USAGE
+}
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  usage
+  exit 0
+fi
+
+profile="$(seed_shortcuts_profile "${1:-}")"
+namespace="$(seed_shortcuts_resolve_namespace "${profile}")"
+if [ -z "${namespace}" ]; then
+  seed_shortcuts_die "cannot resolve namespace for profile ${profile}"
+fi
+
+seed_shortcuts_print_map "k3stop" "kubectl top nodes && kubectl -n ${namespace} top pods"
+kubectl top nodes
+kubectl -n "${namespace}" top pods
+

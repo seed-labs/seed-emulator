@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
+seed_shortcuts_source_env
+seed_shortcuts_ensure_kubeconfig
+
+usage() {
+  cat <<'USAGE'
+Usage: k3slogs [profile] <label|pod> [-- <kubectl logs args>]
+
+Examples:
+  k3slogs seedemu.io/asn=151,seedemu.io/name=router0
+  k3slogs mini_internet seedemu.io/asn=151,seedemu.io/name=router0
+  k3slogs real_topology_rr <pod-name> -- --tail=200
+
+Maps to: kubectl -n <ns> logs <pod> ...
+USAGE
+}
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  usage
+  exit 0
+fi
+
+profile="$(seed_shortcuts_profile "${1:-}")"
+target=""
+if [ -z "${1:-}" ]; then
+  usage
+  exit 1
+fi
+if [ -n "${2:-}" ] && seed_shortcuts_is_profile_id "${1}"; then
+  profile="${1}"
+  target="${2}"
+  shift 2
+else
+  profile="$(seed_shortcuts_profile "")"
+  target="${1}"
+  shift 1
+fi
+namespace="$(seed_shortcuts_resolve_namespace "${profile}")"
+if [ -z "${namespace}" ]; then
+  seed_shortcuts_die "cannot resolve namespace for profile ${profile}"
+fi
+
+pod="$(seed_shortcuts_pick_pod "${namespace}" "${target}")"
+if [ -z "${pod}" ]; then
+  seed_shortcuts_die "no pod matched: ${target} (namespace=${namespace})"
+fi
+
+cmd=( kubectl -n "${namespace}" logs "${pod}" )
+if [ "${1:-}" = "--" ]; then
+  shift
+  cmd+=( "$@" )
+fi
+
+seed_shortcuts_print_map "k3slogs" "${cmd[@]}"
+exec "${cmd[@]}"

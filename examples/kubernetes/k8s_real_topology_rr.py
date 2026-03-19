@@ -40,6 +40,17 @@ import sys
 from ipaddress import IPv4Network
 from typing import Dict, List, Tuple, Any
 
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+cleaned_sys_path = []
+for entry in sys.path:
+    normalized = os.path.abspath(entry or os.getcwd())
+    if normalized == REPO_ROOT:
+        continue
+    if os.path.isfile(os.path.join(normalized, "seedemu", "__init__.py")):
+        continue
+    cleaned_sys_path.append(entry)
+sys.path[:] = [REPO_ROOT, *cleaned_sys_path]
+
 from seedemu.compiler import KubernetesCompiler, SchedulingStrategy
 from seedemu.core import Emulator
 from seedemu.layers import Base, Ebgp, Ibgp, Ospf, PeerRelationship, Routing
@@ -134,6 +145,102 @@ def _ring_links(nodes: List[int]) -> List[Tuple[int, int]]:
     return links
 
 
+def _cluster_id(asn: int, index: int) -> str:
+    second = (asn // 256) % 256
+    third = asn % 256
+    fourth = max(1, min(254, index + 1))
+    return f"10.{second}.{third}.{fourth}"
+
+
+def _split_contiguous_segments(items: List[int], segment_count: int) -> List[List[int]]:
+    if segment_count <= 0:
+        return []
+
+    total = len(items)
+    segments: List[List[int]] = []
+    for index in range(segment_count):
+        start = (index * total) // segment_count
+        end = ((index + 1) * total) // segment_count
+        if start >= end:
+            continue
+        segments.append(items[start:end])
+    return segments
+
+
+def _recommended_rr_count(router_count: int) -> int:
+    override = os.environ.get("SEED_REAL_RR_COUNT")
+    if override:
+        try:
+            requested = int(override)
+        except ValueError as exc:
+            raise ValueError(f"Invalid SEED_REAL_RR_COUNT: {override}") from exc
+        if router_count <= 1:
+            return 0
+        return max(1, min(router_count - 1, requested))
+
+    if router_count <= 2:
+        return 0
+    if router_count >= 64:
+        return 4
+    if router_count >= 24:
+        return 3
+    if router_count >= 12:
+        return 2
+    return 1
+
+
+def _configure_route_reflectors(
+    transit_as,
+    asn: int,
+    exchanges: List[int],
+    routers_by_ix: Dict[int, Any],
+) -> Dict[str, Any]:
+    router_count = len(exchanges)
+    rr_count = _recommended_rr_count(router_count)
+    plan: Dict[str, Any] = {
+        "asn": asn,
+        "router_count": router_count,
+        "rr_count": rr_count,
+        "rr_routers": [],
+        "clusters": {},
+        "cluster_rrs": {},
+    }
+
+    if rr_count <= 0:
+        return plan
+
+    segments = _split_contiguous_segments(exchanges, rr_count)
+    if not segments:
+        return plan
+
+    if len(segments) == 1:
+        rr_ix = segments[0][len(segments[0]) // 2]
+        routers_by_ix[rr_ix].makeRouteReflector(True)
+        plan["rr_routers"] = [f"r{rr_ix}"]
+        plan["clusters"] = {"default": [f"r{ix}" for ix in exchanges]}
+        plan["cluster_rrs"] = {"default": f"r{rr_ix}"}
+        return plan
+
+    cluster_ids = [_cluster_id(asn, index) for index in range(len(segments))]
+    for cluster_id in cluster_ids:
+        transit_as.createCluster(cluster_id)
+
+    for cluster_id, segment in zip(cluster_ids, segments):
+        rr_ix = segment[len(segment) // 2]
+        plan["cluster_rrs"][cluster_id] = f"r{rr_ix}"
+        plan["clusters"][cluster_id] = [f"r{ix}" for ix in segment]
+
+        for ix in segment:
+            router = routers_by_ix[ix]
+            router.joinBgpCluster(cluster_id)
+            if ix == rr_ix:
+                router.makeRouteReflector(True)
+                plan["rr_routers"].append(f"r{ix}")
+
+    plan["rr_routers"].sort()
+    return plan
+
+
 def _make_transit_as(
     base: Base,
     *,
@@ -141,7 +248,7 @@ def _make_transit_as(
     prefix: str,
     exchanges: List[int],
     node_prefix: Dict[int, str],
-) -> None:
+) -> Dict[str, Any]:
     transit_as = base.createAutonomousSystem(asn)
     routers_by_ix: Dict[int, Any] = {}
 
@@ -150,9 +257,7 @@ def _make_transit_as(
         router.joinNetwork(f"ix{ix}", str(IPv4Network(node_prefix[ix])[asn]))
         routers_by_ix[ix] = router
 
-    # Mark a single RR per transit AS (first router in a deterministic ordering).
-    if exchanges:
-        routers_by_ix[exchanges[0]].makeRouteReflector(True)
+    rr_plan = _configure_route_reflectors(transit_as, asn, exchanges, routers_by_ix)
 
     # Connect routers via a simple ring over local networks (OSPF + iBGP reachability).
     links = _ring_links(exchanges)
@@ -166,6 +271,9 @@ def _make_transit_as(
         routers_by_ix[a].joinNetwork(net_name)
         routers_by_ix[b].joinNetwork(net_name)
         subnet_idx += 1
+
+    rr_plan["internal_links"] = [f"r{a}<->r{b}" for a, b in links]
+    return rr_plan
 
 
 def run() -> None:
@@ -196,21 +304,9 @@ def run() -> None:
     emu = Emulator()
     base = Base()
     ebgp = Ebgp()
-    routing = Routing().setKernelExportMode(_env_choice(
-        "SEED_ROUTING_KERNEL_EXPORT_MODE",
-        "default",
-        ("default", "device_ospf_only"),
-    ))
-    ibgp = Ibgp().setReflectionMode(_env_choice(
-        "SEED_IBGP_REFLECTION_MODE",
-        "simple",
-        ("simple", "clustered"),
-    ))
-    ospf = Ospf().setTimingProfile(_env_choice(
-        "SEED_OSPF_TIMING_PROFILE",
-        "default",
-        ("default", "large_scale"),
-    ))
+    routing = Routing()
+    ibgp = Ibgp()
+    ospf = Ospf()
 
     # 1) Internet Exchanges (+ route servers)
     for ixp_name in topo["ixps"]:
@@ -241,11 +337,18 @@ def run() -> None:
         connected[t_asn].add(int(assignment[ix_a]["asn"]))
         connected[t_asn].add(int(assignment[ix_b]["asn"]))
 
+    rr_plan_by_as: Dict[str, Dict[str, Any]] = {}
     for transit_key in topo["transit_asns"]:
         asn = int(assignment[transit_key]["asn"])
         prefix = str(assignment[transit_key]["ipv4"])
         exchanges = sorted(connected.get(asn, set()))
-        _make_transit_as(base, asn=asn, prefix=prefix, exchanges=exchanges, node_prefix=node_prefix)
+        rr_plan_by_as[str(asn)] = _make_transit_as(
+            base,
+            asn=asn,
+            prefix=prefix,
+            exchanges=exchanges,
+            node_prefix=node_prefix,
+        )
 
     # 3) Optional stub ASes (no hosts; keep node count aligned with dataset)
     # Only create stubs if present in the dataset.
@@ -305,7 +408,7 @@ def run() -> None:
     cni_type = os.environ.get("SEED_CNI_TYPE", "bridge").strip().lower()
     cni_master_interface = os.environ.get("SEED_CNI_MASTER_INTERFACE", "eth0").strip()
     image_pull_policy = os.environ.get("SEED_IMAGE_PULL_POLICY", "Always").strip()
-    scheduling_strategy = os.environ.get("SEED_SCHEDULING_STRATEGY", SchedulingStrategy.AUTO).strip().lower()
+    scheduling_strategy = os.environ.get("SEED_SCHEDULING_STRATEGY", SchedulingStrategy.BY_AS_HARD).strip().lower()
     node_labels = _parse_node_labels_json(os.environ.get("SEED_NODE_LABELS_JSON", ""))
     enable_internet_map = _env_bool("SEED_ENABLE_INTERNET_MAP", default=False)
 
@@ -328,6 +431,9 @@ def run() -> None:
         k8s.attachInternetMap()
 
     emu.compile(k8s, output_dir, override=True)
+    rr_plan_path = os.path.join(output_dir, "rr_plan.json")
+    with open(rr_plan_path, "w", encoding="utf-8") as handle:
+        json.dump(rr_plan_by_as, handle, indent=2, sort_keys=True)
 
     expected_nodes = (
         len(topo["ixps"])
@@ -345,9 +451,10 @@ def run() -> None:
     print(f"Registry prefix: {registry_prefix}")
     print(f"CNI type: {cni_type}")
     print(f"Internet Map enabled: {enable_internet_map}")
-    print(f"iBGP reflection mode: {ibgp.getReflectionMode()}")
-    print(f"Routing kernel export mode: {routing.getKernelExportMode()}")
-    print(f"OSPF timing profile: {ospf.getTimingProfile()}")
+    print(f"RR plan: {rr_plan_path}")
+    print("iBGP layout: senior default RR/cluster logic")
+    print("Routing kernel export: senior default (device+OSPF to kernel)")
+    print("OSPF default: legacy large-scale timers")
 
 
 if __name__ == "__main__":

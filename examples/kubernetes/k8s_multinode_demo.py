@@ -14,12 +14,13 @@ Usage:
     python3 k8s_multinode_demo.py [macvlan|ipvlan|bridge]
 """
 
-from seedemu.layers import Base, Routing, Ebgp
-from seedemu.services import WebService
-from seedemu.compiler import KubernetesCompiler, SchedulingStrategy, Platform
-from seedemu.core import Emulator, Binding, Filter
 import os
 import sys
+
+from seedemu.compiler import KubernetesCompiler, SchedulingStrategy
+from seedemu.core import Binding, Emulator, Filter
+from seedemu.layers import Base, Ebgp, Routing
+from seedemu.services import WebService
 
 
 def run(cni_type: str = "bridge"):
@@ -96,9 +97,17 @@ def run(cni_type: str = "bridge"):
     }
 
     # Create Kubernetes compiler with multi-node features
+    registry_prefix = os.environ.get("SEED_REGISTRY", "127.0.0.1:5001").strip()
+    namespace = os.environ.get("SEED_NAMESPACE", "seedemu").strip()
+    output_dir = os.environ.get("SEED_OUTPUT_DIR")
+    if not output_dir:
+        output_dir = os.path.join(os.path.dirname(__file__), f"output_multinode_{cni_type}")
+    elif not os.path.isabs(output_dir):
+        output_dir = os.path.join(os.path.dirname(__file__), output_dir)
+
     k8s = KubernetesCompiler(
-        registry_prefix="127.0.0.1:5001",
-        namespace="seedemu",
+        registry_prefix=registry_prefix,
+        namespace=namespace,
         use_multus=True,
         internetMapEnabled=True,
         
@@ -122,7 +131,6 @@ def run(cni_type: str = "bridge"):
     k8s.attachInternetMap()
 
     # Compile
-    output_dir = os.path.join(os.path.dirname(__file__), f'output_multinode_{cni_type}')
     emu.compile(k8s, output_dir, override=True)
 
     print(f"""
@@ -131,6 +139,8 @@ Multi-Node Kubernetes Deployment Generated!
 ================================================================================
 
 Output Directory: {output_dir}
+Registry Prefix: {registry_prefix}
+Namespace: {namespace}
 CNI Type: {cni_type}
 Scheduling Strategy: CUSTOM (by AS number)
 
@@ -153,11 +163,11 @@ Next Steps:
      cd {output_dir} && ./build_images.sh
 
   3. Deploy to K8s:
-     kubectl create ns seedemu
-     kubectl apply -f k8s.yaml
+     kubectl create ns {namespace}
+     kubectl apply -n {namespace} -f k8s.yaml
 
   4. Verify pod placement:
-     kubectl get pods -n seedemu -o wide
+     kubectl get pods -n {namespace} -o wide
 
 ================================================================================
 """)

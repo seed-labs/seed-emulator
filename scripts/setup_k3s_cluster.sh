@@ -3,6 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/env_seedemu.sh"
+source "${SCRIPT_DIR}/seed_k8s_cluster_inventory.sh"
+seed_load_cluster_inventory
 
 PROJECT_ROOT="${REPO_ROOT}"
 INVENTORY_TEMPLATE="${PROJECT_ROOT}/ansible/inventory.yml"

@@ -54,6 +54,7 @@ required_files=(
     "${REPO_ROOT}/scripts/inspect_k3s_mini_internet.sh"
     "${REPO_ROOT}/scripts/seed_lab_entry_status.sh"
     "${REPO_ROOT}/scripts/bootstrap_seed_lab_env.sh"
+    "${REPO_ROOT}/scripts/check_doc_hygiene.sh"
     "${REPO_ROOT}/scripts/seedlab_report_from_artifacts.sh"
     "${REPO_ROOT}/scripts/seed_k8s_profile_runner.sh"
     "${REPO_ROOT}/.opencode/agents/seed-lab.md"
@@ -85,6 +86,14 @@ for file in "${required_files[@]}"; do
         fail "missing ${file}"
     fi
 done
+
+if [[ -f "${REPO_ROOT}/scripts/check_doc_hygiene.sh" ]]; then
+    if "${REPO_ROOT}/scripts/check_doc_hygiene.sh" >"${ARTIFACT_DIR}/doc_hygiene.txt" 2>&1; then
+        pass "doc hygiene"
+    else
+        fail "doc hygiene failed (see ${ARTIFACT_DIR}/doc_hygiene.txt)"
+    fi
+fi
 
 for cmd in kubectl rg; do
     if command -v "${cmd}" >/dev/null 2>&1; then

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
+seed_shortcuts_source_env
+seed_shortcuts_ensure_kubeconfig
+
+usage() {
+  cat <<'USAGE'
+Usage: k3sevents [profile]
+Maps to: kubectl -n <ns> get events --sort-by=.lastTimestamp | tail -n 80
+USAGE
+}
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  usage
+  exit 0
+fi
+
+profile="$(seed_shortcuts_profile "${1:-}")"
+namespace="$(seed_shortcuts_resolve_namespace "${profile}")"
+if [ -z "${namespace}" ]; then
+  seed_shortcuts_die "cannot resolve namespace for profile ${profile}"
+fi
+
+seed_shortcuts_print_map "k3sevents" "kubectl -n ${namespace} get events --sort-by=.lastTimestamp | tail -n 80"
+kubectl -n "${namespace}" get events --sort-by=.lastTimestamp | tail -n 80
+

@@ -4,11 +4,12 @@
 # Copied from examples/basic/A20_nano_internet/nano_internet.py
 # Adapted for KubernetesCompiler
 
-from seedemu.layers import Base, Routing, Ebgp
-from seedemu.services import WebService, DomainNameService
-from seedemu.compiler import KubernetesCompiler, Platform
-from seedemu.core import Emulator, Binding, Filter
 import os, sys
+
+from seedemu.compiler import KubernetesCompiler
+from seedemu.core import Binding, Emulator, Filter
+from seedemu.layers import Base, Ebgp, Routing
+from seedemu.services import DomainNameService, WebService
 
 def run():
     # Initialize the emulator and layers
@@ -107,16 +108,30 @@ def run():
     # Configure the compiler
     # registry_prefix: Where to push images (e.g., "docker.io/myuser" or "localhost:5000")
     # namespace: The K8s namespace to deploy into
+    registry_prefix = os.environ.get("SEED_REGISTRY", "localhost:5000").strip()
+    namespace = os.environ.get("SEED_NAMESPACE", "seedemu").strip()
+    cni_type = os.environ.get("SEED_CNI_TYPE", "bridge").strip().lower()
+    cni_master_interface = os.environ.get("SEED_CNI_MASTER_INTERFACE", "eth0").strip()
+    image_pull_policy = os.environ.get("SEED_IMAGE_PULL_POLICY", "Always").strip()
     k8s = KubernetesCompiler(
-        registry_prefix="localhost:5000",
-        namespace="seedemu"
+        registry_prefix=registry_prefix,
+        namespace=namespace,
+        use_multus=True,
+        cni_type=cni_type,
+        cni_master_interface=cni_master_interface,
+        image_pull_policy=image_pull_policy,
     )
 
-    # Compile to the 'output' directory
-    output_dir = os.path.join(os.path.dirname(__file__), 'output_nano_internet')
+    output_dir = os.environ.get("SEED_OUTPUT_DIR")
+    if not output_dir:
+        output_dir = os.path.join(os.path.dirname(__file__), 'output_nano_internet')
+    elif not os.path.isabs(output_dir):
+        output_dir = os.path.join(os.path.dirname(__file__), output_dir)
     emu.compile(k8s, output_dir, override=True)
 
     print(f"Compilation complete. Output generated in {output_dir}")
+    print(f"Registry prefix: {registry_prefix}")
+    print(f"Namespace: {namespace}")
 
 if __name__ == '__main__':
     run()

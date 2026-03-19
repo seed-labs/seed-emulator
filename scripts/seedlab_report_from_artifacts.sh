@@ -3,6 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/env_seedemu.sh"
+source "${SCRIPT_DIR}/seed_k8s_cluster_inventory.sh"
+seed_load_cluster_inventory
 
 VALIDATION_DIR_INPUT="${1:-}"
 OBSERVE_DIR_INPUT="${2:-}"
@@ -107,6 +109,19 @@ report_dir.mkdir(parents=True, exist_ok=True)
 
 summary = json.loads((validation_dir / "summary.json").read_text(encoding="utf-8"))
 profile_id = str(summary.get("profile", "") or summary.get("profile_id", "") or "")
+profile_file = Path(${REPO_ROOT@Q}) / "configs" / "seed_k8s_profiles.yaml"
+
+def load_profile_metadata(path: Path, current_profile_id: str) -> dict:
+    if not current_profile_id or not path.exists():
+        return {}
+    try:
+        import yaml  # type: ignore
+    except Exception:
+        return {}
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    profiles = loaded.get("profiles", {}) if isinstance(loaded, dict) else {}
+    profile = profiles.get(current_profile_id, {}) if isinstance(profiles, dict) else {}
+    return profile if isinstance(profile, dict) else {}
 
 def detect_host_os() -> str:
     os_release = Path("/etc/os-release")
@@ -165,6 +180,27 @@ def load_json_if_exists(path: Path):
             return {"parse_error": str(path)}
     return None
 
+
+runner_summary = load_json_if_exists(validation_dir.parent / "runner_summary.json")
+if not isinstance(runner_summary, dict):
+    runner_summary = {}
+profile_metadata = load_profile_metadata(profile_file, profile_id)
+
+timing = load_json_if_exists(validation_dir / "timing.json")
+if not isinstance(timing, dict):
+    timing = {}
+
+build_duration_seconds = int(timing.get("build_duration_seconds", summary.get("build_duration_seconds", 0)) or 0)
+up_duration_seconds = int(timing.get("up_duration_seconds", summary.get("up_duration_seconds", 0)) or 0)
+phase_start_duration_seconds = int(timing.get("phase_start_duration_seconds", summary.get("phase_start_duration_seconds", 0)) or 0)
+validation_duration_seconds = int(summary.get("validation_duration_seconds", summary.get("duration_seconds", 0)) or 0)
+pipeline_duration_seconds = max(
+    int(summary.get("pipeline_duration_seconds", 0) or 0),
+    int(runner_summary.get("duration_seconds", 0) or 0),
+    build_duration_seconds + up_duration_seconds + phase_start_duration_seconds + validation_duration_seconds,
+    validation_duration_seconds,
+)
+
 placement = load_json_if_exists(validation_dir / "placement_check.json")
 recovery = load_json_if_exists(validation_dir / "recovery_check.json")
 diagnostics = load_json_if_exists(validation_dir / "diagnostics.json")
@@ -210,6 +246,10 @@ if profile_id in {"real_topology_rr", "real_topology_rr_scale"}:
         "deploy_wait_timeout_or_failure": "scripts/validate_k3s_real_topology_multinode.sh deploy",
         "placement_check_failed": "scripts/validate_k3s_real_topology_multinode.sh verify",
         "bgp_not_established": "scripts/validate_k3s_real_topology_multinode.sh verify",
+        "ospf_incomplete": "scripts/validate_k3s_real_topology_multinode.sh verify",
+        "artifact_contract_failed": "scripts/validate_k3s_real_topology_multinode.sh verify",
+        "connectivity_check_failed": "scripts/validate_k3s_real_topology_multinode.sh verify",
+        "recovery_check_failed": "scripts/validate_k3s_real_topology_multinode.sh verify",
         "strict3_not_supported": "export SEED_PLACEMENT_MODE=auto && scripts/validate_k3s_real_topology_multinode.sh verify",
     }
 else:
@@ -222,6 +262,8 @@ else:
         "strict3_placement_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
         "placement_check_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
         "bgp_not_established": "scripts/validate_k3s_mini_internet_multinode.sh verify",
+        "ospf_incomplete": "scripts/validate_k3s_mini_internet_multinode.sh verify",
+        "artifact_contract_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
         "connectivity_check_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
         "recovery_check_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
     }
@@ -245,6 +287,8 @@ if not fallback_command:
     fallback_command = minimal_retry_command
 if not first_evidence_file:
     first_evidence_file = str((validation_dir / "summary.json").resolve())
+runner_status = str(summary.get("runner_status", "") or runner_summary.get("status", "") or ("PASS" if overall_pass else "FAIL"))
+capacity_gate_status = str(summary.get("capacity_gate_status", "") or ("gated" if failure_code == "CAPACITY_GATED" else "open"))
 
 evidence_files = {}
 def add_evidence(key: str, path: Path):
@@ -271,6 +315,14 @@ else:
     add_evidence("ping_150_to_151", validation_dir / "ping_150_to_151.txt")
     add_evidence("recovery_check", validation_dir / "recovery_check.json")
 
+add_evidence("protocol_health", validation_dir / "protocol_health.json")
+add_evidence("connectivity_matrix", validation_dir / "connectivity_matrix.tsv")
+add_evidence("convergence_timeline", validation_dir / "convergence_timeline.json")
+add_evidence("failure_injection_summary", validation_dir / "failure_injection_summary.json")
+add_evidence("resource_summary", validation_dir / "resource_summary.json")
+add_evidence("relationship_graph", validation_dir / "relationship_graph.json")
+add_evidence("network_attachment_matrix", validation_dir / "network_attachment_matrix.tsv")
+
 if observe_dir:
     add_evidence("observe_summary", observe_dir / "summary.json")
 
@@ -281,6 +333,13 @@ registry = str(summary.get("registry", "") or "")
 registry_host = str(summary.get("registry_host", "") or "")
 registry_port = str(summary.get("registry_port", "") or "")
 profile_kind = str(summary.get("profile_kind", "baseline") or "baseline")
+support_tier = str(summary.get("support_tier", "") or profile_metadata.get("support_tier", "") or "unknown")
+acceptance_level = str(summary.get("acceptance_level", "") or profile_metadata.get("acceptance_level", "") or "unknown")
+capacity_gate = str(summary.get("capacity_gate", "") or profile_metadata.get("capacity_gate", "") or "none")
+inventory_name = os.environ.get("SEED_CLUSTER_INVENTORY_NAME", "")
+inventory_path = os.environ.get("SEED_CLUSTER_INVENTORY_PATH", "")
+inventory_loaded = os.environ.get("SEED_CLUSTER_INVENTORY_LOADED", "false") == "true"
+cluster_inventory = load_json_if_exists(validation_dir / "nodes.json")
 image_distribution_mode = str(summary.get("image_distribution_mode", "") or "")
 if not image_distribution_mode:
     image_distribution_mode = "preload" if profile_id in {"real_topology_rr", "real_topology_rr_scale"} else "registry"
@@ -305,21 +364,30 @@ else:
 report = {
     "generated_at": datetime.now(timezone.utc).isoformat(),
     "profile_id": profile_id,
+    "runner_status": runner_status,
     "validation_dir": str(validation_dir),
     "observe_dir": str(observe_dir) if observe_dir else "",
     "report_dir": str(report_dir),
     "cluster": summary.get("cluster", ""),
     "namespace": summary.get("namespace", ""),
     "profile_kind": profile_kind,
+    "support_tier": support_tier,
+    "acceptance_level": acceptance_level,
+    "capacity_gate": capacity_gate,
+    "capacity_gate_status": capacity_gate_status,
     "cni_type": summary.get("cni_type", ""),
     "cni_master_interface": summary.get("cni_master_interface", ""),
     "registry": registry,
     "registry_host": registry_host,
     "registry_port": registry_port,
+    "cluster_inventory_name": inventory_name,
+    "cluster_inventory_path": inventory_path,
+    "cluster_inventory_loaded": inventory_loaded,
     "image_distribution_mode": image_distribution_mode,
     "host_os": host_os,
     "node_os_matrix": node_os_matrix,
     "container_base_image": container_base_image,
+    "cluster_inventory_snapshot": cluster_inventory,
     "image_flow": image_flow,
     "placement_mode": placement_mode,
     "nodes_used": summary.get("nodes_used", 0),
@@ -332,7 +400,12 @@ report = {
     "failure_reason": failure_reason,
     "failure_code": failure_code,
     "fallback_used": summary.get("fallback_used", ""),
-    "duration_seconds": summary.get("duration_seconds", 0),
+    "build_duration_seconds": build_duration_seconds,
+    "up_duration_seconds": up_duration_seconds,
+    "phase_start_duration_seconds": phase_start_duration_seconds,
+    "validation_duration_seconds": validation_duration_seconds,
+    "pipeline_duration_seconds": pipeline_duration_seconds,
+    "duration_seconds": pipeline_duration_seconds,
     "minimal_retry_command": minimal_retry_command,
     "fallback_command": fallback_command,
     "first_evidence_file": first_evidence_file,
@@ -356,14 +429,24 @@ md_lines = [
     f"- Observe dir: '{report['observe_dir']}'" if report["observe_dir"] else "- Observe dir: '(not provided)'",
     f"- Cluster: '{report['cluster']}'",
     f"- Namespace: '{report['namespace']}'",
+    f"- Profile ID: '{report['profile_id']}'",
     f"- Profile kind: '{report['profile_kind']}'",
+    f"- Support tier: '{report['support_tier']}'",
+    f"- Acceptance level: '{report['acceptance_level']}'",
+    f"- Capacity gate: '{report['capacity_gate']}' ({report['capacity_gate_status']})",
     f"- CNI: '{report['cni_type']}' (iface: '{report['cni_master_interface']}')",
     f"- Registry: '{report['registry']}'",
+    f"- Cluster inventory: '{report['cluster_inventory_name'] or 'not-set'}' ({report['cluster_inventory_path'] or 'n/a'})",
     f"- Image distribution: '{report['image_distribution_mode']}'",
     f"- Host OS: '{report['host_os']}'",
     f"- Container base image: '{report['container_base_image']}'",
     f"- Placement mode: '{report['placement_mode']}'",
     f"- Nodes used: '{report['nodes_used']}'",
+    f"- Build duration: '{report['build_duration_seconds']}s'",
+    f"- Up duration: '{report['up_duration_seconds']}s'",
+    f"- Phase-start duration: '{report['phase_start_duration_seconds']}s'",
+    f"- Verify duration: '{report['validation_duration_seconds']}s'",
+    f"- Pipeline duration: '{report['pipeline_duration_seconds']}s'",
     "",
     "## Environment",
     "",
@@ -372,6 +455,7 @@ md_lines = [
     "",
     "## Verdict",
     "",
+    f"- runner_status: '{report['runner_status']}'",
     f"- placement_passed: '{report['placement_passed']}'",
     f"- strict3_passed: '{report['strict3_passed']}'",
     f"- bgp_passed: '{report['bgp_passed']}'",

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
+seed_shortcuts_source_env
+
+usage() {
+  cat <<'USAGE'
+Usage: k3sreport [profile]
+Maps to: scripts/seed_k8s_profile_runner.sh <profile> report
+USAGE
+}
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  usage
+  exit 0
+fi
+
+profile="$(seed_shortcuts_profile "${1:-}")"
+repo_root="$(seed_shortcuts_repo_root)"
+cmd=( "${repo_root}/scripts/seed_k8s_profile_runner.sh" "${profile}" report )
+seed_shortcuts_print_map "k3sreport" "${cmd[@]}"
+exec "${cmd[@]}"
+

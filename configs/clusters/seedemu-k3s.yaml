@@ -1,0 +1,31 @@
+cluster_name: seedemu-k3s
+reference_cluster: true
+runtime: k3s
+ssh:
+  user: ubuntu
+  key_path_env: SEED_K3S_SSH_KEY
+  default_key_path: ~/.ssh/id_ed25519
+registry:
+  host: 192.168.122.110
+  port: 5000
+cni:
+  default_master_interface: ens2
+nodes:
+  - name: seed-k3s-master
+    role: master
+    management_ip: 192.168.122.110
+    runtime: k3s
+    labels:
+      kubernetes.io/hostname: seed-k3s-master
+  - name: seed-k3s-worker1
+    role: worker
+    management_ip: 192.168.122.111
+    runtime: k3s
+    labels:
+      kubernetes.io/hostname: seed-k3s-worker1
+  - name: seed-k3s-worker2
+    role: worker
+    management_ip: 192.168.122.112
+    runtime: k3s
+    labels:
+      kubernetes.io/hostname: seed-k3s-worker2

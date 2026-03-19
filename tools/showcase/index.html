@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SEED K3s Academic Showcase</title>
+  <style>
+    :root {
+      --bg: #081120;
+      --panel: #101b2f;
+      --panel-2: #12223c;
+      --text: #e7eefc;
+      --muted: #9eb0d1;
+      --good: #2dd4bf;
+      --warn: #f59e0b;
+      --bad: #fb7185;
+      --line: #203252;
+      --accent: #60a5fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #07101d 0%, #0b1424 100%);
+      color: var(--text);
+    }
+    header {
+      padding: 24px 28px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(8, 17, 32, 0.94);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .sub { color: var(--muted); font-size: 14px; }
+    .toolbar {
+      margin-top: 14px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    button, select, input {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    main {
+      padding: 24px 28px 40px;
+      display: grid;
+      gap: 18px;
+    }
+    .grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+    .panel {
+      background: rgba(16, 27, 47, 0.95);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+    .cards {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(18, 34, 60, 0.82);
+    }
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .value {
+      font-size: 28px;
+      margin-top: 6px;
+      font-weight: 700;
+    }
+    .value.small { font-size: 18px; }
+    .good { color: var(--good); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(32, 50, 82, 0.8);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .mono, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #09111f;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      max-height: 420px;
+      overflow: auto;
+    }
+    .bars { display: grid; gap: 10px; }
+    .bar-row { display: grid; gap: 6px; }
+    .bar-track {
+      height: 10px;
+      border-radius: 999px;
+      background: #0a1426;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #60a5fa, #2dd4bf);
+    }
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      margin: 0 6px 6px 0;
+    }
+    .tag-button {
+      cursor: pointer;
+      background: rgba(18, 34, 60, 0.82);
+    }
+    .split {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 1100px) {
+      .split { grid-template-columns: 1fr; }
+    }
+    .foot {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SEED K3s 学术展示面板</h1>
+    <div class="sub" id="subtitle">正在加载运行上下文…</div>
+    <div class="toolbar">
+      <button id="refresh-btn">立即刷新</button>
+      <label><input type="checkbox" id="auto-refresh" checked> 自动刷新</label>
+      <span class="tag" id="last-refresh">last refresh: --</span>
+      <span class="tag" id="current-profile">profile: --</span>
+      <span class="tag" id="current-run">run: --</span>
+      <span class="tag" id="current-namespace">namespace: --</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>运行概览</h2>
+      <div class="cards" id="overview-cards"></div>
+      <div class="bars" id="timeline-bars"></div>
+    </section>
+
+    <section class="split">
+      <div class="panel">
+        <h2>节点资源</h2>
+        <div id="node-bars" class="bars"></div>
+        <table id="nodes-table"></table>
+      </div>
+      <div class="panel">
+        <h2>RR / 服务 / 事件</h2>
+        <div id="rr-summary"></div>
+        <div id="services-list"></div>
+        <pre id="events-box">加载中…</pre>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Pod 分布与资源</h2>
+      <div class="foot">展示当前 namespace 的 live pods、角色、ASN、节点分布与 `kubectl top` 指标。</div>
+      <table id="pods-table"></table>
+    </section>
+
+    <section class="split">
+      <div class="panel">
+        <h2>实时探针</h2>
+        <div class="toolbar">
+          <select id="pod-select"></select>
+          <input id="sniff-filter" type="text" value="tcp port 179 or proto ospf or icmp" style="min-width: 320px;">
+          <button id="probe-protocols">看协议</button>
+          <button id="probe-routes">看路由</button>
+          <button id="probe-sniff">抓包样本</button>
+        </div>
+        <pre id="probe-output">请选择一个 Pod，然后查看协议 / 路由 / 抓包样本。</pre>
+      </div>
+      <div class="panel">
+        <h2>系统快照</h2>
+        <pre id="system-output">加载中…</pre>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>证据索引</h2>
+      <div class="foot">这些就是现在展示面板背后的固定证据文件，可以直接拿去写报告、做答辩、喂给 opencode。</div>
+      <div class="split">
+        <div>
+          <div id="evidence-list"></div>
+        </div>
+        <div>
+          <div class="foot">点击左边任意证据文件，右边直接预览内容。</div>
+          <pre id="evidence-preview">点击一份证据文件即可预览内容。</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const state = { selectedPod: "", autoTimer: null };
+
+    async function api(path) {
+      const res = await fetch(path);
+      return res.json();
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function statusClass(flag) {
+      if (flag === true) return "good";
+      if (flag === false) return "bad";
+      return "warn";
+    }
+
+    function bar(value) {
+      const number = Number.parseFloat(String(value).replace("%", "")) || 0;
+      return `<div class="bar-track"><div class="bar-fill" style="width:${Math.min(number, 100)}%"></div></div>`;
+    }
+
+    function renderOverview(data) {
+      const result = data.result || {};
+      const summary = result.summary || {};
+      const bgp = result.bgp_summary || {};
+      const live = result.live || {};
+      const cards = [
+        ["Profile", result.profile || "--", ""],
+        ["Run", result.run_id || "--", "small"],
+        ["Pipeline", `${(summary.pipeline_duration_seconds ?? summary.duration_seconds ?? 0)}s`, ""],
+        ["Nodes Used", summary.nodes_used ?? live.nodes_ready ?? "--", ""],
+        ["Pods Running", `${live.pods_running ?? "--"} / ${live.pods_total ?? "--"}`, "small"],
+        ["iBGP", `${bgp.ibgp_established ?? 0} / ${bgp.ibgp_total ?? 0}`, bgp.passed === false ? "bad" : "good"],
+        ["eBGP", `${bgp.ebgp_established ?? 0} / ${bgp.ebgp_total ?? 0}`, bgp.passed === false ? "bad" : "good"],
+        ["Placement", String(summary.placement_passed), statusClass(summary.placement_passed)],
+        ["BGP", String(summary.bgp_passed), statusClass(summary.bgp_passed)],
+        ["Connectivity", String(summary.connectivity_passed), statusClass(summary.connectivity_passed)],
+        ["Recovery", String(summary.recovery_passed), statusClass(summary.recovery_passed)]
+      ];
+      document.getElementById("overview-cards").innerHTML = cards.map(([label, value, klass]) => `
+        <div class="card">
+          <div class="label">${escapeHtml(label)}</div>
+          <div class="value ${klass || ""} ${klass === "small" ? "small" : ""}">${escapeHtml(value)}</div>
+        </div>
+      `).join("");
+
+      const timeline = result.timeline || {};
+      const bars = [
+        ["total", timeline.total || 0],
+        ["build", timeline.build || 0],
+        ["up", timeline.up || 0],
+        ["phase-start", timeline.phase_start || 0],
+        ["verify", timeline.verify || 0]
+      ];
+      const maxValue = Math.max(...bars.map(([, value]) => value), 1);
+      document.getElementById("timeline-bars").innerHTML = bars.map(([label, value]) => `
+        <div class="bar-row">
+          <div class="label">${escapeHtml(label)} · ${escapeHtml(value)}s</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(value / maxValue) * 100}%"></div></div>
+        </div>
+      `).join("");
+
+      document.getElementById("subtitle").textContent =
+        `当前面板把“固定证据 + 实时 kubectl 观测 + 单 Pod 探针”收在一起，用于运行展示、答辩和复盘。`;
+      document.getElementById("current-profile").textContent = `profile: ${result.profile || "--"}`;
+      document.getElementById("current-run").textContent = `run: ${result.run_id || "--"}`;
+      document.getElementById("current-namespace").textContent = `namespace: ${result.namespace || "--"}`;
+    }
+
+    function renderNodes(data) {
+      const items = (data.result && data.result.items) || [];
+      document.getElementById("node-bars").innerHTML = items.map(item => `
+        <div class="bar-row">
+          <div class="label">${escapeHtml(item.name)} · CPU ${escapeHtml(item.cpu_used || "--")} (${escapeHtml(item.cpu_percent || "--")}) · MEM ${escapeHtml(item.memory_used || "--")} (${escapeHtml(item.memory_percent || "--")})</div>
+          ${bar(item.memory_percent || "0")}
+        </div>
+      `).join("");
+      document.getElementById("nodes-table").innerHTML = `
+        <thead>
+          <tr>
+            <th>Node</th><th>Ready</th><th>OS</th><th>Kernel</th><th>CPU</th><th>Memory</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td class="mono">${escapeHtml(item.name)}</td>
+              <td class="${item.ready ? "good" : "bad"}">${escapeHtml(item.ready)}</td>
+              <td>${escapeHtml(item.os_image)}</td>
+              <td class="mono">${escapeHtml(item.kernel_version)}</td>
+              <td class="mono">${escapeHtml(item.cpu_used || "--")} / ${escapeHtml(item.cpu_allocatable || "--")} (${escapeHtml(item.cpu_percent || "--")})</td>
+              <td class="mono">${escapeHtml(item.memory_used || "--")} / ${escapeHtml(item.memory_allocatable || "--")} (${escapeHtml(item.memory_percent || "--")})</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+    }
+
+    function renderPods(data) {
+      const result = data.result || {};
+      const items = result.items || [];
+      const routerCandidates = items.filter(item => ["r", "brd", "rs"].includes(item.role));
+      const selected = state.selectedPod && items.some(item => item.name === state.selectedPod)
+        ? state.selectedPod
+        : (routerCandidates[0]?.name || items[0]?.name || "");
+      state.selectedPod = selected;
+
+      const select = document.getElementById("pod-select");
+      select.innerHTML = items.map(item => `
+        <option value="${escapeHtml(item.name)}" ${item.name === selected ? "selected" : ""}>
+          ${escapeHtml(item.name)} · as${escapeHtml(item.asn)} · ${escapeHtml(item.node)}
+        </option>
+      `).join("");
+
+      document.getElementById("pods-table").innerHTML = `
+        <thead>
+          <tr>
+            <th>Pod</th><th>ASN</th><th>Role</th><th>Node</th><th>Status</th><th>CPU</th><th>Memory</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.slice(0, 160).map(item => `
+            <tr>
+              <td class="mono">${escapeHtml(item.name)}</td>
+              <td>${escapeHtml(item.asn)}</td>
+              <td>${escapeHtml(item.role)}</td>
+              <td class="mono">${escapeHtml(item.node)}</td>
+              <td>${escapeHtml(item.phase)} · ${escapeHtml(item.ready)}</td>
+              <td class="mono">${escapeHtml(item.cpu_used || "--")}</td>
+              <td class="mono">${escapeHtml(item.memory_used || "--")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+    }
+
+    function renderRRPlan(overview) {
+      const rr = (overview.result && overview.result.rr_plan_summary) || {};
+      const totals = rr.totals || {};
+      const byAs = rr.by_as || [];
+      document.getElementById("rr-summary").innerHTML = `
+        <div class="cards">
+          <div class="card"><div class="label">AS with RR Plan</div><div class="value">${escapeHtml(totals.ases ?? "--")}</div></div>
+          <div class="card"><div class="label">RRs</div><div class="value">${escapeHtml(totals.rrs ?? "--")}</div></div>
+          <div class="card"><div class="label">Clients</div><div class="value">${escapeHtml(totals.clients ?? "--")}</div></div>
+          <div class="card"><div class="label">Internal Links</div><div class="value">${escapeHtml(totals.internal_links ?? "--")}</div></div>
+        </div>
+        <table>
+          <thead><tr><th>ASN</th><th>RRs</th><th>Clients</th><th>Clusters</th></tr></thead>
+          <tbody>
+            ${byAs.map(item => `
+              <tr>
+                <td>${escapeHtml(item.asn)}</td>
+                <td>${escapeHtml(item.rrs)}</td>
+                <td>${escapeHtml(item.clients)}</td>
+                <td>${escapeHtml(item.clusters)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderServices(data) {
+      const services = (data.result && data.result.items) || [];
+      const important = services.filter(item => item.name.includes("map") || item.name.includes("service") || item.type === "NodePort");
+      document.getElementById("services-list").innerHTML = `
+        <div class="foot">如果这里出现 map / NodePort 服务，就可以把 Internet Map 一起并到展示里。</div>
+        ${important.map(item => `<span class="tag">${escapeHtml(item.name)} · ${escapeHtml(item.type)} · ${escapeHtml((item.ports || []).map(p => `${p.port}/${p.protocol}`).join(", "))}</span>`).join("") || '<span class="tag">当前没有额外可视化 Service</span>'}
+      `;
+    }
+
+    function renderEvents(data) {
+      document.getElementById("events-box").textContent = (data.result && data.result.tail) || "No recent events.";
+    }
+
+    function renderSystem(data) {
+      const result = data.result || {};
+      document.getElementById("system-output").textContent =
+`Host OS
+${result.host_os || "--"}
+
+Uptime
+${result.uptime || "--"}
+
+Memory
+${result.memory || "--"}
+
+Top
+${result.top || "--"}`;
+    }
+
+    function renderEvidence(data) {
+      const files = (data.result && data.result.files) || [];
+      document.getElementById("evidence-list").innerHTML = files.slice(0, 120).map(item => `
+        <button class="tag tag-button" data-evidence-path="${escapeHtml(item.path)}">${escapeHtml(item.section)} · <span class="mono">${escapeHtml(item.path)}</span></button>
+      `).join("");
+      document.querySelectorAll("[data-evidence-path]").forEach(element => {
+        element.addEventListener("click", () => loadEvidence(element.getAttribute("data-evidence-path")));
+      });
+      const preferred = files.find(item => item.path.endsWith("validation/summary.json"))
+        || files.find(item => item.path.endsWith("validation/bgp_health_summary.json"))
+        || files.find(item => item.path.endsWith("report/report.json"))
+        || files[0];
+      if (preferred && document.getElementById("evidence-preview").textContent.includes("点击一份证据文件")) {
+        loadEvidence(preferred.path);
+      }
+    }
+
+    async function loadEvidence(path) {
+      if (!path) return;
+      const data = await api(`/api/evidence/content?path=${encodeURIComponent(path)}`);
+      const result = data.result || {};
+      const suffix = result.truncated ? "\n\n[内容已截断，仅展示前 50KB]" : "";
+      document.getElementById("evidence-preview").textContent = (result.content || "无法读取证据文件。") + suffix;
+    }
+
+    async function loadProbe(mode) {
+      const pod = document.getElementById("pod-select").value;
+      if (!pod) return;
+      state.selectedPod = pod;
+      const expr = document.getElementById("sniff-filter").value;
+      let path = `/api/pods/${encodeURIComponent(pod)}/${mode}`;
+      if (mode === "sniff") {
+        path += `?expr=${encodeURIComponent(expr)}&count=20`;
+      }
+      const data = await api(path);
+      const result = data.result || {};
+      document.getElementById("probe-output").textContent = result.output || JSON.stringify(result, null, 2);
+    }
+
+    async function refreshAll() {
+      const [overview, nodes, pods, services, events, system, evidence] = await Promise.all([
+        api("/api/overview"),
+        api("/api/nodes"),
+        api("/api/pods"),
+        api("/api/services"),
+        api("/api/events"),
+        api("/api/system"),
+        api("/api/evidence")
+      ]);
+      renderOverview(overview);
+      renderNodes(nodes);
+      renderPods(pods);
+      renderRRPlan(overview);
+      renderServices(services);
+      renderEvents(events);
+      renderSystem(system);
+      renderEvidence(evidence);
+      document.getElementById("last-refresh").textContent = `last refresh: ${new Date().toLocaleTimeString()}`;
+    }
+
+    function boot() {
+      document.getElementById("refresh-btn").addEventListener("click", refreshAll);
+      document.getElementById("probe-protocols").addEventListener("click", () => loadProbe("protocols"));
+      document.getElementById("probe-routes").addEventListener("click", () => loadProbe("routes"));
+      document.getElementById("probe-sniff").addEventListener("click", () => loadProbe("sniff"));
+      document.getElementById("pod-select").addEventListener("change", event => {
+        state.selectedPod = event.target.value;
+      });
+      refreshAll();
+      state.autoTimer = setInterval(() => {
+        if (document.getElementById("auto-refresh").checked) refreshAll();
+      }, 5000);
+    }
+
+    boot();
+  </script>
+</body>
+</html>

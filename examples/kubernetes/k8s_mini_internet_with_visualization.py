@@ -14,6 +14,18 @@ It is intended to be "generic and reproducible":
 
 import os
 import json
+import sys
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+cleaned_sys_path = []
+for entry in sys.path:
+    normalized = os.path.abspath(entry or os.getcwd())
+    if normalized == REPO_ROOT:
+        continue
+    if os.path.isfile(os.path.join(normalized, "seedemu", "__init__.py")):
+        continue
+    cleaned_sys_path.append(entry)
+sys.path[:] = [REPO_ROOT, *cleaned_sys_path]
 
 from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship
 from seedemu.services import WebService
@@ -59,7 +71,7 @@ def run():
     # images when the cluster caches tags. Default to Always for correctness.
     image_pull_policy = os.environ.get("SEED_IMAGE_PULL_POLICY", "Always").strip()
     output_dir = _get_output_dir("output_mini_internet_with_viz")
-    scheduling_strategy = os.environ.get("SEED_SCHEDULING_STRATEGY", SchedulingStrategy.AUTO).strip().lower()
+    scheduling_strategy = os.environ.get("SEED_SCHEDULING_STRATEGY", SchedulingStrategy.BY_AS_HARD).strip().lower()
     node_labels = _parse_node_labels_json(os.environ.get("SEED_NODE_LABELS_JSON", ""))
     force_colocate = os.environ.get("SEED_FORCE_COLOCATE", "false").strip().lower() in {"1", "true", "yes"}
 

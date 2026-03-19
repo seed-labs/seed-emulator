@@ -1,10 +1,13 @@
 profiles:
   mini_internet:
     profile_id: mini_internet
+    support_tier: tier1
+    acceptance_level: runtime_strict
+    capacity_gate: none
     compile_script: examples/kubernetes/k8s_mini_internet.py
     default_namespace: seedemu-k3s-mini-mn
     default_cni_type: macvlan
-    default_scheduling_strategy: auto
+    default_scheduling_strategy: by_as_hard
     verify_mode: mini_strict3
     verify_targets:
       required_labels:
@@ -14,47 +17,109 @@ profiles:
       connectivity_probe:
         source_label: "seedemu.io/name=host_0,seedemu.io/asn=150"
         target_ip: "10.151.0.71"
+    validation_required_files:
+      - summary.json
+      - placement_by_as.tsv
+      - protocol_health.json
+      - connectivity_matrix.tsv
+      - convergence_timeline.json
+      - failure_injection_summary.json
+      - resource_summary.json
+      - relationship_graph.json
+      - network_attachment_matrix.tsv
     observe_required_files:
       - summary.json
       - placement.tsv
+      - placement_by_as.tsv
+      - bird_before_phase.txt
+      - bird_after_phase.txt
       - bird_r151.txt
       - bird_rs100.txt
+      - bgp_health_summary.json
+      - bgp_health_by_pod.tsv
+      - nodes_top.txt
+      - pods_top.txt
       - ping_150_to_151.txt
 
   real_topology_rr:
     profile_id: real_topology_rr
+    support_tier: tier1
+    acceptance_level: runtime_strict
+    capacity_gate: none
     compile_script: examples/kubernetes/k8s_real_topology_rr.py
     default_namespace: seedemu-k3s-real-topo
     default_cni_type: macvlan
-    default_scheduling_strategy: auto
+    default_scheduling_strategy: by_as_hard
     verify_mode: generic_ready
     verify_targets:
       min_deployments_available: 1
       min_pods_running: 1
+    validation_required_files:
+      - summary.json
+      - placement_by_as.tsv
+      - protocol_health.json
+      - connectivity_matrix.tsv
+      - convergence_timeline.json
+      - failure_injection_summary.json
+      - resource_summary.json
+      - relationship_graph.json
+      - network_attachment_matrix.tsv
     observe_required_files:
       - summary.json
       - placement.tsv
+      - placement_by_as.tsv
+      - bird_before_phase.txt
+      - bird_after_phase.txt
       - pods_wide.txt
       - bird_sample.txt
+      - bgp_health_summary.json
+      - bgp_health_by_pod.tsv
+      - nodes_top.txt
+      - pods_top.txt
+      - rr_plan.json
 
   real_topology_rr_scale:
     profile_id: real_topology_rr_scale
+    support_tier: tier1
+    acceptance_level: runtime_strict
+    capacity_gate: large_hardware_required
     compile_script: examples/kubernetes/k8s_real_topology_rr.py
     default_namespace: seedemu-k3s-real-topo-scale
     default_cni_type: macvlan
-    default_scheduling_strategy: auto
+    default_scheduling_strategy: by_as_hard
     verify_mode: generic_ready
     verify_targets:
       min_deployments_available: 1
       min_pods_running: 1
+    validation_required_files:
+      - summary.json
+      - placement_by_as.tsv
+      - protocol_health.json
+      - connectivity_matrix.tsv
+      - convergence_timeline.json
+      - failure_injection_summary.json
+      - resource_summary.json
+      - relationship_graph.json
+      - network_attachment_matrix.tsv
     observe_required_files:
       - summary.json
       - placement.tsv
+      - placement_by_as.tsv
+      - bird_before_phase.txt
+      - bird_after_phase.txt
       - pods_wide.txt
       - bird_sample.txt
+      - bgp_health_summary.json
+      - bgp_health_by_pod.tsv
+      - nodes_top.txt
+      - pods_top.txt
+      - rr_plan.json
 
   transit_as:
     profile_id: transit_as
+    support_tier: tier2
+    acceptance_level: runtime_capability_gated
+    capacity_gate: none
     compile_script: examples/kubernetes/k8s_transit_as.py
     default_namespace: seedemu-k8s-transit
     default_cni_type: macvlan
@@ -63,12 +128,29 @@ profiles:
     verify_targets:
       min_deployments_available: 1
       min_pods_running: 1
+    validation_required_files:
+      - summary.json
+      - placement_by_as.tsv
+      - protocol_health.json
+      - connectivity_matrix.tsv
+      - convergence_timeline.json
+      - failure_injection_summary.json
+      - resource_summary.json
+      - relationship_graph.json
+      - network_attachment_matrix.tsv
     observe_required_files:
       - summary.json
       - placement.tsv
+      - placement_by_as.tsv
+      - pods_wide.txt
+      - nodes_top.txt
+      - pods_top.txt
 
   mini_internet_viz:
     profile_id: mini_internet_viz
+    support_tier: tier2
+    acceptance_level: runtime_capability_gated
+    capacity_gate: none
     compile_script: examples/kubernetes/k8s_mini_internet_with_visualization.py
     default_namespace: seedemu-k8s-mini-viz
     default_cni_type: macvlan
@@ -80,12 +162,29 @@ profiles:
       expected_service_keywords:
         - map
         - api
+    validation_required_files:
+      - summary.json
+      - placement_by_as.tsv
+      - protocol_health.json
+      - connectivity_matrix.tsv
+      - convergence_timeline.json
+      - failure_injection_summary.json
+      - resource_summary.json
+      - relationship_graph.json
+      - network_attachment_matrix.tsv
     observe_required_files:
       - summary.json
       - placement.tsv
+      - placement_by_as.tsv
+      - pods_wide.txt
+      - nodes_top.txt
+      - pods_top.txt
 
   hybrid_kubevirt:
     profile_id: hybrid_kubevirt
+    support_tier: tier2
+    acceptance_level: runtime_capability_gated
+    capacity_gate: reference_cluster_only
     compile_script: examples/kubernetes/k8s_hybrid_kubevirt_demo.py
     default_namespace: seedemu-hybrid-repro
     default_cni_type: bridge
@@ -94,7 +193,18 @@ profiles:
     verify_targets:
       min_vm_or_vmi: 1
       min_pods_running: 1
+    validation_required_files:
+      - summary.json
+      - placement_by_as.tsv
+      - protocol_health.json
+      - connectivity_matrix.tsv
+      - convergence_timeline.json
+      - failure_injection_summary.json
+      - resource_summary.json
+      - relationship_graph.json
+      - network_attachment_matrix.tsv
     observe_required_files:
       - summary.json
       - vm_vmi.txt
       - pods_wide.txt
+      - placement_by_as.tsv
