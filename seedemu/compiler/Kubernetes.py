@@ -18,7 +18,8 @@ class SchedulingStrategy:
     """Scheduling strategy constants for Kubernetes node placement."""
     NONE = "none"           # No scheduling constraints
     AUTO = "auto"           # Automatic soft grouping + soft spreading
-    BY_AS = "by_as"         # Schedule pods by AS number
+    BY_AS = "by_as"         # Schedule pods by AS number (soft affinity)
+    BY_AS_HARD = "by_as_hard"  # Same ASN must land on one explicit Kubernetes node
     BY_ROLE = "by_role"     # Schedule pods by node role (router, host, etc.)
     CUSTOM = "custom"       # Use custom labels provided by user
 
@@ -46,6 +47,7 @@ class KubernetesCompiler(Docker):
     __node_labels: Dict[str, Dict[str, str]]
     __default_resources: Dict[str, Dict[str, str]]
     __cni_type: str
+    __local_link_cni_type: Optional[str]
     __cni_master_interface: str
     __generate_services: bool
     __service_type: str
@@ -62,6 +64,7 @@ class KubernetesCompiler(Docker):
         node_labels: Dict[str, Dict[str, str]] = None,
         default_resources: Dict[str, Dict[str, str]] = None,
         cni_type: str = "bridge",
+        local_link_cni_type: Optional[str] = None,
         cni_master_interface: str = "eth0",
         generate_services: bool = False,
         service_type: str = "ClusterIP",
@@ -91,6 +94,10 @@ class KubernetesCompiler(Docker):
             - "macvlan": macvlan for cross-node with L2 access
             - "ipvlan": ipvlan for cross-node networking
             - "host-local": Use host-local IPAM
+        @param local_link_cni_type (optional) Override CNI type for node-local internal links.
+            When left unset, `by_as_hard` + `macvlan/ipvlan` automatically falls back to
+            `bridge` for `Local` / `CrossConnect` networks so same-AS internal links stay
+            isolated on the selected Kubernetes node.
         @param cni_master_interface (optional) Master interface for macvlan/ipvlan. Default "eth0".
         @param generate_services (optional) Generate K8s Service resources for nodes. Default False.
         @param service_type (optional) Service type when generate_services is True. 
@@ -114,6 +121,7 @@ class KubernetesCompiler(Docker):
             SchedulingStrategy.NONE,
             SchedulingStrategy.AUTO,
             SchedulingStrategy.BY_AS,
+            SchedulingStrategy.BY_AS_HARD,
             SchedulingStrategy.BY_ROLE,
             SchedulingStrategy.CUSTOM,
         }
@@ -121,6 +129,7 @@ class KubernetesCompiler(Docker):
         self.__node_labels = node_labels or {}
         self.__default_resources = default_resources or {}
         self.__cni_type = cni_type
+        self.__local_link_cni_type = local_link_cni_type.strip().lower() if isinstance(local_link_cni_type, str) and local_link_cni_type.strip() else None
         self.__cni_master_interface = cni_master_interface
         self.__generate_services = generate_services
         self.__service_type = service_type
@@ -128,6 +137,20 @@ class KubernetesCompiler(Docker):
 
     def getName(self) -> str:
         return "Kubernetes"
+
+    def _resolveInternetMapImages(self) -> Tuple[str, str]:
+        """Resolve source and deployment image refs for the optional Internet Map service."""
+        source_image = os.environ.get(
+            "SEED_INTERNET_MAP_SOURCE_IMAGE",
+            "handsonsecurity/seedemu-multiarch-map:buildx-latest",
+        ).strip() or "handsonsecurity/seedemu-multiarch-map:buildx-latest"
+
+        default_target = source_image
+        if self.__registry_prefix:
+            default_target = f"{self.__registry_prefix}/seedemu-internet-map:buildx-latest"
+
+        target_image = os.environ.get("SEED_INTERNET_MAP_IMAGE", default_target).strip() or default_target
+        return source_image, target_image
 
 
     @staticmethod
@@ -409,7 +432,25 @@ class KubernetesCompiler(Docker):
             f.write("    retry_push \"${push_image}\"\n")
             f.write("  fi\n")
             f.write("}\n")
-            f.write("export -f registry_probe wait_for_registry local_push_image_ref docker_push_with_timeout retry_push seedemu_build_and_push\n")
+            f.write("\n")
+            f.write("seedemu_copy_and_push_image() {\n")
+            f.write("  local source_image=\"$1\"\n")
+            f.write("  local target_image=\"$2\"\n")
+            f.write("  ensure_image_present \"${source_image}\"\n")
+            f.write("  docker tag \"${source_image}\" \"${target_image}\"\n")
+            f.write("  if [[ \"${SEED_IMAGE_DISTRIBUTION_MODE}\" == \"preload\" ]]; then\n")
+            f.write("    return 0\n")
+            f.write("  fi\n")
+            f.write("  if [[ -n \"${REGISTRY_PREFIX}\" ]]; then\n")
+            f.write("    local push_image\n")
+            f.write("    push_image=\"$(local_push_image_ref \"${target_image}\")\"\n")
+            f.write("    if [[ \"${push_image}\" != \"${target_image}\" ]]; then\n")
+            f.write("      docker tag \"${target_image}\" \"${push_image}\"\n")
+            f.write("    fi\n")
+            f.write("    retry_push \"${push_image}\"\n")
+            f.write("  fi\n")
+            f.write("}\n")
+            f.write("export -f registry_probe wait_for_registry local_push_image_ref docker_push_with_timeout retry_push seedemu_build_and_push seedemu_copy_and_push_image\n")
             f.write("\n")
             f.write("prepare_dummy_image() {\n")
             f.write("  local base_image=\"$1\"\n")
@@ -434,7 +475,21 @@ class KubernetesCompiler(Docker):
             f.write("  docker build -t \"$dummy_tag\" -f \"$df\" dummies >/dev/null\n")
             f.write("}\n")
             f.write("\n")
+            f.write("load_prefetched_images() {\n")
+            f.write("  if [ ! -d prefetched_images ]; then\n")
+            f.write("    return 0\n")
+            f.write("  fi\n")
+            f.write("  local tarball\n")
+            f.write("  shopt -s nullglob\n")
+            f.write("  for tarball in prefetched_images/*.tar; do\n")
+            f.write("    echo \"[build_images] loading prefetched image: ${tarball}\" >&2\n")
+            f.write("    docker load -i \"${tarball}\" >/dev/null\n")
+            f.write("  done\n")
+            f.write("  shopt -u nullglob\n")
+            f.write("}\n")
+            f.write("\n")
             f.write("ensure_docker_daemon_config\n")
+            f.write("load_prefetched_images\n")
 
             if used_images:
                 f.write('echo "[build_images] preparing base-image dummies"\n')
@@ -465,6 +520,8 @@ class KubernetesCompiler(Docker):
             parts = shlex.split(command)
             if len(parts) >= 2 and parts[0] == 'seedemu_build_and_push':
                 image_refs.append(parts[1])
+            elif len(parts) >= 3 and parts[0] == 'seedemu_copy_and_push_image':
+                image_refs.append(parts[2])
         with open('images.txt', 'w') as f:
             if image_refs:
                 f.write("\n".join(image_refs) + "\n")
@@ -482,9 +539,11 @@ class KubernetesCompiler(Docker):
         """
         name = self._getRealNetName(net).replace('_', '-').lower()
         prefix = str(net.getPrefix())
-        
+
+        cni_type = self._resolveNetworkCniType(net)
+
         # Build CNI config based on cni_type
-        if self.__cni_type == "macvlan":
+        if cni_type == "macvlan":
             config = {
                 "cniVersion": "0.3.1",
                 "type": "macvlan",
@@ -494,7 +553,7 @@ class KubernetesCompiler(Docker):
                     "type": "static"  # We manage IPs inside the container
                 }
             }
-        elif self.__cni_type == "ipvlan":
+        elif cni_type == "ipvlan":
             config = {
                 "cniVersion": "0.3.1",
                 "type": "ipvlan",
@@ -504,7 +563,7 @@ class KubernetesCompiler(Docker):
                     "type": "static"
                 }
             }
-        elif self.__cni_type == "host-local":
+        elif cni_type == "host-local":
             config = {
                 "cniVersion": "0.3.1",
                 "type": "bridge",
@@ -537,6 +596,15 @@ spec:
   config: '{json.dumps(config)}'
 """
         return manifest
+
+    def _resolveNetworkCniType(self, net: Network) -> str:
+        net_type = net.getType()
+        if net_type in {NetworkType.Local, NetworkType.CrossConnect}:
+            if self.__local_link_cni_type:
+                return self.__local_link_cni_type
+            if self.__scheduling_strategy == SchedulingStrategy.BY_AS_HARD and self.__cni_type in {"macvlan", "ipvlan"}:
+                return "bridge"
+        return self.__cni_type
 
     def _compileNodeK8s(self, node: Node) -> str:
         """Compile a node to Kubernetes Deployment manifest or KubeVirt VirtualMachine.
@@ -613,18 +681,27 @@ spec:
         if self.__use_multus:
             nets = []
             net_specs = []
+            needs_json_annotation = False
             for iface in node.getInterfaces():
                 net = iface.getNet()
                 net_name = self._getRealNetName(net).replace('_', '-').lower()
                 nets.append(net_name)
-                if self.__cni_type in {"macvlan", "ipvlan"}:
+                resolved_cni_type = self._resolveNetworkCniType(net)
+                if resolved_cni_type in {"macvlan", "ipvlan"}:
                     prefix_len = net.getPrefix().prefixlen
                     net_specs.append({
                         "name": net_name,
                         "ips": [f"{iface.getAddress()}/{prefix_len}"]
                     })
+                    needs_json_annotation = True
+                else:
+                    net_specs.append({
+                        "name": net_name,
+                    })
+                if resolved_cni_type != self.__cni_type:
+                    needs_json_annotation = True
 
-            if self.__cni_type in {"macvlan", "ipvlan"} and net_specs:
+            if needs_json_annotation and net_specs:
                 # Static IPAM requires IPs in Multus runtime config. Use JSON form annotation
                 # so each secondary interface gets deterministic seed-emulator addresses.
                 annotations["k8s.v1.cni.cncf.io/networks"] = json.dumps(net_specs)
@@ -707,18 +784,22 @@ spec:
         }:
             return {}
 
+        node_key = f"{asn}_{node.getName()}"
+        if node_key in self.__node_labels:
+            return self.__node_labels[node_key]
+        if asn in self.__node_labels:
+            return self.__node_labels[asn]
+
+        if self.__scheduling_strategy == SchedulingStrategy.BY_AS_HARD:
+            raise AssertionError(
+                f"SchedulingStrategy.BY_AS_HARD requires an explicit nodeSelector mapping for ASN {asn}. "
+                f"Pass SEED_NODE_LABELS_JSON with an entry for ASN {asn}, for example: "
+                f'{{"{asn}": {{"kubernetes.io/hostname": "node-name"}}}}'
+            )
+
         if self.__scheduling_strategy == SchedulingStrategy.CUSTOM:
-            # Use custom labels if provided
-            # First check node-specific labels
-            node_key = f"{asn}_{node.getName()}"
-            if node_key in self.__node_labels:
-                return self.__node_labels[node_key]
-            # Then check AS-level labels
-            if asn in self.__node_labels:
-                return self.__node_labels[asn]
-            # Fall back to no selector
             return {}
-        
+
         return {}
 
     def _computePodAffinity(self, asn: str, role: str) -> Dict[str, Any]:
@@ -1105,6 +1186,11 @@ spec:
             return self
             
         self._log('attaching the Internet Map service to Kubernetes deployment')
+        source_image, target_image = self._resolveInternetMapImages()
+        if target_image != source_image:
+            self.__build_commands.append(
+                f"seedemu_copy_and_push_image {source_image} {target_image}"
+            )
         
         # Generate Internet Map Kubernetes manifests
         internet_map_manifest = f"""
@@ -1128,9 +1214,10 @@ spec:
     spec:
       containers:
       - name: internet-map
-        image: handsonsecurity/seedemu-multiarch-map:buildx-latest
+        image: {target_image}
         ports:
         - containerPort: 8080
+        imagePullPolicy: {self.__image_pull_policy}
         securityContext:
           privileged: true
         volumeMounts:

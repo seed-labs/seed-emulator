@@ -846,7 +846,9 @@ class Docker(Compiler):
         """
 
         staged_path = md5(path.encode('utf-8')).hexdigest()
-        print(content, file=open(staged_path, 'w'))
+        with open(staged_path, 'w', encoding='utf-8') as handle:
+            handle.write(content)
+            handle.write('\n')
         return 'COPY {} {}\n'.format(staged_path, path)
 
     def _importFile(self, path: str, hostpath: str) -> str:
@@ -1274,7 +1276,9 @@ class Docker(Compiler):
             except:
                 pass
         assert len(vars)==len(self.__config), 'implementation error'
-        print( '\n'.join(vars) ,file=open(f'{prefix}.env','w'))
+        with open(f'{prefix}.env', 'w', encoding='utf-8') as handle:
+            handle.write('\n'.join(vars))
+            handle.write('\n')
 
     def _makeDummies(self) -> str:
         """!

@@ -170,6 +170,32 @@ class KubeVirtCompilerTest(unittest.TestCase):
 
         self.assertEqual(target_node.getVirtualizationMode(), "KubeVirt")
 
+    def test_internet_map_uses_registry_mirror_when_enabled(self):
+        emulator = self._build_emulator()
+        original_cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            compiler = KubernetesCompiler(
+                registry_prefix="192.168.122.110:5000",
+                namespace="seedemu-test",
+                use_multus=True,
+                internetMapEnabled=True,
+                image_pull_policy="IfNotPresent",
+            )
+            compiler.attachInternetMap()
+            try:
+                emulator.compile(compiler, tmp_dir, override=True)
+            finally:
+                os.chdir(original_cwd)
+
+            manifest_text = Path(tmp_dir, "k8s.yaml").read_text(encoding="utf-8")
+            build_script = Path(tmp_dir, "build_images.sh").read_text(encoding="utf-8")
+
+        self.assertIn("image: 192.168.122.110:5000/seedemu-internet-map:buildx-latest", manifest_text)
+        self.assertIn(
+            "seedemu_copy_and_push_image handsonsecurity/seedemu-multiarch-map:buildx-latest 192.168.122.110:5000/seedemu-internet-map:buildx-latest",
+            build_script,
+        )
+
 
 class KubeVirtRuntimeProfileTest(unittest.TestCase):
     @classmethod

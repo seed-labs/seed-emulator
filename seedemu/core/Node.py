@@ -18,7 +18,7 @@ from string import ascii_letters
 from random import choice
 from .BaseSystem import BaseSystem
 
-DEFAULT_SOFTWARE: List[str] = ['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat']
+DEFAULT_SOFTWARE: List[str] = ['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat-openbsd']
 
 class File(Printable):
     """!
@@ -239,7 +239,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
 
     __geo: Tuple[float,float,str] # (Latitude,Longitude,Address) -- optional parameter that contains the geographical location of the Node
     __note: str # optional parameter that contains a note about the Node
-    __virtualization_mode: str # "Container" (default) or "KubeVirt"
+    __virtualization_mode: str # K3s/KubeVirt adaptation only: Container or KubeVirt
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         """!
@@ -1002,23 +1002,21 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         """
         return self.__note
 
-    def setVirtualizationMode(self, mode: str) -> Node:
+    def setVirtualizationMode(self, mode: str) -> "Node":
         """!
-        @brief Set the virtualization mode for this node.
+        @brief K3s/KubeVirt adaptation only: choose container vs VM output.
 
-        @param mode "Container" (default) or "KubeVirt".
-        @returns self, for chaining API calls.
+        This does not change senior mainline routing semantics. It only tells the
+        Kubernetes compiler whether this node should render as a Deployment or a
+        KubeVirt VirtualMachine.
         """
-        assert mode in ["Container", "KubeVirt"], "Invalid virtualization mode. Must be 'Container' or 'KubeVirt'."
-        # Virtualization mode is part of per-node runtime intent (container vs VM).
+        assert mode in ["Container", "KubeVirt"], "Invalid virtualization mode. Must be Container or KubeVirt."
         self.__virtualization_mode = mode
         return self
 
     def getVirtualizationMode(self) -> str:
         """!
-        @brief Get the virtualization mode.
-
-        @returns "Container" or "KubeVirt".
+        @brief Get the container/VM rendering mode used by the Kubernetes compiler.
         """
         return self.__virtualization_mode
 
@@ -1043,7 +1041,6 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         for (h, n, p) in node.getPorts(): self.addPort(h, n, p)
         for v in node.getDockerVolumes(): self.addDockerVolume(v)
         for (c, f) in node.getStartCommands(): self.appendStartCommand(c, f)
-        # Keep VM/container semantics consistent after render-time binding.
         self.setVirtualizationMode(node.getVirtualizationMode())
         # for (c, f) in node.getUserStartCommands(): self.appendUserStartCommand(c, f)
         for c in node.getBuildCommands(): self.addBuildCommand(c)
@@ -1158,18 +1155,31 @@ class Router(Node):
 
     __loopback_address: str
     __is_border_router: bool
-    __ibgp_is_rr: bool
+    __is_bgp_rr: bool
     __bgp_cluster_id: str
-
     __extensions: Dict[str, RouterExtension]
 
     def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
         self.__is_border_router = False
         self.__loopback_address = None
-        self.__ibgp_is_rr = False
-        self.__bgp_cluster_id = None
         self.__extensions = {}
+        self.__is_bgp_rr = False
+        self.__bgp_cluster_id = None
         super().__init__( name,role,asn,scope)
+    
+    def makeRouteReflector(self, is_rr: bool = True):
+        self.__is_bgp_rr = is_rr
+        return self
+    
+    def joinBgpCluster(self, cluster_id: str):
+        self.__bgp_cluster_id = cluster_id
+        return self
+    
+    def getBgpClusterId(self) -> str | None:
+        return self.__bgp_cluster_id
+    
+    def isRouteReflector(self) -> bool:
+        return self.__is_bgp_rr
 
     def hasExtension(self, name: str) -> bool:
         return name in self.__extensions
@@ -1213,57 +1223,6 @@ class Router(Node):
         @returns address.
         """
         return self.__loopback_address
-
-    def makeRouteReflector(self, is_rr: bool = True) -> Router:
-        """!
-        @brief Mark this router as an iBGP route reflector.
-
-        If at least one router in an AS is marked as a route reflector, the
-        Ibgp layer will establish iBGP sessions in an RR topology (clients peer
-        with RRs; RRs mesh with each other) instead of a full-mesh.
-
-        @param is_rr whether this router is a route reflector.
-        @returns self, for chaining API calls.
-        """
-        self.__ibgp_is_rr = bool(is_rr)
-        return self
-
-    def isRouteReflector(self) -> bool:
-        """!
-        @brief Check whether this router is an iBGP route reflector.
-
-        @returns True if this router is a route reflector.
-        """
-        return bool(self.__ibgp_is_rr)
-
-    def joinBgpCluster(self, cluster_id: str) -> Router:
-        """!
-        @brief Assign this router to a clustered iBGP RR cluster.
-
-        Cluster IDs are only consumed when Ibgp reflection mode is
-        `clustered`.
-
-        @param cluster_id cluster identifier string.
-        @returns self, for chaining API calls.
-        """
-        self.__bgp_cluster_id = cluster_id
-        return self
-
-    def getBgpClusterId(self) -> str | None:
-        """!
-        @brief Get the clustered iBGP RR cluster identifier, if any.
-
-        @returns cluster identifier or None.
-        """
-        return self.__bgp_cluster_id
-
-    def configure(self, emulator: Emulator):
-        super().configure(emulator)
-        # Persist RR intent for layers/compilers that inspect registry attrs.
-        if hasattr(self, "_attrs"):
-            self.setAttribute("__ibgp_is_rr", bool(self.__ibgp_is_rr))
-            if self.__bgp_cluster_id is not None:
-                self.setAttribute("__bgp_cluster_id", self.__bgp_cluster_id)
 
     def addProtocol(self, protocol: str, name: str, body: str) -> Router:
         """!
@@ -1551,3 +1510,4 @@ def promote_to_scion_router(node: Node):
         extn.initScionRouter()
         node.installExtension(extn)
     return node
+
