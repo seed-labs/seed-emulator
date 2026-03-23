@@ -1,7 +1,7 @@
 #!/bin/bash
 
-BOOTNODES_FILE="/tmp/eth-nodes"
-OUTPUT_ENR_FILE="/tmp/bc_enrs.txt"
+BOOTNODES_FILE="/tmp/beacon-eth-nodes"   ## geth and beacon 
+OUTPUT_ENR_FILE="/tmp/bc_enrs.txt"   
 
 MAX_RETRIES=60
 SLEEP_SECONDS=3
