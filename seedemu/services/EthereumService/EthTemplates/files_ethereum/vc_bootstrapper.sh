@@ -26,6 +26,7 @@ while read -r node; do {{
             tar -xzvf /tmp/testnet.tar.gz -C /tmp/vc
         }}
 
+
         ($validatorAtGenesis) && {{
             eth2-val-tools keystores --source-mnemonic "{validator_mnemonic}" --source-max {validator_key_end} --source-min {validator_key_start} --out-loc "/tmp/vc/assigned_data" 
             mkdir /tmp/vc/local-testnet/testnet/validators
