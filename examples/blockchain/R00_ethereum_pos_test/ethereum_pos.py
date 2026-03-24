@@ -12,14 +12,14 @@ script_name = os.path.basename(__file__)
 
 if len(sys.argv) < 2:
     print(f"Usage:  {script_name} <total_number_of_eth_nodes> [amd|arm]")
-    # sys.exit(1)
+    sys.exit(1)
 
-# Read total number of Ethereum nodes from the command line argument
-# try:
-#     total_number_of_nodes = int(sys.argv[1])
-# except ValueError:
-#     print(f"Invalid number of Ethereum nodes: {sys.argv[1]}")
-#     sys.exit(1)
+# Read total number of Ethereum beaconnodes from the command line argument
+try:
+    total_number_of_beaconnodes = int(sys.argv[1])
+except ValueError:
+    print(f"Invalid number of Ethereum beaconnodes: {sys.argv[1]}")
+    sys.exit(1)
 
 # Optional platform argument
 if len(sys.argv) == 3:
@@ -28,15 +28,20 @@ if len(sys.argv) == 3:
     elif sys.argv[2].lower() == 'arm':
         platform = Platform.ARM64
     else:
-        print(f"Usage:  {script_name} <total_number_of_eth_nodes> amd|arm")
+        print(f"Usage:  {script_name} <total_number_of_eth_beaconnodes> amd|arm")
         sys.exit(1)
 else:
     platform = Platform.AMD64  # Default platform is AMD64
 
 
+geth_node_number = total_number_of_beaconnodes
+beacon_node_number = total_number_of_beaconnodes
+vc_node_number = 3 * total_number_of_beaconnodes
+beaconsetup_node_number = 1
+
+total_number_of_nodes = geth_node_number + beacon_node_number + vc_node_number + beaconsetup_node_number
 
 
-total_number_of_nodes=350
 # Calculate how many hosts per stub AS are needed
 # We know we have 10 stub AS (150-154, 160-164), and at least one node per AS is required
 # to host a node (Beacon or Ethereum node).
@@ -70,14 +75,7 @@ for i in range(accounts_total):
 asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
 
 ###################################################
-# Ethereum GethNode
-# geth_nodes_assigned = 0  # To track the number of Ethereum nodes assigned
-beaconsetup_node_number=1
 
-
-geth_node_number=100
-beacon_node_number=100
-vc_node_number=100
 
 
 
