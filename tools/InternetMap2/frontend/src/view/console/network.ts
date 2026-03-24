@@ -31,19 +31,16 @@ export class ConsoleNetwork {
             }
         } catch (error: any) {
             if (error?.response) {
-                // 服务器有响应但状态码非 2xx
                 return Promise.reject({
                     ok: false,
                     result: 'non-200 response from API.',
                 });
             } else if (error?.request) {
-                // 请求已发出，但没有收到响应
                 return Promise.reject({
                     ok: false,
                     result: 'axios request failed.',
                 });
             } else {
-                // 其它错误（例如代码错误、JSON 解析错误等）
                 return Promise.reject({
                     ok: false,
                     result: error?.message ?? 'unknown error',

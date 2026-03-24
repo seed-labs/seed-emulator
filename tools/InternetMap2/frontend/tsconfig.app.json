@@ -17,7 +17,7 @@
         "src/*"
       ]
     },
-    "types": ["node", "vite/client"],   //node 添加 Node 类型; vite/client让 .vue、.ts 能被识别
+    "types": ["node", "vite/client"],
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
 }

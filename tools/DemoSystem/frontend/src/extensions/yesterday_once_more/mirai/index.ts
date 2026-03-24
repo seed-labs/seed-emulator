@@ -84,7 +84,7 @@ export const config = [
     "text": [
       {
         "shortText": "Botnet 控制",
-        "innerHtml": "<div>使用 `broadcast` 控制 Botnet</div>\n<div>切换到运行 BYOB 控制台的终端窗口，键入以下命令并回车。此命令将被广播给所有在线的 `bot`。</div>\n<div>请切换到 Internet map 进行观察（闪烁）。</div>\n<div class=\"code-block\">\n    <div class=\"code-header\">\n        <span class=\"code-title\">命令</span>\n    </div>\n    <pre class=\"code-content\"># 在 BYOB 控制台中输入命令：\n\n# display\nbroadcast timeout 30s bash -c &#039;\n/usr/bin/echo &quot;{ \\&quot;flash\\&quot;: { \\&quot;dynamic\\&quot;: { \\&quot;borderWidth\\&quot;: 8, \\&quot;size\\&quot;: 50 }, \\&quot;duration\\&quot;: 1000 } }&quot; &gt;/map-plugins/style.json \n&amp;&amp; /bin/bash /map-plugins/submit_event.sh -a flash -s /map-plugins/style.json &gt; /dev/null 2&gt;&amp;1&#039;\n\n# restore\nbroadcast timeout 30s bash -c &#039;/bin/bash /map-plugins/submit_event.sh \n-a restore &gt; /dev/null 2&gt;&amp;1&#039;</pre>\n</div>",
+        "innerHtml": "<div>使用 `broadcast` 控制 Botnet</div>\n<div>切换到运行 BYOB 控制台的终端窗口，键入以下命令并回车。此命令将被广播给所有在线的 `bot`。</div>\n<div>请切换到 Internet map 进行观察（闪烁）。</div>\n<div class=\"code-block\">\n    <div class=\"code-header\">\n        <span class=\"code-title\">命令</span>\n    </div>\n    <pre class=\"code-content\"># 在 BYOB 控制台中输入命令：\n\n# display\nbroadcast timeout 300s bash -c &#039;\n/usr/bin/echo &quot;{ \\&quot;flash\\&quot;: { \\&quot;dynamic\\&quot;: { \\&quot;borderWidth\\&quot;: 8, \\&quot;size\\&quot;: 50 }, \\&quot;duration\\&quot;: 1000 } }&quot; &gt;/map-plugins/style.json \n&amp;&amp; /bin/bash /map-plugins/submit_event.sh -a flash -s /map-plugins/style.json &gt; /dev/null 2&gt;&amp;1&#039;\n\n# restore\nbroadcast timeout 30s bash -c &#039;/bin/bash /map-plugins/submit_event.sh \n-a restore &gt; /dev/null 2&gt;&amp;1&#039;</pre>\n</div>",
         "cmdGroupKwargs": [
           {
             "title": "display",
@@ -93,7 +93,7 @@ export const config = [
               {
                 "action": "terminal_exec",
                 "containerName": "as170h-C2_server-10.170.0.100",
-                "cmd": "broadcast timeout 30s bash -c '/usr/bin/echo \"{ \\\"flash\\\": { \\\"dynamic\\\": { \\\"borderWidth\\\": 8, \\\"size\\\": 50 }, \\\"duration\\\": 1000 } }\" >/map-plugins/style.json && /bin/bash /map-plugins/submit_event.sh -a flash -s /map-plugins/style.json > /dev/null 2>&1'\n"
+                "cmd": "broadcast timeout 60s bash -c '/usr/bin/echo \"{ \\\"flash\\\": { \\\"dynamic\\\": { \\\"borderWidth\\\": 8, \\\"size\\\": 50 }, \\\"duration\\\": 1000 } }\" >/map-plugins/style.json && /bin/bash /map-plugins/submit_event.sh -a flash -s /map-plugins/style.json && sleep 5 && /bin/bash /map-plugins/submit_event.sh -a highlight > /dev/null 2>&1'\n"
               }
             ]
           },

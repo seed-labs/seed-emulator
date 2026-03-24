@@ -21,9 +21,10 @@
           <el-menu-item index="/plugin">Plugin</el-menu-item>
           <el-sub-menu index="/map">
             <template #title>Map</template>
-<!--            <el-menu-item index="/ixMap">IXMap</el-menu-item>-->
-            <el-menu-item index="/transitMap">TransitMap</el-menu-item>
             <el-menu-item index="/map">Map</el-menu-item>
+            <el-menu-item index="/ixMap">IXMap</el-menu-item>
+            <el-menu-item index="/transitMap">TransitMap</el-menu-item>
+            <el-menu-item index="/uploadMap">UploadMap</el-menu-item>
           </el-sub-menu>
         </div>
       </el-menu>
@@ -47,8 +48,6 @@ const route = useRoute();
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  /* 右侧菜单项容器保持水平排列 */
   .right-items {
     display: flex;
     align-items: center;

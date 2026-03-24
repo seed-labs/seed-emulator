@@ -8,7 +8,7 @@
     "sourceMap": true,
     "types": ["node"],
     "outDir": "bin/",
-    "lib": ["ES2015", "DOM"]  // 必须包含 ES2015 或 ES6
+    "lib": ["ES2015", "DOM"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

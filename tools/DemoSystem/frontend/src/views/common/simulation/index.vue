@@ -148,7 +148,7 @@ const onConfirmNext = async (...stepArgs: number[]): Promise<ApiResponse<any>> =
       if (activeStep === 0) {
         iframeSrc.value = ''
         setTimeout(() => {
-          iframeSrc.value = `http://${form.host}:8080/pro/map`
+          iframeSrc.value = `http://${form.host}:8080/pro/home`
         }, 1000)
       } else if (activeStep === componentConfig.value.config.length - 1) {
         iframeSrc.value = ''

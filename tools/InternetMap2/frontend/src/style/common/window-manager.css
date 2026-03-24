@@ -27,7 +27,6 @@
   border-radius: 3px;
 }
 
-/* 确保操作按钮可以被点击 */
 .console-action {
   pointer-events: auto !important;
 }
@@ -95,25 +94,21 @@
   display: none !important;
 }
 
-/* 确保 iframe 可以正确显示和交互 */
 .console-iframe {
   pointer-events: auto !important;
   z-index: 1;
 }
 
-/* 确保调整大小手柄在 iframe 上方 */
 .resize-handle {
   pointer-events: auto !important;
   z-index: 2;
 }
 
-/* 确保遮罩层在 iframe 上方但不在按钮上方 */
 .console-mask {
   pointer-events: auto !important;
   z-index: 3;
 }
 
-/* 确保按钮在遮罩层上方 */
 .console-action {
   z-index: 4 !important;
 }

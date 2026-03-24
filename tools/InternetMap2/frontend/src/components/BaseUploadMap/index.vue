@@ -1,7 +1,7 @@
 <script setup lang="ts" xmlns="http://www.w3.org/1999/html">
 import {ref, onMounted, reactive, nextTick, shallowRef, type PropType, type Component, watch} from "vue";
 import type {TabsPaneContext} from 'element-plus'
-import {ElNotification, ElMessage} from "element-plus";
+import {ElNotification, ElMessage, ElMessageBox} from "element-plus";
 import type {Details} from '@/types'
 import {allLoading} from '@/utils/tools.ts'
 import {
@@ -26,14 +26,12 @@ import {DataSource as TransitDataSource} from "@/view/map/transitMap/datasource.
 import Upload from '@/components/Upload/index.vue'
 
 
-// ① 为每一种 UI 类对应的配置类型建立映射
 type OtherConfigOf<T> =
     T extends typeof MapUi ? OtherConfiguration :
         T extends typeof IXMapUi ? IxMapUiOtherConfiguration :
             T extends typeof TransitMapUi ? TransitMapUiOtherConfiguration :
                 never;
 
-// ② Props 使用单一泛型参数 M，M 决定 dataSource 与 otherConfig 的具体类型
 interface Props<M extends typeof MapUi | typeof IXMapUi | typeof TransitMapUi> {
   settingNumItem?: PropType<Component>
   mapUiClass: M;
@@ -50,6 +48,12 @@ const props = withDefaults(defineProps<Props<any>>(), {})
 interface RuleForm {
   dragFixed: boolean
   services: string[]
+  ixValue: string[]
+  _ixValue: string[]
+  ixNum: number
+  transitValue: string[]
+  _transitValue: string[]
+  transitNum: number
 }
 
 const mapData = ref()
@@ -60,6 +64,7 @@ const inputFilter = ref('')
 const inputSearch = ref('')
 const dialogVisible = ref(true)
 const settingActiveName = ref('settings')
+const classActiveName = ref('IX')
 const detailsDialogVisible = ref(false)
 const details = ref<Details[]>([])
 const logBtnClick = ref(true)
@@ -67,7 +72,13 @@ const logAutoscrollChecked = ref(true)
 const logDisableChecked = ref(false)
 const ruleForm = reactive<RuleForm>({
   dragFixed: false,
-  services: []
+  services: [],
+  ixValue: [],
+  _ixValue: [],
+  transitValue: [],
+  _transitValue: [],
+  transitNum: 0,
+  ixNum: 0,
 })
 const allService = ref<string[]>([])
 const replayState = reactive({
@@ -103,12 +114,38 @@ const replayState = reactive({
     value: 200
   }
 })
+const ixOptions = ref([])
+const transitOptions = ref([])
+const tooltipVisible = ref(false);
+const tooltipContent = ref('');
+const position = ref({
+  top: 0,
+  left: 0,
+  bottom: 0,
+  right: 0,
+} as DOMRect)
+const tooltipVirtualRef = ref({
+  getBoundingClientRect: () => position.value,
+})
+const mapUiStart = ref<boolean>(false)
+const arraysEqualUnordered = (arr1: string[], arr2: string[]): boolean => {
+  const set1 = new Set(arr1);
+  const set2 = new Set(arr2);
 
+  if (set1.size !== set2.size) return false;
+  for (const char of set1) {
+    if (!set2.has(char)) {
+      return false;
+    }
+  }
+
+  return true;
+}
 const onSubmitFilter = async () => {
   if (!mapUi.value) return
   await mapUi.value?.onSubmitFilter(inputFilter.value)
   ElMessage({
-    message: '已提交',
+    message: 'Submitted',
     type: 'success',
     duration: 1000
   })
@@ -117,7 +154,7 @@ const onSubmitSearch = () => {
   if (!mapUi.value) return
   mapUi.value?.onSubmitSearch(inputSearch.value)
   ElMessage({
-    message: '已提交',
+    message: 'Submitted',
     type: 'success',
     duration: 1000
   })
@@ -231,10 +268,99 @@ const searchInput = () => {
   if (!mapUi.value) return
   mapUi.value?.updateFilterSuggestions(inputSearch.value)
 }
+const onIxBlur = async () => {
+  if (ruleForm.ixValue.length === 0 || arraysEqualUnordered(ruleForm.ixValue, ruleForm._ixValue)) {
+    return
+  }
+  await partStartMapUi()
+  const {filteredNodes, filteredEdges} = mapUi.value?.filterGraphByIX(ruleForm.ixValue)
+  mapUi.value?.render(filteredNodes, filteredEdges)
+  ruleForm._ixValue = ruleForm.ixValue
+}
+const onIXNumChange = async () => {
+  await partStartMapUi()
+  const {filteredNodes, filteredEdges} = mapUi.value?.filterGraphByIXNum(ruleForm.ixNum)
+  mapUi.value?.render(filteredNodes, filteredEdges)
+}
+const onTransitBlur = async () => {
+  if (ruleForm.transitValue.length === 0 || arraysEqualUnordered(ruleForm.transitValue, ruleForm._transitValue)) {
+    return
+  }
+  await partStartMapUi()
+  const {filteredNodes, filteredEdges} = mapUi.value?.filterGraphByTransit(ruleForm.transitValue)
+  mapUi.value?.render(filteredNodes, filteredEdges)
+  ruleForm._transitValue = ruleForm.transitValue
+}
+const onTransitNumChange = async () => {
+  await partStartMapUi()
+  const {filteredNodes, filteredEdges} = mapUi.value?.filterGraphByTransitNum(ruleForm.transitNum)
+  mapUi.value?.render(filteredNodes, filteredEdges)
+}
+const partStartMapUi = async () => {
+  mapUi.value?.newAllLoadingInstance()
+  if (!mapUiStart.value) {
+    await mapUi.value?.partStart()
+    mapUiStart.value = true
+  }
+}
 
 watch(() => mapData.value, async (value) => {
   mapUi.value?.setVisData(value)
-  mapUi.value?.start()
+  const IXs = mapUi.value?.getIxs() || []
+  ixOptions.value = IXs.map(ix => {
+    return {
+      label: ix.meta.emulatorInfo.displayname,
+      value: ix.meta.emulatorInfo.name,
+    }
+  })
+  ruleForm.ixNum = IXs.length
+  const transits = mapUi.value?.getTransits() || []
+  transitOptions.value = transits.map(transit => {
+    return {
+      label: `AS-${transit.asn} (${transit.info.length})`,
+      value: `${transit.asn}`,
+    }
+  })
+  ruleForm.transitNum = transits.length
+  await ElMessageBox.confirm(
+      'Do you want to display all the nodes of the Internet Map?',
+      'Notice',
+      {
+        confirmButtonText: 'Yes',
+        cancelButtonText: 'No',
+        type: 'info',
+        async beforeClose(action, instance, done) {
+          instance.confirmButtonLoading = false;
+          instance.cancelButtonLoading = false;
+
+          try {
+            if (action === 'confirm') {
+              instance.confirmButtonLoading = true;
+              await new Promise(resolve => setTimeout(resolve, 500));
+              done();
+              mapUi.value?.start();
+
+            } else if (action === 'cancel') {
+              instance.cancelButtonLoading = true;
+              await new Promise(resolve => setTimeout(resolve, 500));
+              done();
+              ElMessage({
+                type: 'info',
+                message: 'Please select the options to be displayed in the "Settings -> Categories" section.',
+              });
+            } else {
+              done();
+            }
+          } catch (error) {
+            console.error(error);
+            ElMessage.error('Operation failed. Please try again.');
+          } finally {
+            instance.confirmButtonLoading = false;
+            instance.confirmButtonDisabled = false;
+          }
+        },
+      }
+  );
 })
 
 onMounted(() => {
@@ -274,7 +400,6 @@ onMounted(() => {
       replayStatusInfo: replayState.replayStatus,
     }
     mapUi.value = new props.mapUiClass(config, props.otherConfig);
-    // await mapUi.value.start();
   })
 })
 defineExpose({mapUi})
@@ -382,6 +507,61 @@ defineExpose({mapUi})
         <el-form-item label="Drag Fixed" prop="dragFixed" label-width="150px">
           <el-switch v-model="ruleForm.dragFixed" @change="onDragFixedChange"/>
         </el-form-item>
+        <el-form-item label="Classify" label-width="150px">
+          <el-tabs v-model="classActiveName" type="card" class="tabs dialog-tabs">
+            <el-tab-pane label="IX" name="IX">
+              <el-form-item label="Name" label-width="60px">
+                <el-select
+                    v-model="ruleForm.ixValue"
+                    multiple
+                    collapse-tags
+                    collapse-tags-tooltip
+                    placeholder="Select IX"
+                    style="width: 200px"
+                    @blur="onIxBlur"
+                    filterable
+                    clearable
+                >
+                  <el-option
+                      v-for="item in ixOptions"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item.value"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Number" label-width="60px">
+                <el-input-number style="width: 200px" v-model="ruleForm.ixNum" :min="0" @change="onIXNumChange"/>
+              </el-form-item>
+            </el-tab-pane>
+            <el-tab-pane label="Transit" name="transit">
+              <el-form-item label="Name" label-width="60px">
+                <el-select
+                    filterable
+                    clearable
+                    v-model="ruleForm.transitValue"
+                    multiple
+                    collapse-tags
+                    collapse-tags-tooltip
+                    placeholder="Select Transit"
+                    style="width: 200px"
+                    @blur="onTransitBlur"
+                >
+                  <el-option
+                      v-for="item in transitOptions"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item.value"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Number" label-width="60px">
+                <el-input-number style="width: 200px" v-model="ruleForm.transitNum" :min="0"
+                                 @change="onTransitNumChange"/>
+              </el-form-item>
+            </el-tab-pane>
+          </el-tabs>
+        </el-form-item>
         <component
             :is="props.settingNumItem"
         />
@@ -446,7 +626,7 @@ defineExpose({mapUi})
                   @mouseup="onReplaySeekUp"
               />
             </div>
-            <el-form-item label="event interval (ms)" prop="interval">
+            <el-form-item label="Event interval (ms)" prop="interval">
               <el-input-number
                   id="replay-interval"
                   v-model="replayState.replayInterval.value"
@@ -500,6 +680,15 @@ defineExpose({mapUi})
       </template>
     </el-descriptions>
   </el-dialog>
+  <el-tooltip
+      v-model:visible="tooltipVisible"
+      :content="tooltipContent"
+      placement="bottom"
+      effect="light"
+      trigger="click"
+      virtual-triggering
+      :virtual-ref="tooltipVirtualRef"
+  />
 </template>
 
 <style scoped lang="scss">
@@ -525,6 +714,10 @@ defineExpose({mapUi})
   left: 50%;
   transform: translate(-50%, -50%);
   width: 50vw;
+}
+
+.el-form-item .el-form-item:not(:last-child) {
+  margin-bottom: 18px
 }
 </style>
 

@@ -23,7 +23,7 @@ declare global {
 }
 const CONSOLE = window.__ENV__?.CONSOLE;
 const CLICK_DELAY = 250
-const VIS_VERTEX_MAX = 300
+export const VIS_VERTEX_MAX = 500
 
 export interface replayValueType {
     disabled: boolean,
@@ -415,30 +415,24 @@ export class MapUi {
             }
             const _data = JSON.parse(data.data);
             const nodeId = data.source;
-            if (nodeId in this._flasherVis) {
+            const node = this._nodes.get(nodeId)
+            if (!node || node.hidden) {
+                return;
+            }
+            if (this._flasherVis[nodeId]) {
                 window.clearInterval(this._flasherVis[nodeId]);
             }
 
             if (_data.action === 'flash') {
-                const currentTime = new Date().getTime();
-                const offset = currentTime - this._firstIntervalStartTime;
-                const adjustedDelay = this._intervalDefault - (offset % this._intervalDefault);
-                window.setTimeout(() => {
-                    this._flasherVis[nodeId] = window.setInterval(() => {
-                        this._flashVisNodes(
-                            nodeId, _data.interval, _data.static, _data.dynamic, _data.action
-                        )
-                    }, this._intervalDefault);
-                }, adjustedDelay)
-            } else {
-                if (this._flasherVis[nodeId]) {
-                    window.clearInterval(this._flasherVis[nodeId]);
-                }
-                window.setTimeout(() => {
+                this._flasherVis[nodeId] = window.setInterval(() => {
                     this._flashVisNodes(
                         nodeId, _data.interval, _data.static, _data.dynamic, _data.action
                     )
-                }, 1000)
+                }, this._intervalDefault)
+            } else {
+                this._flashVisNodes(
+                    nodeId, _data.interval, _data.static, _data.dynamic, _data.action
+                )
             }
         });
     }
@@ -927,80 +921,82 @@ export class MapUi {
             detail1.data.ASN = node.meta.emulatorInfo.asn.toString()
             detail1.data.Name = node.meta.emulatorInfo.name
             detail1.data.Role = node.meta.emulatorInfo.role
+            vertexDetails.push(detail1)
 
             detail2.title = 'IP addresses';
             node.meta.emulatorInfo.nets.forEach(net => {
                 detail2.data[net.name] = net.address
             });
+            vertexDetails.push(detail2)
 
             if (vertex.custom !== 'custom' && CONSOLE !== 'false') {
-                if (['Router', 'Route Server', 'BorderRouter'].includes(node.meta.emulatorInfo.role)) {
-                    let peers = await this._datasource.getBgpPeers(node.Id);
-                    detail3.title = 'BGP sessions';
-                    peers.forEach(peer => {
-                        const peerStatus = peer.protocolState != 'down' ? peer.bgpState : 'Disabled'
-                        const peerAction = peer.protocolState != 'down' ? 'Disable' : 'Enable'
-                        // detail3.data[peer.name] = [peerStatus, peerAction]
+                try {
+                    if (['Router', 'Route Server', 'BorderRouter'].includes(node.meta.emulatorInfo.role)) {
+                        let peers = await this._datasource.getBgpPeers(node.Id);
+                        detail3.title = 'BGP sessions';
+                        peers.forEach(peer => {
+                            const peerStatus = peer.protocolState != 'down' ? peer.bgpState : 'Disabled'
+                            const peerAction = peer.protocolState != 'down' ? 'Disable' : 'Enable'
+                            // detail3.data[peer.name] = [peerStatus, peerAction]
 
-                        let _peerAction = document.createElement('a');
-                        _peerAction.href = '#';
-                        _peerAction.classList.add(CLICK_CLASS.PEER_ACTION_CLASS);
-                        _peerAction.setAttribute("params", JSON.stringify({
-                            node: node.Id,
-                            peer: peer.name,
-                            up: peer.protocolState == 'down',
-                        }))
-                        _peerAction.innerText = peer.protocolState != 'down' ? 'Disable' : 'Enable';
-                        detail3.data[peer.name] = [peerStatus, _peerAction.outerHTML]
-                    });
+                            let _peerAction = document.createElement('a');
+                            _peerAction.href = '#';
+                            _peerAction.classList.add(CLICK_CLASS.PEER_ACTION_CLASS);
+                            _peerAction.setAttribute("params", JSON.stringify({
+                                node: node.Id,
+                                peer: peer.name,
+                                up: peer.protocolState == 'down',
+                            }))
+                            _peerAction.innerText = peer.protocolState != 'down' ? 'Disable' : 'Enable';
+                            detail3.data[peer.name] = [peerStatus, _peerAction.outerHTML]
+                        });
+                    }
+                    vertexDetails.push(detail3)
+
+                    let actions = document.createElement('div');
+                    actions.classList.add('section');
+                    let actionTitle = document.createElement('div');
+                    actionTitle.className = 'title';
+                    detail4.title = 'Actions';
+                    actions.appendChild(actionTitle);
+
+                    let consoleLink = document.createElement('a');
+                    consoleLink.href = '#';
+                    consoleLink.innerText = 'Launch console';
+                    consoleLink.classList.add(CLICK_CLASS.CONSOLE_CLASS);
+                    consoleLink.setAttribute("params", JSON.stringify({
+                        nodeId: node.Id.substr(0, 12),
+                        label: vertex.label,
+                    }))
+                    detail4.data["Launch console"] = consoleLink.outerHTML
+
+                    let netToggle = document.createElement('a');
+                    let netState = await this._datasource.getNetworkStatus(node.Id);
+
+                    netToggle.href = '#';
+                    netToggle.innerText = netState ? 'Disconnect' : 'Re-connect'
+                    netToggle.classList.add(CLICK_CLASS.NET_TOGGLE_CLASS);
+                    netToggle.setAttribute("params", JSON.stringify({
+                        nodeId: node.Id,
+                        nodeRole: node.meta.emulatorInfo.role,
+                        netState,
+                    }))
+                    detail4.data["netState"] = netToggle.outerHTML
+
+                    let reloadLink = document.createElement('a');
+
+                    reloadLink.href = '#';
+                    reloadLink.innerText = 'Refresh';
+                    reloadLink.classList.add(CLICK_CLASS.RELOAD_CLASS);
+                    reloadLink.setAttribute("params", JSON.stringify({
+                        nodeId: node.Id,
+                    }))
+                    detail4.data["Refresh"] = reloadLink.outerHTML
+                    vertexDetails.push(detail4)
+                } catch (e) {
+                    console.log(e)
                 }
-
-                let actions = document.createElement('div');
-                actions.classList.add('section');
-
-                let actionTitle = document.createElement('div');
-                actionTitle.className = 'title';
-                detail4.title = 'Actions';
-                actions.appendChild(actionTitle);
-
-                let consoleLink = document.createElement('a');
-                consoleLink.href = '#';
-                consoleLink.innerText = 'Launch console';
-                consoleLink.classList.add(CLICK_CLASS.CONSOLE_CLASS);
-                consoleLink.setAttribute("params", JSON.stringify({
-                    nodeId: node.Id.substr(0, 12),
-                    label: vertex.label,
-                }))
-                detail4.data["Launch console"] = consoleLink.outerHTML
-
-                let netToggle = document.createElement('a');
-                let netState = await this._datasource.getNetworkStatus(node.Id);
-
-                netToggle.href = '#';
-                netToggle.innerText = netState ? 'Disconnect' : 'Re-connect'
-                netToggle.classList.add(CLICK_CLASS.NET_TOGGLE_CLASS);
-                netToggle.setAttribute("params", JSON.stringify({
-                    nodeId: node.Id,
-                    nodeRole: node.meta.emulatorInfo.role,
-                    netState,
-                }))
-                detail4.data["netState"] = netToggle.outerHTML
-
-                let reloadLink = document.createElement('a');
-
-                reloadLink.href = '#';
-                reloadLink.innerText = 'Refresh';
-                reloadLink.classList.add(CLICK_CLASS.RELOAD_CLASS);
-                reloadLink.setAttribute("params", JSON.stringify({
-                    nodeId: node.Id,
-                }))
-                detail4.data["Refresh"] = reloadLink.outerHTML
             }
-
-            vertexDetails.push(detail1)
-            vertexDetails.push(detail2)
-            vertexDetails.push(detail3)
-            vertexDetails.push(detail4)
         }
 
         return vertexDetails
@@ -1482,6 +1478,11 @@ export class MapUi {
         this._firstIntervalStartTime = new Date().getTime();
     }
 
+    async partStart(): Promise<void> {
+        await this._datasource.connect();
+        this.allService.value = [...this._datasource.services]
+    }
+
     /**
      * disconnect datasource and stop log/flash worker.
      */
@@ -1509,13 +1510,23 @@ export class MapUi {
      * redraw map.
      */
     redraw() {
-        this.allLoadingInstance = allLoading()
         const {vertices, edges} = this.getDataSetOrigin()
         this._edges = new DataSet(edges);
         this._nodes = new DataSet(vertices);
 
-        let groups: { [key: string]: {} } = {};
+        this.allLoadingInstance = allLoading()
+        this.createVisGraph()
+    }
 
+    newAllLoadingInstance() {
+        if (this.allLoadingInstance) {
+            this.allLoadingInstance.close()
+        }
+        this.allLoadingInstance = allLoading()
+    }
+
+    createVisGraph() {
+        let groups: { [key: string]: {} } = {};
         this._datasource.groups.forEach(group => {
             groups[group] = {
                 color: {
@@ -1524,15 +1535,15 @@ export class MapUi {
                 }
             }
         });
-        const otherOptions = vertices.length > VIS_VERTEX_MAX ? {
+        const otherOptions = this._nodes.length > VIS_VERTEX_MAX ? {
             physics: {
                 enabled: true,
                 stabilization: {
                     enabled: true,
-                    iterations: 100, // 减少迭代次数
+                    iterations: 100,
                     updateInterval: 50
                 },
-                solver: 'forceAtlas2Based', // 更适合大规模网络
+                solver: 'forceAtlas2Based',
                 forceAtlas2Based: {
                     gravitationalConstant: -50,
                     centralGravity: 0.01,
@@ -1544,16 +1555,14 @@ export class MapUi {
             },
             edges: {
                 smooth: {
-                    type: 'continuous' // 比 'dynamic' 性能更好
+                    type: 'continuous'
                 }
             },
             configure: {
-                enabled: false // 禁用配置界面提升性能
+                enabled: false
             },
-            layout: {
-                improvedLayout: false
-            }
         } : {}
+
         this._graph = new Network(this._mapElement, {
             nodes: this._nodes,
             edges: this._edges
@@ -1563,23 +1572,13 @@ export class MapUi {
                 hover: true,
                 zoomView: true,
                 tooltipDelay: 200,
-                // hideEdgesOnDrag: true, // 拖拽时隐藏边提升性能
                 hideNodesOnDrag: false
             },
-            // physics: {
-            //     enabled: true,
-            //     solver: 'barnesHut',
-            //     barnesHut: {gravitationalConstant: -2600, springLength: 120},
-            //     stabilization: {iterations: 200}
-            // },
-            // interaction: {
-            //     dragView: false, // 初始不允许拖动
-            //     zoomView: false,
-            //     zoomSpeed: 0.4
-            // },
+            layout: {
+                improvedLayout: false
+            },
             ...otherOptions
         } as Options);
-
         this._graph.on('click', async (ev) => {
             this._suggestions.innerText = '';
             this._moveSuggestionSelection('clear');
@@ -1669,7 +1668,6 @@ export class MapUi {
     }
     onPeerActionClick = async (event: MouseEvent) => {
         const target = event.target as HTMLElement;
-        // 检查点击的是否是 detail-link
         if (target.classList.contains(CLICK_CLASS.PEER_ACTION_CLASS) || target.closest(`.${CLICK_CLASS.PEER_ACTION_CLASS}`)) {
             event.preventDefault();
             const linkElement = target.classList.contains(CLICK_CLASS.PEER_ACTION_CLASS) ? target : target.closest(`.${CLICK_CLASS.PEER_ACTION_CLASS}`) as HTMLElement;
@@ -1685,7 +1683,6 @@ export class MapUi {
     }
     onConsoleLink = (event: MouseEvent) => {
         const target = event.target as HTMLElement;
-        // 检查点击的是否是 detail-link
         if (target.classList.contains(CLICK_CLASS.CONSOLE_CLASS) || target.closest(`.${CLICK_CLASS.CONSOLE_CLASS}`)) {
             event.preventDefault();
             let _params = target?.getAttribute('params');
@@ -1697,7 +1694,6 @@ export class MapUi {
     }
     onNetToggle = async (event: MouseEvent) => {
         const target = event.target as HTMLElement;
-        // 检查点击的是否是 detail-link
         if (target.classList.contains(CLICK_CLASS.NET_TOGGLE_CLASS) || target.closest(`.${CLICK_CLASS.NET_TOGGLE_CLASS}`)) {
             event.preventDefault();
             let _params = target?.getAttribute('params');
@@ -1718,7 +1714,6 @@ export class MapUi {
     }
     onReloadLink = async (event: MouseEvent) => {
         const target = event.target as HTMLElement;
-        // 检查点击的是否是 detail-link
         if (target.classList.contains(CLICK_CLASS.NET_TOGGLE_CLASS) || target.closest(`.${CLICK_CLASS.NET_TOGGLE_CLASS}`)) {
             event.preventDefault();
             let _params = target?.getAttribute('params');

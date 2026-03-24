@@ -10,6 +10,7 @@ const mapRef = ref()
 const IX_NUM_KEY = 'ixNumProvide'
 const ixNum = ref(0);
 const ixNumMax = ref(0);
+const ixOptions = ref([])
 const onIXNumChange = (currentValue: number) => {
   if (!mapRef.value?.mapUi) return
   try {
@@ -22,10 +23,24 @@ const onIXNumChange = (currentValue: number) => {
     } as any)
   }
 }
+const onIXBlur = (currentValue: string[]) => {
+  if (!mapRef.value?.mapUi) return
+  try {
+    mapRef.value?.mapUi.onIXBlur(currentValue)
+  } catch (e) {
+    ElNotification({
+      type: 'error',
+      message: e,
+      duration: 2000
+    } as any)
+  }
+}
 provide(IX_NUM_KEY, {
       ixNum,
       ixNumMax,
-      onIXNumChange
+      ixOptions,
+      onIXNumChange,
+      onIXBlur,
     }
 )
 
@@ -33,6 +48,7 @@ const ixMapUiOtherConfiguration: IxMapUiOtherConfiguration = {
   settingControls: {
     ixNumberValue: ixNum,
     ixNumberMaxValue: ixNumMax,
+    ixOptions: ixOptions,
   },
 }
 </script>

@@ -103,6 +103,7 @@ const onSwitchChange = (val: boolean) => {
         :step="1"
         @change="onTransitNumChange"
         :max="transitNumMax"
+        :min=0
     />
   </el-form-item>
   <el-form-item label="Transits" prop="transits" label-width="150px">
@@ -148,7 +149,7 @@ const onSwitchChange = (val: boolean) => {
             >
               <template #reference>
                 <el-checkbox :label="item.asn">
-                  {{ item.asn }}
+                  AS-{{ item.asn }} ({{item.info.length}})
                 </el-checkbox>
               </template>
               <el-table :data="item.info" max-height="800">
@@ -175,7 +176,7 @@ const onSwitchChange = (val: boolean) => {
           </template>
           <template v-else>
             <el-checkbox v-for="item in transits" :key="item.asn" :label="item.asn">
-              {{ item.asn }}
+              AS - {{ item.asn }}
             </el-checkbox>
           </template>
         </el-checkbox-group>

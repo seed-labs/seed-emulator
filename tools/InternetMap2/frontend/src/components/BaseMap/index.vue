@@ -1,6 +1,6 @@
 <script setup lang="ts" xmlns="http://www.w3.org/1999/html">
 import {ref, onMounted, reactive, nextTick, shallowRef, type PropType, type Component} from "vue";
-import type {TabsPaneContext} from 'element-plus'
+import {ElMessageBox, type TabsPaneContext} from 'element-plus'
 import {ElNotification, ElMessage} from "element-plus";
 import type {Details} from '@/types'
 import {allLoading, getSocket} from '@/utils/tools.ts'
@@ -25,14 +25,12 @@ import {DataSource as IXDataSource} from "@/view/map/ixMap/datasource.ts";
 import {DataSource as TransitDataSource} from "@/view/map/transitMap/datasource.ts";
 
 
-// ① 为每一种 UI 类对应的配置类型建立映射
 type OtherConfigOf<T> =
     T extends typeof MapUi ? OtherConfiguration :
         T extends typeof IXMapUi ? IxMapUiOtherConfiguration :
             T extends typeof TransitMapUi ? TransitMapUiOtherConfiguration :
                 never;
 
-// ② Props 使用单一泛型参数 M，M 决定 dataSource 与 otherConfig 的具体类型
 interface Props<M extends typeof MapUi | typeof IXMapUi | typeof TransitMapUi> {
   settingNumItem?: PropType<Component>
   mapUiClass: M;
@@ -107,7 +105,7 @@ const onSubmitFilter = async () => {
   if (!mapUi.value) return
   await mapUi.value?.onSubmitFilter(inputFilter.value)
   ElMessage({
-    message: '已提交',
+    message: 'Submitted',
     type: 'success',
     duration: 1000
   })
@@ -318,11 +316,29 @@ onMounted(() => {
       },
       replayStatusInfo: replayState.replayStatus,
     }
-    const ui = new props.mapUiClass(config, props.otherConfig);
-    await ui.start();
-    // ui.setBackgroundImg(imgSrc)
-    mapUi.value = ui
-    hostWsSet(ui)
+    mapUi.value = new props.mapUiClass(config, props.otherConfig);
+    if (mapUi.value instanceof MapUi) {
+      await mapUi.value?.start();
+    } else {
+      ElMessageBox.confirm(
+          'Whether to display all the nodes of the Internet Map ?',
+          'Notice',
+          {
+            confirmButtonText: 'Yes',
+            cancelButtonText: 'No',
+            type: 'info',
+          }
+      ).then(async () => {
+        await mapUi.value?.start();
+      }).catch(async () => {
+        await mapUi.value?.partStart()
+        ElMessage({
+          type: 'info',
+          message: 'Please select the options to be displayed in the "Settings -> Categories" section.',
+        })
+      })
+    }
+    hostWsSet(mapUi.value)
     packetWsSet()
 
     window.addEventListener('message', (e) => {
@@ -505,7 +521,7 @@ defineExpose({mapUi})
                   @mouseup="onReplaySeekUp"
               />
             </div>
-            <el-form-item label="event interval (ms)" prop="interval">
+            <el-form-item label="Event interval (ms)" prop="interval">
               <el-input-number
                   id="replay-interval"
                   v-model="replayState.replayInterval.value"
