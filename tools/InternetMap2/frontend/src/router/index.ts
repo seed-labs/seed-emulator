@@ -69,6 +69,16 @@ export const defaultRouters: RouteRecord[] = [
                 },
             },
             {
+                path: '/ixMap',
+                component: () => import('@/view/map/ixMap/ixMap.vue'),
+                name: 'ixMap',
+                meta: {
+                    title: "IXMap",
+                    icon: 'HomeFilled',
+                    componentName: 'IXMap',
+                },
+            },
+            {
                 path: '/transitMap',
                 component: () => import('@/view/map/transitMap/transitMap.vue'),
                 name: 'transitMap',

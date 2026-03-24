@@ -4,6 +4,7 @@ import {DataSource} from './datasource.ts';
 import type {Ref} from "vue";
 import {allLoading} from "@/utils/tools.ts";
 import type {TransitsEmulatorNodeInfo} from "@/utils/types.ts";
+import {DataSet} from "vis-data";
 
 export interface TransitMapUiOtherConfiguration {
     settingControls: {
@@ -44,14 +45,22 @@ export class MapUi extends BaseMapUi {
     }
 
     setTransitNumber() {
-        this._transitNumber.value = this._datasource.transits.length
-        this._transitNumberMax.value = this._datasource.transits.length
         this._transits.value = this._datasource.transits
-        this._transitsCheckedList.value = this._datasource.transits.map((item: TransitsEmulatorNodeInfo) => item.asn)
+        this._transitNumber.value = this._transits.value.length
+        this._transitNumberMax.value = this._transits.value.length
+        this._transitsCheckedList.value = this._transits.value.map((item: TransitsEmulatorNodeInfo) => item.asn)
     }
 
     async start() {
         await super.start()
+        this.setTransitNumber()
+    }
+
+    async partStart(): Promise<void> {
+        await super.partStart()
+        const {vertices, edges} = this.getDataSetOrigin()
+        this._edges = new DataSet(edges);
+        this._nodes = new DataSet(vertices);
         this.setTransitNumber()
     }
 
@@ -76,35 +85,37 @@ export class MapUi extends BaseMapUi {
 
     _updateTransitMap(vertices: Vertex[], edges: Edge[]) {
         this.allLoadingInstance = allLoading()
-
         const {_nodes, _edges, _graph} = this.getter();
-        vertices.filter(item => !_nodes.get(item.id)).forEach((item: Vertex) => {
-            _nodes.add(item)
-        })
-        let updateHidden = _nodes.get({
-            filter: item => vertices.some(v => v.id === item.id && item.hidden)
-        }).map(item => ({id: item.id, hidden: false}))
-        _nodes.update(updateHidden)
+        try {
+            vertices.filter(item => !_nodes.get(item.id)).forEach((item: Vertex) => {
+                _nodes.add(item)
+            })
+            let updateHidden = _nodes.get({
+                filter: item => vertices.some(v => v.id === item.id && item.hidden)
+            }).map(item => ({id: item.id, hidden: false}))
+            _nodes.update(updateHidden)
+            updateHidden = _nodes.get({
+                filter: (item: Vertex) => !vertices.filter(_item => _item.id === item.id).length
+            }).map((item: Vertex) => ({id: item.id, hidden: true}))
+            _nodes.update(updateHidden)
 
-        // _nodes.remove(_nodes.get({
-        //     filter: (item: Vertex) => !vertices.filter(_item => _item.id === item.id).length
-        // }).map((item: Vertex) => item.id))
-        updateHidden = _nodes.get({
-            filter: (item: Vertex) => !vertices.filter(_item => _item.id === item.id).length
-        }).map((item: Vertex) => ({id: item.id, hidden: true}))
-        _nodes.update(updateHidden)
+            _edges.remove(_edges.get({
+                filter: (item: Edge) => !edges.some(_item => _item.from === item.from && _item.to === item.to)
+            }).map((item: Edge) => item.id!))
 
-        _edges.remove(_edges.get({
-            filter: (item: Edge) => !edges.some(_item => _item.from === item.from && _item.to === item.to)
-        }).map((item: Edge) => item.id!))
-
-        edges.filter((item: Edge) => !_edges.get({
-            filter: (_item: Edge) => _item.from === item.from && _item.to === item.to
-        }).length).forEach((edge: Edge) => {
-            _edges.add(edge)
-        })
-        _graph.stabilize();
-
+            edges.filter((item: Edge) => !_edges.get({
+                filter: (_item: Edge) => _item.from === item.from && _item.to === item.to
+            }).length).forEach((edge: Edge) => {
+                _edges.add(edge)
+            })
+            if (!this._graph) {
+                this.createVisGraph()
+            } else {
+                this._graph.stabilize();
+            }
+        } catch (e) {
+            console.log(e)
+        }
         this.allLoadingInstance?.close()
     }
 }

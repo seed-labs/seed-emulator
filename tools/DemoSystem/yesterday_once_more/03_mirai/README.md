@@ -20,5 +20,7 @@ cd demo_output
 DOCKER_BUILDKIT=0 docker compose build
 ```
 
-3. Operate on the `DemoSystem` webpage
+3. Operate on the `DemoSystem` webpage.
+    
+    After the shooting range is successfully activated, select to enter the `Map` page and then proceed with the subsequent operations.
 

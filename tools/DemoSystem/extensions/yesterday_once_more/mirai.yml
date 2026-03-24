@@ -95,7 +95,7 @@ sections:
               # 在 BYOB 控制台中输入命令：
               
               # display
-              broadcast timeout 30s bash -c '
+              broadcast timeout 300s bash -c '
               /usr/bin/echo "{ \"flash\": { \"dynamic\": { \"borderWidth\": 8, \"size\": 50 }, \"duration\": 1000 } }" >/map-plugins/style.json 
               && /bin/bash /map-plugins/submit_event.sh -a flash -s /map-plugins/style.json > /dev/null 2>&1'
               
@@ -109,7 +109,7 @@ sections:
               - action: terminal_exec
                 containerName: "as170h-C2_server-10.170.0.100"
                 cmd: |
-                  broadcast timeout 30s bash -c '/usr/bin/echo "{ \"flash\": { \"dynamic\": { \"borderWidth\": 8, \"size\": 50 }, \"duration\": 1000 } }" >/map-plugins/style.json && /bin/bash /map-plugins/submit_event.sh -a flash -s /map-plugins/style.json > /dev/null 2>&1'
+                  broadcast timeout 60s bash -c '/usr/bin/echo "{ \"flash\": { \"dynamic\": { \"borderWidth\": 8, \"size\": 50 }, \"duration\": 1000 } }" >/map-plugins/style.json && /bin/bash /map-plugins/submit_event.sh -a flash -s /map-plugins/style.json && sleep 5 && /bin/bash /map-plugins/submit_event.sh -a highlight > /dev/null 2>&1'
           - title: "restore"
             tooltip: "恢复"
             commands:

@@ -13,10 +13,21 @@ const ixNum = computed({
     injected.ixNum.value = value
   }
 })
+
+const ixOptions = computed({
+  get: () => injected.ixOptions.value,
+  set: (value) => {
+    injected.ixOptions.value = value
+  }
+})
 const ixNumMax = computed(() => injected.ixNumMax.value)
 const onIXNumChange = (newVal: number) => {
   injected.onIXNumChange(newVal)
 }
+const onIXBlur = () => {
+  injected.onIXBlur(ixValue.value)
+}
+const ixValue = ref<string>([])
 </script>
 
 <template>
@@ -27,6 +38,26 @@ const onIXNumChange = (newVal: number) => {
         @change="onIXNumChange"
         :max="ixNumMax"
     />
+  </el-form-item>
+  <el-form-item label="IX" prop="name" label-width="150px">
+    <el-select
+        v-model="ixValue"
+        multiple
+        collapse-tags
+        collapse-tags-tooltip
+        placeholder="Select IX"
+        style="width: 200px"
+        @blur="onIXBlur"
+        filterable
+        clearable
+    >
+      <el-option
+          v-for="item in ixOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+      />
+    </el-select>
   </el-form-item>
 </template>
 

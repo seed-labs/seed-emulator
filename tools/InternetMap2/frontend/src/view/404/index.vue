@@ -2,7 +2,7 @@
   <div class="no-found">
     <img src="@/assets/img/404.png">
     <div class="home-btn">
-      <el-button @click="goHome" class="btn1" type="primary" size="large">返回首页</el-button>
+      <el-button @click="goHome" class="btn1" type="primary" size="large">Return to the home</el-button>
     </div>
   </div>
 </template>

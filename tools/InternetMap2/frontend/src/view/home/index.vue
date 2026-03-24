@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import mapImg from '@/assets/img/map.png'
 import transitMapImg from '@/assets/img/transitMap.png'
+import ixMapImg from '@/assets/img/ixMap.png'
+import uploadMapImg from '@/assets/img/uploadMap.png'
 import dashboardImg from '@/assets/img/dashboard.png'
 import pluginImg from '@/assets/img/plugin.png'
 
@@ -17,10 +19,10 @@ import pluginImg from '@/assets/img/plugin.png'
       </section>
     </el-col>
   </el-row>
-  <el-row style="padding: 20px 0" :justify="'center'">
+  <el-row class="menu" style="padding: 20px 0" :justify="'center'">
     <el-col :span="22">
       <ul style="
-        display: grid;grid-template-columns: repeat(4, 1fr);
+        display: grid;grid-template-columns: repeat(3, 1fr);
         gap: 20px;
         list-style: none;
         padding: 0;
@@ -47,6 +49,25 @@ import pluginImg from '@/assets/img/plugin.png'
         </li>
         <li>
           <router-link
+              :to="{ name: 'ixMap'}"
+          >
+            <el-tooltip
+                class="box-item"
+                effect="dark"
+                content="Similar to the map page in function, the difference lies in the display dimension. IXMap only shows up to the IX dimension and does not display the Host at a deeper level."
+                placement="bottom-start"
+            >
+              <el-card>
+                <template #header>
+                  <h3>IX MAP</h3>
+                </template>
+                <el-image :src="ixMapImg" :fit="'fit'"/>
+              </el-card>
+            </el-tooltip>
+          </router-link>
+        </li>
+        <li>
+          <router-link
               :to="{ name: 'transitMap'}"
           >
             <el-tooltip
@@ -60,6 +81,25 @@ import pluginImg from '@/assets/img/plugin.png'
                   <h3>TRANSIT MAP</h3>
                 </template>
                 <el-image :src="transitMapImg" :fit="'fit'"/>
+              </el-card>
+            </el-tooltip>
+          </router-link>
+        </li>
+        <li>
+          <router-link
+              :to="{ name: 'uploadMap'}"
+          >
+            <el-tooltip
+                class="box-item"
+                effect="dark"
+                content="Compared with Internet Map, the data source is the docker-compose.yml file of the uploaded SEED simulator. Of course, this data source merely displays the network structure and other functions such as terminals are not available."
+                placement="bottom-start"
+            >
+              <el-card>
+                <template #header>
+                  <h3>Upload MAP</h3>
+                </template>
+                <el-image :src="uploadMapImg" :fit="'fit'"/>
               </el-card>
             </el-tooltip>
           </router-link>
@@ -123,5 +163,9 @@ import pluginImg from '@/assets/img/plugin.png'
 
 .container {
   text-align: center;
+}
+
+.menu a {
+  text-decoration: none;
 }
 </style>

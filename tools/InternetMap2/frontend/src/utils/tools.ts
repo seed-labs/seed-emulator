@@ -2,20 +2,19 @@ import {useRouter} from "vue-router";
 import {ElLoading} from "element-plus";
 import type {RouteRecord, NewRouteRecord} from "@/types/index.ts";
 import type {EmulatorNetwork, EmulatorNode} from "@/utils/types.ts";
+import {type Vertex} from '@/utils/map-datasource.ts';
 
-// 按path 查找路由对象
 export const getRouteByPath = (path: string) => {
     const router = useRouter()
     const routes = router.getRoutes()
     return routes.find(route => route.path === path)
 }
-// 将路由的所有最底层item插入到同一个列表
+
 export const RouterToListItem = (routes: RouteRecord[]) => {
     const result: NewRouteRecord[] = [];
 
     const walk = (list: RouteRecord[]) => {
         for (const item of list) {
-            // 先把当前节点加入结果（如果不想保留父节点可以自行过滤）
             result.push({
                 title: item.meta?.title,
                 name: item.path,
@@ -23,7 +22,6 @@ export const RouterToListItem = (routes: RouteRecord[]) => {
                 icon: item.meta?.icon,
                 type: 'element',
             });
-            // 若存在 children，递归处理
             if (item.children && item.children.length > 0) {
                 walk(item.children);
             }
@@ -38,17 +36,14 @@ export const findRouteWithParents = (path: string, routes: RouteRecord[]): Route
 
     const findRecursive = (currentRoutes: RouteRecord[], currentPath: string, parents: RouteRecord[] = []): boolean => {
         for (const route of currentRoutes) {
-            // 标准化路径比较（处理开头斜杠）
             const normalizedRoutePath = route.path.startsWith('/') ? route.path : `/${route.path}`
             const normalizedTargetPath = currentPath.startsWith('/') ? currentPath : `/${currentPath}`
 
-            // 检查是否匹配当前路由
             if (normalizedRoutePath === normalizedTargetPath) {
                 result.push(...parents, route)
                 return true
             }
 
-            // 如果有子路由，递归查找
             if (route.children && route.children.length > 0) {
                 const found = findRecursive(route.children, currentPath, [...parents, route])
                 if (found) return true
@@ -60,7 +55,7 @@ export const findRouteWithParents = (path: string, routes: RouteRecord[]): Route
     findRecursive(routes, path)
     return result
 }
-// 读取环境变量
+
 const proxyAddress = import.meta.env.MODE === 'development' ? import.meta.env.VITE_PROXY_ADDRESS : location.host
 export const getImgUrl = (path: string | undefined) => {
     if (!path || import.meta.env.MODE !== "development") {
@@ -117,9 +112,7 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
             hash = ((hash << 5) - hash) + char;
             hash = hash & hash; // Convert to 32-bit integer
         }
-        // 转换为16进制字符串，并确保长度为64字符（类似SHA-256）
         const hashHex = Math.abs(hash).toString(16).padStart(8, '0');
-        // 重复几次以达到类似SHA-256的长度
         return hashHex.repeat(8).substring(0, 64);
     }
 
@@ -144,7 +137,7 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
         const networkNameToId: NetworkNameToId = {};
 
         if (!composeData.networks) {
-            console.log("警告: compose文件中没有网络定义");
+            console.log("Warning: There is no network definition in the compose file.");
             return [networks, networkNameToId];
         }
 
@@ -158,7 +151,6 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
             const netId = generateId(fullNetName);
             const labels = netConfig.labels || {};
 
-            // 保存映射关系
             networkNameToId[fullNetName] = netId;
 
             // Extract emulator info from labels
@@ -166,7 +158,8 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
                 name: labels['org.seedsecuritylabs.seedemu.meta.name'] || '',
                 prefix: labels['org.seedsecuritylabs.seedemu.meta.prefix'] || subnet,
                 scope: labels['org.seedsecuritylabs.seedemu.meta.scope'] || '',
-                type: labels['org.seedsecuritylabs.seedemu.meta.type'] || 'local'
+                type: labels['org.seedsecuritylabs.seedemu.meta.type'] || 'local',
+                displayname: labels['org.seedsecuritylabs.seedemu.meta.displayname'] || '',
             };
 
             const network: EmulatorNetwork = {
@@ -203,24 +196,20 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
     }
 
     /**
-     * 检查节点是否有效
-     * 要求：meta.emulatorInfo.name 存在且不是空字符串
+     * Check whether the check node is valid
+     * Requirement: The meta.emulatorInfo.name exists and is not an empty string
      */
     function isValidNode(labels: Record<string, any>): boolean {
-        // 检查 nodename 是否存在且不是空字符串
         const nodeName = labels['org.seedsecuritylabs.seedemu.meta.nodename'];
 
-        // 如果是 undefined 或者 null，返回 false
         if (nodeName === undefined || nodeName === null) {
             return false;
         }
 
-        // 去除空白字符后检查是否为空
         if (typeof nodeName === 'string' && nodeName.trim() === '') {
             return false;
         }
 
-        // 检查是否有网络配置
         let hasNetwork = false;
         for (const key in labels) {
             if (key.startsWith('org.seedsecuritylabs.seedemu.meta.net.')) {
@@ -229,13 +218,9 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
             }
         }
 
-        // 必须有名称，至少有一个网络配置
         return Boolean(nodeName) && hasNetwork;
     }
 
-    /**
-     * 获取节点名称，返回去除空白字符后的值
-     */
     function getNodeName(labels: Record<string, any>): string {
         const nodeName = labels['org.seedsecuritylabs.seedemu.meta.nodename'] || '';
         if (typeof nodeName === 'string') {
@@ -244,9 +229,6 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
         return String(nodeName);
     }
 
-    /**
-     * Create node entries from compose data，只保留有效的节点
-     */
     function createNodes(
         composeData: ComposeData,
         networkNameToId: NetworkNameToId,
@@ -256,7 +238,7 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
         const skippedNodes: SkippedNode[] = [];
 
         if (!composeData.services) {
-            console.log("警告: compose文件中没有服务定义");
+            console.log("Warning: There are no service definitions in the compose file.");
             return [nodes, skippedNodes];
         }
 
@@ -270,22 +252,18 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
                 continue;
             }
 
-            // 获取标签
             const labels = svcConfig.labels || {};
-
-            // 获取节点名称用于检查
             const nodeName = getNodeName(labels);
             const containerName = svcConfig.container_name || svcName;
 
-            // 检查节点是否有效
             if (!isValidNode(labels)) {
                 let skipReason = '';
                 if (!nodeName) {
-                    skipReason = 'meta.emulatorInfo.name为空';
+                    skipReason = 'meta.emulatorInfo.name is null ';
                 } else if (nodeName.trim() === '') {
-                    skipReason = 'meta.emulatorInfo.name为空字符串';
+                    skipReason = 'meta.emulatorInfo.name is an empty string';
                 } else {
-                    skipReason = '没有网络配置';
+                    skipReason = 'No network configuration';
                 }
                 skippedNodes.push({
                     name: containerName,
@@ -295,19 +273,13 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
                 continue;
             }
 
-            // 生成节点ID
             const nodeId = generateId(`${project}_${svcName}_${containerName}`);
-
-            // 获取镜像名称
             const image = svcConfig.image || svcName;
-
-            // 构建Names数组 - 格式为 ["/容器名称"]
             const names: string[] = [];
             if (containerName) {
                 names.push(`/${containerName}`);
             }
 
-            // 构建网络设置
             const netSettings: { Networks: Record<string, any> } = {Networks: {}};
             let networkMode = "";
 
@@ -315,25 +287,21 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
                 for (const [netName, netCfg] of Object.entries(svcConfig.networks)) {
                     const fullNetName = `${project}_${netName}`;
 
-                    // 获取IP地址
                     let ip = '';
                     if (typeof netCfg === 'object' && netCfg !== null) {
                         ip = (netCfg as any).ipv4_address || '';
                     }
 
-                    // 获取网络ID - 确保不为空
                     let networkId = networkNameToId[fullNetName];
                     if (!networkId) {
-                        console.log(`警告: 网络 ${fullNetName} 的ID未找到，将生成新的ID`);
+                        console.log(`Warning: The ID of the network ${fullNetName} could not be found. A new ID will be generated.`);
                         networkId = generateId(fullNetName);
                     }
 
-                    // 设置网络模式为第一个网络
                     if (!networkMode) {
                         networkMode = fullNetName;
                     }
 
-                    // 计算网关地址
                     let gateway = '';
                     if (ip) {
                         const ipParts = ip.split('.');
@@ -362,7 +330,6 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
                 }
             }
 
-            // 从标签中提取网络信息
             const netsInfo: Array<{ name: string; address: string }> = [];
             for (let i = 0; i < 10; i++) { // Check up to 10 networks
                 const nameKey = `org.seedsecuritylabs.seedemu.meta.net.${i}.name`;
@@ -375,7 +342,6 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
                 }
             }
 
-            // 构建节点对象
             const node: EmulatorNode = {
                 Id: nodeId,
                 Names: names,
@@ -428,4 +394,25 @@ export function genVisData(composeData: ComposeData, projectName = "demo_output"
         nodes: nodes,
         nets: networks
     }
+}
+
+export function dealTransitWeight(dataList: Vertex[]) {
+    const groupCount: { [key: string]: number } = {};
+    const dotItems: Vertex[] = [];
+    const regex = /^r\d+$/;
+    dataList.forEach(item => {
+        if (item.shape === 'dot' && regex.test(item.object.meta.emulatorInfo.name)) {
+            dotItems.push(item);
+            groupCount[item.group as string] = (groupCount[item.group as string] || 0) + 1;
+        }
+    });
+
+    return dotItems
+        .map(item => ({...item, weight: groupCount[item.group as string]}))
+        .sort((a, b) => {
+            if (b.weight !== a.weight) {
+                return b.weight! - a.weight!;
+            }
+            return a.group!.localeCompare(b.group as string);
+        });
 }

@@ -90,11 +90,9 @@ export class DataSource {
         url: string,
         body?: any
     ): Promise<AxiosResponse<ApiRespond<ResultType>>> {
-        // 组装 axios 配置
         const config: AxiosRequestConfig = {
             method,
             url,
-            // 对于 POST/PUT 自动设置 JSON 头并序列化 body
             ...(method === 'POST' || method === 'PUT'
                 ? {
                     headers: {'Content-Type': 'application/json;charset=UTF-8'},
@@ -106,30 +104,23 @@ export class DataSource {
         try {
             const response: AxiosResponse<ApiRespond<ResultType>> = await request(config);
 
-            // axios 默认只在 HTTP 状态码 2xx 时 resolve
-            // 这里再检查业务层面的 ok 标记
             if (response.ok) {
                 return response;
             } else {
-                // 业务返回错误，直接抛出让调用方走 catch 分支
                 throw response;
             }
         } catch (error: any) {
-            // 统一错误结构，保持与原实现的 reject 参数一致
             if (error?.response) {
-                // 服务器有响应但状态码非 2xx
                 return Promise.reject({
                     ok: false,
                     result: `non-200 response from API`,
                 });
             } else if (error?.request) {
-                // 请求已发出，但没有收到响应
                 return Promise.reject({
                     ok: false,
                     result: 'axios request failed.',
                 });
             } else {
-                // 其它错误（例如代码错误、JSON 解析错误等）
                 return Promise.reject({
                     ok: false,
                     result: error?.message ?? 'unknown error',
@@ -373,20 +364,11 @@ export class DataSource {
         let vertices: Vertex[] = [];
         let hiddenNodeNetworkIds = new Set<string>()
 
-        // const IX_DB: IXLocation[] = [
-        //     {id: 'HN', name: 'HaiNan-IX', lat: 20.04, lon: 110.19},
-        //     {id: 'BJ', name: 'BeiJing-IX', lat: 39.9, lon: 116.4},
-        //     {id: 'AMS', name: 'AMS-IX', lat: 52.37, lon: 4.9},
-        //     {id: 'LON', name: 'LINX', lat: 51.5, lon: -0.12},
-        //     {id: 'TYO', name: 'JP-IX', lat: 35.68, lon: 139.76},
-        //     {id: 'NewYork', name: 'NewYork-IX', lat: 74.01, lon: 40.71}
-        // ]
-
         this._nodes.forEach(node => {
             let nodeInfo = node.meta.emulatorInfo;
             let vertex: Vertex = {
                 id: node.Id,
-                label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
+                label: nodeInfo.displayname || `${nodeInfo.asn}/${nodeInfo.name}`,
                 type: 'node',
                 shape: ['Router', 'BorderRouter'].includes(nodeInfo.role) ? 'dot' : 'hexagon',
                 // hidden: !['Router', 'BorderRouter', 'Route Server'].includes(nodeInfo.role),
@@ -412,29 +394,13 @@ export class DataSource {
             let netInfo = net.meta.emulatorInfo;
             let vertex: Vertex = {
                 id: net.Id,
-                label: netInfo.displayname ?? `${netInfo.scope}/${netInfo.name}`,
+                label: netInfo.displayname || `${netInfo.scope}/${netInfo.name}`,
                 type: 'network',
                 shape: netInfo.type == 'global' ? 'star' : 'diamond',
                 object: net,
                 collapsed: hiddenNodeNetworkIds.has(net.Id),
                 borderWidth: hiddenNodeNetworkIds.has(net.Id) ? 3 : 1
             };
-
-            // if (netInfo.type === 'global') {
-            //     const ix = IX_DB.pop()
-            //     if (ix) {
-            //         vertex.physics = false
-            //         vertex.fixed = true
-            //         vertex.label = ix.name
-            //         const pos = geoToXY(ix!.lat, ix!.lon)
-            //         console.log(pos)
-            //         vertex.x = pos.x
-            //         vertex.y = pos.y
-            //         vertex.size = 30
-            //         vertex.color = { background: '#2563eb', border: '#0f172a' }
-            //         vertex.font = { size: 13, color: '#000' }
-            //     }
-            // }
 
             if (netInfo.type == 'local') {
                 vertex.group = netInfo.scope;
@@ -451,11 +417,12 @@ export class DataSource {
     }
 
     get transits(): Array<TransitsEmulatorNodeInfo> {
+        const regex = /^r\d+$/;
         let asnSet = new Set<number>()
         let asnInfoMap = new Map<number, EmulatorNodeInfo[]>();
         this._nodes.forEach(node => {
             const asn = node.meta.emulatorInfo.asn
-            if (!["Router", "BorderRouter"].includes(node.meta.emulatorInfo.role) || node.meta.emulatorInfo.name.startsWith("router")) {
+            if (!["Router", "BorderRouter"].includes(node.meta.emulatorInfo.role) || !regex.test(node.meta.emulatorInfo.name)) {
                 return
             }
             if (asnSet.has(asn)) {
@@ -545,10 +512,7 @@ export class DataSource {
     }
 
     connectExistingTopology(originalNodes: Vertex[], originalEdges: Edge[], currentNodes: Vertex[], currentEdges: Edge[]): Edge[] {
-        // 生成边的唯一标识
         const getEdgeKey = (from: string, to: string): string => `${from}-${to}`;
-
-        // 构建图的邻接表（双向）
         const buildGraph = (edges: Edge[]): Map<string, { node: string, edge: Edge }[]> => {
             const graph = new Map<string, { node: string, edge: Edge }[]>();
 
@@ -567,8 +531,6 @@ export class DataSource {
 
             return graph;
         };
-
-        // 查找两个现有节点之间的最短路径（路径中间都是缺失节点）
         const findShortestPathBetweenExistingNodes = (
             graph: Map<string, { node: string, edge: Edge }[]>,
             start: string,
@@ -591,10 +553,7 @@ export class DataSource {
                 const neighbors = graph.get(current.node) || [];
 
                 for (const neighbor of neighbors) {
-                    // 跳过自环
                     if (neighbor.node === current.node) continue;
-
-                    // 如果遇到终点，返回路径
                     if (neighbor.node === end) {
                         return {
                             path: [...current.path, end],
@@ -602,7 +561,6 @@ export class DataSource {
                         };
                     }
 
-                    // 只允许通过缺失节点（不在existingNodes中）
                     if (!visited.has(neighbor.node) && !existingNodes.has(neighbor.node)) {
                         queue.push({
                             node: neighbor.node,
@@ -616,39 +574,29 @@ export class DataSource {
             return null;
         };
 
-        // 根据节点类型确定边的方向
         const determineEdgeDirection = (node1: Vertex, node2: Vertex): { from: string, to: string } | null => {
-            if (node1.id === node2.id) return null; // 同一个节点
+            if (node1.id === node2.id) return null;
 
             if (node1.type === 'node' && node2.type === 'network') {
                 return {from: node1.id, to: node2.id};
             } else if (node1.type === 'network' && node2.type === 'node') {
                 return {from: node2.id, to: node1.id};
             }
-            // 如果都是同类型节点，根据ID排序确定方向以避免重复
             return node1.id < node2.id ? {from: node1.id, to: node2.id} : {from: node2.id, to: node1.id};
         };
 
-        // 生成新边的标签
         const generateEdgeLabel = (originalEdges: Edge[]): string => {
             const labels = originalEdges.map(edge => edge.label).filter(Boolean);
             if (labels.length === 0) {
                 return 'connected';
             }
 
-            // 只有一个标签时，直接返回该标签（仍保持方括号的格式）
             if (labels.length === 1) {
                 return `[${labels[0]}]`;
             }
-
-            // // 多于一个标签时，取第一个和最后一个
-            // const first = labels[0];
-            // const last = labels[labels.length - 1];
-            // return `${first}->${last}`;
             return ''
         };
 
-        // 判断两个节点是否已经存在边
         const hasExistingEdge = (edges: Edge[], node1Id: string, node2Id: string): boolean => {
             return edges.some(edge =>
                 (edge.from === node1Id && edge.to === node2Id) ||
@@ -656,7 +604,6 @@ export class DataSource {
             );
         };
 
-        // 主函数：连接现有节点
         if (currentNodes.length === 0) return [];
 
         const existingNodeIds = new Set(currentNodes.map(node => node.id));
@@ -665,13 +612,12 @@ export class DataSource {
         let newEdges: Edge[] = [...currentEdges];
         const processedPairs = new Set<string>();
 
-        // 检查每对现有节点，寻找需要连接的路径
         for (let i = 0; i < currentNodes.length; i++) {
             for (let j = i + 1; j < currentNodes.length; j++) {
                 const nodeA = currentNodes[i];
                 const nodeB = currentNodes[j];
 
-                if (nodeA.id === nodeB.id) continue; // 跳过同一个节点
+                if (nodeA.id === nodeB.id) continue;
 
                 const pairKey = getEdgeKey(nodeA.id, nodeB.id);
                 const reversePairKey = getEdgeKey(nodeB.id, nodeA.id);
@@ -679,16 +625,13 @@ export class DataSource {
                 if (processedPairs.has(pairKey) || processedPairs.has(reversePairKey)) continue;
                 processedPairs.add(pairKey);
 
-                // 如果已经存在边，跳过
                 if (hasExistingEdge(newEdges, nodeA.id, nodeB.id)) continue;
 
-                // 确定边的方向
                 const direction = determineEdgeDirection(nodeA, nodeB);
                 if (!direction) continue;
 
                 const {from, to} = direction;
 
-                // 查找通过缺失节点的路径
                 const pathResult = findShortestPathBetweenExistingNodes(
                     graph,
                     from,
@@ -696,7 +639,6 @@ export class DataSource {
                     existingNodeIds
                 );
 
-                // 如果找到路径且路径中有缺失节点，创建新边
                 if (pathResult && pathResult.path.length > 2) {
                     const newEdge: Edge = {
                         from,
@@ -704,7 +646,6 @@ export class DataSource {
                         label: generateEdgeLabel(pathResult.edges)
                     };
 
-                    // 检查是否已经添加了这条边
                     if (!hasExistingEdge(newEdges, from, to)) {
                         newEdges.push(newEdge);
                     }

@@ -18,7 +18,7 @@ const visRef = ref<HTMLDivElement | null>(null)
 let map: L.Map
 let network: Network
 
-/* ================= GEO 节点 ================= */
+/* ================= GEO ================= */
 const GEO_NODES = [
   {id: 1, name: 'Beijing', lat: 39.9042, lon: 116.4074},
   {id: 2, name: 'Shanghai', lat: 31.2304, lon: 121.4737},
@@ -93,8 +93,6 @@ onMounted(async () => {
         }
       }
   )
-
-  /* ---------- 同步经纬度 ---------- */
   const syncGeoNodes = () => {
     GEO_NODES.forEach(n => {
       const p = map.latLngToContainerPoint([n.lat, n.lon])
@@ -107,8 +105,6 @@ onMounted(async () => {
   }
 
   map.on('move zoom resize', syncGeoNodes)
-
-  /* 关键：等待 DOM 完全布局后再修正尺寸 */
   await nextTick()
   map.invalidateSize()
   syncGeoNodes()
@@ -127,7 +123,6 @@ onBeforeUnmount(() => {
   height: 100vh;
 }
 
-/* Leaflet 背景 */
 .map-layer {
   position: absolute;
   inset: 0;
