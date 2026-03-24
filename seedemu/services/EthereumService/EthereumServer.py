@@ -1,5 +1,4 @@
 from __future__ import annotations
-from examples.internet.B29_email_dns.email_realistic import configure_bgp_peering
 from seedemu.core import Node, Server, BaseSystem
 from .EthEnum import *
 from .EthUtil import *
