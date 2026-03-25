@@ -16,6 +16,7 @@ EthServerFileTemplates: Dict[str, str] = {
         'bootstrapper':        get_file_content("files_ethereum/bootstrapper.sh"),
         'beacon_bootstrapper': get_file_content("files_ethereum/beacon_bootstrapper.sh"),
         'fetch_bn_enr':    get_file_content("files_ethereum/fetch_bn_enr.sh"),
+        'vc_bootstrapper': get_file_content("files_ethereum/vc_bootstrapper.sh"),
 }
 
 UtilityServerFileTemplates: Dict[str, str] = {

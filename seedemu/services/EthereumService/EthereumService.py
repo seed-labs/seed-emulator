@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .EthEnum import ConsensusMechanism, EthUnit
 from .EthUtil import Genesis, EthAccount, AccountStructure
-from .EthereumServer import EthereumServer, PoAServer, PoWServer, PoSServer
+from .EthereumServer import EthereumServer, PoAServer, PoSBeaconServer, PoSBeaconSetupServer, PoSGethServer, PoWServer, PoSVcServer,PoSServer
 from os import mkdir, path, makedirs, rename
 from seedemu.core import Node, Service, Server, Emulator
 from seedemu.core.enums import NetworkType
@@ -52,12 +52,16 @@ class Blockchain:
         self._consensus = consensus 
         self._chain_name = chainName 
         self._genesis = Genesis(self._consensus)
-        self._boot_node_addresses = [] 
+        # self._boot_node_addresses = [] 
         self._miner_node_address = [] 
         self._joined_accounts = []
         self._joined_signer_accounts = [] 
         self._validator_ids = [] 
         self._beacon_setup_node_address = ''  
+
+        self._beacon_boot_node_address = []
+        self._geth_boot_node_address = []
+
         self._pending_targets = [] #
         self._emu_mnemonic = "great awesome fun seed security lab protect system network prevent attack future"
         self._total_accounts_per_node = 1
@@ -68,6 +72,10 @@ class Blockchain:
         self._chain_id = chainId
         self._target_aggregater_per_committee = 2
         self._target_committee_size = 3
+        self._beacon_to_geth_vnode = {}
+        self._vc_to_beacon_vnode = {}
+        self._beacon_to_geth_ip = {}
+        self._vc_to_beacon_ip = {}
         
 
     def _doConfigure(self, node:Node, server:Server):
@@ -86,31 +94,45 @@ class Blockchain:
         assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
         addr = '{}:{}'.format(str(ifaces[0].getAddress()), server.getBootNodeHttpPort())
         
+        # if server.isBootNode():
+        #     self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self._consensus.value))
+        #     self._boot_node_addresses.append(str(ifaces[0].getAddress()))
+
         if server.isBootNode():
-            self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self._consensus.value))
-            self._boot_node_addresses.append(str(ifaces[0].getAddress()))
+            if isinstance(server, PoSBeaconServer):
+                self._beacon_boot_node_address.append(str(ifaces[0].getAddress()))
+            elif isinstance(server, PoSGethServer):
+                self._geth_boot_node_address.append(str(ifaces[0].getAddress()))
+            # self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self._consensus.value))
+            # self._boot_node_addresses.append(str(ifaces[0].getAddress()))
+       
         
         if self._consensus == ConsensusMechanism.POS:
-            if server.isStartMiner():
-                self._log('adding as{}/{} as consensus-{} miner...'.format(node.getAsn(), node.getName(), self._consensus.value))
-                self._miner_node_address.append(str(ifaces[0].getAddress())) 
-            if server.isBeaconSetupNode():
+            if isinstance(server, PoSBeaconSetupServer):
                 self._beacon_setup_node_address = '{}:{}'.format(ifaces[0].getAddress(), server.getBeaconSetupHttpPort())
+            # if server.isStartMiner():
+            #     self._log('adding as{}/{} as consensus-{} miner...'.format(node.getAsn(), node.getName(), self._consensus.value))
+            #     self._miner_node_address.append(str(ifaces[0].getAddress())) 
+            # if server.isBeaconSetupNode():
+            #     self._beacon_setup_node_address = '{}:{}'.format(ifaces[0].getAddress(), server.getBeaconSetupHttpPort())
 
         server._createAccounts(self)
         
         accounts = server._getAccounts()
         if len(accounts) > 0:
-            if self._consensus == ConsensusMechanism.POS and server.isValidatorAtRunning():
-                accounts[0].balance = 33 * EthUnit.ETHER.value
+            if isinstance(server, PoSVcServer):
+                if self._consensus == ConsensusMechanism.POS and server.isValidatorAtRunning():
+                    accounts[0].balance = 33 * EthUnit.ETHER.value
             self._joined_accounts.extend(accounts)
             if self._consensus in [ConsensusMechanism.POA] and server.isStartMiner():
                 self._joined_signer_accounts.append(accounts[0])
+        if isinstance(server, PoSVcServer):
+            if self._consensus == ConsensusMechanism.POS and server.isValidatorAtGenesis():
+                self._validator_ids.append(str(server.getId()))
 
-        if self._consensus == ConsensusMechanism.POS and server.isValidatorAtGenesis():
-            self._validator_ids.append(str(server.getId()))
-        
+        ### 2026/2/11  生成可以，但是beacon 不add就可以
         server._generateGethStartCommand(str(ifaces[0].getAddress()))
+            
 
         if self._eth_service.isSave():
             save_path = self._eth_service.getSavePath()
@@ -148,6 +170,20 @@ class Blockchain:
                 server.setFaucetUrl(self.__getIpByVnodeName(emulator, linked_faucet_node_name))
                 faucet_server:FaucetServer = emulator.getServerByVirtualNodeName(linked_faucet_node_name)
                 server.setFaucetPort(faucet_server.getPort())
+
+            elif isinstance(server, PoSBeaconServer):
+                geth_vnode = server.getConnectGethVNode()
+                if geth_vnode != '':
+                    ip = self.__getIpByVnodeName(emulator, geth_vnode)
+                    if ip:
+                        server.setConnectedGethIp(ip)
+            elif isinstance(server, PoSVcServer):
+                beacon_vnode = server.getConnectBeaconVNode()
+                if beacon_vnode != '':
+                    ip = self.__getIpByVnodeName(emulator, beacon_vnode)
+                    if ip:
+                        server.setConnectedBeaconIp(ip)
+            
   
         self._genesis.addAccounts(self.getAllAccounts())
         
@@ -164,7 +200,8 @@ class Blockchain:
             if net.getType() == NetworkType.Local:
                 address = iface.getAddress()
                 return address
-    
+    def getIpByVnodeName(self, emulator, nodename:str) -> str:
+        return self.__getIpByVnodeName(emulator, nodename)
     def getAllServerNames(self):
         server_names = {}
         pending_targets = self._eth_service.getPendingTargets()
@@ -223,6 +260,24 @@ class Blockchain:
         @returns The IP address.
         """
         return self._beacon_setup_node_address
+    def  getBeaconBootNodeIP(self) -> str:
+        """!
+        @brief Get the IP of a beacon boot node.
+
+        @returns The IP address.
+        """
+        return self._beacon_boot_node_address
+    def getGethBootNodeIP(self) -> str:         
+        """!
+        @brief Get the IP of a geth boot node.
+
+        @returns The IP address.
+        """
+        return self._geth_boot_node_address
+    def getBeaconBootNodes(self) -> List[str]:
+        return list(self._beacon_boot_node_address)
+    def getGethBootNodes(self) -> List[str]:
+        return list(self._geth_boot_node_address)
 
     def setGenesis(self, genesis:str) -> EthereumServer:
         """!
@@ -300,6 +355,56 @@ class Blockchain:
         eth = self._eth_service
         self._pending_targets.append(vnode)
         return eth.installByBlockchain(vnode, self)
+    def createGethNode(self, vnode: str) -> EthereumServer:
+        """!
+        @brief Create a node belongs to this blockchain.
+
+        @param vnode The name of vnode.
+
+        @returns EthereumServer
+        """
+        nodetype = 'geth'
+        eth = self._eth_service
+        self._pending_targets.append(vnode)
+        return eth.installByBlockchain(vnode, self,nodetype="geth")
+    def createBeaconNode(self, vnode: str) -> EthereumServer:
+        """!
+        @brief Create a node belongs to this blockchain.
+
+        @param vnode The name of vnode.
+
+        @returns EthereumServer
+        """
+        nodetype = 'beacon'
+        eth = self._eth_service
+        self._pending_targets.append(vnode)
+        return eth.installByBlockchain(vnode, self,nodetype="beacon")
+
+    def createVcNode(self, vnode: str) -> EthereumServer:
+        """!
+        @brief Create a node belongs to this blockchain.
+
+        @param vnode The name of vnode.
+
+        @returns EthereumServer
+        """
+        nodetype = 'beacon'
+        eth = self._eth_service
+        self._pending_targets.append(vnode)
+        return eth.installByBlockchain(vnode, self,nodetype="vc")
+
+    def createBeaconSetupNode(self, vnode: str) -> EthereumServer:
+        """!
+        @brief Create a node belongs to this blockchain.
+
+        @param vnode The name of vnode.
+
+        @returns EthereumServer
+        """
+        nodetype = 'beaconsetup'
+        eth = self._eth_service
+        self._pending_targets.append(vnode)
+        return eth.installByBlockchain(vnode, self, nodetype="beaconsetup")  
     
     def addCode(self, address: str, code: str) -> Blockchain:
         """!
@@ -636,7 +741,7 @@ class EthereumService(Service):
                 exit(1)
         mkdir(self.__save_path)
         
-    def _doInstall(self, node: Node, server: Server):
+    def _doInstall(self, node: Node, server: Server):   ##这里的server是基类 service的render 传进来的
         self._log('installing eth on as{}/{}...'.format(node.getAsn(), node.getName()))
         if isinstance(server, EthereumServer):
             server.install(node, self)
@@ -645,7 +750,7 @@ class EthereumService(Service):
         elif isinstance(server, EthUtilityServer):
             server.install(node)
 
-    def _createServer(self, blockchain: Blockchain = None) -> Server:
+    def _createServer(self, blockchain: Blockchain = None,nodetype:str =None) -> Server:
         self.__serial += 1
         assert blockchain != None, 'EthereumService::_createServer(): create server using Blockchain::createNode() not EthereumService::install()'.format()
         consensus = blockchain.getConsensusMechanism()
@@ -654,7 +759,16 @@ class EthereumService(Service):
         if consensus == ConsensusMechanism.POW:
             return PoWServer(self.__serial, blockchain)
         if consensus == ConsensusMechanism.POS:
-            return PoSServer(self.__serial, blockchain)
+            if nodetype == 'geth':
+                return PoSGethServer(self.__serial, blockchain)
+            if nodetype == "beacon":
+                return PoSBeaconServer(self.__serial, blockchain)
+            if nodetype == "beaconsetup":
+                return PoSBeaconSetupServer(self.__serial, blockchain)
+            if nodetype == "vc":
+                return PoSVcServer(self.__serial, blockchain)
+            if nodetype == None:
+                return PoSServer(self.__serial, blockchain)
         
     def _createFaucetServer(self, blockchain:Blockchain, linked_eth_node:str, port:int, balance:int, max_fund_amount:int) -> FaucetServer:
         return FaucetServer(blockchain, linked_eth_node, port, balance, max_fund_amount)
@@ -662,7 +776,7 @@ class EthereumService(Service):
     def _createEthUtilityServer(self, blockchain:Blockchain, port:int, linked_eth_node:str, linked_faucet_node:str) -> EthUtilityServer:
         return EthUtilityServer(blockchain, port, linked_eth_node, linked_faucet_node)
 
-    def installByBlockchain(self, vnode: str, blockchain: Blockchain) -> EthereumServer:
+    def installByBlockchain(self, vnode: str, blockchain: Blockchain,nodetype:str = None) -> EthereumServer:
         """!
         @brief Install the service on a node identified by given name. 
                 This API is called by Blockchain Class. 
@@ -674,7 +788,8 @@ class EthereumService(Service):
         """
         if vnode in self._pending_targets.keys(): return self._pending_targets[vnode]
 
-        s = self._createServer(blockchain)
+       
+        s = self._createServer(blockchain,nodetype)
         self._pending_targets[vnode] = s
 
         return self._pending_targets[vnode]
