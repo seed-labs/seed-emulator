@@ -4,6 +4,7 @@ Similar to the map page in function, the difference lies in the display dimensio
 - display
   - [by number](#by-number)
   - [by name](#by-name)
+  - [full / partial](#full--partial)
 
 ![transitMap.png](assets/transitMap.png)
 
@@ -24,3 +25,13 @@ Display according to the ASN name of the selected transit. By default, all are d
 ![transit_by_name2.png](assets/transit_by_name2.png)
 ![transit_by_name3.png](assets/transit_by_name3.png)
 ![transit_by_name4.png](assets/transit_by_name4.png)
+
+### full / partial
+As soon as you enter the webpage, a prompt will appear asking whether you want to display all the nodes.
+
+- Yes
+  - Display all nodes
+- No
+  - Please select the options to be displayed in the "Settings -> Categories" section.
+
+![transitMap1.png](assets/transitMap1.png)

@@ -2,7 +2,7 @@
 
 This guide provides a thorough checklist and runnable commands to validate the B29 DNS-first email example end-to-end, including: DNS, BGP, email flows (intra- and cross-domain), logging/record verification, resilience, and large-scale/roster-based automation.
 
-- Internet Map: http://localhost:8080/map.html
+- Internet Map: http://localhost:8080/pro/map
 - Roundcube: http://localhost:8082
 
 ## 1) Environment pre-checks

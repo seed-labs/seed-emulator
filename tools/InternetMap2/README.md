@@ -17,10 +17,19 @@ Currently, the tool supports the following features:
   - Customize node styles 
   - Expand/collapse nodes 
   - Drag-to-fix node positions
+- [ixMap](#ixMap):
+  - Similar to the map page in function
+  - Displayed up to the IX level and will not show the Host at a deeper level
+  - Filter by the number or name of IX
 - [transitMap](#transitMap):
   - Similar to the map page in function
   - Displayed up to the transit level and will not show the Host at a deeper level
   - Filter by the number or name of transit
+- [uploadMap](#uploadMap):
+  - Similar to the map page in function
+  - The data source is the uploaded docker-compose.yml file, which only displays the network topology diagram
+  - Functions such as the terminal and Filter that require background nodes cannot be used
+  - Set the displayed topology diagram based on the names and quantities of IX and Transit.
 - [dashboard](#dashboard):
   - List nodes in the emulation 
   - Access nodes in the emulation 
@@ -69,11 +78,23 @@ The network topology diagram displays interconnection relationships between node
 
 ![map.png](docs/assets/map.png)
 
+### ixMap
+
+Similar to the map page in function, the difference lies in the display dimension. ixMap only shows up to the IX dimension and does not display the Host at a deeper level. For detailed introductions, [please refer to this document](./docs/ixMap.md).
+
+![ixMap.png](docs/assets/ixMap.png)
+
 ### transitMap
 
 Similar to the map page in function, the difference lies in the display dimension. transitMap only shows up to the transit dimension and does not display the Host at a deeper level. For detailed introductions, [please refer to this document](./docs/transitMap.md).
 
 ![transitMap.png](docs/assets/transitMap.png)
+
+### uploadMap
+
+Similar to the map page in function, However, the data source is the uploaded docker-compose.yml file, which only displays the network topology diagram. In fact, no corresponding nodes are running on the host machine. Therefore, functions such as the terminal and Filter that require background nodes cannot be used. For detailed introductions, [please refer to this document](./docs/uploadMap.md).
+
+![uploadMap.png](docs/assets/uploadMap.png)
 
 ### dashboard
 
