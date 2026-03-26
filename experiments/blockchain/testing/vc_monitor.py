@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 import time
 import os
+import argparse # Added for argument parsing
 from datetime import datetime
 
 def clear_terminal():
@@ -61,14 +62,23 @@ def run_monitor(target_ip):
             print("Refreshing every 12 seconds... (Press Ctrl+C to stop)")
             
         else:
-            print("No data received. Retrying in 12s...")
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] No data received from {target_ip}. Retrying in 12s...")
             
         time.sleep(12)
 
 if __name__ == "__main__":
-    NODE_IP = "10.153.0.96"
+    # Setup Argument Parser
+    parser = argparse.ArgumentParser(description="Beacon Chain Validator Monitor")
+    parser.add_argument(
+        "--ip", 
+        type=str, 
+        default="10.153.0.96", 
+        help="The IP address of the Ethereum node (default: 10.153.0.96)"
+    )
+    
+    args = parser.parse_args()
     
     try:
-        run_monitor(NODE_IP)
+        run_monitor(args.ip)
     except KeyboardInterrupt:
         print("\nMonitor stopped by user.")

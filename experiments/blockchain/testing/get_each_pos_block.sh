@@ -2,7 +2,7 @@
 
 LOGFILE="pos_block_$(date '+%Y%m%d_%H%M%S').log"
 
-docker ps --format '{{.Names}}' | grep POS | while IFS= read -r eth_container; do
+docker ps --format '{{.Names}}' | grep Geth | while IFS= read -r eth_container; do
     block=$(docker exec "$eth_container" geth attach --exec 'eth.blockNumber' 2>&1)
     exit_code=$?
 

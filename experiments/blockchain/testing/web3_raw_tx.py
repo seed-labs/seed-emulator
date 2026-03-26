@@ -7,21 +7,34 @@ import argparse
 from web3 import Web3
 from eth_account import Account
 from datetime import datetime
-
+import traceback
+# --------------------------
+# Parse command-line arguments
+# --------------------------
 # --------------------------
 # Parse command-line arguments
 # --------------------------
 parser = argparse.ArgumentParser(description="ETH transaction sender")
+
 parser.add_argument(
-    "--node",
+    "--ip",
     type=str,
-    default="http://10.164.0.118:8545",
-    help="Ethereum node RPC URL"
+    default="10.151.0.80",
+    help="Ethereum node IP address"
 )
+
+parser.add_argument(
+    "--port",
+    type=int,
+    default=8545,
+    help="Ethereum node RPC port"
+)
+
 args = parser.parse_args()
 
-# Use passed-in node URL
-NODE_URL = args.node
+# Build RPC URL
+NODE_URL = f"http://{args.ip}:{args.port}"
+
 
 # Connect to blockchain
 w3 = Web3(Web3.HTTPProvider(NODE_URL))
@@ -53,9 +66,18 @@ def log_transaction(amount, from_addr, to_addr, tx_hash, status):
 
 def send_eth_transaction(from_account, to_address, amount_eth):
     try:
+        # 1. 检查发送者余额 (v5 使用 fromWei)
+        balance_wei = w3.eth.get_balance(from_account.address)
+        balance_eth = w3.fromWei(balance_wei, 'ether')
+        
         amount_wei = w3.toWei(amount_eth, 'ether')
         gas_price = w3.eth.gas_price
         gas_limit = 21000
+        
+        if balance_wei < (amount_wei + (gas_price * gas_limit)):
+            print(f"Skipping: Insufficient funds. Balance: {balance_eth} ETH")
+            return None
+
         nonce = w3.eth.get_transaction_count(from_account.address)
 
         tx = {
@@ -64,32 +86,37 @@ def send_eth_transaction(from_account, to_address, amount_eth):
             'gas': gas_limit,
             'gasPrice': gas_price,
             'nonce': nonce,
-            'chainId': 1337
+            'chainId': 1337  # 使用动态获取的 ID
         }
 
+        # v5 使用 sign_transaction 和 rawTransaction
         signed_txn = w3.eth.account.sign_transaction(tx, from_account.key)
         tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
         print(f"Transaction sent! Hash: {tx_hash.hex()}")
 
-        # Wait for receipt
-        # receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+        print(f"Waiting for receipt (Max 20s)...")
+        # 如果这里报错，traceback 会抓住它
         receipt = w3.eth.wait_for_transaction_receipt(
             tx_hash,
-            timeout=600,        # 600 second
-            poll_latency=1      # 1 second loop
+            timeout=20,
+            poll_latency=1
         )
 
         status = "Success" if receipt.status == 1 else "Fail"
         print(f"Transaction status: {status}\n")
 
-        # Write detailed log
         log_transaction(amount_eth, from_account.address, to_address, tx_hash.hex(), status)
-
         return tx_hash.hex()
 
     except Exception as e:
-        print(f"Error sending transaction: {e}")
-        log_transaction(amount_eth, from_account.address, to_address, "N/A", f"Error: {e}")
+        print("\n" + "!"*60)
+        print("ERROR DETECTED:")
+        # 打印详细的报错行号和错误类型
+        traceback.print_exc() 
+        print("!"*60 + "\n")
+        
+        # 记录到日志
+        log_transaction(amount_eth, from_account.address, to_address, "ERROR", str(e))
         return None
 
 

@@ -62,7 +62,7 @@ def send_eth_transaction(from_account, to_address, amount_eth, nonce=None):
 
 
 # Connect to the blockchain
-eth_node_url = 'http://10.153.0.71:8545'
+eth_node_url = 'http://10.151.0.71:8545'
 w3 = Web3(Web3.HTTPProvider(eth_node_url))
 
 Account.enable_unaudited_hdwallet_features()
