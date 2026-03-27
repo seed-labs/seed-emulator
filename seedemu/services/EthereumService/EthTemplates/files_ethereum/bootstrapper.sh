@@ -19,4 +19,4 @@ while read -r node; do {
             break
         fi
     }; done
-}; done < /tmp/eth-nodes
+}; done < /tmp/geth-eth-nodes

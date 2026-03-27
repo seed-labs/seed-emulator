@@ -157,12 +157,13 @@ class EthereumServer(Server):
             node.appendStartCommand("chmod +x /usr/bin/geth")
 
         # genesis
-        # if isinstance(self, PoSGethServer) or isinstance(self, PoSVcServer):
-        node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth --datadir {} init /tmp/eth-genesis.json'.format(self._data_dir))
+        if isinstance(self, PoSGethServer):
+            node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth --datadir {} init /tmp/eth-genesis.json'.format(self._data_dir))
         
         # copy keystore to the proper folder
         for account in self._accounts:
-            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename))
+            if isinstance(self, PoSGethServer):
+                node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename))
 
         if self._is_bootnode and isinstance(self, PoSGethServer):
             # generate enode url. other nodes will access this to bootstrap the network.
