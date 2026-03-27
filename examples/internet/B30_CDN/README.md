@@ -1,6 +1,12 @@
 # Simple CDN
 
-This example builds a simple CDN on top of the mini Internet example.
+This directory contains:
+
+- the baseline CDN example in the current directory
+- the amplification-attack experiment in
+  `examples/internet/B30_CDN/amplification_attack`
+
+The baseline example builds a simple CDN on top of the mini Internet example.
 
 The deployment includes:
 
@@ -19,7 +25,7 @@ a small JSON payload identifying the selected site.
 ## Topology
 
 This example reuses the base topology from
-[B00_mini_internet](/Users/bruce/seed-emulator/examples/internet/B00_mini_internet).
+`examples/internet/B00_mini_internet`.
 
 The CDN sites are:
 
@@ -85,3 +91,34 @@ docker exec -it as154h-host_0-10.154.0.71 sh -lc "curl --noproxy '*' -s http://w
 
 The DNS answers should point to different edge IPs for different regions, and
 the JSON response should identify the selected CDN site.
+
+
+## Directory Layout
+
+- `examples/internet/B30_CDN/cdn.py`
+  builds the baseline CDN example
+- `examples/internet/B30_CDN/amplification_attack/rangeamp_sbr.py`
+  builds the RangeAmp-style amplification experiment
+- `examples/internet/B30_CDN/amplification_attack/rangeamp_sbr.md`
+  documents the attack experiment and observed results
+
+
+## Amplification Experiment
+
+The amplification attack reproduction is separated from the baseline CDN.
+
+To build it:
+
+```bash
+cd examples/internet/B30_CDN/amplification_attack
+conda run -n seedpy310 python rangeamp_sbr.py amd
+```
+
+This creates:
+
+```bash
+examples/internet/B30_CDN/amplification_attack/output
+```
+
+The full experiment description is in
+`examples/internet/B30_CDN/amplification_attack/rangeamp_sbr.md`.
