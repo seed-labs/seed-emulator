@@ -21,6 +21,7 @@ from examples.internet.B00_mini_internet import mini_internet
 SERVICE_DOMAIN = "www.example.com"
 SERVICE_ZONE = "example.com"
 SERVICE_ZONE_FQDN = "example.com."
+OUTPUT_RELATIVE_PATH = "examples/internet/B30_CDN/output"
 
 CLIENT_REGION_BY_ASN = {
     150: "east",
@@ -317,7 +318,7 @@ def run():
         override=True,
     )
 
-    print(f"Generated Docker output in: {output_dir}")
+    print(f"Generated Docker output in: {OUTPUT_RELATIVE_PATH}")
     print("Docker was not started automatically.")
 
 
