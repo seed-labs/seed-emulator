@@ -94,11 +94,11 @@ def send_eth_transaction(from_account, to_address, amount_eth):
         tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
         print(f"Transaction sent! Hash: {tx_hash.hex()}")
 
-        print(f"Waiting for receipt (Max 20s)...")
+        print(f"Waiting for receipt (Max 50s)...")
         # 如果这里报错，traceback 会抓住它
         receipt = w3.eth.wait_for_transaction_receipt(
             tx_hash,
-            timeout=20,
+            timeout=50,
             poll_latency=1
         )
 
