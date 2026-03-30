@@ -4,7 +4,9 @@ This directory contains:
 
 - the baseline CDN example in the current directory
 - the amplification-attack experiment in
-  `examples/internet/B30_CDN/amplification_attack`
+  `nsdi/CDN/amplification_attack`
+- the erasure-coded cache experiment in
+  `nsdi/CDN/c2dn`
 
 The baseline example builds a simple CDN on top of the mini Internet example.
 
@@ -95,12 +97,16 @@ the JSON response should identify the selected CDN site.
 
 ## Directory Layout
 
-- `examples/internet/B30_CDN/cdn.py`
+- `nsdi/CDN/cdn.py`
   builds the baseline CDN example
-- `examples/internet/B30_CDN/amplification_attack/rangeamp_sbr.py`
+- `nsdi/CDN/amplification_attack/rangeamp_sbr.py`
   builds the RangeAmp-style amplification experiment
-- `examples/internet/B30_CDN/amplification_attack/rangeamp_sbr.md`
+- `nsdi/CDN/amplification_attack/rangeamp_sbr.md`
   documents the attack experiment and observed results
+- `nsdi/CDN/c2dn/c2dn.py`
+  builds the simplified C2DN experiment
+- `nsdi/CDN/c2dn/c2dn.md`
+  documents the C2DN experiment
 
 
 ## Amplification Experiment
@@ -110,15 +116,36 @@ The amplification attack reproduction is separated from the baseline CDN.
 To build it:
 
 ```bash
-cd examples/internet/B30_CDN/amplification_attack
+cd nsdi/CDN/amplification_attack
 conda run -n seedpy310 python rangeamp_sbr.py amd
 ```
 
 This creates:
 
 ```bash
-examples/internet/B30_CDN/amplification_attack/output
+nsdi/CDN/amplification_attack/output
 ```
 
 The full experiment description is in
-`examples/internet/B30_CDN/amplification_attack/rangeamp_sbr.md`.
+`nsdi/CDN/amplification_attack/rangeamp_sbr.md`.
+
+
+## C2DN Experiment
+
+The erasure-coded cache experiment is separated from the baseline CDN.
+
+To build it:
+
+```bash
+cd nsdi/CDN/c2dn
+conda run -n seedpy310 python c2dn.py amd
+```
+
+This creates:
+
+```bash
+nsdi/CDN/c2dn/output
+```
+
+The full experiment description is in
+`nsdi/CDN/c2dn/c2dn.md`.

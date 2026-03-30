@@ -12,11 +12,11 @@ attack in a controlled SeedEmu environment.
 
 The experiment is implemented in:
 
-- `examples/internet/B30_CDN/amplification_attack/rangeamp_sbr.py`
+- `nsdi/CDN/amplification_attack/rangeamp_sbr.py`
 
 The baseline CDN example remains:
 
-- `examples/internet/B30_CDN/cdn.py`
+- `nsdi/CDN/cdn.py`
 
 
 ## Attack Idea
@@ -62,9 +62,9 @@ treated as a new object and causes another cache miss.
 
 ## What Was Added on Top of `cdn.py`
 
-The experiment does **not** modify `examples/internet/B30_CDN/cdn.py`.
+The experiment does **not** modify `nsdi/CDN/cdn.py`.
 Instead, it creates a separate topology in
-`examples/internet/B30_CDN/amplification_attack/rangeamp_sbr.py`,
+`nsdi/CDN/amplification_attack/rangeamp_sbr.py`,
 reusing the same mini-Internet style deployment.
 
 Compared with the baseline CDN example, the experiment adds the following
@@ -134,20 +134,20 @@ Logical request path:
 Generate the Docker output:
 
 ```bash
-cd examples/internet/B30_CDN/amplification_attack
+cd nsdi/CDN/amplification_attack
 conda run -n seedpy310 python rangeamp_sbr.py amd
 ```
 
 This creates:
 
 ```bash
-examples/internet/B30_CDN/amplification_attack/output
+nsdi/CDN/amplification_attack/output
 ```
 
 Start Docker manually:
 
 ```bash
-cd examples/internet/B30_CDN/amplification_attack/output
+cd nsdi/CDN/amplification_attack/output
 docker compose build
 docker compose up -d
 ```
