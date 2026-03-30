@@ -255,6 +255,10 @@ def _render_markdown(
     build_s = _safe_int(k3s_summary.get("build_duration_seconds", k3s_report.get("build_duration_seconds")))
     up_s = _safe_int(k3s_summary.get("up_duration_seconds", k3s_report.get("up_duration_seconds")))
     phase_s = _safe_int(k3s_summary.get("phase_start_duration_seconds", k3s_report.get("phase_start_duration_seconds")))
+    start_bird_s = _safe_int(k3s_summary.get("start_bird_duration_seconds", k3s_report.get("start_bird_duration_seconds")))
+    start_kernel_s = _safe_int(
+        k3s_summary.get("start_kernel_duration_seconds", k3s_report.get("start_kernel_duration_seconds"))
+    )
     verify_s = _safe_int(k3s_summary.get("validation_duration_seconds", k3s_report.get("validation_duration_seconds")))
     pipeline_s = _safe_int(k3s_summary.get("pipeline_duration_seconds", k3s_report.get("pipeline_duration_seconds")))
 
@@ -313,9 +317,10 @@ flowchart LR
     K1[profile_runner doctor] --> K2[compile -> k8s.yaml]
     K2 --> K3[build_images.sh]
     K3 --> K4[kubectl apply/wait]
-    K4 --> K5[phase-start: bird/iBGP/eBGP]
-    K5 --> K6[verify: contract artifacts]
-    K6 --> K7[showcase: read-only observation]
+    K4 --> K5[start-bird]
+    K5 --> K6[start-kernel]
+    K6 --> K7[verify: contract artifacts]
+    K7 --> K8[showcase: read-only observation]
   end
 ```
 
@@ -359,8 +364,10 @@ This comparison uses the current K3s run summarized by
 - image distribution mode: `{image_distribution or '-'}`
 - stage timing:
   - build: `{_fmt_duration(build_s)}`
-  - up: `{_fmt_duration(up_s)}`
-  - phase-start: `{_fmt_duration(phase_s)}`
+  - deploy/up: `{_fmt_duration(up_s)}`
+  - start-bird: `{_fmt_duration(start_bird_s)}`
+  - start-kernel: `{_fmt_duration(start_kernel_s)}`
+  - phase-start (compatibility aggregate): `{_fmt_duration(phase_s)}`
   - verify: `{_fmt_duration(verify_s)}`
   - full pipeline: `{_fmt_duration(pipeline_s)}`
 
@@ -379,10 +386,12 @@ Primary evidence files:
 
 | Historical Compose | Current K3s workflow | Primary evidence |
 |---|---|---|
-| generate `compose.yml` | `compile` generates `k8s.yaml` | `output/profile_runs/<profile>/<run>/compile/` |
+| generate `compose.yml` | `compile` generates `k8s.yaml` | `output/profile_runs/<profile>/<run>/compiled/` |
 | `docker compose build` | `build_images.sh` on the build node | `validation/remote_build.log` |
-| `docker compose up -d` | `kubectl apply` + `kubectl wait` | `validation/kubectl_apply.log` |
-| batched `docker start` | `phase-start` for bird, iBGP, and eBGP | `validation/phased_startup_summary.json` |
+| `docker compose up -d` | `deploy` (`kubectl apply` + `kubectl wait`) | `validation/apply.log`, `validation/wait.log` |
+| manual `start_bird0130.py` | `start-bird` | `validation/start_bird_summary.json` |
+| manual `start_bird_kernel.py` | `start-kernel` | `validation/start_kernel_summary.json` |
+| compatibility batched startup | `phase-start` | `validation/phased_startup_summary.json` |
 | manual `logs/exec` checks | `verify` emits protocol, connectivity, recovery, and resource evidence | `validation/*.json`, `validation/*.tsv`, `validation/*.txt` |
 
 ### 3.2 Why K3s uses explicit phases
@@ -390,15 +399,17 @@ Primary evidence files:
 The Compose path used batched startup to avoid “too many services start at
 once -> systemd/cgroup timeout”.
 
-The maintained K3s path splits startup into two layers:
+The maintained K3s path splits startup into three layers:
 
-1. Kubernetes brings Pods up (`start`)
-2. The runner explicitly starts bird and the routing protocols (`phase-start`)
+1. Kubernetes brings Pods up (`deploy`)
+2. The runner starts `bird` (`start-bird`)
+3. The runner switches the kernel-export stage (`start-kernel`)
 
 That keeps failure triage clearer:
 
-- `start` fails -> inspect scheduling, image distribution, registry, and CNI
-- `phase-start` fails -> inspect bird startup and protocol establishment
+- `deploy` fails -> inspect scheduling, image distribution, registry, and CNI
+- `start-bird` fails -> inspect BIRD startup
+- `start-kernel` fails -> inspect kernel export switching
 - `verify` fails -> inspect which required evidence artifact failed or went missing
 
 ---
@@ -407,7 +418,7 @@ That keeps failure triage clearer:
 
 The old Compose pain points become the K3s improvement checklist:
 
-1. **Startup pressure**: keep `phase-start` explicit and parameterizable.
+1. **Startup pressure**: keep protocol startup explicit and parameterizable.
 2. **Image distribution**: keep both `registry` and `preload` modes available
    and make registry failures easier to classify.
 3. **Verification cost**: prefer structured evidence over manual log-only
@@ -424,7 +435,13 @@ Current K3s path:
 ```bash
 cd <repo_root>
 source scripts/env_seedemu.sh
-SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale all
+SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale compile
+SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale build
+SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale deploy
+SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale start-bird
+SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale start-kernel
+SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale verify
+SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale report
 ```
 
 If you only want the evidence:

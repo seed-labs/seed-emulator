@@ -268,6 +268,8 @@ wait_for_ssh() {
         if ssh -o StrictHostKeyChecking=no \
                -o UserKnownHostsFile=/dev/null \
                -o BatchMode=yes \
+               -o IdentitiesOnly=yes \
+               -o IdentityAgent=none \
                -o ConnectTimeout=3 \
                -i "${SEED_K3S_SSH_KEY}" \
                "${SEED_K3S_USER}@${vm_ip}" "echo ok" >/dev/null 2>&1; then

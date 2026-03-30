@@ -109,6 +109,16 @@ def parse_bird_protocols(raw: str) -> List[ProtocolState]:
     return rows
 
 
+def ospf_row_is_healthy(row: ProtocolState, *, ibgp_total: int) -> bool:
+    if row.family != "ospf":
+        return row.healthy
+    if "Running" in row.raw_line:
+        return True
+    if "Alone" in row.raw_line:
+        return ibgp_total == 0
+    return False
+
+
 def fetch_protocols(namespace: str, target: PodTarget, timeout_seconds: int) -> dict:
     result = kubectl(namespace, ["exec", target.name, "--", "sh", "-lc", "birdc show protocols"], timeout=timeout_seconds)
     raw = "\n".join(chunk for chunk in [result.stdout, result.stderr] if chunk)
@@ -119,8 +129,12 @@ def fetch_protocols(namespace: str, target: PodTarget, timeout_seconds: int) -> 
     ospf_rows = [row for row in rows if row.family == "ospf"]
     ibgp_established = sum(1 for row in ibgp_rows if row.healthy)
     ebgp_established = sum(1 for row in ebgp_rows if row.healthy)
-    ospf_running = sum(1 for row in ospf_rows if row.healthy)
-    failures = [row.raw_line for row in rows if not row.healthy]
+    ospf_running = sum(1 for row in ospf_rows if ospf_row_is_healthy(row, ibgp_total=len(ibgp_rows)))
+    failures = [row.raw_line for row in ibgp_rows if not row.healthy]
+    failures.extend(row.raw_line for row in ebgp_rows if not row.healthy)
+    failures.extend(
+        row.raw_line for row in ospf_rows if not ospf_row_is_healthy(row, ibgp_total=len(ibgp_rows))
+    )
 
     return {
         "pod": target.name,

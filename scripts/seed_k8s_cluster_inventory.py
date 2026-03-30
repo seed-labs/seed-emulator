@@ -22,6 +22,12 @@ def _expand_path(value: str) -> str:
     return str(Path(value).expanduser())
 
 
+def _optional_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    return int(value)
+
+
 def _pick(nodes: list[dict[str, Any]], role_names: set[str], index: int = 0) -> dict[str, Any] | None:
     matches = [node for node in nodes if str(node.get("role", "")).lower() in role_names]
     if index >= len(matches):
@@ -39,6 +45,7 @@ def normalize_inventory(path: Path, name_override: str | None = None) -> dict[st
     registry = data.get("registry", {}) if isinstance(data.get("registry"), dict) else {}
     ssh_cfg = data.get("ssh", {}) if isinstance(data.get("ssh"), dict) else {}
     cni_cfg = data.get("cni", {}) if isinstance(data.get("cni"), dict) else {}
+    k3s_cfg = data.get("k3s", {}) if isinstance(data.get("k3s"), dict) else {}
 
     normalized_nodes: list[dict[str, Any]] = []
     for item in nodes:
@@ -83,12 +90,19 @@ def normalize_inventory(path: Path, name_override: str | None = None) -> dict[st
         "inventory_path": str(path),
         "reference_cluster": bool(data.get("reference_cluster", False)),
         "runtime": str(data.get("runtime") or ""),
+        "max_validated_topology_size": int(data.get("max_validated_topology_size") or 0),
         "registry_host": str(os.environ.get("SEED_REGISTRY_HOST") or registry.get("host") or master_ip or ""),
         "registry_port": int(os.environ.get("SEED_REGISTRY_PORT") or registry.get("port") or 5000),
         "ssh_user": str(os.environ.get("SEED_K3S_USER") or ssh_cfg.get("user") or "ubuntu"),
         "ssh_key_env": env_key_name,
         "ssh_key_path": _expand_path(env_key_value or default_key_path),
         "default_master_interface": str(os.environ.get("SEED_CNI_MASTER_INTERFACE") or cni_cfg.get("default_master_interface") or ""),
+        "k3s_cluster_cidr": str(os.environ.get("SEED_K3S_CLUSTER_CIDR") or k3s_cfg.get("cluster_cidr") or ""),
+        "k3s_service_cidr": str(os.environ.get("SEED_K3S_SERVICE_CIDR") or k3s_cfg.get("service_cidr") or ""),
+        "k3s_node_cidr_mask_size_ipv4": _optional_int(
+            os.environ.get("SEED_K3S_NODE_CIDR_MASK_SIZE_IPV4") or k3s_cfg.get("node_cidr_mask_size_ipv4")
+        ),
+        "k3s_max_pods": _optional_int(os.environ.get("SEED_K3S_MAX_PODS") or k3s_cfg.get("max_pods")),
         "master_name": master_name,
         "master_ip": master_ip,
         "worker1_name": worker1_name,
@@ -109,6 +123,7 @@ def export_shell(normalized: dict[str, Any]) -> str:
         "SEED_CLUSTER_REFERENCE": "true" if normalized["reference_cluster"] else "false",
         "SEED_CLUSTER_RUNTIME": normalized["runtime"],
         "SEED_CLUSTER_NODE_COUNT": str(normalized["node_count"]),
+        "SEED_CLUSTER_MAX_VALIDATED_TOPOLOGY_SIZE": str(normalized["max_validated_topology_size"]),
         "SEED_CLUSTER_NODES_JSON": json.dumps(normalized["nodes"], sort_keys=True),
         "SEED_K3S_MASTER_NAME": normalized["master_name"],
         "SEED_K3S_MASTER_IP": normalized["master_ip"],
@@ -122,6 +137,18 @@ def export_shell(normalized: dict[str, Any]) -> str:
         "SEED_REGISTRY_PORT": str(normalized["registry_port"]),
         "SEED_REGISTRY": f"{normalized['registry_host']}:{normalized['registry_port']}",
         "SEED_CNI_MASTER_INTERFACE": normalized["default_master_interface"],
+        "SEED_K3S_CLUSTER_CIDR": normalized.get("k3s_cluster_cidr") or "",
+        "SEED_K3S_SERVICE_CIDR": normalized.get("k3s_service_cidr") or "",
+        "SEED_K3S_NODE_CIDR_MASK_SIZE_IPV4": (
+            str(normalized["k3s_node_cidr_mask_size_ipv4"])
+            if normalized.get("k3s_node_cidr_mask_size_ipv4") is not None
+            else ""
+        ),
+        "SEED_K3S_MAX_PODS": (
+            str(normalized["k3s_max_pods"])
+            if normalized.get("k3s_max_pods") is not None
+            else ""
+        ),
     }
     return "\n".join(
         f"export {key}={shlex.quote(value)}"

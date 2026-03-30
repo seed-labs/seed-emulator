@@ -6,9 +6,8 @@ seed_shortcuts_source_env
 
 usage() {
   cat <<'USAGE'
-Usage: k3sup [profile]
-Maps to: scripts/seed_k8s_profile_runner.sh <profile> deploy
-Note: deploy applies workloads but does NOT start bird (use k3sstartbird + k3skernel, or k3sphase).
+Usage: k3skernel [profile]
+Maps to: scripts/seed_k8s_profile_runner.sh <profile> start-kernel
 USAGE
 }
 
@@ -19,6 +18,6 @@ fi
 
 profile="$(seed_shortcuts_profile "${1:-}")"
 repo_root="$(seed_shortcuts_repo_root)"
-cmd=( "${repo_root}/scripts/seed_k8s_profile_runner.sh" "${profile}" deploy )
-seed_shortcuts_print_map "k3sup" "${cmd[@]}"
+cmd=( "${repo_root}/scripts/seed_k8s_profile_runner.sh" "${profile}" start-kernel )
+seed_shortcuts_print_map "k3skernel" "${cmd[@]}"
 exec "${cmd[@]}"

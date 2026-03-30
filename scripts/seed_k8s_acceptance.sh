@@ -119,7 +119,7 @@ run_docs_suite() {
   "${SCRIPT_DIR}/check_doc_hygiene.sh" || return 1
   (
     source "${SCRIPT_DIR}/env_seedemu.sh"
-    for cmd in k3sdoctor k3sbuild k3sup k3sphase k3sverify k3sobserve k3sreport k3sall k3scompare k3sdown k3sps k3slogs k3sexec k3stop k3sevents; do
+    for cmd in k3sdoctor k3scompile k3sbuild k3sdeploy k3sup k3sstartbird k3skernel k3sphase k3sverify k3sobserve k3sreport k3sall k3scompare k3sdown k3sps k3slogs k3sexec k3stop k3sevents; do
       command -v "${cmd}" >/dev/null 2>&1
       "${cmd}" --help >/dev/null 2>&1 || "${cmd}" help >/dev/null 2>&1 || true
     done
@@ -135,6 +135,8 @@ run_unit_suite() {
     tests.seed_k8s_profile_contract_test \
     tests.seed_k8s_validation_contract_test \
     tests.seed_k8s_cluster_inventory_test \
+    tests.seed_k8s_real_topology_planner_test \
+    tests.seed_k8s_runner_stage_contract_test \
     tests.seed_k8s_bgp_health_test \
     tests.seed_k8s_failure_injection_test \
     tests.kubevirt_compiler_test \
@@ -228,11 +230,11 @@ run_tier2_runtime_suite() {
   cleanup_profile_runtime mini_internet_viz || return 1
   cleanup_profile_runtime hybrid_kubevirt || return 1
 
-  run_runtime_profile transit_as build start verify observe report || return 1
-  run_runtime_profile mini_internet_viz build start verify observe report || return 1
+  run_runtime_profile transit_as compile build deploy verify observe report || return 1
+  run_runtime_profile mini_internet_viz compile build deploy verify observe report || return 1
 
   if kubectl api-resources 2>/dev/null | grep -qi '^virtualmachines[[:space:]]'; then
-    SEED_RUNTIME_PROFILE=auto run_runtime_profile hybrid_kubevirt build start verify observe report || return 1
+    SEED_RUNTIME_PROFILE=auto run_runtime_profile hybrid_kubevirt compile build deploy verify observe report || return 1
   else
     log "hybrid_kubevirt capability-gated: VirtualMachine resources are not available on this cluster"
     record_result "tier2-runtime-hybrid_kubevirt" "CAPABILITY_GATED" "VirtualMachine resources are not available on this cluster"

@@ -51,6 +51,18 @@ ospf1      OSPF       t_ospf     up     09:31:41.022  Alone
         self.assertEqual(rows[0].family, "ospf")
         self.assertTrue(rows[0].healthy)
 
+    def test_ospf_alone_requires_adjacency_when_ibgp_exists(self):
+        raw = """
+BIRD 2.0.7 ready.
+Name       Proto      Table      State  Since         Info
+Ibgp_to_rr_r2 BGP        ---        up     09:31:41.022  Established
+ospf1      OSPF       t_ospf     up     09:31:41.022  Alone
+"""
+        rows = self.module.parse_bird_protocols(raw)
+        ospf = [row for row in rows if row.family == "ospf"][0]
+        self.assertFalse(self.module.ospf_row_is_healthy(ospf, ibgp_total=1))
+        self.assertTrue(self.module.ospf_row_is_healthy(ospf, ibgp_total=0))
+
     def test_determine_failure_reason_prioritizes_ibgp(self):
         summary = {
             "pods_checked": 3,

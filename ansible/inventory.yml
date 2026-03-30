@@ -7,26 +7,33 @@ all:
     ansible_user: __SEED_K3S_USER__
     ansible_ssh_private_key_file: __SEED_K3S_SSH_KEY__
     k3s_version: __SEED_K3S_VERSION__
+    k3s_install_version: __SEED_K3S_INSTALL_VERSION__
     seed_registry_host: __SEED_REGISTRY_HOST__
     seed_registry_port: __SEED_REGISTRY_PORT__
     seed_docker_io_mirror_endpoint: __SEED_DOCKER_IO_MIRROR_ENDPOINT__
+    seed_k3s_artifact_url: __SEED_K3S_ARTIFACT_URL__
     seed_cni_master_interface: __SEED_CNI_MASTER_INTERFACE__
+    seed_k3s_cluster_cidr: __SEED_K3S_CLUSTER_CIDR__
+    seed_k3s_service_cidr: __SEED_K3S_SERVICE_CIDR__
+    seed_k3s_node_cidr_mask_size_ipv4: __SEED_K3S_NODE_CIDR_MASK_SIZE_IPV4__
+    seed_k3s_max_pods: __SEED_K3S_MAX_PODS__
+    seed_k3s_force_reinstall: __SEED_K3S_FORCE_REINSTALL__
     
   children:
     master:
       hosts:
-        k3s-master:
+        __SEED_K3S_MASTER_NAME__:
           ansible_host: __SEED_K3S_MASTER_IP__
           k3s_role: server
           seedemu_as_group: as2
           
     workers:
       hosts:
-        k3s-worker1:
+        __SEED_K3S_WORKER1_NAME__:
           ansible_host: __SEED_K3S_WORKER1_IP__
           k3s_role: agent
           seedemu_as_group: as150
-        k3s-worker2:
+        __SEED_K3S_WORKER2_NAME__:
           ansible_host: __SEED_K3S_WORKER2_IP__
           k3s_role: agent
           seedemu_as_group: as151

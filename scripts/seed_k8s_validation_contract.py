@@ -40,10 +40,16 @@ def _derive_duration_fields(
     phase_duration = int(
         timing.get("phase_start_duration_seconds", summary.get("phase_start_duration_seconds", 0)) or 0
     )
+    start_bird_duration = int(
+        timing.get("start_bird_duration_seconds", summary.get("start_bird_duration_seconds", 0)) or 0
+    )
+    start_kernel_duration = int(
+        timing.get("start_kernel_duration_seconds", summary.get("start_kernel_duration_seconds", 0)) or 0
+    )
     pipeline_duration = max(
         int(summary.get("pipeline_duration_seconds", 0) or 0),
         int(runner_summary.get("duration_seconds", 0) or 0),
-        build_duration + up_duration + phase_duration + validation_duration,
+        build_duration + up_duration + phase_duration + start_bird_duration + start_kernel_duration + validation_duration,
         validation_duration,
     )
     return {
@@ -51,6 +57,8 @@ def _derive_duration_fields(
         "build_duration_seconds": build_duration,
         "up_duration_seconds": up_duration,
         "phase_start_duration_seconds": phase_duration,
+        "start_bird_duration_seconds": start_bird_duration,
+        "start_kernel_duration_seconds": start_kernel_duration,
         "pipeline_duration_seconds": pipeline_duration,
     }
 
@@ -188,6 +196,8 @@ def _write_convergence_timeline(artifact_dir: Path, profile_id: str) -> None:
         "build_duration_seconds": durations["build_duration_seconds"],
         "up_duration_seconds": durations["up_duration_seconds"],
         "phase_start_duration_seconds": durations["phase_start_duration_seconds"],
+        "start_bird_duration_seconds": durations["start_bird_duration_seconds"],
+        "start_kernel_duration_seconds": durations["start_kernel_duration_seconds"],
         "pipeline_duration_seconds": durations["pipeline_duration_seconds"],
         "stage_events": stage_timeline if isinstance(stage_timeline, list) else [],
     }

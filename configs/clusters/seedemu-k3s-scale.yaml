@@ -1,12 +1,12 @@
 cluster_name: seedemu-k3s
-reference_cluster: true
+reference_cluster: false
 runtime: k3s
-max_validated_topology_size: 214
+max_validated_topology_size: 1897
 k3s:
   cluster_cidr: 10.42.0.0/16
   service_cidr: 10.43.0.0/16
-  node_cidr_mask_size_ipv4: 24
-  max_pods: 110
+  node_cidr_mask_size_ipv4: 22
+  max_pods: 700
 ssh:
   user: ubuntu
   key_path_env: SEED_K3S_SSH_KEY

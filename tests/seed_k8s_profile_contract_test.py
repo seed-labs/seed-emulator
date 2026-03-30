@@ -42,6 +42,8 @@ class SeedK8sProfileContractTest(unittest.TestCase):
                 self.assertEqual(profile.get("support_tier"), support_tier)
                 self.assertEqual(profile.get("acceptance_level"), acceptance_level)
                 self.assertIn(profile.get("capacity_gate"), {"none", "reference_cluster_only", "large_hardware_required"})
+                self.assertIn("default_topology_size", profile)
+                self.assertIsInstance(profile.get("default_topology_size"), int)
                 self.assertTrue(profile.get("compile_script"), "compile_script must be set")
                 compile_script = repo_root / str(profile.get("compile_script"))
                 self.assertTrue(compile_script.exists(), f"compile_script missing: {compile_script}")

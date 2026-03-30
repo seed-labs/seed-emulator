@@ -48,9 +48,10 @@ Avoid copying full topology logic into two unrelated scripts.
 
 Prefer:
 
-1. a topology-building function,
+1. a shared topology-building function,
 2. a Docker/Compose compile entry,
-3. a Kubernetes compile entry.
+3. a Kubernetes compile entry,
+4. an optional public profile only if the example is operator-facing.
 
 That keeps the topology definition stable while letting the compiler-specific
 wrapper differ.
@@ -62,6 +63,12 @@ When a migrated example becomes operator-facing, update:
 - `examples/kubernetes/README.md`
 - `configs/seed_k8s_profiles.yaml` (if profile-backed)
 - `docs/k8s_usage.md`
+
+The promoted runtime path must follow the staged contract:
+
+```text
+compile -> build -> deploy -> start-bird -> start-kernel -> verify -> observe -> report
+```
 
 If the example is still compile-only, document it in the support matrix but do
 not promote it into the public runtime baseline.
@@ -103,6 +110,6 @@ Before promoting an example to a higher tier, verify:
 
 - docs are public and English,
 - no private notes are needed to operate it,
-- shortcut/operator commands are clear,
+- staged operator commands are clear,
 - evidence files are stable,
 - acceptance harness covers the intended tier.

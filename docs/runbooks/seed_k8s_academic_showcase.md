@@ -19,7 +19,7 @@ The verdict always comes from:
 The runtime order is:
 
 ```text
-doctor -> build -> start -> phase-start -> verify -> observe -> report -> showcase (optional)
+doctor -> compile -> build -> deploy -> start-bird -> start-kernel -> verify -> observe -> report -> showcase (optional)
 ```
 
 The showcase should only consume:

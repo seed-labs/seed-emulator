@@ -35,6 +35,12 @@ project-words.txt
 .opencode/bun.lock
 **/.obsidian/**
 test_result.txt
+lxl/
+docs/phase_start_split.md
+scripts/validate_k3s_stages.md
+scripts/check_multus_110_111_112.sh
+scripts/fix_k3s_worker111_multus.sh
+scripts/seed_k8s_ultimate_all.sh
 
 # Local kind binary (some workflows download it into repo root)
 kind

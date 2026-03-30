@@ -30,9 +30,14 @@ RUNNER_NEXT_ACTIONS="${BASE_DIR}/next_actions.json"
 RUNNER_LOG="${BASE_DIR}/runner.log"
 RUNNER_START_TS="$(date +%s)"
 RUNNER_START_ISO="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+RUN_LOCK_FILE="${PROFILE_ROOT}/.profile_runner.lock"
+RUN_LOCK_INFO="${PROFILE_ROOT}/.profile_runner.lock.json"
+RUN_LOCK_FD=""
+RUN_LOCK_HELD="false"
 PROFILE_SUPPORT_TIER=""
 PROFILE_ACCEPTANCE_LEVEL=""
 PROFILE_CAPACITY_GATE=""
+PROFILE_DEFAULT_TOPOLOGY_SIZE=""
 
 setup_runner_logging() {
   local enabled="${SEED_RUNNER_LOG:-true}"
@@ -46,6 +51,7 @@ setup_runner_logging() {
 
 rebind_run_paths() {
   BASE_DIR="$1"
+  RUN_ID="$(basename "${BASE_DIR}")"
   VALIDATION_DIR="${BASE_DIR}/validation"
   COMPILED_DIR="${BASE_DIR}/compiled"
   OBSERVE_DIR="${BASE_DIR}/observe"
@@ -62,7 +68,7 @@ adopt_latest_for_read_actions() {
   fi
 
   case "${ACTION}" in
-    start|phase-start|verify|observe|report|triage|showcase|compare)
+    build|deploy|start|phase-start|start-bird|start-kernel|verify|observe|report|triage|showcase|compare)
       ;;
     *)
       return 0
@@ -75,11 +81,11 @@ adopt_latest_for_read_actions() {
   run_has_required_artifacts() {
     local run_dir="$1"
     case "${ACTION}" in
-      start)
-        [ -f "${run_dir}/compiled/k8s.yaml" ]
+      build|deploy|start)
+        [ -f "${run_dir}/compiled/k8s.yaml" ] && [ -x "${run_dir}/compiled/build_images.sh" ]
         ;;
-      phase-start|verify|observe)
-        [ -d "${run_dir}/validation" ]
+      phase-start|start-bird|start-kernel|verify|observe)
+        [ -f "${run_dir}/validation/apply.log" ] || [ -f "${run_dir}/validation/deployments_wide.txt" ]
         ;;
       report)
         [ -f "${run_dir}/validation/summary.json" ]
@@ -108,12 +114,41 @@ adopt_latest_for_read_actions() {
   fi
 
   if [ -z "${candidate_dir}" ] && [ -d "${PROFILE_ROOT}" ]; then
-    while IFS= read -r run_dir; do
-      if run_has_required_artifacts "${run_dir}"; then
-        candidate_dir="${run_dir}"
-        break
-      fi
-    done < <(find "${PROFILE_ROOT}" -mindepth 1 -maxdepth 1 -type d ! -name latest | sort -r)
+    candidate_dir="$(python3 - <<PY
+from pathlib import Path
+
+profile_root = Path(${PROFILE_ROOT@Q})
+candidates = []
+for run_dir in profile_root.iterdir():
+    if not run_dir.is_dir() or run_dir.name == "latest":
+        continue
+    candidates.append((run_dir.stat().st_mtime, str(run_dir)))
+
+candidates.sort(reverse=True)
+print(candidates[0][1] if candidates else "")
+PY
+)"
+    if [ -n "${candidate_dir}" ] && ! run_has_required_artifacts "${candidate_dir}"; then
+      candidate_dir=""
+      while IFS= read -r run_dir; do
+        if run_has_required_artifacts "${run_dir}"; then
+          candidate_dir="${run_dir}"
+          break
+        fi
+      done < <(python3 - <<PY
+from pathlib import Path
+
+profile_root = Path(${PROFILE_ROOT@Q})
+runs = []
+for run_dir in profile_root.iterdir():
+    if run_dir.is_dir() and run_dir.name != "latest":
+        runs.append((run_dir.stat().st_mtime, str(run_dir)))
+runs.sort(reverse=True)
+for _, run_dir in runs:
+    print(run_dir)
+PY
+)
+    fi
   fi
 
   if [ -n "${candidate_dir}" ]; then
@@ -123,6 +158,145 @@ adopt_latest_for_read_actions() {
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
+is_read_only_action() {
+  case "${ACTION}" in
+    triage|showcase|compare)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+release_run_lock() {
+  if [ "${RUN_LOCK_HELD}" != "true" ]; then
+    return 0
+  fi
+
+  python3 - <<PY
+import json
+from pathlib import Path
+
+info_path = Path(${RUN_LOCK_INFO@Q})
+if info_path.exists():
+    try:
+        data = json.loads(info_path.read_text(encoding="utf-8"))
+    except Exception:
+        data = {}
+    if str(data.get("pid", "")) == "${BASHPID}":
+        info_path.unlink(missing_ok=True)
+PY
+
+  if [ -n "${RUN_LOCK_FD}" ]; then
+    flock -u "${RUN_LOCK_FD}" || true
+  fi
+  RUN_LOCK_HELD="false"
+}
+
+acquire_run_lock() {
+  if is_read_only_action; then
+    return 0
+  fi
+
+  require_cmd flock
+  mkdir -p "${PROFILE_ROOT}"
+  exec {RUN_LOCK_FD}> "${RUN_LOCK_FILE}"
+
+  if ! flock -n "${RUN_LOCK_FD}"; then
+    local stale_lock
+    stale_lock="$(python3 - <<PY
+import json
+import os
+from pathlib import Path
+
+info_path = Path(${RUN_LOCK_INFO@Q})
+if not info_path.exists():
+    print("false")
+    raise SystemExit(0)
+
+try:
+    data = json.loads(info_path.read_text(encoding="utf-8"))
+except Exception:
+    print("true")
+    raise SystemExit(0)
+
+pid_raw = str(data.get("pid", "") or "").strip()
+if not pid_raw.isdigit():
+    print("true")
+    raise SystemExit(0)
+
+pid = int(pid_raw)
+try:
+    os.kill(pid, 0)
+except ProcessLookupError:
+    print("true")
+except PermissionError:
+    print("false")
+else:
+    print("false")
+PY
+)"
+    if [ "${stale_lock}" = "true" ]; then
+      rm -f "${RUN_LOCK_INFO}" "${RUN_LOCK_FILE}"
+      exec {RUN_LOCK_FD}> "${RUN_LOCK_FILE}"
+      if flock -n "${RUN_LOCK_FD}"; then
+        RUN_LOCK_HELD="true"
+        python3 - <<PY
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
+payload = {
+    "pid": "${BASHPID}",
+    "profile_id": ${PROFILE_ID@Q},
+    "action": ${ACTION@Q},
+    "run_id": ${RUN_ID@Q},
+    "base_dir": ${BASE_DIR@Q},
+    "started_at": datetime.now(timezone.utc).isoformat(),
+}
+Path(${RUN_LOCK_INFO@Q}).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+PY
+        trap release_run_lock EXIT
+        return 0
+      fi
+    fi
+
+    local owner_hint
+    owner_hint=""
+    if [ -f "${RUN_LOCK_INFO}" ]; then
+      owner_hint="$(cat "${RUN_LOCK_INFO}" 2>/dev/null || true)"
+    fi
+    write_runner_artifacts "lock" "FAIL" "RUN_LOCKED" "profile_runner_already_active" "${RUN_LOCK_INFO}" \
+      "Wait for the active run to finish, then rerun: scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} ${ACTION}" \
+      "scripts/seed_lab_entry_status.sh"
+    if [ -n "${owner_hint}" ]; then
+      log "Another ${PROFILE_ID} runner is active: ${owner_hint}"
+    else
+      log "Another ${PROFILE_ID} runner is active; refusing to overlap staged actions."
+    fi
+    return 1
+  fi
+
+  RUN_LOCK_HELD="true"
+  python3 - <<PY
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
+payload = {
+    "pid": "${BASHPID}",
+    "profile_id": ${PROFILE_ID@Q},
+    "action": ${ACTION@Q},
+    "run_id": ${RUN_ID@Q},
+    "base_dir": ${BASE_DIR@Q},
+    "started_at": datetime.now(timezone.utc).isoformat(),
+}
+Path(${RUN_LOCK_INFO@Q}).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+PY
+  trap release_run_lock EXIT
 }
 
 require_cmd() {
@@ -167,17 +341,21 @@ usage() {
 Usage: scripts/seed_k8s_profile_runner.sh <profile_id> <action>
 
 Actions:
-  doctor      Preflight risk assessment only
-  build       preflight -> compile -> build
-  start       preflight -> compile -> build -> deploy (bird remains stopped)
-  phase-start Run the separate bird/iBGP/eBGP startup stage on latest deployment
-  verify      Verify deployment status
-  observe     Collect runtime observation artifacts
-  compare     Generate compose-vs-k3s comparison report for latest run
-  showcase    Launch the live academic showcase dashboard for the latest run
-  all         build -> start -> phase-start -> verify -> observe -> report
-  triage      Diagnose most recent failure from artifacts
-  report      Generate normalized report from artifacts
+  doctor       Preflight risk assessment only
+  compile      Preflight + compile only
+  build        Build/distribute images from the latest compiled artifacts
+  deploy       Apply the latest compiled manifests and wait for readiness
+  start        Backward-compatible alias for deploy
+  start-bird   Start bird routing processes only
+  start-kernel Switch bird to kernel mode only
+  phase-start  Backward-compatible wrapper for the separate startup stage
+  verify       Verify deployment status
+  observe      Collect runtime observation artifacts
+  compare      Generate compose-vs-k3s comparison report for latest run
+  showcase     Launch the live academic showcase dashboard for the latest run
+  all          compile -> build -> deploy -> start-bird -> start-kernel -> verify -> observe -> report
+  triage       Diagnose most recent failure from artifacts
+  report       Generate normalized report from artifacts
 USAGE
 }
 
@@ -316,20 +494,27 @@ if not isinstance(runner, dict):
 build_duration = int(timing.get("build_duration_seconds", summary.get("build_duration_seconds", 0)) or 0)
 up_duration = int(timing.get("up_duration_seconds", summary.get("up_duration_seconds", 0)) or 0)
 phase_duration = int(timing.get("phase_start_duration_seconds", summary.get("phase_start_duration_seconds", 0)) or 0)
+start_bird_duration = int(timing.get("start_bird_duration_seconds", summary.get("start_bird_duration_seconds", 0)) or 0)
+start_kernel_duration = int(timing.get("start_kernel_duration_seconds", summary.get("start_kernel_duration_seconds", 0)) or 0)
 validation_duration = int(summary.get("validation_duration_seconds", summary.get("duration_seconds", 0)) or 0)
 runner_duration = int(runner.get("duration_seconds", 0) or 0)
 pipeline_duration = max(
     int(summary.get("pipeline_duration_seconds", 0) or 0),
     runner_duration,
-    build_duration + up_duration + phase_duration + validation_duration,
+    build_duration + up_duration + phase_duration + start_bird_duration + start_kernel_duration + validation_duration,
     validation_duration,
 )
 
 summary["build_duration_seconds"] = build_duration
 summary["up_duration_seconds"] = up_duration
 summary["phase_start_duration_seconds"] = phase_duration
+summary["start_bird_duration_seconds"] = start_bird_duration
+summary["start_kernel_duration_seconds"] = start_kernel_duration
 summary["validation_duration_seconds"] = validation_duration
 summary["pipeline_duration_seconds"] = pipeline_duration
+summary["run_id"] = str(summary.get("run_id", "") or ${RUN_ID@Q})
+summary["stage"] = str(summary.get("stage", "") or runner.get("stage", "") or runner.get("action", "") or "")
+summary["status"] = str(summary.get("status", "") or summary.get("runner_status", "") or runner.get("status", "") or "")
 summary["profile_id"] = str(summary.get("profile_id", "") or ${PROFILE_ID@Q})
 summary["support_tier"] = str(summary.get("support_tier", "") or ${PROFILE_SUPPORT_TIER@Q})
 summary["acceptance_level"] = str(summary.get("acceptance_level", "") or ${PROFILE_ACCEPTANCE_LEVEL@Q})
@@ -346,6 +531,20 @@ summary["runner_finished_at"] = str(runner.get("finished_at", "") or "")
 
 if summary["runner_action"] in {"all", "report"}:
     summary["duration_seconds"] = pipeline_duration
+
+verified_actions = {"verify", "observe", "report", "all"}
+verification_keys = ("placement_passed", "bgp_passed", "connectivity_passed", "recovery_passed")
+
+if summary["capacity_gate_status"] == "gated" or str(summary.get("failure_code", "") or "") == "CAPACITY_GATED":
+    acceptance_status = "CAPACITY_GATED"
+elif summary["runner_status"] != "PASS":
+    acceptance_status = "FAIL"
+elif summary["runner_action"] in verified_actions:
+    acceptance_status = "PASS" if all(bool(summary.get(key, False)) for key in verification_keys) else "FAIL"
+else:
+    acceptance_status = "PARTIAL"
+
+summary["acceptance_status"] = acceptance_status
 
 summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 PY
@@ -495,6 +694,10 @@ init_profile_context() {
   export SEED_K3S_MASTER_IP="${SEED_K3S_MASTER_IP:-192.168.122.110}"
   export SEED_K3S_USER="${SEED_K3S_USER:-ubuntu}"
   export SEED_K3S_SSH_KEY="${SEED_K3S_SSH_KEY:-$HOME/.ssh/id_ed25519}"
+  export SEED_DEFAULT_TOPOLOGY_SIZE="${PROFILE_DEFAULT_TOPOLOGY_SIZE:-}"
+  if [ -z "${SEED_TOPOLOGY_SIZE:-}" ] && [ -n "${PROFILE_DEFAULT_TOPOLOGY_SIZE:-}" ] && [ "${PROFILE_DEFAULT_TOPOLOGY_SIZE}" != "0" ]; then
+    export SEED_TOPOLOGY_SIZE="${PROFILE_DEFAULT_TOPOLOGY_SIZE}"
+  fi
 
   case "${PROFILE_ID}" in
     real_topology_rr_scale)
@@ -541,15 +744,39 @@ run_generic_compile() {
     python3 "${compile_script}"
   ) 2>&1 | tee "${VALIDATION_DIR}/compile.log"; then
     write_runner_artifacts "compile" "FAIL" "COMPILE_FAILED" "compile_command_failed" "${VALIDATION_DIR}/compile.log" \
-      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor"
+      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor"
     return 1
   fi
 
   if [ ! -f "${COMPILED_DIR}/k8s.yaml" ] || [ ! -x "${COMPILED_DIR}/build_images.sh" ]; then
     write_runner_artifacts "compile" "FAIL" "COMPILE_FAILED" "compile_output_missing" "${VALIDATION_DIR}/compile.log" \
-      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor"
+      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor"
     return 1
   fi
+}
+
+compiled_artifacts_present() {
+  [ -f "${COMPILED_DIR}/k8s.yaml" ] && [ -x "${COMPILED_DIR}/build_images.sh" ]
+}
+
+require_compiled_artifacts() {
+  if compiled_artifacts_present; then
+    return 0
+  fi
+
+  write_runner_artifacts "compile" "FAIL" "COMPILE_MISSING" "compiled_artifacts_missing" "${COMPILED_DIR}/k8s.yaml" \
+    "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor"
+  return 1
+}
+
+require_deploy_artifacts() {
+  if [ -f "${VALIDATION_DIR}/apply.log" ] || [ -f "${VALIDATION_DIR}/deployments_wide.txt" ]; then
+    return 0
+  fi
+
+  write_runner_artifacts "deploy" "FAIL" "DEPLOY_MISSING" "deployment_artifacts_missing" "${VALIDATION_DIR}/summary.json" \
+    "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} deploy" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile"
+  return 1
 }
 
 run_generic_build() {
@@ -604,6 +831,8 @@ run_generic_build() {
       -o UserKnownHostsFile=/dev/null \
       -o LogLevel=ERROR \
       -o BatchMode=yes \
+      -o IdentitiesOnly=yes \
+      -o IdentityAgent=none \
       -o ConnectTimeout=10 \
       -o ServerAliveInterval=30 \
       -o ServerAliveCountMax=3 \
@@ -622,6 +851,8 @@ run_generic_build() {
       -o UserKnownHostsFile=/dev/null \
       -o LogLevel=ERROR \
       -o BatchMode=yes \
+      -o IdentitiesOnly=yes \
+      -o IdentityAgent=none \
       -o ConnectTimeout=10 \
       -i "${SEED_K3S_SSH_KEY}" \
       "${tarball}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}:${remote_work_dir}/compiled.tar.gz"; then
@@ -635,6 +866,8 @@ run_generic_build() {
       -o UserKnownHostsFile=/dev/null \
       -o LogLevel=ERROR \
       -o BatchMode=yes \
+      -o IdentitiesOnly=yes \
+      -o IdentityAgent=none \
       -o ConnectTimeout=10 \
       -o ServerAliveInterval=30 \
       -o ServerAliveCountMax=3 \
@@ -665,7 +898,7 @@ run_generic_build() {
     ./build_images.sh
   ) 2>&1 | tee "${VALIDATION_DIR}/build.log"; then
     write_runner_artifacts "build" "FAIL" "BUILD_FAILED" "build_command_failed" "${VALIDATION_DIR}/build.log" \
-      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor"
+      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} build" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile"
     return 1
   fi
 }
@@ -682,7 +915,7 @@ run_generic_deploy() {
 
   if ! kubectl -n "${SEED_NAMESPACE}" apply -f "${COMPILED_DIR}/k8s.yaml" 2>&1 | tee "${VALIDATION_DIR}/apply.log"; then
     write_runner_artifacts "deploy" "FAIL" "DEPLOY_TIMEOUT" "apply_failed" "${VALIDATION_DIR}/apply.log" \
-      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "kubectl -n ${SEED_NAMESPACE} get events --sort-by=.lastTimestamp"
+      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} deploy" "kubectl -n ${SEED_NAMESPACE} get events --sort-by=.lastTimestamp"
     return 1
   fi
 
@@ -931,7 +1164,7 @@ run_report() {
 
   if [ ! -f "${vdir}/summary.json" ]; then
     write_runner_artifacts "report" "FAIL" "DEPLOY_TIMEOUT" "summary_missing_for_report" "${vdir}/summary.json" \
-      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage"
+      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage"
     return 1
   fi
 
@@ -956,7 +1189,7 @@ run_doctor() {
   if [ "${PROFILE_ID}" = "mini_internet" ]; then
     if run_mini_validate preflight; then
       write_runner_artifacts "doctor" "PASS" "" "" "${VALIDATION_DIR}/preflight.json" \
-        "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify"
+        "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify"
       return 0
     fi
 
@@ -981,7 +1214,7 @@ PY
   if is_real_topology_profile; then
     if run_real_topology_validate preflight; then
       write_runner_artifacts "doctor" "PASS" "" "" "${VALIDATION_DIR}/summary.json" \
-        "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify"
+        "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify"
       return 0
     fi
 
@@ -1030,7 +1263,7 @@ PY
 
   if "${SCRIPT_DIR}/k3s_fetch_kubeconfig.sh" >/dev/null 2>&1 && kubectl --kubeconfig "${KUBECONFIG:-${kubeconfig_path}}" get nodes >/dev/null 2>&1; then
     write_runner_artifacts "doctor" "PASS" "" "" "${kubeconfig_path}" \
-      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify"
+      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify"
     return 0
   fi
 
@@ -1039,42 +1272,56 @@ PY
   return 1
 }
 
-run_build() {
+run_compile() {
   if [ "${PROFILE_ID}" = "mini_internet" ]; then
-    run_mini_validate preflight || return 1
     run_mini_validate compile || return 1
-    run_mini_validate build || return 1
   elif is_real_topology_profile; then
-    run_real_topology_validate preflight || return 1
     run_real_topology_validate compile || return 1
-    run_real_topology_validate build || return 1
   else
     run_doctor || return 1
     run_generic_compile || return 1
-    run_generic_build || return 1
   fi
 
-  write_runner_artifacts "build" "PASS" "" "" "${VALIDATION_DIR}/summary.json"     "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} phase-start"
+  write_runner_artifacts "compile" "PASS" "" "" "${COMPILED_DIR}/k8s.yaml" \
+    "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} build" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor"
   sync_validation_summary_runtime_fields
 }
 
-run_start() {
+run_build() {
+  require_compiled_artifacts || return 1
+
   if [ "${PROFILE_ID}" = "mini_internet" ]; then
-    run_mini_validate preflight || return 1
+    run_mini_validate build || return 1
+  elif is_real_topology_profile; then
+    run_real_topology_validate build || return 1
+  else
+    run_generic_build || return 1
+  fi
+
+  write_runner_artifacts "build" "PASS" "" "" "${VALIDATION_DIR}/summary.json" \
+    "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} deploy" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile"
+  sync_validation_summary_runtime_fields
+}
+
+run_deploy() {
+  require_compiled_artifacts || return 1
+
+  if [ "${PROFILE_ID}" = "mini_internet" ]; then
     run_mini_validate deploy || return 1
   elif is_real_topology_profile; then
-    run_real_topology_validate preflight || return 1
     run_real_topology_validate deploy || return 1
   else
-    run_doctor || return 1
     run_generic_deploy || return 1
   fi
 
-  write_runner_artifacts "start" "PASS" "" "" "${VALIDATION_DIR}/summary.json"     "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} phase-start" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify"
+  write_runner_artifacts "deploy" "PASS" "" "" "${VALIDATION_DIR}/summary.json" \
+    "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start-bird" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify"
   sync_validation_summary_runtime_fields
 }
 
 run_phase_start() {
+  require_deploy_artifacts || return 1
+
   if [ "${PROFILE_ID}" = "mini_internet" ]; then
     run_mini_validate phase-start || return 1
   elif is_real_topology_profile; then
@@ -1088,7 +1335,45 @@ run_phase_start() {
   sync_validation_summary_runtime_fields
 }
 
+run_start_bird() {
+  require_deploy_artifacts || return 1
+
+  if [ "${PROFILE_ID}" = "mini_internet" ]; then
+    run_mini_validate start-bird || return 1
+  elif is_real_topology_profile; then
+    run_real_topology_validate start-bird || return 1
+  else
+    write_runner_artifacts "start-bird" "FAIL" "START_BIRD_UNSUPPORTED" "start_bird_not_supported_for_profile" "${VALIDATION_DIR}/summary.json" \
+      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage"
+    return 1
+  fi
+
+  write_runner_artifacts "start-bird" "PASS" "" "" "${VALIDATION_DIR}/summary.json" \
+    "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start-kernel" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} observe"
+  sync_validation_summary_runtime_fields
+}
+
+run_start_kernel() {
+  require_deploy_artifacts || return 1
+
+  if [ "${PROFILE_ID}" = "mini_internet" ]; then
+    run_mini_validate start-kernel || return 1
+  elif is_real_topology_profile; then
+    run_real_topology_validate start-kernel || return 1
+  else
+    write_runner_artifacts "start-kernel" "FAIL" "START_KERNEL_UNSUPPORTED" "start_kernel_not_supported_for_profile" "${VALIDATION_DIR}/summary.json" \
+      "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage"
+    return 1
+  fi
+
+  write_runner_artifacts "start-kernel" "PASS" "" "" "${VALIDATION_DIR}/summary.json" \
+    "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} verify" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} observe"
+  sync_validation_summary_runtime_fields
+}
+
 run_verify() {
+  require_deploy_artifacts || return 1
+
   local generic_verify=false
   if [ "${PROFILE_ID}" = "mini_internet" ]; then
     run_mini_validate verify || return 1
@@ -1108,9 +1393,11 @@ run_verify() {
 }
 
 run_all() {
+  run_compile || return 1
   run_build || return 1
-  run_start || return 1
-  run_phase_start || return 1
+  run_deploy || return 1
+  run_start_bird || return 1
+  run_start_kernel || return 1
   run_verify || return 1
   run_observe || return 1
   run_report || return 1
@@ -1164,7 +1451,7 @@ PY
   fi
 
   write_runner_artifacts "triage" "FAIL" "DEPLOY_TIMEOUT" "diagnostics_missing" "${diag_file}" \
-    "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start"
+    "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor" "scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile"
   return 1
 }
 
@@ -1185,6 +1472,7 @@ main() {
   PROFILE_SUPPORT_TIER="$(profile_field support_tier || true)"
   PROFILE_ACCEPTANCE_LEVEL="$(profile_field acceptance_level || true)"
   PROFILE_CAPACITY_GATE="$(profile_field capacity_gate || true)"
+  PROFILE_DEFAULT_TOPOLOGY_SIZE="$(profile_field default_topology_size || true)"
   export SEED_PROFILE_SUPPORT_TIER="${PROFILE_SUPPORT_TIER}"
   export SEED_PROFILE_ACCEPTANCE_LEVEL="${PROFILE_ACCEPTANCE_LEVEL}"
   export SEED_PROFILE_CAPACITY_GATE="${PROFILE_CAPACITY_GATE}"
@@ -1192,11 +1480,26 @@ main() {
   adopt_latest_for_read_actions
   init_profile_context
   setup_runner_logging
+  acquire_run_lock || exit 1
   log "Profile=${PROFILE_ID} Action=${ACTION} BaseDir=${BASE_DIR}"
 
   case "${ACTION}" in
     doctor)
       run_doctor
+      ;;
+    compile)
+      if ! run_compile; then
+        mapfile -t _fields < <(write_runner_failure_from_validation "compile")
+        stage="${_fields[0]:-compile}"
+        failure_code="${_fields[1]:-COMPILE_FAILED}"
+        failure_reason="${_fields[2]:-run_compile_failed}"
+        evidence="${_fields[3]:-${VALIDATION_DIR}/compile.log}"
+        minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile}"
+        fallback="${_fields[5]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor}"
+        write_runner_artifacts "${stage}" "FAIL" "${failure_code:-COMPILE_FAILED}" "${failure_reason:-run_compile_failed}" "${evidence}" \
+          "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} compile}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor}"
+        exit 1
+      fi
       ;;
     build)
       if ! run_build; then
@@ -1211,17 +1514,17 @@ main() {
         exit 1
       fi
       ;;
-    start)
-      if ! run_start; then
-        mapfile -t _fields < <(write_runner_failure_from_validation "start")
-        stage="${_fields[0]:-start}"
+    deploy|start)
+      if ! run_deploy; then
+        mapfile -t _fields < <(write_runner_failure_from_validation "deploy")
+        stage="${_fields[0]:-deploy}"
         failure_code="${_fields[1]:-DEPLOY_TIMEOUT}"
-        failure_reason="${_fields[2]:-run_start_failed}"
+        failure_reason="${_fields[2]:-run_deploy_failed}"
         evidence="${_fields[3]:-${VALIDATION_DIR}/diagnostics.json}"
-        minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start}"
+        minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} deploy}"
         fallback="${_fields[5]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor}"
-        write_runner_artifacts "${stage}" "FAIL" "${failure_code:-DEPLOY_TIMEOUT}" "${failure_reason:-run_start_failed}" "${evidence}" \
-          "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor}"
+        write_runner_artifacts "${stage}" "FAIL" "${failure_code:-DEPLOY_TIMEOUT}" "${failure_reason:-run_deploy_failed}" "${evidence}" \
+          "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} deploy}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} doctor}"
         exit 1
       fi
       ;;
@@ -1235,6 +1538,34 @@ main() {
         minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} phase-start}"
         fallback="${_fields[5]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
         write_runner_artifacts "${stage}" "FAIL" "${failure_code:-PHASED_START_FAILED}" "${failure_reason:-run_phase_start_failed}" "${evidence}"           "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} phase-start}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        exit 1
+      fi
+      ;;
+    start-bird)
+      if ! run_start_bird; then
+        mapfile -t _fields < <(write_runner_failure_from_validation "start-bird")
+        stage="${_fields[0]:-start-bird}"
+        failure_code="${_fields[1]:-START_BIRD_FAILED}"
+        failure_reason="${_fields[2]:-run_start_bird_failed}"
+        evidence="${_fields[3]:-${VALIDATION_DIR}/diagnostics.json}"
+        minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start-bird}"
+        fallback="${_fields[5]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        write_runner_artifacts "${stage}" "FAIL" "${failure_code:-START_BIRD_FAILED}" "${failure_reason:-run_start_bird_failed}" "${evidence}" \
+          "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start-bird}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        exit 1
+      fi
+      ;;
+    start-kernel)
+      if ! run_start_kernel; then
+        mapfile -t _fields < <(write_runner_failure_from_validation "start-kernel")
+        stage="${_fields[0]:-start-kernel}"
+        failure_code="${_fields[1]:-START_KERNEL_FAILED}"
+        failure_reason="${_fields[2]:-run_start_kernel_failed}"
+        evidence="${_fields[3]:-${VALIDATION_DIR}/diagnostics.json}"
+        minimal="${_fields[4]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start-kernel}"
+        fallback="${_fields[5]:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
+        write_runner_artifacts "${stage}" "FAIL" "${failure_code:-START_KERNEL_FAILED}" "${failure_reason:-run_start_kernel_failed}" "${evidence}" \
+          "${minimal:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} start-kernel}" "${fallback:-scripts/seed_k8s_profile_runner.sh ${PROFILE_ID} triage}"
         exit 1
       fi
       ;;

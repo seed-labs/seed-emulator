@@ -29,8 +29,50 @@ def load_assignment(path: Path) -> dict:
     return data
 
 
-def ready_nodes(nodes_json: Path, pod_reserve: int) -> List[dict]:
+def _parse_int(value: object, default: int = 0) -> int:
+    text = str(value or "").strip()
+    if not text:
+        return default
+    if text.lower().endswith("k"):
+        return int(float(text[:-1]) * 1000)
+    return int(text)
+
+
+def current_pod_usage(
+    pods_json: Path | None,
+    *,
+    excluded_namespaces: Set[str] | None = None,
+) -> Dict[str, int]:
+    if pods_json is None or not pods_json.exists():
+        return {}
+
+    data = json.loads(pods_json.read_text(encoding="utf-8"))
+    usage: Dict[str, int] = {}
+    excluded = excluded_namespaces or set()
+    for item in data.get("items", []):
+        metadata = item.get("metadata", {}) or {}
+        namespace = str(metadata.get("namespace", "") or "")
+        if namespace in excluded:
+            continue
+        node_name = str(item.get("spec", {}).get("nodeName", "") or "")
+        if not node_name:
+            continue
+        usage[node_name] = usage.get(node_name, 0) + 1
+    return usage
+
+
+def ready_nodes(nodes_json: Path, pod_reserve: int, pods_json: Path | None = None) -> List[dict]:
     data = json.loads(nodes_json.read_text(encoding="utf-8"))
+    excluded_namespaces = {
+        value.strip()
+        for value in (
+            os.environ.get("SEED_EXCLUDED_NAMESPACES")
+            or os.environ.get("SEED_NAMESPACE")
+            or ""
+        ).split(",")
+        if value.strip()
+    }
+    usage = current_pod_usage(pods_json, excluded_namespaces=excluded_namespaces)
     nodes = []
     for item in data.get("items", []):
         conds = item.get("status", {}).get("conditions", []) or []
@@ -39,13 +81,23 @@ def ready_nodes(nodes_json: Path, pod_reserve: int) -> List[dict]:
             continue
         if item.get("spec", {}).get("unschedulable"):
             continue
-        allocatable_pods = int(str(item.get("status", {}).get("allocatable", {}).get("pods", "110")))
+        labels = item.get("metadata", {}).get("labels", {}) or {}
+        node_name = str(item.get("metadata", {}).get("name", ""))
+        allocatable_pods = _parse_int(item.get("status", {}).get("allocatable", {}).get("pods", "110"), 110)
+        current_pods = usage.get(node_name, 0)
+        effective_capacity = max(0, allocatable_pods - current_pods - pod_reserve)
         nodes.append({
-            "name": str(item.get("metadata", {}).get("name", "")),
+            "name": node_name,
             "allocatable_pods": allocatable_pods,
-            "effective_capacity": max(1, allocatable_pods - pod_reserve),
+            "current_pods": current_pods,
+            "pod_reserve": pod_reserve,
+            "effective_capacity": effective_capacity,
             "assigned_pods": 0,
             "assigned_asns": [],
+            "is_control_plane": (
+                "node-role.kubernetes.io/control-plane" in labels
+                or "node-role.kubernetes.io/master" in labels
+            ),
         })
     nodes.sort(key=lambda item: item["name"])
     return nodes
@@ -84,12 +136,40 @@ def assign(counts: Dict[str, int], nodes: List[dict]) -> Tuple[Dict[str, dict], 
     mapping: Dict[str, dict] = {}
     as_items = sorted(counts.items(), key=lambda item: (-item[1], int(item[0]) if item[0].isdigit() else item[0]))
     for asn, pod_count in as_items:
-        candidate = sorted(nodes, key=lambda item: (-item["effective_capacity"] + item["assigned_pods"], item["assigned_pods"], item["name"]))[0]
-        remaining = candidate["effective_capacity"] - candidate["assigned_pods"]
-        if pod_count > remaining:
+        feasible = [
+            item
+            for item in nodes
+            if pod_count <= (item["effective_capacity"] - item["assigned_pods"])
+        ]
+        if not feasible:
+            candidate = sorted(
+                nodes,
+                key=lambda item: (
+                    -(item["effective_capacity"] - item["assigned_pods"]),
+                    item.get("is_control_plane", False),
+                    item["assigned_pods"],
+                    item["name"],
+                ),
+            )[0]
+            remaining = candidate["effective_capacity"] - candidate["assigned_pods"]
             raise ValueError(
                 f"ASN {asn} needs {pod_count} pods, but best remaining node {candidate['name']} only has {remaining} pod slots left"
             )
+
+        preferred_pool = feasible
+        if pod_count > 1:
+            worker_feasible = [item for item in feasible if not item.get("is_control_plane", False)]
+            if worker_feasible:
+                preferred_pool = worker_feasible
+
+        candidate = sorted(
+            preferred_pool,
+            key=lambda item: (
+                -(item["effective_capacity"] - item["assigned_pods"]),
+                item["assigned_pods"],
+                item["name"],
+            ),
+        )[0]
         candidate["assigned_pods"] += pod_count
         candidate["assigned_asns"].append(asn)
         mapping[asn] = {"kubernetes.io/hostname": candidate["name"]}
@@ -115,12 +195,14 @@ def main() -> int:
     nodes_json = Path(sys.argv[3])
     mapping_json = Path(sys.argv[4])
     plan_json = Path(sys.argv[5])
-    pod_reserve = int(os.environ.get("SEED_NODE_POD_RESERVE", "20"))
+    pods_json_env = os.environ.get("SEED_CURRENT_PODS_JSON_PATH", "").strip()
+    pods_json = Path(pods_json_env) if pods_json_env else None
+    pod_reserve = int(os.environ.get("SEED_NODE_POD_RESERVE", "5"))
 
     topo = load_topology(topology_file)
     assignment = load_assignment(assignment_file)
     counts = compute_as_pod_counts(topo, assignment)
-    nodes = ready_nodes(nodes_json, pod_reserve)
+    nodes = ready_nodes(nodes_json, pod_reserve, pods_json)
     mapping, plan = assign(counts, nodes)
 
     mapping_json.parent.mkdir(parents=True, exist_ok=True)

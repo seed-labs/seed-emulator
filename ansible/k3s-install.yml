@@ -6,6 +6,15 @@
   hosts: master
   become: yes
   tasks:
+    - name: Optionally uninstall existing K3s server
+      shell: |
+        if [ -x /usr/local/bin/k3s-uninstall.sh ]; then
+          /usr/local/bin/k3s-uninstall.sh
+        fi
+      args:
+        executable: /bin/bash
+      when: seed_k3s_force_reinstall | bool
+
     - name: Check if K3s server already installed
       stat:
         path: /etc/rancher/k3s/k3s.yaml
@@ -16,6 +25,23 @@
         path: /etc/rancher/k3s
         state: directory
         mode: "0755"
+
+    - name: Render K3s server config
+      copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: "0644"
+        content: |
+          write-kubeconfig-mode: "644"
+          flannel-backend: host-gw
+          disable:
+            - traefik
+          cluster-cidr: "{{ seed_k3s_cluster_cidr }}"
+          service-cidr: "{{ seed_k3s_service_cidr }}"
+          kubelet-arg:
+            - "max-pods={{ seed_k3s_max_pods }}"
+          kube-controller-manager-arg:
+            - "node-cidr-mask-size-ipv4={{ seed_k3s_node_cidr_mask_size_ipv4 }}"
+      register: k3s_server_config
 
     - name: Configure registry mirror (insecure HTTP)
       copy:
@@ -40,6 +66,12 @@
         state: restarted
       when: k3s_server_yaml.stat.exists and k3s_registries.changed
 
+    - name: Restart K3s server if server config changed
+      service:
+        name: k3s
+        state: restarted
+      when: k3s_server_yaml.stat.exists and k3s_server_config.changed
+
     - name: Install Docker (used to host local registry container)
       apt:
         name: docker.io
@@ -54,9 +86,8 @@
 
     - name: Install K3s server
       shell: |
-        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={{ k3s_version }} \
-          K3S_KUBECONFIG_MODE="644" \
-          INSTALL_K3S_EXEC="--flannel-backend=host-gw --disable=traefik" \
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={{ k3s_install_version }} \
+          INSTALL_K3S_ARTIFACT_URL={{ seed_k3s_artifact_url }} \
           sh -
       args:
         creates: /etc/rancher/k3s/k3s.yaml
@@ -90,6 +121,15 @@
         - macvlan
         - ipvlan
         - static
+
+    - name: Ensure Multus kubeconfig compatibility path exists on K3s master
+      shell: |
+        set -euo pipefail
+        sudo -n mkdir -p /etc/cni/net.d
+        sudo -n rm -rf /etc/cni/net.d/multus.d
+        sudo -n ln -s /var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d /etc/cni/net.d/multus.d
+      args:
+        executable: /bin/bash
 
     - name: Get K3s token
       shell: cat /var/lib/rancher/k3s/server/node-token
@@ -148,19 +188,20 @@
           fi
           sleep 2
         done
-        conf_dir="$(sed -n 's/^[[:space:]]*conf_dir[[:space:]]*=[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p' /var/lib/rancher/k3s/agent/etc/containerd/config.toml | head -n 1)"
+        conf_dir="/var/lib/rancher/k3s/agent/etc/cni/net.d"
+        if [ ! -d "${conf_dir}" ]; then
+          conf_dir="$(awk -F'"' '/conf_dir[[:space:]]*=/{print $2; exit}' /var/lib/rancher/k3s/agent/etc/containerd/config.toml 2>/dev/null || true)"
+        fi
         if [ -d /var/lib/rancher/k3s/data/current/bin ]; then
           bin_dir="/var/lib/rancher/k3s/data/current/bin"
         else
-          bin_dir="$(sed -n 's/^[[:space:]]*bin_dir[[:space:]]*=[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p' /var/lib/rancher/k3s/agent/etc/containerd/config.toml | head -n 1)"
+          bin_dir="$(awk -F'"' '/bin_dir[[:space:]]*=/{print $2; exit}' /var/lib/rancher/k3s/agent/etc/containerd/config.toml 2>/dev/null || true)"
         fi
         if [ -z "${conf_dir}" ] || [ -z "${bin_dir}" ]; then
           echo "Failed to detect k3s conf_dir/bin_dir" >&2
           exit 1
         fi
         kubectl -n kube-system patch ds kube-multus-ds --type='strategic' -p "{\"spec\":{\"template\":{\"spec\":{\"volumes\":[{\"name\":\"cni\",\"hostPath\":{\"path\":\"${conf_dir}\"}},{\"name\":\"cnibin\",\"hostPath\":{\"path\":\"${bin_dir}\"}}]}}}}"
-        kubectl -n kube-system rollout restart ds/kube-multus-ds
-        kubectl -n kube-system rollout status ds/kube-multus-ds --timeout=300s
       args:
         executable: /bin/bash
       
@@ -171,6 +212,15 @@
   hosts: workers
   become: yes
   tasks:
+    - name: Optionally uninstall existing K3s agent
+      shell: |
+        if [ -x /usr/local/bin/k3s-agent-uninstall.sh ]; then
+          /usr/local/bin/k3s-agent-uninstall.sh
+        fi
+      args:
+        executable: /bin/bash
+      when: seed_k3s_force_reinstall | bool
+
     - name: Check if K3s agent already installed
       stat:
         path: /var/lib/rancher/k3s/agent
@@ -181,6 +231,15 @@
         path: /etc/rancher/k3s
         state: directory
         mode: "0755"
+
+    - name: Render K3s agent config
+      copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: "0644"
+        content: |
+          kubelet-arg:
+            - "max-pods={{ seed_k3s_max_pods }}"
+      register: k3s_agent_config
 
     - name: Configure registry mirror (insecure HTTP)
       copy:
@@ -205,9 +264,16 @@
         state: restarted
       when: k3s_agent_dir.stat.exists and k3s_registries.changed
 
+    - name: Restart K3s agent if agent config changed
+      service:
+        name: k3s-agent
+        state: restarted
+      when: k3s_agent_dir.stat.exists and k3s_agent_config.changed
+
     - name: Install K3s agent
       shell: |
-        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={{ k3s_version }} \
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={{ k3s_install_version }} \
+          INSTALL_K3S_ARTIFACT_URL={{ seed_k3s_artifact_url }} \
           K3S_URL=https://{{ hostvars[groups['master'][0]]['ansible_host'] }}:6443 \
           K3S_TOKEN={{ hostvars[groups['master'][0]]['k3s_server_token'] }} \
           sh -
@@ -236,6 +302,15 @@
         - macvlan
         - ipvlan
         - static
+
+    - name: Ensure Multus kubeconfig compatibility path exists on K3s workers
+      shell: |
+        set -euo pipefail
+        sudo -n mkdir -p /etc/cni/net.d
+        sudo -n rm -rf /etc/cni/net.d/multus.d
+        sudo -n ln -s /var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d /etc/cni/net.d/multus.d
+      args:
+        executable: /bin/bash
 
 - name: Configure Worker Labels
   hosts: master

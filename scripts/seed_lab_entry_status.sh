@@ -148,6 +148,11 @@ export ENTRY_SEED_OUTPUT_DIR="${SEED_OUTPUT_DIR}"
 export ENTRY_MASTER_NAME="${SEED_K3S_MASTER_NAME}"
 export ENTRY_WORKER1_NAME="${SEED_K3S_WORKER1_NAME}"
 export ENTRY_WORKER2_NAME="${SEED_K3S_WORKER2_NAME}"
+export ENTRY_MASTER_IP="${SEED_K3S_MASTER_IP:-}"
+export ENTRY_WORKER1_IP="${SEED_K3S_WORKER1_IP:-}"
+export ENTRY_WORKER2_IP="${SEED_K3S_WORKER2_IP:-}"
+export ENTRY_SEED_K3S_USER="${SEED_K3S_USER:-ubuntu}"
+export ENTRY_SEED_K3S_SSH_KEY="${SEED_K3S_SSH_KEY:-$HOME/.ssh/id_ed25519}"
 export ENTRY_SEED_REGISTRY_HOST="${SEED_REGISTRY_HOST:-192.168.122.110}"
 export ENTRY_SEED_REGISTRY_PORT="${SEED_REGISTRY_PORT:-5000}"
 export ENTRY_SEED_PROFILE_KIND="${SEED_PROFILE_KIND:-}"
@@ -155,11 +160,13 @@ export ENTRY_SEED_IMAGE_DISTRIBUTION_MODE="${SEED_IMAGE_DISTRIBUTION_MODE:-}"
 export ENTRY_CLUSTER_INVENTORY_NAME="${SEED_CLUSTER_INVENTORY_NAME:-}"
 export ENTRY_CLUSTER_INVENTORY_PATH="${SEED_CLUSTER_INVENTORY_PATH:-}"
 export ENTRY_CLUSTER_INVENTORY_LOADED="${SEED_CLUSTER_INVENTORY_LOADED:-false}"
+export ENTRY_CLUSTER_MAX_VALIDATED_TOPOLOGY_SIZE="${SEED_CLUSTER_MAX_VALIDATED_TOPOLOGY_SIZE:-0}"
 
 python3 - <<'PY'
 import json
 import os
 import re
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -190,6 +197,7 @@ summary = {
     "cluster_inventory_name": os.environ.get("ENTRY_CLUSTER_INVENTORY_NAME", ""),
     "cluster_inventory_path": os.environ.get("ENTRY_CLUSTER_INVENTORY_PATH", ""),
     "cluster_inventory_loaded": os.environ.get("ENTRY_CLUSTER_INVENTORY_LOADED", "false") == "true",
+    "cluster_max_validated_topology_size": int(os.environ.get("ENTRY_CLUSTER_MAX_VALIDATED_TOPOLOGY_SIZE", "0") or 0),
 }
 
 profile_kind = os.environ.get("ENTRY_SEED_PROFILE_KIND", "").strip() or (
@@ -217,6 +225,78 @@ if os_release.exists():
     host_os = data.get("PRETTY_NAME") or data.get("NAME") or "unknown"
 summary["host_os"] = host_os
 
+ssh_key_path = str(Path(os.environ.get("ENTRY_SEED_K3S_SSH_KEY", "")).expanduser())
+ssh_user = os.environ.get("ENTRY_SEED_K3S_USER", "ubuntu")
+summary["ssh_user"] = ssh_user
+summary["ssh_key_path"] = ssh_key_path
+summary["ssh_key_exists"] = Path(ssh_key_path).is_file()
+
+ssh_targets = [
+    (os.environ.get("ENTRY_MASTER_NAME", ""), os.environ.get("ENTRY_MASTER_IP", "")),
+    (os.environ.get("ENTRY_WORKER1_NAME", ""), os.environ.get("ENTRY_WORKER1_IP", "")),
+    (os.environ.get("ENTRY_WORKER2_NAME", ""), os.environ.get("ENTRY_WORKER2_IP", "")),
+]
+ssh_access = []
+if summary["ssh_key_exists"]:
+    for name, ip in ssh_targets:
+        if not name or not ip:
+            continue
+        command = [
+            "ssh",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            "-o",
+            "LogLevel=ERROR",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "IdentitiesOnly=yes",
+            "-o",
+            "IdentityAgent=none",
+            "-o",
+            "ConnectTimeout=8",
+            "-n",
+            "-i",
+            ssh_key_path,
+            f"{ssh_user}@{ip}",
+            "hostname",
+        ]
+        result = subprocess.run(command, text=True, capture_output=True, check=False, timeout=15)
+        ssh_access.append(
+            {
+                "name": name,
+                "management_ip": ip,
+                "reachable": result.returncode == 0,
+                "hostname": result.stdout.strip(),
+                "error": "" if result.returncode == 0 else " ".join((result.stderr or result.stdout).strip().split()),
+            }
+        )
+else:
+    for name, ip in ssh_targets:
+        if not name or not ip:
+            continue
+        ssh_access.append(
+            {
+                "name": name,
+                "management_ip": ip,
+                "reachable": False,
+                "hostname": "",
+                "error": f"key not found: {ssh_key_path}",
+            }
+        )
+
+summary["ssh_access"] = ssh_access
+summary["ssh_access_ok"] = bool(ssh_access) and all(item.get("reachable") for item in ssh_access)
+(out_dir / "ssh_access.json").write_text(json.dumps({
+    "ssh_user": ssh_user,
+    "ssh_key_path": ssh_key_path,
+    "ssh_key_exists": summary["ssh_key_exists"],
+    "ssh_access_ok": summary["ssh_access_ok"],
+    "nodes": ssh_access,
+}, indent=2), encoding="utf-8")
+
 profiles = []
 if profile_file.exists() and yaml is not None:
     loaded = yaml.safe_load(profile_file.read_text(encoding="utf-8")) or {}
@@ -231,6 +311,7 @@ if profile_file.exists() and yaml is not None:
                     "compile_script": cfg.get("compile_script", ""),
                     "default_namespace": cfg.get("default_namespace", ""),
                     "default_cni_type": cfg.get("default_cni_type", ""),
+                    "default_topology_size": cfg.get("default_topology_size", 0),
                     "verify_mode": cfg.get("verify_mode", ""),
                     "support_tier": cfg.get("support_tier", ""),
                     "acceptance_level": cfg.get("acceptance_level", ""),
@@ -300,6 +381,21 @@ summary["kubernetes"] = {
     else "",
 }
 
+active_seed_namespaces = []
+namespaces_file = out_dir / "kube_namespaces.txt"
+if namespaces_file.exists():
+    lines = [ln for ln in namespaces_file.read_text(encoding="utf-8", errors="ignore").splitlines() if ln.strip()]
+    for idx, line in enumerate(lines):
+        if idx == 0 and "STATUS" in line:
+            continue
+        cols = line.split()
+        if len(cols) < 2:
+            continue
+        name, status = cols[0], cols[1]
+        if name.startswith("seedemu-"):
+            active_seed_namespaces.append({"name": name, "status": status})
+summary["active_seed_namespaces"] = active_seed_namespaces
+
 node_matrix = []
 nodes_json = out_dir / "kube_nodes.json"
 if nodes_json.exists():
@@ -338,105 +434,179 @@ else:
         "workers pull images from master registry",
     ]
 
+def load_json(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def iso_to_epoch(value: str) -> float:
+    text = str(value or "").strip()
+    if not text:
+        return 0.0
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp()
+    except Exception:
+        return 0.0
+
+
+def build_run_record(run_dir: Path) -> dict:
+    runner_summary_path = run_dir / "runner_summary.json"
+    validation_summary_path = run_dir / "validation" / "summary.json"
+    timing_path = run_dir / "validation" / "timing.json"
+    report_path = run_dir / "report" / "report.json"
+
+    runner_data = load_json(runner_summary_path)
+    validation_data = load_json(validation_summary_path)
+    timing_data = load_json(timing_path)
+    report_data = load_json(report_path)
+
+    runner_action = str(validation_data.get("runner_action", "") or runner_data.get("action", "") or "")
+    runner_status = str(validation_data.get("runner_status", "") or runner_data.get("status", "") or "")
+    namespace = str(validation_data.get("namespace", "") or report_data.get("namespace", "") or "")
+    nodes_used = int(validation_data.get("nodes_used", report_data.get("nodes_used", 0)) or 0)
+    expected_nodes = int(validation_data.get("expected_nodes", 0) or 0)
+    validation_duration_seconds = int(
+        validation_data.get("validation_duration_seconds", validation_data.get("duration_seconds", 0)) or 0
+    )
+    build_duration = int(timing_data.get("build_duration_seconds", validation_data.get("build_duration_seconds", 0)) or 0)
+    up_duration = int(timing_data.get("up_duration_seconds", validation_data.get("up_duration_seconds", 0)) or 0)
+    phase_duration = int(
+        timing_data.get("phase_start_duration_seconds", validation_data.get("phase_start_duration_seconds", 0)) or 0
+    )
+    start_bird_duration = int(
+        timing_data.get("start_bird_duration_seconds", validation_data.get("start_bird_duration_seconds", 0)) or 0
+    )
+    start_kernel_duration = int(
+        timing_data.get("start_kernel_duration_seconds", validation_data.get("start_kernel_duration_seconds", 0)) or 0
+    )
+    pipeline_duration_seconds = max(
+        int(report_data.get("pipeline_duration_seconds", validation_data.get("pipeline_duration_seconds", 0)) or 0),
+        build_duration + up_duration + phase_duration + start_bird_duration + start_kernel_duration + validation_duration_seconds,
+        validation_duration_seconds,
+    )
+
+    acceptance_status = str(
+        report_data.get("acceptance_status", "")
+        or validation_data.get("acceptance_status", "")
+        or ("PASS" if report_data.get("overall_passed") else "")
+    )
+    if not acceptance_status:
+        if runner_status != "PASS":
+            acceptance_status = "FAIL"
+        elif runner_action in {"verify", "observe", "report", "all"}:
+            acceptance_status = "FAIL"
+        elif runner_action:
+            acceptance_status = "PARTIAL"
+        else:
+            acceptance_status = "NOT_RUN"
+
+    overall_passed = report_data.get("overall_passed")
+    if overall_passed is None and acceptance_status:
+        overall_passed = acceptance_status == "PASS"
+
+    sort_epoch = max(
+        iso_to_epoch(validation_data.get("runner_finished_at", "")),
+        iso_to_epoch(validation_data.get("runner_started_at", "")),
+        iso_to_epoch(validation_data.get("generated_at", "")),
+        iso_to_epoch(report_data.get("generated_at", "")),
+        iso_to_epoch(runner_data.get("finished_at", "")),
+        iso_to_epoch(runner_data.get("started_at", "")),
+        run_dir.stat().st_mtime,
+    )
+
+    return {
+        "run_id": run_dir.name,
+        "latest_dir": str(run_dir),
+        "runner_summary": str(runner_summary_path) if runner_summary_path.exists() else "",
+        "validation_summary": str(validation_summary_path) if validation_summary_path.exists() else "",
+        "report": str(report_path) if report_path.exists() else "",
+        "status": runner_status,
+        "runner_action": runner_action,
+        "acceptance_status": acceptance_status,
+        "overall_passed": overall_passed,
+        "namespace": namespace,
+        "nodes_used": nodes_used,
+        "expected_nodes": expected_nodes,
+        "pipeline_duration_seconds": pipeline_duration_seconds,
+        "validation_duration_seconds": validation_duration_seconds,
+        "first_evidence_file": str(report_data.get("first_evidence_file", "") or ""),
+        "_sort_epoch": sort_epoch,
+    }
+
+
+def clean_record(item: dict) -> dict:
+    return {k: v for k, v in item.items() if not str(k).startswith("_")}
+
+
 latest_runs = {}
+all_run_records = []
 if profile_root.exists():
+
     for pdir in sorted(profile_root.iterdir()):
         if not pdir.is_dir() or pdir.name == "latest":
             continue
-        latest_link = pdir / "latest"
-        target = ""
-        runner_summary_file = ""
-        validation_summary_file = ""
-        report_file = ""
-        status = ""
-        overall_passed = None
-        namespace = ""
-        nodes_used = 0
-        expected_nodes = 0
-        pipeline_duration_seconds = 0
-        validation_duration_seconds = 0
-        first_evidence_file = ""
-        if latest_link.exists():
-            try:
-                target = str(latest_link.resolve())
-            except Exception:
-                target = str(latest_link)
-            runner_summary = Path(target) / "runner_summary.json"
-            if runner_summary.exists():
-                runner_summary_file = str(runner_summary)
-                try:
-                    data = json.loads(runner_summary.read_text(encoding="utf-8"))
-                    status = data.get("status", "")
-                except Exception:
-                    status = ""
-            validation_summary = Path(target) / "validation" / "summary.json"
-            timing_json = Path(target) / "validation" / "timing.json"
-            if validation_summary.exists():
-                validation_summary_file = str(validation_summary)
-                try:
-                    data = json.loads(validation_summary.read_text(encoding="utf-8"))
-                except Exception:
-                    data = {}
-                try:
-                    timing_data = json.loads(timing_json.read_text(encoding="utf-8")) if timing_json.exists() else {}
-                except Exception:
-                    timing_data = {}
-                if isinstance(data, dict):
-                    namespace = str(data.get("namespace", "") or "")
-                    nodes_used = int(data.get("nodes_used", 0) or 0)
-                    expected_nodes = int(data.get("expected_nodes", 0) or 0)
-                    status = status or str(data.get("runner_status", "") or "")
-                    validation_duration_seconds = int(
-                        data.get("validation_duration_seconds", data.get("duration_seconds", 0)) or 0
-                    )
-                    build_duration = int(timing_data.get("build_duration_seconds", data.get("build_duration_seconds", 0)) or 0)
-                    up_duration = int(timing_data.get("up_duration_seconds", data.get("up_duration_seconds", 0)) or 0)
-                    phase_duration = int(
-                        timing_data.get("phase_start_duration_seconds", data.get("phase_start_duration_seconds", 0)) or 0
-                    )
-                    pipeline_duration_seconds = max(
-                        int(data.get("pipeline_duration_seconds", 0) or 0),
-                        build_duration + up_duration + phase_duration + validation_duration_seconds,
-                        validation_duration_seconds,
-                    )
-                    overall_passed = all(
-                        bool(data.get(key, False))
-                        for key in (
-                            "placement_passed",
-                            "bgp_passed",
-                            "connectivity_passed",
-                            "recovery_passed",
-                        )
-                    )
-            report_json = Path(target) / "report" / "report.json"
-            if report_json.exists():
-                report_file = str(report_json)
-                try:
-                    report_data = json.loads(report_json.read_text(encoding="utf-8"))
-                except Exception:
-                    report_data = {}
-                if isinstance(report_data, dict):
-                    if "overall_passed" in report_data:
-                        overall_passed = bool(report_data.get("overall_passed"))
-                    first_evidence_file = str(report_data.get("first_evidence_file", "") or "")
-                    pipeline_duration_seconds = int(
-                        report_data.get("pipeline_duration_seconds", pipeline_duration_seconds) or pipeline_duration_seconds
-                    )
+
+        run_dirs = [child for child in pdir.iterdir() if child.is_dir() and child.name != "latest"]
+        records = [build_run_record(run_dir) for run_dir in run_dirs]
+        all_run_records.extend(records)
+        records.sort(
+            key=lambda item: (float(item.get("_sort_epoch", 0.0) or 0.0), item.get("run_id", "")),
+            reverse=True,
+        )
+        latest_attempted = records[0] if records else {}
+        latest_verified = next(
+            (
+                item
+                for item in records
+                if item.get("acceptance_status") in {"PASS", "FAIL", "CAPACITY_GATED"}
+                or item.get("runner_action") in {"verify", "observe", "report", "all"}
+            ),
+            {},
+        )
+        latest_accepted = next(
+            (
+                item
+                for item in records
+                if item.get("report") and item.get("acceptance_status") == "PASS"
+            ),
+            {},
+        )
+
         latest_runs[pdir.name] = {
-            "latest_dir": target,
-            "runner_summary": runner_summary_file,
-            "validation_summary": validation_summary_file,
-            "report": report_file,
-            "status": status,
-            "overall_passed": overall_passed,
-            "namespace": namespace,
-            "nodes_used": nodes_used,
-            "expected_nodes": expected_nodes,
-            "pipeline_duration_seconds": pipeline_duration_seconds,
-            "validation_duration_seconds": validation_duration_seconds,
-            "first_evidence_file": first_evidence_file,
+            **clean_record(latest_attempted),
+            "latest_attempted_run": clean_record(latest_attempted),
+            "latest_verified_run": clean_record(latest_verified),
+            "latest_accepted_run": clean_record(latest_accepted),
         }
 summary["latest_profile_runs"] = latest_runs
+
+all_run_records.sort(
+    key=lambda item: (float(item.get("_sort_epoch", 0.0) or 0.0), item.get("run_id", "")),
+    reverse=True,
+)
+summary["latest_run"] = next((clean_record(item) for item in all_run_records), None)
+summary["latest_verified_run"] = next(
+    (
+        clean_record(item)
+        for item in all_run_records
+        if item.get("acceptance_status") in {"PASS", "FAIL", "CAPACITY_GATED"}
+        or item.get("runner_action") in {"verify", "observe", "report", "all"}
+    ),
+    None,
+)
+summary["latest_accepted_run"] = next(
+    (
+        clean_record(item)
+        for item in all_run_records
+        if item.get("report") and item.get("acceptance_status") == "PASS"
+    ),
+    None,
+)
 
 summary["macro_tasks"] = [
     {
@@ -445,12 +615,32 @@ summary["macro_tasks"] = [
         "goal": "Check if current KVM+k3s prerequisites are healthy",
     },
     {
-        "name": "Deploy from profile",
-        "command": f"scripts/seed_k8s_profile_runner.sh {summary['seed_profile']} start",
-        "goal": "Compile/build/deploy the selected profile",
+        "name": "Compile profile",
+        "command": f"scripts/seed_k8s_profile_runner.sh {summary['seed_profile']} compile",
+        "goal": "Compile the selected topology into Kubernetes output",
     },
     {
-        "name": "Acceptance verify",
+        "name": "Build images",
+        "command": f"scripts/seed_k8s_profile_runner.sh {summary['seed_profile']} build",
+        "goal": "Build and distribute images for the latest compiled run",
+    },
+    {
+        "name": "Deploy workloads",
+        "command": f"scripts/seed_k8s_profile_runner.sh {summary['seed_profile']} deploy",
+        "goal": "Apply the compiled manifests without starting bird",
+    },
+    {
+        "name": "Start bird",
+        "command": f"scripts/seed_k8s_profile_runner.sh {summary['seed_profile']} start-bird",
+        "goal": "Start bird routing processes",
+    },
+    {
+        "name": "Switch kernel",
+        "command": f"scripts/seed_k8s_profile_runner.sh {summary['seed_profile']} start-kernel",
+        "goal": "Enable the kernel export stage",
+    },
+    {
+        "name": "Verify acceptance",
         "command": f"scripts/seed_k8s_profile_runner.sh {summary['seed_profile']} verify",
         "goal": "Run strict verification on placement/BGP/connectivity/recovery",
     },
@@ -498,9 +688,23 @@ markdown.append(
     f"- Expected KVM Running: `{summary['kvm']['expected_vm_running_count']}/{len(expected_vms)}`"
 )
 markdown.append("")
+markdown.append("## Active SEED Namespaces")
+if summary["active_seed_namespaces"]:
+    for item in summary["active_seed_namespaces"]:
+        markdown.append(f"- `{item['name']}` -> `{item['status']}`")
+else:
+    markdown.append("- none")
+markdown.append("")
 markdown.append("## OS Matrix")
 for item in summary["node_os_matrix"]:
     markdown.append(f"- `{item['name']}` -> `{item['os_image']}` / `{item['container_runtime']}`")
+markdown.append("")
+markdown.append("## SSH Access")
+markdown.append(f"- `user={summary['ssh_user']}` key=`{summary['ssh_key_path']}` exists=`{summary['ssh_key_exists']}` all_ok=`{summary['ssh_access_ok']}`")
+for item in summary["ssh_access"]:
+    markdown.append(
+        f"- `{item['name']}` `{item['management_ip']}` reachable=`{item['reachable']}` hostname=`{item['hostname']}`"
+    )
 markdown.append("")
 markdown.append("## Image Flow")
 for step in summary["image_flow"]:
@@ -509,11 +713,21 @@ markdown.append("")
 markdown.append("## Latest Profile Runs")
 for profile_id, item in sorted(summary["latest_profile_runs"].items()):
     markdown.append(
-        f"- `{profile_id}` -> status=`{item.get('status', '') or 'unknown'}` pass=`{item.get('overall_passed', '')}` "
-        f"ns=`{item.get('namespace', '')}` nodes=`{item.get('nodes_used', 0)}` "
-        f"expected=`{item.get('expected_nodes', 0)}` total=`{item.get('pipeline_duration_seconds', 0)}s` "
-        f"run=`{item.get('latest_dir', '')}`"
+        f"- `{profile_id}` -> attempted=`{item.get('status', '') or 'unknown'}` "
+        f"acceptance=`{item.get('acceptance_status', 'NOT_RUN')}` ns=`{item.get('namespace', '')}` "
+        f"nodes=`{item.get('nodes_used', 0)}` expected=`{item.get('expected_nodes', 0)}` "
+        f"total=`{item.get('pipeline_duration_seconds', 0)}s` run=`{item.get('latest_dir', '')}`"
     )
+    verified = item.get("latest_verified_run") or {}
+    accepted = item.get("latest_accepted_run") or {}
+    if verified:
+        markdown.append(
+            f"- latest_verified=`{verified.get('run_id', '')}` status=`{verified.get('acceptance_status', '')}`"
+        )
+    if accepted:
+        markdown.append(
+            f"- latest_accepted=`{accepted.get('run_id', '')}` status=`{accepted.get('acceptance_status', '')}`"
+        )
 markdown.append("")
 markdown.append("## Next Commands")
 for item in summary["macro_tasks"]:
@@ -523,6 +737,7 @@ markdown.append("## Core Env Vars")
 markdown.append("- `KUBECONFIG`")
 markdown.append("- `SEED_EXPERIMENT_PROFILE`")
 markdown.append("- `SEED_NAMESPACE`")
+markdown.append("- `SEED_K3S_SSH_KEY`")
 markdown.append("- `SEED_CNI_TYPE`")
 markdown.append("- `SEED_PLACEMENT_MODE`")
 markdown.append("- `SEED_AGENT_PROACTIVE_MODE`")

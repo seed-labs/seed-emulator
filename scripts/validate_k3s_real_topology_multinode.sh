@@ -158,6 +158,8 @@ SSH_OPTS=(
   -o UserKnownHostsFile=/dev/null
   -o LogLevel=ERROR
   -o BatchMode=yes
+  -o IdentitiesOnly=yes
+  -o IdentityAgent=none
   -o ConnectTimeout=10
   -o ServerAliveInterval=30
   -o ServerAliveCountMax=3
@@ -165,6 +167,7 @@ SSH_OPTS=(
 )
 SSH_EXEC_OPTS=("${SSH_OPTS[@]}" -n)
 SEED_SSH_PROBE_TIMEOUT_SECONDS="${SEED_SSH_PROBE_TIMEOUT_SECONDS:-20}"
+SEED_SSH_LONG_PROBE_TIMEOUT_SECONDS="${SEED_SSH_LONG_PROBE_TIMEOUT_SECONDS:-90}"
 
 run_ssh_probe() {
   if command -v timeout >/dev/null 2>&1; then
@@ -174,8 +177,27 @@ run_ssh_probe() {
   fi
 }
 
+run_ssh_probe_with_timeout() {
+  local probe_timeout="$1"
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "${probe_timeout}" ssh "$@"
+  else
+    ssh "$@"
+  fi
+}
+
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
+tail_log_on_failure() {
+  local log_file="$1"
+  local lines="${2:-120}"
+  if [ -f "${log_file}" ]; then
+    log "Last ${lines} lines from ${log_file}:"
+    tail -n "${lines}" "${log_file}" >&2 || true
+  fi
 }
 
 run_kubectl_exec() {
@@ -188,17 +210,19 @@ run_kubectl_exec() {
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/validate_k3s_real_topology_multinode.sh [all|preflight|compile|build|deploy|phase-start|verify|clean]
+Usage: scripts/validate_k3s_real_topology_multinode.sh [all|preflight|compile|build|deploy|phase-start|start-bird|start-kernel|verify|clean]
 
 Actions:
-  all         Run full pipeline: preflight -> compile -> build -> deploy -> phase-start -> verify
-  preflight   Fetch kubeconfig, check nodes, detect CNI master iface
-  compile     Compile real-topology RR into Kubernetes manifests
-  build       Build and push images on K3s master
-  deploy      Apply manifests and wait until all deployments are Available (does not start bird)
-  phase-start Run the separate bird/iBGP/eBGP startup stage after deploy
-  verify      Verify expected workload count, multinode placement, and BGP status (birdc)
-  clean       Delete namespace resources used by this workflow
+  all          Run full pipeline: preflight -> compile -> build -> deploy -> phase-start -> verify
+  preflight    Fetch kubeconfig, check nodes, detect CNI master iface
+  compile      Compile real-topology RR into Kubernetes manifests
+  build        Build and push images on K3s master
+  deploy       Apply manifests and wait until all deployments are Available (does not start bird)
+  phase-start  Run the separate bird/iBGP/eBGP startup stage after deploy
+  start-bird   Start bird routing processes only
+  start-kernel Switch bird to kernel mode
+  verify       Verify expected workload count, multinode placement, and BGP status (birdc)
+  clean        Delete namespace resources used by this workflow
 USAGE
 }
 
@@ -216,6 +240,9 @@ resolve_failure_code() {
       ;;
     ssh_key_not_found)
       echo "SSH_KEY_INVALID"
+      ;;
+    ssh_access_failed)
+      echo "SSH_ACCESS_FAILED"
       ;;
     capacity_gated)
       echo "CAPACITY_GATED"
@@ -390,12 +417,16 @@ summary = {
     "build_duration_seconds": int(timing.get("build_duration_seconds", 0)),
     "up_duration_seconds": int(timing.get("up_duration_seconds", 0)),
     "phase_start_duration_seconds": int(timing.get("phase_start_duration_seconds", 0)),
+    "start_bird_duration_seconds": int(timing.get("start_bird_duration_seconds", 0)),
+    "start_kernel_duration_seconds": int(timing.get("start_kernel_duration_seconds", 0)),
     "validation_duration_seconds": int(timing.get("validation_duration_seconds", 0)),
     "pipeline_duration_seconds": max(
         int(${duration_seconds@Q}),
         int(timing.get("build_duration_seconds", 0))
         + int(timing.get("up_duration_seconds", 0))
         + int(timing.get("phase_start_duration_seconds", 0))
+        + int(timing.get("start_bird_duration_seconds", 0))
+        + int(timing.get("start_kernel_duration_seconds", 0))
         + int(timing.get("validation_duration_seconds", 0)),
     ),
     "duration_seconds": max(
@@ -403,6 +434,8 @@ summary = {
         int(timing.get("build_duration_seconds", 0))
         + int(timing.get("up_duration_seconds", 0))
         + int(timing.get("phase_start_duration_seconds", 0))
+        + int(timing.get("start_bird_duration_seconds", 0))
+        + int(timing.get("start_kernel_duration_seconds", 0))
         + int(timing.get("validation_duration_seconds", 0)),
     ),
     "fallback_used": ${FALLBACK_USED@Q},
@@ -448,6 +481,18 @@ ensure_kubeconfig() {
   fi
 }
 
+check_ssh_access() {
+  python3 "${SCRIPT_DIR}/seed_k8s_ssh_probe.py" \
+    --user "${SEED_K3S_USER}" \
+    --key "${SEED_K3S_SSH_KEY}" \
+    --timeout "${SEED_SSH_PROBE_TIMEOUT_SECONDS}" \
+    --json-output "${ARTIFACT_DIR}/ssh_access.json" \
+    --node "${SEED_K3S_MASTER_NAME}=${SEED_K3S_MASTER_IP}" \
+    --node "${SEED_K3S_WORKER1_NAME}=${SEED_K3S_WORKER1_IP}" \
+    --node "${SEED_K3S_WORKER2_NAME}=${SEED_K3S_WORKER2_IP}" \
+    --strict >/dev/null
+}
+
 detect_default_iface() {
   local ip="$1"
   # Avoid SIGPIPE issues from `awk '{...; exit}'` when the producer keeps writing.
@@ -458,6 +503,8 @@ detect_default_iface() {
 write_capacity_gate_artifact() {
   local reference_cluster
   reference_cluster="${SEED_CLUSTER_REFERENCE:-false}"
+  local max_validated_topology_size
+  max_validated_topology_size="${SEED_CLUSTER_MAX_VALIDATED_TOPOLOGY_SIZE:-0}"
   python3 - <<PY
 import json
 from datetime import datetime, timezone
@@ -470,30 +517,38 @@ payload = {
     "cluster": ${SEED_K3S_CLUSTER_NAME@Q},
     "reference_cluster": ${reference_cluster@Q} == "true",
     "topology_size": int(${SEED_TOPOLOGY_SIZE@Q}),
+    "max_validated_topology_size": int(${max_validated_topology_size@Q}),
     "expected_nodes": int(${EXPECTED_NODES@Q}),
     "capacity_gate": ${SEED_PROFILE_CAPACITY_GATE@Q},
     "capacity_gate_status": ${CAPACITY_GATE_STATUS@Q},
-    "next_step": "Use SEED_TOPOLOGY_SIZE=214 on the reference cluster, or switch to a larger cluster inventory for >214.",
+    "next_step": (
+        f"Use SEED_TOPOLOGY_SIZE={int(${max_validated_topology_size@Q})} on the current reference cluster, "
+        "or switch to a larger cluster inventory for bigger runs."
+    ),
 }
 artifact_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 PY
 }
 
 enforce_capacity_gate() {
-  if [ "${SEED_TOPOLOGY_SIZE}" -le 214 ]; then
+  local max_validated_topology_size
+  max_validated_topology_size="${SEED_CLUSTER_MAX_VALIDATED_TOPOLOGY_SIZE:-0}"
+
+  if [ "${max_validated_topology_size}" -gt 0 ] && [ "${SEED_TOPOLOGY_SIZE}" -le "${max_validated_topology_size}" ]; then
     CAPACITY_GATE_STATUS="open"
     return 0
   fi
 
-  if [ "${SEED_CLUSTER_REFERENCE:-false}" = "true" ]; then
+  if [ "${max_validated_topology_size}" -gt 0 ] && [ "${SEED_TOPOLOGY_SIZE}" -gt "${max_validated_topology_size}" ]; then
     CAPACITY_GATE_STATUS="gated"
     write_capacity_gate_artifact
     fail_with_reason "capacity_gated" "${ARTIFACT_DIR}/capacity_gate.json" \
-      "SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE} doctor" \
+      "SEED_TOPOLOGY_SIZE=${max_validated_topology_size} scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE} doctor" \
       "Select a larger cluster inventory and rerun with SEED_TOPOLOGY_SIZE=${SEED_TOPOLOGY_SIZE}"
   fi
 
   CAPACITY_GATE_STATUS="open"
+  return 0
 }
 
 repair_registry_connectivity() {
@@ -556,6 +611,28 @@ JSON
   )" >/dev/null 2>&1 || true
   kubectl -n kube-system rollout restart ds/kube-multus-ds >/dev/null 2>&1 || true
   kubectl -n kube-system rollout status ds/kube-multus-ds --timeout=300s >/dev/null 2>&1 || true
+  return 0
+}
+
+repair_multus_kubeconfig_bridge_for_k3s() {
+  log "Ensuring Multus kubeconfig compatibility path on K3s nodes"
+  local host
+  for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
+    run_ssh_probe_with_timeout "${SEED_SSH_LONG_PROBE_TIMEOUT_SECONDS}" "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
+      "set -euo pipefail; \
+       sudo -n mkdir -p /etc/cni/net.d; \
+       if [ ! -L /etc/cni/net.d/multus.d ] || [ \"\$(readlink -f /etc/cni/net.d/multus.d 2>/dev/null || true)\" != \"/var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d\" ]; then \
+         sudo -n rm -rf /etc/cni/net.d/multus.d; \
+         sudo -n ln -s /var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d /etc/cni/net.d/multus.d; \
+       fi; \
+       for i in \$(seq 1 30); do \
+         if sudo -n test -f /etc/cni/net.d/multus.d/multus.kubeconfig; then \
+           exit 0; \
+         fi; \
+         sleep 2; \
+       done; \
+       exit 1" >/dev/null 2>&1 || return 1
+  done
   return 0
 }
 
@@ -873,7 +950,12 @@ generate_effective_node_labels_json() {
     return 0
   fi
 
-  python3 "${SCRIPT_DIR}/seed_k8s_plan_real_topology_by_as.py"     "${SEED_TOPOLOGY_FILE}" "${SEED_ASSIGNMENT_FILE}" "${ARTIFACT_DIR}/nodes.json"     "${ARTIFACT_DIR}/placement_expected.json" "${ARTIFACT_DIR}/placement_plan.json"
+  SEED_CURRENT_PODS_JSON_PATH="${ARTIFACT_DIR}/cluster_pods.json" \
+  SEED_NAMESPACE="${SEED_NAMESPACE}" \
+  SEED_EXCLUDED_NAMESPACES="${SEED_NAMESPACE}" \
+    python3 "${SCRIPT_DIR}/seed_k8s_plan_real_topology_by_as.py" \
+      "${SEED_TOPOLOGY_FILE}" "${SEED_ASSIGNMENT_FILE}" "${ARTIFACT_DIR}/nodes.json" \
+      "${ARTIFACT_DIR}/placement_expected.json" "${ARTIFACT_DIR}/placement_plan.json"
   SEED_NODE_LABELS_JSON_EFFECTIVE="$(cat "${ARTIFACT_DIR}/placement_expected.json")"
 }
 
@@ -903,9 +985,16 @@ run_preflight() {
   SEED_PLACEMENT_MODE="by_as_hard"
   SEED_SCHEDULING_STRATEGY="by_as_hard"
 
+  if ! check_ssh_access; then
+    fail_with_reason "ssh_access_failed" "${ARTIFACT_DIR}/ssh_access.json" \
+      "export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_real_topology_multinode.sh preflight" \
+      "python3 scripts/seed_k8s_ssh_probe.py --user ${SEED_K3S_USER} --key ${SEED_K3S_SSH_KEY} --node ${SEED_K3S_MASTER_NAME}=${SEED_K3S_MASTER_IP} --node ${SEED_K3S_WORKER1_NAME}=${SEED_K3S_WORKER1_IP} --node ${SEED_K3S_WORKER2_NAME}=${SEED_K3S_WORKER2_IP}"
+  fi
+
   ensure_kubeconfig
   kubectl get nodes -o wide > "${ARTIFACT_DIR}/nodes_wide.txt"
   kubectl get nodes -o json > "${ARTIFACT_DIR}/nodes.json"
+  kubectl get pods -A -o json > "${ARTIFACT_DIR}/cluster_pods.json"
   compute_expected_nodes
   enforce_capacity_gate
 
@@ -929,6 +1018,12 @@ run_preflight() {
       fail_with_reason "multus_not_ready" "${ARTIFACT_DIR}/multus_ds.txt" \
         "kubectl -n kube-system rollout restart ds/kube-multus-ds" "kubectl -n kube-system get pods -l name=multus -o wide"
     fi
+  fi
+
+  if ! repair_multus_kubeconfig_bridge_for_k3s; then
+    kubectl -n kube-system logs -l name=multus --tail=80 > "${ARTIFACT_DIR}/multus_logs_tail.txt" 2>/dev/null || true
+    fail_with_reason "multus_not_ready" "${ARTIFACT_DIR}/multus_logs_tail.txt" \
+      "scripts/setup_k3s_cluster.sh" "kubectl -n kube-system logs -l name=multus --tail=80"
   fi
 
   local can_list
@@ -1063,12 +1158,14 @@ run_remote_build() {
   run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}"     "rm -rf '${REMOTE_WORK_DIR}' && mkdir -p '${REMOTE_WORK_DIR}'"
   scp -q "${SSH_OPTS[@]}" "${tarball}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}:${REMOTE_WORK_DIR}/compiled.tar.gz"
 
+  log "Build logs -> ${ARTIFACT_DIR}/remote_build.log"
   if ! ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n env     SEED_BUILD_PARALLELISM=${SEED_BUILD_PARALLELISM}     SEED_DOCKER_BUILDKIT=${SEED_DOCKER_BUILDKIT}     SEED_REGISTRY_PUSH_RETRIES=${SEED_REGISTRY_PUSH_RETRIES}     SEED_REGISTRY_PUSH_BACKOFF_SECONDS=${SEED_REGISTRY_PUSH_BACKOFF_SECONDS}     SEED_DOCKER_MAX_CONCURRENT_UPLOADS=${SEED_DOCKER_MAX_CONCURRENT_UPLOADS}     SEED_REGISTRY_PUSH_TIMEOUT_SECONDS=${SEED_REGISTRY_PUSH_TIMEOUT_SECONDS}     SEED_IMAGE_DISTRIBUTION_MODE=${SEED_IMAGE_DISTRIBUTION_MODE}     bash -lc '
     set -euo pipefail
     cd "${REMOTE_WORK_DIR}"
     tar -xzf compiled.tar.gz
     ./build_images.sh
-  '" 2>&1 | tee "${ARTIFACT_DIR}/remote_build.log"; then
+  '" > "${ARTIFACT_DIR}/remote_build.log" 2>&1; then
+    tail_log_on_failure "${ARTIFACT_DIR}/remote_build.log" 80
     if grep -Eiq 'i/o timeout|Client\.Timeout|TLS handshake timeout|context deadline exceeded' "${ARTIFACT_DIR}/remote_build.log"; then
       fail_with_reason "registry_timeout" "${ARTIFACT_DIR}/remote_build.log"         "scripts/validate_k3s_real_topology_multinode.sh build" "tail -n 200 ${ARTIFACT_DIR}/remote_build.log"
     fi
@@ -1089,7 +1186,7 @@ run_remote_build() {
   stage_duration="$(( $(date +%s) - stage_start ))"
   BUILD_DURATION_SECONDS="${stage_duration}"
   write_stage_timing "build_duration_seconds" "${stage_duration}"
-  write_diagnostics "${CURRENT_STAGE}" "PASS" "${ARTIFACT_DIR}/remote_build.log"     "scripts/validate_k3s_real_topology_multinode.sh deploy" "scripts/validate_k3s_real_topology_multinode.sh phase-start"
+  write_diagnostics "${CURRENT_STAGE}" "PASS" "${ARTIFACT_DIR}/remote_build.log"     "scripts/validate_k3s_real_topology_multinode.sh deploy" "scripts/validate_k3s_real_topology_multinode.sh start-bird"
 }
 
 run_phased_startup() {
@@ -1123,6 +1220,110 @@ run_phased_startup() {
   esac
 }
 
+run_start_bird() {
+  CURRENT_STAGE="start_bird"
+  LAST_COMMAND="python3 ${SCRIPT_DIR}/seed_k8s_start_bird0130.py ${SEED_NAMESPACE} ${ARTIFACT_DIR}"
+  local rc=0 stage_start stage_duration
+  stage_start="$(date +%s)"
+  python3 "${SCRIPT_DIR}/seed_k8s_start_bird0130.py" "${SEED_NAMESPACE}" "${ARTIFACT_DIR}" || rc=$?
+  case "${rc}" in
+    0)
+      stage_duration="$(( $(date +%s) - stage_start ))"
+      write_stage_timing "start_bird_duration_seconds" "${stage_duration}"
+      write_diagnostics "${CURRENT_STAGE}" "PASS" "${ARTIFACT_DIR}/start_bird_summary.json"         "scripts/validate_k3s_real_topology_multinode.sh start-kernel" "kubectl -n ${SEED_NAMESPACE} get pods -o wide"
+      return 0
+      ;;
+    *)
+      fail_with_reason "start_bird_failed" "${ARTIFACT_DIR}/start_bird_summary.json"         "scripts/validate_k3s_real_topology_multinode.sh start-bird" "cat ${ARTIFACT_DIR}/start_bird.log"
+      ;;
+  esac
+}
+
+run_start_kernel() {
+  CURRENT_STAGE="start_kernel"
+  LAST_COMMAND="python3 ${SCRIPT_DIR}/seed_k8s_start_bird_kernel.py ${SEED_NAMESPACE} ${ARTIFACT_DIR}"
+  local rc=0 stage_start stage_duration
+  stage_start="$(date +%s)"
+  python3 "${SCRIPT_DIR}/seed_k8s_start_bird_kernel.py" "${SEED_NAMESPACE}" "${ARTIFACT_DIR}" || rc=$?
+  case "${rc}" in
+    0)
+      stage_duration="$(( $(date +%s) - stage_start ))"
+      write_stage_timing "start_kernel_duration_seconds" "${stage_duration}"
+      write_diagnostics "${CURRENT_STAGE}" "PASS" "${ARTIFACT_DIR}/start_kernel_summary.json"         "scripts/validate_k3s_real_topology_multinode.sh verify" "kubectl -n ${SEED_NAMESPACE} get pods -o wide"
+      return 0
+      ;;
+    *)
+      fail_with_reason "start_kernel_failed" "${ARTIFACT_DIR}/start_kernel_summary.json"         "scripts/validate_k3s_real_topology_multinode.sh start-kernel" "cat ${ARTIFACT_DIR}/start_kernel.log"
+      ;;
+  esac
+}
+
+force_finalize_namespace() {
+  local namespace="$1"
+  python3 - "${namespace}" <<'PY'
+import json
+import subprocess
+import sys
+
+namespace = sys.argv[1]
+result = subprocess.run(
+    ["kubectl", "get", "namespace", namespace, "-o", "json"],
+    text=True,
+    capture_output=True,
+)
+if result.returncode != 0:
+    raise SystemExit(0)
+
+payload = json.loads(result.stdout)
+payload.setdefault("spec", {})["finalizers"] = []
+finalize = subprocess.run(
+    ["kubectl", "replace", "--raw", f"/api/v1/namespaces/{namespace}/finalize", "-f", "-"],
+    input=json.dumps(payload),
+    text=True,
+)
+raise SystemExit(finalize.returncode)
+PY
+}
+
+aggressive_namespace_cleanup() {
+  local namespace="$1"
+
+  if ! kubectl get namespace "${namespace}" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  kubectl -n "${namespace}" delete deployment --all --wait=false >/dev/null 2>&1 || true
+  kubectl -n "${namespace}" delete network-attachment-definitions.k8s.cni.cncf.io --all --wait=false >/dev/null 2>&1 || true
+  kubectl -n "${namespace}" delete pod --all --force --grace-period=0 >/dev/null 2>&1 || true
+  kubectl delete namespace "${namespace}" --wait=false >/dev/null 2>&1 || true
+}
+
+ensure_clean_namespace() {
+  local namespace="$1"
+  aggressive_namespace_cleanup "${namespace}"
+
+  if ! kubectl get namespace "${namespace}" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if ! kubectl wait --for=delete namespace/"${namespace}" --timeout=90s >/dev/null 2>&1; then
+    log "Namespace ${namespace} is still terminating; retrying aggressive cleanup and forcing finalization."
+    aggressive_namespace_cleanup "${namespace}"
+    force_finalize_namespace "${namespace}" >/dev/null 2>&1 || true
+    kubectl wait --for=delete namespace/"${namespace}" --timeout=90s >/dev/null 2>&1 || true
+  fi
+
+  if kubectl get namespace "${namespace}" >/dev/null 2>&1; then
+    kubectl get namespace "${namespace}" -o yaml > "${ARTIFACT_DIR}/namespace_delete_blocked.yaml" 2>/dev/null || true
+    kubectl -n "${namespace}" get deploy -o wide > "${ARTIFACT_DIR}/namespace_delete_blocked_deployments.txt" 2>/dev/null || true
+    kubectl -n "${namespace}" get pods -o wide > "${ARTIFACT_DIR}/namespace_delete_blocked_pods.txt" 2>/dev/null || true
+    kubectl -n "${namespace}" get network-attachment-definitions.k8s.cni.cncf.io > "${ARTIFACT_DIR}/namespace_delete_blocked_network_attachments.txt" 2>/dev/null || true
+    fail_with_reason "namespace_delete_blocked" "${ARTIFACT_DIR}/namespace_delete_blocked.yaml" \
+      "kubectl delete namespace ${namespace} --wait=false" \
+      "kubectl get namespace ${namespace} -o yaml"
+  fi
+}
+
 run_deploy() {
   CURRENT_STAGE="deploy"
   log "Deploy: apply k8s.yaml to namespace ${SEED_NAMESPACE} (bird stays stopped)"
@@ -1131,16 +1332,27 @@ run_deploy() {
   stage_start="$(date +%s)"
 
   if [ "${CLEAN_NAMESPACE}" = "true" ]; then
-    kubectl delete namespace "${SEED_NAMESPACE}" --ignore-not-found >/dev/null 2>&1 || true
-    if kubectl get namespace "${SEED_NAMESPACE}" >/dev/null 2>&1; then
-      kubectl wait --for=delete namespace/"${SEED_NAMESPACE}" --timeout=300s >/dev/null 2>&1 || true
-    fi
+    ensure_clean_namespace "${SEED_NAMESPACE}"
   fi
 
   kubectl create namespace "${SEED_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-  kubectl -n "${SEED_NAMESPACE}" apply -f "${COMPILE_DIR}/k8s.yaml" 2>&1 | tee "${ARTIFACT_DIR}/apply.log"
+  if ! kubectl -n "${SEED_NAMESPACE}" apply -f "${COMPILE_DIR}/k8s.yaml" > "${ARTIFACT_DIR}/apply.log" 2>&1; then
+    tail_log_on_failure "${ARTIFACT_DIR}/apply.log" 80
+    fail_with_reason "deploy_wait_timeout_or_failure" "${ARTIFACT_DIR}/apply.log" \
+      "scripts/validate_k3s_real_topology_multinode.sh deploy" "kubectl -n ${SEED_NAMESPACE} get pods -o wide"
+  fi
 
-  if ! kubectl -n "${SEED_NAMESPACE}" wait --for=condition=Available --timeout="${DEPLOY_WAIT_TIMEOUT}" deployment --all     2>&1 | tee "${ARTIFACT_DIR}/wait.log"; then
+  local namespace_phase
+  namespace_phase="$(kubectl get namespace "${SEED_NAMESPACE}" -o jsonpath='{.status.phase}' 2>/dev/null || true)"
+  if [ "${namespace_phase}" != "Active" ]; then
+    kubectl get namespace "${SEED_NAMESPACE}" -o yaml > "${ARTIFACT_DIR}/namespace_not_active.yaml" 2>/dev/null || true
+    fail_with_reason "namespace_delete_blocked" "${ARTIFACT_DIR}/namespace_not_active.yaml" \
+      "kubectl delete namespace ${SEED_NAMESPACE} --wait=false" \
+      "kubectl get namespace ${SEED_NAMESPACE} -o yaml"
+  fi
+
+  if ! kubectl -n "${SEED_NAMESPACE}" wait --for=condition=Available --timeout="${DEPLOY_WAIT_TIMEOUT}" deployment --all > "${ARTIFACT_DIR}/wait.log" 2>&1; then
+    tail_log_on_failure "${ARTIFACT_DIR}/wait.log" 80
     kubectl -n "${SEED_NAMESPACE}" get pods -o wide > "${ARTIFACT_DIR}/pods_wide.txt" 2>/dev/null || true
     kubectl -n "${SEED_NAMESPACE}" get deploy -o wide > "${ARTIFACT_DIR}/deployments_wide.txt" 2>/dev/null || true
     kubectl -n "${SEED_NAMESPACE}" get events --sort-by=.lastTimestamp > "${ARTIFACT_DIR}/events.txt" 2>/dev/null || true
@@ -1152,7 +1364,7 @@ run_deploy() {
   stage_duration="$(( $(date +%s) - stage_start ))"
   UP_DURATION_SECONDS="${stage_duration}"
   write_stage_timing "up_duration_seconds" "${stage_duration}"
-  write_diagnostics "${CURRENT_STAGE}" "PASS" "${ARTIFACT_DIR}/deployments_wide.txt"     "scripts/validate_k3s_real_topology_multinode.sh phase-start" "kubectl -n ${SEED_NAMESPACE} get pods -o wide"
+  write_diagnostics "${CURRENT_STAGE}" "PASS" "${ARTIFACT_DIR}/deployments_wide.txt"     "scripts/validate_k3s_real_topology_multinode.sh start-bird" "kubectl -n ${SEED_NAMESPACE} get pods -o wide"
 }
 
 list_router_pods() {
@@ -1360,6 +1572,16 @@ main() {
     phase-start)
       run_preflight
       run_phased_startup
+      write_summary "PASS" "$(( $(date +%s) - START_TS ))"
+      ;;
+    start-bird)
+      run_preflight
+      run_start_bird
+      write_summary "PASS" "$(( $(date +%s) - START_TS ))"
+      ;;
+    start-kernel)
+      run_preflight
+      run_start_kernel
       write_summary "PASS" "$(( $(date +%s) - START_TS ))"
       ;;
     verify)

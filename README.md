@@ -100,6 +100,12 @@ Start here:
 - Kubernetes examples and support matrix: `examples/kubernetes/README.md`
 - Optional AI helper quickstart: `docs/runbooks/opencode_seed_lab_quickstart.md`
 
+The maintained K8s/K3s workflow is staged:
+
+```text
+compile -> build -> deploy -> start-bird -> start-kernel -> verify -> report
+```
+
 ## User Manuals
 
 User manuals are provided inside the [docs/user_manual/](./docs/user_manual) folder.

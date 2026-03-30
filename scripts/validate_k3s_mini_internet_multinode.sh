@@ -170,6 +170,8 @@ SSH_OPTS=(
   -o UserKnownHostsFile=/dev/null
   -o LogLevel=ERROR
   -o BatchMode=yes
+  -o IdentitiesOnly=yes
+  -o IdentityAgent=none
   -o ConnectTimeout=10
   -o ServerAliveInterval=30
   -o ServerAliveCountMax=3
@@ -177,6 +179,7 @@ SSH_OPTS=(
 )
 SSH_EXEC_OPTS=("${SSH_OPTS[@]}" -n)
 SEED_SSH_PROBE_TIMEOUT_SECONDS="${SEED_SSH_PROBE_TIMEOUT_SECONDS:-20}"
+SEED_SSH_LONG_PROBE_TIMEOUT_SECONDS="${SEED_SSH_LONG_PROBE_TIMEOUT_SECONDS:-90}"
 
 run_ssh_probe() {
   if command -v timeout >/dev/null 2>&1; then
@@ -186,8 +189,27 @@ run_ssh_probe() {
   fi
 }
 
+run_ssh_probe_with_timeout() {
+  local probe_timeout="$1"
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "${probe_timeout}" ssh "$@"
+  else
+    ssh "$@"
+  fi
+}
+
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
+tail_log_on_failure() {
+  local log_file="$1"
+  local lines="${2:-120}"
+  if [ -f "${log_file}" ]; then
+    log "Last ${lines} lines from ${log_file}:"
+    tail -n "${lines}" "${log_file}" >&2 || true
+  fi
 }
 
 run_kubectl_exec() {
@@ -200,17 +222,19 @@ run_kubectl_exec() {
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/validate_k3s_mini_internet_multinode.sh [all|preflight|compile|build|deploy|phase-start|verify|clean]
+Usage: scripts/validate_k3s_mini_internet_multinode.sh [all|preflight|compile|build|deploy|phase-start|start-bird|start-kernel|verify|clean]
 
 Actions:
-  all         Run full pipeline: preflight -> compile -> build -> deploy -> phase-start -> verify
-  preflight   Run health checks and auto-repair once if needed
-  compile     Compile mini-internet into Kubernetes manifests
-  build       Build images on K3s master and distribute to K3s nodes
-  deploy      Apply manifests and wait until all deployments are Available (does not start bird)
-  phase-start Run the separate bird/iBGP/eBGP startup stage after deploy
-  verify      Verify placement gate + BGP + connectivity + self-healing
-  clean       Delete namespace resources used by this workflow
+  all          Run full pipeline: preflight -> compile -> build -> deploy -> phase-start -> verify
+  preflight    Run health checks and auto-repair once if needed
+  compile      Compile mini-internet into Kubernetes manifests
+  build        Build images on K3s master and distribute to K3s nodes
+  deploy       Apply manifests and wait until all deployments are Available (does not start bird)
+  phase-start  Run the separate bird/iBGP/eBGP startup stage after deploy
+  start-bird   Start bird routing processes only
+  start-kernel Switch bird to kernel mode
+  verify       Verify placement gate + BGP + connectivity + self-healing
+  clean        Delete namespace resources used by this workflow
 USAGE
 }
 
@@ -306,6 +330,10 @@ resolve_failure_code() {
       echo "SSH_KEY_INVALID"
       return
       ;;
+    ssh_access_failed)
+      echo "SSH_ACCESS_FAILED"
+      return
+      ;;
     compile_missing_k8s_yaml|compile_missing_build_script)
       echo "COMPILE_FAILED"
       return
@@ -378,6 +406,8 @@ if not data.get("kubeconfig_ok", True):
     print("KCFG_MISSING")
 elif not data.get("k3s_nodes_ready", True):
     print("NODE_NOT_READY")
+elif not data.get("ssh_ok", True):
+    print("SSH_ACCESS_FAILED")
 elif not data.get("multus_ready", True):
     print("MULTUS_NOT_READY")
 elif data.get("registry_required", True) and ((not data.get("registry_container_running", True)) or (not data.get("registry_reachable_from_workers", True))):
@@ -439,8 +469,10 @@ default_success_next = {
     "preflight": "scripts/validate_k3s_mini_internet_multinode.sh compile",
     "compile": "scripts/validate_k3s_mini_internet_multinode.sh build",
     "build": "scripts/validate_k3s_mini_internet_multinode.sh deploy",
-    "deploy": "scripts/validate_k3s_mini_internet_multinode.sh phase-start",
+    "deploy": "scripts/validate_k3s_mini_internet_multinode.sh start-bird",
     "phase_start": "scripts/validate_k3s_mini_internet_multinode.sh verify",
+    "start_bird": "scripts/validate_k3s_mini_internet_multinode.sh start-kernel",
+    "start_kernel": "scripts/validate_k3s_mini_internet_multinode.sh verify",
     "verify": "scripts/inspect_k3s_mini_internet.sh ${SEED_NAMESPACE}",
     "clean": "scripts/validate_k3s_mini_internet_multinode.sh preflight",
     "all": "scripts/seedlab_report_from_artifacts.sh ${SEED_ARTIFACT_DIR}",
@@ -579,12 +611,16 @@ summary = {
     "build_duration_seconds": int(timing.get("build_duration_seconds", 0)),
     "up_duration_seconds": int(timing.get("up_duration_seconds", 0)),
     "phase_start_duration_seconds": int(timing.get("phase_start_duration_seconds", 0)),
+    "start_bird_duration_seconds": int(timing.get("start_bird_duration_seconds", 0)),
+    "start_kernel_duration_seconds": int(timing.get("start_kernel_duration_seconds", 0)),
     "validation_duration_seconds": int(timing.get("validation_duration_seconds", 0)),
     "pipeline_duration_seconds": max(
         int("${duration}"),
         int(timing.get("build_duration_seconds", 0))
         + int(timing.get("up_duration_seconds", 0))
         + int(timing.get("phase_start_duration_seconds", 0))
+        + int(timing.get("start_bird_duration_seconds", 0))
+        + int(timing.get("start_kernel_duration_seconds", 0))
         + int(timing.get("validation_duration_seconds", 0)),
     ),
     "duration_seconds": max(
@@ -592,6 +628,8 @@ summary = {
         int(timing.get("build_duration_seconds", 0))
         + int(timing.get("up_duration_seconds", 0))
         + int(timing.get("phase_start_duration_seconds", 0))
+        + int(timing.get("start_bird_duration_seconds", 0))
+        + int(timing.get("start_kernel_duration_seconds", 0))
         + int(timing.get("validation_duration_seconds", 0)),
     ),
     "fallback_used": "${FALLBACK_USED}",
@@ -627,6 +665,17 @@ ensure_kubeconfig() {
     fail_with_reason "kubeconfig_not_found_after_fetch"
   fi
   export KUBECONFIG="${KUBECONFIG_PATH}"
+}
+
+write_ssh_access_artifact() {
+  python3 "${SCRIPT_DIR}/seed_k8s_ssh_probe.py" \
+    --user "${SEED_K3S_USER}" \
+    --key "${SEED_K3S_SSH_KEY}" \
+    --timeout "${SEED_SSH_PROBE_TIMEOUT_SECONDS}" \
+    --json-output "${ARTIFACT_DIR}/ssh_access.json" \
+    --node "${SEED_K3S_MASTER_NAME}=${SEED_K3S_MASTER_IP}" \
+    --node "${SEED_K3S_WORKER1_NAME}=${SEED_K3S_WORKER1_IP}" \
+    --node "${SEED_K3S_WORKER2_NAME}=${SEED_K3S_WORKER2_IP}" >/dev/null 2>&1 || true
 }
 
 get_node_name_by_ip() {
@@ -743,16 +792,26 @@ run_preflight_check_once() {
   fi
 
   # 2) ssh + sudo
-  if run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "echo ok" >/dev/null 2>&1 \
-    && run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "echo ok" >/dev/null 2>&1 \
-    && run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "echo ok" >/dev/null 2>&1; then
-    ssh_ok="true"
-  fi
+  write_ssh_access_artifact
+  if [ -f "${ARTIFACT_DIR}/ssh_access.json" ]; then
+    read -r ssh_ok sudo_ok < <(
+      python3 - <<PY
+import json
+from pathlib import Path
 
-  if run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n true" >/dev/null 2>&1 \
-    && run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER1_IP}" "sudo -n true" >/dev/null 2>&1 \
-    && run_ssh_probe "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_WORKER2_IP}" "sudo -n true" >/dev/null 2>&1; then
-    sudo_ok="true"
+path = Path(${ARTIFACT_DIR@Q}) / "ssh_access.json"
+try:
+    data = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    print("false false")
+    raise SystemExit(0)
+
+print(
+    "true" if data.get("ssh_access_ok", False) else "false",
+    "true" if data.get("sudo_nopasswd_ok", False) else "false",
+)
+PY
+    )
   fi
 
   # 3) kubeconfig
@@ -771,6 +830,9 @@ run_preflight_check_once() {
   ready="$(kubectl --kubeconfig "${KUBECONFIG_PATH}" -n kube-system get ds kube-multus-ds -o jsonpath='{.status.numberReady}' 2>/dev/null || echo -1)"
   if [ "${desired}" != "0" ] && [ "${desired}" = "${ready}" ]; then
     multus_ok="true"
+  fi
+  if [ "${multus_ok}" = "true" ] && ! repair_multus_kubeconfig_bridge_for_k3s; then
+    multus_ok="false"
   fi
 
   local can_list
@@ -937,6 +999,28 @@ JSON
   return 0
 }
 
+repair_multus_kubeconfig_bridge_for_k3s() {
+  log "Ensuring Multus kubeconfig compatibility path on K3s nodes"
+  local host
+  for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
+    run_ssh_probe_with_timeout "${SEED_SSH_LONG_PROBE_TIMEOUT_SECONDS}" "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
+      "set -euo pipefail; \
+       sudo -n mkdir -p /etc/cni/net.d; \
+       if [ ! -L /etc/cni/net.d/multus.d ] || [ \"\$(readlink -f /etc/cni/net.d/multus.d 2>/dev/null || true)\" != \"/var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d\" ]; then \
+         sudo -n rm -rf /etc/cni/net.d/multus.d; \
+         sudo -n ln -s /var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d /etc/cni/net.d/multus.d; \
+       fi; \
+       for i in \$(seq 1 30); do \
+         if sudo -n test -f /etc/cni/net.d/multus.d/multus.kubeconfig; then \
+           exit 0; \
+         fi; \
+         sleep 2; \
+       done; \
+       exit 1" >/dev/null 2>&1 || return 1
+  done
+  return 0
+}
+
 repair_multus_rbac_for_k3s() {
   log "Attempting quick multus RBAC repair (allow list/watch pods)"
   kubectl --kubeconfig "${KUBECONFIG_PATH}" apply -f - <<'YAML' >/dev/null 2>&1 || true
@@ -1031,6 +1115,7 @@ run_preflight() {
   repair_multus_rbac_for_k3s || true
   repair_cni_plugins_for_k3s || true
   repair_multus_hostpaths_for_k3s || true
+  repair_multus_kubeconfig_bridge_for_k3s || true
 
   if run_preflight_check_once; then
     detect_cluster_nodes
@@ -1327,12 +1412,14 @@ run_remote_build() {
     return 1
   fi
 
+  log "Build logs -> ${ARTIFACT_DIR}/remote_build.log"
   if ! ssh "${SSH_EXEC_OPTS[@]}" "${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}" "sudo -n env     SEED_BUILD_PARALLELISM=${SEED_BUILD_PARALLELISM}     SEED_DOCKER_BUILDKIT=${SEED_DOCKER_BUILDKIT}     SEED_REGISTRY_PUSH_RETRIES=${SEED_REGISTRY_PUSH_RETRIES}     SEED_REGISTRY_PUSH_BACKOFF_SECONDS=${SEED_REGISTRY_PUSH_BACKOFF_SECONDS}     SEED_DOCKER_MAX_CONCURRENT_UPLOADS=${SEED_DOCKER_MAX_CONCURRENT_UPLOADS}     SEED_REGISTRY_PUSH_TIMEOUT_SECONDS=${SEED_REGISTRY_PUSH_TIMEOUT_SECONDS}     SEED_IMAGE_DISTRIBUTION_MODE=${SEED_IMAGE_DISTRIBUTION_MODE}     bash -lc '
     set -euo pipefail
     cd "${REMOTE_WORK_DIR}"
     tar -xzf compiled.tar.gz
     ./build_images.sh
-  '" 2>&1 | tee "${ARTIFACT_DIR}/remote_build.log"; then
+  '" > "${ARTIFACT_DIR}/remote_build.log" 2>&1; then
+    tail_log_on_failure "${ARTIFACT_DIR}/remote_build.log" 80
     if grep -Eiq 'i/o timeout|Client\.Timeout|TLS handshake timeout|context deadline exceeded' "${ARTIFACT_DIR}/remote_build.log"; then
       FAILURE_REASON="registry_timeout"
     else
@@ -1394,6 +1481,117 @@ run_phased_startup() {
   return 1
 }
 
+run_start_bird() {
+  CURRENT_STAGE="start_bird"
+  LAST_COMMAND="python3 ${SCRIPT_DIR}/seed_k8s_start_bird0130.py ${SEED_NAMESPACE} ${ARTIFACT_DIR}"
+  local rc=0 stage_start stage_duration
+  stage_start="$(date +%s)"
+  python3 "${SCRIPT_DIR}/seed_k8s_start_bird0130.py" "${SEED_NAMESPACE}" "${ARTIFACT_DIR}" || rc=$?
+  case "${rc}" in
+    0)
+      stage_duration="$(( $(date +%s) - stage_start ))"
+      write_stage_timing "start_bird_duration_seconds" "${stage_duration}"
+      LAST_FAILURE_CODE=""
+      record_stage_event "${CURRENT_STAGE}" "PASS" "${LAST_COMMAND}" "${ARTIFACT_DIR}/start_bird_summary.json" ""
+      write_diagnostics_and_next_actions "${CURRENT_STAGE}" "PASS" "" "${LAST_FAILURE_CODE}"
+      return 0
+      ;;
+    *)
+      FAILURE_REASON="start_bird_failed"
+      return 1
+      ;;
+  esac
+}
+
+run_start_kernel() {
+  CURRENT_STAGE="start_kernel"
+  LAST_COMMAND="python3 ${SCRIPT_DIR}/seed_k8s_start_bird_kernel.py ${SEED_NAMESPACE} ${ARTIFACT_DIR}"
+  local rc=0 stage_start stage_duration
+  stage_start="$(date +%s)"
+  python3 "${SCRIPT_DIR}/seed_k8s_start_bird_kernel.py" "${SEED_NAMESPACE}" "${ARTIFACT_DIR}" || rc=$?
+  case "${rc}" in
+    0)
+      stage_duration="$(( $(date +%s) - stage_start ))"
+      write_stage_timing "start_kernel_duration_seconds" "${stage_duration}"
+      LAST_FAILURE_CODE=""
+      record_stage_event "${CURRENT_STAGE}" "PASS" "${LAST_COMMAND}" "${ARTIFACT_DIR}/start_kernel_summary.json" ""
+      write_diagnostics_and_next_actions "${CURRENT_STAGE}" "PASS" "" "${LAST_FAILURE_CODE}"
+      return 0
+      ;;
+    *)
+      FAILURE_REASON="start_kernel_failed"
+      return 1
+      ;;
+  esac
+}
+
+force_finalize_namespace() {
+  local namespace="$1"
+  python3 - "${namespace}" <<'PY'
+import json
+import subprocess
+import sys
+
+namespace = sys.argv[1]
+result = subprocess.run(
+    ["kubectl", "get", "namespace", namespace, "-o", "json"],
+    text=True,
+    capture_output=True,
+)
+if result.returncode != 0:
+    raise SystemExit(0)
+
+payload = json.loads(result.stdout)
+payload.setdefault("spec", {})["finalizers"] = []
+finalize = subprocess.run(
+    ["kubectl", "replace", "--raw", f"/api/v1/namespaces/{namespace}/finalize", "-f", "-"],
+    input=json.dumps(payload),
+    text=True,
+)
+raise SystemExit(finalize.returncode)
+PY
+}
+
+aggressive_namespace_cleanup() {
+  local namespace="$1"
+
+  if ! kubectl get namespace "${namespace}" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  kubectl -n "${namespace}" delete deployment --all --wait=false >/dev/null 2>&1 || true
+  kubectl -n "${namespace}" delete network-attachment-definitions.k8s.cni.cncf.io --all --wait=false >/dev/null 2>&1 || true
+  kubectl -n "${namespace}" delete pod --all --force --grace-period=0 >/dev/null 2>&1 || true
+  kubectl delete namespace "${namespace}" --wait=false >/dev/null 2>&1 || true
+}
+
+ensure_clean_namespace() {
+  local namespace="$1"
+  aggressive_namespace_cleanup "${namespace}"
+
+  if ! kubectl get namespace "${namespace}" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if ! kubectl wait --for=delete namespace/"${namespace}" --timeout=90s >/dev/null 2>&1; then
+    log "Namespace ${namespace} is still terminating; retrying aggressive cleanup and forcing finalization."
+    aggressive_namespace_cleanup "${namespace}"
+    force_finalize_namespace "${namespace}" >/dev/null 2>&1 || true
+    kubectl wait --for=delete namespace/"${namespace}" --timeout=90s >/dev/null 2>&1 || true
+  fi
+
+  if kubectl get namespace "${namespace}" >/dev/null 2>&1; then
+    kubectl get namespace "${namespace}" -o yaml > "${ARTIFACT_DIR}/namespace_delete_blocked.yaml" 2>/dev/null || true
+    kubectl -n "${namespace}" get deployment -o wide > "${ARTIFACT_DIR}/namespace_delete_blocked_deployments.txt" 2>/dev/null || true
+    kubectl -n "${namespace}" get pods -o wide > "${ARTIFACT_DIR}/namespace_delete_blocked_pods.txt" 2>/dev/null || true
+    kubectl -n "${namespace}" get network-attachment-definitions.k8s.cni.cncf.io > "${ARTIFACT_DIR}/namespace_delete_blocked_network_attachments.txt" 2>/dev/null || true
+    FAILURE_REASON="namespace_delete_blocked"
+    LAST_FAILURE_CODE="NAMESPACE_DELETE_BLOCKED"
+    record_stage_event "${CURRENT_STAGE}" "FAIL" "${LAST_COMMAND}" "${ARTIFACT_DIR}/namespace_delete_blocked.yaml" "${FAILURE_REASON}"
+    return 1
+  fi
+}
+
 run_deploy() {
   CURRENT_STAGE="deploy"
   LAST_COMMAND="kubectl -n ${SEED_NAMESPACE} apply -f ${COMPILE_DIR}/k8s.yaml"
@@ -1404,16 +1602,30 @@ run_deploy() {
   stage_start="$(date +%s)"
 
   if [ "${CLEAN_NAMESPACE}" = "true" ]; then
-    kubectl delete namespace "${SEED_NAMESPACE}" --ignore-not-found >/dev/null 2>&1 || true
-    if kubectl get namespace "${SEED_NAMESPACE}" >/dev/null 2>&1; then
-      kubectl wait --for=delete namespace/"${SEED_NAMESPACE}" --timeout=300s >/dev/null 2>&1 || true
-    fi
+    ensure_clean_namespace "${SEED_NAMESPACE}" || return 1
   fi
 
   kubectl create namespace "${SEED_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 
-  kubectl -n "${SEED_NAMESPACE}" apply -f "${COMPILE_DIR}/k8s.yaml" 2>&1 | tee "${ARTIFACT_DIR}/apply.log"
-  if ! kubectl -n "${SEED_NAMESPACE}" wait --for=condition=Available --timeout="${DEPLOY_WAIT_TIMEOUT}" deployment --all     2>&1 | tee "${ARTIFACT_DIR}/wait.log"; then
+  if ! kubectl -n "${SEED_NAMESPACE}" apply -f "${COMPILE_DIR}/k8s.yaml" > "${ARTIFACT_DIR}/apply.log" 2>&1; then
+    tail_log_on_failure "${ARTIFACT_DIR}/apply.log" 80
+    FAILURE_REASON="deploy_wait_timeout_or_failure"
+    record_stage_event "${CURRENT_STAGE}" "FAIL" "${LAST_COMMAND}" "${ARTIFACT_DIR}/apply.log" "${FAILURE_REASON}"
+    return 1
+  fi
+
+  local namespace_phase
+  namespace_phase="$(kubectl get namespace "${SEED_NAMESPACE}" -o jsonpath='{.status.phase}' 2>/dev/null || true)"
+  if [ "${namespace_phase}" != "Active" ]; then
+    kubectl get namespace "${SEED_NAMESPACE}" -o yaml > "${ARTIFACT_DIR}/namespace_not_active.yaml" 2>/dev/null || true
+    FAILURE_REASON="namespace_delete_blocked"
+    LAST_FAILURE_CODE="NAMESPACE_DELETE_BLOCKED"
+    record_stage_event "${CURRENT_STAGE}" "FAIL" "${LAST_COMMAND}" "${ARTIFACT_DIR}/namespace_not_active.yaml" "${FAILURE_REASON}"
+    return 1
+  fi
+
+  if ! kubectl -n "${SEED_NAMESPACE}" wait --for=condition=Available --timeout="${DEPLOY_WAIT_TIMEOUT}" deployment --all > "${ARTIFACT_DIR}/wait.log" 2>&1; then
+    tail_log_on_failure "${ARTIFACT_DIR}/wait.log" 80
     kubectl -n "${SEED_NAMESPACE}" get pods -o wide > "${ARTIFACT_DIR}/pods_wide.txt" 2>/dev/null || true
     kubectl -n "${SEED_NAMESPACE}" get deployment -o wide > "${ARTIFACT_DIR}/deployments_wide.txt" 2>/dev/null || true
     kubectl -n "${SEED_NAMESPACE}" get events --sort-by=.lastTimestamp > "${ARTIFACT_DIR}/events_tail.txt" 2>/dev/null || true
@@ -1707,6 +1919,16 @@ main() {
     phase-start)
       run_preflight
       run_phased_startup || fail_with_reason "${FAILURE_REASON:-phase_start_failed}"
+      write_summary
+      ;;
+    start-bird)
+      run_preflight
+      run_start_bird || fail_with_reason "${FAILURE_REASON:-start_bird_failed}"
+      write_summary
+      ;;
+    start-kernel)
+      run_preflight
+      run_start_kernel || fail_with_reason "${FAILURE_REASON:-start_kernel_failed}"
       write_summary
       ;;
     verify)

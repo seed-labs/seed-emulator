@@ -3,7 +3,7 @@ failure_actions:
     first_evidence_pattern: kubeconfig_fetch.log
     minimal_retry_command: scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_mini_internet_multinode.sh preflight
     fallback_command: scripts/setup_k3s_cluster.sh
-    operator_hint: kubeconfig 失效或 master 不可达，先修 kubeconfig 再做 preflight
+    operator_hint: kubeconfig is missing or the master node is unreachable; restore cluster access first, then rerun preflight.
     safe_auto_retry: true
     requires_confirmation: false
 
@@ -11,7 +11,15 @@ failure_actions:
     first_evidence_pattern: summary.json
     minimal_retry_command: export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_mini_internet_multinode.sh preflight
     fallback_command: chmod 600 /path/to/key && ssh -i /path/to/key ${SEED_K3S_USER}@${SEED_K3S_MASTER_IP}
-    operator_hint: SSH 密钥路径或权限错误
+    operator_hint: SSH key path or permissions are invalid.
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  SSH_ACCESS_FAILED:
+    first_evidence_pattern: ssh_access.json
+    minimal_retry_command: export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_mini_internet_multinode.sh preflight
+    fallback_command: scripts/seed_lab_entry_status.sh
+    operator_hint: SSH to one or more K3s/KVM nodes failed with the configured key; verify the SSH user, private key, and VM authorized_keys first.
     safe_auto_retry: false
     requires_confirmation: false
 
@@ -19,7 +27,7 @@ failure_actions:
     first_evidence_pattern: preflight.json
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh preflight
     fallback_command: scripts/setup_k3s_cluster.sh
-    operator_hint: 节点未 Ready，先检查 k3s 和节点状态
+    operator_hint: One or more Kubernetes nodes are not Ready; inspect K3s health and node status first.
     safe_auto_retry: true
     requires_confirmation: true
 
@@ -27,7 +35,7 @@ failure_actions:
     first_evidence_pattern: multus_status.txt
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh preflight
     fallback_command: kubectl -n kube-system rollout restart ds/kube-multus-ds
-    operator_hint: Multus 未就绪，先修复 daemonset
+    operator_hint: Multus is not ready; repair the daemonset before retrying.
     safe_auto_retry: true
     requires_confirmation: false
 
@@ -35,7 +43,7 @@ failure_actions:
     first_evidence_pattern: preflight.json
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh preflight
     fallback_command: scripts/setup_k3s_cluster.sh
-    operator_hint: registry 在 worker 不可达，优先修复 master registry
+    operator_hint: Workers cannot reach the registry; fix the registry on the master node first.
     safe_auto_retry: true
     requires_confirmation: true
 
@@ -43,31 +51,39 @@ failure_actions:
     first_evidence_pattern: compile.log
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh compile
     fallback_command: PYTHONPATH=. python3 examples/kubernetes/k8s_mini_internet.py
-    operator_hint: 编译阶段失败，检查示例脚本参数和 PYTHONPATH
+    operator_hint: Compilation failed; check example-script arguments and PYTHONPATH.
     safe_auto_retry: false
+    requires_confirmation: false
+
+  COMPILE_MISSING:
+    first_evidence_pattern: k8s.yaml
+    minimal_retry_command: scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} compile
+    fallback_command: scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} doctor
+    operator_hint: This stage needs compiled artifacts first; run compile before build or deploy.
+    safe_auto_retry: true
     requires_confirmation: false
 
   BUILD_FAILED:
     first_evidence_pattern: remote_build.log
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh build
     fallback_command: scripts/validate_k3s_mini_internet_multinode.sh compile && scripts/validate_k3s_mini_internet_multinode.sh build
-    operator_hint: 镜像构建/推送失败，检查 docker、registry、SSH 链路
+    operator_hint: Image build or distribution failed; inspect Docker, the registry, and the SSH path to the build host.
     safe_auto_retry: false
     requires_confirmation: false
   IMAGE_PRELOAD_FAILED:
     first_evidence_pattern: preload_master.log
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh build
     fallback_command: tail -n 200 output/profile_runs/${SEED_EXPERIMENT_PROFILE:-mini_internet}/latest/validation/preload_master.log
-    operator_hint: 镜像已在 master 构建完成，但导入到 k3s 节点失败，先看 preload_*.log 和 sample 证据
+    operator_hint: Images built on the master, but preload into the K3s nodes failed; inspect the preload logs and sample evidence first.
     safe_auto_retry: false
     requires_confirmation: false
 
 
   REGISTRY_TIMEOUT:
     first_evidence_pattern: remote_build.log
-    minimal_retry_command: scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} start
+    minimal_retry_command: scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} build
     fallback_command: tail -n 200 output/profile_runs/${SEED_EXPERIMENT_PROFILE:-mini_internet}/latest/validation/remote_build.log
-    operator_hint: master registry 推送超时，优先检查 192.168.122.110:5000 的 registry 负载、网络与磁盘
+    operator_hint: Push to the master registry timed out; check load, network reachability, and disk health on 192.168.122.110:5000.
     safe_auto_retry: false
     requires_confirmation: false
 
@@ -75,7 +91,39 @@ failure_actions:
     first_evidence_pattern: wait.log
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh deploy
     fallback_command: kubectl -n ${SEED_NAMESPACE} get events --sort-by=.lastTimestamp
-    operator_hint: 部署超时，先看 pods/events 再重试 deploy
+    operator_hint: Deployment timed out; inspect pod state and recent events before retrying deploy.
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  NAMESPACE_DELETE_BLOCKED:
+    first_evidence_pattern: namespace_delete_blocked.yaml
+    minimal_retry_command: kubectl delete namespace ${SEED_NAMESPACE} --wait=false
+    fallback_command: kubectl get namespace ${SEED_NAMESPACE} -o yaml
+    operator_hint: The previous namespace is still terminating; inspect the namespace and remaining resources before retrying deploy.
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  DEPLOY_MISSING:
+    first_evidence_pattern: summary.json
+    minimal_retry_command: scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} deploy
+    fallback_command: scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-mini_internet} compile
+    operator_hint: This stage needs a deployed run first; deploy the latest compiled output before starting protocols or verify.
+    safe_auto_retry: true
+    requires_confirmation: false
+
+  RUN_LOCKED:
+    first_evidence_pattern: .profile_runner.lock.json
+    minimal_retry_command: scripts/seed_lab_entry_status.sh
+    fallback_command: cat output/profile_runs/${SEED_EXPERIMENT_PROFILE:-mini_internet}/.profile_runner.lock.json
+    operator_hint: Another staged K8s runner is already active for this profile; wait for it to finish before starting a second run.
+    safe_auto_retry: false
+    requires_confirmation: false
+
+  CAPACITY_GATED:
+    first_evidence_pattern: capacity_gate.json
+    minimal_retry_command: SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh ${SEED_EXPERIMENT_PROFILE:-real_topology_rr} doctor
+    fallback_command: cat output/profile_runs/${SEED_EXPERIMENT_PROFILE:-real_topology_rr}/latest/validation/capacity_gate.json
+    operator_hint: The requested topology size is beyond the validated limit of the selected cluster inventory.
     safe_auto_retry: false
     requires_confirmation: false
 
@@ -83,7 +131,7 @@ failure_actions:
     first_evidence_pattern: placement_check.json
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
     fallback_command: cat ${SEED_ARTIFACT_DIR}/placement_actual.json
-    operator_hint: 调度分布未命中当前 placement gate（strict3 或 auto 模式）
+    operator_hint: Scheduling did not satisfy the current placement policy.
     safe_auto_retry: false
     requires_confirmation: false
 
@@ -91,7 +139,7 @@ failure_actions:
     first_evidence_pattern: bird_router151.txt
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
     fallback_command: cat ${SEED_ARTIFACT_DIR}/bird_ix100.txt
-    operator_hint: BGP 邻居未建立，优先排查路由器邻接与网络附加
+    operator_hint: BGP neighbors are not established; inspect router adjacency and network attachments first.
     safe_auto_retry: false
     requires_confirmation: false
 
@@ -99,7 +147,7 @@ failure_actions:
     first_evidence_pattern: protocol_health.json
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
     fallback_command: cat ${SEED_ARTIFACT_DIR}/protocol_health.json
-    operator_hint: 协议健康检查失败，先看 protocol_health.json 和 bgp_health_summary.json
+    operator_hint: Protocol-health checks failed; inspect protocol_health.json and bgp_health_summary.json first.
     safe_auto_retry: false
     requires_confirmation: false
 
@@ -107,7 +155,7 @@ failure_actions:
     first_evidence_pattern: ping_150_to_151.txt
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
     fallback_command: kubectl -n ${SEED_NAMESPACE} get pod -o wide
-    operator_hint: 跨 AS 连通失败，先确认 BGP 再看数据平面
+    operator_hint: Cross-AS connectivity failed; confirm BGP first, then inspect the data plane.
     safe_auto_retry: false
     requires_confirmation: false
 
@@ -115,7 +163,7 @@ failure_actions:
     first_evidence_pattern: recovery_check.json
     minimal_retry_command: scripts/validate_k3s_mini_internet_multinode.sh verify
     fallback_command: kubectl -n ${SEED_NAMESPACE} rollout status deployment --all --timeout=300s
-    operator_hint: 自愈检查失败，优先看 rollout 和 deployment 事件
+    operator_hint: Recovery checks failed; inspect rollout status and deployment events first.
     safe_auto_retry: false
     requires_confirmation: false
 
@@ -123,6 +171,6 @@ failure_actions:
     first_evidence_pattern: report/report.json
     minimal_retry_command: scripts/inspect_k3s_mini_internet.sh ${SEED_NAMESPACE}
     fallback_command: scripts/seedlab_report_from_artifacts.sh ${SEED_ARTIFACT_DIR} ${SEED_OBSERVE_DIR}
-    operator_hint: 观测快照与验证命名空间不一致
+    operator_hint: Observe artifacts were collected from a different namespace than the validation run.
     safe_auto_retry: true
     requires_confirmation: false

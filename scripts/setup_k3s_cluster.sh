@@ -13,6 +13,9 @@ PLAYBOOK_PATH="${PROJECT_ROOT}/ansible/k3s-install.yml"
 SEED_K3S_MASTER_IP="${SEED_K3S_MASTER_IP:-192.168.122.110}"
 SEED_K3S_WORKER1_IP="${SEED_K3S_WORKER1_IP:-192.168.122.111}"
 SEED_K3S_WORKER2_IP="${SEED_K3S_WORKER2_IP:-192.168.122.112}"
+SEED_K3S_MASTER_NAME="${SEED_K3S_MASTER_NAME:-seed-k3s-master}"
+SEED_K3S_WORKER1_NAME="${SEED_K3S_WORKER1_NAME:-seed-k3s-worker1}"
+SEED_K3S_WORKER2_NAME="${SEED_K3S_WORKER2_NAME:-seed-k3s-worker2}"
 SEED_K3S_USER="${SEED_K3S_USER:-ubuntu}"
 SEED_K3S_SSH_KEY="${SEED_K3S_SSH_KEY:-$HOME/.ssh/id_ed25519}"
 SEED_K3S_VERSION="${SEED_K3S_VERSION:-v1.28.5+k3s1}"
@@ -20,7 +23,20 @@ SEED_REGISTRY_HOST="${SEED_REGISTRY_HOST:-${SEED_K3S_MASTER_IP}}"
 SEED_REGISTRY_PORT="${SEED_REGISTRY_PORT:-5000}"
 SEED_K3S_CLUSTER_NAME="${SEED_K3S_CLUSTER_NAME:-seedemu-k3s}"
 SEED_CNI_MASTER_INTERFACE="${SEED_CNI_MASTER_INTERFACE:-}"
+SEED_K3S_CLUSTER_CIDR="${SEED_K3S_CLUSTER_CIDR:-10.42.0.0/16}"
+SEED_K3S_SERVICE_CIDR="${SEED_K3S_SERVICE_CIDR:-10.43.0.0/16}"
+SEED_K3S_NODE_CIDR_MASK_SIZE_IPV4="${SEED_K3S_NODE_CIDR_MASK_SIZE_IPV4:-24}"
+SEED_K3S_MAX_PODS="${SEED_K3S_MAX_PODS:-110}"
+SEED_K3S_FORCE_REINSTALL="${SEED_K3S_FORCE_REINSTALL:-false}"
 SEED_DOCKER_IO_MIRROR_ENDPOINT="${SEED_DOCKER_IO_MIRROR_ENDPOINT:-https://docker.m.daocloud.io}"
+SEED_K3S_ARTIFACT_URL="${SEED_K3S_ARTIFACT_URL:-https://rancher-mirror.rancher.cn/k3s}"
+if [ -z "${SEED_K3S_INSTALL_VERSION:-}" ]; then
+    if [[ "${SEED_K3S_ARTIFACT_URL}" == *"rancher-mirror.rancher.cn/k3s"* ]]; then
+        SEED_K3S_INSTALL_VERSION="${SEED_K3S_VERSION//+/-}"
+    else
+        SEED_K3S_INSTALL_VERSION="${SEED_K3S_VERSION}"
+    fi
+fi
 
 SSH_CONNECT_TIMEOUT_SECONDS="${SEED_SSH_CONNECT_TIMEOUT_SECONDS:-10}"
 ANSIBLE_TIMEOUT="${SEED_ANSIBLE_TIMEOUT:-1800s}"
@@ -29,6 +45,8 @@ SSH_OPTS=(
     -o UserKnownHostsFile=/dev/null
     -o LogLevel=ERROR
     -o BatchMode=yes
+    -o IdentitiesOnly=yes
+    -o IdentityAgent=none
     -o ConnectTimeout="${SSH_CONNECT_TIMEOUT_SECONDS}"
     -o ServerAliveInterval=30
     -o ServerAliveCountMax=3
@@ -42,8 +60,10 @@ echo "=============================================="
 echo "SEED Emulator - K3s Multi-Node Cluster Setup"
 echo "=============================================="
 echo "master=${SEED_K3S_MASTER_IP} worker1=${SEED_K3S_WORKER1_IP} worker2=${SEED_K3S_WORKER2_IP}"
-echo "user=${SEED_K3S_USER} k3s_version=${SEED_K3S_VERSION}"
+echo "user=${SEED_K3S_USER} k3s_version=${SEED_K3S_VERSION} install_version=${SEED_K3S_INSTALL_VERSION}"
 echo "registry=${SEED_REGISTRY_HOST}:${SEED_REGISTRY_PORT}"
+echo "cluster_cidr=${SEED_K3S_CLUSTER_CIDR} service_cidr=${SEED_K3S_SERVICE_CIDR}"
+echo "node_cidr_mask_size_ipv4=${SEED_K3S_NODE_CIDR_MASK_SIZE_IPV4} max_pods=${SEED_K3S_MAX_PODS} force_reinstall=${SEED_K3S_FORCE_REINSTALL}"
 echo ""
 
 require_cmd() {
@@ -122,23 +142,33 @@ verify_connectivity() {
 render_inventory() {
   local output_path="$1"
   sed \
+        -e "s|__SEED_K3S_MASTER_NAME__|${SEED_K3S_MASTER_NAME}|g" \
+        -e "s|__SEED_K3S_WORKER1_NAME__|${SEED_K3S_WORKER1_NAME}|g" \
+        -e "s|__SEED_K3S_WORKER2_NAME__|${SEED_K3S_WORKER2_NAME}|g" \
         -e "s|__SEED_K3S_USER__|${SEED_K3S_USER}|g" \
         -e "s|__SEED_K3S_SSH_KEY__|${SEED_K3S_SSH_KEY}|g" \
         -e "s|__SEED_K3S_VERSION__|${SEED_K3S_VERSION}|g" \
+        -e "s|__SEED_K3S_INSTALL_VERSION__|${SEED_K3S_INSTALL_VERSION}|g" \
         -e "s|__SEED_K3S_MASTER_IP__|${SEED_K3S_MASTER_IP}|g" \
         -e "s|__SEED_K3S_WORKER1_IP__|${SEED_K3S_WORKER1_IP}|g" \
         -e "s|__SEED_K3S_WORKER2_IP__|${SEED_K3S_WORKER2_IP}|g" \
         -e "s|__SEED_REGISTRY_HOST__|${SEED_REGISTRY_HOST}|g" \
         -e "s|__SEED_REGISTRY_PORT__|${SEED_REGISTRY_PORT}|g" \
         -e "s|__SEED_DOCKER_IO_MIRROR_ENDPOINT__|${SEED_DOCKER_IO_MIRROR_ENDPOINT}|g" \
+        -e "s|__SEED_K3S_ARTIFACT_URL__|${SEED_K3S_ARTIFACT_URL}|g" \
         -e "s|__SEED_CNI_MASTER_INTERFACE__|${SEED_CNI_MASTER_INTERFACE}|g" \
+        -e "s|__SEED_K3S_CLUSTER_CIDR__|${SEED_K3S_CLUSTER_CIDR}|g" \
+        -e "s|__SEED_K3S_SERVICE_CIDR__|${SEED_K3S_SERVICE_CIDR}|g" \
+        -e "s|__SEED_K3S_NODE_CIDR_MASK_SIZE_IPV4__|${SEED_K3S_NODE_CIDR_MASK_SIZE_IPV4}|g" \
+        -e "s|__SEED_K3S_MAX_PODS__|${SEED_K3S_MAX_PODS}|g" \
+        -e "s|__SEED_K3S_FORCE_REINSTALL__|${SEED_K3S_FORCE_REINSTALL}|g" \
         "${INVENTORY_TEMPLATE}" > "${output_path}"
 }
 
 run_ansible() {
     echo "[3/7] Installing K3s cluster via Ansible"
     local inventory_tmp
-    inventory_tmp="$(mktemp)"
+    inventory_tmp="$(mktemp --suffix=.yml)"
     trap 'rm -f "${inventory_tmp}"' RETURN
     render_inventory "${inventory_tmp}"
     ANSIBLE_HOST_KEY_CHECKING=False \
@@ -146,7 +176,7 @@ run_ansible() {
         ansible-playbook \
         -i "${inventory_tmp}" \
         "${PLAYBOOK_PATH}" \
-        --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=${SSH_CONNECT_TIMEOUT_SECONDS} -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o BatchMode=yes"
+        --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=${SSH_CONNECT_TIMEOUT_SECONDS} -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityAgent=none"
     trap - RETURN
     rm -f "${inventory_tmp}"
 }
@@ -179,6 +209,7 @@ verify_cluster_readiness() {
     patch_multus_rbac
     ensure_cni_plugins
     kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system rollout status daemonset/kube-multus-ds --timeout=300s
+    ensure_multus_kubeconfig_bridge
     kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" get nodes -o wide
 }
 
@@ -187,8 +218,39 @@ patch_multus_atomic_shim_install() {
         return
     fi
 
+    local shim_mode
+    shim_mode="${SEED_MULTUS_SHIM_INSTALL_MODE:-default}"
+
     local cmd0
     cmd0="$(kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system get daemonset/kube-multus-ds -o jsonpath='{.spec.template.spec.initContainers[?(@.name=="install-multus-binary")].command[0]}' 2>/dev/null || true)"
+    if [ "${shim_mode}" != "atomic" ]; then
+        if [ "${cmd0}" = "/install_multus" ]; then
+            echo "  multus shim installer already uses default upstream launcher"
+            return
+        fi
+        echo "  restoring multus shim installer to the default upstream launcher"
+        kubectl --kubeconfig "${OUTPUT_KUBECONFIG}" -n kube-system patch daemonset/kube-multus-ds --type='strategic' -p "$(
+            cat <<'JSON'
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "initContainers": [
+          {
+            "name": "install-multus-binary",
+            "command": ["/install_multus"],
+            "args": ["--type", "thin"]
+          }
+        ]
+      }
+    }
+  }
+}
+JSON
+        )" >/dev/null || true
+        return
+    fi
+
     if [ "${cmd0}" = "/bin/sh" ] || [ "${cmd0}" = "sh" ]; then
         echo "  multus shim installer already uses atomic install"
         return
@@ -214,7 +276,6 @@ patch_multus_atomic_shim_install() {
     }
   }
 }
-
 JSON
     )" >/dev/null || true
 }
@@ -339,6 +400,32 @@ ensure_cni_plugins() {
              for p in ${required_plugins[*]}; do \
                if [ -x \"/usr/lib/cni/\$p\" ]; then sudo -n ln -sf \"/usr/lib/cni/\$p\" \"/opt/cni/bin/\$p\"; fi; \
              done"
+    done
+}
+
+ensure_multus_kubeconfig_bridge() {
+    local multus_target="/var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d"
+    local multus_link="/etc/cni/net.d/multus.d"
+
+    echo "  ensuring Multus kubeconfig compatibility path"
+    local host
+    for host in "${SEED_K3S_MASTER_IP}" "${SEED_K3S_WORKER1_IP}" "${SEED_K3S_WORKER2_IP}"; do
+        run_with_timeout 90s ssh "${SSH_OPTS[@]}" "${SEED_K3S_USER}@${host}" \
+            "set -euo pipefail; \
+             sudo -n mkdir -p /etc/cni/net.d; \
+             if [ ! -L '${multus_link}' ] || [ \"\$(readlink -f '${multus_link}' 2>/dev/null || true)\" != '${multus_target}' ]; then \
+               sudo -n rm -rf '${multus_link}'; \
+               sudo -n ln -s '${multus_target}' '${multus_link}'; \
+             fi; \
+             for i in \$(seq 1 30); do \
+               if sudo -n test -f '${multus_link}/multus.kubeconfig'; then \
+                 echo '${host}: multus-kubeconfig-ok'; \
+                 exit 0; \
+               fi; \
+               sleep 2; \
+             done; \
+             echo '${host}: missing ${multus_link}/multus.kubeconfig' >&2; \
+             exit 1"
     done
 }
 

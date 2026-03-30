@@ -193,11 +193,18 @@ if not isinstance(timing, dict):
 build_duration_seconds = int(timing.get("build_duration_seconds", summary.get("build_duration_seconds", 0)) or 0)
 up_duration_seconds = int(timing.get("up_duration_seconds", summary.get("up_duration_seconds", 0)) or 0)
 phase_start_duration_seconds = int(timing.get("phase_start_duration_seconds", summary.get("phase_start_duration_seconds", 0)) or 0)
+start_bird_duration_seconds = int(timing.get("start_bird_duration_seconds", summary.get("start_bird_duration_seconds", 0)) or 0)
+start_kernel_duration_seconds = int(timing.get("start_kernel_duration_seconds", summary.get("start_kernel_duration_seconds", 0)) or 0)
 validation_duration_seconds = int(summary.get("validation_duration_seconds", summary.get("duration_seconds", 0)) or 0)
 pipeline_duration_seconds = max(
     int(summary.get("pipeline_duration_seconds", 0) or 0),
     int(runner_summary.get("duration_seconds", 0) or 0),
-    build_duration_seconds + up_duration_seconds + phase_start_duration_seconds + validation_duration_seconds,
+    build_duration_seconds
+    + up_duration_seconds
+    + phase_start_duration_seconds
+    + start_bird_duration_seconds
+    + start_kernel_duration_seconds
+    + validation_duration_seconds,
     validation_duration_seconds,
 )
 
@@ -219,6 +226,7 @@ bgp = bool(summary.get("bgp_passed", False))
 connectivity = bool(summary.get("connectivity_passed", False))
 recovery_passed = bool(summary.get("recovery_passed", False))
 overall_pass = placement_passed and bgp and connectivity and recovery_passed
+runner_action = str(summary.get("runner_action", "") or runner_summary.get("action", "") or "")
 
 failure_reason = str(summary.get("failure_reason", "") or "")
 failure_code = str(summary.get("failure_code", "") or "")
@@ -239,11 +247,13 @@ if profile_id in {"real_topology_rr", "real_topology_rr_scale"}:
         "kubeconfig_fetch_failed": "scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_real_topology_multinode.sh preflight",
         "kubeconfig_not_found_after_fetch": "scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_real_topology_multinode.sh preflight",
         "ssh_key_not_found": "export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_real_topology_multinode.sh preflight",
+        "ssh_access_failed": "export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_real_topology_multinode.sh preflight",
         "compile_missing_k8s_yaml": "scripts/validate_k3s_real_topology_multinode.sh compile",
         "compile_missing_build_script": "scripts/validate_k3s_real_topology_multinode.sh compile",
-        "registry_timeout": f"scripts/seed_k8s_profile_runner.sh {profile_id} start",
+        "registry_timeout": f"scripts/seed_k8s_profile_runner.sh {profile_id} build",
         "build_failed": "scripts/validate_k3s_real_topology_multinode.sh build",
         "deploy_wait_timeout_or_failure": "scripts/validate_k3s_real_topology_multinode.sh deploy",
+        "namespace_delete_blocked": "kubectl get namespace ${SEED_NAMESPACE} -o yaml",
         "placement_check_failed": "scripts/validate_k3s_real_topology_multinode.sh verify",
         "bgp_not_established": "scripts/validate_k3s_real_topology_multinode.sh verify",
         "ospf_incomplete": "scripts/validate_k3s_real_topology_multinode.sh verify",
@@ -256,9 +266,11 @@ else:
     retry_by_failure = {
         "kubeconfig_not_found_after_fetch": "scripts/k3s_fetch_kubeconfig.sh && scripts/validate_k3s_mini_internet_multinode.sh preflight",
         "ssh_key_not_found": "export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_mini_internet_multinode.sh preflight",
+        "ssh_access_failed": "export SEED_K3S_SSH_KEY=/path/to/key && scripts/validate_k3s_mini_internet_multinode.sh preflight",
         "preflight_failed_after_repair": "scripts/validate_k3s_mini_internet_multinode.sh preflight",
         "compile_missing_k8s_yaml": "scripts/validate_k3s_mini_internet_multinode.sh compile",
         "deploy_wait_timeout_or_failure": "scripts/validate_k3s_mini_internet_multinode.sh deploy",
+        "namespace_delete_blocked": "kubectl get namespace ${SEED_NAMESPACE} -o yaml",
         "strict3_placement_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
         "placement_check_failed": "scripts/validate_k3s_mini_internet_multinode.sh verify",
         "bgp_not_established": "scripts/validate_k3s_mini_internet_multinode.sh verify",
@@ -290,6 +302,17 @@ if not first_evidence_file:
 runner_status = str(summary.get("runner_status", "") or runner_summary.get("status", "") or ("PASS" if overall_pass else "FAIL"))
 capacity_gate_status = str(summary.get("capacity_gate_status", "") or ("gated" if failure_code == "CAPACITY_GATED" else "open"))
 
+if capacity_gate_status == "gated" or failure_code == "CAPACITY_GATED":
+    acceptance_status = "CAPACITY_GATED"
+elif runner_status != "PASS":
+    acceptance_status = "FAIL"
+elif runner_action in {"verify", "observe", "report", "all"}:
+    acceptance_status = "PASS" if overall_pass else "FAIL"
+elif runner_action:
+    acceptance_status = "PARTIAL"
+else:
+    acceptance_status = "NOT_RUN"
+
 evidence_files = {}
 def add_evidence(key: str, path: Path):
     if path.exists():
@@ -298,6 +321,10 @@ def add_evidence(key: str, path: Path):
 add_evidence("summary", validation_dir / "summary.json")
 add_evidence("diagnostics", validation_dir / "diagnostics.json")
 add_evidence("next_actions", validation_dir / "next_actions.json")
+add_evidence("start_bird_summary", validation_dir / "start_bird_summary.json")
+add_evidence("start_bird_log", validation_dir / "start_bird.log")
+add_evidence("start_kernel_summary", validation_dir / "start_kernel_summary.json")
+add_evidence("start_kernel_log", validation_dir / "start_kernel.log")
 
 if profile_id in {"real_topology_rr", "real_topology_rr_scale"}:
     add_evidence("counts", validation_dir / "counts.json")
@@ -365,6 +392,7 @@ report = {
     "generated_at": datetime.now(timezone.utc).isoformat(),
     "profile_id": profile_id,
     "runner_status": runner_status,
+    "acceptance_status": acceptance_status,
     "validation_dir": str(validation_dir),
     "observe_dir": str(observe_dir) if observe_dir else "",
     "report_dir": str(report_dir),
@@ -403,6 +431,8 @@ report = {
     "build_duration_seconds": build_duration_seconds,
     "up_duration_seconds": up_duration_seconds,
     "phase_start_duration_seconds": phase_start_duration_seconds,
+    "start_bird_duration_seconds": start_bird_duration_seconds,
+    "start_kernel_duration_seconds": start_kernel_duration_seconds,
     "validation_duration_seconds": validation_duration_seconds,
     "pipeline_duration_seconds": pipeline_duration_seconds,
     "duration_seconds": pipeline_duration_seconds,
@@ -445,6 +475,8 @@ md_lines = [
     f"- Build duration: '{report['build_duration_seconds']}s'",
     f"- Up duration: '{report['up_duration_seconds']}s'",
     f"- Phase-start duration: '{report['phase_start_duration_seconds']}s'",
+    f"- Start-bird duration: '{report['start_bird_duration_seconds']}s'",
+    f"- Start-kernel duration: '{report['start_kernel_duration_seconds']}s'",
     f"- Verify duration: '{report['validation_duration_seconds']}s'",
     f"- Pipeline duration: '{report['pipeline_duration_seconds']}s'",
     "",
@@ -456,6 +488,7 @@ md_lines = [
     "## Verdict",
     "",
     f"- runner_status: '{report['runner_status']}'",
+    f"- acceptance_status: '{report['acceptance_status']}'",
     f"- placement_passed: '{report['placement_passed']}'",
     f"- strict3_passed: '{report['strict3_passed']}'",
     f"- bgp_passed: '{report['bgp_passed']}'",

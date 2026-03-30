@@ -31,6 +31,7 @@ class SeedK8sClusterInventoryTest(unittest.TestCase):
                 textwrap.dedent(
                     """
                     cluster_name: demo
+                    max_validated_topology_size: 1897
                     ssh:
                       user: tester
                       default_key_path: ~/.ssh/demo
@@ -39,6 +40,11 @@ class SeedK8sClusterInventoryTest(unittest.TestCase):
                       port: 5001
                     cni:
                       default_master_interface: ens2
+                    k3s:
+                      cluster_cidr: 10.42.0.0/16
+                      service_cidr: 10.43.0.0/16
+                      node_cidr_mask_size_ipv4: 22
+                      max_pods: 700
                     nodes:
                       - name: demo-master
                         role: master
@@ -56,9 +62,13 @@ class SeedK8sClusterInventoryTest(unittest.TestCase):
             normalized = self.module.normalize_inventory(path)
 
         self.assertEqual(normalized["cluster_name"], "demo")
+        self.assertEqual(normalized["max_validated_topology_size"], 1897)
         self.assertEqual(normalized["registry_host"], "10.0.0.10")
         self.assertEqual(normalized["registry_port"], 5001)
         self.assertEqual(normalized["master_name"], "demo-master")
         self.assertEqual(normalized["worker1_ip"], "10.0.0.11")
         self.assertEqual(normalized["default_master_interface"], "ens2")
-
+        self.assertEqual(normalized["k3s_cluster_cidr"], "10.42.0.0/16")
+        self.assertEqual(normalized["k3s_service_cidr"], "10.43.0.0/16")
+        self.assertEqual(normalized["k3s_node_cidr_mask_size_ipv4"], 22)
+        self.assertEqual(normalized["k3s_max_pods"], 700)

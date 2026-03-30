@@ -1,83 +1,87 @@
 # SEED-Emulator Kubernetes Examples
 
 This directory contains the Kubernetes-facing example scripts for SEED
-Emulator. Some scripts are promoted into official profile-based workflows,
-while others are compile-ready examples that will be promoted later.
+Emulator.
 
-For the public operator workflow, start with `docs/k8s_usage.md`.
-For maintainer boundaries and promotion rules, see `docs/k3s_runtime_architecture.md`.
+Some examples are promoted into profile-backed runtime workflows. Others are
+compile-only examples that are not yet part of the runtime baseline.
+
+Public operator guide: `docs/k8s_usage.md`  
+Maintainer architecture guide: `docs/k3s_runtime_architecture.md`
 
 ## Support Matrix
 
-| Script | Docker / legacy source | Tier | Runtime status | Recommended entry |
-|:---|:---|:---|:---|:---|
-| `k8s_mini_internet.py` | `examples/internet/B00_mini_internet` | Tier-1 | Runtime-validated | `scripts/seed_k8s_profile_runner.sh mini_internet all` |
-| `k8s_real_topology_rr.py` | External dataset (`RR_214_example.py` lineage) | Tier-1 | Runtime-validated (`real_topology_rr`, `real_topology_rr_scale`) | `scripts/seed_k8s_profile_runner.sh real_topology_rr all` |
-| `k8s_transit_as.py` | `examples/basic/A01_transit_as` | Tier-2 | Capability-gated runtime | `scripts/seed_k8s_profile_runner.sh transit_as build/start/verify/report` |
-| `k8s_mini_internet_with_visualization.py` | `examples/internet/B00_mini_internet` + Internet Map | Tier-2 | Capability-gated runtime | `scripts/seed_k8s_profile_runner.sh mini_internet_viz build/start/verify/report` |
-| `k8s_hybrid_kubevirt_demo.py` | Hybrid KubeVirt demo | Tier-2 | Capability-gated runtime | `scripts/seed_k8s_profile_runner.sh hybrid_kubevirt build/start/verify/report` |
-| `k8s_nano_internet.py` | `examples/basic/A20_nano_internet` | Tier-3 | Compile-only backlog | `python3 examples/kubernetes/k8s_nano_internet.py` |
-| `k8s_multinode_demo.py` | Kubernetes-only demo | Tier-3 | Compile-only backlog | `python3 examples/kubernetes/k8s_multinode_demo.py` |
-| `k8s_multinode_demo_dynamic.py` | Kubernetes-only demo | Tier-3 | Compile-only backlog | `python3 examples/kubernetes/k8s_multinode_demo_dynamic.py` |
+| Script | Support tier | Public profile | Compile entry | Runtime entry | Size policy |
+|:---|:---|:---|:---|:---|:---|
+| `k8s_mini_internet.py` | Tier-1 | `mini_internet` | `scripts/seed_k8s_profile_runner.sh mini_internet compile` | `scripts/seed_k8s_profile_runner.sh mini_internet all` | fixed example |
+| `k8s_real_topology_rr.py` | Tier-1 | `real_topology_rr` | `scripts/seed_k8s_profile_runner.sh real_topology_rr compile` | `SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr all` | `214` baseline |
+| `k8s_real_topology_rr.py` | Tier-1 | `real_topology_rr_scale` | `scripts/seed_k8s_profile_runner.sh real_topology_rr_scale compile` | `SEED_TOPOLOGY_SIZE=214 scripts/seed_k8s_profile_runner.sh real_topology_rr_scale all` | `214` baseline, `1078` rehearsal, `1897` target via `seedemu-k3s-scale` |
+| `k8s_transit_as.py` | Tier-2 | `transit_as` | `scripts/seed_k8s_profile_runner.sh transit_as compile` | `scripts/seed_k8s_profile_runner.sh transit_as compile/build/deploy/verify/report` | fixed example |
+| `k8s_mini_internet_with_visualization.py` | Tier-2 | `mini_internet_viz` | `scripts/seed_k8s_profile_runner.sh mini_internet_viz compile` | `scripts/seed_k8s_profile_runner.sh mini_internet_viz compile/build/deploy/verify/report` | fixed example |
+| `k8s_hybrid_kubevirt_demo.py` | Tier-2 | `hybrid_kubevirt` | `scripts/seed_k8s_profile_runner.sh hybrid_kubevirt compile` | `scripts/seed_k8s_profile_runner.sh hybrid_kubevirt compile/build/deploy/verify/report` | capability-gated by cluster features |
+| `k8s_nano_internet.py` | Tier-3 | none | `python3 examples/kubernetes/k8s_nano_internet.py` | compile-only | not promoted |
+| `k8s_multinode_demo.py` | Tier-3 | none | `python3 examples/kubernetes/k8s_multinode_demo.py` | compile-only | not promoted |
+| `k8s_multinode_demo_dynamic.py` | Tier-3 | none | `python3 examples/kubernetes/k8s_multinode_demo_dynamic.py` | compile-only | not promoted |
 
-## Official Profiles
+## Official staged workflow
 
-The maintained profiles are defined in `configs/seed_k8s_profiles.yaml`.
-
-- `mini_internet`: Tier-1, strict runtime acceptance
-- `real_topology_rr`: Tier-1, strict runtime acceptance (default size `214`)
-- `real_topology_rr_scale`: Tier-1, strict runtime acceptance at `214`, capacity-gated for larger runs
-- `transit_as`: Tier-2, capability-gated runtime
-- `mini_internet_viz`: Tier-2, capability-gated runtime
-- `hybrid_kubevirt`: Tier-2, capability-gated runtime
-
-## Recommended Workflow
-
-### Operator workflow
+For promoted profiles, the normal operator flow is:
 
 ```bash
-cd <repo_root>
-source scripts/env_seedemu.sh
-scripts/seed_lab_entry_status.sh
-scripts/seed_k8s_profile_runner.sh mini_internet all
+scripts/seed_k8s_profile_runner.sh <profile> compile
+scripts/seed_k8s_profile_runner.sh <profile> build
+scripts/seed_k8s_profile_runner.sh <profile> deploy
+scripts/seed_k8s_profile_runner.sh <profile> start-bird
+scripts/seed_k8s_profile_runner.sh <profile> start-kernel
+scripts/seed_k8s_profile_runner.sh <profile> verify
+scripts/seed_k8s_profile_runner.sh <profile> observe
+scripts/seed_k8s_profile_runner.sh <profile> report
 ```
 
-### Compile smoke for an individual example
+`all` is a convenience wrapper for the same chain.
+
+## Real-topology dataset notes
+
+`k8s_real_topology_rr.py` reads external real-topology data. The dataset is not
+committed to this repository.
+
+Default operator settings:
 
 ```bash
-cd <repo_root>
-source scripts/env_seedemu.sh
-PYTHONPATH="${REPO_ROOT}" python3 examples/kubernetes/k8s_transit_as.py
+export SEED_REAL_TOPOLOGY_DIR=~/lxl_topology/autocoder_test
+export SEED_ASSIGNMENT_FILE="${SEED_REAL_TOPOLOGY_DIR}/assignment.pkl"
+export SEED_TOPOLOGY_SIZE=214
 ```
 
-### Run the acceptance harness
+On the reference cluster:
+
+- `214` is the maintained baseline
+- `1078` is the rehearsal/debug waypoint
+- `1897` is the first official large-hardware target and is capacity-gated on
+  the reference cluster
+- the current SSH/entry-status hardening keeps the runtime behavior of the
+  `214` promoted examples intact and makes KVM node access visible before
+  build/deploy time
+
+To move from the reference cluster to the tracked scale inventory:
 
 ```bash
-cd <repo_root>
-source scripts/env_seedemu.sh
-scripts/seed_k8s_acceptance.sh compile-all
+SEED_CLUSTER_INVENTORY=seedemu-k3s-scale \
+SEED_K3S_FORCE_REINSTALL=true \
+scripts/setup_k3s_cluster.sh
 ```
 
-## Hybrid KubeVirt Runtime Profile
+## Acceptance mapping
 
-`k8s_hybrid_kubevirt_demo.py` supports `SEED_RUNTIME_PROFILE`:
-
-- `auto`: pick the best available mode
-- `full`: require VM + container hybrid mode
-- `degraded`: force container-only mode
-- `strict`: fail if VM mode is unavailable
-
-Example:
-
-```bash
-SEED_RUNTIME_PROFILE=auto PYTHONPATH="${REPO_ROOT}" python3 examples/kubernetes/k8s_hybrid_kubevirt_demo.py
-```
+- Tier-1 profiles are part of `scripts/seed_k8s_acceptance.sh tier1-runtime`
+- Tier-2 profiles are part of `scripts/seed_k8s_acceptance.sh tier2-runtime`
+- Tier-3 examples are part of `scripts/seed_k8s_acceptance.sh compile-all`
 
 ## What “promoted” means
 
 An example is promoted beyond compile-only only when it has:
 
 1. a stable compile entry,
-2. a profile (if it is operator-facing),
-3. a validation artifact contract,
-4. a documented acceptance path.
+2. a public support-tier declaration,
+3. a documented staged runtime path,
+4. a stable evidence contract.

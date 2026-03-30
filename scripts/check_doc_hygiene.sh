@@ -32,6 +32,11 @@ check_pattern '^docs/TODO\.md$' 'repo-internal TODO must not be tracked (docs/TO
 check_pattern '^docs/runbooks/.*handoff.*\.md$' 'handoff-only runbooks must not be tracked'
 check_pattern '^docs/runbooks/.*replay.*\.md$' 'local replay notes must not be tracked'
 check_pattern '^docs/runbooks/.*variant_diff.*\.md$' 'repo-variant comparison notes must not be tracked'
+check_pattern '^docs/phase_start_split\.md$' 'local phase-start split notes must not be tracked'
+check_pattern '^scripts/validate_k3s_stages\.md$' 'local validation stage notes must not be tracked'
+check_pattern '^scripts/check_multus_110_111_112\.sh$' 'IP-specific repair helpers must not be tracked'
+check_pattern '^scripts/fix_k3s_worker111_multus\.sh$' 'IP-specific repair helpers must not be tracked'
+check_pattern '^scripts/seed_k8s_ultimate_all\.sh$' 'local one-off orchestrators must not be tracked'
 
 # Dated runbooks/design drafts belong under output/private_docs (ignored), not in git.
 check_pattern '^docs/runbooks/.*20[0-9]{6}.*\.md$' 'dated runbooks must not be tracked (docs/runbooks/*YYYYMMDD*)'
@@ -74,6 +79,7 @@ check_no_cjk 'docs/runbooks/seed_k8s_academic_showcase.md' 'public showcase manu
 check_no_cjk 'docs/developer_manual/20-migrating-examples-to-k8s.md' 'public K8s migration manual must be English-only'
 check_no_cjk 'docs/runbooks/local_kind_quick_runbook.md' 'public local Kind runbook must be English-only'
 check_no_cjk 'docs/design/kubevirt_hybrid_k8s.md' 'public KubeVirt hybrid design doc must be English-only'
+check_no_cjk 'configs/seed_failure_action_map.yaml' 'public failure-action map must be English-only'
 
 if [ "${fail}" -ne 0 ]; then
   echo "[doc-hygiene] Hint: archive private docs under output/private_docs/ (ignored by .gitignore)."
