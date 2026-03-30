@@ -1,0 +1,6 @@
+# Target_Network  Target_IP  Target_Hostname
+223.109.0.0/16  223.109.82.16  www.baidu.com  
+10.203.4.0/24   10.203.4.70    www.zju.edu.cn
+#111.23.4.0/24   111.23.4.50 www.zju.edu.cn
+128.210.0.0/16   128.210.7.200 www.purdue.edu
+

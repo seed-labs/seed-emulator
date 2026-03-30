@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# This conda_env variable might be different for the user
+conda_env='emu'  
+
+conda_path=$(which conda)
+demo_system_path=$(pwd -P | sed 's/DemoSystem.*/DemoSystem/' )
+echo $demo_system_path
+
+CONFIG=$(cat <<EOF
+condaPath: $conda_path
+demoSystem:
+  envName: $conda_env
+  hostProjectPath: $demo_system_path
+EOF
+)
+
+#echo "$CONFIG" > ./seedemu.conf
+
+sudo mkdir -p /etc/seedemu
+sudo rm -f /etc/seedemu/seedemu.conf
+echo "$CONFIG" | sudo tee /etc/seedemu/seedemu.conf > /dev/null

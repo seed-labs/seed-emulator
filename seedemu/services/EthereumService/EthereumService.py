@@ -48,17 +48,17 @@ class Blockchain:
 
         @returns An instance of The Blockchain class.
         """
-        self._eth_service = service
-        self._consensus = consensus
-        self._chain_name = chainName
-        self._genesis = Genesis(ConsensusMechanism.POA) if self._consensus == ConsensusMechanism.POS else Genesis(self._consensus)
-        self._boot_node_addresses = []
-        self._miner_node_address = []
+        self._eth_service = service 
+        self._consensus = consensus 
+        self._chain_name = chainName 
+        self._genesis = Genesis(self._consensus)
+        self._boot_node_addresses = [] 
+        self._miner_node_address = [] 
         self._joined_accounts = []
-        self._joined_signer_accounts = []
-        self._validator_ids = []
-        self._beacon_setup_node_address = ''
-        self._pending_targets = []
+        self._joined_signer_accounts = [] 
+        self._validator_ids = [] 
+        self._beacon_setup_node_address = ''  
+        self._pending_targets = [] #
         self._emu_mnemonic = "great awesome fun seed security lab protect system network prevent attack future"
         self._total_accounts_per_node = 1
         self._emu_account_balance = 32 * EthUnit.ETHER.value
@@ -66,7 +66,6 @@ class Blockchain:
         self._local_accounts_total = 5
         self._local_account_balance = 10 * EthUnit.ETHER.value
         self._chain_id = chainId
-        self._terminal_total_difficulty = 20
         self._target_aggregater_per_committee = 2
         self._target_committee_size = 3
         
@@ -89,7 +88,7 @@ class Blockchain:
         
         if server.isBootNode():
             self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self._consensus.value))
-            self._boot_node_addresses.append(addr)
+            self._boot_node_addresses.append(str(ifaces[0].getAddress()))
         
         if self._consensus == ConsensusMechanism.POS:
             if server.isStartMiner():
@@ -105,13 +104,13 @@ class Blockchain:
             if self._consensus == ConsensusMechanism.POS and server.isValidatorAtRunning():
                 accounts[0].balance = 33 * EthUnit.ETHER.value
             self._joined_accounts.extend(accounts)
-            if self._consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] and server.isStartMiner():
+            if self._consensus in [ConsensusMechanism.POA] and server.isStartMiner():
                 self._joined_signer_accounts.append(accounts[0])
 
         if self._consensus == ConsensusMechanism.POS and server.isValidatorAtGenesis():
             self._validator_ids.append(str(server.getId()))
         
-        server._generateGethStartCommand()
+        server._generateGethStartCommand(str(ifaces[0].getAddress()))
 
         if self._eth_service.isSave():
             save_path = self._eth_service.getSavePath()
@@ -149,21 +148,10 @@ class Blockchain:
                 server.setFaucetUrl(self.__getIpByVnodeName(emulator, linked_faucet_node_name))
                 faucet_server:FaucetServer = emulator.getServerByVirtualNodeName(linked_faucet_node_name)
                 server.setFaucetPort(faucet_server.getPort())
-
-            elif self._consensus == ConsensusMechanism.POS and server.isStartMiner():
-
-                ifaces = node.getInterfaces()
-                assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
-                addr = str(ifaces[0].getAddress())
-                miner_ip = self._miner_node_address[0]
-                if addr == miner_ip:
-                    validator_count = len(self.getValidatorIds())
-                    index = self._joined_accounts.index(server._getAccounts()[0])
-                    self._joined_accounts[index].balance = 32*pow(10,18)*(validator_count+2)
-        
+  
         self._genesis.addAccounts(self.getAllAccounts())
         
-        if self._consensus in [ConsensusMechanism.POA, ConsensusMechanism.POS] :
+        if self._consensus in [ConsensusMechanism.POA] :
             self._genesis.setSigner(self.getAllSignerAccounts())
     
     def __getIpByVnodeName(self, emulator, nodename:str) -> str:
@@ -277,31 +265,6 @@ class Blockchain:
         """
         return self._consensus
     
-    def setTerminalTotalDifficulty(self, ttd:int):
-        """!
-        @brief Set the terminal total difficulty, which is the value to designate
-                when the Merge is happen. In POA, difficulty is tend to increase by 2
-                for every one block. For example, if the terminal_total_difficulty is 
-                set to 20, the Ethereum blockchain will keep POA consensus for approximately
-                150 sec (20/2*15) and then stop signing the block until the Merge happens.
-                Default to 20. 
-
-        @param ttd The terminal total difficulty to set.
-        
-        @returns Self, for chaining API calls.
-        """
-        self._terminal_total_difficulty = ttd
-
-        return self
-
-    def getTerminalTotalDifficulty(self) -> int:
-        """!
-        @brief Get the value of the terminal total difficulty.
-        
-        @returns terminal_total_difficulty.
-        """
-
-        return self._terminal_total_difficulty
 
     def setGasLimitPerBlock(self, gasLimit:int):
         """!
