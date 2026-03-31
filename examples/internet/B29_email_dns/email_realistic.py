@@ -504,7 +504,7 @@ SEED Realistic Email System (29-1) created!
    SMTP: localhost:2205 | IMAP: localhost:1405
 
 🌐 Monitoring:
-   Internet Map: http://localhost:8080/map.html
+   Internet Map: http://localhost:8080/pro/map
 
 ======================================================================
     "")

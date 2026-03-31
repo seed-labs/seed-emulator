@@ -2,7 +2,7 @@
 
 A realistic multi-ISP, multi-IX email system using DNS-based MX routing with a Roundcube webmail frontend. This is the single source of truth for running and validating the B29 scenario.
 
-- Internet Map: http://localhost:8080/map.html
+- Internet Map: http://localhost:8080/pro/map
 - Roundcube: http://localhost:8082
 
 ## Status

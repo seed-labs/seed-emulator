@@ -1,9 +1,9 @@
 <script setup lang="ts" xmlns="http://www.w3.org/1999/html">
 import {ref, onMounted, reactive, nextTick, shallowRef, type PropType, type Component} from "vue";
-import type {TabsPaneContext} from 'element-plus'
-import {ElNotification} from "element-plus";
+import {ElMessageBox, type TabsPaneContext} from 'element-plus'
+import {ElNotification, ElMessage} from "element-plus";
 import type {Details} from '@/types'
-import {allLoading} from '@/utils/tools.ts'
+import {allLoading, getSocket} from '@/utils/tools.ts'
 import {
   ArrowUpBold,
   ArrowDownBold,
@@ -16,7 +16,7 @@ import {
   VideoPlay,
   SwitchButton
 } from '@element-plus/icons-vue'
-import {CLICK_CLASS} from "@/utils/map-ui.ts";
+import {CLICK_CLASS, wsDataType} from "@/utils/map-ui.ts";
 import {MapUi, type OtherConfiguration} from "@/view/map/map/ui.ts";
 import {MapUi as IXMapUi, type IxMapUiOtherConfiguration} from "@/view/map/ixMap/ui.ts";
 import {MapUi as TransitMapUi, type TransitMapUiOtherConfiguration} from "@/view/map/transitMap/ui.ts";
@@ -25,14 +25,12 @@ import {DataSource as IXDataSource} from "@/view/map/ixMap/datasource.ts";
 import {DataSource as TransitDataSource} from "@/view/map/transitMap/datasource.ts";
 
 
-// ① 为每一种 UI 类对应的配置类型建立映射
 type OtherConfigOf<T> =
     T extends typeof MapUi ? OtherConfiguration :
         T extends typeof IXMapUi ? IxMapUiOtherConfiguration :
             T extends typeof TransitMapUi ? TransitMapUiOtherConfiguration :
                 never;
 
-// ② Props 使用单一泛型参数 M，M 决定 dataSource 与 otherConfig 的具体类型
 interface Props<M extends typeof MapUi | typeof IXMapUi | typeof TransitMapUi> {
   settingNumItem?: PropType<Component>
   mapUiClass: M;
@@ -102,9 +100,15 @@ const replayState = reactive({
   }
 })
 
+const imgSrc = new URL('@/assets/img/worldMap.png', import.meta.url).href
 const onSubmitFilter = async () => {
   if (!mapUi.value) return
   await mapUi.value?.onSubmitFilter(inputFilter.value)
+  ElMessage({
+    message: 'Submitted',
+    type: 'success',
+    duration: 1000
+  })
 }
 const onSubmitSearch = () => {
   if (!mapUi.value) return
@@ -219,6 +223,63 @@ const searchInput = () => {
   if (!mapUi.value) return
   mapUi.value?.updateFilterSuggestions(inputSearch.value)
 }
+
+const getConsoleIframeElement = (id: string) => {
+  if (!mapUi.value) return
+  return mapUi.value?.getConsoleIframeElement(id)
+}
+
+const getNodeInfoByContainerName = (name: string) => {
+  if (!mapUi.value) return
+  return mapUi.value?.getNodeInfoByContainerName(name)
+}
+
+const packetWsSet = () => {
+  const packetWs = getSocket('ws', '/packet')
+  packetWs.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data?.type !== wsDataType.CAPTURE_PACKET) {
+        return
+      }
+      let nodeInfo, style
+      const packetNum = data.data.packetNum ?? -1
+      if (packetNum === -1) {
+        nodeInfo = mapUi.value?.getNodeInfoById(data.source)?.meta.emulatorInfo
+        style = {
+          id: data.source,
+          borderWidth: 1,
+          label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
+          size: 25,
+          font: {size: 14},
+        }
+      } else {
+        style = {
+          id: data.source,
+          borderWidth: 4,
+          label: `${packetNum}`,
+          font: {size: 50},
+          size: 60,
+        }
+      }
+      mapUi.value?.updateNodeStyle(style)
+    } catch (e) {
+      console.log(e)
+    }
+  }
+}
+
+const hostWsSet = (ui: MapUi | IXMapUi | TransitMapUi) => {
+  const ws = getSocket()
+  ws.onmessage = (event) => {
+    try {
+      const {nodeId, title, cmd} = JSON.parse(event.data)
+      ui.createWindow(nodeId, title, {cmd})
+    } catch (e) {
+      console.log(e)
+    }
+  }
+}
 onMounted(() => {
   nextTick(async () => {
     const datasource = new props.dataSourceClass();
@@ -255,9 +316,44 @@ onMounted(() => {
       },
       replayStatusInfo: replayState.replayStatus,
     }
-    const ui = new props.mapUiClass(config, props.otherConfig);
-    await ui.start();
-    mapUi.value = ui
+    mapUi.value = new props.mapUiClass(config, props.otherConfig);
+    if (mapUi.value instanceof MapUi) {
+      await mapUi.value?.start();
+    } else {
+      ElMessageBox.confirm(
+          'Whether to display all the nodes of the Internet Map ?',
+          'Notice',
+          {
+            confirmButtonText: 'Yes',
+            cancelButtonText: 'No',
+            type: 'info',
+          }
+      ).then(async () => {
+        await mapUi.value?.start();
+      }).catch(async () => {
+        await mapUi.value?.partStart()
+        ElMessage({
+          type: 'info',
+          message: 'Please select the options to be displayed in the "Settings -> Categories" section.',
+        })
+      })
+    }
+    hostWsSet(mapUi.value)
+    packetWsSet()
+
+    window.addEventListener('message', (e) => {
+      const msg = e.data
+      if (msg?.type === 'DEMO_SYSTEM_CTRL') {
+        const nodeInfo = getNodeInfoByContainerName(`/${msg.name}`)
+        if (!nodeInfo) {
+          return
+        }
+        getConsoleIframeElement(nodeInfo.Id.slice(0, 12))?.contentWindow?.postMessage(
+            msg,
+            '*'
+        )
+      }
+    })
   })
 })
 defineExpose({mapUi})
@@ -425,7 +521,7 @@ defineExpose({mapUi})
                   @mouseup="onReplaySeekUp"
               />
             </div>
-            <el-form-item label="event interval (ms)" prop="interval">
+            <el-form-item label="Event interval (ms)" prop="interval">
               <el-input-number
                   id="replay-interval"
                   v-model="replayState.replayInterval.value"

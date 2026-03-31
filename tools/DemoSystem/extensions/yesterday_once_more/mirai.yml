@@ -1,0 +1,158 @@
+baseInfo:
+  name: "Mirai 僵尸网络攻击"
+  path: "./yesterday_once_more/03_mirai"
+
+sections:
+  - headerTitle: "启动靶场"
+    steps:
+      - type: "command_only"
+        action: host_exec
+        cmd: "cd $hostProjectPath/yesterday_once_more/03_mirai/demo/demo_output && docker compose up -d"
+  - headerTitle: "环境设置"
+    steps:
+      - type: "description_with_command"
+        shortText: "环境设置"
+        description:
+          - type: "paragraph"
+            content: "首先，我们需要启动仿真器。"
+          - type: "paragraph"
+            content: "在本实验中，我们需要安装`submit_event`插件。"
+          - type: "code_block"
+            title: "命令"
+            content: |
+              curl -X POST -H "Content-Type: application/json" -d '{"name": "submit_event"}' http://<hostname>:8080/api/v1/install
+        commands:
+          - action: host_exec
+            cmd: |
+              /usr/bin/curl -X POST -H \"Content-Type: application/json\" -d '{\"name\": \"submit_event\"}' \"http://$hostname:8080/api/v1/install\"
+
+  - headerTitle: "构建僵尸网络"
+    steps:
+      - type: "description_with_command"
+        shortText: "启动 C2 服务器"
+        description:
+          - type: "paragraph"
+            content: "C2 服务器是僵尸网络的控制中心，用于接收`bot`的连接并发布指令。本示例使用开源工具 BYOB 作为 C2 框架。"
+          - type: "code_block"
+            title: "命令"
+            content: |
+              ./yesterday_once_more/03_mirai/scripts/start_c2_server.sh
+
+        commands:
+          - action: host_exec
+            cmd: "cd $hostProjectPath/yesterday_once_more/03_mirai/scripts/ && /bin/bash start_c2_server.sh"
+      - type: "description_with_command_group"
+        shortText: "蠕虫控制"
+        description:
+          - type: "paragraph"
+            content: "C2 服务准备就绪后，即可释放蠕虫。我们将从 C2 服务器本身开始，运行 mirai.py 脚本。它将作为第一个被感染的节点，扫描网络中其他具有弱 Telnet 凭据的设备，并植入自身的副本"
+          - type: "paragraph"
+            content: "现在，执行下面的代码单元以启动蠕虫。"
+          - type: "code_block"
+            title: "命令"
+            content: |
+              print("正在 C2 服务器上释放 'mirai.py' 蠕虫...")
+              c2_container_id = !docker ps -f "name=C2_server" -q
+              if c2_container_id:
+                  !docker exec -d {c2_container_id[0]} sh -c 'cd /var/www/html/ && python3 mirai.py > /tmp/mirai_worm.log 2>&1'
+                  print("蠕虫已在后台运行，将开始扫描并感染网络中的其他主机。")
+              else:
+                  print("错误：未找到 C2_server 容器。")
+          - type: "paragraph"
+            content: "执行上一步后，蠕虫已开始传播。请切换到 Internet map 进行观察（短暂闪烁后高亮）。"
+          - type: "paragraph"
+            content: "您将看到新的节点不断发起与 C2 服务器的连接，这表明这些节点正在下载 mirai.py 蠕虫脚本。整个传播过程的流量动态将直观地呈现在您面前。"
+          - type: "paragraph"
+            content: "同时，在运行 BYOB 的终端中，您会看到新的会话连接消息出现。当网络被完全感染时，会话总数将超过 90 个，可作为传播进度的参考。"
+        cmdGroups:
+          - title: "release"
+            tooltip: "释放蠕虫"
+            commands:
+              - action: docker_exec
+                containerNames: [ "as170h-C2_server-10.170.0.100" ]
+                cmd: "cd /var/www/html/ && python3 mirai.py > /tmp/mirai_worm.log 2>&1"
+                detach: true
+          - title: "stop"
+            tooltip: "停止蠕虫"
+            commands:
+              - action: host_exec
+                cmd: "cd $hostProjectPath/yesterday_once_more/03_mirai/scripts && /bin/bash ./control_worm.sh stop"
+
+  - headerTitle: "Botnet"
+    steps:
+      - type: "description_with_command_group"
+        shortText: "Botnet 控制"
+        description:
+          - type: "paragraph"
+            content: "使用 `broadcast` 控制 Botnet"
+          - type: "paragraph"
+            content: "切换到运行 BYOB 控制台的终端窗口，键入以下命令并回车。此命令将被广播给所有在线的 `bot`。"
+          - type: "paragraph"
+            content: "请切换到 Internet map 进行观察（闪烁）。"
+          - type: "code_block"
+            title: "命令"
+            content: |
+              # 在 BYOB 控制台中输入命令：
+              
+              # display
+              broadcast timeout 300s bash -c '
+              /usr/bin/echo "{ \"flash\": { \"dynamic\": { \"borderWidth\": 8, \"size\": 50 }, \"duration\": 1000 } }" >/map-plugins/style.json 
+              && /bin/bash /map-plugins/submit_event.sh -a flash -s /map-plugins/style.json > /dev/null 2>&1'
+              
+              # restore
+              broadcast timeout 30s bash -c '/bin/bash /map-plugins/submit_event.sh 
+              -a restore > /dev/null 2>&1'
+        cmdGroups:
+          - title: "display"
+            tooltip: "展示"
+            commands:
+              - action: terminal_exec
+                containerName: "as170h-C2_server-10.170.0.100"
+                cmd: |
+                  broadcast timeout 60s bash -c '/usr/bin/echo "{ \"flash\": { \"dynamic\": { \"borderWidth\": 8, \"size\": 50 }, \"duration\": 1000 } }" >/map-plugins/style.json && /bin/bash /map-plugins/submit_event.sh -a flash -s /map-plugins/style.json && sleep 5 && /bin/bash /map-plugins/submit_event.sh -a highlight > /dev/null 2>&1'
+          - title: "restore"
+            tooltip: "恢复"
+            commands:
+              - action: terminal_exec
+                containerName: "as170h-C2_server-10.170.0.100"
+                cmd: |
+                  broadcast timeout 30s bash -c '/bin/bash /map-plugins/submit_event.sh -a restore > /dev/null 2>&1'
+      - type: "description_with_command_group"
+        shortText: "Botnet 攻击"
+        description:
+          - type: "paragraph"
+            content: "切换到运行 BYOB 控制台的终端窗口，键入以下命令并回车。此命令将被广播给所有在线的 `bot`。"
+          - type: "paragraph"
+            content: "请切换到 Internet map 进行观察（数据包数量统计）。"
+          - type: "code_block"
+            title: "命令"
+            content: |
+              # 在 BYOB 控制台中输入此命令：
+              broadcast timeout 30s bash -c 'ping 10.170.0.99 > /dev/null 2>&1'
+        cmdGroups:
+          - title: "attack"
+            tooltip: "发起攻击"
+            commands:
+              - action: terminal_exec
+                containerName: "as170h-C2_server-10.170.0.100"
+                cmd: |
+                  broadcast timeout 30s bash -c 'ping 10.170.0.99 > /dev/null 2>&1'
+              - action: host_exec
+                cmd: |
+                  /usr/bin/curl -X POST -H \"Content-Type: application/json\" -d '{\"nodeName\": \"/as170h-victim-10.170.0.99\", \"filter\": \"dst 10.170.0.99\"}' \"http://$hostname:8080/api/v1/packet\"
+          - title: "restore"
+            tooltip: "恢复"
+            commands:
+              - action: terminal_exec
+                containerName: "as170h-C2_server-10.170.0.100"
+                cmd: |
+                  broadcast bash -c 'pkill -f "ping 10.170.0.99"'
+              - action: host_exec
+                cmd: |
+                  /usr/bin/curl -X POST -H \"Content-Type: application/json\" -d '{\"nodeName\": \"/as170h-victim-10.170.0.99\", \"action\": \"restore\"}' \"http://$hostname:8080/api/v1/packet\"
+
+  - headerTitle: "关闭靶场"
+    steps:
+      - type: "command_only"
+        action: host_exec
+        cmd: "cd $hostProjectPath/yesterday_once_more/03_mirai/demo/demo_output && docker compose down"

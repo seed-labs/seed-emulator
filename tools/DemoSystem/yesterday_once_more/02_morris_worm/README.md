@@ -4,10 +4,7 @@
   and copy it to `/etc/seedemu/seedemu.conf`
 
 ```yaml
-condaPath: /home/cy/miniconda3/condabin/conda # conda's path
-
 demoSystem:
-  envName: seedpy310   # The conda environemnt name needed for demoSystem
   hostProjectPath: /home/cy/projects/debug/seed-emulator/tools/DemoSystem  # DemoSystem's root folder 
 ```
 
@@ -17,3 +14,5 @@ demoSystem:
   Note, `dcbuild` is the alias for `DOCKER_BUILDKIT=0 docker compose build`
 
 After this step, the setup is complete, we are ready to run the demo system. 
+
+After the shooting range is successfully activated, select to enter the Map page and then proceed with the subsequent operations.

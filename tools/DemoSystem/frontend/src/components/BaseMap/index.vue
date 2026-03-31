@@ -1,6 +1,7 @@
 <template xmlns="http://www.w3.org/1999/html">
   <div class="main-container">
     <iframe
+        ref="internetMapRef"
         v-if="iframeSrc"
         :src="iframeSrc"
         class="full-iframe"
@@ -37,7 +38,9 @@
         @fontSizeChange="handleFontSizeChange"
     >
       <!-- 使用插槽 -->
-      <slot name="console-tabs">
+      <slot
+          name="console-tabs"
+      >
         <div class="default-console">
           <p>请提供console-tabs插槽内容</p>
         </div>
@@ -77,30 +80,29 @@ interface BaseMapEmits {
 
 const props = defineProps<BaseMapProps>()
 const emit = defineEmits<BaseMapEmits>()
-
 const alertTitle = ref("请先启动靶场")
-
 // 对话框相关状态
 const dialogVisible = ref(false)
 const dialogWidth = ref('900px')
 const dialogHeight = ref('700px')
-
+const internetMapRef = ref<HTMLIFrameElement | null>(null)
 const handleFontSizeChange = (fontSize: number) => {
   emit("update:font-size", fontSize)
 }
-
 // 对话框缩放处理
 const onDialogResize = (size: { width: number; height: number; scale: number }) => {
   // console.log('对话框尺寸变化:', size)
   // 可以在这里保存用户偏好的尺寸
 }
-
 // 对话框重置处理
 const onDialogReset = () => {
   dialogWidth.value = '900px'
   dialogHeight.value = '600px'
   ElMessage.success('对话框已重置为默认大小')
 }
+defineExpose({
+  internetMapRef
+});
 </script>
 
 <style scoped>

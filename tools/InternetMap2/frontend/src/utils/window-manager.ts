@@ -1,4 +1,5 @@
 import {type ConsoleEvent} from './console-event';
+import type {IframeQueryData} from "@/types";
 
 export type WindowManagerEvent = 'taskbarchanges';
 
@@ -26,7 +27,6 @@ export class Window {
     private _isResizing: boolean = false;
     private _resizeDirection: string | null = null;
 
-    // 初始尺寸和位置
     private _initialWidth: number;
     private _initialHeight: number;
     private _initialX: number;
@@ -49,13 +49,11 @@ export class Window {
         this._isMinimized = false;
         this._isFocused = false;
 
-        // 初始尺寸
         this._initialWidth = 800;
         this._initialHeight = 600;
         this._initialX = left;
         this._initialY = top;
 
-        // 先创建 iframe，再创建窗口元素
         this._frameElement = this._createIframe(url);
 
         this._createWindowElement();
@@ -63,7 +61,6 @@ export class Window {
     }
 
     private _createWindowElement(): void {
-        // 窗口容器
         const windowEl = document.createElement('div');
         windowEl.className = 'console-window';
         windowEl.style.position = 'absolute';
@@ -81,7 +78,6 @@ export class Window {
         windowEl.style.flexDirection = 'column';
         windowEl.style.userSelect = 'none';
 
-        // 标题栏
         const titleBar = document.createElement('div');
         titleBar.className = 'console-titlebar';
         titleBar.style.padding = '12px 16px';
@@ -95,7 +91,6 @@ export class Window {
         titleBar.style.fontSize = '14px';
         titleBar.style.fontWeight = '500';
 
-        // 标题文本
         const titleText = document.createElement('span');
         titleText.className = 'console-title';
         titleText.innerText = `${this._title} ${this._statusText}`;
@@ -104,14 +99,12 @@ export class Window {
         titleText.style.textOverflow = 'ellipsis';
         titleText.style.whiteSpace = 'nowrap';
 
-        // 操作按钮区域
         const titleActions = document.createElement('div');
         titleActions.className = 'console-actions';
         titleActions.style.display = 'flex';
         titleActions.style.gap = '8px';
         titleActions.style.alignItems = 'center';
 
-        // 按钮配置
         const buttons = [
             {
                 icon: '⌨️',
@@ -178,14 +171,12 @@ export class Window {
             titleActions.appendChild(button);
         });
 
-        // 内容区域
         const contentArea = document.createElement('div');
         contentArea.className = 'console-content';
         contentArea.style.flexGrow = '1';
         contentArea.style.position = 'relative';
         contentArea.style.overflow = 'hidden';
 
-        // 遮罩层
         const mask = document.createElement('div');
         mask.className = 'console-mask hide';
         mask.style.position = 'absolute';
@@ -196,18 +187,15 @@ export class Window {
         mask.style.zIndex = '10';
         mask.style.display = 'none';
 
-        // 组装
         titleBar.appendChild(titleText);
         titleBar.appendChild(titleActions);
 
-        // 将 iframe 添加到内容区域
         contentArea.appendChild(this._frameElement);
         contentArea.appendChild(mask);
 
         windowEl.appendChild(titleBar);
         windowEl.appendChild(contentArea);
 
-        // 创建调整大小手柄
         this._createResizeHandles(windowEl);
 
         this._element = windowEl;
@@ -227,7 +215,6 @@ export class Window {
             handle.style.zIndex = '1000';
             handle.style.pointerEvents = 'auto';
 
-            // 设置位置和大小
             switch (dir) {
                 case 'n':
                     handle.style.top = '0';
@@ -308,14 +295,10 @@ export class Window {
         frameElement.setAttribute('allow', 'clipboard-read; clipboard-write');
         frameElement.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals');
 
-        // 监听 iframe 加载完成
         frameElement.onload = () => {
             this.setStatusText('');
-
-            // 确保 iframe 可以获得焦点
             try {
                 if (frameElement.contentWindow) {
-                    // 设置 iframe 内部 body 的样式
                     const style = document.createElement('style');
                     style.textContent = `
             body, html {
@@ -329,8 +312,6 @@ export class Window {
 
                     if (frameElement.contentDocument) {
                         frameElement.contentDocument.head.appendChild(style);
-
-                        // 确保 body 可以接收点击
                         frameElement.contentDocument.body.style.width = '100%';
                         frameElement.contentDocument.body.style.height = '100%';
                         frameElement.contentDocument.body.style.margin = '0';
@@ -339,7 +320,6 @@ export class Window {
                     }
                 }
             } catch (e) {
-                // 跨域限制，无法访问 iframe 内容
                 console.log('Cannot access iframe content due to cross-origin restrictions');
             }
         };
@@ -359,32 +339,26 @@ export class Window {
         this._titleBarElement.addEventListener('mousedown', this._mousedownHandler);
         document.addEventListener('mouseup', this._mouseupHandler);
 
-        // 监听窗口点击事件
         this._element.addEventListener('click', (e) => {
             const target = e.target as HTMLElement;
 
-            // 如果点击的是窗口本身（不是 iframe 或按钮），激活窗口
             if (target === this._element || target === this._titleBarElement ||
                 this._titleBarElement.contains(target)) {
                 this._manager.setActiveWindowDirect(this);
             }
         });
 
-        // 监听 iframe 加载事件
         this._frameElement.addEventListener('load', () => {
             this._attachIframeEvents();
         });
     }
 
     private _attachIframeEvents(): void {
-        // 监听 iframe 内部的事件
         if (this._frameElement.contentWindow) {
             try {
-                // 监听 iframe 内部的鼠标事件，当点击 iframe 时激活窗口
                 const contentDocument = this._frameElement.contentDocument;
                 if (contentDocument) {
                     contentDocument.addEventListener('click', (e) => {
-                        // 只在点击 iframe 内容时激活窗口，避免干扰 iframe 内部的操作
                         this._manager.setActiveWindowDirect(this);
                     });
 
@@ -393,7 +367,7 @@ export class Window {
                     });
                 }
             } catch (e) {
-                // 跨域限制，无法添加事件监听器
+                console.log(`Cannot access iframe content due to cross-origin restrictions: ${e}`)
             }
         }
     }
@@ -425,7 +399,6 @@ export class Window {
             let newWidth = this._initialWidth;
             let newHeight = this._initialHeight;
 
-            // 根据方向调整大小和位置
             switch (direction) {
                 case 'n':
                     newTop = startY + dy;
@@ -463,7 +436,6 @@ export class Window {
                     break;
             }
 
-            // 应用最小尺寸限制
             const minWidth = 125;
             const minHeight = 45;
 
@@ -481,7 +453,6 @@ export class Window {
                 }
             }
 
-            // 更新元素样式
             this._element.style.left = `${newLeft}px`;
             this._element.style.top = `${newTop}px`;
             this._element.style.width = `${newWidth}px`;
@@ -500,7 +471,6 @@ export class Window {
     }
 
     private _handleDragStart(e: MouseEvent): void {
-        // 如果在调整大小，不开始拖拽
         if (this._isResizing || e.button !== 0) return;
 
         const target = e.target as HTMLElement;
@@ -541,7 +511,10 @@ export class Window {
         document.removeEventListener('mousemove', this._mousemoveHandler);
     }
 
-    // 公共方法
+    iframeElement(): HTMLIFrameElement {
+        return this._frameElement;
+    }
+
     getId(): string {
         return this._id;
     }
@@ -586,7 +559,6 @@ export class Window {
         const w = this._frameElement.clientWidth;
 
         this.close();
-        // 使用 console.html 页面，因为那是已经开发好的 xterm 终端页面
         window.open(
             `${import.meta.env.VITE_FRONTEND_URL_PREFIX}/console#${this._id}`, this._title,
             `directories=no,titlebar=no,toolbar=no,location=no,status=no,menubar=no,scrollbars=no,width=${w},height=${h}`
@@ -607,9 +579,7 @@ export class Window {
 
     reload(): void {
         this.setStatusText('(connecting...)');
-        if (this._frameElement) {
-            this._frameElement.src = this._frameElement.src; // 重新加载
-        }
+        this._frameElement.contentWindow?.location.reload();
     }
 
     toBack(): void {
@@ -620,7 +590,6 @@ export class Window {
     }
 
     toFront(): void {
-        // 只设置当前窗口的视觉激活状态
         this._titleBarElement.classList.add('active');
         this._element.style.zIndex = '20000';
         this._isMinimized = false;
@@ -628,7 +597,6 @@ export class Window {
         this._isFocused = true;
         this._element.classList.add('focused');
 
-        // 聚焦 iframe
         this._ensureFocus();
     }
 
@@ -662,12 +630,10 @@ export class Window {
     }
 
     private _ensureFocus(): void {
-        // 尝试聚焦 iframe
         if (this._frameElement) {
             try {
                 this._frameElement.focus();
 
-                // 尝试聚焦 iframe 内部的 window
                 if (this._frameElement.contentWindow) {
                     this._frameElement.contentWindow.focus();
                 }
@@ -706,7 +672,6 @@ export class WindowManager {
         this._desktop = document.getElementById(desktopElement) as HTMLDivElement;
         this._taskbar = document.getElementById(taskbarElement) as HTMLDivElement;
 
-        // 设置桌面容器样式
         if (this._desktop) {
             // this._desktop.style.position = 'relative';
             this._desktop.style.width = '100%';
@@ -721,17 +686,22 @@ export class WindowManager {
         }
     }
 
-    createWindow(id: string, title: string): Window {
+    createWindow(id: string, title: string, queryData: IframeQueryData = {cmd: ''}, reload: boolean = false): Window {
         if (this._windows[id]) {
-            this.setActiveWindowDirect(this._windows[id]);
-            return this._windows[id];
+            if (!reload) {
+                this.setActiveWindowDirect(this._windows[id]);
+                return this._windows[id];
+            }
+            this._windows[id].close()
         }
+
+        const url = `${import.meta.env.VITE_FRONTEND_URL_PREFIX}/console#${id}?data=${encodeURIComponent(JSON.stringify(queryData))}`
 
         const win = new Window(
             this,
             id,
             title,
-            `${import.meta.env.VITE_FRONTEND_URL_PREFIX}/console#${id}`,  // 使用已经开发好的 xterm 终端页面
+            url,
             10 + this._nextOffset,
             10 + this._nextOffset
         );
@@ -739,7 +709,6 @@ export class WindowManager {
         this._desktop.appendChild(win.getElement());
         this._windows[id] = win;
 
-        // 激活新窗口
         this.setActiveWindowDirect(win);
 
         this._nextOffset += 30;
@@ -754,7 +723,6 @@ export class WindowManager {
             this._windows[id].getElement().remove();
             delete this._windows[id];
 
-            // 如果关闭的是活动窗口，清空活动窗口ID
             if (this._activeWindowId === id) {
                 this._activeWindowId = '';
             }
@@ -767,7 +735,6 @@ export class WindowManager {
         const element = window.getElement() as HTMLElement;
         element.style.display = 'none';
 
-        // 如果是活动窗口，清空活动窗口ID
         if (this._activeWindowId === window.getId()) {
             this._activeWindowId = '';
         }
@@ -776,47 +743,33 @@ export class WindowManager {
     }
 
     setActiveWindow(window: Window): void {
-        // 这个方法是给外部调用的，内部使用 setActiveWindowDirect
         this.setActiveWindowDirect(window);
     }
 
     setActiveWindowDirect(window: Window): void {
         const windowId = window.getId();
 
-        // 如果已经是活动窗口，不需要重复处理
         if (this._activeWindowId === windowId) {
             return;
         }
 
-        // 保存旧的活动窗口ID
         const oldActiveId = this._activeWindowId;
-
-        // 更新活动窗口ID
         this._activeWindowId = windowId;
-
-        // 还原窗口（如果是最小化的）
         if ((window as any)._isMinimized) {
             window.restore();
         }
-
-        // 处理旧的活动窗口
         if (oldActiveId && this._windows[oldActiveId]) {
             const oldWindow = this._windows[oldActiveId];
             const oldElement = oldWindow.getElement() as HTMLElement;
             oldElement.style.zIndex = '10000';
 
-            // 取消窗口内部激活状态
             oldWindow.toBack();
         }
 
-        // 处理新的活动窗口
         const newElement = window.getElement() as HTMLElement;
         newElement.style.zIndex = '20000';
 
-        // 设置窗口内部激活状态
         window.toFront();
-
-        // 更新任务栏
         this._updateTaskbar();
     }
 
@@ -913,10 +866,8 @@ export class WindowManager {
         if (!window) return;
 
         if (this._activeWindowId === id) {
-            // 如果点击的是当前活动窗口，最小化它
             window.minimize();
         } else {
-            // 否则激活该窗口
             this.setActiveWindowDirect(window);
         }
     }

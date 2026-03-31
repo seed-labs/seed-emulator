@@ -7,35 +7,33 @@ export const defaultRouters: RouteRecord[] = [
     {
         path: '/',
         component: () => import('@/views/layout/index.vue'),
-        redirect: {name: "home"},
+        redirect: {name: "dashboard", params: {dashboardName: "home"}},
         name: 'layout',
         meta: {
             title: "总览",
         },
         children: [
             {
-                path: '/home',
-                component: () => import('@/views/home/index.vue'),
-                name: 'home',
+                path: '/dashboard/:dashboardName/',
+                component: () => import('@/views/common/dashboard/index.vue'),
+                name: 'dashboard',
                 meta: {
-                    title: "首页",
+                    title: "面板",
                     icon: 'HomeFilled',
-                    componentName: 'Home',
+                    componentName: 'Dashboard',
                 },
+                props: true,
             },
             {
-                path: '/common',
-                component: () => import('@/views/common/index.vue'),
-                name: 'common',
+                path: '/dashboard/:dashboardName/simulation/:simulateName/',
+                component: () => import('@/views/common/simulation/index.vue'),
+                name: 'simulation',
                 meta: {
-                    title: "通用",
+                    title: "仿真",
                     icon: 'HomeFilled',
-                    componentName: 'Common',
+                    componentName: 'Simulation',
                 },
-                // 添加 props 函数
-                props: (route) => ({
-                    name: route.query.name || "bgp",
-                })
+                props: true
             },
         ]
     },

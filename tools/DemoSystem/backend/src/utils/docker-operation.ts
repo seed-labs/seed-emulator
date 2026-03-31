@@ -26,16 +26,18 @@ interface ExecResult {
 }
 
 export interface SeedemuConf {
-    condaPath: string;
     demoSystem: {
         hostProjectPath: string
-        envName: string
     }
+}
+
+export interface HostConf {
+    seedemuConf: SeedemuConf
 }
 
 export class DockerOperation implements LogProducer {
     private readonly _logger: Logger;
-    public seedemuConf: SeedemuConf | null = null;
+    public hostConf: HostConf | null = null;
 
     constructor() {
         this._logger = new Logger({name: 'Docker'});
@@ -64,8 +66,7 @@ export class DockerOperation implements LogProducer {
             return containerInfo!.Id
 
         } catch (error) {
-            this._logger.error('查找容器失败:', error)
-            this._logger.error(`查找容器失败: ${error}`,)
+            this._logger.error(`查找容器失败: ${error}`)
             return ''
         }
     }
@@ -295,7 +296,7 @@ APPEND_EOF`
             ret.stdout = output.stdout;
             this._logger.info(`containerId: ${containerId} Successfully exec cmd: (${cmd}), detach: ${detach}`);
         } catch (error) {
-            this._logger.warn(`Error exec cmd: (${cmd}), error: ${error}`);
+            this._logger.warn(`Warning exec cmd: (${cmd}), error: ${error}`);
             ret.ok = false
             ret.stderr = `${error}`
         }
@@ -619,94 +620,11 @@ APPEND_EOF`
         }
     }
 
-    /**
-     * 执行原生 Docker 命令（类似 docker ps）
-     */
-    async execDockerCommand(command: string): Promise<{ stdout: string; stderr: string }> {
-        try {
-            return await execAsync(`docker ${command}`);
-        } catch (error: any) {
-            if (error.stdout || error.stderr) {
-                return {
-                    stdout: error.stdout || '',
-                    stderr: error.stderr || ''
-                };
-            }
-            throw new Error(`执行 Docker 命令失败: ${error.message}`);
-        }
-    }
-
-    /**
-     * 执行 Docker Compose 命令
-     */
-    async execComposeCommand(
-        composePath: string,
-        command: string,
-        serviceName?: string
-    ): Promise<{ stdout: string; stderr: string }> {
-        let cleanedStdout, cleanedStderr
-        try {
-            let cmd = `cd ${composePath} && ${command}`;
-            if (serviceName) {
-                cmd += ` ${serviceName}`;
-            }
-            const {stdout, stderr} = await execAsync(cmd, {
-                timeout: 60000 * 30,
-                maxBuffer: 1024 * 1024 * 10 // 10MB buffer
-            });
-            cleanedStdout = stdout.trim();
-            cleanedStderr = stderr.trim();
-        } catch (error: any) {
-            if (error.stdout || error.stderr) {
-                cleanedStdout = error.stdout || ''
-                cleanedStderr = error.stderr || ''
-            } else {
-                throw new Error(`执行 Docker Compose 命令失败: ${error.message}`);
-            }
-        }
-        if (!cleanedStderr.includes("level=warning")) {
-            throw new Error(cleanedStderr)
-        }
-        return {stdout: cleanedStdout, stderr: ''}
-    }
-
-    /**
-     * 启动指定路径的 Docker Compose 服务
-     */
-    async composeUp(composePath: string, serviceName?: string): Promise<string> {
-        // let command = "DOCKER_BUILDKIT=0 docker compose build && docker compose up -d"
-        let command = "docker compose up -d"
-        command = serviceName ? `${command} ${serviceName}` : command;
-        const result = await this.execComposeCommand(composePath, command);
-
-        if (result.stderr && !result.stderr.includes('Creating')) {
-            throw new Error(result.stderr);
-        }
-
-        return result.stdout || '服务启动成功';
-    }
-
-    /**
-     * 停止 Docker Compose 服务
-     */
-    async composeDown(composePath: string): Promise<string> {
-        const command = "docker compose down"
-        const result = await this.execComposeCommand(composePath, command);
-
-        if (result.stderr) {
-            throw new Error(result.stderr);
-        }
-
-        return result.stdout || '服务停止成功';
-    }
-
     async execOnHost(command: string): Promise<ExecResult> {
-        const seedemuConf = await this.getHostSeedemuConf()
+        const hostConf = await this.getHostConf()
         command = replaceRelativePath(
             command,
-            seedemuConf.demoSystem.hostProjectPath,
-            seedemuConf.condaPath,
-            seedemuConf.demoSystem.envName,
+            hostConf.seedemuConf.demoSystem.hostProjectPath,
         )
         command = `nsenter -t ${HOST_PID} -m -u -i -n -p /bin/sh -c "${command}"`;
         this._logger.info(`宿主机执行命令: ${command}`);
@@ -729,13 +647,14 @@ APPEND_EOF`
         }
     }
 
-    async getHostSeedemuConf(): Promise<SeedemuConf> {
-        if (this.seedemuConf === null) {
-            const command = `nsenter -t ${HOST_PID} -m -u -i -n -p -- cat ${JSON.stringify(SEEDEMU_CONF_FILE_PATH)}`;
-            const {stdout} = await execAsync(command, {timeout: 6000})
-            this.seedemuConf = yaml.load(stdout) as SeedemuConf;
+    async getHostConf(): Promise<HostConf> {
+        if (this.hostConf === null) {
+            let command = `nsenter -t ${HOST_PID} -m -u -i -n -p -- cat ${JSON.stringify(SEEDEMU_CONF_FILE_PATH)}`;
+            let {stdout} = await execAsync(command, {timeout: 6000})
+            this.hostConf = {} as HostConf
+            this.hostConf.seedemuConf = yaml.load(stdout) as SeedemuConf;
         }
-        return this.seedemuConf;
+        return this.hostConf;
     }
 
     getLoggers(): Logger[] {

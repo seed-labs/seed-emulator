@@ -26,7 +26,6 @@ interface Props {
   getData: () => void
 }
 
-// 为可选的 pageParams 提供完整默认值
 const props = withDefaults(defineProps<Props>(), {
   pageParams: () => ({
     total: 0,
@@ -52,7 +51,6 @@ watch(disabled,
     async (newVal: boolean) => {
       if (!newVal) {
         await nextTick()
-        // 移除跳转输入框的 disabled 属性
         const jumpInput = paginationRef.value?.$el?.querySelector('.el-pagination__jump')
         if (jumpInput) {
           jumpInput.removeAttribute('disabled')

@@ -1,180 +1,107 @@
 import {DataSource as BaseDataSource, type Edge, type Vertex} from '@/utils/map-datasource.ts';
-import type {EmulatorNetwork, EmulatorNode} from "@/utils/types.ts";
+import {dealTransitWeight} from "@/utils/tools.ts";
 
 export class DataSource extends BaseDataSource {
     visDataSet(transitsNumber: number): { vertices: Vertex[], edges: Edge[] } {
-        const allEdges: Edge[] = this.edges;
-        const allVertices = this.vertices
-
-        let newVerticeIds = new Set<string>()
-        let newVertices: Vertex[] = []
-        let newEdges: Edge[] = []
         let groups = new Set<string>()
         if (transitsNumber <= 0) {
-            return {vertices: newVertices, edges: newEdges}
+            return {vertices: this.vertices, edges: this.edges}
         }
 
-        const {_nets, _nodes} = this.getter()
-        const transitsWithWeight = this.dealTransitWeight(allVertices)
+        const transitsWithWeight = dealTransitWeight(this.vertices)
         for (const transit of transitsWithWeight) {
+            if (groups.size >= transitsNumber) {
+                break
+            }
             groups.add(transit.group as string)
-            if (groups.size > transitsNumber) {
-                break
-            }
-
-            for (let i = allEdges.length - 1; i >= 0; i--) {
-                const edge = allEdges[i] as Edge;
-                if (edge.from !== transit.id) {
-                    continue
-                }
-                const from = _nodes.find(item => item.Id === edge!.from) as EmulatorNode
-                const to = _nets.find(item => item.Id === edge!.to) as EmulatorNetwork
-
-                let nodeInfo = from.meta.emulatorInfo;
-                let netInfo = to!.meta.emulatorInfo;
-                let nodeVertex: Vertex = {
-                    id: from.Id,
-                    label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
-                    type: 'node',
-                    shape: ['Router', 'BorderRouter'].includes(nodeInfo.role) ? 'dot' : 'hexagon',
-                    object: from,
-                    collapsed: false,
-                    custom: nodeInfo.custom
-                };
-                if (!newVerticeIds.has(from.Id)) {
-                    newVerticeIds.add(from.Id)
-                    newVertices.push(nodeVertex)
-                    nodeVertex.group = nodeInfo.asn.toString();
-                }
-                const _netVertex = allVertices.find(item => item.id === to.Id)
-                let netVertex: Vertex = {
-                    id: to!.Id,
-                    label: netInfo.displayname ?? `${netInfo.scope}/${netInfo.name}`,
-                    type: 'network',
-                    shape: netInfo.type == 'global' ? 'star' : 'diamond',
-                    object: to!,
-                    collapsed: _netVertex!.collapsed,
-                    borderWidth: _netVertex!.borderWidth
-                };
-                if (!newVerticeIds.has(to!.Id)) {
-                    if (netInfo.type == 'local') {
-                        netVertex.group = netInfo.scope;
-                    }
-                    newVerticeIds.add(to!.Id)
-                    newVertices.push(netVertex)
-                }
-                newEdges.push(edge)
-                allEdges.splice(i, 1);
-            }
         }
 
-        const _newEdges = this.connectExistingTopology(allVertices, allEdges, newVertices, newEdges)
-        newVertices.push(...allVertices.filter(item => {
-            if (item.shape !== 'star') {
-                return false
-            } else {
-                return !newVertices.find(n => n.id === item.id);
-            }
-        }))
-
-        return {vertices: newVertices, edges: _newEdges};
+        return this.visDataSetByAsn([...groups])
     }
 
-    visDataSetByAsn(AsnArray: number[]): { vertices: Vertex[], edges: Edge[] } {
-        const allEdges: Edge[] = this.edges;
-        const allVertices = this.vertices
-
-        let newVerticeIds = new Set<string>()
-        let newVertices: Vertex[] = []
-        let newEdges: Edge[] = []
-        if (AsnArray.length <= 0) {
-            return {vertices: newVertices, edges: newEdges}
+    visDataSetByAsn(selectedGroups: number[] | string[]): { vertices: Vertex[], edges: Edge[] } {
+        const nodes = this.vertices;
+        const edges = this.edges;
+        if (selectedGroups.length === 0) {
+            return {
+                vertices: nodes,
+                edges: edges
+            };
         }
+        const _selectedGroups = selectedGroups.map(item => item.toString())
+        const nodeMap = new Map<string, Vertex>();
+        nodes.forEach(node => nodeMap.set(node.id, node));
+        const adjacencyList = new Map<string, Set<string>>();
+        nodes.forEach(node => adjacencyList.set(node.id, new Set()));
+        edges.forEach(edge => {
+            adjacencyList.get(edge.from)?.add(edge.to);
+            adjacencyList.get(edge.to)?.add(edge.from);
+        });
 
-        const {_nets, _nodes} = this.getter()
-        const transitsWithWeight = this.dealTransitWeight(allVertices)
-        for (const transit of transitsWithWeight) {
-            const obj = transit.object as EmulatorNode
-            if (!AsnArray.includes(obj.meta.emulatorInfo.asn)) {
-                break
+        const selectedGroupNodeIds = new Set<string>();
+        nodes.forEach(node => {
+            if (_selectedGroups.includes(node.group as string)) {
+                selectedGroupNodeIds.add(node.id);
             }
+        });
+        const nodesToKeep = new Set<string>();
+        const edgesToKeep = new Set<string>();
+        selectedGroupNodeIds.forEach(nodeId => {
+            nodesToKeep.add(nodeId);
+            const neighbors = adjacencyList.get(nodeId) || new Set();
+            neighbors.forEach(neighborId => {
+                nodesToKeep.add(neighborId);
+                const edgeKey = [nodeId, neighborId].sort().join('-');
+                edgesToKeep.add(edgeKey);
+            });
+        });
 
-            for (let i = allEdges.length - 1; i >= 0; i--) {
-                const edge = allEdges[i] as Edge;
-                if (edge.from !== transit.id) {
-                    continue
-                }
-                const from = _nodes.find(item => item.Id === edge!.from) as EmulatorNode
-                const to = _nets.find(item => item.Id === edge!.to) as EmulatorNetwork
+        const starNodesInKeep = Array.from(nodesToKeep).filter(id => {
+            const node = nodeMap.get(id);
+            return node?.shape === 'star';
+        });
 
-                let nodeInfo = from.meta.emulatorInfo;
-                let netInfo = to.meta.emulatorInfo;
-                let nodeVertex: Vertex = {
-                    id: from.Id,
-                    label: nodeInfo.displayname ?? `${nodeInfo.asn}/${nodeInfo.name}`,
-                    type: 'node',
-                    shape: ['Router', 'BorderRouter'].includes(nodeInfo.role) ? 'dot' : 'hexagon',
-                    object: from,
-                    collapsed: false,
-                    custom: nodeInfo.custom
-                };
-                if (!newVerticeIds.has(from.Id)) {
-                    newVerticeIds.add(from.Id)
-                    newVertices.push(nodeVertex)
-                    nodeVertex.group = nodeInfo.asn.toString();
+        starNodesInKeep.forEach(starId => {
+            const neighbors = adjacencyList.get(starId) || new Set();
+
+            neighbors.forEach(neighborId => {
+                const neighborNode = nodeMap.get(neighborId);
+                if (neighborNode?.shape === 'dot') {
+                    nodesToKeep.add(neighborId);
+                    const edgeKey = [starId, neighborId].sort().join('-');
+                    edgesToKeep.add(edgeKey);
                 }
-                const _netVertex = allVertices.find(item => item.id === to.Id)
-                let netVertex: Vertex = {
-                    id: to!.Id,
-                    label: netInfo.displayname ?? `${netInfo.scope}/${netInfo.name}`,
-                    type: 'network',
-                    shape: netInfo.type == 'global' ? 'star' : 'diamond',
-                    object: to!,
-                    collapsed: _netVertex!.collapsed,
-                    borderWidth: _netVertex!.borderWidth
-                };
-                if (!newVerticeIds.has(to!.Id)) {
-                    if (netInfo.type == 'local') {
-                        netVertex.group = netInfo.scope;
+            });
+        });
+
+        selectedGroupNodeIds.forEach(nodeId1 => {
+            selectedGroupNodeIds.forEach(nodeId2 => {
+                if (nodeId1 < nodeId2) {
+                    const edgeKey = [nodeId1, nodeId2].sort().join('-');
+                    if (adjacencyList.get(nodeId1)?.has(nodeId2)) {
+                        edgesToKeep.add(edgeKey);
                     }
-                    newVerticeIds.add(to!.Id)
-                    newVertices.push(netVertex)
                 }
-                newEdges.push(edge)
-                allEdges.splice(i, 1);
-            }
-        }
+            });
+        });
 
-        const _newEdges = this.connectExistingTopology(allVertices, allEdges, newVertices, newEdges)
-        newVertices.push(...allVertices.filter(item => {
-            if (item.shape !== 'star') {
-                return false
-            } else {
-                return !newVertices.find(n => n.id === item.id);
-            }
-        }))
+        const filteredNodes: Vertex[] = nodes.filter((node: Vertex) => nodesToKeep.has(node.id));
+        const filteredEdges: Edge[] = [];
+        const addedEdges = new Set<string>();
 
-        return {vertices: newVertices, edges: _newEdges};
-    }
+        edges.forEach(edge => {
+            const edgeKey = [edge.from, edge.to].sort().join('-');
 
-    dealTransitWeight(dataList: Vertex[]) {
-        const groupCount: { [key: string]: number } = {};
-        const dotItems: Vertex[] = [];
-
-        dataList.forEach(item => {
-            if (item.shape === 'dot') {
-                dotItems.push(item);
-                groupCount[item.group as string] = (groupCount[item.group as string] || 0) + 1;
+            if (edgesToKeep.has(edgeKey) && !addedEdges.has(edgeKey)) {
+                const newEdge = {...edge};
+                filteredEdges.push(newEdge);
+                addedEdges.add(edgeKey);
             }
         });
 
-        return dotItems
-            .map(item => ({...item, weight: groupCount[item.group as string]}))
-            .sort((a, b) => {
-                if (b.weight !== a.weight) {
-                    return b.weight! - a.weight!;
-                }
-                return a.group!.localeCompare(b.group as string);
-            });
+        return {
+            vertices: filteredNodes,
+            edges: filteredEdges,
+        };
     }
 }

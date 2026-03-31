@@ -58,16 +58,26 @@ export const defaultRouters: RouteRecord[] = [
                     componentName: 'Map',
                 },
             },
-            // {
-            //     path: '/ixMap',
-            //     component: () => import('@/view/map/ixMap/ixMap.vue'),
-            //     name: 'ixMap',
-            //     meta: {
-            //         title: "IXMap",
-            //         icon: 'HomeFilled',
-            //         componentName: 'IXMap',
-            //     },
-            // },
+            {
+                path: '/uploadMap',
+                component: () => import('@/view/map/uploadMap/uploadMap.vue'),
+                name: 'uploadMap',
+                meta: {
+                    title: "UploadMap",
+                    icon: 'HomeFilled',
+                    componentName: 'UploadMap',
+                },
+            },
+            {
+                path: '/ixMap',
+                component: () => import('@/view/map/ixMap/ixMap.vue'),
+                name: 'ixMap',
+                meta: {
+                    title: "IXMap",
+                    icon: 'HomeFilled',
+                    componentName: 'IXMap',
+                },
+            },
             {
                 path: '/transitMap',
                 component: () => import('@/view/map/transitMap/transitMap.vue'),
@@ -75,9 +85,19 @@ export const defaultRouters: RouteRecord[] = [
                 meta: {
                     title: "TransitMap",
                     icon: 'HomeFilled',
-                    componentName: 'transitMap',
+                    componentName: 'TransitMap',
                 },
             },
+            // {
+            //     path: '/testMap',
+            //     component: () => import('@/view/map/test/testMap.vue'),
+            //     name: 'testMap',
+            //     meta: {
+            //         title: "testMap",
+            //         icon: 'HomeFilled',
+            //         componentName: 'testMap',
+            //     },
+            // },
         ]
     },
     {

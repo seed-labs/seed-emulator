@@ -39,7 +39,7 @@ sections:
             content: "执行 ./yesterday_once_more/02_morris_worm/worm/first_attack.py 发起攻击"
         commands:
           - action: host_exec
-            cmd: "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm && $condaPath run -n $envName python first_attack.py"
+            cmd: "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm && /usr/bin/python3 first_attack.py"
 
   - headerTitle: "蠕虫控制"
     steps:

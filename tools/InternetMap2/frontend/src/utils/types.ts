@@ -72,3 +72,8 @@ export interface Response {
     ok: boolean,
     result?: any
 }
+
+export interface VisData {
+    nodes: EmulatorNode[],
+    nets: EmulatorNetwork[]
+}

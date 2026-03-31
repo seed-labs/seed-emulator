@@ -47,7 +47,7 @@ export const config = [
         "cmdKwargs": [
           {
             "action": "host_exec",
-            "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm && $condaPath run -n $envName python first_attack.py"
+            "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm && /usr/bin/python3 first_attack.py"
           }
         ]
       }

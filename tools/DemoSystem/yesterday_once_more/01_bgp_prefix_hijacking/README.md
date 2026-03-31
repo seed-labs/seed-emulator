@@ -20,7 +20,9 @@ DOCKER_BUILDKIT=0 docker compose build
 docker compose up
 ```
 
-3. Start the Jupyter notebook server (see `Jupyter/README.md`) and follow the instructions in the Jupyter notebook `Jupyter/bgp_attack_cn.ipynb` (Chinese version) or `Jupyter/bgp_attack.ipynb` (English version) to replay the attack.
+3. Operate on the `DemoSystem` webpage.
+    
+    After the shooting range is successfully activated, select to enter the `Map` page and then proceed with the subsequent operations.
 
 
 ### Stop Replaying the attack
