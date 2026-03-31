@@ -51,12 +51,13 @@ def canonicalize_prefix(prefix):
 def normalize_state(raw_state):
     state = {
         "enabled": bool(raw_state.get("enabled", False)),
+        "allowed_prefixes": [],
         "suppressed_prefixes": [],
         "routeid_prefixes": [],
         "invalid_prefixes": [],
     }
 
-    for key in ("suppressed_prefixes", "routeid_prefixes", "invalid_prefixes"):
+    for key in ("allowed_prefixes", "suppressed_prefixes", "routeid_prefixes", "invalid_prefixes"):
         prefixes = raw_state.get(key, [])
         if not isinstance(prefixes, list):
             raise ValueError(f"{key} must be a list")
@@ -92,6 +93,18 @@ def render_policy_conf(state):
         [
             "}",
             "",
+            "function rost_export_is_allowed()",
+            "{",
+        ]
+    )
+
+    if state["allowed_prefixes"]:
+        lines.append(render_prefix_match(state["allowed_prefixes"], 4))
+    lines.extend(
+        [
+            "    return false;",
+            "}",
+            "",
             "function rost_apply_export_attributes()",
             "{",
         ]
@@ -124,6 +137,63 @@ def render_policy_conf(state):
     return "\n".join(lines)
 
 
+def list_bgp_protocols():
+    ok, detail = run_command(["birdc", "show", "protocols"])
+    if not ok:
+        return False, detail
+
+    protocols = []
+    for raw_line in detail.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        parts = line.split()
+        if len(parts) >= 2 and parts[1] == "BGP":
+            protocols.append(parts[0])
+
+    return True, protocols
+
+
+def refresh_bgp_protocols():
+    ok, protocols = list_bgp_protocols()
+    if not ok:
+        return False, {
+            "protocols": [],
+            "detail": protocols,
+            "results": [],
+        }
+
+    results = []
+    for protocol in protocols:
+        disable_ok, disable_detail = run_command(["birdc", "disable", protocol])
+        enable_ok, enable_detail = run_command(["birdc", "enable", protocol])
+        results.append(
+            {
+                "protocol": protocol,
+                "disable": {
+                    "ok": disable_ok,
+                    "detail": disable_detail,
+                },
+                "enable": {
+                    "ok": enable_ok,
+                    "detail": enable_detail,
+                },
+            }
+        )
+
+    refresh_ok = all(
+        entry["disable"]["ok"] and entry["enable"]["ok"]
+        for entry in results
+    )
+    detail = "refreshed {} BGP protocol(s)".format(len(protocols))
+    return refresh_ok, {
+        "protocols": protocols,
+        "detail": detail,
+        "results": results,
+    }
+
+
 class PolicyManager:
     def __init__(self, state_path=ROST_POLICY_STATE_PATH, policy_path=ROST_POLICY_PATH):
         self._state_path = Path(state_path)
@@ -137,7 +207,7 @@ class PolicyManager:
         with self._lock:
             return json.loads(json.dumps(self._state))
 
-    def apply(self, mutator=None):
+    def apply(self, mutator=None, refresh_bgp=False):
         with self._lock:
             if mutator is not None:
                 mutator(self._state)
@@ -145,15 +215,26 @@ class PolicyManager:
             self._write_state()
             self._write_policy_conf()
             ok, detail = run_command(["birdc", "configure"])
+            refresh_ok = True
+            refresh_payload = None
+            if ok and refresh_bgp:
+                refresh_ok, refresh_payload = refresh_bgp_protocols()
+
             payload = {
-                "status": "ok" if ok else "error",
+                "status": "ok" if ok and refresh_ok else "error",
                 "bird_configure": {
                     "ok": ok,
                     "detail": detail,
                 },
                 "state": json.loads(json.dumps(self._state)),
             }
-            status = HTTPStatus.OK if ok else HTTPStatus.INTERNAL_SERVER_ERROR
+            if refresh_payload is not None:
+                payload["bgp_refresh"] = {
+                    "ok": refresh_ok,
+                    **refresh_payload,
+                }
+
+            status = HTTPStatus.OK if ok and refresh_ok else HTTPStatus.INTERNAL_SERVER_ERROR
             return status, payload
 
     def _load_state(self):
@@ -206,6 +287,8 @@ class RouterHelperHandler(BaseHTTPRequestHandler):
         routes = {
             "/rost/enable": self._post_enable,
             "/rost/disable": self._post_disable,
+            "/rost/allow": self._post_allow,
+            "/rost/disallow": self._post_disallow,
             "/rost/suppress": self._post_suppress,
             "/rost/unsuppress": self._post_unsuppress,
             "/rost/routeid": self._post_routeid,
@@ -242,16 +325,32 @@ class RouterHelperHandler(BaseHTTPRequestHandler):
             lambda state: state.__setitem__("enabled", False)
         )
 
+    def _post_allow(self, payload):
+        prefix = self._require_prefix(payload)
+        return self.server.policy_manager.apply(
+            lambda state: self._add_prefix(state["allowed_prefixes"], prefix),
+            refresh_bgp=True,
+        )
+
+    def _post_disallow(self, payload):
+        prefix = self._require_prefix(payload)
+        return self.server.policy_manager.apply(
+            lambda state: self._remove_prefix(state["allowed_prefixes"], prefix),
+            refresh_bgp=True,
+        )
+
     def _post_suppress(self, payload):
         prefix = self._require_prefix(payload)
         return self.server.policy_manager.apply(
-            lambda state: self._add_prefix(state["suppressed_prefixes"], prefix)
+            lambda state: self._add_prefix(state["suppressed_prefixes"], prefix),
+            refresh_bgp=True,
         )
 
     def _post_unsuppress(self, payload):
         prefix = self._require_prefix(payload)
         return self.server.policy_manager.apply(
-            lambda state: self._remove_prefix(state["suppressed_prefixes"], prefix)
+            lambda state: self._remove_prefix(state["suppressed_prefixes"], prefix),
+            refresh_bgp=True,
         )
 
     def _post_routeid(self, payload):
@@ -269,13 +368,15 @@ class RouterHelperHandler(BaseHTTPRequestHandler):
     def _post_invalidate(self, payload):
         prefix = self._require_prefix(payload)
         return self.server.policy_manager.apply(
-            lambda state: self._add_prefix(state["invalid_prefixes"], prefix)
+            lambda state: self._add_prefix(state["invalid_prefixes"], prefix),
+            refresh_bgp=True,
         )
 
     def _post_clear_invalid(self, payload):
         prefix = self._require_prefix(payload)
         return self.server.policy_manager.apply(
-            lambda state: self._remove_prefix(state["invalid_prefixes"], prefix)
+            lambda state: self._remove_prefix(state["invalid_prefixes"], prefix),
+            refresh_bgp=True,
         )
 
     def _post_bird_configure(self, _payload):

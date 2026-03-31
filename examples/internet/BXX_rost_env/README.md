@@ -1,242 +1,444 @@
 # RoST-Style Environment
 
-This example is a first draft of a RoST-style SEED environment. It is meant to
-provide a clean Internet emulation skeleton that can later host RoST-related
-components, but it is not a full implementation of the RoST algorithm.
+This example is a RoST-style SEED environment prototype. It does not implement
+the full RoST algorithm or cryptographic protocol. Its purpose is to show that
+SEED can represent the environment structure and control mechanisms needed for
+RoST-style experiments:
 
-The scenario keeps the standard SEED example structure: it builds a small demo
-Internet, assigns experiment roles, deploys component hosts, and compiles the
-result into Docker artifacts.
+- a repository reachable over HTTP
+- a host-side agent in adopting ASes
+- a router-local helper that rewrites dynamic BIRD policy and runs `birdc configure`
+- static suppressor-AS behavior injected at render time for selected prefixes
 
-The environment is intended to include:
+The example keeps the normal SEED workflow. `bird.conf` is rendered by SEED and
+then patched in `rost_env.py`. Adopting ASes get dynamic policy through
+`/etc/bird/rost_policy.conf`. Suppressor ASes do not run an agent or helper and
+use only static render-time export withholding.
 
-- normal ASes
-- adopting ASes that will later run agent software
-- one repository AS that will later host the repository service
-- one suppressor AS that represents a routing-policy role in the network
+## What This Example Demonstrates
 
-In this model:
+- A repository / agent / router-helper / BIRD split inside a SEED Internet example.
+- Dynamic policy control for adopting ASes without rewriting `bird.conf` at runtime.
+- A static suppressor routing role that withholds selected prefixes on export.
+- Prefix-specific experiments using simple BIRD policy changes instead of protocol changes.
 
-- the agent is a software component that runs on hosts in adopting ASes
-- the repository is a software component that runs on a host in the repository AS
-- the suppressor is not an application component; it is expressed through
-  routing and BGP policy behavior in a central AS
+This example demonstrates the environment and control path. It does not claim
+to implement full RoST validation, protocol signaling, or protocol-level
+withdraw handling.
 
-The main functions in `rost_env.py` are:
+## Topology And Roles
 
-- `build_base_topology()`: creates a small connected demo Internet of about 10
-  ASes, including several transit-like ASes and several edge/stub-like ASes.
-- `assign_rost_roles()`: assigns repo, suppressor, and adopting AS roles
-  independently from topology construction.
-- `deploy_rost_components()`: adds RoST component hosts. Adopting ASes still
-  receive `rost-agent` hosts prepared with a manual `agent.py` script, while
-  the repository AS receives a `rost-repo` host that runs a minimal mock
-  `repo_server.py` service. Each adopting AS also installs a minimal
-  `router_helper.py` onto its anchor router so the external agent can query
-  router state over HTTP instead of running `birdc` locally. Phase 1 keeps this
-  topology-neutral by reusing an existing AS-local network that is already
-  attached to the anchor router, rather than creating a new router-facing
-  network.
-- `apply_special_policies()`: reserved hook for future suppressor-specific
-  BGP and routing-policy logic. In the current code, this function installs a
-  suppressor-specific SEED hook that targets the `Ebgp` layer and marks the
-  suppressor routers as the future injection point for BIRD/BGP policy changes.
-- `main()`: runs the full build flow and compiles the emulation in the normal
-  SEED style.
+The example builds a small multi-AS Internet with transit-like and stub ASes.
 
-This draft is intentionally conservative. It aims to be a realistic SEED
-scenario skeleton that can be extended later with actual agent code, richer
-repository behavior, and special routing policies.
+Default role settings in [rost_env.py](/home/seed/seed-emulator/examples/internet/BXX_rost_env/rost_env.py):
 
-## Architecture (Phase 1)
+- Repository AS: `154`
+- Suppressor ASes: `3`
+- Suppressor target prefixes: `10.154.0.0/24`
+- Current patched suppressor router: AS3 anchor router `r100`
 
-Phase 1 models the RoST component split conservatively:
+Adopting ASes are selected deterministically from the configured seed and
+adoption rate. With the current defaults, the adopting ASes are:
 
-- the agent runs on a normal host container and remains external to the router
-- the router continues to run BIRD inside the router container
-- a small `router_helper.py` service runs inside the router container
-- the agent communicates with the router through `router_helper.py` over HTTP
-- `router_helper.py` wraps `birdc` and exposes only a small read-only API
-- the agent also communicates with the repository over HTTP
+- `2`
+- `4`
+- `150`
+- `152`
+- `153`
 
-In other words, the agent does not execute `birdc` locally. Router-local BIRD
-state is accessed through the helper, which is closer to the RoST paper's
-"external agent talking to router via CLI/API" model.
+In this example:
 
-### Phase 1 Diagram
+- adopting ASes have a host-side `rost-agent` and a router-local `router_helper.py`
+- suppressor ASes have no agent and no helper runtime control
+- the repository AS runs a minimal HTTP service on a normal host
+
+## Components
+
+### Repository
+
+Implemented in `repo_server.py`.
+
+- Runs on host `rost-repo`
+- Default port: `18080`
+- Endpoints:
+  - `GET /healthz`
+  - `POST /`
+
+The repository is intentionally minimal. It is only used to demonstrate that
+the agent can reach an external service in the emulated network.
+
+### Agent
+
+Implemented in `agent.py`.
+
+- Runs on host `rost-agent` inside each adopting AS
+- Talks to the repository over HTTP
+- Talks to the router helper over HTTP
+- Supports both capability checks and direct control commands
+
+Control commands already implemented in the agent:
+
+- `--enable`
+- `--disable`
+- `--allow PREFIX`
+- `--disallow PREFIX`
+- `--suppress PREFIX`
+- `--unsuppress PREFIX`
+- `--routeid PREFIX`
+- `--unrouteid PREFIX`
+- `--invalidate PREFIX`
+- `--clear-invalid PREFIX`
+- `--state`
+
+### Router Helper
+
+Implemented in `router_helper.py`.
+
+- Runs inside each adopting anchor router
+- Default port: `18081`
+- Rewrites `/etc/bird/rost_policy.conf`
+- Stores JSON state in `/etc/bird/rost_policy_state.json`
+- Runs `birdc configure` after each policy change
+- Automatically refreshes BGP protocols after import/export policy changes that
+  affect routing decisions
+
+Helper `GET` endpoints:
+
+- `/healthz`
+- `/rost/state`
+- `/bird/protocols`
+- `/bird/route`
+
+Helper `POST` endpoints:
+
+- `/rost/enable`
+- `/rost/disable`
+- `/rost/allow`
+- `/rost/disallow`
+- `/rost/suppress`
+- `/rost/unsuppress`
+- `/rost/routeid`
+- `/rost/unrouteid`
+- `/rost/invalidate`
+- `/rost/clear-invalid`
+- `/bird/configure`
+
+### BIRD Policy Split
+
+The policy split is the core of the example:
+
+- `/etc/bird/bird.conf`
+  - rendered by SEED
+  - patched once by `rost_env.py`
+  - remains static at runtime
+
+- `/etc/bird/rost_policy.conf`
+  - used only on adopting AS anchor routers
+  - rewritten by `router_helper.py`
+  - loaded by BIRD through an `include`
+
+This keeps adopting-AS control policy-based and helper-driven without changing
+the SEED BGP implementation itself.
+
+## How It Works
+
+### Adopting ASes
+
+For adopting anchor routers, `rost_env.py` patches the rendered eBGP policy and
+adds an include for `/etc/bird/rost_policy.conf`. The helper then changes only
+the policy file and asks BIRD to reload it with `birdc configure`.
+
+For policy mutations that change import/export decisions (`allow`, `disallow`,
+`suppress`, `unsuppress`, `invalidate`, `clear-invalid`), the helper then
+automatically refreshes BGP protocols by cycling the router's BGP sessions with
+`birdc disable <protocol>` and `birdc enable <protocol>`.
+
+The helper renders the following functions into `rost_policy.conf`:
+
+- `rost_is_enabled()`
+- `rost_export_is_allowed()`
+- `rost_export_is_suppressed()`
+- `rost_apply_export_attributes()`
+- `rost_import_is_invalid()`
+
+At a high level, export handling on adopting routers is:
 
 ```text
-+------------+      HTTP       +-----------+      HTTP       +-----------------+      local CLI      +------+
-| Repository | <-------------> |   Agent   | <-------------> |  Router Helper  | <-----------------> | BIRD |
-| repo_host  |                 | rost-agent|                 | router container |                     | birdc|
-+------------+                 +-----------+                 +-----------------+                     +------+
+if !(original_seed_export_condition) then reject;
+if !rost_is_enabled() then accept;
+if !rost_export_is_allowed() then reject;
+if rost_export_is_suppressed() then reject;
+rost_apply_export_attributes();
+accept;
 ```
 
-## Repository Service
+Import handling adds a prefix-specific invalidation check before the original
+SEED import logic.
 
-The repository host now runs an intentionally minimal mock HTTP service on port
-`18080`, avoiding SEED-reserved tooling ports such as `8080`. The service is
-implemented in `repo_server.py` and is copied onto the `rost-repo` host during
-emulation rendering.
+### Suppressor ASes
 
-The repository is only a mock receiver/responder. It remains reachable over the
-network so future agent code can contact it, but it does not implement real
-repository logic yet.
+Suppressor behavior is static and render-time only.
 
-Available endpoints:
+- configured by `SUPPRESSOR_ASES`
+- controlled by `SUPPRESSOR_TARGET_PREFIXES`
+- injected directly into the rendered `bird.conf`
+- no agent
+- no helper
+- no runtime daemon
 
-- `POST /`: accepts a simple message body and returns `{"status": "received"}`
-- `/healthz`: returns a minimal health response
+On the patched suppressor router, the export wrapper becomes:
 
-## Agent Script
+```text
+if !(original_seed_export_condition) then reject;
+if net ~ [ suppressor target prefixes ] then reject;
+accept;
+```
 
-Adopting ASes now receive a one-shot `agent.py` script on their `rost-agent`
-host. This script is only a capability demonstration:
+This means the suppressor still learns the route locally, but refuses to export
+the selected prefixes across the patched eBGP edge.
 
-- it does not run as a daemon
-- it does not perform RoST validation or decision logic
-- it does not control routers yet
+## Build And Run
 
-When run manually, the agent:
-
-- prints basic startup information
-- calls `GET /healthz` on the repository
-- sends a small message to `POST /`
-- calls the local AS router-helper over HTTP
-- queries `GET /bird/protocols` and `GET /bird/route` through that helper
-- prints a final placeholder note showing where future router-control logic
-  would be added
-
-## Router Helper
-
-Each adopting AS installs a minimal `router_helper.py` on its anchor router.
-The helper listens on port `18081` and wraps a small allowlist of BIRD queries:
-
-- `GET /healthz`
-- `GET /bird/protocols`
-- `GET /bird/route`
-
-This keeps the agent external to the router while still letting it inspect
-router-local BIRD state using a network API, which is closer to the RoST paper
-model than running `birdc` inside the agent container.
-
-Neither the repository nor the agent implements the RoST algorithm in this
-example. They only demonstrate host-level placement, network reachability, and
-basic inspection flow inside the SEED environment.
-
-## Manual Validation
-
-After compiling and starting the emulation, the current Phase 1 environment can
-be validated manually with the following checks.
-
-### 1. Test The Repository From A Reachable Host
-
-From a host that can reach the repository:
+From this example directory:
 
 ```bash
-curl http://<repo-host-ip>:18080/healthz
-curl -X POST http://<repo-host-ip>:18080/ -H 'Content-Type: application/json' -d '{"message":"hello"}'
+cd examples/internet/BXX_rost_env
+python3 rost_env.py
+cd output
+docker compose up -d
 ```
 
-Expected behavior:
+If your environment uses the legacy compose command, use `docker-compose up -d`
+instead.
 
-- `/healthz` returns a small JSON health response
-- `POST /` returns `{"status": "received"}`
-
-### 2. Test The Router Helper Locally On The Router
-
-Open an adopting AS anchor router container and run:
+To stop the environment:
 
 ```bash
-curl http://127.0.0.1:18081/healthz
-curl http://127.0.0.1:18081/bird/protocols
-curl http://127.0.0.1:18081/bird/route
+cd examples/internet/BXX_rost_env/output
+docker compose down
 ```
 
-This verifies that:
+## Quick Walkthrough
 
-- `router_helper.py` started correctly inside the router container
-- the helper can invoke `birdc`
-- BIRD state is readable through the helper API
+The commands below follow the current code and the tested demo flow directly.
+They use one adopting AS agent container and one suppressor router.
 
-### 3. Test The Router Helper From The Agent Host
+### 1. Find An Adopting Agent Container
 
-Open an adopting AS `rost-agent` host and determine the helper IP:
+After the environment is up:
+
+```bash
+cd examples/internet/BXX_rost_env/output
+docker ps --format '{{.Names}}' | grep rost-agent
+```
+
+For a simple walkthrough, use the AS150 agent if it is present. With the
+current deterministic role selection, AS150 is an adopting AS.
+
+Open a shell in the agent container:
+
+```bash
+docker exec -it as150h-rost-agent-10.150.0.72 bash
+```
+
+### 2. Discover The Router Helper IP
+
+Inside the adopting agent container:
 
 ```bash
 ip route show default
 ```
 
-Use the default gateway IP as the router-helper IP. In this example, the helper
-runs on the colocated anchor router that serves as the `rost-agent` host's
-default gateway on the reused AS-local network.
+Use the default gateway as `<router-ip>`. That is the router-helper IP for this
+host.
 
-Then test the helper over the network:
+### 3. Check The Helper
 
-```bash
-curl http://<default-gateway-ip>:18081/healthz
-curl http://<default-gateway-ip>:18081/bird/protocols
-curl http://<default-gateway-ip>:18081/bird/route
-```
-
-This verifies the external-agent model directly: the agent-side network can
-reach the router-side helper without entering the router container.
-
-### 4. Run The Agent End-To-End
-
-From an adopting AS `rost-agent` host, run:
+Inside the adopting agent container:
 
 ```bash
-/root/agent.py --repo-host <repo-host-ip> --repo-port 18080 --router-host <default-gateway-ip> --router-port 18081
+curl -s http://<router-ip>:18081/healthz
+curl -s http://<router-ip>:18081/rost/state | python3 -m json.tool
+curl -s http://<router-ip>:18081/bird/protocols | python3 -m json.tool
+curl -s http://<router-ip>:18081/bird/route
 ```
 
-Where:
+Expected:
 
-- `<repo-host-ip>` is the IP address of the `rost-repo` host inside the
-  emulated network
-- `<default-gateway-ip>` is the router-helper IP reachable from the agent host
+- `/healthz` returns `{"status": "ok"}`
+- `/rost/state` returns JSON policy state
+- `/bird/protocols` returns BIRD protocol output wrapped in JSON
+- `/bird/route` returns current route output wrapped in JSON
 
-The agent should:
+### 4. Drive Policy Through The Agent
 
-- report repository health-check success/failure
-- report repository `POST /` success/failure
-- report router-helper health success/failure
-- report `birdc show protocols` output through `/bird/protocols`
-- report `birdc show route` output through `/bird/route`
+Still inside the adopting agent container:
 
-## Project Phases
+```bash
+python3 /root/agent.py --router-ip <router-ip> --enable
+python3 /root/agent.py --router-ip <router-ip> --allow 10.154.0.0/24
+python3 /root/agent.py --router-ip <router-ip> --routeid 10.154.0.0/24
+python3 /root/agent.py --router-ip <router-ip> --invalidate 10.154.0.0/24
+python3 /root/agent.py --router-ip <router-ip> --clear-invalid 10.154.0.0/24
+python3 /root/agent.py --router-ip <router-ip> --state
+```
 
-- Phase 1: Read-only router visibility via helper. Completed. The agent is
-  external to the router, the helper runs inside the router container, and the
-  helper exposes read-only BIRD visibility over HTTP.
-- Phase 2: Router control via helper. Planned. The helper will be extended to
-  support controlled router-policy changes, such as policy updates and
-  attribute modification, while keeping the agent external.
-- Phase 3: Suppressor AS behavior via routing policy. Planned. The suppressor
-  remains a routing-policy role implemented on routers, not an agent/helper
-  application deployment.
+These commands exercise the existing helper-backed control path exactly as
+implemented.
 
-## Future Suppressor Experiments
+### 5. Inspect Router State
 
-Future revisions can use this example to verify suppressor behavior at the
-network layer. For example:
+Open a shell on the corresponding router, for example:
 
-- inspect route propagation across the AS graph before and after policy changes
-- observe which ASes continue to receive or stop receiving certain routes
-- study how withdrawal-related behavior changes when suppressor policies are
-  enabled
-- compare ordinary AS behavior with suppressor-AS behavior using router state
-  and BGP visibility tools
+```bash
+docker exec -it as150r-router0 bash
+```
 
-## Current Assumptions And Limitations
+Then inspect the generated policy and BIRD state:
 
-- The suppressor hook is installed and grounded in SEED's hook model, but it
-  does not yet implement real withdrawal suppression.
-- `agent.py` is installed on adopting AS `rost-agent` hosts for manual
-  execution only; this example does not yet orchestrate automatic startup.
-- `router_helper.py` is installed only on the anchor router of each adopting AS
-  in this first phase; it is not yet a generic multi-router control plane.
-- For transit-like adopting ASes, Phase 1 reuses one existing internal
-  router-connected network for component reachability. This avoids changing the
-  original Internet topology, but it is still only a temporary management-plane
-  scaffold.
+```bash
+cat /etc/bird/rost_policy.conf
+birdc show protocols
+birdc show route
+birdc show route 10.154.0.0/24
+birdc show route 10.154.0.0/24 all
+```
+
+Expected:
+
+- `rost_policy.conf` reflects the helper-managed policy state
+- `birdc show protocols` shows the normal router sessions
+- route visibility changes follow the helper policy state
+- import/export policy mutations trigger automatic router reconvergence via the
+  helper
+
+## Demo / Walkthrough
+
+This is a concise demo flow that can be followed directly.
+
+### Demo Script
+
+1. Build and start the environment.
+2. Enter an adopting agent container, preferably `as150h-rost-agent-10.150.0.72`.
+3. Run `ip route show default` and record the default gateway as `<router-ip>`.
+4. Verify helper reachability with:
+   `curl -s http://<router-ip>:18081/healthz`
+5. Inspect current helper and route state with:
+   `curl -s http://<router-ip>:18081/rost/state | python3 -m json.tool`
+   `curl -s http://<router-ip>:18081/bird/protocols | python3 -m json.tool`
+   `curl -s http://<router-ip>:18081/bird/route`
+6. Enable RoST behavior on the adopting router:
+   `python3 /root/agent.py --router-ip <router-ip> --enable`
+7. Allow the repository prefix:
+   `python3 /root/agent.py --router-ip <router-ip> --allow 10.154.0.0/24`
+8. Attach the RouteID-style marker:
+   `python3 /root/agent.py --router-ip <router-ip> --routeid 10.154.0.0/24`
+9. Invalidate that prefix on import:
+   `python3 /root/agent.py --router-ip <router-ip> --invalidate 10.154.0.0/24`
+10. Inspect the router with `birdc show route 10.154.0.0/24`.
+11. Clear invalid state:
+    `python3 /root/agent.py --router-ip <router-ip> --clear-invalid 10.154.0.0/24`
+12. Re-check state with:
+    `python3 /root/agent.py --router-ip <router-ip> --state`
+13. Verify the static suppressor on `as3r-r100`.
+
+### Repository Check
+
+From an adopting agent container, you can also exercise the repository and
+helper capability check mode directly:
+
+```bash
+python3 /root/agent.py \
+  --repo-host <repo-ip> \
+  --repo-port 18080 \
+  --router-host <router-ip> \
+  --router-port 18081
+```
+
+This performs:
+
+- repository health check
+- repository `POST /`
+- helper health check
+- `birdc show protocols` via the helper
+- `birdc show route` via the helper
+
+### Import Invalidation Note
+
+Import invalidation changes the selected route view, and the helper now
+automatically triggers BGP protocol refresh for the affected policy mutations.
+
+In the tested demo, the route-table effect could also be made visible manually
+with:
+
+```bash
+birdc disable u_as2
+birdc enable u_as2
+sleep 3
+birdc show route 10.154.0.0/24
+```
+
+This manual step is usually no longer required for the supported helper
+mutations, but it remains useful if you want to force another re-import or make
+the effect easier to observe. The exact session name depends on the router. On
+`as150r-router0`, the upstream session name is `u_as2`.
+
+### Suppressor Verification
+
+The default suppressor is AS3, and the patched suppressor anchor router is
+`as3r-r100`.
+
+Open a shell on that router:
+
+```bash
+docker exec -it as3r-r100 bash
+```
+
+Then run:
+
+```bash
+grep -n "rost_static_suppressor_match" /etc/bird/bird.conf
+grep -n "10.154.0.0/24" /etc/bird/bird.conf
+birdc show route 10.154.0.0/24
+```
+
+Expected:
+
+- the suppressor function is present in `bird.conf`
+- the selected target prefix appears in the suppressor policy
+- the suppressor still learns the route locally
+
+The suppressor behavior here is export withholding, not local route removal.
+The route can still exist locally on the suppressor while being statically
+rejected for export to external neighbors on the patched edge.
+
+## Key Files
+
+- [rost_env.py](/home/seed/seed-emulator/examples/internet/BXX_rost_env/rost_env.py)
+  - builds the topology
+  - assigns roles
+  - deploys repository, agent, and helper files
+  - patches adopting and suppressor router BIRD config
+
+- [agent.py](/home/seed/seed-emulator/examples/internet/BXX_rost_env/agent.py)
+  - capability check client
+  - helper control client
+
+- [router_helper.py](/home/seed/seed-emulator/examples/internet/BXX_rost_env/router_helper.py)
+  - helper HTTP server
+  - policy-state manager
+  - `birdc` integration
+
+- [repo_server.py](/home/seed/seed-emulator/examples/internet/BXX_rost_env/repo_server.py)
+  - minimal repository HTTP service
+
+## Notes And Limitations
+
+- This is a RoST-style environment prototype, not a full RoST implementation.
+- The repository is intentionally minimal.
+- Suppressor behavior is static and configured at render time only.
+- Suppressor ASes do not have runtime control via helper or agent.
+- The example does not modify the SEED BGP implementation.
+- The example does not implement protocol-level withdraw handling.
+- The suppressor patch is intentionally narrow and currently targets only the
+  suppressor anchor router selected by the existing helper function.

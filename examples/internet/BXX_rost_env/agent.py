@@ -24,6 +24,8 @@ def parse_args():
     controls = parser.add_mutually_exclusive_group()
     controls.add_argument("--enable", action="store_true")
     controls.add_argument("--disable", action="store_true")
+    controls.add_argument("--allow", metavar="PREFIX")
+    controls.add_argument("--disallow", metavar="PREFIX")
     controls.add_argument("--suppress", metavar="PREFIX")
     controls.add_argument("--unsuppress", metavar="PREFIX")
     controls.add_argument("--routeid", metavar="PREFIX")
@@ -59,6 +61,8 @@ def has_control_command(args):
         [
             args.enable,
             args.disable,
+            args.allow is not None,
+            args.disallow is not None,
             args.suppress is not None,
             args.unsuppress is not None,
             args.routeid is not None,
@@ -131,6 +135,13 @@ def run_control_command(args):
     action_map = [
         (args.enable, "POST", "/rost/enable", None),
         (args.disable, "POST", "/rost/disable", None),
+        (args.allow, "POST", "/rost/allow", {"prefix": args.allow} if args.allow else None),
+        (
+            args.disallow,
+            "POST",
+            "/rost/disallow",
+            {"prefix": args.disallow} if args.disallow else None,
+        ),
         (args.suppress, "POST", "/rost/suppress", {"prefix": args.suppress} if args.suppress else None),
         (
             args.unsuppress,
@@ -221,7 +232,7 @@ def run_capability_check(args):
         except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as exc:
             log_step(name, False, str(exc))
 
-    print("Future placeholder: router-control logic would be added via the router helper.")
+    print("Capability check complete.")
     return 0
 
 

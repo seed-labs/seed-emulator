@@ -8,7 +8,7 @@ import re
 import sys
 
 from seedemu.compiler import Docker, Platform
-from seedemu.core import Emulator, Hook, ScopedRegistry
+from seedemu.core import Emulator, Hook
 from seedemu.layers import Base, Ebgp, Ibgp, Ospf, PeerRelationship, Routing
 from seedemu.utilities import Makers
 
@@ -22,8 +22,11 @@ RANDOM_SEED = 7
 # AS that will later host the repository component.
 REPO_AS = 154
 
-# Central AS reserved for future suppressor-specific routing behavior.
-SUPPRESSOR_AS = 3
+# Transit ASes that should statically withhold selected prefixes on export.
+SUPPRESSOR_ASES = [3]
+
+# Prefixes affected by suppressor export withholding.
+SUPPRESSOR_TARGET_PREFIXES = ["10.154.0.0/24"]
 
 # Minimal repository service settings for the demo repository host.
 REPO_SERVICE_PORT = 18080
@@ -35,39 +38,32 @@ ROST_POLICY_PATH = "/etc/bird/rost_policy.conf"
 
 
 class SuppressorPolicyHook(Hook):
-    """SEED-native hook point for future suppressor-specific BGP policy."""
+    """Patch rendered BIRD config for suppressor anchor routers."""
 
-    def __init__(self, suppressor_asn):
-        self._suppressor_asn = suppressor_asn
+    def __init__(self, suppressor_asns, target_prefixes):
+        self._suppressor_asns = sorted(suppressor_asns)
+        self._target_prefixes = sorted(target_prefixes)
 
     def getName(self):
-        return f"SuppressorPolicyAs{self._suppressor_asn}"
+        return "SuppressorPolicyHook"
 
     def getTargetLayer(self):
-        return "Ebgp"
+        # Run after iBGP has rendered so the full router bird.conf is present.
+        return "Ibgp"
 
     def postrender(self, emulator):
-        # This follows the SEED-native pattern used by
-        # seedemu/components/BgpAttackerComponent.py: modify router/BIRD state
-        # after the Ebgp layer has created the baseline BGP configuration.
-        reg = emulator.getRegistry()
-        scoped = ScopedRegistry(str(self._suppressor_asn), reg)
-        suppressor_routers = scoped.getByType("brdnode")
+        base = emulator.getRegistry().get("seedemu", "layer", "Base")
 
-        for router in suppressor_routers:
-            router.setAttribute("rost_role", "suppressor")
-            router.setAttribute("rost_policy_hook_ready", True)
+        for asn in self._suppressor_asns:
+            as_obj = base.getAutonomousSystem(asn)
+            router = _get_component_anchor_router(as_obj)
+            bird_conf = _get_node_file_content(router, "/etc/bird/bird.conf")
+            patched_conf = _patch_suppressor_bird_conf(bird_conf, self._target_prefixes)
 
-            # Keep this draft behavior-neutral. The hook intentionally does not
-            # change routing yet, but it records the precise place where future
-            # work should inject BIRD filters, tables, or protocol changes.
-            router.appendFile(
-                "/etc/bird/bird.conf",
-                "\n# RoST suppressor hook placeholder\n"
-                "# Future work should add suppressor-specific BGP policy here,\n"
-                "# for example export/import filters or route-processing logic\n"
-                "# on AS{} border routers.\n".format(self._suppressor_asn),
-            )
+            router.setAttribute("rost_role", "suppressor-anchor")
+            router.setAttribute("rost_suppressor_bird_patched", True)
+            router.setAttribute("rost_suppressor_prefixes", list(self._target_prefixes))
+            router.setFile("/etc/bird/bird.conf", patched_conf)
 
 
 class RostBirdPolicyHook(Hook):
@@ -113,6 +109,11 @@ def _build_filter_definition(filter_name, body_lines):
     return f"filter {filter_name} {{\n{indented}\n}}\n"
 
 
+def _build_function_definition(function_name, body_lines):
+    indented = "\n".join(f"    {line}" for line in body_lines)
+    return f"function {function_name}()\n{{\n{indented}\n}}\n"
+
+
 def _build_rost_policy_conf():
     return """# Managed by the RoST router helper.
 # This file carries dynamic RoST state only. The main /etc/bird/bird.conf
@@ -128,6 +129,13 @@ function rost_is_enabled()
 # Export-side suppression predicate. The helper will replace the body with
 # prefix-specific checks such as `if net ~ [ 203.0.113.0/24 ] then return true;`.
 function rost_export_is_suppressed()
+{
+    return false;
+}
+
+# Export-side allow predicate. When RoST is enabled, only prefixes that match
+# this predicate will be exported.
+function rost_export_is_allowed()
 {
     return false;
 }
@@ -177,6 +185,21 @@ def _insert_rost_policy_include(bird_conf):
     return bird_conf.rstrip() + "\n" + include_line + "\n"
 
 
+def _insert_after_defines(bird_conf, snippet):
+    define_matches = list(
+        re.finditer(r"^define\s+[A-Z_]+\s*=\s*\([^)]+\);\s*$", bird_conf, flags=re.MULTILINE)
+    )
+    if define_matches:
+        insert_at = define_matches[-1].end()
+        return bird_conf[:insert_at] + "\n" + snippet + bird_conf[insert_at:]
+
+    first_bgp = bird_conf.find("protocol bgp ")
+    if first_bgp >= 0:
+        return bird_conf[:first_bgp] + snippet + "\n" + bird_conf[first_bgp:]
+
+    return bird_conf.rstrip() + "\n" + snippet + "\n"
+
+
 def _wrap_ebgp_protocol(protocol_name, local_asn, peer_asn, import_body, export_expr):
     tag = _sanitize_bird_identifier(protocol_name)
     import_filter_name = f"rost_import_base_{tag}"
@@ -187,8 +210,50 @@ def _wrap_ebgp_protocol(protocol_name, local_asn, peer_asn, import_body, export_
     import_lines.extend(line.strip() for line in import_body.strip().splitlines())
     export_lines = [
         f"if !({export_guard}) then reject;",
+        "if !rost_is_enabled() then accept;",
+        "if !rost_export_is_allowed() then reject;",
         "if rost_is_enabled() && rost_export_is_suppressed() then reject;",
-        "if rost_is_enabled() then rost_apply_export_attributes();",
+        "rost_apply_export_attributes();",
+        "accept;",
+    ]
+
+    filter_defs = (
+        "\n"
+        + _build_filter_definition(import_filter_name, import_lines)
+        + _build_filter_definition(export_filter_name, export_lines)
+    )
+
+    protocol_body = f"""protocol bgp {protocol_name} {{
+    ipv4 {{
+        table t_bgp;
+        import filter {import_filter_name};
+        export filter {export_filter_name};
+        next hop self;
+    }};
+    local {local_asn[0]} as {local_asn[1]};
+    neighbor {peer_asn[0]} as {peer_asn[1]};
+}}"""
+    return filter_defs + protocol_body
+
+
+def _build_suppressor_policy_functions(target_prefixes):
+    lines = []
+    if target_prefixes:
+        lines.append(f'if net ~ [ {", ".join(target_prefixes)} ] then return true;')
+    lines.append("return false;")
+    return _build_function_definition("rost_static_suppressor_match", lines)
+
+
+def _wrap_suppressor_ebgp_protocol(protocol_name, local_asn, peer_asn, import_body, export_expr):
+    tag = _sanitize_bird_identifier(protocol_name)
+    import_filter_name = f"rost_suppressor_import_base_{tag}"
+    export_filter_name = f"rost_suppressor_export_base_{tag}"
+    export_guard = _translate_export_expression(export_expr)
+
+    import_lines = [line.strip() for line in import_body.strip().splitlines()]
+    export_lines = [
+        f"if !({export_guard}) then reject;",
+        "if rost_static_suppressor_match() then reject;",
         "accept;",
     ]
 
@@ -247,12 +312,53 @@ def _patch_rost_bird_conf(bird_conf):
     return protocol_pattern.sub(replace_protocol, bird_conf)
 
 
+def _patch_suppressor_bird_conf(bird_conf, target_prefixes):
+    function_name = "rost_static_suppressor_match"
+    if f"function {function_name}()" not in bird_conf:
+        bird_conf = _insert_after_defines(
+            bird_conf,
+            _build_suppressor_policy_functions(target_prefixes).rstrip(),
+        )
+
+    protocol_pattern = re.compile(
+        r"""protocol\s+bgp\s+(?P<name>\S+)\s*\{
+\s*ipv4\s*\{
+\s*table\s+t_bgp;
+\s*import\s+filter\s*\{
+(?P<import_body>.*?)
+\s*\};
+\s*export\s+(?P<export_expr>.*?);
+\s*next\s+hop\s+self;
+\s*\};
+\s*local\s+(?P<local_addr>\S+)\s+as\s+(?P<local_asn>\d+);
+\s*neighbor\s+(?P<peer_addr>\S+)\s+as\s+(?P<peer_asn>\d+);
+\s*\}""",
+        flags=re.DOTALL,
+    )
+
+    def replace_protocol(match):
+        local_asn = match.group("local_asn")
+        peer_asn = match.group("peer_asn")
+        if local_asn == peer_asn:
+            return match.group(0)
+
+        return _wrap_suppressor_ebgp_protocol(
+            protocol_name=match.group("name"),
+            local_asn=(match.group("local_addr"), local_asn),
+            peer_asn=(match.group("peer_addr"), peer_asn),
+            import_body=match.group("import_body"),
+            export_expr=match.group("export_expr"),
+        )
+
+    return protocol_pattern.sub(replace_protocol, bird_conf)
+
+
 def _ensure_component_network(as_obj):
     """Return an existing local network for RoST component hosts.
 
-    Phase 1 must be topology-neutral, so this helper only reuses an existing
-    AS-local network that is already attached to the anchor router. It must not
-    create a new router-facing network or alter router interface membership.
+    This example stays topology-neutral by reusing an existing AS-local network
+    that is already attached to the anchor router. It must not create a new
+    router-facing network or alter router interface membership.
     """
 
     # Reuse `net0` when present. This matches the normal stub-AS layout used
@@ -288,7 +394,7 @@ def _deploy_component_host(as_obj, host_name):
 
 
 def _get_component_anchor_router(as_obj):
-    """Return the anchor router used for Phase 1 RoST components in an AS."""
+    """Return the anchor router used for RoST components in an AS."""
 
     router_names = as_obj.getRouters()
     assert len(router_names) > 0, "RoST component deployment requires at least one router"
@@ -370,17 +476,20 @@ def assign_rost_roles(topology):
     """Assign RoST-related roles independently from topology construction."""
 
     all_asns = set(topology["all_asns"])
+    suppressor_ases = sorted(SUPPRESSOR_ASES)
+    suppressor_set = set(suppressor_ases)
 
     assert REPO_AS in all_asns, "REPO_AS must exist in the topology"
-    assert SUPPRESSOR_AS in all_asns, "SUPPRESSOR_AS must exist in the topology"
-    assert REPO_AS != SUPPRESSOR_AS, "REPO_AS and SUPPRESSOR_AS must be different"
-    assert SUPPRESSOR_AS in set(topology["transit_asns"]), (
-        "SUPPRESSOR_AS should be a central/transit-like AS in this demo topology"
+    assert len(suppressor_ases) > 0, "at least one suppressor AS must be configured"
+    assert REPO_AS not in suppressor_set, "REPO_AS cannot also be a suppressor AS"
+    assert suppressor_set <= all_asns, "all suppressor ASNs must exist in the topology"
+    assert suppressor_set <= set(topology["transit_asns"]), (
+        "suppressor ASes should be central/transit-like ASes in this demo topology"
     )
 
     # Adoption is assigned independently of topology construction. For this
     # revision, any non-repository and non-suppressor AS may adopt.
-    eligible = sorted(all_asns - {REPO_AS, SUPPRESSOR_AS})
+    eligible = sorted(all_asns - {REPO_AS} - suppressor_set)
 
     rng = random.Random(RANDOM_SEED)
     adopting = []
@@ -390,10 +499,11 @@ def assign_rost_roles(topology):
 
     return {
         "repo_as": REPO_AS,
-        "suppressor_as": SUPPRESSOR_AS,
+        "suppressor_ases": suppressor_ases,
+        "suppressor_target_prefixes": sorted(SUPPRESSOR_TARGET_PREFIXES),
         "eligible_adopters": eligible,
         "adopting_ases": sorted(adopting),
-        "ordinary_ases": sorted(all_asns - {REPO_AS, SUPPRESSOR_AS} - set(adopting)),
+        "ordinary_ases": sorted(all_asns - {REPO_AS} - suppressor_set - set(adopting)),
     }
 
 
@@ -402,8 +512,6 @@ def deploy_rost_components(topology, roles):
 
     base = topology["base"]
 
-    # Future RoST code can replace these placeholders with real file injection,
-    # startup commands, and service installation.
     for asn in roles["adopting_ases"]:
         as_obj = base.getAutonomousSystem(asn)
         agent_host = _deploy_component_host(as_obj, "rost-agent")
@@ -419,8 +527,7 @@ def deploy_rost_components(topology, roles):
                 ROUTER_HELPER_PORT,
             )
         )
-        # Keep first-agent execution manual. Later revisions can add explicit
-        # startup orchestration once the repository/agent interaction evolves.
+        # Agent execution stays manual so users can drive the demo explicitly.
         anchor_router = _get_component_anchor_router(as_obj)
         anchor_router.addSoftware("python3")
         anchor_router.setFile(ROUTER_HELPER_PATH, _load_example_asset("router_helper.py"))
@@ -447,20 +554,16 @@ def deploy_rost_components(topology, roles):
 
 
 def apply_special_policies(topology, roles):
-    """Placeholder hook for future suppressor-specific routing behavior."""
+    """Apply static suppressor policy and dynamic adopting-AS policy hooks."""
 
     emu = topology["emu"]
-    suppressor_as = roles["suppressor_as"]
     adopting_ases = roles["adopting_ases"]
-
-    # The suppressor is not an application host. It is a network role that
-    # should be realized by modifying the BGP behavior of routers in this AS.
-    #
-    # The most SEED-native extension point for this is a Hook that targets the
-    # Ebgp layer and mutates the suppressor's border routers after the baseline
-    # BIRD eBGP configuration has been generated. This is the same general
-    # pattern used by seedemu/components/BgpAttackerComponent.py.
-    emu.addHook(SuppressorPolicyHook(suppressor_as))
+    emu.addHook(
+        SuppressorPolicyHook(
+            roles["suppressor_ases"],
+            roles["suppressor_target_prefixes"],
+        )
+    )
     emu.addHook(RostBirdPolicyHook(adopting_ases))
 
 
