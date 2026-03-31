@@ -4,6 +4,7 @@
 import os
 from pathlib import Path
 import random
+import re
 import sys
 
 from seedemu.compiler import Docker, Platform
@@ -30,6 +31,7 @@ REPO_SERVICE_PATH = "/root/repo_server.py"
 AGENT_SCRIPT_PATH = "/root/agent.py"
 ROUTER_HELPER_PORT = 18081
 ROUTER_HELPER_PATH = "/root/router_helper.py"
+ROST_POLICY_PATH = "/etc/bird/rost_policy.conf"
 
 
 class SuppressorPolicyHook(Hook):
@@ -66,6 +68,183 @@ class SuppressorPolicyHook(Hook):
                 "# for example export/import filters or route-processing logic\n"
                 "# on AS{} border routers.\n".format(self._suppressor_asn),
             )
+
+
+class RostBirdPolicyHook(Hook):
+    """Patch rendered BIRD config for adopting-AS anchor routers."""
+
+    def __init__(self, adopting_ases):
+        self._adopting_ases = sorted(adopting_ases)
+
+    def getName(self):
+        return "RostBirdPolicyHook"
+
+    def getTargetLayer(self):
+        # Run after iBGP has rendered so the full router bird.conf is present.
+        return "Ibgp"
+
+    def postrender(self, emulator):
+        base = emulator.getRegistry().get("seedemu", "layer", "Base")
+
+        for asn in self._adopting_ases:
+            as_obj = base.getAutonomousSystem(asn)
+            router = _get_component_anchor_router(as_obj)
+            bird_conf = _get_node_file_content(router, "/etc/bird/bird.conf")
+            patched_conf = _patch_rost_bird_conf(bird_conf)
+
+            router.setAttribute("rost_role", "adopting-anchor")
+            router.setAttribute("rost_bird_patched", True)
+            router.setFile("/etc/bird/bird.conf", patched_conf)
+            router.setFile(ROST_POLICY_PATH, _build_rost_policy_conf())
+
+
+def _get_node_file_content(node, path):
+    file_path, content = node.getFile(path).get()
+    assert file_path == path, f"unexpected file handle for {path}: {file_path}"
+    return content
+
+
+def _sanitize_bird_identifier(value):
+    return re.sub(r"[^A-Za-z0-9_]+", "_", value)
+
+
+def _build_filter_definition(filter_name, body_lines):
+    indented = "\n".join(f"    {line}" for line in body_lines)
+    return f"filter {filter_name} {{\n{indented}\n}}\n"
+
+
+def _build_rost_policy_conf():
+    return """# Managed by the RoST router helper.
+# This file carries dynamic RoST state only. The main /etc/bird/bird.conf
+# remains static after rost_env.py injects the wrapper filters.
+
+# Enable/disable switch for all RoST controls. The helper will change this
+# function body and then run `birdc configure`.
+function rost_is_enabled()
+{
+    return false;
+}
+
+# Export-side suppression predicate. The helper will replace the body with
+# prefix-specific checks such as `if net ~ [ 203.0.113.0/24 ] then return true;`.
+function rost_export_is_suppressed()
+{
+    return false;
+}
+
+# Export-side attribute mutation hook. The helper can add a BGP community here
+# to simulate RouteID insertion before the route is announced.
+function rost_apply_export_attributes()
+{
+}
+
+# Import-side invalid-route predicate. The helper will replace the body with
+# route or prefix-specific rejection tests so BGP re-selects another path.
+function rost_import_is_invalid()
+{
+    return false;
+}
+"""
+
+
+def _translate_export_expression(export_expr):
+    expr = export_expr.strip()
+    if expr == "all":
+        return "true"
+    if expr == "none":
+        return "false"
+    if expr.startswith("where "):
+        return expr[len("where ") :].strip()
+    return expr
+
+
+def _insert_rost_policy_include(bird_conf):
+    include_line = f'include "{ROST_POLICY_PATH}";'
+    if include_line in bird_conf:
+        return bird_conf
+
+    define_matches = list(
+        re.finditer(r"^define\s+[A-Z_]+\s*=\s*\([^)]+\);\s*$", bird_conf, flags=re.MULTILINE)
+    )
+    if define_matches:
+        insert_at = define_matches[-1].end()
+        return bird_conf[:insert_at] + "\n" + include_line + bird_conf[insert_at:]
+
+    first_bgp = bird_conf.find("protocol bgp ")
+    if first_bgp >= 0:
+        return bird_conf[:first_bgp] + include_line + "\n" + bird_conf[first_bgp:]
+
+    return bird_conf.rstrip() + "\n" + include_line + "\n"
+
+
+def _wrap_ebgp_protocol(protocol_name, local_asn, peer_asn, import_body, export_expr):
+    tag = _sanitize_bird_identifier(protocol_name)
+    import_filter_name = f"rost_import_base_{tag}"
+    export_filter_name = f"rost_export_base_{tag}"
+    export_guard = _translate_export_expression(export_expr)
+
+    import_lines = ["if rost_is_enabled() && rost_import_is_invalid() then reject;"]
+    import_lines.extend(line.strip() for line in import_body.strip().splitlines())
+    export_lines = [
+        f"if !({export_guard}) then reject;",
+        "if rost_is_enabled() && rost_export_is_suppressed() then reject;",
+        "if rost_is_enabled() then rost_apply_export_attributes();",
+        "accept;",
+    ]
+
+    filter_defs = (
+        "\n"
+        + _build_filter_definition(import_filter_name, import_lines)
+        + _build_filter_definition(export_filter_name, export_lines)
+    )
+
+    protocol_body = f"""protocol bgp {protocol_name} {{
+    ipv4 {{
+        table t_bgp;
+        import filter {import_filter_name};
+        export filter {export_filter_name};
+        next hop self;
+    }};
+    local {local_asn[0]} as {local_asn[1]};
+    neighbor {peer_asn[0]} as {peer_asn[1]};
+}}"""
+    return filter_defs + protocol_body
+
+
+def _patch_rost_bird_conf(bird_conf):
+    bird_conf = _insert_rost_policy_include(bird_conf)
+
+    protocol_pattern = re.compile(
+        r"""protocol\s+bgp\s+(?P<name>\S+)\s*\{
+\s*ipv4\s*\{
+\s*table\s+t_bgp;
+\s*import\s+filter\s*\{
+(?P<import_body>.*?)
+\s*\};
+\s*export\s+(?P<export_expr>.*?);
+\s*next\s+hop\s+self;
+\s*\};
+\s*local\s+(?P<local_addr>\S+)\s+as\s+(?P<local_asn>\d+);
+\s*neighbor\s+(?P<peer_addr>\S+)\s+as\s+(?P<peer_asn>\d+);
+\s*\}""",
+        flags=re.DOTALL,
+    )
+
+    def replace_protocol(match):
+        local_asn = match.group("local_asn")
+        peer_asn = match.group("peer_asn")
+        if local_asn == peer_asn:
+            return match.group(0)
+
+        return _wrap_ebgp_protocol(
+            protocol_name=match.group("name"),
+            local_asn=(match.group("local_addr"), local_asn),
+            peer_asn=(match.group("peer_addr"), peer_asn),
+            import_body=match.group("import_body"),
+            export_expr=match.group("export_expr"),
+        )
+
+    return protocol_pattern.sub(replace_protocol, bird_conf)
 
 
 def _ensure_component_network(as_obj):
@@ -272,6 +451,7 @@ def apply_special_policies(topology, roles):
 
     emu = topology["emu"]
     suppressor_as = roles["suppressor_as"]
+    adopting_ases = roles["adopting_ases"]
 
     # The suppressor is not an application host. It is a network role that
     # should be realized by modifying the BGP behavior of routers in this AS.
@@ -281,6 +461,7 @@ def apply_special_policies(topology, roles):
     # BIRD eBGP configuration has been generated. This is the same general
     # pattern used by seedemu/components/BgpAttackerComponent.py.
     emu.addHook(SuppressorPolicyHook(suppressor_as))
+    emu.addHook(RostBirdPolicyHook(adopting_ases))
 
 
 def main():
