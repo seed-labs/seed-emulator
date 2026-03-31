@@ -7,8 +7,6 @@ import sys
 import urllib.error
 import urllib.request
 
-import requests
-
 
 DEFAULT_ROUTER_PORT = 18081
 
@@ -95,16 +93,36 @@ def http_post_json(url, payload, timeout=5):
         return response.status, json.loads(body)
 
 
+def http_request_json(url, method="GET", payload=None, timeout=5):
+    data = None
+    headers = {}
+
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+
+    request = urllib.request.Request(
+        url,
+        data=data,
+        headers=headers,
+        method=method,
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        body = response.read().decode("utf-8")
+        return response.status, json.loads(body)
+
+
 def router_get_json(base_url, path, timeout=5):
-    response = requests.get(f"{base_url}{path}", timeout=timeout)
-    payload = response.json()
-    return response.status_code, payload
+    return http_request_json(f"{base_url}{path}", method="GET", timeout=timeout)
 
 
 def router_post_json(base_url, path, payload=None, timeout=5):
-    response = requests.post(f"{base_url}{path}", json=payload or {}, timeout=timeout)
-    body = response.json()
-    return response.status_code, body
+    return http_request_json(
+        f"{base_url}{path}",
+        method="POST",
+        payload=payload or {},
+        timeout=timeout,
+    )
 
 
 def run_control_command(args):
@@ -151,10 +169,10 @@ def run_control_command(args):
                 status, response = router_get_json(router_base, path)
             else:
                 status, response = router_post_json(router_base, path, payload)
-        except requests.RequestException as exc:
+        except (urllib.error.URLError, urllib.error.HTTPError) as exc:
             print(json.dumps({"status": "error", "error": str(exc)}, indent=2, sort_keys=True))
             return 1
-        except ValueError as exc:
+        except json.JSONDecodeError as exc:
             print(json.dumps({"status": "error", "error": f"invalid JSON response: {exc}"}, indent=2, sort_keys=True))
             return 1
 
