@@ -1,5 +1,7 @@
 from __future__ import annotations
+from readline import insert_text
 from seedemu.core import Node, Server, BaseSystem
+from tests.ethereum import POA
 from .EthEnum import *
 from .EthUtil import *
 from typing import List
@@ -157,24 +159,34 @@ class EthereumServer(Server):
             node.appendStartCommand("chmod +x /usr/bin/geth")
 
         # genesis
-        if isinstance(self, PoSGethServer):
+        if isinstance(self, PoSGethServer) or isinstance(self, PoAServer):
             node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth --datadir {} init /tmp/eth-genesis.json'.format(self._data_dir))
         
         # copy keystore to the proper folder
         for account in self._accounts:
-            if isinstance(self, PoSGethServer):
+            if isinstance(self, PoSGethServer) or isinstance(self, PoAServer):
                 node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename))
 
-        if self._is_bootnode and isinstance(self, PoSGethServer):
-            # generate enode url. other nodes will access this to bootstrap the network.
-            node.appendStartCommand('[ ! -e "/root/.ethereum/geth/bootkey" ] && bootnode -genkey /root/.ethereum/geth/bootkey')
-            node.appendStartCommand('echo "enode://$(bootnode -nodekey /root/.ethereum/geth/bootkey -writeaddress)@{}:30301" > /tmp/eth-enode-url'.format(addr))
+        if self._is_bootnode:
+            if isinstance(self, PoSGethServer) or isinstance(self, PoAServer):
+                # generate enode url. other nodes will access this to bootstrap the network.
+                node.appendStartCommand('[ ! -e "/root/.ethereum/geth/bootkey" ] && bootnode -genkey /root/.ethereum/geth/bootkey')
+                node.appendStartCommand('echo "enode://$(bootnode -nodekey /root/.ethereum/geth/bootkey -writeaddress)@{}:30301" > /tmp/eth-enode-url'.format(addr))
+                
+                # Default port is 30301, use -addr :<port> to specify a custom port
+                node.appendStartCommand('bootnode -nodekey /root/.ethereum/geth/bootkey -verbosity 9 -addr {}:30301 2> /tmp/bootnode-logs &'.format(addr))          
+                node.appendStartCommand('python3 -m http.server {} -d /tmp'.format(self._bootnode_http_port), True)
+    
+    # get other nodes IP for the bootstrapper.
+        bootnodes = self._blockchain.getBootNodes()[:]
+        if len(bootnodes) > 0:
+            node.setFile('/tmp/geth-eth-nodes', '\n'.join(bootnodes))
             
-            # Default port is 30301, use -addr :<port> to specify a custom port
-            node.appendStartCommand('bootnode -nodekey /root/.ethereum/geth/bootkey -verbosity 9 -addr {}:30301 2> /tmp/bootnode-logs &'.format(addr))          
-            node.appendStartCommand('python3 -m http.server {} -d /tmp'.format(self._bootnode_http_port), True)
- 
-   
+            node.setFile('/tmp/eth-bootstrapper', EthServerFileTemplates['bootstrapper'])
+
+            # load enode urls from other nodes
+            node.appendStartCommand('chmod +x /tmp/eth-bootstrapper')
+            node.appendStartCommand('/tmp/eth-bootstrapper')
         try:
             beacon_bootnodes = list(self._blockchain.getBeaconBootNodes()[:])
         except Exception:
@@ -193,10 +205,10 @@ class EthereumServer(Server):
             node.setFile('/tmp/eth-bootstrapper', EthServerFileTemplates['bootstrapper'])
             node.appendStartCommand('chmod +x /tmp/eth-bootstrapper')
             node.appendStartCommand('/tmp/eth-bootstrapper')
-            node.appendStartCommand(self._geth_start_command, True)
+            # node.appendStartCommand(self._geth_start_command, True)
         # launch Ethereum process.
-        # if isinstance(self, PoSGethServer):
-        #     node.appendStartCommand(self._geth_start_command, True) 
+        if isinstance(self, PoSGethServer) or isinstance(self, PoAServer):
+            node.appendStartCommand(self._geth_start_command, True) 
         
 
         # Rarely used and tentatively not supported. 

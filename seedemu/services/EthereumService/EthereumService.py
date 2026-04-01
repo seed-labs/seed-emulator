@@ -52,7 +52,7 @@ class Blockchain:
         self._consensus = consensus 
         self._chain_name = chainName 
         self._genesis = Genesis(self._consensus)
-        # self._boot_node_addresses = [] 
+        self._boot_node_addresses = [] 
         self._miner_node_address = [] 
         self._joined_accounts = []
         self._joined_signer_accounts = [] 
@@ -94,17 +94,16 @@ class Blockchain:
         assert len(ifaces) > 0, 'EthereumService::_doConfigure(): node as{}/{} has not interfaces'.format()
         addr = '{}:{}'.format(str(ifaces[0].getAddress()), server.getBootNodeHttpPort())
         
-        # if server.isBootNode():
-        #     self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self._consensus.value))
-        #     self._boot_node_addresses.append(str(ifaces[0].getAddress()))
+
 
         if server.isBootNode():
             if isinstance(server, PoSBeaconServer):
                 self._beacon_boot_node_address.append(str(ifaces[0].getAddress()))
             elif isinstance(server, PoSGethServer):
                 self._geth_boot_node_address.append(str(ifaces[0].getAddress()))
-            # self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self._consensus.value))
-            # self._boot_node_addresses.append(str(ifaces[0].getAddress()))
+            elif isinstance(server,PoAServer):
+                self._log('adding as{}/{} as consensus-{} bootnode...'.format(node.getAsn(), node.getName(), self._consensus.value))
+                self._boot_node_addresses.append(str(ifaces[0].getAddress()))
        
         
         if self._consensus == ConsensusMechanism.POS:
@@ -130,7 +129,7 @@ class Blockchain:
             if self._consensus == ConsensusMechanism.POS and server.isValidatorAtGenesis():
                 self._validator_ids.append(str(server.getId()))
 
-        ### 2026/2/11  生成可以，但是beacon 不add就可以
+    
         server._generateGethStartCommand(str(ifaces[0].getAddress()))
             
 
