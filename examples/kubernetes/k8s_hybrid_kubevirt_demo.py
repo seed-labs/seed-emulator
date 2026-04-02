@@ -4,7 +4,8 @@ import json
 import os
 from typing import Dict, Tuple
 
-from seedemu.layers import Base, Routing, Ebgp
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf
+from seedemu.layers.Ebgp import PeerRelationship
 from seedemu.services import WebService
 from seedemu.compiler import KubernetesCompiler, SchedulingStrategy
 from seedemu.core import Emulator, Binding, Filter
@@ -134,12 +135,13 @@ def run():
     for node in (as150_router, as151_router, as150_web, as151_web):
         node.addSoftware("traceroute")
 
-    ebgp.addRsPeer(100, 150)
-    ebgp.addRsPeer(100, 151)
+    ebgp.addPrivatePeerings(100, [150], [151], PeerRelationship.Peer)
 
     emu.addLayer(base)
     emu.addLayer(routing)
     emu.addLayer(ebgp)
+    emu.addLayer(Ibgp())
+    emu.addLayer(Ospf())
     emu.addLayer(web)
     emu.render()
 

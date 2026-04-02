@@ -507,7 +507,7 @@ SEED Realistic Email System (29-1) created!
    Internet Map: http://localhost:8080/map.html
 
 ======================================================================
-    "")
+    """)
 
 if __name__ == "__main__":
     platform = sys.argv[1] if len(sys.argv) > 1 else "auto"

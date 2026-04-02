@@ -537,7 +537,7 @@ class KubernetesCompiler(Docker):
         - macvlan: For cross-node with L2 access
         - ipvlan: For cross-node networking
         """
-        name = self._getRealNetName(net).replace('_', '-').lower()
+        name = self._getRealNetName(net).replace('_', '-').replace('.', '-').lower()
         prefix = str(net.getPrefix())
 
         cni_type = self._resolveNetworkCniType(net)
@@ -623,7 +623,7 @@ spec:
             result = self._compileNodeKubeVirt(node)
 
             if self.__generate_services:
-                node_name = self._getComposeNodeName(node).replace('_', '-').lower()
+                node_name = self._getComposeNodeName(node).replace('_', '-').replace('.', '-').lower()
                 asn = str(node.getAsn())
                 role = self._nodeRoleToString(node.getRole())
                 labels = {
@@ -672,7 +672,7 @@ spec:
         self.__build_commands.append(build_cmd)
 
         # 3. Generate Deployment Manifest
-        node_name = self._getComposeNodeName(node).replace('_', '-').lower()  # K8s names must be DNS compliant
+        node_name = self._getComposeNodeName(node).replace('_', '-').replace('.', '-').lower()  # K8s names must be DNS compliant
         asn = str(node.getAsn())
         role = self._nodeRoleToString(node.getRole())
 
@@ -684,7 +684,7 @@ spec:
             needs_json_annotation = False
             for iface in node.getInterfaces():
                 net = iface.getNet()
-                net_name = self._getRealNetName(net).replace('_', '-').lower()
+                net_name = self._getRealNetName(net).replace('_', '-').replace('.', '-').lower()
                 nets.append(net_name)
                 resolved_cni_type = self._resolveNetworkCniType(net)
                 if resolved_cni_type in {"macvlan", "ipvlan"}:
@@ -924,7 +924,7 @@ spec:
 
     def _compileNodeKubeVirt(self, node: Node) -> str:
         """Compile a node to KubeVirt VirtualMachine manifest."""
-        node_name = self._getComposeNodeName(node).replace('_', '-').lower()
+        node_name = self._getComposeNodeName(node).replace('_', '-').replace('.', '-').lower()
         asn = str(node.getAsn())
         role = self._nodeRoleToString(node.getRole())
 
@@ -986,7 +986,7 @@ spec:
 
         for i, iface in enumerate(node.getInterfaces()):
             net = iface.getNet()
-            net_name = self._getRealNetName(net).replace('_', '-').lower()
+            net_name = self._getRealNetName(net).replace('_', '-').replace('.', '-').lower()
 
             networks.append({
                 "name": f"net{i+1}",
@@ -1108,7 +1108,97 @@ spec:
         if path == '/replace_address.sh' and self.__use_multus and self._current_node:
             # Generate K8s specific address replacement script
             content = self._generateK8sAddressScript()
+        elif path == '/interface_setup' and self.__use_multus and self._current_node:
+            # In K8s/Multus mode, generate a proper rename script that renames Multus
+            # interfaces (net1/net2/...) to their correct SEED topology names using IP
+            # matching. This way BIRD configs can use SEED names directly without rewriting.
+            is_kubevirt = self._current_node.getVirtualizationMode() == "KubeVirt"
+            iface_prefix = "eth" if is_kubevirt else "net"
+            content = self._generateK8sRenameScript(self._current_node, iface_prefix)
         return super()._addFile(path, content)
+
+
+    def _generateK8sRenameScript(self, node, interface_prefix: str = "net") -> str:
+        """
+        Generate a script to rename Multus interfaces (net1/net2/...) to their correct
+        SEED topology names. The mapping from Multus interface index (net1, net2, ...) to
+        SEED interface name is determined at compile time from the Multus annotation
+        declaration order, which matches node.getInterfaces() order. No runtime IP matching
+        is performed — the mapping is fixed and embedded in the generated script.
+
+        Uses a two-phase rename via tmp_net1/tmp_net2/... intermediaries to avoid
+        conflicts when two interfaces need to swap names (e.g. net1->net2, net2->net1).
+        After this script runs, interfaces will have their SEED names (e.g. net2, ix101)
+        and BIRD configs using those names will work without any rewriting.
+        """
+        ifaces = node.getInterfaces()
+        n = len(ifaces)
+
+        script = "#!/bin/bash\n"
+        script += "# K8s Interface Rename Script (SEED Emulator)\n"
+        script += "# Renames Multus interfaces to SEED topology names using IP matching.\n\n"
+
+        if n == 0:
+            script += "# No interfaces to rename\n"
+            script += "exit 0\n"
+            return script
+
+        # Build the mapping: slot index -> (multus_name, seed_name, ip/prefix)
+        # slot i (0-based) -> multus name is {prefix}{i+1}
+        entries = []
+        for i, iface in enumerate(ifaces):
+            addr = iface.getAddress()
+            prefix_len = iface.getNet().getPrefix().prefixlen
+            seed_name = iface.getNet().getName()
+            multus_name = f"{interface_prefix}{i + 1}"
+            entries.append((multus_name, seed_name, f"{addr}/{prefix_len}"))
+
+        # Check if any renaming is needed
+        needs_rename = any(m != s for m, s, _ in entries)
+        if not needs_rename:
+            script += "# All interfaces already have correct SEED names, no rename needed\n"
+            script += "exit 0\n"
+            return script
+
+        script += "set -euo pipefail\n\n"
+
+        # Phase 1: rename all interfaces to tmp_ names to avoid conflicts
+        script += "# Phase 1: rename all to temporary names to avoid conflicts\n"
+        for multus_name, seed_name, addr_cidr in entries:
+            if multus_name != seed_name:
+                tmp_name = f"tmp_{multus_name}"
+                script += f"ip link set {multus_name} down\n"
+                script += f"ip link set {multus_name} name {tmp_name}\n"
+                script += f"ip link set {tmp_name} up\n"
+
+        script += "\n# Phase 2: rename from temporary names to final SEED names\n"
+        for multus_name, seed_name, addr_cidr in entries:
+            if multus_name != seed_name:
+                tmp_name = f"tmp_{multus_name}"
+                script += f"ip link set {tmp_name} down\n"
+                script += f"ip link set {tmp_name} name {seed_name}\n"
+                script += f"ip link set {seed_name} up\n"
+
+        # Apply tc qdisc from ifinfo (latency/bw/loss) like the original interface_setup
+        script += "\n# Apply traffic control settings from ifinfo.txt\n"
+        script += "cidr_to_net() {\n"
+        script += "    ipcalc -n \"$1\" | sed -E -n 's/^Network: +([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\/[0-9]{1,2}) +.*/\\1/p'\n"
+        script += "}\n\n"
+
+        for multus_name, seed_name, addr_cidr in entries:
+            final_name = seed_name if multus_name != seed_name else multus_name
+            script += f"# Configure tc for {final_name}\n"
+            script += f"line=$(grep -m1 '^{final_name}:' /ifinfo.txt 2>/dev/null || true)\n"
+            script += f"if [ -n \"$line\" ]; then\n"
+            script += f"    latency=$(echo \"$line\" | cut -d: -f3)\n"
+            script += f"    bw=$(echo \"$line\" | cut -d: -f4)\n"
+            script += f"    loss=$(echo \"$line\" | cut -d: -f5)\n"
+            script += f"    [ \"$bw\" = 0 ] && bw=1000000000000\n"
+            script += f"    tc qdisc add dev {final_name} root handle 1:0 tbf rate \"${{bw}}bit\" buffer 1000000 limit 1000 || true\n"
+            script += f"    tc qdisc add dev {final_name} parent 1:0 handle 10: netem delay \"${{latency}}ms\" loss \"${{loss}}%\" || true\n"
+            script += f"fi\n"
+
+        return script
 
     def _generateK8sAddressScript(self, interface_prefix: str = "net") -> str:
         """

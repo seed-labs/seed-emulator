@@ -19,7 +19,8 @@ import sys
 
 from seedemu.compiler import KubernetesCompiler, SchedulingStrategy
 from seedemu.core import Binding, Emulator, Filter
-from seedemu.layers import Base, Ebgp, Routing
+from seedemu.layers import Base, Ebgp, Ibgp, Ospf, Routing
+from seedemu.layers.Ebgp import PeerRelationship
 from seedemu.services import WebService
 
 
@@ -65,16 +66,16 @@ def run(cni_type: str = "bridge"):
 
     ###############################################################################
     # Peering
-    ebgp.addRsPeer(100, 2)
-    ebgp.addRsPeer(100, 150)
-    ebgp.addRsPeer(101, 2)
-    ebgp.addRsPeer(101, 151)
+    ebgp.addPrivatePeerings(100, [2], [150], PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(101, [2], [151], PeerRelationship.Provider)
 
     ###############################################################################
     # Rendering
     emu.addLayer(base)
     emu.addLayer(routing)
     emu.addLayer(ebgp)
+    emu.addLayer(Ibgp())
+    emu.addLayer(Ospf())
     emu.addLayer(web)
 
     emu.render()
