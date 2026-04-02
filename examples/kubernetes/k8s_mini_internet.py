@@ -119,10 +119,11 @@ def run(dumpfile=None, hosts_per_as=2):
     # We will use this peering relationship to peer all the ASes in an IX.
     # None of them will provide transit service for others.
 
-    ebgp.addRsPeers(100, [2, 3, 4])
-    ebgp.addRsPeers(102, [2, 4])
-    ebgp.addRsPeers(104, [3, 4])
-    ebgp.addRsPeers(105, [2, 3])
+    ebgp.addPrivatePeerings(100, [2], [3, 4], PeerRelationship.Peer)
+    ebgp.addPrivatePeerings(100, [3], [4], PeerRelationship.Peer)
+    ebgp.addPrivatePeerings(102, [2], [4], PeerRelationship.Peer)
+    ebgp.addPrivatePeerings(104, [3], [4], PeerRelationship.Peer)
+    ebgp.addPrivatePeerings(105, [2], [3], PeerRelationship.Peer)
 
     # To buy transit services from another autonomous system,
     # we will use private peering

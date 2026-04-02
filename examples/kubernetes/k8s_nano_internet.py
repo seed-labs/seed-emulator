@@ -8,7 +8,8 @@ import os, sys
 
 from seedemu.compiler import KubernetesCompiler
 from seedemu.core import Binding, Emulator, Filter
-from seedemu.layers import Base, Ebgp, Routing
+from seedemu.layers import Base, Ebgp, Ibgp, Ospf, Routing
+from seedemu.layers.Ebgp import PeerRelationship
 from seedemu.services import DomainNameService, WebService
 
 def run():
@@ -85,11 +86,9 @@ def run():
     ###############################################################################
     # Peering at Internet Exchanges
 
-    ebgp.addRsPeer(100, 3)
-    ebgp.addRsPeer(101, 3)
-    ebgp.addRsPeer(100, 150)
-    ebgp.addRsPeer(101, 151)
-    ebgp.addRsPeer(101, 152)
+    ebgp.addPrivatePeering(100, 3, 150, abRelationship=PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(101, [3], [151, 152], abRelationship=PeerRelationship.Provider)
+    ebgp.addPrivatePeering(101, 151, 152, abRelationship=PeerRelationship.Peer)
 
     ###############################################################################
     # Rendering
@@ -99,6 +98,8 @@ def run():
     emu.addLayer(ebgp)
     emu.addLayer(web)
     emu.addLayer(dns)
+    emu.addLayer(Ibgp())
+    emu.addLayer(Ospf())
 
     emu.render()
 

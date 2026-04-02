@@ -126,10 +126,11 @@ def run():
     Makers.makeStubAsWithHosts(emu, base, 171, 105, hosts_per_as)
 
     # Peering via RS (route server)
-    ebgp.addRsPeers(100, [2, 3, 4])
-    ebgp.addRsPeers(102, [2, 4])
-    ebgp.addRsPeers(104, [3, 4])
-    ebgp.addRsPeers(105, [2, 3])
+    ebgp.addPrivatePeerings(100, [2], [3, 4], PeerRelationship.Peer)
+    ebgp.addPrivatePeerings(100, [3], [4], PeerRelationship.Peer)
+    ebgp.addPrivatePeerings(102, [2], [4], PeerRelationship.Peer)
+    ebgp.addPrivatePeerings(104, [3], [4], PeerRelationship.Peer)
+    ebgp.addPrivatePeerings(105, [2], [3], PeerRelationship.Peer)
 
     # Private peering relationships (provider/customer)
     ebgp.addPrivatePeerings(100, [2], [150, 151], PeerRelationship.Provider)

@@ -4,7 +4,7 @@
 # Copied from examples/basic/A01_transit_as/transit_as.py
 # Adapted for KubernetesCompiler
 
-from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf
+from seedemu.layers import Base, Routing, Ebgp, Ibgp, Ospf, PeerRelationship
 from seedemu.services import WebService
 from seedemu.compiler import KubernetesCompiler, SchedulingStrategy, Platform
 from seedemu.core import Emulator, Binding, Filter
@@ -84,10 +84,8 @@ def run():
     ###############################################################################
     # Peering at Internet Exchanges
 
-    ebgp.addRsPeer(100, 2)
-    ebgp.addRsPeer(101, 2)
-    ebgp.addRsPeer(100, 150)
-    ebgp.addRsPeer(101, 151)
+    ebgp.addPrivatePeerings(100, [2], [150], PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(101, [2], [151], PeerRelationship.Provider)
 
     ###############################################################################
     # Rendering
