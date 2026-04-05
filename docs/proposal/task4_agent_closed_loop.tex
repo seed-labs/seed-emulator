@@ -1,0 +1,61 @@
+\documentclass[10pt]{article}
+\usepackage[letterpaper,margin=0.56in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2.6pt}
+\pagestyle{empty}
+\raggedbottom
+\graphicspath{{docs/proposal/generated_figures/}}
+
+\begin{document}
+\small
+
+\begin{center}
+{\Large\bfseries Trustworthy Agentic Orchestration for Closed-Loop Network Experimentation}
+\end{center}
+\vspace{-2mm}
+
+\textbf{Scientific objective.} This task develops the \emph{methodology} that turns a high-fidelity network emulator into a trustworthy substrate for autonomous experimentation. The scientific gap is not that current platforms lack realism, nor that recent agentic AI systems lack planning ability. The gap is that realistic network experimentation still depends on manual orchestration, while general-purpose agents remain weakly grounded, weakly bounded, and weakly auditable once they enter dynamic runtime environments~\cite{yao2023react,lu2024aiscientist,zhu2025safescientist}. For network science and security studies, this is the decisive barrier: an autonomous trajectory is valuable only if it remains tied to true runtime state, respects intervention constraints, verifies the consequences of action, and leaves evidence sufficient for replay and scientific comparison~\cite{yamin2020cyberranges,jiang2021dtn,du2022seed}. We therefore pose the central question as follows: \emph{how can an agent autonomously operate and experiment on complex network simulations while remaining grounded, policy-bounded, reproducible, and auditable?}
+
+\textbf{Core hypothesis.} We hypothesize that trustworthy autonomy emerges only when \emph{state grounding, bounded action, verification, and evidence archival are designed as one closed loop}. This leads to a methodological abstraction
+\[
+\mathcal{X}=(g,s_0,\mathcal{A},\Pi,\mathcal{V},\mathcal{E}),
+\]
+where $g$ is the declared objective, $s_0$ the attached runtime state, $\mathcal{A}$ the admissible intervention surface, $\Pi$ the policy and escalation constraints, $\mathcal{V}$ the verification operators, and $\mathcal{E}$ the cumulative evidence archive. An orchestration policy $\pi_\theta$ is scientifically admissible only if, for every step $t$,
+\[
+a_t=\pi_\theta(b_t,\mathcal{X}),\qquad
+a_t\in\mathcal{A}(\Pi),\qquad
+\mathcal{V}(s_{t+1};g,\Pi)=1,\qquad
+\mathcal{E}_{t+1}=\mathcal{E}_t\cup \mathrm{Art}(o_{t+1},a_t).
+\]
+The point of the formulation is methodological rather than notational: the agent is not judged solely by whether it reaches a useful end state, but by whether it follows an admissible, inspectable, and evidence-producing trajectory.
+
+\textbf{Methodological design.} The proposed design has three roles. First, the \emph{network simulation substrate} provides executable topologies, routing dynamics, services, and attack or fault scenarios. Second, the \emph{runtime control-and-evidence layer} reconstructs structured inventory from running systems, exposes selector-scoped operations, executes deterministic jobs, and persists artifacts. Third, the \emph{agentic orchestration layer} translates intent into task objects, chooses bounded actions, routes elevated interventions through explicit confirmation, and summarizes outcomes against evidence. This layered view connects agentic AI with assurance-oriented thinking~\cite{goemans2024safetycase,porter2023praise}: autonomy is permitted, but only inside a regime where consequential action is bounded and reviewable.
+
+\begin{center}
+\includegraphics[width=0.94\linewidth]{final_architecture_4k.jpeg}
+
+\vspace{0.5mm}
+\parbox{0.96\linewidth}{\footnotesize \textbf{Figure 1.} Closed-loop methodology for trustworthy network experimentation. The simulation substrate supplies executable network dynamics; the control-and-evidence layer reconstructs runtime state and bounded interventions; the orchestration layer plans under policy and human confirmation, then closes the loop through observation, action, verification, and archival evidence.}
+\end{center}
+\vspace{-1mm}
+
+\textbf{Research plan.} The task is organized into three tightly coupled directions.
+\emph{T4.1 Grounded task formalization} will encode maintenance and experiment intents as explicit task objects with prerequisites, admissible scope, success criteria, rollback conditions, and evidence requirements; the goal is to replace underspecified natural-language requests with comparable experimental units.
+\emph{T4.2 Trustworthy execution architecture} will study bounded autonomy over structured runtime summaries rather than free-form logs, with selector-scoped operations, deterministic playbooks, policy tiers, and explicit human confirmation for elevated actions; the goal is to preserve strategic flexibility without permitting opaque or unsafe execution.
+\emph{T4.3 Closed-loop evaluation} will validate the methodology on representative workflows including routing diagnosis, service recovery, controlled perturbation with rollback, routing-security drills, and comparative experiments; the emphasis is on trajectory quality rather than one-shot success.
+
+\textbf{Evaluation criteria and expected outcomes.} The evaluation will measure at least five observable dimensions: task grounding accuracy, policy-compliant action rate, verified recovery or rollback rate, evidence completeness, and run-to-run reproducibility. Concretely, we will release: (1) a formal task schema and benchmarkable workflow suite; (2) a policy-bounded orchestration framework with confirmation gates and evidence-backed reports; and (3) a reproducible evaluation protocol for autonomous network experimentation. Success will be judged not merely by whether the agent can ``do something useful,'' but by whether it can repeatedly attach to live simulated systems, choose scope proportional to runtime scale, intervene within an explicit risk envelope, verify the effect of its actions, and leave artifacts sufficient for independent review. The broader scientific value is a reusable methodology for trustworthy autonomous experimentation in realistic network environments, with direct relevance to operational diagnosis, routing security, service resilience, and reproducible systems research.
+
+\textbf{Expected contribution.} If successful, this task will move the field from ad hoc tool-calling agents toward a scientific discipline of autonomous experimentation. Its contribution is therefore not a convenience interface or a demonstration workflow. It is a methodological foundation that makes autonomous action over realistic network emulations \emph{grounded, controllable, auditable, and experimentally defensible}.
+
+\bibliographystyle{abbrv}
+\bibliography{docs/proposal/task4_agent_closed_loop}
+
+\end{document}

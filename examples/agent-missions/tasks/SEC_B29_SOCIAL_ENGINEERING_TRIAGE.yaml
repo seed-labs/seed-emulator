@@ -2,6 +2,7 @@ task_id: SEC_B29_SOCIAL_ENGINEERING_TRIAGE
 title: B29 Social Engineering Triage
 track: security
 baseline: B29
+scenario_class: Security Offense-Defense
 objective_template: triage suspicious email and operational anomalies
 required_inputs:
   - id: attach_output_dir
@@ -24,10 +25,20 @@ policy_by_stage:
 canonical_request_templates:
   - >
     Attach to {attach_output_dir}; refresh inventory; collect mail and DNS operational
-    logs related to sender/domain {suspicious_sender}; summarize anomalies within
-    {time_window_minutes} minutes and provide containment recommendations.
+    logs related to sender/domain {suspicious_sender}; summarize anomalies for the
+    requested time window and provide containment recommendations.
 fallback_playbooks:
   - examples/agent-missions/playbooks/sec_b29_social_engineering_triage.yaml
+scale_hints: [small, medium, large]
+rollback_required: false
+evidence_requirements:
+  - mail evidence
+  - dns evidence
+  - containment recommendation
+skill_patterns:
+  - attach-and-scan
+  - service-debug
+  - evidence-collection
 acceptance_checks:
   - status == ok
   - summary contains anomaly evidence
@@ -37,4 +48,3 @@ report_template: |
   - objective: {objective}
   - status: {status}
   - key anomalies: {anomalies}
-

@@ -2,6 +2,7 @@ task_id: RS_B00_CONVERGENCE_COMPARISON
 title: B00 Convergence Comparison
 track: research
 baseline: B00
+scenario_class: Research Experiments
 objective_template: compare routing convergence behavior under two conditions
 required_inputs:
   - id: attach_output_dir
@@ -24,6 +25,16 @@ canonical_request_templates:
     and output quantitative differences with confidence notes.
 fallback_playbooks:
   - examples/agent-missions/playbooks/rs_b00_convergence_comparison.yaml
+scale_hints: [small, medium, large]
+rollback_required: false
+evidence_requirements:
+  - bgp snapshots
+  - comparative metrics
+  - assumptions and limitations
+skill_patterns:
+  - attach-and-scan
+  - bgp-health-triage
+  - evidence-collection
 acceptance_checks:
   - status == ok
   - report includes comparable metrics
@@ -33,4 +44,3 @@ report_template: |
   - objective: {objective}
   - metrics: {metrics}
   - conclusion: {conclusion}
-

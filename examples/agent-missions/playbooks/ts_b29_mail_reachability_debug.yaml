@@ -1,7 +1,9 @@
 version: 1
 name: ts_b29_mail_reachability_debug
 defaults:
-  selector: {}
+  selector:
+    node_id: [as151/host_0, as202/dns-auth-gmail]
+    role: [Host]
   timeout_seconds: 30
   parallelism: 20
   max_output_chars: 8000
@@ -9,17 +11,36 @@ steps:
   - action: workspace_refresh
     id: refresh
     save_as: refresh
-  - action: ping
-    id: ping_diag
-    dst: 1.1.1.1
-    count: 2
-    save_as: ping
-  - action: traceroute
-    id: trace_diag
-    dst: 1.1.1.1
-    save_as: trace
+  - action: inventory_list_nodes
+    id: endpoint_inventory
+    save_as: endpoint_inventory
   - action: ops_logs
-    id: mail_logs
-    tail: 200
-    save_as: mail_logs
-
+    id: endpoint_logs
+    tail: 120
+    since_seconds: 900
+    save_as: endpoint_logs
+  - action: ops_exec
+    id: endpoint_probe
+    command: >-
+      sh -lc 'echo ===NODE===; hostname; echo ===ROUTE===; ip route 2>/dev/null ||
+      route -n 2>/dev/null || true; echo ===LISTEN===; ss -tulpn 2>/dev/null ||
+      netstat -tulpn 2>/dev/null || true; echo ===RESOLV===; cat /etc/resolv.conf
+      2>/dev/null || true; echo ===RECENT_SYSLOG===; tail -n 60 /var/log/syslog
+      2>/dev/null || true'
+    save_as: endpoint_probe
+  - action: routing_bgp_summary
+    id: route_context
+    selector:
+      asn: [151, 202]
+      role: [BorderRouter, Router, Route Server]
+    save_as: route_context
+  - action: ops_exec
+    id: post_check
+    command: >-
+      sh -lc 'echo ===NODE===; hostname; echo ===ROUTE===; ip route 2>/dev/null ||
+      route -n 2>/dev/null || true; echo ===LISTEN===; ss -tulpn 2>/dev/null ||
+      netstat -tulpn 2>/dev/null || true; echo ===RESOLV===; cat /etc/resolv.conf
+      2>/dev/null || true; echo ===RECENT_SYSLOG===; tail -n 60 /var/log/syslog
+      2>/dev/null || true'
+    save_as: post_check
+    on_error: continue

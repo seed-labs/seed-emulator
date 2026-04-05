@@ -1,0 +1,369 @@
+{
+  "generated_at_utc": "2026-03-18T09:04:30.680820+00:00",
+  "run_dir": "/home/parallels/seed-email-service/examples/agent-missions/reports/20260318T085945Z",
+  "task_count": 6,
+  "classes": {
+    "Diagnosis / Maintenance": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "Disturbance Recovery": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "Research Experiments": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "Routing Security": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "Security Offense-Defense": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "Service Reachability": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "tasks": [
+    {
+      "task_id": "RS_B00_CONVERGENCE_COMPARISON",
+      "scenario_class": "Research Experiments",
+      "attach_output_dir": "/home/parallels/seed-email-service/examples/internet/B00_mini_internet/output",
+      "start_status": "ok",
+      "execute_status": "ok",
+      "approved_execute_status": null,
+      "status_status": "ok",
+      "planner_mode": "template_fallback",
+      "verification_status": "verified",
+      "rollback_status": "not_required",
+      "artifact_count": 2,
+      "risky_action_count": 0,
+      "selected_scope": {
+        "role": [
+          "BorderRouter",
+          "Router"
+        ]
+      },
+      "runtime_scale": 58,
+      "scale_hint": "large",
+      "action_count": 2,
+      "latency_seconds": 27.956,
+      "attach_success": true,
+      "planner_fallback": true,
+      "expected_min_risky_actions": 0,
+      "unresolved_issues": [
+        {
+          "severity": "medium",
+          "failure_type": "planner_fallback",
+          "suspected_root_cause": "llm planner unavailable or generated invalid/policy-violating playbook",
+          "recommended_fix": "improve planner grounding, runtime context, or task-specific fallback templates",
+          "owner": "unassigned"
+        }
+      ],
+      "rc": {
+        "start": 0,
+        "execute": 0,
+        "approve": 0,
+        "status": 0
+      },
+      "manual_review": {
+        "objective_understanding": null,
+        "environment_awareness": null,
+        "scope_choice_quality": null,
+        "evidence_conclusion_consistency": null,
+        "unnecessary_action_rate": null,
+        "reviewer_notes": ""
+      },
+      "passed": true
+    },
+    {
+      "task_id": "RS_B29_FAULT_IMPACT_ABLATION",
+      "scenario_class": "Disturbance Recovery",
+      "attach_output_dir": "/home/parallels/seed-email-service/examples/internet/B29_email_dns/output",
+      "start_status": "awaiting_confirmation",
+      "execute_status": "awaiting_confirmation",
+      "approved_execute_status": "ok",
+      "status_status": "ok",
+      "planner_mode": "template_fallback",
+      "verification_status": "verified",
+      "rollback_status": "verified",
+      "artifact_count": 10,
+      "risky_action_count": 2,
+      "selected_scope": {
+        "node_id": [
+          "as150/router0"
+        ]
+      },
+      "runtime_scale": 76,
+      "scale_hint": "large",
+      "action_count": 12,
+      "latency_seconds": 48.951,
+      "attach_success": true,
+      "planner_fallback": true,
+      "expected_min_risky_actions": 1,
+      "unresolved_issues": [
+        {
+          "severity": "medium",
+          "failure_type": "planner_fallback",
+          "suspected_root_cause": "llm planner unavailable or generated invalid/policy-violating playbook",
+          "recommended_fix": "improve planner grounding, runtime context, or task-specific fallback templates",
+          "owner": "unassigned"
+        }
+      ],
+      "rc": {
+        "start": 0,
+        "execute": 0,
+        "approve": 0,
+        "status": 0
+      },
+      "manual_review": {
+        "objective_understanding": null,
+        "environment_awareness": null,
+        "scope_choice_quality": null,
+        "evidence_conclusion_consistency": null,
+        "unnecessary_action_rate": null,
+        "reviewer_notes": ""
+      },
+      "passed": true
+    },
+    {
+      "task_id": "SEC_B29_DNS_MAIL_ABUSE_RESPONSE",
+      "scenario_class": "Security Offense-Defense",
+      "attach_output_dir": "/home/parallels/seed-email-service/examples/internet/B29_email_dns/output",
+      "start_status": "awaiting_confirmation",
+      "execute_status": "awaiting_confirmation",
+      "approved_execute_status": "ok",
+      "status_status": "ok",
+      "planner_mode": "template_fallback",
+      "verification_status": "verified",
+      "rollback_status": "not_required",
+      "artifact_count": 6,
+      "risky_action_count": 1,
+      "selected_scope": {
+        "node_id": [
+          "as202/dns-auth-gmail"
+        ]
+      },
+      "runtime_scale": 76,
+      "scale_hint": "large",
+      "action_count": 6,
+      "latency_seconds": 27.847,
+      "attach_success": true,
+      "planner_fallback": true,
+      "expected_min_risky_actions": 1,
+      "unresolved_issues": [
+        {
+          "severity": "medium",
+          "failure_type": "planner_fallback",
+          "suspected_root_cause": "llm planner unavailable or generated invalid/policy-violating playbook",
+          "recommended_fix": "improve planner grounding, runtime context, or task-specific fallback templates",
+          "owner": "unassigned"
+        }
+      ],
+      "rc": {
+        "start": 0,
+        "execute": 0,
+        "approve": 0,
+        "status": 0
+      },
+      "manual_review": {
+        "objective_understanding": null,
+        "environment_awareness": null,
+        "scope_choice_quality": null,
+        "evidence_conclusion_consistency": null,
+        "unnecessary_action_rate": null,
+        "reviewer_notes": ""
+      },
+      "passed": true
+    },
+    {
+      "task_id": "TS_B00_BGP_FLAP_ROOTCAUSE",
+      "scenario_class": "Diagnosis / Maintenance",
+      "attach_output_dir": "/home/parallels/seed-email-service/examples/internet/B00_mini_internet/output",
+      "start_status": "awaiting_confirmation",
+      "execute_status": "awaiting_confirmation",
+      "approved_execute_status": "ok",
+      "status_status": "ok",
+      "planner_mode": "template_fallback",
+      "verification_status": "verified",
+      "rollback_status": "not_required",
+      "artifact_count": 3,
+      "risky_action_count": 0,
+      "selected_scope": {
+        "role": [
+          "BorderRouter",
+          "Router"
+        ]
+      },
+      "runtime_scale": 58,
+      "scale_hint": "large",
+      "action_count": 3,
+      "latency_seconds": 45.215,
+      "attach_success": true,
+      "planner_fallback": true,
+      "expected_min_risky_actions": 0,
+      "unresolved_issues": [
+        {
+          "severity": "medium",
+          "failure_type": "planner_fallback",
+          "suspected_root_cause": "llm planner unavailable or generated invalid/policy-violating playbook",
+          "recommended_fix": "improve planner grounding, runtime context, or task-specific fallback templates",
+          "owner": "unassigned"
+        }
+      ],
+      "rc": {
+        "start": 0,
+        "execute": 0,
+        "approve": 0,
+        "status": 0
+      },
+      "manual_review": {
+        "objective_understanding": null,
+        "environment_awareness": null,
+        "scope_choice_quality": null,
+        "evidence_conclusion_consistency": null,
+        "unnecessary_action_rate": null,
+        "reviewer_notes": ""
+      },
+      "passed": true
+    },
+    {
+      "task_id": "TS_B00_PREFIX_HIJACK_LIVE",
+      "scenario_class": "Routing Security",
+      "attach_output_dir": "/home/parallels/seed-email-service/examples/internet/B00_mini_internet/output",
+      "start_status": "awaiting_confirmation",
+      "execute_status": "awaiting_confirmation",
+      "approved_execute_status": "ok",
+      "status_status": "ok",
+      "planner_mode": "template_fallback",
+      "verification_status": "verified",
+      "rollback_status": "verified",
+      "artifact_count": 8,
+      "risky_action_count": 2,
+      "selected_scope": {
+        "role": [
+          "BorderRouter",
+          "Router"
+        ],
+        "asn": [
+          151
+        ]
+      },
+      "runtime_scale": 58,
+      "scale_hint": "large",
+      "action_count": 10,
+      "latency_seconds": 39.664,
+      "attach_success": true,
+      "planner_fallback": true,
+      "expected_min_risky_actions": 2,
+      "unresolved_issues": [
+        {
+          "severity": "medium",
+          "failure_type": "planner_fallback",
+          "suspected_root_cause": "llm planner unavailable or generated invalid/policy-violating playbook",
+          "recommended_fix": "improve planner grounding, runtime context, or task-specific fallback templates",
+          "owner": "unassigned"
+        }
+      ],
+      "rc": {
+        "start": 0,
+        "execute": 0,
+        "approve": 0,
+        "status": 0
+      },
+      "manual_review": {
+        "objective_understanding": null,
+        "environment_awareness": null,
+        "scope_choice_quality": null,
+        "evidence_conclusion_consistency": null,
+        "unnecessary_action_rate": null,
+        "reviewer_notes": ""
+      },
+      "passed": true
+    },
+    {
+      "task_id": "TS_B29_MAIL_REACHABILITY_DEBUG",
+      "scenario_class": "Service Reachability",
+      "attach_output_dir": "/home/parallels/seed-email-service/examples/internet/B29_email_dns/output",
+      "start_status": "awaiting_confirmation",
+      "execute_status": "awaiting_confirmation",
+      "approved_execute_status": "ok",
+      "status_status": "ok",
+      "planner_mode": "template_fallback",
+      "verification_status": "verified",
+      "rollback_status": "not_required",
+      "artifact_count": 6,
+      "risky_action_count": 2,
+      "selected_scope": {
+        "node_id": [
+          "as151/host_0",
+          "as202/dns-auth-gmail"
+        ],
+        "role": [
+          "Host"
+        ]
+      },
+      "runtime_scale": 76,
+      "scale_hint": "large",
+      "action_count": 6,
+      "latency_seconds": 29.143,
+      "attach_success": true,
+      "planner_fallback": true,
+      "expected_min_risky_actions": 0,
+      "unresolved_issues": [
+        {
+          "severity": "medium",
+          "failure_type": "planner_fallback",
+          "suspected_root_cause": "llm planner unavailable or generated invalid/policy-violating playbook",
+          "recommended_fix": "improve planner grounding, runtime context, or task-specific fallback templates",
+          "owner": "unassigned"
+        }
+      ],
+      "rc": {
+        "start": 0,
+        "execute": 0,
+        "approve": 0,
+        "status": 0
+      },
+      "manual_review": {
+        "objective_understanding": null,
+        "environment_awareness": null,
+        "scope_choice_quality": null,
+        "evidence_conclusion_consistency": null,
+        "unnecessary_action_rate": null,
+        "reviewer_notes": ""
+      },
+      "passed": true
+    }
+  ],
+  "aggregate_metrics": {
+    "attach_success_count": 6,
+    "verification_success_count": 6,
+    "rollback_verified_count": 2,
+    "planner_fallback_count": 6,
+    "total_risky_actions": 7
+  },
+  "overall": {
+    "status": "passed",
+    "passed_tasks": 6,
+    "failed_tasks": 0
+  },
+  "human_review_fields": [
+    "objective_understanding",
+    "environment_awareness",
+    "scope_choice_quality",
+    "evidence_conclusion_consistency",
+    "unnecessary_action_rate"
+  ],
+  "all_passed": true
+}

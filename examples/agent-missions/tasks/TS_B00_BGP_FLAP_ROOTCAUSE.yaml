@@ -2,7 +2,8 @@ task_id: TS_B00_BGP_FLAP_ROOTCAUSE
 title: B00 BGP Flap Rootcause
 track: troubleshooting
 baseline: B00
-objective_template: locate bgp flap root cause and suggest fix
+scenario_class: Diagnosis / Maintenance
+objective_template: locate bgp flap root cause and propose the smallest safe next action
 required_inputs:
   - id: attach_output_dir
     question: Provide B00 output directory for attach.
@@ -12,26 +13,34 @@ required_inputs:
     question: Which router pair or node is suspected?
     required: true
     reason: Focus diagnostics to reduce blast radius.
-stages: [observe, analyze, act, verify]
+stages: [observe, analyze, verify]
 policy_by_stage:
   observe: read_only
   analyze: read_only
-  act: net_ops
   verify: read_only
 canonical_request_templates:
   - >
     Attach to {attach_output_dir}; collect BGP summaries, route snapshots and
     traceroute diagnostics around {suspect_router}; locate probable flap breakpoints;
-    run minimal corrective checks and verify stabilization.
+    verify current control-plane state and recommend the smallest safe next action.
 fallback_playbooks:
   - examples/agent-missions/playbooks/ts_b00_bgp_flap_rootcause.yaml
+scale_hints: [small, medium, large]
+rollback_required: false
+evidence_requirements:
+  - bgp summary
+  - breakpoint hypothesis
+  - post-check verification
+skill_patterns:
+  - attach-and-scan
+  - bgp-health-triage
+  - evidence-collection
 acceptance_checks:
   - status == ok
   - summary includes breakpoint hypothesis
-  - verification includes post-check BGP state
+  - report includes bounded next action
 report_template: |
   Troubleshooting report for {task_id}:
   - objective: {objective}
   - rootcause hypothesis: {rootcause}
   - verification: {verification}
-

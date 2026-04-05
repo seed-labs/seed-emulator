@@ -2,6 +2,7 @@ task_id: RS_B29_FAULT_IMPACT_ABLATION
 title: B29 Fault Impact Ablation
 track: research
 baseline: B29
+scenario_class: Disturbance Recovery
 objective_template: run controlled fault impact ablation with rollback
 required_inputs:
   - id: attach_output_dir
@@ -30,6 +31,17 @@ canonical_request_templates:
     rollback fault and verify recovery; produce impact ablation summary.
 fallback_playbooks:
   - examples/agent-missions/playbooks/rs_b29_fault_impact_ablation.yaml
+scale_hints: [small, medium]
+rollback_required: true
+evidence_requirements:
+  - baseline routing or service snapshot
+  - disturbance evidence
+  - rollback evidence
+  - post-rollback verification
+skill_patterns:
+  - attach-and-scan
+  - fault-inject-and-rollback
+  - evidence-collection
 acceptance_checks:
   - status == ok
   - experiment and rollback are both recorded
@@ -40,4 +52,3 @@ report_template: |
   - injected fault: {fault_type}
   - impact summary: {impact}
   - rollback verification: {verification}
-

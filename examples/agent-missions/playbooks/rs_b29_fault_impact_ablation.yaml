@@ -1,7 +1,8 @@
 version: 1
 name: rs_b29_fault_impact_ablation
 defaults:
-  selector: {}
+  selector:
+    node_id: [as150/router0]
   timeout_seconds: 30
   parallelism: 20
   max_output_chars: 8000
@@ -9,23 +10,60 @@ steps:
   - action: workspace_refresh
     id: refresh
     save_as: refresh
+  - action: inventory_list_nodes
+    id: target_inventory
+    save_as: target_inventory
   - action: routing_bgp_summary
     id: baseline_bgp
+    selector:
+      asn: [150]
+      role: [BorderRouter, Router, Route Server]
     save_as: baseline_bgp
+  - action: ops_logs
+    id: baseline_logs
+    tail: 120
+    since_seconds: 900
+    save_as: baseline_logs
   - action: inject_fault
     id: inject_fault
     fault_type: packet_loss
-    loss_percent: 15
-    duration_seconds: 20
+    params: "15"
+    interface: auto
     save_as: fault_injected
+  - action: sleep
+    id: disturbance_wait
+    seconds: 3
   - action: routing_bgp_summary
     id: during_fault_bgp
+    selector:
+      asn: [150]
+      role: [BorderRouter, Router, Route Server]
     save_as: during_fault_bgp
+  - action: ops_logs
+    id: during_fault_logs
+    tail: 120
+    since_seconds: 300
+    save_as: during_fault_logs
   - action: inject_fault
     id: rollback_fault
     fault_type: reset
+    interface: auto
     save_as: fault_reset
+    on_error: continue
+  - action: sleep
+    id: rollback_wait
+    seconds: 2
+    on_error: continue
   - action: routing_bgp_summary
     id: post_reset_bgp
+    selector:
+      asn: [150]
+      role: [BorderRouter, Router, Route Server]
     save_as: post_reset_bgp
-
+    on_error: continue
+  - action: ops_logs
+    id: post_reset_logs
+    tail: 120
+    since_seconds: 300
+    save_as: post_reset_logs
+    on_error: continue

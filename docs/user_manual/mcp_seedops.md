@@ -46,6 +46,18 @@ For production-like operations, use this order:
 5. download/parse artifacts
 6. summarize + decide next action
 
+For attached-runtime operation, the explicit lifecycle contract is:
+
+`render -> compile -> build -> start -> attach -> operate -> stop`
+
+The agent is expected to read lifecycle state before planning. Side-effectful runtime actions should be executed as supervised patterns:
+
+1. pre-check
+2. apply
+3. evidence capture
+4. rollback
+5. post-rollback verification
+
 It is designed for:
 
 - Attaching to an existing `docker compose up -d` output (no rebuild needed)
@@ -211,6 +223,14 @@ Playbooks run **asynchronously** and produce:
 
 - `job_steps` (progress + step events)
 - artifacts (optional JSON outputs saved to disk)
+
+For risky operations such as `inject_fault`, `bgp_announce_prefix`, `bgp_withdraw_prefix`, `pcap_capture`, and bounded `ops_exec`, the recommended contract is:
+
+- selector-scoped target definition
+- explicit pre-check step
+- explicit evidence step
+- explicit rollback when state is mutated
+- post-rollback verification
 
 ### Validate a playbook
 

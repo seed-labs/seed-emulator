@@ -207,6 +207,25 @@ summary = {
     "task_status": status.get("status"),
     "job_id": (((execute.get("execution") or {}).get("summary") or {}).get("job_id")),
     "job_status": (((execute.get("execution") or {}).get("summary") or {}).get("job_status")),
+    "scenario_class": (((status.get("report_summary") or {}).get("scenario_class")) or ""),
+    "planner_mode": ((((execute.get("execution") or {}).get("compiled_plan") or {}).get("planner_mode")) or ""),
+    "scale_hint": (((execute.get("execution") or {}).get("summary") or {}).get("scale_hint")),
+    "selected_scope": (((execute.get("execution") or {}).get("summary") or {}).get("selected_scope")),
+    "action_count": (((execute.get("execution") or {}).get("summary") or {}).get("action_count")),
+    "risky_action_count": (((execute.get("execution") or {}).get("summary") or {}).get("risky_action_count")),
+    "rollback_status": (((execute.get("execution") or {}).get("summary") or {}).get("rollback_status")),
+    "verification_status": (((execute.get("execution") or {}).get("summary") or {}).get("verification_status")),
+    "artifact_count": (((execute.get("execution") or {}).get("summary") or {}).get("artifact_count")),
+    "latency_seconds": (((execute.get("execution") or {}).get("summary") or {}).get("latency_seconds")),
+    "unresolved_issues": (((status.get("report_summary") or {}).get("unresolved_issues")) or []),
+    "manual_review": {
+        "objective_understanding": None,
+        "environment_awareness": None,
+        "scope_choice_quality": None,
+        "evidence_conclusion_consistency": None,
+        "unnecessary_action_rate": None,
+        "reviewer_notes": "",
+    },
 }
 pathlib.Path(out_path).write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
 print(json.dumps(summary, indent=2, ensure_ascii=False))

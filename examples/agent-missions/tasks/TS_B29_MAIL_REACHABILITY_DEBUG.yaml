@@ -2,40 +2,50 @@ task_id: TS_B29_MAIL_REACHABILITY_DEBUG
 title: B29 Mail Reachability Debug
 track: troubleshooting
 baseline: B29
-objective_template: debug end-to-end mail reachability
+scenario_class: Service Reachability
+objective_template: debug end-to-end mail reachability and propose bounded next steps
 required_inputs:
   - id: attach_output_dir
     question: Provide B29 output directory for attach.
     required: true
     reason: Runtime workspace attachment is required.
   - id: source_node
-    question: Source mail client node identifier.
+    question: Source client node identifier.
     required: true
     reason: End-to-end checks require source endpoint.
   - id: destination_node
-    question: Destination mail server node identifier.
+    question: Destination visible service node identifier.
     required: true
-    reason: End-to-end checks require destination endpoint.
-stages: [observe, analyze, act, verify]
+    reason: Use a SEED-visible node so runtime operations remain attachable and auditable.
+stages: [observe, analyze, verify]
 policy_by_stage:
   observe: read_only
   analyze: read_only
-  act: net_ops
   verify: read_only
 canonical_request_templates:
   - >
     Attach to {attach_output_dir}; diagnose mail reachability from {source_node} to
-    {destination_node}; inspect route and service logs; apply minimal operational fixes
-    when needed; verify recovery and summarize unresolved risks.
+    {destination_node}; inspect route and service logs on visible SEED nodes;
+    verify current runtime state and summarize the smallest safe next action plus
+    unresolved risks.
 fallback_playbooks:
   - examples/agent-missions/playbooks/ts_b29_mail_reachability_debug.yaml
+scale_hints: [small, medium]
+rollback_required: false
+evidence_requirements:
+  - routing evidence
+  - service log evidence
+  - recovery verification
+skill_patterns:
+  - attach-and-scan
+  - service-debug
+  - evidence-collection
 acceptance_checks:
   - status == ok
   - includes routing and log evidence
-  - includes post-fix verification output
+  - report includes bounded next action
 report_template: |
   Reachability debug report for {task_id}:
   - objective: {objective}
   - diagnosis: {diagnosis}
   - recovery verification: {verification}
-

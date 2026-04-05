@@ -1,0 +1,1 @@
+Methodological principle of trustworthy autonomous experimentation. The figure should show how grounded observation, bounded intervention, supervised escalation, verification, and evidence archival jointly constrain the trajectory of an agent so that autonomous execution becomes reproducible, auditable, and scientifically defensible.

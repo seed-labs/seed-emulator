@@ -6,6 +6,7 @@ from typing import Any
 SUPPORTED_SELECTOR_KEYS = {
     "asn",
     "role",
+    "node_id",
     "node_name",
     "class",
     "network",
@@ -61,6 +62,14 @@ def match_selector(node: dict[str, Any], selector: dict[str, Any]) -> bool:
             return False
         allowed = set(allowed_list)
         if str(node.get("role", "")) not in allowed:
+            return False
+
+    if "node_id" in selector:
+        allowed_list = [str(x) for x in _as_list(selector["node_id"]) if x is not None]
+        if not allowed_list:
+            return False
+        allowed = set(allowed_list)
+        if str(node.get("node_id", "")) not in allowed:
             return False
 
     if "node_name" in selector:

@@ -13,10 +13,14 @@ SUPPORTED_ACTIONS = {
     "inventory_list_nodes",
     "ops_exec",
     "ops_logs",
+    "routing_protocol_summary",
+    "routing_looking_glass",
     "routing_bgp_summary",
     "ping",
     "traceroute",
     "inject_fault",
+    "bgp_announce_prefix",
+    "bgp_withdraw_prefix",
     "capture_evidence",
     "pcap_capture",
     "sleep",
@@ -61,7 +65,7 @@ def parse_playbook_yaml(playbook_yaml: str) -> Playbook:
         retries: 0
         retry_delay_seconds: 1
       steps:
-        - action: workspace_refresh|inventory_list_nodes|ops_exec|ops_logs|routing_bgp_summary|ping|traceroute|inject_fault|capture_evidence|pcap_capture|sleep
+        - action: workspace_refresh|inventory_list_nodes|ops_exec|ops_logs|routing_protocol_summary|routing_looking_glass|routing_bgp_summary|ping|traceroute|inject_fault|bgp_announce_prefix|bgp_withdraw_prefix|capture_evidence|pcap_capture|sleep
           id: <optional str>
           save_as: <optional str>
           on_error: <optional stop|continue>
@@ -164,11 +168,15 @@ def parse_playbook_yaml(playbook_yaml: str) -> Playbook:
         if action in {
             "ops_exec",
             "ops_logs",
+            "routing_protocol_summary",
+            "routing_looking_glass",
             "routing_bgp_summary",
             "inventory_list_nodes",
             "ping",
             "traceroute",
             "inject_fault",
+            "bgp_announce_prefix",
+            "bgp_withdraw_prefix",
             "capture_evidence",
             "pcap_capture",
         }:
@@ -186,6 +194,9 @@ def parse_playbook_yaml(playbook_yaml: str) -> Playbook:
         if action == "inject_fault":
             if "fault_type" not in args:
                 raise ValueError(f"playbook.steps[{i}] inject_fault requires 'fault_type'.")
+        if action in {"bgp_announce_prefix", "bgp_withdraw_prefix"}:
+            if "prefix" not in args:
+                raise ValueError(f"playbook.steps[{i}] {action} requires 'prefix'.")
         if action == "capture_evidence":
             if "evidence_type" not in args:
                 raise ValueError(f"playbook.steps[{i}] capture_evidence requires 'evidence_type'.")

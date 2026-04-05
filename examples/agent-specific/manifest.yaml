@@ -1,0 +1,39 @@
+version: 1
+kind: seed-agent-specific-bundle-catalog
+description: Curated attached-runtime examples keyed by Z** numbering.
+bundles:
+  - id: Z00
+    slug: Z00_b00_attached_runtime
+    title: B00 Attached Runtime
+    source_example: B00_mini_internet
+    source_family: B
+    output_dir: examples/internet/B00_mini_internet/output
+    live_readiness: go
+  - id: Z01
+    slug: Z01_y01_prefix_hijack_drill
+    title: Y01 Prefix Hijack Drill
+    source_example: Y01_bgp_prefix_hijacking
+    source_family: "Y"
+    output_dir: examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/output
+    live_readiness: conditional_go
+  - id: Z02
+    slug: Z02_a02_mpls_control_plane
+    title: A02 MPLS Control Plane
+    source_example: A02_transit_as_mpls
+    source_family: A
+    output_dir: examples/basic/A02_transit_as_mpls/output
+    live_readiness: conditional_go
+  - id: Z28
+    slug: Z28_b28_traffic_lab
+    title: B28 Traffic Lab
+    source_example: B28_traffic_generator
+    source_family: B
+    output_dir: examples/internet/B28_traffic_generator/3-multi-traffic-generator/output
+    live_readiness: go
+  - id: Z29
+    slug: Z29_b29_mail_runtime_ops
+    title: B29 Mail Runtime Ops
+    source_example: B29_email_dns
+    source_family: B
+    output_dir: examples/internet/B29_email_dns/output
+    live_readiness: go

@@ -4,22 +4,81 @@ import json
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import yaml
 
 from .inventory import DEFAULT_LABEL_PREFIX, Inventory, InventoryBuilder
-from .selectors import filter_nodes
+from .selectors import filter_nodes, match_selector
 from .store import EventRow, SeedOpsStore, WorkspaceRow
 
 
-def extract_container_names_from_compose(output_dir: str) -> list[str]:
+DEFAULT_REDACTED_FIELDS = ["container_name", "node_id", "labels"]
+
+
+def _seed_repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def resolve_compose_output_dir(output_dir: str) -> str:
     output_dir_s = str(output_dir or "").strip()
     if not output_dir_s:
         raise ValueError("output_dir is required.")
-    output_dir_abs = os.path.abspath(output_dir_s)
-    if not os.path.isdir(output_dir_abs):
-        raise ValueError(f"output_dir not found or not a directory: {output_dir_abs}")
+
+    raw = Path(output_dir_s).expanduser()
+    tried: list[str] = []
+
+    def _normalize(candidate: Path) -> Path:
+        resolved = candidate.resolve()
+        if resolved.name == "docker-compose.yml":
+            return resolved.parent
+        return resolved
+
+    def _maybe_accept(candidate: Path) -> Path | None:
+        normalized = _normalize(candidate)
+        tried.append(str(normalized))
+        if normalized.is_dir():
+            return normalized
+        return None
+
+    if raw.is_absolute():
+        accepted = _maybe_accept(raw)
+        if accepted is None:
+            raise ValueError(f"output_dir not found or not a directory: {tried[-1]}")
+        return str(accepted)
+
+    roots: list[Path] = []
+    env_root = (os.environ.get("SEED_REPO_ROOT") or "").strip()
+    if env_root:
+        roots.append(Path(env_root).expanduser())
+    roots.extend(
+        [
+            _seed_repo_root(),
+            Path.cwd(),
+            Path(__file__).resolve().parents[1],
+        ]
+    )
+
+    seen: set[str] = set()
+    for root in roots:
+        key = str(root.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        accepted = _maybe_accept(root / raw)
+        if accepted is not None:
+            return str(accepted)
+
+    tried_text = ", ".join(dict.fromkeys(tried))
+    raise ValueError(
+        "output_dir not found or not a directory. "
+        f"input={output_dir_s!r}; tried: {tried_text}"
+    )
+
+
+def extract_container_names_from_compose(output_dir: str) -> list[str]:
+    output_dir_abs = resolve_compose_output_dir(output_dir)
 
     compose_path = os.path.join(output_dir_abs, "docker-compose.yml")
     if not os.path.exists(compose_path):
@@ -94,6 +153,76 @@ class WorkspaceManager:
             updated_at=row.updated_at,
         )
 
+    @staticmethod
+    def _normalize_allowed_selector(value: Any) -> dict[str, Any]:
+        if not isinstance(value, dict):
+            return {}
+        return dict(value)
+
+    @staticmethod
+    def _normalize_redacted_fields(value: Any) -> list[str]:
+        if value is None:
+            return list(DEFAULT_REDACTED_FIELDS)
+        if not isinstance(value, list):
+            return list(DEFAULT_REDACTED_FIELDS)
+        fields: list[str] = []
+        for item in value:
+            field = str(item or "").strip()
+            if field and field not in fields:
+                fields.append(field)
+        return fields
+
+    @classmethod
+    def _get_visibility_config(cls, attach_config: dict[str, Any] | None) -> dict[str, Any]:
+        cfg = dict(attach_config or {})
+        return {
+            "allowed_selector": cls._normalize_allowed_selector(cfg.get("allowed_selector")),
+            "redacted_fields": cls._normalize_redacted_fields(cfg.get("redacted_fields")),
+        }
+
+    @classmethod
+    def _apply_visibility_config(
+        cls,
+        attach_config: dict[str, Any] | None,
+        *,
+        allowed_selector: dict[str, Any] | None = None,
+        redacted_fields: list[str] | None = None,
+    ) -> dict[str, Any]:
+        cfg = dict(attach_config or {})
+        if allowed_selector is not None:
+            cfg["allowed_selector"] = cls._normalize_allowed_selector(allowed_selector)
+        elif "allowed_selector" not in cfg:
+            cfg["allowed_selector"] = {}
+
+        if redacted_fields is not None:
+            cfg["redacted_fields"] = cls._normalize_redacted_fields(redacted_fields)
+        elif "redacted_fields" not in cfg:
+            cfg["redacted_fields"] = list(DEFAULT_REDACTED_FIELDS)
+        return cfg
+
+    @classmethod
+    def _redact_node(cls, node: dict[str, Any], redacted_fields: list[str]) -> dict[str, Any]:
+        data = dict(node)
+        for field in redacted_fields:
+            data.pop(str(field), None)
+        return data
+
+    @classmethod
+    def _redact_nodes(cls, nodes: list[dict[str, Any]], redacted_fields: list[str]) -> list[dict[str, Any]]:
+        return [cls._redact_node(node, redacted_fields) for node in nodes]
+
+    @classmethod
+    def _apply_allowed_selector(
+        cls,
+        nodes: list[dict[str, Any]],
+        allowed_selector: dict[str, Any],
+        selector: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        scoped = filter_nodes(nodes, allowed_selector) if allowed_selector else list(nodes)
+        if selector:
+            scoped = filter_nodes(scoped, selector)
+        return scoped
+
     def create(self, name: str) -> Workspace:
         row = self._store.create_workspace(name)
         self._store.insert_event(
@@ -117,14 +246,15 @@ class WorkspaceManager:
         if not ws:
             raise ValueError("Workspace not found")
 
-        output_dir_s = str(output_dir or "").strip()
-        container_names = extract_container_names_from_compose(output_dir_s)
-        output_dir_abs = os.path.abspath(output_dir_s)
+        output_dir_abs = resolve_compose_output_dir(output_dir)
+        container_names = extract_container_names_from_compose(output_dir_abs)
+        visibility = self._get_visibility_config(ws.attach_config)
 
         attach_config = {
             "output_dir": output_dir_abs,
             "container_names": container_names,
             "label_prefix": DEFAULT_LABEL_PREFIX,
+            **visibility,
         }
         self._store.update_workspace_attach(workspace_id, "compose", attach_config)
         self._store.insert_event(
@@ -146,10 +276,12 @@ class WorkspaceManager:
             re.compile(str(name_regex))
         except re.error as e:
             raise ValueError(f"Invalid name_regex: {e}") from e
+        visibility = self._get_visibility_config(ws.attach_config)
 
         attach_config = {
             "name_regex": name_regex,
             "label_prefix": label_prefix,
+            **visibility,
         }
         self._store.update_workspace_attach(workspace_id, "labels", attach_config)
         self._store.insert_event(
@@ -161,7 +293,42 @@ class WorkspaceManager:
         )
         return self.refresh(workspace_id)
 
-    def refresh(self, workspace_id: str) -> dict[str, Any]:
+    def get_visibility(self, workspace_id: str) -> dict[str, Any]:
+        ws = self._store.get_workspace(workspace_id)
+        if not ws:
+            raise ValueError("Workspace not found")
+        return {"workspace_id": workspace_id, **self._get_visibility_config(ws.attach_config)}
+
+    def set_visibility(
+        self,
+        workspace_id: str,
+        *,
+        allowed_selector: dict[str, Any] | None = None,
+        redacted_fields: list[str] | None = None,
+    ) -> dict[str, Any]:
+        ws = self._store.get_workspace(workspace_id)
+        if not ws:
+            raise ValueError("Workspace not found")
+
+        attach_config = self._apply_visibility_config(
+            ws.attach_config,
+            allowed_selector=allowed_selector,
+            redacted_fields=redacted_fields,
+        )
+        self._store.update_workspace_attach(workspace_id, ws.attach_type, attach_config)
+        self._store.insert_event(
+            workspace_id,
+            level="info",
+            event_type="workspace.visibility.updated",
+            message="Workspace visibility updated",
+            data={
+                "allowed_selector": attach_config.get("allowed_selector") or {},
+                "redacted_fields": attach_config.get("redacted_fields") or [],
+            },
+        )
+        return self.get_visibility(workspace_id)
+
+    def refresh(self, workspace_id: str, *, redacted: bool = False) -> dict[str, Any]:
         ws_row = self._store.get_workspace(workspace_id)
         if not ws_row:
             raise ValueError("Workspace not found")
@@ -211,19 +378,25 @@ class WorkspaceManager:
         inv = self._builder.build(containers, label_prefix=label_prefix)
         self._cache[workspace_id] = inv
 
+        visibility = self._get_visibility_config(attach_config)
+        visible_nodes = self._apply_allowed_selector(inv.nodes, visibility["allowed_selector"])
+
         # Summary
         roles: dict[str, int] = {}
         asn_set: set[int] = set()
-        for n in inv.nodes:
+        for n in visible_nodes:
             roles[str(n.get("role", "unknown"))] = roles.get(str(n.get("role", "unknown")), 0) + 1
             asn_set.add(int(n.get("asn", -1)))
 
-        sample_nodes = [{"node_id": n["node_id"], "container_name": n["container_name"]} for n in inv.nodes[:10]]
+        sample_nodes = [{"node_id": n["node_id"], "container_name": n["container_name"]} for n in visible_nodes[:10]]
+        if redacted:
+            sample_nodes = self._redact_nodes(sample_nodes, visibility["redacted_fields"])
+            sample_nodes = [node for node in sample_nodes if node]
         summary = {
             "workspace_id": workspace_id,
             "counts": {
                 "containers_seen": containers_seen,
-                "nodes_parsed": len(inv.nodes),
+                "nodes_parsed": len(visible_nodes),
                 "missing_containers": missing_containers,
             },
             "roles": roles,
@@ -249,17 +422,43 @@ class WorkspaceManager:
             raise ValueError("Inventory not available")
         return inv
 
-    def list_nodes(self, workspace_id: str, *, selector: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def list_nodes(
+        self,
+        workspace_id: str,
+        *,
+        selector: dict[str, Any] | None = None,
+        redacted: bool = False,
+    ) -> list[dict[str, Any]]:
         inv = self._ensure_inventory(workspace_id)
-        nodes = inv.nodes
-        if selector:
-            nodes = filter_nodes(nodes, selector)
+        ws = self._store.get_workspace(workspace_id)
+        if not ws:
+            raise ValueError("Workspace not found")
+        visibility = self._get_visibility_config(ws.attach_config)
+        nodes = self._apply_allowed_selector(
+            inv.nodes,
+            visibility["allowed_selector"],
+            selector,
+        )
         nodes = sorted(nodes, key=lambda n: n.get("node_id", ""))
+        if redacted:
+            nodes = self._redact_nodes(nodes, visibility["redacted_fields"])
         return nodes
 
-    def get_node(self, workspace_id: str, node_id: str) -> dict[str, Any] | None:
+    def get_node(self, workspace_id: str, node_id: str, *, redacted: bool = False) -> dict[str, Any] | None:
         inv = self._ensure_inventory(workspace_id)
-        return inv.by_node_id.get(node_id)
+        node = inv.by_node_id.get(node_id)
+        if node is None:
+            return None
+        ws = self._store.get_workspace(workspace_id)
+        if not ws:
+            raise ValueError("Workspace not found")
+        visibility = self._get_visibility_config(ws.attach_config)
+        allowed_selector = visibility["allowed_selector"]
+        if allowed_selector and not match_selector(node, allowed_selector):
+            return None
+        if redacted:
+            return self._redact_node(node, visibility["redacted_fields"])
+        return node
 
     def list_events(self, workspace_id: str, *, since_ts: int = 0, limit: int = 200) -> list[EventRow]:
         return self._store.list_events(workspace_id, since_ts=since_ts, limit=limit)

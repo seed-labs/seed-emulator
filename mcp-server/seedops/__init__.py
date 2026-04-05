@@ -53,11 +53,15 @@ def register_tools(mcp: FastMCP, services: SeedOpsServices | None = None) -> Non
         "workspace_attach_compose",
         "workspace_attach_labels",
         "workspace_refresh",
+        "workspace_set_visibility",
+        "workspace_get_visibility",
         "events_list",
         "inventory_list_nodes",
         "inventory_get_node",
         "ops_exec",
         "ops_logs",
+        "routing_protocol_summary",
+        "routing_looking_glass",
         "routing_bgp_summary",
         "playbook_validate",
         "playbook_run",
@@ -194,10 +198,43 @@ def register_tools(mcp: FastMCP, services: SeedOpsServices | None = None) -> Non
     def workspace_refresh(workspace_id: str) -> str:
         """Refresh inventory cache for a workspace by re-scanning the runtime backend."""
         try:
-            summary = svcs.workspaces.refresh(workspace_id)
+            summary = svcs.workspaces.refresh(workspace_id, redacted=True)
             return _json(summary)
         except Exception as e:
             _audit_error(workspace_id, tool="workspace_refresh", error=e)
+            return _json({"error": str(e)})
+
+    @mcp.tool()
+    def workspace_set_visibility(
+        workspace_id: str,
+        allowed_selector: dict = {},
+        redacted_fields: list[str] = [],
+    ) -> str:
+        """Set workspace-scoped visibility rules for selector actions and returned fields."""
+        try:
+            summary = svcs.workspaces.set_visibility(
+                workspace_id,
+                allowed_selector=allowed_selector,
+                redacted_fields=redacted_fields,
+            )
+            return _json(summary)
+        except Exception as e:
+            _audit_error(
+                workspace_id,
+                tool="workspace_set_visibility",
+                error=e,
+                data={"allowed_selector": allowed_selector, "redacted_fields": redacted_fields},
+            )
+            return _json({"error": str(e)})
+
+    @mcp.tool()
+    def workspace_get_visibility(workspace_id: str) -> str:
+        """Get workspace-scoped visibility rules."""
+        try:
+            summary = svcs.workspaces.get_visibility(workspace_id)
+            return _json(summary)
+        except Exception as e:
+            _audit_error(workspace_id, tool="workspace_get_visibility", error=e)
             return _json({"error": str(e)})
 
     @mcp.tool()
@@ -228,7 +265,7 @@ def register_tools(mcp: FastMCP, services: SeedOpsServices | None = None) -> Non
     def inventory_list_nodes(workspace_id: str, selector: dict = {}) -> str:
         """List nodes in the workspace inventory, optionally filtered by selector."""
         try:
-            nodes = svcs.workspaces.list_nodes(workspace_id, selector=selector)
+            nodes = svcs.workspaces.list_nodes(workspace_id, selector=selector, redacted=True)
             return _json({"nodes": nodes})
         except Exception as e:
             _audit_error(workspace_id, tool="inventory_list_nodes", error=e, data={"selector": selector})
@@ -238,7 +275,7 @@ def register_tools(mcp: FastMCP, services: SeedOpsServices | None = None) -> Non
     def inventory_get_node(workspace_id: str, node_id: str) -> str:
         """Get a single node by node_id (e.g., 'as150/router0')."""
         try:
-            node = svcs.workspaces.get_node(workspace_id, node_id)
+            node = svcs.workspaces.get_node(workspace_id, node_id, redacted=True)
             if not node:
                 return _json({"error": "not found"})
             return _json({"node": node})
@@ -322,6 +359,41 @@ def register_tools(mcp: FastMCP, services: SeedOpsServices | None = None) -> Non
             return _json(result)
         except Exception as e:
             _audit_error(workspace_id, tool="routing_bgp_summary", error=e, data={"selector": selector})
+            return _json({"error": str(e)})
+
+    @mcp.tool()
+    def routing_protocol_summary(workspace_id: str, selector: dict, backend: str = "auto") -> str:
+        """Summarize protocol state for selected nodes with BIRD/FRR-aware backend detection."""
+        try:
+            result = svcs.ops.routing_protocol_summary(workspace_id, selector=selector, backend=backend)
+            return _json(result)
+        except Exception as e:
+            _audit_error(
+                workspace_id,
+                tool="routing_protocol_summary",
+                error=e,
+                data={"selector": selector, "backend": backend},
+            )
+            return _json({"error": str(e)})
+
+    @mcp.tool()
+    def routing_looking_glass(workspace_id: str, selector: dict, prefix: str = "", backend: str = "auto") -> str:
+        """Query routing state or prefix-specific looking-glass output for selected nodes."""
+        try:
+            result = svcs.ops.routing_looking_glass(
+                workspace_id,
+                selector=selector,
+                prefix=prefix,
+                backend=backend,
+            )
+            return _json(result)
+        except Exception as e:
+            _audit_error(
+                workspace_id,
+                tool="routing_looking_glass",
+                error=e,
+                data={"selector": selector, "prefix": prefix, "backend": backend},
+            )
             return _json({"error": str(e)})
 
     # --------------------------------------------------------------------------

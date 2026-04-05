@@ -61,6 +61,11 @@ except Exception as _e:
     # Keep server importable even if SeedOps dependencies are missing in a minimal env.
     print(f"[server] SeedOps tools not registered: {_e}", file=sys.stderr)
 
+
+def _note_topology_change(reason: str) -> None:
+    """Invalidate rendered/compiled lifecycle state after topology mutations."""
+    runtime.note_topology_change(reason)
+
 # ==============================================================================
 # Infrastructure Tools (Base Layer)
 # ==============================================================================
@@ -78,6 +83,7 @@ def create_as(asn: int) -> str:
              return f"AS {asn} already exists."
              
         as_obj = base.createAutonomousSystem(asn)
+        _note_topology_change(f"create_as:{asn}")
         runtime.register_object(f"as{asn}", as_obj)
         runtime.log_code(f"as{asn} = base.createAutonomousSystem({asn})")
         return f"Created AS {asn}."
@@ -98,6 +104,7 @@ def create_ix(asn: int, name: str) -> str:
              return f"IX {asn} already exists."
 
         ix_obj = base.createInternetExchange(asn)
+        _note_topology_change(f"create_ix:{asn}")
         runtime.register_object(name, ix_obj)
         runtime.log_code(f"{name} = base.createInternetExchange({asn})")
         return f"Created IX {name} (ASN {asn})."
@@ -131,6 +138,7 @@ def create_node(name: str, asn: int, role: str) -> str:
         else:
             return f"Error: Invalid role '{role}'. Must be 'router' or 'host'."
             
+        _note_topology_change(f"create_node:{asn}:{name}")
         runtime.register_object(name, node_obj)
         runtime.log_code(f"{name} = as{asn}.{func_call}('{name}')")
         return f"Created {role} '{name}' in AS {asn}."
@@ -187,6 +195,7 @@ def connect_nodes(node1_name: str, node2_name: str) -> str:
             
             node1.joinNetwork(net_name)
             node2.joinNetwork(net_name)
+            _note_topology_change(f"connect_nodes:{node1_name}:{node2_name}")
             
             runtime.log_code(f"{node1_name}.joinNetwork('{net_name}')")
             runtime.log_code(f"{node2_name}.joinNetwork('{net_name}')")
@@ -224,6 +233,7 @@ def connect_nodes(node1_name: str, node2_name: str) -> str:
             
             node1.crossConnect(asn2, node2_name, ip1)
             node2.crossConnect(asn1, node1_name, ip2)
+            _note_topology_change(f"cross_connect:{node1_name}:{node2_name}")
             
             runtime.log_code(f"{node1_name}.crossConnect({asn2}, '{node2_name}', '{ip1}')")
             runtime.log_code(f"{node2_name}.crossConnect({asn1}, '{node1_name}', '{ip2}')")
@@ -262,8 +272,9 @@ def enable_mpls_on_as(asn: int) -> str:
             emulator.addLayer(mpls_layer)
             runtime.log_code("mpls_layer = Mpls()")
             runtime.log_code("emulator.addLayer(mpls_layer)")
-        
+
         mpls_layer.enableOn(asn)
+        _note_topology_change(f"enable_mpls_on_as:{asn}")
         runtime.log_code(f"mpls_layer.enableOn({asn})")
         
         return f"Enabled MPLS on AS {asn}."
@@ -295,6 +306,7 @@ def mark_mpls_edge(asn: int, node_name: str) -> str:
             return "Error: MPLS layer not enabled. Use enable_routing_layers(['mpls']) or enable_mpls_on_as() first."
 
         mpls_layer.markAsEdge(asn, node_name)
+        _note_topology_change(f"mark_mpls_edge:{asn}:{node_name}")
         runtime.log_code(f"mpls_layer.markAsEdge({asn}, '{node_name}')")
         
         return f"Marked {node_name} as MPLS Edge router in AS {asn}."
@@ -336,6 +348,7 @@ def create_evpn_customer(provider_asn: int, customer_asn: int, vni: int, pe_rout
             runtime.log_code(f"evpn_layer.configureAsEvpnProvider({provider_asn})")
             
         evpn_layer.addCustomer(provider_asn, customer_asn, customer_net, pe_router, vni)
+        _note_topology_change(f"create_evpn_customer:{provider_asn}:{customer_asn}:{vni}")
         runtime.log_code(f"evpn_layer.addCustomer({provider_asn}, {customer_asn}, '{customer_net}', '{pe_router}', {vni})")
         
         return f"Created EVPN customer connection (Provider AS{provider_asn} <-> Customer AS{customer_asn} VNI {vni})."
@@ -400,6 +413,7 @@ def enable_routing_layers(layers: list[str]) -> str:
 
             emulator.addLayer(layer_instance)
             enabled.append(real_name)
+            _note_topology_change(f"enable_layer:{real_name}")
             
             # Log code
             # We assume imports are there.
@@ -473,6 +487,7 @@ def connect_to_ix(node_name: str, ix_asn: int) -> str:
         # node.joinNetwork(net, address="auto") is default.
         
         node.joinNetwork(net_name)
+        _note_topology_change(f"connect_to_ix:{node_name}:{ix_asn}")
         
         runtime.log_code(f"{node_name}.joinNetwork('{net_name}')")
         return f"Connected {node_name} to IX {ix_asn}."
@@ -521,6 +536,7 @@ def configure_ix_peering(ix_asn: int, asn1: int, asn2: int, relationship: str) -
 
     try:
         ebgp_layer.addPrivatePeering(ix_asn, asn1, asn2, rel_enum)
+        _note_topology_change(f"configure_ix_peering:{ix_asn}:{asn1}:{asn2}:{rel_enum.name}")
         runtime.log_code(f"ebgp.addPrivatePeering({ix_asn}, {asn1}, {asn2}, PeerRelationship.{rel_enum.name})")
         return f"Configured Private Peering at IX {ix_asn} between AS {asn1} and AS {asn2} ({rel_enum.name})."
     except Exception as e:
@@ -566,6 +582,7 @@ def configure_direct_peering(asn1: int, asn2: int, relationship: str) -> str:
 
     try:
         ebgp_layer.addCrossConnectPeering(asn1, asn2, rel_enum)
+        _note_topology_change(f"configure_direct_peering:{asn1}:{asn2}:{rel_enum.name}")
         runtime.log_code(f"ebgp.addCrossConnectPeering({asn1}, {asn2}, PeerRelationship.{rel_enum.name})")
         return f"Configured Cross-Connect peering between AS {asn1} and AS {asn2} ({rel_enum.name})."
     except Exception as e:
@@ -589,6 +606,7 @@ def add_node_file(node_name: str, file_path: str, content: str) -> str:
     
     try:
         node.setFile(file_path, content)
+        _note_topology_change(f"add_node_file:{node_name}:{file_path}")
         runtime.log_code(f"find_node('{node_name}').setFile('{file_path}', '...content...')")
         return f"Added file {file_path} to {node_name}."
     except Exception as e:
@@ -607,6 +625,7 @@ def add_node_start_command(node_name: str, command: str) -> str:
     
     try:
         node.appendStartCommand(command)
+        _note_topology_change(f"add_node_start_command:{node_name}")
         runtime.log_code(f"find_node('{node_name}').appendStartCommand('{command}')")
         return f"Added start command to {node_name}."
     except Exception as e:
@@ -627,6 +646,7 @@ def add_node_build_command(node_name: str, command: str) -> str:
     
     try:
         node.addBuildCommand(command)
+        _note_topology_change(f"add_node_build_command:{node_name}")
         runtime.log_code(f"find_node('{node_name}').addBuildCommand('{command}')")
         return f"Added build command to {node_name}."
     except Exception as e:
@@ -675,6 +695,7 @@ def configure_web_server(node_name: str, url: str = "www.example.com", index_htm
         server = web_layer.install(node_name)
         server.setServerNames([url])
         server.setIndexContent(index_html)
+        _note_topology_change(f"configure_web_server:{node_name}:{url}")
         
         runtime.log_code(f"server = web_layer.install('{node_name}')")
         runtime.log_code(f"server.setServerNames(['{url}'])")
@@ -718,6 +739,7 @@ def configure_dns_zone(zone_name: str, records: list[str], glue_records: list[tu
         for fqdn, ip in glue_records:
             zone.addGuleRecord(fqdn, ip)
             runtime.log_code(f"dns_layer.getZone('{zone_name}').addGuleRecord('{fqdn}', '{ip}')")
+        _note_topology_change(f"configure_dns_zone:{zone_name}")
             
         return f"Configured DNS Zone {zone_name} with {len(records)} records."
     except Exception as e:
@@ -756,6 +778,7 @@ def install_botnet_c2(node_name: str, port: int = 445) -> str:
         
         server = c2_layer.install(node_name)
         server.setPort(port)
+        _note_topology_change(f"install_botnet_c2:{node_name}:{port}")
         runtime.log_code(f"c2_layer.install('{node_name}').setPort({port})")
         
         return f"Installed Botnet C2 on {node_name} port {port}."
@@ -796,6 +819,7 @@ def install_botnet_bot(node_name: str, c2_node_name: str) -> str:
         
         client = bot_layer.install(bot_vnode_name)
         client.setServer(c2_node_name)
+        _note_topology_change(f"install_botnet_bot:{node_name}:{c2_node_name}")
         runtime.log_code(f"bot_layer.install('{bot_vnode_name}').setServer('{c2_node_name}')")
         
         return f"Installed Botnet Bot on {node_name} connecting to {c2_node_name}."
@@ -863,6 +887,7 @@ def install_service(node_name: str, service_type: str, params: str) -> str:
 
             # Install on node (returns WebServer object)
             server = web_layer.install(node_name)
+            _note_topology_change(f"install_service:web:{node_name}")
             
             # Param: url (optional string or list)
             url = parameters.get('url')
@@ -928,6 +953,7 @@ def install_service(node_name: str, service_type: str, params: str) -> str:
             # 2. Host Zones on Server (Deployment)
             # We need to tell the server which zones it hosts
             server = dns_layer.install(node_name)
+            _note_topology_change(f"install_service:dns:{node_name}")
             
             for zone_conf in zones:
                 z_name = zone_conf.get('name')
@@ -951,8 +977,15 @@ def render_simulation() -> str:
     emulator = runtime.get_emulator()
     try:
         emulator.render()
-        runtime.rendered = True
-        return "Simulation rendered successfully. Configuration files generated in memory."
+        runtime.mark_rendered()
+        return json.dumps(
+            {
+                "status": "ok",
+                "message": "Simulation rendered successfully. Configuration files generated in memory.",
+                "lifecycle": runtime.lifecycle_contract(),
+            },
+            indent=2,
+        )
     except Exception as e:
         return f"Error rendering simulation: {str(e)}"
 
@@ -1006,6 +1039,7 @@ def install_email_service(
             dns=dns_server or None,
             net=network_name
         )
+        _note_topology_change(f"install_email_service:{domain}:{asn}")
         
         runtime.log_code(f"# Email Service")
         runtime.log_code(f"email_svc = EmailService(mode='{mode}')")
@@ -1077,6 +1111,7 @@ def configure_link_properties(
             bandwidth=bandwidth_bps,
             packetDrop=packet_loss
         )
+        _note_topology_change(f"configure_link_properties:{node_name}:{interface_index}")
         
         runtime.log_code(f"# Configure link properties for {node_name}")
         runtime.log_code(f"node.getInterfaces()[{interface_index}].setLinkProperties(latency={latency_ms}, bandwidth={bandwidth_bps}, packetDrop={packet_loss})")
@@ -1118,6 +1153,7 @@ def add_static_route(
         # Add static route command to node startup
         route_cmd = f"ip route add {destination} via {next_hop} || true"
         node.appendStartCommand(route_cmd)
+        _note_topology_change(f"add_static_route:{node_name}:{destination}")
         
         runtime.log_code(f"# Add static route to {node_name}")
         runtime.log_code(f"node.appendStartCommand('{route_cmd}')")
@@ -1339,8 +1375,8 @@ def compile_simulation(output_dir: str) -> str:
     """
     emulator = runtime.get_emulator()
     
-    if not emulator.rendered():
-        return "Error: Simulation not rendered. Call render_simulation first."
+    if not emulator.rendered() or not runtime.is_render_current():
+        return "Error: Simulation not rendered for the current topology. Call render_simulation first."
     
     import os
     from seedemu.compiler import Docker
@@ -1371,11 +1407,18 @@ def compile_simulation(output_dir: str) -> str:
                     pass  # Ignore callback errors
             os_module.chdir(prev_cwd)
         
-        runtime.output_dir = os.path.abspath(output_dir)
+        runtime.mark_compiled(output_dir)
         runtime.log_code(f"docker = Docker()")
         runtime.log_code(f"docker.compile(emulator, '{output_dir}')")
-        
-        return f"Compiled simulation to Docker files in '{output_dir}'."
+
+        return json.dumps(
+            {
+                "status": "ok",
+                "message": f"Compiled simulation to Docker files in '{output_dir}'.",
+                "lifecycle": runtime.lifecycle_contract(),
+            },
+            indent=2,
+        )
     except Exception as e:
         return f"Error compiling simulation: {str(e)}"
 
@@ -1385,8 +1428,10 @@ def build_images() -> str:
     
     Must be called after compile_simulation.
     """
-    if not runtime.output_dir:
-        return "Error: No output directory set. Call compile_simulation first."
+    if not runtime.output_dir or not runtime.is_compile_current():
+        return "Error: No current compiled output. Call compile_simulation after rendering the latest topology."
+    if runtime.is_build_current():
+        return "Docker images already built for the current compiled output."
     
     import subprocess
     
@@ -1402,6 +1447,7 @@ def build_images() -> str:
         if result.returncode != 0:
             return f"Error building images: {result.stderr}"
         
+        runtime.mark_built()
         return "Docker images built successfully."
     except subprocess.TimeoutExpired:
         return "Error: Build timed out after 10 minutes."
@@ -1414,8 +1460,12 @@ def start_simulation() -> str:
     
     Must be called after build_images.
     """
-    if not runtime.output_dir:
-        return "Error: No output directory set. Call compile_simulation first."
+    if not runtime.output_dir or not runtime.is_compile_current():
+        return "Error: No current compiled output. Call compile_simulation first."
+    if not runtime.is_build_current():
+        return "Error: Docker images are not built for the current compiled output. Call build_images first."
+    if runtime.get_phase().value == "running":
+        return "Simulation is already marked as running."
     
     import subprocess
     
@@ -1431,6 +1481,7 @@ def start_simulation() -> str:
         if result.returncode != 0:
             return f"Error starting simulation: {result.stderr}"
         
+        runtime.mark_started()
         return "Simulation started. Containers are running."
     except Exception as e:
         return f"Error starting simulation: {str(e)}"
@@ -1455,6 +1506,7 @@ def stop_simulation() -> str:
         if result.returncode != 0:
             return f"Error stopping simulation: {result.stderr}"
         
+        runtime.mark_stopped()
         return "Simulation stopped. Containers removed."
     except Exception as e:
         return f"Error stopping simulation: {str(e)}"
@@ -2118,7 +2170,8 @@ def get_agent_state() -> str:
                 for asn in base.getAsns()
             ) if base.getAsns() else 0
         },
-        "running_containers": running_containers[:10]  # Limit to 10
+        "running_containers": running_containers[:10],  # Limit to 10
+        "lifecycle": runtime.lifecycle_contract(),
     }
     
     return json.dumps(state, indent=2)
@@ -2185,8 +2238,7 @@ def attach_to_simulation(output_dir: str) -> str:
     if not os.path.exists(compose_file):
         return f"Error: No docker-compose.yml found in {output_dir}"
     
-    runtime.output_dir = os.path.abspath(output_dir)
-    runtime.set_phase(AgentPhase.OPERATING)
+    runtime.mark_attached(output_dir)
     
     # Verify containers are running
     discover_result = discover_running_simulation()
@@ -2195,7 +2247,8 @@ def attach_to_simulation(output_dir: str) -> str:
         "attached": True,
         "output_dir": runtime.output_dir,
         "phase": runtime.get_phase().value,
-        "discovery": json.loads(discover_result)
+        "discovery": json.loads(discover_result),
+        "lifecycle": runtime.lifecycle_contract(),
     }, indent=2)
 
 

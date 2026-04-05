@@ -1,5 +1,8 @@
 # Seed-Agent Dynamic Operations Showcase (`examples/agent-base`)
 
+Superseded for curated agent-facing packaging by `examples/agent-specific`.
+`examples/agent-base` remains the older showcase automation path.
+
 This package demonstrates **runtime operations only** on already-running SEED networks.
 It is designed to highlight:
 

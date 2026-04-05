@@ -1,6 +1,7 @@
-import sys
 import os
+import sys
 from enum import Enum
+from typing import Any
 
 # Ensure local repository root has highest import priority for `seedemu`.
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -23,6 +24,17 @@ class AgentPhase(Enum):
     DEBUGGING = "debugging"          # Analyzing/fixing issues
 
 
+class LifecycleAction(Enum):
+    """Canonical lifecycle actions for build and attached-runtime flows."""
+
+    RENDER = "render_simulation"
+    COMPILE = "compile_simulation"
+    BUILD = "build_images"
+    START = "start_simulation"
+    STOP = "stop_simulation"
+    ATTACH = "attach_to_simulation"
+
+
 class EmulatorRuntime:
     _instance = None
 
@@ -37,7 +49,13 @@ class EmulatorRuntime:
         self.base = Base()
         self.emulator.addLayer(self.base)
         self.rendered = False
-        
+        self.topology_version = 0
+        self.rendered_version = -1
+        self.compiled_version = -1
+        self.built_version = -1
+        self.attached_output_dir = None
+        self.last_transition_reason = "reset"
+
         # Agent state machine
         self.phase = AgentPhase.IDLE
         self.current_example = None     # Path to loaded example
@@ -60,6 +78,108 @@ class EmulatorRuntime:
             "base = Base()",
             "emulator.addLayer(base)",
         ]
+
+    def note_topology_change(self, reason: str = "") -> None:
+        """Invalidate rendered/compiled runtime state after topology mutations."""
+        self.topology_version += 1
+        self.rendered = False
+        self.rendered_version = -1
+        self.compiled_version = -1
+        self.built_version = -1
+        self.output_dir = None
+        self.attached_output_dir = None
+        self.last_transition_reason = reason or "topology_changed"
+        if self.phase in {
+            AgentPhase.CONFIRMED,
+            AgentPhase.COMPILING,
+            AgentPhase.RUNNING,
+            AgentPhase.OPERATING,
+            AgentPhase.DEBUGGING,
+        }:
+            self.phase = AgentPhase.DESIGNING
+
+    def mark_rendered(self) -> None:
+        self.rendered = True
+        self.rendered_version = self.topology_version
+        self.compiled_version = -1
+        self.built_version = -1
+        self.output_dir = None
+        self.attached_output_dir = None
+        self.phase = AgentPhase.CONFIRMED
+        self.last_transition_reason = LifecycleAction.RENDER.value
+
+    def mark_compiled(self, output_dir: str) -> None:
+        self.output_dir = os.path.abspath(output_dir)
+        self.attached_output_dir = None
+        self.compiled_version = self.topology_version
+        self.built_version = -1
+        self.phase = AgentPhase.COMPILING
+        self.last_transition_reason = LifecycleAction.COMPILE.value
+
+    def mark_built(self) -> None:
+        self.built_version = self.compiled_version
+        self.phase = AgentPhase.COMPILING
+        self.last_transition_reason = LifecycleAction.BUILD.value
+
+    def mark_started(self) -> None:
+        self.phase = AgentPhase.RUNNING
+        self.last_transition_reason = LifecycleAction.START.value
+
+    def mark_stopped(self) -> None:
+        self.phase = AgentPhase.CONFIRMED if self.rendered_version == self.topology_version else AgentPhase.IDLE
+        self.last_transition_reason = LifecycleAction.STOP.value
+
+    def mark_attached(self, output_dir: str) -> None:
+        resolved = os.path.abspath(output_dir)
+        self.output_dir = resolved
+        self.attached_output_dir = resolved
+        self.phase = AgentPhase.OPERATING
+        self.last_transition_reason = LifecycleAction.ATTACH.value
+
+    def is_render_current(self) -> bool:
+        return self.rendered and self.rendered_version == self.topology_version
+
+    def is_compile_current(self) -> bool:
+        return bool(self.output_dir) and self.compiled_version == self.topology_version
+
+    def is_build_current(self) -> bool:
+        return self.is_compile_current() and self.built_version == self.compiled_version
+
+    def lifecycle_contract(self) -> dict[str, Any]:
+        """Return explicit lifecycle state and valid next actions."""
+        next_actions: list[str] = []
+        if not self.is_render_current():
+            next_actions.append(LifecycleAction.RENDER.value)
+        if self.is_render_current() and not self.is_compile_current():
+            next_actions.append(LifecycleAction.COMPILE.value)
+        if self.is_compile_current() and not self.is_build_current():
+            next_actions.append(LifecycleAction.BUILD.value)
+        if self.is_build_current():
+            next_actions.extend([LifecycleAction.START.value, LifecycleAction.STOP.value])
+        if self.attached_output_dir:
+            next_actions.extend(["workspace_attach_compose", "workspace_refresh", "operate_runtime"])
+        if self.phase == AgentPhase.RUNNING:
+            next_actions.extend(["list_containers", "discover_running_simulation"])
+
+        return {
+            "phase": self.phase.value,
+            "topology_version": self.topology_version,
+            "rendered": self.is_render_current(),
+            "compiled": self.is_compile_current(),
+            "images_built": self.is_build_current(),
+            "running": self.phase == AgentPhase.RUNNING,
+            "attached": bool(self.attached_output_dir),
+            "output_dir": self.output_dir,
+            "attached_output_dir": self.attached_output_dir,
+            "last_transition_reason": self.last_transition_reason,
+            "next_actions": next_actions,
+            "preconditions": {
+                LifecycleAction.COMPILE.value: "requires rendered topology current with latest mutations",
+                LifecycleAction.BUILD.value: "requires compiled output current with latest render",
+                LifecycleAction.START.value: "requires built images current with latest compile",
+                LifecycleAction.ATTACH.value: "requires an existing output directory with docker-compose.yml",
+            },
+        }
     
     def set_phase(self, phase: AgentPhase):
         """Update agent phase."""

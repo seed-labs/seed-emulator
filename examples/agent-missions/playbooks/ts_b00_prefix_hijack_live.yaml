@@ -1,0 +1,47 @@
+version: 1
+name: ts_b00_prefix_hijack_live
+defaults:
+  selector:
+    asn: [151]
+    role: [BorderRouter, Router]
+  timeout_seconds: 30
+  parallelism: 12
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: routing_bgp_summary
+    id: bgp_before
+    save_as: bgp_before
+  - action: bgp_announce_prefix
+    id: announce_hijack
+    prefix: 10.150.0.0/24
+    table: t_direct
+    protocol_id: seedops_hijack_10_150_0_0_24
+    save_as: hijack_announce
+  - action: sleep
+    id: propagation_wait
+    seconds: 3
+  - action: routing_bgp_summary
+    id: bgp_during
+    save_as: bgp_during
+  - action: traceroute
+    id: trace_during
+    dst: 10.150.0.1
+    save_as: trace_during
+  - action: bgp_withdraw_prefix
+    id: withdraw_hijack
+    prefix: 10.150.0.0/24
+    table: t_direct
+    protocol_id: seedops_hijack_10_150_0_0_24
+    save_as: hijack_withdraw
+    on_error: continue
+  - action: sleep
+    id: rollback_wait
+    seconds: 2
+    on_error: continue
+  - action: routing_bgp_summary
+    id: bgp_after
+    save_as: bgp_after
+    on_error: continue

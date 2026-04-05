@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ipaddress
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -28,6 +30,89 @@ def _sleep_interruptible(cancel: threading.Event, seconds: float) -> None:
         if remaining <= 0:
             return
         time.sleep(min(0.2, remaining))
+
+
+def _validate_prefix(prefix: str) -> str:
+    text = str(prefix or "").strip()
+    if not text:
+        raise ValueError("prefix must be non-empty.")
+    try:
+        net = ipaddress.ip_network(text, strict=False)
+    except Exception as exc:
+        raise ValueError(f"Invalid prefix: {text!r}") from exc
+    return str(net)
+
+
+def _sanitize_hijack_tag(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return "seedops_hijack"
+    tag = re.sub(r"[^a-zA-Z0-9_]", "_", raw)
+    tag = re.sub(r"_+", "_", tag).strip("_")
+    if not tag:
+        tag = "seedops_hijack"
+    if not re.match(r"^[A-Za-z_]", tag):
+        tag = f"h_{tag}"
+    return tag[:63]
+
+
+def _build_hijack_protocol_block(*, prefix: str, table: str, protocol_id: str) -> str:
+    return (
+        f"# seedops-bgp-hijack:{protocol_id}:begin\n"
+        f"protocol static {protocol_id} {{\n"
+        f"    ipv4 {{ table {table}; }};\n"
+        f"    route {prefix} blackhole;\n"
+        "}\n"
+        f"# seedops-bgp-hijack:{protocol_id}:end\n"
+    )
+
+
+def _build_bgp_hijack_command(
+    *,
+    mode: str,
+    prefix: str,
+    protocol_id: str,
+    table: str,
+) -> str:
+    conf_path = "/etc/bird/bird.conf"
+    begin_marker = f"# seedops-bgp-hijack:{protocol_id}:begin"
+    end_marker = f"# seedops-bgp-hijack:{protocol_id}:end"
+    tmp_path = "/tmp/bird.conf.seedops.tmp"
+    protocol_block = _build_hijack_protocol_block(prefix=prefix, table=table, protocol_id=protocol_id)
+
+    if mode == "announce":
+        script = (
+            f'CONF="{conf_path}"\n'
+            f'BEGIN_MARK={shlex.quote(begin_marker)}\n'
+            f'END_MARK={shlex.quote(end_marker)}\n'
+            'if ! grep -qF "$BEGIN_MARK" "$CONF"; then\n'
+            "cat >> \"$CONF\" <<'EOF_SEEDOPS_BGP_HIJACK'\n"
+            f"{protocol_block}"
+            "EOF_SEEDOPS_BGP_HIJACK\n"
+            "fi\n"
+            "birdc configure\n"
+            f"birdc \"show route for {prefix} all\" || true\n"
+        )
+    elif mode == "withdraw":
+        script = (
+            f'CONF="{conf_path}"\n'
+            f'TMP="{tmp_path}"\n'
+            f'BEGIN_MARK={shlex.quote(begin_marker)}\n'
+            f'END_MARK={shlex.quote(end_marker)}\n'
+            'if grep -qF "$BEGIN_MARK" "$CONF"; then\n'
+            "awk -v b=\"$BEGIN_MARK\" -v e=\"$END_MARK\" '\n"
+            '$0 == b {skip=1; next}\n'
+            '$0 == e {skip=0; next}\n'
+            '!skip {print}\n'
+            "' \"$CONF\" > \"$TMP\" && mv \"$TMP\" \"$CONF\"\n"
+            "fi\n"
+            "birdc configure || true\n"
+            f"birdc \"show route for {prefix} all\" || true\n"
+        )
+    else:
+        raise ValueError(f"unsupported hijack mode: {mode}")
+
+    return f"sh -lc {shlex.quote(script)}"
 
 
 def _capture_pcap_to_file(
@@ -350,6 +435,38 @@ class JobManager:
             delay = 1.0
         return max(0.0, delay)
 
+    def _resolve_fault_interface(self, workspace_id: str, *, selector: dict[str, Any]) -> str:
+        try:
+            nodes = self._workspaces.list_nodes(workspace_id, selector=selector)
+        except Exception:
+            return "eth0"
+        if not nodes:
+            return "eth0"
+
+        preferred_by_node: list[list[str]] = []
+        for node in nodes:
+            interfaces = node.get("interfaces") or []
+            names = [
+                str(iface.get("name") or "").strip()
+                for iface in interfaces
+                if isinstance(iface, dict)
+            ]
+            names = [name for name in names if name and name != "lo" and not name.startswith("dummy")]
+            if names:
+                preferred_by_node.append(names)
+
+        if not preferred_by_node:
+            return "eth0"
+
+        common = set(preferred_by_node[0])
+        for names in preferred_by_node[1:]:
+            common &= set(names)
+        if common:
+            for candidate in preferred_by_node[0]:
+                if candidate in common:
+                    return candidate
+        return preferred_by_node[0][0]
+
     def _summarize_result(self, action: str, result: Any) -> dict[str, Any]:
         if action == "inventory_list_nodes" and isinstance(result, list):
             sample = []
@@ -357,7 +474,15 @@ class JobManager:
                 if isinstance(n, dict) and "node_id" in n:
                     sample.append(str(n["node_id"]))
             return {"count": len(result), "sample_node_ids": sample}
-        if action in {"ops_exec", "ping", "traceroute", "inject_fault", "capture_evidence"} and isinstance(result, dict):
+        if action in {
+            "ops_exec",
+            "ping",
+            "traceroute",
+            "inject_fault",
+            "bgp_announce_prefix",
+            "bgp_withdraw_prefix",
+            "capture_evidence",
+        } and isinstance(result, dict):
             summary = self._summarize_exec_like(result)
             if action in {"ping", "traceroute"}:
                 summary["dst"] = result.get("dst")
@@ -367,6 +492,11 @@ class JobManager:
                 summary["fault_type"] = result.get("fault_type")
                 summary["params"] = result.get("params")
                 summary["interface"] = result.get("interface")
+            if action in {"bgp_announce_prefix", "bgp_withdraw_prefix"}:
+                summary["prefix"] = result.get("prefix")
+                summary["table"] = result.get("table")
+                summary["protocol_id"] = result.get("protocol_id")
+                summary["mode"] = result.get("mode")
             if action == "capture_evidence":
                 summary["evidence_type"] = result.get("evidence_type")
             return summary
@@ -380,6 +510,15 @@ class JobManager:
             return {"counts": result.get("counts"), "sample": sample}
         if action == "ops_logs" and isinstance(result, dict):
             return {"counts": result.get("counts"), "fail_reasons": result.get("fail_reasons")}
+        if action in {"routing_protocol_summary", "routing_looking_glass"} and isinstance(result, dict):
+            summary = {
+                "backend": result.get("backend"),
+                "backend_counts": result.get("backend_counts"),
+                "counts": result.get("counts"),
+            }
+            if action == "routing_looking_glass":
+                summary["prefix"] = result.get("prefix")
+            return summary
         if action == "routing_bgp_summary" and isinstance(result, dict):
             return {"backend": result.get("backend"), "counts": result.get("counts")}
         if action == "sleep" and isinstance(result, dict):
@@ -431,10 +570,14 @@ class JobManager:
         if action in {
             "ops_exec",
             "ops_logs",
+            "routing_protocol_summary",
+            "routing_looking_glass",
             "routing_bgp_summary",
             "ping",
             "traceroute",
             "inject_fault",
+            "bgp_announce_prefix",
+            "bgp_withdraw_prefix",
             "capture_evidence",
             "pcap_capture",
         }:
@@ -475,6 +618,24 @@ class JobManager:
                     max_output_chars=max_output_chars,
                 )
 
+            if action == "routing_protocol_summary":
+                backend = str(step_args.get("backend") or "auto").strip() or "auto"
+                return self._ops.routing_protocol_summary(
+                    workspace_id,
+                    selector=selector,
+                    backend=backend,
+                )
+
+            if action == "routing_looking_glass":
+                backend = str(step_args.get("backend") or "auto").strip() or "auto"
+                prefix = str(step_args.get("prefix") or "").strip()
+                return self._ops.routing_looking_glass(
+                    workspace_id,
+                    selector=selector,
+                    prefix=prefix,
+                    backend=backend,
+                )
+
             if action == "routing_bgp_summary":
                 return self._ops.bgp_summary(workspace_id, selector=selector)
 
@@ -487,7 +648,14 @@ class JobManager:
                 parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 20)
                 max_output_chars = int(step_args.get("max_output_chars") or self._render_default(playbook, "max_output_chars", context) or 8000)
 
-                cmd = f"ping -c {count} {shlex.quote(dst)}"
+                script = (
+                    f"if command -v ping >/dev/null 2>&1; then "
+                    f"ping -c {count} {shlex.quote(dst)}; "
+                    "elif command -v busybox >/dev/null 2>&1; then "
+                    f"busybox ping -c {count} {shlex.quote(dst)}; "
+                    "else echo 'ping command not found'; exit 127; fi"
+                )
+                cmd = f"sh -lc {shlex.quote(script)}"
                 res = self._ops.exec(
                     workspace_id,
                     selector=selector,
@@ -506,7 +674,17 @@ class JobManager:
                 parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 20)
                 max_output_chars = int(step_args.get("max_output_chars") or self._render_default(playbook, "max_output_chars", context) or 8000)
 
-                script = f"traceroute -n {shlex.quote(dst)} || tracepath -n {shlex.quote(dst)}"
+                script = (
+                    "if command -v traceroute >/dev/null 2>&1; then "
+                    f"traceroute -n {shlex.quote(dst)}; "
+                    "elif command -v tracepath >/dev/null 2>&1; then "
+                    f"tracepath -n {shlex.quote(dst)}; "
+                    "elif command -v ping >/dev/null 2>&1; then "
+                    f"ping -c 4 {shlex.quote(dst)}; "
+                    "elif command -v busybox >/dev/null 2>&1; then "
+                    f"busybox ping -c 4 {shlex.quote(dst)}; "
+                    "else echo 'traceroute/tracepath/ping command not found'; exit 127; fi"
+                )
                 cmd = f"sh -lc {shlex.quote(script)}"
                 res = self._ops.exec(
                     workspace_id,
@@ -523,7 +701,10 @@ class JobManager:
                 if not fault_type:
                     raise ValueError("inject_fault requires non-empty fault_type.")
                 params = str(step_args.get("params") or "").strip()
-                interface = str(step_args.get("interface") or "eth0").strip() or "eth0"
+                interface = str(step_args.get("interface") or "").strip()
+                if not interface or interface.lower() == "auto":
+                    interface = self._resolve_fault_interface(workspace_id, selector=selector)
+                interface = interface or "eth0"
 
                 if fault_type == "packet_loss":
                     percent = params or "10"
@@ -562,7 +743,42 @@ class JobManager:
                     parallelism=parallelism,
                     max_output_chars=max_output_chars,
                 )
+                if fault_type != "reset" and int((res.get("counts") or {}).get("fail") or 0) > 0:
+                    fail_reasons = dict(res.get("fail_reasons") or {})
+                    raise RuntimeError(f"inject_fault failed on selected nodes: {fail_reasons}")
                 return {"fault_type": fault_type, "params": params, "interface": interface, **res}
+
+            if action in {"bgp_announce_prefix", "bgp_withdraw_prefix"}:
+                prefix = _validate_prefix(str(step_args.get("prefix") or ""))
+                table = str(step_args.get("table") or "t_direct").strip() or "t_direct"
+                # protocol_id is persisted across announce/withdraw steps.
+                protocol_id_input = str(step_args.get("protocol_id") or f"seedops_hijack_{prefix.replace('/', '_').replace('.', '_')}").strip()
+                protocol_id = _sanitize_hijack_tag(protocol_id_input)
+                mode = "announce" if action == "bgp_announce_prefix" else "withdraw"
+                cmd = _build_bgp_hijack_command(
+                    mode=mode,
+                    prefix=prefix,
+                    protocol_id=protocol_id,
+                    table=table,
+                )
+                timeout_seconds = int(step_args.get("timeout_seconds") or self._render_default(playbook, "timeout_seconds", context) or 30)
+                parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 20)
+                max_output_chars = int(step_args.get("max_output_chars") or self._render_default(playbook, "max_output_chars", context) or 8000)
+                res = self._ops.exec(
+                    workspace_id,
+                    selector=selector,
+                    command=cmd,
+                    timeout_seconds=timeout_seconds,
+                    parallelism=parallelism,
+                    max_output_chars=max_output_chars,
+                )
+                return {
+                    "prefix": prefix,
+                    "table": table,
+                    "protocol_id": protocol_id,
+                    "mode": mode,
+                    **res,
+                }
 
             if action == "capture_evidence":
                 evidence_type = str(step_args.get("evidence_type") or "").strip().lower()
@@ -576,10 +792,22 @@ class JobManager:
                     parts.append("ip route || true")
                     parts.append("echo ''")
                     parts.append("echo '=== BGP STATUS ==='")
-                    parts.append("birdc show protocol 2>/dev/null || echo 'No BIRD'")
+                    parts.append(
+                        "if command -v birdc >/dev/null 2>&1; then "
+                        "birdc show protocols 2>/dev/null || echo 'BIRD unavailable'; "
+                        "elif command -v vtysh >/dev/null 2>&1; then "
+                        "vtysh -c 'show bgp summary' 2>/dev/null || echo 'FRR unavailable'; "
+                        "else echo 'No BIRD/FRR'; fi"
+                    )
                     parts.append("echo ''")
                     parts.append("echo '=== BGP ROUTES ==='")
-                    parts.append("birdc 'show route' 2>/dev/null || echo 'No BIRD'")
+                    parts.append(
+                        "if command -v birdc >/dev/null 2>&1; then "
+                        "birdc 'show route' 2>/dev/null || echo 'BIRD routes unavailable'; "
+                        "elif command -v vtysh >/dev/null 2>&1; then "
+                        "vtysh -c 'show bgp ipv4 unicast' 2>/dev/null || vtysh -c 'show bgp' 2>/dev/null || echo 'FRR routes unavailable'; "
+                        "else echo 'No BIRD/FRR'; fi"
+                    )
 
                 if evidence_type in {"network_state", "full"}:
                     parts.append("echo ''")
@@ -637,6 +865,16 @@ class JobManager:
                 parallelism = int(step_args.get("parallelism") or self._render_default(playbook, "parallelism", context) or 5)
 
                 nodes = self._workspaces.list_nodes(workspace_id, selector=selector)
+                visibility_getter = getattr(self._workspaces, "get_visibility", None)
+                redacted_fields: list[str] = []
+                if callable(visibility_getter):
+                    try:
+                        visibility = visibility_getter(workspace_id)
+                        fields = visibility.get("redacted_fields") if isinstance(visibility, dict) else []
+                        if isinstance(fields, list):
+                            redacted_fields = [str(field) for field in fields if str(field or "").strip()]
+                    except Exception:
+                        redacted_fields = []
 
                 def worker(node: dict[str, Any]) -> dict[str, Any]:
                     node_id = str(node.get("node_id") or "")
@@ -710,6 +948,14 @@ class JobManager:
                         results.append(fut.result())
 
                 results.sort(key=lambda r: str(r.get("node_id", "")))
+                if redacted_fields:
+                    redacted_results: list[dict[str, Any]] = []
+                    for row in results:
+                        item = dict(row)
+                        for field in redacted_fields:
+                            item.pop(field, None)
+                        redacted_results.append(item)
+                    results = redacted_results
                 ok = sum(1 for r in results if r.get("ok"))
                 fail = len(results) - ok
 
@@ -955,7 +1201,7 @@ class JobManager:
         try:
             while not cancel.is_set():
                 tick += 1
-                inv_summary = self._workspaces.refresh(workspace_id)
+                inv_summary = self._workspaces.refresh(workspace_id, redacted=True)
                 inv_snapshot_id = self._store.insert_snapshot(
                     workspace_id,
                     snapshot_type="inventory_summary",
@@ -964,7 +1210,7 @@ class JobManager:
 
                 bgp_snapshot_id = None
                 if include_bgp_summary:
-                    bgp = self._ops.bgp_summary(workspace_id, selector=selector)
+                    bgp = self._ops.routing_protocol_summary(workspace_id, selector=selector, backend="auto")
                     bgp_snapshot_id = self._store.insert_snapshot(
                         workspace_id,
                         snapshot_type="bgp_summary_counts",

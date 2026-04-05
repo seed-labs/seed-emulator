@@ -1,0 +1,16 @@
+Create a publication-quality academic architecture diagram for a national science foundation proposal.
+
+Subject: trustworthy agentic orchestration for closed-loop network experimentation.
+
+Composition requirements:
+- Landscape 16:9 figure, clean white background.
+- Three vertically stacked layers with elegant spacing and subtle rounded containers.
+- Top layer: Network Simulation Substrate. Depict miniature Internet, AS topology, routers, and services in a restrained abstract style.
+- Middle layer: Runtime Control and Evidence Plane. Depict structured inventory, bounded operations, jobs, logs, and evidence artifacts.
+- Bottom layer: Trustworthy Agentic Orchestration. Depict task formalization, policy gate, planner, verification, and archive.
+- Show a clear closed loop with arrows: observe, plan, act, verify, archive.
+- Emphasize scientific architecture, not product UI, not cartoon, not dashboard.
+- Minimal text only. Use only short labels. No paragraph text.
+- Aesthetic direction: high-end academic figure, soft blue-gray, muted teal, pale sand accents, restrained saturation, precise layout, strong hierarchy, paper-ready, elegant.
+- Avoid engineering poster style, neon colors, dark backgrounds, photorealism, and decorative icon overload.
+- Visual feel: serious, conceptual, refined, suitable for a high-level NSFC proposal.

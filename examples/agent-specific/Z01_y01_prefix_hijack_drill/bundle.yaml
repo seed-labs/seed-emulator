@@ -1,0 +1,66 @@
+id: Z01
+slug: Z01_y01_prefix_hijack_drill
+title: Y01 Prefix Hijack Drill Candidate
+source_examples:
+  - family: "Y"
+    example_id: Y01_bgp_prefix_hijacking
+    output_dir: examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/output
+runtime_contract:
+  stage: already_running_network
+  planner_visibility: runtime_restricted
+  full_container_access: true
+  future_partial_visibility_ready: true
+tool_contract:
+  high_level:
+    - seed_agent_run
+    - seed_agent_plan
+    - seed_agent_policy_check
+  preferred_ops:
+    - workspace_refresh
+    - inventory_list_nodes
+    - routing_protocol_summary
+    - routing_looking_glass
+    - ops_logs
+    - job_get
+    - job_steps_list
+  risky_ops:
+    - bgp_announce_prefix
+    - bgp_withdraw_prefix
+    - inject_fault
+  shell_command_policy:
+    default: avoid_shell_first
+    allowed_only_for:
+      - explicit live drill evidence gaps after policy approval
+orchestration_contract:
+  canonical_loop:
+    - attach
+    - inspect
+    - decide
+    - act
+    - rollback
+    - verify
+  primary_entry: seed_agent_run
+  structured_task_entry: []
+  deterministic_fallback: []
+skill_contract:
+  task_skill_patterns:
+    - attach-and-scan
+    - routing-drill-and-rollback
+    - evidence-collection
+  why_it_fits:
+    - Y01 is the strongest routing-security story in the repo.
+    - It is useful for scope reasoning even before live actions are enabled.
+command_contract:
+  interactive_ui: ./scripts/seed-codex ui -m gpt-5.4 -c 'model_reasoning_effort="low"'
+  read_only_probe: ./scripts/seed-codex run "Attach to examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/output; only inspect the running environment and identify how a prefix hijack should be observed." --workspace-name z01_probe --attach-output-dir examples/yesterday_once_more/Y01_bgp_prefix_hijacking/demo/output --policy read_only
+  live_note:
+    - Use only as an optional security drill after startup stability is confirmed.
+status:
+  live_readiness: conditional_go
+  best_for:
+    - routing-security potential
+    - pre-drill planning
+    - before/during/after evidence design
+  hard_boundaries:
+    - Startup remains heavy and less demo-friendly than B00 or B29.
+    - Do not make Y01 the only live path for a critical session.

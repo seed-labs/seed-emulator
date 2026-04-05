@@ -21,7 +21,7 @@ class FakeWorkspaces:
             {"node_id": "as150/host0", "container_name": "c1"},
         ]
 
-    def refresh(self, workspace_id: str):
+    def refresh(self, workspace_id: str, redacted: bool = False):
         return {
             "workspace_id": workspace_id,
             "counts": {"containers_seen": 0, "nodes_parsed": 0, "missing_containers": 0},
@@ -37,6 +37,9 @@ class FakeOps:
 
     def logs(self, *args, **kwargs):
         raise AssertionError("Unexpected ops_logs call")
+
+    def routing_protocol_summary(self, *args, **kwargs):
+        raise AssertionError("Unexpected routing_protocol_summary call")
 
     def bgp_summary(self, *args, **kwargs):
         raise AssertionError("Unexpected bgp_summary call")
@@ -102,4 +105,3 @@ steps:
 
 if __name__ == "__main__":
     unittest.main()
-

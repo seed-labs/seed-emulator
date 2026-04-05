@@ -15,7 +15,7 @@ from seedops.store import SeedOpsStore
 
 
 class FakeWorkspaces:
-    def refresh(self, workspace_id: str):
+    def refresh(self, workspace_id: str, redacted: bool = False):
         return {
             "workspace_id": workspace_id,
             "counts": {"containers_seen": 0, "nodes_parsed": 0, "missing_containers": 0},
@@ -41,6 +41,14 @@ class FakeOps:
 
     def logs(self, workspace_id: str, *, selector, tail=200, since_seconds=0, parallelism=20, max_output_chars=8000):
         return {"counts": {"total": 1, "ok": 1, "fail": 0}, "fail_reasons": {}, "logs": []}
+
+    def routing_protocol_summary(self, workspace_id: str, *, selector, backend="auto"):
+        return {
+            "backend": backend,
+            "backend_counts": {backend: 1},
+            "counts": {"nodes": 1, "nodes_ok": 1, "nodes_error": 0, "bgp_up": 1, "bgp_down": 0},
+            "nodes": [],
+        }
 
     def bgp_summary(self, workspace_id: str, *, selector):
         return {

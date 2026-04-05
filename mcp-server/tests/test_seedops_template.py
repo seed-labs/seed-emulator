@@ -14,7 +14,7 @@ from seedops.template import TemplateError, render_value
 
 
 class FakeWorkspaces:
-    def refresh(self, workspace_id: str):
+    def refresh(self, workspace_id: str, redacted: bool = False):
         return {
             "workspace_id": workspace_id,
             "counts": {"containers_seen": 0, "nodes_parsed": 0, "missing_containers": 0},
@@ -44,6 +44,9 @@ class RecordingOps:
 
     def logs(self, workspace_id: str, *, selector, tail=200, since_seconds=0, parallelism=20, max_output_chars=8000):
         raise AssertionError("Unexpected logs call")
+
+    def routing_protocol_summary(self, workspace_id: str, *, selector, backend="auto"):
+        raise AssertionError("Unexpected routing_protocol_summary call")
 
     def bgp_summary(self, workspace_id: str, *, selector):
         raise AssertionError("Unexpected bgp_summary call")
@@ -126,4 +129,3 @@ steps:
 
 if __name__ == "__main__":
     unittest.main()
-
