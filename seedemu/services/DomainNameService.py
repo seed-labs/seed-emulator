@@ -1,7 +1,7 @@
 from __future__ import annotations
 from seedemu.core import Node, Printable, Emulator, Service, Server
 from seedemu.core.enums import NetworkType
-from typing import List, Dict, Tuple, Set
+from typing import List, Dict, Tuple, Set, Optional
 from re import sub
 from random import randint
 import requests
@@ -136,7 +136,7 @@ class Zone(Printable):
         assert len(ifaces) > 0, 'Node has no interfaces.'
         for iface in ifaces:
             net = iface.getNet()
-            if net.getType() == NetworkType.Host or net.getType() == NetworkType.Local:
+            if net.getType() == NetworkType.Local:
                 address = iface.getAddress()
                 break
 
@@ -240,6 +240,11 @@ class DomainNameServer(Server):
     __node: Node
     __is_master: bool
     __is_real_root: bool
+    __named_options: Optional[str]
+    __named_conf_local_prepend: List[str]
+    __named_conf_local_append: List[str]
+    __managed_zones_enabled: bool
+    __extra_config_files: Dict[str, List[Tuple[bool, str]]]
 
     def __init__(self):
         """!
@@ -250,6 +255,11 @@ class DomainNameServer(Server):
         self.__zones = set()
         self.__is_master = False
         self.__is_real_root = False
+        self.__named_options = None
+        self.__named_conf_local_prepend = []
+        self.__named_conf_local_append = []
+        self.__managed_zones_enabled = True
+        self.__extra_config_files = {}
 
     def addZone(self, zonename: str, createNsAndSoa: bool = True) -> DomainNameServer:
         """!
@@ -284,6 +294,70 @@ class DomainNameServer(Server):
         @returns self, for chaining API calls.
         """
         self.__is_real_root = True
+
+        return self
+
+    def setNamedOptions(self, content: str) -> DomainNameServer:
+        """!
+        @brief Override /etc/bind/named.conf.options content.
+
+        @param content file content.
+
+        @returns self, for chaining API calls.
+        """
+        self.__named_options = content
+
+        return self
+
+    def appendNamedConfLocal(self, content: str) -> DomainNameServer:
+        """!
+        @brief Append content to /etc/bind/named.conf.local.
+
+        @param content file content to append.
+
+        @returns self, for chaining API calls.
+        """
+        self.__named_conf_local_append.append(content)
+
+        return self
+
+    def prependNamedConfLocal(self, content: str) -> DomainNameServer:
+        """!
+        @brief Prepend content to /etc/bind/named.conf.local.
+
+        @param content file content to prepend.
+
+        @returns self, for chaining API calls.
+        """
+        self.__named_conf_local_prepend.append(content)
+
+        return self
+
+    def setManagedZonesEnabled(self, enabled: bool) -> DomainNameServer:
+        """!
+        @brief Enable/disable automatic zone stanza generation in install().
+
+        @param enabled whether managed zone generation is enabled.
+
+        @returns self, for chaining API calls.
+        """
+        self.__managed_zones_enabled = enabled
+
+        return self
+
+    def setConfig(self, path: str, content: str, append: bool = False) -> DomainNameServer:
+        """!
+        @brief Set or append an arbitrary configuration file on the DNS node.
+
+        @param path path inside the container.
+        @param content file content.
+        @param append append to the file if true; replace otherwise.
+
+        @returns self, for chaining API calls.
+        """
+        if path not in self.__extra_config_files:
+            self.__extra_config_files[path] = []
+        self.__extra_config_files[path].append((append, content))
 
         return self
 
@@ -363,6 +437,15 @@ class DomainNameServer(Server):
                 if len(zone.findRecords('SOA')) == 0:
                     zone.addRecord('@ SOA {} {} {} 900 900 1800 60'.format('ns1.{}'.format(zonename), 'admin.{}'.format(zonename), randint(1, 0xffffffff)))
 
+                existing_ns_addr = False
+                for record in zone.getRecords():
+                    if record.endswith(' A {}'.format(addr)) and record.startswith('ns'):
+                        existing_ns_addr = True
+                        break
+
+                if existing_ns_addr:
+                    continue
+
                 #If there are multiple zone servers, increase the NS number for ns name.
                 ns_number = 1
                 while (True):
@@ -386,33 +469,67 @@ class DomainNameServer(Server):
         assert node == self.__node, 'configured node differs from install node. Please check if there are conflict bindings'
 
         node.addSoftware('bind9')
-        node.appendStartCommand('echo "include \\"/etc/bind/named.conf.zones\\";" >> /etc/bind/named.conf.local')
-        node.setFile('/etc/bind/named.conf.options', DomainNameServiceFileTemplates['named_options'])
+        if self.__managed_zones_enabled:
+            node.setFile(
+                '/etc/bind/named.conf',
+                '''// Generated by seedemu DomainNameService
+include "/etc/bind/named.conf.options";
+include "/etc/bind/named.conf.local";
+include "/etc/bind/named.conf.default-zones";
+'''
+            )
+        else:
+            node.setFile(
+                '/etc/bind/named.conf',
+                '''// Generated by seedemu DomainNameService
+include "/etc/bind/named.conf.options";
+include "/etc/bind/named.conf.local";
+'''
+            )
+        node.setFile(
+            '/etc/bind/named.conf.options',
+            self.__named_options if self.__named_options != None else DomainNameServiceFileTemplates['named_options']
+        )
+
+        named_conf_local_parts = []
+        named_conf_local_parts.extend(self.__named_conf_local_prepend)
+        if self.__managed_zones_enabled:
+            named_conf_local_parts.append('include "/etc/bind/named.conf.zones";\n')
+        named_conf_local_parts.extend(self.__named_conf_local_append)
+        node.setFile('/etc/bind/named.conf.local', ''.join(named_conf_local_parts))
         node.setFile('/etc/bind/named.conf.zones', '')
 
-        for (_zonename, auto_ns_soa) in self.__zones:
-            zone = dns.getZone(_zonename)
-            zonename = filename = zone.getName()
+        if self.__managed_zones_enabled:
+            for (_zonename, auto_ns_soa) in self.__zones:
+                zone = dns.getZone(_zonename)
+                zonename = filename = zone.getName()
 
-            if zonename == '' or zonename == '.':
-                filename = 'root'
-                zonename = '.'
-            zonepath = '/etc/bind/zones/{}'.format(filename)
-            node.setFile(zonepath, '\n'.join(zone.getRecords()))
+                if zonename == '' or zonename == '.':
+                    filename = 'root'
+                    zonename = '.'
+                zonepath = '/etc/bind/zones/{}'.format(filename)
+                node.setFile(zonepath, '\n'.join(zone.getRecords()))
 
-            if self.__is_master:
-                node.appendFile('/etc/bind/named.conf.zones',
-                        'zone "{}" {{ type master; notify yes; allow-transfer {{ any; }}; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
+                if self.__is_master:
+                    node.appendFile('/etc/bind/named.conf.zones',
+                            'zone "{}" {{ type master; notify yes; allow-transfer {{ any; }}; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
+                        )
+                elif zone.getName() in dns.getMasterIp().keys(): # Check if there are some master servers
+                    master_ips = ';'.join(dns.getMasterIp()[zone.getName()])
+                    node.appendFile('/etc/bind/named.conf.zones',
+                        'zone "{}" {{ type slave; masters {{ {}; }}; file "{}"; }};\n'.format(zonename, master_ips, zonepath)
                     )
-            elif zone.getName() in dns.getMasterIp().keys(): # Check if there are some master servers
-                master_ips = ';'.join(dns.getMasterIp()[zone.getName()])
-                node.appendFile('/etc/bind/named.conf.zones',
-                    'zone "{}" {{ type slave; masters {{ {}; }}; file "{}"; }};\n'.format(zonename, master_ips, zonepath)
-                )
-            else:
-                node.appendFile('/etc/bind/named.conf.zones',
-                    'zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
-                )
+                else:
+                    node.appendFile('/etc/bind/named.conf.zones',
+                        'zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
+                    )
+
+        for (path, operations) in self.__extra_config_files.items():
+            for (append, content) in operations:
+                if append:
+                    node.appendFile(path, content)
+                else:
+                    node.setFile(path, content)
 
         node.appendStartCommand('chown -R bind:bind /etc/bind/zones')
         node.appendStartCommand('service named start')
