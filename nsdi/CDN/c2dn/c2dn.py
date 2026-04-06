@@ -20,7 +20,7 @@ from examples.internet.B00_mini_internet import mini_internet
 
 ZONE_NAME = "example.com"
 ZONE_FQDN = "example.com."
-OUTPUT_RELATIVE_PATH = "examples/internet/B30_CDN/c2dn/output"
+OUTPUT_RELATIVE_PATH = "nsdi/CDN/c2dn/output"
 SERVICE_PORT = 8080
 BASE_OBJECT_SIZE = 64 * 1024
 

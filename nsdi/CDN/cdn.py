@@ -21,7 +21,7 @@ from examples.internet.B00_mini_internet import mini_internet
 SERVICE_DOMAIN = "www.example.com"
 SERVICE_ZONE = "example.com"
 SERVICE_ZONE_FQDN = "example.com."
-OUTPUT_RELATIVE_PATH = "examples/internet/B30_CDN/output"
+OUTPUT_RELATIVE_PATH = "nsdi/CDN/output"
 
 CLIENT_REGION_BY_ASN = {
     150: "east",
@@ -58,7 +58,6 @@ CDN_SITES = [
         "asn": 181,
         "prefix": "10.181.0.0/24",
         "edge_ip": "10.181.0.100",
-        "origin_ip": "10.181.0.10",
         "upstreams": [2, 3, 4],
     },
     {
@@ -68,7 +67,6 @@ CDN_SITES = [
         "asn": 182,
         "prefix": "10.182.0.0/24",
         "edge_ip": "10.182.0.100",
-        "origin_ip": "10.182.0.10",
         "upstreams": [2, 12],
     },
     {
@@ -78,12 +76,20 @@ CDN_SITES = [
         "asn": 183,
         "prefix": "10.183.0.0/24",
         "edge_ip": "10.183.0.100",
-        "origin_ip": "10.183.0.10",
         "upstreams": [2, 4, 11],
     },
 ]
 
 EDGE_IP_BY_REGION = {site["region"]: site["edge_ip"] for site in CDN_SITES}
+
+ORIGIN_SITE = {
+    "site_id": "origin",
+    "asn": 184,
+    "ix": 102,
+    "prefix": "10.184.0.0/24",
+    "origin_ip": "10.184.0.10",
+    "upstreams": [2, 4, 11],
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -96,22 +102,7 @@ def resolve_platform(name: str) -> Platform:
     return Platform.AMD64 if name == "amd" else Platform.ARM64
 
 
-def build_origin_payload(site: dict) -> str:
-    return (
-        "{"
-        f"\\\"site_id\\\":\\\"{site['site_id']}\\\","
-        f"\\\"region\\\":\\\"{site['region']}\\\","
-        "\\\"role\\\":\\\"origin\\\","
-        f"\\\"asn\\\":{site['asn']},"
-        f"\\\"edge_ip\\\":\\\"{site['edge_ip']}\\\","
-        f"\\\"origin_ip\\\":\\\"{site['origin_ip']}\\\","
-        f"\\\"service_domain\\\":\\\"{SERVICE_DOMAIN}\\\""
-        "}"
-    )
-
-
-def build_origin_nginx_conf(site: dict) -> str:
-    payload = build_origin_payload(site)
+def build_origin_nginx_conf() -> str:
     return textwrap.dedent(
         f"""\
         server {{
@@ -120,7 +111,7 @@ def build_origin_nginx_conf(site: dict) -> str:
 
             location / {{
                 default_type application/json;
-                return 200 '{payload}';
+                return 200 '{{"site_id":"$http_x_cdn_site","region":"$http_x_cdn_region","role":"origin","origin_site":"{ORIGIN_SITE["site_id"]}","origin_asn":{ORIGIN_SITE["asn"]},"edge_ip":"$http_x_cdn_edge_ip","origin_ip":"{ORIGIN_SITE["origin_ip"]}","service_domain":"{SERVICE_DOMAIN}"}}';
             }}
         }}
         """
@@ -132,7 +123,7 @@ def build_edge_nginx_conf(site: dict) -> str:
     return textwrap.dedent(
         f"""\
         upstream {upstream_name} {{
-            server {site["origin_ip"]}:8080;
+            server {ORIGIN_SITE["origin_ip"]}:8080;
             keepalive 16;
         }}
 
@@ -146,6 +137,7 @@ def build_edge_nginx_conf(site: dict) -> str:
                 proxy_set_header Host $host;
                 proxy_set_header X-CDN-Site {site["site_id"]};
                 proxy_set_header X-CDN-Region {site["region"]};
+                proxy_set_header X-CDN-Edge-IP {site["edge_ip"]};
                 proxy_pass http://{upstream_name};
             }}
         }}
@@ -153,9 +145,9 @@ def build_edge_nginx_conf(site: dict) -> str:
     )
 
 
-def install_origin_service(host, site: dict):
+def install_origin_service(host):
     host.addSoftware("nginx-light")
-    host.setFile("/etc/nginx/sites-available/default", build_origin_nginx_conf(site))
+    host.setFile("/etc/nginx/sites-available/default", build_origin_nginx_conf())
     host.appendStartCommand("service nginx start")
 
 
@@ -267,17 +259,28 @@ def add_cdn_sites(base, ebgp: Ebgp):
         site_as = base.createAutonomousSystem(site["asn"])
         net_name = f'{site["site_id"]}_net'
         edge_name = f'{site["site_id"]}_edge'
-        origin_name = f'{site["site_id"]}_origin'
         router_name = f'{site["site_id"]}_br'
 
         site_as.createNetwork(net_name, site["prefix"])
         site_as.createHost(edge_name).joinNetwork(net_name, address=site["edge_ip"])
-        site_as.createHost(origin_name).joinNetwork(net_name, address=site["origin_ip"])
         site_as.createRouter(router_name).joinNetwork(net_name).joinNetwork(f'ix{site["ix"]}')
 
         install_edge_service(site_as.getHost(edge_name), site)
-        install_origin_service(site_as.getHost(origin_name), site)
         ebgp.addPrivatePeerings(site["ix"], site["upstreams"], [site["asn"]], PeerRelationship.Provider)
+
+
+def add_origin_site(base, ebgp: Ebgp):
+    site_as = base.createAutonomousSystem(ORIGIN_SITE["asn"])
+    net_name = "origin_net"
+    origin_name = "global_origin"
+    router_name = "origin_br"
+
+    site_as.createNetwork(net_name, ORIGIN_SITE["prefix"])
+    site_as.createHost(origin_name).joinNetwork(net_name, address=ORIGIN_SITE["origin_ip"])
+    site_as.createRouter(router_name).joinNetwork(net_name).joinNetwork(f'ix{ORIGIN_SITE["ix"]}')
+
+    install_origin_service(site_as.getHost(origin_name))
+    ebgp.addPrivatePeerings(ORIGIN_SITE["ix"], ORIGIN_SITE["upstreams"], [ORIGIN_SITE["asn"]], PeerRelationship.Provider)
 
 
 def add_dns_servers(base):
@@ -301,6 +304,7 @@ def build_emulator() -> Emulator:
     ebgp = emu.getLayer("Ebgp")
 
     add_cdn_sites(base, ebgp)
+    add_origin_site(base, ebgp)
     add_dns_servers(base)
     return emu
 
