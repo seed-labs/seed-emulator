@@ -340,7 +340,10 @@ class CDNService(Service):
 
     def mapRegion(self, domain: str, region: str, edges: List[str]) -> CDNService:
         assert domain in self.__domains, 'unknown domain "{}"'.format(domain)
-        self.__domains[domain].region_map[region] = list(edges)
+        current_edges = self.__domains[domain].region_map.setdefault(region, [])
+        for edge in edges:
+            if edge not in current_edges:
+                current_edges.append(edge)
         return self
 
     def setRegionMembers(self, region: str, asns: List[int]) -> CDNService:
@@ -352,7 +355,10 @@ class CDNService(Service):
     def mapAsn(self, domain: str, asns: List[int], edges: List[str]) -> CDNService:
         assert domain in self.__domains, 'unknown domain "{}"'.format(domain)
         for asn in asns:
-            self.__domains[domain].asn_map[int(asn)] = list(edges)
+            current_edges = self.__domains[domain].asn_map.setdefault(int(asn), [])
+            for edge in edges:
+                if edge not in current_edges:
+                    current_edges.append(edge)
         return self
 
     def enableMetrics(self, enabled: bool = True) -> CDNService:
