@@ -159,13 +159,12 @@ class EthereumServer(Server):
             node.appendStartCommand("chmod +x /usr/bin/geth")
 
         # genesis
-        if isinstance(self, PoSGethServer) or isinstance(self, PoAServer):
-            node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth --datadir {} init /tmp/eth-genesis.json'.format(self._data_dir))
+        node.appendStartCommand('[ ! -e "/root/.ethereum/geth/nodekey" ] && geth --datadir {} init /tmp/eth-genesis.json'.format(self._data_dir))
         
         # copy keystore to the proper folder
         for account in self._accounts:
-            if isinstance(self, PoSGethServer) or isinstance(self, PoAServer):
-                node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename))
+            # if isinstance(self, PoSGethServer) or isinstance(self, PoAServer):
+            node.appendStartCommand("cp /tmp/keystore/{} /root/.ethereum/keystore/".format(account.keystore_filename))
 
         if self._is_bootnode:
             if isinstance(self, PoSGethServer) or isinstance(self, PoAServer):
@@ -769,9 +768,7 @@ class PoSBeaconServer(EthereumServer):
     __beacon_peer_counts:int
     def __init__(self, id: int, blockchain:Blockchain):
         super().__init__(id, blockchain)
-        self.__is_beacon_validator_at_genesis = False
-        self.__is_beacon_validator_at_running = False
-        self.__is_manual_deposit_for_validator = False
+ 
         self.__beacon_peer_counts = 30
         self.__connect_geth_vnode = ""
         self.__connected_geth_ip = ""
@@ -783,10 +780,10 @@ class PoSBeaconServer(EthereumServer):
         #     beacon_setup_node.install(self, node, self._blockchain)
         #     return 
         
-        if self.__is_beacon_validator_at_genesis:
-            self._role.append("validator_at_genesis")
-        if self.__is_beacon_validator_at_running:
-            self._role.append("validator_at_running")
+        # if self.__is_beacon_validator_at_genesis:
+        #     self._role.append("validator_at_genesis")
+        # if self.__is_beacon_validator_at_running:
+        #     self._role.append("validator_at_running")
         
         super().install(node,eth)
         self.__install_beacon(node, eth)
@@ -794,8 +791,7 @@ class PoSBeaconServer(EthereumServer):
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has no interfaces'.format(node.getAsn(), node.getName())
         addr = str(ifaces[0].getAddress())
-        ## 得到的beacon_setup_node的服务ip和端口
-        ### configure 阶段早就拿到了，等在那里，
+        # Get the IP address of beacon_setup_node.
         beacon_setup_node = self._blockchain.getBeaconSetupNodeIp()
 
         assert beacon_setup_node != "", 'EthereumServer::install: Ethereum Service has no beacon_setup_node.'
@@ -832,7 +828,7 @@ class PoSBeaconServer(EthereumServer):
             #     validator_deposit_sh = "/tmp/deposit.sh"
         # if self.__is_beacon_validator_at_genesis or self.__is_beacon_validator_at_running:     
         #     vc_start_command = LIGHTHOUSE_VC_CMD.format(ip_address=addr, acct_address=self._accounts[0].address)
-        ## 写入beacon_setup_node的服务ip和端口到文件
+        # Write the IP address of beacon_setup_node to a file.
         node.setFile('/tmp/beacon-setup-node', beacon_setup_node)
         
         # get current node validator index if it's validator at genesis. 
@@ -863,20 +859,7 @@ class PoSBeaconServer(EthereumServer):
     def connectToGethNode(self, vnode:str):
         self.__connect_geth_vnode = vnode
         return self
-    def enablePOSValidatorAtGenesis(self):
-        self.__is_beacon_validator_at_genesis = True
-        return self
 
-    def isValidatorAtGenesis(self):
-        return self.__is_beacon_validator_at_genesis
-
-    def isValidatorAtRunning(self):
-        return self.__is_beacon_validator_at_running
-
-    def enablePOSValidatorAtRunning(self, is_manual:bool=False):
-        self.__is_beacon_validator_at_running = True
-        self.__is_manual_deposit_for_validator = is_manual
-        return self
     def setConnectedGethIp(self, ip:str):
         self.__connected_geth_ip = ip
         return self
@@ -1009,7 +992,7 @@ class PoSVcServer(EthereumServer):
         ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'EthereumServer::install: node as{}/{} has no interfaces'.format(node.getAsn(), node.getName())
         addr = str(ifaces[0].getAddress())
-        ## 得到的beacon_setup_node的服务ip和端口
+        # Get the IP address of beacon_setup_node.
         beacon_setup_node = self._blockchain.getBeaconSetupNodeIp()
 
         assert beacon_setup_node != "", 'EthereumServer::install: Ethereum Service has no beacon_setup_node.'
@@ -1048,7 +1031,7 @@ class PoSVcServer(EthereumServer):
             #     validator_deposit_sh = "/tmp/deposit.sh"
         if self.__is_beacon_validator_at_genesis or self.__is_beacon_validator_at_running:     
             vc_start_command = LIGHTHOUSE_VC_CMD.format(ip_address=addr, acct_address=self._accounts[0].address, beacon_node=beacon_node_ip)
-        ## 写入beacon_setup_node的服务ip和端口到文件
+        # Write the IP and port of beacon_setup_node to the file.
         node.setFile('/tmp/beacon-setup-node', beacon_setup_node)
         
         # get current node validator index if it's validator at genesis.
@@ -1096,6 +1079,10 @@ class PoSVcServer(EthereumServer):
     def enablePOSValidatorAtGenesis(self):
         self.__is_beacon_validator_at_genesis = True
         return self
+    # def enablePOSValidatorAtRunning(self, is_manual:bool=False):
+    #     self.__is_beacon_validator_at_running = True
+    #     self.__is_manual_deposit_for_validator = is_manual
+    #     return self       
     def isValidatorAtRunning(self):
         return self.__is_beacon_validator_at_running
     def isValidatorAtGenesis(self):
