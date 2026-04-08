@@ -153,14 +153,14 @@ def run(dumpfile=None, hosts_per_as=2):
     # Node customization
     ######################################
 
-    # An example to show how to customize a host 
+    # An example to show how to customize IP
     as154 = base.getAutonomousSystem(154)
     new_host = as154.createHost('host_new')
     new_host.joinNetwork('net0', address = '10.154.0.129')
-    new_host.... i  
+    new_host ....   
 
 
-    # Node customization
+    # Node customization: software installation, configuration 
     new_node.addSoftware("python3")
     new_node.addBuildCommand("curl http://example.com")
     new_node.importFile(hostpath=os.getcwd() + "/myprog.py",
@@ -168,7 +168,7 @@ def run(dumpfile=None, hosts_per_as=2):
     new_node.insertStartCommand(0, "ping 1.2.3.4")
 
 
-    # What is this ??? 
+    # Node customization: set sysctl parameters
     from seedemu.core import OptionRegistry, OptionMode
     o = OptionRegistry().sysctl_netipv4_conf_rp_filter({'all': False, 
           'default': False, 'net0': False}, mode = OptionMode.RUN_TIME)
@@ -177,6 +177,7 @@ def run(dumpfile=None, hosts_per_as=2):
     o = OptionRegistry().sysctl_netipv4_udp_rmem_min(5000, mode = OptionMode.RUN_TIME)
     new_host.setOption(o)
     
+
     ######################################
     # Network customization
     ######################################
@@ -187,10 +188,17 @@ def run(dumpfile=None, hosts_per_as=2):
     # Create a real-world AS. 
     # Packets coming into this AS will be routed out to the real world. 
     as60000 = base.createAutonomousSystem(60000)
-    as60000.createRealWorldRouter('rw').joinNetwork('ix101', '10.101.0.118')
-    ... 
-    ebgp.add...
+    router = as60000.createRealWorldRouter(name='rw', 
+                     prefixes=['0.0.0.0/1', '128.0.0.0/1'])
+    router.joinNetwork('ix101', '10.101.0.118')
+    ebgp.addPrivatePeerings(101, [2], [60000], PeerRelationship.Provider)
 
+
+    ######################################
+    # IP Anycast 
+    ######################################
+
+    # Follow the instructions from example B24_ip_anycast 
 
     
     ###############################################################################
