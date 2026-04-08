@@ -23,7 +23,7 @@ SERVICE_ZONE = "example.com"
 SERVICE_ZONE_FQDN = "example.com."
 OBJECT_PATH = "/large.bin"
 OBJECT_SIZE_BYTES = 8 * 1024 * 1024
-OUTPUT_RELATIVE_PATH = "examples/internet/B30_CDN/amplification_attack/output"
+OUTPUT_RELATIVE_PATH = "nsdi/CDN/amplification_attack/output"
 
 CLIENT_ASNS = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164, 170, 171]
 
