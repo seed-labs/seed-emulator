@@ -15,6 +15,14 @@ then patched in `rost_env.py`. Adopting ASes get dynamic policy through
 `/etc/bird/rost_policy.conf`. Suppressor ASes do not run an agent or helper and
 use only static render-time export withholding.
 
+Primary reviewer-facing validation is documented in
+[VALIDATION.md](./VALIDATION.md).
+That guide focuses on BIRD behavior, neighbor/downstream observation, and real
+reachability effects, including the default suppressor behavior and the
+separate controlled experiment for downstream loss. The
+implementation-oriented checks in this README are secondary debugging/detail
+checks.
+
 ## What This Example Demonstrates
 
 - A repository / agent / router-helper / BIRD split inside a SEED Internet example.
@@ -30,12 +38,19 @@ withdraw handling.
 
 The example builds a small multi-AS Internet with transit-like and stub ASes.
 
-Default role settings in [rost_env.py](/home/seed/seed-emulator/examples/internet/BXX_rost_env/rost_env.py):
+Default role settings in [rost_env.py](./rost_env.py):
 
 - Repository AS: `154`
+- Repository validation target: `10.154.0.0/24`
+- Dynamic policy demo target: `10.153.0.0/24`
 - Suppressor ASes: `3`
-- Suppressor target prefixes: `10.154.0.0/24`
+- Suppressor target prefixes: `10.155.0.0/24`
 - Current patched suppressor router: AS3 anchor router `r100`
+
+The example uses three distinct reviewer-facing targets: the repository prefix
+`10.154.0.0/24` for repository reachability, the ordinary prefix
+`10.153.0.0/24` for helper-driven dynamic policy exercises, and the suppressor
+target `10.155.0.0/24` for static export-withholding checks.
 
 Adopting ASes are selected deterministically from the configured seed and
 adoption rate. With the current defaults, the adopting ASes are:
@@ -98,6 +113,7 @@ Implemented in `router_helper.py`.
 - Default port: `18081`
 - Rewrites `/etc/bird/rost_policy.conf`
 - Stores JSON state in `/etc/bird/rost_policy_state.json`
+- Resets to an empty default policy state on startup unless started with `--preserve-state`
 - Runs `birdc configure` after each policy change
 - Automatically refreshes BGP protocols after import/export policy changes that
   affect routing decisions
@@ -202,145 +218,26 @@ the selected prefixes across the patched eBGP edge.
 From this example directory:
 
 ```bash
-cd examples/internet/BXX_rost_env
-python3 rost_env.py
+cd nsdi/rost
+python3 rost_env.py amd
 cd output
-docker compose up -d
+docker-compose up -d
 ```
 
-If your environment uses the legacy compose command, use `docker-compose up -d`
-instead.
+Use `python3 rost_env.py arm` instead on ARM64 hosts.
 
 To stop the environment:
 
 ```bash
-cd examples/internet/BXX_rost_env/output
-docker compose down
+cd nsdi/rost/output
+docker-compose down
 ```
 
-## Quick Walkthrough
+## Secondary Implementation / Debugging Checks
 
-The commands below follow the current code and the tested demo flow directly.
-They use one adopting AS agent container and one suppressor router.
-
-### 1. Find An Adopting Agent Container
-
-After the environment is up:
-
-```bash
-cd examples/internet/BXX_rost_env/output
-docker ps --format '{{.Names}}' | grep rost-agent
-```
-
-For a simple walkthrough, use the AS150 agent if it is present. With the
-current deterministic role selection, AS150 is an adopting AS.
-
-Open a shell in the agent container:
-
-```bash
-docker exec -it as150h-rost-agent-10.150.0.72 bash
-```
-
-### 2. Discover The Router Helper IP
-
-Inside the adopting agent container:
-
-```bash
-ip route show default
-```
-
-Use the default gateway as `<router-ip>`. That is the router-helper IP for this
-host.
-
-### 3. Check The Helper
-
-Inside the adopting agent container:
-
-```bash
-curl -s http://<router-ip>:18081/healthz
-curl -s http://<router-ip>:18081/rost/state | python3 -m json.tool
-curl -s http://<router-ip>:18081/bird/protocols | python3 -m json.tool
-curl -s http://<router-ip>:18081/bird/route
-```
-
-Expected:
-
-- `/healthz` returns `{"status": "ok"}`
-- `/rost/state` returns JSON policy state
-- `/bird/protocols` returns BIRD protocol output wrapped in JSON
-- `/bird/route` returns current route output wrapped in JSON
-
-### 4. Drive Policy Through The Agent
-
-Still inside the adopting agent container:
-
-```bash
-python3 /root/agent.py --router-ip <router-ip> --enable
-python3 /root/agent.py --router-ip <router-ip> --allow 10.154.0.0/24
-python3 /root/agent.py --router-ip <router-ip> --routeid 10.154.0.0/24
-python3 /root/agent.py --router-ip <router-ip> --invalidate 10.154.0.0/24
-python3 /root/agent.py --router-ip <router-ip> --clear-invalid 10.154.0.0/24
-python3 /root/agent.py --router-ip <router-ip> --state
-```
-
-These commands exercise the existing helper-backed control path exactly as
-implemented.
-
-### 5. Inspect Router State
-
-Open a shell on the corresponding router, for example:
-
-```bash
-docker exec -it as150r-router0 bash
-```
-
-Then inspect the generated policy and BIRD state:
-
-```bash
-cat /etc/bird/rost_policy.conf
-birdc show protocols
-birdc show route
-birdc show route 10.154.0.0/24
-birdc show route 10.154.0.0/24 all
-```
-
-Expected:
-
-- `rost_policy.conf` reflects the helper-managed policy state
-- `birdc show protocols` shows the normal router sessions
-- route visibility changes follow the helper policy state
-- import/export policy mutations trigger automatic router reconvergence via the
-  helper
-
-## Demo / Walkthrough
-
-This is a concise demo flow that can be followed directly.
-
-### Demo Script
-
-1. Build and start the environment.
-2. Enter an adopting agent container, preferably `as150h-rost-agent-10.150.0.72`.
-3. Run `ip route show default` and record the default gateway as `<router-ip>`.
-4. Verify helper reachability with:
-   `curl -s http://<router-ip>:18081/healthz`
-5. Inspect current helper and route state with:
-   `curl -s http://<router-ip>:18081/rost/state | python3 -m json.tool`
-   `curl -s http://<router-ip>:18081/bird/protocols | python3 -m json.tool`
-   `curl -s http://<router-ip>:18081/bird/route`
-6. Enable RoST behavior on the adopting router:
-   `python3 /root/agent.py --router-ip <router-ip> --enable`
-7. Allow the repository prefix:
-   `python3 /root/agent.py --router-ip <router-ip> --allow 10.154.0.0/24`
-8. Attach the RouteID-style marker:
-   `python3 /root/agent.py --router-ip <router-ip> --routeid 10.154.0.0/24`
-9. Invalidate that prefix on import:
-   `python3 /root/agent.py --router-ip <router-ip> --invalidate 10.154.0.0/24`
-10. Inspect the router with `birdc show route 10.154.0.0/24`.
-11. Clear invalid state:
-    `python3 /root/agent.py --router-ip <router-ip> --clear-invalid 10.154.0.0/24`
-12. Re-check state with:
-    `python3 /root/agent.py --router-ip <router-ip> --state`
-13. Verify the static suppressor on `as3r-r100`.
+Use [VALIDATION.md](./VALIDATION.md)
+for the primary reviewer-facing behavior checks. The sections below are mainly
+for implementation review and debugging.
 
 ### Repository Check
 
@@ -363,6 +260,10 @@ This performs:
 - `birdc show protocols` via the helper
 - `birdc show route` via the helper
 
+Repository-specific checks should continue to use the repository service in
+AS154. The primary validation guide intentionally uses the separate
+ordinary prefix `10.153.0.0/24` instead of the repository prefix.
+
 ### Import Invalidation Note
 
 Import invalidation changes the selected route view, and the helper now
@@ -375,7 +276,7 @@ with:
 birdc disable u_as2
 birdc enable u_as2
 sleep 3
-birdc show route 10.154.0.0/24
+birdc show route 10.153.0.0/24
 ```
 
 This manual step is usually no longer required for the supported helper
@@ -388,6 +289,10 @@ the effect easier to observe. The exact session name depends on the router. On
 The default suppressor is AS3, and the patched suppressor anchor router is
 `as3r-r100`.
 
+Use [VALIDATION.md](./VALIDATION.md)
+for the primary downstream/behavioral suppressor check. The commands here are
+implementation/debugging checks on the suppressor router itself.
+
 Open a shell on that router:
 
 ```bash
@@ -398,8 +303,9 @@ Then run:
 
 ```bash
 grep -n "rost_static_suppressor_match" /etc/bird/bird.conf
-grep -n "10.154.0.0/24" /etc/bird/bird.conf
-birdc show route 10.154.0.0/24
+grep -n "10.155.0.0/24" /etc/bird/bird.conf
+birdc show route 10.155.0.0/24
+birdc show route export p_rs100 10.155.0.0/24
 ```
 
 Expected:
@@ -407,6 +313,7 @@ Expected:
 - the suppressor function is present in `bird.conf`
 - the selected target prefix appears in the suppressor policy
 - the suppressor still learns the route locally
+- `birdc show route export p_rs100 10.155.0.0/24` shows that the route is withheld on that edge
 
 The suppressor behavior here is export withholding, not local route removal.
 The route can still exist locally on the suppressor while being statically
@@ -414,22 +321,22 @@ rejected for export to external neighbors on the patched edge.
 
 ## Key Files
 
-- [rost_env.py](/home/seed/seed-emulator/examples/internet/BXX_rost_env/rost_env.py)
+- [rost_env.py](./rost_env.py)
   - builds the topology
   - assigns roles
   - deploys repository, agent, and helper files
   - patches adopting and suppressor router BIRD config
 
-- [agent.py](/home/seed/seed-emulator/examples/internet/BXX_rost_env/agent.py)
+- [agent.py](./agent.py)
   - capability check client
   - helper control client
 
-- [router_helper.py](/home/seed/seed-emulator/examples/internet/BXX_rost_env/router_helper.py)
+- [router_helper.py](./router_helper.py)
   - helper HTTP server
   - policy-state manager
   - `birdc` integration
 
-- [repo_server.py](/home/seed/seed-emulator/examples/internet/BXX_rost_env/repo_server.py)
+- [repo_server.py](./repo_server.py)
   - minimal repository HTTP service
 
 ## Notes And Limitations
@@ -440,5 +347,7 @@ rejected for export to external neighbors on the patched edge.
 - Suppressor ASes do not have runtime control via helper or agent.
 - The example does not modify the SEED BGP implementation.
 - The example does not implement protocol-level withdraw handling.
+- Adopting-router helper state is reset to an empty baseline on startup unless
+  `router_helper.py` is launched manually with `--preserve-state`.
 - The suppressor patch is intentionally narrow and currently targets only the
   suppressor anchor router selected by the existing helper function.

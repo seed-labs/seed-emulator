@@ -195,9 +195,10 @@ def refresh_bgp_protocols():
 
 
 class PolicyManager:
-    def __init__(self, state_path=ROST_POLICY_STATE_PATH, policy_path=ROST_POLICY_PATH):
+    def __init__(self, state_path=ROST_POLICY_STATE_PATH, policy_path=ROST_POLICY_PATH, preserve_state=False):
         self._state_path = Path(state_path)
         self._policy_path = Path(policy_path)
+        self._preserve_state = preserve_state
         self._lock = threading.Lock()
         self._state = self._load_state()
         self._write_state()
@@ -238,7 +239,7 @@ class PolicyManager:
             return status, payload
 
     def _load_state(self):
-        if not self._state_path.exists():
+        if not self._preserve_state or not self._state_path.exists():
             return normalize_state({})
 
         with self._state_path.open("r", encoding="utf-8") as handle:
@@ -441,6 +442,11 @@ def parse_args():
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--policy-state", default=str(ROST_POLICY_STATE_PATH))
     parser.add_argument("--policy-conf", default=str(ROST_POLICY_PATH))
+    parser.add_argument(
+        "--preserve-state",
+        action="store_true",
+        help="load existing policy state on startup instead of resetting to an empty default state",
+    )
     return parser.parse_args()
 
 
@@ -449,6 +455,7 @@ def main():
     policy_manager = PolicyManager(
         state_path=args.policy_state,
         policy_path=args.policy_conf,
+        preserve_state=args.preserve_state,
     )
     server = RouterHelperServer((args.host, args.port), RouterHelperHandler, policy_manager)
     server.serve_forever()

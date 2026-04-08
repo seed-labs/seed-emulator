@@ -26,7 +26,7 @@ REPO_AS = 154
 SUPPRESSOR_ASES = [3]
 
 # Prefixes affected by suppressor export withholding.
-SUPPRESSOR_TARGET_PREFIXES = ["10.154.0.0/24"]
+SUPPRESSOR_TARGET_PREFIXES = ["10.155.0.0/24"]
 
 # Minimal repository service settings for the demo repository host.
 REPO_SERVICE_PORT = 18080
@@ -453,8 +453,7 @@ def build_base_topology():
     ebgp.addPrivatePeerings(100, [2], [150, 151], PeerRelationship.Provider)
     ebgp.addPrivatePeerings(101, [4], [152], PeerRelationship.Provider)
     ebgp.addPrivatePeerings(102, [10], [153], PeerRelationship.Provider)
-    ebgp.addPrivatePeerings(103, [3], [154], PeerRelationship.Provider)
-    ebgp.addPrivatePeerings(103, [10], [155], PeerRelationship.Provider)
+    ebgp.addPrivatePeerings(103, [3], [154, 155], PeerRelationship.Provider)
 
     emu.addLayer(base)
     emu.addLayer(Routing())
