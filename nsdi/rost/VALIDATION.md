@@ -1,7 +1,10 @@
 # Reviewer Validation
 
 This file is the primary reviewer-facing validation guide for the RoST-style
-example. It prioritizes externally meaningful evidence:
+example. [README.md](./README.md) is the short setup and orientation entry
+point; this document contains the full step-by-step behavioral validation.
+
+It prioritizes externally meaningful evidence:
 
 - repository reachability
 - BIRD route presence and absence
