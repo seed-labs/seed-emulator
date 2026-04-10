@@ -93,6 +93,7 @@ class _DomainConfig:
     edges: List[str]
     mode: str = 'static'
     zone: Optional[str] = None
+    include_path: Optional[str] = None
     region_map: Dict[str, List[str]] = field(default_factory=dict)
     asn_map: Dict[int, List[str]] = field(default_factory=dict)
 
@@ -361,6 +362,15 @@ class CDNService(Service):
                     current_edges.append(edge)
         return self
 
+    def setIncludeContent(
+        self,
+        domain: str,
+        file_path: str = '/etc/bind/include/custom.local',
+    ) -> CDNService:
+        assert domain in self.__domains, 'unknown domain "{}"'.format(domain)
+        self.__domains[domain].include_path = file_path
+        return self
+
     def enableMetrics(self, enabled: bool = True) -> CDNService:
         self.__metrics_enabled = enabled
         return self
@@ -424,10 +434,15 @@ class CDNService(Service):
             if domain_cfg.mode in ['static', 'round_robin']:
                 self.__configureSimpleDomain(dns_layer, domain_cfg)
             else:
+                assert domain_cfg.include_path is not None, (
+                    'domain "{}" uses mode "{}" and requires setIncludeContent()'.format(
+                        domain_cfg.domain, domain_cfg.mode
+                    )
+                )
                 policy_domains.setdefault(domain_cfg.dns_vnode, []).append(domain_cfg)
 
         for (dns_vnode, domain_cfgs) in policy_domains.items():
-            self.__configureViewBackedDomains(emulator, dns_layer, dns_vnode, domain_cfgs)
+            self.__configureIncludeBackedDomains(emulator, dns_layer, dns_vnode, domain_cfgs)
 
     def __configureSimpleDomain(self, dns_layer: DomainNameService, domain_cfg: _DomainConfig):
         zone = dns_layer.getZone(domain_cfg.zone)
@@ -437,7 +452,7 @@ class CDNService(Service):
             edge = self.__edges[edge_vnode]
             zone.addRecord('{} A {}'.format(record_name, edge.getServiceAddress()))
 
-    def __configureViewBackedDomains(
+    def __configureIncludeBackedDomains(
         self,
         emulator: Emulator,
         dns_layer: DomainNameService,
@@ -448,54 +463,65 @@ class CDNService(Service):
         dns_server: DomainNameServer = dns_targets[dns_vnode]
         dns_node = emulator.getBindingFor(dns_vnode)
         dns_addr = _choose_service_address(dns_node)
-        zone_names = sorted(set(dns_server.getZones()))
-
-        view_rules: List[Tuple[str, List[str], Dict[str, List[str]]]] = []
-        acl_definitions: List[str] = []
-        view_index = 0
-
+        include_groups: Dict[str, List[_DomainConfig]] = {}
         for domain_cfg in domains:
-            edge_map = self.__buildDomainEdgeMap(emulator, domain_cfg)
-            for (rule_name, (cidrs, edges)) in edge_map.items():
-                acl_name = 'cdn_acl_{}_{}'.format(_safe_name(domain_cfg.domain), view_index)
-                view_name = 'cdn_view_{}_{}'.format(_safe_name(domain_cfg.domain), view_index)
-                acl_definitions.append('acl "{}" {{ {} }};\n'.format(acl_name, ' '.join(['{};'.format(c) for c in cidrs])))
-                view_rules.append((view_name, [acl_name], {domain_cfg.domain: edges}))
-                view_index += 1
-
-        default_domain_edges = {
-            domain_cfg.domain: (domain_cfg.edges[:1] if domain_cfg.mode == 'region' else domain_cfg.edges[:1])
-            for domain_cfg in domains
-        }
-        view_rules.append(('cdn_view_default', [], default_domain_edges))
-
-        dns_server.setManagedZonesEnabled(False)
-        named_conf_local = ''.join(acl_definitions)
-        zone_file_paths: Dict[Tuple[str, str], str] = {}
-
-        for (view_name, acl_names, domain_edges) in view_rules:
-            match_clients = 'any;' if len(acl_names) == 0 else ' '.join(['{};'.format(name) for name in acl_names])
-            view_lines = [
-                'view "{}" {{'.format(view_name),
-                '    match-clients {{ {} }};'.format(match_clients),
-                '    recursion no;',
-            ]
-
-            for zone_name in zone_names:
-                zone_path = '/etc/bind/zones/{}_{}.zone'.format(_safe_name(zone_name), _safe_name(view_name))
-                zone_file_paths[(view_name, zone_name)] = zone_path
-                zone_content = self.__buildZoneFileForView(dns_layer, zone_name, domain_edges, dns_addr)
-                dns_server.setConfig(zone_path, zone_content)
-                view_lines.append(
-                    '    zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};'.format(
-                        zone_name if zone_name != '' else '.', zone_path
-                    )
+            include_path = domain_cfg.include_path
+            assert include_path is not None, 'domain "{}" is missing include path'.format(domain_cfg.domain)
+            assert dns_server.getIncludePath(domain_cfg.zone) == include_path, (
+                'DNS include path mismatch for zone "{}": expected "{}", got "{}"'.format(
+                    domain_cfg.zone,
+                    include_path,
+                    dns_server.getIncludePath(domain_cfg.zone),
                 )
+            )
+            include_groups.setdefault(include_path, []).append(domain_cfg)
 
-            view_lines.append('};\n')
-            named_conf_local += '\n'.join(view_lines)
+        for (include_path, include_domains) in include_groups.items():
+            zone_names = sorted(set(domain_cfg.zone for domain_cfg in include_domains))
+            view_rules: List[Tuple[str, List[str], Dict[str, List[str]]]] = []
+            acl_definitions: List[str] = []
+            view_index = 0
 
-        dns_server.appendNamedConfLocal(named_conf_local)
+            for domain_cfg in include_domains:
+                edge_map = self.__buildDomainEdgeMap(emulator, domain_cfg)
+                for (_rule_name, (cidrs, edges)) in edge_map.items():
+                    acl_name = 'cdn_acl_{}_{}'.format(_safe_name(domain_cfg.domain), view_index)
+                    view_name = 'cdn_view_{}_{}'.format(_safe_name(domain_cfg.domain), view_index)
+                    acl_definitions.append(
+                        'acl "{}" {{ {} }};\n'.format(acl_name, ' '.join(['{};'.format(c) for c in cidrs]))
+                    )
+                    view_rules.append((view_name, [acl_name], {domain_cfg.domain: edges}))
+                    view_index += 1
+
+            default_domain_edges = {
+                domain_cfg.domain: domain_cfg.edges[:1]
+                for domain_cfg in include_domains
+            }
+            view_rules.append(('cdn_view_default', [], default_domain_edges))
+
+            include_content = ''.join(acl_definitions)
+            for (view_name, acl_names, domain_edges) in view_rules:
+                match_clients = 'any;' if len(acl_names) == 0 else ' '.join(['{};'.format(name) for name in acl_names])
+                view_lines = [
+                    'view "{}" {{'.format(view_name),
+                    '    match-clients {{ {} }};'.format(match_clients),
+                    '    recursion no;',
+                ]
+
+                for zone_name in zone_names:
+                    zone_path = '/etc/bind/zones/{}_{}.zone'.format(_safe_name(zone_name), _safe_name(view_name))
+                    zone_content = self.__buildZoneFileForView(dns_layer, zone_name, domain_edges, dns_addr)
+                    dns_server.setZoneFile(zone_path, zone_content)
+                    view_lines.append(
+                        '    zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};'.format(
+                            zone_name if zone_name != '' else '.', zone_path
+                        )
+                    )
+
+                view_lines.append('};\n')
+                include_content += '\n'.join(view_lines)
+
+            dns_server.setIncludeFile(include_path, include_content)
 
     def __buildDomainEdgeMap(self, emulator: Emulator, domain_cfg: _DomainConfig) -> Dict[str, Tuple[List[str], List[str]]]:
         mapping: Dict[str, Tuple[List[str], List[str]]] = {}

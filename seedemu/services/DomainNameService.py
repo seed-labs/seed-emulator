@@ -240,11 +240,10 @@ class DomainNameServer(Server):
     __node: Node
     __is_master: bool
     __is_real_root: bool
-    __named_options: Optional[str]
-    __named_conf_local_prepend: List[str]
-    __named_conf_local_append: List[str]
     __managed_zones_enabled: bool
-    __extra_config_files: Dict[str, List[Tuple[bool, str]]]
+    __zone_files: Dict[str, str]
+    __include_files: Dict[str, str]
+    __include_paths: Dict[str, str]
 
     def __init__(self):
         """!
@@ -255,11 +254,10 @@ class DomainNameServer(Server):
         self.__zones = set()
         self.__is_master = False
         self.__is_real_root = False
-        self.__named_options = None
-        self.__named_conf_local_prepend = []
-        self.__named_conf_local_append = []
         self.__managed_zones_enabled = True
-        self.__extra_config_files = {}
+        self.__zone_files = {}
+        self.__include_files = {}
+        self.__include_paths = {}
 
     def addZone(self, zonename: str, createNsAndSoa: bool = True) -> DomainNameServer:
         """!
@@ -297,69 +295,65 @@ class DomainNameServer(Server):
 
         return self
 
-    def setNamedOptions(self, content: str) -> DomainNameServer:
+    def setZoneFile(self, path: str, content: str) -> DomainNameServer:
         """!
-        @brief Override /etc/bind/named.conf.options content.
+        @brief Register a zone file to be written on the DNS node.
 
+        @param path zone file path inside the container.
         @param content file content.
 
         @returns self, for chaining API calls.
         """
-        self.__named_options = content
+        self.__zone_files[path] = content
 
         return self
 
-    def appendNamedConfLocal(self, content: str) -> DomainNameServer:
+    def setIncludeFile(self, path: str, content: str) -> DomainNameServer:
         """!
-        @brief Append content to /etc/bind/named.conf.local.
+        @brief Register an include file to be written on the DNS node.
 
-        @param content file content to append.
-
-        @returns self, for chaining API calls.
-        """
-        self.__named_conf_local_append.append(content)
-
-        return self
-
-    def prependNamedConfLocal(self, content: str) -> DomainNameServer:
-        """!
-        @brief Prepend content to /etc/bind/named.conf.local.
-
-        @param content file content to prepend.
-
-        @returns self, for chaining API calls.
-        """
-        self.__named_conf_local_prepend.append(content)
-
-        return self
-
-    def setManagedZonesEnabled(self, enabled: bool) -> DomainNameServer:
-        """!
-        @brief Enable/disable automatic zone stanza generation in install().
-
-        @param enabled whether managed zone generation is enabled.
-
-        @returns self, for chaining API calls.
-        """
-        self.__managed_zones_enabled = enabled
-
-        return self
-
-    def setConfig(self, path: str, content: str, append: bool = False) -> DomainNameServer:
-        """!
-        @brief Set or append an arbitrary configuration file on the DNS node.
-
-        @param path path inside the container.
+        @param path include file path inside the container.
         @param content file content.
-        @param append append to the file if true; replace otherwise.
 
         @returns self, for chaining API calls.
         """
-        if path not in self.__extra_config_files:
-            self.__extra_config_files[path] = []
-        self.__extra_config_files[path].append((append, content))
+        self.__include_files[path] = content
 
         return self
+
+    def setInclude(self, zonename: str, file_path: str = '/etc/bind/include/custom.local') -> DomainNameServer:
+        """!
+        @brief Register an include file for a hosted zone.
+
+        When any include is registered, DomainNameService switches this DNS
+        node into include-backed mode and skips the default global zone
+        stanzas. This is required for custom BIND view-based configurations.
+
+        @param zonename zone name.
+        @param file_path include file path inside container.
+
+        @returns self, for chaining API calls.
+        """
+        if zonename != '.' and not zonename.endswith('.'):
+            zonename += '.'
+
+        self.__managed_zones_enabled = False
+        self.__include_paths[zonename] = file_path
+
+        return self
+
+    def getIncludePath(self, zonename: str) -> Optional[str]:
+        """!
+        @brief Get include file path for a hosted zone.
+
+        @param zonename zone name.
+
+        @returns include file path or None if not configured.
+        """
+        if zonename != '.' and not zonename.endswith('.'):
+            zonename += '.'
+
+        return self.__include_paths.get(zonename)
 
     def getNode(self) -> Node:
         """!
@@ -488,14 +482,14 @@ include "/etc/bind/named.conf.local";
             )
         node.setFile(
             '/etc/bind/named.conf.options',
-            self.__named_options if self.__named_options != None else DomainNameServiceFileTemplates['named_options']
+            DomainNameServiceFileTemplates['named_options']
         )
 
         named_conf_local_parts = []
-        named_conf_local_parts.extend(self.__named_conf_local_prepend)
         if self.__managed_zones_enabled:
             named_conf_local_parts.append('include "/etc/bind/named.conf.zones";\n')
-        named_conf_local_parts.extend(self.__named_conf_local_append)
+        for include_path in dict.fromkeys(self.__include_paths.values()).keys():
+            named_conf_local_parts.append('include "{}";\n'.format(include_path))
         node.setFile('/etc/bind/named.conf.local', ''.join(named_conf_local_parts))
         node.setFile('/etc/bind/named.conf.zones', '')
 
@@ -524,12 +518,11 @@ include "/etc/bind/named.conf.local";
                         'zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
                     )
 
-        for (path, operations) in self.__extra_config_files.items():
-            for (append, content) in operations:
-                if append:
-                    node.appendFile(path, content)
-                else:
-                    node.setFile(path, content)
+        for (path, content) in self.__zone_files.items():
+            node.setFile(path, content)
+
+        for (path, content) in self.__include_files.items():
+            node.setFile(path, content)
 
         node.appendStartCommand('chown -R bind:bind /etc/bind/zones')
         node.appendStartCommand('service named start')

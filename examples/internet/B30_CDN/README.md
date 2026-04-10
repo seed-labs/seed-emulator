@@ -3,6 +3,11 @@
 This example validates the new `CDNService` and its integration with
 `DomainNameService`.
 
+The current design keeps the two services loosely coupled:
+
+- DNS explicitly exposes an include file through `setInclude(...)`
+- CDN explicitly writes policy-specific include content through `setIncludeContent(...)`
+
 The topology is built on top of the mini Internet and models a simple CDN with:
 
 - one authoritative DNS server
@@ -100,7 +105,7 @@ This example checks that:
 
 - `CDNService` can bind virtual origin and edge nodes to concrete hosts
 - final edge and origin configuration is rendered before container startup
-- `DomainNameService` can host CDN-generated BIND views without runtime patching
+- `DomainNameService` can host CDN-generated BIND views through an include file
 - region-aware DNS steering and HTTP proxying work end to end
 
 

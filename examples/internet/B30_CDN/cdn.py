@@ -22,6 +22,7 @@ from examples.internet.B00_mini_internet import mini_internet
 SERVICE_DOMAIN = 'www.example.com'
 SERVICE_ZONE = 'example.com.'
 OUTPUT_RELATIVE_PATH = 'examples/internet/B30_CDN/output'
+DNS_INCLUDE_PATH = '/etc/bind/include/cdn_views.local'
 
 DNS_VNODE = 'dns-auth'
 DNS_NODE_NAME = 'cdn_dns'
@@ -129,7 +130,7 @@ def add_dns_host(base):
 
 def create_dns_layer() -> DomainNameService:
     dns = DomainNameService()
-    dns.install(DNS_VNODE).addZone(SERVICE_ZONE).setMaster()
+    dns.install(DNS_VNODE).addZone(SERVICE_ZONE).setMaster().setInclude(SERVICE_ZONE, DNS_INCLUDE_PATH)
     return dns
 
 
@@ -150,6 +151,7 @@ def create_cdn_layer() -> CDNService:
         mode='region',
         zone=SERVICE_ZONE,
     )
+    cdn.setIncludeContent(SERVICE_DOMAIN, DNS_INCLUDE_PATH)
 
     for site in EDGE_SITES:
         cdn.mapRegion(SERVICE_DOMAIN, site['region'], [site['vnode']])
