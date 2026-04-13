@@ -285,6 +285,7 @@ class CDNService(Service):
     __domains: Dict[str, _DomainConfig]
     __region_members: Dict[str, Set[int]]
     __metrics_enabled: bool
+    __dns_artifacts: Dict[str, Dict[str, str]]
 
     def __init__(self, dnsServiceName: str = 'DomainNameService'):
         super().__init__()
@@ -294,6 +295,7 @@ class CDNService(Service):
         self.__domains = {}
         self.__region_members = {}
         self.__metrics_enabled = False
+        self.__dns_artifacts = {}
         self.addDependency('Base', False, False)
         self.addDependency('Routing', False, False)
         self.addDependency(dnsServiceName, True, False)
@@ -384,6 +386,7 @@ class CDNService(Service):
 
     def configure(self, emulator: Emulator):
         super().configure(emulator)
+        self.__dns_artifacts = {}
 
         dns_layer: DomainNameService = emulator.getRegistry().get('seedemu', 'layer', self.__dns_service_name)
         assert dns_layer is not None, 'CDNService requires DomainNameService'
@@ -511,7 +514,7 @@ class CDNService(Service):
                 for zone_name in zone_names:
                     zone_path = '/etc/bind/zones/{}_{}.zone'.format(_safe_name(zone_name), _safe_name(view_name))
                     zone_content = self.__buildZoneFileForView(dns_layer, zone_name, domain_edges, dns_addr)
-                    dns_server.setZoneFile(zone_path, zone_content)
+                    self.__registerDnsArtifact(dns_vnode, zone_path, zone_content)
                     view_lines.append(
                         '    zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};'.format(
                             zone_name if zone_name != '' else '.', zone_path
@@ -521,7 +524,10 @@ class CDNService(Service):
                 view_lines.append('};\n')
                 include_content += '\n'.join(view_lines)
 
-            dns_server.setIncludeFile(include_path, include_content)
+            self.__registerDnsArtifact(dns_vnode, include_path, include_content)
+
+    def __registerDnsArtifact(self, dns_vnode: str, path: str, content: str):
+        self.__dns_artifacts.setdefault(dns_vnode, {})[path] = content
 
     def __buildDomainEdgeMap(self, emulator: Emulator, domain_cfg: _DomainConfig) -> Dict[str, Tuple[List[str], List[str]]]:
         mapping: Dict[str, Tuple[List[str], List[str]]] = {}
@@ -613,3 +619,11 @@ class CDNService(Service):
                 filtered_records.append('{} A {}'.format(record_name, edge.getServiceAddress()))
 
         return '\n'.join(filtered_records)
+
+    def render(self, emulator: Emulator):
+        super().render(emulator)
+
+        for (dns_vnode, artifacts) in self.__dns_artifacts.items():
+            dns_node = emulator.getBindingFor(dns_vnode)
+            for (path, content) in artifacts.items():
+                dns_node.setFile(path, content)
