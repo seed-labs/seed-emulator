@@ -3,7 +3,10 @@ from seedemu.core import Node, Service, Server, Emulator, ScopedRegistry
 from seedemu.layers.Routing import Router
 from typing import Set, Dict
 
+from seedemu.layers._bgp_metadata import get_bgp_backend
+
 BIRDCTRL='/run/bird/bird.ctl'
+GO_VERSION='1.22.12'
 
 class BgpLookingGlassServer(Server):
     """!
@@ -33,14 +36,21 @@ class BgpLookingGlassServer(Server):
         @param node node.
         """
 
-        # note: need golang 1.12+; ubuntu defaults to 1.13. need attention if using debian
-        node.addSoftware('golang')
+        # bird-lg-go uses Go embed support, so we install a newer upstream Go toolchain
+        # instead of relying on Ubuntu 20.04's older golang package.
         node.addSoftware('git')
         node.addSoftware('make')
+        node.addSoftware('ca-certificates')
+        node.addBuildCommand(
+            "arch=\"$(dpkg --print-architecture)\"; "
+            "case \"$arch\" in amd64) go_arch=amd64 ;; arm64) go_arch=arm64 ;; *) echo \"unsupported arch: $arch\"; exit 1 ;; esac; "
+            f"curl -fsSL https://go.dev/dl/go{GO_VERSION}.linux-${{go_arch}}.tar.gz -o /tmp/go.tgz && "
+            "rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz && rm -f /tmp/go.tgz && "
+            "ln -sf /usr/local/go/bin/go /usr/local/bin/go && ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt"
+        )
         node.addBuildCommand('git clone https://github.com/xddxdd/bird-lg-go /lg')
-        node.addBuildCommand('curl -Lo /bin/go-bindata https://github.com/kevinburke/go-bindata/releases/download/v3.11.0/go-bindata-linux-amd64')
-        node.addBuildCommand('chmod +x /bin/go-bindata')
-        node.addBuildCommand('make -C /lg')
+        node.addBuildCommand('GOBIN=/usr/local/bin /usr/local/go/bin/go install github.com/kevinburke/go-bindata/go-bindata@v3.11.0')
+        node.addBuildCommand('PATH=/usr/local/go/bin:$PATH make -C /lg')
 
     def setFrontendPort(self, port: int) -> BgpLookingGlassServer:
         """!
@@ -60,7 +70,7 @@ class BgpLookingGlassServer(Server):
 
         @returns frontend port.
         """
-        return self.__proxy_port
+        return self.__frontend_port
 
     def setProxyPort(self, port: int) -> BgpLookingGlassServer:
         """!
@@ -125,6 +135,10 @@ class BgpLookingGlassServer(Server):
             router: Router = obj
             
             if router.getName() not in self.__routers: continue
+            assert get_bgp_backend(router) == "bird", (
+                "BgpLookingGlassService currently supports Bird routers only; "
+                f"as{router.getAsn()}/{router.getName()} uses backend={get_bgp_backend(router)}"
+            )
 
             _node: Node = router.getAttribute('__looking_glass_node', node)
 
@@ -147,7 +161,7 @@ class BgpLookingGlassServer(Server):
         for (router, address) in routers.items():
             node.appendStartCommand('echo "{} {}.lg.as{}.net" >> /etc/hosts'.format(address, router, asn))
 
-        node.appendStartCommand('/lg/frontend/frontend -domain lg.as{}.net --servers {} --proxy-port {} --listen :{} --title-brand "{}" --navbar-brand "{}"'.format(
+        node.appendStartCommand('/lg/frontend/frontend --domain lg.as{}.net --servers {} --proxy-port {} --listen :{} --title-brand "{}" --navbar-brand "{}"'.format(
             asn, ','.join(routers.keys()), self.__proxy_port, self.__frontend_port, 'AS{} looking glass'.format(asn), 'AS{} looking glass'.format(asn)
         ))
 

@@ -5,6 +5,8 @@ from seedemu.core.enums import NetworkType
 from typing import List, Dict
 from ipaddress import IPv4Network
 
+from ._bgp_metadata import get_bgp_backend
+
 RoutingFileTemplates: Dict[str, str] = {}
 
 RoutingFileTemplates["rs_bird"] = """\
@@ -84,13 +86,21 @@ class Routing(Layer):
         node.addBuildCommand('touch /usr/share/doc/bird2/examples/bird.conf')
         node.addSoftware('bird2')
 
+        self._ensureRouterBaseSystem(node)
+
+    def _ensureRouterBaseSystem(self, node: Node):
+        """!
+        @brief Ensure the node uses the router base system even when BIRD is not installed.
+        """
+
         base = node.getBaseSystem()
         if not BaseSystem.doesAContainB(base,BaseSystem.SEEDEMU_ROUTER) and base !=BaseSystem.SEEDEMU_ROUTER:
             node.setBaseSystem(BaseSystem.SEEDEMU_ROUTER)
 
     def _configure_rs(self, rs_node: Node):
-        rs_node.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
-        rs_node.appendStartCommand('bird -d', True)
+        if get_bgp_backend(rs_node) == "bird":
+            rs_node.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
+            rs_node.appendStartCommand('bird -d', True)
         self._log("Bootstrapping bird.conf for RS {}...".format(rs_node.getName()))
 
         rs_ifaces = rs_node.getInterfaces()
@@ -117,8 +127,9 @@ class Routing(Layer):
         rnode.setFile("/etc/bird/bird.conf",
             RoutingFileTemplates["rnode_bird"].format(
               routerId = rnode.getLoopbackAddress()))
-        rnode.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
-        rnode.appendStartCommand('bird -d', True)
+        if get_bgp_backend(rnode) == "bird":
+            rnode.appendStartCommand('[ ! -d /run/bird ] && mkdir /run/bird')
+            rnode.appendStartCommand('bird -d', True)
         if has_localnet:
             rnode.addProtocol('direct', 'local_nets',
                               RoutingFileTemplates['rnode_bird_direct'].format(interfaces = ifaces))
@@ -149,12 +160,13 @@ class Routing(Layer):
 
                 self._log("Bootstrapping bird.conf for AS{} Router {}...".format(scope, name))
 
-                self._installBird(rnode)
-
                 r_ifaces = rnode.getInterfaces()
                 assert len(r_ifaces) > 0, "router node {}/{} has no interfaces".format(rnode.getAsn(), rnode.getName())
 
-                self._configure_bird_router(rnode)
+                self._ensureRouterBaseSystem(rnode)
+                if get_bgp_backend(rnode) == "bird":
+                    self._installBird(rnode)
+                    self._configure_bird_router(rnode)
 
     def render(self, emulator: Emulator):
         reg = emulator.getRegistry()

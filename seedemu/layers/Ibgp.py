@@ -4,6 +4,8 @@ from .Base import Base
 from seedemu.core import ScopedRegistry, Node, Graphable, Emulator, Layer
 from typing import List, Set, Dict
 
+from ._bgp_metadata import install_router_bgp_session
+
 IbgpFileTemplates: Dict[str, str] = {}
 
 IbgpFileTemplates['ibgp_peer'] = '''
@@ -110,14 +112,23 @@ class Ibgp(Layer, Graphable):
 
                     laddr = local.getLoopbackAddress()
                     raddr = remote.getLoopbackAddress()
-                    local.addTable('t_bgp')
-                    local.addTablePipe('t_bgp')
-                    local.addTablePipe('t_direct', 't_bgp')
-                    local.addProtocol('bgp', 'ibgp{}'.format(n), IbgpFileTemplates['ibgp_peer'].format(
-                        localAddress = laddr,
-                        peerAddress = raddr,
-                        asn = asn
-                    ))
+                    install_router_bgp_session(
+                        local,
+                        {
+                            "name": 'ibgp{}'.format(n),
+                            "kind": "ibgp",
+                            "local_address": laddr,
+                            "local_asn": asn,
+                            "peer_address": raddr,
+                            "peer_asn": asn,
+                            "import_community": None,
+                            "local_pref": None,
+                            "export_policy": "all",
+                            "next_hop_self": False,
+                            "route_server_client": False,
+                            "igp_table": "t_ospf",
+                        },
+                    )
 
                     n += 1
 
@@ -157,4 +168,3 @@ class Ibgp(Layer, Graphable):
             out += '{}\n'.format(asn)
 
         return out
-

@@ -27,6 +27,8 @@ class Compiler:
     Compiler takes the rendered result and compiles them to working emulators.
     """
 
+    __last_output_dir: str | None = None
+
     def optionHandlingCapabilities(self) -> OptionHandling:
         """!@brief returns the capabilities of this compiler
            regarding (DynamicConfigurable-) Option handling"""
@@ -64,17 +66,23 @@ class Compiler:
         assert emulator.rendered(), 'Simulation needs to be rendered before compile.'
 
         cur = getcwd()
-        if path.exists(output):
+        output_abs = path.abspath(output)
+        if path.exists(output_abs):
             if override:
                 self._log('output folder "{}" already exist, overriding.'.format(output))
-                rmtree(output)
+                rmtree(output_abs)
             else:
                 self._log('output folder "{}" already exist. Set "override = True" when calling compile() to override.'.format(output))
                 exit(1)
-        mkdir(output)
-        chdir(output)
+        mkdir(output_abs)
+        self.__last_output_dir = output_abs
+        chdir(output_abs)
         self._doCompile(emulator)
         chdir(cur)
+
+    def getLastOutputDirectory(self) -> str | None:
+        """Return the last output directory used by this compiler instance."""
+        return self.__last_output_dir
 
     def _log(self, message: str) -> None:
         """!

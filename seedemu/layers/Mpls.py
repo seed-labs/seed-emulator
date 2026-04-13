@@ -6,6 +6,8 @@ from seedemu.core import Node, ScopedRegistry, Graphable, Emulator, Layer
 from seedemu.core.enums import NetworkType, NodeRole
 from typing import List, Tuple, Dict, Set
 
+from ._bgp_metadata import install_router_bgp_session
+
 MplsFileTemplates: Dict[str, str] = {}
 
 MplsFileTemplates['frr_start_script'] = """\
@@ -229,14 +231,23 @@ class Mpls(Layer, Graphable):
             for remote in nodes:
                 if local == remote: continue
 
-                local.addTable('t_bgp')
-                local.addTablePipe('t_bgp')
-                local.addTablePipe('t_direct', 't_bgp')
-                local.addProtocol('bgp', 'ibgp{}'.format(n), MplsFileTemplates['bird_ibgp_peer'].format(
-                    localAddress = local.getLoopbackAddress(),
-                    peerAddress = remote.getLoopbackAddress(),
-                    asn = local.getAsn()
-                ))
+                install_router_bgp_session(
+                    local,
+                    {
+                        "name": 'ibgp{}'.format(n),
+                        "kind": "ibgp",
+                        "local_address": local.getLoopbackAddress(),
+                        "local_asn": local.getAsn(),
+                        "peer_address": remote.getLoopbackAddress(),
+                        "peer_asn": local.getAsn(),
+                        "import_community": None,
+                        "local_pref": None,
+                        "export_policy": "all",
+                        "next_hop_self": False,
+                        "route_server_client": False,
+                        "igp_table": "master4",
+                    },
+                )
 
                 n += 1
 

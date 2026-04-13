@@ -2,6 +2,7 @@ import subprocess
 from contextlib import contextmanager
 import os
 import tempfile
+import shlex
 from typing import Dict
 
 @contextmanager
@@ -112,4 +113,8 @@ class BuildtimeDockerContainer:
             raise Exception("Failed to run docker container:\n" + run_command)
 
         for source, _ in self.__volumes:
-            sh(f"docker run --rm {source}:/tmp alpine:latest chown -R {os.getuid()}:{os.getgid()} /tmp")
+            quoted_source = shlex.quote(source)
+            sh(
+                f"docker run --rm -v {quoted_source}:/tmp "
+                f"alpine:latest chown -R {os.getuid()}:{os.getgid()} /tmp"
+            )
