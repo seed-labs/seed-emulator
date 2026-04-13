@@ -61,23 +61,23 @@ def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2):
        e.setDisplayName(displayName%(i))
                 
     # Create the Faucet server
-    # faucet:FaucetServer = blockchain.createFaucetServer(
-    #            vnode='faucet', 
-    #            port=80, 
-    #            linked_eth_node='eth5',
-    #            balance=10000,
-    #            max_fund_amount=10)
-    # faucet.setDisplayName('Faucet')
-    # faucet.addHostName('faucet' + DOMAIN)  # Add this name to /etc/hosts
+    faucet:FaucetServer = blockchain.createFaucetServer(
+               vnode='faucet', 
+               port=80, 
+               linked_eth_node='eth5',
+               balance=10000,
+               max_fund_amount=10)
+    faucet.setDisplayName('Faucet')
+    faucet.addHostName('faucet' + DOMAIN)  # Add this name to /etc/hosts
 
     # # Create the Utility server 
-    # util_server:EthUtilityServer = blockchain.createEthUtilityServer(
-    #            vnode='utility',
-    #            port=5000,
-    #            linked_eth_node='eth6',
-    #            linked_faucet_node='faucet')
-    # util_server.setDisplayName('UtilityServer')
-    # util_server.addHostName('utility' + DOMAIN)  # Add this name to /etc/hosts
+    util_server:EthUtilityServer = blockchain.createEthUtilityServer(
+               vnode='utility',
+               port=5000,
+               linked_eth_node='eth6',
+               linked_faucet_node='faucet')
+    util_server.setDisplayName('UtilityServer')
+    util_server.addHostName('utility' + DOMAIN)  # Add this name to /etc/hosts
 
     # Add the Ethereum layer
     emu.addLayer(eth)
