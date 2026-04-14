@@ -1,0 +1,54 @@
+task_id: RS_B29_FAULT_IMPACT_ABLATION
+title: B29 Fault Impact Ablation
+track: research
+baseline: B29
+scenario_class: Disturbance Recovery
+objective_template: run controlled fault impact ablation with rollback
+required_inputs:
+  - id: attach_output_dir
+    question: Provide B29 output directory for attach.
+    required: true
+    reason: Runtime workspace attachment is required.
+  - id: fault_target
+    question: Which node/interface is fault target?
+    required: true
+    reason: Controlled experiment requires explicit scope.
+  - id: fault_type
+    question: Fault type (latency|packet_loss).
+    required: true
+    options: [latency, packet_loss]
+    reason: Defines experiment action.
+stages: [observe, analyze, act, verify]
+policy_by_stage:
+  observe: read_only
+  analyze: read_only
+  act: net_ops
+  verify: read_only
+canonical_request_templates:
+  - >
+    Attach to {attach_output_dir}; run baseline observation; execute controlled
+    {fault_type} injection on {fault_target}; collect mail/routing evidence;
+    rollback fault and verify recovery; produce impact ablation summary.
+fallback_playbooks:
+  - examples/agent-missions/playbooks/rs_b29_fault_impact_ablation.yaml
+scale_hints: [small, medium]
+rollback_required: true
+evidence_requirements:
+  - baseline routing or service snapshot
+  - disturbance evidence
+  - rollback evidence
+  - post-rollback verification
+skill_patterns:
+  - attach-and-scan
+  - fault-inject-and-rollback
+  - evidence-collection
+acceptance_checks:
+  - status == ok
+  - experiment and rollback are both recorded
+  - post-rollback verification indicates stabilization
+report_template: |
+  Ablation report for {task_id}:
+  - objective: {objective}
+  - injected fault: {fault_type}
+  - impact summary: {impact}
+  - rollback verification: {verification}

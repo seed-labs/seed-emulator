@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/dc-common.sh"
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage_dcdown
+  exit 0
+fi
+
+TARGET="${1:-.}"
+COMPOSE_FILE="$(resolve_compose_target "${TARGET}")"
+MAP_PORT="$(default_map_port)"
+COMPOSE_CMD="$(compose_cmd)"
+
+echo "[dcdown] compose file: ${COMPOSE_FILE}"
+echo "[dcdown] map port: ${MAP_PORT}"
+
+SEED_DEMO_MAP_PORT="${MAP_PORT}" ${COMPOSE_CMD} -f "${COMPOSE_FILE}" down --remove-orphans

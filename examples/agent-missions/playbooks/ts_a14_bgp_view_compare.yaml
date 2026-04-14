@@ -1,0 +1,40 @@
+version: 1
+name: ts_a14_bgp_view_compare
+defaults:
+  timeout_seconds: 30
+  parallelism: 12
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: inventory_list_nodes
+    id: inventory
+    save_as: inventory
+  - action: routing_protocol_summary
+    id: route_server_protocols
+    selector:
+      role: [Route Server]
+    save_as: route_server_protocols
+  - action: routing_looking_glass
+    id: route_server_state
+    selector:
+      role: [Route Server]
+    save_as: route_server_state
+  - action: ops_exec
+    id: looking_glass_endpoint
+    selector:
+      node_id: [as2/looking-glass]
+    command: >-
+      sh -lc 'echo ===LISTEN===; ss -tulpn 2>/dev/null | grep 5000 || true;
+      echo ===PROC===; ps aux | grep -E "frontend|proxy" | grep -v grep || true'
+    save_as: looking_glass_endpoint
+  - action: ops_exec
+    id: exabgp_endpoint
+    selector:
+      node_id: [as151/event-viewer]
+    command: >-
+      sh -lc 'echo ===LISTEN===; ss -tulpn 2>/dev/null | grep 5000 || true;
+      echo ===PROC===; ps aux | grep -E "exabgp|dashboard.py" | grep -v grep || true;
+      echo ===EVENTS===; tail -n 80 /var/log/exabgp/events.jsonl 2>/dev/null || true'
+    save_as: exabgp_endpoint

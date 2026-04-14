@@ -1,0 +1,67 @@
+id: Z13
+slug: Z13_a13_exabgp_control_plane
+title: A13 ExaBGP Control Plane Tooling
+source_examples:
+  - family: A
+    example_id: A13_exabgp_control_plane
+    output_dir: examples/basic/A13_exabgp_control_plane/output
+runtime_contract:
+  stage: already_running_network
+  planner_visibility: runtime_restricted
+  full_container_access: true
+  future_partial_visibility_ready: true
+tool_contract:
+  high_level:
+    - seed_agent_run
+    - seed_agent_plan
+    - seed_agent_policy_check
+  preferred_ops:
+    - workspace_refresh
+    - inventory_list_nodes
+    - routing_protocol_summary
+    - ops_logs
+    - ops_exec
+    - job_get
+    - job_steps_list
+    - artifacts_list
+    - artifact_read
+  risky_ops: []
+  shell_command_policy:
+    default: exabgp_read_only_inspection
+    allowed_only_for:
+      - exabgp log and config inspection
+      - route announcement evidence review without mutation
+orchestration_contract:
+  canonical_loop:
+    - attach
+    - locate ExaBGP tool node
+    - inspect peer state and announcements
+    - inspect dashboard artifacts
+    - summarize reusable tool role
+  primary_entry: seed_agent_run
+  structured_task_entry:
+    - TS_A13_EXABGP_TOOL_DISCOVERY
+  deterministic_fallback:
+    - examples/agent-missions/playbooks/ts_a13_exabgp_tool_discovery.yaml
+skill_contract:
+  task_skill_patterns:
+    - attach-and-scan
+    - control-plane-inspection
+    - evidence-collection
+  why_it_fits:
+    - ExaBGP is the reusable Swiss Army Knife control-plane tool in this repo branch.
+    - The runtime exposes both peer state and event logs.
+command_contract:
+  interactive_ui: ./scripts/seed-codex ui -m gpt-5.4 -c 'model_reasoning_effort="low"'
+  read_only_probe: ./scripts/seed-codex run "Attach to examples/basic/A13_exabgp_control_plane/output; locate the ExaBGP tool node, summarize its BGP peer, current announcements, and available control-plane evidence." --workspace-name z13_probe --attach-output-dir examples/basic/A13_exabgp_control_plane/output --policy read_only
+  mission_examples:
+    - ./scripts/seed-codex mission start --task TS_A13_EXABGP_TOOL_DISCOVERY --objective "Locate the ExaBGP tool node and summarize its evidence surfaces" --attach-output-dir examples/basic/A13_exabgp_control_plane/output
+status:
+  live_readiness: conditional_go
+  best_for:
+    - ExaBGP tool discovery
+    - control-plane evidence collection
+    - reusable BGP experiment design
+  hard_boundaries:
+    - Do not mutate ExaBGP config in read-only mode.
+    - Treat ExaBGP as a scoped control-plane tool, not a generic shell demo.

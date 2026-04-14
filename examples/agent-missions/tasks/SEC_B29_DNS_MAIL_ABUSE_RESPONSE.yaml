@@ -1,0 +1,52 @@
+task_id: SEC_B29_DNS_MAIL_ABUSE_RESPONSE
+title: B29 DNS Mail Abuse Triage
+track: security
+baseline: B29
+scenario_class: Security Offense-Defense
+objective_template: investigate dns/mail abuse chain and scope the safest response
+required_inputs:
+  - id: attach_output_dir
+    question: Provide B29 output directory for attach.
+    required: true
+    reason: Runtime workspace attachment is required.
+  - id: suspected_domain
+    question: Which domain is suspected to be abused?
+    required: true
+    reason: Investigation target must be explicit.
+  - id: suspected_mail_node
+    question: Which visible SEED node should be prioritized?
+    required: false
+    reason: Optional accelerated scoping for runtime operations.
+stages: [observe, analyze, verify]
+policy_by_stage:
+  observe: read_only
+  analyze: read_only
+  verify: read_only
+canonical_request_templates:
+  - >
+    Attach to {attach_output_dir}; investigate DNS and mail logs for abuse around
+    domain {suspected_domain}; assess whether bounded mitigation is warranted;
+    verify current service health and summarize the safest next response.
+fallback_playbooks:
+  - examples/agent-missions/playbooks/sec_b29_dns_mail_abuse_response.yaml
+scale_hints: [small, medium]
+rollback_required: false
+evidence_requirements:
+  - dns log chain
+  - mail log chain
+  - response recommendation
+  - current-health validation
+skill_patterns:
+  - attach-and-scan
+  - service-debug
+  - evidence-collection
+acceptance_checks:
+  - status == ok
+  - evidence includes dns or mail log chain
+  - report includes bounded mitigation recommendation
+  - verification captures current service health
+report_template: |
+  Abuse response report for {task_id}:
+  - objective: {objective}
+  - response summary: {summary}
+  - verification result: {verification}

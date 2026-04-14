@@ -1,0 +1,47 @@
+task_id: RS_A12_FRR_ROUTE_INJECTION_LIVE
+title: A12 FRR Route Injection Live Drill
+track: research
+baseline: A12
+scenario_class: FRR Dynamic Control Plane
+objective_template: run a controlled FRR route injection and rollback drill
+required_inputs:
+  - id: attach_output_dir
+    question: Provide A12 output directory for attach.
+    required: true
+    reason: Runtime workspace attachment is required.
+stages: [observe, act, verify]
+policy_by_stage:
+  observe: read_only
+  act: net_ops
+  verify: read_only
+canonical_request_templates:
+  - >
+    Attach to {attach_output_dir}; execute a controlled FRR route injection drill on
+    the FRR-backed A12 customer router; announce prefix 198.51.100.0/24 from the FRR
+    speaker, verify the route appears in FRR and downstream summaries, always roll it
+    back, and verify the route is withdrawn cleanly.
+fallback_playbooks:
+  - examples/agent-missions/playbooks/rs_a12_frr_route_injection_live.yaml
+scale_hints: [small]
+rollback_required: true
+evidence_requirements:
+  - pre-injection control-plane baseline
+  - FRR announce evidence
+  - rollback evidence
+  - post-rollback verification
+skill_patterns:
+  - attach-and-scan
+  - control-plane-inspection
+  - routing-drill-and-rollback
+  - evidence-collection
+acceptance_checks:
+  - status == ok
+  - announce and rollback are both recorded
+  - FRR evidence shows the injected route during the drill
+  - post-rollback verification shows route withdrawal
+report_template: |
+  FRR live drill report for {task_id}:
+  - objective: {objective}
+  - injected prefix: 198.51.100.0/24
+  - fr r announce evidence: {announce_evidence}
+  - rollback verification: {verification}

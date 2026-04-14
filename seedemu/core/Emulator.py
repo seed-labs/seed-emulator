@@ -9,6 +9,7 @@ from typing import Dict, Set, Tuple, List
 from sys import prefix, stderr
 from ipaddress import IPv4Address, IPv4Network
 import pickle
+import os
 
 class BindingDatabase(Registrable, Printable):
     """!
@@ -426,9 +427,24 @@ class Emulator:
         @param compiler to use
         @param callbacks which is a list of custom functions that will be executed to update the output directory
         """
+        output_dir = None
+        getter = getattr(compiler, "getLastOutputDirectory", None)
+        if callable(getter):
+            output_dir = getter()
 
-        for func in callbacks:
-            func(compiler)
+        previous_cwd = None
+        if output_dir:
+            previous_cwd = os.getcwd()
+            os.chdir(output_dir)
+
+        try:
+            for func in callbacks:
+                func(compiler)
+        finally:
+            if previous_cwd is not None:
+                os.chdir(previous_cwd)
+
+        return self
 
     def getRegistry(self) -> Registry:
         """!

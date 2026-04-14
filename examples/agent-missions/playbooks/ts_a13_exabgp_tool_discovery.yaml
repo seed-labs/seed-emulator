@@ -1,0 +1,33 @@
+version: 1
+name: ts_a13_exabgp_tool_discovery
+defaults:
+  timeout_seconds: 30
+  parallelism: 12
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: inventory_list_nodes
+    id: inventory
+    save_as: inventory
+  - action: routing_protocol_summary
+    id: route_summary
+    selector:
+      role: [Route Server, BorderRouter]
+    save_as: route_summary
+  - action: ops_logs
+    id: exabgp_logs
+    selector:
+      node_id: [as151/control-plane-tool]
+    tail: 120
+    save_as: exabgp_logs
+  - action: ops_exec
+    id: exabgp_probe
+    selector:
+      node_id: [as151/control-plane-tool]
+    command: >-
+      sh -lc 'echo ===CONF===; cat /etc/exabgp/exabgp.conf 2>/dev/null || true;
+      echo ===EVENTS===; tail -n 80 /var/log/exabgp/events.jsonl 2>/dev/null || true;
+      echo ===LISTEN===; ss -tulpn 2>/dev/null | grep 5000 || true'
+    save_as: exabgp_probe

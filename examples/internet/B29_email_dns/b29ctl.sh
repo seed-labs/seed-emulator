@@ -36,7 +36,7 @@ have_compose() {
 
 b29_generate() {
   log "Generating emulation (platform=$PLATFORM) ..."
-  export PYTHONPATH="$ROOT_DIR:$PYTHONPATH"
+  export PYTHONPATH="$ROOT_DIR${PYTHONPATH:+:$PYTHONPATH}"
   python3 "$SCRIPT_DIR/email_realistic.py" "$PLATFORM"
   log "Generation complete: $OUTPUT_DIR"
 }

@@ -1,0 +1,56 @@
+task_id: TS_B00_PREFIX_HIJACK_LIVE
+title: B00 Prefix Hijacking Live Drill
+track: troubleshooting
+baseline: B00
+scenario_class: Routing Security
+objective_template: run a live prefix hijacking drill with rollback
+required_inputs:
+  - id: attach_output_dir
+    question: Provide B00 output directory for attach.
+    required: true
+    reason: Runtime workspace attachment is required.
+  - id: target_prefix
+    question: Which victim prefix should be hijacked?
+    required: true
+    pattern: '^\d{1,3}(\.\d{1,3}){3}/\d{1,2}$'
+    reason: Prefix scope is required for attack/rollback operations.
+  - id: attacker_asn
+    question: Which ASN is the attacker (example 151)?
+    required: true
+    pattern: '^[0-9]{1,6}$'
+    reason: Deterministic attacker selection is required for live execution.
+stages: [observe, act, verify]
+policy_by_stage:
+  observe: read_only
+  act: net_ops
+  verify: read_only
+canonical_request_templates:
+  - >
+    Attach to {attach_output_dir}; execute a live BGP prefix hijack drill from as{attacker_asn}
+    against prefix {target_prefix}; collect before/during/after evidence using BGP summary and
+    traceroute; always rollback hijack config and verify network recovery.
+fallback_playbooks:
+  - examples/agent-missions/playbooks/ts_b00_prefix_hijack_live.yaml
+scale_hints: [small, medium]
+rollback_required: true
+evidence_requirements:
+  - pre-attack baseline
+  - during-attack routing evidence
+  - rollback evidence
+  - post-rollback stabilization check
+skill_patterns:
+  - attach-and-scan
+  - routing-drill-and-rollback
+  - evidence-collection
+acceptance_checks:
+  - status == ok
+  - hijack announce and rollback are both recorded
+  - post-rollback verification indicates routing stabilization
+report_template: |
+  Live hijack drill report for {task_id}:
+  - objective: {objective}
+  - attacker asn: {attacker_asn}
+  - target prefix: {target_prefix}
+  - pre-attack baseline: {baseline_observation}
+  - during attack impact: {impact}
+  - rollback verification: {verification}

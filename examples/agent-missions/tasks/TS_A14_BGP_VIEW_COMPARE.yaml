@@ -1,0 +1,44 @@
+task_id: TS_A14_BGP_VIEW_COMPARE
+title: A14 Route State And Event View Compare
+track: troubleshooting
+baseline: A14
+scenario_class: BGP Observability
+objective_template: compare route-table looking glass state with ExaBGP event view
+required_inputs:
+  - id: attach_output_dir
+    question: Provide A14 output directory for attach.
+    required: true
+    reason: Runtime workspace attachment is required.
+stages: [observe, analyze, verify]
+policy_by_stage:
+  observe: read_only
+  analyze: read_only
+  verify: read_only
+canonical_request_templates:
+  - >
+    Attach to {attach_output_dir}; locate the route-table looking glass and the ExaBGP
+    event dashboard; compare what each one reveals about current BGP state versus live
+    BGP events; verify both surfaces are reachable and summarize their observability boundaries.
+fallback_playbooks:
+  - examples/agent-missions/playbooks/ts_a14_bgp_view_compare.yaml
+scale_hints: [small]
+rollback_required: false
+evidence_requirements:
+  - route-table state evidence
+  - event-view evidence
+  - reachability evidence
+  - observability comparison
+skill_patterns:
+  - attach-and-scan
+  - control-plane-inspection
+  - evidence-collection
+acceptance_checks:
+  - status == ok
+  - report distinguishes state view from event view
+  - report includes reachability evidence for both surfaces
+report_template: |
+  BGP observability report for {task_id}:
+  - objective: {objective}
+  - route-state view: {route_state_view}
+  - event view: {event_view}
+  - comparison: {comparison}

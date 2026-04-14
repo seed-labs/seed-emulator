@@ -1,0 +1,75 @@
+version: 1
+name: rs_a12_frr_route_injection_live
+defaults:
+  selector:
+    asn: [151]
+    role: [BorderRouter]
+  timeout_seconds: 30
+  parallelism: 8
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: routing_protocol_summary
+    id: pre_protocol
+    selector:
+      asn: [151, 2]
+      role: [BorderRouter]
+    save_as: pre_protocol
+  - action: routing_looking_glass
+    id: pre_route_state
+    selector:
+      asn: [151]
+      role: [BorderRouter]
+    prefix: 198.51.100.0/24
+    backend: frr
+    save_as: pre_route_state
+  - action: bgp_announce_prefix
+    id: announce
+    prefix: 198.51.100.0/24
+    protocol_id: a12_frr_inject
+    save_as: announce
+  - action: sleep
+    id: propagation_wait
+    seconds: 2
+  - action: routing_looking_glass
+    id: during_route_state
+    selector:
+      asn: [151]
+      role: [BorderRouter]
+    prefix: 198.51.100.0/24
+    backend: frr
+    save_as: during_route_state
+  - action: routing_protocol_summary
+    id: during_protocol
+    selector:
+      asn: [151, 2]
+      role: [BorderRouter]
+    save_as: during_protocol
+  - action: bgp_withdraw_prefix
+    id: rollback
+    prefix: 198.51.100.0/24
+    protocol_id: a12_frr_inject
+    save_as: rollback
+    on_error: continue
+  - action: sleep
+    id: rollback_wait
+    seconds: 2
+    on_error: continue
+  - action: routing_looking_glass
+    id: post_route_state
+    selector:
+      asn: [151]
+      role: [BorderRouter]
+    prefix: 198.51.100.0/24
+    backend: frr
+    save_as: post_route_state
+    on_error: continue
+  - action: routing_protocol_summary
+    id: post_protocol
+    selector:
+      asn: [151, 2]
+      role: [BorderRouter]
+    save_as: post_protocol
+    on_error: continue

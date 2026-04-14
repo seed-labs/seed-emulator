@@ -1,0 +1,42 @@
+version: 1
+name: sec_b29_dns_mail_abuse_response
+defaults:
+  selector:
+    node_id: [as202/dns-auth-gmail]
+    role: [Host]
+  timeout_seconds: 30
+  parallelism: 20
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: inventory_list_nodes
+    id: focus_inventory
+    save_as: focus_inventory
+  - action: ops_logs
+    id: dns_mail_logs
+    tail: 160
+    since_seconds: 1800
+    save_as: logs
+  - action: ops_exec
+    id: containment_probe
+    command: >-
+      sh -lc 'echo ===NODE===; hostname; echo ===PROC===; ps aux; echo ===LISTEN===;
+      ss -tulpn 2>/dev/null || netstat -tulpn 2>/dev/null || true; echo ===MAILLOG===;
+      tail -n 80 /var/log/mail.log 2>/dev/null || true; echo ===SYSLOG===;
+      tail -n 80 /var/log/syslog 2>/dev/null || true; echo ===DNSLOG===;
+      tail -n 80 /var/log/named/named.log 2>/dev/null || true'
+    save_as: containment_probe
+  - action: routing_bgp_summary
+    id: bgp
+    selector:
+      asn: [202]
+      role: [BorderRouter, Router, Route Server]
+    save_as: bgp
+  - action: ops_logs
+    id: post_action_logs
+    tail: 120
+    since_seconds: 300
+    save_as: post_action_logs
+    on_error: continue

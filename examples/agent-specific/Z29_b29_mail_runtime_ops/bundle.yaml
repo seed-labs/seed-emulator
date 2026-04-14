@@ -1,0 +1,83 @@
+id: Z29
+slug: Z29_b29_mail_runtime_ops
+title: B29 Mail / DNS Runtime Ops
+source_examples:
+  - family: B
+    example_id: B29_email_dns
+    output_dir: examples/internet/B29_email_dns/output
+runtime_contract:
+  stage: already_running_network
+  planner_visibility: runtime_restricted
+  full_container_access: true
+  future_partial_visibility_ready: true
+tool_contract:
+  high_level:
+    - seed_agent_run
+    - seed_agent_plan
+    - seed_agent_policy_check
+    - seed_agent_task_begin
+    - seed_agent_task_execute
+    - seed_agent_task_status
+  preferred_ops:
+    - workspace_refresh
+    - inventory_list_nodes
+    - routing_protocol_summary
+    - ops_logs
+    - job_get
+    - job_steps_list
+    - artifacts_list
+    - artifact_read
+  risky_ops:
+    - inject_fault
+  shell_command_policy:
+    default: avoid_shell_first
+    allowed_only_for:
+      - bounded mail and DNS diagnostics not covered by structured ops tools
+      - post-policy-check read-only inspection
+orchestration_contract:
+  canonical_loop:
+    - attach
+    - inspect
+    - diagnose service and routing state
+    - run bounded operation when needed
+    - verify recovery or summarize unresolved issues
+  primary_entry: seed_agent_run
+  structured_task_entry:
+    - TS_B29_MAIL_REACHABILITY_DEBUG
+    - RS_B29_FAULT_IMPACT_ABLATION
+    - SEC_B29_DNS_MAIL_ABUSE_RESPONSE
+    - SEC_B29_SOCIAL_ENGINEERING_TRIAGE
+  deterministic_fallback:
+    - examples/agent-missions/playbooks/ts_b29_mail_reachability_debug.yaml
+    - examples/agent-missions/playbooks/rs_b29_fault_impact_ablation.yaml
+    - examples/agent-missions/playbooks/sec_b29_dns_mail_abuse_response.yaml
+    - examples/agent-missions/playbooks/sec_b29_social_engineering_triage.yaml
+skill_contract:
+  task_skill_patterns:
+    - attach-and-scan
+    - service-debug
+    - fault-inject-and-rollback
+    - evidence-collection
+  why_it_fits:
+    - B29 is the strongest current end-to-end runtime ops story.
+    - Service logs and routing signals are both visible and auditable.
+command_contract:
+  interactive_ui: ./scripts/seed-codex ui -m gpt-5.4 -c 'model_reasoning_effort="low"'
+  read_only_probe: ./scripts/seed-codex run "Attach to examples/internet/B29_email_dns/output; only do read-only environment understanding and mail/DNS anomaly triage." --workspace-name z29_probe --attach-output-dir examples/internet/B29_email_dns/output --policy read_only
+  mission_examples:
+    - ./scripts/seed-codex mission list --baseline B29
+    - ./scripts/seed-codex mission start --task TS_B29_MAIL_REACHABILITY_DEBUG --objective "Debug end-to-end mail reachability" --attach-output-dir examples/internet/B29_email_dns/output
+legacy_compat:
+  showcase_paths:
+    - examples/agent-base/S01_b29_health_maintenance
+    - examples/agent-base/S04_b29_packetloss_experiment
+status:
+  live_readiness: go
+  best_for:
+    - service reachability debug
+    - disturbance recovery
+    - security triage
+    - attached-runtime mainline demos
+  hard_boundaries:
+    - B29 and B00 should not be run together in the same Docker namespace.
+    - Fault-injection stages require confirmation and rollback discipline.

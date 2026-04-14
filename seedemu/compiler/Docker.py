@@ -8,6 +8,7 @@ from typing import Dict, Generator, List, Set, Tuple
 from hashlib import md5
 from functools import cmp_to_key
 from os import mkdir, chdir
+import os
 from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
@@ -353,7 +354,7 @@ class Docker(Compiler):
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
         internetMapEnabled: bool = True,
-        internetMapPort: int = 8080,
+        internetMapPort: int | None = None,
         etherViewEnabled: bool = False,
         etherViewPort: int = 5000,
         clientHideServiceNet: bool = True,
@@ -385,7 +386,7 @@ class Docker(Compiler):
         Default to False. Note that the seedemu internetMap allows unauthenticated
         access to all nodes, which can potentially allow root access to the
         emulator host. Only enable seedemu in a trusted network.
-        @param internetMapPort (optional) set seedemu internetMap port. Default to 8080.
+        @param internetMapPort (optional) set seedemu internetMap port. Default to env `SEED_DEMO_MAP_PORT` or 18080.
         @param etherViewEnabled (optional) set if seedemu EtherView should be enabled.
         Default to False.
         @param etherViewPort (optional) set seedemu EtherView port. Default to 5000.
@@ -401,7 +402,9 @@ class Docker(Compiler):
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
         self.__internet_map_enabled = internetMapEnabled
-        self.__internet_map_port = internetMapPort
+        if internetMapPort is None:
+            internetMapPort = int(os.environ.get("SEED_DEMO_MAP_PORT", "18080"))
+        self.__internet_map_port = int(internetMapPort)
 
         self.__ether_view_enabled = etherViewEnabled
         self.__ether_view_port = etherViewPort
