@@ -23,6 +23,27 @@ bundles:
     source_family: A
     output_dir: examples/basic/A02_transit_as_mpls/output
     live_readiness: conditional_go
+  - id: Z12
+    slug: Z12_a12_bgp_mixed_backend
+    title: A12 Mixed BIRD / FRR BGP Backend
+    source_example: A12_bgp_mixed_backend
+    source_family: A
+    output_dir: examples/basic/A12_bgp_mixed_backend/output
+    live_readiness: conditional_go
+  - id: Z13
+    slug: Z13_a13_exabgp_control_plane
+    title: A13 ExaBGP Control Plane
+    source_example: A13_exabgp_control_plane
+    source_family: A
+    output_dir: examples/basic/A13_exabgp_control_plane/output
+    live_readiness: conditional_go
+  - id: Z14
+    slug: Z14_a14_bgp_event_looking_glass
+    title: A14 BGP Event Looking Glass
+    source_example: A14_bgp_event_looking_glass
+    source_family: A
+    output_dir: examples/basic/A14_bgp_event_looking_glass/output
+    live_readiness: conditional_go
   - id: Z28
     slug: Z28_b28_traffic_lab
     title: B28 Traffic Lab

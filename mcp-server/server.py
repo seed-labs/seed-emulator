@@ -2,6 +2,7 @@ from mcp.server.fastmcp import FastMCP
 import json
 import sys
 import os
+import shlex
 
 
 # Ensure local repository root has highest import priority for `seedemu`.
@@ -1663,20 +1664,35 @@ def bgp_announce_prefix(
     Example:
         bgp_announce_prefix("as666brd-attacker", "10.150.0.0/24")
     """
-    # Step 1: Add static route to kernel
-    route_cmd = f"ip route add {prefix} dev lo 2>/dev/null || true"
-    exec_command(router_container, route_cmd)
-    
-    # Step 2: Configure BIRD to redistribute kernel routes
-    # This requires the protocol kernel { } to have export all or similar
-    # We add a static route in BIRD directly for more control
-    bird_cmd = f'''birdc << EOF
+    tag = f"hijack_{prefix.replace('/', '_').replace('.', '_')}"
+    shell_script = f"""\
+if command -v vtysh >/dev/null 2>&1; then
+  FRR_ASN="$(vtysh -c 'show running-config' 2>/dev/null | awk '/^router bgp / {{print $3; exit}}')"
+  FRR_SUMMARY="$(vtysh -c 'show bgp summary' 2>&1 || true)"
+  if [ -n "$FRR_ASN" ] && ! printf '%s' "$FRR_SUMMARY" | grep -qi 'bgpd is not running'; then
+    vtysh <<EOF_SEEDOPS_FRR
+configure terminal
+ip route {prefix} Null0
+router bgp $FRR_ASN
+ address-family ipv4 unicast
+  network {prefix}
+ exit-address-family
+end
+write file
+EOF_SEEDOPS_FRR
+    vtysh -c 'show bgp ipv4 unicast {prefix}' || vtysh -c 'show bgp {prefix}' || true
+    exit 0
+  fi
+fi
+ip route add {prefix} dev lo 2>/dev/null || true
+birdc <<EOF_SEEDOPS_BIRD
 configure soft
-protocol static hijack_{prefix.replace('/', '_').replace('.', '_')} {{
+protocol static {tag} {{
     route {prefix} blackhole;
 }}
-EOF'''
-    result = exec_command(router_container, f"sh -c '{bird_cmd}'")
+EOF_SEEDOPS_BIRD
+"""
+    result = exec_command(router_container, f"sh -lc {shlex.quote(shell_script)}")
     
     return f"Announced prefix {prefix} from {router_container}. BIRD output: {result[:200]}"
 
@@ -1692,10 +1708,28 @@ def get_looking_glass(router_container: str, prefix: str = "") -> str:
         get_looking_glass("as100brd-r100", "10.200.0.0/24")
     """
     if prefix:
-        cmd = f"birdc 'show route for {prefix} all'"
+        shell_script = f"""\
+if command -v vtysh >/dev/null 2>&1; then
+  FRR_SUMMARY="$(vtysh -c 'show bgp summary' 2>&1 || true)"
+  if ! printf '%s' "$FRR_SUMMARY" | grep -qi 'bgpd is not running'; then
+    vtysh -c 'show bgp ipv4 unicast {prefix}' || vtysh -c 'show bgp {prefix}'
+    exit 0
+  fi
+fi
+birdc "show route for {prefix} all"
+"""
     else:
-        cmd = "birdc 'show route'"
-    return exec_command(router_container, cmd)
+        shell_script = """\
+if command -v vtysh >/dev/null 2>&1; then
+  FRR_SUMMARY="$(vtysh -c 'show bgp summary' 2>&1 || true)"
+  if ! printf '%s' "$FRR_SUMMARY" | grep -qi 'bgpd is not running'; then
+    vtysh -c 'show bgp ipv4 unicast' || vtysh -c 'show bgp'
+    exit 0
+  fi
+fi
+birdc 'show route'
+"""
+    return exec_command(router_container, f"sh -lc {shlex.quote(shell_script)}")
 
 # ==============================================================================
 # Dynamic Operations Tools (Phase 13)

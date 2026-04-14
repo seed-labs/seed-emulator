@@ -35,6 +35,9 @@ The intent is:
 | `Z00_b00_attached_runtime` | `B00_mini_internet` | `go` | routing diagnostics, path maintenance, controlled experiments |
 | `Z01_y01_prefix_hijack_drill` | `Y01_bgp_prefix_hijacking` | `conditional_go` | high-impact routing security drill candidate |
 | `Z02_a02_mpls_control_plane` | `A02_transit_as_mpls` | `conditional_go` | FRR/MPLS control-plane inspection |
+| `Z12_a12_bgp_mixed_backend` | `A12_bgp_mixed_backend` | `conditional_go` | selective FRR migration and mixed-backend BGP validation |
+| `Z13_a13_exabgp_control_plane` | `A13_exabgp_control_plane` | `conditional_go` | ExaBGP runtime tooling and control-plane evidence |
+| `Z14_a14_bgp_event_looking_glass` | `A14_bgp_event_looking_glass` | `conditional_go` | route-state and event-stream BGP observability |
 | `Z28_b28_traffic_lab` | `B28_traffic_generator` | `go` | runtime traffic-role discovery and experiment design |
 | `Z29_b29_mail_runtime_ops` | `B29_email_dns` | `go` | service reachability, disturbance recovery, security triage |
 
@@ -50,6 +53,15 @@ examples/agent-specific/
 │   ├── bundle.yaml
 │   └── README.md
 ├── Z02_a02_mpls_control_plane/
+│   ├── bundle.yaml
+│   └── README.md
+├── Z12_a12_bgp_mixed_backend/
+│   ├── bundle.yaml
+│   └── README.md
+├── Z13_a13_exabgp_control_plane/
+│   ├── bundle.yaml
+│   └── README.md
+├── Z14_a14_bgp_event_looking_glass/
 │   ├── bundle.yaml
 │   └── README.md
 ├── Z28_b28_traffic_lab/
@@ -100,3 +112,9 @@ Structured mission path:
 ```
 
 Use the bundle README and `bundle.yaml` to decide which entry is appropriate.
+
+Recommended BGP control-plane showcase order:
+
+1. `Z12_a12_bgp_mixed_backend`
+2. `Z13_a13_exabgp_control_plane`
+3. `Z14_a14_bgp_event_looking_glass`

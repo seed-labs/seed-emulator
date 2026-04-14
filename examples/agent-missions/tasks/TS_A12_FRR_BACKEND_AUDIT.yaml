@@ -1,0 +1,45 @@
+task_id: TS_A12_FRR_BACKEND_AUDIT
+title: A12 Mixed BIRD FRR Backend Audit
+track: troubleshooting
+baseline: A12
+scenario_class: Control Plane Audit
+objective_template: identify BIRD and FRRouting speakers and verify mixed-backend interoperability
+required_inputs:
+  - id: attach_output_dir
+    question: Provide A12 output directory for attach.
+    required: true
+    reason: Runtime workspace attachment is required.
+stages: [observe, analyze, verify]
+policy_by_stage:
+  observe: read_only
+  analyze: read_only
+  verify: read_only
+canonical_request_templates:
+  - >
+    Attach to {attach_output_dir}; identify which A12 routers use BIRD versus FRRouting;
+    collect protocol summaries, route-table evidence, and explicit daemon evidence;
+    verify that mixed-backend BGP sessions are working and summarize the safest next FRR migration step.
+fallback_playbooks:
+  - examples/agent-missions/playbooks/ts_a12_frr_backend_audit.yaml
+scale_hints: [small]
+rollback_required: false
+evidence_requirements:
+  - backend inventory
+  - protocol summary evidence
+  - route-table evidence
+  - backend-specific daemon evidence
+skill_patterns:
+  - attach-and-scan
+  - control-plane-inspection
+  - evidence-collection
+acceptance_checks:
+  - status == ok
+  - report names BIRD and FRR nodes explicitly
+  - report includes interoperability evidence
+report_template: |
+  FRR backend audit report for {task_id}:
+  - objective: {objective}
+  - bird nodes: {bird_nodes}
+  - frr nodes: {frr_nodes}
+  - interoperability evidence: {interoperability}
+  - next migration step: {next_step}

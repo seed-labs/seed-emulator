@@ -101,13 +101,13 @@
 
 源目录：
 
-- `subrepos/seed-agent/codex_skills/seed-attached-runtime`
+- `subrepos/seed-agent/codex_skills/seed-runtime-operator`
 - `subrepos/seed-agent/codex_skills/seed-task-runtime-loop`
 - `subrepos/seed-agent/codex_skills/seed-behavior-verification`
 
 同步目标：
 
-- `subrepos/seed-agent/.codex-seed-agent/skills/seed-attached-runtime`
+- `subrepos/seed-agent/.codex-seed-agent/skills/seed-runtime-operator`
 - `subrepos/seed-agent/.codex-seed-agent/skills/seed-task-runtime-loop`
 - `subrepos/seed-agent/.codex-seed-agent/skills/seed-behavior-verification`
 
@@ -119,7 +119,7 @@
 
 ### 这三个 skill 的分工
 
-- `seed-attached-runtime`
+- `seed-runtime-operator`
   - 解决“已运行网络接管、运行态理解、工具路径选择”
 - `seed-task-runtime-loop`
   - 解决“任务式 begin/reply/execute/status 闭环”

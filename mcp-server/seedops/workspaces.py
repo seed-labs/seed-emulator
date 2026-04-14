@@ -30,10 +30,10 @@ def resolve_compose_output_dir(output_dir: str) -> str:
     tried: list[str] = []
 
     def _normalize(candidate: Path) -> Path:
-        resolved = candidate.resolve()
-        if resolved.name == "docker-compose.yml":
-            return resolved.parent
-        return resolved
+        absolute = Path(os.path.abspath(str(candidate.expanduser())))
+        if absolute.name == "docker-compose.yml":
+            return absolute.parent
+        return absolute
 
     def _maybe_accept(candidate: Path) -> Path | None:
         normalized = _normalize(candidate)

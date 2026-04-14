@@ -250,9 +250,11 @@ steps:
             self.assertEqual(final.status, "succeeded")
             self.assertEqual(len(ops.commands), 2)
             self.assertIn("sh -lc", ops.commands[0])
+            self.assertIn("show bgp summary", ops.commands[0])
             self.assertIn("seedops-bgp-hijack:hijack_test:begin", ops.commands[0])
             self.assertIn("birdc configure", ops.commands[0])
             self.assertIn("show route for 10.150.0.0/24", ops.commands[0])
+            self.assertIn("no network 10.150.0.0/24", ops.commands[1])
             self.assertIn("seedops-bgp-hijack:hijack_test:begin", ops.commands[1])
             self.assertIn("awk -v b=", ops.commands[1])
 

@@ -80,34 +80,82 @@ def _build_bgp_hijack_command(
     tmp_path = "/tmp/bird.conf.seedops.tmp"
     protocol_block = _build_hijack_protocol_block(prefix=prefix, table=table, protocol_id=protocol_id)
 
+    frr_announce = f"""\
+if command -v vtysh >/dev/null 2>&1; then
+  FRR_ASN="$(vtysh -c 'show running-config' 2>/dev/null | awk '/^router bgp / {{print $3; exit}}')"
+  FRR_SUMMARY="$(vtysh -c 'show bgp summary' 2>&1 || true)"
+  if [ -n "$FRR_ASN" ] && ! printf '%s' "$FRR_SUMMARY" | grep -qi 'bgpd is not running'; then
+    vtysh <<EOF_SEEDOPS_FRR_HIJACK
+configure terminal
+ip route {prefix} Null0
+router bgp $FRR_ASN
+ address-family ipv4 unicast
+  network {prefix}
+ exit-address-family
+end
+write file
+EOF_SEEDOPS_FRR_HIJACK
+    vtysh -c 'show bgp ipv4 unicast {prefix}' || vtysh -c 'show bgp {prefix}' || true
+    exit 0
+  fi
+fi
+"""
+
+    frr_withdraw = f"""\
+if command -v vtysh >/dev/null 2>&1; then
+  FRR_ASN="$(vtysh -c 'show running-config' 2>/dev/null | awk '/^router bgp / {{print $3; exit}}')"
+  FRR_SUMMARY="$(vtysh -c 'show bgp summary' 2>&1 || true)"
+  if [ -n "$FRR_ASN" ] && ! printf '%s' "$FRR_SUMMARY" | grep -qi 'bgpd is not running'; then
+    vtysh <<EOF_SEEDOPS_FRR_HIJACK
+configure terminal
+no ip route {prefix} Null0
+router bgp $FRR_ASN
+ address-family ipv4 unicast
+  no network {prefix}
+ exit-address-family
+end
+write file
+EOF_SEEDOPS_FRR_HIJACK
+    vtysh -c 'show bgp ipv4 unicast {prefix}' || vtysh -c 'show bgp {prefix}' || true
+    exit 0
+  fi
+fi
+"""
+
     if mode == "announce":
         script = (
-            f'CONF="{conf_path}"\n'
-            f'BEGIN_MARK={shlex.quote(begin_marker)}\n'
-            f'END_MARK={shlex.quote(end_marker)}\n'
-            'if ! grep -qF "$BEGIN_MARK" "$CONF"; then\n'
-            "cat >> \"$CONF\" <<'EOF_SEEDOPS_BGP_HIJACK'\n"
-            f"{protocol_block}"
-            "EOF_SEEDOPS_BGP_HIJACK\n"
-            "fi\n"
-            "birdc configure\n"
-            f"birdc \"show route for {prefix} all\" || true\n"
+            frr_announce
+            + (
+                f'CONF="{conf_path}"\n'
+                f'BEGIN_MARK={shlex.quote(begin_marker)}\n'
+                f'END_MARK={shlex.quote(end_marker)}\n'
+                'if ! grep -qF "$BEGIN_MARK" "$CONF"; then\n'
+                "cat >> \"$CONF\" <<'EOF_SEEDOPS_BGP_HIJACK'\n"
+                f"{protocol_block}"
+                "EOF_SEEDOPS_BGP_HIJACK\n"
+                "fi\n"
+                "birdc configure\n"
+                f"birdc \"show route for {prefix} all\" || true\n"
+            )
         )
     elif mode == "withdraw":
         script = (
-            f'CONF="{conf_path}"\n'
-            f'TMP="{tmp_path}"\n'
-            f'BEGIN_MARK={shlex.quote(begin_marker)}\n'
-            f'END_MARK={shlex.quote(end_marker)}\n'
-            'if grep -qF "$BEGIN_MARK" "$CONF"; then\n'
-            "awk -v b=\"$BEGIN_MARK\" -v e=\"$END_MARK\" '\n"
-            '$0 == b {skip=1; next}\n'
-            '$0 == e {skip=0; next}\n'
-            '!skip {print}\n'
-            "' \"$CONF\" > \"$TMP\" && mv \"$TMP\" \"$CONF\"\n"
-            "fi\n"
-            "birdc configure || true\n"
-            f"birdc \"show route for {prefix} all\" || true\n"
+            frr_withdraw
+            + (
+                f'CONF="{conf_path}"\n'
+                f'TMP="{tmp_path}"\n'
+                f'BEGIN_MARK={shlex.quote(begin_marker)}\n'
+                f'END_MARK={shlex.quote(end_marker)}\n'
+                'if grep -qF "$BEGIN_MARK" "$CONF"; then\n'
+                "awk -v b=\"$BEGIN_MARK\" -v e=\"$END_MARK\" '\n"
+                '$0 == b {skip=1; next}\n'
+                '$0 == e {skip=0; next}\n'
+                '!skip {print}\n'
+                "' \"$CONF\" > \"$TMP\" && mv \"$TMP\" \"$CONF\"\n"
+                "fi\n"
+                "birdc configure || true\n"
+                f"birdc \"show route for {prefix} all\" || true\n"
+            )
         )
     else:
         raise ValueError(f"unsupported hijack mode: {mode}")

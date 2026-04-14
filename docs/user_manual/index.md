@@ -11,6 +11,7 @@ High-frequency links:
 - [Compilation](./compiler.md)
 - [Visualization](./visualization.md)
 - [SeedOps MCP operations](./mcp_seedops.md)
+- [Agent baseline demo guide](./agent_baseline_demo_guide.md)
 - [seed-codex active stack](./seed_codex_active_stack.md)
 - [Attached-runtime showcase guide and scenario map](./attached_runtime_capability_audit.md)
 - [Six-class mission baseline](../../examples/agent-missions/README.md)

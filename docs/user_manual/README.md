@@ -32,6 +32,8 @@ This is the primary manual hub for `seed-email-service`.
    [Agent runtime quick guide](./agent_runtime_quick_guide.md)
 6. If you need the real active prompt/MCP/skill surface:
    [seed-codex active stack](./seed_codex_active_stack.md)
+7. If you need the per-baseline demo script and prompt guide:
+   [Agent baseline demo guide](./agent_baseline_demo_guide.md)
 
 ---
 
@@ -54,6 +56,7 @@ This is the primary manual hub for `seed-email-service`.
 
 - [SeedOps: operate already-running networks](./mcp_seedops.md)
 - [Agent runtime quick guide](./agent_runtime_quick_guide.md)
+- [Agent baseline demo guide](./agent_baseline_demo_guide.md)
 - [seed-codex active stack](./seed_codex_active_stack.md)
 - [Attached-runtime showcase guide and scenario map](./attached_runtime_capability_audit.md)
 - [Seed-Agent mission packs and six-class baseline](../../examples/agent-missions/README.md)

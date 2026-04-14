@@ -1,0 +1,44 @@
+task_id: TS_A13_EXABGP_TOOL_DISCOVERY
+title: A13 ExaBGP Tool Discovery
+track: troubleshooting
+baseline: A13
+scenario_class: Control Plane Tooling
+objective_template: locate the ExaBGP tool node and summarize its peer and evidence surfaces
+required_inputs:
+  - id: attach_output_dir
+    question: Provide A13 output directory for attach.
+    required: true
+    reason: Runtime workspace attachment is required.
+stages: [observe, analyze, verify]
+policy_by_stage:
+  observe: read_only
+  analyze: read_only
+  verify: read_only
+canonical_request_templates:
+  - >
+    Attach to {attach_output_dir}; identify the ExaBGP tool node, summarize its BGP
+    peer, configured announcements, dashboard port, and event evidence, then explain
+    how it should be reused as a control-plane tool in later experiments.
+fallback_playbooks:
+  - examples/agent-missions/playbooks/ts_a13_exabgp_tool_discovery.yaml
+scale_hints: [small]
+rollback_required: false
+evidence_requirements:
+  - node identity evidence
+  - peer evidence
+  - config evidence
+  - dashboard or event evidence
+skill_patterns:
+  - attach-and-scan
+  - control-plane-inspection
+  - evidence-collection
+acceptance_checks:
+  - status == ok
+  - report identifies the ExaBGP tool node
+  - report includes peer and announcement evidence
+report_template: |
+  ExaBGP tool report for {task_id}:
+  - objective: {objective}
+  - tool node: {tool_node}
+  - peer summary: {peer_summary}
+  - evidence surfaces: {evidence_surfaces}

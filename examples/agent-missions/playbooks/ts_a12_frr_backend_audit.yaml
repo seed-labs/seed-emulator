@@ -1,0 +1,41 @@
+version: 1
+name: ts_a12_frr_backend_audit
+defaults:
+  timeout_seconds: 30
+  parallelism: 12
+  max_output_chars: 8000
+steps:
+  - action: workspace_refresh
+    id: refresh
+    save_as: refresh
+  - action: inventory_list_nodes
+    id: inventory
+    save_as: inventory
+  - action: routing_protocol_summary
+    id: backend_summary
+    selector:
+      role: [Route Server, BorderRouter]
+    save_as: backend_summary
+  - action: routing_looking_glass
+    id: route_state
+    selector:
+      role: [Route Server, BorderRouter]
+    save_as: route_state
+  - action: ops_exec
+    id: frr_explicit
+    selector:
+      node_id: [as2/r2, as151/router0]
+    command: >-
+      sh -lc 'echo ===NODE===; hostname; echo ===VTYSH===; command -v vtysh || true;
+      echo ===BGP===; vtysh -c "show bgp summary" 2>&1 || true; echo ===FRRCONF===;
+      sed -n "1,160p" /etc/frr/frr.conf 2>/dev/null || true'
+    save_as: frr_explicit
+  - action: ops_exec
+    id: bird_explicit
+    selector:
+      node_id: [as2/r1, as152/router0]
+    command: >-
+      sh -lc 'echo ===NODE===; hostname; echo ===BIRDC===; command -v birdc || true;
+      echo ===PROTO===; birdc show protocols 2>&1 || true; echo ===BIRDCONF===;
+      sed -n "1,160p" /etc/bird/bird.conf 2>/dev/null || true'
+    save_as: bird_explicit
