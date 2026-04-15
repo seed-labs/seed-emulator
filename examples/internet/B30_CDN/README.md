@@ -1,87 +1,115 @@
-# Simple CDN
+# CDNService Baseline Example
 
-This example builds a simple CDN on top of the mini Internet example.
+This example validates the new `CDNService` and its integration with
+`DomainNameService`.
 
-The deployment includes:
+The current design keeps the two services loosely coupled:
 
-- Three DNS servers, one in each region
-- Three CDN edge nodes
-- Three CDN origin nodes
-- A single service domain: `www.example.com`
+- DNS explicitly exposes an include file through `setInclude(...)`
+- CDN explicitly writes policy-specific include content through `setIncludeContent(...)`
 
-Each client uses a region-aware DNS server order. The DNS servers rewrite
-`www.example.com` based on the client's source subnet and return the edge IP of
-the East, West, or Central CDN site. Each edge node runs `nginx` and reverse
-proxies requests to its local origin node, which also runs `nginx` and returns
-a small JSON payload identifying the selected site.
+The topology is built on top of the mini Internet and models a simple CDN with:
+
+- one authoritative DNS server
+- three edge sites
+- one shared origin
+- one service domain: `www.example.com`
+
+The CDN uses region-aware DNS answers:
+
+- East clients resolve to `10.181.0.100`
+- West clients resolve to `10.182.0.100`
+- Central clients resolve to `10.183.0.100`
+
+All three edge nodes proxy to the same origin at `10.184.0.10`.
 
 
 ## Topology
 
-This example reuses the base topology from
-[B00_mini_internet](/Users/bruce/seed-emulator/examples/internet/B00_mini_internet).
+The example reuses the base topology from
+`examples/internet/B00_mini_internet`.
 
-The CDN sites are:
+CDN components:
 
-- `nyc` for East
-- `sjc` for West
-- `chi` for Central
-
-The DNS servers are placed in:
-
-- `AS150` at `10.150.0.53`
-- `AS152` at `10.152.0.53`
-- `AS154` at `10.154.0.53`
+- DNS: `AS150`, `10.150.0.53`
+- East edge: `AS181`, `10.181.0.100`
+- West edge: `AS182`, `10.182.0.100`
+- Central edge: `AS183`, `10.183.0.100`
+- Shared origin: `AS184`, `10.184.0.10`
 
 
 ## Running
 
-Generate the Docker output with:
+Generate the Docker output:
 
 ```bash
-python ./cdn.py amd
+conda run -n seedpy310 python examples/internet/B30_CDN/cdn.py amd
 ```
 
-This creates the output directory:
+This creates:
 
 ```bash
-./output
+examples/internet/B30_CDN/output
 ```
 
-Start the emulation manually:
+Build and start the topology manually:
 
 ```bash
-cd output
-docker compose build
+cd examples/internet/B30_CDN/output
+DOCKER_BUILDKIT=0 docker compose build
 docker compose up -d
 ```
 
-Wait about 1-2 minutes for BGP, DNS, and `nginx` to settle.
+Wait about 10-20 seconds for services to start.
 
 
 ## Verifying
 
-From an East client:
+East client:
 
 ```bash
-docker exec -it as150h-host_0-10.150.0.71 sh -lc "cat /etc/resolv.conf"
-docker exec -it as150h-host_0-10.150.0.71 sh -lc "getent ahostsv4 www.example.com"
-docker exec -it as150h-host_0-10.150.0.71 sh -lc "curl --noproxy '*' -s http://www.example.com:8080/"
+docker exec as150h-host_0-10.150.0.71 sh -lc 'getent ahostsv4 www.example.com'
+docker exec as150h-host_0-10.150.0.71 sh -lc 'env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u all_proxy -u ALL_PROXY curl --noproxy "*" -s -D - http://www.example.com:8080/ -o /dev/null'
 ```
 
-From a West client:
+West client:
 
 ```bash
-docker exec -it as152h-host_0-10.152.0.71 sh -lc "getent ahostsv4 www.example.com"
-docker exec -it as152h-host_0-10.152.0.71 sh -lc "curl --noproxy '*' -s http://www.example.com:8080/"
+docker exec as152h-host_0-10.152.0.71 sh -lc 'getent ahostsv4 www.example.com'
+docker exec as152h-host_0-10.152.0.71 sh -lc 'env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u all_proxy -u ALL_PROXY curl --noproxy "*" -s -D - http://www.example.com:8080/ -o /dev/null'
 ```
 
-From a Central client:
+Central client:
 
 ```bash
-docker exec -it as154h-host_0-10.154.0.71 sh -lc "getent ahostsv4 www.example.com"
-docker exec -it as154h-host_0-10.154.0.71 sh -lc "curl --noproxy '*' -s http://www.example.com:8080/"
+docker exec as154h-host_0-10.154.0.71 sh -lc 'getent ahostsv4 www.example.com'
+docker exec as154h-host_0-10.154.0.71 sh -lc 'env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u all_proxy -u ALL_PROXY curl --noproxy "*" -s -D - http://www.example.com:8080/ -o /dev/null'
 ```
 
-The DNS answers should point to different edge IPs for different regions, and
-the JSON response should identify the selected CDN site.
+Expected results:
+
+- East resolves to `10.181.0.100`
+- West resolves to `10.182.0.100`
+- Central resolves to `10.183.0.100`
+- HTTP responses include:
+  - `X-CDN-Origin: global_origin`
+  - `X-CDN-Origin-IP: 10.184.0.10`
+  - `X-CDN-Edge`
+  - `X-CDN-Region`
+  - `X-CDN-Edge-IP`
+
+
+## What This Example Exercises
+
+This example checks that:
+
+- `CDNService` can bind virtual origin and edge nodes to concrete hosts
+- final edge and origin configuration is rendered before container startup
+- `DomainNameService` can host CDN-generated BIND views through an include file
+- region-aware DNS steering and HTTP proxying work end to end
+
+
+## Files
+
+- `examples/internet/B30_CDN/cdn.py`: baseline CDN built with `CDNService`
+- `examples/internet/B30_CDN/output`: generated Docker deployment
