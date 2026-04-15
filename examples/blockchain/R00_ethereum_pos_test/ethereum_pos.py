@@ -90,7 +90,7 @@ vc_nodes: List[PoSVcServer] =[]
 
 ### Create beacon setup node
 beaconsetupServer: PoSBeaconSetupServer = blockchain.createBeaconSetupNode(f"BeaconSetupNode")
-emu.getVirtualNode(f'BeaconSetupNode').setDisplayName('Ethereum-BeaconSetup')
+emu.getVirtualNode(f'BeaconSetupNode').setDisplayName('Ethereum-POS-BeaconSetup')
 ### Create geth nodes
 for i in range(geth_node_number):
     gethServer: PoSGethServer = blockchain.createGethNode(f"gethnode{i}")
@@ -109,6 +109,9 @@ for i in range(beacon_node_number):
 # Set boot nodes
 geth_nodes[0].setBootNode(True)
 beacon_nodes[0].setBootNode(True)
+# Set beacon_node cmd for eth viewer
+# beacon_nodes[1].addViewercmd(True)
+# beacon_nodes[1].setDisplayName('Ethereum-POS-Beacon-Viewer')
 
 for i in range(vc_node_number):
     VcServer: PoSVcServer=blockchain.createVcNode(f"vcnode{i}")

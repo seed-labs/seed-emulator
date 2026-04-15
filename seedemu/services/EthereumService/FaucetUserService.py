@@ -57,8 +57,8 @@ class FaucetUserServer(Server):
                      FaucetServerFileTemplates['fundme'].format(
                            faucet_url=self.__faucet_util.getFacuetUrl(),
                            faucet_fund_url=self.__faucet_util.getFaucetFundUrl()))
-        node.appendStartCommand('chmod +x {}/fund.py'.format(self.DIR_PREFIX))
-        node.appendStartCommand(self.DIR_PREFIX + '/fund.py')
+        node.appendStartCommand('chmod +x {}/fundme.py'.format(self.DIR_PREFIX))
+        node.appendStartCommand(self.DIR_PREFIX + '/fundme.py')
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
