@@ -70,7 +70,7 @@ def run(dumpfile=None, total_eth_nodes=20, total_accounts_per_node=2):
     faucet.setDisplayName('Faucet')
     faucet.addHostName('faucet' + DOMAIN)  # Add this name to /etc/hosts
 
-    # Create the Utility server 
+    # # Create the Utility server 
     util_server:EthUtilityServer = blockchain.createEthUtilityServer(
                vnode='utility',
                port=5000,

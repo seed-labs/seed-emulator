@@ -33,7 +33,11 @@ if len(sys.argv) == 3:
 else:
     platform = Platform.AMD64  # Default platform is AMD64
 
-
+# Calculate the number of each type of node
+# 1. Geth nodes: one per beacon node
+# 2. Beacon nodes: one per VC node
+# 3. VC nodes: three per beacon node
+# 4. Beacon setup node: one
 geth_node_number = total_number_of_beaconnodes
 beacon_node_number = total_number_of_beaconnodes
 vc_node_number = 3 * total_number_of_beaconnodes
@@ -55,8 +59,8 @@ print(f"Number of eth nodes per stub AS: {hosts_per_stub_as}")
 
 # Create the Ethereum layer
 eth = EthereumService()
-###  ethserevice -> blockchain -> ethserver (gethserver/beaconserver/beaconsetup)
-# Create the Blockchain layer which is a sub-layer of Ethereum layer. 说明是pos子类
+###  EthereumService -> Blockchain -> EthServer (GethServer/BeaconServer/BeaconSetupServer)
+# Create the Blockchain layer as a sub-layer of the Ethereum layer; configure it for POS consensus
 blockchain = eth.createBlockchain(chainName="pos", consensus=ConsensusMechanism.POS)
 
 
@@ -84,17 +88,17 @@ beacon_nodes: List[PoSBeaconServer] = []
 
 vc_nodes: List[PoSVcServer] =[]
 
-### 创建beaconsetupnode
+### Create beacon setup node
 beaconsetupServer: PoSBeaconSetupServer = blockchain.createBeaconSetupNode(f"BeaconSetupNode")
 emu.getVirtualNode(f'BeaconSetupNode').setDisplayName('Ethereum-BeaconSetup')
-### 创建gethnode
+### Create geth nodes
 for i in range(geth_node_number):
     gethServer: PoSGethServer = blockchain.createGethNode(f"gethnode{i}")
     gethServer.enableGethHttp()
     gethServer.appendClassName(f'Ethereum-POS-Geth-{i+1}')
     geth_nodes.append(gethServer)
     emu.getVirtualNode(f'gethnode{i}').setDisplayName(f'Ethereum-POS-Geth-{i+1}')
-## 创建beaconnode
+## Create beacon nodes
 for i in range(beacon_node_number):
     beaconServer: PoSBeaconServer = blockchain.createBeaconNode(f"beaconnode{i}")
     beaconServer.appendClassName(f'Ethereum-POS-Beacon-{i+1}')
@@ -102,7 +106,7 @@ for i in range(beacon_node_number):
     beacon_nodes.append(beaconServer)
     emu.getVirtualNode(f'beaconnode{i}').setDisplayName(f'Ethereum-POS-Beacon-{i+1}')
     # beaconServer.enablePOSValidatorAtGenesis()
-# 设置bootnode
+# Set boot nodes
 geth_nodes[0].setBootNode(True)
 beacon_nodes[0].setBootNode(True)
 

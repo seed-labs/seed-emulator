@@ -3,103 +3,126 @@
 
 from seedemu import *
 import sys, os
+import math
+from eth_account import Account
 
-###############################################################################
-# Set the platform information
-script_name = os.path.basename(__file__)
+DOMAIN = ".net"
 
-if len(sys.argv) == 1:
-    platform = Platform.AMD64
-elif len(sys.argv) == 2:
-    if sys.argv[1].lower() == 'amd':
-        platform = Platform.AMD64
-    elif sys.argv[1].lower() == 'arm':
-        platform = Platform.ARM64
-    else:
-        print(f"Usage:  {script_name} amd|arm")
-        sys.exit(1)
-else:
-    print(f"Usage:  {script_name} amd|arm")
-    sys.exit(1)
-
-# Create Emulator Base with 10 Stub AS (150-154, 160-164) using Makers utility method.
-# hosts_per_stub_as=3 : create 3 hosts per one stub AS.
-# It will create hosts(physical node) named `host_{}`.format(counter), counter starts from 0. 
-hosts_per_stub_as = 3
-emu = Makers.makeEmulatorBaseWith10StubASAndHosts(hosts_per_stub_as = hosts_per_stub_as)
-
-# Create the Ethereum layer
-eth = EthereumService()
-
-# Create the Blockchain layer which is a sub-layer of Ethereum layer.
-# chainName="pos": set the blockchain name as "pos"
-# consensus="ConsensusMechnaism.POS" : set the consensus of the blockchain as "ConsensusMechanism.POS".
-# supported consensus option: ConsensusMechanism.POA, ConsensusMechanism.POW, ConsensusMechanism.POS
-blockchain = eth.createBlockchain(chainName="pos", consensus=ConsensusMechanism.POS)
-
-
-asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
-
-###################################################
-# Ethereum Node
-
-i = 1
-for asn in asns:
-    for id in range(hosts_per_stub_as):        
-        # Create a blockchain virtual node named "eth{}".format(i)
-        e:EthereumServer = blockchain.createNode("eth{}".format(i))   
-        
-        # Create Docker Container Label named 'Ethereum-POS-i'
-        e.appendClassName('Ethereum-POS-{}'.format(i))
-
-        # Enable Geth to communicate with geth node via http
-        e.enableGethHttp()
-
-        # Set host in asn 150 with id 0 (ip : 10.150.0.71) as BeaconSetupNode.
-        if asn == 150 and id == 0:
-                e.setBeaconSetupNode()
-
-        # Set host in asn 150 with id 1 (ip : 10.150.0.72) as BootNode. 
-        # This node will serve as a BootNode in both execution layer (geth) and consensus layer (lighthouse).
-        if asn == 150 and id == 1:
-                e.setBootNode(True)
-
-        # Set hosts in asn 152 and 162 with id 0 and 1 as validator node. 
-        # Validator is added by deposit 32 Ethereum and is activated in realtime after the Merge.
-        # isManual=True : deposit 32 Ethereum by manual. 
-        #                 Other than deposit part, create validator key and running a validator node is done by codes.  
-        if asn in [151]:
-            if id == 0:
-                e.enablePOSValidatorAtRunning()
-            if id == 1:
-                e.enablePOSValidatorAtRunning(is_manual=True)
-        
-        # Set hosts in asn 152, 153, 154, and 160 as validator node.
-        # These validators are activated by default from genesis status.
-        # Before the Merge, when the consensus in this blockchain is still POA, 
-        # these hosts will be the signer nodes.
-        if asn in [152,153,154,160,161,162,163,164]:
-            e.enablePOSValidatorAtGenesis()
-
-        # Customizing the display names (for visualiztion purpose)
-        if e.isBeaconSetupNode():
-            emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-BeaconSetup')
+def run(dumpfile = None, total_beacon_nodes=3, vc_per_beacon=3):
+    ###############################################################################
+    # Set the platform information
+    if dumpfile is None:
+        script_name = os.path.basename(__file__)
+        if len(sys.argv) == 1:
+            platform = Platform.AMD64
+        elif len(sys.argv) == 2:
+            if sys.argv[1].lower() == 'amd':
+                platform = Platform.AMD64
+            elif sys.argv[1].lower() == 'arm':
+                platform = Platform.ARM64
+            else:
+                print(f"Usage:  {script_name} amd|arm")
+                sys.exit(1)
         else:
-            emu.getVirtualNode('eth{}'.format(i)).setDisplayName('Ethereum-POS-{}'.format(i))
+            print(f"Usage:  {script_name} amd|arm")
+            sys.exit(1)
 
-        # Binding the virtual node to the physical node. 
-        emu.addBinding(Binding('eth{}'.format(i), filter=Filter(asn=asn, nodeName='host_{}'.format(id))))
+    # Configure the number of nodes
+    geth_node_number = total_beacon_nodes
+    beacon_node_number = total_beacon_nodes
+    vc_node_number = vc_per_beacon * beacon_node_number
+    # Create Emulator Base with 10 Stub AS (150-154, 160-164) using Makers utility method.
+    # hosts_per_stub_as=3 : create 3 hosts per one stub AS.
+    # It will create hosts(physical node) named `host_{}`.format(counter), counter starts from 0. 
+    hosts_per_stub_as = 3
+    emu = Makers.makeEmulatorBaseWith10StubASAndHosts(hosts_per_stub_as = hosts_per_stub_as)
+    
+    # Create the Ethereum layer
+    eth = EthereumService()
+    # Create the Blockchain layer which is a sub-layer of Ethereum layer.
+    # chainName="pos": set the blockchain name as "pos"
+    # consensus="ConsensusMechnaism.POS" : set the consensus of the blockchain as "ConsensusMechanism.POS".
+    # supported consensus option: ConsensusMechanism.POA, ConsensusMechanism.POW, ConsensusMechanism.POS
+    blockchain = eth.createBlockchain(chainName="pos", consensus=ConsensusMechanism.POS)
+    asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
+    geth_nodes: List[PoSGethServer] = []
+    beacon_nodes: List[PoSBeaconServer] = []
+    vc_nodes: List[PoSVcServer] =[]
+    # Create the BeaconSetupNode
+    beaconsetupServer: PoSBeaconSetupServer = blockchain.createBeaconSetupNode(f"BeaconSetupNode")
+    emu.getVirtualNode(f'BeaconSetupNode').setDisplayName('Ethereum-POS-BeaconSetup')
+    for i in range(geth_node_number):
+        gethServer: PoSGethServer = blockchain.createGethNode(f"gethnode{i}")
+        gethServer.enableGethHttp()
+        gethServer.appendClassName(f'Ethereum-POS-Geth-{i+1}')
+        geth_nodes.append(gethServer)
+        emu.getVirtualNode(f'gethnode{i}').setDisplayName(f'Ethereum-POS-Geth-{i+1}')
+    
+    # Create Beacon nodes and connect to Geth nodes
+    for i in range(beacon_node_number):
+        beaconServer: PoSBeaconServer = blockchain.createBeaconNode(f"beaconnode{i}")
+        beaconServer.appendClassName(f'Ethereum-POS-Beacon-{i+1}')
+        beaconServer.connectToGethNode(f"gethnode{(i+1)%len(geth_nodes)}")
+        beacon_nodes.append(beaconServer)
+        emu.getVirtualNode(f'beaconnode{i}').setDisplayName(f'Ethereum-POS-Beacon-{i+1}')
+    
+    # Set boot nodes
+    geth_nodes[0].setBootNode(True)
+    beacon_nodes[0].setBootNode(True)
+    
+    # Create Validator nodes and connect to Beacon nodes
+    for i in range(vc_node_number):
+        VcServer: PoSVcServer=blockchain.createVcNode(f"vcnode{i}")
+        VcServer.appendClassName(f'Ethereum-POS-Validator-{i+1}')
+        VcServer.connectToBeaconNode(f"beaconnode{(i+1)%len(beacon_nodes)}")
+        VcServer.enablePOSValidatorAtGenesis()
+        vc_nodes.append(VcServer)
+        emu.getVirtualNode(f'vcnode{i}').setDisplayName(f'Ethereum-POS-Validator-{i+1}')
+    
+    # Create the Faucet server
+    faucet:FaucetServer = blockchain.createFaucetServer(
+                vnode='faucet',
+                port=80,
+                linked_eth_node='gethnode1',
+                balance=10000,
+                max_fund_amount=10)
+    faucet.setDisplayName('Faucet')
+    faucet.addHostName('faucet' + DOMAIN)
+    # Create the Utility server
+    util_server:EthUtilityServer = blockchain.createEthUtilityServer(
+                vnode='utility',
+                port=5000,
+                linked_eth_node='gethnode2',
+                linked_faucet_node='faucet')
+    util_server.setDisplayName('UtilityServer')
+    util_server.addHostName('utility' + DOMAIN)
+    
+    # Add Ethereum service to the emulator
+    emu.addLayer(eth)
+    
+    # Bind all virtual servers (including faucet/utility) to physical hosts
+    for _, servers in blockchain.getAllServerNames().items():
+        for server in servers:
+            emu.addBinding(Binding(server, filter=Filter(nodeName="host_*"),
+                           action=Action.FIRST))
+    
+    # Add /etc/hosts layer
+    emu.addLayer(EtcHosts())
+    
+    # Configure IP range for each AS
+    base_layer = emu.getLayer('Base')
+    for asn in asns:
+        as_obj = base_layer.getAutonomousSystem(asn)
+        net = as_obj.getNetwork('net0')
+        net.setHostIpRange(hostStart=71, hostEnd=199, hostStep=1)
+        
+    # Generate the emulator output
+    if dumpfile is not None:
+        emu.dump(dumpfile)
+    else:
+        emu.render()
+        docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=platform)
+        emu.compile(docker, './output', override=True)
 
-        i = i+1
-
-
-# Add layer to the emulator
-emu.addLayer(eth)
-
-emu.render()
-
-# Enable internetMap
-# Enable etherView
-docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=platform)
-
-emu.compile(docker, './output', override = True)
+if __name__ == "__main__":
+    run()
