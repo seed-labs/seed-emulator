@@ -19,6 +19,7 @@ class EthereumServer(Server):
     _id: int
     _blockchain: Blockchain
     _is_bootnode: bool
+    _is_beaconviewer: bool
     _bootnode_http_port: int
     _smart_contract: SmartContract
     _accounts: List[AccountStructure]
@@ -57,6 +58,7 @@ class EthereumServer(Server):
         self._id = id
         self._blockchain = blockchain
         self._is_bootnode = False
+        self._is_beaconviewer = False
         self._bootnode_http_port = 8088
         self._smart_contract = None
         self._accounts = []
@@ -301,6 +303,26 @@ class EthereumServer(Server):
         @returns True if this node is a boot node. False otherwise.
         """
         return self._is_bootnode
+
+
+    def addViewercmd(self, isBeaconViewer: bool) -> EthereumServer:
+        """!
+        @brief set bootnode status of this node.
+        Note: if no nodes are configured as boot nodes, all nodes will be each
+        other's boot nodes.
+        @param isBootNode True to set this node as a bootnode, False otherwise.
+        
+        @returns self, for chaining API calls.
+        """
+        self._is_beaconviewer = isBeaconViewer                  
+
+        return self
+    def isBeaconViewer(self) -> bool:
+        """!
+        @brief get bootnode status of this node.
+        @returns True if this node is a boot node. False otherwise.
+        """
+        return self._is_beaconviewer
 
     def setBootNodeHttpPort(self, port: int) -> EthereumServer:
         """!
@@ -797,11 +819,11 @@ class PoSBeaconServer(EthereumServer):
         assert beacon_setup_node != "", 'EthereumServer::install: Ethereum Service has no beacon_setup_node.'
 
         geth_node_ip = self.getConnectedGethIp()
-        ### 是否正确
+    
         # connect_geth_node = self.__blockchain.getIpByVnodeName(self.__connect_geth_vnode)
         bootnode_start_command = ""
-        bc_start_command = ""
-        bc_start_command = LIGHTHOUSE_BN_CMD.format(ip_address=addr, target_peers=self.__beacon_peer_counts, bootnodes_flag="" if self._is_bootnode else f'--boot-nodes "$(cat /tmp/bc_enrs.txt)"', remote_geth=geth_node_ip)
+        bc_start_command = LIGHTHOUSE_BN_CMD.format(ip_address=addr, target_peers=self.__beacon_peer_counts, bootnodes_flag="" if self._is_bootnode else f'--boot-nodes "$(cat /tmp/bc_enrs.txt)"',remote_geth=geth_node_ip)
+        # bc_start_command = LIGHTHOUSE_BN_CMD.format(ip_address=addr, target_peers=self.__beacon_peer_counts, bootnodes_flag="" if self._is_bootnode else f'--boot-nodes "$(cat /tmp/bc_enrs.txt)"', viewer_cmd = f'--reconstruct-historic-states' if self.isBeaconViewer() else "",remote_geth=geth_node_ip)
 
         ## div beacon node and geth node
         if not self._is_bootnode:
