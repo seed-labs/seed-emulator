@@ -44,6 +44,14 @@ def run(dumpfile = None, total_beacon_nodes=3, vc_per_beacon=3):
     # consensus="ConsensusMechnaism.POS" : set the consensus of the blockchain as "ConsensusMechanism.POS".
     # supported consensus option: ConsensusMechanism.POA, ConsensusMechanism.POW, ConsensusMechanism.POS
     blockchain = eth.createBlockchain(chainName="pos", consensus=ConsensusMechanism.POS)
+    # Generate a list of accounts and prefund them
+    accounts_total  = 10
+    pre_funded_amount = 1000000
+    mnemonic = "gentle always fun glass foster produce north tail security list example gain"
+    Account.enable_unaudited_hdwallet_features()
+    for i in range(accounts_total):
+        account = Account.from_mnemonic(mnemonic, account_path=f"m/44'/60'/0'/0/{i}")
+        blockchain.addLocalAccount(address=account.address, balance=pre_funded_amount)
     asns = [150, 151, 152, 153, 154, 160, 161, 162, 163, 164]
     geth_nodes: List[PoSGethServer] = []
     beacon_nodes: List[PoSBeaconServer] = []
@@ -55,6 +63,7 @@ def run(dumpfile = None, total_beacon_nodes=3, vc_per_beacon=3):
         gethServer: PoSGethServer = blockchain.createGethNode(f"gethnode{i}")
         gethServer.enableGethHttp()
         gethServer.appendClassName(f'Ethereum-POS-Geth-{i+1}')
+        gethServer.addHostName(f"gethnode{i}" + DOMAIN)
         geth_nodes.append(gethServer)
         emu.getVirtualNode(f'gethnode{i}').setDisplayName(f'Ethereum-POS-Geth-{i+1}')
     

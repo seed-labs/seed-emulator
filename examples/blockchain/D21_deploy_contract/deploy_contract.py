@@ -15,8 +15,18 @@ def run(dumpfile = None):
     if dumpfile is None:
         script_name = os.path.basename(__file__)
 
+        def print_help():
+            print(f"Usage: {script_name} [poa|pos] [amd|arm]")
+            print(f"Options:")
+            print(f"  poa|pos   Set the consensus mechanism (default: poa)")
+            print(f"  amd|arm   Set the platform architecture (default: amd)")
+            print(f"  -h, --help Show this help message")
+
         if len(sys.argv) >= 2:
             arg1 = sys.argv[1].lower()
+            if arg1 in ['-h', '--help']:
+                print_help()
+                sys.exit(0)
             if arg1 in ['poa', 'pos']:
                 consensus = arg1
                 if len(sys.argv) == 3:
@@ -26,10 +36,10 @@ def run(dumpfile = None):
                     elif arg2 == 'arm':
                         platform = Platform.ARM64
                     else:
-                        print(f"Usage:  {script_name} [poa|pos] [amd|arm]")
+                        print_help()
                         sys.exit(1)
                 elif len(sys.argv) > 3:
-                    print(f"Usage:  {script_name} [poa|pos] [amd|arm]")
+                    print_help()
                     sys.exit(1)
             else:
                 if arg1 == 'amd':
@@ -37,7 +47,7 @@ def run(dumpfile = None):
                 elif arg1 == 'arm':
                     platform = Platform.ARM64
                 else:
-                    print(f"Usage:  {script_name} [poa|pos] [amd|arm]")
+                    print_help()
                     sys.exit(1)
 
     ###############################################################################
