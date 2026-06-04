@@ -31,9 +31,9 @@ runtime:
         - hnode_150_web
         - hnode_151_web
         - hnode_152_web
-        - rnode_150_router0
-        - rnode_151_router0
-        - rnode_152_router0
+        - brdnode_150_router0
+        - brdnode_151_router0
+        - brdnode_152_router0
       retries: 30
       interval: 2
 

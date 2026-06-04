@@ -187,6 +187,13 @@ class ExampleRunner:
         for probe in probes:
             result = self.__run_probe_with_retries(probe)
             results.append(result)
+            self.__log(
+                "{} {}: {}".format(
+                    result["status"],
+                    result["name"],
+                    result.get("message", ""),
+                )
+            )
             if result["status"] == "failed" and probe.get("required", True):
                 failures.append(probe["name"])
 
@@ -346,15 +353,23 @@ class ExampleRunner:
             return True, "compose ps succeeded"
 
         running = set()
+        observed = []
         for item in self.__parse_compose_ps_output(result.stdout or ""):
             name = item.get("Service") or item.get("Name")
             state = item.get("State") or item.get("Status")
-            if name in expected_services and str(state).lower().startswith("running"):
+            observed.append("{}={}".format(name, state))
+            state_text = str(state).lower()
+            if name in expected_services and (
+                state_text.startswith("running") or state_text.startswith("up")
+            ):
                 running.add(name)
 
         missing = sorted(expected_services - running)
         if missing:
-            return False, "services not running: {}".format(", ".join(missing))
+            return False, "services not running: {}; observed: {}".format(
+                ", ".join(missing),
+                ", ".join(observed) or "<none>",
+            )
         return True, "all services running"
 
     def __probe_log_contains(self, probe: Dict[str, Any]) -> tuple[bool, str]:

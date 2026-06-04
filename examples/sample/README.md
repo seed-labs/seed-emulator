@@ -78,6 +78,6 @@ example.
 ## Notes
 
 The service names in `example.yaml` are Docker Compose service names generated
-by the SEED Emulator Docker compiler, such as `hnode_151_web`. The container
-names include IP addresses, but `docker compose exec` uses the service names.
-
+by the SEED Emulator Docker compiler, such as `hnode_151_web` for a host and
+`brdnode_151_router0` for an IX-connected border router. The container names
+include IP addresses, but `docker compose exec` uses the service names.
