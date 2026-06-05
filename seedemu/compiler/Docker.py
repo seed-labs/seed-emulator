@@ -1,6 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
+from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode, normalizeAddressList
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
@@ -9,7 +9,7 @@ from hashlib import md5
 from functools import cmp_to_key
 from os import mkdir, chdir
 from re import sub
-from ipaddress import IPv4Network, IPv4Address
+from ipaddress import IPv4Network, IPv4Address, IPv6Network, IPv6Address
 from shutil import copyfile
 import json
 from yaml import dump
@@ -87,7 +87,7 @@ while read -sr line; do {
 }; done
 """
 
-DockerCompilerFileTemplates['replace_address_script'] = '''\
+DockerCompilerFileTemplates['replace_address_script'] = r'''\
 #!/bin/bash
 ip -j addr | jq -cr '.[]' | while read -r iface; do {
     ifname="`jq -cr '.ifname' <<< "$iface"`"
@@ -176,15 +176,29 @@ DockerCompilerFileTemplates['compose_service_network_address'] = """\
                 ipv4_address: {address}
 """
 
+DockerCompilerFileTemplates['compose_service_network_ipv6_address'] = """\
+                ipv6_address: {address}
+"""
+
 DockerCompilerFileTemplates['compose_network'] = """\
     {netId}:
+{enableIpv6}
         driver_opts:
             com.docker.network.driver.mtu: {mtu}
         ipam:
             config:
                 - subnet: {prefix}
+{ipv6Ipam}
         labels:
 {labelList}
+"""
+
+DockerCompilerFileTemplates['compose_network_enable_ipv6'] = """\
+        enable_ipv6: true
+"""
+
+DockerCompilerFileTemplates['compose_network_ipv6_ipam'] = """\
+                - subnet: {prefix}
 """
 
 DockerCompilerFileTemplates['seedemu_internet_map'] = """\
@@ -208,7 +222,7 @@ DockerCompilerFileTemplates['environment_variable_entry'] = """\
 DockerCompilerFileTemplates['network_entry'] = """\
         networks:
              {network_name_field}:
-                    {ipv4_address_field}
+{address_fields}\
 """
 
 DockerCompilerFileTemplates['custom_compose_label_meta'] = """\
@@ -473,6 +487,7 @@ class Docker(Compiler):
     __naming_scheme: str
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
+    __dummy_ipv6_network_pool: Generator[IPv6Network, None, None]
 
 
     __internet_map_enabled: bool
@@ -500,6 +515,8 @@ class Docker(Compiler):
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
+        dummyIpv6NetworksPool: str = 'fd00:ffff::/48',
+        dummyIpv6NetworksMask: int = 64,
         internetMapEnabled: bool = True,
         internetMapPort: int = 8080,
         etherViewEnabled: bool = False,
@@ -529,6 +546,10 @@ class Docker(Compiler):
         loopback IP addresses. Default to 10.128.0.0/9.
         @param dummyNetworksMask (optional) mask of dummy networks. Default to
         24.
+        @param dummyIpv6NetworksPool (optional) dummy IPv6 networks pool for
+        self-managed dual-stack networks. Default to fd00:ffff::/48.
+        @param dummyIpv6NetworksMask (optional) mask of dummy IPv6 networks.
+        Default to 64.
         @param internetMapEnabled (optional) set if seedemu internetMap should be enabled.
         Default to False. Note that the seedemu internetMap allows unauthenticated
         access to all nodes, which can potentially allow root access to the
@@ -547,6 +568,7 @@ class Docker(Compiler):
         self.__naming_scheme = namingScheme
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
+        self.__dummy_ipv6_network_pool = IPv6Network(dummyIpv6NetworksPool).subnets(new_prefix = dummyIpv6NetworksMask)
 
         self.__internet_map_enabled = internetMapEnabled
         self.__internet_map_port = internetMapPort
@@ -844,6 +866,12 @@ class Docker(Compiler):
             value = net.getPrefix()
         )
 
+        if net.hasIpv6Prefix():
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'ipv6_prefix',
+                value = net.getIpv6Prefix()
+            )
+
         if net.getDisplayName() != None:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key = 'displayname',
@@ -951,6 +979,12 @@ class Docker(Compiler):
                 key = 'net.{}.address'.format(n),
                 value = '{}/{}'.format(iface.getAddress(), net.getPrefix().prefixlen)
             )
+
+            if iface.hasIpv6Address():
+                labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                    key = 'net.{}.ipv6_address'.format(n),
+                    value = '{}/{}'.format(iface.getIpv6Address(), net.getIpv6Prefix().prefixlen)
+                )
 
             n += 1
 
@@ -1092,14 +1126,37 @@ class Docker(Compiler):
                     node.getAsn(), node.getName()
                 ))
 
-            if address == None:
-                address = ""
-            else:
-                address = DockerCompilerFileTemplates['compose_service_network_address'].format(address = address)
+            ipv6_address = iface.getIpv6Address() if iface.hasIpv6Address() else None
+            if self.__self_managed_network and net.getType() != NetworkType.Bridge and iface.hasIpv6Address():
+                d6_index: int = net.getAttribute('dummy_ipv6_prefix_index')
+                d6_prefix: IPv6Network = net.getAttribute('dummy_ipv6_prefix')
+                d6_address = d6_prefix[d6_index]
+
+                net.setAttribute('dummy_ipv6_prefix_index', d6_index + 1)
+
+                dummy_addr_map += '{}/{},{}/{}\n'.format(
+                    d6_address, d6_prefix.prefixlen,
+                    iface.getIpv6Address(), iface.getNet().getIpv6Prefix().prefixlen
+                )
+
+                ipv6_address = d6_address
+
+                self._log('using self-managed network: using dummy address {}/{} for {}/{} on as{}/{}'.format(
+                    d6_address, d6_prefix.prefixlen, iface.getIpv6Address(), iface.getNet().getIpv6Prefix().prefixlen,
+                    node.getAsn(), node.getName()
+                ))
+
+            address_entries = ""
+            if address != None:
+                address_entries += DockerCompilerFileTemplates['compose_service_network_address'].format(address = address)
+            if ipv6_address is not None:
+                address_entries += DockerCompilerFileTemplates['compose_service_network_ipv6_address'].format(
+                    address=ipv6_address
+                )
 
             node_nets += DockerCompilerFileTemplates['compose_service_network'].format(
                 netId = real_netname,
-                address = address
+                address = address_entries
             )
         return node_nets, dummy_addr_map
 
@@ -1283,6 +1340,12 @@ class Docker(Compiler):
                             opt_keyvals.append(f'- {s.strip()}')
                     else:
                         opt_keyvals.append(repr(o))
+        if node.getRole() in {NodeRole.Router, NodeRole.BorderRouter, NodeRole.OpenVpnRouter, NodeRole.RouteServer}:
+            if any(iface.hasIpv6Address() for iface in node.getInterfaces()):
+                opt_keyvals.append('- net.ipv6.conf.all.forwarding=1')
+                opt_keyvals.append('- net.ipv6.conf.default.forwarding=1')
+                opt_keyvals.append('- net.ipv6.conf.all.disable_ipv6=0')
+                opt_keyvals.append('- net.ipv6.conf.default.disable_ipv6=0')
         if len(opt_keyvals) > 0:
             return DockerCompilerFileTemplates['compose_sysctl'] + '           ' + '\n           '.join( opt_keyvals )
         else:
@@ -1391,11 +1454,25 @@ class Docker(Compiler):
             net.setAttribute('dummy_prefix', pfx)
             net.setAttribute('dummy_prefix_index', 2)
             self._log('self-managed network: using dummy prefix {}'.format(pfx))
+            if net.hasIpv6Prefix():
+                pfx6 = next(self.__dummy_ipv6_network_pool)
+                net.setAttribute('dummy_ipv6_prefix', pfx6)
+                net.setAttribute('dummy_ipv6_prefix_index', 2)
+                self._log('self-managed network: using dummy IPv6 prefix {}'.format(pfx6))
 
+
+        ipv6_ipam = ""
+        enable_ipv6 = ""
+        if net.hasIpv6Prefix():
+            ipv6_prefix = net.getAttribute('dummy_ipv6_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getIpv6Prefix()
+            enable_ipv6 = DockerCompilerFileTemplates['compose_network_enable_ipv6']
+            ipv6_ipam = DockerCompilerFileTemplates['compose_network_ipv6_ipam'].format(prefix=ipv6_prefix)
 
         return DockerCompilerFileTemplates['compose_network'].format(
             netId = self._getRealNetName(net),
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
+            enableIpv6 = enable_ipv6,
+            ipv6Ipam = ipv6_ipam,
             mtu = net.getMtu(),
             labelList = self._getNetMeta(net)
         )
@@ -1581,6 +1658,7 @@ class Docker(Compiler):
         return toplevelvolumes
 
     def attachInternetMap(self, asn: int = -1, net: str = '', ip_address: str = '',
+                      ipv6_address: str = '',
                       port_forwarding: str = '', env: list = [],
                       show_on_map=False, node_name='seedemu_internet_map') -> Docker:
         """!
@@ -1593,6 +1671,8 @@ class Docker(Compiler):
         @param net the name of the network that this container is attached to.
         @param ip_address the IP address set for this container. If no IP address is provided,
             docker will provide one when building the image.
+        @param ipv6_address the IPv6 address set for this container. If no IPv6 address is
+            provided, docker will provide one when the attached network supports IPv6.
         @param port_forwarding the port forwarding field.
         @param env the list of the environment variables.
         @param show_on_map it is show on the map.
@@ -1613,13 +1693,13 @@ class Docker(Compiler):
                 clientImage=SEEDEMU_INTERNET_MAP_IMAGE,
                 containerName=node_name,
             ),
-            asn=asn, net=net, ip_address=ip_address, port_forwarding=port_forwarding, env=env, show_on_map=show_on_map,
+            asn=asn, net=net, ip_address=ip_address, ipv6_address=ipv6_address, port_forwarding=port_forwarding, env=env, show_on_map=show_on_map,
             node_name=node_name
         )
         return self
 
     def attachCustomContainer(self, compose_entry: str, asn: int = -1, net: str = '',
-                              ip_address: str = '', port_forwarding: str = '', env: list = [],
+                              ip_address: str = '', ipv6_address: str = '', port_forwarding: str = '', env: list = [],
                               show_on_map=False, node_name: str = 'unnamed') -> Docker:
         """!
         @brief add an pre-built container image to the emulator (the entry should not
@@ -1632,6 +1712,8 @@ class Docker(Compiler):
         @param net the name of the network that this container is attached to.
         @param ip_address the IP address set for this container. If no IP address is provided,
             docker will provide one when building the image.
+        @param ipv6_address the IPv6 address set for this container. If no IPv6 address is
+            provided, docker will provide one when the attached network supports IPv6.
         @param port_forwarding the port forwarding field.
 
         @param env the list of the environment variables.
@@ -1642,6 +1724,14 @@ class Docker(Compiler):
         """
 
         self._log('attaching an existing container to {}:{}'.format(asn, net))
+
+        if asn >= 0:
+            if ip_address != '':
+                ip_address = normalizeAddressList([ip_address])[0]
+                IPv4Address(ip_address)
+            if ipv6_address != '':
+                ipv6_address = normalizeAddressList([ipv6_address])[0]
+                IPv6Address(ipv6_address)
 
         self.__custom_services += compose_entry
 
@@ -1665,27 +1755,28 @@ class Docker(Compiler):
             net_prefix = self._contextToPrefix(asn, 'net')
             real_netname = '{}{}'.format(net_prefix, net)
 
-            # Construct the IP address field (leave it empty if IP address is not provided)
-            if ip_address == '':
-                ipv4_address_entry = ''
-            else:
-                ipv4_address_entry = 'ipv4_address: {}'.format(ip_address)
+            # Construct IP address fields (leave empty when addresses are not provided)
+            address_fields = ''
+            if ip_address != '':
+                address_fields += '                    ipv4_address: {}\n'.format(ip_address)
+            if ipv6_address != '':
+                address_fields += '                    ipv6_address: {}\n'.format(ipv6_address)
 
             self.__custom_services += DockerCompilerFileTemplates['network_entry'].format(
                 network_name_field=real_netname,
-                ipv4_address_field=ipv4_address_entry
+                address_fields=address_fields
             )
             self.__custom_services += '\n'
 
         if show_on_map:
             self.__custom_services += DockerCompilerFileTemplates['custom_compose_label_meta'].format(labelList=self._getCustomNodeMeta(
-                asn, node_name, net, ip_address
+                asn, node_name, net, ip_address, ipv6_address
             ))
             self.__custom_services += '\n'
 
         return self
 
-    def _getCustomNodeMeta(self, asn: int = -1, node_name: str = '', net: str = '', ip_address: str = '', ) -> str:
+    def _getCustomNodeMeta(self, asn: int = -1, node_name: str = '', net: str = '', ip_address: str = '', ipv6_address: str = '') -> str:
         """!
         @brief get custom node metadata labels.
 
@@ -1717,6 +1808,11 @@ class Docker(Compiler):
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key='net.0.address',
                 value=ip_address
+            )
+        if ipv6_address:
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key='net.0.ipv6_address',
+                value=ipv6_address
             )
         labels += DockerCompilerFileTemplates['compose_label_meta'].format(
             key='custom',

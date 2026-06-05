@@ -3,6 +3,8 @@ from seedemu.core import Node, Emulator, Layer
 from seedemu.core.enums import NetworkType
 from typing import Set, Dict, List, Tuple
 
+from ._bgp_metadata import classify_ospf_interfaces, set_ospf_interface_intents
+
 OspfFileTemplates: Dict[str, str] = {}
 
 OspfFileTemplates['ospf_body'] = """
@@ -142,7 +144,8 @@ class Ospf(Layer):
         """
         return (asn, netname) in self.__masked
 
-    def render(self, emulator: Emulator):
+    def configure(self, emulator: Emulator):
+        super().configure(emulator)
         reg = emulator.getRegistry()
 
         for ((scope, type, name), obj) in reg.getAll().items():
@@ -150,35 +153,14 @@ class Ospf(Layer):
             router: Node = obj
             if router.getAsn() in self.__masked_asn: continue
 
-            stubs: List[str] = ['dummy0']
-            active: List[str] = []
-
             self._log('setting up OSPF for router as{}/{}...'.format(scope, name))
-            for iface in router.getInterfaces():
-                net = iface.getNet()
+            masked = [netname for (asn, netname) in self.__masked if asn == int(scope)]
+            stubs = [netname for (asn, netname) in self.__stubs if asn == int(scope)]
+            active, passive = classify_ospf_interfaces(router, stubs=stubs, masked=masked)
+            set_ospf_interface_intents(router, active, passive)
 
-                if (int(scope), net.getName()) in self.__masked: continue
-
-                if (int(scope), net.getName()) in self.__stubs or net.getType() != NetworkType.Local:
-                    stubs.append(net.getName())
-                    continue
-
-                active.append(net.getName())
-            
-            ospf_interfaces = ''
-            for name in stubs: ospf_interfaces += OspfFileTemplates['ospf_stub_interface'].format(
-                interfaceName = name
-            )
-            for name in active: ospf_interfaces += OspfFileTemplates['ospf_interface'].format(
-                interfaceName = name
-            )
-
-            if ospf_interfaces != '':
-                router.addTable('t_ospf')
-                router.addProtocol('ospf', 'ospf1', OspfFileTemplates['ospf_body'].format(
-                    interfaces = ospf_interfaces
-                ))
-                router.addTablePipe('t_ospf')
+    def render(self, emulator: Emulator):
+        pass
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -210,4 +192,3 @@ class Ospf(Layer):
             out += 'as{}\n'.format(asn)
 
         return out
-

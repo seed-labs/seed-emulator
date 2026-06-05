@@ -5,161 +5,57 @@ on:
     branches:
       - master
       - development
+      - development2
       - development-ipv6
   workflow_dispatch:
     inputs:
-      run-quick-tests:
-        description: "Run quick tests | ignores other options for testing (they still apply for compile/build)"
+      run-example-build:
+        description: "Build selected representative examples"
         type: boolean
         required: false
-        default: "false"
-      run-basic-tests:
-        description: "Run basic tests | Compile and builds all the basic examples - Runs basic tests"
+        default: false
+      run-runtime-integration:
+        description: "Run Docker runtime integration probes"
         type: boolean
         required: false
-        default: "true"
-      run-internet-tests:
-        description: "Run internet tests | Compile and builds all the internet examples - Runs internet tests"
-        type: boolean
-        required: false
-        default: "true"
-      run-blockchain-tests:
-        description: "Run blockchain tests | Compile and builds all the blockchain examples - Runs blockchain tests"
-        type: boolean
-        required: false
-        default: "false"
-      run-scion-tests:
-        description: "Run SCION tests | Compile and builds all the SCION examples - Runs SCION tests"
-        type: boolean
-        required: false
-        default: "false"
-      run-real-world-tests:
-        description: "Run tests that depend on real external network reachability"
-        type: boolean
-        required: false
-        default: "false"
+        default: false
 
+permissions:
+  contents: read
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
-  compile-examples:
-    name: Compile Examples
+  static:
+    name: Static
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'false' }}
-      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
-      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
-      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
-      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'false' }}
     steps:
       - name: Check out the source repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-          cache: 'pip'
+          cache: "pip"
           cache-dependency-path: "**/*requirements.txt"
-      - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
-      - name: Get scion-pki
-        if: ${{ env.SCION_TESTS == 'true' }}
-        run: |
-          curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
-          mkdir bin
-          tar -C bin -xzf scion_0.12.0_amd64_linux.tar.gz scion-pki
-      - name: Compile Examples
-        run: |
-          source development.env
-          export PATH=$PATH:$PWD/bin
-          CMD="tests/compile-and-build-test/compile-test.py"
-          if [ "$BASIC_TESTS" == "true" ]; then
-            CMD+=" --basic"
-          fi
-          if [ "$INTERNET_TESTS" == "true" ]; then
-            CMD+=" --internet"
-          fi
-          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
-            CMD+=" --blockchain"
-          fi
-          if [ "$SCION_TESTS" == "true" ]; then
-            CMD+=" --scion"
-          fi
-          python $CMD
-
-  run-tests:
-    name: Run Tests
-    needs: compile-examples # Only run heavy tests if quick compile test succeeds
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'false' }}
-      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
-      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
-      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
-      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'false' }}
-      SEED_EMU_RUN_REAL_WORLD_TESTS: ${{ github.event.inputs.run-real-world-tests || 'false' }}
-    steps:
-      - name: Check out the source repository
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: 'pip'
-          cache-dependency-path: "**/*requirements.txt"
-      - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
-      - name: Get scion-pki
-        if: ${{ env.SCION_TESTS == 'true' }}
-        run: |
-          curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
-          mkdir bin
-          tar -C bin -xzf scion_0.12.0_amd64_linux.tar.gz scion-pki
-      - name: Run tests
-        run: |
-          source development.env
-          export PATH=$PATH:$PWD/bin
-          CMD="tests/run-tests.py"
-          if [ "$QUICK_TESTS" == "true" ]; then
-            CMD+=" --ci"
-          fi
-          if [ "$BASIC_TESTS" == "true" ]; then
-            CMD+=" --basic"
-          fi
-          if [ "$INTERNET_TESTS" == "true" ]; then
-            CMD+=" --internet"
-          fi
-          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
-            CMD+=" --blockchain"
-          fi
-          if [ "$SCION_TESTS" == "true" ]; then
-            CMD+=" --scion"
-          fi
-          python $CMD
-      - name: Archive test results
+      - name: Install Python dependencies
+        run: python -m pip install "setuptools<81" -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+      - name: Run static checks
+        run: python tests/ci/run_ci.py static --artifact-dir ci-artifacts/static
+      - name: Upload static artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test_result
-          path: |
-            tests/test_result.txt
-            tests/**/test_log
-      - name: Check for errors
-        shell: bash
-        run: set +e; grep -E "^score" tests/test_result.txt | grep -Eq '[1-9][0-9]* errors|[1-9][0-9]* failures'; test $? -eq 1
+          name: static-ci-artifacts
+          path: ci-artifacts/static
 
-  build-examples:
-    name: Build Examples
-    needs: compile-examples # Only run heavy tests if quick compile test succeeds
+  unit:
+    name: Unit
+    needs: static
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'false' }}
-      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
-      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
-      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
-      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'false' }}
     steps:
       - name: Check out the source repository
         uses: actions/checkout@v4
@@ -167,41 +63,89 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-          cache: 'pip'
+          cache: "pip"
           cache-dependency-path: "**/*requirements.txt"
-      - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
-      - name: Get scion-pki
-        if: ${{ github.event.inputs.run-scion-tests == 'true' }}
-        run: |
-          curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
-          mkdir bin
-          tar -C bin -xzf scion_0.12.0_amd64_linux.tar.gz scion-pki
-      - name: Build Examples
-        run: |
-          source development.env
-          export PATH=$PATH:$PWD/bin
-          cd tests/compile-and-build-test
-          CMD="compile-and-build-test.py"
-          if [ "$BASIC_TESTS" == "true" ]; then
-            CMD+=" --basic"
-          fi
-          if [ "$INTERNET_TESTS" == "true" ]; then
-            CMD+=" --internet"
-          fi
-          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
-            CMD+=" --blockchain"
-          fi
-          if [ "$SCION_TESTS" == "true" ]; then
-            CMD+=" --scion"
-          fi
-          python $CMD
-      - name: Archive test results
+      - name: Install Python dependencies
+        run: python -m pip install "setuptools<81" -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+      - name: Run unit checks
+        run: python tests/ci/run_ci.py unit --artifact-dir ci-artifacts/unit
+      - name: Upload unit artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test_log
-          path: |
-            tests/compile-and-build-test/test_log/build_log.txt
-            tests/compile-and-build-test/test_log/log.txt
-      - name: Check for errors
-        shell: bash
-        run: set +e; grep -E "^score" tests/compile-and-build-test/test_log/log.txt | grep -Eq '[1-9][0-9]* errors|[1-9][0-9]* failures'; test $? -eq 1
+          name: unit-ci-artifacts
+          path: ci-artifacts/unit
+
+  example-compile:
+    name: Example Compile
+    needs: static
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the source repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: "**/*requirements.txt"
+      - name: Install Python dependencies
+        run: python -m pip install "setuptools<81" -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+      - name: Compile representative examples
+        run: python tests/ci/run_ci.py example-compile --artifact-dir ci-artifacts/example-compile
+      - name: Upload example compile artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-compile-ci-artifacts
+          path: ci-artifacts/example-compile
+
+  example-build:
+    name: Example Build
+    needs: example-compile
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs['run-example-build'] == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the source repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: "**/*requirements.txt"
+      - name: Install Python dependencies
+        run: python -m pip install "setuptools<81" -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+      - name: Build selected examples
+        run: python tests/ci/run_ci.py example-build --artifact-dir ci-artifacts/example-build
+      - name: Upload example build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-build-ci-artifacts
+          path: ci-artifacts/example-build
+
+  runtime-integration:
+    name: Runtime Integration
+    needs: example-compile
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs['run-runtime-integration'] == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the source repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: "**/*requirements.txt"
+      - name: Install Python dependencies
+        run: python -m pip install "setuptools<81" -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+      - name: Run runtime integration probes
+        run: python tests/ci/run_ci.py runtime-integration --artifact-dir ci-artifacts/runtime-integration
+      - name: Upload runtime integration artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-integration-ci-artifacts
+          path: ci-artifacts/runtime-integration

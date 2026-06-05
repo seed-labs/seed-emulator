@@ -4,10 +4,11 @@ from .ExternalConnectivityProvider import ExternalConnectivityProvider
 from .Merger import Mergeable, Merger
 from .Registry import Registry, Registrable, Printable
 from .Network import Network
+from .Addressing import normalizePrefix
 from seedemu import core
 from typing import Dict, Set, Tuple, List
 from sys import prefix, stderr
-from ipaddress import IPv4Address, IPv4Network
+from ipaddress import IPv4Address, IPv4Network, IPv6Network
 import pickle
 
 class BindingDatabase(Registrable, Printable):
@@ -89,9 +90,10 @@ class Emulator:
 
     __service_net: Network
     __service_net_prefix: str
+    __service_net_ipv6_prefix: str
     __ecp: ExternalConnectivityProvider
 
-    def __init__(self, serviceNetworkPrefix: str = '192.168.66.0/24'):
+    def __init__(self, serviceNetworkPrefix: str = '192.168.66.0/24', serviceNetworkIpv6Prefix: str = None):
         """!
         @brief Construct a new emulation.
 
@@ -100,6 +102,8 @@ class Emulator:
         emulation, and provide access between the emulation nodes and the host
         node. Service network will not be created unless some layer/service/as
         asks for it.
+        @param serviceNetworkIpv6Prefix (optional) IPv6 prefix for the service
+        network. The service network remains IPv4-only unless this is set.
         """
         self.__rendered = False
         self.__dependencies_db = {}
@@ -112,6 +116,7 @@ class Emulator:
         self.__registry.register('seedemu', 'list', 'bindingdb', self.__bindings)
 
         self.__service_net_prefix = serviceNetworkPrefix
+        self.__service_net_ipv6_prefix = serviceNetworkIpv6Prefix
         self.__service_net = None
         self.__ecp = ExternalConnectivityProvider()
 
@@ -330,7 +335,25 @@ class Emulator:
         @returns service network.
         """
         if self.__service_net == None:
-            self.__service_net = self.__registry.register('seedemu', 'net', '000_svc', Network('000_svc', NetworkType.Bridge, IPv4Network(self.__service_net_prefix), direct = False))
+            ipv6_prefix = (
+                IPv6Network(normalizePrefix(self.__service_net_ipv6_prefix))
+                if self.__service_net_ipv6_prefix is not None
+                else None
+            )
+            ipv6_intent = "explicit" if ipv6_prefix is not None else None
+            self.__service_net = self.__registry.register(
+                'seedemu',
+                'net',
+                '000_svc',
+                Network(
+                    '000_svc',
+                    NetworkType.Bridge,
+                    IPv4Network(self.__service_net_prefix),
+                    direct = False,
+                    ipv6Prefix = ipv6_prefix,
+                    ipv6PrefixIntent = ipv6_intent,
+                ),
+            )
 
         return self.__service_net
 

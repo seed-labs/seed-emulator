@@ -7,6 +7,7 @@ from .DomainNameCachingService import DomainNameCachingServer, DomainNameCaching
 from .CymruIpOrigin import CymruIpOriginService, CymruIpOriginServer
 from .ReverseDomainNameService import ReverseDomainNameService, ReverseDomainNameServer
 from .BgpLookingGlassService import BgpLookingGlassServer, BgpLookingGlassService
+from .ExaBgpService import ExaBgpServer, ExaBgpService
 from .DHCPService import DHCPServer, DHCPService
 from .EthereumService import *
 from .MoneroService import *

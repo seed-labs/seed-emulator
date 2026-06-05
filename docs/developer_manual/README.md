@@ -1,5 +1,6 @@
 # Developer Manual for the SEED Emulator
 
+- [Control-plane extension design](../designs/control-plane-extension-design.md)
 - [Creating a new layer](./00-creating-a-new-layer.md)
 - [Creating a new service](./01-creating-a-new-service.md)
 - [Creating a new component](./02-creating-a-new-component.md)

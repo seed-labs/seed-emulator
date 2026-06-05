@@ -1,8 +1,10 @@
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
+from .Addressing import AddressFamily, formatHost, formatHostPort, formatMultiaddr, formatUrl, getInterfaceAddress, getNodeAddress, getNodeAddresses, getNodePreferredAddress, hasInterfaceAddress, nodeHasAddress, nodeHasAddressInPrefix, normalizeAddressFamily, normalizeAddressList, normalizeAddressRecord, normalizePrefix
 from .AutonomousSystem import AutonomousSystem
 from .ScionAutonomousSystem import ScionAutonomousSystem
 from .IsolationDomain import IsolationDomain
 from .InternetExchange import InternetExchange
+from .Ipv6Addressing import DEFAULT_IPV6_INFRA_PREFIX, DEFAULT_IPV6_ROOT_PREFIX, Ipv6Addressing
 from .Network import Network
 from .Node import Node, File, Interface, Router, promote_to_real_world_router, promote_to_scion_router
 from .Printable import Printable

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from ipaddress import IPv4Network, IPv4Address
+from ipaddress import IPv4Network, IPv4Address, IPv6Network, IPv6Address
 from .RemoteAccessProvider import RemoteAccessProvider
 from .ExternalConnectivityProvider import ExternalConnectivityProvider
 from .Printable import Printable
@@ -7,7 +7,7 @@ from .enums import NetworkType, NodeRole
 from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
 from .Visualization import Vertex
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Set
 
 class Network(Printable, Registrable, Vertex):
     """!
@@ -17,10 +17,15 @@ class Network(Printable, Registrable, Vertex):
     """
     __type: NetworkType
     __prefix: IPv4Network
+    __ipv6_prefix: IPv6Network
+    __ipv6_prefix_intent: str
     __name: str
     __scope: str
     __aac: AddressAssignmentConstraint
     __assigners: Dict[NodeRole, Assigner]
+    __ipv6_assigners: Dict[NodeRole, Assigner]
+    __ipv6_ix_assignments: Dict[int, int]
+    __ipv6_ix_offsets: Set[int]
 
     __connected_nodes: List['Node']
 
@@ -36,7 +41,7 @@ class Network(Printable, Registrable, Vertex):
     __rap: RemoteAccessProvider
     __ecp: ExternalConnectivityProvider
 
-    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None, direct: bool = False):
+    def __init__(self, name: str, type: NetworkType, prefix: IPv4Network, aac: AddressAssignmentConstraint = None, direct: bool = False, ipv6Prefix: IPv6Network = None, ipv6PrefixIntent: str = None):
         """!
         @brief Network constructor.
 
@@ -54,8 +59,13 @@ class Network(Printable, Registrable, Vertex):
         self.__name = name
         self.__type = type
         self.__prefix = prefix
+        self.__ipv6_prefix = ipv6Prefix
+        self.__ipv6_prefix_intent = ipv6PrefixIntent
         self.__aac = aac if aac != None else AddressAssignmentConstraint()
         self.__assigners = {}
+        self.__ipv6_assigners = {}
+        self.__ipv6_ix_assignments = {}
+        self.__ipv6_ix_offsets = set()
 
         self.__connected_nodes = []
 
@@ -66,6 +76,11 @@ class Network(Printable, Registrable, Vertex):
         self.__assigners[ NodeRole.OpenVpnRouter ] = arouter
         self.__assigners[ NodeRole.Host ] = ahost
         self.__assigners[ NodeRole.ControlService ] = ahost
+        self.__ipv6_assigners[ NodeRole.BorderRouter ] = self.__aac.getOffsetAssigner(NodeRole.Router)
+        self.__ipv6_assigners[ NodeRole.Router ] = self.__ipv6_assigners[ NodeRole.BorderRouter ]
+        self.__ipv6_assigners[ NodeRole.OpenVpnRouter ] = self.__ipv6_assigners[ NodeRole.BorderRouter ]
+        self.__ipv6_assigners[ NodeRole.Host ] = self.__aac.getOffsetAssigner(NodeRole.Host)
+        self.__ipv6_assigners[ NodeRole.ControlService ] = self.__ipv6_assigners[ NodeRole.Host ]
 
         self.__d_latency = 0
         self.__d_bandwidth = 0
@@ -188,6 +203,40 @@ class Network(Printable, Registrable, Vertex):
         """
         return self.__prefix
 
+    def hasIpv6Prefix(self) -> bool:
+        """!
+        @brief Check if this network has an IPv6 prefix.
+
+        @returns true if an IPv6 prefix is configured.
+        """
+        return self.__ipv6_prefix is not None
+
+    def getIpv6Prefix(self) -> IPv6Network:
+        """!
+        @brief Get IPv6 prefix of this network.
+
+        @returns IPv6 prefix, or None when IPv6 is disabled.
+        """
+        return self.__ipv6_prefix
+
+    def setIpv6Prefix(self, prefix: IPv6Network) -> Network:
+        """!
+        @brief Set IPv6 prefix of this network.
+
+        @param prefix IPv6 prefix.
+        @returns self, for chaining API calls.
+        """
+        self.__ipv6_prefix = prefix
+        return self
+
+    def getIpv6PrefixIntent(self) -> str:
+        """!
+        @brief Get IPv6 prefix intent used by the Base layer.
+
+        @returns auto, explicit, or None.
+        """
+        return self.__ipv6_prefix_intent
+
     def setHostIpRange(self, hostStart:int , hostEnd: int, hostStep: int):
         """!
         @brief Set IP Range for host nodes
@@ -199,6 +248,8 @@ class Network(Printable, Registrable, Vertex):
 
         self.__aac.setHostIpRange(hostStart, hostEnd, hostStep)
         self.__assigners[NodeRole.Host] = self.__aac.getOffsetAssigner(NodeRole.Host)
+        self.__ipv6_assigners[NodeRole.Host] = self.__aac.getOffsetAssigner(NodeRole.Host)
+        self.__ipv6_assigners[NodeRole.ControlService] = self.__ipv6_assigners[NodeRole.Host]
 
         return self
 
@@ -226,6 +277,9 @@ class Network(Printable, Registrable, Vertex):
         self.__aac.setRouterIpRange(routerStart, routerEnd, routerStep)
         self.__assigners[NodeRole.Router] = self.__aac.getOffsetAssigner(NodeRole.Router)
         self.__assigners[NodeRole.OpenVpnRouter] = self.__aac.getOffsetAssigner(NodeRole.OpenVpnRouter)
+        self.__ipv6_assigners[NodeRole.Router] = self.__aac.getOffsetAssigner(NodeRole.Router)
+        self.__ipv6_assigners[NodeRole.BorderRouter] = self.__ipv6_assigners[NodeRole.Router]
+        self.__ipv6_assigners[NodeRole.OpenVpnRouter] = self.__ipv6_assigners[NodeRole.Router]
         return self
 
     def getDhcpIpRange(self) -> list:
@@ -242,10 +296,47 @@ class Network(Printable, Registrable, Vertex):
         @param asn optional. If interface type is InternetExchange, the asn for
         IP address mapping.
         """
-        assert not (nodeRole == nodeRole.Host and self.__type == NetworkType.InternetExchange), 'trying to assign IX network to non-router node'
+        assert not (nodeRole == NodeRole.Host and self.__type == NetworkType.InternetExchange), 'trying to assign IX network to non-router node'
 
         if self.__type == NetworkType.InternetExchange: return self.__prefix[self.__aac.mapIxAddress(asn)]
         return self.__prefix[self.__assigners[nodeRole].next()]
+
+    def assignIpv6(self, nodeRole: NodeRole, asn: int = -1) -> IPv6Address:
+        """!
+        @brief Assign IPv6 for interface.
+
+        @param nodeRole role of the node getting this assignment.
+        @param asn optional. If interface type is InternetExchange, the asn for
+        IP address mapping.
+        """
+        assert self.__ipv6_prefix is not None, 'IPv6 is not enabled on network {}'.format(self.__name)
+        assert not (nodeRole == NodeRole.Host and self.__type == NetworkType.InternetExchange), 'trying to assign IX network to non-router node'
+
+        if self.__type == NetworkType.InternetExchange:
+            return self.__ipv6_prefix[self.__mapIxIpv6Offset(asn)]
+        return self.__ipv6_prefix[self.__ipv6_assigners[nodeRole].next()]
+
+    def __mapIxIpv6Offset(self, asn: int) -> int:
+        """Map an IX participant ASN into IPv6 host bits with collision handling."""
+        assert self.__ipv6_prefix is not None, 'IPv6 is not enabled on network {}'.format(self.__name)
+        if asn in self.__ipv6_ix_assignments:
+            return self.__ipv6_ix_assignments[asn]
+
+        limit = self.__ipv6_prefix.num_addresses
+        assert limit > 2, 'IPv6 IX prefix {} is too small'.format(self.__ipv6_prefix)
+        preferred = int(asn)
+        if preferred <= 1 or preferred >= limit:
+            preferred = (abs(preferred) % (limit - 2)) + 2
+        offset = preferred
+        while offset in self.__ipv6_ix_offsets or offset <= 1 or offset >= limit:
+            offset += 1
+            if offset >= limit:
+                offset = 2
+            assert offset != preferred, 'IPv6 IX address allocation exhausted for {}'.format(self.__name)
+
+        self.__ipv6_ix_assignments[asn] = offset
+        self.__ipv6_ix_offsets.add(offset)
+        return offset
 
     def associate(self, node: 'Node'):
         """!
@@ -330,6 +421,26 @@ class Network(Printable, Registrable, Vertex):
 
         return None
 
+    def getDefaultRouterIpv6(self) -> IPv6Address:
+        """!
+        @brief Get default IPv6 router for this network.
+
+        @returns default IPv6 router.
+        """
+        for __node in self.getAssociations():
+            if __node.getRole() == NodeRole.BorderRouter:
+                for __interface in __node.getInterfaces():
+                    if __interface.getNet() == self:
+                        return __interface.getIpv6Address()
+
+        for __node in self.getAssociations():
+            if __node.getRole() == NodeRole.Router:
+                for __interface in __node.getInterfaces():
+                    if __interface.getNet() == self:
+                        return __interface.getIpv6Address()
+
+        return None
+
     def hasDHCPService(self) -> bool:
         """!
         @brief Check if this network has DHCP service.
@@ -350,6 +461,9 @@ class Network(Printable, Registrable, Vertex):
         indent += 4
         out += ' ' * indent
         out += 'Prefix: {}\n'.format(self.__prefix)
+        if self.__ipv6_prefix is not None:
+            out += ' ' * indent
+            out += 'IPv6 Prefix: {}\n'.format(self.__ipv6_prefix)
         out += self.__aac.print(indent)
 
         if self.__rap != None:

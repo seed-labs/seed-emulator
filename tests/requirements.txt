@@ -38,6 +38,7 @@ pydantic==2.10.6
 pydantic_core==2.27.2
 python-dateutil==2.9.0.post0
 python-on-whales==0.75.1
+pytest==8.3.5
 PyYAML==6.0.2
 referencing==0.36.2
 requests==2.22.0

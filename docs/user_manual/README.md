@@ -15,6 +15,7 @@ This document provides a portal to those examples.
   - [Component and Binding](./component.md): bind virtual nodes in component 
            to physical nodes, filters  
   - [Compilation](./compiler.md): generate emulation files (docker files)
+  - [IPv6 readiness](./ipv6.md): optional dual-stack design and helper APIs
   - [Visualization](./visualization.md): visualize the emulated Internet
   - [Docker image](./docker.md): generate images for AMD and ARM platforms, 
            use custom images 

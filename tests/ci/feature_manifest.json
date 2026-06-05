@@ -1,0 +1,145 @@
+{
+  "schema": 1,
+  "features": {
+    "ipv4-default": {
+      "status": "covered",
+      "description": "Legacy IPv4 examples continue to compile and build without requiring any new control-plane capability.",
+      "unit_groups": [],
+      "compile_examples": ["basic-a00-simple-as"],
+      "build_examples": ["basic-a00-simple-as"],
+      "runtime_groups": []
+    },
+    "ipv6-core": {
+      "status": "declared-gap",
+      "description": "Repository-level IPv6 readiness is tracked here, but this integration branch does not yet carry the IPv6 readiness examples or runtime probes.",
+      "unit_groups": [],
+      "compile_examples": [],
+      "build_examples": [],
+      "runtime_groups": [],
+      "notes": "Do not mark IPv6 as covered on this branch until the IPv6 readiness work is merged into this integration line."
+    },
+    "routing-bird-frr": {
+      "status": "covered",
+      "description": "Router-selected BIRD/FRR backends are rendered by Routing from protocol-layer intent.",
+      "unit_groups": ["control-plane-unit"],
+      "compile_examples": ["basic-a12-bgp-mixed-backend"],
+      "build_examples": ["basic-a12-bgp-mixed-backend"],
+      "runtime_groups": ["control-plane-runtime"]
+    },
+    "exabgp-service": {
+      "status": "covered",
+      "description": "ExaBGP is exercised only as ExaBgpService plus Binding, including the IX speaker example.",
+      "unit_groups": ["control-plane-unit"],
+      "compile_examples": [
+        "basic-a13-exabgp-control-plane",
+        "internet-b30-mini-internet-exabgp-ix"
+      ],
+      "build_examples": ["basic-a13-exabgp-control-plane"],
+      "runtime_groups": ["control-plane-runtime"]
+    },
+    "looking-glass": {
+      "status": "covered",
+      "description": "Looking Glass remains a route-state observer and is tested separately from ExaBGP event streams.",
+      "unit_groups": ["control-plane-unit"],
+      "compile_examples": ["basic-a14-bgp-event-looking-glass"],
+      "build_examples": ["basic-a14-bgp-event-looking-glass"],
+      "runtime_groups": ["control-plane-runtime"]
+    },
+    "dns-endpoint": {
+      "status": "covered",
+      "description": "DNS endpoint behavior is represented by the mini Internet plus DNS example.",
+      "unit_groups": [],
+      "compile_examples": ["internet-b02-mini-internet-with-dns"],
+      "build_examples": ["internet-b02-mini-internet-with-dns"],
+      "runtime_groups": []
+    },
+    "legacy-guard": {
+      "status": "covered",
+      "description": "Removed legacy control-plane APIs stay removed through explicit guard tests.",
+      "unit_groups": ["control-plane-unit"],
+      "compile_examples": [],
+      "build_examples": [],
+      "runtime_groups": []
+    }
+  },
+  "unit_groups": {
+    "control-plane-unit": {
+      "description": "Control-plane API, rendering, service, and legacy guard checks.",
+      "pytest_args": ["tests/control_plane/test_bgp_control_plane_extensions.py"]
+    }
+  },
+  "runtime_groups": {
+    "control-plane-runtime": {
+      "description": "Docker runtime probes for selected BIRD/FRR, ExaBGP, and Looking Glass examples.",
+      "pytest_args": ["-m", "integration", "tests/control_plane/test_bgp_runtime_matrix.py"],
+      "default": false,
+      "notes": "Manual workflow-dispatch entry for this PR. PR3 will make runtime evidence richer and artifact-indexed."
+    }
+  },
+  "examples": {
+    "basic-a00-simple-as": {
+      "description": "Small IPv4 default behavior smoke example.",
+      "script": "examples/basic/A00_simple_as/simple_as.py",
+      "args": ["amd"],
+      "clean": ["output"],
+      "expected": ["output/docker-compose.yml"],
+      "compile": true,
+      "build": true
+    },
+    "basic-a12-bgp-mixed-backend": {
+      "description": "Mixed BIRD/FRR routing backend example.",
+      "script": "examples/basic/A12_bgp_mixed_backend/bgp_mixed_backend.py",
+      "args": ["amd"],
+      "clean": ["output"],
+      "expected": ["output/docker-compose.yml"],
+      "compile": true,
+      "build": true
+    },
+    "basic-a13-exabgp-control-plane": {
+      "description": "ExaBGP service plus Binding control-plane speaker example.",
+      "script": "examples/basic/A13_exabgp_control_plane/exabgp_control_plane.py",
+      "args": ["amd"],
+      "env": {
+        "SEED_A13_EXABGP_PORT": "5101"
+      },
+      "clean": ["output"],
+      "expected": ["output/docker-compose.yml"],
+      "compile": true,
+      "build": true
+    },
+    "basic-a14-bgp-event-looking-glass": {
+      "description": "Looking Glass route-state observer plus separate ExaBGP event dashboard example.",
+      "script": "examples/basic/A14_bgp_event_looking_glass/bgp_event_looking_glass.py",
+      "args": ["amd"],
+      "env": {
+        "SEED_A14_LG_PORT": "5002",
+        "SEED_A14_EVENT_PORT": "5003"
+      },
+      "clean": ["output"],
+      "expected": ["output/docker-compose.yml"],
+      "compile": true,
+      "build": true
+    },
+    "internet-b02-mini-internet-with-dns": {
+      "description": "Mini Internet with DNS component and local DNS endpoints.",
+      "script": "examples/internet/B02_mini_internet_with_dns/mini_internet_with_dns.py",
+      "args": ["amd"],
+      "clean": ["output", "base_internet.bin", "dns_component.bin"],
+      "expected": ["output/docker-compose.yml"],
+      "compile": true,
+      "build": true
+    },
+    "internet-b30-mini-internet-exabgp-ix": {
+      "description": "Internet-scale ExaBGP IX speaker compile coverage.",
+      "script": "examples/internet/B30_mini_internet_exabgp_ix/mini_internet_exabgp_ix.py",
+      "args": ["amd"],
+      "env": {
+        "SEED_B30_EXABGP_PORT": "5130"
+      },
+      "clean": ["output", "base_internet.bin"],
+      "expected": ["output/docker-compose.yml"],
+      "compile": true,
+      "build": false
+    }
+  }
+}
