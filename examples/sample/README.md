@@ -43,22 +43,22 @@ Supported arguments:
 Use the new testing runner from the repository root:
 
 ```sh
-python seedemu/testing/cli.py clean examples/sample/example.yaml --runner internet
-python seedemu/testing/cli.py compile examples/sample/example.yaml --runner internet --artifact-dir ci-artifacts/sample
-python seedemu/testing/cli.py build examples/sample/example.yaml --runner internet --artifact-dir ci-artifacts/sample
-python seedemu/testing/cli.py up examples/sample/example.yaml --runner internet --artifact-dir ci-artifacts/sample
-python seedemu/testing/cli.py probe examples/sample/example.yaml --runner internet --artifact-dir ci-artifacts/sample
-python seedemu/testing/cli.py test examples/sample/example.yaml --runner internet --artifact-dir ci-artifacts/sample
-python seedemu/testing/cli.py down examples/sample/example.yaml --runner internet --artifact-dir ci-artifacts/sample
+python seedemu/testing/cli.py clean examples/sample/example.yaml
+python seedemu/testing/cli.py compile examples/sample/example.yaml --artifact-dir ci-artifacts/sample
+python seedemu/testing/cli.py build examples/sample/example.yaml --artifact-dir ci-artifacts/sample
+python seedemu/testing/cli.py up examples/sample/example.yaml --artifact-dir ci-artifacts/sample
+python seedemu/testing/cli.py probe examples/sample/example.yaml --artifact-dir ci-artifacts/sample
+python seedemu/testing/cli.py test examples/sample/example.yaml --artifact-dir ci-artifacts/sample
+python seedemu/testing/cli.py down examples/sample/example.yaml --artifact-dir ci-artifacts/sample
 ```
 
 The full lifecycle can also be run with:
 
 ```sh
-python seedemu/testing/cli.py all examples/sample/example.yaml --runner internet --artifact-dir ci-artifacts/sample
+python seedemu/testing/cli.py all examples/sample/example.yaml --artifact-dir ci-artifacts/sample
 ```
 
-The `internet` runner is used because this manifest includes Internet-style
+The manifest declares `runner: internet` because it includes Internet-style
 probes such as `ping`.
 
 ## What The Runner Checks
