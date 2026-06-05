@@ -169,3 +169,49 @@ See [this manual](/docs/user_manual/manual.md#rendering).
 
 Generate the emulation files. See [this manual](/docs/user_manual/compiler.md).
 
+## Standard Arguments
+
+The example accepts both the legacy platform argument and the newer named
+arguments:
+
+```sh
+python examples/basic/A00_simple_as/simple_as.py amd
+python examples/basic/A00_simple_as/simple_as.py --platform amd --output examples/basic/A00_simple_as/output
+python examples/basic/A00_simple_as/simple_as.py --dumpfile examples/basic/A00_simple_as/simple_as.bin
+```
+
+Supported arguments:
+
+- `amd|arm`: optional legacy platform argument.
+- `--platform amd|arm`: named platform argument.
+- `--output PATH`: output folder for Docker compiler results.
+- `--dumpfile PATH`: save a serialized emulator instead of compiling Docker output.
+- `--override` / `--no-override`: control whether existing output is replaced.
+- `--skip-render`: compile without calling `emu.render()` first.
+
+## TestRunner Lifecycle
+
+This example includes an `example.yaml` manifest for `seedemu.testing`. Run
+these commands from the repository root:
+
+```sh
+python seedemu/testing/cli.py clean examples/basic/A00_simple_as/example.yaml
+python seedemu/testing/cli.py compile examples/basic/A00_simple_as/example.yaml --artifact-dir ci-artifacts/a00
+python seedemu/testing/cli.py build examples/basic/A00_simple_as/example.yaml --artifact-dir ci-artifacts/a00
+python seedemu/testing/cli.py up examples/basic/A00_simple_as/example.yaml --artifact-dir ci-artifacts/a00
+python seedemu/testing/cli.py probe examples/basic/A00_simple_as/example.yaml --artifact-dir ci-artifacts/a00
+python seedemu/testing/cli.py test examples/basic/A00_simple_as/example.yaml --artifact-dir ci-artifacts/a00
+python seedemu/testing/cli.py down examples/basic/A00_simple_as/example.yaml --artifact-dir ci-artifacts/a00
+```
+
+The full lifecycle can also be run with:
+
+```sh
+python seedemu/testing/cli.py all examples/basic/A00_simple_as/example.yaml --artifact-dir ci-artifacts/a00
+```
+
+The manifest declares `runner: internet` because it uses Internet-style probes.
+The readiness stage checks that the three web hosts and three border routers are
+running. The probe stage checks cross-AS reachability, and `test_runtime.py`
+demonstrates the same runtime validation as a custom Python test program.
+
