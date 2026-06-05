@@ -82,26 +82,26 @@ listening on net1, link-type EN10MB (Ethernet), capture size 262144 bytes
 0 packets dropped by kernel
 ```
 
-## Standardized ExampleRunner lifecycle
+## Standardized TestRunner lifecycle
 
 This example also includes an `example.yaml` manifest so it can be compiled,
-built, started, probed, tested, and stopped by `seedemu.utilities.ExampleRunner`.
+built, started, probed, tested, and stopped by `seedemu.testing`.
 Run these commands from the repository root:
 
 ```sh
-python seedemu/utilities/ExampleRunner.py clean examples/basic/A02_transit_as_mpls/example.yaml
-python seedemu/utilities/ExampleRunner.py compile examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
-python seedemu/utilities/ExampleRunner.py build examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
-python seedemu/utilities/ExampleRunner.py up examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
-python seedemu/utilities/ExampleRunner.py probe examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
-python seedemu/utilities/ExampleRunner.py test examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
-python seedemu/utilities/ExampleRunner.py down examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/testing/cli.py clean examples/basic/A02_transit_as_mpls/example.yaml
+python seedemu/testing/cli.py compile examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/testing/cli.py build examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/testing/cli.py up examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/testing/cli.py probe examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/testing/cli.py test examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/testing/cli.py down examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
 ```
 
 The full lifecycle can also be run with:
 
 ```sh
-python seedemu/utilities/ExampleRunner.py all examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/testing/cli.py all examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
 ```
 
 The manifest uses declarative probes for simple runtime checks:

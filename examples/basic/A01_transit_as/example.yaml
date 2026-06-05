@@ -1,6 +1,7 @@
 id: basic-a01-transit-as
 name: Transit AS
 description: A transit-AS example with AS2 carrying traffic between stub ASes on IX100 and IX101.
+runner: internet
 script: transit_as.py
 platform: amd
 features:

@@ -21,7 +21,7 @@ from seedemu.services import WebService
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build a small SEED Emulator topology for ExampleRunner."
+        description="Build a small SEED Emulator topology for TestRunner."
     )
     parser.add_argument("legacy_platform", nargs="?", choices=["amd", "arm"])
     parser.add_argument("--platform", choices=["amd", "arm"])

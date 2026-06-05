@@ -1,6 +1,7 @@
 id: sample-example-runner
-name: ExampleRunner SEED Emulator Sample
-description: A small A00-style SEED Emulator topology used to demonstrate ExampleRunner lifecycle commands.
+name: TestRunner SEED Emulator Sample
+description: A small A00-style SEED Emulator topology used to demonstrate TestRunner lifecycle commands.
+runner: internet
 script: sample_example.py
 platform: amd
 features:

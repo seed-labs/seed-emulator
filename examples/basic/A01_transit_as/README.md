@@ -91,25 +91,25 @@ emu.dump('base_component.bin')
 
 It should be noted that `dump()` must be called before the `render()`.  
 
-## ExampleRunner lifecycle
+## TestRunner lifecycle
 
 This example also includes an `example.yaml` manifest for
-`seedemu.utilities.ExampleRunner`. The manifest lets CI, agents, and developers
-drive the example through the same lifecycle:
+`seedemu.testing`. The manifest lets CI, agents, and developers drive the
+example through the same lifecycle:
 
 ```sh
-python seedemu/utilities/ExampleRunner.py clean examples/basic/A01_transit_as/example.yaml
-python seedemu/utilities/ExampleRunner.py compile examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
-python seedemu/utilities/ExampleRunner.py build examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
-python seedemu/utilities/ExampleRunner.py up examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
-python seedemu/utilities/ExampleRunner.py probe examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
-python seedemu/utilities/ExampleRunner.py down examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
+python seedemu/testing/cli.py clean examples/basic/A01_transit_as/example.yaml
+python seedemu/testing/cli.py compile examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
+python seedemu/testing/cli.py build examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
+python seedemu/testing/cli.py up examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
+python seedemu/testing/cli.py probe examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
+python seedemu/testing/cli.py down examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
 ```
 
 The full lifecycle can be run with:
 
 ```sh
-python seedemu/utilities/ExampleRunner.py all examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
+python seedemu/testing/cli.py all examples/basic/A01_transit_as/example.yaml --artifact-dir ci-artifacts/a01
 ```
 
 The runtime probes check that AS2 is actually providing transit between the
