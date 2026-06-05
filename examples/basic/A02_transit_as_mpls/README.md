@@ -38,7 +38,7 @@ mpls = Mpls()
 Unlike OSPF and IBGP, MPLS needs to be explicitly enabled for an autonomous system. This can be done by `Mpls::enableOn`:
 
 ```python
-mpls.enableOn(150)
+mpls.enableOn(2)
 ```
 
 The `enableOn` call takes on parameter, the ASN to enable MPLS on.
@@ -46,10 +46,10 @@ The `enableOn` call takes on parameter, the ASN to enable MPLS on.
 Here, only `r1` and `r4` are edge routers; thus, IBGP session will only be set up between them. `r2` and `r3` will only participate in OSPF and LDP. The topology looks like this:
 
 ```
-       |  AS150's MPLS backbone                         |
+       |  AS2's MPLS backbone                           |
        |          ____________ ibgp ___________         |
        |         /                             \        |
-as151 -|- as150_r1 -- as150_r2 -- as150_r3 -- as150_r4 -|- as152 
+as151 -|- as2_r1 -- as2_r2 -- as2_r3 -- as2_r4 -|- as152
        |                                                |
 ```
 
@@ -58,10 +58,10 @@ Since `r2` and `r3` don't carry the tables from AS151 and AS152, traceroute will
 ```
 HOST: 0e58e675b98b Loss%   Snt   Last   Avg  Best  Wrst StDev
  1.|-- 10.152.0.254  0.0%    10    0.1   0.1   0.1   0.1   0.0
- 2.|-- 10.101.0.150  0.0%    10    0.1   0.1   0.1   0.2   0.0
+ 2.|-- 10.101.0.2    0.0%    10    0.1   0.1   0.1   0.2   0.0
  3.|-- ???          100.0    10    0.0   0.0   0.0   0.0   0.0
  4.|-- ???          100.0    10    0.0   0.0   0.0   0.0   0.0
- 5.|-- 10.150.0.254  0.0%    10    0.1   0.1   0.1   0.2   0.0
+ 5.|-- 10.2.0.254    0.0%    10    0.1   0.1   0.1   0.2   0.0
  6.|-- 10.100.0.151  0.0%    10    0.3   0.2   0.1   0.3   0.1
  7.|-- 10.151.0.71   0.0%    10    0.2   0.2   0.1   0.3   0.0
 ```
@@ -81,3 +81,36 @@ listening on net1, link-type EN10MB (Ethernet), capture size 262144 bytes
 4 packets received by filter
 0 packets dropped by kernel
 ```
+
+## Standardized ExampleRunner lifecycle
+
+This example also includes an `example.yaml` manifest so it can be compiled,
+built, started, probed, tested, and stopped by `seedemu.utilities.ExampleRunner`.
+Run these commands from the repository root:
+
+```sh
+python seedemu/utilities/ExampleRunner.py clean examples/basic/A02_transit_as_mpls/example.yaml
+python seedemu/utilities/ExampleRunner.py compile examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/utilities/ExampleRunner.py build examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/utilities/ExampleRunner.py up examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/utilities/ExampleRunner.py probe examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/utilities/ExampleRunner.py test examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+python seedemu/utilities/ExampleRunner.py down examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+```
+
+The full lifecycle can also be run with:
+
+```sh
+python seedemu/utilities/ExampleRunner.py all examples/basic/A02_transit_as_mpls/example.yaml --artifact-dir ci-artifacts/a02-transit-as-mpls
+```
+
+The manifest uses declarative probes for simple runtime checks:
+
+- AS151 fetches the AS152 web service through AS2.
+- AS152 fetches the AS151 web service through AS2.
+- AS151 can ping AS152 through AS2.
+
+The `test_runtime.py` program demonstrates a custom test for cases where YAML
+would become awkward. It checks the same end-to-end reachability and also
+verifies that the AS2 transit routers have MPLS/LDP configuration files for
+the expected internal links.
