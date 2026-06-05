@@ -13,6 +13,8 @@ can all execute in the same way.
 
 - `sample_example.py`: standardized SEED Emulator example entrypoint.
 - `example.yaml`: metadata consumed by `ExampleRunner`.
+- `test_runtime.py`: custom runtime test program used when checks are easier
+  to express in Python than YAML.
 - `output/`: generated Docker compiler output, removed by the clean command.
 
 ## Standard Arguments
@@ -45,6 +47,7 @@ python seedemu/utilities/ExampleRunner.py compile examples/sample/example.yaml -
 python seedemu/utilities/ExampleRunner.py build examples/sample/example.yaml --artifact-dir ci-artifacts/sample
 python seedemu/utilities/ExampleRunner.py up examples/sample/example.yaml --artifact-dir ci-artifacts/sample
 python seedemu/utilities/ExampleRunner.py probe examples/sample/example.yaml --artifact-dir ci-artifacts/sample
+python seedemu/utilities/ExampleRunner.py test examples/sample/example.yaml --artifact-dir ci-artifacts/sample
 python seedemu/utilities/ExampleRunner.py down examples/sample/example.yaml --artifact-dir ci-artifacts/sample
 ```
 
@@ -74,6 +77,24 @@ The probe stage performs cross-AS reachability checks:
 These probes demonstrate the kind of declarative runtime checks that can be
 shared by CI and agents without writing custom Python test code for every
 example.
+
+The test stage runs custom programs listed in `test_programs`. This sample uses
+`test_runtime.py` to perform the same kind of runtime validation in Python. That
+is useful when the success condition needs loops, tables, richer parsing, or
+domain-specific logic that would make `example.yaml` hard to read.
+
+When `ExampleRunner` starts a test program, it provides these environment
+variables:
+
+- `EXAMPLE_RUNNER_EXAMPLE_ID`: stable ID from `example.yaml`.
+- `EXAMPLE_RUNNER_EXAMPLE_DIR`: absolute path to this example folder.
+- `EXAMPLE_RUNNER_MANIFEST`: absolute path to `example.yaml`.
+- `EXAMPLE_RUNNER_COMPOSE_FILE`: absolute path to the generated compose file.
+- `EXAMPLE_RUNNER_ARTIFACT_DIR`: artifact folder, if one was provided.
+
+The custom test exits with `0` on success and nonzero on failure. Its stdout and
+stderr are captured under the artifact directory, and the runner also writes
+`test-summary.json`.
 
 ## Notes
 

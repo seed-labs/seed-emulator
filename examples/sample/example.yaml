@@ -61,3 +61,8 @@ probes:
     count: 3
     retries: 10
     interval: 3
+
+test_programs:
+  - name: sample custom runtime validation
+    script: test_runtime.py
+    timeout: 180

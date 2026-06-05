@@ -151,12 +151,17 @@ class ExampleRunner:
 
         return self.__run_probes("probe", self.__manifest.get("probes", []))
 
+    def test(self) -> int:
+        """Run custom runtime test programs declared under test_programs."""
+
+        return self.__run_test_programs(self.__manifest.get("test_programs", []))
+
     def all(self) -> int:
-        """Run clean, compile, build, up, probe, and down."""
+        """Run clean, compile, build, up, probe, test, and down."""
 
         status = 0
         try:
-            for step in (self.clean, self.compile, self.build, self.up, self.probe):
+            for step in (self.clean, self.compile, self.build, self.up, self.probe, self.test):
                 status = step()
                 if status != 0:
                     break
@@ -200,6 +205,42 @@ class ExampleRunner:
         self.__write_json("{}-summary.json".format(stage), {"results": results, "failures": failures})
         if failures:
             self.__log("{} failures: {}".format(stage, ", ".join(failures)))
+            return 1
+        return 0
+
+    def __run_test_programs(self, tests: Sequence[Dict[str, Any]]) -> int:
+        failures = []
+        results = []
+        for test in tests:
+            name = str(test["name"])
+            timeout = int(test.get("timeout", 300))
+            env = self.__test_env(test.get("env", {}))
+            cmd = self.__test_command(test)
+            result = self.__run_command(
+                "test-{}".format(self.__slug(name)),
+                cmd,
+                cwd=self.__example_dir,
+                env=env,
+                timeout=timeout,
+            )
+            expected = int(test.get("expect_exit", 0))
+            status = "passed" if result.returncode == expected else "failed"
+            message = "exit {}, expected {}".format(result.returncode, expected)
+            self.__log("{} {}: {}".format(status, name, message))
+            item = {
+                "name": name,
+                "status": status,
+                "exit": result.returncode,
+                "expected_exit": expected,
+                "message": message,
+            }
+            results.append(item)
+            if status == "failed" and test.get("required", True):
+                failures.append(name)
+
+        self.__write_json("test-summary.json", {"results": results, "failures": failures})
+        if failures:
+            self.__log("test failures: {}".format(", ".join(failures)))
             return 1
         return 0
 
@@ -465,6 +506,8 @@ class ExampleRunner:
             self.__validate_probe(probe)
         for probe in self.__manifest.get("runtime", {}).get("readiness", []):
             self.__validate_probe(probe)
+        for test in self.__manifest.get("test_programs", []):
+            self.__validate_test_program(test)
 
     @staticmethod
     def __validate_probe(probe: Dict[str, Any]) -> None:
@@ -488,11 +531,32 @@ class ExampleRunner:
                 "probe {} missing fields: {}".format(probe.get("name", "<unnamed>"), ", ".join(missing))
             )
 
+    def __validate_test_program(self, test: Dict[str, Any]) -> None:
+        if "name" not in test:
+            raise ExampleRunnerError("each test program must define name")
+        if "script" not in test and "command" not in test:
+            raise ExampleRunnerError(
+                "test program {} must define script or command".format(test.get("name", "<unnamed>"))
+            )
+        if "script" in test:
+            script = self.__resolve_example_path(test["script"])
+            if not script.is_file():
+                raise ExampleRunnerError("test program script does not exist: {}".format(script))
+
     def __resolve_example_path(self, value: Any) -> Path:
         path = Path(str(value))
         if path.is_absolute():
             return path
         return (self.__example_dir / path).resolve()
+
+    def __test_command(self, test: Dict[str, Any]) -> List[str]:
+        if "command" in test:
+            return self.__coerce_command(test["command"])
+
+        script = self.__resolve_example_path(test["script"])
+        cmd = [sys.executable, str(script)]
+        cmd.extend(str(arg) for arg in test.get("args", []))
+        return cmd
 
     def __assert_inside_example_dir(self, target: Path) -> None:
         base = self.__example_dir.resolve()
@@ -537,6 +601,20 @@ class ExampleRunner:
     @staticmethod
     def __merged_env(extra: Dict[str, Any]) -> Dict[str, str]:
         env = dict(os.environ)
+        env.update({str(k): str(v) for k, v in extra.items()})
+        return env
+
+    def __test_env(self, extra: Dict[str, Any]) -> Dict[str, str]:
+        env = self.__docker_env()
+        env.update(
+            {
+                "EXAMPLE_RUNNER_EXAMPLE_ID": self.example_id(),
+                "EXAMPLE_RUNNER_EXAMPLE_DIR": str(self.__example_dir),
+                "EXAMPLE_RUNNER_MANIFEST": str(self.__manifest_path),
+                "EXAMPLE_RUNNER_COMPOSE_FILE": str(self.compose_file()),
+                "EXAMPLE_RUNNER_ARTIFACT_DIR": str(self.__artifact_dir or ""),
+            }
+        )
         env.update({str(k): str(v) for k, v in extra.items()})
         return env
 
@@ -586,7 +664,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Run a standardized SEED Emulator example.")
     parser.add_argument(
         "command",
-        choices=["clean", "compile", "build", "up", "readiness", "probe", "down", "all"],
+        choices=["clean", "compile", "build", "up", "readiness", "probe", "test", "down", "all"],
     )
     parser.add_argument("manifest", type=Path, help="Path to an example.yaml file.")
     parser.add_argument("--artifact-dir", type=Path, help="Optional directory for command logs and summaries.")
@@ -600,6 +678,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "up": runner.up,
         "readiness": runner.readiness,
         "probe": runner.probe,
+        "test": runner.test,
         "down": runner.down,
         "all": runner.all,
     }
