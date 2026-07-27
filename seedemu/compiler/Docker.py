@@ -330,8 +330,8 @@ DockerCompilerFileTemplates['seedemu_eth_explorer'] = """\
             - CL_HOST={cl_host}
         networks:
             - beacon-network
-            - {beaconNetwork}
-            - {gEthNetwork}
+            - {clNetwork}
+            - {elNetwork}
 
     seedemu-ethexplorer-web:
         image: {clientWebImage}
@@ -362,8 +362,8 @@ DockerCompilerFileTemplates['seedemu_eth_explorer'] = """\
             - {clientPort}:5000/tcp
         networks:
             - beacon-network
-            - {beaconNetwork}
-            - {gEthNetwork}
+            - {clNetwork}
+            - {elNetwork}
 """
 
 DockerCompilerFileTemplates['seedemu_eth_explorer_net'] = """\
@@ -1043,6 +1043,57 @@ class Docker(Compiler):
           if net.getType() == NetworkType.Bridge: net_prefix = ''
           return '{}{}'.format(net_prefix, net.getName())
 
+    def _getEthExplorerEndpoints(self, registry) -> Tuple[str, str, str, str]:
+        """!
+        @brief Find a complete execution/consensus endpoint pair for EthExplorer.
+
+        Endpoints are paired by Ethereum chain name and must be reachable through
+        a local network interface.
+        """
+        chains = {}
+
+        for ((_, type, _), node) in registry.getAll().items():
+            if type != 'hnode':
+                continue
+
+            labels = node.getLabel()
+            if labels.get('ethereum.consensus') != 'POS':
+                continue
+
+            chain_name = labels.get('ethereum.chain_name')
+            if not chain_name:
+                continue
+
+            provides_execution = labels.get('ethereum.client.execution') == 'true'
+            provides_consensus = labels.get('ethereum.client.consensus') == 'true'
+            if not provides_execution and not provides_consensus:
+                continue
+
+            interface = next((
+                iface for iface in node.getInterfaces()
+                if iface.getNet().getType() == NetworkType.Local
+            ), None)
+            if interface is None:
+                continue
+
+            endpoint = (
+                str(interface.getAddress()),
+                self._getRealNetName(interface.getNet())
+            )
+            chain = chains.setdefault(str(chain_name), {})
+            if provides_execution and 'execution' not in chain:
+                chain['execution'] = endpoint
+            if provides_consensus and 'consensus' not in chain:
+                chain['consensus'] = endpoint
+
+        for chain in chains.values():
+            if 'execution' in chain and 'consensus' in chain:
+                el_host, el_network = chain['execution']
+                cl_host, cl_network = chain['consensus']
+                return el_host, cl_host, el_network, cl_network
+
+        return '', '', '', ''
+
     def _getComposeServicePortList(self, node: Node) -> str:
         """!
         @brief Computes the 'ports:' section of the service in docker-compose.yml.
@@ -1464,9 +1515,6 @@ class Docker(Compiler):
 
         self._groupSoftware(emulator)
 
-        el_host = cl_host = ''
-        beaconNetwork = gEthNetwork = ''
-
         for ((scope, type, name), obj) in registry.getAll().items():
             if type == 'net':
                 self._log('creating network: {}/{}...'.format(scope, name))
@@ -1484,19 +1532,6 @@ class Docker(Compiler):
             if type == 'hnode':
                 self._log('compiling host node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
-
-                if el_host and cl_host:
-                    continue
-
-                ip = str(obj.getInterfaces()[0].getAddress())
-                name = obj.getDisplayName() if obj.getDisplayName() is not None else obj.getName()
-                net = self._getRealNetName(obj.getInterfaces()[0].getNet())
-                if "-Beacon-" in name and cl_host == "":
-                    cl_host = ip
-                    gEthNetwork = net
-                elif "-Geth-" in name and el_host == "":
-                    el_host = ip
-                    beaconNetwork = net
 
             if type == 'rs':
                 self._log('compiling rs node for {}...'.format(name))
@@ -1517,13 +1552,17 @@ class Docker(Compiler):
         if self.__ether_view_enabled:
             self._log('enabling seedemu-eth-explorer...')
 
+            el_host, cl_host, el_network, cl_network = self._getEthExplorerEndpoints(registry)
+            if not el_host or not cl_host:
+                self._log('no complete PoS execution/consensus endpoint pair found for EthExplorer.')
+
             self.__services += DockerCompilerFileTemplates['seedemu_eth_explorer'].format(
                 clientWebImage=SEEDEMU_ETH_EXPLORER_WEB_IMAGE,
                 clientBackendImage=SEEDEMU_ETH_EXPLORER_BACKEND_IMAGE,
                 cl_host=cl_host,
                 el_host=el_host,
-                beaconNetwork=beaconNetwork,
-                gEthNetwork=gEthNetwork,
+                clNetwork=cl_network,
+                elNetwork=el_network,
                 clientPort=self.__ether_view_port
             )
             self.__services += '\n'

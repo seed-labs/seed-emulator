@@ -2,12 +2,14 @@ from __future__ import annotations
 from seedemu.core import Node, Server, BaseSystem
 from .EthEnum import *
 from .EthUtil import *
-from typing import List
+from typing import List, Set
 from seedemu.services.EthereumService import *
 from .EthTemplates import EthServerFileTemplates, GethCommandTemplates
 from .EthTemplates.LighthouseCommandTemplates import *
 
 ETH_LABEL_META = 'ethereum.{key}'
+ETH_CLIENT_ROLE_EXECUTION = 'execution'
+ETH_CLIENT_ROLE_CONSENSUS = 'consensus'
 
 class EthereumServer(Server):
     """!
@@ -110,6 +112,12 @@ class EthereumServer(Server):
                 accounts.append(account.address)
             self._geth_options['unlock'] = GethCommandTemplates['unlock'].format(accounts=', '.join(accounts))
         self._geth_start_command = GethCommandTemplates['base'].format(node_id=self._id, chain_id=self._blockchain.getChainId(), datadir=self._data_dir, syncmode=self._syncmode.value, snapshot=self._snapshot, allow_insecure_unlock="" if self._consensus_mechanism == ConsensusMechanism.POS else "--allow-insecure-unlock", option=self._geth_options)
+
+    def getClientRoles(self) -> Set[str]:
+        """!
+        @brief Get the Ethereum client roles provided by this server.
+        """
+        return set()
         
     def install(self, node: Node, eth: EthereumService):
         """!
@@ -126,6 +134,8 @@ class EthereumServer(Server):
         node.setLabel(ETH_LABEL_META.format(key='consensus'), self._consensus_mechanism.value)
         node.setLabel(ETH_LABEL_META.format(key='chain_name'), self._blockchain.getChainName())
         node.setLabel(ETH_LABEL_META.format(key='chain_id'), self._blockchain.getChainId())
+        for client_role in sorted(self.getClientRoles()):
+            node.setLabel(ETH_LABEL_META.format(key='client.{}'.format(client_role)), 'true')
         
         if self.isBootNode(): self._role.append("bootnode")
         if self.isStartMiner(): self._role.append("miner")
@@ -604,6 +614,9 @@ class PoSServer(EthereumServer):
     __beacon_setup_http_port: int
     __beacon_peer_counts:int
 
+    def getClientRoles(self) -> Set[str]:
+        return {ETH_CLIENT_ROLE_EXECUTION, ETH_CLIENT_ROLE_CONSENSUS}
+
     def __init__(self, id: int, blockchain:Blockchain):
         """!
         @brief Create new eth server.
@@ -772,6 +785,9 @@ class PoSServer(EthereumServer):
 
 
 class PoSGethServer(EthereumServer):
+    def getClientRoles(self) -> Set[str]:
+        return {ETH_CLIENT_ROLE_EXECUTION}
+
     def __init__(self, id: int, blockchain:Blockchain):
         """!
         @brief Create new geth server.
@@ -791,6 +807,10 @@ class PoSGethServer(EthereumServer):
         node.setFile('/tmp/jwt.hex', '0xae7177335e3d4222160e08cecac0ace2cecce3dc3910baada14e26b11d2009fc')
 class PoSBeaconServer(EthereumServer):
     __beacon_peer_counts:int
+
+    def getClientRoles(self) -> Set[str]:
+        return {ETH_CLIENT_ROLE_CONSENSUS}
+
     def __init__(self, id: int, blockchain:Blockchain):
 
         """!
