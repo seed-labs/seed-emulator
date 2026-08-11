@@ -556,6 +556,14 @@ def build_topology(topology: str):
 def get_topology_build_cmd(topology: str) -> str:
     """返回拓扑的编译命令。"""
     base = "/home/zvanadium/seed-emulator"
+    from generator.topology.registry import is_declarative_topology, topology_id_from_name
+
+    if is_declarative_topology(topology):
+        topology_id = topology_id_from_name(topology)
+        return (
+            f"cd {base}/benchmarks && python3 -m generator.topology.cli "
+            f"compile --topology-id {topology_id}"
+        )
     if topology == "B00_mini_internet":
         return (
             f"cd {base} && python3 "
@@ -586,6 +594,14 @@ def get_topology_build_cmd(topology: str) -> str:
 
 def get_topology_path(topology: str) -> str:
     """返回拓扑的 output 目录路径。"""
+    from generator.topology.registry import (
+        is_declarative_topology,
+        output_dir,
+        topology_id_from_name,
+    )
+
+    if is_declarative_topology(topology):
+        return str(output_dir(topology_id_from_name(topology)))
     if topology == "B00_mini_internet":
         return "/home/zvanadium/seed-emulator/benchmarks/generated/mini_internet/output"
     elif topology == "B00_mini_internet_firewall":
@@ -600,6 +616,18 @@ def get_topology_path(topology: str) -> str:
         return "/home/zvanadium/seed-emulator/benchmarks/generated/random_complex/output"
     else:
         return "/home/zvanadium/seed-emulator/benchmarks/generated/mini_internet/output"
+
+
+def get_topology_compose_command(topology: str):
+    """Return a collision-safe Compose argv prefix for a topology."""
+    from generator.topology.registry import is_declarative_topology, topology_id_from_name
+
+    if is_declarative_topology(topology):
+        topology_id = topology_id_from_name(topology)
+        return ["docker", "compose", "-p", f"decl_{topology_id}"]
+    if topology == "RANDOM_COMPLEX_INTERNET":
+        return ["docker", "compose"]
+    return ["docker-compose"]
 
 
 def _docker_exec(container: str, *args: str, timeout: int = 5) -> str:
@@ -717,11 +745,7 @@ def wait_for_bgp_convergence(max_wait: int = 120):
 def wait_for_topology_containers(topology: str, max_wait: int = 120) -> bool:
     """Require every Compose service container to exist and be running."""
     topo_path = get_topology_path(topology)
-    compose = (
-        ["docker", "compose"]
-        if topology == "RANDOM_COMPLEX_INTERNET"
-        else ["docker-compose"]
-    )
+    compose = get_topology_compose_command(topology)
     try:
         service_result = subprocess.run(
             compose + ["config", "--services"],
@@ -805,6 +829,8 @@ def start_topology(topology: str):
     """启动拓扑。"""
     print(f"  启动拓扑: {topology}")
     topo_path = get_topology_path(topology)
+    from generator.topology.registry import is_declarative_topology
+
     if topology == "RANDOM_COMPLEX_INTERNET":
         build_compose_services_serially(
             topo_path,
@@ -829,6 +855,12 @@ def start_topology(topology: str):
                 verify_images=True,
             )
             run_checked(up_command, timeout=600)
+    elif is_declarative_topology(topology):
+        compose = " ".join(get_topology_compose_command(topology))
+        run_checked(
+            f"cd {topo_path} && {compose} up -d",
+            timeout=600,
+        )
     elif topology in (
         "B00_mini_internet_firewall",
         "B00_network_software_suite",
@@ -860,11 +892,7 @@ def start_topology(topology: str):
 def recreate_topology_for_isolation(topology: str) -> bool:
     """Destroy and recreate containers so Agent side effects cannot leak."""
     topo_path = get_topology_path(topology)
-    compose = (
-        "docker compose"
-        if topology == "RANDOM_COMPLEX_INTERNET"
-        else "docker-compose"
-    )
+    compose = " ".join(get_topology_compose_command(topology))
     marker = "BENCHMARK_ISOLATION_RECREATED"
     output = run(
         f"cd {topo_path} && "

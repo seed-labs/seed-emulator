@@ -126,7 +126,9 @@ def validate_scenario_spec(spec: ScenarioSpec) -> None:
     ):
         raise ValueError("generated root-cause fields must be complete")
     template = get_template(spec.template_id)
-    if template.topology != spec.topology:
+    if template.topology != spec.topology and not spec.topology.startswith(
+        "DECLARATIVE_"
+    ):
         raise ValueError("scenario topology differs from its audited template")
     if template.fault_type != spec.fault_type:
         raise ValueError("scenario fault type differs from its audited template")

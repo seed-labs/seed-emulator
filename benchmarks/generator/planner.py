@@ -23,6 +23,10 @@ from generator.templates import TEMPLATES, get_template
 SUITE_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
 
 
+def _is_declarative(topology: str) -> bool:
+    return topology.startswith("DECLARATIVE_")
+
+
 def validate_job(job: GenerationJob) -> None:
     if not SUITE_ID_PATTERN.fullmatch(job.suite_id):
         raise ValueError(
@@ -38,10 +42,19 @@ def validate_job(job: GenerationJob) -> None:
         )
     for template_id in job.template_ids:
         get_template(template_id)
-    if job.topology and not any(
-        item.topology == job.topology for item in TEMPLATES.values()
-    ):
-        raise ValueError(f"no audited templates for topology={job.topology}")
+    if job.topology:
+        if _is_declarative(job.topology):
+            from generator.topology.bindings import TEMPLATE_COMPONENTS
+            from generator.topology.registry import topology_id_from_name
+
+            topology_id_from_name(job.topology)
+            unsupported = set(job.template_ids) - set(TEMPLATE_COMPONENTS)
+            if unsupported:
+                raise ValueError(
+                    f"templates lack declarative bindings: {sorted(unsupported)}"
+                )
+        elif not any(item.topology == job.topology for item in TEMPLATES.values()):
+            raise ValueError(f"no audited templates for topology={job.topology}")
 
 
 def _seed_number(master_seed: str) -> int:
@@ -81,6 +94,10 @@ def plan_suite(
     validate_job(job)
     if job.template_ids:
         selected_ids = list(job.template_ids)
+    elif job.topology and _is_declarative(job.topology):
+        from generator.topology.bindings import TEMPLATE_COMPONENTS
+
+        selected_ids = sorted(TEMPLATE_COMPONENTS)
     elif job.topology:
         selected_ids = [
             key
@@ -93,7 +110,7 @@ def plan_suite(
             for key, value in sorted(TEMPLATES.items())
             if value.default_enabled
         ]
-    if job.topology:
+    if job.topology and not _is_declarative(job.topology):
         selected_ids = [
             item
             for item in selected_ids
@@ -103,6 +120,14 @@ def plan_suite(
         raise ValueError("generation job selected no fault templates")
 
     seed = _seed_number(job.master_seed)
+    capability_manifest = None
+    if _is_declarative(job.topology):
+        from generator.topology.bindings import load_capability_manifest
+        from generator.topology.registry import topology_id_from_name
+
+        capability_manifest = load_capability_manifest(
+            topology_id_from_name(job.topology)
+        )
     rotation = seed % len(selected_ids)
     selected_ids = selected_ids[rotation:] + selected_ids[:rotation]
     counters = {template_id: 0 for template_id in selected_ids}
@@ -120,10 +145,24 @@ def plan_suite(
         sequence = counters[template_id]
         counters[template_id] += 1
         attempts += 1
-        parameters = template.candidate(sequence, seed)
+        if capability_manifest is not None:
+            from generator.topology.bindings import (
+                TEMPLATE_COMPONENTS,
+                bind_fault_component,
+            )
+
+            parameters = bind_fault_component(
+                capability_manifest,
+                TEMPLATE_COMPONENTS[template_id],
+                sequence,
+                job.master_seed,
+            )
+        else:
+            parameters = template.candidate(sequence, seed)
+        scenario_topology = job.topology or template.topology
         fingerprint = scenario_fingerprint(
             template_id,
-            template.topology,
+            scenario_topology,
             parameters,
         )
         if fingerprint in fingerprints:
@@ -193,7 +232,7 @@ def plan_suite(
                 description=(
                     f"Generated deterministic case: {template.description}"
                 ),
-                topology=template.topology,
+                topology=scenario_topology,
                 fault_type=template.fault_type,
                 template_id=template_id,
                 parameters=parameters,

@@ -1,0 +1,13 @@
+{
+  "asset_count": 6,
+  "compose_service_count": 8,
+  "connectivity_verified": true,
+  "kept_running": false,
+  "source_container": "as64512h-host0-10.0.0.3",
+  "started_at": "2026-08-12T04:10:07.471903",
+  "target_container": "as64514h-host0-10.0.2.3",
+  "target_ip": "10.0.2.3",
+  "topology_fingerprint": "bea998b67dacaeaa7dafc1819d24ae007bbc554f7f4aa5ecd5b0019c28943e97",
+  "topology_id": "small_ring",
+  "topology_name": "DECLARATIVE_small_ring"
+}

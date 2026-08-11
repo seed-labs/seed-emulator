@@ -40,6 +40,16 @@ def cleanup_environment():
 
 def build_topology(topology: str):
     """编译拓扑。"""
+    from generator.topology.registry import is_declarative_topology, topology_id_from_name
+
+    if is_declarative_topology(topology):
+        topology_id = topology_id_from_name(topology)
+        run(
+            "cd /home/zvanadium/seed-emulator/benchmarks && "
+            f"python3 -m generator.topology.cli compile --topology-id {topology_id}",
+            timeout=600,
+        )
+        return
     if topology == "RANDOM_COMPLEX_INTERNET":
         run("cd /home/zvanadium/seed-emulator && python3 benchmarks/topologies/random_complex_internet.py", timeout=300)
         return
@@ -59,6 +69,21 @@ def build_topology(topology: str):
 
 def start_topology(topology: str):
     """启动拓扑。"""
+    from generator.topology.registry import (
+        is_declarative_topology,
+        output_dir,
+        topology_id_from_name,
+    )
+
+    if is_declarative_topology(topology):
+        topology_id = topology_id_from_name(topology)
+        path = output_dir(topology_id)
+        run(
+            f"cd {path} && docker compose -p decl_{topology_id} up -d",
+            timeout=600,
+        )
+        time.sleep(30)
+        return
     if topology == "RANDOM_COMPLEX_INTERNET":
         run("cd /home/zvanadium/seed-emulator/benchmarks/generated/random_complex/output && docker compose up -d", timeout=600)
         time.sleep(30)

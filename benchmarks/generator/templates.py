@@ -924,6 +924,21 @@ def validate_template_parameters(spec: ScenarioSpec) -> None:
     """Validate typed parameters independently of command rendering."""
     parameters = spec.parameters
     template_id = spec.template_id
+    if spec.topology.startswith("DECLARATIVE_"):
+        from generator.topology.bindings import (
+            TEMPLATE_COMPONENTS,
+            load_capability_manifest,
+            validate_fault_binding,
+        )
+        from generator.topology.registry import topology_id_from_name
+
+        try:
+            component_id = TEMPLATE_COMPONENTS[template_id]
+        except KeyError as exc:
+            raise ValueError("template has no declarative topology binding") from exc
+        manifest = load_capability_manifest(topology_id_from_name(spec.topology))
+        validate_fault_binding(manifest, component_id, parameters)
+        return
     if template_id == "bird_wrong_asn":
         if parameters.get("container") not in BIRD_TARGETS:
             raise ValueError("bird_wrong_asn target is not in the audited set")
