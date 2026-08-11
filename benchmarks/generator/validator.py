@@ -10,6 +10,7 @@ from generator.models import (
     ScenarioSpec,
     SuiteManifest,
     VALID_DIFFICULTIES,
+    VALID_FAULT_RELATIONSHIPS,
     VALID_TRACKS,
     scenario_fingerprint,
 )
@@ -23,6 +24,7 @@ from generator.templates import (
 
 SCENARIO_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*_01$")
 CONTAINER_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
+COMPONENT_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
 
 FORBIDDEN_COMMAND_MARKERS = (
     "docker rm",
@@ -34,6 +36,33 @@ FORBIDDEN_COMMAND_MARKERS = (
     "sudo ",
     "curl ",
     "wget ",
+)
+
+FAULT_CHECK_MUTATION_MARKERS = (
+    "sed -i",
+    "sed -e",
+    "iptables -a",
+    "iptables -d",
+    "iptables -f",
+    "iptables -i",
+    "iptables -p",
+    "ip addr add",
+    "ip addr del",
+    "ip link add",
+    "ip link del",
+    "ip link set",
+    "tc qdisc add",
+    "tc qdisc del",
+    "tc qdisc replace",
+    "birdc configure",
+    "docker start",
+    "docker stop",
+    "docker restart",
+    "docker network connect",
+    "docker network disconnect",
+    "vtysh -c 'configure",
+    " > ",
+    " >> ",
 )
 
 
@@ -67,6 +96,10 @@ def validate_scenario_spec(spec: ScenarioSpec) -> None:
         raise ValueError(f"invalid track={spec.benchmark_track}")
     if spec.difficulty not in VALID_DIFFICULTIES:
         raise ValueError(f"invalid difficulty={spec.difficulty}")
+    if spec.fault_relationship not in VALID_FAULT_RELATIONSHIPS:
+        raise ValueError(
+            f"invalid fault_relationship={spec.fault_relationship}"
+        )
     if spec.main_score_eligible:
         raise ValueError("generated scenarios must be quarantined before promotion")
     if not spec.quarantine_reason.strip():
@@ -107,6 +140,193 @@ def validate_scenario_spec(spec: ScenarioSpec) -> None:
         raise ValueError("scenario fingerprint does not match its content")
 
     rendered = render_scenario(spec)
+    if not spec.expected_root_causes:
+        raise ValueError("generated scenario requires expected_root_causes")
+    for root in spec.expected_root_causes:
+        if not all(
+            str(value).strip()
+            for value in (
+                root.category,
+                root.artifact,
+                root.faulty_value,
+                root.expected_value,
+            )
+        ):
+            raise ValueError("generated root cause fields must be complete")
+        if not root.target_container:
+            raise ValueError("generated root cause requires target containers")
+        if any(
+            target not in spec.repair_containers
+            for target in root.target_container
+        ):
+            raise ValueError("root cause escapes scenario repair scope")
+    if spec.fault_type == "multiple_faults":
+        if len(spec.expected_root_causes) < 2:
+            raise ValueError("multiple_faults requires at least two root causes")
+    elif len(spec.expected_root_causes) != 1:
+        raise ValueError("single-root fault type cannot declare multiple roots")
+    if spec.fault_relationship == "cascading":
+        if len(spec.expected_root_causes) != 1:
+            raise ValueError("cascading scenario must retain one primary root cause")
+        if len(spec.causal_chain) < 2:
+            raise ValueError("cascading scenario requires a causal chain")
+    elif spec.causal_chain:
+        raise ValueError("only cascading scenarios may declare a causal chain")
+
+    if bool(spec.fault_components) != bool(rendered.components):
+        raise ValueError("rendered and declared fault components differ")
+    if spec.fault_components:
+        count = len(spec.fault_components)
+        component_ids = [item.component_id for item in spec.fault_components]
+        if len(component_ids) != len(set(component_ids)):
+            raise ValueError("fault component ids must be unique")
+        if any(not COMPONENT_ID_PATTERN.fullmatch(item) for item in component_ids):
+            raise ValueError("invalid fault component id")
+        inject_orders = {item.inject_order for item in spec.fault_components}
+        cleanup_orders = {item.cleanup_order for item in spec.fault_components}
+        if inject_orders != set(range(count)):
+            raise ValueError("fault component inject_order must be contiguous")
+        if cleanup_orders != set(range(count)):
+            raise ValueError("fault component cleanup_order must be contiguous")
+        if any(
+            item.inject_order + item.cleanup_order != count - 1
+            for item in spec.fault_components
+        ):
+            raise ValueError("cleanup order must reverse injection order")
+        by_id = {item.component_id: item for item in spec.fault_components}
+        for item in spec.fault_components:
+            if not item.target_containers:
+                raise ValueError("fault component has no mutation target")
+            if any(
+                target not in spec.repair_containers
+                for target in item.target_containers
+            ):
+                raise ValueError("fault component escapes repair scope")
+            for dependency in item.depends_on:
+                if dependency not in by_id:
+                    raise ValueError("fault component dependency is unknown")
+                if by_id[dependency].inject_order >= item.inject_order:
+                    raise ValueError("fault component dependency order is invalid")
+        component_target_union = tuple(
+            dict.fromkeys(
+                target
+                for item in sorted(
+                    spec.fault_components,
+                    key=lambda component: component.inject_order,
+                )
+                for target in item.target_containers
+            )
+        )
+        if set(component_target_union) != set(spec.repair_containers):
+            raise ValueError("repair scope must equal fault component target union")
+        declared_roots = {
+            (
+                item.category,
+                tuple(item.target_container),
+                item.artifact,
+                item.faulty_value,
+                item.expected_value,
+            )
+            for item in spec.expected_root_causes
+        }
+        component_roots = {
+            (
+                item.category,
+                tuple(item.target_containers),
+                item.artifact,
+                item.faulty_value,
+                item.expected_value,
+            )
+            for item in rendered.components
+        }
+        if declared_roots != component_roots:
+            raise ValueError("component metadata differs from expected root causes")
+        declared_components = {
+            (
+                item.component_id,
+                item.category,
+                tuple(item.target_containers),
+                item.artifact,
+                item.inject_order,
+                item.cleanup_order,
+                tuple(item.depends_on),
+            )
+            for item in spec.fault_components
+        }
+        rendered_components = {
+            (
+                item.component_id,
+                item.category,
+                tuple(item.target_containers),
+                item.artifact,
+                item.inject_order,
+                item.cleanup_order,
+                tuple(item.depends_on),
+            )
+            for item in rendered.components
+        }
+        if declared_components != rendered_components:
+            raise ValueError("rendered component contract differs from manifest")
+        expected_inject = " && ".join(
+            item.inject_command
+            for item in sorted(
+                rendered.components,
+                key=lambda component: component.inject_order,
+            )
+        )
+        expected_cleanup = "; ".join(
+            item.cleanup_command
+            for item in sorted(
+                rendered.components,
+                key=lambda component: component.cleanup_order,
+            )
+        )
+        if rendered.inject_command != expected_inject:
+            raise ValueError("aggregate injection order differs from components")
+        if rendered.fix_command != expected_cleanup:
+            raise ValueError("aggregate cleanup order differs from components")
+        for component in rendered.components:
+            if any(
+                not command.strip() or "\n" in command or "\r" in command
+                for command in (
+                    component.inject_command,
+                    component.fault_check_command,
+                    component.cleanup_command,
+                )
+            ):
+                raise ValueError("component commands must be non-empty single lines")
+            check_lower = component.fault_check_command.lower()
+            matched = next(
+                (
+                    marker
+                    for marker in FAULT_CHECK_MUTATION_MARKERS
+                    if marker in check_lower
+                ),
+                None,
+            )
+            if matched:
+                raise ValueError(
+                    f"fault activation check is not read-only: {matched}"
+                )
+            if evaluate_verifier(
+                component.fault_verifier_kind,
+                component.fault_verifier_value,
+                "",
+            ):
+                raise ValueError("empty component evidence must never be active")
+            for command in (
+                component.inject_command,
+                component.fault_check_command,
+                component.cleanup_command,
+            ):
+                targets = _referenced_targets(command)
+                if not targets:
+                    raise ValueError("component command lacks explicit Docker target")
+                if any(target not in spec.repair_containers for target in targets):
+                    raise ValueError("component command escapes repair scope")
+    elif spec.fault_relationship != "single":
+        raise ValueError("non-single scenarios require auditable fault components")
+
     commands = {
         "inject": rendered.inject_command,
         "verify": rendered.verify_command,

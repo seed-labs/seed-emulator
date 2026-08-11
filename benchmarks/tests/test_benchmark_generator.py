@@ -17,10 +17,11 @@ from generator.models import GenerationJob, SuiteManifest  # noqa: E402
 from generator.planner import plan_suite  # noqa: E402
 from generator.runtime import scenario_class_from_spec  # noqa: E402
 from generator.storage import validate_manifest_file, write_manifest  # noqa: E402
-from generator.templates import render_scenario  # noqa: E402
+from generator.templates import TEMPLATES, render_scenario  # noqa: E402
 from generator.validator import validate_manifest, validate_scenario_spec  # noqa: E402
 import benchmark_cli as cli_module  # noqa: E402
 from benchmark_cli import can_reuse_topology_between_scenarios  # noqa: E402
+import scenarios.base as base_module  # noqa: E402
 
 
 snapshot = inspect_contracts(BENCHMARKS_DIR)
@@ -190,8 +191,11 @@ assert len({item.name for item in first.scenarios}) == 100
 assert len({item.fingerprint for item in first.scenarios}) == 100
 assert {item.template_id for item in first.scenarios} == {
     "bird_wrong_asn",
+    "cascading_network_bgp",
     "container_stopped",
     "dns_nameserver",
+    "dual_bgp_ospf",
+    "dual_dns_network",
     "ipv6_connected_route",
 }
 batches = agent.build_batches(first, batch_size=7)
@@ -214,10 +218,15 @@ with tempfile.TemporaryDirectory() as planning_directory:
 validate_manifest(random_suite)
 assert len(random_suite.scenarios) == 10
 assert {item.template_id for item in random_suite.scenarios} == {
-    "random_complex_transit_acl"
+    "random_complex_dual_bgp_acl",
+    "random_complex_transit_acl",
 }
-assert all(item.convergence_timeout == 240 for item in random_suite.scenarios)
-random_spec = random_suite.scenarios[0]
+assert all(item.convergence_timeout in {240, 300} for item in random_suite.scenarios)
+random_spec = next(
+    item
+    for item in random_suite.scenarios
+    if item.template_id == "random_complex_transit_acl"
+)
 random_rendered = render_scenario(random_spec)
 assert "iptables -I OUTPUT" in random_rendered.inject_command
 assert "SEED_RANDOM_COMPLEX_ACL" in random_rendered.fix_command
@@ -229,6 +238,94 @@ assert random_spec.repair_containers == (
 random_scenario = scenario_class_from_spec(random_spec)()
 assert random_scenario.check_verified("2 packets transmitted, 2 received, 0% packet loss")
 assert not random_scenario.check_verified("2 packets transmitted, 0 received, 100% packet loss")
+
+random_dual_spec = next(
+    item
+    for item in random_suite.scenarios
+    if item.template_id == "random_complex_dual_bgp_acl"
+)
+random_dual_rendered = render_scenario(random_dual_spec)
+assert random_dual_spec.fault_relationship == "independent"
+assert len(random_dual_spec.expected_root_causes) == 2
+assert len(random_dual_spec.fault_components) == 2
+assert [
+    item.component_id
+    for item in sorted(
+        random_dual_rendered.components,
+        key=lambda component: component.inject_order,
+    )
+] == ["random_bird_wrong_asn", "random_transit_acl"]
+assert "config_summary" not in random_dual_rendered.verify_command
+assert "iptables -C OUTPUT" in random_dual_rendered.components[1].fault_check_command
+
+dual_bgp_spec = next(
+    item for item in first.scenarios if item.template_id == "dual_bgp_ospf"
+)
+dual_bgp_rendered = render_scenario(dual_bgp_spec)
+assert dual_bgp_spec.fault_type == "multiple_faults"
+assert dual_bgp_spec.fault_relationship == "independent"
+assert len(dual_bgp_spec.expected_root_causes) == 2
+assert {item.category for item in dual_bgp_spec.expected_root_causes} == {
+    "wrong_asn",
+    "missing_ospf_adjacency",
+}
+assert [item.inject_order for item in dual_bgp_spec.fault_components] == [0, 1]
+assert [item.cleanup_order for item in dual_bgp_spec.fault_components] == [1, 0]
+assert dual_bgp_rendered.fix_command.startswith(
+    dual_bgp_rendered.components[1].cleanup_command
+)
+
+component_scenario = scenario_class_from_spec(dual_bgp_spec)()
+component_scenario._healthy_baseline_prepared = True
+component_calls = []
+original_base_status = base_module.run_with_status
+original_base_run = base_module.run
+original_runtime_sleep = __import__("generator.runtime", fromlist=["time"]).time.sleep
+runtime_module = __import__("generator.runtime", fromlist=["time"])
+try:
+    def component_status(command, timeout=120):
+        component_calls.append(("status", command, timeout))
+        for component in dual_bgp_rendered.components:
+            if command == component.fault_check_command:
+                return 0, component.fault_verifier_value
+        return 0, "injected"
+
+    def component_run(command, timeout=120):
+        component_calls.append(("run", command, timeout))
+        return ""
+
+    base_module.run_with_status = component_status
+    base_module.run = component_run
+    runtime_module.time.sleep = lambda _seconds: None
+    component_scenario.inject_fault()
+finally:
+    base_module.run_with_status = original_base_status
+    base_module.run = original_base_run
+    runtime_module.time.sleep = original_runtime_sleep
+assert [
+    command
+    for kind, command, _timeout in component_calls
+    if kind == "status"
+] == [
+    dual_bgp_rendered.components[0].inject_command,
+    dual_bgp_rendered.components[0].fault_check_command,
+    dual_bgp_rendered.components[1].inject_command,
+    dual_bgp_rendered.components[1].fault_check_command,
+]
+
+cascade_spec = next(
+    item
+    for item in first.scenarios
+    if item.template_id == "cascading_network_bgp"
+)
+assert cascade_spec.fault_relationship == "cascading"
+assert cascade_spec.causal_chain == (
+    "docker_network_disconnect",
+    "interface_removed",
+    "external_peer_unreachable",
+    "external_bgp_path_unusable",
+)
+assert len(cascade_spec.expected_root_causes) == 1
 
 for spec in first.scenarios:
     validate_scenario_spec(spec)
@@ -260,9 +357,63 @@ for spec in first.scenarios:
             "artifact": spec.diagnosis_artifact,
             "faulty_value": spec.diagnosis_faulty_value,
             "expected_value": spec.diagnosis_expected_value,
+            "root_causes": [
+                {
+                    "category": root.category,
+                    "target_container": list(root.target_container),
+                    "artifact": root.artifact,
+                    "faulty_value": root.faulty_value,
+                    "expected_value": root.expected_value,
+                }
+                for root in spec.expected_root_causes
+            ],
         }
     )
     assert score["correct"] is True
+
+bad_component = replace(
+    dual_bgp_spec.fault_components[1],
+    depends_on=("missing_component",),
+)
+invalid_dependency = replace(
+    dual_bgp_spec,
+    fault_components=(dual_bgp_spec.fault_components[0], bad_component),
+)
+try:
+    validate_scenario_spec(invalid_dependency)
+    raise AssertionError("unknown component dependency was accepted")
+except ValueError as exc:
+    assert "dependency" in str(exc)
+
+original_dual_template = TEMPLATES["dual_bgp_ospf"]
+try:
+    original_renderer = original_dual_template.renderer
+
+    def unsafe_check_renderer(parameters):
+        rendered = original_renderer(parameters)
+        unsafe_component = replace(
+            rendered.components[0],
+            fault_check_command=(
+                f"docker exec {parameters['container']} "
+                "sed -i 's/a/b/' /etc/bird/bird.conf"
+            ),
+        )
+        return replace(
+            rendered,
+            components=(unsafe_component, rendered.components[1]),
+        )
+
+    TEMPLATES["dual_bgp_ospf"] = replace(
+        original_dual_template,
+        renderer=unsafe_check_renderer,
+    )
+    try:
+        validate_scenario_spec(dual_bgp_spec)
+        raise AssertionError("mutating component activation check was accepted")
+    except ValueError as exc:
+        assert "not read-only" in str(exc)
+finally:
+    TEMPLATES["dual_bgp_ospf"] = original_dual_template
 
 invalid = replace(first.scenarios[0], fingerprint="0" * 64)
 try:

@@ -1,11 +1,12 @@
 {
-  "contract_sha256": "d65f0d4b907004a4cbb4ac51cf363cf6c2d067ee44bda51af607b088e2a7a684",
+  "contract_sha256": "10f7427514eba73704f6a888c55b095273507993c6fc8d9162c9fd43d4ef37a7",
   "enabled": true,
-  "generator_version": "1.0.0",
+  "generator_version": "2.0.0",
   "master_seed": "20260809",
   "scenarios": [
     {
       "benchmark_track": "robustness",
+      "causal_chain": [],
       "convergence_timeout": 240,
       "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a 100+ container topology",
       "diagnosis_artifact": "iptables OUTPUT chain",
@@ -15,6 +16,19 @@
         "as111brd-router0-10.111.0.254"
       ],
       "difficulty": "advanced",
+      "expected_root_causes": [
+        {
+          "artifact": "iptables OUTPUT chain",
+          "category": "randomized_transit_acl_shadowing",
+          "expected_value": "no matching REJECT rule",
+          "faulty_value": "REJECT 10.201.0.111 to 10.201.0.113 payload=56",
+          "target_container": [
+            "as111brd-router0-10.111.0.254"
+          ]
+        }
+      ],
+      "fault_components": [],
+      "fault_relationship": "single",
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
       "fingerprint": "7fdefe8ac67c9a45e825cdda345e222798a3833ac80d29c3efd926b83f2b7452",
@@ -41,6 +55,7 @@
     },
     {
       "benchmark_track": "robustness",
+      "causal_chain": [],
       "convergence_timeout": 240,
       "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a 100+ container topology",
       "diagnosis_artifact": "iptables OUTPUT chain",
@@ -50,6 +65,19 @@
         "as111brd-router0-10.111.0.254"
       ],
       "difficulty": "advanced",
+      "expected_root_causes": [
+        {
+          "artifact": "iptables OUTPUT chain",
+          "category": "randomized_transit_acl_shadowing",
+          "expected_value": "no matching REJECT rule",
+          "faulty_value": "REJECT 10.201.0.111 to 10.201.0.21 payload=120",
+          "target_container": [
+            "as111brd-router0-10.111.0.254"
+          ]
+        }
+      ],
+      "fault_components": [],
+      "fault_relationship": "single",
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
       "fingerprint": "72b8e46bcc17c4b088f9bf7b54769bf465bf08ba26d0a76bd11841337265d098",
@@ -76,6 +104,7 @@
     },
     {
       "benchmark_track": "robustness",
+      "causal_chain": [],
       "convergence_timeout": 240,
       "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a 100+ container topology",
       "diagnosis_artifact": "iptables OUTPUT chain",
@@ -85,6 +114,19 @@
         "as111brd-router0-10.111.0.254"
       ],
       "difficulty": "advanced",
+      "expected_root_causes": [
+        {
+          "artifact": "iptables OUTPUT chain",
+          "category": "randomized_transit_acl_shadowing",
+          "expected_value": "no matching REJECT rule",
+          "faulty_value": "REJECT 10.201.0.111 to 10.201.0.22 payload=120",
+          "target_container": [
+            "as111brd-router0-10.111.0.254"
+          ]
+        }
+      ],
+      "fault_components": [],
+      "fault_relationship": "single",
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
       "fingerprint": "de983543fe149ffb42eeda8fa5ca0515da99bbd97213e27b7a0768deec0434de",
@@ -111,6 +153,7 @@
     },
     {
       "benchmark_track": "robustness",
+      "causal_chain": [],
       "convergence_timeout": 240,
       "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a 100+ container topology",
       "diagnosis_artifact": "iptables OUTPUT chain",
@@ -120,6 +163,19 @@
         "as111brd-router0-10.111.0.254"
       ],
       "difficulty": "advanced",
+      "expected_root_causes": [
+        {
+          "artifact": "iptables OUTPUT chain",
+          "category": "randomized_transit_acl_shadowing",
+          "expected_value": "no matching REJECT rule",
+          "faulty_value": "REJECT 10.201.0.111 to 10.201.0.24 payload=120",
+          "target_container": [
+            "as111brd-router0-10.111.0.254"
+          ]
+        }
+      ],
+      "fault_components": [],
+      "fault_relationship": "single",
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
       "fingerprint": "4147c096f08466261f4240b174d7cb2485b1dd2838270903772a0586ca0fb952",
@@ -146,6 +202,7 @@
     },
     {
       "benchmark_track": "robustness",
+      "causal_chain": [],
       "convergence_timeout": 240,
       "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a 100+ container topology",
       "diagnosis_artifact": "iptables OUTPUT chain",
@@ -155,6 +212,19 @@
         "as111brd-router0-10.111.0.254"
       ],
       "difficulty": "advanced",
+      "expected_root_causes": [
+        {
+          "artifact": "iptables OUTPUT chain",
+          "category": "randomized_transit_acl_shadowing",
+          "expected_value": "no matching REJECT rule",
+          "faulty_value": "REJECT 10.201.0.111 to 10.201.0.25 payload=120",
+          "target_container": [
+            "as111brd-router0-10.111.0.254"
+          ]
+        }
+      ],
+      "fault_components": [],
+      "fault_relationship": "single",
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
       "fingerprint": "ee1cba6fcce9472aed4ec23658bc74ff7b1f0062f967e91549e3ff043d6997c1",
@@ -180,6 +250,6 @@
       "topology": "RANDOM_COMPLEX_INTERNET"
     }
   ],
-  "schema_version": 1,
+  "schema_version": 2,
   "suite_id": "random_complex_generator_pilot"
 }

@@ -24,6 +24,8 @@ observations_source = (
 ).read_text(encoding="utf-8")
 assert "iptables -S FORWARD" in observations_source
 assert "iptables -S OUTPUT" in observations_source
+assert "BIRD ASN and OSPF area summary" in observations_source
+assert "Docker network attachments" in observations_source
 
 
 source = {
@@ -87,6 +89,69 @@ large_state = capture_network_state(run_command=large_topology_run)
 assert large_state["capture_profile"] == "large_router_control_plane"
 assert large_state["probe_count"] == 0
 assert len(large_commands) == 1
+
+large_router_commands = []
+large_router_rows = "\n".join(
+    ["as111brd-router0-10.111.0.254\trunning"]
+    + [f"bulk-host-{index}\trunning" for index in range(99)]
+)
+
+
+def large_router_run(command, timeout=8):
+    large_router_commands.append((command, timeout))
+    if command.startswith("docker ps -a"):
+        return large_router_rows
+    if "birdc show protocols" in command:
+        return "u_as24 BGP master4 up Established"
+    if "bird.conf" in command:
+        return "local 10.201.0.111 as 111;"
+    if "docker inspect" in command:
+        return '{"output_net_ix_ix201":{"IPAddress":"10.201.0.111"}}'
+    if "iptables -S" in command:
+        return "-P OUTPUT ACCEPT"
+    return "unexpected"
+
+
+large_router_state = capture_network_state(run_command=large_router_run)
+assert large_router_state["capture_profile"] == "large_router_control_plane"
+assert large_router_state["probe_count"] == 5
+assert len(large_router_commands) == 6
+large_router_kinds = {
+    item["kind"]
+    for key, item in large_router_state["observations"].items()
+    if key.startswith(("bird:", "docker:", "firewall:"))
+}
+assert large_router_kinds == {
+    "routing_protocols",
+    "routing_config",
+    "docker_networks",
+    "firewall",
+}
+
+small_commands = []
+
+
+def small_topology_run(command, timeout=8):
+    small_commands.append((command, timeout))
+    if command.startswith("docker ps -a"):
+        return (
+            "as2brd-r101-10.101.0.2\trunning\n"
+            "as150h-host_0-10.150.0.71\trunning"
+        )
+    return "healthy probe output"
+
+
+small_state = capture_network_state(run_command=small_topology_run)
+assert small_state["capture_profile"] == "full"
+small_probe_commands = [item[0] for item in small_commands[1:]]
+assert any(
+    "docker inspect --format" in command
+    and "as150h-host_0-10.150.0.71" in command
+    for command in small_probe_commands
+)
+assert any("cat /etc/resolv.conf" in command for command in small_probe_commands)
+assert any("bird.conf" in command for command in small_probe_commands)
+assert any("birdc show ospf neighbors" in command for command in small_probe_commands)
 
 dns_scenario = DnsFailureScenario()
 full_score = dns_scenario.score_diagnosis(

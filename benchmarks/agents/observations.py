@@ -134,6 +134,28 @@ def capture_network_state(
                     "artifact": "BIRD protocol state",
                 },
                 {
+                    "id": f"bird:{router}:config_summary",
+                    "kind": "routing_config",
+                    "command": (
+                        f"docker exec {router} sh -c \""
+                        "grep -E '^[[:space:]]*local .* as [0-9]+;|"
+                        "^[[:space:]]*area [0-9]+' /etc/bird/bird.conf "
+                        "2>/dev/null | head -n 80\""
+                    ),
+                    "container": router,
+                    "artifact": "BIRD ASN and OSPF area summary",
+                },
+                {
+                    "id": f"ospf:{router}:neighbors",
+                    "kind": "ospf_neighbors",
+                    "command": (
+                        f"docker exec {router} "
+                        "birdc show ospf neighbors 2>/dev/null"
+                    ),
+                    "container": router,
+                    "artifact": "BIRD OSPF neighbor state",
+                },
+                {
                     "id": f"docker:{router}:networks",
                     "kind": "docker_networks",
                     "command": (
@@ -183,6 +205,16 @@ def capture_network_state(
     for host in hosts:
         probes.extend(
             (
+                {
+                    "id": f"docker:{host}:networks",
+                    "kind": "docker_networks",
+                    "command": (
+                        "docker inspect --format "
+                        f"'{{{{json .NetworkSettings.Networks}}}}' {host}"
+                    ),
+                    "container": host,
+                    "artifact": "Docker network attachments",
+                },
                 {
                     "id": f"dns:{host}:resolv",
                     "kind": "dns_config",
@@ -247,17 +279,23 @@ def capture_network_state(
     capture_profile = "full"
     if len(statuses) >= 100:
         # Large generated Internets currently exercise router/control-plane
-        # faults. Preserve every container state and every router's BIRD plus
-        # firewall evidence, but avoid hundreds of unrelated host DNS/tc/wg
-        # subprocesses. Selection depends only on topology size and roles, not
-        # scenario metadata, so blind evaluation remains blind.
+        # faults. Preserve every container state and every router's BIRD,
+        # compact configuration, Docker attachment, and firewall evidence, but
+        # avoid hundreds of unrelated host DNS/tc/wg subprocesses. Selection
+        # depends only on topology size and roles, not scenario metadata, so
+        # blind evaluation remains blind.
         capture_profile = "large_router_control_plane"
         router_set = set(routers)
         probes = [
             probe
             for probe in probes
             if probe.get("container") in router_set
-            and probe.get("kind") in {"routing_protocols", "firewall"}
+            and probe.get("kind") in {
+                "routing_protocols",
+                "routing_config",
+                "docker_networks",
+                "firewall",
+            }
         ]
 
     def execute(probe: Dict[str, str]) -> Optional[Observation]:

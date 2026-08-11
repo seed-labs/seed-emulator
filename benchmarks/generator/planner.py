@@ -9,7 +9,9 @@ import re
 from typing import Iterable, List, Set
 
 from generator.models import (
+    FaultComponentSpec,
     GenerationJob,
+    RootCauseSpec,
     ScenarioSpec,
     SuiteManifest,
     VALID_TRACKS,
@@ -128,6 +130,49 @@ def plan_suite(
             continue
         fingerprints.add(fingerprint)
         targets, artifact, faulty, expected = template.diagnosis(parameters)
+        rendered = template.renderer(parameters)
+        if rendered.components:
+            expected_root_causes = tuple(
+                RootCauseSpec(
+                    category=component.category,
+                    target_container=component.target_containers,
+                    artifact=component.artifact,
+                    faulty_value=component.faulty_value,
+                    expected_value=component.expected_value,
+                )
+                for component in rendered.components
+            )
+            fault_components = tuple(
+                FaultComponentSpec(
+                    component_id=component.component_id,
+                    category=component.category,
+                    target_containers=component.target_containers,
+                    artifact=component.artifact,
+                    inject_order=component.inject_order,
+                    cleanup_order=component.cleanup_order,
+                    depends_on=component.depends_on,
+                )
+                for component in rendered.components
+            )
+            repair_containers = tuple(
+                dict.fromkeys(
+                    target
+                    for component in rendered.components
+                    for target in component.target_containers
+                )
+            )
+        else:
+            expected_root_causes = (
+                RootCauseSpec(
+                    category=template.fault_type,
+                    target_container=targets,
+                    artifact=artifact,
+                    faulty_value=faulty,
+                    expected_value=expected,
+                ),
+            )
+            fault_components = ()
+            repair_containers = targets
         scenario_seed = int.from_bytes(
             hashlib.sha256(
                 f"{job.master_seed}:{fingerprint}".encode("utf-8")
@@ -136,7 +181,11 @@ def plan_suite(
         )
         timeout = {
             "bird_wrong_asn": 120,
+            "dual_bgp_ospf": 150,
+            "dual_dns_network": 90,
+            "cascading_network_bgp": 150,
             "random_complex_transit_acl": 240,
+            "random_complex_dual_bgp_acl": 300,
         }.get(template_id, 60)
         scenarios.append(
             ScenarioSpec(
@@ -158,11 +207,15 @@ def plan_suite(
                 quarantine_reason=(
                     f"generated suite {job.suite_id}; promote only after live validation"
                 ),
-                repair_containers=targets,
+                repair_containers=repair_containers,
                 scenario_seed=scenario_seed,
                 fingerprint=fingerprint,
                 convergence_timeout=timeout,
                 fault_settle_seconds=3,
+                fault_relationship=template.fault_relationship,
+                expected_root_causes=expected_root_causes,
+                fault_components=fault_components,
+                causal_chain=template.causal_chain(parameters),
             )
         )
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import time
 from typing import List, Tuple, Type
 
 from generator.contracts import inspect_contracts
@@ -48,7 +49,70 @@ def scenario_class_from_spec(
             output,
         )
 
-    expected_roots = (
+    def inject_fault(self):
+        """Inject and prove every generated component before scoring starts."""
+        rendered = render_scenario(self.generated_spec)
+        if not rendered.components:
+            return BaseScenario.inject_fault(self)
+        from scenarios.base import run, run_with_status
+
+        if not self._healthy_baseline_prepared:
+            self.prepare_healthy_baseline()
+        print(
+            f"  注入组合故障: {self.fault_type} "
+            f"({len(rendered.components)} components)"
+        )
+        try:
+            for component in sorted(
+                rendered.components,
+                key=lambda item: item.inject_order,
+            ):
+                returncode, output = run_with_status(
+                    component.inject_command,
+                    timeout=120,
+                )
+                if returncode != 0:
+                    raise RuntimeError(
+                        f"component {component.component_id} injection failed "
+                        f"(exit={returncode}):\n{output[:2000]}"
+                    )
+                check_code, check_output = run_with_status(
+                    component.fault_check_command,
+                    timeout=30,
+                )
+                if check_code != 0 or not evaluate_verifier(
+                    component.fault_verifier_kind,
+                    component.fault_verifier_value,
+                    check_output,
+                ):
+                    raise RuntimeError(
+                        f"component {component.component_id} did not become active:\n"
+                        f"{check_output[:2000]}"
+                    )
+            time.sleep(self.fault_settle_seconds)
+            fault_output = run(self.get_verify_cmd(), timeout=30)
+            if not self.check_fault_active(fault_output):
+                raise RuntimeError(
+                    "all components were present but aggregate functional impact "
+                    f"was absent:\n{fault_output[:2000]}"
+                )
+        except Exception:
+            run(self.get_fix_cmd(), timeout=120)
+            self._healthy_baseline_prepared = False
+            raise
+        self._healthy_baseline_prepared = False
+        print("  组合故障验证成功")
+
+    expected_roots = tuple(
+        {
+            "category": root.category,
+            "target_container": list(root.target_container),
+            "artifact": root.artifact,
+            "faulty_value": root.faulty_value,
+            "expected_value": root.expected_value,
+        }
+        for root in spec.expected_root_causes
+    ) or (
         {
             "category": spec.fault_type,
             "target_container": list(spec.diagnosis_targets),
@@ -65,6 +129,7 @@ def scenario_class_from_spec(
         "get_verify_cmd": verify_command,
         "get_fix_cmd": fix_command,
         "check_verified": check_verified,
+        "inject_fault": inject_fault,
         "name": spec.name,
         "description": spec.description,
         "topology": spec.topology,
@@ -81,6 +146,9 @@ def scenario_class_from_spec(
         "repair_containers": spec.repair_containers,
         "convergence_timeout": spec.convergence_timeout,
         "fault_settle_seconds": spec.fault_settle_seconds,
+        "fault_relationship": spec.fault_relationship,
+        "fault_components": spec.fault_components,
+        "causal_chain": spec.causal_chain,
         "generated_suite_id": suite_id,
         "generation_fingerprint": spec.fingerprint,
         "generation_contract_sha256": contract_sha256,

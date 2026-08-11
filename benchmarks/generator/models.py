@@ -8,8 +8,8 @@ import json
 from typing import Any, Dict, Iterable, List, Mapping, Tuple
 
 
-SCHEMA_VERSION = 1
-GENERATOR_VERSION = "1.0.0"
+SCHEMA_VERSION = 2
+GENERATOR_VERSION = "2.0.0"
 VALID_TRACKS = {
     "network_functional",
     "network_control_plane",
@@ -18,6 +18,7 @@ VALID_TRACKS = {
     "robustness",
 }
 VALID_DIFFICULTIES = {"basic", "core", "advanced"}
+VALID_FAULT_RELATIONSHIPS = {"single", "independent", "cascading", "mixed"}
 
 
 def scenario_fingerprint(
@@ -69,6 +70,63 @@ class GenerationJob:
 
 
 @dataclass(frozen=True)
+class RootCauseSpec:
+    """One independently scored root cause in a generated scenario."""
+
+    category: str
+    target_container: Tuple[str, ...]
+    artifact: str
+    faulty_value: str
+    expected_value: str
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> "RootCauseSpec":
+        data = _strict_mapping(
+            value,
+            (
+                "category",
+                "target_container",
+                "artifact",
+                "faulty_value",
+                "expected_value",
+            ),
+        )
+        data["target_container"] = tuple(data["target_container"])
+        return cls(**data)
+
+
+@dataclass(frozen=True)
+class FaultComponentSpec:
+    """Auditable mutation component and its dependency/cleanup ordering."""
+
+    component_id: str
+    category: str
+    target_containers: Tuple[str, ...]
+    artifact: str
+    inject_order: int
+    cleanup_order: int
+    depends_on: Tuple[str, ...] = ()
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> "FaultComponentSpec":
+        data = _strict_mapping(
+            value,
+            (
+                "component_id",
+                "category",
+                "target_containers",
+                "artifact",
+                "inject_order",
+                "cleanup_order",
+                "depends_on",
+            ),
+        )
+        data["target_containers"] = tuple(data["target_containers"])
+        data["depends_on"] = tuple(data["depends_on"])
+        return cls(**data)
+
+
+@dataclass(frozen=True)
 class ScenarioSpec:
     """Declarative representation compiled into the existing scenario API."""
 
@@ -91,17 +149,39 @@ class ScenarioSpec:
     fingerprint: str
     convergence_timeout: int = 90
     fault_settle_seconds: int = 3
+    fault_relationship: str = "single"
+    expected_root_causes: Tuple[RootCauseSpec, ...] = ()
+    fault_components: Tuple[FaultComponentSpec, ...] = ()
+    causal_chain: Tuple[str, ...] = ()
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "ScenarioSpec":
-        fields = tuple(cls.__dataclass_fields__)
-        data = _strict_mapping(value, fields)
+        optional = (
+            "fault_relationship",
+            "expected_root_causes",
+            "fault_components",
+            "causal_chain",
+        )
+        required = tuple(
+            item for item in cls.__dataclass_fields__ if item not in optional
+        )
+        data = _strict_mapping(value, required, optional)
         data["diagnosis_targets"] = tuple(data["diagnosis_targets"])
         data["repair_containers"] = tuple(data["repair_containers"])
         data["parameters"] = dict(data["parameters"])
+        data["fault_relationship"] = data.get("fault_relationship", "single")
+        data["expected_root_causes"] = tuple(
+            RootCauseSpec.from_dict(item)
+            for item in data.get("expected_root_causes", ())
+        )
+        data["fault_components"] = tuple(
+            FaultComponentSpec.from_dict(item)
+            for item in data.get("fault_components", ())
+        )
+        data["causal_chain"] = tuple(data.get("causal_chain", ()))
         return cls(**data)
 
 
@@ -142,9 +222,10 @@ class SuiteManifest:
                 "scenarios",
             ),
         )
-        if data["schema_version"] != SCHEMA_VERSION:
+        source_schema = data["schema_version"]
+        if source_schema not in {1, SCHEMA_VERSION}:
             raise ValueError(
-                f"unsupported schema_version={data['schema_version']}"
+                f"unsupported schema_version={source_schema}"
             )
         scenarios = tuple(
             ScenarioSpec.from_dict(item) for item in data["scenarios"]
@@ -155,6 +236,10 @@ class SuiteManifest:
             contract_sha256=data["contract_sha256"],
             scenarios=scenarios,
             enabled=bool(data["enabled"]),
-            schema_version=data["schema_version"],
-            generator_version=data["generator_version"],
+            schema_version=SCHEMA_VERSION,
+            generator_version=(
+                GENERATOR_VERSION
+                if source_schema == 1
+                else data["generator_version"]
+            ),
         )
