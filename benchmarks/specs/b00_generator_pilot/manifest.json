@@ -1,0 +1,600 @@
+{
+  "contract_sha256": "35d9e3fc943d4f3058c1e3e16bb2668ae2e7ba3df550c52e893225232075aa46",
+  "enabled": true,
+  "generator_version": "1.0.0",
+  "master_seed": "20260809",
+  "scenarios": [
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: A target workload container is unexpectedly stopped",
+      "diagnosis_artifact": "Docker container state",
+      "diagnosis_expected_value": "running",
+      "diagnosis_faulty_value": "stopped",
+      "diagnosis_targets": [
+        "as151h-host_0-10.151.0.71"
+      ],
+      "difficulty": "basic",
+      "fault_settle_seconds": 3,
+      "fault_type": "container_not_running",
+      "fingerprint": "509ac469a80bbd598097495c52becc047d7f2b069604181481030b12dd1d09a1",
+      "main_score_eligible": false,
+      "name": "gen_container_stopped_509ac469a8_01",
+      "parameters": {
+        "container": "as151h-host_0-10.151.0.71"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as151h-host_0-10.151.0.71"
+      ],
+      "scenario_seed": 7016665955126067933,
+      "template_id": "container_stopped",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: Docker embedded DNS is replaced by an unreachable resolver",
+      "diagnosis_artifact": "/etc/resolv.conf",
+      "diagnosis_expected_value": "nameserver 127.0.0.11",
+      "diagnosis_faulty_value": "nameserver 203.0.113.239",
+      "diagnosis_targets": [
+        "as151h-host_0-10.151.0.71"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "dns_failure",
+      "fingerprint": "e183f64b8f49559d9852163e5240b12ee107bbdc029fdc1d7a54b8771f1b1ce3",
+      "main_score_eligible": false,
+      "name": "gen_dns_nameserver_e183f64b8f_01",
+      "parameters": {
+        "bad_nameserver": "203.0.113.239",
+        "container": "as151h-host_0-10.151.0.71",
+        "expected_nameserver": "127.0.0.11",
+        "peer_container": "as151brd-router0-10.151.0.254",
+        "peer_ip": "10.151.0.254"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as151h-host_0-10.151.0.71"
+      ],
+      "scenario_seed": 105379211505482446,
+      "template_id": "dns_nameserver",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: Removing an IPv6 address removes its connected route",
+      "diagnosis_artifact": "IPv6 route table",
+      "diagnosis_expected_value": "2001:db8:a065::/64 dev dummy0",
+      "diagnosis_faulty_value": "missing 2001:db8:a065::/64",
+      "diagnosis_targets": [
+        "as151brd-router0-10.151.0.254"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "ipv6_route_missing",
+      "fingerprint": "592c26befceb362b2b8d591d68cd6fbdacadf9a2f6c4ab31baff2ac8064a1d07",
+      "main_score_eligible": false,
+      "name": "gen_ipv6_connected_route_592c26befc_01",
+      "parameters": {
+        "address": "2001:db8:a065::1/64",
+        "container": "as151brd-router0-10.151.0.254",
+        "interface": "dummy0",
+        "prefix": "2001:db8:a065::/64",
+        "probe": "2001:db8:a065::2"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as151brd-router0-10.151.0.254"
+      ],
+      "scenario_seed": 11088523860861802168,
+      "template_id": "ipv6_connected_route",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 120,
+      "description": "Generated deterministic case: BIRD local ASN differs from its healthy baseline",
+      "diagnosis_artifact": "/etc/bird/bird.conf",
+      "diagnosis_expected_value": "AS 2",
+      "diagnosis_faulty_value": "AS 64573",
+      "diagnosis_targets": [
+        "as2brd-r101-10.101.0.2"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "wrong_asn",
+      "fingerprint": "696d67d19c1730e3da5c1bca2ff53e2f4884bcc6f6d76e9a7d83f077afdf6482",
+      "main_score_eligible": false,
+      "name": "gen_bird_wrong_asn_696d67d19c_01",
+      "parameters": {
+        "bad_asn": 64573,
+        "container": "as2brd-r101-10.101.0.2",
+        "correct_asn": 2
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as2brd-r101-10.101.0.2"
+      ],
+      "scenario_seed": 9363634813520219281,
+      "template_id": "bird_wrong_asn",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: A target workload container is unexpectedly stopped",
+      "diagnosis_artifact": "Docker container state",
+      "diagnosis_expected_value": "running",
+      "diagnosis_faulty_value": "stopped",
+      "diagnosis_targets": [
+        "as152h-host_0-10.152.0.71"
+      ],
+      "difficulty": "basic",
+      "fault_settle_seconds": 3,
+      "fault_type": "container_not_running",
+      "fingerprint": "5f98de6c603a8d2f5c5d0633ee3d9d59daa6c0b361325a5b1a78cd02f7ffa450",
+      "main_score_eligible": false,
+      "name": "gen_container_stopped_5f98de6c60_01",
+      "parameters": {
+        "container": "as152h-host_0-10.152.0.71"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as152h-host_0-10.152.0.71"
+      ],
+      "scenario_seed": 5932385731699949465,
+      "template_id": "container_stopped",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: Docker embedded DNS is replaced by an unreachable resolver",
+      "diagnosis_artifact": "/etc/resolv.conf",
+      "diagnosis_expected_value": "nameserver 127.0.0.11",
+      "diagnosis_faulty_value": "nameserver 192.0.2.239",
+      "diagnosis_targets": [
+        "as152h-host_0-10.152.0.71"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "dns_failure",
+      "fingerprint": "0ed2cb2406edee2c4843ae2ee06cb51d2d7ef0c4e157434ff7e7542cfa3a1b26",
+      "main_score_eligible": false,
+      "name": "gen_dns_nameserver_0ed2cb2406_01",
+      "parameters": {
+        "bad_nameserver": "192.0.2.239",
+        "container": "as152h-host_0-10.152.0.71",
+        "expected_nameserver": "127.0.0.11",
+        "peer_container": "as152brd-router0-10.152.0.254",
+        "peer_ip": "10.152.0.254"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as152h-host_0-10.152.0.71"
+      ],
+      "scenario_seed": 9449055990818933226,
+      "template_id": "dns_nameserver",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: Removing an IPv6 address removes its connected route",
+      "diagnosis_artifact": "IPv6 route table",
+      "diagnosis_expected_value": "2001:db8:a066::/64 dev dummy0",
+      "diagnosis_faulty_value": "missing 2001:db8:a066::/64",
+      "diagnosis_targets": [
+        "as151brd-router0-10.151.0.254"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "ipv6_route_missing",
+      "fingerprint": "d21d4ee2b9c178fc02e9623a23cb9448eb67cd98cde949cc589bf7939ceb0bba",
+      "main_score_eligible": false,
+      "name": "gen_ipv6_connected_route_d21d4ee2b9_01",
+      "parameters": {
+        "address": "2001:db8:a066::1/64",
+        "container": "as151brd-router0-10.151.0.254",
+        "interface": "dummy0",
+        "prefix": "2001:db8:a066::/64",
+        "probe": "2001:db8:a066::2"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as151brd-router0-10.151.0.254"
+      ],
+      "scenario_seed": 13314092219639961760,
+      "template_id": "ipv6_connected_route",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 120,
+      "description": "Generated deterministic case: BIRD local ASN differs from its healthy baseline",
+      "diagnosis_artifact": "/etc/bird/bird.conf",
+      "diagnosis_expected_value": "AS 2",
+      "diagnosis_faulty_value": "AS 64573",
+      "diagnosis_targets": [
+        "as2brd-r102-10.102.0.2"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "wrong_asn",
+      "fingerprint": "86722d6aaae9c74eefba1427883653335ccf0708c3d8a00ba460de4b0990f8b3",
+      "main_score_eligible": false,
+      "name": "gen_bird_wrong_asn_86722d6aaa_01",
+      "parameters": {
+        "bad_asn": 64573,
+        "container": "as2brd-r102-10.102.0.2",
+        "correct_asn": 2
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as2brd-r102-10.102.0.2"
+      ],
+      "scenario_seed": 9964181831278135401,
+      "template_id": "bird_wrong_asn",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: A target workload container is unexpectedly stopped",
+      "diagnosis_artifact": "Docker container state",
+      "diagnosis_expected_value": "running",
+      "diagnosis_faulty_value": "stopped",
+      "diagnosis_targets": [
+        "as153h-host_0-10.153.0.71"
+      ],
+      "difficulty": "basic",
+      "fault_settle_seconds": 3,
+      "fault_type": "container_not_running",
+      "fingerprint": "4cfe5331b286c383debc298dd371f9dfd0d26aa9d195e20f64235da1615c237a",
+      "main_score_eligible": false,
+      "name": "gen_container_stopped_4cfe5331b2_01",
+      "parameters": {
+        "container": "as153h-host_0-10.153.0.71"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as153h-host_0-10.153.0.71"
+      ],
+      "scenario_seed": 5231542429117940235,
+      "template_id": "container_stopped",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: Docker embedded DNS is replaced by an unreachable resolver",
+      "diagnosis_artifact": "/etc/resolv.conf",
+      "diagnosis_expected_value": "nameserver 127.0.0.11",
+      "diagnosis_faulty_value": "nameserver 198.51.100.239",
+      "diagnosis_targets": [
+        "as153h-host_0-10.153.0.71"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "dns_failure",
+      "fingerprint": "2b86e044a9d6ef689b576141fdfdebb0de275729decbff81ae8e316699aa39a5",
+      "main_score_eligible": false,
+      "name": "gen_dns_nameserver_2b86e044a9_01",
+      "parameters": {
+        "bad_nameserver": "198.51.100.239",
+        "container": "as153h-host_0-10.153.0.71",
+        "expected_nameserver": "127.0.0.11",
+        "peer_container": "as153brd-router0-10.153.0.254",
+        "peer_ip": "10.153.0.254"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as153h-host_0-10.153.0.71"
+      ],
+      "scenario_seed": 843243328489581516,
+      "template_id": "dns_nameserver",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: Removing an IPv6 address removes its connected route",
+      "diagnosis_artifact": "IPv6 route table",
+      "diagnosis_expected_value": "2001:db8:a067::/64 dev dummy0",
+      "diagnosis_faulty_value": "missing 2001:db8:a067::/64",
+      "diagnosis_targets": [
+        "as151brd-router0-10.151.0.254"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "ipv6_route_missing",
+      "fingerprint": "d9d2d0522f2785f4d4ba4b2c94353edf0621366b96c111ffe08a12aa82b8f968",
+      "main_score_eligible": false,
+      "name": "gen_ipv6_connected_route_d9d2d0522f_01",
+      "parameters": {
+        "address": "2001:db8:a067::1/64",
+        "container": "as151brd-router0-10.151.0.254",
+        "interface": "dummy0",
+        "prefix": "2001:db8:a067::/64",
+        "probe": "2001:db8:a067::2"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as151brd-router0-10.151.0.254"
+      ],
+      "scenario_seed": 3665267447718198555,
+      "template_id": "ipv6_connected_route",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 120,
+      "description": "Generated deterministic case: BIRD local ASN differs from its healthy baseline",
+      "diagnosis_artifact": "/etc/bird/bird.conf",
+      "diagnosis_expected_value": "AS 2",
+      "diagnosis_faulty_value": "AS 64573",
+      "diagnosis_targets": [
+        "as2brd-r105-10.105.0.2"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "wrong_asn",
+      "fingerprint": "98d7f86b4a53d49361bad661fb74e1644011dce139af37be6a38d44280e1080b",
+      "main_score_eligible": false,
+      "name": "gen_bird_wrong_asn_98d7f86b4a_01",
+      "parameters": {
+        "bad_asn": 64573,
+        "container": "as2brd-r105-10.105.0.2",
+        "correct_asn": 2
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as2brd-r105-10.105.0.2"
+      ],
+      "scenario_seed": 1677627883686680828,
+      "template_id": "bird_wrong_asn",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: A target workload container is unexpectedly stopped",
+      "diagnosis_artifact": "Docker container state",
+      "diagnosis_expected_value": "running",
+      "diagnosis_faulty_value": "stopped",
+      "diagnosis_targets": [
+        "as154h-host_0-10.154.0.71"
+      ],
+      "difficulty": "basic",
+      "fault_settle_seconds": 3,
+      "fault_type": "container_not_running",
+      "fingerprint": "34332acf8a831f67ae4806532b1dc96f34e37593a0969686dde63797402c1f07",
+      "main_score_eligible": false,
+      "name": "gen_container_stopped_34332acf8a_01",
+      "parameters": {
+        "container": "as154h-host_0-10.154.0.71"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as154h-host_0-10.154.0.71"
+      ],
+      "scenario_seed": 15510515155786699188,
+      "template_id": "container_stopped",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: Docker embedded DNS is replaced by an unreachable resolver",
+      "diagnosis_artifact": "/etc/resolv.conf",
+      "diagnosis_expected_value": "nameserver 127.0.0.11",
+      "diagnosis_faulty_value": "nameserver 203.0.113.239",
+      "diagnosis_targets": [
+        "as154h-host_0-10.154.0.71"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "dns_failure",
+      "fingerprint": "e01fb6600da4937b74264f0c6ebef7d937935cd850a4f2f650be1fc2628becb9",
+      "main_score_eligible": false,
+      "name": "gen_dns_nameserver_e01fb6600d_01",
+      "parameters": {
+        "bad_nameserver": "203.0.113.239",
+        "container": "as154h-host_0-10.154.0.71",
+        "expected_nameserver": "127.0.0.11",
+        "peer_container": "as154brd-router0-10.154.0.254",
+        "peer_ip": "10.154.0.254"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as154h-host_0-10.154.0.71"
+      ],
+      "scenario_seed": 5226976235860573570,
+      "template_id": "dns_nameserver",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: Removing an IPv6 address removes its connected route",
+      "diagnosis_artifact": "IPv6 route table",
+      "diagnosis_expected_value": "2001:db8:a068::/64 dev dummy0",
+      "diagnosis_faulty_value": "missing 2001:db8:a068::/64",
+      "diagnosis_targets": [
+        "as151brd-router0-10.151.0.254"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "ipv6_route_missing",
+      "fingerprint": "61d002f9683b27254a18e5b28d4966a1903235db2cba3ae7b047e487e1343b51",
+      "main_score_eligible": false,
+      "name": "gen_ipv6_connected_route_61d002f968_01",
+      "parameters": {
+        "address": "2001:db8:a068::1/64",
+        "container": "as151brd-router0-10.151.0.254",
+        "interface": "dummy0",
+        "prefix": "2001:db8:a068::/64",
+        "probe": "2001:db8:a068::2"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as151brd-router0-10.151.0.254"
+      ],
+      "scenario_seed": 4491274288376381910,
+      "template_id": "ipv6_connected_route",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 120,
+      "description": "Generated deterministic case: BIRD local ASN differs from its healthy baseline",
+      "diagnosis_artifact": "/etc/bird/bird.conf",
+      "diagnosis_expected_value": "AS 2",
+      "diagnosis_faulty_value": "AS 64573",
+      "diagnosis_targets": [
+        "as2brd-r100-10.100.0.2"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "wrong_asn",
+      "fingerprint": "882c52b910bc0d52b91defe2bc1c3b753d69349b90703775f2f95c978dc71b78",
+      "main_score_eligible": false,
+      "name": "gen_bird_wrong_asn_882c52b910_01",
+      "parameters": {
+        "bad_asn": 64573,
+        "container": "as2brd-r100-10.100.0.2",
+        "correct_asn": 2
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as2brd-r100-10.100.0.2"
+      ],
+      "scenario_seed": 3562832041613306146,
+      "template_id": "bird_wrong_asn",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: A target workload container is unexpectedly stopped",
+      "diagnosis_artifact": "Docker container state",
+      "diagnosis_expected_value": "running",
+      "diagnosis_faulty_value": "stopped",
+      "diagnosis_targets": [
+        "as150h-host_0-10.150.0.71"
+      ],
+      "difficulty": "basic",
+      "fault_settle_seconds": 3,
+      "fault_type": "container_not_running",
+      "fingerprint": "85d6dc2aefe61c7ce3d4bd74f7c44c71b4701bec18ff8aa6d12fe48c8aebd7e4",
+      "main_score_eligible": false,
+      "name": "gen_container_stopped_85d6dc2aef_01",
+      "parameters": {
+        "container": "as150h-host_0-10.150.0.71"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as150h-host_0-10.150.0.71"
+      ],
+      "scenario_seed": 5212465065229201876,
+      "template_id": "container_stopped",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: Docker embedded DNS is replaced by an unreachable resolver",
+      "diagnosis_artifact": "/etc/resolv.conf",
+      "diagnosis_expected_value": "nameserver 127.0.0.11",
+      "diagnosis_faulty_value": "nameserver 192.0.2.239",
+      "diagnosis_targets": [
+        "as150h-host_0-10.150.0.71"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "dns_failure",
+      "fingerprint": "bc704cb84806d8463c0e140079d46b660379e32deafa8ce8b1b87f2f67e8d2e1",
+      "main_score_eligible": false,
+      "name": "gen_dns_nameserver_bc704cb848_01",
+      "parameters": {
+        "bad_nameserver": "192.0.2.239",
+        "container": "as150h-host_0-10.150.0.71",
+        "expected_nameserver": "127.0.0.11",
+        "peer_container": "as150brd-router0-10.150.0.254",
+        "peer_ip": "10.150.0.254"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as150h-host_0-10.150.0.71"
+      ],
+      "scenario_seed": 7145892872724945009,
+      "template_id": "dns_nameserver",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: Removing an IPv6 address removes its connected route",
+      "diagnosis_artifact": "IPv6 route table",
+      "diagnosis_expected_value": "2001:db8:a069::/64 dev dummy0",
+      "diagnosis_faulty_value": "missing 2001:db8:a069::/64",
+      "diagnosis_targets": [
+        "as151brd-router0-10.151.0.254"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "ipv6_route_missing",
+      "fingerprint": "62083df6ae777668e3e871d232353bf9a0e789080c1136d5c63435f3c5aad342",
+      "main_score_eligible": false,
+      "name": "gen_ipv6_connected_route_62083df6ae_01",
+      "parameters": {
+        "address": "2001:db8:a069::1/64",
+        "container": "as151brd-router0-10.151.0.254",
+        "interface": "dummy0",
+        "prefix": "2001:db8:a069::/64",
+        "probe": "2001:db8:a069::2"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as151brd-router0-10.151.0.254"
+      ],
+      "scenario_seed": 3024971016624668427,
+      "template_id": "ipv6_connected_route",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "convergence_timeout": 120,
+      "description": "Generated deterministic case: BIRD local ASN differs from its healthy baseline",
+      "diagnosis_artifact": "/etc/bird/bird.conf",
+      "diagnosis_expected_value": "AS 2",
+      "diagnosis_faulty_value": "AS 64574",
+      "diagnosis_targets": [
+        "as2brd-r101-10.101.0.2"
+      ],
+      "difficulty": "core",
+      "fault_settle_seconds": 3,
+      "fault_type": "wrong_asn",
+      "fingerprint": "860f532665becd1bc414f5dfc244e808cbf081e45ec0268d8fb21a0dbad25903",
+      "main_score_eligible": false,
+      "name": "gen_bird_wrong_asn_860f532665_01",
+      "parameters": {
+        "bad_asn": 64574,
+        "container": "as2brd-r101-10.101.0.2",
+        "correct_asn": 2
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as2brd-r101-10.101.0.2"
+      ],
+      "scenario_seed": 594565990371535859,
+      "template_id": "bird_wrong_asn",
+      "topology": "B00_mini_internet"
+    }
+  ],
+  "schema_version": 1,
+  "suite_id": "b00_generator_pilot"
+}
