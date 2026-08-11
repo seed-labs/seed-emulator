@@ -165,7 +165,7 @@ def run_checked_with_retries(cmd, timeout=180, attempts=2):
     raise last_error
 
 
-def run_argv_checked(args, timeout=180):
+def run_argv_checked(args, timeout=180, *, cwd=None, env=None):
     """Run a command without a shell so timeout cannot orphan shell children."""
     try:
         completed = subprocess.run(
@@ -173,6 +173,8 @@ def run_argv_checked(args, timeout=180):
             capture_output=True,
             text=True,
             timeout=timeout,
+            cwd=cwd,
+            env=env,
         )
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
@@ -187,6 +189,103 @@ def run_argv_checked(args, timeout=180):
             f"{' '.join(args)}\n{output[-3000:]}"
         )
     return output
+
+
+COMPOSE_CACHE_CORRUPTION_MARKERS = (
+    "parent snapshot",
+    "read/write on closed pipe",
+)
+
+
+def build_compose_services_serially(compose_dir, timeout_per_service=900):
+    """Build one Compose service at a time and repair corrupt local cache."""
+    environment = os.environ.copy()
+    environment["COMPOSE_PARALLEL_LIMIT"] = "1"
+    environment["DOCKER_BUILDKIT"] = "0"
+    config_output = run_argv_checked(
+        ["docker", "compose", "config", "--format", "json"],
+        timeout=60,
+        cwd=compose_dir,
+        env=environment,
+    )
+    try:
+        config = json.loads(config_output)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("无法解析 Compose JSON 配置") from exc
+    project_name = str(config.get("name") or "compose")
+    build_jobs = []
+    for service, service_config in config.get("services", {}).items():
+        build = service_config.get("build")
+        if not build:
+            continue
+        if isinstance(build, str):
+            build = {"context": build, "dockerfile": "Dockerfile"}
+        unsupported = set(build) - {"context", "dockerfile"}
+        if unsupported:
+            command = ["docker", "compose", "build", service]
+            no_cache_command = [
+                "docker", "compose", "build", "--no-cache", service,
+            ]
+        else:
+            context = str(build["context"])
+            if not os.path.isabs(context):
+                context = os.path.join(compose_dir, context)
+            dockerfile = str(build.get("dockerfile") or "Dockerfile")
+            if not os.path.isabs(dockerfile):
+                dockerfile = os.path.join(context, dockerfile)
+            image = service_config.get("image") or f"{project_name}-{service}"
+            command = [
+                "docker",
+                "build",
+                "--label",
+                "com.docker.compose.image.builder=classic",
+                "--file",
+                dockerfile,
+                "--tag",
+                str(image),
+                context,
+            ]
+            no_cache_command = command[:2] + ["--no-cache"] + command[2:]
+        build_jobs.append((service, command, no_cache_command))
+
+    if not build_jobs:
+        raise RuntimeError(f"Compose 项目没有可构建服务: {compose_dir}")
+
+    repaired_services = []
+    for index, (service, command, no_cache_command) in enumerate(
+        build_jobs,
+        start=1,
+    ):
+        print(f"  串行构建服务 ({index}/{len(build_jobs)}): {service}")
+        try:
+            run_argv_checked(
+                command,
+                timeout=timeout_per_service,
+                cwd=compose_dir,
+                env=environment,
+            )
+        except RuntimeError as exc:
+            message = str(exc).lower()
+            if not any(
+                marker in message
+                for marker in COMPOSE_CACHE_CORRUPTION_MARKERS
+            ):
+                raise
+            print(
+                f"  检测到 {service} 的构建缓存损坏，"
+                "仅对该服务执行无缓存重建"
+            )
+            run_argv_checked(
+                no_cache_command,
+                timeout=timeout_per_service,
+                cwd=compose_dir,
+                env=environment,
+            )
+            repaired_services.append(service)
+    return {
+        "service_count": len(build_jobs),
+        "repaired_services": tuple(repaired_services),
+    }
 
 
 def cleanup_environment():
@@ -475,11 +574,9 @@ def start_topology(topology: str):
     print(f"  启动拓扑: {topology}")
     topo_path = get_topology_path(topology)
     if topology == "RANDOM_COMPLEX_INTERNET":
-        run_checked_with_retries(
-            f"cd {topo_path} && COMPOSE_PARALLEL_LIMIT=1 "
-            "DOCKER_BUILDKIT=0 docker compose build",
-            timeout=3600,
-            attempts=3,
+        build_compose_services_serially(
+            topo_path,
+            timeout_per_service=900,
         )
         run_checked(
             f"cd {topo_path} && docker compose up -d",

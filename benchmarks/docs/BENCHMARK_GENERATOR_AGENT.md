@@ -106,3 +106,9 @@ Generation and static validation can run concurrently. Live tests must be
 serialized on this VM because the current benchmark CLI performs global Docker
 cleanup and network pruning. Large suites should be executed in topology-local
 batches, with CLI reports and logs retained after every scenario.
+
+`RANDOM_COMPLEX_INTERNET` image builds are also serialized. The CLI parses the
+Compose JSON once and invokes `docker build` directly for each build context,
+avoiding Compose's internal parallel queue. If the local builder reports a
+missing parent snapshot or a closed build-context pipe, only that service is
+rebuilt with `--no-cache`; unrelated images and caches are preserved.

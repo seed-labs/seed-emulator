@@ -58,6 +58,65 @@ finally:
     cli_module.time.sleep = original_sleep
 assert len(retry_calls) == 3
 
+serial_build_calls = []
+original_run_argv_checked = cli_module.run_argv_checked
+try:
+    def serial_run_argv_checked(args, timeout=180, *, cwd=None, env=None):
+        serial_build_calls.append((tuple(args), timeout, cwd, env))
+        if tuple(args) == (
+            "docker", "compose", "config", "--format", "json",
+        ):
+            return json.dumps(
+                {
+                    "name": "probe",
+                    "services": {
+                        "service_a": {
+                            "build": {
+                                "context": "/tmp/service_a",
+                                "dockerfile": "Dockerfile",
+                            },
+                        },
+                        "service_b": {
+                            "build": {
+                                "context": "/tmp/service_b",
+                                "dockerfile": "Containerfile",
+                            },
+                            "image": "custom/service_b:test",
+                        },
+                        "external": {"image": "external/service:latest"},
+                    },
+                }
+            )
+        if tuple(args)[-1] == "/tmp/service_a" and "--no-cache" not in args:
+            raise RuntimeError("parent snapshot sha256:broken does not exist")
+        return "ok"
+
+    cli_module.run_argv_checked = serial_run_argv_checked
+    serial_result = cli_module.build_compose_services_serially(
+        "/tmp/compose-project",
+        timeout_per_service=77,
+    )
+finally:
+    cli_module.run_argv_checked = original_run_argv_checked
+assert serial_result == {
+    "service_count": 2,
+    "repaired_services": ("service_a",),
+}
+assert serial_build_calls[0][0] == (
+    "docker", "compose", "config", "--format", "json",
+)
+assert serial_build_calls[1][0][:2] == ("docker", "build")
+assert "--no-cache" not in serial_build_calls[1][0]
+assert serial_build_calls[1][0][-1] == "/tmp/service_a"
+assert serial_build_calls[2][0][:3] == (
+    "docker", "build", "--no-cache",
+)
+assert serial_build_calls[2][0][-1] == "/tmp/service_a"
+assert "custom/service_b:test" in serial_build_calls[3][0]
+assert serial_build_calls[3][0][-1] == "/tmp/service_b"
+assert all(item[2] == "/tmp/compose-project" for item in serial_build_calls)
+assert all(item[3]["DOCKER_BUILDKIT"] == "0" for item in serial_build_calls)
+
 agent = BenchmarkGeneratorAgent(BENCHMARKS_DIR)
 job = GenerationJob(
     suite_id="generator_contract_suite",

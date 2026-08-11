@@ -275,9 +275,14 @@ benchmarks/specs/random_complex_generator_pilot/manifest.json
 - 两个 suite 均默认不参与主榜，需完成真实验证后另行晋级。
 - 规划器的代码级上限为每次 10,000 个唯一场景。
 
-100+ 容器 suite 已通过生成、静态校验、动态类适配和 CLI 注册，但其真实生命周期尚未通过。
-既有尝试在 `docker compose build` 阶段因 VM Docker 内容存储缺少 parent snapshot 而停止；
-故障发生在容器启动和场景注入之前，没有生成成功报告。该限制不能被解释为场景已完成现场验证。
+100+ 容器 suite 已通过生成、静态校验、动态类适配和 CLI 注册。2026-08-11 的构建
+验证进一步完成了 106/106 个镜像：CLI 现在只解析一次 Compose JSON，然后对每个 build
+context 直接执行串行 `docker build`；若检测到缺失 parent snapshot 或 closed-pipe，只对
+故障服务执行 `--no-cache` 重建。本次验证没有再出现 snapshot 错误。
+
+该验证只证明镜像构建层已经恢复并具备可靠的串行路径；它没有启动 100+ 容器，也没有执行
+健康基线、ACL 注入、标准恢复和场景后隔离。因此 Random Complex 的完整真实生命周期仍待
+验证，不能解释为场景已经现场通过。
 
 ## 10. 安全与可信性设计
 
