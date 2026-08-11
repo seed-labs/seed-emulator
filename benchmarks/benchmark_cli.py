@@ -21,6 +21,7 @@ import sys
 import os
 import argparse
 import atexit
+import hashlib
 import json
 from datetime import datetime
 
@@ -197,11 +198,155 @@ COMPOSE_CACHE_CORRUPTION_MARKERS = (
 )
 
 
-def build_compose_services_serially(compose_dir, timeout_per_service=900):
-    """Build one Compose service at a time and repair corrupt local cache."""
-    environment = os.environ.copy()
-    environment["COMPOSE_PARALLEL_LIMIT"] = "1"
-    environment["DOCKER_BUILDKIT"] = "0"
+def _normalize_image_reference(image):
+    """Return the explicit local tag used by ``docker image ls``."""
+    image = str(image)
+    if "@" in image or ":" in image.rsplit("/", 1)[-1]:
+        return image
+    return f"{image}:latest"
+
+
+def _compose_build_state_path(compose_dir):
+    """Keep the state marker outside every generated Docker context."""
+    return os.path.join(
+        os.path.dirname(os.path.abspath(compose_dir)),
+        ".benchmark-build-state.json",
+    )
+
+
+def _hash_build_contexts(config, compose_dir):
+    """Hash canonical build metadata and every local build-context input."""
+    build_metadata = {}
+    contexts = []
+    for service, service_config in sorted(config.get("services", {}).items()):
+        build = service_config.get("build")
+        if not build:
+            continue
+        if isinstance(build, str):
+            build = {"context": build, "dockerfile": "Dockerfile"}
+        build_metadata[service] = {
+            "build": build,
+            "image": service_config.get("image"),
+        }
+        context = str(build.get("context") or ".")
+        if not os.path.isabs(context):
+            context = os.path.join(compose_dir, context)
+        contexts.append(os.path.realpath(context))
+
+    digest = hashlib.sha256()
+    digest.update(
+        json.dumps(
+            {
+                "project": config.get("name"),
+                "services": build_metadata,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+
+    # If one context contains another, hashing the ancestor already covers it.
+    roots = []
+    for candidate in sorted(set(contexts), key=lambda item: (len(item), item)):
+        if any(
+            os.path.commonpath((candidate, root)) == root
+            for root in roots
+        ):
+            continue
+        roots.append(candidate)
+
+    for root in roots:
+        if not os.path.isdir(root):
+            raise RuntimeError(f"Docker build context 不存在: {root}")
+        digest.update(b"\0context\0" + root.encode("utf-8"))
+        for current, directories, filenames in os.walk(root, followlinks=False):
+            directories.sort()
+            filenames.sort()
+            symlink_directories = [
+                name
+                for name in directories
+                if os.path.islink(os.path.join(current, name))
+            ]
+            directories[:] = [
+                name for name in directories if name not in symlink_directories
+            ]
+            for name in symlink_directories:
+                path = os.path.join(current, name)
+                relative = os.path.relpath(path, root)
+                digest.update(b"\0link\0" + relative.encode("utf-8"))
+                digest.update(os.readlink(path).encode("utf-8"))
+            for name in filenames:
+                path = os.path.join(current, name)
+                relative = os.path.relpath(path, root)
+                if os.path.islink(path):
+                    digest.update(b"\0link\0" + relative.encode("utf-8"))
+                    digest.update(os.readlink(path).encode("utf-8"))
+                    continue
+                digest.update(b"\0file\0" + relative.encode("utf-8"))
+                with open(path, "rb") as source:
+                    while True:
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _load_compose_build_state(path):
+    try:
+        with open(path, "r", encoding="utf-8") as source:
+            state = json.load(source)
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(state, dict) or state.get("schema_version") != 1:
+        return None
+    return state
+
+
+def _write_compose_build_state(path, state):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    temporary = f"{path}.tmp.{os.getpid()}"
+    try:
+        with open(temporary, "w", encoding="utf-8") as destination:
+            json.dump(state, destination, ensure_ascii=False, sort_keys=True)
+            destination.write("\n")
+            destination.flush()
+            os.fsync(destination.fileno())
+        os.replace(temporary, path)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
+def _missing_local_images(expected_images, environment):
+    """Check exact image references, avoiding a scan of the whole image store."""
+    expected_images = tuple(sorted(set(expected_images)))
+    bulk_command = [
+        "docker", "image", "inspect", "--format", "{{.Id}}", *expected_images,
+    ]
+    try:
+        run_argv_checked(bulk_command, timeout=120, env=environment)
+        return set()
+    except RuntimeError:
+        # A partial miss makes the bulk command non-zero. Only on that rare
+        # path do exact per-image probes identify the services to rebuild.
+        missing = set()
+        for image in expected_images:
+            try:
+                run_argv_checked(
+                    ["docker", "image", "inspect", image],
+                    timeout=30,
+                    env=environment,
+                )
+            except RuntimeError:
+                missing.add(image)
+        return missing
+
+
+def _compose_build_plan(compose_dir, environment):
     config_output = run_argv_checked(
         ["docker", "compose", "config", "--format", "json"],
         timeout=60,
@@ -220,6 +365,9 @@ def build_compose_services_serially(compose_dir, timeout_per_service=900):
             continue
         if isinstance(build, str):
             build = {"context": build, "dockerfile": "Dockerfile"}
+        image = _normalize_image_reference(
+            service_config.get("image") or f"{project_name}-{service}"
+        )
         unsupported = set(build) - {"context", "dockerfile"}
         if unsupported:
             command = ["docker", "compose", "build", service]
@@ -227,13 +375,12 @@ def build_compose_services_serially(compose_dir, timeout_per_service=900):
                 "docker", "compose", "build", "--no-cache", service,
             ]
         else:
-            context = str(build["context"])
+            context = str(build.get("context") or ".")
             if not os.path.isabs(context):
                 context = os.path.join(compose_dir, context)
             dockerfile = str(build.get("dockerfile") or "Dockerfile")
             if not os.path.isabs(dockerfile):
                 dockerfile = os.path.join(context, dockerfile)
-            image = service_config.get("image") or f"{project_name}-{service}"
             command = [
                 "docker",
                 "build",
@@ -242,20 +389,99 @@ def build_compose_services_serially(compose_dir, timeout_per_service=900):
                 "--file",
                 dockerfile,
                 "--tag",
-                str(image),
+                image,
                 context,
             ]
             no_cache_command = command[:2] + ["--no-cache"] + command[2:]
-        build_jobs.append((service, command, no_cache_command))
+        build_jobs.append(
+            {
+                "service": service,
+                "image": image,
+                "command": command,
+                "no_cache_command": no_cache_command,
+            }
+        )
 
     if not build_jobs:
         raise RuntimeError(f"Compose 项目没有可构建服务: {compose_dir}")
+    fingerprint = _hash_build_contexts(config, compose_dir)
+    state = {
+        "schema_version": 1,
+        "fingerprint": fingerprint,
+        "images": sorted(job["image"] for job in build_jobs),
+        "service_count": len(build_jobs),
+    }
+    return build_jobs, state
+
+
+def record_existing_compose_build_state(compose_dir):
+    """Adopt a previously audited complete build without rebuilding images."""
+    environment = os.environ.copy()
+    environment["COMPOSE_PARALLEL_LIMIT"] = "1"
+    environment["DOCKER_BUILDKIT"] = "0"
+    build_jobs, state = _compose_build_plan(compose_dir, environment)
+    missing = sorted(_missing_local_images(state["images"], environment))
+    if missing:
+        raise RuntimeError(
+            "不能记录不完整的 Compose 构建状态，缺少镜像: "
+            + ", ".join(missing[:10])
+        )
+    _write_compose_build_state(_compose_build_state_path(compose_dir), state)
+    return {
+        "service_count": len(build_jobs),
+        "fingerprint": state["fingerprint"],
+    }
+
+
+def build_compose_services_serially(
+    compose_dir,
+    timeout_per_service=900,
+    *,
+    verify_images=False,
+):
+    """Build changed/missing services serially and repair corrupt cache."""
+    environment = os.environ.copy()
+    environment["COMPOSE_PARALLEL_LIMIT"] = "1"
+    environment["DOCKER_BUILDKIT"] = "0"
+    build_jobs, expected_state = _compose_build_plan(compose_dir, environment)
+    state_path = _compose_build_state_path(compose_dir)
+    previous_state = _load_compose_build_state(state_path)
+    state_matches = (
+        previous_state is not None
+        and previous_state.get("fingerprint") == expected_state["fingerprint"]
+        and previous_state.get("images") == expected_state["images"]
+    )
+    if state_matches:
+        missing_images = (
+            _missing_local_images(expected_state["images"], environment)
+            if verify_images
+            else set()
+        )
+        build_jobs = [
+            job for job in build_jobs if job["image"] in missing_images
+        ]
+        if not build_jobs:
+            print(
+                "  拓扑构建输入未变化且镜像完整，跳过 "
+                f"{expected_state['service_count']}-service 重建"
+            )
+            return {
+                "service_count": expected_state["service_count"],
+                "built_services": (),
+                "repaired_services": (),
+                "cache_hit": True,
+                "fingerprint": expected_state["fingerprint"],
+            }
 
     repaired_services = []
-    for index, (service, command, no_cache_command) in enumerate(
+    built_services = []
+    for index, job in enumerate(
         build_jobs,
         start=1,
     ):
+        service = job["service"]
+        command = job["command"]
+        no_cache_command = job["no_cache_command"]
         print(f"  串行构建服务 ({index}/{len(build_jobs)}): {service}")
         try:
             run_argv_checked(
@@ -282,9 +508,15 @@ def build_compose_services_serially(compose_dir, timeout_per_service=900):
                 env=environment,
             )
             repaired_services.append(service)
+        built_services.append(service)
+
+    _write_compose_build_state(state_path, expected_state)
     return {
-        "service_count": len(build_jobs),
+        "service_count": expected_state["service_count"],
+        "built_services": tuple(built_services),
         "repaired_services": tuple(repaired_services),
+        "cache_hit": False,
+        "fingerprint": expected_state["fingerprint"],
     }
 
 
@@ -578,10 +810,25 @@ def start_topology(topology: str):
             topo_path,
             timeout_per_service=900,
         )
-        run_checked(
-            f"cd {topo_path} && docker compose up -d",
-            timeout=600,
-        )
+        up_command = f"cd {topo_path} && docker compose up -d --no-build"
+        try:
+            run_checked(up_command, timeout=600)
+        except RuntimeError as exc:
+            message = str(exc).lower()
+            missing_image_markers = (
+                "no such image",
+                "pull access denied",
+                "unable to get image",
+            )
+            if not any(marker in message for marker in missing_image_markers):
+                raise
+            print("  检测到构建状态中的镜像缺失，执行精确增量重建")
+            build_compose_services_serially(
+                topo_path,
+                timeout_per_service=900,
+                verify_images=True,
+            )
+            run_checked(up_command, timeout=600)
     elif topology in (
         "B00_mini_internet_firewall",
         "B00_network_software_suite",
@@ -622,7 +869,7 @@ def recreate_topology_for_isolation(topology: str) -> bool:
     output = run(
         f"cd {topo_path} && "
         f"{compose} down --remove-orphans && "
-        f"{compose} up -d && echo {marker}",
+        f"{compose} up -d --no-build && echo {marker}",
         timeout=480,
     )
     if marker not in output:

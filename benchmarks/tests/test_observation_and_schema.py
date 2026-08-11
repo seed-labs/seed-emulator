@@ -11,7 +11,11 @@ sys.path.insert(0, str(BENCHMARKS_DIR))
 
 import ai_agent as ai_module  # noqa: E402
 from ai_agent import AIAgent, AIResponseError  # noqa: E402
-from observations import diff_network_states, format_state_delta  # noqa: E402
+from observations import (  # noqa: E402
+    capture_network_state,
+    diff_network_states,
+    format_state_delta,
+)
 from scenarios.dns_failure import DnsFailureScenario  # noqa: E402
 
 
@@ -19,6 +23,7 @@ observations_source = (
     BENCHMARKS_DIR / "agents" / "observations.py"
 ).read_text(encoding="utf-8")
 assert "iptables -S FORWARD" in observations_source
+assert "iptables -S OUTPUT" in observations_source
 
 
 source = {
@@ -66,6 +71,22 @@ assert "docker exec node cat /tmp/config" in formatted
 assert "container: `node`" in formatted
 assert "artifact: `/tmp/config`" in formatted
 assert "unchanged" not in formatted
+
+large_commands = []
+large_rows = "\n".join(f"bulk-host-{index}\trunning" for index in range(100))
+
+
+def large_topology_run(command, timeout=8):
+    large_commands.append((command, timeout))
+    if command.startswith("docker ps -a"):
+        return large_rows
+    return "unexpected"
+
+
+large_state = capture_network_state(run_command=large_topology_run)
+assert large_state["capture_profile"] == "large_router_control_plane"
+assert large_state["probe_count"] == 0
+assert len(large_commands) == 1
 
 dns_scenario = DnsFailureScenario()
 full_score = dns_scenario.score_diagnosis(
@@ -207,6 +228,12 @@ try:
     assert "target_container" in response_format["json_schema"]["schema"]["required"]
     assert "root_causes" in response_format["json_schema"]["schema"]["required"]
 
+    invalid_transport = api_agent.parse_response("```json\n{")
+    assert invalid_transport.error
+    captured_request.clear()
+    api_agent.call_ai_api([{"role": "user", "content": "retry"}])
+    assert "response_format" not in captured_request
+
     ai_module.requests.post = lambda *args, **kwargs: _Response("length")
     truncated_agent = AIAgent(api_key="test", verbose=False)
     try:
@@ -227,6 +254,38 @@ concatenated = concatenated_agent.parse_response(
 )
 assert concatenated.category == "test_fault"
 assert concatenated.repair_commands == ["docker start node"]
+
+# MIMO can emit literal newlines inside an otherwise complete JSON string.
+# The transport quirk is normalized, while the full local schema remains
+# mandatory after decoding.
+literal_newline = first_payload.replace(
+    "baseline delta identifies node",
+    "baseline delta\nidentifies node",
+)
+normalized = concatenated_agent.parse_response(literal_newline)
+assert normalized.category == "test_fault"
+assert normalized.repair_commands == ["docker start node"]
+
+# The provider sometimes returns an action-specific object followed by the
+# beginning of another object. A complete minimal diagnostic request remains
+# safe because it still passes the read-only command gate before execution.
+minimal_request = concatenated_agent.parse_response(
+    '{"action":"execute_commands","commands":["docker ps -a"]}\n{"'
+)
+assert minimal_request.commands == ["docker ps -a"]
+assert minimal_request.reasoning
+
+# A duplicated opening brace is treated as malformed transport framing; the
+# first complete actionable object is isolated without guessing any fields.
+double_brace_request = concatenated_agent.parse_response(
+    '{{"action":"execute_commands","commands":["docker ps -a"]}'
+)
+assert double_brace_request.commands == ["docker ps -a"]
+
+single_command_request = concatenated_agent.parse_response(
+    '{"action":"execute_commands","commands":"docker ps -a"}'
+)
+assert single_command_request.commands == ["docker ps -a"]
 
 # A large max_turns value must not create a tight retry storm while DNS/API
 # connectivity is down.

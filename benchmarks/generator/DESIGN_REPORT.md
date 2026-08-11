@@ -8,8 +8,8 @@
 > 该智能体可以生成满足现有 `BaseScenario` 接口、具备健康验证、故障注入、
 > 独立恢复验证和标准清理能力的 benchmark 场景。
 
-本文是设计与证据审计，不是一次新的执行记录。编写本文时没有运行生成器、
-没有生成新 suite、没有启动 Docker，也没有运行 benchmark 场景。
+本文同时是设计审计与完成证据。初版报告只描述静态设计；本版已纳入 10,000 场景规模
+验证、106 镜像构建、Random Complex 真实生命周期和正式 MIMO 盲测结果。
 
 ## 2. 设计目标与非目标
 
@@ -66,7 +66,7 @@ flowchart TD
 - `benchmarks/scenarios/__init__.py`：加载启用的 manifest，与内置场景合并并拒绝重名。
 - `benchmarks/scenarios/base.py`：把 suite、指纹和契约哈希加入运行结果。
 - `benchmarks/benchmark_cli.py`：执行统一生命周期、同拓扑复用、重试、日志和报告。
-- `benchmarks/agents/observations.py`：为随机复杂拓扑增加只读 `iptables -S FORWARD` 可观测性。
+- `benchmarks/agents/observations.py`：为随机复杂拓扑增加只读 `iptables -S OUTPUT/FORWARD` 可观测性。
 
 ## 5. 场景生成工作流程
 
@@ -111,7 +111,7 @@ SHA256(template_id + topology + canonical_parameters)
 | `container_stopped` | `B00_mini_internet` | 停止目标容器，验证容器恢复运行 |
 | `dns_nameserver` | `B00_mini_internet` | 写入不可达 DNS，验证名称解析恢复 |
 | `ipv6_connected_route` | `B00_mini_internet` | 移除 IPv6 地址/直连路由，验证网络状态恢复 |
-| `random_complex_transit_acl` | `RANDOM_COMPLEX_INTERNET` | 注入 FORWARD ACL，验证跨域连通性恢复 |
+| `random_complex_transit_acl` | `RANDOM_COMPLEX_INTERNET` | 注入 OUTPUT ACL，验证确定性 IX peer 连通性恢复 |
 
 前四个是默认模板。随机复杂拓扑模板必须显式选择，不会意外进入普通生成任务。
 
@@ -210,6 +210,12 @@ check_verified(output)
 - 超过 10,000 个场景的任务被拒绝；
 - 瞬时基础设施错误最多重试三次，不会无限循环；
 - 随机复杂 ACL 场景限定修复容器，并能正确区分 0% 与 100% 丢包。
+- Compose 构建输入指纹未变化时跳过 106 个服务重建；指纹变化或镜像缺失时只构建必要服务。
+- 大拓扑观测 profile 保留全容器状态和全路由器 BIRD/ACL 证据，并跳过无关主机探针。
+- MIMO 结构化传输异常时切换到 prompt-only，结果仍必须通过本地 schema 和命令门禁。
+
+10,000 场景规模验收进一步证明：两次规划完全一致，10,000 个名称和语义指纹均唯一，
+按 500 个场景切分为 20 个完整批次，静态规划与验证耗时 0.794 秒。
 
 其他回归测试覆盖盲测信息隔离、AI 命令安全、观测 schema、修复授权、shell 隔离、
 报告审计和场景契约。此前的完整静态回归结果为：全部 benchmark Python 编译通过，
@@ -217,7 +223,7 @@ check_verified(output)
 
 ## 8. 已有运行报告证据
 
-以下是已有统一 CLI 报告中的历史证据；本次撰写报告没有重新执行这些测试。
+以下证据均来自统一 CLI 报告；其中 B00 是既有历史证据，Random Complex 是本轮现场验收。
 
 ### 8.1 B00 无 AI 生命周期
 
@@ -261,6 +267,34 @@ benchmarks/reports/GENERATOR_PILOT_AI_BLIND_20260809.md
 
 因此系统能够区分“模型输出失败”和“benchmark 基础设施/清理失败”，并在 AI 失败后保持隔离。
 
+### 8.4 Random Complex 单场景与全 suite 生命周期
+
+CLI 报告：
+
+```text
+benchmarks/reports/GENERATOR_RANDOM_COMPLEX_CANARY_20260811.md
+benchmarks/reports/GENERATOR_RANDOM_COMPLEX_LIFECYCLE_20260811.md
+```
+
+canary 完成健康基线、OUTPUT ACL 注入确认、标准恢复和独立 ping 验证 1/1；随后 5 个
+manifest 场景在同一 105-container 运行拓扑中连续通过 5/5。每个场景在下一个场景开始前
+删除自身规则，证明同拓扑复用不会把 ACL 污染带入后续场景。
+
+### 8.5 Random Complex 正式 MIMO 盲测
+
+CLI 报告：
+
+```text
+benchmarks/reports/GENERATOR_RANDOM_COMPLEX_AI_BLIND_20260811.md
+```
+
+正式参数为默认 `--blind --repair-eval --max-turns 20`。MIMO 根据实时 OUTPUT 链差异提交
+1 条精确 `iptables -D OUTPUT` 命令；命令通过场景白名单、实际执行，并通过独立功能验证
+1/1。标准清理 1/1、拓扑隔离重建 1/1、污染状态 0。
+
+模型把类别报告为更泛化的 `firewall_misconfiguration`，因此类别和完整根因成绩仍为 0/1；
+报告没有把功能修复成功改写为诊断成功。这同时证明诊断与修复确实独立评分。
+
 ## 9. 当前 suite 与规模能力
 
 现有 manifest：
@@ -275,14 +309,14 @@ benchmarks/specs/random_complex_generator_pilot/manifest.json
 - 两个 suite 均默认不参与主榜，需完成真实验证后另行晋级。
 - 规划器的代码级上限为每次 10,000 个唯一场景。
 
-100+ 容器 suite 已通过生成、静态校验、动态类适配和 CLI 注册。2026-08-11 的构建
-验证进一步完成了 106/106 个镜像：CLI 现在只解析一次 Compose JSON，然后对每个 build
-context 直接执行串行 `docker build`；若检测到缺失 parent snapshot 或 closed-pipe，只对
-故障服务执行 `--no-cache` 重建。本次验证没有再出现 snapshot 错误。
+100+ 容器 suite 已通过生成、静态校验、动态类适配、CLI 注册和真实生命周期。2026-08-11
+的构建验证完成 106/106 个镜像；CLI 对构建元数据与所有本地 context 内容生成 SHA-256
+指纹，真实 cache hit 将启动前构建阶段缩短到约 1.1 秒。指纹变化时仍串行构建，缺少镜像时
+只精确重建对应服务，parent snapshot/closed-pipe 只触发该服务的 `--no-cache`。
 
-该验证只证明镜像构建层已经恢复并具备可靠的串行路径；它没有启动 100+ 容器，也没有执行
-健康基线、ACL 注入、标准恢复和场景后隔离。因此 Random Complex 的完整真实生命周期仍待
-验证，不能解释为场景已经现场通过。
+现场运行完成 105 个业务容器和 2 个正常退出的 dependency dummy，单场景 1/1、全 suite
+5/5、正式 MIMO 功能修复 1/1，且最终独立 ping 健康、ACL 无残留。场景继续处于非主榜
+quarantine；真实验证不会自动改变计分政策。
 
 ## 10. 安全与可信性设计
 
@@ -314,9 +348,9 @@ context 直接执行串行 `docker build`；若检测到缺失 parent snapshot �
 master seed、模板 ID、拓扑和参数决定场景内容；指纹与场景 seed 均来自稳定 SHA-256，
 不依赖 Python 进程随机哈希。manifest 是复现实验的固定输入。
 
-## 11. 建议的正式验收流程
+## 11. 已完成的正式验收流程
 
-以下为设计规定的后续验收顺序，不代表本文编写时执行了这些命令：
+本次实现按以下顺序完成并保留 CLI 报告或回归证据：
 
 1. `inventory`：确认接口契约和模板清单。
 2. `preview`：审查计划结果，不写文件。
@@ -327,19 +361,19 @@ master seed、模板 ID、拓扑和参数决定场景内容；指纹与场景 se
 7. 重复无 AI 验证：确认幂等和无污染。
 8. 默认 `--blind --repair-eval --max-turns 20`：进行正式 MIMO 自主修复评估。
 9. 检查 CLI 报告、控制台日志、标准清理、拓扑重建和最终健康状态。
-10. 只有通过真实生命周期和盲测审计后，才单独评审是否解除主榜隔离。
+10. 真实生命周期和盲测审计已通过；主榜隔离保持不变，等待单独政策评审。
 
 ## 12. 结论
 
-代码结构、回归断言和已有 B00 CLI 报告共同支持以下结论：
+代码结构、回归断言、B00 与 Random Complex CLI 报告共同支持以下结论：
 
 1. Generator Agent 生成的不是单纯数据样本，而是能够适配为正式 `BaseScenario` 的完整场景。
 2. 每个场景同时具备故障注入、独立验证、标准恢复、根因字段和最小修复作用域。
 3. 场景通过现有统一 CLI 完成测试、评分、清理、隔离和报告，不存在旁路执行框架。
 4. B00 四种模板已有真实生命周期 4/4 通过的历史报告，批次入口也有 1/1 报告证据。
 5. 大规模规划、确定性、唯一性、原子写入和安全边界已有代码级回归证明。
-6. 100+ 容器随机复杂场景目前只有静态与注册证明，真实生命周期仍受 VM Docker
-   parent snapshot 故障阻塞，不能声称已经现场通过。
+6. 100+ 容器随机复杂场景已完成 106/106 镜像构建、5/5 无 AI 生命周期、1/1 MIMO
+   功能修复、1/1 标准清理和 1/1 隔离重建；模型类别误判被如实保留。
 
 综上，该智能体已经具备构建“带测试功能的 benchmark 场景”的完整设计与已验证实现；
 其可信性来自受审计模板、严格门禁、现有 `BaseScenario` 生命周期和统一 CLI 证据链，

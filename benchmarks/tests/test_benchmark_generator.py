@@ -60,61 +60,110 @@ assert len(retry_calls) == 3
 
 serial_build_calls = []
 original_run_argv_checked = cli_module.run_argv_checked
-try:
+with tempfile.TemporaryDirectory() as build_directory:
+    build_root = Path(build_directory)
+    compose_root = build_root / "compose-project"
+    service_a = build_root / "service_a"
+    service_b = build_root / "service_b"
+    compose_root.mkdir()
+    service_a.mkdir()
+    service_b.mkdir()
+    (service_a / "Dockerfile").write_text("FROM scratch\n", encoding="utf-8")
+    (service_b / "Containerfile").write_text("FROM scratch\n", encoding="utf-8")
+    config_document = {
+        "name": "probe",
+        "services": {
+            "service_a": {
+                "build": {
+                    "context": str(service_a),
+                    "dockerfile": "Dockerfile",
+                },
+            },
+            "service_b": {
+                "build": {
+                    "context": str(service_b),
+                    "dockerfile": "Containerfile",
+                },
+                "image": "custom/service_b:test",
+            },
+            "external": {"image": "external/service:latest"},
+        },
+    }
+    built_images = set()
+
     def serial_run_argv_checked(args, timeout=180, *, cwd=None, env=None):
         serial_build_calls.append((tuple(args), timeout, cwd, env))
         if tuple(args) == (
             "docker", "compose", "config", "--format", "json",
         ):
-            return json.dumps(
-                {
-                    "name": "probe",
-                    "services": {
-                        "service_a": {
-                            "build": {
-                                "context": "/tmp/service_a",
-                                "dockerfile": "Dockerfile",
-                            },
-                        },
-                        "service_b": {
-                            "build": {
-                                "context": "/tmp/service_b",
-                                "dockerfile": "Containerfile",
-                            },
-                            "image": "custom/service_b:test",
-                        },
-                        "external": {"image": "external/service:latest"},
-                    },
-                }
-            )
-        if tuple(args)[-1] == "/tmp/service_a" and "--no-cache" not in args:
+            return json.dumps(config_document)
+        if tuple(args)[:5] == (
+            "docker", "image", "inspect", "--format", "{{.Id}}",
+        ):
+            expected = set(args[5:])
+            if expected <= built_images:
+                return "\n".join("sha256:present" for _item in expected)
+            raise RuntimeError("No such image")
+        if tuple(args)[:3] == ("docker", "image", "inspect"):
+            if args[-1] in built_images:
+                return "present"
+            raise RuntimeError("No such image")
+        if tuple(args)[-1] == str(service_a) and "--no-cache" not in args:
             raise RuntimeError("parent snapshot sha256:broken does not exist")
+        if tuple(args)[-1] == str(service_a):
+            built_images.add("probe-service_a:latest")
+        if tuple(args)[-1] == str(service_b):
+            built_images.add("custom/service_b:test")
         return "ok"
 
-    cli_module.run_argv_checked = serial_run_argv_checked
-    serial_result = cli_module.build_compose_services_serially(
-        "/tmp/compose-project",
-        timeout_per_service=77,
-    )
-finally:
-    cli_module.run_argv_checked = original_run_argv_checked
-assert serial_result == {
-    "service_count": 2,
-    "repaired_services": ("service_a",),
-}
-assert serial_build_calls[0][0] == (
-    "docker", "compose", "config", "--format", "json",
-)
-assert serial_build_calls[1][0][:2] == ("docker", "build")
-assert "--no-cache" not in serial_build_calls[1][0]
-assert serial_build_calls[1][0][-1] == "/tmp/service_a"
-assert serial_build_calls[2][0][:3] == (
-    "docker", "build", "--no-cache",
-)
-assert serial_build_calls[2][0][-1] == "/tmp/service_a"
-assert "custom/service_b:test" in serial_build_calls[3][0]
-assert serial_build_calls[3][0][-1] == "/tmp/service_b"
-assert all(item[2] == "/tmp/compose-project" for item in serial_build_calls)
+    try:
+        cli_module.run_argv_checked = serial_run_argv_checked
+        serial_result = cli_module.build_compose_services_serially(
+            str(compose_root),
+            timeout_per_service=77,
+        )
+        first_call_count = len(serial_build_calls)
+        cached_result = cli_module.build_compose_services_serially(
+            str(compose_root),
+            timeout_per_service=77,
+        )
+        cached_calls = serial_build_calls[first_call_count:]
+        built_images.remove("custom/service_b:test")
+        missing_result = cli_module.build_compose_services_serially(
+            str(compose_root),
+            timeout_per_service=77,
+            verify_images=True,
+        )
+        (service_b / "payload.txt").write_text("changed\n", encoding="utf-8")
+        changed_result = cli_module.build_compose_services_serially(
+            str(compose_root),
+            timeout_per_service=77,
+        )
+    finally:
+        cli_module.run_argv_checked = original_run_argv_checked
+
+assert serial_result["service_count"] == 2
+assert serial_result["built_services"] == ("service_a", "service_b")
+assert serial_result["repaired_services"] == ("service_a",)
+assert serial_result["cache_hit"] is False
+assert len(serial_result["fingerprint"]) == 64
+assert cached_result["cache_hit"] is True
+assert cached_result["built_services"] == ()
+assert not any(call[0][:2] == ("docker", "build") for call in cached_calls)
+assert missing_result["cache_hit"] is False
+assert missing_result["built_services"] == ("service_b",)
+assert changed_result["cache_hit"] is False
+assert changed_result["built_services"] == ("service_a", "service_b")
+docker_build_calls = [
+    item for item in serial_build_calls if item[0][:2] == ("docker", "build")
+]
+assert docker_build_calls[0][0][:2] == ("docker", "build")
+assert "--no-cache" not in docker_build_calls[0][0]
+assert docker_build_calls[0][0][-1] == str(service_a)
+assert docker_build_calls[1][0][:3] == ("docker", "build", "--no-cache")
+assert docker_build_calls[1][0][-1] == str(service_a)
+assert "custom/service_b:test" in docker_build_calls[2][0]
+assert docker_build_calls[2][0][-1] == str(service_b)
 assert all(item[3]["DOCKER_BUILDKIT"] == "0" for item in serial_build_calls)
 
 agent = BenchmarkGeneratorAgent(BENCHMARKS_DIR)
@@ -170,8 +219,10 @@ assert {item.template_id for item in random_suite.scenarios} == {
 assert all(item.convergence_timeout == 240 for item in random_suite.scenarios)
 random_spec = random_suite.scenarios[0]
 random_rendered = render_scenario(random_spec)
-assert "iptables -I FORWARD" in random_rendered.inject_command
+assert "iptables -I OUTPUT" in random_rendered.inject_command
 assert "SEED_RANDOM_COMPLEX_ACL" in random_rendered.fix_command
+assert "ping -I ix201" in random_rendered.verify_command
+assert random_spec.parameters["destination_asn"] in {21, 22, 24, 25, 107, 113}
 assert random_spec.repair_containers == (
     random_spec.parameters["source_router"],
 )

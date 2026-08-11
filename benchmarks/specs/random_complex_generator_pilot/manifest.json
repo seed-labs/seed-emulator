@@ -1,5 +1,5 @@
 {
-  "contract_sha256": "1d92c0781f2a2f532de007f96f79ab057b1a0cbeb3a31c951bcd83bbd03e494c",
+  "contract_sha256": "d65f0d4b907004a4cbb4ac51cf363cf6c2d067ee44bda51af607b088e2a7a684",
   "enabled": true,
   "generator_version": "1.0.0",
   "master_seed": "20260809",
@@ -7,27 +7,27 @@
     {
       "benchmark_track": "robustness",
       "convergence_timeout": 240,
-      "description": "Generated deterministic case: A scoped FORWARD ACL blocks one cross-domain path in a 100+ container topology",
-      "diagnosis_artifact": "iptables FORWARD chain",
+      "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a 100+ container topology",
+      "diagnosis_artifact": "iptables OUTPUT chain",
       "diagnosis_expected_value": "no matching REJECT rule",
-      "diagnosis_faulty_value": "REJECT 10.111.0.71 to 10.107.0.71",
+      "diagnosis_faulty_value": "REJECT 10.201.0.111 to 10.201.0.113 payload=56",
       "diagnosis_targets": [
         "as111brd-router0-10.111.0.254"
       ],
       "difficulty": "advanced",
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
-      "fingerprint": "ec38a94536bfbc1aa19a2df1e841fd4c8cb8b01d7b38ae020524861b329a043f",
+      "fingerprint": "7fdefe8ac67c9a45e825cdda345e222798a3833ac80d29c3efd926b83f2b7452",
       "main_score_eligible": false,
-      "name": "gen_random_complex_transit_acl_ec38a94536_01",
+      "name": "gen_random_complex_transit_acl_7fdefe8ac6_01",
       "parameters": {
-        "destination_asn": 107,
-        "destination_host": "as107h-host_0-10.107.0.71",
-        "destination_ip": "10.107.0.71",
+        "destination_asn": 113,
+        "destination_ip": "10.201.0.113",
+        "probe_size": 56,
         "rule_comment": "SEED_RANDOM_COMPLEX_ACL",
         "source_asn": 111,
-        "source_host": "as111h-host_0-10.111.0.71",
-        "source_ip": "10.111.0.71",
+        "source_interface": "ix201",
+        "source_ip": "10.201.0.111",
         "source_router": "as111brd-router0-10.111.0.254",
         "topology_seed": 20260724
       },
@@ -35,34 +35,34 @@
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
-      "scenario_seed": 983700871036861339,
+      "scenario_seed": 1499143090136023249,
       "template_id": "random_complex_transit_acl",
       "topology": "RANDOM_COMPLEX_INTERNET"
     },
     {
       "benchmark_track": "robustness",
       "convergence_timeout": 240,
-      "description": "Generated deterministic case: A scoped FORWARD ACL blocks one cross-domain path in a 100+ container topology",
-      "diagnosis_artifact": "iptables FORWARD chain",
+      "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a 100+ container topology",
+      "diagnosis_artifact": "iptables OUTPUT chain",
       "diagnosis_expected_value": "no matching REJECT rule",
-      "diagnosis_faulty_value": "REJECT 10.111.0.71 to 10.108.0.71",
+      "diagnosis_faulty_value": "REJECT 10.201.0.111 to 10.201.0.21 payload=120",
       "diagnosis_targets": [
         "as111brd-router0-10.111.0.254"
       ],
       "difficulty": "advanced",
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
-      "fingerprint": "87935deeef868364216c67a08d835d1e39c548a489d31564ec9a501d99e66ba3",
+      "fingerprint": "72b8e46bcc17c4b088f9bf7b54769bf465bf08ba26d0a76bd11841337265d098",
       "main_score_eligible": false,
-      "name": "gen_random_complex_transit_acl_87935deeef_01",
+      "name": "gen_random_complex_transit_acl_72b8e46bcc_01",
       "parameters": {
-        "destination_asn": 108,
-        "destination_host": "as108h-host_0-10.108.0.71",
-        "destination_ip": "10.108.0.71",
+        "destination_asn": 21,
+        "destination_ip": "10.201.0.21",
+        "probe_size": 120,
         "rule_comment": "SEED_RANDOM_COMPLEX_ACL",
         "source_asn": 111,
-        "source_host": "as111h-host_0-10.111.0.71",
-        "source_ip": "10.111.0.71",
+        "source_interface": "ix201",
+        "source_ip": "10.201.0.111",
         "source_router": "as111brd-router0-10.111.0.254",
         "topology_seed": 20260724
       },
@@ -70,34 +70,34 @@
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
-      "scenario_seed": 1811894187354140681,
+      "scenario_seed": 5381277029749996325,
       "template_id": "random_complex_transit_acl",
       "topology": "RANDOM_COMPLEX_INTERNET"
     },
     {
       "benchmark_track": "robustness",
       "convergence_timeout": 240,
-      "description": "Generated deterministic case: A scoped FORWARD ACL blocks one cross-domain path in a 100+ container topology",
-      "diagnosis_artifact": "iptables FORWARD chain",
+      "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a 100+ container topology",
+      "diagnosis_artifact": "iptables OUTPUT chain",
       "diagnosis_expected_value": "no matching REJECT rule",
-      "diagnosis_faulty_value": "REJECT 10.111.0.71 to 10.109.0.71",
+      "diagnosis_faulty_value": "REJECT 10.201.0.111 to 10.201.0.22 payload=120",
       "diagnosis_targets": [
         "as111brd-router0-10.111.0.254"
       ],
       "difficulty": "advanced",
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
-      "fingerprint": "6406adfbcf8a827206c3b95e1634314dbbbbc5e0f605e89513a1719ba5dd87b7",
+      "fingerprint": "de983543fe149ffb42eeda8fa5ca0515da99bbd97213e27b7a0768deec0434de",
       "main_score_eligible": false,
-      "name": "gen_random_complex_transit_acl_6406adfbcf_01",
+      "name": "gen_random_complex_transit_acl_de983543fe_01",
       "parameters": {
-        "destination_asn": 109,
-        "destination_host": "as109h-host_0-10.109.0.71",
-        "destination_ip": "10.109.0.71",
+        "destination_asn": 22,
+        "destination_ip": "10.201.0.22",
+        "probe_size": 120,
         "rule_comment": "SEED_RANDOM_COMPLEX_ACL",
         "source_asn": 111,
-        "source_host": "as111h-host_0-10.111.0.71",
-        "source_ip": "10.111.0.71",
+        "source_interface": "ix201",
+        "source_ip": "10.201.0.111",
         "source_router": "as111brd-router0-10.111.0.254",
         "topology_seed": 20260724
       },
@@ -105,34 +105,34 @@
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
-      "scenario_seed": 12802300430957781644,
+      "scenario_seed": 10722031025283003843,
       "template_id": "random_complex_transit_acl",
       "topology": "RANDOM_COMPLEX_INTERNET"
     },
     {
       "benchmark_track": "robustness",
       "convergence_timeout": 240,
-      "description": "Generated deterministic case: A scoped FORWARD ACL blocks one cross-domain path in a 100+ container topology",
-      "diagnosis_artifact": "iptables FORWARD chain",
+      "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a 100+ container topology",
+      "diagnosis_artifact": "iptables OUTPUT chain",
       "diagnosis_expected_value": "no matching REJECT rule",
-      "diagnosis_faulty_value": "REJECT 10.111.0.71 to 10.110.0.71",
+      "diagnosis_faulty_value": "REJECT 10.201.0.111 to 10.201.0.24 payload=120",
       "diagnosis_targets": [
         "as111brd-router0-10.111.0.254"
       ],
       "difficulty": "advanced",
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
-      "fingerprint": "a9ad162807bfa9ddc278112f27c62932cd0e42696c0d68d92e77f2937e8b49df",
+      "fingerprint": "4147c096f08466261f4240b174d7cb2485b1dd2838270903772a0586ca0fb952",
       "main_score_eligible": false,
-      "name": "gen_random_complex_transit_acl_a9ad162807_01",
+      "name": "gen_random_complex_transit_acl_4147c096f0_01",
       "parameters": {
-        "destination_asn": 110,
-        "destination_host": "as110h-host_0-10.110.0.71",
-        "destination_ip": "10.110.0.71",
+        "destination_asn": 24,
+        "destination_ip": "10.201.0.24",
+        "probe_size": 120,
         "rule_comment": "SEED_RANDOM_COMPLEX_ACL",
         "source_asn": 111,
-        "source_host": "as111h-host_0-10.111.0.71",
-        "source_ip": "10.111.0.71",
+        "source_interface": "ix201",
+        "source_ip": "10.201.0.111",
         "source_router": "as111brd-router0-10.111.0.254",
         "topology_seed": 20260724
       },
@@ -140,34 +140,34 @@
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
-      "scenario_seed": 9114000655361587374,
+      "scenario_seed": 9909867344264913396,
       "template_id": "random_complex_transit_acl",
       "topology": "RANDOM_COMPLEX_INTERNET"
     },
     {
       "benchmark_track": "robustness",
       "convergence_timeout": 240,
-      "description": "Generated deterministic case: A scoped FORWARD ACL blocks one cross-domain path in a 100+ container topology",
-      "diagnosis_artifact": "iptables FORWARD chain",
+      "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a 100+ container topology",
+      "diagnosis_artifact": "iptables OUTPUT chain",
       "diagnosis_expected_value": "no matching REJECT rule",
-      "diagnosis_faulty_value": "REJECT 10.111.0.71 to 10.112.0.71",
+      "diagnosis_faulty_value": "REJECT 10.201.0.111 to 10.201.0.25 payload=120",
       "diagnosis_targets": [
         "as111brd-router0-10.111.0.254"
       ],
       "difficulty": "advanced",
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
-      "fingerprint": "d362fbe98cdc7f865e14f89d86976879a7617ca239f076d513f32ed15ea07c05",
+      "fingerprint": "ee1cba6fcce9472aed4ec23658bc74ff7b1f0062f967e91549e3ff043d6997c1",
       "main_score_eligible": false,
-      "name": "gen_random_complex_transit_acl_d362fbe98c_01",
+      "name": "gen_random_complex_transit_acl_ee1cba6fcc_01",
       "parameters": {
-        "destination_asn": 112,
-        "destination_host": "as112h-host_0-10.112.0.71",
-        "destination_ip": "10.112.0.71",
+        "destination_asn": 25,
+        "destination_ip": "10.201.0.25",
+        "probe_size": 120,
         "rule_comment": "SEED_RANDOM_COMPLEX_ACL",
         "source_asn": 111,
-        "source_host": "as111h-host_0-10.111.0.71",
-        "source_ip": "10.111.0.71",
+        "source_interface": "ix201",
+        "source_ip": "10.201.0.111",
         "source_router": "as111brd-router0-10.111.0.254",
         "topology_seed": 20260724
       },
@@ -175,7 +175,7 @@
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
-      "scenario_seed": 14733301497107352254,
+      "scenario_seed": 4985031037103759837,
       "template_id": "random_complex_transit_acl",
       "topology": "RANDOM_COMPLEX_INTERNET"
     }

@@ -95,7 +95,8 @@ python3 benchmark_cli.py \
 
 The first four templates target `B00_mini_internet` and are selected by
 default. The random-complex template targets the existing 100+ container
-topology and must be selected explicitly with
+topology. It applies a scoped OUTPUT ACL to deterministic live IX peers and
+varies the peer plus ICMP payload size; it must be selected explicitly with
 `--topology RANDOM_COMPLEX_INTERNET`. New templates must add parameter
 validation, deterministic planning, independent verification, cleanup, repair
 scope, and regression tests before they become selectable.
@@ -112,3 +113,29 @@ Compose JSON once and invokes `docker build` directly for each build context,
 avoiding Compose's internal parallel queue. If the local builder reports a
 missing parent snapshot or a closed build-context pipe, only that service is
 rebuilt with `--no-cache`; unrelated images and caches are preserved.
+
+The build plan and every local context input are hashed into an atomic state
+marker outside the generated Docker context. An unchanged complete topology
+skips all 106 builds (about 1.1 seconds on the audited VM); `compose up` and
+isolation recreation use `--no-build`. If startup proves an image is missing,
+the CLI performs exact image checks and rebuilds only the missing services.
+
+For 100+ container blind runs, the observation layer keeps every container
+state and every router's BIRD plus OUTPUT/FORWARD firewall evidence, while
+omitting unrelated per-host DNS/tc/wg probes. Selection uses only topology size
+and container roles, not scenario metadata. MIMO's provider-specific malformed
+`json_schema` transport falls back once to prompt-only JSON; completed objects
+still pass the same local schema, read-only diagnostic gate, mutation scope,
+and independent verifier.
+
+## Audited evidence
+
+- 10,000 deterministic scenarios: 10,000 unique names/fingerprints, 20 batches
+  of 500, repeatable SHA-256, 0.794 seconds planning/validation.
+- Random Complex images: 106/106 serial builds; unchanged cache hit ~1.1s.
+- Random Complex no-AI lifecycle: canary 1/1 and full manifest 5/5.
+- Formal blind MIMO: repair proposed/executed/verified 1/1; standard cleanup
+  1/1; topology recreation 1/1; tainted 0. Category score remains 0/1 because
+  the model used the generic firewall category.
+
+Reports are stored under `benchmarks/reports/GENERATOR_RANDOM_COMPLEX_*_20260811.md`.

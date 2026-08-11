@@ -207,6 +207,7 @@ class AIAgent:
         self.model = model or os.environ.get("AI_MODEL", "mimo-v2.5")
         self.max_turns = max_turns
         self.verbose = verbose
+        self._use_json_schema_transport = True
         self.max_completion_tokens = max(
             1024,
             min(
@@ -386,7 +387,7 @@ class AIAgent:
 15. **netem_packet_loss** - tc/NetEm 注入异常丢包
 16. **kea_dhcp_config_error** - Kea DHCP 子网或地址池配置错误
 17. **randomized_transit_acl_shadowing** - 随机拓扑中带注释的隐藏
-    iptables FORWARD ACL 阻断指定跨域流量
+    iptables OUTPUT/FORWARD ACL 阻断指定路径
 18. **multiple_faults** - 同一场景存在两个或更多独立根因；必须在
     `root_causes` 中逐项列出，每项使用其具体类别
 
@@ -444,11 +445,12 @@ class AIAgent:
             "messages": messages,
             "temperature": 0.1,
             "max_tokens": self.max_completion_tokens,
-            "response_format": {
+        }
+        if self._use_json_schema_transport:
+            data["response_format"] = {
                 "type": "json_schema",
                 "json_schema": AGENT_RESPONSE_SCHEMA,
-            },
-        }
+            }
 
         self._current_api_turn += 1
         start_time = time.time()
@@ -570,31 +572,56 @@ class AIAgent:
             # JSON value or explanatory prose even when json_schema is set.
             # Decode exactly the first complete value, then apply the strict
             # local schema and the existing command safety gates to it.
-            object_start = json_str.find("{")
-            if object_start < 0:
+            object_starts = [
+                index for index, character in enumerate(json_str)
+                if character == "{"
+            ]
+            if not object_starts:
                 raise ValueError("response does not contain a JSON object")
-            decoder = json.JSONDecoder()
-            data, consumed = decoder.raw_decode(json_str[object_start:])
+            # MIMO's OpenAI-compatible endpoint can emit literal newlines in
+            # JSON strings even with json_schema enabled. ``strict=False``
+            # accepts only those JSON control characters; the complete local
+            # schema and every command safety gate still run below.
+            decoder = json.JSONDecoder(strict=False)
+            data = None
+            consumed = 0
+            object_start = -1
+            decode_error = None
+            for candidate_start in object_starts:
+                try:
+                    candidate, candidate_consumed = decoder.raw_decode(
+                        json_str[candidate_start:]
+                    )
+                except json.JSONDecodeError as exc:
+                    decode_error = exc
+                    continue
+                if isinstance(candidate, dict) and "action" in candidate:
+                    data = candidate
+                    consumed = candidate_consumed
+                    object_start = candidate_start
+                    break
+            if data is None:
+                raise decode_error or ValueError(
+                    "response does not contain an actionable JSON object"
+                )
             trailing = json_str[object_start + consumed:].strip()
             if trailing:
                 self.log(
                     "结构化响应包含尾随内容；已隔离首个完整 JSON "
                     f"并忽略 {len(trailing)} 个尾随字符"
                 )
-            required = set(AGENT_RESPONSE_SCHEMA["schema"]["required"])
             allowed = set(AGENT_RESPONSE_SCHEMA["schema"]["properties"])
             if not isinstance(data, dict):
                 raise ValueError("top-level response must be an object")
-            missing = sorted(required - set(data))
             extra = sorted(set(data) - allowed)
-            if missing or extra:
-                raise ValueError(
-                    f"schema keys invalid: missing={missing}, extra={extra}"
-                )
+            if extra:
+                raise ValueError(f"schema keys invalid: extra={extra}")
 
             action = data["action"]
             if action == 'execute_commands':
-                commands = data["commands"]
+                commands = data.get("commands")
+                if isinstance(commands, str):
+                    commands = [commands]
                 if (
                     not isinstance(commands, list)
                     or not commands
@@ -606,10 +633,30 @@ class AIAgent:
                     )
                 return CommandRequest(
                     commands=commands,
-                    reasoning=data["reasoning"],
+                    reasoning=data.get(
+                        "reasoning", "model requested read-only diagnostics"
+                    ),
                 )
             if action != "diagnose":
                 raise ValueError(f"unsupported action: {action}")
+            diagnosis_required = {
+                "category",
+                "root_cause",
+                "symptoms",
+                "proposed_fix",
+                "confidence",
+                "repair_commands",
+                "target_container",
+                "artifact",
+                "faulty_value",
+                "expected_value",
+                "root_causes",
+            }
+            missing = sorted(diagnosis_required - set(data))
+            if missing:
+                raise ValueError(
+                    f"diagnose schema keys missing: {missing}"
+                )
             target_container = data["target_container"]
             repair_commands = data["repair_commands"]
             root_causes = data["root_causes"]
@@ -660,7 +707,7 @@ class AIAgent:
                 symptoms=data["symptoms"],
                 proposed_fix=data["proposed_fix"],
                 confidence=float(confidence),
-                reasoning=data["reasoning"],
+                reasoning=data.get("reasoning", data["root_cause"]),
                 repair_commands=repair_commands,
                 target_container=target_container,
                 artifact=data["artifact"],
@@ -669,7 +716,15 @@ class AIAgent:
                 root_causes=root_causes,
             )
         except Exception as e:
-            self.log(f"解析响应失败: {e}")
+            if self._use_json_schema_transport:
+                self._use_json_schema_transport = False
+                self.log(
+                    "结构化传输未产生完整对象；后续请求停用 provider "
+                    "response_format，继续使用 prompt + 本地严格 schema"
+                )
+            self.log(
+                f"解析响应失败: {e}; 原始响应片段={response[:500]!r}"
+            )
             return InvalidResponse(error=str(e), raw=response[:1000])
 
     @staticmethod

@@ -167,6 +167,16 @@ def capture_network_state(
                     "container": router,
                     "artifact": "iptables FORWARD chain",
                 },
+                {
+                    "id": f"firewall:{router}:output",
+                    "kind": "firewall",
+                    "command": (
+                        f"docker exec {router} "
+                        "iptables -S OUTPUT 2>/dev/null"
+                    ),
+                    "container": router,
+                    "artifact": "iptables OUTPUT chain",
+                },
             )
         )
 
@@ -234,6 +244,22 @@ def capture_network_state(
         )
     )
 
+    capture_profile = "full"
+    if len(statuses) >= 100:
+        # Large generated Internets currently exercise router/control-plane
+        # faults. Preserve every container state and every router's BIRD plus
+        # firewall evidence, but avoid hundreds of unrelated host DNS/tc/wg
+        # subprocesses. Selection depends only on topology size and roles, not
+        # scenario metadata, so blind evaluation remains blind.
+        capture_profile = "large_router_control_plane"
+        router_set = set(routers)
+        probes = [
+            probe
+            for probe in probes
+            if probe.get("container") in router_set
+            and probe.get("kind") in {"routing_protocols", "firewall"}
+        ]
+
     def execute(probe: Dict[str, str]) -> Optional[Observation]:
         try:
             output = run_command(probe["command"], timeout=8)
@@ -256,6 +282,8 @@ def capture_network_state(
 
     return {
         "captured_at": datetime.now(timezone.utc).isoformat(),
+        "capture_profile": capture_profile,
+        "probe_count": len(probes),
         "observations": observations,
     }
 

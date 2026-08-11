@@ -232,15 +232,23 @@ def _container_diagnosis(parameters: Mapping[str, Any]):
     )
 
 
-RANDOM_STUB_ASNS = tuple(range(100, 118))
 RANDOM_SOURCE_ASN = 111
+RANDOM_SOURCE_IX = 201
+# Audited live peers attached to IX 201 by topology seed 20260724. Targeting
+# their IX addresses exercises a real router ACL without depending on the VM's
+# host-wide bridge-netfilter policy for container-to-container transit.
+RANDOM_IX_PEER_ASNS = (21, 22, 24, 25, 107, 113)
+RANDOM_ICMP_PAYLOAD_SIZES = (56, 120, 256, 512)
 
 
 def _random_acl_candidate(sequence: int, seed: int) -> Dict[str, Any]:
-    destinations = tuple(
-        asn for asn in RANDOM_STUB_ASNS if asn != RANDOM_SOURCE_ASN
-    )
-    destination_asn = destinations[(sequence + seed) % len(destinations)]
+    destination_asn = RANDOM_IX_PEER_ASNS[
+        (sequence + seed) % len(RANDOM_IX_PEER_ASNS)
+    ]
+    probe_size = RANDOM_ICMP_PAYLOAD_SIZES[
+        ((sequence + seed) // len(RANDOM_IX_PEER_ASNS))
+        % len(RANDOM_ICMP_PAYLOAD_SIZES)
+    ]
     return {
         "topology_seed": 20260724,
         "source_asn": RANDOM_SOURCE_ASN,
@@ -248,40 +256,39 @@ def _random_acl_candidate(sequence: int, seed: int) -> Dict[str, Any]:
         "source_router": (
             f"as{RANDOM_SOURCE_ASN}brd-router0-10.{RANDOM_SOURCE_ASN}.0.254"
         ),
-        "source_host": (
-            f"as{RANDOM_SOURCE_ASN}h-host_0-10.{RANDOM_SOURCE_ASN}.0.71"
-        ),
-        "source_ip": f"10.{RANDOM_SOURCE_ASN}.0.71",
-        "destination_host": (
-            f"as{destination_asn}h-host_0-10.{destination_asn}.0.71"
-        ),
-        "destination_ip": f"10.{destination_asn}.0.71",
+        "source_interface": f"ix{RANDOM_SOURCE_IX}",
+        "source_ip": f"10.{RANDOM_SOURCE_IX}.0.{RANDOM_SOURCE_ASN}",
+        "destination_ip": f"10.{RANDOM_SOURCE_IX}.0.{destination_asn}",
+        "probe_size": probe_size,
         "rule_comment": "SEED_RANDOM_COMPLEX_ACL",
     }
 
 
 def _random_acl_render(parameters: Mapping[str, Any]) -> RenderedScenario:
     router = parameters["source_router"]
-    source_host = parameters["source_host"]
+    source_interface = parameters["source_interface"]
     source_ip = parameters["source_ip"]
     destination_ip = parameters["destination_ip"]
+    probe_size = int(parameters["probe_size"])
     comment = parameters["rule_comment"]
     rule = (
-        f"-s {source_ip} -d {destination_ip} -m comment "
+        f"-s {source_ip} -d {destination_ip} -p icmp "
+        f"-m length --length {probe_size + 28} -m comment "
         f"--comment {comment} -j REJECT"
     )
     return RenderedScenario(
         inject_command=(
             f"docker exec {router} sh -c '"
-            f"iptables -D FORWARD {rule} 2>/dev/null || true; "
-            f"iptables -I FORWARD 1 {rule}'"
+            f"iptables -D OUTPUT {rule} 2>/dev/null || true; "
+            f"iptables -I OUTPUT 1 {rule}'"
         ),
         verify_command=(
-            f"docker exec {source_host} ping -c 2 -W 2 {destination_ip}"
+            f"docker exec {router} ping -I {source_interface} "
+            f"-s {probe_size} -c 2 -W 2 {destination_ip}"
         ),
         fix_command=(
             f"docker exec {router} sh -c '"
-            f"iptables -D FORWARD {rule} 2>/dev/null || true'"
+            f"iptables -D OUTPUT {rule} 2>/dev/null || true'"
         ),
         verifier_kind="regex",
         verifier_value=r"(?<!\d)0% packet loss",
@@ -291,10 +298,10 @@ def _random_acl_render(parameters: Mapping[str, Any]) -> RenderedScenario:
 def _random_acl_diagnosis(parameters: Mapping[str, Any]):
     return (
         (str(parameters["source_router"]),),
-        "iptables FORWARD chain",
+        "iptables OUTPUT chain",
         (
             f"REJECT {parameters['source_ip']} to "
-            f"{parameters['destination_ip']}"
+            f"{parameters['destination_ip']} payload={parameters['probe_size']}"
         ),
         "no matching REJECT rule",
     )
@@ -349,8 +356,8 @@ TEMPLATES: Dict[str, FaultTemplate] = {
             fault_type="randomized_transit_acl_shadowing",
             difficulty="advanced",
             description=(
-                "A scoped FORWARD ACL blocks one cross-domain path in a "
-                "100+ container topology"
+                "A scoped OUTPUT ACL blocks one deterministic IX peer path "
+                "in a 100+ container topology"
             ),
             candidate_factory=_random_acl_candidate,
             renderer=_random_acl_render,
@@ -430,8 +437,8 @@ def validate_template_parameters(spec: ScenarioSpec) -> None:
         if int(parameters.get("source_asn", -1)) != RANDOM_SOURCE_ASN:
             raise ValueError("random ACL source differs from the audited build")
         destination = int(parameters.get("destination_asn", -1))
-        if destination not in RANDOM_STUB_ASNS or destination == RANDOM_SOURCE_ASN:
-            raise ValueError("random ACL destination is invalid")
+        if destination not in RANDOM_IX_PEER_ASNS:
+            raise ValueError("random ACL IX peer destination is invalid")
         if parameters.get("rule_comment") != "SEED_RANDOM_COMPLEX_ACL":
             raise ValueError("random ACL rule marker is invalid")
         expected_router = (
@@ -439,5 +446,17 @@ def validate_template_parameters(spec: ScenarioSpec) -> None:
         )
         if parameters.get("source_router") != expected_router:
             raise ValueError("random ACL router is invalid")
+        if parameters.get("source_interface") != f"ix{RANDOM_SOURCE_IX}":
+            raise ValueError("random ACL source interface is invalid")
+        if parameters.get("source_ip") != (
+            f"10.{RANDOM_SOURCE_IX}.0.{RANDOM_SOURCE_ASN}"
+        ):
+            raise ValueError("random ACL source IP is invalid")
+        if parameters.get("destination_ip") != (
+            f"10.{RANDOM_SOURCE_IX}.0.{destination}"
+        ):
+            raise ValueError("random ACL destination IP is invalid")
+        if int(parameters.get("probe_size", -1)) not in RANDOM_ICMP_PAYLOAD_SIZES:
+            raise ValueError("random ACL ICMP probe size is invalid")
     else:
         raise ValueError(f"unknown template_id={template_id}")
