@@ -1,0 +1,92 @@
+{
+  "asset_count": 100,
+  "bgp_sessions": {
+    "64512": 2,
+    "64513": 2,
+    "64514": 2,
+    "64515": 2
+  },
+  "compose_service_count": 102,
+  "connectivity_verified": true,
+  "cross_as_probes": [
+    {
+      "source_asn": 64512,
+      "target_asn": 64513,
+      "target_ip": "10.0.1.12"
+    },
+    {
+      "source_asn": 64512,
+      "target_asn": 64514,
+      "target_ip": "10.0.2.12"
+    },
+    {
+      "source_asn": 64512,
+      "target_asn": 64515,
+      "target_ip": "10.0.3.12"
+    },
+    {
+      "source_asn": 64513,
+      "target_asn": 64514,
+      "target_ip": "10.0.2.12"
+    },
+    {
+      "source_asn": 64513,
+      "target_asn": 64515,
+      "target_ip": "10.0.3.12"
+    },
+    {
+      "source_asn": 64514,
+      "target_asn": 64515,
+      "target_ip": "10.0.3.12"
+    }
+  ],
+  "ix_peer_probes": [
+    {
+      "ix_id": 1000,
+      "left_asn": 64512,
+      "right_asn": 64513
+    },
+    {
+      "ix_id": 1001,
+      "left_asn": 64512,
+      "right_asn": 64515
+    },
+    {
+      "ix_id": 1002,
+      "left_asn": 64513,
+      "right_asn": 64514
+    },
+    {
+      "ix_id": 1003,
+      "left_asn": 64514,
+      "right_asn": 64515
+    }
+  ],
+  "kept_running": false,
+  "local_gateway_probes": [
+    {
+      "asn": 64512,
+      "gateway": "10.0.0.2",
+      "host": "as64512h-host9-10.0.0.12"
+    },
+    {
+      "asn": 64513,
+      "gateway": "10.0.1.2",
+      "host": "as64513h-host9-10.0.1.12"
+    },
+    {
+      "asn": 64514,
+      "gateway": "10.0.2.2",
+      "host": "as64514h-host9-10.0.2.12"
+    },
+    {
+      "asn": 64515,
+      "gateway": "10.0.3.2",
+      "host": "as64515h-host9-10.0.3.12"
+    }
+  ],
+  "started_at": "2026-08-12T18:51:41.780629",
+  "topology_fingerprint": "bfd44249458570de8948059522e1aa04892b5974313db7123174abee1a6830ba",
+  "topology_id": "scale_100",
+  "topology_name": "DECLARATIVE_scale_100"
+}

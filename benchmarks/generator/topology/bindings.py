@@ -16,12 +16,14 @@ SUPPORTED_COMPONENTS = (
     "dns_nameserver",
     "bird_wrong_asn",
     "scoped_acl",
+    "bird_wrong_asn_scoped_acl",
 )
 TEMPLATE_COMPONENTS = {
     "container_stopped": "container_stopped",
     "dns_nameserver": "dns_nameserver",
     "bird_wrong_asn": "bird_wrong_asn",
     "random_complex_transit_acl": "scoped_acl",
+    "random_complex_dual_bgp_acl": "bird_wrong_asn_scoped_acl",
 }
 
 
@@ -50,6 +52,20 @@ def bind_fault_component(
         hashlib.sha256(master_seed.encode("utf-8")).digest()[:8], "big"
     )
     assets = list(manifest.get("assets") or [])
+    if component_id == "bird_wrong_asn_scoped_acl":
+        acl = bind_fault_component(manifest, "scoped_acl", sequence, master_seed)
+        bad_asn = 64512 + ((sequence + seed) % 1023)
+        if bad_asn == acl["source_asn"]:
+            bad_asn = 64512 + ((bad_asn - 64512 + 1) % 1023)
+        return {
+            **acl,
+            "template_revision": 2,
+            "correct_asn": acl["source_asn"],
+            "bad_asn": bad_asn,
+            # Declarative edges compile as PeerRelationship.Unfiltered, whose
+            # SEED/BIRD protocol prefix is ``x_`` (commercial peers use p_).
+            "peer_protocol": f"x_as{acl['destination_asn']}",
+        }
     if component_id == "container_stopped":
         candidates = list(bindings.get(component_id) or [])
         if not candidates:
@@ -129,6 +145,23 @@ def validate_fault_binding(
     """Prove rendered parameters remain inside compiled topology capabilities."""
     assets = list(manifest.get("assets") or [])
     bindings = manifest.get("fault_component_bindings") or {}
+    if component_id == "bird_wrong_asn_scoped_acl":
+        required_extra = {
+            "template_revision", "correct_asn", "bad_asn", "peer_protocol"
+        }
+        if not required_extra.issubset(parameters):
+            raise ValueError("invalid compound BIRD/ACL binding keys")
+        acl = {key: value for key, value in parameters.items() if key not in required_extra}
+        validate_fault_binding(manifest, "scoped_acl", acl)
+        if (
+            int(parameters.get("template_revision", -1)) != 2
+            or int(parameters.get("correct_asn", -1)) != int(parameters["source_asn"])
+            or int(parameters.get("bad_asn", -1)) == int(parameters["source_asn"])
+            or not 64512 <= int(parameters.get("bad_asn", -1)) <= 65534
+            or parameters.get("peer_protocol") != f"x_as{parameters['destination_asn']}"
+        ):
+            raise ValueError("compound BIRD/ACL binding differs from capabilities")
+        return
     if component_id == "container_stopped":
         if set(parameters) != {"container"} or parameters.get("container") not in (
             bindings.get(component_id) or []

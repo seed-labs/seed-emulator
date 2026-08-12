@@ -1,0 +1,15 @@
+{
+  "topology_id": "scale_100",
+  "master_seed": "declarative-scale-20260812",
+  "as_count": 4,
+  "hosts_per_as": 24,
+  "edge_policy": "ring",
+  "budget": {
+    "max_containers": 102,
+    "max_networks": 16,
+    "max_memory_mb": 8192,
+    "max_cpu_cores": 8.0,
+    "max_ases": 8,
+    "max_links": 8
+  }
+}

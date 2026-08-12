@@ -10,6 +10,7 @@ sys.path.insert(0, str(BENCHMARKS_DIR / "agents"))
 sys.path.insert(0, str(BENCHMARKS_DIR))
 
 import ai_agent as ai_module  # noqa: E402
+import observations as observations_module  # noqa: E402
 from ai_agent import AIAgent, AIResponseError  # noqa: E402
 from observations import (  # noqa: E402
     capture_network_state,
@@ -127,6 +128,51 @@ assert large_router_kinds == {
     "docker_networks",
     "firewall",
 }
+
+# Declarative captures must select probes from the compiled capability
+# manifest, not infer all targets from scenario-specific container names.
+declarative_commands = []
+declarative_manifest = {
+    "assets": [
+        {"container": "decl-router", "role": "BorderRouter"},
+        {"container": "decl-sensor", "role": "Host"},
+        {"container": "decl-other-host", "role": "Host"},
+    ],
+    "fault_component_bindings": {"dns_nameserver": ["decl-sensor"]},
+}
+
+
+def declarative_run(command, timeout=8):
+    declarative_commands.append((command, timeout))
+    if command.startswith("docker ps -a"):
+        return (
+            "decl-router\trunning\n"
+            "decl-sensor\trunning\n"
+            "decl-other-host\trunning"
+        )
+    return "healthy probe output"
+
+
+original_capability_lookup = observations_module._active_declarative_capabilities
+try:
+    observations_module._active_declarative_capabilities = (
+        lambda _statuses: declarative_manifest
+    )
+    declarative_state = observations_module.capture_network_state(
+        run_command=declarative_run
+    )
+finally:
+    observations_module._active_declarative_capabilities = original_capability_lookup
+
+assert declarative_state["capture_profile"] == "declarative_capability_driven"
+declarative_probe_commands = [item[0] for item in declarative_commands[1:]]
+assert any("decl-router" in command for command in declarative_probe_commands)
+assert any(
+    "decl-sensor" in command and "resolv.conf" in command
+    for command in declarative_probe_commands
+)
+assert not any("decl-other-host" in command for command in declarative_probe_commands)
+assert not any("route_reflector" in command for command in declarative_probe_commands)
 
 small_commands = []
 

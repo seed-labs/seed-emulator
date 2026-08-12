@@ -165,7 +165,7 @@ assert docker_build_calls[1][0][:3] == ("docker", "build", "--no-cache")
 assert docker_build_calls[1][0][-1] == str(service_a)
 assert "custom/service_b:test" in docker_build_calls[2][0]
 assert docker_build_calls[2][0][-1] == str(service_b)
-assert all(item[3]["DOCKER_BUILDKIT"] == "0" for item in serial_build_calls)
+assert all(item[3]["DOCKER_BUILDKIT"] == "1" for item in serial_build_calls)
 
 agent = BenchmarkGeneratorAgent(BENCHMARKS_DIR)
 job = GenerationJob(

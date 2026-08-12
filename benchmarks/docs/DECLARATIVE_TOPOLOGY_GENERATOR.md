@@ -31,6 +31,8 @@ python3 -m generator.topology.cli validate --topology-id small_ring
 python3 -m generator.topology.cli bind --topology-id small_ring \
   --component bird_wrong_asn --sequence 0 --seed example
 python3 -m generator.topology.cli smoke --topology-id small_ring
+python3 -m generator.topology.cli test --topology-id small_ring
+python3 -m generator.topology.cli preflight --topology-id small_ring --require-fit
 ```
 
 Registered inputs and plans are stored under
@@ -115,6 +117,20 @@ The smoke command starts the topology under a topology-specific Compose project,
 waits for all SEED assets, verifies end-to-end cross-AS ping, writes a JSON audit
 report under `benchmarks/reports/`, and tears down only that project unless
 `--keep-running` is requested.
+
+The `test` command checks every host's local gateway, every IX peer edge, the
+expected number of Established eBGP sessions on every router, and cross-AS host
+reachability. Small topologies use a full AS-pair matrix; larger topologies use
+up to 64 deterministic pairs. The `preflight` command compares the approved
+estimate with live VM memory/CPU capacity, retains a host reserve, and fails
+closed above the 1,000-container safety ceiling. It prevents a planning success
+from being mistaken for authorization to exhaust the host.
+
+Blind observation discovers an active declarative capability manifest, selects
+routers by compiled role and one DNS sensor host per AS, and never relies on
+B00 container names. Above 500 assets it retains all anomalous role/state
+counts while deterministically sampling at most 128 routers and 128 host
+sensors, bounding subprocess and prompt volume independently of the fault.
 
 The first implementation supports one router and one LAN per AS, IPv4 eBGP,
 and at most the limits admitted by the request budget. Multi-router ASes,

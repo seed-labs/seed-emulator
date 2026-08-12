@@ -1,0 +1,1129 @@
+{
+  "capture_profile": "declarative_capability_driven",
+  "captured_at": "2026-08-12T11:18:50.503486+00:00",
+  "observations": {
+    "bird:as64512brd-router0-10.0.0.2:config_summary": {
+      "id": "bird:as64512brd-router0-10.0.0.2:config_summary",
+      "kind": "routing_config",
+      "output": "local 172.16.0.2 as 64512;\n    local 172.16.0.10 as 64512;",
+      "source": {
+        "artifact": "BIRD ASN and OSPF area summary",
+        "command": "docker exec as64512brd-router0-10.0.0.2 sh -c \"grep -E '^[[:space:]]*local .* as [0-9]+;|^[[:space:]]*area [0-9]+' /etc/bird/bird.conf 2>/dev/null | head -n 80\"",
+        "container": "as64512brd-router0-10.0.0.2",
+        "interface": ""
+      }
+    },
+    "bird:as64512brd-router0-10.0.0.2:protocols": {
+      "id": "bird:as64512brd-router0-10.0.0.2:protocols",
+      "kind": "routing_protocols",
+      "output": "BIRD 2.17.2 ready.\nName       Proto      Table      State  Since         Info\ndevice1    Device     ---        up     11:04:56.614  \nkernel1    Kernel     master4    up     11:04:56.614  \nlocal_nets Direct     ---        up     11:04:56.614  \npipe1      Pipe       ---        up     11:04:56.614  t_bgp <=> master4\npipe2      Pipe       ---        up     11:04:56.614  t_direct <=> t_bgp\nx_as64513  BGP        ---        up     11:17:13.385  Established   \nx_as64514  BGP        ---        up     11:05:00.629  Established",
+      "source": {
+        "artifact": "BIRD protocol state",
+        "command": "docker exec as64512brd-router0-10.0.0.2 birdc show protocols 2>/dev/null",
+        "container": "as64512brd-router0-10.0.0.2",
+        "interface": ""
+      }
+    },
+    "bird:as64513brd-router0-10.0.1.2:config_summary": {
+      "id": "bird:as64513brd-router0-10.0.1.2:config_summary",
+      "kind": "routing_config",
+      "output": "local 172.16.0.3 as 64513;\n    local 172.16.0.18 as 64513;",
+      "source": {
+        "artifact": "BIRD ASN and OSPF area summary",
+        "command": "docker exec as64513brd-router0-10.0.1.2 sh -c \"grep -E '^[[:space:]]*local .* as [0-9]+;|^[[:space:]]*area [0-9]+' /etc/bird/bird.conf 2>/dev/null | head -n 80\"",
+        "container": "as64513brd-router0-10.0.1.2",
+        "interface": ""
+      }
+    },
+    "bird:as64513brd-router0-10.0.1.2:protocols": {
+      "id": "bird:as64513brd-router0-10.0.1.2:protocols",
+      "kind": "routing_protocols",
+      "output": "BIRD 2.17.2 ready.\nName       Proto      Table      State  Since         Info\ndevice1    Device     ---        up     11:04:56.394  \nkernel1    Kernel     master4    up     11:04:56.394  \nlocal_nets Direct     ---        up     11:04:56.394  \npipe1      Pipe       ---        up     11:04:56.394  t_bgp <=> master4\npipe2      Pipe       ---        up     11:04:56.394  t_direct <=> t_bgp\nx_as64512  BGP        ---        up     11:17:12.993  Established   \nx_as64514  BGP        ---        up     11:08:02.848  Established",
+      "source": {
+        "artifact": "BIRD protocol state",
+        "command": "docker exec as64513brd-router0-10.0.1.2 birdc show protocols 2>/dev/null",
+        "container": "as64513brd-router0-10.0.1.2",
+        "interface": ""
+      }
+    },
+    "bird:as64514brd-router0-10.0.2.2:config_summary": {
+      "id": "bird:as64514brd-router0-10.0.2.2:config_summary",
+      "kind": "routing_config",
+      "output": "local 172.16.0.11 as 64514;\n    local 172.16.0.19 as 64514;",
+      "source": {
+        "artifact": "BIRD ASN and OSPF area summary",
+        "command": "docker exec as64514brd-router0-10.0.2.2 sh -c \"grep -E '^[[:space:]]*local .* as [0-9]+;|^[[:space:]]*area [0-9]+' /etc/bird/bird.conf 2>/dev/null | head -n 80\"",
+        "container": "as64514brd-router0-10.0.2.2",
+        "interface": ""
+      }
+    },
+    "bird:as64514brd-router0-10.0.2.2:protocols": {
+      "id": "bird:as64514brd-router0-10.0.2.2:protocols",
+      "kind": "routing_protocols",
+      "output": "BIRD 2.17.2 ready.\nName       Proto      Table      State  Since         Info\ndevice1    Device     ---        up     11:04:56.843  \nkernel1    Kernel     master4    up     11:04:56.843  \nlocal_nets Direct     ---        up     11:04:56.843  \npipe1      Pipe       ---        up     11:04:56.843  t_bgp <=> master4\npipe2      Pipe       ---        up     11:04:56.843  t_direct <=> t_bgp\nx_as64512  BGP        ---        up     11:05:00.629  Established   \nx_as64513  BGP        ---        up     11:08:02.848  Established",
+      "source": {
+        "artifact": "BIRD protocol state",
+        "command": "docker exec as64514brd-router0-10.0.2.2 birdc show protocols 2>/dev/null",
+        "container": "as64514brd-router0-10.0.2.2",
+        "interface": ""
+      }
+    },
+    "container:as100brd-ix100-10.100.0.100:state": {
+      "id": "container:as100brd-ix100-10.100.0.100:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as100brd-ix100-10.100.0.100",
+        "interface": ""
+      }
+    },
+    "container:as101brd-ix101-10.101.0.101:state": {
+      "id": "container:as101brd-ix101-10.101.0.101:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as101brd-ix101-10.101.0.101",
+        "interface": ""
+      }
+    },
+    "container:as102brd-ix102-10.102.0.102:state": {
+      "id": "container:as102brd-ix102-10.102.0.102:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as102brd-ix102-10.102.0.102",
+        "interface": ""
+      }
+    },
+    "container:as103brd-ix103-10.103.0.103:state": {
+      "id": "container:as103brd-ix103-10.103.0.103:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as103brd-ix103-10.103.0.103",
+        "interface": ""
+      }
+    },
+    "container:as104brd-ix104-10.104.0.104:state": {
+      "id": "container:as104brd-ix104-10.104.0.104:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as104brd-ix104-10.104.0.104",
+        "interface": ""
+      }
+    },
+    "container:as105brd-ix105-10.105.0.105:state": {
+      "id": "container:as105brd-ix105-10.105.0.105:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as105brd-ix105-10.105.0.105",
+        "interface": ""
+      }
+    },
+    "container:as11brd-r102-10.102.0.11:state": {
+      "id": "container:as11brd-r102-10.102.0.11:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as11brd-r102-10.102.0.11",
+        "interface": ""
+      }
+    },
+    "container:as11brd-r105-10.105.0.11:state": {
+      "id": "container:as11brd-r105-10.105.0.11:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as11brd-r105-10.105.0.11",
+        "interface": ""
+      }
+    },
+    "container:as12brd-r101-10.101.0.12:state": {
+      "id": "container:as12brd-r101-10.101.0.12:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as12brd-r101-10.101.0.12",
+        "interface": ""
+      }
+    },
+    "container:as12brd-r104-10.104.0.12:state": {
+      "id": "container:as12brd-r104-10.104.0.12:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as12brd-r104-10.104.0.12",
+        "interface": ""
+      }
+    },
+    "container:as150brd-router0-10.150.0.254:state": {
+      "id": "container:as150brd-router0-10.150.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as150brd-router0-10.150.0.254",
+        "interface": ""
+      }
+    },
+    "container:as150h-host_0-10.150.0.71:state": {
+      "id": "container:as150h-host_0-10.150.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as150h-host_0-10.150.0.71",
+        "interface": ""
+      }
+    },
+    "container:as150h-host_1-10.150.0.72:state": {
+      "id": "container:as150h-host_1-10.150.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as150h-host_1-10.150.0.72",
+        "interface": ""
+      }
+    },
+    "container:as151brd-router0-10.151.0.254:state": {
+      "id": "container:as151brd-router0-10.151.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as151brd-router0-10.151.0.254",
+        "interface": ""
+      }
+    },
+    "container:as151h-host_0-10.151.0.71:state": {
+      "id": "container:as151h-host_0-10.151.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as151h-host_0-10.151.0.71",
+        "interface": ""
+      }
+    },
+    "container:as151h-host_1-10.151.0.72:state": {
+      "id": "container:as151h-host_1-10.151.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as151h-host_1-10.151.0.72",
+        "interface": ""
+      }
+    },
+    "container:as152brd-router0-10.152.0.254:state": {
+      "id": "container:as152brd-router0-10.152.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as152brd-router0-10.152.0.254",
+        "interface": ""
+      }
+    },
+    "container:as152h-host_0-10.152.0.71:state": {
+      "id": "container:as152h-host_0-10.152.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as152h-host_0-10.152.0.71",
+        "interface": ""
+      }
+    },
+    "container:as152h-host_1-10.152.0.72:state": {
+      "id": "container:as152h-host_1-10.152.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as152h-host_1-10.152.0.72",
+        "interface": ""
+      }
+    },
+    "container:as153brd-router0-10.153.0.254:state": {
+      "id": "container:as153brd-router0-10.153.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as153brd-router0-10.153.0.254",
+        "interface": ""
+      }
+    },
+    "container:as153h-host_0-10.153.0.71:state": {
+      "id": "container:as153h-host_0-10.153.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as153h-host_0-10.153.0.71",
+        "interface": ""
+      }
+    },
+    "container:as153h-host_1-10.153.0.72:state": {
+      "id": "container:as153h-host_1-10.153.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as153h-host_1-10.153.0.72",
+        "interface": ""
+      }
+    },
+    "container:as154brd-router0-10.154.0.254:state": {
+      "id": "container:as154brd-router0-10.154.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as154brd-router0-10.154.0.254",
+        "interface": ""
+      }
+    },
+    "container:as154h-host_0-10.154.0.71:state": {
+      "id": "container:as154h-host_0-10.154.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as154h-host_0-10.154.0.71",
+        "interface": ""
+      }
+    },
+    "container:as154h-host_1-10.154.0.72:state": {
+      "id": "container:as154h-host_1-10.154.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as154h-host_1-10.154.0.72",
+        "interface": ""
+      }
+    },
+    "container:as154h-host_new-10.154.0.129:state": {
+      "id": "container:as154h-host_new-10.154.0.129:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as154h-host_new-10.154.0.129",
+        "interface": ""
+      }
+    },
+    "container:as160brd-router0-10.160.0.254:state": {
+      "id": "container:as160brd-router0-10.160.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as160brd-router0-10.160.0.254",
+        "interface": ""
+      }
+    },
+    "container:as160h-host_0-10.160.0.71:state": {
+      "id": "container:as160h-host_0-10.160.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as160h-host_0-10.160.0.71",
+        "interface": ""
+      }
+    },
+    "container:as160h-host_1-10.160.0.72:state": {
+      "id": "container:as160h-host_1-10.160.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as160h-host_1-10.160.0.72",
+        "interface": ""
+      }
+    },
+    "container:as161brd-router0-10.161.0.254:state": {
+      "id": "container:as161brd-router0-10.161.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as161brd-router0-10.161.0.254",
+        "interface": ""
+      }
+    },
+    "container:as161h-host_0-10.161.0.71:state": {
+      "id": "container:as161h-host_0-10.161.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as161h-host_0-10.161.0.71",
+        "interface": ""
+      }
+    },
+    "container:as161h-host_1-10.161.0.72:state": {
+      "id": "container:as161h-host_1-10.161.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as161h-host_1-10.161.0.72",
+        "interface": ""
+      }
+    },
+    "container:as162brd-router0-10.162.0.254:state": {
+      "id": "container:as162brd-router0-10.162.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as162brd-router0-10.162.0.254",
+        "interface": ""
+      }
+    },
+    "container:as162h-host_0-10.162.0.71:state": {
+      "id": "container:as162h-host_0-10.162.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as162h-host_0-10.162.0.71",
+        "interface": ""
+      }
+    },
+    "container:as162h-host_1-10.162.0.72:state": {
+      "id": "container:as162h-host_1-10.162.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as162h-host_1-10.162.0.72",
+        "interface": ""
+      }
+    },
+    "container:as163brd-router0-10.163.0.254:state": {
+      "id": "container:as163brd-router0-10.163.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as163brd-router0-10.163.0.254",
+        "interface": ""
+      }
+    },
+    "container:as163h-host_0-10.163.0.71:state": {
+      "id": "container:as163h-host_0-10.163.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as163h-host_0-10.163.0.71",
+        "interface": ""
+      }
+    },
+    "container:as163h-host_1-10.163.0.72:state": {
+      "id": "container:as163h-host_1-10.163.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as163h-host_1-10.163.0.72",
+        "interface": ""
+      }
+    },
+    "container:as164brd-router0-10.164.0.254:state": {
+      "id": "container:as164brd-router0-10.164.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as164brd-router0-10.164.0.254",
+        "interface": ""
+      }
+    },
+    "container:as164h-host_0-10.164.0.71:state": {
+      "id": "container:as164h-host_0-10.164.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as164h-host_0-10.164.0.71",
+        "interface": ""
+      }
+    },
+    "container:as164h-host_1-10.164.0.72:state": {
+      "id": "container:as164h-host_1-10.164.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as164h-host_1-10.164.0.72",
+        "interface": ""
+      }
+    },
+    "container:as170brd-router0-10.170.0.254:state": {
+      "id": "container:as170brd-router0-10.170.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as170brd-router0-10.170.0.254",
+        "interface": ""
+      }
+    },
+    "container:as170h-host_0-10.170.0.71:state": {
+      "id": "container:as170h-host_0-10.170.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as170h-host_0-10.170.0.71",
+        "interface": ""
+      }
+    },
+    "container:as170h-host_1-10.170.0.72:state": {
+      "id": "container:as170h-host_1-10.170.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as170h-host_1-10.170.0.72",
+        "interface": ""
+      }
+    },
+    "container:as171brd-router0-10.171.0.254:state": {
+      "id": "container:as171brd-router0-10.171.0.254:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as171brd-router0-10.171.0.254",
+        "interface": ""
+      }
+    },
+    "container:as171h-host_0-10.171.0.71:state": {
+      "id": "container:as171h-host_0-10.171.0.71:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as171h-host_0-10.171.0.71",
+        "interface": ""
+      }
+    },
+    "container:as171h-host_1-10.171.0.72:state": {
+      "id": "container:as171h-host_1-10.171.0.72:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as171h-host_1-10.171.0.72",
+        "interface": ""
+      }
+    },
+    "container:as2brd-r100-10.100.0.2:state": {
+      "id": "container:as2brd-r100-10.100.0.2:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as2brd-r100-10.100.0.2",
+        "interface": ""
+      }
+    },
+    "container:as2brd-r101-10.101.0.2:state": {
+      "id": "container:as2brd-r101-10.101.0.2:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as2brd-r101-10.101.0.2",
+        "interface": ""
+      }
+    },
+    "container:as2brd-r102-10.102.0.2:state": {
+      "id": "container:as2brd-r102-10.102.0.2:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as2brd-r102-10.102.0.2",
+        "interface": ""
+      }
+    },
+    "container:as2brd-r105-10.105.0.2:state": {
+      "id": "container:as2brd-r105-10.105.0.2:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as2brd-r105-10.105.0.2",
+        "interface": ""
+      }
+    },
+    "container:as3brd-r100-10.100.0.3:state": {
+      "id": "container:as3brd-r100-10.100.0.3:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as3brd-r100-10.100.0.3",
+        "interface": ""
+      }
+    },
+    "container:as3brd-r103-10.103.0.3:state": {
+      "id": "container:as3brd-r103-10.103.0.3:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as3brd-r103-10.103.0.3",
+        "interface": ""
+      }
+    },
+    "container:as3brd-r104-10.104.0.3:state": {
+      "id": "container:as3brd-r104-10.104.0.3:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as3brd-r104-10.104.0.3",
+        "interface": ""
+      }
+    },
+    "container:as3brd-r105-10.105.0.3:state": {
+      "id": "container:as3brd-r105-10.105.0.3:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as3brd-r105-10.105.0.3",
+        "interface": ""
+      }
+    },
+    "container:as4brd-r100-10.100.0.4:state": {
+      "id": "container:as4brd-r100-10.100.0.4:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as4brd-r100-10.100.0.4",
+        "interface": ""
+      }
+    },
+    "container:as4brd-r102-10.102.0.4:state": {
+      "id": "container:as4brd-r102-10.102.0.4:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as4brd-r102-10.102.0.4",
+        "interface": ""
+      }
+    },
+    "container:as4brd-r104-10.104.0.4:state": {
+      "id": "container:as4brd-r104-10.104.0.4:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as4brd-r104-10.104.0.4",
+        "interface": ""
+      }
+    },
+    "container:as64512brd-router0-10.0.0.2:state": {
+      "id": "container:as64512brd-router0-10.0.0.2:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as64512brd-router0-10.0.0.2",
+        "interface": ""
+      }
+    },
+    "container:as64512h-host0-10.0.0.3:state": {
+      "id": "container:as64512h-host0-10.0.0.3:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as64512h-host0-10.0.0.3",
+        "interface": ""
+      }
+    },
+    "container:as64513brd-router0-10.0.1.2:state": {
+      "id": "container:as64513brd-router0-10.0.1.2:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as64513brd-router0-10.0.1.2",
+        "interface": ""
+      }
+    },
+    "container:as64513h-host0-10.0.1.3:state": {
+      "id": "container:as64513h-host0-10.0.1.3:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as64513h-host0-10.0.1.3",
+        "interface": ""
+      }
+    },
+    "container:as64514brd-router0-10.0.2.2:state": {
+      "id": "container:as64514brd-router0-10.0.2.2:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as64514brd-router0-10.0.2.2",
+        "interface": ""
+      }
+    },
+    "container:as64514h-host0-10.0.2.3:state": {
+      "id": "container:as64514h-host0-10.0.2.3:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "as64514h-host0-10.0.2.3",
+        "interface": ""
+      }
+    },
+    "container:decl_small_ring-072d7840db6a44d06e5c5fd4d7ea8a7d-1:state": {
+      "id": "container:decl_small_ring-072d7840db6a44d06e5c5fd4d7ea8a7d-1:state",
+      "kind": "container_state",
+      "output": "exited",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "decl_small_ring-072d7840db6a44d06e5c5fd4d7ea8a7d-1",
+        "interface": ""
+      }
+    },
+    "container:decl_small_ring-ad739b7b201eccafa592110d2bf214a7-1:state": {
+      "id": "container:decl_small_ring-ad739b7b201eccafa592110d2bf214a7-1:state",
+      "kind": "container_state",
+      "output": "exited",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "decl_small_ring-ad739b7b201eccafa592110d2bf214a7-1",
+        "interface": ""
+      }
+    },
+    "container:output-072d7840db6a44d06e5c5fd4d7ea8a7d-1:state": {
+      "id": "container:output-072d7840db6a44d06e5c5fd4d7ea8a7d-1:state",
+      "kind": "container_state",
+      "output": "exited",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "output-072d7840db6a44d06e5c5fd4d7ea8a7d-1",
+        "interface": ""
+      }
+    },
+    "container:output-ad739b7b201eccafa592110d2bf214a7-1:state": {
+      "id": "container:output-ad739b7b201eccafa592110d2bf214a7-1:state",
+      "kind": "container_state",
+      "output": "exited",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "output-ad739b7b201eccafa592110d2bf214a7-1",
+        "interface": ""
+      }
+    },
+    "container:seedemu_internet_map:state": {
+      "id": "container:seedemu_internet_map:state",
+      "kind": "container_state",
+      "output": "running",
+      "source": {
+        "artifact": "Docker container state",
+        "command": "docker ps -a --format '{{.Names}}\\t{{.State}}'",
+        "container": "seedemu_internet_map",
+        "interface": ""
+      }
+    },
+    "dns:as64512h-host0-10.0.0.3:resolv": {
+      "id": "dns:as64512h-host0-10.0.0.3:resolv",
+      "kind": "dns_config",
+      "output": "# Generated by Docker Engine.\n# This file can be edited; Docker Engine will not make further changes once it\n# has been modified.\n\nnameserver 127.0.0.11\noptions ndots:0\n\n# Based on host file: '/etc/resolv.conf' (internal resolver)\n# ExtServers: [host(8.8.8.8) host(1.1.1.1)]\n# Overrides: []\n# Option ndots from: internal",
+      "source": {
+        "artifact": "/etc/resolv.conf",
+        "command": "docker exec as64512h-host0-10.0.0.3 cat /etc/resolv.conf 2>/dev/null",
+        "container": "as64512h-host0-10.0.0.3",
+        "interface": ""
+      }
+    },
+    "dns:as64513h-host0-10.0.1.3:resolv": {
+      "id": "dns:as64513h-host0-10.0.1.3:resolv",
+      "kind": "dns_config",
+      "output": "nameserver 127.0.0.11\noptions ndots:0",
+      "source": {
+        "artifact": "/etc/resolv.conf",
+        "command": "docker exec as64513h-host0-10.0.1.3 cat /etc/resolv.conf 2>/dev/null",
+        "container": "as64513h-host0-10.0.1.3",
+        "interface": ""
+      }
+    },
+    "dns:as64514h-host0-10.0.2.3:resolv": {
+      "id": "dns:as64514h-host0-10.0.2.3:resolv",
+      "kind": "dns_config",
+      "output": "# Generated by Docker Engine.\n# This file can be edited; Docker Engine will not make further changes once it\n# has been modified.\n\nnameserver 127.0.0.11\noptions ndots:0\n\n# Based on host file: '/etc/resolv.conf' (internal resolver)\n# ExtServers: [host(8.8.8.8) host(1.1.1.1)]\n# Overrides: []\n# Option ndots from: internal",
+      "source": {
+        "artifact": "/etc/resolv.conf",
+        "command": "docker exec as64514h-host0-10.0.2.3 cat /etc/resolv.conf 2>/dev/null",
+        "container": "as64514h-host0-10.0.2.3",
+        "interface": ""
+      }
+    },
+    "docker:as64512brd-router0-10.0.0.2:networks": {
+      "id": "docker:as64512brd-router0-10.0.0.2:networks",
+      "kind": "docker_networks",
+      "output": "{\"decl_small_ring_net_64512_lan0\":{\"IPAMConfig\":{\"IPv4Address\":\"10.0.0.2\"},\"Links\":null,\"Aliases\":[\"as64512brd-router0-10.0.0.2\",\"brdnode_64512_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"17a69c0c645dbb848df98b2f5a69a8a11a905ee091331d7363aec5bb54c744cd\",\"EndpointID\":\"5c6e6ddebe179f311d31993c363635aaf6582d5da80e27874514e71f53ac9d2e\",\"Gateway\":\"10.0.0.1\",\"IPAddress\":\"10.0.0.2\",\"MacAddress\":\"de:83:1e:9f:51:82\",\"IPPrefixLen\":24,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"as64512brd-router0-10.0.0.2\",\"brdnode_64512_router0\",\"6914be38a623\"]},\"decl_small_ring_net_ix_ix1000\":{\"IPAMConfig\":{\"IPv4Address\":\"172.16.0.2\"},\"Links\":null,\"Aliases\":[\"as64512brd-router0-10.0.0.2\",\"brdnode_64512_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"b2eb4a3036af328744499cf437fdfaef76225a15f156447cbc4f195d6970f0e0\",\"EndpointID\":\"33af69b11bd9be06db35565c0ef9f740dd2ca4f85f893471a9c119383be06e7c\",\"Gateway\":\"172.16.0.1\",\"IPAddress\":\"172.16.0.2\",\"MacAddress\":\"e6:b6:02:3a:2e:dc\",\"IPPrefixLen\":29,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"as64512brd-router0-10.0.0.2\",\"brdnode_64512_router0\",\"6914be38a623\"]},\"decl_small_ring_net_ix_ix1001\":{\"IPAMConfig\":{\"IPv4Address\":\"172.16.0.10\"},\"Links\":null,\"Aliases\":[\"as64512brd-router0-10.0.0.2\",\"brdnode_64512_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"e1f9aca5defeadac6dd0777dbc88c78bd2e2e476c851d3980a48db035100a9f1\",\"EndpointID\":\"dec0c7eba290c2bd74256cc298884b8809f6d2a972fa2ca00fefe5825871b881\",\"Gateway\":\"172.16.0.9\",\"IPAddress\":\"172.16.0.10\",\"MacAddress\":\"16:f5:d8:98:",
+      "source": {
+        "artifact": "Docker network attachments",
+        "command": "docker inspect --format '{{json .NetworkSettings.Networks}}' as64512brd-router0-10.0.0.2",
+        "container": "as64512brd-router0-10.0.0.2",
+        "interface": ""
+      }
+    },
+    "docker:as64512h-host0-10.0.0.3:networks": {
+      "id": "docker:as64512h-host0-10.0.0.3:networks",
+      "kind": "docker_networks",
+      "output": "{\"decl_small_ring_net_64512_lan0\":{\"IPAMConfig\":{\"IPv4Address\":\"10.0.0.3\"},\"Links\":null,\"Aliases\":[\"as64512h-host0-10.0.0.3\",\"hnode_64512_host0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"17a69c0c645dbb848df98b2f5a69a8a11a905ee091331d7363aec5bb54c744cd\",\"EndpointID\":\"65e7b562f28f80289b8102be3063ec574f1921a0885802970e903b375c56faa4\",\"Gateway\":\"10.0.0.1\",\"IPAddress\":\"10.0.0.3\",\"MacAddress\":\"12:9a:e7:f9:ef:54\",\"IPPrefixLen\":24,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"as64512h-host0-10.0.0.3\",\"hnode_64512_host0\",\"492f70f4f5bd\"]}}",
+      "source": {
+        "artifact": "Docker network attachments",
+        "command": "docker inspect --format '{{json .NetworkSettings.Networks}}' as64512h-host0-10.0.0.3",
+        "container": "as64512h-host0-10.0.0.3",
+        "interface": ""
+      }
+    },
+    "docker:as64513brd-router0-10.0.1.2:networks": {
+      "id": "docker:as64513brd-router0-10.0.1.2:networks",
+      "kind": "docker_networks",
+      "output": "{\"decl_small_ring_net_64513_lan0\":{\"IPAMConfig\":{\"IPv4Address\":\"10.0.1.2\"},\"Links\":null,\"Aliases\":[\"as64513brd-router0-10.0.1.2\",\"brdnode_64513_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"a9b5ed57aed542118ba28d4ac23c238ca3bd29a15e60188ac9cad2a49d345bcd\",\"EndpointID\":\"74b6de8299998f7ee1281f2bd7ec10c486fa2d652409da6681a675c7ad3529c1\",\"Gateway\":\"10.0.1.1\",\"IPAddress\":\"10.0.1.2\",\"MacAddress\":\"9e:30:73:08:06:13\",\"IPPrefixLen\":24,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"as64513brd-router0-10.0.1.2\",\"brdnode_64513_router0\",\"4be33c80d6be\"]},\"decl_small_ring_net_ix_ix1000\":{\"IPAMConfig\":{\"IPv4Address\":\"172.16.0.3\"},\"Links\":null,\"Aliases\":[\"as64513brd-router0-10.0.1.2\",\"brdnode_64513_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"b2eb4a3036af328744499cf437fdfaef76225a15f156447cbc4f195d6970f0e0\",\"EndpointID\":\"08eb54a523eef7ec1fcc44e4c302be1b8df7d5d5e2d3e178081a9ad4e50c5711\",\"Gateway\":\"172.16.0.1\",\"IPAddress\":\"172.16.0.3\",\"MacAddress\":\"62:a9:22:49:37:ff\",\"IPPrefixLen\":29,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"as64513brd-router0-10.0.1.2\",\"brdnode_64513_router0\",\"4be33c80d6be\"]},\"decl_small_ring_net_ix_ix1002\":{\"IPAMConfig\":{\"IPv4Address\":\"172.16.0.18\"},\"Links\":null,\"Aliases\":[\"as64513brd-router0-10.0.1.2\",\"brdnode_64513_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"cdefbd712326fb34c31a3b7efbf9ffbd8aa496a15f1b6a51b50dd2eb3f9f31c3\",\"EndpointID\":\"19be00bad7fa0ffb1a77b1e4c51a1db0490273f0695315c62f23f2edc2f4aa58\",\"Gateway\":\"172.16.0.17\",\"IPAddress\":\"172.16.0.18\",\"MacAddress\":\"ba:87:39:c4",
+      "source": {
+        "artifact": "Docker network attachments",
+        "command": "docker inspect --format '{{json .NetworkSettings.Networks}}' as64513brd-router0-10.0.1.2",
+        "container": "as64513brd-router0-10.0.1.2",
+        "interface": ""
+      }
+    },
+    "docker:as64513h-host0-10.0.1.3:networks": {
+      "id": "docker:as64513h-host0-10.0.1.3:networks",
+      "kind": "docker_networks",
+      "output": "{\"decl_small_ring_net_64513_lan0\":{\"IPAMConfig\":{\"IPv4Address\":\"10.0.1.3\"},\"Links\":null,\"Aliases\":[\"as64513h-host0-10.0.1.3\",\"hnode_64513_host0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"a9b5ed57aed542118ba28d4ac23c238ca3bd29a15e60188ac9cad2a49d345bcd\",\"EndpointID\":\"80979087aac15abfb924c598bb7f3c6b80b92ae4587a58f28e7caefd5624fd36\",\"Gateway\":\"10.0.1.1\",\"IPAddress\":\"10.0.1.3\",\"MacAddress\":\"16:76:f6:08:82:da\",\"IPPrefixLen\":24,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"as64513h-host0-10.0.1.3\",\"hnode_64513_host0\",\"a246ccd92ed7\"]}}",
+      "source": {
+        "artifact": "Docker network attachments",
+        "command": "docker inspect --format '{{json .NetworkSettings.Networks}}' as64513h-host0-10.0.1.3",
+        "container": "as64513h-host0-10.0.1.3",
+        "interface": ""
+      }
+    },
+    "docker:as64514brd-router0-10.0.2.2:networks": {
+      "id": "docker:as64514brd-router0-10.0.2.2:networks",
+      "kind": "docker_networks",
+      "output": "{\"decl_small_ring_net_64514_lan0\":{\"IPAMConfig\":{\"IPv4Address\":\"10.0.2.2\"},\"Links\":null,\"Aliases\":[\"as64514brd-router0-10.0.2.2\",\"brdnode_64514_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"05e7030fe01aa06c4a386d8b3569495310679b962af0b03c6ef8f12cd84cc4f1\",\"EndpointID\":\"4ed1530cc85b9e1ed699ce03125054a703117ac1142f7cc58d05e7044442cedf\",\"Gateway\":\"10.0.2.1\",\"IPAddress\":\"10.0.2.2\",\"MacAddress\":\"86:85:2f:96:c8:43\",\"IPPrefixLen\":24,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"as64514brd-router0-10.0.2.2\",\"brdnode_64514_router0\",\"04d9ebe631f4\"]},\"decl_small_ring_net_ix_ix1001\":{\"IPAMConfig\":{\"IPv4Address\":\"172.16.0.11\"},\"Links\":null,\"Aliases\":[\"as64514brd-router0-10.0.2.2\",\"brdnode_64514_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"e1f9aca5defeadac6dd0777dbc88c78bd2e2e476c851d3980a48db035100a9f1\",\"EndpointID\":\"77a1315edd42abd434827ca8f20eee314088bf2850513446b493138262b29b95\",\"Gateway\":\"172.16.0.9\",\"IPAddress\":\"172.16.0.11\",\"MacAddress\":\"06:73:f3:ec:c3:d1\",\"IPPrefixLen\":29,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"as64514brd-router0-10.0.2.2\",\"brdnode_64514_router0\",\"04d9ebe631f4\"]},\"decl_small_ring_net_ix_ix1002\":{\"IPAMConfig\":{\"IPv4Address\":\"172.16.0.19\"},\"Links\":null,\"Aliases\":[\"as64514brd-router0-10.0.2.2\",\"brdnode_64514_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"cdefbd712326fb34c31a3b7efbf9ffbd8aa496a15f1b6a51b50dd2eb3f9f31c3\",\"EndpointID\":\"1be0eb502c989937ae646332eb268e49c67fc3c4e7898d246b592ad64f517d1e\",\"Gateway\":\"172.16.0.17\",\"IPAddress\":\"172.16.0.19\",\"MacAddress\":\"5a:0c:35:",
+      "source": {
+        "artifact": "Docker network attachments",
+        "command": "docker inspect --format '{{json .NetworkSettings.Networks}}' as64514brd-router0-10.0.2.2",
+        "container": "as64514brd-router0-10.0.2.2",
+        "interface": ""
+      }
+    },
+    "docker:as64514h-host0-10.0.2.3:networks": {
+      "id": "docker:as64514h-host0-10.0.2.3:networks",
+      "kind": "docker_networks",
+      "output": "{\"decl_small_ring_net_64514_lan0\":{\"IPAMConfig\":{\"IPv4Address\":\"10.0.2.3\"},\"Links\":null,\"Aliases\":[\"as64514h-host0-10.0.2.3\",\"hnode_64514_host0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"05e7030fe01aa06c4a386d8b3569495310679b962af0b03c6ef8f12cd84cc4f1\",\"EndpointID\":\"3ed73085187292ab91b00f3b6e49f25a47ebae436ec5c62e753de096ce6747a2\",\"Gateway\":\"10.0.2.1\",\"IPAddress\":\"10.0.2.3\",\"MacAddress\":\"9a:d7:e3:62:e3:4b\",\"IPPrefixLen\":24,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"as64514h-host0-10.0.2.3\",\"hnode_64514_host0\",\"9e635497c1e1\"]}}",
+      "source": {
+        "artifact": "Docker network attachments",
+        "command": "docker inspect --format '{{json .NetworkSettings.Networks}}' as64514h-host0-10.0.2.3",
+        "container": "as64514h-host0-10.0.2.3",
+        "interface": ""
+      }
+    },
+    "firewall:as64512brd-router0-10.0.0.2:forward": {
+      "id": "firewall:as64512brd-router0-10.0.0.2:forward",
+      "kind": "firewall",
+      "output": "-P FORWARD ACCEPT",
+      "source": {
+        "artifact": "iptables FORWARD chain",
+        "command": "docker exec as64512brd-router0-10.0.0.2 iptables -S FORWARD 2>/dev/null",
+        "container": "as64512brd-router0-10.0.0.2",
+        "interface": ""
+      }
+    },
+    "firewall:as64512brd-router0-10.0.0.2:output": {
+      "id": "firewall:as64512brd-router0-10.0.0.2:output",
+      "kind": "firewall",
+      "output": "-P OUTPUT ACCEPT",
+      "source": {
+        "artifact": "iptables OUTPUT chain",
+        "command": "docker exec as64512brd-router0-10.0.0.2 iptables -S OUTPUT 2>/dev/null",
+        "container": "as64512brd-router0-10.0.0.2",
+        "interface": ""
+      }
+    },
+    "firewall:as64513brd-router0-10.0.1.2:forward": {
+      "id": "firewall:as64513brd-router0-10.0.1.2:forward",
+      "kind": "firewall",
+      "output": "-P FORWARD ACCEPT",
+      "source": {
+        "artifact": "iptables FORWARD chain",
+        "command": "docker exec as64513brd-router0-10.0.1.2 iptables -S FORWARD 2>/dev/null",
+        "container": "as64513brd-router0-10.0.1.2",
+        "interface": ""
+      }
+    },
+    "firewall:as64513brd-router0-10.0.1.2:output": {
+      "id": "firewall:as64513brd-router0-10.0.1.2:output",
+      "kind": "firewall",
+      "output": "-P OUTPUT ACCEPT",
+      "source": {
+        "artifact": "iptables OUTPUT chain",
+        "command": "docker exec as64513brd-router0-10.0.1.2 iptables -S OUTPUT 2>/dev/null",
+        "container": "as64513brd-router0-10.0.1.2",
+        "interface": ""
+      }
+    },
+    "firewall:as64514brd-router0-10.0.2.2:forward": {
+      "id": "firewall:as64514brd-router0-10.0.2.2:forward",
+      "kind": "firewall",
+      "output": "-P FORWARD ACCEPT",
+      "source": {
+        "artifact": "iptables FORWARD chain",
+        "command": "docker exec as64514brd-router0-10.0.2.2 iptables -S FORWARD 2>/dev/null",
+        "container": "as64514brd-router0-10.0.2.2",
+        "interface": ""
+      }
+    },
+    "firewall:as64514brd-router0-10.0.2.2:output": {
+      "id": "firewall:as64514brd-router0-10.0.2.2:output",
+      "kind": "firewall",
+      "output": "-P OUTPUT ACCEPT",
+      "source": {
+        "artifact": "iptables OUTPUT chain",
+        "command": "docker exec as64514brd-router0-10.0.2.2 iptables -S OUTPUT 2>/dev/null",
+        "container": "as64514brd-router0-10.0.2.2",
+        "interface": ""
+      }
+    },
+    "ipv6:as64512brd-router0-10.0.0.2:routes": {
+      "id": "ipv6:as64512brd-router0-10.0.0.2:routes",
+      "kind": "ipv6_routes",
+      "output": "fe80::/64 dev dummy0 proto kernel metric 256 pref medium",
+      "source": {
+        "artifact": "IPv6 route table",
+        "command": "docker exec as64512brd-router0-10.0.0.2 ip -6 route show",
+        "container": "as64512brd-router0-10.0.0.2",
+        "interface": ""
+      }
+    },
+    "ipv6:as64513brd-router0-10.0.1.2:routes": {
+      "id": "ipv6:as64513brd-router0-10.0.1.2:routes",
+      "kind": "ipv6_routes",
+      "output": "fe80::/64 dev dummy0 proto kernel metric 256 pref medium",
+      "source": {
+        "artifact": "IPv6 route table",
+        "command": "docker exec as64513brd-router0-10.0.1.2 ip -6 route show",
+        "container": "as64513brd-router0-10.0.1.2",
+        "interface": ""
+      }
+    },
+    "ipv6:as64514brd-router0-10.0.2.2:routes": {
+      "id": "ipv6:as64514brd-router0-10.0.2.2:routes",
+      "kind": "ipv6_routes",
+      "output": "fe80::/64 dev dummy0 proto kernel metric 256 pref medium",
+      "source": {
+        "artifact": "IPv6 route table",
+        "command": "docker exec as64514brd-router0-10.0.2.2 ip -6 route show",
+        "container": "as64514brd-router0-10.0.2.2",
+        "interface": ""
+      }
+    },
+    "link:as64512brd-router0-10.0.0.2:all": {
+      "id": "link:as64512brd-router0-10.0.0.2:all",
+      "kind": "link_state",
+      "output": "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n2: ix1001@if16311: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc tbf state UP mode DEFAULT group default qlen 1000\n    link/ether 16:f5:d8:98:18:c0 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n3: lan0@if16318: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc tbf state UP mode DEFAULT group default qlen 1000\n    link/ether de:83:1e:9f:51:82 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n4: ix1000@if16320: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc tbf state UP mode DEFAULT group default qlen 1000\n    link/ether e6:b6:02:3a:2e:dc brd ff:ff:ff:ff:ff:ff link-netnsid 0\n5: dummy0: <BROADCAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000\n    link/ether 76:e9:6d:c1:94:1f brd ff:ff:ff:ff:ff:ff",
+      "source": {
+        "artifact": "kernel link table",
+        "command": "docker exec as64512brd-router0-10.0.0.2 ip link show",
+        "container": "as64512brd-router0-10.0.0.2",
+        "interface": ""
+      }
+    },
+    "link:as64513brd-router0-10.0.1.2:all": {
+      "id": "link:as64513brd-router0-10.0.1.2:all",
+      "kind": "link_state",
+      "output": "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n2: lan0@if16312: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc tbf state UP mode DEFAULT group default qlen 1000\n    link/ether 9e:30:73:08:06:13 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n3: ix1000@if16319: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc tbf state UP mode DEFAULT group default qlen 1000\n    link/ether 62:a9:22:49:37:ff brd ff:ff:ff:ff:ff:ff link-netnsid 0\n4: ix1002@if16321: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc tbf state UP mode DEFAULT group default qlen 1000\n    link/ether ba:87:39:c4:b0:44 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n5: dummy0: <BROADCAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000\n    link/ether 7a:ef:0c:99:a8:15 brd ff:ff:ff:ff:ff:ff",
+      "source": {
+        "artifact": "kernel link table",
+        "command": "docker exec as64513brd-router0-10.0.1.2 ip link show",
+        "container": "as64513brd-router0-10.0.1.2",
+        "interface": ""
+      }
+    },
+    "link:as64514brd-router0-10.0.2.2:all": {
+      "id": "link:as64514brd-router0-10.0.2.2:all",
+      "kind": "link_state",
+      "output": "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n2: ix1002@if16314: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc tbf state UP mode DEFAULT group default qlen 1000\n    link/ether 5a:0c:35:2e:93:3d brd ff:ff:ff:ff:ff:ff link-netnsid 0\n3: lan0@if16322: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc tbf state UP mode DEFAULT group default qlen 1000\n    link/ether 86:85:2f:96:c8:43 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n4: ix1001@if16323: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc tbf state UP mode DEFAULT group default qlen 1000\n    link/ether 06:73:f3:ec:c3:d1 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n5: dummy0: <BROADCAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000\n    link/ether fa:43:f7:d3:c4:09 brd ff:ff:ff:ff:ff:ff",
+      "source": {
+        "artifact": "kernel link table",
+        "command": "docker exec as64514brd-router0-10.0.2.2 ip link show",
+        "container": "as64514brd-router0-10.0.2.2",
+        "interface": ""
+      }
+    },
+    "netem:as64512h-host0-10.0.0.3:qdisc": {
+      "id": "netem:as64512h-host0-10.0.0.3:qdisc",
+      "kind": "netem",
+      "output": "qdisc noqueue 0: dev lo root refcnt 2 \n Sent 0 bytes 0 pkt (dropped 0, overlimits 0 requeues 0) \n backlog 0b 0p requeues 0\nqdisc tbf 1: dev lan0 root refcnt 9 rate 1Tbit burst 992000b limit 1000b \n Sent 1092 bytes 18 pkt (dropped 0, overlimits 0 requeues 0) \n backlog 0b 0p requeues 0\nqdisc netem 10: dev lan0 parent 1: limit 1000\n Sent 1092 bytes 18 pkt (dropped 0, overlimits 0 requeues 0) \n backlog 0b 0p requeues 0",
+      "source": {
+        "artifact": "root qdisc",
+        "command": "docker exec as64512h-host0-10.0.0.3 tc -s qdisc show 2>/dev/null",
+        "container": "as64512h-host0-10.0.0.3",
+        "interface": ""
+      }
+    },
+    "netem:as64513h-host0-10.0.1.3:qdisc": {
+      "id": "netem:as64513h-host0-10.0.1.3:qdisc",
+      "kind": "netem",
+      "output": "qdisc noqueue 0: dev lo root refcnt 2 \n Sent 0 bytes 0 pkt (dropped 0, overlimits 0 requeues 0) \n backlog 0b 0p requeues 0\nqdisc tbf 1: dev lan0 root refcnt 9 rate 1Tbit burst 992000b limit 1000b \n Sent 84 bytes 2 pkt (dropped 0, overlimits 0 requeues 0) \n backlog 0b 0p requeues 0\nqdisc netem 10: dev lan0 parent 1: limit 1000\n Sent 84 bytes 2 pkt (dropped 0, overlimits 0 requeues 0) \n backlog 0b 0p requeues 0",
+      "source": {
+        "artifact": "root qdisc",
+        "command": "docker exec as64513h-host0-10.0.1.3 tc -s qdisc show 2>/dev/null",
+        "container": "as64513h-host0-10.0.1.3",
+        "interface": ""
+      }
+    },
+    "netem:as64514h-host0-10.0.2.3:qdisc": {
+      "id": "netem:as64514h-host0-10.0.2.3:qdisc",
+      "kind": "netem",
+      "output": "qdisc noqueue 0: dev lo root refcnt 2 \n Sent 0 bytes 0 pkt (dropped 0, overlimits 0 requeues 0) \n backlog 0b 0p requeues 0\nqdisc tbf 1: dev lan0 root refcnt 9 rate 1Tbit burst 992000b limit 1000b \n Sent 756 bytes 10 pkt (dropped 0, overlimits 0 requeues 0) \n backlog 0b 0p requeues 0\nqdisc netem 10: dev lan0 parent 1: limit 1000\n Sent 756 bytes 10 pkt (dropped 0, overlimits 0 requeues 0) \n backlog 0b 0p requeues 0",
+      "source": {
+        "artifact": "root qdisc",
+        "command": "docker exec as64514h-host0-10.0.2.3 tc -s qdisc show 2>/dev/null",
+        "container": "as64514h-host0-10.0.2.3",
+        "interface": ""
+      }
+    },
+    "ospf:as64512brd-router0-10.0.0.2:neighbors": {
+      "id": "ospf:as64512brd-router0-10.0.0.2:neighbors",
+      "kind": "ospf_neighbors",
+      "output": "BIRD 2.17.2 ready.\nThere is no OSPF protocol running",
+      "source": {
+        "artifact": "BIRD OSPF neighbor state",
+        "command": "docker exec as64512brd-router0-10.0.0.2 birdc show ospf neighbors 2>/dev/null",
+        "container": "as64512brd-router0-10.0.0.2",
+        "interface": ""
+      }
+    },
+    "ospf:as64513brd-router0-10.0.1.2:neighbors": {
+      "id": "ospf:as64513brd-router0-10.0.1.2:neighbors",
+      "kind": "ospf_neighbors",
+      "output": "BIRD 2.17.2 ready.\nThere is no OSPF protocol running",
+      "source": {
+        "artifact": "BIRD OSPF neighbor state",
+        "command": "docker exec as64513brd-router0-10.0.1.2 birdc show ospf neighbors 2>/dev/null",
+        "container": "as64513brd-router0-10.0.1.2",
+        "interface": ""
+      }
+    },
+    "ospf:as64514brd-router0-10.0.2.2:neighbors": {
+      "id": "ospf:as64514brd-router0-10.0.2.2:neighbors",
+      "kind": "ospf_neighbors",
+      "output": "BIRD 2.17.2 ready.\nThere is no OSPF protocol running",
+      "source": {
+        "artifact": "BIRD OSPF neighbor state",
+        "command": "docker exec as64514brd-router0-10.0.2.2 birdc show ospf neighbors 2>/dev/null",
+        "container": "as64514brd-router0-10.0.2.2",
+        "interface": ""
+      }
+    }
+  },
+  "probe_count": 39
+}

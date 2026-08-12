@@ -47,7 +47,11 @@ def build_emulator(plan: TopologyPlan):
             link.ix_id,
             link.left_asn,
             link.right_asn,
-            PeerRelationship.Peer,
+            # Declarative connectivity means every AS pair admitted by the
+            # graph must be reachable.  A commercial Peer policy suppresses
+            # third-party routes on paths longer than one edge; Unfiltered is
+            # the SEED relationship that preserves graph-wide reachability.
+            PeerRelationship.Unfiltered,
             aRouter="router0",
             bRouter="router0",
         )
@@ -85,9 +89,14 @@ def _capability_manifest(plan: TopologyPlan, compose_file: Path) -> Dict[str, ob
         })
     routers = [item for item in assets if "Router" in item["role"]]
     hosts = [item for item in assets if item["role"] == "Host"]
+    dns_hosts = []
+    for asn in sorted({item["asn"] for item in hosts}):
+        dns_hosts.append(next(item for item in hosts if item["asn"] == asn))
     bindings = {
         "container_stopped": [item["container"] for item in hosts],
-        "dns_nameserver": [item["container"] for item in hosts],
+        # One deterministic sensor host per AS bounds blind DNS observation
+        # cost while retaining topology-wide AS coverage.
+        "dns_nameserver": [item["container"] for item in dns_hosts],
         "bird_wrong_asn": [
             {"container": item["container"], "correct_asn": item["asn"]}
             for item in routers
@@ -135,6 +144,10 @@ def compile_topology(plan: TopologyPlan, *, override: bool = True) -> Path:
     )
     compose_file = destination / "docker-compose.yml"
     compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
+    # Give every generated project a stable identity.  Image tags produced by
+    # the serial builder must be identical to those resolved by smoke/up even
+    # when the output directory itself is generically named ``output``.
+    compose["name"] = f"decl_{plan.topology_id}"
     for network in (compose.get("networks") or {}).values():
         network.setdefault("driver_opts", {})[
             "com.docker.network.bridge.gateway_mode_ipv4"

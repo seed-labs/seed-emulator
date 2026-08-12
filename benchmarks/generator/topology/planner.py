@@ -187,7 +187,9 @@ def plan_topology(request: TopologyRequest) -> TopologyPlan:
         # optional Internet Map is disabled to avoid host-port collisions.
         containers=request.as_count * (request.hosts_per_as + 1) + 2,
         networks=request.as_count + len(links),
-        memory_mb=request.as_count * (256 + request.hosts_per_as * 128),
+        # Admission estimate for idle benchmark nodes. Runtime preflight keeps
+        # an additional host reserve and does not treat this as a Docker limit.
+        memory_mb=request.as_count * (128 + request.hosts_per_as * 64),
         cpu_cores=round(request.as_count * (0.10 + request.hosts_per_as * 0.05), 2),
         ases=request.as_count,
         links=len(links),

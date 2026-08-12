@@ -3,6 +3,8 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+import json
+from pathlib import Path
 import subprocess
 from typing import Callable, Dict, Iterable, List, Optional
 
@@ -16,6 +18,29 @@ _EMPTY_OR_NOISE = (
     "is not running",
     "command not found",
 )
+
+
+def _sample(values: List[str], limit: int) -> List[str]:
+    if len(values) <= limit:
+        return values
+    return [values[index * len(values) // limit] for index in range(limit)]
+
+
+def _active_declarative_capabilities(statuses: Dict[str, str]):
+    benchmarks_dir = Path(__file__).resolve().parents[1]
+    for path in sorted(
+        (benchmarks_dir / "generated" / "declarative").glob(
+            "*/output/topology_manifest.json"
+        )
+    ):
+        try:
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        assets = list(manifest.get("assets") or [])
+        if assets and any(item.get("container") in statuses for item in assets):
+            return manifest
+    return None
 
 
 def _run(command: str, timeout: int = 30) -> str:
@@ -121,6 +146,51 @@ def capture_network_state(
         if "router" in name.lower() or "brd" in name.lower() or "core" in name.lower()
     ]
     hosts = [name for name in running if "host" in name.lower()]
+    capability_manifest = _active_declarative_capabilities(statuses)
+    capture_profile = "full"
+    if capability_manifest is not None:
+        assets = list(capability_manifest.get("assets") or [])
+        routers = sorted(
+            item["container"]
+            for item in assets
+            if "Router" in item.get("role", "")
+            and statuses.get(item["container"]) == "running"
+        )
+        sensor_hosts = set(
+            (capability_manifest.get("fault_component_bindings") or {}).get(
+                "dns_nameserver", []
+            )
+        )
+        hosts = sorted(
+            item["container"]
+            for item in assets
+            if item.get("role") == "Host"
+            and item["container"] in sensor_hosts
+            and statuses.get(item["container"]) == "running"
+        )
+        routers = _sample(routers, 128)
+        hosts = _sample(hosts, 128)
+        capture_profile = "declarative_capability_driven"
+        if len(assets) > 500:
+            capture_profile = "declarative_capability_sampled"
+            asset_names = {item["container"] for item in assets}
+            for name in asset_names:
+                if statuses.get(name) == "running":
+                    observations.pop(f"container:{name}:state", None)
+            role_counts = {}
+            for item in assets:
+                role = item.get("role", "unknown")
+                state = statuses.get(item["container"], "missing")
+                role_counts[f"{role}:{state}"] = role_counts.get(f"{role}:{state}", 0) + 1
+            observations["topology:declarative:role_state_counts"] = {
+                "id": "topology:declarative:role_state_counts",
+                "kind": "topology_summary",
+                "source": _source(
+                    "compiled capability manifest + docker ps -a",
+                    artifact="role/state counts",
+                ),
+                "output": json.dumps(role_counts, sort_keys=True),
+            }
 
     probes: List[Dict[str, str]] = []
     for router in routers:
@@ -251,7 +321,8 @@ def capture_network_state(
     # baseline delta into an answer oracle. Config-lint scenarios must discover
     # their input with attributed read-only commands and are reported in a
     # separate track.
-    probes.extend(
+    if capability_manifest is None:
+        probes.extend(
         (
             {
                 "id": "routing:route_reflector:running_config",
@@ -276,8 +347,7 @@ def capture_network_state(
         )
     )
 
-    capture_profile = "full"
-    if len(statuses) >= 100:
+    if capability_manifest is None and len(statuses) >= 100:
         # Large generated Internets currently exercise router/control-plane
         # faults. Preserve every container state and every router's BIRD,
         # compact configuration, Docker attachment, and firewall evidence, but

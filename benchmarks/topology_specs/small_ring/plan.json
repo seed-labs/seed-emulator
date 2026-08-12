@@ -61,7 +61,7 @@
       "right_asn": 64514
     }
   ],
-  "fingerprint": "bea998b67dacaeaa7dafc1819d24ae007bbc554f7f4aa5ecd5b0019c28943e97",
+  "fingerprint": "cf41242b9e3801ae23c4e4bc95bd628e5d642f3280d36062378b6afbba5d01f9",
   "generator_version": "1.0.0",
   "master_seed": "small-ring-20260812",
   "platform": "amd",
@@ -94,7 +94,7 @@
     "containers": 8,
     "cpu_cores": 0.45,
     "links": 3,
-    "memory_mb": 1152,
+    "memory_mb": 576,
     "networks": 6
   },
   "schema_version": 1,

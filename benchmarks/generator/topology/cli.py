@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -40,15 +41,28 @@ def _run(args, *, cwd=None, timeout=600, check=True):
     return completed
 
 
-def smoke_test(topology_id: str, *, keep_running: bool = False):
+def smoke_test(
+    topology_id: str, *, keep_running: bool = False, build: bool = True
+):
     plan = load_plan(topology_id)
     manifest = validate_compiled_output(plan)
     destination = output_dir(topology_id)
     project = f"decl_{topology_id}"
-    compose = ["docker", "compose", "-p", project]
+    compose = ["docker", "compose", "--parallel", "4", "-p", project]
     started = datetime.now().isoformat()
     try:
-        _run([*compose, "up", "-d", "--build"], cwd=destination, timeout=1800)
+        if build:
+            # Compose otherwise schedules every service build at once.  The
+            # benchmark builder serializes services while BuildKit still
+            # shares content-addressed layers, which is reliable offline and
+            # bounded for large generated projects.
+            from benchmark_cli import build_compose_services_serially
+
+            build_compose_services_serially(
+                destination, timeout_per_service=900, verify_images=True
+            )
+        up = [*compose, "up", "-d", "--no-build"]
+        _run(up, cwd=destination, timeout=1800)
         expected = manifest["actual_compose_services"]
         running = 0
         for _attempt in range(60):
@@ -67,32 +81,7 @@ def smoke_test(topology_id: str, *, keep_running: bool = False):
             time.sleep(2)
         else:
             raise RuntimeError(f"only {running}/{len(manifest['assets'])} assets running")
-        hosts = manifest["fault_component_bindings"]["container_stopped"]
-        if len(hosts) < 2:
-            raise RuntimeError("smoke test requires at least two hosts")
-        target_asset = next(item for item in manifest["assets"] if item["container"] == hosts[-1])
-        target_ip = next(
-            iface["address"].split("/")[0]
-            for iface in target_asset["interfaces"]
-            if iface["name"] == "lan0"
-        )
-        output = ""
-        convergence_deadline = time.monotonic() + 120
-        while time.monotonic() < convergence_deadline:
-            probe = _run(
-                ["docker", "exec", hosts[0], "ping", "-c", "3", "-W", "2", target_ip],
-                timeout=30,
-                check=False,
-            )
-            output = probe.stdout + probe.stderr
-            if probe.returncode == 0 and re.search(r"(?<!\d)0% packet loss", output):
-                break
-            time.sleep(min(5, max(0, convergence_deadline - time.monotonic())))
-        else:
-            raise RuntimeError(
-                "end-to-end ping did not converge within 120 seconds:\n"
-                f"{output[-2000:]}"
-            )
+        matrix = test_running_topology(topology_id, convergence_timeout=120)
         report = {
             "topology_id": topology_id,
             "topology_name": plan.topology_name,
@@ -100,9 +89,10 @@ def smoke_test(topology_id: str, *, keep_running: bool = False):
             "started_at": started,
             "asset_count": len(manifest["assets"]),
             "compose_service_count": expected,
-            "source_container": hosts[0],
-            "target_container": hosts[-1],
-            "target_ip": target_ip,
+            "local_gateway_probes": matrix["local_gateway_probes"],
+            "ix_peer_probes": matrix["ix_peer_probes"],
+            "bgp_sessions": matrix["bgp_sessions"],
+            "cross_as_probes": matrix["cross_as_probes"],
             "connectivity_verified": True,
             "kept_running": keep_running,
         }
@@ -113,6 +103,118 @@ def smoke_test(topology_id: str, *, keep_running: bool = False):
     finally:
         if not keep_running:
             _run([*compose, "down", "--remove-orphans"], cwd=destination, timeout=300, check=False)
+
+
+def _ping(container: str, address: str) -> tuple[bool, str]:
+    result = _run(
+        ["docker", "exec", container, "ping", "-c", "2", "-W", "2", address],
+        timeout=20,
+        check=False,
+    )
+    output = result.stdout + result.stderr
+    return bool(result.returncode == 0 and re.search(r"(?<!\d)0% packet loss", output)), output
+
+
+def test_running_topology(topology_id: str, *, convergence_timeout: int = 120):
+    """Validate every local/IX edge and a bounded deterministic host matrix."""
+    plan = load_plan(topology_id)
+    manifest = validate_compiled_output(plan)
+    assets = manifest["assets"]
+    routers = {item["asn"]: item for item in assets if "Router" in item["role"]}
+    hosts = {item["asn"]: item for item in assets if item["role"] == "Host"}
+    local_probes = []
+    for asn, host in sorted(hosts.items()):
+        router = routers[asn]
+        gateway = next(
+            item["address"].split("/")[0]
+            for item in router["interfaces"] if item["name"] == "lan0"
+        )
+        healthy, output = _ping(host["container"], gateway)
+        if not healthy:
+            raise RuntimeError(f"AS{asn} local gateway probe failed:\n{output[-1000:]}")
+        local_probes.append({"asn": asn, "host": host["container"], "gateway": gateway})
+    ix_probes = []
+    for link in plan.external_links:
+        healthy, output = _ping(routers[link.left_asn]["container"], link.right_address)
+        if not healthy:
+            raise RuntimeError(f"IX{link.ix_id} peer probe failed:\n{output[-1000:]}")
+        ix_probes.append({"ix_id": link.ix_id, "left_asn": link.left_asn, "right_asn": link.right_asn})
+    expected_sessions = {asn: 0 for asn in routers}
+    for link in plan.external_links:
+        expected_sessions[link.left_asn] += 1
+        expected_sessions[link.right_asn] += 1
+    deadline = time.monotonic() + convergence_timeout
+    session_counts = {}
+    while time.monotonic() < deadline:
+        session_counts = {}
+        for asn, router in sorted(routers.items()):
+            result = _run(
+                ["docker", "exec", router["container"], "birdc", "show", "protocols"],
+                timeout=20,
+                check=False,
+            )
+            session_counts[asn] = len(re.findall(r"\bBGP\b.*\bEstablished\b", result.stdout))
+        if all(session_counts.get(asn, 0) >= count for asn, count in expected_sessions.items()):
+            break
+        time.sleep(5)
+    else:
+        raise RuntimeError(f"eBGP convergence incomplete: {session_counts} != {expected_sessions}")
+    pairs = [(left, right) for left in sorted(hosts) for right in sorted(hosts) if left < right]
+    if len(pairs) > 64:
+        step = max(1, len(pairs) // 64)
+        pairs = pairs[::step][:64]
+    cross_probes = []
+    for left, right in pairs:
+        target_ip = next(
+            item["address"].split("/")[0]
+            for item in hosts[right]["interfaces"] if item["name"] == "lan0"
+        )
+        healthy, output = _ping(hosts[left]["container"], target_ip)
+        if not healthy:
+            raise RuntimeError(f"AS{left}->AS{right} host probe failed:\n{output[-1000:]}")
+        cross_probes.append({"source_asn": left, "target_asn": right, "target_ip": target_ip})
+    return {
+        "topology_id": topology_id,
+        "topology_fingerprint": plan.fingerprint,
+        "local_gateway_probes": local_probes,
+        "ix_peer_probes": ix_probes,
+        "bgp_sessions": session_counts,
+        "cross_as_probes": cross_probes,
+    }
+
+
+def runtime_preflight(topology_id: str):
+    """Fail closed before a topology would exhaust the current VM."""
+    plan = load_plan(topology_id)
+    memory = {}
+    for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
+        key, value = line.split(":", 1)
+        memory[key] = int(value.strip().split()[0]) // 1024
+    total_mb = memory["MemTotal"]
+    available_mb = memory["MemAvailable"]
+    reserve_mb = max(2048, total_mb // 5)
+    cpu_count = os.cpu_count() or 1
+    estimate = plan.resource_estimate
+    checks = {
+        "memory": estimate.memory_mb <= max(0, available_mb - reserve_mb),
+        "cpu": estimate.cpu_cores <= cpu_count * 2,
+        "container_count": estimate.containers <= 1000,
+    }
+    return {
+        "topology_id": topology_id,
+        "topology_fingerprint": plan.fingerprint,
+        "resource_estimate": estimate.__dict__,
+        "host_capacity": {
+            "memory_total_mb": total_mb,
+            "memory_available_mb": available_mb,
+            "memory_reserve_mb": reserve_mb,
+            "cpu_count": cpu_count,
+            "cpu_overcommit_factor": 2,
+            "container_safety_ceiling": 1000,
+        },
+        "checks": checks,
+        "runtime_allowed": all(checks.values()),
+    }
 
 
 def build_parser():
@@ -130,11 +232,18 @@ def build_parser():
     smoke = commands.add_parser("smoke")
     smoke.add_argument("--topology-id", required=True)
     smoke.add_argument("--keep-running", action="store_true")
+    smoke.add_argument("--no-build", action="store_true")
     bind = commands.add_parser("bind")
     bind.add_argument("--topology-id", required=True)
     bind.add_argument("--component", required=True, choices=SUPPORTED_COMPONENTS)
     bind.add_argument("--sequence", type=int, default=0)
     bind.add_argument("--seed", default="topology-fault-binding")
+    test = commands.add_parser("test")
+    test.add_argument("--topology-id", required=True)
+    test.add_argument("--convergence-timeout", type=int, default=120)
+    preflight = commands.add_parser("preflight")
+    preflight.add_argument("--topology-id", required=True)
+    preflight.add_argument("--require-fit", action="store_true")
     commands.add_parser("inventory")
     return parser
 
@@ -161,7 +270,11 @@ def main(argv=None):
             f"services={manifest['actual_compose_services']}"
         )
     elif args.command == "smoke":
-        path, report = smoke_test(args.topology_id, keep_running=args.keep_running)
+        path, report = smoke_test(
+            args.topology_id,
+            keep_running=args.keep_running,
+            build=not args.no_build,
+        )
         print(json.dumps({"report": str(path), **report}, indent=2, sort_keys=True))
     elif args.command == "bind":
         manifest = load_capability_manifest(args.topology_id)
@@ -169,6 +282,19 @@ def main(argv=None):
             manifest, args.component, args.sequence, args.seed
         )
         print(json.dumps(binding, indent=2, sort_keys=True))
+    elif args.command == "test":
+        print(json.dumps(
+            test_running_topology(
+                args.topology_id, convergence_timeout=args.convergence_timeout
+            ),
+            indent=2,
+            sort_keys=True,
+        ))
+    elif args.command == "preflight":
+        result = runtime_preflight(args.topology_id)
+        print(json.dumps(result, indent=2, sort_keys=True))
+        if args.require_fit and not result["runtime_allowed"]:
+            return 2
     elif args.command == "inventory":
         print(json.dumps([item.to_dict() for item in list_plans()], indent=2, sort_keys=True))
     return 0

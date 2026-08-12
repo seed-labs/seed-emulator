@@ -1,5 +1,5 @@
 {
-  "contract_sha256": "9c3f99c51c36a4b94fc5c785a56a1e6d0087a685b12b8f8132b58f473a152dec",
+  "contract_sha256": "ea68d47351bf8f37c20db5097696991800c1c966b1bc3d5b97da04297110c1dc",
   "enabled": true,
   "generator_version": "2.0.0",
   "master_seed": "complex-20260812",
@@ -8,7 +8,7 @@
       "benchmark_track": "robustness",
       "causal_chain": [],
       "convergence_timeout": 300,
-      "description": "Generated deterministic case: Independent BIRD ASN and scoped ACL faults coexist in a 100+ container topology",
+      "description": "Generated deterministic case: Independent BIRD ASN and scoped ACL faults coexist in a capability-selected generated topology",
       "diagnosis_artifact": "/etc/bird/bird.conf and iptables OUTPUT chain",
       "diagnosis_expected_value": "AS 111 and no matching REJECT rule",
       "diagnosis_faulty_value": "AS 65213 and REJECT to 10.201.0.22",
@@ -63,14 +63,15 @@
       "fault_relationship": "independent",
       "fault_settle_seconds": 3,
       "fault_type": "multiple_faults",
-      "fingerprint": "36052dbbf0e98011d45c6a89e2875478abab747f092ca30b761a165e56558551",
+      "fingerprint": "01ca9a52d632ae30bf82350f02aa4bc0f02f996c95f7e1a86ccb4975efbf71d0",
       "main_score_eligible": false,
-      "name": "gen_random_complex_dual_bgp_acl_36052dbbf0_01",
+      "name": "gen_random_complex_dual_bgp_acl_01ca9a52d6_01",
       "parameters": {
         "bad_asn": 65213,
         "correct_asn": 111,
         "destination_asn": 22,
         "destination_ip": "10.201.0.22",
+        "peer_protocol": "u_as24",
         "probe_size": 256,
         "rule_comment": "SEED_RANDOM_COMPLEX_ACL",
         "source_asn": 111,
@@ -84,7 +85,7 @@
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
-      "scenario_seed": 5738687156749259295,
+      "scenario_seed": 10415699849358909058,
       "template_id": "random_complex_dual_bgp_acl",
       "topology": "RANDOM_COMPLEX_INTERNET"
     },
@@ -92,7 +93,7 @@
       "benchmark_track": "robustness",
       "causal_chain": [],
       "convergence_timeout": 300,
-      "description": "Generated deterministic case: Independent BIRD ASN and scoped ACL faults coexist in a 100+ container topology",
+      "description": "Generated deterministic case: Independent BIRD ASN and scoped ACL faults coexist in a capability-selected generated topology",
       "diagnosis_artifact": "/etc/bird/bird.conf and iptables OUTPUT chain",
       "diagnosis_expected_value": "AS 111 and no matching REJECT rule",
       "diagnosis_faulty_value": "AS 65213 and REJECT to 10.201.0.24",
@@ -147,14 +148,15 @@
       "fault_relationship": "independent",
       "fault_settle_seconds": 3,
       "fault_type": "multiple_faults",
-      "fingerprint": "463fbccdfe40bee85fa0e808e77058960960787072f536ba86c04308d5f2cb5c",
+      "fingerprint": "47863c448c5a428c98af0b25774b5563c068da7038dccafc798bf20afa762d63",
       "main_score_eligible": false,
-      "name": "gen_random_complex_dual_bgp_acl_463fbccdfe_01",
+      "name": "gen_random_complex_dual_bgp_acl_47863c448c_01",
       "parameters": {
         "bad_asn": 65213,
         "correct_asn": 111,
         "destination_asn": 24,
         "destination_ip": "10.201.0.24",
+        "peer_protocol": "u_as24",
         "probe_size": 256,
         "rule_comment": "SEED_RANDOM_COMPLEX_ACL",
         "source_asn": 111,
@@ -168,7 +170,7 @@
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
-      "scenario_seed": 15765106662129060487,
+      "scenario_seed": 2989707383127095149,
       "template_id": "random_complex_dual_bgp_acl",
       "topology": "RANDOM_COMPLEX_INTERNET"
     },
@@ -176,7 +178,7 @@
       "benchmark_track": "robustness",
       "causal_chain": [],
       "convergence_timeout": 300,
-      "description": "Generated deterministic case: Independent BIRD ASN and scoped ACL faults coexist in a 100+ container topology",
+      "description": "Generated deterministic case: Independent BIRD ASN and scoped ACL faults coexist in a capability-selected generated topology",
       "diagnosis_artifact": "/etc/bird/bird.conf and iptables OUTPUT chain",
       "diagnosis_expected_value": "AS 111 and no matching REJECT rule",
       "diagnosis_faulty_value": "AS 65213 and REJECT to 10.201.0.25",
@@ -231,14 +233,15 @@
       "fault_relationship": "independent",
       "fault_settle_seconds": 3,
       "fault_type": "multiple_faults",
-      "fingerprint": "8b5e4ce61f21a84504aaa616ed21cf0760c3dde3357f01d4d5aa9d3844a1336f",
+      "fingerprint": "b8b6e3473e3974aceac5c5bd9357c486da32981a3462d1542922c42625056a2c",
       "main_score_eligible": false,
-      "name": "gen_random_complex_dual_bgp_acl_8b5e4ce61f_01",
+      "name": "gen_random_complex_dual_bgp_acl_b8b6e3473e_01",
       "parameters": {
         "bad_asn": 65213,
         "correct_asn": 111,
         "destination_asn": 25,
         "destination_ip": "10.201.0.25",
+        "peer_protocol": "u_as24",
         "probe_size": 256,
         "rule_comment": "SEED_RANDOM_COMPLEX_ACL",
         "source_asn": 111,
@@ -252,7 +255,7 @@
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
-      "scenario_seed": 16599324682501770709,
+      "scenario_seed": 15294248317310410409,
       "template_id": "random_complex_dual_bgp_acl",
       "topology": "RANDOM_COMPLEX_INTERNET"
     },
@@ -260,7 +263,7 @@
       "benchmark_track": "robustness",
       "causal_chain": [],
       "convergence_timeout": 300,
-      "description": "Generated deterministic case: Independent BIRD ASN and scoped ACL faults coexist in a 100+ container topology",
+      "description": "Generated deterministic case: Independent BIRD ASN and scoped ACL faults coexist in a capability-selected generated topology",
       "diagnosis_artifact": "/etc/bird/bird.conf and iptables OUTPUT chain",
       "diagnosis_expected_value": "AS 111 and no matching REJECT rule",
       "diagnosis_faulty_value": "AS 65213 and REJECT to 10.201.0.107",
@@ -315,14 +318,15 @@
       "fault_relationship": "independent",
       "fault_settle_seconds": 3,
       "fault_type": "multiple_faults",
-      "fingerprint": "d97fd21e2c8666d91a3fe75255d39e89d9151cd1fd20e9c0e62c2ee1d72ba9d1",
+      "fingerprint": "576061db24e6480b553be1be6dbf625189dbafd508849e2321dafdf4609a5064",
       "main_score_eligible": false,
-      "name": "gen_random_complex_dual_bgp_acl_d97fd21e2c_01",
+      "name": "gen_random_complex_dual_bgp_acl_576061db24_01",
       "parameters": {
         "bad_asn": 65213,
         "correct_asn": 111,
         "destination_asn": 107,
         "destination_ip": "10.201.0.107",
+        "peer_protocol": "u_as24",
         "probe_size": 256,
         "rule_comment": "SEED_RANDOM_COMPLEX_ACL",
         "source_asn": 111,
@@ -336,7 +340,7 @@
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
-      "scenario_seed": 12370563563847512730,
+      "scenario_seed": 3344247475888439762,
       "template_id": "random_complex_dual_bgp_acl",
       "topology": "RANDOM_COMPLEX_INTERNET"
     }

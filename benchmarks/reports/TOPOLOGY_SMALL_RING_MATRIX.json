@@ -1,12 +1,9 @@
 {
-  "asset_count": 6,
   "bgp_sessions": {
     "64512": 2,
     "64513": 2,
     "64514": 2
   },
-  "compose_service_count": 8,
-  "connectivity_verified": true,
   "cross_as_probes": [
     {
       "source_asn": 64512,
@@ -41,7 +38,6 @@
       "right_asn": 64514
     }
   ],
-  "kept_running": false,
   "local_gateway_probes": [
     {
       "asn": 64512,
@@ -59,8 +55,6 @@
       "host": "as64514h-host0-10.0.2.3"
     }
   ],
-  "started_at": "2026-08-12T19:21:26.007098",
   "topology_fingerprint": "cf41242b9e3801ae23c4e4bc95bd628e5d642f3280d36062378b6afbba5d01f9",
-  "topology_id": "small_ring",
-  "topology_name": "DECLARATIVE_small_ring"
+  "topology_id": "small_ring"
 }

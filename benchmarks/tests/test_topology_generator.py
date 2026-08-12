@@ -48,6 +48,7 @@ assert len({item.asn for item in first.autonomous_systems}) == 4
 assert len({item.lan_prefix for item in first.autonomous_systems}) == 4
 assert len({item.prefix for item in first.external_links}) == 5
 assert first.resource_estimate.containers == 14
+assert first.resource_estimate.memory_mb == 1024
 assert first.autonomous_systems[0].router_address == "10.0.0.2"
 assert first.autonomous_systems[0].host_addresses[0] == "10.0.0.3"
 assert first.autonomous_systems[0].loopback_address == "100.64.0.1"
@@ -189,6 +190,13 @@ acl = bind_fault_component(fake_manifest, "scoped_acl", 0, "x")
 assert acl["source_interface"] == "ix1000"
 assert acl["destination_ip"] == "172.16.0.2"
 validate_fault_binding(fake_manifest, "scoped_acl", acl)
+compound = bind_fault_component(
+    fake_manifest, "bird_wrong_asn_scoped_acl", 0, "x"
+)
+assert compound["source_router"] == acl["source_router"]
+assert compound["correct_asn"] == compound["source_asn"]
+assert compound["peer_protocol"] == f"x_as{compound['destination_asn']}"
+validate_fault_binding(fake_manifest, "bird_wrong_asn_scoped_acl", compound)
 try:
     validate_fault_binding(
         fake_manifest,

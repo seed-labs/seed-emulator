@@ -418,7 +418,10 @@ def record_existing_compose_build_state(compose_dir):
     """Adopt a previously audited complete build without rebuilding images."""
     environment = os.environ.copy()
     environment["COMPOSE_PARALLEL_LIMIT"] = "1"
-    environment["DOCKER_BUILDKIT"] = "0"
+    # BuildKit can reuse content-addressed layers across independently named
+    # declarative topology services.  Keep service scheduling serial here;
+    # disabling BuildKit would force offline hosts to repeat apt operations.
+    environment["DOCKER_BUILDKIT"] = "1"
     build_jobs, state = _compose_build_plan(compose_dir, environment)
     missing = sorted(_missing_local_images(state["images"], environment))
     if missing:
@@ -442,7 +445,7 @@ def build_compose_services_serially(
     """Build changed/missing services serially and repair corrupt cache."""
     environment = os.environ.copy()
     environment["COMPOSE_PARALLEL_LIMIT"] = "1"
-    environment["DOCKER_BUILDKIT"] = "0"
+    environment["DOCKER_BUILDKIT"] = "1"
     build_jobs, expected_state = _compose_build_plan(compose_dir, environment)
     state_path = _compose_build_state_path(compose_dir)
     previous_state = _load_compose_build_state(state_path)

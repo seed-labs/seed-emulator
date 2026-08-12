@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "container_count": true,
+    "cpu": true,
+    "memory": true
+  },
+  "host_capacity": {
+    "container_safety_ceiling": 1000,
+    "cpu_count": 8,
+    "cpu_overcommit_factor": 2,
+    "memory_available_mb": 13318,
+    "memory_reserve_mb": 3197,
+    "memory_total_mb": 15987
+  },
+  "resource_estimate": {
+    "ases": 4,
+    "containers": 102,
+    "cpu_cores": 5.2,
+    "links": 4,
+    "memory_mb": 6656,
+    "networks": 8
+  },
+  "runtime_allowed": true,
+  "topology_fingerprint": "bfd44249458570de8948059522e1aa04892b5974313db7123174abee1a6830ba",
+  "topology_id": "scale_100"
+}

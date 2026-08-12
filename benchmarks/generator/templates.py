@@ -672,6 +672,7 @@ def _random_dual_candidate(sequence: int, seed: int) -> Dict[str, Any]:
             "template_revision": 1,
             "correct_asn": RANDOM_SOURCE_ASN,
             "bad_asn": 64512 + (((sequence // 24) + seed) % 1000),
+            "peer_protocol": "u_as24",
         }
     )
     return parameters
@@ -686,6 +687,7 @@ def _random_dual_render(parameters: Mapping[str, Any]) -> RenderedScenario:
     comment = str(parameters["rule_comment"])
     correct_asn = int(parameters["correct_asn"])
     bad_asn = int(parameters["bad_asn"])
+    peer_protocol = str(parameters.get("peer_protocol", "u_as24"))
     rule = (
         f"-s {source_ip} -d {destination_ip} -p icmp "
         f"-m length --length {probe_size + 28} -m comment "
@@ -752,7 +754,7 @@ def _random_dual_render(parameters: Mapping[str, Any]) -> RenderedScenario:
         verify_command=(
             f"docker exec {router} sh -c \""
             f"grep -q 'local {source_ip} as {correct_asn};' /etc/bird/bird.conf && "
-            "birdc show protocols | grep -Eq '^u_as24[[:space:]]+BGP.*Established'\" && "
+            f"birdc show protocols | grep -Eq '^{peer_protocol}[[:space:]]+BGP.*Established'\" && "
             f"docker exec {router} ping -I {source_interface} "
             f"-s {probe_size} -c 2 -W 2 {destination_ip} && "
             "echo GENERATED_RANDOM_DUAL_OK"
@@ -870,7 +872,7 @@ TEMPLATES: Dict[str, FaultTemplate] = {
             difficulty="advanced",
             description=(
                 "A scoped OUTPUT ACL blocks one deterministic IX peer path "
-                "in a 100+ container topology"
+                "in a capability-selected generated topology"
             ),
             candidate_factory=_random_acl_candidate,
             renderer=_random_acl_render,
@@ -884,7 +886,7 @@ TEMPLATES: Dict[str, FaultTemplate] = {
             difficulty="advanced",
             description=(
                 "Independent BIRD ASN and scoped ACL faults coexist in a "
-                "100+ container topology"
+                "capability-selected generated topology"
             ),
             candidate_factory=_random_dual_candidate,
             renderer=_random_dual_render,
