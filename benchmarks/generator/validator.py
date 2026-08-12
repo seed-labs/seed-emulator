@@ -101,9 +101,14 @@ def validate_scenario_spec(spec: ScenarioSpec) -> None:
             f"invalid fault_relationship={spec.fault_relationship}"
         )
     if spec.main_score_eligible:
-        raise ValueError("generated scenarios must be quarantined before promotion")
-    if not spec.quarantine_reason.strip():
-        raise ValueError("generated scenario requires a quarantine reason")
+        if spec.benchmark_track not in {
+            "network_functional", "network_control_plane"
+        }:
+            raise ValueError("promoted scenario uses a non-scoring track")
+        if spec.quarantine_reason.strip():
+            raise ValueError("promoted scenario must clear quarantine reason")
+    elif not spec.quarantine_reason.strip():
+        raise ValueError("quarantined generated scenario requires a reason")
     if not spec.repair_containers:
         raise ValueError("generated scenario requires a repair scope")
     if not isinstance(spec.scenario_seed, int) or spec.scenario_seed < 0:

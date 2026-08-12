@@ -49,6 +49,17 @@ assert len(names) == len(set(names))
 assert set(MAIN_SCENARIOS).issubset(set(SCENARIO_CATALOG))
 assert get_scenarios_by_track("main") == MAIN_SCENARIOS
 assert get_scenarios_by_track("all") == SCENARIO_CATALOG
+promoted_generated = [
+    item for item in MAIN_SCENARIOS
+    if getattr(item, "generated_suite_id", "")
+]
+assert len(promoted_generated) == 5
+assert {item.generated_suite_id for item in promoted_generated} == {
+    "declarative_small_ring_pilot"
+}
+assert {item.benchmark_track for item in promoted_generated} == {
+    "network_functional", "network_control_plane"
+}
 
 for scenario_class in SCENARIO_CATALOG:
     scenario = scenario_class()

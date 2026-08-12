@@ -1,0 +1,55 @@
+{
+  "contract_sha256": "fcddd187eccda4a180bb68884652e710258f036a3f906df8bf9f6f427baf8419",
+  "created_at": "2026-08-12T13:42:29.150504+00:00",
+  "observation_evidence": "reports/DECLARATIVE_SMALL_RING_BLIND_OBSERVATION.json",
+  "observation_evidence_sha256": "08d7605982ea33c1a171205ca33c42d6991eec8db08b1b10026c20ee4af8e1cd",
+  "policy": {
+    "minimum_independent_lifecycle_runs": 2
+  },
+  "promoted_manifest_sha256": "b95fc9976ef2d4a13a265ae55b3c36fbe5060d8abbe448bf36b78c9ada9eb7ae",
+  "promoted_scenarios": [
+    {
+      "benchmark_track": "network_functional",
+      "fingerprint": "9b2b4ac3169d3c06e5182e85fc345f028d716663f6902c0f8dd9d10ee56c6140",
+      "name": "gen_container_stopped_9b2b4ac316_01"
+    },
+    {
+      "benchmark_track": "network_functional",
+      "fingerprint": "fac593b8741e4f8f448a1eac1bd4c0511720a83ecd77df3a4a2cf58b02f7bcbf",
+      "name": "gen_dns_nameserver_fac593b874_01"
+    },
+    {
+      "benchmark_track": "network_control_plane",
+      "fingerprint": "9695fab1eb4735611dfb87a605b48ce71b0009c311162f52f4d17368242748e7",
+      "name": "gen_bird_wrong_asn_9695fab1eb_01"
+    },
+    {
+      "benchmark_track": "network_control_plane",
+      "fingerprint": "25af448cd5011a2cba9507c1d9a7cd1c80b48a5d46420d932ad0bacaf3d903c8",
+      "name": "gen_random_complex_transit_acl_25af448cd5_01"
+    },
+    {
+      "benchmark_track": "network_control_plane",
+      "fingerprint": "5b3d8d80cfff26f198a33743011386c37365e9b5717fa02ed2cac62ea87f0175",
+      "name": "gen_random_complex_dual_bgp_acl_5b3d8d80cf_01"
+    }
+  ],
+  "promotion_sha256": "0ab3dc1a61c1788d530d28dbab0b1e59baf5a26dd5c893f10975e7fb700f3f0c",
+  "receipts": [
+    {
+      "path": "reports/PROMOTION_DECLARATIVE_SMALL_RING_PILOT_ROUND_01_BATCH_0000.json",
+      "receipt_id": "3f76c6c5-f14c-4258-92cd-938ac42756e1",
+      "sha256": "f508e340a5e838f1eacb87fd62293073b38f86dc1205bfd6733f8b5f5cb6c136"
+    },
+    {
+      "path": "reports/PROMOTION_DECLARATIVE_SMALL_RING_PILOT_ROUND_02_BATCH_0000.json",
+      "receipt_id": "ffc540c1-a966-4cb2-b800-46e8f5a38211",
+      "sha256": "6e3047d66215b3b8a95c740bdf62c87ddf38a5ea54d3156db12da822c4743452"
+    }
+  ],
+  "schema_version": 1,
+  "suite_id": "declarative_small_ring_pilot",
+  "topology_evidence": "reports/TOPOLOGY_SMALL_RING_SMOKE.json",
+  "topology_evidence_sha256": "ae1d3f41b97ea18eb6091f2d4685c787c97011de6dedb0ccc36d26b3fb6c583b",
+  "topology_fingerprint": "cf41242b9e3801ae23c4e4bc95bd628e5d642f3280d36062378b6afbba5d01f9"
+}

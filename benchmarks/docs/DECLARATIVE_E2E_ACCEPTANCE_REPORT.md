@@ -57,3 +57,7 @@
 ## 已知边界
 
 当前声明式模型提供常用图策略与显式边，不是任意 SEED layer/service 的通用 DSL；10,000 节点已经生成和编译，但其真实运行需要容量足够的宿主机或分布式执行后端。此边界由 preflight 明确阻断，不会退化为“生成即声称可运行”。
+
+## 场景晋级
+
+后续已建立失败关闭的 promotion pipeline。声明式小环的 5 个场景完成两轮独立、盲测、无 AI 生命周期后，已从 quarantine 晋级到 `network_functional` 或 `network_control_plane` 主榜。完整证据策略与持续生产命令见 `docs/BENCHMARK_PROMOTION_PIPELINE.md`。

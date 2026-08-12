@@ -60,6 +60,10 @@ class BenchmarkGeneratorAgent:
             raise ValueError(
                 "manifest contract hash differs from the current benchmark interface"
             )
+        if any(spec.main_score_eligible for spec in manifest.scenarios):
+            from generator.promotion import verify_promotion_record
+
+            verify_promotion_record(self.benchmarks_dir, manifest)
         return manifest
 
     def load_suite(self, suite_id: str) -> SuiteManifest:
@@ -100,6 +104,7 @@ class BenchmarkGeneratorAgent:
         start_batch: int = 0,
         reuse_running: bool = False,
         dry_run: bool = False,
+        receipt_prefix: str = "",
     ) -> List[Dict[str, object]]:
         batches = self.build_batches(manifest, batch_size)
         if not 0 <= start_batch <= len(batches):
@@ -127,6 +132,11 @@ class BenchmarkGeneratorAgent:
                 "--report",
                 str(report_path),
             ]
+            if receipt_prefix:
+                receipt_path = self.benchmarks_dir / "reports" / (
+                    f"{receipt_prefix}_BATCH_{index:04d}.json"
+                )
+                command.extend(["--receipt", str(receipt_path)])
             if (
                 (index == start_batch and reuse_running)
                 or (previous_topology and previous_topology == topology)
@@ -139,6 +149,46 @@ class BenchmarkGeneratorAgent:
             )
             previous_topology = topology
         return planned
+
+    def qualify(
+        self,
+        suite_id: str,
+        *,
+        topology_evidence: Path,
+        observation_evidence: Path,
+        rounds: int = 2,
+        batch_size: int = 20,
+        reuse_running: bool = False,
+    ) -> Path:
+        """Run independent no-AI lifecycle rounds and atomically promote."""
+        from generator.promotion import MIN_LIFECYCLE_RUNS, promote_suite
+
+        if rounds < MIN_LIFECYCLE_RUNS:
+            raise ValueError(
+                f"qualification requires at least {MIN_LIFECYCLE_RUNS} rounds"
+            )
+        manifest = self.load_suite(suite_id)
+        receipt_paths = []
+        for round_index in range(1, rounds + 1):
+            prefix = f"PROMOTION_{suite_id.upper()}_ROUND_{round_index:02d}"
+            batches = self.run_lifecycle_batches(
+                manifest,
+                batch_size=batch_size,
+                reuse_running=(reuse_running or round_index > 1),
+                receipt_prefix=prefix,
+            )
+            receipt_paths.extend(
+                self.benchmarks_dir / "reports" /
+                f"{prefix}_BATCH_{int(batch['index']):04d}.json"
+                for batch in batches
+            )
+        return promote_suite(
+            self.benchmarks_dir,
+            suite_id,
+            receipt_paths,
+            topology_evidence=topology_evidence,
+            observation_evidence=observation_evidence,
+        )
 
 
 def _add_job_arguments(parser: argparse.ArgumentParser) -> None:
@@ -207,6 +257,20 @@ def build_parser() -> argparse.ArgumentParser:
     lifecycle.add_argument("--reuse-running", action="store_true")
     lifecycle.add_argument("--dry-run", action="store_true")
     lifecycle.set_defaults(action="lifecycle")
+    promote = subparsers.add_parser("promote")
+    promote.add_argument("--suite-id", required=True)
+    promote.add_argument("--receipt", action="append", required=True)
+    promote.add_argument("--topology-evidence", required=True)
+    promote.add_argument("--observation-evidence", required=True)
+    promote.set_defaults(action="promote")
+    qualify = subparsers.add_parser("qualify")
+    qualify.add_argument("--suite-id", required=True)
+    qualify.add_argument("--rounds", type=int, default=2)
+    qualify.add_argument("--batch-size", type=int, default=20)
+    qualify.add_argument("--reuse-running", action="store_true")
+    qualify.add_argument("--topology-evidence", required=True)
+    qualify.add_argument("--observation-evidence", required=True)
+    qualify.set_defaults(action="qualify")
     return parser
 
 
@@ -277,6 +341,29 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                 indent=2,
             )
         )
+        return 0
+    if args.action == "promote":
+        from generator.promotion import promote_suite
+
+        record = promote_suite(
+            BENCHMARKS_DIR,
+            args.suite_id,
+            [Path(item) for item in args.receipt],
+            topology_evidence=Path(args.topology_evidence),
+            observation_evidence=Path(args.observation_evidence),
+        )
+        print(f"promoted_suite={args.suite_id} record={record}")
+        return 0
+    if args.action == "qualify":
+        record = agent.qualify(
+            args.suite_id,
+            topology_evidence=Path(args.topology_evidence),
+            observation_evidence=Path(args.observation_evidence),
+            rounds=args.rounds,
+            batch_size=args.batch_size,
+            reuse_running=args.reuse_running,
+        )
+        print(f"qualified_suite={args.suite_id} record={record}")
         return 0
     raise AssertionError(args.action)
 

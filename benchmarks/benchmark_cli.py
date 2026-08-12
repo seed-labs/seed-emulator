@@ -24,6 +24,7 @@ import atexit
 import hashlib
 import json
 from datetime import datetime
+from pathlib import Path
 
 
 CONSOLE_LOG_PATH = None
@@ -1466,6 +1467,10 @@ def main():
     )
     parser.add_argument("--report", help="报告输出路径")
     parser.add_argument(
+        "--receipt",
+        help="write a tamper-evident JSON lifecycle receipt (requires --validate-only)",
+    )
+    parser.add_argument(
         "--repair-eval",
         action="store_true",
         help="授权 Agent 尝试通过安全白名单的修复命令，并独立统计诊断和修复结果",
@@ -1503,6 +1508,9 @@ def main():
     parser.set_defaults(blind=True)
 
     args = parser.parse_args()
+
+    if args.receipt and not args.validate_only:
+        parser.error("--receipt requires --validate-only")
 
     if not 1 <= args.max_turns <= 1000:
         parser.error("--max-turns 必须是 1 到 1000 之间的整数")
@@ -1688,6 +1696,7 @@ def main():
                 "duration": 0.0,
                 "scenario_error": str(exc),
             }
+            result.update(scenario._generation_metadata())
 
         # 如果是AI Agent，附加API资源消耗到结果中
         result["blind_mode"] = args.blind
@@ -1732,6 +1741,16 @@ def main():
 
     # 生成报告
     generate_report(results, report_path, args.agent)
+    if args.receipt:
+        from generator.promotion import write_lifecycle_receipt
+
+        write_lifecycle_receipt(
+            Path(args.receipt),
+            results,
+            agent_type=args.agent,
+            blind_mode=args.blind,
+            validate_only=args.validate_only,
+        )
     if args.validate_only and any(
         result.get("scenario_error") or not result.get("fix_verified")
         for result in results

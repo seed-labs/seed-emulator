@@ -178,6 +178,10 @@ def load_generated_scenarios(
                 f"{manifest.contract_sha256[:12]}, current is "
                 f"{snapshot.sha256[:12]}; regenerate or revalidate it"
             )
+        if any(spec.main_score_eligible for spec in manifest.scenarios):
+            from generator.promotion import verify_promotion_record
+
+            verify_promotion_record(root, manifest)
         for spec in manifest.scenarios:
             if spec.name in names:
                 raise RuntimeError(f"duplicate generated scenario name={spec.name}")

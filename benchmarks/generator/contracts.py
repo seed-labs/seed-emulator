@@ -19,6 +19,17 @@ CONTRACT_FILES = (
     "manager.py",
     "agents/ai_agent.py",
     "agents/observations.py",
+    "generator/contracts.py",
+    "generator/models.py",
+    "generator/planner.py",
+    "generator/templates.py",
+    "generator/validator.py",
+    "generator/promotion.py",
+    "generator/topology/bindings.py",
+    "generator/topology/compiler.py",
+    "generator/topology/models.py",
+    "generator/topology/planner.py",
+    "generator/topology/registry.py",
 )
 
 REQUIRED_BASE_METHODS = {
@@ -36,6 +47,7 @@ REQUIRED_CLI_OPTIONS = {
     "--topology",
     "--track",
     "--report",
+    "--receipt",
     "--repair-eval",
     "--validate-only",
     "--reuse-running",

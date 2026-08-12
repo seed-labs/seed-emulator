@@ -174,6 +174,50 @@ assert any(
 assert not any("decl-other-host" in command for command in declarative_probe_commands)
 assert not any("route_reflector" in command for command in declarative_probe_commands)
 
+# Overlapping deterministic names across scale manifests select the topology
+# with the highest active-asset coverage, not the first path alphabetically.
+original_path = observations_module.Path
+try:
+    class _FakePath:
+        def __init__(self, *_args):
+            pass
+
+        def resolve(self):
+            return self
+
+        @property
+        def parents(self):
+            return [self, self]
+
+        def __truediv__(self, _other):
+            return self
+
+        def glob(self, _pattern):
+            return [Path("/tmp/large.json"), Path("/tmp/small.json")]
+
+    manifests = {
+        "/tmp/large.json": {
+            "topology_id": "large",
+            "assets": [{"container": "shared"}] + [
+                {"container": f"large-{index}"} for index in range(99)
+            ],
+        },
+        "/tmp/small.json": {
+            "topology_id": "small",
+            "assets": [{"container": "shared"}, {"container": "small-only"}],
+        },
+    }
+    original_read_text = Path.read_text
+    Path.read_text = lambda self, **_kwargs: json.dumps(manifests[str(self)])
+    observations_module.Path = _FakePath
+    selected = observations_module._active_declarative_capabilities({
+        "shared": "running", "small-only": "running"
+    })
+    assert selected["topology_id"] == "small"
+finally:
+    observations_module.Path = original_path
+    Path.read_text = original_read_text
+
 small_commands = []
 
 

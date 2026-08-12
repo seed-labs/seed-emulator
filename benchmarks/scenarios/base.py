@@ -783,6 +783,10 @@ class BaseScenario:
             "ai_confidence": ai_diagnosis['confidence'],
             "correct_diagnosis": correct_diagnosis,
             "fix_verified": verified,
+            "healthy_baseline_verified": True,
+            "fault_injection_verified": True,
+            "standard_cleanup_verified": verified,
+            "topology_tainted": not verified,
             "duration": duration,
         }
         result.update(self._generation_metadata())

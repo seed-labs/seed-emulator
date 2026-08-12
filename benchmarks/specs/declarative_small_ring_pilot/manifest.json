@@ -1,11 +1,11 @@
 {
-  "contract_sha256": "ea68d47351bf8f37c20db5097696991800c1c966b1bc3d5b97da04297110c1dc",
+  "contract_sha256": "fcddd187eccda4a180bb68884652e710258f036a3f906df8bf9f6f427baf8419",
   "enabled": true,
-  "generator_version": "2.0.0",
+  "generator_version": "2.1.0",
   "master_seed": "declarative-e2e-20260812",
   "scenarios": [
     {
-      "benchmark_track": "robustness",
+      "benchmark_track": "network_functional",
       "causal_chain": [],
       "convergence_timeout": 60,
       "description": "Generated deterministic case: A target workload container is unexpectedly stopped",
@@ -32,12 +32,12 @@
       "fault_settle_seconds": 3,
       "fault_type": "container_not_running",
       "fingerprint": "9b2b4ac3169d3c06e5182e85fc345f028d716663f6902c0f8dd9d10ee56c6140",
-      "main_score_eligible": false,
+      "main_score_eligible": true,
       "name": "gen_container_stopped_9b2b4ac316_01",
       "parameters": {
         "container": "as64513h-host0-10.0.1.3"
       },
-      "quarantine_reason": "generated suite declarative_small_ring_pilot; promote only after live validation",
+      "quarantine_reason": "",
       "repair_containers": [
         "as64513h-host0-10.0.1.3"
       ],
@@ -46,7 +46,7 @@
       "topology": "DECLARATIVE_small_ring"
     },
     {
-      "benchmark_track": "robustness",
+      "benchmark_track": "network_functional",
       "causal_chain": [],
       "convergence_timeout": 60,
       "description": "Generated deterministic case: Docker embedded DNS is replaced by an unreachable resolver",
@@ -73,7 +73,7 @@
       "fault_settle_seconds": 3,
       "fault_type": "dns_failure",
       "fingerprint": "fac593b8741e4f8f448a1eac1bd4c0511720a83ecd77df3a4a2cf58b02f7bcbf",
-      "main_score_eligible": false,
+      "main_score_eligible": true,
       "name": "gen_dns_nameserver_fac593b874_01",
       "parameters": {
         "bad_nameserver": "198.51.100.1",
@@ -82,7 +82,7 @@
         "peer_container": "as64513brd-router0-10.0.1.2",
         "peer_ip": "10.0.1.2"
       },
-      "quarantine_reason": "generated suite declarative_small_ring_pilot; promote only after live validation",
+      "quarantine_reason": "",
       "repair_containers": [
         "as64513h-host0-10.0.1.3"
       ],
@@ -91,7 +91,7 @@
       "topology": "DECLARATIVE_small_ring"
     },
     {
-      "benchmark_track": "robustness",
+      "benchmark_track": "network_control_plane",
       "causal_chain": [],
       "convergence_timeout": 120,
       "description": "Generated deterministic case: BIRD local ASN differs from its healthy baseline",
@@ -118,14 +118,14 @@
       "fault_settle_seconds": 3,
       "fault_type": "wrong_asn",
       "fingerprint": "9695fab1eb4735611dfb87a605b48ce71b0009c311162f52f4d17368242748e7",
-      "main_score_eligible": false,
+      "main_score_eligible": true,
       "name": "gen_bird_wrong_asn_9695fab1eb_01",
       "parameters": {
         "bad_asn": 65470,
         "container": "as64513brd-router0-10.0.1.2",
         "correct_asn": 64513
       },
-      "quarantine_reason": "generated suite declarative_small_ring_pilot; promote only after live validation",
+      "quarantine_reason": "",
       "repair_containers": [
         "as64513brd-router0-10.0.1.2"
       ],
@@ -134,7 +134,7 @@
       "topology": "DECLARATIVE_small_ring"
     },
     {
-      "benchmark_track": "robustness",
+      "benchmark_track": "network_control_plane",
       "causal_chain": [],
       "convergence_timeout": 240,
       "description": "Generated deterministic case: A scoped OUTPUT ACL blocks one deterministic IX peer path in a capability-selected generated topology",
@@ -161,7 +161,7 @@
       "fault_settle_seconds": 3,
       "fault_type": "randomized_transit_acl_shadowing",
       "fingerprint": "25af448cd5011a2cba9507c1d9a7cd1c80b48a5d46420d932ad0bacaf3d903c8",
-      "main_score_eligible": false,
+      "main_score_eligible": true,
       "name": "gen_random_complex_transit_acl_25af448cd5_01",
       "parameters": {
         "destination_asn": 64512,
@@ -175,7 +175,7 @@
         "source_router": "as64513brd-router0-10.0.1.2",
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generated suite declarative_small_ring_pilot; promote only after live validation",
+      "quarantine_reason": "",
       "repair_containers": [
         "as64513brd-router0-10.0.1.2"
       ],
@@ -184,7 +184,7 @@
       "topology": "DECLARATIVE_small_ring"
     },
     {
-      "benchmark_track": "robustness",
+      "benchmark_track": "network_control_plane",
       "causal_chain": [],
       "convergence_timeout": 300,
       "description": "Generated deterministic case: Independent BIRD ASN and scoped ACL faults coexist in a capability-selected generated topology",
@@ -243,7 +243,7 @@
       "fault_settle_seconds": 3,
       "fault_type": "multiple_faults",
       "fingerprint": "5b3d8d80cfff26f198a33743011386c37365e9b5717fa02ed2cac62ea87f0175",
-      "main_score_eligible": false,
+      "main_score_eligible": true,
       "name": "gen_random_complex_dual_bgp_acl_5b3d8d80cf_01",
       "parameters": {
         "bad_asn": 65470,
@@ -261,7 +261,7 @@
         "template_revision": 2,
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generated suite declarative_small_ring_pilot; promote only after live validation",
+      "quarantine_reason": "",
       "repair_containers": [
         "as64513brd-router0-10.0.1.2"
       ],
@@ -270,6 +270,6 @@
       "topology": "DECLARATIVE_small_ring"
     }
   ],
-  "schema_version": 2,
+  "schema_version": 3,
   "suite_id": "declarative_small_ring_pilot"
 }

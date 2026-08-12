@@ -1,7 +1,7 @@
 {
-  "contract_sha256": "ea68d47351bf8f37c20db5097696991800c1c966b1bc3d5b97da04297110c1dc",
+  "contract_sha256": "fcddd187eccda4a180bb68884652e710258f036a3f906df8bf9f6f427baf8419",
   "enabled": true,
-  "generator_version": "2.0.0",
+  "generator_version": "2.1.0",
   "master_seed": "20260809",
   "scenarios": [
     {
@@ -250,6 +250,6 @@
       "topology": "RANDOM_COMPLEX_INTERNET"
     }
   ],
-  "schema_version": 2,
+  "schema_version": 3,
   "suite_id": "random_complex_generator_pilot"
 }

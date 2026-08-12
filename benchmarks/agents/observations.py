@@ -28,6 +28,7 @@ def _sample(values: List[str], limit: int) -> List[str]:
 
 def _active_declarative_capabilities(statuses: Dict[str, str]):
     benchmarks_dir = Path(__file__).resolve().parents[1]
+    candidates = []
     for path in sorted(
         (benchmarks_dir / "generated" / "declarative").glob(
             "*/output/topology_manifest.json"
@@ -38,9 +39,16 @@ def _active_declarative_capabilities(statuses: Dict[str, str]):
         except (OSError, json.JSONDecodeError):
             continue
         assets = list(manifest.get("assets") or [])
-        if assets and any(item.get("container") in statuses for item in assets):
-            return manifest
-    return None
+        asset_names = {item.get("container") for item in assets}
+        matched = len(asset_names.intersection(statuses))
+        if assets and matched:
+            # Generated scales deliberately reuse deterministic leading names.
+            # Prefer the manifest whose complete asset set best explains the
+            # running containers; a one-name overlap must not select 10k scale.
+            candidates.append((matched / len(asset_names), matched, manifest))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: (item[0], item[1]))[2]
 
 
 def _run(command: str, timeout: int = 30) -> str:
@@ -388,12 +396,21 @@ def capture_network_state(
             if observation:
                 observations[str(observation["id"])] = observation
 
-    return {
+    result = {
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "capture_profile": capture_profile,
         "probe_count": len(probes),
         "observations": observations,
     }
+    if capability_manifest is not None:
+        result.update({
+            "topology_id": capability_manifest.get("topology_id"),
+            "topology_fingerprint": capability_manifest.get(
+                "topology_fingerprint"
+            ),
+            "scenario_metadata_included": False,
+        })
+    return result
 
 
 def diff_network_states(

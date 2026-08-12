@@ -1,0 +1,71 @@
+{
+  "contract_sha256": "fcddd187eccda4a180bb68884652e710258f036a3f906df8bf9f6f427baf8419",
+  "created_at": "2026-08-12T13:42:29.050454+00:00",
+  "execution": {
+    "agent": "rule",
+    "ai_invoked": false,
+    "blind_mode": true,
+    "validate_only": true
+  },
+  "receipt_id": "ffc540c1-a966-4cb2-b800-46e8f5a38211",
+  "receipt_sha256": "6cee22b435ef59083bf1140498cd86df42728585884155810caf772a95a58001",
+  "scenarios": [
+    {
+      "fault_injection_verified": true,
+      "fingerprint": "9b2b4ac3169d3c06e5182e85fc345f028d716663f6902c0f8dd9d10ee56c6140",
+      "fix_verified": true,
+      "healthy_baseline_verified": true,
+      "name": "gen_container_stopped_9b2b4ac316_01",
+      "scenario_error": "",
+      "standard_cleanup_verified": true,
+      "topology": "DECLARATIVE_small_ring",
+      "topology_tainted": false
+    },
+    {
+      "fault_injection_verified": true,
+      "fingerprint": "fac593b8741e4f8f448a1eac1bd4c0511720a83ecd77df3a4a2cf58b02f7bcbf",
+      "fix_verified": true,
+      "healthy_baseline_verified": true,
+      "name": "gen_dns_nameserver_fac593b874_01",
+      "scenario_error": "",
+      "standard_cleanup_verified": true,
+      "topology": "DECLARATIVE_small_ring",
+      "topology_tainted": false
+    },
+    {
+      "fault_injection_verified": true,
+      "fingerprint": "9695fab1eb4735611dfb87a605b48ce71b0009c311162f52f4d17368242748e7",
+      "fix_verified": true,
+      "healthy_baseline_verified": true,
+      "name": "gen_bird_wrong_asn_9695fab1eb_01",
+      "scenario_error": "",
+      "standard_cleanup_verified": true,
+      "topology": "DECLARATIVE_small_ring",
+      "topology_tainted": false
+    },
+    {
+      "fault_injection_verified": true,
+      "fingerprint": "25af448cd5011a2cba9507c1d9a7cd1c80b48a5d46420d932ad0bacaf3d903c8",
+      "fix_verified": true,
+      "healthy_baseline_verified": true,
+      "name": "gen_random_complex_transit_acl_25af448cd5_01",
+      "scenario_error": "",
+      "standard_cleanup_verified": true,
+      "topology": "DECLARATIVE_small_ring",
+      "topology_tainted": false
+    },
+    {
+      "fault_injection_verified": true,
+      "fingerprint": "5b3d8d80cfff26f198a33743011386c37365e9b5717fa02ed2cac62ea87f0175",
+      "fix_verified": true,
+      "healthy_baseline_verified": true,
+      "name": "gen_random_complex_dual_bgp_acl_5b3d8d80cf_01",
+      "scenario_error": "",
+      "standard_cleanup_verified": true,
+      "topology": "DECLARATIVE_small_ring",
+      "topology_tainted": false
+    }
+  ],
+  "schema_version": 1,
+  "suite_id": "declarative_small_ring_pilot"
+}

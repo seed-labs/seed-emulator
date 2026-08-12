@@ -8,8 +8,8 @@ import json
 from typing import Any, Dict, Iterable, List, Mapping, Tuple
 
 
-SCHEMA_VERSION = 2
-GENERATOR_VERSION = "2.0.0"
+SCHEMA_VERSION = 3
+GENERATOR_VERSION = "2.1.0"
 VALID_TRACKS = {
     "network_functional",
     "network_control_plane",
@@ -223,7 +223,7 @@ class SuiteManifest:
             ),
         )
         source_schema = data["schema_version"]
-        if source_schema not in {1, SCHEMA_VERSION}:
+        if source_schema not in {1, 2, SCHEMA_VERSION}:
             raise ValueError(
                 f"unsupported schema_version={source_schema}"
             )
@@ -239,7 +239,7 @@ class SuiteManifest:
             schema_version=SCHEMA_VERSION,
             generator_version=(
                 GENERATOR_VERSION
-                if source_schema == 1
+                if source_schema in {1, 2}
                 else data["generator_version"]
             ),
         )
