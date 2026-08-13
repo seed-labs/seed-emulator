@@ -170,6 +170,10 @@ fake_manifest = {
                 "interfaces": [{"name": "ix1000", "address": "172.16.0.1/29"}],
             }
         ],
+        "netem": [
+            {"container": "as64512h-host0-10.0.0.2", "asn": 64512,
+             "interface": "lan0"}
+        ],
     },
 }
 assert bind_fault_component(fake_manifest, "container_stopped", 0, "x") == {
@@ -190,6 +194,11 @@ acl = bind_fault_component(fake_manifest, "scoped_acl", 0, "x")
 assert acl["source_interface"] == "ix1000"
 assert acl["destination_ip"] == "172.16.0.2"
 validate_fault_binding(fake_manifest, "scoped_acl", acl)
+netem = bind_fault_component(fake_manifest, "netem", 3, "x")
+assert netem["container"] == "as64512h-host0-10.0.0.2"
+assert netem["interface"] == "lan0"
+assert netem["delay_ms"] == 80 and netem["jitter_ms"] == 30
+validate_fault_binding(fake_manifest, "netem", netem)
 compound = bind_fault_component(
     fake_manifest, "bird_wrong_asn_scoped_acl", 0, "x"
 )

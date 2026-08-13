@@ -13,6 +13,13 @@ from generator.storage import validate_manifest_file
 from generator.templates import evaluate_verifier, render_scenario
 
 
+MIGRATED_FAULT_TEMPLATES = {
+    "container_stopped", "dns_nameserver", "bird_wrong_asn",
+    "random_complex_transit_acl", "random_complex_dual_bgp_acl",
+    "netem_impairment",
+}
+
+
 def _class_name(spec: ScenarioSpec) -> str:
     words = [item for item in re.split(r"[^A-Za-z0-9]+", spec.name) if item]
     return "".join(word[:1].upper() + word[1:] for word in words) + "Scenario"
@@ -31,6 +38,28 @@ def scenario_class_from_spec(
     def initialize(self):
         BaseScenario.__init__(self)
         self.scenario_seed = self.generated_spec.scenario_seed
+        self._fault_execution_id = f"{suite_id}_{spec.fingerprint[:16]}"
+        self._fault_journal_path = None
+
+    def compiled_fault_plan(self):
+        if self.generated_spec.template_id not in MIGRATED_FAULT_TEMPLATES:
+            return None
+        from generator.faults.adapters import compile_template_faults
+
+        topology_fingerprint = "legacy-audited-topology"
+        if self.generated_spec.topology.startswith("DECLARATIVE_"):
+            from generator.topology.bindings import load_capability_manifest
+            from generator.topology.registry import topology_id_from_name
+
+            capabilities = load_capability_manifest(
+                topology_id_from_name(self.generated_spec.topology)
+            )
+            topology_fingerprint = str(capabilities["topology_fingerprint"])
+        return compile_template_faults(
+            self.generated_spec.template_id,
+            self.generated_spec.parameters,
+            topology_fingerprint=topology_fingerprint,
+        )
 
     def inject_command(self) -> str:
         return render_scenario(self.generated_spec).inject_command
@@ -52,7 +81,8 @@ def scenario_class_from_spec(
     def inject_fault(self):
         """Inject and prove every generated component before scoring starts."""
         rendered = render_scenario(self.generated_spec)
-        if not rendered.components:
+        plan = self.get_compiled_fault_plan()
+        if plan is None and not rendered.components:
             return BaseScenario.inject_fault(self)
         from scenarios.base import run, run_with_status
 
@@ -63,32 +93,42 @@ def scenario_class_from_spec(
             f"({len(rendered.components)} components)"
         )
         try:
-            for component in sorted(
-                rendered.components,
-                key=lambda item: item.inject_order,
-            ):
-                returncode, output = run_with_status(
-                    component.inject_command,
-                    timeout=120,
+            if plan is not None:
+                from generator.faults.journal import FaultExecutor
+
+                executor = FaultExecutor(
+                    Path(__file__).resolve().parents[1] / "generated" / "fault-journal"
                 )
-                if returncode != 0:
-                    raise RuntimeError(
-                        f"component {component.component_id} injection failed "
-                        f"(exit={returncode}):\n{output[:2000]}"
-                    )
-                check_code, check_output = run_with_status(
-                    component.fault_check_command,
-                    timeout=30,
+                self._fault_journal_path = executor.inject(
+                    plan, self._fault_execution_id
                 )
-                if check_code != 0 or not evaluate_verifier(
-                    component.fault_verifier_kind,
-                    component.fault_verifier_value,
-                    check_output,
+            else:
+                for component in sorted(
+                    rendered.components,
+                    key=lambda item: item.inject_order,
                 ):
-                    raise RuntimeError(
-                        f"component {component.component_id} did not become active:\n"
-                        f"{check_output[:2000]}"
+                    returncode, output = run_with_status(
+                        component.inject_command,
+                        timeout=120,
                     )
+                    if returncode != 0:
+                        raise RuntimeError(
+                            f"component {component.component_id} injection failed "
+                            f"(exit={returncode}):\n{output[:2000]}"
+                        )
+                    check_code, check_output = run_with_status(
+                        component.fault_check_command,
+                        timeout=30,
+                    )
+                    if check_code != 0 or not evaluate_verifier(
+                        component.fault_verifier_kind,
+                        component.fault_verifier_value,
+                        check_output,
+                    ):
+                        raise RuntimeError(
+                            f"component {component.component_id} did not become active:\n"
+                            f"{check_output[:2000]}"
+                        )
             time.sleep(self.fault_settle_seconds)
             fault_output = run(self.get_verify_cmd(), timeout=30)
             if not self.check_fault_active(fault_output):
@@ -97,11 +137,26 @@ def scenario_class_from_spec(
                     f"was absent:\n{fault_output[:2000]}"
                 )
         except Exception:
-            run(self.get_fix_cmd(), timeout=120)
+            self.execute_standard_cleanup(timeout=120)
             self._healthy_baseline_prepared = False
             raise
         self._healthy_baseline_prepared = False
         print("  组合故障验证成功")
+
+    def execute_standard_cleanup(self, timeout=90):
+        from scenarios.base import run
+
+        plan = self.get_compiled_fault_plan()
+        if plan is not None and self._fault_journal_path is not None:
+            from generator.faults.journal import FaultExecutor
+
+            executor = FaultExecutor(
+                Path(__file__).resolve().parents[1] / "generated" / "fault-journal"
+            )
+            path = executor.recover(plan, self._fault_execution_id)
+            self._fault_journal_path = None
+            return f"fault journal recovered: {path}"
+        return run(self.get_fix_cmd(), timeout=timeout)
 
     expected_roots = tuple(
         {
@@ -130,6 +185,7 @@ def scenario_class_from_spec(
         "get_fix_cmd": fix_command,
         "check_verified": check_verified,
         "inject_fault": inject_fault,
+        "execute_standard_cleanup": execute_standard_cleanup,
         "name": spec.name,
         "description": spec.description,
         "topology": spec.topology,
@@ -152,6 +208,7 @@ def scenario_class_from_spec(
         "generated_suite_id": suite_id,
         "generation_fingerprint": spec.fingerprint,
         "generation_contract_sha256": contract_sha256,
+        "get_compiled_fault_plan": compiled_fault_plan,
     }
     return type(_class_name(spec), (BaseScenario,), attributes)
 

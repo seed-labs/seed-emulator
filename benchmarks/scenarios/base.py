@@ -199,7 +199,7 @@ class BaseScenario:
         """Restore and prove a healthy pre-injection state."""
         print("  准备并验证健康基线...")
         self._ensure_repair_containers_running()
-        run_with_status(self.get_fix_cmd(), timeout=120)
+        self.execute_standard_cleanup(timeout=120)
         output = ""
         deadline = time.monotonic() + self.convergence_timeout
         while time.monotonic() < deadline:
@@ -257,8 +257,7 @@ class BaseScenario:
     def fix_fault(self):
         """修复故障 - 使用轮询检测模式。"""
         print(f"  修复故障...")
-        cmd = self.get_fix_cmd()
-        run(cmd)
+        self.execute_standard_cleanup(timeout=180)
 
         # 轮询检测修复是否成功
         max_attempts = 10
@@ -279,6 +278,10 @@ class BaseScenario:
         print(f"  验证修复...")
         cmd = self.get_verify_cmd()
         return run(cmd)
+
+    def execute_standard_cleanup(self, timeout=90):
+        """Recover a scenario; generated scenarios may use a durable journal."""
+        return run(self.get_fix_cmd(), timeout=timeout)
 
     def _infer_repair_containers(self):
         if self.repair_containers:
@@ -714,7 +717,7 @@ class BaseScenario:
         finally:
             # Freeze the Agent score first, then always restore the known
             # scenario state. Cleanup is never counted as an Agent repair.
-            cleanup_output = run(self.get_fix_cmd(), timeout=90)
+            cleanup_output = self.execute_standard_cleanup(timeout=90)
             cleanup_verified = False
             for _ in range(10):
                 time.sleep(3)

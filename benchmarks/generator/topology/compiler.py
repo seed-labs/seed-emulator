@@ -110,6 +110,11 @@ def _capability_manifest(plan: TopologyPlan, compose_file: Path) -> Dict[str, ob
             for item in routers
             if any(iface["name"].startswith("ix") for iface in item["interfaces"])
         ],
+        "netem": [
+            {"container": item["container"], "asn": item["asn"], "interface": "lan0"}
+            for item in assets
+            if any(iface["name"] == "lan0" for iface in item["interfaces"])
+        ],
     }
     return {
         "schema_version": 1,

@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Tuple
 
 
 SCHEMA_VERSION = 3
-GENERATOR_VERSION = "2.1.0"
+GENERATOR_VERSION = "3.0.0"
 VALID_TRACKS = {
     "network_functional",
     "network_control_plane",

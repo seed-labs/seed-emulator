@@ -1,7 +1,7 @@
 {
-  "contract_sha256": "fcddd187eccda4a180bb68884652e710258f036a3f906df8bf9f6f427baf8419",
+  "contract_sha256": "48fb1f295955e2df3bd75e2aac34a759511faa91a83b9268b3ae88569775b22d",
   "enabled": true,
-  "generator_version": "2.1.0",
+  "generator_version": "3.0.0",
   "master_seed": "20260809",
   "scenarios": [
     {
@@ -37,7 +37,7 @@
       "parameters": {
         "container": "as151h-host_0-10.151.0.71"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as151h-host_0-10.151.0.71"
       ],
@@ -82,7 +82,7 @@
         "peer_container": "as151brd-router0-10.151.0.254",
         "peer_ip": "10.151.0.254"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as151h-host_0-10.151.0.71"
       ],
@@ -127,7 +127,7 @@
         "prefix": "2001:db8:a065::/64",
         "probe": "2001:db8:a065::2"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as151brd-router0-10.151.0.254"
       ],
@@ -170,7 +170,7 @@
         "container": "as2brd-r101-10.101.0.2",
         "correct_asn": 2
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as2brd-r101-10.101.0.2"
       ],
@@ -211,7 +211,7 @@
       "parameters": {
         "container": "as152h-host_0-10.152.0.71"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as152h-host_0-10.152.0.71"
       ],
@@ -256,7 +256,7 @@
         "peer_container": "as152brd-router0-10.152.0.254",
         "peer_ip": "10.152.0.254"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as152h-host_0-10.152.0.71"
       ],
@@ -301,7 +301,7 @@
         "prefix": "2001:db8:a066::/64",
         "probe": "2001:db8:a066::2"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as151brd-router0-10.151.0.254"
       ],
@@ -344,7 +344,7 @@
         "container": "as2brd-r102-10.102.0.2",
         "correct_asn": 2
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as2brd-r102-10.102.0.2"
       ],
@@ -385,7 +385,7 @@
       "parameters": {
         "container": "as153h-host_0-10.153.0.71"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as153h-host_0-10.153.0.71"
       ],
@@ -430,7 +430,7 @@
         "peer_container": "as153brd-router0-10.153.0.254",
         "peer_ip": "10.153.0.254"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as153h-host_0-10.153.0.71"
       ],
@@ -475,7 +475,7 @@
         "prefix": "2001:db8:a067::/64",
         "probe": "2001:db8:a067::2"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as151brd-router0-10.151.0.254"
       ],
@@ -518,7 +518,7 @@
         "container": "as2brd-r105-10.105.0.2",
         "correct_asn": 2
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as2brd-r105-10.105.0.2"
       ],
@@ -559,7 +559,7 @@
       "parameters": {
         "container": "as154h-host_0-10.154.0.71"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as154h-host_0-10.154.0.71"
       ],
@@ -604,7 +604,7 @@
         "peer_container": "as154brd-router0-10.154.0.254",
         "peer_ip": "10.154.0.254"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as154h-host_0-10.154.0.71"
       ],
@@ -649,7 +649,7 @@
         "prefix": "2001:db8:a068::/64",
         "probe": "2001:db8:a068::2"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as151brd-router0-10.151.0.254"
       ],
@@ -692,7 +692,7 @@
         "container": "as2brd-r100-10.100.0.2",
         "correct_asn": 2
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as2brd-r100-10.100.0.2"
       ],
@@ -733,7 +733,7 @@
       "parameters": {
         "container": "as150h-host_0-10.150.0.71"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as150h-host_0-10.150.0.71"
       ],
@@ -778,7 +778,7 @@
         "peer_container": "as150brd-router0-10.150.0.254",
         "peer_ip": "10.150.0.254"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as150h-host_0-10.150.0.71"
       ],
@@ -823,7 +823,7 @@
         "prefix": "2001:db8:a069::/64",
         "probe": "2001:db8:a069::2"
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as151brd-router0-10.151.0.254"
       ],
@@ -866,7 +866,7 @@
         "container": "as2brd-r101-10.101.0.2",
         "correct_asn": 2
       },
-      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as2brd-r101-10.101.0.2"
       ],

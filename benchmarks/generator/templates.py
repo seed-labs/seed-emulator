@@ -57,6 +57,7 @@ class FaultTemplate:
         Callable[[Mapping[str, Any]], Tuple[str, ...]]
     ] = None
     default_enabled: bool = True
+    declarative_only: bool = False
 
     def candidate(self, sequence: int, seed: int) -> Dict[str, Any]:
         return self.candidate_factory(sequence, seed)
@@ -99,15 +100,14 @@ def _bird_asn_candidate(sequence: int, seed: int) -> Dict[str, Any]:
 
 
 def _bird_asn_render(parameters: Mapping[str, Any]) -> RenderedScenario:
+    from generator.faults.adapters import compile_template_faults
+
     container = parameters["container"]
     correct = int(parameters["correct_asn"])
     bad = int(parameters["bad_asn"])
+    action = compile_template_faults("bird_wrong_asn", parameters).actions[0]
     return RenderedScenario(
-        inject_command=(
-            f"docker exec {container} sed -i "
-            f"'s/as {correct};/as {bad};/g' /etc/bird/bird.conf && "
-            f"docker exec {container} birdc configure"
-        ),
+        inject_command=action.inject_command,
         verify_command=(
             f"docker exec {container} sh -c \""
             "birdc show protocols | grep -Eq "
@@ -115,11 +115,7 @@ def _bird_asn_render(parameters: Mapping[str, Any]) -> RenderedScenario:
             f"grep -q 'as {correct};' /etc/bird/bird.conf && "
             "echo GENERATED_BGP_ASN_OK\""
         ),
-        fix_command=(
-            f"docker exec {container} sed -i "
-            f"'s/as {bad};/as {correct};/g' /etc/bird/bird.conf && "
-            f"docker exec {container} birdc configure"
-        ),
+        fix_command=action.cleanup_command,
         verifier_kind="contains",
         verifier_value="GENERATED_BGP_ASN_OK",
     )
@@ -149,16 +145,16 @@ def _dns_candidate(sequence: int, seed: int) -> Dict[str, Any]:
 
 
 def _dns_render(parameters: Mapping[str, Any]) -> RenderedScenario:
+    from generator.faults.adapters import compile_template_faults
+
     container = parameters["container"]
     peer = parameters["peer_container"]
     peer_ip = parameters["peer_ip"]
     bad = parameters["bad_nameserver"]
     expected = parameters["expected_nameserver"]
+    action = compile_template_faults("dns_nameserver", parameters).actions[0]
     return RenderedScenario(
-        inject_command=(
-            f"docker exec {container} sh -c "
-            f"'printf \"nameserver {bad}\\n\" > /etc/resolv.conf'"
-        ),
+        inject_command=action.inject_command,
         verify_command=(
             f"docker exec {container} sh -c '"
             f"grep -Eq \"^nameserver[[:space:]]+{expected.replace('.', '[.]')}$\" "
@@ -167,11 +163,7 @@ def _dns_render(parameters: Mapping[str, Any]) -> RenderedScenario:
             f"grep -q \"^{peer_ip.replace('.', '[.]')}[[:space:]]\" && "
             "echo GENERATED_DNS_OK'"
         ),
-        fix_command=(
-            f"docker exec {container} sh -c "
-            f"'printf \"nameserver {expected}\\noptions ndots:0\\n\" "
-            "> /etc/resolv.conf'"
-        ),
+        fix_command=action.cleanup_command,
         verifier_kind="contains",
         verifier_value="GENERATED_DNS_OK",
     )
@@ -241,13 +233,16 @@ def _container_candidate(sequence: int, seed: int) -> Dict[str, Any]:
 
 
 def _container_render(parameters: Mapping[str, Any]) -> RenderedScenario:
+    from generator.faults.adapters import compile_template_faults
+
     container = parameters["container"]
+    action = compile_template_faults("container_stopped", parameters).actions[0]
     return RenderedScenario(
-        inject_command=f"docker stop {container}",
+        inject_command=action.inject_command,
         verify_command=(
             "docker inspect --format '{{.State.Running}}' " f"{container}"
         ),
-        fix_command=f"docker start {container}",
+        fix_command=action.cleanup_command,
         verifier_kind="equals",
         verifier_value="true",
     )
@@ -295,6 +290,8 @@ def _random_acl_candidate(sequence: int, seed: int) -> Dict[str, Any]:
 
 
 def _random_acl_render(parameters: Mapping[str, Any]) -> RenderedScenario:
+    from generator.faults.adapters import compile_template_faults
+
     router = parameters["source_router"]
     source_interface = parameters["source_interface"]
     source_ip = parameters["source_ip"]
@@ -306,20 +303,16 @@ def _random_acl_render(parameters: Mapping[str, Any]) -> RenderedScenario:
         f"-m length --length {probe_size + 28} -m comment "
         f"--comment {comment} -j REJECT"
     )
+    action = compile_template_faults(
+        "random_complex_transit_acl", parameters
+    ).actions[0]
     return RenderedScenario(
-        inject_command=(
-            f"docker exec {router} sh -c '"
-            f"iptables -D OUTPUT {rule} 2>/dev/null || true; "
-            f"iptables -I OUTPUT 1 {rule}'"
-        ),
+        inject_command=action.inject_command,
         verify_command=(
             f"docker exec {router} ping -I {source_interface} "
             f"-s {probe_size} -c 2 -W 2 {destination_ip}"
         ),
-        fix_command=(
-            f"docker exec {router} sh -c '"
-            f"iptables -D OUTPUT {rule} 2>/dev/null || true'"
-        ),
+        fix_command=action.cleanup_command,
         verifier_kind="regex",
         verifier_value=r"(?<!\d)0% packet loss",
     )
@@ -354,6 +347,24 @@ def _compose_components(
         verifier_kind=verifier_kind,
         verifier_value=verifier_value,
         components=components,
+    )
+
+
+def _compose_plan(
+    plan,
+    *,
+    verify_command: str,
+    verifier_kind: str,
+    verifier_value: str,
+) -> RenderedScenario:
+    """One generic composition path for all compiled primitive plans."""
+    from generator.faults.adapters import rendered_components
+
+    return _compose_components(
+        rendered_components(plan),
+        verify_command=verify_command,
+        verifier_kind=verifier_kind,
+        verifier_value=verifier_value,
     )
 
 
@@ -679,6 +690,8 @@ def _random_dual_candidate(sequence: int, seed: int) -> Dict[str, Any]:
 
 
 def _random_dual_render(parameters: Mapping[str, Any]) -> RenderedScenario:
+    from generator.faults.adapters import compile_template_faults
+
     router = str(parameters["source_router"])
     source_interface = str(parameters["source_interface"])
     source_ip = str(parameters["source_ip"])
@@ -693,64 +706,11 @@ def _random_dual_render(parameters: Mapping[str, Any]) -> RenderedScenario:
         f"-m length --length {probe_size + 28} -m comment "
         f"--comment {comment} -j REJECT"
     )
-    asn_component = RenderedFaultComponent(
-        component_id="random_bird_wrong_asn",
-        category="wrong_asn",
-        target_containers=(router,),
-        artifact="/etc/bird/bird.conf",
-        faulty_value=f"local {source_ip} as {bad_asn}",
-        expected_value=f"local {source_ip} as {correct_asn}",
-        inject_order=0,
-        cleanup_order=1,
-        inject_command=(
-            f"docker exec {router} sed -i "
-            f"'s/local {source_ip} as {correct_asn};/"
-            f"local {source_ip} as {bad_asn};/' /etc/bird/bird.conf && "
-            f"docker exec {router} birdc configure"
-        ),
-        fault_check_command=(
-            f"docker exec {router} sh -c \""
-            f"grep -q 'local {source_ip} as {bad_asn};' /etc/bird/bird.conf && "
-            "echo GENERATED_RANDOM_ASN_ACTIVE\""
-        ),
-        fault_verifier_kind="contains",
-        fault_verifier_value="GENERATED_RANDOM_ASN_ACTIVE",
-        cleanup_command=(
-            f"docker exec {router} sed -i "
-            f"'s/local {source_ip} as {bad_asn};/"
-            f"local {source_ip} as {correct_asn};/' /etc/bird/bird.conf && "
-            f"docker exec {router} birdc configure"
-        ),
+    plan = compile_template_faults(
+        "random_complex_dual_bgp_acl", parameters
     )
-    acl_component = RenderedFaultComponent(
-        component_id="random_transit_acl",
-        category="randomized_transit_acl_shadowing",
-        target_containers=(router,),
-        artifact="iptables OUTPUT chain",
-        faulty_value=(
-            f"REJECT {source_ip} to {destination_ip} payload={probe_size}"
-        ),
-        expected_value="no matching REJECT rule",
-        inject_order=1,
-        cleanup_order=0,
-        inject_command=(
-            f"docker exec {router} sh -c '"
-            f"iptables -D OUTPUT {rule} 2>/dev/null || true; "
-            f"iptables -I OUTPUT 1 {rule}'"
-        ),
-        fault_check_command=(
-            f"docker exec {router} sh -c '"
-            f"iptables -C OUTPUT {rule} && echo GENERATED_RANDOM_ACL_ACTIVE'"
-        ),
-        fault_verifier_kind="contains",
-        fault_verifier_value="GENERATED_RANDOM_ACL_ACTIVE",
-        cleanup_command=(
-            f"docker exec {router} sh -c '"
-            f"iptables -D OUTPUT {rule} 2>/dev/null || true'"
-        ),
-    )
-    return _compose_components(
-        (asn_component, acl_component),
+    return _compose_plan(
+        plan,
         verify_command=(
             f"docker exec {router} sh -c \""
             f"grep -q 'local {source_ip} as {correct_asn};' /etc/bird/bird.conf && "
@@ -773,6 +733,43 @@ def _random_dual_diagnosis(parameters: Mapping[str, Any]):
             f"{parameters['destination_ip']}"
         ),
         f"AS {parameters['correct_asn']} and no matching REJECT rule",
+    )
+
+
+def _netem_render(parameters: Mapping[str, Any]) -> RenderedScenario:
+    from generator.faults.adapters import compile_template_faults
+
+    container = str(parameters["container"])
+    interface = str(parameters["interface"])
+    peer_ip = str(parameters["peer_ip"])
+    return _compose_plan(
+        compile_template_faults("netem_impairment", parameters),
+        verify_command=(
+            f"docker exec {container} sh -c '"
+            f"tc qdisc show dev {interface} | grep -vq netem && "
+            f"ping -c 2 -W 2 {peer_ip} >/dev/null && "
+            "echo GENERATED_NETEM_OK'"
+        ),
+        verifier_kind="contains",
+        verifier_value="GENERATED_NETEM_OK",
+    )
+
+
+def _netem_diagnosis(parameters: Mapping[str, Any]):
+    enabled = []
+    if int(parameters["delay_ms"]):
+        enabled.append(f"delay={parameters['delay_ms']}ms")
+    if int(parameters["jitter_ms"]):
+        enabled.append(f"jitter={parameters['jitter_ms']}ms")
+    if float(parameters["loss_percent"]):
+        enabled.append(f"loss={parameters['loss_percent']}%")
+    if int(parameters["rate_kbit"]):
+        enabled.append(f"rate={parameters['rate_kbit']}kbit")
+    return (
+        (str(parameters["container"]),),
+        f"tc qdisc {parameters['interface']}",
+        ", ".join(enabled),
+        "no netem qdisc",
     )
 
 
@@ -893,6 +890,21 @@ TEMPLATES: Dict[str, FaultTemplate] = {
             diagnosis_factory=_random_dual_diagnosis,
             fault_relationship="independent",
             default_enabled=False,
+        ),
+        FaultTemplate(
+            template_id="netem_impairment",
+            topology="RANDOM_COMPLEX_INTERNET",
+            fault_type="network_impairment",
+            difficulty="advanced",
+            description=(
+                "A capability-selected interface has deterministic delay, loss, "
+                "rate limiting, jitter, or a bounded combination"
+            ),
+            candidate_factory=lambda _sequence, _seed: {},
+            renderer=_netem_render,
+            diagnosis_factory=_netem_diagnosis,
+            default_enabled=False,
+            declarative_only=True,
         ),
     )
 }

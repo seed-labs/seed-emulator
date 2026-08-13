@@ -1,7 +1,7 @@
 {
-  "contract_sha256": "fcddd187eccda4a180bb68884652e710258f036a3f906df8bf9f6f427baf8419",
+  "contract_sha256": "48fb1f295955e2df3bd75e2aac34a759511faa91a83b9268b3ae88569775b22d",
   "enabled": true,
-  "generator_version": "2.1.0",
+  "generator_version": "3.0.0",
   "master_seed": "complex-20260812",
   "scenarios": [
     {
@@ -81,7 +81,7 @@
         "template_revision": 1,
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generated suite random_complex_compound_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
@@ -166,7 +166,7 @@
         "template_revision": 1,
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generated suite random_complex_compound_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
@@ -251,7 +251,7 @@
         "template_revision": 1,
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generated suite random_complex_compound_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
@@ -336,7 +336,7 @@
         "template_revision": 1,
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generated suite random_complex_compound_pilot; promote only after live validation",
+      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],

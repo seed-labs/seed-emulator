@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import yaml
 
 from generator.topology.bindings import (
     SUPPORTED_COMPONENTS,
@@ -61,8 +62,30 @@ def smoke_test(
             build_compose_services_serially(
                 destination, timeout_per_service=900, verify_images=True
             )
-        up = [*compose, "up", "-d", "--no-build"]
-        _run(up, cwd=destination, timeout=1800)
+        # Starting hundreds of namespaces in one Compose transaction can make
+        # dockerd unresponsive even when memory admission succeeds. Start
+        # dependency helpers first and ramp business assets in small batches.
+        asset_services = [item["service"] for item in manifest["assets"]]
+        compose_document = yaml.safe_load(
+            (destination / "docker-compose.yml").read_text(encoding="utf-8")
+        )
+        dependency_services = sorted(
+            set(compose_document.get("services", {})) - set(asset_services)
+        )
+        if dependency_services:
+            _run(
+                [*compose, "up", "-d", "--no-build", *dependency_services],
+                cwd=destination, timeout=300,
+            )
+        start_batch_size = 4
+        for offset in range(0, len(asset_services), start_batch_size):
+            batch = asset_services[offset:offset + start_batch_size]
+            _run(
+                [*compose, "up", "-d", "--no-build", "--no-deps", *batch],
+                cwd=destination, timeout=300,
+            )
+            # A cheap bounded daemon health gate prevents a queued start storm.
+            _run(["docker", "version"], timeout=60)
         expected = manifest["actual_compose_services"]
         running = 0
         for _attempt in range(60):
@@ -198,7 +221,11 @@ def runtime_preflight(topology_id: str):
     checks = {
         "memory": estimate.memory_mb <= max(0, available_mb - reserve_mb),
         "cpu": estimate.cpu_cores <= cpu_count * 2,
-        "container_count": estimate.containers <= 1000,
+        # Empirical 2026-08-13 gate: this 8-vCPU VM became daemon-unresponsive
+        # when 100 business assets were launched simultaneously. Until a
+        # throttled 100-node smoke passes, automatic runtime admission must
+        # remain below that observed unsafe boundary.
+        "container_count": estimate.containers <= 64,
     }
     return {
         "topology_id": topology_id,
@@ -210,7 +237,7 @@ def runtime_preflight(topology_id: str):
             "memory_reserve_mb": reserve_mb,
             "cpu_count": cpu_count,
             "cpu_overcommit_factor": 2,
-            "container_safety_ceiling": 1000,
+            "container_safety_ceiling": 64,
         },
         "checks": checks,
         "runtime_allowed": all(checks.values()),

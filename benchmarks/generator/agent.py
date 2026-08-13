@@ -69,6 +69,27 @@ class BenchmarkGeneratorAgent:
     def load_suite(self, suite_id: str) -> SuiteManifest:
         return self.validate(suite_manifest_path(self.benchmarks_dir, suite_id))
 
+    def compile_fault_specs(self, specs, capabilities, *, relationship="independent"):
+        """Public fault-planning entry point used by large-scale producers."""
+        from generator.faults.compiler import compile_fault_set
+
+        return compile_fault_set(specs, capabilities, relationship=relationship)
+
+    def fault_coverage(self, plans, capabilities):
+        from generator.faults.coverage import measure_coverage
+
+        return measure_coverage(plans, capabilities)
+
+    def select_fault_combinations(
+        self, candidates, capabilities, *, count, master_seed, max_components=3
+    ):
+        from generator.faults.coverage import select_combinations
+
+        return select_combinations(
+            candidates, capabilities, count=count, master_seed=master_seed,
+            max_components=max_components,
+        )
+
     @staticmethod
     def build_batches(
         manifest: SuiteManifest,

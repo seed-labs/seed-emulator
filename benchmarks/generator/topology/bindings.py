@@ -16,6 +16,7 @@ SUPPORTED_COMPONENTS = (
     "dns_nameserver",
     "bird_wrong_asn",
     "scoped_acl",
+    "netem",
     "bird_wrong_asn_scoped_acl",
 )
 TEMPLATE_COMPONENTS = {
@@ -24,6 +25,7 @@ TEMPLATE_COMPONENTS = {
     "bird_wrong_asn": "bird_wrong_asn",
     "random_complex_transit_acl": "scoped_acl",
     "random_complex_dual_bgp_acl": "bird_wrong_asn_scoped_acl",
+    "netem_impairment": "netem",
 }
 
 
@@ -71,6 +73,36 @@ def bind_fault_component(
         if not candidates:
             raise ValueError("topology has no host container binding")
         return {"container": candidates[(sequence + seed) % len(candidates)]}
+    if component_id == "netem":
+        candidates = list(bindings.get(component_id) or [])
+        if not candidates:
+            raise ValueError("capability manifest has no netem targets")
+        selected = candidates[(sequence + seed) % len(candidates)]
+        peer_candidates = [
+            item for item in assets
+            if item.get("asn") == selected.get("asn")
+            and item.get("container") != selected.get("container")
+        ]
+        if not peer_candidates:
+            raise ValueError("netem target has no same-AS probe peer")
+        peer = peer_candidates[sequence % len(peer_candidates)]
+        peer_lan = next(
+            item["address"].split("/")[0]
+            for item in peer.get("interfaces", []) if item["name"] == "lan0"
+        )
+        profiles = (
+            {"delay_ms": 120, "jitter_ms": 20, "loss_percent": 0, "rate_kbit": 0},
+            {"delay_ms": 0, "jitter_ms": 0, "loss_percent": 25, "rate_kbit": 0},
+            {"delay_ms": 0, "jitter_ms": 0, "loss_percent": 0, "rate_kbit": 256},
+            {"delay_ms": 80, "jitter_ms": 30, "loss_percent": 5, "rate_kbit": 512},
+        )
+        return {
+            "container": selected["container"],
+            "interface": selected["interface"],
+            "peer_container": peer["container"],
+            "peer_ip": peer_lan,
+            **profiles[sequence % len(profiles)],
+        }
     if component_id == "bird_wrong_asn":
         candidates = list(bindings.get(component_id) or [])
         if not candidates:
@@ -167,6 +199,37 @@ def validate_fault_binding(
             bindings.get(component_id) or []
         ):
             raise ValueError("container stop target is outside topology capabilities")
+        return
+    if component_id == "netem":
+        required = {
+            "container", "interface", "peer_container", "peer_ip",
+            "delay_ms", "jitter_ms", "loss_percent", "rate_kbit",
+        }
+        candidates = {
+            (item["container"], item["interface"])
+            for item in bindings.get(component_id) or []
+        }
+        by_container = {item["container"]: item for item in assets}
+        target = by_container.get(parameters.get("container"))
+        peer = by_container.get(parameters.get("peer_container"))
+        peer_ips = {
+            item["address"].split("/")[0]
+            for item in (peer or {}).get("interfaces", []) if item["name"] == "lan0"
+        }
+        delay = int(parameters.get("delay_ms", -1))
+        jitter = int(parameters.get("jitter_ms", -1))
+        loss = float(parameters.get("loss_percent", -1))
+        rate = int(parameters.get("rate_kbit", -1))
+        if (
+            set(parameters) != required
+            or (parameters.get("container"), parameters.get("interface")) not in candidates
+            or not target or not peer or target.get("asn") != peer.get("asn")
+            or parameters.get("peer_ip") not in peer_ips
+            or not 0 <= delay <= 5000 or not 0 <= jitter <= delay
+            or not 0 <= loss <= 100 or not 0 <= rate <= 10_000_000
+            or not any((delay, loss, rate))
+        ):
+            raise ValueError("netem binding differs from compiled topology capabilities")
         return
     if component_id == "bird_wrong_asn":
         if set(parameters) != {"container", "correct_asn", "bad_asn"}:

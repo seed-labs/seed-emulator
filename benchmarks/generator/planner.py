@@ -102,7 +102,7 @@ def plan_suite(
         selected_ids = [
             key
             for key, value in sorted(TEMPLATES.items())
-            if value.topology == job.topology
+            if value.topology == job.topology and not value.declarative_only
         ]
     else:
         selected_ids = [
