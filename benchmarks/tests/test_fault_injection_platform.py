@@ -13,6 +13,8 @@ sys.path.insert(0, str(BENCHMARKS_DIR))
 from generator.faults.adapters import compile_template_faults  # noqa: E402
 from generator.faults.compiler import compile_fault, compile_fault_set  # noqa: E402
 from generator.faults.coverage import measure_coverage, select_combinations  # noqa: E402
+from generator.faults import drivers as drivers_module  # noqa: E402
+from generator.faults.drivers import get_driver  # noqa: E402
 from generator.faults.journal import FaultExecutor  # noqa: E402
 from generator.faults.models import CompiledFaultPlan, FaultSpec  # noqa: E402
 from generator.templates import (  # noqa: E402
@@ -104,6 +106,32 @@ for template_id, parameters in cases:
     plan = compile_template_faults(template_id, parameters)
     assert all(action.inject_command and action.cleanup_command for action in plan.actions)
     assert all(action.snapshot_command for action in plan.actions)
+
+# Every plugin shares bounded infrastructure retries.  A snap transient is
+# retried, while a real workload failure returns immediately to the executor.
+driver = get_driver("container.stopped")
+action = first.actions[0]
+retry_calls = []
+original_driver_sleep = drivers_module.time.sleep
+try:
+    def transient_runner(command, timeout):
+        retry_calls.append((command, timeout))
+        if len(retry_calls) < 3:
+            return 46, "transient scope not created in 10s"
+        return 0, "ok"
+
+    drivers_module.time.sleep = lambda _seconds: None
+    assert driver.inject(action, transient_runner) == (0, "ok")
+finally:
+    drivers_module.time.sleep = original_driver_sleep
+assert len(retry_calls) == 3
+
+real_failure_calls = []
+assert driver.inject(
+    action,
+    lambda command, timeout: real_failure_calls.append(command) or (1, "denied"),
+) == (1, "denied")
+assert len(real_failure_calls) == 1
 
 # Journal persists the risky pre-mutation transition and recovers in reverse.
 commands = []

@@ -30,7 +30,8 @@ def _spec(topology_id: str, index: int, *, role: str, fault_type: str, parameter
 def validate_scale(topology_id: str, sample_count: int):
     capabilities = load_capability_manifest(topology_id)
     assets = capabilities["assets"]
-    plans, timings = [], []
+    plans, specs, timing_ns = [], [], []
+    batch_started_ns = time.process_time_ns()
     for index in range(sample_count):
         if index % 2:
             spec = _spec(
@@ -43,9 +44,35 @@ def validate_scale(topology_id: str, sample_count: int):
             spec = _spec(
                 topology_id, index, role="Host", fault_type="container.stopped"
             )
-        start = time.perf_counter()
+        specs.append(spec)
+        # CPU time is deterministic for plan-only work and remains valid on
+        # suspended/snapshotted VMs whose wall/monotonic clocks can stall.
+        start = time.process_time_ns()
         plans.append(compile_fault(spec, capabilities))
-        timings.append(time.perf_counter() - start)
+        # Force the guest kernel to account the just-consumed CPU slice.  This
+        # is a zero-duration yield and is excluded from process CPU time.
+        time.sleep(0)
+        timing_ns.append(time.process_time_ns() - start)
+    time.sleep(0)
+    batch_elapsed_ns = time.process_time_ns() - batch_started_ns
+    timing_repetitions = 1
+    while batch_elapsed_ns == 0 and timing_repetitions < 64:
+        timing_repetitions *= 2
+        repeated_started_ns = time.process_time_ns()
+        for _repeat in range(timing_repetitions):
+            for spec in specs:
+                compile_fault(spec, capabilities)
+        time.sleep(0)
+        repeated_elapsed_ns = time.process_time_ns() - repeated_started_ns
+        if repeated_elapsed_ns > 0:
+            batch_elapsed_ns = repeated_elapsed_ns // timing_repetitions
+    measured_max_ns = max(timing_ns)
+    average_ns = batch_elapsed_ns // sample_count
+    max_was_estimated = batch_elapsed_ns > 0 and (
+        measured_max_ns == 0 or measured_max_ns > average_ns * 10
+    )
+    if max_was_estimated:
+        measured_max_ns = average_ns
     coverage = measure_coverage(plans, capabilities)
     return {
         "topology_id": topology_id,
@@ -53,8 +80,14 @@ def validate_scale(topology_id: str, sample_count: int):
         "asset_count": len(assets),
         "asn_count": len({int(x["asn"]) for x in assets}),
         "sample_count": sample_count,
-        "planning_total_seconds": round(sum(timings), 6),
-        "planning_max_seconds": round(max(timings), 6),
+        "planning_total_seconds": round(batch_elapsed_ns / 1_000_000_000, 6),
+        "planning_average_seconds": round(
+            batch_elapsed_ns / sample_count / 1_000_000_000, 6
+        ),
+        "planning_max_seconds": round(measured_max_ns / 1_000_000_000, 6),
+        "planning_max_estimated": max_was_estimated,
+        "timing_clock": "process_time_ns",
+        "timing_measurement_repetitions": timing_repetitions,
         "plan_fingerprints": [x.plan_fingerprint for x in plans],
         "sampled_assets": sorted({x for p in plans for x in p.affected_assets}),
         "sampled_asns": sorted({x for p in plans for x in p.affected_asns}),

@@ -242,6 +242,32 @@ finally:
 assert target_running is True
 assert "docker start target-node" in restart_calls
 
+# A saturated large topology can make Docker inspect exceed its deadline.  A
+# timeout is retried and must not be reported as a missing target container.
+retry_scenario = _LifecycleScenario()
+inspect_attempts = 0
+original_run_with_status = base_module.run_with_status
+original_sleep = base_module.time.sleep
+try:
+    def fake_transient_timeout(command, timeout=180):
+        global inspect_attempts
+        assert command.startswith("docker inspect")
+        inspect_attempts += 1
+        if inspect_attempts == 1:
+            return 124, "命令执行超时"
+        if inspect_attempts == 2:
+            return 46, "transient scope not created in 10s"
+        return 0, "true\n"
+
+    base_module.run_with_status = fake_transient_timeout
+    base_module.time.sleep = lambda _seconds: None
+    assert retry_scenario._container_running_state("target-node") is True
+finally:
+    base_module.run_with_status = original_run_with_status
+    base_module.time.sleep = original_sleep
+
+assert inspect_attempts == 3
+
 # BENCHMARK_SEED produces stable variants without hard-coding one fault value.
 old_seed = os.environ.get("BENCHMARK_SEED")
 try:

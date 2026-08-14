@@ -1,5 +1,5 @@
 {
-  "contract_sha256": "48fb1f295955e2df3bd75e2aac34a759511faa91a83b9268b3ae88569775b22d",
+  "contract_sha256": "0dd22d82c0f4aad3237c1324d106fb8581f103dcd2b94c3366dd0602795031c7",
   "enabled": true,
   "generator_version": "3.0.0",
   "master_seed": "20260809",
@@ -45,7 +45,7 @@
         "source_router": "as111brd-router0-10.111.0.254",
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite random_complex_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
@@ -94,7 +94,7 @@
         "source_router": "as111brd-router0-10.111.0.254",
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite random_complex_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
@@ -143,7 +143,7 @@
         "source_router": "as111brd-router0-10.111.0.254",
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite random_complex_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
@@ -192,7 +192,7 @@
         "source_router": "as111brd-router0-10.111.0.254",
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite random_complex_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],
@@ -241,7 +241,7 @@
         "source_router": "as111brd-router0-10.111.0.254",
         "topology_seed": 20260724
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite random_complex_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as111brd-router0-10.111.0.254"
       ],

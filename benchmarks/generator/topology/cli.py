@@ -31,15 +31,58 @@ from generator.topology.registry import (
 
 
 def _run(args, *, cwd=None, timeout=600, check=True):
-    completed = subprocess.run(
-        args, cwd=cwd, capture_output=True, text=True, timeout=timeout
-    )
+    attempts = 3 if args and args[0] == "docker" else 1
+    for attempt in range(attempts):
+        try:
+            completed = subprocess.run(
+                args, cwd=cwd, capture_output=True, text=True, timeout=timeout
+            )
+            break
+        except subprocess.TimeoutExpired:
+            if attempt + 1 >= attempts:
+                raise
+            time.sleep(2)
     if check and completed.returncode != 0:
         raise RuntimeError(
             f"command failed ({completed.returncode}): {' '.join(args)}\n"
             f"{(completed.stdout + completed.stderr)[-3000:]}"
         )
     return completed
+
+
+def _memory_available_mb() -> int:
+    for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
+        if line.startswith("MemAvailable:"):
+            return int(line.split()[1]) // 1024
+    raise RuntimeError("MemAvailable is missing from /proc/meminfo")
+
+
+def _wait_for_start_capacity(*, timeout: int = 300) -> dict:
+    """Wait for two stable samples before scheduling another container batch."""
+    cpu_count = os.cpu_count() or 1
+    load_ceiling = max(2.0, cpu_count * 2.0)
+    memory_floor_mb = max(2048, _memory_available_mb() // 8)
+    deadline = time.monotonic() + timeout
+    stable_samples = 0
+    last_sample = {}
+    while time.monotonic() < deadline:
+        load_1m = os.getloadavg()[0]
+        available_mb = _memory_available_mb()
+        last_sample = {
+            "load_1m": round(load_1m, 2),
+            "load_ceiling": round(load_ceiling, 2),
+            "memory_available_mb": available_mb,
+            "memory_floor_mb": memory_floor_mb,
+        }
+        if load_1m <= load_ceiling and available_mb >= memory_floor_mb:
+            daemon = _run(["docker", "version"], timeout=30, check=False)
+            stable_samples = stable_samples + 1 if daemon.returncode == 0 else 0
+            if stable_samples >= 2:
+                return last_sample
+        else:
+            stable_samples = 0
+        time.sleep(5)
+    raise RuntimeError(f"container start capacity did not stabilize: {last_sample}")
 
 
 def smoke_test(
@@ -73,19 +116,41 @@ def smoke_test(
             set(compose_document.get("services", {})) - set(asset_services)
         )
         if dependency_services:
+            _wait_for_start_capacity()
             _run(
                 [*compose, "up", "-d", "--no-build", *dependency_services],
                 cwd=destination, timeout=300,
             )
+        current = _run(
+            [
+                "docker", "ps", "--filter",
+                f"label=com.docker.compose.project={project}",
+                "--format", '{{.Label "com.docker.compose.service"}}',
+            ],
+            timeout=120,
+            check=False,
+        )
+        running_services = set(current.stdout.splitlines()) if current.returncode == 0 else set()
+        pending_assets = [service for service in asset_services if service not in running_services]
+        print(
+            f"asset resume state: running={len(asset_services) - len(pending_assets)} "
+            f"pending={len(pending_assets)}",
+            flush=True,
+        )
         start_batch_size = 4
-        for offset in range(0, len(asset_services), start_batch_size):
-            batch = asset_services[offset:offset + start_batch_size]
+        for offset in range(0, len(pending_assets), start_batch_size):
+            capacity = _wait_for_start_capacity()
+            batch = pending_assets[offset:offset + start_batch_size]
+            print(
+                f"starting pending assets {offset + 1}-{offset + len(batch)}/"
+                f"{len(pending_assets)} load={capacity['load_1m']}",
+                flush=True,
+            )
             _run(
                 [*compose, "up", "-d", "--no-build", "--no-deps", *batch],
                 cwd=destination, timeout=300,
             )
-            # A cheap bounded daemon health gate prevents a queued start storm.
-            _run(["docker", "version"], timeout=60)
+        _wait_for_start_capacity()
         expected = manifest["actual_compose_services"]
         running = 0
         for _attempt in range(60):
@@ -128,11 +193,28 @@ def smoke_test(
             _run([*compose, "down", "--remove-orphans"], cwd=destination, timeout=300, check=False)
 
 
+def _docker_exec(args, *, timeout: int = 20, attempts: int = 3):
+    """Retry container-runtime launch errors, never workload command failures."""
+    result = None
+    transient_markers = (
+        "transient scope not created",
+        "context deadline exceeded",
+        "cannot connect to the docker daemon",
+        "command execution timeout",
+    )
+    for attempt in range(attempts):
+        result = _run(["docker", "exec", *args], timeout=timeout, check=False)
+        output = (result.stdout + result.stderr).lower()
+        if result.returncode == 0 or not any(marker in output for marker in transient_markers):
+            return result
+        if attempt + 1 < attempts:
+            time.sleep(2)
+    return result
+
+
 def _ping(container: str, address: str) -> tuple[bool, str]:
-    result = _run(
-        ["docker", "exec", container, "ping", "-c", "2", "-W", "2", address],
-        timeout=20,
-        check=False,
+    result = _docker_exec(
+        [container, "ping", "-c", "2", "-W", "2", address], timeout=20
     )
     output = result.stdout + result.stderr
     return bool(result.returncode == 0 and re.search(r"(?<!\d)0% packet loss", output)), output
@@ -171,10 +253,8 @@ def test_running_topology(topology_id: str, *, convergence_timeout: int = 120):
     while time.monotonic() < deadline:
         session_counts = {}
         for asn, router in sorted(routers.items()):
-            result = _run(
-                ["docker", "exec", router["container"], "birdc", "show", "protocols"],
-                timeout=20,
-                check=False,
+            result = _docker_exec(
+                [router["container"], "birdc", "show", "protocols"], timeout=20
             )
             session_counts[asn] = len(re.findall(r"\bBGP\b.*\bEstablished\b", result.stdout))
         if all(session_counts.get(asn, 0) >= count for asn, count in expected_sessions.items()):
@@ -221,11 +301,10 @@ def runtime_preflight(topology_id: str):
     checks = {
         "memory": estimate.memory_mb <= max(0, available_mb - reserve_mb),
         "cpu": estimate.cpu_cores <= cpu_count * 2,
-        # Empirical 2026-08-13 gate: this 8-vCPU VM became daemon-unresponsive
-        # when 100 business assets were launched simultaneously. Until a
-        # throttled 100-node smoke passes, automatic runtime admission must
-        # remain below that observed unsafe boundary.
-        "container_count": estimate.containers <= 64,
+        # Empirical 2026-08-14 gate: 100 assets plus two dependency services
+        # passed the adaptive-batch smoke and six-fault lifecycle.  Keep
+        # automatic execution below the next unvalidated scale boundary.
+        "container_count": estimate.containers <= 128,
     }
     return {
         "topology_id": topology_id,
@@ -237,7 +316,7 @@ def runtime_preflight(topology_id: str):
             "memory_reserve_mb": reserve_mb,
             "cpu_count": cpu_count,
             "cpu_overcommit_factor": 2,
-            "container_safety_ceiling": 64,
+            "container_safety_ceiling": 128,
         },
         "checks": checks,
         "runtime_allowed": all(checks.values()),

@@ -62,7 +62,7 @@
       "right_asn": 64515
     }
   ],
-  "kept_running": false,
+  "kept_running": true,
   "local_gateway_probes": [
     {
       "asn": 64512,
@@ -85,7 +85,7 @@
       "host": "as64515h-host9-10.0.3.12"
     }
   ],
-  "started_at": "2026-08-12T18:51:41.780629",
+  "started_at": "2026-08-14T19:31:20.052085",
   "topology_fingerprint": "bfd44249458570de8948059522e1aa04892b5974313db7123174abee1a6830ba",
   "topology_id": "scale_100",
   "topology_name": "DECLARATIVE_scale_100"

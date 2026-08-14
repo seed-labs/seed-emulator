@@ -76,7 +76,9 @@ class FaultExecutor:
                 delay = action.at_seconds - (time.monotonic() - execution_started)
                 if delay > 0:
                     time.sleep(delay)
-                code, snapshot = self.runner(action.snapshot_command, 30)
+                code, snapshot = get_driver(action.driver).snapshot(
+                    action, self.runner
+                )
                 if code != 0:
                     raise RuntimeError(f"snapshot failed for {action.action_id}: {snapshot[:500]}")
                 entry = {

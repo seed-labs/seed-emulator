@@ -145,6 +145,44 @@ class BaseScenario:
         """检查验证结果。"""
         raise NotImplementedError
 
+    @staticmethod
+    def _container_running_state(container: str, *, attempts: int = 3) -> bool:
+        """Query Docker without treating a transient daemon timeout as absence."""
+        quoted = shlex.quote(container)
+        last_code = 125
+        last_output = "container state was not queried"
+        for attempt in range(attempts):
+            last_code, last_output = run_with_status(
+                "docker inspect --format '{{.State.Running}}' " f"{quoted}",
+                timeout=30,
+            )
+            state = last_output.strip().lower()
+            if last_code == 0 and state in {"true", "false"}:
+                return state == "true"
+            transient = last_code == 124 or any(
+                marker in state
+                for marker in (
+                    "transient scope not created",
+                    "context deadline exceeded",
+                    "cannot connect to the docker daemon",
+                )
+            )
+            if not transient:
+                if "no such object" in state or "no such container" in state:
+                    raise RuntimeError(
+                        f"健康基线目标容器不存在: {container}\n{last_output[:1000]}"
+                    )
+                raise RuntimeError(
+                    f"健康基线目标容器状态查询失败: {container}\n"
+                    f"exit_code={last_code}\n{last_output[:1000]}"
+                )
+            if attempt + 1 < attempts:
+                time.sleep(2)
+        raise RuntimeError(
+            f"健康基线 Docker API 连续超时: {container}\n"
+            f"attempts={attempts} exit_code={last_code}\n{last_output[:1000]}"
+        )
+
     def _ensure_repair_containers_running(self):
         """Restore scenario targets to a runnable pre-injection state."""
         containers = self._infer_repair_containers()
@@ -152,17 +190,7 @@ class BaseScenario:
             return
         for container in containers:
             quoted = shlex.quote(container)
-            returncode, output = run_with_status(
-                "docker inspect --format '{{.State.Running}}' "
-                f"{quoted}",
-                timeout=15,
-            )
-            if returncode != 0:
-                raise RuntimeError(
-                    f"健康基线目标容器不存在: {container}\n"
-                    f"{output[:1000]}"
-                )
-            if output.strip().lower() == "true":
+            if self._container_running_state(container):
                 continue
             start_code, start_output = run_with_status(
                 f"docker start {quoted}",
@@ -179,12 +207,7 @@ class BaseScenario:
         while pending and time.monotonic() < deadline:
             still_pending = []
             for container in pending:
-                returncode, output = run_with_status(
-                    "docker inspect --format '{{.State.Running}}' "
-                    f"{shlex.quote(container)}",
-                    timeout=15,
-                )
-                if returncode != 0 or output.strip().lower() != "true":
+                if not self._container_running_state(container, attempts=2):
                     still_pending.append(container)
             pending = still_pending
             if pending:

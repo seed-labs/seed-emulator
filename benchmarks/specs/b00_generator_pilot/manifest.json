@@ -1,50 +1,9 @@
 {
-  "contract_sha256": "48fb1f295955e2df3bd75e2aac34a759511faa91a83b9268b3ae88569775b22d",
+  "contract_sha256": "0dd22d82c0f4aad3237c1324d106fb8581f103dcd2b94c3366dd0602795031c7",
   "enabled": true,
   "generator_version": "3.0.0",
   "master_seed": "20260809",
   "scenarios": [
-    {
-      "benchmark_track": "robustness",
-      "causal_chain": [],
-      "convergence_timeout": 60,
-      "description": "Generated deterministic case: A target workload container is unexpectedly stopped",
-      "diagnosis_artifact": "Docker container state",
-      "diagnosis_expected_value": "running",
-      "diagnosis_faulty_value": "stopped",
-      "diagnosis_targets": [
-        "as151h-host_0-10.151.0.71"
-      ],
-      "difficulty": "basic",
-      "expected_root_causes": [
-        {
-          "artifact": "Docker container state",
-          "category": "container_not_running",
-          "expected_value": "running",
-          "faulty_value": "stopped",
-          "target_container": [
-            "as151h-host_0-10.151.0.71"
-          ]
-        }
-      ],
-      "fault_components": [],
-      "fault_relationship": "single",
-      "fault_settle_seconds": 3,
-      "fault_type": "container_not_running",
-      "fingerprint": "509ac469a80bbd598097495c52becc047d7f2b069604181481030b12dd1d09a1",
-      "main_score_eligible": false,
-      "name": "gen_container_stopped_509ac469a8_01",
-      "parameters": {
-        "container": "as151h-host_0-10.151.0.71"
-      },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
-      "repair_containers": [
-        "as151h-host_0-10.151.0.71"
-      ],
-      "scenario_seed": 7016665955126067933,
-      "template_id": "container_stopped",
-      "topology": "B00_mini_internet"
-    },
     {
       "benchmark_track": "robustness",
       "causal_chain": [],
@@ -82,7 +41,7 @@
         "peer_container": "as151brd-router0-10.151.0.254",
         "peer_ip": "10.151.0.254"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as151h-host_0-10.151.0.71"
       ],
@@ -127,7 +86,7 @@
         "prefix": "2001:db8:a065::/64",
         "probe": "2001:db8:a065::2"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as151brd-router0-10.151.0.254"
       ],
@@ -170,7 +129,7 @@
         "container": "as2brd-r101-10.101.0.2",
         "correct_asn": 2
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as2brd-r101-10.101.0.2"
       ],
@@ -187,7 +146,7 @@
       "diagnosis_expected_value": "running",
       "diagnosis_faulty_value": "stopped",
       "diagnosis_targets": [
-        "as152h-host_0-10.152.0.71"
+        "as151h-host_0-10.151.0.71"
       ],
       "difficulty": "basic",
       "expected_root_causes": [
@@ -197,7 +156,7 @@
           "expected_value": "running",
           "faulty_value": "stopped",
           "target_container": [
-            "as152h-host_0-10.152.0.71"
+            "as151h-host_0-10.151.0.71"
           ]
         }
       ],
@@ -205,17 +164,17 @@
       "fault_relationship": "single",
       "fault_settle_seconds": 3,
       "fault_type": "container_not_running",
-      "fingerprint": "5f98de6c603a8d2f5c5d0633ee3d9d59daa6c0b361325a5b1a78cd02f7ffa450",
+      "fingerprint": "509ac469a80bbd598097495c52becc047d7f2b069604181481030b12dd1d09a1",
       "main_score_eligible": false,
-      "name": "gen_container_stopped_5f98de6c60_01",
+      "name": "gen_container_stopped_509ac469a8_01",
       "parameters": {
-        "container": "as152h-host_0-10.152.0.71"
+        "container": "as151h-host_0-10.151.0.71"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
-        "as152h-host_0-10.152.0.71"
+        "as151h-host_0-10.151.0.71"
       ],
-      "scenario_seed": 5932385731699949465,
+      "scenario_seed": 7016665955126067933,
       "template_id": "container_stopped",
       "topology": "B00_mini_internet"
     },
@@ -256,7 +215,7 @@
         "peer_container": "as152brd-router0-10.152.0.254",
         "peer_ip": "10.152.0.254"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as152h-host_0-10.152.0.71"
       ],
@@ -301,7 +260,7 @@
         "prefix": "2001:db8:a066::/64",
         "probe": "2001:db8:a066::2"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as151brd-router0-10.151.0.254"
       ],
@@ -344,7 +303,7 @@
         "container": "as2brd-r102-10.102.0.2",
         "correct_asn": 2
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as2brd-r102-10.102.0.2"
       ],
@@ -361,7 +320,7 @@
       "diagnosis_expected_value": "running",
       "diagnosis_faulty_value": "stopped",
       "diagnosis_targets": [
-        "as153h-host_0-10.153.0.71"
+        "as152h-host_0-10.152.0.71"
       ],
       "difficulty": "basic",
       "expected_root_causes": [
@@ -371,7 +330,7 @@
           "expected_value": "running",
           "faulty_value": "stopped",
           "target_container": [
-            "as153h-host_0-10.153.0.71"
+            "as152h-host_0-10.152.0.71"
           ]
         }
       ],
@@ -379,17 +338,17 @@
       "fault_relationship": "single",
       "fault_settle_seconds": 3,
       "fault_type": "container_not_running",
-      "fingerprint": "4cfe5331b286c383debc298dd371f9dfd0d26aa9d195e20f64235da1615c237a",
+      "fingerprint": "5f98de6c603a8d2f5c5d0633ee3d9d59daa6c0b361325a5b1a78cd02f7ffa450",
       "main_score_eligible": false,
-      "name": "gen_container_stopped_4cfe5331b2_01",
+      "name": "gen_container_stopped_5f98de6c60_01",
       "parameters": {
-        "container": "as153h-host_0-10.153.0.71"
+        "container": "as152h-host_0-10.152.0.71"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
-        "as153h-host_0-10.153.0.71"
+        "as152h-host_0-10.152.0.71"
       ],
-      "scenario_seed": 5231542429117940235,
+      "scenario_seed": 5932385731699949465,
       "template_id": "container_stopped",
       "topology": "B00_mini_internet"
     },
@@ -430,7 +389,7 @@
         "peer_container": "as153brd-router0-10.153.0.254",
         "peer_ip": "10.153.0.254"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as153h-host_0-10.153.0.71"
       ],
@@ -475,7 +434,7 @@
         "prefix": "2001:db8:a067::/64",
         "probe": "2001:db8:a067::2"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as151brd-router0-10.151.0.254"
       ],
@@ -518,7 +477,7 @@
         "container": "as2brd-r105-10.105.0.2",
         "correct_asn": 2
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as2brd-r105-10.105.0.2"
       ],
@@ -535,7 +494,7 @@
       "diagnosis_expected_value": "running",
       "diagnosis_faulty_value": "stopped",
       "diagnosis_targets": [
-        "as154h-host_0-10.154.0.71"
+        "as153h-host_0-10.153.0.71"
       ],
       "difficulty": "basic",
       "expected_root_causes": [
@@ -545,7 +504,7 @@
           "expected_value": "running",
           "faulty_value": "stopped",
           "target_container": [
-            "as154h-host_0-10.154.0.71"
+            "as153h-host_0-10.153.0.71"
           ]
         }
       ],
@@ -553,17 +512,17 @@
       "fault_relationship": "single",
       "fault_settle_seconds": 3,
       "fault_type": "container_not_running",
-      "fingerprint": "34332acf8a831f67ae4806532b1dc96f34e37593a0969686dde63797402c1f07",
+      "fingerprint": "4cfe5331b286c383debc298dd371f9dfd0d26aa9d195e20f64235da1615c237a",
       "main_score_eligible": false,
-      "name": "gen_container_stopped_34332acf8a_01",
+      "name": "gen_container_stopped_4cfe5331b2_01",
       "parameters": {
-        "container": "as154h-host_0-10.154.0.71"
+        "container": "as153h-host_0-10.153.0.71"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
-        "as154h-host_0-10.154.0.71"
+        "as153h-host_0-10.153.0.71"
       ],
-      "scenario_seed": 15510515155786699188,
+      "scenario_seed": 5231542429117940235,
       "template_id": "container_stopped",
       "topology": "B00_mini_internet"
     },
@@ -604,7 +563,7 @@
         "peer_container": "as154brd-router0-10.154.0.254",
         "peer_ip": "10.154.0.254"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as154h-host_0-10.154.0.71"
       ],
@@ -649,7 +608,7 @@
         "prefix": "2001:db8:a068::/64",
         "probe": "2001:db8:a068::2"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as151brd-router0-10.151.0.254"
       ],
@@ -692,7 +651,7 @@
         "container": "as2brd-r100-10.100.0.2",
         "correct_asn": 2
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as2brd-r100-10.100.0.2"
       ],
@@ -709,7 +668,7 @@
       "diagnosis_expected_value": "running",
       "diagnosis_faulty_value": "stopped",
       "diagnosis_targets": [
-        "as150h-host_0-10.150.0.71"
+        "as154h-host_0-10.154.0.71"
       ],
       "difficulty": "basic",
       "expected_root_causes": [
@@ -719,7 +678,7 @@
           "expected_value": "running",
           "faulty_value": "stopped",
           "target_container": [
-            "as150h-host_0-10.150.0.71"
+            "as154h-host_0-10.154.0.71"
           ]
         }
       ],
@@ -727,17 +686,17 @@
       "fault_relationship": "single",
       "fault_settle_seconds": 3,
       "fault_type": "container_not_running",
-      "fingerprint": "85d6dc2aefe61c7ce3d4bd74f7c44c71b4701bec18ff8aa6d12fe48c8aebd7e4",
+      "fingerprint": "34332acf8a831f67ae4806532b1dc96f34e37593a0969686dde63797402c1f07",
       "main_score_eligible": false,
-      "name": "gen_container_stopped_85d6dc2aef_01",
+      "name": "gen_container_stopped_34332acf8a_01",
       "parameters": {
-        "container": "as150h-host_0-10.150.0.71"
+        "container": "as154h-host_0-10.154.0.71"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
-        "as150h-host_0-10.150.0.71"
+        "as154h-host_0-10.154.0.71"
       ],
-      "scenario_seed": 5212465065229201876,
+      "scenario_seed": 15510515155786699188,
       "template_id": "container_stopped",
       "topology": "B00_mini_internet"
     },
@@ -778,7 +737,7 @@
         "peer_container": "as150brd-router0-10.150.0.254",
         "peer_ip": "10.150.0.254"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as150h-host_0-10.150.0.71"
       ],
@@ -823,7 +782,7 @@
         "prefix": "2001:db8:a069::/64",
         "probe": "2001:db8:a069::2"
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as151brd-router0-10.151.0.254"
       ],
@@ -866,12 +825,53 @@
         "container": "as2brd-r101-10.101.0.2",
         "correct_asn": 2
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as2brd-r101-10.101.0.2"
       ],
       "scenario_seed": 594565990371535859,
       "template_id": "bird_wrong_asn",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "causal_chain": [],
+      "convergence_timeout": 60,
+      "description": "Generated deterministic case: A target workload container is unexpectedly stopped",
+      "diagnosis_artifact": "Docker container state",
+      "diagnosis_expected_value": "running",
+      "diagnosis_faulty_value": "stopped",
+      "diagnosis_targets": [
+        "as150h-host_0-10.150.0.71"
+      ],
+      "difficulty": "basic",
+      "expected_root_causes": [
+        {
+          "artifact": "Docker container state",
+          "category": "container_not_running",
+          "expected_value": "running",
+          "faulty_value": "stopped",
+          "target_container": [
+            "as150h-host_0-10.150.0.71"
+          ]
+        }
+      ],
+      "fault_components": [],
+      "fault_relationship": "single",
+      "fault_settle_seconds": 3,
+      "fault_type": "container_not_running",
+      "fingerprint": "85d6dc2aefe61c7ce3d4bd74f7c44c71b4701bec18ff8aa6d12fe48c8aebd7e4",
+      "main_score_eligible": false,
+      "name": "gen_container_stopped_85d6dc2aef_01",
+      "parameters": {
+        "container": "as150h-host_0-10.150.0.71"
+      },
+      "quarantine_reason": "generated suite b00_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as150h-host_0-10.150.0.71"
+      ],
+      "scenario_seed": 5212465065229201876,
+      "template_id": "container_stopped",
       "topology": "B00_mini_internet"
     }
   ],

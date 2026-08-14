@@ -84,17 +84,30 @@ PYTHONPATH=benchmarks python3 -m generator.faults.scale_validation \
 ```
 
 The 100-node gate is a real SEED/Docker smoke followed by real fault lifecycles.
-On 2026-08-13, the first unthrottled 100-node start saturated dockerd on the
-8-vCPU/16-GB development VM. This result is a failed gate, not a pass. The
-smoke launcher now ramps assets in batches of four and the automatic runtime
-preflight ceiling is temporarily 64 containers until a clean throttled rerun
-proves the higher scale safe.
-The 1,000/10,000-node gates compile real capability inventories, then benchmark
-deterministic planning and bounded sampling. Resource preflight remains
-fail-closed on hosts that cannot safely launch those scales.
+The first unthrottled 2026-08-13 attempt saturated dockerd on the 8-vCPU/16-GB
+development VM. The final 2026-08-14 launcher uses batches of four, waits for
+two stable CPU/memory/daemon samples, skips already-running services after a
+restart, and retries bounded Docker API/runtime transients. The clean rerun
+passed with 100 assets and 102 Compose services: all four ASes had two
+Established BGP sessions, every IX/local edge and six cross-AS probes passed,
+and all six fault lifecycles (the four migrated drivers, generic BIRD+ACL
+composition, and netem) recovered. All six durable journals ended in
+`recovered`. The validated automatic runtime ceiling is now 128 containers;
+larger scales remain plan-only until separately promoted.
 
-Latest local evidence is written to the ignored report directory as
-`FAULT_PLATFORM_SCALE_VALIDATION.json` and
-`FAULT_PLATFORM_SCALE100_FAILED_GATE.json`. These are run-specific artifacts;
-promotion must use fresh signed lifecycle evidence after the 100-node gate is
-clean.
+The 1,000/10,000-node gates compile real capability inventories, then benchmark
+64 deterministic samples and bounded coverage without launching containers.
+Planning performance uses process CPU time, with repeated calibration when the
+VM clock cannot resolve a short batch; reports state the clock and repetition
+count. Resource preflight remains fail-closed on hosts that cannot safely launch
+those scales.
+
+Latest evidence is stored in:
+
+- `TOPOLOGY_SCALE_100_SMOKE.json`
+- `GENERATOR_FAULT_PLATFORM_SCALE100_PILOT_LIFECYCLE_BATCH_0000.md`
+- `FAULT_PLATFORM_SCALE_1000_VALIDATION.json`
+- `FAULT_PLATFORM_SCALE_10000_VALIDATION.json`
+
+The failed-gate report is retained only as historical diagnostic evidence and
+must not be treated as the current admission decision.

@@ -1,90 +1,9 @@
 {
-  "contract_sha256": "48fb1f295955e2df3bd75e2aac34a759511faa91a83b9268b3ae88569775b22d",
+  "contract_sha256": "0dd22d82c0f4aad3237c1324d106fb8581f103dcd2b94c3366dd0602795031c7",
   "enabled": true,
   "generator_version": "3.0.0",
   "master_seed": "complex-20260812",
   "scenarios": [
-    {
-      "benchmark_track": "robustness",
-      "causal_chain": [],
-      "convergence_timeout": 90,
-      "description": "Generated deterministic case: An invalid resolver and a disconnected Docker network require ordered recovery",
-      "diagnosis_artifact": "/etc/resolv.conf and Docker network attachment",
-      "diagnosis_expected_value": "nameserver 127.0.0.11 and connected",
-      "diagnosis_faulty_value": "nameserver 198.51.100.240 and disconnected",
-      "diagnosis_targets": [
-        "as151h-host_0-10.151.0.71"
-      ],
-      "difficulty": "advanced",
-      "expected_root_causes": [
-        {
-          "artifact": "/etc/resolv.conf",
-          "category": "dns_failure",
-          "expected_value": "nameserver 127.0.0.11",
-          "faulty_value": "nameserver 198.51.100.240",
-          "target_container": [
-            "as151h-host_0-10.151.0.71"
-          ]
-        },
-        {
-          "artifact": "Docker network output_net_151_net0",
-          "category": "wrong_docker_network",
-          "expected_value": "connected with 10.151.0.71",
-          "faulty_value": "disconnected",
-          "target_container": [
-            "as151h-host_0-10.151.0.71"
-          ]
-        }
-      ],
-      "fault_components": [
-        {
-          "artifact": "/etc/resolv.conf",
-          "category": "dns_failure",
-          "cleanup_order": 1,
-          "component_id": "dns_bad_nameserver",
-          "depends_on": [],
-          "inject_order": 0,
-          "target_containers": [
-            "as151h-host_0-10.151.0.71"
-          ]
-        },
-        {
-          "artifact": "Docker network output_net_151_net0",
-          "category": "wrong_docker_network",
-          "cleanup_order": 0,
-          "component_id": "docker_network_disconnect",
-          "depends_on": [],
-          "inject_order": 1,
-          "target_containers": [
-            "as151h-host_0-10.151.0.71"
-          ]
-        }
-      ],
-      "fault_relationship": "independent",
-      "fault_settle_seconds": 3,
-      "fault_type": "multiple_faults",
-      "fingerprint": "7adff3a0cc18dfd3ee199600b515f8b373146e83aba61a187720993c2257a72f",
-      "main_score_eligible": false,
-      "name": "gen_dual_dns_network_7adff3a0cc_01",
-      "parameters": {
-        "bad_nameserver": "198.51.100.240",
-        "container": "as151h-host_0-10.151.0.71",
-        "docker_network": "output_net_151_net0",
-        "expected_nameserver": "127.0.0.11",
-        "interface": "net0",
-        "peer_container": "as151brd-router0-10.151.0.254",
-        "peer_ip": "10.151.0.254",
-        "target_ip": "10.151.0.71",
-        "template_revision": 1
-      },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
-      "repair_containers": [
-        "as151h-host_0-10.151.0.71"
-      ],
-      "scenario_seed": 17597765497383310018,
-      "template_id": "dual_dns_network",
-      "topology": "B00_mini_internet"
-    },
     {
       "benchmark_track": "robustness",
       "causal_chain": [
@@ -142,7 +61,7 @@
         "target_ip": "10.101.0.2",
         "template_revision": 3
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite complex_fault_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as2brd-r101-10.101.0.2"
       ],
@@ -220,11 +139,170 @@
         "correct_asn": 2,
         "template_revision": 1
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite complex_fault_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as2brd-r101-10.101.0.2"
       ],
       "scenario_seed": 12755058483965124797,
+      "template_id": "dual_bgp_ospf",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "causal_chain": [],
+      "convergence_timeout": 90,
+      "description": "Generated deterministic case: An invalid resolver and a disconnected Docker network require ordered recovery",
+      "diagnosis_artifact": "/etc/resolv.conf and Docker network attachment",
+      "diagnosis_expected_value": "nameserver 127.0.0.11 and connected",
+      "diagnosis_faulty_value": "nameserver 198.51.100.240 and disconnected",
+      "diagnosis_targets": [
+        "as151h-host_0-10.151.0.71"
+      ],
+      "difficulty": "advanced",
+      "expected_root_causes": [
+        {
+          "artifact": "/etc/resolv.conf",
+          "category": "dns_failure",
+          "expected_value": "nameserver 127.0.0.11",
+          "faulty_value": "nameserver 198.51.100.240",
+          "target_container": [
+            "as151h-host_0-10.151.0.71"
+          ]
+        },
+        {
+          "artifact": "Docker network output_net_151_net0",
+          "category": "wrong_docker_network",
+          "expected_value": "connected with 10.151.0.71",
+          "faulty_value": "disconnected",
+          "target_container": [
+            "as151h-host_0-10.151.0.71"
+          ]
+        }
+      ],
+      "fault_components": [
+        {
+          "artifact": "/etc/resolv.conf",
+          "category": "dns_failure",
+          "cleanup_order": 1,
+          "component_id": "dns_bad_nameserver",
+          "depends_on": [],
+          "inject_order": 0,
+          "target_containers": [
+            "as151h-host_0-10.151.0.71"
+          ]
+        },
+        {
+          "artifact": "Docker network output_net_151_net0",
+          "category": "wrong_docker_network",
+          "cleanup_order": 0,
+          "component_id": "docker_network_disconnect",
+          "depends_on": [],
+          "inject_order": 1,
+          "target_containers": [
+            "as151h-host_0-10.151.0.71"
+          ]
+        }
+      ],
+      "fault_relationship": "independent",
+      "fault_settle_seconds": 3,
+      "fault_type": "multiple_faults",
+      "fingerprint": "7adff3a0cc18dfd3ee199600b515f8b373146e83aba61a187720993c2257a72f",
+      "main_score_eligible": false,
+      "name": "gen_dual_dns_network_7adff3a0cc_01",
+      "parameters": {
+        "bad_nameserver": "198.51.100.240",
+        "container": "as151h-host_0-10.151.0.71",
+        "docker_network": "output_net_151_net0",
+        "expected_nameserver": "127.0.0.11",
+        "interface": "net0",
+        "peer_container": "as151brd-router0-10.151.0.254",
+        "peer_ip": "10.151.0.254",
+        "target_ip": "10.151.0.71",
+        "template_revision": 1
+      },
+      "quarantine_reason": "generated suite complex_fault_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as151h-host_0-10.151.0.71"
+      ],
+      "scenario_seed": 17597765497383310018,
+      "template_id": "dual_dns_network",
+      "topology": "B00_mini_internet"
+    },
+    {
+      "benchmark_track": "robustness",
+      "causal_chain": [],
+      "convergence_timeout": 150,
+      "description": "Generated deterministic case: Independent BGP ASN and OSPF area faults coexist in one router",
+      "diagnosis_artifact": "/etc/bird/bird.conf (ASN and OSPF area)",
+      "diagnosis_expected_value": "AS 2 and area 0",
+      "diagnosis_faulty_value": "AS 65214 and area 77",
+      "diagnosis_targets": [
+        "as2brd-r101-10.101.0.2"
+      ],
+      "difficulty": "advanced",
+      "expected_root_causes": [
+        {
+          "artifact": "/etc/bird/bird.conf",
+          "category": "wrong_asn",
+          "expected_value": "AS 2",
+          "faulty_value": "AS 65214",
+          "target_container": [
+            "as2brd-r101-10.101.0.2"
+          ]
+        },
+        {
+          "artifact": "/etc/bird/bird.conf",
+          "category": "missing_ospf_adjacency",
+          "expected_value": "area 0",
+          "faulty_value": "area 77",
+          "target_container": [
+            "as2brd-r101-10.101.0.2"
+          ]
+        }
+      ],
+      "fault_components": [
+        {
+          "artifact": "/etc/bird/bird.conf",
+          "category": "wrong_asn",
+          "cleanup_order": 1,
+          "component_id": "bird_wrong_asn",
+          "depends_on": [],
+          "inject_order": 0,
+          "target_containers": [
+            "as2brd-r101-10.101.0.2"
+          ]
+        },
+        {
+          "artifact": "/etc/bird/bird.conf",
+          "category": "missing_ospf_adjacency",
+          "cleanup_order": 0,
+          "component_id": "ospf_wrong_area",
+          "depends_on": [],
+          "inject_order": 1,
+          "target_containers": [
+            "as2brd-r101-10.101.0.2"
+          ]
+        }
+      ],
+      "fault_relationship": "independent",
+      "fault_settle_seconds": 3,
+      "fault_type": "multiple_faults",
+      "fingerprint": "d6729c09514999b3db4a1b7d64747417c4c79b70e3efdc44cfdc091e7d57113c",
+      "main_score_eligible": false,
+      "name": "gen_dual_bgp_ospf_d6729c0951_01",
+      "parameters": {
+        "bad_area": 77,
+        "bad_asn": 65214,
+        "container": "as2brd-r101-10.101.0.2",
+        "correct_area": 0,
+        "correct_asn": 2,
+        "template_revision": 1
+      },
+      "quarantine_reason": "generated suite complex_fault_generator_pilot; promote only after live validation",
+      "repair_containers": [
+        "as2brd-r101-10.101.0.2"
+      ],
+      "scenario_seed": 13833110888494110816,
       "template_id": "dual_bgp_ospf",
       "topology": "B00_mini_internet"
     },
@@ -301,7 +379,7 @@
         "target_ip": "10.152.0.71",
         "template_revision": 1
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite complex_fault_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as152h-host_0-10.152.0.71"
       ],
@@ -316,7 +394,7 @@
       "description": "Generated deterministic case: Independent BGP ASN and OSPF area faults coexist in one router",
       "diagnosis_artifact": "/etc/bird/bird.conf (ASN and OSPF area)",
       "diagnosis_expected_value": "AS 2 and area 0",
-      "diagnosis_faulty_value": "AS 65214 and area 77",
+      "diagnosis_faulty_value": "AS 65215 and area 77",
       "diagnosis_targets": [
         "as2brd-r101-10.101.0.2"
       ],
@@ -326,7 +404,7 @@
           "artifact": "/etc/bird/bird.conf",
           "category": "wrong_asn",
           "expected_value": "AS 2",
-          "faulty_value": "AS 65214",
+          "faulty_value": "AS 65215",
           "target_container": [
             "as2brd-r101-10.101.0.2"
           ]
@@ -368,22 +446,22 @@
       "fault_relationship": "independent",
       "fault_settle_seconds": 3,
       "fault_type": "multiple_faults",
-      "fingerprint": "d6729c09514999b3db4a1b7d64747417c4c79b70e3efdc44cfdc091e7d57113c",
+      "fingerprint": "f2b72d2b75d7134bae824be62323ea93beb1caaca810ad514bde66b70d80ad93",
       "main_score_eligible": false,
-      "name": "gen_dual_bgp_ospf_d6729c0951_01",
+      "name": "gen_dual_bgp_ospf_f2b72d2b75_01",
       "parameters": {
         "bad_area": 77,
-        "bad_asn": 65214,
+        "bad_asn": 65215,
         "container": "as2brd-r101-10.101.0.2",
         "correct_area": 0,
         "correct_asn": 2,
         "template_revision": 1
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite complex_fault_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as2brd-r101-10.101.0.2"
       ],
-      "scenario_seed": 13833110888494110816,
+      "scenario_seed": 8268150079660095523,
       "template_id": "dual_bgp_ospf",
       "topology": "B00_mini_internet"
     },
@@ -460,7 +538,7 @@
         "target_ip": "10.153.0.71",
         "template_revision": 1
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite complex_fault_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as153h-host_0-10.153.0.71"
       ],
@@ -475,7 +553,7 @@
       "description": "Generated deterministic case: Independent BGP ASN and OSPF area faults coexist in one router",
       "diagnosis_artifact": "/etc/bird/bird.conf (ASN and OSPF area)",
       "diagnosis_expected_value": "AS 2 and area 0",
-      "diagnosis_faulty_value": "AS 65215 and area 77",
+      "diagnosis_faulty_value": "AS 65216 and area 77",
       "diagnosis_targets": [
         "as2brd-r101-10.101.0.2"
       ],
@@ -485,7 +563,7 @@
           "artifact": "/etc/bird/bird.conf",
           "category": "wrong_asn",
           "expected_value": "AS 2",
-          "faulty_value": "AS 65215",
+          "faulty_value": "AS 65216",
           "target_container": [
             "as2brd-r101-10.101.0.2"
           ]
@@ -527,22 +605,22 @@
       "fault_relationship": "independent",
       "fault_settle_seconds": 3,
       "fault_type": "multiple_faults",
-      "fingerprint": "f2b72d2b75d7134bae824be62323ea93beb1caaca810ad514bde66b70d80ad93",
+      "fingerprint": "341eeb110000ab2a04ab477a66a963a7a53946a845aaa9f3fac42f86b364451b",
       "main_score_eligible": false,
-      "name": "gen_dual_bgp_ospf_f2b72d2b75_01",
+      "name": "gen_dual_bgp_ospf_341eeb1100_01",
       "parameters": {
         "bad_area": 77,
-        "bad_asn": 65215,
+        "bad_asn": 65216,
         "container": "as2brd-r101-10.101.0.2",
         "correct_area": 0,
         "correct_asn": 2,
         "template_revision": 1
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite complex_fault_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as2brd-r101-10.101.0.2"
       ],
-      "scenario_seed": 8268150079660095523,
+      "scenario_seed": 4936450446991518666,
       "template_id": "dual_bgp_ospf",
       "topology": "B00_mini_internet"
     },
@@ -619,90 +697,12 @@
         "target_ip": "10.154.0.71",
         "template_revision": 1
       },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
+      "quarantine_reason": "generated suite complex_fault_generator_pilot; promote only after live validation",
       "repair_containers": [
         "as154h-host_0-10.154.0.71"
       ],
       "scenario_seed": 16494317874842408151,
       "template_id": "dual_dns_network",
-      "topology": "B00_mini_internet"
-    },
-    {
-      "benchmark_track": "robustness",
-      "causal_chain": [],
-      "convergence_timeout": 150,
-      "description": "Generated deterministic case: Independent BGP ASN and OSPF area faults coexist in one router",
-      "diagnosis_artifact": "/etc/bird/bird.conf (ASN and OSPF area)",
-      "diagnosis_expected_value": "AS 2 and area 0",
-      "diagnosis_faulty_value": "AS 65216 and area 77",
-      "diagnosis_targets": [
-        "as2brd-r101-10.101.0.2"
-      ],
-      "difficulty": "advanced",
-      "expected_root_causes": [
-        {
-          "artifact": "/etc/bird/bird.conf",
-          "category": "wrong_asn",
-          "expected_value": "AS 2",
-          "faulty_value": "AS 65216",
-          "target_container": [
-            "as2brd-r101-10.101.0.2"
-          ]
-        },
-        {
-          "artifact": "/etc/bird/bird.conf",
-          "category": "missing_ospf_adjacency",
-          "expected_value": "area 0",
-          "faulty_value": "area 77",
-          "target_container": [
-            "as2brd-r101-10.101.0.2"
-          ]
-        }
-      ],
-      "fault_components": [
-        {
-          "artifact": "/etc/bird/bird.conf",
-          "category": "wrong_asn",
-          "cleanup_order": 1,
-          "component_id": "bird_wrong_asn",
-          "depends_on": [],
-          "inject_order": 0,
-          "target_containers": [
-            "as2brd-r101-10.101.0.2"
-          ]
-        },
-        {
-          "artifact": "/etc/bird/bird.conf",
-          "category": "missing_ospf_adjacency",
-          "cleanup_order": 0,
-          "component_id": "ospf_wrong_area",
-          "depends_on": [],
-          "inject_order": 1,
-          "target_containers": [
-            "as2brd-r101-10.101.0.2"
-          ]
-        }
-      ],
-      "fault_relationship": "independent",
-      "fault_settle_seconds": 3,
-      "fault_type": "multiple_faults",
-      "fingerprint": "341eeb110000ab2a04ab477a66a963a7a53946a845aaa9f3fac42f86b364451b",
-      "main_score_eligible": false,
-      "name": "gen_dual_bgp_ospf_341eeb1100_01",
-      "parameters": {
-        "bad_area": 77,
-        "bad_asn": 65216,
-        "container": "as2brd-r101-10.101.0.2",
-        "correct_area": 0,
-        "correct_asn": 2,
-        "template_revision": 1
-      },
-      "quarantine_reason": "generator 3.0 fault-platform migration; live requalification required",
-      "repair_containers": [
-        "as2brd-r101-10.101.0.2"
-      ],
-      "scenario_seed": 4936450446991518666,
-      "template_id": "dual_bgp_ospf",
       "topology": "B00_mini_internet"
     }
   ],

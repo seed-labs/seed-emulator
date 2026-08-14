@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import time
 from typing import Any, Dict, Mapping, Sequence, Tuple
 
 from generator.faults.models import FaultAction, FaultSpec
@@ -32,20 +33,44 @@ class FaultDriver(ABC):
         if not action.targets or not action.inject_command or not action.cleanup_command:
             raise ValueError(f"driver {self.fault_type} produced an incomplete action")
 
+    @staticmethod
+    def _run_with_retry(runner, command: str, timeout: int):
+        """Retry Docker runtime launch failures, not fault command failures."""
+        result = (125, "fault command was not executed")
+        transient_markers = (
+            "transient scope not created",
+            "context deadline exceeded",
+            "cannot connect to the docker daemon",
+            "command execution timeout",
+        )
+        for attempt in range(3):
+            result = runner(command, timeout)
+            returncode, output = result
+            if returncode == 0 or not any(
+                marker in output.lower() for marker in transient_markers
+            ):
+                return result
+            if attempt < 2:
+                time.sleep(2)
+        return result
+
     def inject(self, action: FaultAction, runner):
-        return runner(action.inject_command, 120)
+        return self._run_with_retry(runner, action.inject_command, 120)
+
+    def snapshot(self, action: FaultAction, runner):
+        return self._run_with_retry(runner, action.snapshot_command, 30)
 
     def verify_active(self, action: FaultAction, runner):
-        return runner(action.active_check_command, 30)
+        return self._run_with_retry(runner, action.active_check_command, 30)
 
     def observe(self, action: FaultAction, runner):
-        return runner(action.active_check_command, 30)
+        return self._run_with_retry(runner, action.active_check_command, 30)
 
     def recover(self, action: FaultAction, runner):
-        return runner(action.cleanup_command, 120)
+        return self._run_with_retry(runner, action.cleanup_command, 120)
 
     def verify_recovered(self, action: FaultAction, runner):
-        return runner(action.active_check_command, 30)
+        return self._run_with_retry(runner, action.active_check_command, 30)
 
 
 def _one_target(targets: Sequence[Mapping[str, Any]]) -> str:
