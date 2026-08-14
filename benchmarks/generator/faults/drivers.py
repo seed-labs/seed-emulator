@@ -410,6 +410,139 @@ class NetemDriver(FaultDriver):
         )
 
 
+class Ipv6ConnectedRouteRemovedDriver(FaultDriver):
+    """Remove one declared IPv6 address and its kernel connected route."""
+
+    fault_type = "network.ipv6.connected_route_removed"
+
+    def plan(self, spec, targets):
+        container = _one_target(targets)
+        p = spec.parameters
+        address, prefix = str(p["address"]), str(p["prefix"])
+        interface = str(p["interface"])
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]+", interface):
+            raise ValueError("invalid IPv6 interface")
+        marker = "GENERATED_IPV6_CONNECTED_ROUTE_REMOVED"
+        return FaultAction(
+            action_id=spec.fault_id, driver=self.fault_type,
+            category="ipv6_route_missing", targets=(container,),
+            artifact=f"IPv6 address {address} on {interface}",
+            faulty_value=f"missing {prefix}",
+            expected_value=f"{prefix} dev {interface}",
+            resource_locks=(f"container:{container}:ipv6:{interface}:{prefix}",),
+            inject_command=(
+                f"docker exec {container} ip -6 addr del {address} dev {interface}"
+            ),
+            active_check_command=(
+                f"docker exec {container} sh -c '"
+                f"if ! ip -6 addr show dev {interface} | grep -Fq {shlex.quote(address.split('/')[0])} "
+                f"&& ! ip -6 route show {prefix} | grep -Fq {shlex.quote(prefix)}; "
+                f"then echo {marker}; fi'"
+            ),
+            active_verifier_kind="contains", active_verifier_value=marker,
+            snapshot_command=(
+                f"docker exec {container} sh -c 'ip -6 addr show dev {interface}; "
+                f"ip -6 route show {prefix}'"
+            ),
+            cleanup_command=(
+                f"docker exec {container} sh -c '"
+                f"ip -6 route del {prefix} dev {interface} 2>/dev/null || true; "
+                f"ip -6 addr del {address} dev {interface} 2>/dev/null || true; "
+                f"ip -6 addr add {address} dev {interface}'"
+            ),
+        )
+
+
+class BirdOspfWrongAreaDriver(FaultDriver):
+    """Replace one audited BIRD OSPF area and restore the healthy value."""
+
+    fault_type = "routing.bird.ospf_wrong_area"
+
+    def plan(self, spec, targets):
+        container = _one_target(targets)
+        correct, bad = int(spec.parameters["correct_area"]), int(spec.parameters["bad_area"])
+        if correct == bad:
+            raise ValueError("OSPF healthy and faulty areas must differ")
+        return FaultAction(
+            action_id=spec.fault_id, driver=self.fault_type,
+            category="missing_ospf_adjacency", targets=(container,),
+            artifact="/etc/bird/bird.conf", faulty_value=f"area {bad}",
+            expected_value=f"area {correct}",
+            resource_locks=(f"container:{container}:file:/etc/bird/bird.conf:ospf-area",),
+            inject_command=(
+                f"docker exec {container} sed -i 's/area {correct}/area {bad}/g' "
+                f"/etc/bird/bird.conf && docker exec {container} birdc configure"
+            ),
+            active_check_command=(
+                f"docker exec {container} sh -c \"grep -q 'area {bad}' "
+                "/etc/bird/bird.conf && echo GENERATED_OSPF_AREA_ACTIVE\""
+            ),
+            active_verifier_kind="contains",
+            active_verifier_value="GENERATED_OSPF_AREA_ACTIVE",
+            snapshot_command=f"docker exec {container} sha256sum /etc/bird/bird.conf",
+            cleanup_command=(
+                f"docker exec {container} sed -i 's/area {bad}/area {correct}/g' "
+                f"/etc/bird/bird.conf && docker exec {container} birdc configure"
+            ),
+        )
+
+
+class DockerNetworkDisconnectedDriver(FaultDriver):
+    """Disconnect one declared Compose network and deterministically reconnect it."""
+
+    fault_type = "docker.network.disconnected"
+
+    def plan(self, spec, targets):
+        container = _one_target(targets)
+        p = spec.parameters
+        network = str(p["docker_network"])
+        interface = str(p["interface"])
+        target_ip = str(p["target_ip"])
+        remove_interface = bool(p.get("remove_interface", False))
+        for value in (network, interface, target_ip):
+            if not re.fullmatch(r"[A-Za-z0-9_.:-]+", value):
+                raise ValueError("invalid Docker network fault parameter")
+        inject = f"docker network disconnect {network} {container}"
+        if remove_interface:
+            inject += (
+                f"; docker exec {container} ip link del {interface} 2>/dev/null || true"
+            )
+        marker = "GENERATED_DOCKER_NETWORK_DISCONNECTED"
+        active = (
+            f"docker inspect {container} --format '"
+            "{{json .NetworkSettings.Networks}}'"
+        )
+        # Make the verifier independent from grep exit-code details.
+        active += f" | grep -vq {shlex.quote(network)} && echo {marker}"
+        cleanup = (
+            f"docker network disconnect {network} {container} 2>/dev/null || true; "
+            f"docker exec {container} ip link del {interface} 2>/dev/null || true; "
+            f"docker network connect --ip {target_ip} {network} {container}; "
+            f"docker exec {container} sh -c 'for path in /sys/class/net/eth*; do "
+            "iface=${path##*/}; "
+            f"if ip -o -4 addr show dev \"$iface\" | grep -q \"{target_ip}/24\"; then "
+            "ip link set \"$iface\" down; "
+            f"ip link set \"$iface\" name {interface}; ip link set {interface} up; fi; done'"
+        )
+        if bool(p.get("bird_reconfigure", False)):
+            cleanup += f"; docker exec {container} birdc configure"
+        return FaultAction(
+            action_id=spec.fault_id, driver=self.fault_type,
+            category="wrong_docker_network", targets=(container,),
+            artifact=f"Docker network {network} and interface {interface}",
+            faulty_value="attachment disconnected and interface missing",
+            expected_value=f"connected with {target_ip} on {interface}",
+            resource_locks=(f"container:{container}:docker-network:{network}",),
+            inject_command=inject, active_check_command=active,
+            active_verifier_kind="contains", active_verifier_value=marker,
+            snapshot_command=(
+                f"docker inspect {container} --format '"
+                "{{json .NetworkSettings.Networks}}'"
+            ),
+            cleanup_command=cleanup,
+        )
+
+
 DRIVERS: Dict[str, FaultDriver] = {}
 
 
@@ -425,7 +558,8 @@ def register_driver(driver: FaultDriver) -> None:
 for _driver in (
     ContainerStoppedDriver(), DnsNameserverDriver(), BirdWrongAsnDriver(),
     ScopedAclDriver(), NetemDriver(), SoftwareConfigReplaceDriver(),
-    SoftwareExecutableDisabledDriver(),
+    SoftwareExecutableDisabledDriver(), Ipv6ConnectedRouteRemovedDriver(),
+    BirdOspfWrongAreaDriver(), DockerNetworkDisconnectedDriver(),
 ):
     register_driver(_driver)
 

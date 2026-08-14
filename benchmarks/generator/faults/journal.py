@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import subprocess
@@ -84,6 +84,10 @@ class FaultExecutor:
                 entry = {
                     "action_id": action.action_id, "status": "snapshotted",
                     "snapshot": snapshot[:4000], "snapshot_exit": code,
+                    "expires_at": (
+                        datetime.now(timezone.utc)
+                        + timedelta(seconds=action.duration_seconds)
+                    ).isoformat() if action.duration_seconds > 0 else "",
                 }
                 state["actions"].append(entry)
                 state["updated_at"] = _now()
@@ -180,3 +184,39 @@ class FaultExecutor:
                 continue
             recovered.append(self.recover(plan, str(value["execution_id"])))
         return tuple(recovered)
+
+    def recover_due(
+        self, plan: CompiledFaultPlan, execution_id: str,
+        *, now: Optional[datetime] = None,
+    ) -> Optional[Path]:
+        """Recover an atomic fault set when any scheduled component expires."""
+        journal = FaultJournal(self.journal_root, execution_id)
+        state = journal.load()
+        if state.get("status") != "active":
+            return None
+        current = now or datetime.now(timezone.utc)
+        expirations = [
+            datetime.fromisoformat(str(item["expires_at"]))
+            for item in state.get("actions", ()) if item.get("expires_at")
+        ]
+        if expirations and min(expirations) <= current:
+            return self.recover(plan, execution_id)
+        return None
+
+    def wait_for_expiry(
+        self, plan: CompiledFaultPlan, execution_id: str,
+        *, poll_seconds: float = 0.5,
+    ) -> Path:
+        """Block until the first duration deadline, then fail-safe recover all."""
+        if poll_seconds <= 0 or poll_seconds > 60:
+            raise ValueError("poll_seconds must be between 0 and 60")
+        while True:
+            recovered = self.recover_due(plan, execution_id)
+            if recovered is not None:
+                return recovered
+            state = FaultJournal(self.journal_root, execution_id).load()
+            if state.get("status") != "active":
+                raise RuntimeError("fault plan left active state before expiry")
+            if not any(item.get("expires_at") for item in state.get("actions", ())):
+                raise ValueError("compiled plan has no positive duration")
+            time.sleep(poll_seconds)

@@ -1,6 +1,7 @@
 """Contract, recovery, coverage and scale tests for FaultSpec v1."""
 
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 import tempfile
@@ -20,7 +21,9 @@ from generator.faults.models import CompiledFaultPlan, FaultSpec  # noqa: E402
 from generator.faults.software import discover_software_fault_specs  # noqa: E402
 from generator.templates import (  # noqa: E402
     _bird_asn_candidate, _dns_candidate, _container_candidate,
-    _random_acl_candidate, _random_dual_candidate, render_scenario,
+    _random_acl_candidate, _random_dual_candidate, _ipv6_candidate,
+    _dual_bgp_ospf_candidate, _dual_dns_network_candidate,
+    _cascading_network_bgp_candidate, render_scenario,
 )
 from generator.topology.bindings import bind_fault_component  # noqa: E402
 
@@ -168,6 +171,10 @@ cases = (
     ("container_stopped", _container_candidate(0, 1)),
     ("random_complex_transit_acl", _random_acl_candidate(0, 1)),
     ("random_complex_dual_bgp_acl", _random_dual_candidate(0, 1)),
+    ("ipv6_connected_route", _ipv6_candidate(0, 1)),
+    ("dual_bgp_ospf", _dual_bgp_ospf_candidate(0, 1)),
+    ("dual_dns_network", _dual_dns_network_candidate(0, 1)),
+    ("cascading_network_bgp", _cascading_network_bgp_candidate(0, 1)),
 )
 for template_id, parameters in cases:
     plan = compile_template_faults(template_id, parameters)
@@ -224,6 +231,20 @@ with tempfile.TemporaryDirectory() as temporary:
     assert json.loads(journal_path.read_text())["status"] == "recovered"
     assert first.actions[0].cleanup_command in commands
     assert commands[-1] == first.actions[0].active_check_command
+
+# Positive duration produces an expiry timestamp and a fail-safe atomic
+# recovery path. The scheduler can poll this after a coordinator restart.
+container_running = True
+with tempfile.TemporaryDirectory() as temporary:
+    executor = FaultExecutor(Path(temporary), successful_runner)
+    duration_journal = executor.inject(first, "duration-expiry")
+    state = json.loads(duration_journal.read_text())
+    assert state["actions"][0]["expires_at"]
+    assert executor.recover_due(
+        first, "duration-expiry",
+        now=datetime.now(timezone.utc) + timedelta(seconds=31),
+    ) == duration_journal
+    assert json.loads(duration_journal.read_text())["status"] == "recovered"
 
 failure_calls = []
 def failing_runner(command, timeout):

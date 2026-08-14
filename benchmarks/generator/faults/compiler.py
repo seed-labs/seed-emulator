@@ -69,8 +69,8 @@ def resolve_targets(
         ]
     candidates.sort(key=lambda x: str(x.get("container", "")))
     choose = int(selector.get("choose", 1))
-    if choose != 1:
-        raise ValueError("FaultSpec v1 drivers currently require choose=1")
+    if not 1 <= choose <= 64:
+        raise ValueError("FaultSpec v1 choose must be between 1 and 64")
     if len(candidates) < choose:
         raise ValueError(f"selector matched {len(candidates)}/{choose} required assets")
     # Seeded rotation makes broad selectors deterministic and reproducible.
@@ -119,6 +119,7 @@ def compile_fault_set(
     if len(ids) != len(set(ids)):
         raise ValueError("fault ids must be unique")
     actions: List[FaultAction] = []
+    action_ids_by_fault: Dict[str, Tuple[str, ...]] = {}
     asset_by_container = {
         str(item.get("container")): item for item in _assets(capabilities)
     }
@@ -136,14 +137,37 @@ def compile_fault_set(
         selected = {str(item["container"]) for item in targets}
         if selected & protected:
             raise ValueError("selector includes a protected asset")
-        action = driver.plan(spec, targets)
-        driver.precheck(action)
-        actions.append(replace(
-            action, inject_order=index, cleanup_order=len(specs) - index - 1,
-            depends_on=spec.depends_on,
-            at_seconds=float(spec.schedule.get("at_seconds", 0)),
-            duration_seconds=float(spec.schedule.get("duration_seconds", 0)),
-        ))
+        dependency_actions = tuple(
+            action_id
+            for dependency in spec.depends_on
+            for action_id in action_ids_by_fault[dependency]
+        )
+        generated = []
+        for target_index, target in enumerate(targets):
+            action = driver.plan(spec, (target,))
+            if len(targets) > 1:
+                action = replace(
+                    action,
+                    action_id=f"{action.action_id}-{target_index + 1:02d}",
+                )
+            driver.precheck(action)
+            generated.append(replace(
+                action, depends_on=dependency_actions,
+                at_seconds=float(spec.schedule.get("at_seconds", 0)),
+                duration_seconds=float(spec.schedule.get("duration_seconds", 0)),
+            ))
+        action_ids_by_fault[spec.fault_id] = tuple(
+            item.action_id for item in generated
+        )
+        actions.extend(generated)
+    action_count = len(actions)
+    actions = [
+        replace(
+            action, inject_order=index,
+            cleanup_order=action_count - index - 1,
+        )
+        for index, action in enumerate(actions)
+    ]
     affected_assets = tuple(dict.fromkeys(x for a in actions for x in a.targets))
     affected_asns = tuple(sorted({
         int(asset_by_container[x]["asn"])

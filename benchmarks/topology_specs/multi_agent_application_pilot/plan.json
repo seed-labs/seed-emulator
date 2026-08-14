@@ -1,0 +1,151 @@
+{
+  "autonomous_systems": [
+    {
+      "asn": 64512,
+      "host_addresses": [
+        "10.0.0.3",
+        "10.0.0.4",
+        "10.0.0.5",
+        "10.0.0.6"
+      ],
+      "index": 0,
+      "lan_prefix": "10.0.0.0/24",
+      "loopback_address": "100.64.0.1",
+      "router_address": "10.0.0.2"
+    }
+  ],
+  "edge_policy": "ring",
+  "external_links": [],
+  "fingerprint": "a5e184f646145e377b2396f662d200a456520c1edb39cff7b0bf9dcd9c72ad39",
+  "generator_version": "1.0.0",
+  "master_seed": "multi-agent-application-pilot-v1",
+  "platform": "amd",
+  "request": {
+    "as_count": 1,
+    "asn_start": 64512,
+    "budget": {
+      "max_ases": 1,
+      "max_containers": 8,
+      "max_cpu_cores": 2.0,
+      "max_links": 0,
+      "max_memory_mb": 4096,
+      "max_networks": 2
+    },
+    "edge_policy": "ring",
+    "explicit_edges": [],
+    "extra_links": 0,
+    "hosts_per_as": 4,
+    "ix_pool": "172.16.0.0/12",
+    "ix_prefixlen": 29,
+    "lan_pool": "10.0.0.0/8",
+    "lan_prefixlen": 24,
+    "loopback_pool": "100.64.0.0/10",
+    "master_seed": "multi-agent-application-pilot-v1",
+    "platform": "amd",
+    "software": [
+      {
+        "capabilities": [
+          "http.nginx.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [],
+        "packages": [
+          "nginx"
+        ],
+        "schema_version": 1,
+        "software_id": "nginx",
+        "target_asns": [],
+        "target_nodes": [
+          "host0"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      },
+      {
+        "capabilities": [
+          "dns.bind9.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [
+          {
+            "content": "zone \"pilot.test\" { type master; file \"/etc/bind/db.pilot.test\"; };\n",
+            "mode": "0644",
+            "path": "/etc/bind/named.conf.local"
+          },
+          {
+            "content": "$TTL 60\n@ IN SOA ns.pilot.test. admin.pilot.test. (1 60 60 60 60)\n@ IN NS ns.pilot.test.\nns IN A 10.0.0.3\nservice IN A 10.0.0.3\n",
+            "mode": "0644",
+            "path": "/etc/bind/db.pilot.test"
+          }
+        ],
+        "packages": [
+          "bind9",
+          "dnsutils"
+        ],
+        "schema_version": 1,
+        "software_id": "bind9",
+        "target_asns": [],
+        "target_nodes": [
+          "host1"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      },
+      {
+        "capabilities": [
+          "database.postgresql.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [],
+        "packages": [
+          "postgresql",
+          "postgresql-client"
+        ],
+        "schema_version": 1,
+        "software_id": "postgresql",
+        "target_asns": [],
+        "target_nodes": [
+          "host2"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      },
+      {
+        "capabilities": [
+          "observer.network.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [],
+        "packages": [
+          "curl",
+          "dnsutils",
+          "netcat-openbsd"
+        ],
+        "schema_version": 1,
+        "software_id": "curl_tools",
+        "target_asns": [],
+        "target_nodes": [
+          "host3"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      }
+    ],
+    "topology_id": "multi_agent_application_pilot"
+  },
+  "resource_estimate": {
+    "ases": 1,
+    "containers": 7,
+    "cpu_cores": 0.3,
+    "links": 0,
+    "memory_mb": 384,
+    "networks": 1
+  },
+  "schema_version": 1,
+  "topology_id": "multi_agent_application_pilot",
+  "topology_name": "DECLARATIVE_multi_agent_application_pilot"
+}

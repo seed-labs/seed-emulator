@@ -1,12 +1,12 @@
 {
-  "contract_sha256": "8ec3bf7ccfa599939df33f24feb5c54d547c3f25f18222a6d7d12c6fcf0053ba",
-  "created_at": "2026-08-14T13:32:01.222392+00:00",
+  "contract_sha256": "af0e5ffd25778fff6a3e8519bd6303e5ec833ea9c6e1f3a1fe7a108ffc581493",
+  "created_at": "2026-08-14T16:20:55.687529+00:00",
   "observation_evidence": "reports/DECLARATIVE_SMALL_RING_BLIND_OBSERVATION.json",
   "observation_evidence_sha256": "08d7605982ea33c1a171205ca33c42d6991eec8db08b1b10026c20ee4af8e1cd",
   "policy": {
     "minimum_independent_lifecycle_runs": 2
   },
-  "promoted_manifest_sha256": "65cf1ccfa3ad44b8ea4183e592f1f4fa207d26d2ae675b7380fb74b3474de3c9",
+  "promoted_manifest_sha256": "4eb7324ceebdfc9adb7d1b2f5d91fc1f82c71c546f7fc24d49041eb8144bedc0",
   "promoted_scenarios": [
     {
       "benchmark_track": "network_functional",
@@ -34,22 +34,22 @@
       "name": "gen_random_complex_dual_bgp_acl_5b3d8d80cf_01"
     }
   ],
-  "promotion_sha256": "a8150dd8832a8e4de3e02ec15d66b1596617d2277083fd6d666068aaf4f8ba32",
+  "promotion_sha256": "01e181d7c8ff4179be8af9c45861b8bd7ffa137a1953a6d0dc756ff3abc0c8f2",
   "receipts": [
     {
       "path": "reports/PROMOTION_DECLARATIVE_SMALL_RING_PILOT_ROUND_01_BATCH_0000.json",
-      "receipt_id": "2324784b-1f5a-495b-a0b4-6954e94bd3cf",
-      "sha256": "028c6d7df0f9cf4d8495c67e7379bfc99331559888743fc12fc08a856cdff547"
+      "receipt_id": "5028dc58-54df-44e9-9730-70b835bf184c",
+      "sha256": "9eb7f6fe9120439dc7a282c353b2f7b47c6f7fd806a9fe0c0933b9904bdabf33"
     },
     {
       "path": "reports/PROMOTION_DECLARATIVE_SMALL_RING_PILOT_ROUND_02_BATCH_0000.json",
-      "receipt_id": "4671af99-722d-4c74-b6ae-bccf754a654f",
-      "sha256": "406400a1d864b7acd8ecc7ecac4bf832ec1b0d3c87c47faa85505bde865c9669"
+      "receipt_id": "7cff7ca2-e8db-4fa2-90da-022a6e85f1fa",
+      "sha256": "5ba0a297abca1a63c5e71e1a13c5f90f4bab71f6e4c004d9bcfcafa78410b69a"
     }
   ],
   "schema_version": 1,
   "suite_id": "declarative_small_ring_pilot",
   "topology_evidence": "reports/TOPOLOGY_SMALL_RING_SMOKE.json",
-  "topology_evidence_sha256": "c7afdd68143df323d7f55772336a620e8145dfd22646779506c95e38f4e62665",
+  "topology_evidence_sha256": "7efb3767f199c9047a57838b52687249b8391a134c41236b6ae41b48e69d5fc1",
   "topology_fingerprint": "cf41242b9e3801ae23c4e4bc95bd628e5d642f3280d36062378b6afbba5d01f9"
 }

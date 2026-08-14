@@ -60,6 +60,32 @@ def compile_template_faults(
         ))
     elif template_id == "netem_impairment":
         specs.append(_spec("netem_impairment", "network.netem", str(p["container"]), p, seed="0"))
+    elif template_id == "ipv6_connected_route":
+        specs.append(_spec(
+            "ipv6_connected_route", "network.ipv6.connected_route_removed",
+            str(p["container"]), p, seed="0",
+        ))
+    elif template_id == "dual_bgp_ospf":
+        container = str(p["container"])
+        specs.extend((
+            _spec("bird_wrong_asn", "routing.bird.wrong_asn", container, p, seed="0"),
+            _spec("ospf_wrong_area", "routing.bird.ospf_wrong_area", container, p, seed="0"),
+        ))
+    elif template_id == "dual_dns_network":
+        container = str(p["container"])
+        specs.extend((
+            _spec("dns_bad_nameserver", "dns.nameserver", container, p, seed="0"),
+            _spec(
+                "docker_network_disconnect", "docker.network.disconnected",
+                container, {**p, "remove_interface": False}, seed="0",
+            ),
+        ))
+    elif template_id == "cascading_network_bgp":
+        specs.append(_spec(
+            "docker_network_disconnect", "docker.network.disconnected",
+            str(p["container"]),
+            {**p, "remove_interface": True, "bird_reconfigure": True}, seed="0",
+        ))
     else:
         raise ValueError(f"template is not migrated to FaultSpec v1: {template_id}")
     containers = {str(item.selector["container"]) for item in specs}
@@ -69,7 +95,10 @@ def compile_template_faults(
     }
     return compile_fault_set(
         tuple(specs), capabilities,
-        relationship="single" if len(specs) == 1 else "independent",
+        relationship=(
+            "cascading" if template_id == "cascading_network_bgp"
+            else "single" if len(specs) == 1 else "independent"
+        ),
     )
 
 

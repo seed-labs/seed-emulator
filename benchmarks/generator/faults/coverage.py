@@ -8,6 +8,7 @@ from itertools import combinations
 from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple
 
 from generator.faults.compiler import compile_fault_set
+from generator.faults.drivers import DRIVERS
 from generator.faults.models import FaultSpec
 
 
@@ -45,7 +46,7 @@ def measure_coverage(plans, capabilities: Mapping[str, Any]) -> CoverageReport:
     scores = {
         "asset_coverage": len(assets) / max(1, len(all_assets)),
         "asn_coverage": len(asns) / max(1, len(all_asns)),
-        "driver_diversity": len(drivers) / 5,
+        "driver_diversity": len(drivers) / max(1, len(DRIVERS)),
         "composition_coverage": min(1.0, len(pairs) / 4),
     }
     scores["weighted_total"] = round(

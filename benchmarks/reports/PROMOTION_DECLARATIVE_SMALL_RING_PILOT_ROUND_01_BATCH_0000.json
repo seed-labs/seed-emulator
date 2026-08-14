@@ -1,14 +1,14 @@
 {
-  "contract_sha256": "8ec3bf7ccfa599939df33f24feb5c54d547c3f25f18222a6d7d12c6fcf0053ba",
-  "created_at": "2026-08-14T13:28:03.291329+00:00",
+  "contract_sha256": "af0e5ffd25778fff6a3e8519bd6303e5ec833ea9c6e1f3a1fe7a108ffc581493",
+  "created_at": "2026-08-14T16:13:37.971524+00:00",
   "execution": {
     "agent": "rule",
     "ai_invoked": false,
     "blind_mode": true,
     "validate_only": true
   },
-  "receipt_id": "2324784b-1f5a-495b-a0b4-6954e94bd3cf",
-  "receipt_sha256": "412ee4831088ba929a2ca780f8d8c21eef1501a60fbc6257fe6fe750402f79aa",
+  "receipt_id": "5028dc58-54df-44e9-9730-70b835bf184c",
+  "receipt_sha256": "1518c91ff74a0c6fad1d19dc8a3a485626405b4ca3cb540c76d50f73f0bd89f3",
   "scenarios": [
     {
       "fault_injection_verified": true,

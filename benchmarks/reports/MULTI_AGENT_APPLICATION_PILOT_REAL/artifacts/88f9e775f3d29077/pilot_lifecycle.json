@@ -1,0 +1,17 @@
+{
+  "artifact_fingerprint": "6ef4992514e28dddeb6be288dd8277ea329ec93948495506529b0638056e9d46",
+  "artifact_id": "pilot_lifecycle",
+  "artifact_type": "lifecycle",
+  "capabilities_required": [],
+  "input_fingerprints": [],
+  "payload": {
+    "lifecycles": [
+      {
+        "repeat_runs": 2
+      }
+    ]
+  },
+  "producer": "lifecycle_agent",
+  "schema_version": 1,
+  "warnings": []
+}

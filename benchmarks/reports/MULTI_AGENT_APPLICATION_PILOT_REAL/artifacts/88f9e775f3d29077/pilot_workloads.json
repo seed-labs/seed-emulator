@@ -1,0 +1,52 @@
+{
+  "artifact_fingerprint": "0583c97c8fe3afa83765935476b54b2f65373b4aee30c34637db5c15ca033ae8",
+  "artifact_id": "pilot_workloads",
+  "artifact_type": "workload",
+  "capabilities_required": [],
+  "input_fingerprints": [],
+  "payload": {
+    "workloads": [
+      {
+        "driver": "workload.http",
+        "parameters": {
+          "url": "http://10.0.0.3/"
+        },
+        "schema_version": 1,
+        "source": {
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "target_service": "nginx_service",
+        "workload_id": "http_load"
+      },
+      {
+        "driver": "workload.dns",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.0.0.4"
+        },
+        "schema_version": 1,
+        "source": {
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "target_service": "bind_service",
+        "workload_id": "dns_load"
+      },
+      {
+        "driver": "workload.tcp",
+        "parameters": {
+          "host": "127.0.0.1",
+          "port": 5432
+        },
+        "schema_version": 1,
+        "source": {
+          "container": "as64512h-host2-10.0.0.5"
+        },
+        "target_service": "postgres_service",
+        "workload_id": "postgres_load"
+      }
+    ]
+  },
+  "producer": "workload_agent",
+  "schema_version": 1,
+  "warnings": []
+}

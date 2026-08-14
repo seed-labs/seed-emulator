@@ -1,0 +1,28 @@
+{
+  "artifact_fingerprint": "6621d03f4dd673b9d89c8876a9f3255d38500e847f6d75f613ec03052db6e5b9",
+  "artifact_id": "pilot_scoring",
+  "artifact_type": "scoring",
+  "capabilities_required": [],
+  "input_fingerprints": [],
+  "payload": {
+    "scoring": [
+      {
+        "pass_threshold": 1.0,
+        "schema_version": 1,
+        "scoring_id": "pilot_weighted",
+        "weights": {
+          "active_bind": 1,
+          "active_nginx": 1,
+          "active_observer": 1,
+          "active_postgres": 1,
+          "recovery_bind": 1,
+          "recovery_nginx": 1,
+          "recovery_postgres": 1
+        }
+      }
+    ]
+  },
+  "producer": "scoring_agent",
+  "schema_version": 1,
+  "warnings": []
+}

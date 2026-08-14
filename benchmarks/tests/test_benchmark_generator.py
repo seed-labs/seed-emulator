@@ -282,6 +282,8 @@ original_base_status = base_module.run_with_status
 original_base_run = base_module.run
 original_runtime_sleep = __import__("generator.runtime", fromlist=["time"]).time.sleep
 runtime_module = __import__("generator.runtime", fromlist=["time"])
+from generator.faults.journal import FaultExecutor  # noqa: E402
+original_fault_inject = FaultExecutor.inject
 try:
     def component_status(command, timeout=120):
         component_calls.append(("status", command, timeout))
@@ -294,23 +296,29 @@ try:
         component_calls.append(("run", command, timeout))
         return ""
 
+    def compiled_inject(executor, plan, execution_id):
+        component_calls.extend(
+            ("compiled", action.action_id, 0) for action in plan.actions
+        )
+        return Path("/tmp/generated-test-journal.json")
+
     base_module.run_with_status = component_status
     base_module.run = component_run
+    FaultExecutor.inject = compiled_inject
     runtime_module.time.sleep = lambda _seconds: None
     component_scenario.inject_fault()
 finally:
     base_module.run_with_status = original_base_status
     base_module.run = original_base_run
+    FaultExecutor.inject = original_fault_inject
     runtime_module.time.sleep = original_runtime_sleep
 assert [
     command
     for kind, command, _timeout in component_calls
-    if kind == "status"
+    if kind == "compiled"
 ] == [
-    dual_bgp_rendered.components[0].inject_command,
-    dual_bgp_rendered.components[0].fault_check_command,
-    dual_bgp_rendered.components[1].inject_command,
-    dual_bgp_rendered.components[1].fault_check_command,
+    "bird_wrong_asn",
+    "ospf_wrong_area",
 ]
 
 cascade_spec = next(

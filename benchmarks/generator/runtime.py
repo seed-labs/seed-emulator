@@ -16,7 +16,8 @@ from generator.templates import evaluate_verifier, render_scenario
 MIGRATED_FAULT_TEMPLATES = {
     "container_stopped", "dns_nameserver", "bird_wrong_asn",
     "random_complex_transit_acl", "random_complex_dual_bgp_acl",
-    "netem_impairment",
+    "netem_impairment", "ipv6_connected_route", "dual_bgp_ospf",
+    "dual_dns_network", "cascading_network_bgp",
 }
 
 

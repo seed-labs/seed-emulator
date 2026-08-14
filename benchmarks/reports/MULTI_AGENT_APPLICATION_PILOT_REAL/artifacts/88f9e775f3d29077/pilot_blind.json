@@ -1,0 +1,15 @@
+{
+  "artifact_fingerprint": "c73dcf49735c88e5170c8483e4500edd5dab9068c72cc51d1cbb0b5a740d22b0",
+  "artifact_id": "pilot_blind",
+  "artifact_type": "blind_policy",
+  "capabilities_required": [],
+  "input_fingerprints": [],
+  "payload": {
+    "policies": [
+      {}
+    ]
+  },
+  "producer": "safety_agent",
+  "schema_version": 1,
+  "warnings": []
+}

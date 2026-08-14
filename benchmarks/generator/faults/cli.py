@@ -65,6 +65,14 @@ def parser() -> argparse.ArgumentParser:
         command.add_argument("--plan", required=True)
         command.add_argument("--execution-id", required=True)
         command.add_argument("--journal-dir", required=True)
+        if name == "inject":
+            command.add_argument(
+                "--wait-duration", action="store_true",
+                help="wait for the first positive duration and fail-safe recover",
+            )
+    recover_incomplete = sub.add_parser("recover-incomplete")
+    recover_incomplete.add_argument("--plan", action="append", required=True)
+    recover_incomplete.add_argument("--journal-dir", required=True)
     return root
 
 
@@ -166,10 +174,20 @@ def main(argv=None) -> int:
             _write(Path(args.output), report)
         print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
+    if args.command == "recover-incomplete":
+        plans = _load_plans(args.plan)
+        by_fingerprint = {item.plan_fingerprint: item for item in plans}
+        recovered = FaultExecutor(Path(args.journal_dir)).recover_incomplete(
+            by_fingerprint
+        )
+        print(json.dumps({"recovered": [str(path) for path in recovered]}, indent=2))
+        return 0
     plan = CompiledFaultPlan.from_dict(_read(Path(args.plan)))
     executor = FaultExecutor(Path(args.journal_dir))
     if args.command == "inject":
         path = executor.inject(plan, args.execution_id)
+        if args.wait_duration:
+            path = executor.wait_for_expiry(plan, args.execution_id)
     else:
         path = executor.recover(plan, args.execution_id)
     print(f"fault_{args.command}_journal={path}")
