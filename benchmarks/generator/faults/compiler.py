@@ -26,7 +26,10 @@ def resolve_targets(
 ) -> Tuple[Mapping[str, Any], ...]:
     """Resolve a bounded selector without depending on container naming."""
     selector = spec.selector
-    allowed = {"container", "role", "asn", "interface", "choose"}
+    allowed = {
+        "container", "role", "asn", "interface", "choose",
+        "software", "fault_profile",
+    }
     if set(selector) - allowed:
         raise ValueError(f"unsupported selector keys={sorted(set(selector) - allowed)}")
     candidates = _assets(capabilities)
@@ -44,6 +47,25 @@ def resolve_targets(
         candidates = [
             x for x in candidates
             if any(str(i.get("name")) == interface for i in x.get("interfaces", []))
+        ]
+    if "software" in selector:
+        software_id = str(selector["software"])
+        candidates = [
+            x for x in candidates
+            if any(
+                item.get("software_id") == software_id
+                for item in x.get("software", ())
+            )
+        ]
+    if "fault_profile" in selector:
+        profile_id = str(selector["fault_profile"])
+        candidates = [
+            x for x in candidates
+            if any(
+                profile.get("profile_id") == profile_id
+                for software in x.get("software", ())
+                for profile in software.get("fault_profiles", ())
+            )
         ]
     candidates.sort(key=lambda x: str(x.get("container", "")))
     choose = int(selector.get("choose", 1))

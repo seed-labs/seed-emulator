@@ -16,6 +16,11 @@ from generator.topology.bindings import (  # noqa: E402
     validate_fault_binding,
 )
 from generator.topology.models import ResourceBudget, TopologyPlan, TopologyRequest  # noqa: E402
+from generator.software import (  # noqa: E402
+    ManagedFileSpec,
+    SoftwareFaultProfile,
+    SoftwareSpec,
+)
 from generator.topology.planner import plan_topology, validate_topology_plan  # noqa: E402
 from generator.topology.registry import load_plan, register_request  # noqa: E402
 import benchmark_cli  # noqa: E402
@@ -58,6 +63,72 @@ validate_topology_plan(first)
 
 round_trip = TopologyPlan.from_dict(json.loads(json.dumps(first.to_dict())))
 assert round_trip.to_dict() == first.to_dict()
+
+# SoftwareSpec is additive, deterministic and remains absent from legacy plan
+# fingerprints when no software is declared.
+software = SoftwareSpec(
+    software_id="jq_tools",
+    packages=("jq",),
+    target_roles=("host",),
+    target_asns=(64512,),
+    target_nodes=("host0",),
+    capabilities=("json.query.v1",),
+    managed_files=(
+        ManagedFileSpec(
+            path="/etc/jq/benchmark.conf", content="mode=healthy\n", mode="0644"
+        ),
+    ),
+    fault_profiles=(
+        SoftwareFaultProfile(
+            profile_id="wrong_mode",
+            fault_type="software.config.replace",
+            parameters={
+                "path": "/etc/jq/benchmark.conf",
+                "healthy_value": "mode=healthy",
+                "faulty_value": "mode=broken",
+            },
+        ),
+        SoftwareFaultProfile(
+            profile_id="disable_binary",
+            fault_type="software.executable.disabled",
+            parameters={"path": "/usr/bin/jq", "expected_mode": "0755"},
+        ),
+    ),
+)
+software_plan = plan_topology(replace(request, software=(software,)))
+software_round_trip = TopologyPlan.from_dict(
+    json.loads(json.dumps(software_plan.to_dict()))
+)
+assert software_round_trip.to_dict() == software_plan.to_dict()
+assert software_plan.request["software"][0]["software_id"] == "jq_tools"
+assert "software" not in first.request
+assert build_emulator(software_plan) is not None
+
+try:
+    plan_topology(replace(request, software=(replace(software, packages=("jq;id",)),)))
+    raise AssertionError("unsafe apt package declaration was accepted")
+except ValueError as exc:
+    assert "package" in str(exc)
+
+try:
+    invalid_file = replace(
+        software,
+        managed_files=(ManagedFileSpec(path="/etc/passwd", content="x"),),
+        fault_profiles=(),
+    )
+    plan_topology(replace(request, software=(invalid_file,)))
+    raise AssertionError("protected managed file was accepted")
+except ValueError as exc:
+    assert "file" in str(exc)
+
+try:
+    unmatched = replace(
+        software, target_roles=("router",), target_nodes=("host0",)
+    )
+    plan_topology(replace(request, software=(unmatched,)))
+    raise AssertionError("software selector matching no assets was accepted")
+except ValueError as exc:
+    assert "matches no" in str(exc)
 
 with tempfile.TemporaryDirectory() as temporary:
     root = Path(temporary)

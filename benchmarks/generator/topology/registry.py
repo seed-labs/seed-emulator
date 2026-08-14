@@ -54,10 +54,7 @@ def register_request(
     directory = spec_dir(request.topology_id, root)
     if directory.exists() and not force:
         raise FileExistsError(f"topology already registered: {request.topology_id}")
-    _atomic_json(directory / "request.json", {
-        **{key: value for key, value in request.__dict__.items() if key != "budget"},
-        "budget": request.budget.__dict__,
-    })
+    _atomic_json(directory / "request.json", request.to_dict())
     _atomic_json(directory / "plan.json", plan.to_dict())
     return plan
 

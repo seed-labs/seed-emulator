@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import base64
+from pathlib import PurePosixPath
+import re
+import shlex
 import time
 from typing import Any, Dict, Mapping, Sequence, Tuple
 
 from generator.faults.models import FaultAction, FaultSpec
+from generator.software import (
+    EXECUTABLE_ROOTS,
+    MANAGED_FILE_ROOTS,
+    PROTECTED_PATHS,
+)
 
 
 class FaultDriver(ABC):
@@ -77,6 +86,167 @@ def _one_target(targets: Sequence[Mapping[str, Any]]) -> str:
     if len(targets) != 1 or not targets[0].get("container"):
         raise ValueError("fault driver requires exactly one resolved container")
     return str(targets[0]["container"])
+
+
+def _software_profile(
+    spec: FaultSpec, targets: Sequence[Mapping[str, Any]]
+) -> Tuple[str, Mapping[str, Any]]:
+    container = _one_target(targets)
+    if spec.parameters:
+        raise ValueError("software profile faults do not accept runtime command parameters")
+    software_id = str(spec.selector.get("software", ""))
+    profile_id = str(spec.selector.get("fault_profile", ""))
+    matches = []
+    for software in targets[0].get("software") or ():
+        if software.get("software_id") != software_id:
+            continue
+        for profile in software.get("fault_profiles") or ():
+            if (
+                profile.get("profile_id") == profile_id
+                and profile.get("fault_type") == spec.fault_type
+            ):
+                matches.append(profile)
+    if len(matches) != 1:
+        raise ValueError("software fault profile is absent or ambiguous on selected asset")
+    parameters = matches[0].get("parameters")
+    if not isinstance(parameters, Mapping):
+        raise ValueError("software fault profile parameters are invalid")
+    return container, parameters
+
+
+def _assets_with_profile(
+    spec: FaultSpec, capabilities: Mapping[str, Any]
+) -> Tuple[Mapping[str, Any], ...]:
+    software_id = str(spec.selector.get("software", ""))
+    profile_id = str(spec.selector.get("fault_profile", ""))
+    if not software_id or not profile_id:
+        raise ValueError("software fault selector requires software and fault_profile")
+    selected = []
+    for asset in capabilities.get("assets") or ():
+        for software in asset.get("software") or ():
+            if software.get("software_id") != software_id:
+                continue
+            if any(
+                item.get("profile_id") == profile_id
+                and item.get("fault_type") == spec.fault_type
+                for item in software.get("fault_profiles") or ()
+            ):
+                selected.append(asset)
+                break
+    return tuple(selected)
+
+
+def _docker_exec(container: str, *argv: str) -> str:
+    return "docker exec " + shlex.quote(container) + " " + shlex.join(argv)
+
+
+class SoftwareConfigReplaceDriver(FaultDriver):
+    """Mutate one exact managed-file value and restore it idempotently."""
+
+    fault_type = "software.config.replace"
+
+    def discover(self, spec, capabilities):
+        return _assets_with_profile(spec, capabilities)
+
+    def plan(self, spec, targets):
+        container, p = _software_profile(spec, targets)
+        if set(p) != {"path", "healthy_value", "faulty_value"}:
+            raise ValueError("software.config.replace profile parameters are invalid")
+        path = str(p["path"])
+        if (
+            not PurePosixPath(path).is_absolute() or ".." in PurePosixPath(path).parts
+            or path in PROTECTED_PATHS or not path.startswith(MANAGED_FILE_ROOTS)
+        ):
+            raise ValueError("software.config.replace path is outside managed roots")
+        healthy = str(p["healthy_value"])
+        faulty = str(p["faulty_value"])
+        if not healthy or not faulty or healthy == faulty:
+            raise ValueError("software.config.replace values are invalid")
+        healthy64 = base64.b64encode(healthy.encode("utf-8")).decode("ascii")
+        faulty64 = base64.b64encode(faulty.encode("utf-8")).decode("ascii")
+        inject_program = (
+            "import base64,pathlib,sys;p=pathlib.Path(sys.argv[1]);"
+            "a=base64.b64decode(sys.argv[2]);b=base64.b64decode(sys.argv[3]);"
+            "d=p.read_bytes();assert d.count(a)==1 and d.count(b)==0;"
+            "p.write_bytes(d.replace(a,b,1))"
+        )
+        active_program = (
+            "import base64,pathlib,sys;p=pathlib.Path(sys.argv[1]);"
+            "a=base64.b64decode(sys.argv[2]);b=base64.b64decode(sys.argv[3]);"
+            "d=p.read_bytes();assert d.count(a)==0 and d.count(b)==1;"
+            "print('GENERATED_SOFTWARE_CONFIG_ACTIVE')"
+        )
+        snapshot_program = (
+            "import hashlib,pathlib,sys;"
+            "print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())"
+        )
+        cleanup_program = (
+            "import base64,pathlib,sys;p=pathlib.Path(sys.argv[1]);"
+            "a=base64.b64decode(sys.argv[2]);b=base64.b64decode(sys.argv[3]);"
+            "d=p.read_bytes();ok=d.count(a)==1 and d.count(b)==0;"
+            "bad=d.count(a)==0 and d.count(b)==1;assert ok or bad;"
+            "p.write_bytes(d.replace(b,a,1) if bad else d)"
+        )
+        profile = str(spec.selector["fault_profile"])
+        software = str(spec.selector["software"])
+        return FaultAction(
+            action_id=spec.fault_id, driver=self.fault_type,
+            category="software_configuration_error", targets=(container,),
+            artifact=path, faulty_value=faulty, expected_value=healthy,
+            resource_locks=(f"container:{container}:file:{path}",),
+            inject_command=_docker_exec(
+                container, "python3", "-c", inject_program, path, healthy64, faulty64
+            ),
+            active_check_command=_docker_exec(
+                container, "python3", "-c", active_program, path, healthy64, faulty64
+            ),
+            active_verifier_kind="contains",
+            active_verifier_value="GENERATED_SOFTWARE_CONFIG_ACTIVE",
+            snapshot_command=_docker_exec(
+                container, "python3", "-c", snapshot_program, path
+            ),
+            cleanup_command=_docker_exec(
+                container, "python3", "-c", cleanup_program, path, healthy64, faulty64
+            ),
+        )
+
+
+class SoftwareExecutableDisabledDriver(FaultDriver):
+    """Disable one declared executable without stopping the container."""
+
+    fault_type = "software.executable.disabled"
+
+    def discover(self, spec, capabilities):
+        return _assets_with_profile(spec, capabilities)
+
+    def plan(self, spec, targets):
+        container, p = _software_profile(spec, targets)
+        if set(p) != {"path", "expected_mode"}:
+            raise ValueError("software.executable.disabled profile parameters are invalid")
+        path, mode = str(p["path"]), str(p["expected_mode"])
+        candidate = PurePosixPath(path)
+        if (
+            not candidate.is_absolute() or ".." in candidate.parts
+            or path in PROTECTED_PATHS or not path.startswith(EXECUTABLE_ROOTS)
+            or not re.fullmatch(r"[0-7]{3,4}", mode)
+            or mode.endswith(("0", "2", "4", "6"))
+        ):
+            raise ValueError("software.executable.disabled path/mode is unsafe")
+        quoted = shlex.quote(path)
+        inject = f'test "$(stat -c %a {quoted})" = {mode.lstrip("0")} && chmod 000 {quoted}'
+        active = f"test ! -x {quoted} && echo GENERATED_SOFTWARE_EXECUTABLE_DISABLED"
+        return FaultAction(
+            action_id=spec.fault_id, driver=self.fault_type,
+            category="software_executable_unavailable", targets=(container,),
+            artifact=path, faulty_value="mode 000", expected_value=f"mode {mode}",
+            resource_locks=(f"container:{container}:executable:{path}",),
+            inject_command=_docker_exec(container, "sh", "-c", inject),
+            active_check_command=_docker_exec(container, "sh", "-c", active),
+            active_verifier_kind="contains",
+            active_verifier_value="GENERATED_SOFTWARE_EXECUTABLE_DISABLED",
+            snapshot_command=_docker_exec(container, "stat", "-c", "%a", path),
+            cleanup_command=_docker_exec(container, "chmod", mode, path),
+        )
 
 
 class ContainerStoppedDriver(FaultDriver):
@@ -240,12 +410,24 @@ class NetemDriver(FaultDriver):
         )
 
 
-DRIVERS: Dict[str, FaultDriver] = {
-    item.fault_type: item for item in (
-        ContainerStoppedDriver(), DnsNameserverDriver(), BirdWrongAsnDriver(),
-        ScopedAclDriver(), NetemDriver(),
-    )
-}
+DRIVERS: Dict[str, FaultDriver] = {}
+
+
+def register_driver(driver: FaultDriver) -> None:
+    """Register an extension without permitting silent built-in overrides."""
+    if not isinstance(driver, FaultDriver) or not driver.fault_type:
+        raise TypeError("fault driver plugin must implement FaultDriver")
+    if driver.fault_type in DRIVERS:
+        raise ValueError(f"fault driver already registered: {driver.fault_type}")
+    DRIVERS[driver.fault_type] = driver
+
+
+for _driver in (
+    ContainerStoppedDriver(), DnsNameserverDriver(), BirdWrongAsnDriver(),
+    ScopedAclDriver(), NetemDriver(), SoftwareConfigReplaceDriver(),
+    SoftwareExecutableDisabledDriver(),
+):
+    register_driver(_driver)
 
 
 def get_driver(fault_type: str) -> FaultDriver:

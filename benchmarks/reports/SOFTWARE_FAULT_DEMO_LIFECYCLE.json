@@ -1,0 +1,34 @@
+{
+  "ai_invoked": false,
+  "all_passed": true,
+  "mode": "no_ai_software_fault_lifecycle",
+  "results": [
+    {
+      "artifact": "/usr/bin/jq",
+      "baseline_fault_inactive": true,
+      "baseline_snapshot": "755",
+      "fault_id": "sw_jq_tools_disable_binary_beaef1743c",
+      "fault_type": "software.executable.disabled",
+      "injection_verified": true,
+      "journal": "/home/zvanadium/seed-emulator/benchmarks/reports/software_fault_demo_journals/software-0000-sw_jq_tools_disable_binary_beaef1743c.json",
+      "plan_fingerprint": "96ee362d3844e45b79bf0ae54493e39ab6059f1b75e98a51d16c3db4e97f89e7",
+      "recovery_verified": true,
+      "target": "as64512h-host0-10.0.0.3"
+    },
+    {
+      "artifact": "/etc/jq/benchmark.conf",
+      "baseline_fault_inactive": true,
+      "baseline_snapshot": "03d781a31b1437a116062fc479f64d7b0bdcdeb76f99945a5b33233f420d4718",
+      "fault_id": "sw_jq_tools_wrong_mode_06cd5f430b",
+      "fault_type": "software.config.replace",
+      "injection_verified": true,
+      "journal": "/home/zvanadium/seed-emulator/benchmarks/reports/software_fault_demo_journals/software-0001-sw_jq_tools_wrong_mode_06cd5f430b.json",
+      "plan_fingerprint": "9c5c0f21e9db8b9d3d24ee75a2de274f59b91e977ab4b8b1dd4052bf950b89cd",
+      "recovery_verified": true,
+      "target": "as64512h-host0-10.0.0.3"
+    }
+  ],
+  "schema_version": 1,
+  "software_fault_count": 2,
+  "topology_fingerprint": "7f182918c307b97e787618209d859630de955f9d139e1cd37e58ba438869473f"
+}

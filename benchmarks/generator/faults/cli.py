@@ -11,6 +11,7 @@ from generator.faults.compiler import compile_fault_set
 from generator.faults.coverage import measure_coverage, select_combinations
 from generator.faults.journal import FaultExecutor
 from generator.faults.models import CompiledFaultPlan, FaultSpec
+from generator.faults.software import discover_software_fault_specs
 
 
 def _read(path: Path):
@@ -46,6 +47,15 @@ def parser() -> argparse.ArgumentParser:
     select_p.add_argument("--max-components", type=int, default=3)
     select_p.add_argument("--seed", required=True)
     select_p.add_argument("--output", required=True)
+    discover_p = sub.add_parser("discover-software")
+    discover_p.add_argument("--capabilities", required=True)
+    discover_p.add_argument("--seed", required=True)
+    discover_p.add_argument("--output", required=True)
+    validate_software = sub.add_parser("validate-software")
+    validate_software.add_argument("--capabilities", required=True)
+    validate_software.add_argument("--seed", required=True)
+    validate_software.add_argument("--journal-dir", required=True)
+    validate_software.add_argument("--output", required=True)
     coverage_p = sub.add_parser("coverage")
     coverage_p.add_argument("--plan", action="append", required=True)
     coverage_p.add_argument("--capabilities", required=True)
@@ -77,6 +87,76 @@ def main(argv=None) -> int:
         )
         _write(Path(args.output), [x.to_dict() for x in plans])
         print(f"selected_plans={len(plans)} output={args.output}")
+        return 0
+    if args.command == "discover-software":
+        specs = discover_software_fault_specs(
+            _read(Path(args.capabilities)), master_seed=args.seed
+        )
+        _write(Path(args.output), [item.to_dict() for item in specs])
+        print(f"discovered_software_faults={len(specs)} output={args.output}")
+        return 0
+    if args.command == "validate-software":
+        capabilities = _read(Path(args.capabilities))
+        specs = discover_software_fault_specs(capabilities, master_seed=args.seed)
+        if not specs:
+            raise ValueError("capability manifest exposes no software fault profiles")
+        executor = FaultExecutor(Path(args.journal_dir))
+        from generator.faults.drivers import get_driver
+        from generator.templates import evaluate_verifier
+
+        results = []
+        for index, spec in enumerate(specs):
+            plan = compile_fault_set((spec,), capabilities, relationship="single")
+            action = plan.actions[0]
+            driver = get_driver(action.driver)
+            snapshot_code, snapshot = driver.snapshot(action, executor.runner)
+            active_code, active_output = driver.verify_active(action, executor.runner)
+            baseline_active = evaluate_verifier(
+                action.active_verifier_kind,
+                action.active_verifier_value,
+                active_output,
+            )
+            if snapshot_code != 0 or baseline_active:
+                raise RuntimeError(
+                    f"software fault baseline is invalid for {spec.fault_id}: "
+                    f"snapshot={snapshot_code}, active={active_code}, "
+                    f"output={(snapshot + active_output)[:500]}"
+                )
+            execution_id = f"software-{index:04d}-{spec.fault_id}"
+            journal = executor.inject(plan, execution_id)
+            injected = _read(journal)
+            if injected.get("status") != "active":
+                raise RuntimeError(f"software fault did not become active: {spec.fault_id}")
+            executor.recover(plan, execution_id)
+            recovered = _read(journal)
+            if recovered.get("status") != "recovered":
+                raise RuntimeError(f"software fault did not recover: {spec.fault_id}")
+            results.append({
+                "fault_id": spec.fault_id,
+                "fault_type": spec.fault_type,
+                "target": action.targets[0],
+                "artifact": action.artifact,
+                "plan_fingerprint": plan.plan_fingerprint,
+                "baseline_snapshot": snapshot.strip()[:256],
+                "baseline_fault_inactive": True,
+                "injection_verified": True,
+                "recovery_verified": True,
+                "journal": str(journal.resolve()),
+            })
+        report = {
+            "schema_version": 1,
+            "mode": "no_ai_software_fault_lifecycle",
+            "ai_invoked": False,
+            "topology_fingerprint": capabilities.get("topology_fingerprint", ""),
+            "software_fault_count": len(results),
+            "all_passed": all(
+                item["injection_verified"] and item["recovery_verified"]
+                for item in results
+            ),
+            "results": results,
+        }
+        _write(Path(args.output), report)
+        print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
     if args.command == "coverage":
         report = measure_coverage(

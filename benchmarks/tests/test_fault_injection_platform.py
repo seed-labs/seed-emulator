@@ -17,6 +17,7 @@ from generator.faults import drivers as drivers_module  # noqa: E402
 from generator.faults.drivers import get_driver  # noqa: E402
 from generator.faults.journal import FaultExecutor  # noqa: E402
 from generator.faults.models import CompiledFaultPlan, FaultSpec  # noqa: E402
+from generator.faults.software import discover_software_fault_specs  # noqa: E402
 from generator.templates import (  # noqa: E402
     _bird_asn_candidate, _dns_candidate, _container_candidate,
     _random_acl_candidate, _random_dual_candidate, render_scenario,
@@ -47,6 +48,35 @@ def spec(fault_id, fault_type, container, parameters=None, *, max_assets=3):
     )
 
 
+def software_capabilities():
+    value = capabilities(2)
+    value["assets"][1]["software"] = [{
+        "schema_version": 1,
+        "software_id": "jq_tools",
+        "packages": ["jq"],
+        "resolved_packages": ["jq", "python3-minimal"],
+        "capabilities": ["json.query.v1"],
+        "managed_files": [{"path": "/etc/jq/benchmark.conf", "mode": "0644"}],
+        "fault_profiles": [
+            {
+                "profile_id": "wrong_mode",
+                "fault_type": "software.config.replace",
+                "parameters": {
+                    "path": "/etc/jq/benchmark.conf",
+                    "healthy_value": "mode=healthy",
+                    "faulty_value": "mode=broken",
+                },
+            },
+            {
+                "profile_id": "disable_binary",
+                "fault_type": "software.executable.disabled",
+                "parameters": {"path": "/usr/bin/jq", "expected_mode": "0755"},
+            },
+        ],
+    }]
+    return value
+
+
 # FaultSpec is strict, round-trippable, capability-selected and deterministic.
 container_spec = spec("stop_node1", "container.stopped", "node1")
 assert FaultSpec.from_dict(container_spec.to_dict()) == container_spec
@@ -62,6 +92,43 @@ try:
     raise AssertionError("tampered compiled plan was accepted")
 except ValueError as exc:
     assert "fingerprint" in str(exc)
+
+# Software capabilities automatically produce safe, deterministic FaultSpecs.
+software_specs_a = discover_software_fault_specs(
+    software_capabilities(), master_seed="software-seed"
+)
+software_specs_b = discover_software_fault_specs(
+    software_capabilities(), master_seed="software-seed"
+)
+assert software_specs_a == software_specs_b and len(software_specs_a) == 2
+software_plans = tuple(
+    compile_fault(item, software_capabilities()) for item in software_specs_a
+)
+software_actions = {plan.actions[0].driver: plan.actions[0] for plan in software_plans}
+config_action = software_actions["software.config.replace"]
+assert "python3 -c" in config_action.inject_command
+assert "/etc/jq/benchmark.conf" in config_action.inject_command
+assert "mode=healthy" not in config_action.inject_command
+assert "mode=broken" not in config_action.inject_command
+assert config_action.cleanup_command != config_action.inject_command
+executable_action = software_actions["software.executable.disabled"]
+assert "chmod 000" in executable_action.inject_command
+assert "chmod 0755" in executable_action.cleanup_command
+assert executable_action.targets == ("node1",)
+hostile_capabilities = json.loads(json.dumps(software_capabilities()))
+hostile_capabilities["assets"][1]["software"][0]["fault_profiles"][1][
+    "parameters"
+]["path"] = "/usr/bin/python3"
+hostile_spec = next(
+    item for item in discover_software_fault_specs(
+        hostile_capabilities, master_seed="hostile"
+    ) if item.fault_type == "software.executable.disabled"
+)
+try:
+    compile_fault(hostile_spec, hostile_capabilities)
+    raise AssertionError("protected software executable capability was accepted")
+except ValueError as exc:
+    assert "unsafe" in str(exc)
 
 # Impact, protected-target and resource-lock conflict gates fail closed.
 try:

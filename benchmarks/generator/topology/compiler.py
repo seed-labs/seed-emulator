@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shlex
 from typing import Dict
 
 import yaml
@@ -11,6 +12,37 @@ import yaml
 from generator.topology.models import TopologyPlan
 from generator.topology.planner import validate_topology_plan
 from generator.topology.registry import output_dir
+from generator.software import (
+    BUILTIN_ROUTER_SOFTWARE,
+    SOFTWARE_SPEC_VERSION,
+    capability_entry,
+    node_matches,
+    resolved_packages,
+)
+
+
+def _software_specs(plan: TopologyPlan):
+    from generator.topology.models import TopologyRequest
+
+    request = TopologyRequest.from_dict(plan.request)
+    return (BUILTIN_ROUTER_SOFTWARE, *request.software)
+
+
+def _apply_software(node, plan: TopologyPlan, *, role: str, asn: int, node_name: str):
+    """Translate SoftwareSpec data into SEED node APIs, never raw user shell."""
+    applied = []
+    for spec in _software_specs(plan):
+        if not node_matches(spec, role=role, asn=asn, node_name=node_name):
+            continue
+        for package in resolved_packages(spec):
+            node.addSoftware(package)
+        for managed in spec.managed_files:
+            node.setFile(managed.path, managed.content)
+            node.addBuildCommandAtEnd(
+                f"chmod {managed.mode} {shlex.quote(managed.path)}"
+            )
+        applied.append(spec)
+    return tuple(applied)
 
 
 def build_emulator(plan: TopologyPlan):
@@ -32,9 +64,16 @@ def build_emulator(plan: TopologyPlan):
         router = autonomous_system.createRouter("router0")
         router.setLoopbackAddress(item.loopback_address)
         router.joinNetwork("lan0", item.router_address)
-        router.addSoftware("iptables")
+        _apply_software(
+            router, plan, role="router", asn=item.asn, node_name="router0"
+        )
         for index, address in enumerate(item.host_addresses):
-            autonomous_system.createHost(f"host{index}").joinNetwork("lan0", address)
+            node_name = f"host{index}"
+            host = autonomous_system.createHost(node_name)
+            host.joinNetwork("lan0", address)
+            _apply_software(
+                host, plan, role="host", asn=item.asn, node_name=node_name
+            )
         systems[item.asn] = autonomous_system
     for link in plan.external_links:
         systems[link.left_asn].getRouter("router0").joinNetwork(
@@ -76,6 +115,20 @@ def _capability_manifest(plan: TopologyPlan, compose_file: Path) -> Dict[str, ob
                 "address": labels[f"org.seedsecuritylabs.seedemu.meta.net.{index}.address"],
             })
             index += 1
+        normalized_role = "router" if "Router" in role else "host"
+        software = [
+            capability_entry(
+                spec,
+                source="builtin" if spec is BUILTIN_ROUTER_SOFTWARE else "declared",
+            )
+            for spec in _software_specs(plan)
+            if node_matches(
+                spec,
+                role=normalized_role,
+                asn=int(labels["org.seedsecuritylabs.seedemu.meta.asn"]),
+                node_name=labels.get("org.seedsecuritylabs.seedemu.meta.nodename", ""),
+            )
+        ]
         assets.append({
             "service": service_name,
             "container": service.get("container_name", service_name),
@@ -86,6 +139,7 @@ def _capability_manifest(plan: TopologyPlan, compose_file: Path) -> Dict[str, ob
                 "org.seedsecuritylabs.seedemu.meta.loopback_addr"
             ),
             "interfaces": interfaces,
+            "software": software,
         })
     routers = [item for item in assets if "Router" in item["role"]]
     hosts = [item for item in assets if item["role"] == "Host"]
@@ -118,6 +172,7 @@ def _capability_manifest(plan: TopologyPlan, compose_file: Path) -> Dict[str, ob
     }
     return {
         "schema_version": 1,
+        "software_capability_schema_version": SOFTWARE_SPEC_VERSION,
         "topology_id": plan.topology_id,
         "topology_name": plan.topology_name,
         "topology_fingerprint": plan.fingerprint,
@@ -130,6 +185,13 @@ def _capability_manifest(plan: TopologyPlan, compose_file: Path) -> Dict[str, ob
             for name, network in sorted((compose.get("networks") or {}).items())
         },
         "assets": assets,
+        "software_catalog": [
+            capability_entry(
+                spec,
+                source="builtin" if spec is BUILTIN_ROUTER_SOFTWARE else "declared",
+            )
+            for spec in _software_specs(plan)
+        ],
         "fault_component_bindings": bindings,
     }
 
@@ -191,6 +253,30 @@ def validate_compiled_output(plan: TopologyPlan) -> Dict[str, object]:
         raise ValueError("compiled topology exposes no router fault bindings")
     if not manifest["fault_component_bindings"]["container_stopped"]:
         raise ValueError("compiled topology exposes no host fault bindings")
+    if "software_catalog" in manifest:
+        expected_catalog = [
+            capability_entry(
+                spec,
+                source="builtin" if spec is BUILTIN_ROUTER_SOFTWARE else "declared",
+            )
+            for spec in _software_specs(plan)
+        ]
+        if (
+            manifest.get("software_capability_schema_version") != SOFTWARE_SPEC_VERSION
+            or manifest["software_catalog"] != expected_catalog
+        ):
+            raise ValueError("compiled software capability catalog differs from plan")
+        for asset in manifest["assets"]:
+            normalized_role = "router" if "Router" in asset["role"] else "host"
+            expected = [
+                entry for spec, entry in zip(_software_specs(plan), expected_catalog)
+                if node_matches(
+                    spec, role=normalized_role, asn=int(asset["asn"]),
+                    node_name=asset["node_name"],
+                )
+            ]
+            if asset.get("software") != expected:
+                raise ValueError("compiled asset software capabilities differ from plan")
     planned_loopbacks = {
         item.asn: item.loopback_address for item in plan.autonomous_systems
     }

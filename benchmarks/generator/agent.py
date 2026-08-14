@@ -75,6 +75,14 @@ class BenchmarkGeneratorAgent:
 
         return compile_fault_set(specs, capabilities, relationship=relationship)
 
+    def discover_software_faults(self, capabilities, *, master_seed):
+        """Produce deterministic FaultSpec candidates from SoftwareSpec profiles."""
+        from generator.faults.software import discover_software_fault_specs
+
+        return discover_software_fault_specs(
+            capabilities, master_seed=master_seed
+        )
+
     def fault_coverage(self, plans, capabilities):
         from generator.faults.coverage import measure_coverage
 

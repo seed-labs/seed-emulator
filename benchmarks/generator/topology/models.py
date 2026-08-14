@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Mapping, Tuple
 
+from generator.software import SoftwareSpec
+
 
 TOPOLOGY_SCHEMA_VERSION = 1
 TOPOLOGY_GENERATOR_VERSION = "1.0.0"
@@ -54,6 +56,22 @@ class TopologyRequest:
     ix_prefixlen: int = 29
     platform: str = "amd"
     budget: ResourceBudget = ResourceBudget()
+    software: Tuple[SoftwareSpec, ...] = ()
+
+    def to_dict(self) -> Dict[str, Any]:
+        value = {
+            **{
+                key: item
+                for key, item in self.__dict__.items()
+                if key not in {"budget", "software"}
+            },
+            "budget": self.budget.__dict__,
+        }
+        # Omit the additive field when empty so registered v1 plans retain
+        # byte-for-byte fingerprints and continue to validate.
+        if self.software:
+            value["software"] = [item.to_dict() for item in self.software]
+        return value
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "TopologyRequest":
@@ -62,6 +80,9 @@ class TopologyRequest:
         data = _strict(value, required, optional)
         if "budget" in data:
             data["budget"] = ResourceBudget.from_dict(data["budget"])
+        data["software"] = tuple(
+            SoftwareSpec.from_dict(item) for item in data.get("software", ())
+        )
         data["explicit_edges"] = tuple(
             tuple(int(endpoint) for endpoint in edge)
             for edge in data.get("explicit_edges", ())
@@ -141,8 +162,5 @@ class TopologyPlan:
         )
         data["resource_estimate"] = ResourceEstimate(**data["resource_estimate"])
         request = TopologyRequest.from_dict(data["request"])
-        data["request"] = {
-            **{key: value for key, value in request.__dict__.items() if key != "budget"},
-            "budget": request.budget.__dict__,
-        }
+        data["request"] = request.to_dict()
         return cls(**data)

@@ -59,7 +59,7 @@
       "host": "as64514h-host0-10.0.2.3"
     }
   ],
-  "started_at": "2026-08-12T21:32:58.481400",
+  "started_at": "2026-08-14T21:20:57.613981",
   "topology_fingerprint": "cf41242b9e3801ae23c4e4bc95bd628e5d642f3280d36062378b6afbba5d01f9",
   "topology_id": "small_ring",
   "topology_name": "DECLARATIVE_small_ring"

@@ -16,6 +16,7 @@ from generator.topology.models import (
     TopologyPlan,
     TopologyRequest,
 )
+from generator.software import validate_software_specs
 
 
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{2,47}$")
@@ -117,6 +118,11 @@ def _validate_request(request: TopologyRequest) -> None:
         raise ValueError("platform must be amd or arm")
     if request.asn_start < 1 or request.asn_start + request.as_count - 1 > 4294967294:
         raise ValueError("ASN allocation exceeds the 32-bit range")
+    validate_software_specs(
+        request.software,
+        asns=tuple(range(request.asn_start, request.asn_start + request.as_count)),
+        hosts_per_as=request.hosts_per_as,
+    )
     lan_pool = ipaddress.ip_network(request.lan_pool, strict=True)
     ix_pool = ipaddress.ip_network(request.ix_pool, strict=True)
     loopback_pool = ipaddress.ip_network(request.loopback_pool, strict=True)
@@ -204,10 +210,7 @@ def plan_topology(request: TopologyRequest) -> TopologyPlan:
     if violations:
         raise ValueError("resource budget exceeded: " + ", ".join(violations))
 
-    request_dict = {
-        **{key: value for key, value in request.__dict__.items() if key != "budget"},
-        "budget": request.budget.__dict__,
-    }
+    request_dict = request.to_dict()
     content = {
         "topology_id": request.topology_id,
         "topology_name": f"DECLARATIVE_{request.topology_id}",

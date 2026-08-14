@@ -1,5 +1,14 @@
 # Fault Injection Platform v1
 
+## Declarative software capabilities
+
+The platform also accepts `SoftwareSpec v1` and publishes per-asset software
+capabilities. `discover-software` derives deterministic FaultSpecs from those
+capabilities. The first generic plugins are `software.config.replace` and
+`software.executable.disabled`; both use the same compiler, journal, recovery,
+coverage, and conflict gates described below. The complete contract and example
+are in `DECLARATIVE_SOFTWARE_FAULTS.md`.
+
 The benchmark generator now separates fault meaning from execution technology.
 Every new fault is a strict `FaultSpec` compiled against a topology capability
 manifest before any mutation is allowed.
