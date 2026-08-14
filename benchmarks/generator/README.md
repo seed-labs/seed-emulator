@@ -22,6 +22,7 @@ Bundle、质量门禁、晋级和生产调度。所有入口都必须保持可�
 | `faults/` | `FaultSpec v1`、FaultDriver、编译、覆盖率、执行日志和恢复 |
 | `topology/` | 声明式拓扑模型、规划、SEED 编译、能力清单和拓扑测试 |
 | `topology/examples/` | 声明式拓扑请求示例 |
+| `nl/` | 自然语言意图、LLMProvider、澄清、安全、审批和 NL CLI |
 
 详细说明分别见各目录的 `README.md`。
 
@@ -67,6 +68,26 @@ python3 -m generator.bundle.cli generate \
   --request generator/bundle/examples/production_application_request.json \
   --workspace reports/example_generation
 ```
+
+### 自然语言入口
+
+自然语言层只将用户需求转换为声明式对象，默认执行 plan-only；LLM 不拥有 Docker 或故障
+执行权限：
+
+```text
+自然语言 → BenchmarkIntent v1 → 澄清/安全/能力检查
+  → TopologyRequest + BenchmarkRequest → 九 Worker plan-only
+  → 一次性审批 → 可选真实无 AI 生命周期
+```
+
+入口为：
+
+```bash
+python3 -m generator.nl.cli nl-plan \
+  --text "生成一个包含 nginx 和 DNS 的 hard 场景，注入延迟和容器停止故障"
+```
+
+详见 `nl/README.md`。
 
 ## 根层模块
 
@@ -122,6 +143,8 @@ python3 tests/test_production_generator.py
 python3 -m generator.bundle.cli --help
 python3 -m generator.topology.cli --help
 python3 -m generator.faults.cli --help
+python3 -m generator.nl.cli --help
+python3 tests/test_natural_language_generator.py
 ```
 
 若在 CI 中检查某个提交区间的 README 同步情况：

@@ -48,6 +48,7 @@ def main(argv=None) -> int:
         _run("tests/test_multi_agent_bundle.py"),
         _run("tests/test_fault_injection_platform.py"),
         _run("tests/test_topology_generator.py"),
+        _run("tests/test_natural_language_generator.py"),
     ]
     matrix = continuous_validation_matrix()
     selected = [row for row in matrix["rows"] if row["scale"] in TIERS[args.tier]]
