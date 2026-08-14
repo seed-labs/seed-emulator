@@ -15,6 +15,14 @@ from generator.bundle.plugins import builtin_registry
 from generator.bundle.qualification import qualify_bundle
 from generator.bundle.scale import validate_bundle_scales
 from generator.bundle.lifecycle import BundleLifecycleExecutor, DockerLifecycleRunner
+from generator.bundle.pipeline import ProductionGenerator, ProductionWorkerRuntime
+from generator.bundle.publishing import score_submission
+from generator.bundle.request import BenchmarkRequest
+from generator.bundle.scheduler import (
+    DistributedScheduler, ProductionJob, continuous_validation_matrix,
+)
+from generator.bundle.templates import builtin_template_registry
+from generator.bundle.workers import WorkerContext, run_external_worker_once
 
 
 BENCHMARKS_DIR = Path(__file__).resolve().parents[2]
@@ -70,6 +78,7 @@ def build_parser():
     claim.add_argument("--store", required=True)
     claim.add_argument("--state", required=True)
     claim.add_argument("--worker-id", required=True)
+    claim.add_argument("--agent-role")
     complete = commands.add_parser("coordinate-complete")
     complete.add_argument("--store", required=True)
     complete.add_argument("--state", required=True)
@@ -89,13 +98,131 @@ def build_parser():
     scale = commands.add_parser("scale-validate")
     scale.add_argument("--bundle", required=True)
     scale.add_argument("--size", action="append", type=int)
+    scale.add_argument("--capabilities")
     scale.add_argument("--output", required=True)
+    generate = commands.add_parser("generate")
+    generate.add_argument("--request", required=True)
+    generate.add_argument("--workspace", required=True)
+    generate.add_argument("--capabilities")
+    generate.add_argument("--release-version", default="1.0.0")
+    generate.add_argument("--template-file", action="append")
+    worker = commands.add_parser("worker-run")
+    worker.add_argument("--request", required=True)
+    worker.add_argument("--capabilities", required=True)
+    worker.add_argument("--store", required=True)
+    worker.add_argument("--state", required=True)
+    worker.add_argument("--role", required=True)
+    worker.add_argument("--worker-id", required=True)
+    worker.add_argument("--template-file", action="append")
+    score = commands.add_parser("score")
+    score.add_argument("--evidence", required=True)
+    score.add_argument("--output", required=True)
+    enqueue = commands.add_parser("schedule-enqueue")
+    enqueue.add_argument("--scheduler", required=True)
+    enqueue.add_argument("--job", required=True)
+    schedule_status = commands.add_parser("schedule-status")
+    schedule_status.add_argument("--scheduler", required=True)
+    schedule_claim = commands.add_parser("schedule-claim")
+    schedule_claim.add_argument("--scheduler", required=True)
+    schedule_claim.add_argument("--worker-id", required=True)
+    schedule_claim.add_argument("--resource-class", required=True)
+    schedule_claim.add_argument("--max-scale", type=int, required=True)
+    schedule_complete = commands.add_parser("schedule-complete")
+    schedule_complete.add_argument("--scheduler", required=True)
+    schedule_complete.add_argument("--job-id", required=True)
+    schedule_complete.add_argument("--lease-id", required=True)
+    schedule_complete.add_argument("--result", required=True)
+    schedule_fail = commands.add_parser("schedule-fail")
+    schedule_fail.add_argument("--scheduler", required=True)
+    schedule_fail.add_argument("--job-id", required=True)
+    schedule_fail.add_argument("--lease-id", required=True)
+    schedule_fail.add_argument("--error", required=True)
+    schedule_fail.add_argument("--quarantine", action="store_true")
+    schedule_run = commands.add_parser("schedule-run")
+    schedule_run.add_argument("--scheduler", required=True)
+    schedule_run.add_argument("--allowed-root", required=True)
+    schedule_run.add_argument("--worker-id", required=True)
+    schedule_run.add_argument("--resource-class", required=True)
+    schedule_run.add_argument("--max-scale", type=int, required=True)
+    ci_matrix = commands.add_parser("ci-matrix")
+    ci_matrix.add_argument("--output", required=True)
+    templates = commands.add_parser("templates")
+    templates.add_argument("--template-file", action="append")
     commands.add_parser("plugins")
     return parser
 
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    if args.command == "generate":
+        request = BenchmarkRequest.from_dict(_read(args.request))
+        capabilities = _read(args.capabilities) if args.capabilities else None
+        registry = builtin_template_registry()
+        for path in args.template_file or ():
+            registry.load_file(Path(path))
+        summary = ProductionGenerator(BENCHMARKS_DIR).generate(
+            request, Path(args.workspace), capabilities=capabilities,
+            release_version=args.release_version, templates=registry,
+        )
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
+    if args.command == "worker-run":
+        request = BenchmarkRequest.from_dict(_read(args.request))
+        registry = builtin_template_registry()
+        for path in args.template_file or ():
+            registry.load_file(Path(path))
+        context = WorkerContext.build(request, _read(args.capabilities), registry)
+        coordinator = BenchmarkCoordinator(
+            Path(args.state), ArtifactStore(Path(args.store))
+        )
+        result = run_external_worker_once(
+            coordinator, context, role=args.role, worker_id=args.worker_id
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+    if args.command == "score":
+        result = score_submission(_read(args.evidence))
+        path = _write(args.output, result)
+        print(json.dumps({"output": str(path), **result}, indent=2, sort_keys=True))
+        return 0 if result["passed"] else 2
+    if args.command.startswith("schedule-"):
+        scheduler = DistributedScheduler(Path(args.scheduler))
+        if args.command == "schedule-run":
+            result = ProductionWorkerRuntime(
+                BENCHMARKS_DIR, scheduler, Path(args.allowed_root)
+            ).run_once(
+                worker_id=args.worker_id, resource_class=args.resource_class,
+                max_scale=args.max_scale,
+            )
+            print(json.dumps(result, indent=2, sort_keys=True)); return 0
+        if args.command == "schedule-enqueue":
+            job = ProductionJob.from_dict(_read(args.job)); scheduler.enqueue(job)
+            print(f"enqueued_job={job.job_id}"); return 0
+        if args.command == "schedule-status":
+            recovered = scheduler.recover_expired()
+            print(json.dumps({"state": scheduler.load(), "recovered": recovered}, indent=2, sort_keys=True)); return 0
+        if args.command == "schedule-claim":
+            print(json.dumps(scheduler.claim(
+                worker_id=args.worker_id, resource_class=args.resource_class,
+                max_scale=args.max_scale,
+            ), indent=2, sort_keys=True)); return 0
+        if args.command == "schedule-complete":
+            scheduler.complete(args.job_id, args.lease_id, _read(args.result))
+            print(f"completed_job={args.job_id}"); return 0
+        scheduler.fail(
+            args.job_id, args.lease_id, args.error, quarantine=args.quarantine
+        )
+        print(f"failed_job={args.job_id} quarantine={args.quarantine}"); return 0
+    if args.command == "ci-matrix":
+        value = continuous_validation_matrix(); path = _write(args.output, value)
+        print(json.dumps({"output": str(path), **value}, indent=2, sort_keys=True)); return 0
+    if args.command == "templates":
+        registry = builtin_template_registry()
+        for path in args.template_file or ():
+            registry.load_file(Path(path))
+        print(json.dumps([
+            item.to_dict() for item in registry.inventory()
+        ], indent=2, sort_keys=True)); return 0
     if args.command == "artifact-put":
         raw = _read(args.artifact)
         if not raw.get("artifact_fingerprint"):
@@ -148,7 +275,12 @@ def main(argv=None):
             path = qualify_bundle(bundle, [Path(x) for x in args.receipt], Path(args.output))
             print(f"qualified_bundle={bundle.benchmark_id} record={path}")
             return 0
-        report = validate_bundle_scales(bundle, args.size or (5, 20, 100, 1000, 10000))
+        report = validate_bundle_scales(
+            bundle, args.size or (5, 20, 100, 1000, 10000),
+            base_capabilities=(
+                _read(args.capabilities) if args.capabilities else None
+            ),
+        )
         path = _write(args.output, report)
         print(json.dumps({"report": str(path), **report}, indent=2, sort_keys=True))
         return 0 if report["passed"] else 2
@@ -166,7 +298,9 @@ def main(argv=None):
         return 0
     if args.command == "coordinate-claim":
         coordinator = BenchmarkCoordinator(Path(args.state), ArtifactStore(Path(args.store)))
-        print(json.dumps(coordinator.claim_next(worker_id=args.worker_id), indent=2, sort_keys=True))
+        print(json.dumps(coordinator.claim_next(
+            worker_id=args.worker_id, agent_role=args.agent_role
+        ), indent=2, sort_keys=True))
         return 0
     if args.command == "coordinate-complete":
         coordinator = BenchmarkCoordinator(Path(args.state), ArtifactStore(Path(args.store)))

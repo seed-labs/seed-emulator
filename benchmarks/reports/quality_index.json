@@ -1,0 +1,31 @@
+{
+  "entries": {
+    "3ccb768cb308b1ccc27609d58fdb4c60d0e629ad837133ed26fb3f21da0a88e7": {
+      "benchmark_id": "production_application_pilot",
+      "latest_bundle_fingerprint": "40dcf703f31e94d4df95736a2dbb0f356f5b4be6da9554488218ab236d583d44",
+      "revisions": [
+        {
+          "bundle_fingerprint": "b1f11fbaa981a3a3900652f99b4790880b9662fa7c0233a4b11f37a94b8e4ceb",
+          "quality_fingerprint": "767fc89dada4662c98dc6555f6a5787f79c1e2ecf3308a5a2bc55215878be49f",
+          "registered_at": "2026-08-14T17:17:06.005038+00:00"
+        },
+        {
+          "bundle_fingerprint": "d482a97dfeba9c25a1a3dcbe47c8b992567f3acf3deb49730357f1c912c7443e",
+          "quality_fingerprint": "a2bf9f762f6eb164b8d94975719628ad084a781c1079c3621e1c23ca254985a5",
+          "registered_at": "2026-08-14T17:21:07.041395+00:00"
+        },
+        {
+          "bundle_fingerprint": "ce547e767b2d605a18012350054d44deb0c7063ffef599ad012bdd1340678d5b",
+          "quality_fingerprint": "bb96bd2da186ae695aeef94d5417b471cd6d77acfbeb2d2f62e2191f8bc9ba2f",
+          "registered_at": "2026-08-14T17:29:20.191084+00:00"
+        },
+        {
+          "bundle_fingerprint": "40dcf703f31e94d4df95736a2dbb0f356f5b4be6da9554488218ab236d583d44",
+          "quality_fingerprint": "16dc15bc3be29d995176ed159bd437cf497174b9592e25b2f8b73c69171fefab",
+          "registered_at": "2026-08-14T17:30:56.946345+00:00"
+        }
+      ]
+    }
+  },
+  "schema_version": 1
+}

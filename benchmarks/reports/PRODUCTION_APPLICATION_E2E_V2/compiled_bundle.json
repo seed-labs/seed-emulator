@@ -1,0 +1,690 @@
+{
+  "artifact_fingerprints": [
+    "bba70228f7ad31ee3047701c19627c9378b1ab9147e5bfd77e92b5acbccb98df",
+    "29c0558a8831f132f78bf3497d4a398cac88193e1ba7e884c6322e0dcab1268d",
+    "d6d3f6b6afde609cbe8948c7981e191c80eda04093a77cf4577245d2d14bbeb9",
+    "b6bace38b9313a0ca10f34264f5203f770e939cd9ffdaf69f4097608c2f3907b",
+    "1eccfab6ba5925ac5617b652fc61b079bba3859271e4aae613e08709d3cba4f7",
+    "5398015d81bcfe3c565b0ec24caa21f90d3c74334d9dd8a07af3b12a81a7941f",
+    "2ee9e4c764ebc3735aa08506c0c756308ce315aa174e701b2ea1a03aabb4ec83",
+    "c86a97193dd708ba8f5870573b90d81e66d61ad4a1911189ed6ec772f4d6ed9c",
+    "55cdffc3ab0305d53bc0f88eb5229f2bef21de4473e2881796c82b8e4111ffd1",
+    "5336c0f4e49db06287bbe45efa66691b63ae51adea8c3c617f24b60035637274"
+  ],
+  "benchmark_id": "production_application_pilot",
+  "bundle_fingerprint": "40dcf703f31e94d4df95736a2dbb0f356f5b4be6da9554488218ab236d583d44",
+  "generator_contract_sha256": "72c3e121ad12f26c39bc4997aad4dae2374f2b7c3d8d4902b06efd7921c15b8b",
+  "private_bundle": {
+    "blind_policy": {
+      "forbidden_public_fields": [
+        "fault_id",
+        "fault_type",
+        "faulty_value",
+        "expected_value",
+        "inject_command",
+        "cleanup_command",
+        "root_causes"
+      ],
+      "private_sections": [
+        "fault_plans",
+        "oracles",
+        "scoring"
+      ],
+      "public_sections": [
+        "services",
+        "workloads",
+        "public_tests"
+      ],
+      "schema_version": 1
+    },
+    "fault_plans": [
+      {
+        "actions": [
+          {
+            "action_id": "fault_01_bind9",
+            "active_check_command": "docker exec as64512h-host1-10.0.0.4 tc qdisc show dev lan0",
+            "active_verifier_kind": "contains",
+            "active_verifier_value": "netem",
+            "artifact": "tc qdisc lan0",
+            "at_seconds": 0.0,
+            "category": "network_impairment",
+            "cleanup_command": "docker exec as64512h-host1-10.0.0.4 sh -c 'tc qdisc del dev lan0 root 2>/dev/null || true'",
+            "cleanup_order": 2,
+            "depends_on": [],
+            "driver": "network.netem",
+            "duration_seconds": 0.0,
+            "expected_value": "no netem qdisc",
+            "faulty_value": "loss=100%",
+            "inject_command": "docker exec as64512h-host1-10.0.0.4 tc qdisc replace dev lan0 root netem loss 100%",
+            "inject_order": 0,
+            "resource_locks": [
+              "container:as64512h-host1-10.0.0.4:qdisc:lan0"
+            ],
+            "snapshot_command": "docker exec as64512h-host1-10.0.0.4 tc qdisc show dev lan0",
+            "targets": [
+              "as64512h-host1-10.0.0.4"
+            ]
+          },
+          {
+            "action_id": "fault_02_nginx",
+            "active_check_command": "docker inspect --format '{{.State.Running}}' as64512h-host0-10.0.0.3",
+            "active_verifier_kind": "equals",
+            "active_verifier_value": "false",
+            "artifact": "Docker container state",
+            "at_seconds": 0.0,
+            "category": "container_not_running",
+            "cleanup_command": "docker start as64512h-host0-10.0.0.3",
+            "cleanup_order": 1,
+            "depends_on": [],
+            "driver": "container.stopped",
+            "duration_seconds": 0.0,
+            "expected_value": "running",
+            "faulty_value": "stopped",
+            "inject_command": "docker stop as64512h-host0-10.0.0.3",
+            "inject_order": 1,
+            "resource_locks": [
+              "container:as64512h-host0-10.0.0.3:exclusive"
+            ],
+            "snapshot_command": "docker inspect --format '{{.State.Running}}' as64512h-host0-10.0.0.3",
+            "targets": [
+              "as64512h-host0-10.0.0.3"
+            ]
+          },
+          {
+            "action_id": "fault_03_postgresql",
+            "active_check_command": "docker inspect --format '{{.State.Running}}' as64512h-host2-10.0.0.5",
+            "active_verifier_kind": "equals",
+            "active_verifier_value": "false",
+            "artifact": "Docker container state",
+            "at_seconds": 0.0,
+            "category": "container_not_running",
+            "cleanup_command": "docker start as64512h-host2-10.0.0.5",
+            "cleanup_order": 0,
+            "depends_on": [],
+            "driver": "container.stopped",
+            "duration_seconds": 0.0,
+            "expected_value": "running",
+            "faulty_value": "stopped",
+            "inject_command": "docker stop as64512h-host2-10.0.0.5",
+            "inject_order": 2,
+            "resource_locks": [
+              "container:as64512h-host2-10.0.0.5:exclusive"
+            ],
+            "snapshot_command": "docker inspect --format '{{.State.Running}}' as64512h-host2-10.0.0.5",
+            "targets": [
+              "as64512h-host2-10.0.0.5"
+            ]
+          }
+        ],
+        "affected_asns": [
+          64512
+        ],
+        "affected_assets": [
+          "as64512h-host1-10.0.0.4",
+          "as64512h-host0-10.0.0.3",
+          "as64512h-host2-10.0.0.5"
+        ],
+        "fault_ids": [
+          "fault_01_bind9",
+          "fault_02_nginx",
+          "fault_03_postgresql"
+        ],
+        "impact": {
+          "affected_asn_count": 1,
+          "affected_asset_count": 3,
+          "must_break": [
+            "bind9_availability",
+            "nginx_availability",
+            "postgresql_availability"
+          ],
+          "must_preserve": [
+            "observer_availability",
+            "observer_availability",
+            "observer_availability"
+          ],
+          "resource_locks": [
+            "container:as64512h-host0-10.0.0.3:exclusive",
+            "container:as64512h-host1-10.0.0.4:qdisc:lan0",
+            "container:as64512h-host2-10.0.0.5:exclusive"
+          ]
+        },
+        "plan_fingerprint": "0f6b20bb0123a9483a6d02cbb8918ce7ff8c32b253f0c0524015d93e01f15c59",
+        "relationship": "independent",
+        "topology_fingerprint": "a5e184f646145e377b2396f662d200a456520c1edb39cff7b0bf9dcd9c72ad39"
+      }
+    ],
+    "lifecycle": {
+      "baseline_timeout": 120,
+      "fault_timeout": 120,
+      "recovery_timeout": 300,
+      "repeat_runs": 2,
+      "schema_version": 1
+    },
+    "must_break": [
+      "bind9_availability",
+      "nginx_availability",
+      "postgresql_availability"
+    ],
+    "must_preserve": [
+      "observer_availability"
+    ],
+    "oracles": [
+      {
+        "oracle_id": "generated_oracle_v1",
+        "phase_requirements": {
+          "active": [
+            "active_nginx",
+            "active_bind9",
+            "active_postgresql",
+            "active_observer"
+          ],
+          "recovery": [
+            "recovery_bind9",
+            "recovery_nginx",
+            "recovery_postgresql"
+          ]
+        },
+        "required_tests": [
+          "active_nginx",
+          "active_bind9",
+          "active_postgresql",
+          "active_observer",
+          "recovery_bind9",
+          "recovery_nginx",
+          "recovery_postgresql"
+        ],
+        "schema_version": 1
+      }
+    ],
+    "schema_version": 1,
+    "scoring": {
+      "pass_threshold": 1.0,
+      "schema_version": 1,
+      "scoring_id": "generated_weighted_v1",
+      "weights": {
+        "active_bind9": 2.0,
+        "active_nginx": 2.0,
+        "active_observer": 1.0,
+        "active_postgresql": 2.0,
+        "recovery_bind9": 2.0,
+        "recovery_nginx": 2.0,
+        "recovery_postgresql": 2.0
+      }
+    },
+    "services": [
+      {
+        "capabilities_required": [
+          "http.nginx.v1"
+        ],
+        "dependencies": [],
+        "driver": "service.process",
+        "environment": {},
+        "parameters": {
+          "health_argv": [
+            "curl",
+            "-fsS",
+            "http://127.0.0.1/"
+          ],
+          "start_argv": [
+            "service",
+            "nginx",
+            "start"
+          ]
+        },
+        "ports": [
+          80
+        ],
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host0-10.0.0.3"
+        },
+        "service_id": "nginx_service"
+      },
+      {
+        "capabilities_required": [
+          "dns.bind9.v1"
+        ],
+        "dependencies": [],
+        "driver": "service.process",
+        "environment": {},
+        "parameters": {
+          "health_argv": [
+            "rndc",
+            "status"
+          ],
+          "start_argv": [
+            "service",
+            "named",
+            "start"
+          ]
+        },
+        "ports": [
+          53
+        ],
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host1-10.0.0.4"
+        },
+        "service_id": "bind9_service"
+      },
+      {
+        "capabilities_required": [
+          "database.postgresql.v1"
+        ],
+        "dependencies": [],
+        "driver": "service.process",
+        "environment": {},
+        "parameters": {
+          "health_argv": [
+            "pg_isready"
+          ],
+          "start_argv": [
+            "service",
+            "postgresql",
+            "start"
+          ]
+        },
+        "ports": [
+          5432
+        ],
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host2-10.0.0.5"
+        },
+        "service_id": "postgresql_service"
+      }
+    ],
+    "tests": [
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.http",
+        "expectation_id": "nginx_healthy",
+        "parameters": {
+          "url": "http://10.0.0.3:80/"
+        },
+        "phase": "baseline",
+        "public": true,
+        "retries": 1,
+        "samples": 1,
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "test_id": "baseline_nginx",
+        "timeout_seconds": 10.0
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_healthy",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.0.0.4"
+        },
+        "phase": "baseline",
+        "public": true,
+        "retries": 1,
+        "samples": 1,
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "test_id": "baseline_bind9",
+        "timeout_seconds": 10.0
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.tcp",
+        "expectation_id": "postgresql_healthy",
+        "parameters": {
+          "host": "127.0.0.1",
+          "port": 5432
+        },
+        "phase": "baseline",
+        "public": true,
+        "retries": 1,
+        "samples": 1,
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host2-10.0.0.5"
+        },
+        "test_id": "baseline_postgresql",
+        "timeout_seconds": 10.0
+      },
+      {
+        "assertion": {
+          "kind": "exit_code_not",
+          "value": 0
+        },
+        "driver": "probe.http",
+        "expectation_id": "nginx_availability",
+        "parameters": {
+          "url": "http://10.0.0.3:80/"
+        },
+        "phase": "active",
+        "public": true,
+        "retries": 1,
+        "samples": 1,
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "test_id": "active_nginx",
+        "timeout_seconds": 10.0
+      },
+      {
+        "assertion": {
+          "kind": "exit_code_not",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_availability",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.0.0.4"
+        },
+        "phase": "active",
+        "public": true,
+        "retries": 1,
+        "samples": 1,
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "test_id": "active_bind9",
+        "timeout_seconds": 10.0
+      },
+      {
+        "assertion": {
+          "kind": "exit_code_not",
+          "value": 0
+        },
+        "driver": "probe.tcp",
+        "expectation_id": "postgresql_availability",
+        "parameters": {
+          "host": "127.0.0.1",
+          "port": 5432
+        },
+        "phase": "active",
+        "public": true,
+        "retries": 1,
+        "samples": 1,
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host2-10.0.0.5"
+        },
+        "test_id": "active_postgresql",
+        "timeout_seconds": 10.0
+      },
+      {
+        "assertion": {
+          "kind": "equals",
+          "value": "true"
+        },
+        "driver": "probe.container",
+        "expectation_id": "observer_availability",
+        "parameters": {},
+        "phase": "active",
+        "public": true,
+        "retries": 0,
+        "samples": 1,
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "test_id": "active_observer",
+        "timeout_seconds": 10.0
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.tcp",
+        "expectation_id": "postgresql_availability",
+        "parameters": {
+          "host": "127.0.0.1",
+          "port": 5432
+        },
+        "phase": "recovery",
+        "public": true,
+        "retries": 5,
+        "samples": 1,
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host2-10.0.0.5"
+        },
+        "test_id": "recovery_postgresql",
+        "timeout_seconds": 10.0
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_availability",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.0.0.4"
+        },
+        "phase": "recovery",
+        "public": true,
+        "retries": 5,
+        "samples": 1,
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "test_id": "recovery_bind9",
+        "timeout_seconds": 10.0
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.http",
+        "expectation_id": "nginx_availability",
+        "parameters": {
+          "url": "http://10.0.0.3:80/"
+        },
+        "phase": "recovery",
+        "public": true,
+        "retries": 5,
+        "samples": 1,
+        "schema_version": 1,
+        "selector": {
+          "choose": 1,
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "test_id": "recovery_nginx",
+        "timeout_seconds": 10.0
+      }
+    ],
+    "workloads": [
+      {
+        "driver": "workload.http",
+        "duration_seconds": 1.0,
+        "parameters": {
+          "url": "http://10.0.0.3:80/"
+        },
+        "schema_version": 1,
+        "source": {
+          "choose": 1,
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "target_service": "nginx_service",
+        "warmup_seconds": 0.0,
+        "workload_id": "nginx_workload"
+      },
+      {
+        "driver": "workload.dns",
+        "duration_seconds": 1.0,
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.0.0.4"
+        },
+        "schema_version": 1,
+        "source": {
+          "choose": 1,
+          "container": "as64512h-host3-10.0.0.6"
+        },
+        "target_service": "bind9_service",
+        "warmup_seconds": 0.0,
+        "workload_id": "bind9_workload"
+      },
+      {
+        "driver": "workload.tcp",
+        "duration_seconds": 1.0,
+        "parameters": {
+          "host": "127.0.0.1",
+          "port": 5432
+        },
+        "schema_version": 1,
+        "source": {
+          "choose": 1,
+          "container": "as64512h-host2-10.0.0.5"
+        },
+        "target_service": "postgresql_service",
+        "warmup_seconds": 0.0,
+        "workload_id": "postgresql_workload"
+      }
+    ]
+  },
+  "public_bundle": {
+    "benchmark_id": "production_application_pilot",
+    "generator_contract_sha256": "72c3e121ad12f26c39bc4997aad4dae2374f2b7c3d8d4902b06efd7921c15b8b",
+    "public_tests": [
+      {
+        "driver": "probe.http",
+        "phase": "baseline",
+        "test_id": "baseline_nginx"
+      },
+      {
+        "driver": "probe.dns",
+        "phase": "baseline",
+        "test_id": "baseline_bind9"
+      },
+      {
+        "driver": "probe.tcp",
+        "phase": "baseline",
+        "test_id": "baseline_postgresql"
+      },
+      {
+        "driver": "probe.http",
+        "phase": "active",
+        "test_id": "active_nginx"
+      },
+      {
+        "driver": "probe.dns",
+        "phase": "active",
+        "test_id": "active_bind9"
+      },
+      {
+        "driver": "probe.tcp",
+        "phase": "active",
+        "test_id": "active_postgresql"
+      },
+      {
+        "driver": "probe.container",
+        "phase": "active",
+        "test_id": "active_observer"
+      },
+      {
+        "driver": "probe.tcp",
+        "phase": "recovery",
+        "test_id": "recovery_postgresql"
+      },
+      {
+        "driver": "probe.dns",
+        "phase": "recovery",
+        "test_id": "recovery_bind9"
+      },
+      {
+        "driver": "probe.http",
+        "phase": "recovery",
+        "test_id": "recovery_nginx"
+      }
+    ],
+    "scenario_metadata_included": false,
+    "schema_version": 1,
+    "services": [
+      {
+        "driver": "service.process",
+        "ports": [
+          80
+        ],
+        "service_id": "nginx_service"
+      },
+      {
+        "driver": "service.process",
+        "ports": [
+          53
+        ],
+        "service_id": "bind9_service"
+      },
+      {
+        "driver": "service.process",
+        "ports": [
+          5432
+        ],
+        "service_id": "postgresql_service"
+      }
+    ],
+    "topology": {
+      "topology_fingerprint": "a5e184f646145e377b2396f662d200a456520c1edb39cff7b0bf9dcd9c72ad39",
+      "topology_id": "multi_agent_application_pilot"
+    },
+    "workloads": [
+      {
+        "driver": "workload.http",
+        "target_service": "nginx_service",
+        "workload_id": "nginx_workload"
+      },
+      {
+        "driver": "workload.dns",
+        "target_service": "bind9_service",
+        "workload_id": "bind9_workload"
+      },
+      {
+        "driver": "workload.tcp",
+        "target_service": "postgresql_service",
+        "workload_id": "postgresql_workload"
+      }
+    ]
+  },
+  "safety_review": {
+    "approved": true,
+    "asset_count": 5,
+    "blind_metadata_isolated": true,
+    "errors": [],
+    "schema_version": 1,
+    "warnings": []
+  },
+  "schema_version": 1,
+  "seed": "production-application-e2e-v1",
+  "topology_fingerprint": "a5e184f646145e377b2396f662d200a456520c1edb39cff7b0bf9dcd9c72ad39",
+  "topology_id": "multi_agent_application_pilot"
+}

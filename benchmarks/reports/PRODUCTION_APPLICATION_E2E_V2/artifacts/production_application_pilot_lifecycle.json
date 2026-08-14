@@ -1,0 +1,30 @@
+{
+  "artifact_fingerprint": "5336c0f4e49db06287bbe45efa66691b63ae51adea8c3c617f24b60035637274",
+  "artifact_id": "production_application_pilot_lifecycle",
+  "artifact_type": "lifecycle",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "bba70228f7ad31ee3047701c19627c9378b1ab9147e5bfd77e92b5acbccb98df",
+    "29c0558a8831f132f78bf3497d4a398cac88193e1ba7e884c6322e0dcab1268d",
+    "d6d3f6b6afde609cbe8948c7981e191c80eda04093a77cf4577245d2d14bbeb9",
+    "b6bace38b9313a0ca10f34264f5203f770e939cd9ffdaf69f4097608c2f3907b",
+    "1eccfab6ba5925ac5617b652fc61b079bba3859271e4aae613e08709d3cba4f7",
+    "5398015d81bcfe3c565b0ec24caa21f90d3c74334d9dd8a07af3b12a81a7941f",
+    "2ee9e4c764ebc3735aa08506c0c756308ce315aa174e701b2ea1a03aabb4ec83",
+    "c86a97193dd708ba8f5870573b90d81e66d61ad4a1911189ed6ec772f4d6ed9c",
+    "55cdffc3ab0305d53bc0f88eb5229f2bef21de4473e2881796c82b8e4111ffd1"
+  ],
+  "payload": {
+    "lifecycles": [
+      {
+        "baseline_timeout": 120,
+        "fault_timeout": 120,
+        "recovery_timeout": 300,
+        "repeat_runs": 2
+      }
+    ]
+  },
+  "producer": "lifecycle_controller",
+  "schema_version": 1,
+  "warnings": []
+}

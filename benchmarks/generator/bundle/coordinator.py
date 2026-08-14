@@ -218,13 +218,23 @@ class BenchmarkCoordinator:
             and item["attempts"] < item["definition"]["max_attempts"]
         ))
 
-    def claim_next(self, *, worker_id: str) -> Dict[str, Any] | None:
+    def claim_next(
+        self, *, worker_id: str, agent_role: str | None = None,
+    ) -> Dict[str, Any] | None:
         """Lease one ready task for an external Agent process."""
         if not ID_PATTERN.fullmatch(worker_id):
             raise ValueError("invalid coordinator worker_id")
         with _StateLock(self.lock_path):
             state = self.load()
             ready = self._ready_from_state(state)
+            if agent_role is not None:
+                if not ID_PATTERN.fullmatch(agent_role):
+                    raise ValueError("invalid coordinator agent_role")
+                ready = tuple(
+                    task_id for task_id in ready
+                    if state["tasks"][task_id]["definition"]["agent_role"]
+                    == agent_role
+                )
             if not ready:
                 return None
             task_id = ready[0]

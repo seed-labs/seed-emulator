@@ -1,0 +1,102 @@
+{
+  "benchmark_id": "production_application_pilot",
+  "generator_contract_sha256": "72c3e121ad12f26c39bc4997aad4dae2374f2b7c3d8d4902b06efd7921c15b8b",
+  "public_tests": [
+    {
+      "driver": "probe.http",
+      "phase": "baseline",
+      "test_id": "baseline_nginx"
+    },
+    {
+      "driver": "probe.dns",
+      "phase": "baseline",
+      "test_id": "baseline_bind9"
+    },
+    {
+      "driver": "probe.tcp",
+      "phase": "baseline",
+      "test_id": "baseline_postgresql"
+    },
+    {
+      "driver": "probe.http",
+      "phase": "active",
+      "test_id": "active_nginx"
+    },
+    {
+      "driver": "probe.dns",
+      "phase": "active",
+      "test_id": "active_bind9"
+    },
+    {
+      "driver": "probe.tcp",
+      "phase": "active",
+      "test_id": "active_postgresql"
+    },
+    {
+      "driver": "probe.container",
+      "phase": "active",
+      "test_id": "active_observer"
+    },
+    {
+      "driver": "probe.tcp",
+      "phase": "recovery",
+      "test_id": "recovery_postgresql"
+    },
+    {
+      "driver": "probe.dns",
+      "phase": "recovery",
+      "test_id": "recovery_bind9"
+    },
+    {
+      "driver": "probe.http",
+      "phase": "recovery",
+      "test_id": "recovery_nginx"
+    }
+  ],
+  "scenario_metadata_included": false,
+  "schema_version": 1,
+  "services": [
+    {
+      "driver": "service.process",
+      "ports": [
+        80
+      ],
+      "service_id": "nginx_service"
+    },
+    {
+      "driver": "service.process",
+      "ports": [
+        53
+      ],
+      "service_id": "bind9_service"
+    },
+    {
+      "driver": "service.process",
+      "ports": [
+        5432
+      ],
+      "service_id": "postgresql_service"
+    }
+  ],
+  "topology": {
+    "topology_fingerprint": "a5e184f646145e377b2396f662d200a456520c1edb39cff7b0bf9dcd9c72ad39",
+    "topology_id": "multi_agent_application_pilot"
+  },
+  "workloads": [
+    {
+      "driver": "workload.http",
+      "target_service": "nginx_service",
+      "workload_id": "nginx_workload"
+    },
+    {
+      "driver": "workload.dns",
+      "target_service": "bind9_service",
+      "workload_id": "bind9_workload"
+    },
+    {
+      "driver": "workload.tcp",
+      "target_service": "postgresql_service",
+      "workload_id": "postgresql_workload"
+    }
+  ]
+}

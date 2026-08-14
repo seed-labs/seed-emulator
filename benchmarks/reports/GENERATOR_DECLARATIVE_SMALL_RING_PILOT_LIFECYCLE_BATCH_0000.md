@@ -1,11 +1,11 @@
 # Benchmark 测试报告 - RULE Agent
 
-**日期**: 2026-08-15 00:20:55
+**日期**: 2026-08-15 01:55:04
 
 ## 测试汇总
 
 - **Agent 类型**: rule
-- **控制台日志**: `/home/zvanadium/seed-emulator/benchmarks/logs/BENCHMARK_CLI_20260815_001337_373926.log`
+- **控制台日志**: `/home/zvanadium/seed-emulator/benchmarks/logs/BENCHMARK_CLI_20260815_015031_415912.log`
 - **测试模式**: 盲测
 > 盲测不会向 Agent 提供场景名称、预期类别、故障注入、目标容器、参考修复或场景专属提示。
 

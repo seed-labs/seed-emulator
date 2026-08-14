@@ -1,0 +1,43 @@
+{
+  "actions": [
+    {
+      "action_id": "fault_01_bind9",
+      "cleanup_exit": 0,
+      "cleanup_output": "",
+      "expires_at": "",
+      "recovery_check_exit": 0,
+      "recovery_verified": true,
+      "snapshot": "qdisc noqueue 0: root refcnt 2 \n",
+      "snapshot_exit": 0,
+      "status": "recovered"
+    },
+    {
+      "action_id": "fault_02_nginx",
+      "cleanup_exit": 0,
+      "cleanup_output": "as64512h-host0-10.0.0.3\n",
+      "expires_at": "",
+      "recovery_check_exit": 0,
+      "recovery_verified": true,
+      "snapshot": "true\n",
+      "snapshot_exit": 0,
+      "status": "recovered"
+    },
+    {
+      "action_id": "fault_03_postgresql",
+      "cleanup_exit": 0,
+      "cleanup_output": "as64512h-host2-10.0.0.5\n",
+      "expires_at": "",
+      "recovery_check_exit": 0,
+      "recovery_verified": true,
+      "snapshot": "true\n",
+      "snapshot_exit": 0,
+      "status": "recovered"
+    }
+  ],
+  "created_at": "2026-08-14T17:33:30.987032+00:00",
+  "execution_id": "909382bd-d4d3-498a-9bd4-bb7475769b02-0000",
+  "plan_fingerprint": "0f6b20bb0123a9483a6d02cbb8918ce7ff8c32b253f0c0524015d93e01f15c59",
+  "schema_version": 1,
+  "status": "recovered",
+  "updated_at": "2026-08-14T17:34:36.890077+00:00"
+}

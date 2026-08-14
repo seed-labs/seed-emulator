@@ -1,0 +1,227 @@
+{
+  "ai_invoked": false,
+  "benchmark_id": "production_application_pilot",
+  "blind_mode": true,
+  "bundle_fingerprint": "40dcf703f31e94d4df95736a2dbb0f356f5b4be6da9554488218ab236d583d44",
+  "cleanup_failures": [],
+  "execution_backend": "DockerLifecycleRunner",
+  "faults": [
+    {
+      "injection_verified": true,
+      "journal": "/home/zvanadium/seed-emulator/benchmarks/reports/PRODUCTION_APPLICATION_E2E_V2/journals/faults/909382bd-d4d3-498a-9bd4-bb7475769b02-0000.json",
+      "plan_fingerprint": "0f6b20bb0123a9483a6d02cbb8918ce7ff8c32b253f0c0524015d93e01f15c59"
+    }
+  ],
+  "finished_at": "2026-08-14T17:35:03.760635+00:00",
+  "generator_contract_sha256": "72c3e121ad12f26c39bc4997aad4dae2374f2b7c3d8d4902b06efd7921c15b8b",
+  "mode": "no_ai",
+  "passed": true,
+  "receipt_sha256": "4809c776744e485322ac0310aa86c7f206c35ac724df8a807f0bb6860df4d519",
+  "run_id": "909382bd-d4d3-498a-9bd4-bb7475769b02",
+  "schema_version": 1,
+  "services": [
+    {
+      "exit_code": 0,
+      "output": "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: 35em; margin: 0 auto;\nfont-family: Tahoma, Verdana, Arial, sans-serif; }\n</style>\n</head>\n<body>\n<h1>Welcome to nginx!</h1>\n<p>If you see this page, the nginx web server is successfully installed and\nworking. Further configuration is required.</p>\n\n<p>For online documentation and support please refer to\n<a href=\"http://nginx.org/\">nginx.org</a>.<br/>\nCommercial support is available at\n<a href=\"http://nginx.com/\">nginx.com</a>.</p>\n\n<p><em>Thank you for using nginx.</em></p>\n</body>\n</html>\n",
+      "passed": true,
+      "service_id": "nginx_service"
+    },
+    {
+      "exit_code": 0,
+      "output": "version: BIND 9.18.39-0ubuntu0.24.04.5-Ubuntu (Extended Support Version) <id:>\nrunning on localhost: Linux x86_64 7.0.0-28-generic #28~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 15:50:57 UTC 2\nboot time: Fri, 14 Aug 2026 17:27:43 GMT\nlast configured: Fri, 14 Aug 2026 17:27:43 GMT\nconfiguration file: /etc/bind/named.conf\nCPUs found: 8\nworker threads: 8\nUDP listeners per interface: 8\nnumber of zones: 104 (98 automatic)\ndebug level: 0\nxfers running: 0\nxfers deferred: 0\nsoa queries in progress: 0\nquery logging is OFF\nrecursive clients: 0/900/1000\ntcp clients: 0/150\nTCP high-water: 0\nserver is up and running\n",
+      "passed": true,
+      "service_id": "bind9_service"
+    },
+    {
+      "exit_code": 0,
+      "output": "/var/run/postgresql:5432 - accepting connections\n",
+      "passed": true,
+      "service_id": "postgresql_service"
+    },
+    {
+      "exit_code": 0,
+      "output": "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: 35em; margin: 0 auto;\nfont-family: Tahoma, Verdana, Arial, sans-serif; }\n</style>\n</head>\n<body>\n<h1>Welcome to nginx!</h1>\n<p>If you see this page, the nginx web server is successfully installed and\nworking. Further configuration is required.</p>\n\n<p>For online documentation and support please refer to\n<a href=\"http://nginx.org/\">nginx.org</a>.<br/>\nCommercial support is available at\n<a href=\"http://nginx.com/\">nginx.com</a>.</p>\n\n<p><em>Thank you for using nginx.</em></p>\n</body>\n</html>\n",
+      "passed": true,
+      "phase": "recovery",
+      "service_id": "nginx_service"
+    },
+    {
+      "exit_code": 0,
+      "output": "version: BIND 9.18.39-0ubuntu0.24.04.5-Ubuntu (Extended Support Version) <id:>\nrunning on localhost: Linux x86_64 7.0.0-28-generic #28~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 15:50:57 UTC 2\nboot time: Fri, 14 Aug 2026 17:27:43 GMT\nlast configured: Fri, 14 Aug 2026 17:27:43 GMT\nconfiguration file: /etc/bind/named.conf\nCPUs found: 8\nworker threads: 8\nUDP listeners per interface: 8\nnumber of zones: 104 (98 automatic)\ndebug level: 0\nxfers running: 0\nxfers deferred: 0\nsoa queries in progress: 0\nquery logging is OFF\nrecursive clients: 0/900/1000\ntcp clients: 0/150\nTCP high-water: 0\nserver is up and running\n",
+      "passed": true,
+      "phase": "recovery",
+      "service_id": "bind9_service"
+    },
+    {
+      "exit_code": 0,
+      "output": "/var/run/postgresql:5432 - accepting connections\n",
+      "passed": true,
+      "phase": "recovery",
+      "service_id": "postgresql_service"
+    }
+  ],
+  "started_at": "2026-08-14T17:33:19.322884+00:00",
+  "tests": [
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: 35em; margin: 0 auto;\nfont-family: Tahoma, Verdana, Arial, sans-serif; }\n</style>\n</head>\n<body>\n<h1>Welcome to nginx!</h1>\n<p>If you see this page, the nginx web server is successfully installed and\nworking. Further configuration is required.</p>\n\n<p>For online documentation and support please refer to\n<a href=\"http://nginx.org/\">nginx.org</a>.<br/>\nCommercial support is available at\n<a href=\"http://nginx.com/\">nginx.com</a>.</p>\n\n<p><em>Thank you for using nginx.</em></p>\n</body>\n</html>\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "nginx_healthy",
+      "passed": true,
+      "phase": "baseline",
+      "test_id": "baseline_nginx"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "10.0.0.3\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_healthy",
+      "passed": true,
+      "phase": "baseline",
+      "test_id": "baseline_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "Connection to 127.0.0.1 5432 port [tcp/postgresql] succeeded!\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "postgresql_healthy",
+      "passed": true,
+      "phase": "baseline",
+      "test_id": "baseline_postgresql"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 124,
+          "metrics": {},
+          "output": "command timed out",
+          "passed": true
+        }
+      ],
+      "expectation_id": "nginx_availability",
+      "passed": true,
+      "phase": "active",
+      "test_id": "active_nginx"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 124,
+          "metrics": {},
+          "output": "command timed out",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_availability",
+      "passed": true,
+      "phase": "active",
+      "test_id": "active_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 1,
+          "metrics": {},
+          "output": "Error response from daemon: container 4b68d2db3074faa564faf517ab44372b3fc60c1c68f946d25d8fe68ea44362b2 is not running\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "postgresql_availability",
+      "passed": true,
+      "phase": "active",
+      "test_id": "active_postgresql"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "true\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "observer_availability",
+      "passed": true,
+      "phase": "active",
+      "test_id": "active_observer"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "Connection to 127.0.0.1 5432 port [tcp/postgresql] succeeded!\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "postgresql_availability",
+      "passed": true,
+      "phase": "recovery",
+      "test_id": "recovery_postgresql"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "10.0.0.3\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_availability",
+      "passed": true,
+      "phase": "recovery",
+      "test_id": "recovery_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: 35em; margin: 0 auto;\nfont-family: Tahoma, Verdana, Arial, sans-serif; }\n</style>\n</head>\n<body>\n<h1>Welcome to nginx!</h1>\n<p>If you see this page, the nginx web server is successfully installed and\nworking. Further configuration is required.</p>\n\n<p>For online documentation and support please refer to\n<a href=\"http://nginx.org/\">nginx.org</a>.<br/>\nCommercial support is available at\n<a href=\"http://nginx.com/\">nginx.com</a>.</p>\n\n<p><em>Thank you for using nginx.</em></p>\n</body>\n</html>\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "nginx_availability",
+      "passed": true,
+      "phase": "recovery",
+      "test_id": "recovery_nginx"
+    }
+  ],
+  "topology_tainted": false,
+  "workloads": [
+    {
+      "exit_code": 0,
+      "output": "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: 35em; margin: 0 auto;\nfont-family: Tahoma, Verdana, Arial, sans-serif; }\n</style>\n</head>\n<body>\n<h1>Welcome to nginx!</h1>\n<p>If you see this page, the nginx web server is successfully installed and\nworking. Further configuration is required.</p>\n\n<p>For online documentation and support please refer to\n<a href=\"http://nginx.org/\">nginx.org</a>.<br/>\nCommercial support is available at\n<a href=\"http://nginx.com/\">nginx.com</a>.</p>\n\n<p><em>Thank you for using nginx.</em></p>\n</body>\n</html>\n",
+      "passed": true,
+      "workload_id": "nginx_workload"
+    },
+    {
+      "exit_code": 0,
+      "output": "10.0.0.3\n",
+      "passed": true,
+      "workload_id": "bind9_workload"
+    },
+    {
+      "exit_code": 0,
+      "output": "Connection to 127.0.0.1 5432 port [tcp/postgresql] succeeded!\n",
+      "passed": true,
+      "workload_id": "postgresql_workload"
+    }
+  ]
+}
